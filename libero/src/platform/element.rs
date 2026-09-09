@@ -79,6 +79,17 @@ pub trait ElementApi {
     /// different from a renderer that cannot say.
     fn natural_size(&self) -> Read<Dimensions>;
 
+    /// A CSS property's computed value in pixels, `None` when it is not a
+    /// length (`auto`, `none`, a percentage the browser keeps as one).
+    ///
+    /// ```ignore
+    /// let min_width = element.computed_px("min-width").await?.unwrap_or(0.0);
+    /// ```
+    fn computed_px(&self, property: &str) -> Read<Option<f64>> {
+        let _ = property;
+        Box::pin(std::future::ready(Err(PlatformError::Unsupported)))
+    }
+
     /// Sets this element's scroll offset, in pixels.
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError>;
 

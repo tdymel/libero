@@ -129,6 +129,7 @@ stored.
 | `is_focused()`, `is_connected()` | `bool` | Synchronous. A renderer that cannot tell `is_connected` answers `true`. |
 | `dimensions()`, `scroll_size()`, `natural_size()` | `Read<Dimensions>` | Rendered size, scrollable size, an `<img>`'s intrinsic size. |
 | `client_offset()`, `scroll_offset()` | `Read<(f64, f64)>` | Top-left in viewport coordinates, and the scroll offset. |
+| `computed_px(property)` | `Read<Option<f64>>` | A CSS property's computed value in pixels; `None` when it is not a length. Web only. |
 | `scroll_to(x, y)` | `Result<(), PlatformError>` | Sets the scroll offset. |
 | `scroll_into_view(smooth: bool)` | `Result<(), PlatformError>` | Scrolls the nearest scrollable ancestor just far enough. |
 | `set_files(files: &[FileData])` | `Result<(), PlatformError>` | Replaces an `<input type="file">`'s file list. Web only. |

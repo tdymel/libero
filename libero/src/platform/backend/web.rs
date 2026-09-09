@@ -493,6 +493,22 @@ impl ElementApi for WebElement {
         Box::pin(std::future::ready(size.ok_or(PlatformError::NotFound)))
     }
 
+    /// Viewport units and `rem` compute to pixels; `auto`, `none` and a
+    /// percentage do not, and answer `None`.
+    fn computed_px(&self, property: &str) -> Read<Option<f64>> {
+        let Some(style) = web_sys::window()
+            .and_then(|window| window.get_computed_style(&self.element).ok().flatten())
+        else {
+            return Box::pin(std::future::ready(Err(PlatformError::NotFound)));
+        };
+        let value = style.get_property_value(property).unwrap_or_default();
+        resolved(
+            value
+                .strip_suffix("px")
+                .and_then(|number| number.trim().parse::<f64>().ok()),
+        )
+    }
+
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {
         // One call, not `scrollLeft` then `scrollTop`: under
         // `scroll-behavior: smooth` the second write starts a new scroll from

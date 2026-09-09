@@ -24,34 +24,17 @@
 //!   check here asserts the report against the rect the browser actually drew.
 //!   That is the assertion the effect exists for.
 //!
+//! * the separator is the only thing that tells a screen-reader user how big
+//!   the window is, so after every resize its `aria-valuenow`/`valuetext` are
+//!   asserted against the drawn rect and its `aria-valuemin`/`valuemax`
+//!   against the caller's bounds in pixels (todo 388). Without them ARIA's
+//!   implicit 0..100 clamped every size to `100`, and the value once lagged
+//!   the window by two resizes.
+//!
 //! Desktop only for the geometry. The fixture's window may be 480x360, which
 //! does not fit a 390px viewport, so measuring it there would measure the
 //! viewport clamp rather than the component. The archetype and the `Suite`
 //! baseline run at both.
-//!
-//! ## Two defects this unit found and does not assert (todo 388)
-//!
-//! The separator is the resize handle, and it is the only thing that tells a
-//! screen-reader user how big the window is. Both halves of that are wrong,
-//! and both were found by running this unit for the first time:
-//!
-//! * **Its value is clamped to 100.** `role="separator"` with a tabindex is a
-//!   focusable splitter, and ARIA's implicit `valuemin`/`valuemax` are 0 and
-//!   100 because the component declares neither. The `open` baselines record
-//!   what came of that: `separator "Resize window" = 100 [valuemax=100]
-//!   [valuemin=0]` for a window 409px wide, and the same 100 for one at 240
-//!   and at 480. The written-down `aria-valuenow` attribute is right; the
-//!   accessibility tree a screen reader reads is not.
-//! * **The attribute lags the window.** `width`/`height` come from `measured`,
-//!   which `onresize` fills. Asserting the attribute against the drawn rect
-//!   passed once and then read `aria-valuenow="409" aria-valuetext="409 by 120
-//!   pixels"` for a window drawn 480x360 - the initial auto width, two
-//!   resizes later.
-//!
-//! The assertion is **not** kept here: it fails intermittently, and a unit that
-//! both adds coverage and carries a red cannot be merged. The AX baselines hold
-//! the first half permanently, so fixing todo 388 will change them, which is
-//! the note `principles/assertions-that-prove-nothing` asks for.
 //!
 //! ## Not covered, and why
 //!
@@ -204,17 +187,58 @@ pub async fn keyboard_resize(page: &Page) -> Result<()> {
     keyboard::press(page, keyboard::ARROW_RIGHT).await?;
     let stepped = wait_for_size(page, (before.2 + STEP, before.3), "a step right").await?;
     assert_report(page, RESIZE_REPORT, stepped, "the step right").await?;
+    assert_separator(page, stepped, "the step right").await?;
 
     // `0x0`, which the caller's minimum answers.
     keyboard::press(page, keyboard::HOME).await?;
     let smallest = wait_for_size(page, MIN, "Home").await?;
     assert_report(page, RESIZE_REPORT, smallest, "Home").await?;
+    assert_separator(page, smallest, "Home").await?;
 
-    // `u16::MAX`, which the caller's maximum answers. The viewport is 1280x900
+    // `u16::MAX`, which the caller's maximum answers. The viewport is 1280x800
     // here, so it is the caller's bounds that clamp and not the screen.
     keyboard::press(page, keyboard::END).await?;
     let largest = wait_for_size(page, MAX, "End").await?;
-    assert_report(page, RESIZE_REPORT, largest, "End").await
+    assert_report(page, RESIZE_REPORT, largest, "End").await?;
+    assert_separator(page, largest, "End").await
+}
+
+/// The separator is the only thing that tells a screen-reader user how big
+/// the window is: its value is the drawn width, its text the drawn size, and
+/// its range the caller's own bounds in pixels (todo 388).
+async fn assert_separator(page: &Page, drawn: (f64, f64, f64, f64), what: &str) -> Result<()> {
+    let expected = format!(
+        "{} {} by {} pixels {} {}",
+        drawn.2.round(),
+        drawn.2.round(),
+        drawn.3.round(),
+        MIN.0,
+        MAX.0
+    );
+    let read = format!(
+        "(() => {{ const el = document.querySelector({}); if (!el) return null; \
+         return ['aria-valuenow', 'aria-valuetext', 'aria-valuemin', 'aria-valuemax']\
+         .map(name => el.getAttribute(name)).join(' '); }})()",
+        serde_json::to_string(SEPARATOR)?
+    );
+    let (js, wanted) = (read.as_str(), expected.as_str());
+    let settled = wait::until(
+        &format!("the separator to announce {expected:?} after {what}"),
+        || async move {
+            let text: Option<String> = page.evaluate(js.to_string()).await?.into_value()?;
+            Ok(text.as_deref() == Some(wanted))
+        },
+    )
+    .await;
+    if settled.is_err() {
+        let text: Option<String> = page.evaluate(read.clone()).await?.into_value()?;
+        bail!(
+            "after {what} the window is drawn at {expected:?} (value, text, min, max), but the \
+             separator says {:?}",
+            text.unwrap_or_default()
+        );
+    }
+    Ok(())
 }
 
 /// `use_drag` cancels the pointerdown and with it the browser's focus, so the

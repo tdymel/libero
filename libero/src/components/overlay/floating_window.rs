@@ -147,6 +147,57 @@ fn clamped(at: f64, size: Option<f64>, viewport: &str) -> String {
     format!("clamp(0px, {at}px, calc({viewport} - {size}px))")
 }
 
+/// The size range the window's CSS clamps a requested size into, in pixels:
+/// the caller's `min-*`/`max-*`, and the viewport on top of the max.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct WindowBounds {
+    min: (f64, f64),
+    max: (f64, f64),
+}
+
+impl WindowBounds {
+    /// What CSS draws for a requested size: `min-*` wins over `max-*`.
+    fn fit(self, (width, height): (f64, f64)) -> (f64, f64) {
+        (
+            width.min(self.max.0).max(self.min.0),
+            height.min(self.max.1).max(self.min.1),
+        )
+    }
+}
+
+/// Reads the window's computed `min-*`/`max-*` and the viewport into `bounds`.
+/// Off the web there is no computed style, and `bounds` stays as it was.
+fn read_bounds(root: ElementHandle, mut bounds: Signal<Option<WindowBounds>>) {
+    let reads = ["min-width", "min-height", "max-width", "max-height"]
+        .map(|property| root.computed_px(property));
+    let viewport = crate::platform::document().map(|document| document.viewport());
+    spawn(async move {
+        let mut px = [None; 4];
+        for (slot, read) in px.iter_mut().zip(reads) {
+            let Ok(value) = read.await else { return };
+            *slot = value;
+        }
+        let viewport = match viewport {
+            Some(read) => read.await.ok(),
+            None => None,
+        };
+        let cap = |max: Option<f64>, screen: Option<f64>| {
+            max.unwrap_or(f64::INFINITY)
+                .min(screen.unwrap_or(f64::INFINITY))
+        };
+        let next = WindowBounds {
+            min: (px[0].unwrap_or(0.0), px[1].unwrap_or(0.0)),
+            max: (
+                cap(px[2], viewport.map(|v| v.width)),
+                cap(px[3], viewport.map(|v| v.height)),
+            ),
+        };
+        if *bounds.peek() != Some(next) {
+            bounds.set(Some(next));
+        }
+    });
+}
+
 /// Reads the window's current rect and hands it to `callback`. The reads
 /// start here, in the handler, and are awaited in the task - see
 /// `platform::Read`.
@@ -218,6 +269,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         position,
         size,
         mut measured,
+        bounds,
         move_drag,
         resize_drag,
         ..
@@ -266,7 +318,20 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         )
         .into();
 
-    let (width, height) = measured().unwrap_or_default();
+    // The separator's value comes from this render's own request, clamped as
+    // the CSS will clamp it; only an auto-sized window waits for `onresize`.
+    let bounds_now = bounds();
+    let (width, height) = match (size(), bounds_now) {
+        (Some(requested), Some(bounds)) => bounds.fit(requested),
+        _ => measured().unwrap_or_default(),
+    };
+    let (value_min, value_max) = match bounds_now.filter(|b| b.max.0.is_finite()) {
+        Some(b) => (
+            Some(b.min.0.round().to_string()),
+            Some(b.max.0.max(b.min.0).round().to_string()),
+        ),
+        None => (None, None),
+    };
 
     let window = use_box()
         .framework_sx(&WINDOW_SX)
@@ -306,6 +371,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
             if let Ok(size) = event.get_border_box_size() {
                 measured.set(Some((size.width, size.height)));
             }
+            read_bounds(root, bounds);
         })
         .render(
             HtmlTag::Div,
@@ -351,6 +417,9 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                         "aria-label": defaults.resize_label,
                         // One handle resizes two axes, so a single number is
                         // a compromise: the width, with the whole size in words.
+                        // Real pixels: ARIA's implicit 0..100 clamps the value.
+                        "aria-valuemin": value_min,
+                        "aria-valuemax": value_max,
                         "aria-valuenow": "{width.round()}",
                         "aria-valuetext": "{width.round()} by {height.round()} pixels",
                         onpointerdown: move |event| resize_drag.onpointerdown.call(event),
@@ -396,6 +465,8 @@ struct WindowGeometry {
     size: Signal<Option<(f64, f64)>>,
     /// The rendered border box, for the clamp. Kept current by `onresize`.
     measured: Signal<Option<(f64, f64)>>,
+    /// The caller's size bounds in pixels; `None` until read, and off the web.
+    bounds: Signal<Option<WindowBounds>>,
     /// A keyboard move or resize reports once the new geometry has rendered.
     owed: Signal<Option<Option<Callback<WindowRect>>>>,
     move_drag: Drag,
@@ -418,6 +489,12 @@ fn use_window_geometry(
     let mut position = use_signal(|| None::<(f64, f64)>);
     let mut size = use_signal(|| None::<(f64, f64)>);
     let measured = use_signal(|| None::<(f64, f64)>);
+    let bounds = use_signal(|| None::<WindowBounds>);
+    use_effect(move || {
+        if root.is_mounted() {
+            read_bounds(root, bounds);
+        }
+    });
     // Where a pointer drag started, read once at pointerdown.
     let mut move_origin = use_signal(|| None::<(f64, f64)>);
     let mut size_origin = use_signal(|| None::<(f64, f64)>);
@@ -491,6 +568,7 @@ fn use_window_geometry(
         position,
         size,
         measured,
+        bounds,
         owed,
         move_drag,
         resize_drag,
@@ -588,5 +666,34 @@ impl WindowGeometry {
             size.set(Some(next));
             owed.set(Some(onresize));
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::WindowBounds;
+
+    const BOUNDS: WindowBounds = WindowBounds {
+        min: (240.0, 120.0),
+        max: (480.0, 360.0),
+    };
+
+    /// Home and End ask for `0x0` and `u16::MAX`; the separator has to say
+    /// what the CSS draws, not what was asked for.
+    #[test]
+    fn a_request_is_clamped_as_the_css_clamps_it() {
+        assert_eq!(BOUNDS.fit((0.0, 0.0)), (240.0, 120.0));
+        assert_eq!(BOUNDS.fit((65535.0, 65535.0)), (480.0, 360.0));
+        assert_eq!(BOUNDS.fit((300.0, 200.0)), (300.0, 200.0));
+    }
+
+    /// CSS lets `min-width` win over `max-width`.
+    #[test]
+    fn a_min_above_the_max_wins() {
+        let crossed = WindowBounds {
+            min: (500.0, 0.0),
+            max: (480.0, 360.0),
+        };
+        assert_eq!(crossed.fit((65535.0, 10.0)).0, 500.0);
     }
 }

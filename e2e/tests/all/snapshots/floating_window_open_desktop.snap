@@ -19,4 +19,4 @@ generic
       button "Done"
         StaticText "Done"
         generic
-      separator "Resize window" = 100 [valuemax=100] [valuemin=0]
+      separator "Resize window" = 409 [valuemax=480] [valuemin=240]

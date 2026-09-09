@@ -148,6 +148,10 @@ impl ElementApi for ElementHandle {
         self.read(|element| element.natural_size())
     }
 
+    fn computed_px(&self, property: &str) -> Read<Option<f64>> {
+        self.read(|element| element.computed_px(property))
+    }
+
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {
         self.get()?.scroll_to(x, y)
     }
