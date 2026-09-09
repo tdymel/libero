@@ -644,6 +644,59 @@ mod tests {
         );
     }
 
+    #[cfg(any(
+        feature = "code-lang-swift",
+        feature = "code-lang-kotlin",
+        feature = "code-lang-scala",
+        feature = "code-lang-dart",
+        feature = "code-lang-haskell"
+    ))]
+    fn assert_nested_comment(language: &str, source: &str, comment: &str, rest: &str) {
+        assert_eq!(
+            flat(source, lang(language)),
+            vec![
+                (comment.to_string(), Some("lsx-tok-comment")),
+                (rest.to_string(), None),
+            ],
+            "{language}"
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "code-lang-swift")]
+    fn highlight_swift_nested_block_comment_ends_at_its_balancing_close() {
+        assert_nested_comment("swift", "/* a /* b */ c */ x\n", "/* a /* b */ c */", " x");
+    }
+
+    #[test]
+    #[cfg(feature = "code-lang-kotlin")]
+    fn highlight_kotlin_nested_block_comment_ends_at_its_balancing_close() {
+        assert_nested_comment("kotlin", "/* a /* b */ c */ x\n", "/* a /* b */ c */", " x");
+    }
+
+    #[test]
+    #[cfg(feature = "code-lang-scala")]
+    fn highlight_scala_nested_block_comment_ends_at_its_balancing_close() {
+        assert_nested_comment("scala", "/* a /* b */ c */ x\n", "/* a /* b */ c */", " x");
+    }
+
+    #[test]
+    #[cfg(feature = "code-lang-dart")]
+    fn highlight_dart_nested_block_comment_ends_at_its_balancing_close() {
+        assert_nested_comment("dart", "/* a /* b */ c */ x\n", "/* a /* b */ c */", " x");
+    }
+
+    #[test]
+    #[cfg(feature = "code-lang-haskell")]
+    fn highlight_haskell_nested_block_comment_ends_at_its_balancing_close() {
+        assert_nested_comment(
+            "haskell",
+            "{- a {- b -} c -} x\n",
+            "{- a {- b -} c -}",
+            " x",
+        );
+    }
+
     #[test]
     #[cfg(feature = "code-lang-rust")]
     fn highlight_rust_unclosed_block_comment_runs_to_the_end() {

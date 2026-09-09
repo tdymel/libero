@@ -7,7 +7,8 @@ const RULES: &[TokenRule] = &[
         name: "comment",
         patterns: &[
             PatternDef::new(r"//.*").greedy(),
-            PatternDef::new(r"/\*[\s\S]*?\*/").greedy(),
+            // Kotlin's block comments nest.
+            PatternDef::new(r"/\*").balanced("/*", "*/").greedy(),
         ],
     },
     TokenRule {
