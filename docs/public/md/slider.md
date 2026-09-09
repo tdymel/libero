@@ -150,6 +150,10 @@ Without a `label`, name it with the `aria_label` prop; an `aria_label` passed
 through `attributes` lands on the field wrapper instead of the thumb. Pass
 `format` where a bare number does not say the unit.
 
+To translate a discrete slider, pass `format` as well: it replaces
+`SliderValue::label` in the bubble, the mark captions and `aria-valuetext`,
+and runs during render, so it can read the current locale from context.
+
 ## Props
 
 `Slider`

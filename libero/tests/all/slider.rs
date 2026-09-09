@@ -362,6 +362,40 @@ fn a_sliders_format_prop_renames_its_mark_captions_too() {
     assert!(!body.contains("High"));
 }
 
+/// `format` is the translation hook: it runs during render, so it can read a
+/// locale from context, and it names both thumbs of a range.
+#[test]
+fn a_range_sliders_format_translates_both_thumbs_from_a_context_locale() {
+    #[derive(Clone, Copy)]
+    struct German(bool);
+
+    fn app() -> Element {
+        use_context_provider(|| German(true));
+        rsx! {
+            LiberoProvider {
+                RangeSlider {
+                    value: (Grade::Low, Grade::High),
+                    oninput: move |_| {},
+                    format: |grade: Grade| {
+                        let German(german) = consume_context::<German>();
+                        match (grade, german) {
+                            (Grade::Low, true) => "Niedrig".to_string(),
+                            (Grade::High, true) => "Hoch".to_string(),
+                            (grade, false) => grade.label(),
+                        }
+                    },
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(html.contains(r#"aria-valuetext="Niedrig""#), "{html}");
+    assert!(html.contains(r#"aria-valuetext="Hoch""#), "{html}");
+    assert!(!body(&html).contains("Low"), "{html}");
+}
+
 /// `min` defaults to 0, so `max: -10.0` alone is an inverted range - and
 /// `f64::clamp` panics on one. A range computed from data is ordinary
 /// (`items.len() as f64 - 1.0` is `-1` for an empty list), so it has to warn

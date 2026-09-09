@@ -34,7 +34,9 @@ field_props! {
         color: Input<ThemeAwareValue>,
         /// Formats the bubble shown on hover, drag and keyboard focus, and
         /// sets each thumb's `aria-valuetext`. Defaults to the bare value
-        /// continuously, and to `SliderValue::label` discretely.
+        /// continuously, and to `SliderValue::label` discretely. Also names
+        /// the derived marks, and runs during render - so it is how a
+        /// discrete slider is translated, reading a locale from context.
         #[props(default)]
         format: Option<Callback<V, String>>,
         /// Ticks on the track; a labeled one gets a caption below it.

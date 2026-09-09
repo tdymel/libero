@@ -39,7 +39,8 @@ pub trait SliderValue: Clone + PartialEq + 'static {
     where
         Self: Sized;
 
-    /// Bubble text, mark caption and `aria-valuetext`.
+    /// Bubble text, mark caption and `aria-valuetext`. A slider's `format`
+    /// prop overrides it, which is where a translation goes.
     fn label(&self) -> String;
 
     /// Where this value sits on the track's scale - its index, discretely.

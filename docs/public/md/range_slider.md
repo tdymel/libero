@@ -134,6 +134,11 @@ A `label` names both thumbs, so each follows it with its own name: "Price
 Minimum" and "Price Maximum", with "Minimum" and "Maximum" by default. Pass `aria_label_from` and `aria_label_to` where those
 words do not fit, and `format` where a bare number does not say the unit.
 
+To translate a discrete range, pass `format` as well: it replaces
+`SliderValue::label` in both bubbles, the mark captions and both thumbs'
+`aria-valuetext`, and runs during render, so it can read the current locale
+from context.
+
 ## Props
 
 `RangeSlider`
