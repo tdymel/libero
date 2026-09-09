@@ -152,6 +152,7 @@ pub struct TreeNodeRenderArgs<T> {
     pub data: T,
     /// `None` for a leaf (no children, no chevron, no `aria-expanded`).
     pub expanded: Option<bool>,
+    /// By the node's own flag or an ancestor's.
     pub disabled: bool,
     /// Apply to any interactive element your content renders. The row is
     /// already the roving tab stop; without this the link/button adds a

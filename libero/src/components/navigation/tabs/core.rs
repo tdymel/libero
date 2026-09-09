@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{Variables, focus_ring_sx, inset_focus_ring_sx, text_color, variables},
+        common::{Variables, focus_ring_sx, inset_focus_ring_sx, neighbour, text_color, variables},
         layout::use_box,
     },
     hooks::{id_selector, use_element},
@@ -126,26 +126,25 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         attributes,
     } = view;
 
-    let enabled: Vec<usize> = (0..tabs.len()).filter(|i| !tabs[*i].disabled).collect();
+    let disabled: Vec<bool> = tabs.iter().map(|tab| tab.disabled).collect();
     // One tab stop for the strip: the selected tab, or the first enabled one
     // when `value` is not among the tabs, so the strip stays reachable.
-    let tab_stop = selected.or_else(|| enabled.first().copied());
+    let tab_stop = selected.or_else(|| disabled.iter().position(|off| !off));
     let root_element = use_element();
     let keydown_root = root.clone();
     let onkeydown = use_callback(move |event: Event<KeyboardData>| {
-        if enabled.is_empty() {
+        let Some(at) = tab_stop else {
             return;
-        }
-        let at = selected
-            .and_then(|selected| enabled.iter().position(|tab| *tab == selected))
-            .unwrap_or(0);
-        let last = enabled.len() - 1;
+        };
         let next = match event.key() {
-            Key::ArrowRight => enabled[if at == last { 0 } else { at + 1 }],
-            Key::ArrowLeft => enabled[if at == 0 { last } else { at - 1 }],
-            Key::Home => enabled[0],
-            Key::End => enabled[last],
+            Key::ArrowRight => neighbour(&disabled, at, 1),
+            Key::ArrowLeft => neighbour(&disabled, at, -1),
+            Key::Home => disabled.iter().position(|off| !off),
+            Key::End => disabled.iter().rposition(|off| !off),
             _ => return,
+        };
+        let Some(next) = next else {
+            return;
         };
         event.prevent_default();
         onselect.call(next);

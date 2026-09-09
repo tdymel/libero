@@ -122,6 +122,27 @@ pub(super) fn step(
     range.into_iter().find(|index| !disabled(*index))
 }
 
+/// [`step`] in the column under `parents`, by the inherited flag Enter and the
+/// rows use: inside a disabled branch every row is disabled.
+pub(super) fn step_in(
+    nodes: &[CascaderNode],
+    parents: &[usize],
+    from: Option<usize>,
+    forward: bool,
+) -> Option<usize> {
+    let row_disabled = |index| {
+        let mut path = parents.to_vec();
+        path.push(index);
+        disabled_at(nodes, &path)
+    };
+    step(
+        children_at(nodes, parents).len(),
+        row_disabled,
+        from,
+        forward,
+    )
+}
+
 pub(super) fn first_enabled(column: &[CascaderNode]) -> Option<usize> {
     step(column.len(), |index| column[index].disabled, None, true)
 }
@@ -241,6 +262,22 @@ mod tests {
         assert_eq!(step(roots.len(), disabled, Some(0), false), None);
         assert_eq!(first_enabled(roots), Some(0));
         assert_eq!(last_enabled(roots), Some(2));
+    }
+
+    /// Todo 419: `Tea` and `Coffee` are enabled themselves, but `Drink` is not.
+    #[test]
+    fn stepping_in_a_disabled_branch_goes_nowhere() {
+        let tree = vec![
+            node("Food", vec![node("Bread", vec![]), node("Rice", vec![])]),
+            off(node(
+                "Drink",
+                vec![node("Tea", vec![]), node("Coffee", vec![])],
+            )),
+        ];
+        assert_eq!(step_in(&tree, &[1], Some(0), true), None);
+        assert_eq!(step_in(&tree, &[1], None, true), None);
+        assert_eq!(step_in(&tree, &[0], Some(0), true), Some(1));
+        assert_eq!(step_in(&tree, &[], Some(0), true), None);
     }
 
     #[test]

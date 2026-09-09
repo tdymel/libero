@@ -25,7 +25,7 @@ use crate::{
 use super::{
     nodes::{
         FlatPath, children_at, disabled_at, first_enabled, flatten_paths, join_labels,
-        last_enabled, node_at, step,
+        last_enabled, node_at, step, step_in,
     },
     option::CascaderNode,
 };
@@ -681,15 +681,12 @@ impl CascaderKeys {
                     Some((last, parents)) => (parents.to_vec(), Some(*last)),
                     None => (Vec::new(), None),
                 };
-                let column = children_at(nodes, &parents);
                 let from = match key {
                     Key::Home | Key::End => None,
                     _ => from,
                 };
                 let forward = matches!(key, Key::ArrowDown | Key::Home);
-                if let Some(index) =
-                    step(column.len(), |index| column[index].disabled, from, forward)
-                {
+                if let Some(index) = step_in(nodes, &parents, from, forward) {
                     let mut next = parents;
                     next.push(index);
                     cursor.set(next);
@@ -698,7 +695,9 @@ impl CascaderKeys {
             Key::ArrowRight if !paths_layout => {
                 event.prevent_default();
                 let column = children_at(nodes, &here);
+                // A disabled branch does not open, as a click on it does not.
                 if !here.is_empty()
+                    && !disabled_at(nodes, &here)
                     && let Some(index) = first_enabled(column)
                 {
                     let mut next = here;

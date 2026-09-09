@@ -2,6 +2,7 @@ mod base_props;
 mod color_variant;
 mod field_props;
 mod icons;
+mod neighbour;
 mod number_value;
 mod option_list;
 mod options;
@@ -28,6 +29,7 @@ pub(crate) use icons::{
     CopyIcon, EyeDropperIcon, EyeIcon, EyeOffIcon, MinusIcon, MoonIcon, PauseIcon, PersonIcon,
     PlayIcon, PlusIcon, SunIcon, SystemSchemeIcon, UploadIcon,
 };
+pub(crate) use neighbour::neighbour;
 pub use number_value::NumberValue;
 pub use option_list::{OptionItem, OptionList, OptionSource};
 pub use options::{OptionLabel, Options};

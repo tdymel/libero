@@ -5,10 +5,10 @@
 //! component it was not written against - `RovingTabindex` was written from
 //! APG, not from this component.
 
-use e2e::archetypes::{Orientation, RovingTabindex};
+use e2e::archetypes::{Orientation, RovingTabindex, reset_tab_position};
 use e2e::browser::block_on;
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, passes::keyboard};
+use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
 
 pub const TAB: &str = "[role=tab]";
 /// What the "second" state waits on. Not `TAB`: that is visible at rest, so
@@ -39,7 +39,7 @@ fn it_honours_the_roving_tabindex_contract() {
             RovingTabindex {
                 items: TAB,
                 orientation: Orientation::Horizontal,
-                // `TabsCore` wraps: `if at == last { 0 }`.
+                // `TabsCore` wraps: it steps through the shared `neighbour`.
                 wraps: true,
             }
             .assert_contract(&fixture.page)
@@ -49,6 +49,36 @@ fn it_honours_the_roving_tabindex_contract() {
             fixture
                 .console
                 .assert_clean(&format!("the tabs contract at {}", viewport.name()))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// Todo 403: from a selected disabled tab (`Account, Billing (disabled,
+/// selected), Admin`) Left and Right used to land on the same tab.
+#[test]
+fn the_arrows_part_ways_from_a_selected_disabled_tab() {
+    block_on(async {
+        for (key, expected) in [(keyboard::ARROW_LEFT, 0), (keyboard::ARROW_RIGHT, 2)] {
+            let fixture = Fixture::open("/tabs-disabled-selected", Viewport::Desktop)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            reset_tab_position(page).await.unwrap();
+            keyboard::press(page, keyboard::TAB).await.unwrap();
+            keyboard::press(page, key).await.unwrap();
+            let selected = format!(
+                "document.querySelector('[role=tablist] > [role=tab]:nth-child({})')\
+                 .getAttribute('aria-selected') === 'true'",
+                expected + 1
+            );
+            wait::for_js_true(page, &selected, "the arrow to select its neighbour")
+                .await
+                .unwrap_or_else(|e| panic!("{key:?} did not select tab {expected}: {e}"));
+            fixture
+                .console
+                .assert_clean("arrowing off a disabled tab")
                 .unwrap();
             fixture.close().await.unwrap();
         }

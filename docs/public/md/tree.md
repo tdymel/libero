@@ -133,7 +133,7 @@ Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 | `id` | `String` | required | The node's identity, used for expansion state and keyboard navigation. |
 | `data` | `T` | required | The caller's own data for this node. |
 | `children` | `Vec<TreeNode<T>>` | - | Nested nodes - an empty vec makes this a leaf. |
-| `disabled` | `bool` | `false` | Reachable by the arrow keys; nothing activates, expands or collapses it. |
+| `disabled` | `bool` | `false` | Reachable by the arrow keys; nothing activates, expands or collapses it. Its descendants are disabled too. |
 
 ### `TreeNodeRenderArgs<T>`
 
@@ -142,7 +142,7 @@ Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 | `id` | `String` | The node's id. |
 | `data` | `T` | The node's data. |
 | `expanded` | `bool` | `None` for a leaf - no children, no chevron, no `aria-expanded`. |
-| `disabled` | `bool` | Whether the node is disabled. |
+| `disabled` | `bool` | Whether the node is disabled, by its own flag or an ancestor's. |
 | `tabindex` | `&'static str` | Apply to any interactive element your content renders - the row is already the roving tab stop, without this a link/button adds a second one arrow keys never move. |
 | `depth` | `usize` | 0 at top level. Lets `render_node` take indentation over entirely. |
 

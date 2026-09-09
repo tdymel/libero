@@ -67,6 +67,10 @@ pub(super) struct TreeRowProps {
     pub active_id: Signal<Option<String>>,
     pub render_node: ErasedRenderNode,
     pub onexpandedchange: Option<EventHandler<HashSet<String>>>,
+    /// Under a disabled branch: the row acts disabled, as `TREE_ROW_SX`'s
+    /// subtree-wide `pointer-events` already makes it for the mouse.
+    #[props(default)]
+    pub ancestor_disabled: bool,
 }
 
 #[component]
@@ -74,7 +78,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     let node = &props.node;
     let has_children = node.has_children();
     let is_expanded = has_children.then(|| props.expanded.read().contains(&node.id));
-    let disabled = node.disabled;
+    let disabled = node.disabled || props.ancestor_disabled;
     let is_roving_active = props.active.as_deref().is_some_and(<[usize]>::is_empty);
     // The `<li>` carries the roving tabindex; `render_node`'s content is
     // always "-1", or the active row gets a second tab stop.
@@ -119,7 +123,8 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         }
     };
 
-    let row_states = states().with("disabled", disabled).into();
+    // The node's own flag: the ancestor's opacity already covers this row.
+    let row_states = states().with("disabled", node.disabled).into();
     let row = use_box()
         .framework_sx(&TREE_ROW_SX)
         .states(&row_states)
@@ -152,6 +157,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
                         active_id: props.active_id,
                         render_node: props.render_node.clone(),
                         onexpandedchange: props.onexpandedchange,
+                        ancestor_disabled: disabled,
                     }
                 }
             }

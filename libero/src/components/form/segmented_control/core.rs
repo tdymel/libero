@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, States, Variant,
-        common::{Orientation, focus_ring_sx},
+        common::{Orientation, focus_ring_sx, neighbour},
         form::Activation,
         inputs::{
             BUTTON_COLOR_VAR, BUTTON_HOVER_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS,
@@ -211,23 +211,6 @@ pub(crate) struct SegmentedControlView {
     pub attributes: Vec<Attribute>,
 }
 
-/// The next segment in `step`'s direction that can be picked, wrapping and
-/// stepping over the disabled ones. `None` when nothing else can be picked.
-fn neighbour(disabled: &[bool], current: usize, step: isize) -> Option<usize> {
-    let count = disabled.len() as isize;
-    if count == 0 {
-        return None;
-    }
-    let mut index = current as isize;
-    for _ in 0..count {
-        index = ((index + step) % count + count) % count;
-        if !disabled[index as usize] {
-            return Some(index as usize);
-        }
-    }
-    None
-}
-
 /// Scoped to this strip's own root, so two controls can hold the same segment
 /// count without colliding.
 fn focus_segment(element: &ElementHandle, root: &str, index: usize) {
@@ -400,7 +383,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
 
 #[cfg(test)]
 mod tests {
-    use super::{neighbour, segment_state};
+    use super::segment_state;
 
     /// Disabling the picked segment must not hide that it is picked: its
     /// radio stays checked, so the label has to say so too.
@@ -413,36 +396,5 @@ mod tests {
         assert_eq!(segment_state("size-md", true, false), "size-md disabled");
         assert_eq!(segment_state("size-md", false, true), "size-md checked");
         assert_eq!(segment_state("size-md", false, false), "size-md");
-    }
-
-    /// The arrow keys are answered in Rust now, so the wrap SSR cannot reach
-    /// is at least pinned here.
-    #[test]
-    fn stepping_wraps_at_both_ends() {
-        let all_on = [false, false, false];
-        assert_eq!(neighbour(&all_on, 0, 1), Some(1));
-        assert_eq!(neighbour(&all_on, 2, 1), Some(0));
-        assert_eq!(neighbour(&all_on, 0, -1), Some(2));
-        assert_eq!(neighbour(&all_on, 1, -1), Some(0));
-    }
-
-    /// A disabled segment renders but cannot be picked, so the arrows step
-    /// over it rather than landing on it.
-    #[test]
-    fn stepping_skips_the_disabled_segments() {
-        let middle_off = [false, true, false];
-        assert_eq!(neighbour(&middle_off, 0, 1), Some(2));
-        assert_eq!(neighbour(&middle_off, 2, -1), Some(0));
-
-        let only_last = [true, true, false];
-        assert_eq!(neighbour(&only_last, 2, 1), Some(2));
-    }
-
-    /// Nothing to move to is not a panic and not a wrap onto a disabled
-    /// segment - it is simply no move.
-    #[test]
-    fn stepping_nowhere_selects_nothing() {
-        assert_eq!(neighbour(&[], 0, 1), None);
-        assert_eq!(neighbour(&[true, true], 0, 1), None);
     }
 }

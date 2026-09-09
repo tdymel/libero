@@ -160,3 +160,34 @@ fn a_repeated_id_still_makes_one_tab_stop_on_its_first_row() {
         assert!(body[stop..second].contains(first), "{body}");
     }
 }
+
+/// Todo 430: a child of a disabled branch is disabled too, for the keys and
+/// `render_node` as for the mouse the branch's `pointer-events` already stops.
+#[test]
+fn a_disabled_branch_disables_its_children() {
+    fn app() -> Element {
+        let data = vec![
+            TreeNode::new("a", "Alpha".to_string())
+                .disabled(true)
+                .children(vec![TreeNode::new("a1", "Child".to_string())]),
+            TreeNode::new("b", "Beta".to_string()),
+        ];
+        rsx! {
+            LiberoProvider {
+                Tree {
+                    aria_label: "Files",
+                    data,
+                    default_expanded: ["a".to_string()].into(),
+                    render_node: move |args: TreeNodeRenderArgs<String>| rsx! {
+                        span { "data-probe": "{args.id}={args.disabled}" }
+                    },
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    assert!(body.contains(r#"data-probe="a1=true""#), "{body}");
+    assert!(body.contains(r#"data-probe="b=false""#), "{body}");
+    assert_eq!(body.matches(r#"aria-disabled="true""#).count(), 2, "{body}");
+}

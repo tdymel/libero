@@ -33,22 +33,26 @@ struct VisibleNode<'a> {
     label: &'a str,
 }
 
+/// `disabled` cascades: a node under a disabled branch is disabled too, as the
+/// row's `pointer-events` and `aria-disabled` already make it.
 fn push_visible_nodes<'a>(
     nodes: &'a [TreeNodeErased],
     expanded: &HashSet<String>,
-    parent_id: Option<&'a str>,
+    parent: Option<(&'a str, bool)>,
     out: &mut Vec<VisibleNode<'a>>,
 ) {
+    let (parent_id, inherited) = (parent.map(|(id, _)| id), parent.is_some_and(|(_, off)| off));
     for node in nodes {
+        let disabled = inherited || node.disabled;
         out.push(VisibleNode {
             id: &node.id,
             parent_id,
             has_children: node.has_children(),
-            disabled: node.disabled,
+            disabled,
             label: &node.label,
         });
         if node.has_children() && expanded.contains(&node.id) {
-            push_visible_nodes(&node.children, expanded, Some(node.id.as_str()), out);
+            push_visible_nodes(&node.children, expanded, Some((&node.id, disabled)), out);
         }
     }
 }
@@ -627,6 +631,23 @@ mod tests {
             horizontal(&order, a, true, false),
             Some(Horizontal::Go(Some("root".into())))
         );
+    }
+
+    /// Todo 430: the mouse already could not reach a child of a disabled
+    /// branch, so the keys treat it as disabled too.
+    #[test]
+    fn a_disabled_branch_disables_its_visible_children() {
+        let nodes = erase_nodes::<String>(&[
+            TreeNode::new("a", "a".to_string())
+                .disabled(true)
+                .children(vec![TreeNode::new("a1", "a1".to_string())]),
+            TreeNode::new("b", "b".to_string()),
+        ]);
+        let open: HashSet<String> = ["a".to_string()].into();
+        let order = visible_order(&nodes, &open);
+        let disabled: Vec<_> = order.iter().map(|node| (node.id, node.disabled)).collect();
+        assert_eq!(disabled, [("a", true), ("a1", true), ("b", false)]);
+        assert_eq!(order[1].parent_id, Some("a"));
     }
 
     #[test]

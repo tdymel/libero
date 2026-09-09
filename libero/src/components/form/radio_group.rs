@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, OptionSource, Options, States,
-        common::{Orientation, field_props, names_itself, use_name_warning},
+        common::{Orientation, field_props, names_itself, neighbour, use_name_warning},
         form::{Radio, use_bound, use_field},
         layout::use_box,
     },
@@ -39,23 +39,6 @@ static RADIO_GROUP_SX: StaticSx = StaticSx::new(|| {
 fn focus_option(root: &ElementHandle, index: usize) {
     let selector = format!("input[data-radio-index=\"{index}\"]");
     let _ = root.query_selector(&selector).and_then(|el| el.focus());
-}
-
-/// The next option in `step`'s direction that can be picked, wrapping and
-/// stepping over the disabled ones. `None` when nothing else can be picked.
-fn neighbour(disabled: &[bool], current: usize, step: isize) -> Option<usize> {
-    let count = disabled.len() as isize;
-    if count == 0 {
-        return None;
-    }
-    let mut index = current as isize;
-    for _ in 0..count {
-        index = ((index + step) % count + count) % count;
-        if !disabled[index as usize] {
-            return Some(index as usize);
-        }
-    }
-    None
 }
 
 field_props! {

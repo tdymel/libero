@@ -28,9 +28,9 @@ use libero::{
     LiberoProvider,
     components::{
         Anchor, Autocomplete, Button, Carousel, Code, CodeBlock, Collapse, Dialog, Flex, Mark,
-        NotificationData, NotificationLive, NotificationOptions, Notifications, Options, Slider,
-        SliderChangeEvent, Splitter, Tabs, Text, TextField, Tooltip, Tree, TreeItem, TreeNode,
-        TreeNodeRenderArgs, use_notifications,
+        NotificationData, NotificationLive, NotificationOptions, Notifications, OptionList,
+        Options, Slider, SliderChangeEvent, Splitter, Tabs, Text, TextField, Tooltip, Tree,
+        TreeItem, TreeNode, TreeNodeRenderArgs, use_notifications,
     },
     hooks::{ModalScope, use_modal},
     theme::AutoClose,
@@ -56,6 +56,8 @@ enum Route {
     SliderPage {},
     #[route("/tabs")]
     TabsPage {},
+    #[route("/tabs-disabled-selected")]
+    TabsDisabledSelectedPage {},
     #[route("/carousel")]
     CarouselPage {},
     #[route("/modal")]
@@ -476,6 +478,26 @@ fn TabsPage() -> Element {
             Tabs {
                 value: section(),
                 onchange: move |next| section.set(next),
+                panel: |s: Section| rsx! {
+                    Text { "panel for {s.label()}" }
+                },
+            }
+        }
+    }
+}
+
+/// Todo 403: the selected tab is disabled, which a controlled `value` allows.
+/// The arrows must still part ways from it.
+#[component]
+fn TabsDisabledSelectedPage() -> Element {
+    let mut section = use_signal(|| Section::Billing);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Tabs {
+                value: section(),
+                onchange: move |next| section.set(next),
+                options: OptionList::from_options().disabling(|s| *s == Section::Billing),
                 panel: |s: Section| rsx! {
                     Text { "panel for {s.label()}" }
                 },
