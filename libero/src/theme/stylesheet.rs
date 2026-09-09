@@ -240,6 +240,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         lightbox,
         avatar,
         avatar_group,
+        avatar_labels: _,
         kbd,
         menu,
         menubar,

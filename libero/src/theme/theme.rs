@@ -104,6 +104,8 @@ pub struct Theme {
     pub lightbox: LightboxDefaults,
     pub avatar: AvatarDefaults,
     pub avatar_group: AvatarGroupDefaults,
+    /// `AvatarGroup`'s overflow chip text. Swapped whole for a locale.
+    pub avatar_labels: AvatarLabels,
     pub mark: MarkDefaults,
     pub kbd: KbdDefaults,
     pub menu: MenuDefaults,
@@ -230,6 +232,7 @@ impl Theme {
         lightbox: LightboxDefaults::DEFAULT,
         avatar: AvatarDefaults::DEFAULT,
         avatar_group: AvatarGroupDefaults::DEFAULT,
+        avatar_labels: AvatarLabels::ENGLISH,
         mark: MarkDefaults::DEFAULT,
         kbd: KbdDefaults::DEFAULT,
         menu: MenuDefaults::DEFAULT,

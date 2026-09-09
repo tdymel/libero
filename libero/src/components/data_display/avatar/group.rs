@@ -10,7 +10,7 @@ use crate::{
     },
     hooks::use_theme,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{AVATAR_GROUP_INDEX, AVATAR_GROUP_SPACING, Size, SizeCss},
+    theme::{AVATAR_GROUP_INDEX, AVATAR_GROUP_SPACING, AvatarLabels, Size, SizeCss},
 };
 
 /// How far the focused overflow chip rises above the members. The chip paints
@@ -71,6 +71,9 @@ base_props! {
 /// what lets it count them, hide the overflow behind one chip, and give the
 /// row its paint order. The chip is focusable, so the names it hides are
 /// reachable by keyboard and not only by pointer.
+///
+/// The chip's text comes from the theme's [`AvatarLabels`], which a locale
+/// swaps whole.
 #[component]
 pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     let theme = use_theme();
@@ -152,6 +155,9 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
             .map(|person| person.name.as_str())
             .collect();
         let names = names.join(", ");
+        let labels = &theme.avatar_labels;
+        let count = AvatarLabels::fill(labels.count_label, hidden, &names);
+        let more = AvatarLabels::fill(labels.more_label, hidden, &names);
 
         let chip_states = States::default()
             .with("grouped", true)
@@ -163,11 +169,11 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
             .attr("role", "img")
             // The same names the tooltip shows. A tooltip clipped by an
             // `overflow: hidden` ancestor is then cosmetic, not a loss.
-            .attr("aria-label", format!("{hidden} more: {names}"))
+            .attr("aria-label", more)
             // Focusable so the tooltip is reachable without a pointer. One
             // tab stop per group, which is what the hidden names cost.
             .attr("tabindex", "0")
-            .render(HtmlTag::Span, Vec::new(), rsx! { "+{hidden}" });
+            .render(HtmlTag::Span, Vec::new(), rsx! { "{count}" });
 
         rsx! {
             Tooltip { label: rsx! { "{names}" }, {chip} }
