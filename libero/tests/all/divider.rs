@@ -18,8 +18,10 @@ fn divider_renders_as_a_separator() {
     }
 
     let html = render(app);
+    let attributes = attributes_of(&html, "div");
 
-    assert!(attributes_of(&html, "div")["style"].contains("--lsx-divider-color"));
+    assert_eq!(attributes["role"], "separator", "{html}");
+    assert!(attributes["style"].contains("--lsx-divider-color"));
 }
 
 #[test]

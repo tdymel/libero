@@ -12,9 +12,9 @@ use libero::{
     components::{
         ActionIcon, Box, Button, Checkbox, Chip, CodeBlock, Collapse, ColorCode, ColorField,
         Dialog, FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NativeSelect, NumberField,
-        OptionList, Options, PhoneField, PinField, RadioGroup, RangeSlider, Rule, SegmentedControl,
-        SelectionArgs, Slider, SliderChangeEvent, Tabs, TagsField, TextField, not_empty, use_form,
-        use_menu,
+        OptionList, Options, PasswordField, PhoneField, PinField, RadioGroup, RangeSlider, Rule,
+        SegmentedControl, SelectionArgs, Slider, SliderChangeEvent, Tabs, TagsField, TextField,
+        not_empty, use_form, use_menu,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -556,6 +556,61 @@ fn resolving_from_inside_a_modal_settles_its_opening() {
     );
 }
 
+/// The `.await` path of the same opening: the task parks on its waker before
+/// the click, and only the resolve wakes it.
+#[test]
+fn awaiting_an_opening_yields_what_the_modal_resolved() {
+    #[component]
+    fn Opener(outcome: Signal<Option<Option<bool>>>) -> Element {
+        let modal = use_modal(|s: ModalScope<(), bool>| {
+            rsx! {
+                Dialog { title: "Delete?",
+                    Button { onclick: move |_| s.resolve(true), "Yes" }
+                }
+            }
+        });
+        use_hook(move || {
+            let mut outcome = outcome;
+            let opening = modal.open();
+            spawn(async move { outcome.set(Some(opening.await)) });
+        });
+
+        rsx! {}
+    }
+
+    fn app() -> Element {
+        let outcome = use_signal(|| None);
+
+        rsx! {
+            LiberoProvider { Opener { outcome } }
+            "{outcome:?}"
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    dom.render_immediate(&mut find);
+    dom.process_events();
+    let confirm = find.click.expect("registered no click listener");
+
+    let html = dioxus_ssr::render(&dom);
+    assert!(!html.contains("Some("), "settled before the click: {html}");
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), confirm);
+    dom.process_events();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+    let html = dioxus_ssr::render(&dom);
+    assert!(html.contains("Some(Some(true))"), "got {html}");
+    assert!(
+        !html.contains("Delete?"),
+        "the modal should be gone: {html}"
+    );
+}
+
 /// Every listener name registered during a rebuild, in order.
 #[derive(Default)]
 struct Listeners(Vec<String>);
@@ -637,6 +692,36 @@ fn a_failed_copy_is_announced() {
     };
     assert!(!status(&before).contains("Copy failed"), "{before}");
     assert!(status(&after).contains("Copy failed"), "{after}");
+}
+
+/// The reveal button flips the input's `type` and its own name, both ways.
+#[test]
+fn clicking_the_reveal_button_toggles_the_password() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { PasswordField { label: "Password" } } }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let reveal = find.click.expect("registered no click listener");
+    let state = |dom: &VirtualDom| {
+        let html = dioxus_ssr::render(dom);
+        let button = attributes_of(&html, "button");
+        (
+            attributes_of(&html, "input")["type"].clone(),
+            button["aria-label"].clone(),
+        )
+    };
+
+    assert_eq!(state(&dom), ("password".into(), "Show password".into()));
+    for expected in [("text", "Hide password"), ("password", "Show password")] {
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), reveal);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        assert_eq!(state(&dom), (expected.0.into(), expected.1.into()));
+    }
 }
 
 fn marquee_paused(html: &str) -> (bool, bool) {
@@ -1724,6 +1809,64 @@ fn a_radio_group_never_puts_its_tab_stop_on_a_disabled_option() {
     assert_eq!(stop(&inputs), [0], "{inputs:?}");
     let (inputs, _) = tier_press(Some(Tier::Pro), &[], Key::Tab);
     assert_eq!(stop(&inputs), [1], "{inputs:?}");
+}
+
+fn tier_segments() -> Element {
+    rsx! {
+        LiberoProvider {
+            SegmentedControl {
+                aria_label: "Tier",
+                value: TIER.get(),
+                options: OptionList::from_options()
+                    .disabling(|tier| TIERS_OFF.with_borrow(|off| off.contains(tier))),
+                onchange: move |next: Tier| heard(next),
+            }
+        }
+    }
+}
+
+/// Mounts `tier_segments` with `Pro` picked and disabled, and returns what one
+/// `key` on segment `at` picked.
+fn segment_press_around_a_disabled_pick(at: usize, key: Key) -> Vec<String> {
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    TIER.set(Some(Tier::Pro));
+    TIERS_OFF.set(vec![Tier::Pro]);
+    HEARD.with_borrow_mut(Vec::clear);
+    let mut dom = VirtualDom::new(tier_segments);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    assert_eq!(find.keydown.len(), 3, "one keydown per segment");
+    dom.runtime().handle_event(
+        "keydown",
+        Event::new(key_event(key), true),
+        find.keydown[at],
+    );
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    HEARD.with_borrow(Clone::clone)
+}
+
+/// Unlike Tabs (todo 403), a disabled pick does not send both arrows the same
+/// way: each neighbour steps past it in its own direction.
+#[test]
+fn segment_arrows_step_past_a_disabled_pick_both_ways() {
+    assert_eq!(
+        segment_press_around_a_disabled_pick(0, Key::ArrowRight),
+        ["Team"]
+    );
+    assert_eq!(
+        segment_press_around_a_disabled_pick(2, Key::ArrowLeft),
+        ["Free"]
+    );
+    assert_eq!(
+        segment_press_around_a_disabled_pick(0, Key::ArrowLeft),
+        ["Team"]
+    );
+    assert_eq!(
+        segment_press_around_a_disabled_pick(2, Key::ArrowRight),
+        ["Free"]
+    );
+    // The disabled radio takes no focus in a browser, and answers no key here.
+    assert!(segment_press_around_a_disabled_pick(1, Key::ArrowRight).is_empty());
 }
 
 /// Two `keep_mounted: false` collapses, one inside the other, both closing.
