@@ -6,9 +6,12 @@
 
 mod autocomplete;
 mod button;
+mod calendar;
 mod carousel;
+mod cascader;
 mod code;
 mod collapse;
+mod color_picker;
 mod drawer;
 mod floating_window;
 mod focus_contrast;

@@ -257,6 +257,8 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
                         .some(n => n.nodeType === Node.TEXT_NODE && /[\p{{L}}\p{{N}}]/u.test(n.textContent));
                     if (!owns) continue;
                     if (el.closest('[aria-hidden=true]')) continue;
+                    // Inactive text is exempt from 1.4.3, and axe skips it the same way.
+                    if (el.closest('[aria-disabled=true]')) continue;
                     const style = getComputedStyle(el);
                     if (style.display === 'none' || style.visibility === 'hidden'
                         || style.opacity === '0') continue;

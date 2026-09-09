@@ -1,0 +1,161 @@
+---
+source: e2e/src/suite.rs
+description: calendar at desktop (rest)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+button "Previous month"
+button "March 2026" [live=polite]
+  StaticText "March 2026"
+button "Next month"
+grid "March 2026"
+  row "Monday Tuesday Wednesday Thursday Friday Saturday Sunday"
+    columnheader "Monday"
+      StaticText "Mo"
+    columnheader "Tuesday"
+      StaticText "Tu"
+    columnheader "Wednesday"
+      StaticText "We"
+    columnheader "Thursday"
+      StaticText "Th"
+    columnheader "Friday"
+      StaticText "Fr"
+    columnheader "Saturday"
+      StaticText "Sa"
+    columnheader "Sunday"
+      StaticText "Su"
+  row "23 24 25 26 27 28 1"
+    gridcell "23" [selected=false]
+      button "23"
+        StaticText "23"
+    gridcell "24" [selected=false]
+      button "24"
+        StaticText "24"
+    gridcell "25" [selected=false]
+      button "25"
+        StaticText "25"
+    gridcell "26" [selected=false]
+      button "26"
+        StaticText "26"
+    gridcell "27" [selected=false]
+      button "27"
+        StaticText "27"
+    gridcell "28" [selected=false]
+      button "28"
+        StaticText "28"
+    gridcell "1" [selected=false]
+      button "1"
+        StaticText "1"
+  row "2 3 4 5 6 7 8"
+    gridcell "2" [selected=false]
+      button "2"
+        StaticText "2"
+    gridcell "3" [selected=false]
+      button "3"
+        StaticText "3"
+    gridcell "4" [selected=false]
+      button "4"
+        StaticText "4"
+    gridcell "5" [selected=false]
+      button "5"
+        StaticText "5"
+    gridcell "6" [selected=false]
+      button "6"
+        StaticText "6"
+    gridcell "7" [selected=false]
+      button "7"
+        StaticText "7"
+    gridcell "8" [selected=false]
+      button "8"
+        StaticText "8"
+  row "9 10 11 12 13 14 15"
+    gridcell "9" [selected=false]
+      button "9"
+        StaticText "9"
+    gridcell "10" [selected=false]
+      button "10"
+        StaticText "10"
+    gridcell "11" [selected=false]
+      button "11"
+        StaticText "11"
+    gridcell "12" [selected=false]
+      button "12"
+        StaticText "12"
+    gridcell "13" [selected=false]
+      button "13"
+        StaticText "13"
+    gridcell "14" [selected=false]
+      button "14"
+        StaticText "14"
+    gridcell "15" [selected=false]
+      button "15"
+        StaticText "15"
+  row "16 17 18 19 20 21 22"
+    gridcell "16" [selected=false]
+      button "16"
+        StaticText "16"
+    gridcell "17" [selected=false]
+      button "17"
+        StaticText "17"
+    gridcell "18" [selected]
+      button "18"
+        StaticText "18"
+    gridcell "19" [selected=false]
+      button "19"
+        StaticText "19"
+    gridcell "20" [selected=false]
+      button "20"
+        StaticText "20"
+    gridcell "21" [selected=false]
+      button "21"
+        StaticText "21"
+    gridcell "22" [selected=false]
+      button "22"
+        StaticText "22"
+  row "23 24 25 26 27 28 29"
+    gridcell "23" [selected=false]
+      button "23"
+        StaticText "23"
+    gridcell "24" [selected=false]
+      button "24"
+        StaticText "24"
+    gridcell "25" [selected=false]
+      button "25"
+        StaticText "25"
+    gridcell "26" [selected=false]
+      button "26"
+        StaticText "26"
+    gridcell "27" [selected=false]
+      button "27"
+        StaticText "27"
+    gridcell "28" [selected=false]
+      button "28"
+        StaticText "28"
+    gridcell "29" [selected=false]
+      button "29"
+        StaticText "29"
+  row "30 31 1 2 3 4 5"
+    gridcell "30" [selected=false]
+      button "30"
+        StaticText "30"
+    gridcell "31" [selected=false]
+      button "31"
+        StaticText "31"
+    gridcell "1" [selected=false]
+      button "1"
+        StaticText "1"
+    gridcell "2" [selected=false]
+      button "2"
+        StaticText "2"
+    gridcell "3" [selected=false]
+      button "3"
+        StaticText "3"
+    gridcell "4" [selected=false]
+      button "4"
+        StaticText "4"
+    gridcell "5" [selected=false]
+      button "5"
+        StaticText "5"
+button "After"
+  StaticText "After"

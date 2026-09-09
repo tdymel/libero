@@ -1,0 +1,10 @@
+---
+source: e2e/src/suite.rs
+description: cascader at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Place"
+generic
+  combobox "Place" [expanded=false] [haspopup=listbox]
+paragraph

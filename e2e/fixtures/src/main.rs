@@ -26,9 +26,12 @@
 
 mod autocomplete;
 mod button;
+mod calendar;
 mod carousel;
+mod cascader;
 mod code;
 mod collapse;
+mod color_picker;
 mod common;
 mod drawer;
 mod floating_window;
@@ -66,9 +69,12 @@ type Routes = &'static [(&'static str, fn() -> Element)];
 const FIXTURES: &[Routes] = &[
     autocomplete::ROUTES,
     button::ROUTES,
+    calendar::ROUTES,
     carousel::ROUTES,
+    cascader::ROUTES,
     code::ROUTES,
     collapse::ROUTES,
+    color_picker::ROUTES,
     drawer::ROUTES,
     floating_window::ROUTES,
     focus_contrast::ROUTES,

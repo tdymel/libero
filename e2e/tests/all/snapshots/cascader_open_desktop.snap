@@ -1,0 +1,20 @@
+---
+source: e2e/src/suite.rs
+description: cascader at desktop (open)
+expression: tree
+---
+LabelText
+  StaticText "Place"
+generic
+  combobox "Place" [expanded] [haspopup=listbox]
+paragraph
+generic
+  generic
+    listbox "Place"
+      option "Europe" [selected]
+        StaticText "Europe"
+      option "Asia" [disabled] [selected=false]
+        StaticText "Asia"
+      option "Oceania" [selected=false]
+        StaticText "Oceania"
+--> aria-controls [id="lsx-N-listbox-0"] (rendered above)

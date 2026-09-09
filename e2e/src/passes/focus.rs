@@ -269,10 +269,14 @@ async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
                     //
                     // An overlay covers its owner, its containing block, so its
                     // ring sits outside the owner: start at the owner's parent.
+                    //
+                    // An inset ring (`inset_focus_ring_sx`) lies wholly on the
+                    // element's own fill: start at the element.
                     let against = 'rgba(0, 0, 0, 0)';
+                    const inset = s.outlineStyle !== 'none' && (parseFloat(s.outlineOffset) || 0) + (parseFloat(s.outlineWidth) || 0) <= 0;
                     const from = overlay
                         ? (el.offsetParent || el.parentElement).parentElement
-                        : el.parentElement;
+                        : inset ? el : el.parentElement;
                     for (let p = from; p; p = p.parentElement) {{
                         const bg = getComputedStyle(p).backgroundColor;
                         if (bg && !bg.startsWith('rgba(0, 0, 0, 0')) {{ against = bg; break; }}

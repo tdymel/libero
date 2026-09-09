@@ -68,6 +68,18 @@ pub const HOME: Key = Key {
     vk: 36,
     text: None,
 };
+pub const PAGE_UP: Key = Key {
+    key: "PageUp",
+    code: "PageUp",
+    vk: 33,
+    text: None,
+};
+pub const PAGE_DOWN: Key = Key {
+    key: "PageDown",
+    code: "PageDown",
+    vk: 34,
+    text: None,
+};
 pub const ARROW_LEFT: Key = Key {
     key: "ArrowLeft",
     code: "ArrowLeft",
