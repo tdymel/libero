@@ -7,8 +7,15 @@ use libero::{
     components::{ColorCode, ColorField, DateField, Flex, SliderChangeEvent},
 };
 
+use crate::Routes;
+
+pub const ROUTES: Routes = &[
+    ("/color-field", || rsx! { ColorFieldPage {} }),
+    ("/date-field", || rsx! { DateFieldPage {} }),
+];
+
 #[component]
-pub fn ColorFieldPage() -> Element {
+fn ColorFieldPage() -> Element {
     let mut color = use_signal(|| "#1c7ed6".parse::<ColorCode>().unwrap());
 
     rsx! {
@@ -29,7 +36,7 @@ pub fn ColorFieldPage() -> Element {
 }
 
 #[component]
-pub fn DateFieldPage() -> Element {
+fn DateFieldPage() -> Element {
     let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 9, 25));
 
     rsx! {

@@ -16,6 +16,30 @@
 
 use dioxus::prelude::*;
 
+use crate::Routes;
+
+pub const ROUTES: Routes = &[
+    ("/broken/focus-ring", || rsx! { NoFocusRing {} }),
+    ("/broken/target-size", || rsx! { TinyTarget {} }),
+    ("/broken/target-spacing", || rsx! { CrampedTargets {} }),
+    ("/broken/contrast", || rsx! { LowContrast {} }),
+    ("/broken/console", || rsx! { ConsoleError {} }),
+    ("/broken/faint-field-ring", || rsx! { FaintFieldRing {} }),
+    ("/broken/console-warning", || rsx! { ConsoleWarning {} }),
+    ("/broken/roving", || rsx! { ManyTabStops {} }),
+    ("/broken/focus-return", || rsx! { NoFocusReturn {} }),
+    ("/broken/dismissal", || rsx! { PhantomPanel {} }),
+    (
+        "/broken/activedescendant",
+        || rsx! { DanglingActiveDescendant {} },
+    ),
+    (
+        "/broken/activedescendant-missing",
+        || rsx! { MissingActiveDescendant {} },
+    ),
+    ("/broken/static-highlight", || rsx! { StaticHighlight {} }),
+];
+
 /// WCAG 2.4.7 Focus Visible: a control that removes its own indicator.
 #[component]
 pub fn NoFocusRing() -> Element {

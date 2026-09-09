@@ -11,7 +11,7 @@
 //! named**, not for any reason. A plant that made the pass fail somewhere
 //! earlier would prove nothing about the check it was aimed at; that is how the
 //! first `DanglingActiveDescendant` fixture passed while testing nothing
-//! (`fixtures/src/broken.rs`).
+//! (`fixtures/src/negative.rs`).
 //!
 //! Most plants are injected from here after the page mounts - a stylesheet or a
 //! capturing listener - so the library is untouched and the fixture is the one
