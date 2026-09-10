@@ -95,10 +95,16 @@ impl<T: FromStr + Copy + Ord> FromStr for DateRange<T> {
     }
 }
 
-/// Typed range text split at its separator: an en or em dash, ` - ` with
-/// spaces, or ` to `. The end is `None` when nothing follows.
-pub(super) fn split_range(text: &str) -> (&str, Option<&str>) {
-    for separator in ["–", "—", " - ", " to "] {
+/// Typed range text split at its separator: the theme's `separator` first,
+/// then an en or em dash, ` - ` with spaces, or ` to `. The end is `None`
+/// when nothing follows.
+pub(super) fn split_range<'a>(text: &'a str, separator: &str) -> (&'a str, Option<&'a str>) {
+    // Unspaced only without ASCII: `-` or `to` would split `2026-09-01` or `October`.
+    let bare = separator.trim();
+    let bare = (bare != separator && !bare.is_ascii()).then_some(bare);
+    let theme = [Some(separator), bare].into_iter().flatten();
+    let separators = theme.chain(["–", "—", " - ", " to "]);
+    for separator in separators.filter(|separator| !separator.is_empty()) {
         if let Some((start, end)) = text.split_once(separator) {
             let end = end.trim();
             return (start.trim(), (!end.is_empty()).then_some(end));
@@ -149,13 +155,30 @@ mod tests {
 
     #[test]
     fn typed_ranges_split_at_any_separator() {
-        assert_eq!(split_range("1.9 – 5.9"), ("1.9", Some("5.9")));
-        assert_eq!(split_range("1.9-5.9"), ("1.9-5.9", None));
+        let split = |text| split_range(text, " – ");
+        assert_eq!(split("1.9 – 5.9"), ("1.9", Some("5.9")));
+        assert_eq!(split("1.9-5.9"), ("1.9-5.9", None));
         assert_eq!(
-            split_range("2026-09-01 - 2026-09-05"),
+            split("2026-09-01 - 2026-09-05"),
             ("2026-09-01", Some("2026-09-05"))
         );
-        assert_eq!(split_range("sep 1 to sep 5"), ("sep 1", Some("sep 5")));
-        assert_eq!(split_range("1.9 – "), ("1.9", None));
+        assert_eq!(split("sep 1 to sep 5"), ("sep 1", Some("sep 5")));
+        assert_eq!(split("1.9 – "), ("1.9", None));
+    }
+
+    #[test]
+    fn typed_ranges_split_at_the_theme_separator() {
+        let split = |text| split_range(text, " ～ ");
+        assert_eq!(split("9月1日 ～ 9月5日"), ("9月1日", Some("9月5日")));
+        assert_eq!(split("9月1日～9月5日"), ("9月1日", Some("9月5日")));
+        assert_eq!(split("9月1日 ～ "), ("9月1日", None));
+        // The defaults still split.
+        assert_eq!(split("9月1日 – 9月5日"), ("9月1日", Some("9月5日")));
+
+        // An ASCII separator only splits with its spaces.
+        let split = |text| split_range(text, " bis ");
+        assert_eq!(split("1.9 bis 5.9"), ("1.9", Some("5.9")));
+        assert_eq!(split("1.9bis5.9"), ("1.9bis5.9", None));
+        assert_eq!(split_range("1.9 – 5.9", ""), ("1.9", Some("5.9")));
     }
 }

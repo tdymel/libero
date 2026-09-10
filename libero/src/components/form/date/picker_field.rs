@@ -167,7 +167,7 @@ impl<T: FieldValue + Ord> FieldValue for DateRange<T> {
         current: Option<Self>,
         today: Option<NaiveDate>,
     ) -> Result<Self, Unreadable> {
-        let (start, end) = split_range(text);
+        let (start, end) = split_range(text, formats.names.range_separator);
         let start = T::read(start, formats, current.map(|range| range.start), today)?;
         let end = end
             .map(|end| {
@@ -550,5 +550,36 @@ mod tests {
         assert!(css.contains("box-shadow:var(--lsx-shadow-lg);"), "{css}");
         assert!(!css.contains("var(--lsx-paper-radius)"), "{css}");
         assert!(!css.contains("var(--lsx-paper-shadow)"), "{css}");
+    }
+
+    static WAVE_DASH: DateDefaults = DateDefaults {
+        format: "YYYY年M月D日",
+        range_separator: " ～ ",
+        ..DateDefaults::ENGLISH
+    };
+
+    fn wave_dash_formats() -> Formats {
+        Formats {
+            date: WAVE_DASH.format.to_string(),
+            time: WAVE_DASH.time_format.to_string(),
+            names: &WAVE_DASH,
+        }
+    }
+
+    #[test]
+    fn ranges_read_back_what_they_show_with_the_theme_separator() {
+        let formats = wave_dash_formats();
+        let day = |day| NaiveDate::from_ymd_opt(2026, 9, day).expect("a real day");
+        let range = DateRange::new(day(1), Some(day(5)));
+        let text = range.show(&formats);
+        assert_eq!(text, "2026年9月1日 ～ 2026年9月5日");
+        assert_eq!(DateRange::read(&text, &formats, None, None), Ok(range));
+
+        let moments = DateRange::new(
+            day(1).and_hms_opt(9, 0, 0).expect("a real time"),
+            Some(day(5).and_hms_opt(17, 30, 0).expect("a real time")),
+        );
+        let text = moments.show(&formats);
+        assert_eq!(DateRange::read(&text, &formats, None, None), Ok(moments));
     }
 }

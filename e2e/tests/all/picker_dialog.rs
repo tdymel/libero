@@ -63,6 +63,39 @@ fn arrow_down_enters_the_dialog_and_escape_returns_to_the_input() {
     });
 }
 
+/// A theme's own range separator reads back, typed with or without its spaces.
+#[test]
+fn a_typed_range_reads_at_the_theme_separator() {
+    block_on(async {
+        let route = "/date-range-field";
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#date-range-field", 5)
+            .await
+            .unwrap();
+        keyboard::type_text(page, "Sep 1, 2026～Sep 5, 2026")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('input[name=stay]')?.value === '2026-09-01/2026-09-05'",
+            "the typed range to post",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#date-range-field')?.value === 'September 1, 2026 ～ September 5, 2026'",
+            "the field to show the range with the theme separator",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean(route).unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn dialog_contract(page: &Page, input: &str) -> Result<()> {
     // Focus alone opens it, and focus stays in the input.
     keyboard::tab_to(page, input, 5).await?;
