@@ -16,6 +16,7 @@ fn it_meets_the_baseline() {
     Suite::new("color_scheme_button", "/color-scheme-button")
         .focusable(BUTTON)
         .targets(BUTTON)
+        .dark_snapshot("the label names the next scheme, which follows the platform's")
         .run();
 }
 

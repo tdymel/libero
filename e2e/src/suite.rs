@@ -80,6 +80,8 @@ pub struct Suite {
     /// how a coverage hole comes back.
     coverage_waived: Option<&'static str>,
     snapshot: bool,
+    /// `Some(why)` when the dark run keeps baselines of its own.
+    dark_snapshot: Option<&'static str>,
     states: Vec<State>,
     viewports: Vec<Viewport>,
     tab_budget: usize,
@@ -102,6 +104,7 @@ impl Suite {
             covers: Vec::new(),
             coverage_waived: None,
             snapshot: true,
+            dark_snapshot: None,
             states: Vec::new(),
             viewports: Viewport::ALL.to_vec(),
             tab_budget: 10,
@@ -253,6 +256,20 @@ impl Suite {
     /// that scrolls anything.
     pub fn reduced_motion(mut self) -> Self {
         self.reduced_motion = true;
+        self
+    }
+
+    /// Give the dark run baselines of its own (`<name>_<state>_<viewport>_dark`),
+    /// for a unit whose tree names the scheme, like `ColorSchemeButton`'s
+    /// label. By default the dark tree must equal the light one. The reason
+    /// is required, as for [`Suite::no_contrast_coverage`].
+    pub fn dark_snapshot(mut self, why: &'static str) -> Self {
+        assert!(
+            !why.trim().is_empty(),
+            "{}: a separate dark baseline must say why the tree differs",
+            self.name
+        );
+        self.dark_snapshot = Some(why);
         self
     }
 
@@ -554,11 +571,17 @@ impl Suite {
     /// slider would look there.
     async fn take_snapshot(&self, fixture: &Fixture, state: &str) -> anyhow::Result<()> {
         let tree = ax::snapshot(&fixture.page, self.root).await?;
-        let name = format!("{}_{}_{}", self.name, state, fixture.viewport.name());
+        let mut name = format!("{}_{}_{}", self.name, state, fixture.viewport.name());
+        let mut described = state.to_string();
+        // Otherwise the dark tree is held to the light baseline.
+        if fixture.scheme == Scheme::Dark && self.dark_snapshot.is_some() {
+            name.push_str("_dark");
+            described.push_str(", dark");
+        }
         insta::with_settings!({
             snapshot_path => "../tests/all/snapshots",
             prepend_module_to_snapshot => false,
-            description => format!("{} at {} ({state})", self.name, fixture.viewport.name()),
+            description => format!("{} at {} ({described})", self.name, fixture.viewport.name()),
         }, {
             insta::assert_snapshot!(name, tree);
         });
