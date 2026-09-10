@@ -11,13 +11,13 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Burger, Button, ColorSchemeButton, Container, Flex, Header, Image, Kbd,
+        ActionIcon, Box, Burger, Button, ColorSchemeButton, Container, Flex, Header, Image, Kbd,
         Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_spotlight,
     },
     hooks::use_element,
     platform::ElementApi,
     sx::sx,
-    theme::{HEADER_HEIGHT, ICON_SIZE, PAPER_BACKGROUND, Size, ThemeSet},
+    theme::{HEADER_HEIGHT, ICON_SIZE, PAPER_BACKGROUND, Size, ThemeSet, Z_INDEX_HEADER},
 };
 
 mod components;
@@ -279,6 +279,7 @@ fn App() -> Element {
 fn AppShell() -> Element {
     let mut open = use_signal(|| false);
     let burger = use_element();
+    let content = use_element();
     // The docs search: every page, Ctrl/Cmd+K from anywhere.
     let pages = use_hook(nav::page_actions);
     let search = use_spotlight(SpotlightOptions {
@@ -305,6 +306,33 @@ fn AppShell() -> Element {
                     let _ = burger.query_selector("button").and_then(|button| button.focus());
                 }
             },
+            // WCAG 2.4.1: the first tab stop skips the header and the nav.
+            // Off-screen until focused; the click moves focus itself, so the
+            // router never sees the fragment.
+            Box {
+                sx: sx()
+                    .selector(
+                        "& > a",
+                        sx().position("fixed")
+                            .top("8px")
+                            .left("8px")
+                            .z_index(format!("calc({} + 1)", Z_INDEX_HEADER.value()))
+                            .padding("sm")
+                            .border_radius("sm")
+                            .background("surface")
+                            .color("primary.7")
+                            .transform("translateY(-200%)"),
+                    )
+                    .selector("& > a:focus", sx().transform("none")),
+                a {
+                    href: "#docs-main",
+                    onclick: move |event: MouseEvent| {
+                        event.prevent_default();
+                        let _ = content.query_selector("main").and_then(|main| main.focus());
+                    },
+                    "Skip to content"
+                }
+            }
             Header {
                 // No `color`: the header is the page's own surface, the way
                 // Mantine's is, so it reads as chrome rather than as a
@@ -450,31 +478,38 @@ fn AppShell() -> Element {
                         // *row* wider instead of just that one code block
                         // scrolling internally like it's meant to.
                         .min_width("0"),
-                    Container {
-                        component: "main",
-                        size: "lg",
-                        // Unreachable behind the open mobile drawer
-                        // otherwise - still in the DOM, just visually
-                        // covered. No-op at desktop widths, since `open`
-                        // never becomes true there. `inert` is a boolean
-                        // HTML attribute - presence (any value, including
-                        // "false") is what enables it, so it must be omitted
-                        // entirely when not open, not set to the string
-                        // "false".
-                        inert: open().then_some(true),
-                        // `Container`'s own framework `height: 100%` would
-                        // otherwise cap it to `ScrollArea`'s viewport height
-                        // instead of letting it grow to its real content
-                        // height - which is exactly what `ScrollArea` needs
-                        // to actually have something to scroll.
-                        sx: sx()
-                            .height("auto")
-                            // Mobile has no room to spare for the desktop
-                            // padding - shrink it there, restore it from `Sm`
-                            // up.
-                            .padding("24px 16px")
-                            .breakpoint(Size::Sm, sx().padding("48px 64px")),
-                        Outlet::<Route> {}
+                    // The skip link's handle on `main`, as `burger` is on the burger.
+                    div { display: "contents", onmounted: content.mount(),
+                        Container {
+                            component: "main",
+                            id: "docs-main",
+                            // Focusable by the skip link only, with no ring round the page.
+                            tabindex: "-1",
+                            size: "lg",
+                            // Unreachable behind the open mobile drawer
+                            // otherwise - still in the DOM, just visually
+                            // covered. No-op at desktop widths, since `open`
+                            // never becomes true there. `inert` is a boolean
+                            // HTML attribute - presence (any value, including
+                            // "false") is what enables it, so it must be omitted
+                            // entirely when not open, not set to the string
+                            // "false".
+                            inert: open().then_some(true),
+                            // `Container`'s own framework `height: 100%` would
+                            // otherwise cap it to `ScrollArea`'s viewport height
+                            // instead of letting it grow to its real content
+                            // height - which is exactly what `ScrollArea` needs
+                            // to actually have something to scroll.
+                            sx: sx()
+                                .height("auto")
+                                // Mobile has no room to spare for the desktop
+                                // padding - shrink it there, restore it from `Sm`
+                                // up.
+                                .padding("24px 16px")
+                                .breakpoint(Size::Sm, sx().padding("48px 64px"))
+                                .selector("&:focus", sx().outline("none")),
+                            Outlet::<Route> {}
+                        }
                     }
                 }
             }

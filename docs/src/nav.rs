@@ -55,6 +55,7 @@ fn nav_responsive_sx(open: bool) -> Sx {
         })
         .visibility(if open { "visible" } else { "hidden" })
         .transition(transition)
+        .media("(prefers-reduced-motion: reduce)", sx().transition("none"))
         .breakpoint(
             Size::Sm,
             sx().position("sticky")
