@@ -256,9 +256,8 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
                     open: section.open,
                     keep_mounted: false,
                     id: "{region_id}",
-                    // A landmark only while open: the root stays mounted closed.
-                    role: section.open.then_some("region"),
-                    aria_labelledby: section.open.then(|| trigger_id.clone()),
+                    role: "region",
+                    aria_labelledby: "{trigger_id}",
                     div { "data-accordion-body": "", {section.panel} }
                 }
             }

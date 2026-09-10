@@ -166,6 +166,27 @@ fn closed_content_hides_from_the_accessibility_tree_as_the_animation_ends() {
     assert!(html.contains("visibility 0s linear 0s;"), "{html}");
 }
 
+/// On the root, not the content: a caller's `role="region"` sits on the root,
+/// and a closed panel must not stay a landmark (todo 459).
+#[test]
+fn a_closed_root_leaves_the_accessibility_tree() {
+    let html = render(closed_app);
+    let class = root_class(&html);
+
+    assert!(
+        html.contains(&format!(
+            ".{class}[data-state~=\"closed\"]{{grid-template-rows:0fr;visibility:hidden;"
+        )),
+        "{html}"
+    );
+    assert!(
+        html.contains(&format!(
+            ".{class}[data-state~=\"open\"]{{grid-template-rows:1fr;visibility:visible;"
+        )),
+        "{html}"
+    );
+}
+
 /// The specificity trap this library has already been bitten by: a `@media`
 /// block adds nothing, so the guard has to carry the same
 /// `[data-state~=".."]` the rule it overrides does. A guard written beside the

@@ -1,5 +1,5 @@
 //! `Accordion`: the arrows move focus and never toggle, Enter and Space toggle,
-//! and only an open panel is a labelled region.
+//! and every panel is a labelled region that a closed root hides.
 
 use e2e::archetypes::reset_tab_position;
 use e2e::browser::block_on;
@@ -30,6 +30,14 @@ fn it_meets_the_baseline() {
 fn expanded(index: usize, expanded: bool) -> String {
     format!(
         "document.querySelector('#checkout-trigger-{index}').getAttribute('aria-expanded') === '{expanded}'"
+    )
+}
+
+/// `true` once region `index`'s root is `visibility: hidden`, which takes the
+/// landmark out of the accessibility tree.
+fn hidden(index: usize) -> String {
+    format!(
+        "getComputedStyle(document.querySelector('#checkout-region-{index}')).visibility === 'hidden'"
     )
 }
 
@@ -73,7 +81,7 @@ async fn press_and_expect_focus(page: &Page, key: keyboard::Key, id: &str) {
 /// Both motion settings, because headless Chromium defaults to reduced and a
 /// zero-duration close is where the focus return reads a DOM already gone.
 #[test]
-fn the_keys_toggle_sections_and_only_an_open_panel_is_labelled() {
+fn the_keys_toggle_sections_and_only_an_open_panel_is_a_landmark() {
     block_on(async {
         for reduced in [false, true] {
             let fixture = Fixture::open("/accordion", Viewport::Desktop)
@@ -85,7 +93,7 @@ fn the_keys_toggle_sections_and_only_an_open_panel_is_labelled() {
                 motion::assert_reduced_motion_matches(page).await.unwrap();
             }
 
-            // Closed: no landmark, and no label pointing at a hidden panel.
+            // Closed: a labelled region, hidden by `Collapse`'s root.
             reset_tab_position(page).await.unwrap();
             press_and_expect_focus(page, keyboard::TAB, "checkout-trigger-0").await;
             for index in 0..3 {
@@ -95,9 +103,13 @@ fn the_keys_toggle_sections_and_only_an_open_panel_is_labelled() {
                 );
                 assert_eq!(
                     region(page, index).await,
-                    (None, None),
+                    (
+                        Some("region".into()),
+                        Some(format!("checkout-trigger-{index}"))
+                    ),
                     "closed panel {index}"
                 );
+                assert!(is(page, &hidden(index)).await, "closed panel {index} shows");
             }
 
             // Arrows skip the disabled Payment, wrap, and never toggle.
@@ -135,6 +147,7 @@ fn the_keys_toggle_sections_and_only_an_open_panel_is_labelled() {
 
             // Open: a region named by its trigger, and `aria-controls` finds it.
             wait::for_visible(page, CONTINUE).await.unwrap();
+            assert!(!is(page, &hidden(0)).await, "the open panel is hidden");
             assert_eq!(
                 region(page, 0).await,
                 (Some("region".into()), Some("checkout-trigger-0".into()))
@@ -149,7 +162,7 @@ fn the_keys_toggle_sections_and_only_an_open_panel_is_labelled() {
                 .unwrap();
             assert_eq!(controls, "checkout-region-0");
 
-            // Space closes it again, and the label goes with the landmark.
+            // Space closes it again, and the root hides once the close ends.
             keyboard::press(page, keyboard::SPACE).await.unwrap();
             wait::for_js_true(page, &expanded(0, false), "Space to close Shipping")
                 .await
@@ -161,7 +174,9 @@ fn the_keys_toggle_sections_and_only_an_open_panel_is_labelled() {
             )
             .await
             .unwrap();
-            assert_eq!(region(page, 0).await, (None, None), "closed again");
+            wait::for_js_true(page, &hidden(0), "the closed root to hide")
+                .await
+                .unwrap();
 
             // Focus return: Continue opens Review and closes the panel it sits in.
             keyboard::press(page, keyboard::ENTER).await.unwrap();
@@ -177,7 +192,9 @@ fn the_keys_toggle_sections_and_only_an_open_panel_is_labelled() {
                 "focus to return to Shipping's trigger",
             )
             .await;
-            assert_eq!(region(page, 0).await, (None, None), "closed by Continue");
+            wait::for_js_true(page, &hidden(0), "Continue's closed root to hide")
+                .await
+                .unwrap();
 
             // The chevron turns, except under reduced motion.
             let still = motion::assert_still(page, "#checkout").await;

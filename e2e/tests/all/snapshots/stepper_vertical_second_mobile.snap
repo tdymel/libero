@@ -6,10 +6,8 @@ expression: tree
 generic
   list
     listitem [level=1]
-      button "Account , Completed"
-        StaticText "Account"
-        StaticText ", Completed"
-      region "Account , Completed"
+      button "Account, Completed"
+        StaticText "Account, Completed"
     listitem [level=1]
       button "Shipping"
         StaticText "Shipping"
@@ -22,4 +20,3 @@ generic
     listitem [level=1]
       generic
         StaticText "Review"
-      region "Review"

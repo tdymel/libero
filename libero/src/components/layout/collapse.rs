@@ -39,24 +39,35 @@ const EXIT_PROPERTY: &str = "grid-template-rows";
 /// invariant is the pairing, not the nesting. See `docs/public/md/styling.md`,
 /// and `libero/tests/all/collapse.rs`, which asserts the emitted CSS text rather
 /// than trusting the builder.
+///
+/// `visibility` is how a closed panel stops being a tab stop without any JS,
+/// and it sits on the root so a caller's `role="region"` stops being a
+/// landmark too. A zero-length `visibility` transition *delayed by the
+/// duration* keeps the panel visible and announced for the whole close and
+/// drops it out of focus order and the accessibility tree the instant the
+/// animation ends. No `aria-hidden`: it would hide content that is still on
+/// screen and may still hold focus. No `inert` either - it is unimplemented off
+/// the web, `visibility` is portable.
 static COLLAPSE_BASE_SX: StaticSx = StaticSx::new(|| {
-    let transition = format!(
-        "{EXIT_PROPERTY} {} {}",
-        COLLAPSE_DURATION.overridable(),
-        COLLAPSE_EASING.value()
-    );
+    let duration = COLLAPSE_DURATION.overridable();
+    let rows = format!("{EXIT_PROPERTY} {duration} {}", COLLAPSE_EASING.value());
 
     sx().display("grid")
         .when(
             "open",
             sx().grid_template_rows("1fr")
-                .transition(transition.clone())
+                .visibility("visible")
+                .transition(format!("{rows}, visibility 0s linear 0s"))
                 .media(REDUCED_MOTION, sx().transition("none")),
         )
         .when(
             "closed",
             sx().grid_template_rows("0fr")
-                .transition(transition)
+                .visibility("hidden")
+                // Under reduced motion there is no animation to outlast, so
+                // the delay goes with the transition and the panel leaves the
+                // accessibility tree at once.
+                .transition(format!("{rows}, visibility 0s linear {duration}"))
                 .media(REDUCED_MOTION, sx().transition("none")),
         )
 });
@@ -64,41 +75,26 @@ static COLLAPSE_BASE_SX: StaticSx = StaticSx::new(|| {
 /// `min-height: 0` lets the grid row actually reach zero, and `overflow:
 /// hidden` is load-bearing twice: it clips during the transition, and it stops
 /// the content's own margins collapsing out of the row and holding it open.
-///
-/// `visibility` is how closed content stops being a tab stop without any JS. A
-/// zero-length `visibility` transition *delayed by the duration* keeps the
-/// panel visible and announced for the whole close and drops it out of focus
-/// order and the accessibility tree the instant the animation ends. No
-/// `aria-hidden`: `visibility: hidden` already removes the subtree from the
-/// accessibility tree, and it does it in step with the animation, where a
-/// static `aria-hidden` would hide content that is still on screen and may
-/// still hold focus. `inert` is not used either - it is unimplemented off the
-/// web, `visibility` is portable.
+/// Its `visibility` is inherited from the root.
 static COLLAPSE_CONTENT_SX: StaticSx = StaticSx::new(|| {
-    let duration = COLLAPSE_DURATION.overridable();
-    let easing = COLLAPSE_EASING.value();
+    let transition = format!(
+        "opacity {} {}",
+        COLLAPSE_DURATION.overridable(),
+        COLLAPSE_EASING.value()
+    );
 
     sx().min_height("0")
         .overflow("hidden")
         .when(
             "open",
             sx().opacity("1")
-                .visibility("visible")
-                .transition(format!(
-                    "opacity {duration} {easing}, visibility 0s linear 0s"
-                ))
+                .transition(transition.clone())
                 .media(REDUCED_MOTION, sx().transition("none")),
         )
         .when(
             "closed",
             sx().opacity(COLLAPSE_OPACITY_CLOSED.value())
-                .visibility("hidden")
-                // Under reduced motion there is no animation to outlast, so
-                // the delay goes with the transition and the content leaves
-                // the accessibility tree at once.
-                .transition(format!(
-                    "opacity {duration} {easing}, visibility 0s linear {duration}"
-                ))
+                .transition(transition)
                 .media(REDUCED_MOTION, sx().transition("none")),
         )
 });
@@ -128,6 +124,7 @@ base_props! {
         /// The **root is always in the DOM** either way, so a trigger's
         /// `aria-controls` always resolves and a caller may put `id`,
         /// `role="region"` and `aria-labelledby` on it through `attributes`.
+        /// A closed root is `visibility: hidden`, so that landmark closes too.
         #[props(default)]
         keep_mounted: Option<bool>,
         /// Milliseconds, defaulting to `theme.collapse.duration`. `0` disables

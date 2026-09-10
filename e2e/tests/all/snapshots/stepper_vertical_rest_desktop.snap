@@ -16,8 +16,6 @@ generic
     listitem [level=1]
       generic
         StaticText "Shipping"
-      region "Shipping"
     listitem [level=1]
       generic
         StaticText "Review"
-      region "Review"
