@@ -50,6 +50,7 @@ mod modal;
 mod multi_select;
 mod negative;
 mod notifications;
+mod number_field;
 mod pagination;
 mod picker_dialog;
 mod planted;
@@ -101,6 +102,7 @@ const FIXTURES: &[Routes] = &[
     multi_select::ROUTES,
     negative::ROUTES,
     notifications::ROUTES,
+    number_field::ROUTES,
     pagination::ROUTES,
     picker_dialog::ROUTES,
     planted::ROUTES,

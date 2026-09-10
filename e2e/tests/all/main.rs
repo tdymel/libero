@@ -31,6 +31,7 @@ mod modal;
 mod multi_select;
 mod negative;
 mod notifications;
+mod number_field;
 mod pagination;
 mod picker_dialog;
 mod planted;

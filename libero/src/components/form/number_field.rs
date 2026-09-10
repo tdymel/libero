@@ -130,8 +130,6 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
     let onchange = props.onchange;
     let setter = bound.setter();
 
-    // Not `use_callback`: a stepper is a click handler, and a click handler
-    // that writes a signal the field also reads is re-entrant.
     let publish = move |next: T| {
         let next = next.clamp_between(min, max);
         match (&onchange, &setter) {
@@ -141,7 +139,9 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         }
     };
     let typed_publish = publish.clone();
-    let nudge = move |up: bool| {
+    // One identity across renders, so `Steppers` can skip. Safe as a
+    // `use_callback`: nothing in it focuses or clicks, so it cannot re-enter.
+    let nudge = use_callback(move |up: bool| {
         if readonly {
             return;
         }
@@ -155,8 +155,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         };
         buffer.set(String::new());
         publish(next);
-    };
-    let (mut decrement, mut increment, mut arrow) = (nudge.clone(), nudge.clone(), nudge);
+    });
     let publish = typed_publish;
 
     let field = use_field()
@@ -176,43 +175,17 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         .attributes(&props.attributes)
         .prepare();
 
-    let increment_label = props
-        .increment_label
-        .clone()
-        .unwrap_or_else(|| "Increase".to_string());
-    let decrement_label = props
-        .decrement_label
-        .clone()
-        .unwrap_or_else(|| "Decrease".to_string());
-    // Prepared either way - it is a hook, and `steppers` is a prop.
-    let stepper_box = use_box().framework_sx(&STEPPERS_SX).prepare();
-    let steppers = stepper_box.render(
-        HtmlTag::Div,
-        Vec::new(),
-        // Side by side, minus then plus: two stacked carets in a field's line
-        // box are a few pixels each, which is not a target anyone can hit.
+    let trailing = props.steppers.then(|| {
         rsx! {
-            ActionIcon {
-                aria_label: decrement_label,
-                size: ThemeAwareValue::Size(stepper_size(size)),
-                // Not a tab stop: the field is, and the arrow keys do the same
-                // job from there.
-                tabindex: "-1",
+            Steppers {
+                size,
                 disabled: disabled || readonly,
-                onclick: move |_| decrement(false),
-                MinusIcon {}
+                increment_label: props.increment_label.clone(),
+                decrement_label: props.decrement_label.clone(),
+                nudge,
             }
-            ActionIcon {
-                aria_label: increment_label,
-                size: ThemeAwareValue::Size(stepper_size(size)),
-                tabindex: "-1",
-                disabled: disabled || readonly,
-                onclick: move |_| increment(true),
-                PlusIcon {}
-            }
-        },
-    );
-    let trailing = props.steppers.then_some(steppers);
+        }
+    });
     let frame = use_field_frame()
         .trailing(&trailing)
         .states(field.states())
@@ -257,9 +230,48 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
             };
             // Otherwise the caret jumps to the end of the text as well.
             event.prevent_default();
-            arrow(up);
+            nudge.call(up);
         })
         .render(HtmlTag::Input, props.attributes, ());
 
     field.render(frame.render(input))
+}
+
+/// The two stepper buttons, a scope of their own: every prop compares equal
+/// while the value moves, so a press redraws the field and not the buttons.
+#[component]
+fn Steppers(
+    size: Size,
+    disabled: bool,
+    increment_label: Option<String>,
+    decrement_label: Option<String>,
+    nudge: Callback<bool>,
+) -> Element {
+    let stepper_box = use_box().framework_sx(&STEPPERS_SX).prepare();
+    stepper_box.render(
+        HtmlTag::Div,
+        Vec::new(),
+        // Side by side, minus then plus: two stacked carets in a field's line
+        // box are a few pixels each, which is not a target anyone can hit.
+        rsx! {
+            ActionIcon {
+                aria_label: decrement_label.unwrap_or_else(|| "Decrease".to_string()),
+                size: ThemeAwareValue::Size(stepper_size(size)),
+                // Not a tab stop: the field is, and the arrow keys do the same
+                // job from there.
+                tabindex: "-1",
+                disabled,
+                onclick: move |_| nudge.call(false),
+                MinusIcon {}
+            }
+            ActionIcon {
+                aria_label: increment_label.unwrap_or_else(|| "Increase".to_string()),
+                size: ThemeAwareValue::Size(stepper_size(size)),
+                tabindex: "-1",
+                disabled,
+                onclick: move |_| nudge.call(true),
+                PlusIcon {}
+            }
+        },
+    )
 }

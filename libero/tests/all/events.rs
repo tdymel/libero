@@ -1657,6 +1657,50 @@ fn a_read_only_number_field_does_not_step() {
     assert_eq!(heard, Vec::<String>::new());
 }
 
+/// Todo 29: the steppers skip the render a press causes, so their handler must
+/// still step from the value the field holds now, not the one they drew with.
+#[test]
+fn a_stepper_steps_from_the_value_after_the_last_press() {
+    fn app() -> Element {
+        let mut value = use_signal(|| 3);
+        rsx! {
+            LiberoProvider {
+                NumberField {
+                    value: value(),
+                    steppers: true,
+                    onchange: move |next: i32| {
+                        heard(next);
+                        value.set(next);
+                    },
+                }
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    HEARD.with_borrow_mut(Vec::clear);
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let mut send = |name: &str, target: ElementId, data: Rc<dyn std::any::Any>| {
+        dom.runtime()
+            .handle_event(name, Event::new(data, true), target);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    };
+
+    let (minus, plus) = (find.first_click.unwrap(), last_click(&find));
+    send("click", plus, click_event());
+    send("click", plus, click_event());
+    send("keydown", last_keydown(&find), key_event(Key::ArrowUp));
+    send("click", minus, click_event());
+
+    assert_eq!(HEARD.with_borrow(Clone::clone), ["4", "5", "6", "5"]);
+    assert_eq!(
+        attributes_of(&body(&dioxus_ssr::render(&dom)), "input")["value"],
+        "5"
+    );
+}
+
 fn readonly_color() -> Element {
     rsx! {
         LiberoProvider {

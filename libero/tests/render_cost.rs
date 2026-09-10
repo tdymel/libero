@@ -345,6 +345,9 @@ fn render_cost_per_component() {
         "TextField+slots" { TextField { oninput: move |_| {}, label: "l", description: "d", helper: "h", status: "e", required: true } }
         "NumberField" { NumberField { value: 1i32, onchange: move |_| {} } }
         "NumberField+steppers" { NumberField { value: 1i32, onchange: move |_| {}, steppers: true } }
+        // A stepper press or an arrow key: the value moves every round.
+        "NumberField step" { NumberField { value: if flip() { 2i32 } else { 1 }, onchange: move |_| {} } }
+        "NumberField+steppers step" { NumberField { value: if flip() { 2i32 } else { 1 }, onchange: move |_| {}, steppers: true } }
         "Textarea" { Textarea { oninput: move |_| {} } }
         "PasswordField" { PasswordField { oninput: move |_| {} } }
         "PasswordField-toggle" { PasswordField { oninput: move |_| {}, reveal_button: false } }
