@@ -15,6 +15,9 @@ const CARD_FIRST: &str = "#card-first";
 const CARD_LAST: &str = "#card-last";
 const BEFORE: &str = "#before";
 const AFTER: &str = "#after";
+/// The `/hover-card-color-field` card and its read-only field (todo 446).
+const COLOR_CARD: &str = "#card";
+const FIELD: &str = "#card input";
 /// The fixture's delays: values nothing else on the page schedules, so the
 /// held clock takes these two timers and no other.
 const OPEN_MS: u32 = 707;
@@ -212,6 +215,31 @@ fn escape_closes_it_and_returns_focus_to_the_trigger() {
         fixture
             .console
             .assert_clean("escaping a hover card")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A read-only `ColorField` never shows its dropdown, so it must not sit on
+/// the Escape stack: one Escape in it closes the card.
+#[test]
+fn escape_in_a_read_only_color_field_closes_the_card() {
+    block_on(async {
+        let fixture = Fixture::open("/hover-card-color-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        wait::for_visible(page, COLOR_CARD).await.unwrap();
+        keyboard::tab_to(page, FIELD, 3).await.unwrap();
+
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_hidden(page, COLOR_CARD).await.unwrap();
+
+        fixture
+            .console
+            .assert_clean("Escape in a card's read-only field")
             .unwrap();
         fixture.close().await.unwrap();
     });

@@ -238,7 +238,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let showing = opened() && has_dropdown && !readonly;
     // On the Escape stack exactly while the key handler below would take
     // Escape, so a `HoverCard` around this field leaves the press to it.
-    use_field_list_layer(opened());
+    use_field_list_layer(showing);
     let popover = use_popover(
         anchor,
         showing,
@@ -336,7 +336,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                 opened.set(true);
                 entering.set(true);
             }
-            Key::Escape if opened() => {
+            Key::Escape if showing => {
                 event.prevent_default();
                 opened.set(false);
             }
