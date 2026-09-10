@@ -41,7 +41,8 @@ pub(super) enum Piece<'a> {
 ///   format's order: `01022026`;
 /// - day and month take one or two digits, the year exactly four;
 /// - a month may be a name, any case, full, short or a prefix naming only one
-///   month: `1 feb 2026`, `1 Septem 2026`. A weekday name is skipped;
+///   month: `1 feb 2026`, `1 Septem 2026`. A weekday name is skipped, and so
+///   is a word the format writes as literal text: `年` in `YYYY年M月D日`;
 /// - without a year, `fallback_year` fills it in - the current year, or the
 ///   field's current value's.
 ///
@@ -52,6 +53,7 @@ pub(super) fn parse_date(
     names: &DateDefaults,
     fallback_year: Option<i32>,
 ) -> Result<NaiveDate, Unreadable> {
+    let literals = literal_words(format);
     let mut numbers = Vec::new();
     let mut named_month = None;
     for piece in pieces(text) {
@@ -59,6 +61,9 @@ pub(super) fn parse_date(
             Piece::Number(digits) => numbers.push(digits),
             Piece::Word(word) => {
                 let word = word.to_lowercase();
+                if literals.contains(&word) {
+                    continue;
+                }
                 if let Some(month) = month_named(&word, names) {
                     if named_month.replace(month).is_some() {
                         return Err(Unreadable);
@@ -125,6 +130,22 @@ fn order(format: &str) -> Vec<Part> {
         }
     }
     order
+}
+
+/// The words, lowercased, in the format's literal text: `h` in `HH[ h ]mm`.
+pub(super) fn literal_words(format: &str) -> Vec<String> {
+    tokens(format)
+        .into_iter()
+        .filter_map(|token| match token {
+            Token::Literal(literal) => Some(literal),
+            _ => None,
+        })
+        .flat_map(pieces)
+        .filter_map(|piece| match piece {
+            Piece::Word(word) => Some(word.to_lowercase()),
+            Piece::Number(_) => None,
+        })
+        .collect()
 }
 
 /// Runs of ASCII digits and runs of letters; everything else only separates.
@@ -252,6 +273,22 @@ mod tests {
             date(2026, 9, 14)
         );
         assert_eq!(parse("1 foo 2026", DMY), Err(Unreadable));
+    }
+
+    #[test]
+    fn a_word_the_format_writes_is_skipped() {
+        assert_eq!(parse("2026年3月4日", "YYYY年M月D日"), date(2026, 3, 4));
+        assert_eq!(
+            parse_date(
+                "4 OF March",
+                "D [of] MMMM",
+                &DateDefaults::ENGLISH,
+                Some(2026)
+            ),
+            date(2026, 3, 4)
+        );
+        // Only the format's own words.
+        assert_eq!(parse("2026年3月4日", "YYYY-MM-DD"), Err(Unreadable));
     }
 
     #[test]

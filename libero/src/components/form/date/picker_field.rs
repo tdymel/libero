@@ -103,7 +103,7 @@ impl FieldValue for NaiveTime {
         _: Option<Self>,
         _: Option<NaiveDate>,
     ) -> Result<Self, Unreadable> {
-        parse_time(text, formats.names)
+        parse_time(text, &formats.time, formats.names)
     }
 
     fn iso(self) -> String {
@@ -136,6 +136,7 @@ impl FieldValue for NaiveDateTime {
         parse_date_time(
             text,
             &formats.date,
+            &formats.time,
             formats.names,
             fallback_year,
             current.map(|value| value.time()),

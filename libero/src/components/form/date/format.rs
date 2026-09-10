@@ -141,7 +141,7 @@ fn write(
                     WeekdayWidth::Short => &names.weekdays_short,
                     WeekdayWidth::Long => &names.weekdays,
                 };
-                text.push_str(weekdays[date.weekday().num_days_from_monday() as usize]);
+                text.push_str(weekdays[date.weekday().num_days_from_sunday() as usize]);
             }
             (Token::Hour { padded, twelve }, _, Some(time)) => {
                 let hour = match twelve {

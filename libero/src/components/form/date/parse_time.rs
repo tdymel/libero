@@ -4,7 +4,7 @@
 
 use chrono::{NaiveDateTime, NaiveTime};
 
-use super::parse::{Piece, Unreadable, parse_date, pieces};
+use super::parse::{Piece, Unreadable, literal_words, parse_date, pieces};
 use crate::theme::DateDefaults;
 
 pub(super) const MIDNIGHT: NaiveTime = match NaiveTime::from_hms_opt(0, 0, 0) {
@@ -18,8 +18,14 @@ pub(super) const MIDNIGHT: NaiveTime = match NaiveTime::from_hms_opt(0, 0, 0) {
 ///   `13.05.30`, `9 30`;
 /// - or run together: `930`, `0930`, `93015`;
 /// - an `am`/`pm` word from `names`, any case or a prefix (`p`), makes it a
-///   12-hour time: `1:05 pm`, `12am`.
-pub(super) fn parse_time(text: &str, names: &DateDefaults) -> Result<NaiveTime, Unreadable> {
+///   12-hour time: `1:05 pm`, `12am`;
+/// - a word `format` writes as literal text is skipped: `h` in `HH[ h ]mm`.
+pub(super) fn parse_time(
+    text: &str,
+    format: &str,
+    names: &DateDefaults,
+) -> Result<NaiveTime, Unreadable> {
+    let literals = literal_words(format);
     let mut numbers = Vec::new();
     let mut afternoon = None;
     for piece in pieces(text) {
@@ -27,6 +33,9 @@ pub(super) fn parse_time(text: &str, names: &DateDefaults) -> Result<NaiveTime, 
             Piece::Number(digits) => numbers.push(digits),
             Piece::Word(word) => {
                 let word = word.to_lowercase();
+                if literals.contains(&word) {
+                    continue;
+                }
                 let am = names.am.to_lowercase().starts_with(&word);
                 let pm = names.pm.to_lowercase().starts_with(&word);
                 if am == pm || afternoon.replace(pm).is_some() {
@@ -71,21 +80,31 @@ pub(super) fn parse_time(text: &str, names: &DateDefaults) -> Result<NaiveTime, 
 }
 
 /// Reads a typed day and time: the time starts at the number before the first
-/// `:`, and everything before it is the day, read as [`parse_date`] reads it.
-/// Without a `:` the whole text is the day and the time is `fallback_time`,
-/// else midnight.
+/// `:` or the first literal word of `time_format` (`h` in `HH[ h ]mm`), and at
+/// an am/pm word right before that number. Everything before it is the day,
+/// read as [`parse_date`] reads it. Without either the whole text is the day
+/// and the time is `fallback_time`, else midnight.
 pub(super) fn parse_date_time(
     text: &str,
     format: &str,
+    time_format: &str,
     names: &DateDefaults,
     fallback_year: Option<i32>,
     fallback_time: Option<NaiveTime>,
 ) -> Result<NaiveDateTime, Unreadable> {
-    let (date_text, time_text) = match text.find(':') {
-        Some(colon) => {
-            let start = text[..colon]
+    let (date_text, time_text) = match time_marker(text, format, time_format) {
+        Some(marker) => {
+            let mut start = text[..marker]
+                .trim_end()
                 .trim_end_matches(|character: char| character.is_ascii_digit())
                 .len();
+            let before = text[..start].trim_end();
+            if let Some(Piece::Word(word)) = pieces(before).pop()
+                && before.ends_with(word)
+                && is_meridiem(word, names)
+            {
+                start = before.len() - word.len();
+            }
             // An ISO `T` between the two is a separator, not a word.
             let date_text = text[..start].trim_end_matches(['T', 't']);
             (date_text, Some(&text[start..]))
@@ -94,10 +113,32 @@ pub(super) fn parse_date_time(
     };
     let date = parse_date(date_text, format, names, fallback_year)?;
     let time = match time_text {
-        Some(time_text) => parse_time(time_text, names)?,
+        Some(time_text) => parse_time(time_text, time_format, names)?,
         None => fallback_time.unwrap_or(MIDNIGHT),
     };
     Ok(NaiveDateTime::new(date, time))
+}
+
+/// Where the time shows itself in `text`: the first `:`, or the first word
+/// `time_format` writes as literal text that `format` does not.
+fn time_marker(text: &str, format: &str, time_format: &str) -> Option<usize> {
+    let date_words = literal_words(format);
+    let time_words: Vec<String> = literal_words(time_format)
+        .into_iter()
+        .filter(|word| !date_words.contains(word))
+        .collect();
+    let word = pieces(text).into_iter().find_map(|piece| match piece {
+        Piece::Word(word) if time_words.contains(&word.to_lowercase()) => {
+            Some(word.as_ptr().addr() - text.as_ptr().addr())
+        }
+        _ => None,
+    });
+    text.find(':').into_iter().chain(word).min()
+}
+
+fn is_meridiem(word: &str, names: &DateDefaults) -> bool {
+    let word = word.to_lowercase();
+    word == names.am.to_lowercase() || word == names.pm.to_lowercase()
 }
 
 #[cfg(test)]
@@ -107,7 +148,7 @@ mod tests {
     use super::*;
 
     fn time(text: &str) -> Result<NaiveTime, Unreadable> {
-        parse_time(text, &DateDefaults::ENGLISH)
+        parse_time(text, "HH:mm", &DateDefaults::ENGLISH)
     }
 
     fn at(hour: u32, minute: u32, second: u32) -> Result<NaiveTime, Unreadable> {
@@ -136,6 +177,32 @@ mod tests {
     }
 
     #[test]
+    fn a_word_the_time_format_writes_is_skipped() {
+        let names = &DateDefaults::ENGLISH;
+        assert_eq!(parse_time("14 h 05", "HH[ h ]mm", names), at(14, 5, 0));
+        assert_eq!(parse_time("14 h 05", "HH:mm", names), Err(Unreadable));
+        let read = |text: &str| {
+            parse_date_time(text, "D.M.YYYY", "HH[ h ]mm", names, None, None)
+                .map(|moment| moment.time())
+        };
+        assert_eq!(read("4.3.2026 14 h 05"), at(14, 5, 0));
+        assert_eq!(read("4.3.2026 14:05"), at(14, 5, 0));
+    }
+
+    #[test]
+    fn an_am_pm_word_before_the_hour_goes_with_the_time() {
+        let read = parse_date_time(
+            "1.2.2026 PM 1:05",
+            "D.M.YYYY",
+            "A h:mm",
+            &DateDefaults::ENGLISH,
+            None,
+            None,
+        );
+        assert_eq!(read.map(|moment| moment.time()), at(13, 5, 0));
+    }
+
+    #[test]
     fn impossible_times_are_rejected() {
         for text in [
             "24:00", "12:60", "1:2:3:4", "", "1:05 xm", "1234567", "123:4",
@@ -152,7 +219,7 @@ mod tests {
             NaiveTime::from_hms_opt(13, 5, 0).expect("a real time"),
         );
         let read = |text: &str, format: &str, fallback_time: Option<NaiveTime>| {
-            parse_date_time(text, format, names, None, fallback_time)
+            parse_date_time(text, format, "HH:mm", names, None, fallback_time)
         };
         assert_eq!(read("1.2.2026 13:05", "DD.MM.YYYY", None), Ok(expected));
         assert_eq!(

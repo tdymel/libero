@@ -37,13 +37,13 @@ pub struct DateDefaults {
     pub months: [&'static str; 12],
     /// `Jan` to `Dec`. `MMM` in a format; typed names match these too.
     pub months_short: [&'static str; 12],
-    /// `Monday` to `Sunday` - always Monday first, whatever `first_weekday`
-    /// says, so `Weekday::num_days_from_monday` indexes them. `dddd` in a
-    /// format.
+    /// `Sunday` to `Saturday` - always Sunday first, as dayjs has them,
+    /// whatever `first_weekday` says, so `Weekday::num_days_from_sunday`
+    /// indexes them. `dddd` in a format.
     pub weekdays: [&'static str; 7],
-    /// `Mon` to `Sun`. `ddd` in a format.
+    /// `Sun` to `Sat`. `ddd` in a format.
     pub weekdays_short: [&'static str; 7],
-    /// `Mo` to `Su`. `dd` in a format, and a calendar's column headers.
+    /// `Su` to `Sa`. `dd` in a format, and a calendar's column headers.
     pub weekdays_min: [&'static str; 7],
     /// `A` in a format, and what a typed `am` matches.
     pub am: &'static str,
@@ -117,16 +117,16 @@ impl DateDefaults {
             "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
         ],
         weekdays: [
+            "Sunday",
             "Monday",
             "Tuesday",
             "Wednesday",
             "Thursday",
             "Friday",
             "Saturday",
-            "Sunday",
         ],
-        weekdays_short: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-        weekdays_min: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+        weekdays_short: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+        weekdays_min: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
         am: "AM",
         pm: "PM",
         first_weekday: Weekday::Mon,

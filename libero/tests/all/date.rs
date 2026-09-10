@@ -9,12 +9,12 @@ use dioxus::dioxus_core::{NoOpMutations, ScopeId, VirtualDom};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime},
+    chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, Weekday},
     components::{
         DateField, DateLevel, DatePicker, DateRange, DateRangePicker, DayField, DayPicker,
         MonthPicker, SegmentedControl, TimePicker, YearPicker,
     },
-    theme::CalendarVariant,
+    theme::{CalendarVariant, DateDefaults, Theme},
 };
 
 #[test]
@@ -186,6 +186,41 @@ fn a_picker_draws_six_weeks_from_the_first_weekday() {
     assert_eq!(html.matches("tabindex=\"0\"").count(), 4);
     assert!(html.contains("name=\"day\""));
     assert!(html.contains("value=\"2026-09-14\""));
+}
+
+/// The weekday arrays are Sunday first whatever `first_weekday` says; the
+/// grid and its headers rotate to it.
+#[test]
+fn a_sunday_first_theme_starts_the_grid_and_the_headers_on_sunday() {
+    static SUNDAY: Theme = Theme {
+        date: DateDefaults {
+            first_weekday: Weekday::Sun,
+            ..DateDefaults::ENGLISH
+        },
+        ..Theme::DEFAULT
+    };
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { themes: &SUNDAY,
+                DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    let headers = tags_with(&html, &["role=\"columnheader\""]);
+    assert_eq!(headers.len(), 7);
+    assert!(headers[0].contains("aria-label=\"Sunday\""), "{headers:?}");
+    assert!(
+        headers[6].contains("aria-label=\"Saturday\""),
+        "{headers:?}"
+    );
+    // September 2026 starts on a Tuesday: the grid opens on Sunday, August 30.
+    let first = html.find("data-slot=\"day\"").expect("a day");
+    assert_eq!(
+        html[first..].find("data-date=\"2026-08-30\""),
+        html[first..].find("data-date=")
+    );
 }
 
 #[test]

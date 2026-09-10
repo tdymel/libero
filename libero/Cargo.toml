@@ -30,9 +30,9 @@ categories = ["gui", "wasm", "web-programming"]
 dioxus = { path = "../.dioxus-active/packages/dioxus", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "mounted", "router", "logger"] }
 fast_qr = { version = "0.13.1", default-features = false, features = ["svg"] }
 libero-macros = { path = "../libero-macros", version = "0.1.0" }
-# The date and time components hold `chrono`'s naive types. No `clock`: today
-# comes from `platform::clock()`, so neither `js-sys` nor a time zone database
-# is pulled in through it.
+# The date and time components hold `chrono`'s naive types. No `clock` here:
+# on the web today comes from JS `Date`, so chrono pulls in no second `js-sys`
+# path. Native turns `clock` on below for `Local`.
 chrono = { version = "0.4", default-features = false, features = ["std"] }
 
 # Everything web-specific is wasm32-only, so a native build (`cargo test`, or
@@ -56,6 +56,8 @@ web-sys = { version = "0.3", features = ["Window", "Document", "Element", "Event
 # 2026-09-19, todo 36a).
 dioxus-html = { path = "../.dioxus-active/packages/html", default-features = false, features = ["serialize"] }
 regex = "1"
+# `Local`, for today off the web: the system time zone via `iana-time-zone`.
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 # Blitz's `NodeHandle`, which is what a `MountedData` downcasts to under
 # dioxus-native - the whole `platform::ElementApi` is answerable from it, DOM
 # queries included. Only pulled in by the `native` feature; without it a

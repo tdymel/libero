@@ -31,9 +31,26 @@ mod web {
     pub(super) static CLOCK: WebClock = WebClock;
 }
 
-/// `None` off the web for now. A native build has the time in UTC, but not
-/// the local offset without a time zone database, and a day in UTC is the
-/// wrong day for half the world in the evening.
+#[cfg(not(target_arch = "wasm32"))]
+mod native {
+    use chrono::{Local, NaiveDate};
+
+    use super::ClockApi;
+
+    pub(super) struct NativeClock;
+
+    impl ClockApi for NativeClock {
+        /// The system's time zone, which `Local` reads from the OS.
+        fn today(&self) -> NaiveDate {
+            Local::now().date_naive()
+        }
+    }
+
+    pub(super) static CLOCK: NativeClock = NativeClock;
+}
+
+/// The platform's clock: JS `Date` on the web, the system clock and time
+/// zone off it.
 ///
 /// Call it after mount, never while rendering: a server render and the
 /// hydrating client would disagree, if not on the answer then on the day.
@@ -41,5 +58,19 @@ pub fn clock() -> Option<&'static dyn ClockApi> {
     #[cfg(target_arch = "wasm32")]
     return Some(&web::CLOCK);
     #[cfg(not(target_arch = "wasm32"))]
-    return None;
+    return Some(&native::CLOCK);
+}
+
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod tests {
+    use chrono::{TimeDelta, Utc};
+
+    use super::clock;
+
+    #[test]
+    fn the_native_clock_answers_a_day_within_one_of_utc() {
+        let today = clock().expect("a native clock").today();
+        let utc = Utc::now().date_naive();
+        assert!((today - utc).abs() <= TimeDelta::days(1), "{today} {utc}");
+    }
 }

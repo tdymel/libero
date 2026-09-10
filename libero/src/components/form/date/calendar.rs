@@ -941,9 +941,9 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     // that can, while one is shown.
     let tab_stop = view.nearest_in(tab_stop, shown).unwrap_or(tab_stop);
 
-    let first_weekday = names.first_weekday.num_days_from_monday() as usize;
+    let first_weekday = names.first_weekday.num_days_from_sunday() as usize;
     let column = move |day: NaiveDate| {
-        ((day.weekday().num_days_from_monday() as usize + 7 - first_weekday) % 7) as i64
+        ((day.weekday().num_days_from_sunday() as usize + 7 - first_weekday) % 7) as i64
     };
     let onkeydown = move |event: KeyboardEvent| view.day_keydown(event, tab_stop, column(tab_stop));
     let cell_stop = view.cell_stop();

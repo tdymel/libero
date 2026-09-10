@@ -13,6 +13,8 @@ mod calendar;
 mod date_value;
 mod flows;
 mod format;
+#[cfg(test)]
+mod locales;
 mod parse;
 mod parse_time;
 mod picker_field;
