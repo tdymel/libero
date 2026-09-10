@@ -24,7 +24,7 @@ that outlives the moment.
 | `keyboard() -> Option<&'static dyn KeyboardApi>` | `on_key(callback)`, `on_key_unfiltered(callback)` - each returns a `KeySubscription`. The callback gets a `KeyChord` and returns `true` to prevent the default. | Off the web. |
 | `scroll() -> Option<&'static dyn ScrollApi>` | `on_scroll(callback)` - anything scrolling, not just the page. Returns a `ScrollSubscription`. | Off the web. |
 | `document() -> Option<&'static dyn DocumentApi>` | `active_element()`, `viewport()`. | Where the renderer exposes no document: a webview, and any headless build. |
-| `clock() -> Option<&'static dyn ClockApi>` | `today()` - the local calendar day. | Off the web. Call it after mount, never while rendering. |
+| `clock() -> Option<&'static dyn ClockApi>` | `today()` - the local calendar day. | Some on every renderer: JS `Date` on the web, the system clock and time zone off it. Call it after mount, never while rendering. |
 
 ## A subscription
 

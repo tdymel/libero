@@ -3,14 +3,48 @@ use super::date_common::{
     moment_limits, shared_controls, shown, status_of, step_of, text_of, time_limits, today_of,
     twelve_hour_of,
 };
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use libero::components::{
     Code, DateField, DateRange, Flex, Kbd, Rule, Text, Validators, not_empty,
 };
+use libero::theme::DateDefaults;
+
+mod locales {
+    use libero::chrono::Weekday;
+    use libero::theme::DateDefaults;
+
+    include!("date_locales.rs");
+}
 
 const KINDS: [&str; 5] = ["date", "time", "date-time", "date-range", "date-time-range"];
+
+const LOCALES: [&str; 4] = ["en", "de", "fr", "ja"];
+
+/// The copyable constants, printed as they are written.
+const LOCALES_SOURCE: &str = include_str!("date_locales.rs");
+
+/// The picked locale's constant: its name and its values.
+fn locale_of(values: &DemoValues) -> Option<(&'static str, &'static DateDefaults)> {
+    match values.str("locale").as_str() {
+        "de" => Some(("GERMAN", &locales::GERMAN)),
+        "fr" => Some(("FRENCH", &locales::FRENCH)),
+        "ja" => Some(("JAPANESE", &locales::JAPANESE)),
+        _ => None,
+    }
+}
+
+/// One constant out of `LOCALES_SOURCE`, from `pub const` to its `};`.
+fn constant_source(name: &str) -> &'static str {
+    let start = LOCALES_SOURCE
+        .find(&format!("pub const {name}:"))
+        .unwrap_or(0);
+    let end = LOCALES_SOURCE[start..]
+        .find("\n};")
+        .map_or(LOCALES_SOURCE.len(), |end| start + end + 3);
+    &LOCALES_SOURCE[start..end]
+}
 
 const TIME_FORMATS: [&str; 4] = ["default", "HH:mm", "h:mm A", "HH:mm:ss"];
 
@@ -110,6 +144,15 @@ pub fn DateFieldPage() -> Element {
                     "The form gets ISO 8601, whatever the text shows."
                 }
                 Text {
+                    "Names, formats and labels come from a "
+                    Code { source: "DateDefaults" }
+                    " in your theme's "
+                    Code { source: "date" }
+                    ". The "
+                    Code { source: "locale" }
+                    " control prints a German, French or Japanese one to copy; the preview keeps English names and takes only its formats."
+                }
+                Text {
                     "A typed "
                     Code { source: "value" }
                     " alone does not name the type, because dioxus converts every prop. A handler that stores into a typed signal names it; "
@@ -137,6 +180,10 @@ pub fn DateFieldPage() -> Element {
             Demo {
                 component: "DateField",
                 children_text: "",
+                wrap: Wrap(|values: &DemoValues, source: &str| match locale_of(values) {
+                    Some((name, _)) => format!("use chrono::Weekday;\n\n{}\n\n{source}", constant_source(name)),
+                    None => source.to_string(),
+                }),
                 controls: {
                     let controls = vec![
                         Control::select("value", KINDS).default("date").code(|_, values| {
@@ -156,9 +203,22 @@ pub fn DateFieldPage() -> Element {
                         }),
                         Control::slider("size", SIZES).default("md"),
                         Control::slider("radius", SIZES).default("sm"),
+                        // The preview's theme stays English: only the locale's
+                        // formats reach it, as props.
+                        Control::select("locale", LOCALES).default("en").code(|_, values| {
+                            let Some((_, locale)) = locale_of(values) else { return vec![] };
+                            let mut code = Vec::new();
+                            if values.str("value") != "time" {
+                                code.push(format!("format: {:?}", locale.format));
+                            }
+                            if has_time(values) {
+                                code.push(format!("time_format: {:?}", locale.time_format));
+                            }
+                            code
+                        }),
                         Control::select("format", FORMATS)
                             .default("MMMM D, YYYY")
-                            .hidden_when(|values| values.str("value") == "time")
+                            .hidden_when(|values| values.str("value") == "time" || locale_of(values).is_some())
                             .code(|_, values| match values.str("format").as_str() {
                                 "MMMM D, YYYY" => vec![],
                                 format => vec![format!("format: {format:?}")],
@@ -167,7 +227,7 @@ pub fn DateFieldPage() -> Element {
                         // `with_seconds` and `twelve_hour`.
                         Control::select("time_format", TIME_FORMATS)
                             .default("default")
-                            .hidden_when(|values| !has_time(values))
+                            .hidden_when(|values| !has_time(values) || locale_of(values).is_some())
                             .code(|_, values| match values.str("time_format").as_str() {
                                 "default" => vec![],
                                 format => vec![format!("time_format: {format:?}")],
@@ -235,7 +295,8 @@ fn DateFieldDemo(values: DemoValues) -> Element {
 
     let size = values.str("size");
     let radius = values.str("radius");
-    let format = values.str("format");
+    let locale = locale_of(&values).map(|(_, locale)| locale);
+    let format = locale.map_or_else(|| values.str("format"), |locale| locale.format.to_string());
     let variant = values.str("variant");
     let exclude_date = is_on(&values, "exclude_weekends").then(|| Callback::new(is_weekend));
     let close_on_change = is_on(&values, "close_on_change");
@@ -246,7 +307,10 @@ fn DateFieldDemo(values: DemoValues) -> Element {
     let status = status_of(&values);
     let required = is_on(&values, "required").then_some(true);
     let disabled = is_on(&values, "disabled").then_some(true);
-    let time_format = Some(values.str("time_format")).filter(|format| format != "default");
+    let time_format = match locale {
+        Some(locale) => Some(locale.time_format.to_string()),
+        None => Some(values.str("time_format")).filter(|format| format != "default"),
+    };
     let columns = values.str("columns").parse::<usize>().ok();
     let calendar = values.str("calendar");
     let days = values.str("days").parse::<usize>().ok();

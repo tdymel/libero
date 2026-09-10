@@ -30,7 +30,7 @@ const ACCESSORS: [(&str, &str, &str); 5] = [
     (
         "clock() -> Option<&'static dyn ClockApi>",
         "today() - the local calendar day.",
-        "None off the web. Call it after mount, never while rendering.",
+        "Some on every renderer: JS Date on the web, the system clock and time zone off it. Call it after mount, never while rendering.",
     ),
 ];
 

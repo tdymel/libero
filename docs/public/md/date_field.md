@@ -76,6 +76,10 @@ match `format`:
 | `1.2.26` | rejected - two-digit years are not read |
 | `31.2.2026` | rejected - no such day |
 
+A word the format writes as literal text is skipped: `2026年3月4日` reads for
+`YYYY年M月D日`, `14 h 05` for `HH[ h ]mm`. Accents are not folded: `fevrier`
+is not `février`.
+
 Times read `13:05`, `1305`, `1:05 pm` and `9`. A date-time is a day, then a
 time. A range splits on `–`, `—`, ` - ` or ` to `.
 
@@ -133,4 +137,7 @@ Props that only some value types use are ignored by the rest.
 ## Theme
 
 `Theme::date_field` (`DateFieldDefaults`): `size`, `radius`,
-`close_on_change`. Names and formats come from `Theme::date`.
+`close_on_change`. Names and formats come from `Theme::date`, a
+`DateDefaults`. Its weekday arrays are Sunday first, as dayjs' locale files
+have them. The docs' `locale` control prints German, French and Japanese
+constants to copy.
