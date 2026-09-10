@@ -2,6 +2,9 @@
 // A component's `mod.rs` only re-exports, so `code/code.rs`, `tree/tree.rs`
 // etc. are deliberate.
 #![allow(clippy::module_inception)]
+// dioxus' `Props` derive emits `*PropsBuilder`/`*PropsWithOwner` beside the
+// struct, where no item-level `allow` reaches them (todo 450).
+#![allow(unnameable_types)]
 
 pub mod components;
 pub mod context;

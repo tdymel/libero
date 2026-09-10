@@ -22,16 +22,17 @@ mod props;
 mod range;
 mod today;
 
-// The dioxus `Props` builders leak from every module that declares props.
-#[allow(unnameable_types, reason = "todo 450")]
+// The deny above overrides the crate's `allow`, so the modules whose `Props`
+// derive leaks builders allow it again (todo 450).
+#[allow(unnameable_types)]
 mod date_field;
-#[allow(unnameable_types, reason = "todo 450")]
+#[allow(unnameable_types)]
 mod date_picker;
-#[allow(unnameable_types, reason = "todo 450")]
+#[allow(unnameable_types)]
 mod fields;
-#[allow(unnameable_types, reason = "todo 450")]
+#[allow(unnameable_types)]
 mod pickers;
-#[allow(unnameable_types, reason = "todo 450")]
+#[allow(unnameable_types)]
 mod time_picker;
 
 pub use calendar::DateLevel;
