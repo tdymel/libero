@@ -254,6 +254,14 @@ fn wanted(label: &str) -> bool {
     })
 }
 
+/// A caller holding its handler in a `use_callback`, as a closure built in
+/// render defeats the field's memo.
+#[component]
+fn StableNumberField() -> Element {
+    let onchange = use_callback(move |_: i32| {});
+    rsx! { NumberField { value: 1i32, onchange, steppers: true } }
+}
+
 /// The cheapest component that can exist: one scope, one element, no styling.
 #[component]
 fn Leaf(children: Element) -> Element {
@@ -345,6 +353,8 @@ fn render_cost_per_component() {
         "TextField+slots" { TextField { oninput: move |_| {}, label: "l", description: "d", helper: "h", status: "e", required: true } }
         "NumberField" { NumberField { value: 1i32, onchange: move |_| {} } }
         "NumberField+steppers" { NumberField { value: 1i32, onchange: move |_| {}, steppers: true } }
+        // A `use_callback` handler: the field skips, the rows above price the closure.
+        "NumberField+steppers stable" { StableNumberField {} }
         // A stepper press or an arrow key: the value moves every round.
         "NumberField step" { NumberField { value: if flip() { 2i32 } else { 1 }, onchange: move |_| {} } }
         "NumberField+steppers step" { NumberField { value: if flip() { 2i32 } else { 1 }, onchange: move |_| {}, steppers: true } }
