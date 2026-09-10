@@ -1,6 +1,10 @@
 use dioxus::prelude::*;
 
-use super::{AlphaSlider, ColorCode, ColorSwatch, HueSlider, Swatches, saturation::Saturation};
+use super::{
+    ColorCode, ColorSwatch, HueSlider, Swatches,
+    alpha_slider::{COLOR_PICKER_RGB, PickerAlphaSlider},
+    saturation::{SATURATION_HUE, Saturation},
+};
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
@@ -160,6 +164,12 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
     };
     let oninput = props.oninput;
     let focusable = props.focusable.unwrap_or(true);
+    // The value as a signal of one identity, so the panel's props compare
+    // equal and only the scopes that read it redraw - the thumb, on a drag.
+    let mut color = use_signal(|| value);
+    if *color.peek() != value {
+        color.set(value);
+    }
 
     let states: Input<States> = props
         .states
@@ -182,6 +192,17 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                         COLOR_PICKER_SPACING.value()
                     )
                 }),
+        )
+        .with(
+            SATURATION_HUE,
+            with_picker.then(|| ColorCode::hsva(value.hue(), 1.0, 1.0, 1.0).to_hex()),
+        )
+        .with(
+            COLOR_PICKER_RGB,
+            (with_picker && with_alpha).then(|| {
+                let (r, g, b, _) = value.to_rgba_channels();
+                format!("{r}, {g}, {b}")
+            }),
         )
         .into();
 
@@ -214,9 +235,8 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
     let picker = with_picker.then(|| {
         let alpha = with_alpha.then(|| {
             rsx! {
-                AlphaSlider {
+                PickerAlphaSlider {
                     value: value.alpha(),
-                    color: value,
                     size,
                     aria_label: props.alpha_label.clone(),
                     focusable,
@@ -234,7 +254,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
 
         rsx! {
             Saturation {
-                value,
+                value: color,
                 oninput,
                 aria_label: props.saturation_label.clone(),
                 focusable,

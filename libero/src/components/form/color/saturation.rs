@@ -10,7 +10,8 @@ use crate::{
         variables,
     },
     hooks::{
-        DragMove, DragOptions, DragStart, drag_handle_sx, use_drag, use_element, use_local_state,
+        DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, use_drag, use_element,
+        use_local_state,
     },
     platform::ElementApi,
     sx::{StaticSx, sx},
@@ -20,8 +21,9 @@ use crate::{
 /// Both 0-1, measured from the panel's left and top edges.
 const SATURATION_X: CssVar = CssVar::new("--lsx-color-picker-saturation-x");
 const SATURATION_Y: CssVar = CssVar::new("--lsx-color-picker-saturation-y");
-/// The fully saturated hue the panel's gradient runs towards.
-const SATURATION_HUE: CssVar = CssVar::new("--lsx-color-picker-saturation-hue");
+/// The fully saturated hue the panel's gradient runs towards. Set on the
+/// picker's root, which redraws on every change anyway.
+pub(super) const SATURATION_HUE: CssVar = CssVar::new("--lsx-color-picker-saturation-hue");
 const SATURATION_COLOR: CssVar = CssVar::new("--lsx-color-picker-saturation-color");
 
 /// Arrow keys move this far, Shift+arrow ten times as far.
@@ -60,9 +62,12 @@ static THUMB_SX: StaticSx = StaticSx::new(|| {
         .cursor("grab")
 });
 
+/// The panel and its handlers. `value` is the picker's own signal and only
+/// [`SaturationThumb`] reads it while rendering, so a drag frame redraws the
+/// thumb and skips this scope.
 #[derive(Props, Clone, PartialEq)]
 pub(super) struct SaturationProps {
-    value: ColorCode,
+    value: Signal<ColorCode>,
     oninput: Option<EventHandler<SliderChangeEvent<ColorCode>>>,
     aria_label: Option<String>,
     focusable: bool,
@@ -81,7 +86,7 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
     let rect = use_local_state(|| (0.0_f64, 0.0_f64, 0.0_f64, 0.0_f64));
     // What a move is applied to and what `End` reports: the drag's own last
     // color, which a controlled parent may not have echoed back yet.
-    let latest = use_local_state(|| value);
+    let latest = use_local_state(|| *value.peek());
 
     let oninput = props.oninput;
     let emit = {
@@ -111,7 +116,7 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
 
     let grab = use_callback(move |(saturation, brightness): (f64, f64)| {
         emit.call(SliderChangeEvent::Start(
-            value.with_saturation_value(saturation, brightness),
+            value.peek().with_saturation_value(saturation, brightness),
         ));
     });
     let slide = {
@@ -123,48 +128,51 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
         })
     };
 
-    let drag = use_drag(DragOptions {
-        capture: panel_element,
-        onstart: Callback::new(move |event: DragStart| {
-            if !interactive {
+    let onstart = use_callback(move |event: DragStart| {
+        if !interactive {
+            event.cancel.call(());
+            return;
+        }
+        let rect = rect.clone();
+        // Started here, awaited in the task - see `SliderCore`: under
+        // Blitz a read resolves where it is called.
+        let size = panel_element.dimensions();
+        let offset = panel_element.client_offset();
+        spawn(async move {
+            let (Ok(size), Ok((left, top))) = (size.await, offset.await) else {
                 event.cancel.call(());
                 return;
-            }
-            let rect = rect.clone();
-            // Started here, awaited in the task - see `SliderCore`: under
-            // Blitz a read resolves where it is called.
-            let size = panel_element.dimensions();
-            let offset = panel_element.client_offset();
-            spawn(async move {
-                let (Ok(size), Ok((left, top))) = (size.await, offset.await) else {
-                    event.cancel.call(());
-                    return;
-                };
-                rect.set((left, top, size.width, size.height));
-                match at.call((event.client.x, event.client.y)) {
-                    Some(point) => {
-                        grab.call(point);
-                        // The drag cancels the pointerdown, and with it the
-                        // browser's own focus - the keys would be unreachable.
-                        if focusable {
-                            let _ = thumb_element.focus();
-                        }
+            };
+            rect.set((left, top, size.width, size.height));
+            match at.call((event.client.x, event.client.y)) {
+                Some(point) => {
+                    grab.call(point);
+                    // The drag cancels the pointerdown, and with it the
+                    // browser's own focus - the keys would be unreachable.
+                    if focusable {
+                        let _ = thumb_element.focus();
                     }
-                    None => event.cancel.call(()),
                 }
-            });
-        }),
-        onmove: Callback::new(move |event: DragMove| {
-            if let Some(point) = at.call((event.client.x, event.client.y)) {
-                slide.call(point);
+                None => event.cancel.call(()),
             }
-        }),
-        onend: Callback::new(move |_| {
-            emit.call(SliderChangeEvent::End(latest.get()));
-        }),
+        });
+    });
+    let onmove = use_callback(move |event: DragMove| {
+        if let Some(point) = at.call((event.client.x, event.client.y)) {
+            slide.call(point);
+        }
+    });
+    let onend = use_callback(move |_| {
+        emit.call(SliderChangeEvent::End(latest.get()));
+    });
+    let drag = use_drag(DragOptions {
+        capture: panel_element,
+        onstart,
+        onmove,
+        onend,
     });
 
-    let onkeydown = move |event: Event<KeyboardData>| {
+    let onkeydown = use_callback(move |event: Event<KeyboardData>| {
         if !interactive {
             return;
         }
@@ -172,6 +180,7 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
             true => KEY_STEP * 10.0,
             false => KEY_STEP,
         };
+        let value = *value.peek();
         let (saturation, brightness) = (value.saturation(), value.value());
         let moved = match event.key() {
             Key::ArrowRight => (saturation + step, brightness),
@@ -186,22 +195,47 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
         let moved = value.with_saturation_value(moved.0, moved.1);
         emit.call(SliderChangeEvent::Change(moved));
         emit.call(SliderChangeEvent::End(moved));
+    });
+
+    let panel_style = use_box().framework_sx(&PANEL_SX).prepare();
+    let thumb = rsx! {
+        SaturationThumb {
+            value,
+            element: thumb_element,
+            aria_label: props.aria_label,
+            tab_stop: interactive && focusable,
+            onkeydown,
+        }
     };
 
-    let panel_variables: Input<Variables> = variables()
+    panel_style
+        .element(&panel_element)
+        .event("onpointerdown", drag.onpointerdown)
+        .event("onpointermove", drag.onpointermove)
+        .event("onpointerup", drag.onpointerup)
+        .event("onpointercancel", drag.onpointercancel)
+        .render(HtmlTag::Div, Vec::new(), thumb)
+}
+
+/// The thumb, the one part a drag frame changes: its position, its color and
+/// what it announces.
+#[component]
+fn SaturationThumb(
+    value: Signal<ColorCode>,
+    element: ElementHandle,
+    aria_label: Option<String>,
+    tab_stop: bool,
+    onkeydown: Callback<Event<KeyboardData>>,
+) -> Element {
+    let value = value();
+    let thumb_variables: Input<Variables> = variables()
         .with(SATURATION_X, value.saturation().to_string())
         .with(SATURATION_Y, (1.0 - value.value()).to_string())
-        .with(
-            SATURATION_HUE,
-            ColorCode::hsva(value.hue(), 1.0, 1.0, 1.0).to_hex(),
-        )
         .with(SATURATION_COLOR, value.opaque().to_hex())
         .into();
-
-    let thumb_style = use_box().framework_sx(&THUMB_SX).prepare();
-    let panel_style = use_box()
-        .framework_sx(&PANEL_SX)
-        .variables(&panel_variables)
+    let thumb_style = use_box()
+        .framework_sx(&THUMB_SX)
+        .variables(&thumb_variables)
         .prepare();
 
     // One `role="slider"` for a 2D control: its value is the saturation, and
@@ -213,26 +247,15 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
         percent(value.saturation()),
         percent(value.value()),
     );
-    let thumb = thumb_style
+    thumb_style
         .attr("role", "slider")
-        .attr(
-            "tabindex",
-            if interactive && focusable { "0" } else { "-1" },
-        )
-        .attr("aria-label", props.aria_label)
+        .attr("tabindex", if tab_stop { "0" } else { "-1" })
+        .attr("aria-label", aria_label)
         .attr("aria-valuemin", 0)
         .attr("aria-valuemax", 100)
         .attr("aria-valuenow", percent(value.saturation()))
         .attr("aria-valuetext", valuetext)
-        .element(&thumb_element)
+        .element(&element)
         .event("onkeydown", onkeydown)
-        .render(HtmlTag::Div, Vec::new(), rsx! {});
-
-    panel_style
-        .element(&panel_element)
-        .event("onpointerdown", drag.onpointerdown)
-        .event("onpointermove", drag.onpointermove)
-        .event("onpointerup", drag.onpointerup)
-        .event("onpointercancel", drag.onpointercancel)
-        .render(HtmlTag::Div, Vec::new(), thumb)
+        .render(HtmlTag::Div, Vec::new(), ())
 }

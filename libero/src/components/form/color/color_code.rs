@@ -290,7 +290,7 @@ fn unit(value: f64) -> f64 {
 }
 
 /// Two decimals, with no trailing zeros - `0.5`, not `0.50`.
-fn round_alpha(alpha: f64) -> f64 {
+pub(super) fn round_alpha(alpha: f64) -> f64 {
     (alpha * 100.0).round() / 100.0
 }
 

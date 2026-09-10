@@ -403,8 +403,12 @@ fn render_cost_per_component() {
         "ColorSwatch" { ColorSwatch { color: ColorCode::hex(0x228be6) } }
         // The panel, a hue slider and nothing else - no alpha, no swatches.
         "ColorPicker" { ColorPicker { value: ColorCode::hex(0x228be6), oninput: move |_| {} } }
-        // One drag frame.
+        // One drag frame. The two hexes differ in hue too, so the hue slider redraws.
         "ColorPicker drag" { ColorPicker { value: ColorCode::hex(if flip() { 0x228be6 } else { 0x2f8fe0 }), oninput: move |_| {} } }
+        // A panel drag frame: saturation and value move, the hue stays.
+        "ColorPicker pad" { ColorPicker { value: ColorCode::hsva(208.0, if flip() { 0.6 } else { 0.7 }, 0.8, 1.0), oninput: move |_| {} } }
+        "ColorPicker hue" { ColorPicker { value: ColorCode::hsva(if flip() { 208.0 } else { 210.0 }, 0.6, 0.8, 1.0), oninput: move |_| {} } }
+        "ColorPicker+alpha pad" { ColorPicker { value: ColorCode::hsva(208.0, if flip() { 0.6 } else { 0.7 }, 0.8, 1.0), oninput: move |_| {}, with_alpha: true } }
         // Closed: the dropdown's picker is not rendered until it opens.
         "ColorField" { ColorField { value: ColorCode::hex(0x228be6), oninput: move |_| {} } }
         // 42 day buttons, each with its own click handler.

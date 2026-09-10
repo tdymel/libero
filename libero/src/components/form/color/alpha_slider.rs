@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use super::{
     ColorCode,
+    color_code::round_alpha,
     color_slider::{CHECKERBOARD, color_slider_sx},
 };
 use crate::{
@@ -12,7 +13,7 @@ use crate::{
         form::slider::{SliderCore, SliderCoreValue},
     },
     hooks::use_theme,
-    theme::Size,
+    theme::{CssVar, Size},
 };
 
 base_props! {
@@ -42,6 +43,53 @@ base_props! {
 /// of a `ColorPicker`, usable on its own.
 #[component]
 pub fn AlphaSlider(props: AlphaSliderProps) -> Element {
+    // Both ends spelled as `rgba()`: a bare `transparent` is transparent
+    // *black*, which greys the middle of the gradient in older engines.
+    let track = format!(
+        "linear-gradient(to right, {}, {}), {CHECKERBOARD}",
+        props.color.with_alpha(0.0).to_rgba(),
+        props.color.opaque().to_rgba(),
+    );
+    let thumb_fill = props.color.with_alpha(props.value).to_rgba();
+    alpha_slider(props, track, thumb_fill)
+}
+
+/// `r, g, b` of the picker's color, set on its root: its alpha slider paints
+/// with it, so a drag on the panel leaves the slider's props equal.
+pub(super) const COLOR_PICKER_RGB: CssVar = CssVar::new("--lsx-color-picker-rgb");
+
+/// `ColorPicker`'s alpha slider: [`AlphaSlider`] colored by
+/// [`COLOR_PICKER_RGB`] instead of a `color` prop.
+#[component]
+pub(super) fn PickerAlphaSlider(
+    value: f64,
+    size: Size,
+    aria_label: Option<String>,
+    focusable: bool,
+    oninput: EventHandler<SliderChangeEvent>,
+) -> Element {
+    let rgb = COLOR_PICKER_RGB.value();
+    let track =
+        format!("linear-gradient(to right, rgba({rgb}, 0), rgba({rgb}, 1)), {CHECKERBOARD}");
+    let thumb_fill = format!("rgba({rgb}, {})", round_alpha(value));
+    let props = AlphaSliderProps {
+        value,
+        color: ColorCode::default(),
+        oninput: Some(oninput),
+        size: Input::Value(size),
+        disabled: None,
+        aria_label,
+        focusable: Some(focusable),
+        attributes: Vec::new(),
+        class: Input::default(),
+        sx: Input::default(),
+        states: Input::default(),
+    };
+    alpha_slider(props, track, thumb_fill)
+}
+
+/// Both sliders' render, past the track's colors. `props.color` is unread.
+fn alpha_slider(props: AlphaSliderProps, track: String, thumb_fill: String) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.color_picker.size);
     let sx = color_slider_sx(&props.sx);
@@ -52,14 +100,6 @@ pub fn AlphaSlider(props: AlphaSliderProps) -> Element {
             oninput.call(event.map(|value| value.thumb(0)));
         }
     });
-
-    // Both ends spelled as `rgba()`: a bare `transparent` is transparent
-    // *black*, which greys the middle of the gradient in older engines.
-    let track = format!(
-        "linear-gradient(to right, {}, {}), {CHECKERBOARD}",
-        props.color.with_alpha(0.0).to_rgba(),
-        props.color.opaque().to_rgba(),
-    );
 
     rsx! {
         SliderCore {
@@ -89,7 +129,7 @@ pub fn AlphaSlider(props: AlphaSliderProps) -> Element {
             track: Some(track),
             plain: true,
             focusable: props.focusable.unwrap_or(true),
-            thumb_fill: Some(props.color.with_alpha(props.value).to_rgba()),
+            thumb_fill: Some(thumb_fill),
         }
     }
 }
