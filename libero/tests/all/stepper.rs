@@ -271,6 +271,51 @@ fn a_rich_label_is_drawn_hidden_and_named_in_text() {
     assert!(body.contains("Shipping address"), "{html}");
 }
 
+/// Name and status are one text node: Chromium reads separate boxes as
+/// "Account , Completed" (todo 458).
+#[test]
+fn the_status_is_named_in_one_text_with_the_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Stepper::<Stage> {
+                    value: Some(Stage::Shipping),
+                    state: |stage: Stage| (stage == Stage::Shipping).then_some(StepState::Error),
+                    option_description: |_| "Details".to_string(),
+                }
+            }
+        }
+    }
+    let body = body(&render(app));
+    assert!(
+        body.contains("<span data-step-label=\"\"><span aria-hidden=\"true\">Account</span>"),
+        "{body}"
+    );
+    assert!(body.contains(">Account, Completed</span>"), "{body}");
+    assert!(body.contains(">Shipping address, Error</span>"), "{body}");
+    // A step with no status keeps its plain label.
+    assert!(
+        body.contains("<span data-step-label=\"\">Review</span>"),
+        "{body}"
+    );
+}
+
+#[test]
+fn a_rich_label_names_its_status_in_the_same_text() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Stepper::<Stage> {
+                    value: Some(Stage::Shipping),
+                    option_label: |stage: Stage| OptionLabel::rich(stage.label(), rsx! { b { "drawn" } }),
+                }
+            }
+        }
+    }
+    let body = body(&render(app));
+    assert!(body.contains(">Account, Completed</span>"), "{body}");
+}
+
 #[test]
 fn a_description_prints_and_an_empty_one_does_not() {
     fn app() -> Element {

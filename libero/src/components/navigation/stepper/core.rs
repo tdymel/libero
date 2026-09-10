@@ -379,9 +379,9 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         let header_id = format!("{root}-step-{index}");
         let is_current = current == Some(index);
         let status = match step.state {
-            StepState::Completed => Some(completed_label),
-            StepState::Error => Some(error_label),
-            _ => None,
+            StepState::Completed => format!(", {completed_label}"),
+            StepState::Error => format!(", {error_label}"),
+            _ => String::new(),
         };
 
         let marker = match step.state {
@@ -395,19 +395,20 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
             // drawing; the status text below is what a reader gets.
             span { "data-step-marker": "", "aria-hidden": "true", {marker} }
             span { "data-step-body": "",
+                // Name and status in one text node: Chromium puts a space
+                // between separate boxes, "Account , Completed" (todo 458).
                 span { "data-step-label": "",
-                    if let Some(rich) = step.rich {
-                        span { "aria-hidden": "true", {rich} }
-                        VisuallyHidden { "{step.name}" }
+                    if step.rich.is_some() || !status.is_empty() {
+                        span { "aria-hidden": "true",
+                            {step.rich.unwrap_or_else(|| rsx! { "{step.name}" })}
+                        }
+                        VisuallyHidden { "{step.name}{status}" }
                     } else {
                         "{step.name}"
                     }
                 }
                 if let Some(description) = step.description {
                     span { "data-step-description": "", "{description}" }
-                }
-                if let Some(status) = status {
-                    VisuallyHidden { ", {status}" }
                 }
             }
         };
