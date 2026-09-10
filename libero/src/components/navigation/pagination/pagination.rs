@@ -420,7 +420,9 @@ fn use_pagination_focus_repair(list: ElementHandle, page: u32) -> Signal<bool> {
             return;
         }
         owed_focus.set(false);
-        if list.query_selector(":focus").is_ok() {
+        // Chromium keeps a just-disabled button as `activeElement` until its
+        // next focus fixup, so it still matches `:focus` here.
+        if list.query_selector(":focus:not(:disabled)").is_ok() {
             return;
         }
         let _ = list
