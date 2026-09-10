@@ -59,7 +59,7 @@ fn a_pair_emits_both_themes_and_the_attribute_blocks() {
 #[test]
 fn one_theme_still_emits_one_root_block() {
     fn app() -> Element {
-        rsx! { LiberoProvider { theme: &SOLO, Text { "hello" } } }
+        rsx! { LiberoProvider { themes: &SOLO, Text { "hello" } } }
     }
 
     let html = render(app);

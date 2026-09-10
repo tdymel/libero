@@ -5,7 +5,7 @@ Import: `use libero::{LiberoProvider, theme::{HexColor, Size, Sizes, Theme}};`
 Index: [index.md](index.md) - every other component's markdown page
 Description: How a Libero theme is defined - one plain struct of colors, scales and per-component defaults, emitted once as CSS custom properties.
 
-`LiberoProvider` takes a `&'static Theme` and defaults to `Theme::DEFAULT`. A
+`LiberoProvider`'s `themes` takes a `&'static Theme` and defaults to `Theme::DEFAULT`. A
 theme is one plain struct - a color per role, the spacing and radius scales, and a
 defaults struct per component - so customizing it is struct update syntax over the
 default, in a `static`.
@@ -31,7 +31,7 @@ static THEME: Theme = Theme {
 fn App() -> Element {
     rsx! {
         LiberoProvider {
-            theme: &THEME,
+            themes: &THEME,
             Router::<Route> {}
         }
     }
@@ -111,8 +111,8 @@ static THEME: Theme = Theme {
 
 ## Light and dark
 
-`LiberoProvider` takes a `ThemeSet` rather than one theme: it names every theme
-an app ships and designates which is its light and which its dark. An app that
+One theme is shorthand for a `ThemeSet` of only that theme. A whole set names every
+theme an app ships and designates which is its light and which its dark. An app that
 names none at all gets `ThemeSet::DEFAULT`, which pairs `Theme::DEFAULT` with
 `Theme::DARK`, so `prefers-color-scheme` already works with no JavaScript.
 

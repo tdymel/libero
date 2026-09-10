@@ -444,14 +444,14 @@ static SMALL_SLIDERS: Theme = Theme {
 fn both_halves_of_a_slider_take_the_themes_default_size() {
     fn single() -> Element {
         rsx! {
-            LiberoProvider { theme: &SMALL_SLIDERS,
+            LiberoProvider { themes: &SMALL_SLIDERS,
                 Slider { label: "Volume", value: 25.0, oninput: move |_| {} }
             }
         }
     }
     fn range() -> Element {
         rsx! {
-            LiberoProvider { theme: &SMALL_SLIDERS,
+            LiberoProvider { themes: &SMALL_SLIDERS,
                 RangeSlider { label: "Price", value: (20.0, 80.0), oninput: move |_| {} }
             }
         }

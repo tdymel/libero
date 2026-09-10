@@ -18,7 +18,7 @@ const CUSTOM_THEME: &str = r#"static THEME: Theme = Theme {
 fn App() -> Element {
     rsx! {
         LiberoProvider {
-            theme: &THEME,
+            themes: &THEME,
             Router::<Route> {}
         }
     }
@@ -92,6 +92,8 @@ pub fn ThemingPage() -> Element {
             lead: rsx! {
                 Text {
                     Code { source: "LiberoProvider" }
+                    "'s "
+                    Code { source: "themes" }
                     " takes a "
                     Code { source: "&'static Theme" }
                     " and defaults to "
@@ -271,10 +273,9 @@ pub fn ThemingPage() -> Element {
             DocSection {
                 title: "Light and dark",
                 Text {
-                    Code { source: "LiberoProvider" }
-                    " takes a "
+                    "One theme is shorthand for a "
                     Code { source: "ThemeSet" }
-                    " rather than one theme: it names every theme an app ships and "
+                    " of only that theme. A whole set names every theme an app ships and "
                     "designates which is its light and which its dark. An app that names "
                     "none at all gets "
                     Code { source: "ThemeSet::DEFAULT" }

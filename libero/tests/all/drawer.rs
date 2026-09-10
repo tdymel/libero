@@ -63,7 +63,7 @@ fn an_unsized_drawer_takes_the_themes_default_size() {
 
     fn app() -> Element {
         rsx! {
-            LiberoProvider { theme: &WIDE_DRAWERS, Opener {} }
+            LiberoProvider { themes: &WIDE_DRAWERS, Opener {} }
         }
     }
 

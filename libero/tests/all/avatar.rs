@@ -168,7 +168,7 @@ static COUNT_LAST: libero::theme::Theme = libero::theme::Theme {
 fn a_locale_can_put_the_count_after_the_names() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { theme: &COUNT_LAST, AvatarGroup { max: 3, people: people() } }
+            LiberoProvider { themes: &COUNT_LAST, AvatarGroup { max: 3, people: people() } }
         }
     }
 
@@ -300,7 +300,7 @@ static FILLED: libero::theme::Theme = libero::theme::Theme {
 fn an_unset_variant_follows_the_theme() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { theme: &FILLED,
+            LiberoProvider { themes: &FILLED,
                 Avatar { name: "Ada Lovelace", initials: "AL" }
                 AvatarGroup { people: people(), max: 3 }
             }

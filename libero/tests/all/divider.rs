@@ -50,7 +50,7 @@ static THICK_DIVIDERS: Theme = Theme {
 #[test]
 fn an_unsized_divider_takes_the_themes_default_size() {
     fn app() -> Element {
-        rsx! { LiberoProvider { theme: &THICK_DIVIDERS, Divider {} } }
+        rsx! { LiberoProvider { themes: &THICK_DIVIDERS, Divider {} } }
     }
 
     let html = render(app);

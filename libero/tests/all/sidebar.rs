@@ -49,7 +49,7 @@ static WIDE_SIDEBARS: Theme = Theme {
 #[test]
 fn an_unsized_sidebar_takes_the_themes_default_size() {
     fn app() -> Element {
-        rsx! { LiberoProvider { theme: &WIDE_SIDEBARS, Sidebar { "sidebar content" } } }
+        rsx! { LiberoProvider { themes: &WIDE_SIDEBARS, Sidebar { "sidebar content" } } }
     }
 
     let html = render(app);

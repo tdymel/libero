@@ -61,8 +61,8 @@ impl ThemeSet {
         Self::DEFAULT
     }
 
-    /// One theme and nothing else - what `LiberoProvider`'s `theme:` prop is
-    /// sugar for. Deliberately not `new().light(theme)`: the default set
+    /// One theme and nothing else - what `LiberoProvider { themes: &MINE }`
+    /// is sugar for. Deliberately not `new().light(theme)`: the default set
     /// carries [`Theme::DARK`], and an app that hands over one theme of its
     /// own has not authored a dark counterpart for it.
     pub fn of(theme: &'static Theme) -> Self {
@@ -146,6 +146,18 @@ impl Default for ThemeSet {
     }
 }
 
+/// One theme as a set: [`ThemeSet::of`], except that the library's own
+/// [`Theme::DEFAULT`] brings its [`Theme::DARK`] along.
+impl From<&'static Theme> for ThemeSet {
+    fn from(theme: &'static Theme) -> Self {
+        if theme == &Theme::DEFAULT {
+            Self::DEFAULT
+        } else {
+            Self::of(theme)
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -175,6 +187,21 @@ mod tests {
 
         assert!(set.dark_theme().is_none());
         assert!(!set.is_in_pair("dark"));
+    }
+
+    /// What `LiberoProvider { themes: &MINE }` gets: the library's own theme
+    /// keeps its dark half, any other stands alone.
+    #[test]
+    fn a_lone_theme_converts_to_a_set_of_it_unless_it_is_the_default() {
+        static MINE: Theme = Theme {
+            primary: super::super::HexColor::new(0x7C3AED),
+            ..Theme::DEFAULT
+        };
+
+        assert_eq!(ThemeSet::from(&Theme::DEFAULT), ThemeSet::DEFAULT);
+        let set = ThemeSet::from(&MINE);
+        assert!(std::ptr::eq(set.light_theme(), &MINE));
+        assert!(set.dark_theme().is_none());
     }
 
     #[test]

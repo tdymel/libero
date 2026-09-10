@@ -61,12 +61,12 @@ fn unset_chrome_props_follow_the_theme() {
     }
     fn bare() -> Element {
         rsx! {
-            LiberoProvider { theme: &BARE, CodeBlock { source: "let x = 1;" } }
+            LiberoProvider { themes: &BARE, CodeBlock { source: "let x = 1;" } }
         }
     }
     fn overridden() -> Element {
         rsx! {
-            LiberoProvider { theme: &BARE, CodeBlock { source: "let x = 1;", copyable: true } }
+            LiberoProvider { themes: &BARE, CodeBlock { source: "let x = 1;", copyable: true } }
         }
     }
 

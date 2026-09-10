@@ -188,7 +188,7 @@ fn a_set_with_no_dark_half_cannot_be_toggled_into_one() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                theme: &SOLO,
+                themes: &SOLO,
                 Reader {}
                 Act {
                     act: move |scheme: ColorSchemeHandle| scheme.toggle(),

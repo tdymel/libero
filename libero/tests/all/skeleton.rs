@@ -181,7 +181,7 @@ fn the_theme_colour_and_duration_reach_the_stylesheet() {
     }
     fn themed() -> Element {
         rsx! {
-            LiberoProvider { theme: &SLOW_ERROR, Skeleton {} }
+            LiberoProvider { themes: &SLOW_ERROR, Skeleton {} }
         }
     }
 
@@ -244,7 +244,7 @@ static STILL: Theme = Theme {
 fn an_unset_animate_follows_the_theme() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { theme: &STILL, Skeleton { Button { "Save" } } }
+            LiberoProvider { themes: &STILL, Skeleton { Button { "Save" } } }
         }
     }
 

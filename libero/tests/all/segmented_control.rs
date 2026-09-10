@@ -172,7 +172,7 @@ static TONAL: libero::theme::Theme = libero::theme::Theme {
 fn an_unset_variant_follows_its_own_theme_field() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { theme: &TONAL,
+            LiberoProvider { themes: &TONAL,
                 SegmentedControl { value: Emphasis::Bold, onchange: move |_| {} }
             }
         }

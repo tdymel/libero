@@ -175,7 +175,7 @@ static PINNED: libero::theme::Theme = libero::theme::Theme {
 fn an_unset_country_select_follows_the_theme() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { theme: &PINNED,
+            LiberoProvider { themes: &PINNED,
                 PhoneField { label: "Mobile", country: "DE", oninput: move |_: String| {} }
             }
         }

@@ -211,7 +211,7 @@ fn the_themed_radius_reaches_the_dialog() {
         ..Theme::DEFAULT
     };
     fn round() -> Element {
-        rsx! { LiberoProvider { theme: &ROUND, Palette {} } }
+        rsx! { LiberoProvider { themes: &ROUND, Palette {} } }
     }
 
     QUERY.with(|q| q.borrow_mut().clear());

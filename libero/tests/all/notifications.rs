@@ -307,7 +307,7 @@ fn a_notification_leaves_after_its_time_and_is_then_removed() {
         let notify = use_notifications();
         use_hook(|| notify.show("Saved."));
         rsx! {
-            LiberoProvider { theme: &FAST, Notifications {} }
+            LiberoProvider { themes: &FAST, Notifications {} }
         }
     }
 
@@ -341,7 +341,7 @@ fn a_sticky_notification_stays_and_the_next_one_moves_up() {
             notify.show("Queued");
         });
         rsx! {
-            LiberoProvider { theme: &FAST, Notifications { limit: 2 } }
+            LiberoProvider { themes: &FAST, Notifications { limit: 2 } }
         }
     }
 
@@ -367,7 +367,7 @@ fn hiding_a_queued_notification_removes_it_without_ever_showing_it() {
             notify.hide(queued);
         });
         rsx! {
-            LiberoProvider { theme: &FAST, Notifications { limit: 1 } }
+            LiberoProvider { themes: &FAST, Notifications { limit: 1 } }
         }
     }
 

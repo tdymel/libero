@@ -251,7 +251,7 @@ fn an_unset_variant_follows_the_theme() {
 
     fn app() -> Element {
         rsx! {
-            LiberoProvider { theme: &OUTLINED,
+            LiberoProvider { themes: &OUTLINED,
                 Button { "Save" }
                 ActionIcon { aria_label: "Close", color: Color::Primary, "x" }
                 Chip { "Tag" }

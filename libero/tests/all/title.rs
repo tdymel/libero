@@ -36,7 +36,7 @@ static SMALL_TITLES: Theme = Theme {
 #[test]
 fn an_unsized_title_takes_the_themes_look_but_keeps_its_h1() {
     fn app() -> Element {
-        rsx! { LiberoProvider { theme: &SMALL_TITLES, Title { "Heading" } } }
+        rsx! { LiberoProvider { themes: &SMALL_TITLES, Title { "Heading" } } }
     }
 
     let html = render(app);

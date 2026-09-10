@@ -257,7 +257,7 @@ static CARDS: libero::theme::Theme = libero::theme::Theme {
 fn an_unset_variant_follows_the_theme() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { theme: &CARDS,
+            LiberoProvider { themes: &CARDS,
                 Checkbox { label: "Priority support", checked: true, onchange: move |_| {} }
                 Switch { label: "Alerts", checked: true, onchange: move |_| {} }
                 Radio { label: "Free", checked: false, onselect: move |_| {} }

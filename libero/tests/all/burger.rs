@@ -92,7 +92,7 @@ fn the_accessible_name_comes_from_the_theme_and_follows_opened() {
     }
     fn german_open() -> Element {
         rsx! {
-            LiberoProvider { theme: &GERMAN,
+            LiberoProvider { themes: &GERMAN,
                 Burger { open: true, "aria-controls": "nav" }
             }
         }
@@ -116,7 +116,7 @@ fn the_accessible_name_comes_from_the_theme_and_follows_opened() {
 fn the_label_callback_overrides_the_theme_on_both_states() {
     fn open() -> Element {
         rsx! {
-            LiberoProvider { theme: &GERMAN,
+            LiberoProvider { themes: &GERMAN,
                 Burger {
                     open: true,
                     "aria-controls": "nav",

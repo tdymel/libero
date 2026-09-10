@@ -34,7 +34,7 @@ static LARGE_KEYS: Theme = Theme {
 #[test]
 fn an_unsized_kbd_takes_the_themes_default_size() {
     fn app() -> Element {
-        rsx! { LiberoProvider { theme: &LARGE_KEYS, Kbd { "Ctrl" } } }
+        rsx! { LiberoProvider { themes: &LARGE_KEYS, Kbd { "Ctrl" } } }
     }
 
     let html = render(app);

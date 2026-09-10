@@ -228,7 +228,7 @@ fn the_loading_label_comes_from_the_theme() {
         rsx! { LiberoProvider { Loading {} } }
     }
     fn german() -> Element {
-        rsx! { LiberoProvider { theme: &GERMAN, Loading {} } }
+        rsx! { LiberoProvider { themes: &GERMAN, Loading {} } }
     }
 
     let html = loading(english);
@@ -246,7 +246,7 @@ fn the_loading_label_comes_from_the_theme() {
 fn a_loading_label_prop_beats_the_theme() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { theme: &GERMAN,
+            LiberoProvider { themes: &GERMAN,
                 Loading { label: "Searching fruit" }
             }
         }

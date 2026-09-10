@@ -34,7 +34,7 @@ static SMALL_TEXT: Theme = Theme {
 #[test]
 fn an_unsized_text_takes_the_themes_default_size() {
     fn app() -> Element {
-        rsx! { LiberoProvider { theme: &SMALL_TEXT, Text { "body copy" } } }
+        rsx! { LiberoProvider { themes: &SMALL_TEXT, Text { "body copy" } } }
     }
 
     let html = render(app);

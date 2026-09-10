@@ -1359,12 +1359,12 @@ static NO_REVEAL: libero::theme::Theme = libero::theme::Theme {
 fn an_unset_reveal_button_follows_the_theme() {
     fn themed() -> Element {
         rsx! {
-            LiberoProvider { theme: &NO_REVEAL, PasswordField { label: "Password" } }
+            LiberoProvider { themes: &NO_REVEAL, PasswordField { label: "Password" } }
         }
     }
     fn overridden() -> Element {
         rsx! {
-            LiberoProvider { theme: &NO_REVEAL,
+            LiberoProvider { themes: &NO_REVEAL,
                 PasswordField { label: "Password", reveal_button: true }
             }
         }

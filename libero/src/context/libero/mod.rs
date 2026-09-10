@@ -247,31 +247,18 @@ fn StyleOutlet() -> Element {
 
 #[component]
 pub fn LiberoProvider(
-    /// One theme, and sugar for a [`ThemeSet`] holding only it. Ignored when
-    /// `themes` is given.
-    ///
-    /// The library's own [`Theme::DEFAULT`] is the exception: it is paired
-    /// with [`Theme::DARK`], so an app that names no theme at all still
-    /// follows `prefers-color-scheme`. A theme of the caller's own has no
-    /// dark counterpart for us to pair it with, so it stays alone until they
-    /// hand over a `themes:` set.
-    #[props(default = &Theme::DEFAULT)]
-    theme: &'static Theme,
     /// Every theme the app ships. Its light and dark halves are emitted into
     /// the sheet together, so switching between them costs no re-render.
-    #[props(default)]
-    themes: Option<ThemeSet>,
+    ///
+    /// A lone `&'static Theme` converts to a set of that theme alone: a theme
+    /// of the caller's own has no dark counterpart for us to pair it with.
+    /// The default is [`ThemeSet::DEFAULT`], so an app that names no theme at
+    /// all still follows `prefers-color-scheme`.
+    #[props(default, into)]
+    themes: ThemeSet,
     children: Element,
 ) -> Element {
-    let themes = use_hook(|| {
-        themes.clone().unwrap_or_else(|| {
-            if theme == &Theme::DEFAULT {
-                ThemeSet::DEFAULT
-            } else {
-                ThemeSet::of(theme)
-            }
-        })
-    });
+    let themes = use_hook(|| themes.clone());
     // Read once, at mount, so the first render already paints the scheme the
     // app was last left in rather than flashing the light one.
     let setting = use_hook(|| {
