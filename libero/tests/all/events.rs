@@ -3135,6 +3135,117 @@ mod combobox_refusal {
     }
 }
 
+/// Todo 26 item 5: a range of days closes its dropdown on the second pick,
+/// not the first, and `close_on_change: false` keeps it open.
+mod range_close_on_change {
+    use super::*;
+    use chrono::NaiveDate;
+    use libero::components::{DateField, DateRange};
+    use std::collections::HashMap;
+
+    thread_local! {
+        static CLOSE: std::cell::Cell<bool> = const { std::cell::Cell::new(true) };
+    }
+
+    /// The input's click listener comes first; every day button carries its
+    /// date in `data-date`.
+    #[derive(Default)]
+    struct FindDays {
+        last: Option<ElementId>,
+        first_click: Option<ElementId>,
+        days: HashMap<String, ElementId>,
+    }
+
+    impl WriteMutations for FindDays {
+        fn push_id(&mut self, id: ElementId) {
+            self.last = Some(id);
+        }
+        fn set_id(&mut self, id: ElementId) {
+            self.last = Some(id);
+        }
+        fn add_event_listener(&mut self, name: &str) {
+            if name == "click" {
+                self.first_click = self.first_click.or(self.last);
+            }
+        }
+        fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
+            if name == "data-date"
+                && let (AttributeValue::Text(day), Some(id)) = (value, self.last)
+            {
+                self.days.insert(day.clone(), id);
+            }
+        }
+        fn child(&mut self, _index: usize) {}
+        fn pop(&mut self) {}
+        fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
+        fn create_text(&mut self, _value: &str) {}
+        fn clone(&mut self) {}
+        fn append_children(&mut self, _m: usize) {}
+        fn replace_with(&mut self, _m: usize) {}
+        fn insert_after(&mut self, _m: usize) {}
+        fn insert_before(&mut self, _m: usize) {}
+        fn set_text(&mut self, _value: &str) {}
+        fn remove_event_listener(&mut self, _name: &str) {}
+        fn remove(&mut self) {}
+    }
+
+    fn trip() -> Element {
+        let mut value = use_signal(|| None::<DateRange<NaiveDate>>);
+        rsx! {
+            LiberoProvider {
+                DateField::<DateRange<NaiveDate>> {
+                    label: "Trip",
+                    today: NaiveDate::from_ymd_opt(2026, 9, 1).unwrap(),
+                    close_on_change: CLOSE.with(|cell| cell.get()),
+                    value: value(),
+                    onchange: move |next| value.set(next),
+                }
+            }
+        }
+    }
+
+    fn open(dom: &VirtualDom) -> bool {
+        body(&dioxus_ssr::render(dom)).contains(r#"role="dialog""#)
+    }
+
+    fn click(dom: &mut VirtualDom, find: &mut FindDays, id: ElementId) {
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), id);
+        dom.render_immediate(find);
+        dom.render_immediate(find);
+    }
+
+    fn after_two_picks(close: bool) -> (bool, bool) {
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        CLOSE.with(|cell| cell.set(close));
+        let mut dom = VirtualDom::new(trip);
+        let mut find = FindDays::default();
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+        let input = find.first_click.expect("the input takes clicks");
+        click(&mut dom, &mut find, input);
+        assert!(open(&dom), "a click opens the dropdown");
+
+        let day = |find: &FindDays, day: &str| *find.days.get(day).expect(day);
+        let first = day(&find, "2026-09-10");
+        click(&mut dom, &mut find, first);
+        let after_first = open(&dom);
+        let second = day(&find, "2026-09-14");
+        click(&mut dom, &mut find, second);
+        (after_first, open(&dom))
+    }
+
+    #[test]
+    fn a_range_of_days_closes_on_its_second_pick() {
+        assert_eq!(after_two_picks(true), (true, false));
+    }
+
+    #[test]
+    fn close_on_change_false_keeps_a_range_open() {
+        assert_eq!(after_two_picks(false), (true, true));
+    }
+}
+
 /// Todo 439 (a): the pointer refuses what the keys refuse. Each case runs once
 /// editable, so the refusal is believed next to the same click being answered.
 mod pointer_guards {

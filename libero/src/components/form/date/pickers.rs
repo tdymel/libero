@@ -8,7 +8,7 @@ use chrono::NaiveDate;
 use super::{
     DateRange,
     calendar::DateLevel,
-    date_value::{DateValue, PickerArgs, PickerOptions},
+    date_value::{PickerArgs, PickerOptions, Sealed},
     props::date_props,
 };
 use crate::{components::Input, hooks::use_theme};

@@ -18,6 +18,7 @@ use crate::{
     hooks::use_theme,
     sx::Sx,
     theme::{CalendarVariant, Size, TimePickerVariant},
+    utils::warn,
 };
 
 /// Everything a picker takes besides the value, resolved once by the
@@ -74,14 +75,26 @@ pub struct PickerArgs<V: DateValue> {
 
 /// A value [`DatePicker`](super::DatePicker) and [`DateField`](super::DateField)
 /// can hold: `NaiveDate`, `NaiveTime`, `NaiveDateTime`, and a `DateRange` of
-/// days or of date-times. Sealed - its methods take libero's own unnameable
-/// types.
-pub trait DateValue: FieldValue {
+/// days or of date-times. Sealed: the five are all there is.
+#[allow(
+    private_bounds,
+    reason = "the seal, which keeps its machinery out of rustdoc"
+)]
+pub trait DateValue: Sealed {
     /// What `min` and `max` are: the value's own type, or a range's end type.
     type Bound: Copy + PartialOrd + 'static;
+}
+
+/// The part of [`DateValue`] only libero calls.
+pub(super) trait Sealed: FieldValue {
+    /// The type-dependent props this value type reads; debug builds warn about
+    /// the others when set.
+    const USES: &'static [&'static str];
 
     /// Whether a typed or picked value passes `min`, `max` and `exclude_date`.
-    fn accepts(self, options: &PickerOptions<Self::Bound>) -> bool;
+    fn accepts(self, options: &PickerOptions<<Self as DateValue>::Bound>) -> bool
+    where
+        Self: DateValue;
 
     /// Whether a pick leaves nothing more to pick, so a field may close its
     /// dropdown.
@@ -89,11 +102,56 @@ pub trait DateValue: FieldValue {
 
     /// Draws the picker for this value type. Calls hooks: only from a
     /// component's body, never behind a condition.
-    fn picker(args: PickerArgs<Self>) -> Element;
+    fn picker(args: PickerArgs<Self>) -> Element
+    where
+        Self: DateValue;
+}
+
+/// Warns once per mount about each prop set to something `V` does not use, or
+/// that `dropped` names. Debug builds only.
+pub(super) fn use_ignored_props_warning<V: DateValue>(
+    component: &str,
+    set: &[(&'static str, bool)],
+    dropped: &[&str],
+) {
+    use_hook(|| {
+        if !cfg!(debug_assertions) {
+            return;
+        }
+        let ignored = set
+            .iter()
+            .filter(|(prop, set)| *set && (!V::USES.contains(prop) || dropped.contains(prop)));
+        for (prop, _) in ignored {
+            warn(&format!(
+                "{component}::<{}>: `{prop}` is set but ignored - the component's docs list \
+                 the props each value type uses.",
+                std::any::type_name::<V>()
+            ));
+        }
+    });
+}
+
+/// `value` if `V` reads `prop`.
+pub(super) fn used<V: DateValue, T>(prop: &str, value: T) -> Option<T> {
+    V::USES.contains(&prop).then_some(value)
 }
 
 impl DateValue for NaiveDate {
     type Bound = NaiveDate;
+}
+
+impl Sealed for NaiveDate {
+    const USES: &'static [&'static str] = &[
+        "format",
+        "today",
+        "exclude_date",
+        "calendar",
+        "days",
+        "columns",
+        "close_on_change",
+        "level",
+        "allow_deselect",
+    ];
 
     fn accepts(self, options: &PickerOptions<NaiveDate>) -> bool {
         day_allowed(options.min, options.max, options.exclude_date)(self)
@@ -170,6 +228,16 @@ impl DateValue for NaiveDate {
 
 impl DateValue for NaiveTime {
     type Bound = NaiveTime;
+}
+
+impl Sealed for NaiveTime {
+    const USES: &'static [&'static str] = &[
+        "time_format",
+        "variant",
+        "with_seconds",
+        "step",
+        "twelve_hour",
+    ];
 
     fn accepts(self, options: &PickerOptions<NaiveTime>) -> bool {
         !(options.min.is_some_and(|min| self < min) || options.max.is_some_and(|max| self > max))
@@ -205,6 +273,21 @@ impl DateValue for NaiveTime {
 
 impl DateValue for NaiveDateTime {
     type Bound = NaiveDateTime;
+}
+
+impl Sealed for NaiveDateTime {
+    const USES: &'static [&'static str] = &[
+        "format",
+        "today",
+        "exclude_date",
+        "calendar",
+        "days",
+        "time_format",
+        "variant",
+        "with_seconds",
+        "step",
+        "twelve_hour",
+    ];
 
     fn accepts(self, options: &PickerOptions<NaiveDateTime>) -> bool {
         moment_allowed(options.min, options.max, options.exclude_date)(self)
@@ -248,6 +331,16 @@ impl DateValue for NaiveDateTime {
 
 impl DateValue for DateRange<NaiveDate> {
     type Bound = NaiveDate;
+}
+
+impl Sealed for DateRange<NaiveDate> {
+    const USES: &'static [&'static str] = &[
+        "format",
+        "today",
+        "exclude_date",
+        "columns",
+        "close_on_change",
+    ];
 
     fn accepts(self, options: &PickerOptions<NaiveDate>) -> bool {
         self.start.accepts(options) && self.end.is_none_or(|end| end.accepts(options))
@@ -290,6 +383,19 @@ impl DateValue for DateRange<NaiveDate> {
 
 impl DateValue for DateRange<NaiveDateTime> {
     type Bound = NaiveDateTime;
+}
+
+impl Sealed for DateRange<NaiveDateTime> {
+    const USES: &'static [&'static str] = &[
+        "format",
+        "today",
+        "exclude_date",
+        "time_format",
+        "variant",
+        "with_seconds",
+        "step",
+        "twelve_hour",
+    ];
 
     fn accepts(self, options: &PickerOptions<NaiveDateTime>) -> bool {
         self.start.accepts(options) && self.end.is_none_or(|end| end.accepts(options))

@@ -4,7 +4,7 @@ use chrono::{NaiveTime, Timelike};
 
 use super::{
     calendar::use_focus_after_render,
-    date_value::{DateValue, PickerArgs, PickerOptions},
+    date_value::{PickerArgs, PickerOptions, Sealed},
     format::uses_twelve_hours,
     parse_time::MIDNIGHT,
     props::date_props,

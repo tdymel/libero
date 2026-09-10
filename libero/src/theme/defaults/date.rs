@@ -18,8 +18,20 @@ pub const DATE_PICKER_FONT_SIZE: CssVar = CssVar::new("--lsx-date-picker-font-si
 ///
 /// The names follow dayjs' locale files (`months`, `monthsShort`, `weekdays`,
 /// `weekdaysShort`, `weekdaysMin`), so an existing translation copies over.
+///
+/// # Fields, in three groups
+///
+/// - **Names** a language gives: `months`, `months_short`, `weekdays`,
+///   `weekdays_short`, `weekdays_min`, `am`, `pm`.
+/// - **Conventions** a region picks: `first_weekday`, `format`,
+///   `month_format`, `time_format`, `range_separator`.
+/// - **Labels** a screen reader or a sighted reader gets: the paging buttons
+///   (`previous_month` to `next_days`), `invalid_date`, the switch segments
+///   (`date_label` to `end_label`), the switches themselves and the
+///   `TimePicker` columns.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DateDefaults {
+    // Names.
     /// `January` to `December`. `MMMM` in a format, and what a typed month
     /// name is matched against.
     pub months: [&'static str; 12],
@@ -33,6 +45,12 @@ pub struct DateDefaults {
     pub weekdays_short: [&'static str; 7],
     /// `Mo` to `Su`. `dd` in a format, and a calendar's column headers.
     pub weekdays_min: [&'static str; 7],
+    /// `A` in a format, and what a typed `am` matches.
+    pub am: &'static str,
+    /// `A` in a format, and what a typed `pm` matches.
+    pub pm: &'static str,
+
+    // Conventions.
     /// The first column of a calendar.
     pub first_weekday: Weekday,
     /// How a date is shown, in dayjs tokens: `YYYY`, `M`, `MM`, `MMM`,
@@ -41,21 +59,17 @@ pub struct DateDefaults {
     pub format: &'static str,
     /// A calendar's month heading.
     pub month_format: &'static str,
+    /// How a time is shown, in dayjs tokens: `H`, `HH`, `h`, `hh`, `m`, `mm`,
+    /// `s`, `ss`, `A`, `a`. An `h` or an `A` makes pickers 12-hour.
+    pub time_format: &'static str,
+    /// Between a range's two ends in a field's text.
+    pub range_separator: &'static str,
+
+    // Labels.
     /// Names the button that pages a calendar back.
     pub previous_month: &'static str,
     /// Names the button that pages a calendar forward.
     pub next_month: &'static str,
-    /// The error a date field shows for text that is not a date it accepts.
-    pub invalid_date: &'static str,
-    /// How a time is shown, in dayjs tokens: `H`, `HH`, `h`, `hh`, `m`, `mm`,
-    /// `s`, `ss`, `A`, `a`. An `h` or an `A` makes pickers 12-hour.
-    pub time_format: &'static str,
-    /// `A` in a format, and what a typed `am` matches.
-    pub am: &'static str,
-    /// `A` in a format, and what a typed `pm` matches.
-    pub pm: &'static str,
-    /// Between a range's two ends in a field's text.
-    pub range_separator: &'static str,
     /// Names the button that pages a calendar's months back a year.
     pub previous_year: &'static str,
     pub next_year: &'static str,
@@ -65,6 +79,8 @@ pub struct DateDefaults {
     /// Names the button that pages a mini calendar's days back.
     pub previous_days: &'static str,
     pub next_days: &'static str,
+    /// The error a date field shows for text that is not a date it accepts.
+    pub invalid_date: &'static str,
     /// The segments that switch a dropdown between its calendar and its clock.
     pub date_label: &'static str,
     pub time_label: &'static str,
@@ -111,22 +127,22 @@ impl DateDefaults {
         ],
         weekdays_short: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
         weekdays_min: ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"],
+        am: "AM",
+        pm: "PM",
         first_weekday: Weekday::Mon,
         format: "MMMM D, YYYY",
         month_format: "MMMM YYYY",
+        time_format: "HH:mm",
+        range_separator: " – ",
         previous_month: "Previous month",
         next_month: "Next month",
-        invalid_date: "Not a valid date",
-        time_format: "HH:mm",
-        am: "AM",
-        pm: "PM",
-        range_separator: " – ",
         previous_year: "Previous year",
         next_year: "Next year",
         previous_decade: "Previous decade",
         next_decade: "Next decade",
         previous_days: "Previous days",
         next_days: "Next days",
+        invalid_date: "Not a valid date",
         date_label: "Date",
         time_label: "Time",
         start_label: "Start",
@@ -260,7 +276,8 @@ impl ToCssDeclarations for DatePickerDefaults {
 pub struct DateFieldDefaults {
     pub size: Size,
     pub radius: Size,
-    /// Picking a day in the dropdown closes it.
+    /// Picking a day, or the second end of a range of days, closes the
+    /// dropdown. Times, date-times and their ranges never close on a pick.
     pub close_on_change: bool,
 }
 

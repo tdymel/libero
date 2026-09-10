@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use super::{
     calendar::DateLevel,
-    date_value::{DateValue, PickerArgs, PickerOptions},
+    date_value::{DateValue, PickerArgs, PickerOptions, use_ignored_props_warning},
     format::uses_twelve_hours,
     props::date_props,
 };
@@ -21,12 +21,44 @@ date_props! {
 /// A typed `value` alone does not name `V` - dioxus passes props through
 /// `SuperInto` - so a typed `onchange` or a turbofish has to.
 ///
-/// Props a value type does not use are ignored: the clock props need a time,
-/// `exclude_date` and `columns` days, `level` and `allow_deselect` a single
-/// `NaiveDate`, `calendar` and `days` a day or a date-time.
+/// Props a value type does not use are ignored, with a warning in debug
+/// builds: the clock props need a time, `today` and `exclude_date` days,
+/// `columns` a day or a range of days, `level` and `allow_deselect` a single
+/// `NaiveDate`, `calendar` and `days` a day or a date-time. A month or year
+/// picker also ignores `exclude_date`, `columns`, `calendar`, `days` and
+/// `allow_deselect`.
 #[component]
 pub fn DatePicker<V: DateValue>(props: DatePickerProps<V>) -> Element {
     let theme = use_theme();
+    let level = props.level.unwrap_or(DateLevel::Day);
+    use_ignored_props_warning::<V>(
+        "DatePicker",
+        &[
+            ("exclude_date", props.exclude_date.is_some()),
+            ("allow_deselect", props.allow_deselect.is_some()),
+            ("columns", props.columns.is_some()),
+            ("level", props.level.is_some()),
+            ("calendar", props.calendar.as_ref().is_some()),
+            ("days", props.days.is_some()),
+            ("today", props.today.is_some()),
+            ("variant", props.variant.as_ref().is_some()),
+            ("with_seconds", props.with_seconds.is_some()),
+            ("step", props.step.is_some()),
+            ("twelve_hour", props.twelve_hour.is_some()),
+        ],
+        // Months and years have no excluded days, columns, mini calendar or
+        // deselect.
+        match level {
+            DateLevel::Day => &[],
+            _ => &[
+                "exclude_date",
+                "allow_deselect",
+                "columns",
+                "calendar",
+                "days",
+            ],
+        },
+    );
     V::picker(PickerArgs {
         value: props.value,
         onchange: props.onchange,
@@ -36,7 +68,7 @@ pub fn DatePicker<V: DateValue>(props: DatePickerProps<V>) -> Element {
             exclude_date: props.exclude_date,
             allow_deselect: props.allow_deselect.unwrap_or(false),
             columns: props.columns,
-            level: props.level.unwrap_or(DateLevel::Day),
+            level,
             variant: props.variant.copied_or(theme.time_picker.variant),
             with_seconds: props.with_seconds.unwrap_or(false),
             step: props.step,

@@ -115,8 +115,9 @@ macro_rules! date_props {
     };
     (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] close_on_change $($rest:ident)*) => {
         $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
-            /// A pick that leaves nothing more to pick closes the dropdown.
-            /// Defaults to the theme's `DateFieldDefaults::close_on_change`.
+            /// Picking a day, or the second end of a range of days, closes the
+            /// dropdown. Defaults to the theme's
+            /// `DateFieldDefaults::close_on_change`.
             #[props(default)]
             close_on_change: Option<bool>,
         ] $($rest)*);

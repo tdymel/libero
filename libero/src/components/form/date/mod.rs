@@ -6,21 +6,31 @@
 //! `DatePicker` and `DateField` hold every value type; the typed pickers and
 //! fields are the same components for one value type each.
 
+// A pub type in a private module shows up in rustdoc but cannot be named.
+#![deny(unnameable_types)]
+
 mod calendar;
-mod date_field;
-mod date_picker;
 mod date_value;
-mod fields;
 mod flows;
 mod format;
 mod parse;
 mod parse_time;
 mod picker_field;
-mod pickers;
 mod props;
 mod range;
-mod time_picker;
 mod today;
+
+// The dioxus `Props` builders leak from every module that declares props.
+#[allow(unnameable_types, reason = "todo 450")]
+mod date_field;
+#[allow(unnameable_types, reason = "todo 450")]
+mod date_picker;
+#[allow(unnameable_types, reason = "todo 450")]
+mod fields;
+#[allow(unnameable_types, reason = "todo 450")]
+mod pickers;
+#[allow(unnameable_types, reason = "todo 450")]
+mod time_picker;
 
 pub use calendar::DateLevel;
 pub use date_field::{DateField, DateFieldProps};
