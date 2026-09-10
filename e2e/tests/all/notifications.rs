@@ -52,8 +52,8 @@ const EXIT_MS: u32 = 200;
 /// The shown state's baseline, polite and then assertive (todo 315 (b)).
 ///
 /// The states accumulate on one page, so the "assertive" tree holds both: the
-/// polite one in its list and the assertive one in the other. The resting tree
-/// is the empty case, the 18 silent lists, and pins that they are mounted.
+/// polite one in its region and the assertive one in the other. The resting
+/// tree is the empty case, the 18 silent regions with no list in them.
 ///
 /// `targets_spaced`, not `targets`: the close button is 20x20 and meets WCAG
 /// 2.5.8 only through the spacing exception, so what it has to prove is
@@ -79,6 +79,10 @@ fn it_meets_the_baseline() {
 /// A screen reader announces an insertion into a live region, so an insertion
 /// that carries `text` is one announcement. A re-render that put the item
 /// back, or re-set its text, would count again.
+/// Lists with no item in them: none may sit in the page at rest (todo 447).
+const EMPTY_LISTS: &str = "[...document.querySelectorAll('ul, ol, [role=list]')]\
+     .filter(list => !list.querySelector('li, [role=listitem]')).length";
+
 const ANNOUNCEMENTS: &str = r#"(text) => {
     window.__announced = 0;
     const count = (node) => (node.textContent || '').includes(text);
@@ -241,6 +245,11 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
                 !spoken,
                 "at {at}: a live region still speaks after the removal"
             );
+            let empty: usize = js(page, EMPTY_LISTS.into()).await;
+            assert_eq!(
+                empty, 0,
+                "at {at}: {empty} empty list(s) left after the removal"
+            );
             let announced: usize = js(page, "window.__announced".into()).await;
             assert_eq!(announced, 1, "at {at}: closing announced the text again");
             e2e::passes::focus::assert_focused(page, TIMED_TRIGGER, "a notification closing")
@@ -299,12 +308,15 @@ fn a_notification_is_announced_without_stealing_focus() {
     });
 }
 
-/// The live regions are mounted before they have anything to say.
+/// The live regions are mounted before they have anything to say, and hold no
+/// empty list meanwhile.
 ///
 /// A region that mounts together with its text is skipped by some screen
 /// readers, which is why the library keeps them always-mounted and empty
 /// (`codebase/components/notifications`). An assertion that a region exists
-/// *while it is speaking* would hold just as well for the broken shape.
+/// *while it is speaking* would hold just as well for the broken shape. Only
+/// the list inside comes with the first notification: an empty one is read
+/// as "list, 0 items" (todo 447).
 #[test]
 fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
     block_on(async {
@@ -358,6 +370,14 @@ fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
             "a notification host should mount at least one polite live region, found none \
              among {regions}"
         );
+
+        let empty: usize = page
+            .evaluate(EMPTY_LISTS)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(empty, 0, "{empty} empty list(s) in the page at rest");
 
         fixture.close().await.unwrap();
     });

@@ -61,10 +61,33 @@ fn every_stack_renders_both_live_regions_before_anything_is_shown() {
         "{html}"
     );
     assert!(items(&html).is_empty(), "{html}");
-    // Every live region is an `<ol>` with `list-style: none`, which Safari with
-    // VoiceOver stops announcing as a list without an explicit role.
-    assert_eq!(html.matches("<ol").count(), 18, "{html}");
-    assert_eq!(html.matches(r#"role="list""#).count(), 18, "{html}");
+    // No empty list: a screen reader reads it as "list, 0 items" (todo 447).
+    assert_eq!(html.matches("<ol").count(), 0, "{html}");
+    assert_eq!(html.matches(r#"role="list""#).count(), 0, "{html}");
+}
+
+#[test]
+fn only_a_region_with_a_notification_holds_a_list() {
+    fn app() -> Element {
+        let notify = use_notifications();
+        use_hook(|| notify.show("Saved."));
+        rsx! {
+            LiberoProvider { Notifications {} }
+        }
+    }
+
+    let html = body(&render(app));
+    let bottom_end = stack(&html, "bottom", "end");
+    let polite = &bottom_end[bottom_end
+        .find(r#"aria-live="polite""#)
+        .unwrap_or_else(|| panic!("no polite region:\n{bottom_end}"))..];
+
+    // The `<ol>` has `list-style: none`, which Safari with VoiceOver stops
+    // announcing as a list without an explicit role.
+    assert_eq!(html.matches("<ol").count(), 1, "{html}");
+    assert_eq!(html.matches(r#"role="list""#).count(), 1, "{html}");
+    assert!(polite.contains("<ol"), "{bottom_end}");
+    assert_eq!(html.matches(r#"aria-live="polite""#).count(), 9, "{html}");
 }
 
 #[test]
@@ -85,7 +108,7 @@ fn a_shown_message_renders_as_an_alert_in_the_default_corner() {
 
     assert_eq!(shown.len(), 1, "{html}");
     assert!(shown[0].contains("Saved."), "{}", shown[0]);
-    // Not `alert`: the list is already the live region.
+    // Not `alert`: the region around it is already live.
     assert!(shown[0].contains(r#"role="group""#), "{}", shown[0]);
     assert!(shown[0].contains(r#"aria-label="Close""#), "{}", shown[0]);
 }

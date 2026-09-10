@@ -11,34 +11,35 @@ button "Notify for a while"
   StaticText "Notify for a while"
 generic
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
-      listitem [level=1]
-        group
-          generic
-            StaticText "Saved to your library"
-          button "Close"
+    generic [live=assertive]
+    generic [live=polite]
+      list
+        listitem [level=1]
+          group
+            generic
+              StaticText "Saved to your library"
+            button "Close"

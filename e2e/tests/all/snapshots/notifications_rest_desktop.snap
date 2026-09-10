@@ -11,29 +11,29 @@ button "Notify for a while"
   StaticText "Notify for a while"
 generic
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]
   generic
-    list [live=assertive]
-    list [live=polite]
+    generic [live=assertive]
+    generic [live=polite]

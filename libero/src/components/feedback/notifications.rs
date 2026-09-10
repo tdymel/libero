@@ -51,7 +51,15 @@ static CONTAINED_SX: StaticSx = StaticSx::new(|| sx().position("relative"));
 
 /// One live region. Both are always rendered, even empty, and the space
 /// between the two comes from here rather than from a `gap` on the stack, so
-/// an empty list takes none.
+/// an empty region takes none.
+static REGION_SX: StaticSx = StaticSx::new(|| {
+    sx().selector(
+        "&:not(:empty) + &:not(:empty)",
+        sx().margin_top(NOTIFICATION_GAP.value()),
+    )
+});
+
+/// A region's list, rendered only while it holds a notification.
 static LIST_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
@@ -59,10 +67,6 @@ static LIST_SX: StaticSx = StaticSx::new(|| {
         .margin("0")
         .padding("0")
         .list_style("none")
-        .selector(
-            "&:not(:empty) + &:not(:empty)",
-            sx().margin_top(NOTIFICATION_GAP.value()),
-        )
 });
 
 static ITEM_SX: StaticSx = StaticSx::new(|| {
@@ -577,7 +581,7 @@ fn default_template(s: NotificationScope<NotificationData>) -> Element {
 
     rsx! {
         Alert {
-            // Not `alert`: the list around it is already the live region, and
+            // Not `alert`: the region around it is already live, and
             // a live region inside another is announced twice or not at all.
             role: "group",
             title: data.title,
@@ -663,8 +667,8 @@ pub fn Notifications(
 
     let entries = store.entries.read();
     // Every placement, always: both live regions of a stack have to be in the
-    // document before anything is added to them, or nothing is announced. So
-    // a stack cannot appear with its first notification.
+    // document before anything is added to them, or nothing is announced. Only
+    // the list inside a region comes and goes, so none sits empty (todo 447).
     let mut drawn = Vec::new();
     let stacks = Placement::ALL.iter().map(|&placement| {
         let items = entries
@@ -684,21 +688,17 @@ pub fn Notifications(
                 live: entry.live,
             })
             .collect::<Vec<_>>();
-        let assertive = items
-            .iter()
-            .filter(|item| item.live == NotificationLive::Assertive)
-            .cloned();
-        let polite = items
-            .iter()
-            .filter(|item| item.live == NotificationLive::Polite)
-            .cloned();
+        let (assertive, polite): (Vec<_>, Vec<_>) = items
+            .into_iter()
+            .partition(|item| item.live == NotificationLive::Assertive);
         drawn.push(
             assertive
-                .clone()
-                .chain(polite.clone())
+                .iter()
+                .chain(&polite)
                 .map(|item| item.id)
                 .collect(),
         );
+        let regions = [("assertive", assertive), ("polite", polite)];
 
         rsx! {
             Float {
@@ -709,41 +709,31 @@ pub fn Notifications(
                 offset_y: edge_offset(placement, Axis::Vertical),
                 z_index: Z_INDEX_NOTIFICATION.value(),
                 sx: &STACK_SX,
-                Box {
-                    component: HtmlTag::Ol,
-                    framework_sx: &LIST_SX,
-                    // Both: Safari with VoiceOver drops list semantics from a
-                    // `list-style: none` list.
-                    role: "list",
-                    "aria-live": "assertive",
-                    for item in assertive {
-                        NotificationItem {
-                            key: "{item.id.0}",
-                            store,
-                            id: item.id,
-                            draw: item.draw,
-                            auto_close: item.auto_close,
-                            leaving: item.leaving,
-                            exit_ms: item.exit_ms,
-                            live: item.live,
-                        }
-                    }
-                }
-                Box {
-                    component: HtmlTag::Ol,
-                    framework_sx: &LIST_SX,
-                    role: "list",
-                    "aria-live": "polite",
-                    for item in polite {
-                        NotificationItem {
-                            key: "{item.id.0}",
-                            store,
-                            id: item.id,
-                            draw: item.draw,
-                            auto_close: item.auto_close,
-                            leaving: item.leaving,
-                            exit_ms: item.exit_ms,
-                            live: item.live,
+                for (live, items) in regions {
+                    Box {
+                        key: "{live}",
+                        framework_sx: &REGION_SX,
+                        "aria-live": live,
+                        if !items.is_empty() {
+                            Box {
+                                component: HtmlTag::Ol,
+                                framework_sx: &LIST_SX,
+                                // Both: Safari with VoiceOver drops list
+                                // semantics from a `list-style: none` list.
+                                role: "list",
+                                for item in items {
+                                    NotificationItem {
+                                        key: "{item.id.0}",
+                                        store,
+                                        id: item.id,
+                                        draw: item.draw,
+                                        auto_close: item.auto_close,
+                                        leaving: item.leaving,
+                                        exit_ms: item.exit_ms,
+                                        live: item.live,
+                                    }
+                                }
+                            }
                         }
                     }
                 }
