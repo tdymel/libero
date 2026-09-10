@@ -36,7 +36,7 @@ const RENAMED: &str = r#"option_label: |section: Section| -> OptionLabel {
 const RICH: &str = r#"option_label: |section: Section| OptionLabel::rich(
     section.label(),
     rsx! {
-        Icon { variant: "transparent", size: "sm", FileIcon {} }
+        Icon { variant: "standard", size: "sm", FileIcon {} }
         "{section.label()}"
     },
 )"#;
@@ -69,7 +69,7 @@ fn rich(section: Section) -> OptionLabel {
     OptionLabel::rich(
         section.label(),
         rsx! {
-            Icon { variant: "transparent", size: "sm", FileIcon {} }
+            Icon { variant: "standard", size: "sm", FileIcon {} }
             "{section.label()}"
         },
     )

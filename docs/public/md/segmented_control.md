@@ -108,7 +108,7 @@ fn Demo() -> Element {
                 alignment.label(),
                 rsx! {
                     Icon {
-                        variant: "transparent",
+                        variant: "standard",
                         size: "sm",
                         match alignment {
                             Alignment::Left => rsx! { AlignLeftIcon {} },

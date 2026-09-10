@@ -53,7 +53,7 @@ fn Demo() -> Element {
                     path { d: "M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" }
                 }
             }
-            Icon { variant: "transparent", color: "info", size: "lg",
+            Icon { variant: "standard", color: "info", size: "lg",
                 svg { view_box: "0 0 24 24", fill: "currentColor",
                     path { d: "M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" }
                 }

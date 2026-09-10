@@ -72,7 +72,7 @@ const RICH: &str = r#"option_label: |step: Step| OptionLabel::rich(
         Box {
             component: "span",
             sx: sx().display("inline-flex").align_items("center").gap("sm"),
-            Icon { variant: "transparent", size: "sm", {step.icon()} }
+            Icon { variant: "standard", size: "sm", {step.icon()} }
             "{step.label()}"
         }
     },
@@ -120,7 +120,7 @@ fn rich(step: Step) -> OptionLabel {
             Box {
                 component: "span",
                 sx: sx().display("inline-flex").align_items("center").gap("sm"),
-                Icon { variant: "transparent", size: "sm", {step.icon()} }
+                Icon { variant: "standard", size: "sm", {step.icon()} }
                 "{step.label()}"
             }
         },

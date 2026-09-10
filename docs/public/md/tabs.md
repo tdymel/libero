@@ -124,7 +124,7 @@ fn Demo() -> Element {
             option_label: |section: Section| OptionLabel::rich(
                 section.label(),
                 rsx! {
-                    Icon { variant: "transparent", size: "sm", FileIcon {} }
+                    Icon { variant: "standard", size: "sm", FileIcon {} }
                     "{section.label()}"
                 },
             ),

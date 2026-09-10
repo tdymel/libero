@@ -401,7 +401,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                         }
                     }
                     ActionIcon {
-                        variant: "transparent",
+                        variant: "standard",
                         color: "muted",
                         size: "sm",
                         aria_label: defaults.close_label,

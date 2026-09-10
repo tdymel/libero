@@ -97,7 +97,7 @@ fn file_icon(entry: &FileEntry) -> Element {
     let folder = entry.kind == FileKind::Folder;
     rsx! {
         Icon {
-            variant: "transparent",
+            variant: "standard",
             size: "sm",
             color: if folder { "primary" } else { "muted.6" },
             if folder { FolderIcon {} } else { FileIcon {} }

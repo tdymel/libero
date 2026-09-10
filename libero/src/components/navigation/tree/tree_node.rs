@@ -198,7 +198,7 @@ pub fn default_tree_render<T: TreeLabel>(args: TreeNodeRenderArgs<T>) -> Element
     let leading = match args.expanded {
         Some(expanded) => rsx! {
             Icon {
-                variant: "transparent",
+                variant: "standard",
                 size: "xs",
                 color: "muted.6",
                 "data-tree-chevron": true,

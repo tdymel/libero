@@ -9,8 +9,8 @@ str_enum! {
         Tonal = "tonal" | "filled-tonal",
         Elevated = "elevated",
         Outlined = "outlined" | "outline",
-        /// M3's name for the lowest-emphasis arm. `text` (its name on a
-        /// button) and `transparent` (its old name on an icon) both parse.
-        Standard = "standard" | "text" | "transparent",
+        /// M3's name for the lowest-emphasis arm. `text`, its name on a
+        /// button, parses too.
+        Standard = "standard" | "text",
     }
 }

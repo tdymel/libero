@@ -44,7 +44,7 @@ const RICH: &str = r#"option_label: |alignment: Alignment| OptionLabel::rich(
     alignment.label(),
     rsx! {
         Icon {
-            variant: "transparent",
+            variant: "standard",
             size: "sm",
             match alignment {
                 Alignment::Left => rsx! { AlignLeftIcon {} },
@@ -85,7 +85,7 @@ fn rich(alignment: Alignment) -> OptionLabel {
         alignment.label(),
         rsx! {
             Icon {
-                variant: "transparent",
+                variant: "standard",
                 size: "sm",
                 match alignment {
                     Alignment::Left => rsx! { AlignLeftIcon {} },

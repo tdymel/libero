@@ -64,7 +64,7 @@ pub fn DocPage(
                                 // default would outrank the page's own title.
                                 variant: "outlined",
                                 color: "neutral",
-                                Icon { variant: "transparent", size: "sm", color: "inherit", GitHubIcon {} }
+                                Icon { variant: "standard", size: "sm", color: "inherit", GitHubIcon {} }
                                 "Source"
                             }
                         }
@@ -94,7 +94,7 @@ pub fn DocPage(
                                 size: "sm",
                                 variant: "outlined",
                                 color: "neutral",
-                                Icon { variant: "transparent", size: "sm", color: "inherit", MarkdownIcon {} }
+                                Icon { variant: "standard", size: "sm", color: "inherit", MarkdownIcon {} }
                                 "View as markdown"
                             }
                         }
@@ -113,7 +113,7 @@ pub fn DocPage(
                     option_label: |selected: DocTab| OptionLabel::rich(
                         selected.label(),
                         rsx! {
-                            Icon { variant: "transparent", size: "md",
+                            Icon { variant: "standard", size: "md",
                                 match selected {
                                     DocTab::Usage => rsx! { FileIcon {} },
                                     DocTab::Properties => rsx! { CodeIcon {} },

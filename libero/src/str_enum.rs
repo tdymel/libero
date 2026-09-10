@@ -13,7 +13,7 @@
 ///         #[default]
 ///         Filled = "filled",
 ///         Outlined = "outlined" | "outline",
-///         Standard = "standard" | "text" | "transparent",
+///         Standard = "standard" | "text",
 ///     }
 /// }
 /// ```
@@ -217,9 +217,8 @@ mod tests {
     fn parses_case_insensitively_and_accepts_aliases() {
         assert_eq!(Variant::from("OUTLINED"), Variant::Outlined);
         assert_eq!(Variant::from("outline"), Variant::Outlined);
-        // The lowest arm answers to M3's name and to both of ours.
+        // The lowest arm answers to M3's name and to a button's.
         assert_eq!(Variant::from("text"), Variant::Standard);
-        assert_eq!(Variant::from("transparent"), Variant::Standard);
     }
 
     #[test]
