@@ -260,8 +260,9 @@ impl Theme {
     ///
     /// Almost all of it is the default theme. The palette bases do not move -
     /// `primary` is the brand blue on both pages, and the text and fill roles
-    /// are derived against `surface`, so each one walks its own ramp the
-    /// right way here (see `theme::stylesheet::push_color_declarations`). The
+    /// are derived against `surface` (the text role against `Paper` too), so
+    /// each one walks its own ramp the right way here (see
+    /// `theme::stylesheet::push_color_declarations`). The
     /// `muted` ramp does not move either: it is mixed between `ink` and
     /// `surface`, so swapping those two is what turns it round.
     ///

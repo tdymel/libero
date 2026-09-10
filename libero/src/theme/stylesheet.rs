@@ -385,14 +385,20 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         NamedColorCss::TEXT_DIMMED.name(),
         ColorValue::Text(Color::Muted, ColorShade::DEFAULT).value(),
     ));
-    push_color_declarations(&mut declarations, Color::Primary, *primary, ends);
-    push_color_declarations(&mut declarations, Color::Secondary, *secondary, ends);
-    push_color_declarations(&mut declarations, Color::Error, *error, ends);
-    push_color_declarations(&mut declarations, Color::Warning, *warning, ends);
-    push_color_declarations(&mut declarations, Color::Info, *info, ends);
-    push_color_declarations(&mut declarations, Color::Success, *success, ends);
-    push_color_declarations(&mut declarations, Color::Neutral, *neutral, ends);
-    push_color_declarations(&mut declarations, Color::Muted, *muted, ends);
+    // A `Paper` that is not a hex (a `var()`, a gradient) cannot be measured.
+    let cards: Vec<HexColor> = HexColor::parse(paper.background).into_iter().collect();
+    for (color, base) in [
+        (Color::Primary, *primary),
+        (Color::Secondary, *secondary),
+        (Color::Error, *error),
+        (Color::Warning, *warning),
+        (Color::Info, *info),
+        (Color::Success, *success),
+        (Color::Neutral, *neutral),
+        (Color::Muted, *muted),
+    ] {
+        push_color_declarations(&mut declarations, color, base, ends, &cards);
+    }
     rebase_text_on_derived_surfaces(&mut declarations, ends);
     declarations
 }
@@ -530,15 +536,17 @@ fn foreground_var(foreground: HexColor, ends: Ends) -> String {
 ///
 /// `surface` is `theme.surface`, whichever end of the greyscale it sits at:
 /// the text ramp is walked away from it, so a dark paper derives its roles
-/// correctly rather than inheriting a light one's (todo 69(b)).
+/// correctly rather than inheriting a light one's (todo 69(b)). It must read on
+/// `cards` too, the `Paper` a dialog draws on (todo 314).
 fn push_color_declarations(
     declarations: &mut Vec<CssDeclaration>,
     color: Color,
     base: HexColor,
     ends: Ends,
+    cards: &[HexColor],
 ) {
     let ramp = color.shade_ramp();
-    let text_base = base.text_base(ramp, ends);
+    let text_base = base.text_base(ramp, ends, cards);
     let fill_base = base.fill_base(ramp, ends);
 
     for shade in SHADES {

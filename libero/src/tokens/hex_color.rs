@@ -248,9 +248,14 @@ impl HexColor {
     /// for. The ramps derived from this base are still ordinary ramps.
     ///
     /// `self` is the base (shade 6) of the ramp, as in [`shade`](Self::shade).
-    pub(crate) fn text_base(self, ramp: ShadeRamp, ends: Ends) -> Self {
+    /// `cards` are the theme's other surfaces text lands on (a dark `Paper`
+    /// one step off the page, todo 314); it must read on those too.
+    pub(crate) fn text_base(self, ramp: ShadeRamp, ends: Ends, cards: &[Self]) -> Self {
         self.first_mix(ramp, ends, |text| {
             text.contrast_ratio(ends.surface) >= TEXT_CONTRAST
+                && cards
+                    .iter()
+                    .all(|&card| text.contrast_ratio(card) >= TEXT_CONTRAST)
         })
     }
 
@@ -416,7 +421,7 @@ mod tests {
         const BLUE: HexColor = HexColor::new(0x22_8B_E6);
         const WHITE: HexColor = HexColor::new(0xFF_FF_FF);
 
-        let text = BLUE.text_base(ShadeRamp::Chromatic, Ends::ABSOLUTE);
+        let text = BLUE.text_base(ShadeRamp::Chromatic, Ends::ABSOLUTE, &[]);
         let fill = BLUE.fill_base(ShadeRamp::Chromatic, Ends::ABSOLUTE);
         assert!(text.contrast_ratio(WHITE) >= TEXT_CONTRAST);
         assert!(fill.contrast_ratio(WHITE) >= TEXT_CONTRAST);
@@ -445,6 +450,29 @@ mod tests {
         // `green.6` already carries black, so its fill stays where it is.
         const GREEN: HexColor = HexColor::new(0x40_C0_57);
         assert_eq!(GREEN.fill_base(ShadeRamp::Chromatic, Ends::ABSOLUTE), GREEN);
+    }
+
+    /// `Theme::DARK`'s blue reads 4.88:1 on its page but 4.24:1 on the
+    /// `Paper` one step off it, where every dialog puts its buttons (todo 314).
+    #[test]
+    fn the_text_role_reads_on_the_card_as_well_as_the_page() {
+        const BLUE: HexColor = HexColor::new(0x22_8B_E6);
+        const PAGE: HexColor = HexColor::new(0x1A_1B_1E);
+        const CARD: HexColor = HexColor::new(0x25_26_2B);
+        let ends = Ends {
+            surface: PAGE,
+            ink: HexColor::new(0xE9_EC_EF),
+        };
+
+        assert_eq!(BLUE.text_base(ShadeRamp::Chromatic, ends, &[]), BLUE);
+        let text = BLUE.text_base(ShadeRamp::Chromatic, ends, &[CARD]);
+        assert!(text.contrast_ratio(CARD) >= TEXT_CONTRAST);
+        assert!(text.contrast_ratio(PAGE) >= TEXT_CONTRAST);
+        // The smallest mix that does it, lighter on an inked page.
+        let far = HexColor::new(0xFF_FF_FF);
+        let weight = (0..=25).find(|&w| BLUE.mix(far, w) == text).expect("a mix");
+        assert!(weight > 0);
+        assert!(BLUE.mix(far, weight - 1).contrast_ratio(CARD) < TEXT_CONTRAST);
     }
 
     #[test]
