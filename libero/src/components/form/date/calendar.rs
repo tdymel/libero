@@ -2,7 +2,12 @@ use dioxus::prelude::*;
 
 use chrono::{Datelike, Days, Months, NaiveDate};
 
-use super::{DateRange, fields::day_allowed, format::format_date, today::use_today};
+use super::{
+    DateRange,
+    fields::day_allowed,
+    format::{date_formatter, format_date},
+    today::use_today,
+};
 use crate::{
     components::{
         ActionIcon, ClassList, HtmlTag, Input, States, Variant,
@@ -953,59 +958,35 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     // mouse movement.
     let hovered = if awaits_end { hover() } else { None };
 
-    let week_row = move |week: i64, first: NaiveDate, month: NaiveDate| {
-        let last = add_days(first, 6);
-        let inside = move |day: Option<NaiveDate>| day.filter(|day| (first..=last).contains(day));
-        rsx! {
-            Week {
-                key: "{week}",
-                first,
-                month,
-                blanks: columns > 1,
-                selection: selection.clip(hovered, first, last),
-                today: inside(today),
-                tab_stop: inside(Some(tab_stop)),
-                min,
-                max,
-                exclude_date,
-                focusable,
-                awaits_end,
-                hover,
-                active,
-                paged,
-                onpick,
-            }
-        }
-    };
-
-    let month_grid = move |month: NaiveDate| {
+    // The first day of each of a month's six weeks.
+    let weeks = move |month: NaiveDate| {
         let start = add_days(month, -column(month));
-        let title = format_date(month, names.month_format, names);
-        rsx! {
-            div {
-                key: "{month}",
-                role: "grid",
-                "aria-label": "{title}",
-                onkeydown,
-                Weekdays { first_weekday }
-                for week in 0..6 {
-                    {week_row(week, add_days(start, week * 7), month)}
-                }
-            }
-        }
+        (0..6).map(move |week| (week, add_days(start, week * 7)))
     };
+    let in_week = |day: Option<NaiveDate>, first: NaiveDate| {
+        day.filter(|day| (first..=add_days(first, 6)).contains(day))
+    };
+    let size = props.size;
 
     let body = match level() {
         _ if props.variant == CalendarVariant::Mini => {
             view.strip_view(Strip::new(view, props.days))
         }
         DateLevel::Day => {
-            let months: Vec<NaiveDate> =
-                (0..columns).map(|index| add_months(first, index)).collect();
+            let months = (0..columns).map(|index| add_months(first, index));
+            // Items drawn inline: see `Week`.
             rsx! {
                 div { "data-slot": "header",
-                    {view.nav(names.previous_month, min.is_some_and(|min| add_days(first, -1) < min), add_months(first, -1), false)}
-                    for month in months.iter().copied() {
+                    Nav {
+                        label: names.previous_month,
+                        disabled: min.is_some_and(|min| add_days(first, -1) < min),
+                        target: add_months(first, -1),
+                        forward: false,
+                        size,
+                        focusable,
+                        paged,
+                    }
+                    for month in months.clone() {
                         button {
                             key: "{month}",
                             r#type: "button",
@@ -1020,7 +1001,15 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                             {format_date(month, names.month_format, names)}
                         }
                     }
-                    {view.nav(names.next_month, max.is_some_and(|max| add_months(last, 1) > max), add_months(first, 1), true)}
+                    Nav {
+                        label: names.next_month,
+                        disabled: max.is_some_and(|max| add_months(last, 1) > max),
+                        target: add_months(first, 1),
+                        forward: true,
+                        size,
+                        focusable,
+                        paged,
+                    }
                 }
                 div {
                     "data-slot": "months",
@@ -1030,7 +1019,33 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                         }
                     },
                     for month in months {
-                        {month_grid(month)}
+                        div {
+                            key: "{month}",
+                            role: "grid",
+                            "aria-label": format_date(month, names.month_format, names),
+                            onkeydown,
+                            Weekdays { first_weekday }
+                            for (week, first) in weeks(month) {
+                                Week {
+                                    key: "{week}",
+                                    first,
+                                    month,
+                                    blanks: columns > 1,
+                                    selection: selection.clip(hovered, first, add_days(first, 6)),
+                                    today: in_week(today, first),
+                                    tab_stop: in_week(Some(tab_stop), first),
+                                    min,
+                                    max,
+                                    exclude_date,
+                                    focusable,
+                                    awaits_end,
+                                    hover,
+                                    active,
+                                    paged,
+                                    onpick,
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1113,56 +1128,71 @@ fn Week(props: WeekProps) -> Element {
     } = props;
     let allowed = day_allowed(min, max, exclude_date.0);
     let names = &use_theme().date;
+    // APG: the full date, not only the number shown.
+    let label = date_formatter(names.format, names);
+    let (mut hover, mut active, mut paged) = (hover, active, paged);
 
-    let day_cell = move |day: NaiveDate| {
-        let outside = first_of_month(day) != month;
-        if outside && blanks {
-            return rsx! {
-                div { key: "{day}", role: "gridcell", "data-slot": "blank" }
-            };
-        }
-        let (mut hover, mut active, mut paged) = (hover, active, paged);
+    let day = move |offset: i64| add_days(first, offset);
+    let outside = move |day: NaiveDate| first_of_month(day) != month;
+    // Outside days sit at the ends of a week, so the blanks do too.
+    let (lead, trail) = match blanks {
+        true => (
+            (0..7).take_while(|offset| day(*offset) < month).count() as i64,
+            (0..7)
+                .rev()
+                .take_while(|offset| first_of_month(day(*offset)) > month)
+                .count() as i64,
+        ),
+        false => (0, 0),
+    };
+    let cell = move |offset: i64| {
+        let day = day(offset);
         let (picked, in_range) = selection.marks(day, None);
-        rsx! {
-            div {
-                key: "{day}",
-                role: "gridcell",
-                "aria-selected": picked.to_string(),
-                button {
-                    r#type: "button",
-                    "data-slot": "day",
-                    "data-date": "{day}",
-                    "data-outside": outside.then_some("true"),
-                    "data-today": (today == Some(day)).then_some("true"),
-                    "data-selected": picked.then_some("true"),
-                    "data-in-range": in_range.then_some("true"),
-                    // APG: the full date, not only the number shown.
-                    "aria-label": format_date(day, names.format, names),
-                    disabled: !allowed(day),
-                    tabindex: if focusable && !outside && tab_stop == Some(day) { "0" } else { "-1" },
-                    onmouseenter: move |_| {
-                        if awaits_end {
-                            hover.set(Some(day));
-                        }
-                    },
-                    onclick: move |_| {
-                        active.set(Some(day));
-                        // A neighbour's day pages to its month.
-                        if outside {
-                            paged.set(Some(first_of_month(day)));
-                        }
-                        onpick.call(day);
-                    },
-                    "{day.day()}"
-                }
-            }
-        }
+        (day, outside(day), picked, in_range)
     };
 
+    // Items drawn inline, not through a helper returning `rsx!`: a nested
+    // element per item costs about a microsecond each.
     rsx! {
         div { role: "row",
-            for offset in 0..7 {
-                {day_cell(add_days(first, offset))}
+            for day in (0..lead).map(day) {
+                div { key: "{day}", role: "gridcell", "data-slot": "blank" }
+            }
+            for (day, outside, picked, in_range) in (lead..7 - trail).map(cell) {
+                div {
+                    key: "{day}",
+                    role: "gridcell",
+                    "aria-selected": if picked { "true" } else { "false" },
+                    button {
+                        r#type: "button",
+                        "data-slot": "day",
+                        "data-date": "{day}",
+                        "data-outside": outside.then_some("true"),
+                        "data-today": (today == Some(day)).then_some("true"),
+                        "data-selected": picked.then_some("true"),
+                        "data-in-range": in_range.then_some("true"),
+                        "aria-label": label(day),
+                        disabled: !allowed(day),
+                        tabindex: if focusable && !outside && tab_stop == Some(day) { "0" } else { "-1" },
+                        onmouseenter: move |_| {
+                            if awaits_end {
+                                hover.set(Some(day));
+                            }
+                        },
+                        onclick: move |_| {
+                            active.set(Some(day));
+                            // A neighbour's day pages to its month.
+                            if outside {
+                                paged.set(Some(first_of_month(day)));
+                            }
+                            onpick.call(day);
+                        },
+                        "{day.day()}"
+                    }
+                }
+            }
+            for day in (7 - trail..7).map(day) {
+                div { key: "{day}", role: "gridcell", "data-slot": "blank" }
             }
         }
     }

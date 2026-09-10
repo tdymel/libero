@@ -191,10 +191,11 @@ impl Sealed for NaiveDate {
         });
         // Keyed by level and layout inside a one-item list: dioxus remounts a
         // keyed child whose key changes, and the calendar's own view state
-        // starts over.
-        let calendar = rsx! {
-            Calendar {
-                key: "{level:?}-{mini}",
+        // starts over. Inline, as a nested `rsx!` costs a node.
+        rsx! {
+            for args in std::iter::once(args) {
+                Calendar {
+                    key: "{level:?}-{mini}",
                 variant: if mini { CalendarVariant::Mini } else { CalendarVariant::Full },
                 days: options.days,
                 selection: Selection::Single(value),
@@ -217,11 +218,9 @@ impl Sealed for NaiveDate {
                 class: args.class,
                 sx: args.sx,
                 states: args.states,
-                attributes: args.attributes,
+                    attributes: args.attributes,
+                }
             }
-        };
-        rsx! {
-            {std::iter::once(calendar)}
         }
     }
 }

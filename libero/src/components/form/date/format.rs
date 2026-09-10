@@ -103,24 +103,33 @@ pub(super) fn uses_twelve_hours(format: &str) -> bool {
 
 /// The day as `format` shows it, with the names from `names`.
 pub(super) fn format_date(date: NaiveDate, format: &str, names: &DateDefaults) -> String {
-    write(format, Some(date), None, names)
+    write(&tokens(format), Some(date), None, names)
+}
+
+/// [`format_date`] for many days, reading `format` once.
+pub(super) fn date_formatter<'a>(
+    format: &'a str,
+    names: &'a DateDefaults,
+) -> impl Fn(NaiveDate) -> String + 'a {
+    let tokens = tokens(format);
+    move |date| write(&tokens, Some(date), None, names)
 }
 
 /// The time as `format` shows it.
 pub(super) fn format_time(time: NaiveTime, format: &str, names: &DateDefaults) -> String {
-    write(format, None, Some(time), names)
+    write(&tokens(format), None, Some(time), names)
 }
 
-/// `format` written out for a day, a time, or both. A token for the part that
+/// `tokens` written out for a day, a time, or both. A token for the part that
 /// is missing writes nothing.
 fn write(
-    format: &str,
+    tokens: &[Token<'_>],
     date: Option<NaiveDate>,
     time: Option<NaiveTime>,
     names: &DateDefaults,
 ) -> String {
     let mut text = String::new();
-    for token in tokens(format) {
+    for &token in tokens {
         match (token, date, time) {
             (Token::Literal(literal), _, _) => text.push_str(literal),
             (Token::Year, Some(date), _) => text.push_str(&year_text(date.year())),
