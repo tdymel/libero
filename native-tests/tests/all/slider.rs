@@ -6,7 +6,7 @@ use libero::{
     components::{Slider, SliderChangeEvent},
     sx::sx,
 };
-use native_tests::mount;
+use native_tests::{Key, Page, mount};
 
 const THUMB: &str = "[role=slider]";
 const TRACK: &str = "[data-state~=size-md] > [data-state~=size-md] > div";
@@ -37,5 +37,31 @@ fn pressing_the_track_centre_and_dragging_right_follows_the_pointer() {
         (now - 75.0).abs() < 2.0,
         "the value is {now}\n{}",
         page.tree()
+    );
+}
+
+/// The thumb's anchor is placed by `left`; its `transform` only centres it.
+#[test]
+fn the_thumb_moves_with_the_value() {
+    let mut page = mount(app);
+    let x = |page: &Page| {
+        let thumb = page.node(THUMB);
+        page.doc
+            .inner
+            .borrow()
+            .get_client_bounding_rect(thumb)
+            .map(|r| r.x)
+    };
+    let at_zero = x(&page);
+    page.focus(THUMB);
+    page.press(Key::End);
+    page.advance(1.0);
+    assert_eq!(page.attr(THUMB, "aria-valuenow").as_deref(), Some("100"));
+    let at_end = x(&page);
+    assert!(
+        at_end
+            .zip(at_zero)
+            .is_some_and(|(end, zero)| end - zero > 300.0),
+        "the thumb went from {at_zero:?} to {at_end:?}"
     );
 }

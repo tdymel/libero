@@ -278,11 +278,11 @@ pub(crate) struct DismissOptions {
     pub escape: bool,
     /// Focus leaving the box closes it.
     ///
-    /// **Web-only in practice: off the web it is inert.** A focusout closes the
-    /// box only where the platform can say focus is outside. The mounted floor
-    /// answers `query_selector` `Unsupported`, and Blitz does too from the task
-    /// the check runs in, so there nothing closes on focus (todo 46). Escape
-    /// and [`DismissHandle::dismiss`] still do.
+    /// **Inert on the mounted floor.** A focusout closes the box only where the
+    /// platform can say focus is outside: the web and Blitz can, the mounted
+    /// floor answers `query_selector` `Unsupported` (todo 46). Blitz fires no
+    /// focus event for Tab, so there only a click moves focus out. Escape and
+    /// [`DismissHandle::dismiss`] close everywhere.
     pub outside: bool,
     /// A deliberate close hands focus back to whatever opened the box.
     pub return_focus: bool,
@@ -474,12 +474,13 @@ impl DismissHandle {
         if self.outside {
             let handle = *self;
             events.push(listener("onfocusout", move |_: Event<FocusData>| {
-                // `focusout` is dispatched *before* `focusin`, so a check here
-                // sees focus nowhere at all. After the platform's next task it
-                // has landed. A platform that cannot answer closes nothing.
+                // On the web focus lands after `focusout`, so the answer is
+                // taken after the next task. Blitz moves focus first and cannot
+                // answer from a task, so its answer is the one taken here.
+                let early = handle.focus_inside();
                 spawn(async move {
                     next_task().await;
-                    if handle.focus_inside() == Some(false) {
+                    if handle.focus_inside().or(early) == Some(false) {
                         handle.close(Dismissal::FocusMoved);
                     }
                 });
