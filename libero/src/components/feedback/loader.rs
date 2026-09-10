@@ -21,18 +21,14 @@ fn ink() -> String {
     LOADER_COLOR.value_or("currentColor")
 }
 
-/// Cancelling an animation drops the element back on its *static* style, which
-/// is the `from` frame - and `bars` starts at `scale(0.6); opacity: 0`.
+/// Cancelling an animation drops the element back on its *static* style, not
+/// the `from` frame, so the bars stay visible under `prefers-reduced-motion:
+/// reduce` even without `restore`. It pins the visible end anyway, so a static
+/// style that starts hidden cannot make the loader vanish for exactly the
+/// readers who asked for less motion.
 ///
-/// So `animation: none` alone would hide the bars completely under
-/// `prefers-reduced-motion: reduce`: the loader would vanish for exactly the
-/// readers who asked for less motion, which is worse than the motion. The
-/// visible end of the keyframes has to be restored by hand.
-///
-/// `oval` and `dots` do not need this - an oval animates only `transform:
-/// rotate`, and `dots` starts at its visible end - but they go through the same
-/// helper so that the *next* variant cannot be added without meeting the
-/// question.
+/// Every variant goes through this helper so that the *next* one cannot be
+/// added without meeting the question.
 fn stop_motion(restore: Sx) -> Sx {
     restore.animation("none")
 }
