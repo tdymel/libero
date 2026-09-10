@@ -24,7 +24,7 @@
 
 use crate::passes::keyboard::{self, Key};
 use crate::passes::{contrast, focus, motion, pointer, target_size};
-use crate::{Fixture, Viewport, ax, browser};
+use crate::{Fixture, Scheme, Viewport, ax, browser};
 
 /// How long a state's entry animation may take before the wait fails. Well
 /// past anything the theme animates (a notification's entry is 200 ms), and
@@ -266,27 +266,41 @@ impl Suite {
     /// On failure it writes a screenshot and names it in the panic, because a
     /// layout or focus failure described only in prose costs the next person a
     /// re-run to see.
+    ///
+    /// Then again under the dark scheme (todo 314): axe, contrast coverage,
+    /// the focus rings and the console. Target sizes are geometry and are not
+    /// repeated; the AX snapshot is compared against the light baseline, so a
+    /// dark tree that differs fails rather than growing a second baseline.
     pub fn run(self) {
         browser::block_on(async move {
-            for viewport in self.viewports.iter().copied() {
-                if let Err(error) = self.run_at(viewport).await {
-                    panic!("{} at {}: {error:?}", self.name, viewport.name());
+            for scheme in [Scheme::Light, Scheme::Dark] {
+                for viewport in self.viewports.iter().copied() {
+                    if let Err(error) = self.run_at(viewport, scheme).await {
+                        panic!(
+                            "{} at {} ({}): {error:?}",
+                            self.name,
+                            viewport.name(),
+                            scheme.name()
+                        );
+                    }
                 }
             }
         });
     }
 
-    async fn run_at(&self, viewport: Viewport) -> anyhow::Result<()> {
-        let fixture = Fixture::open(self.route, viewport).await?;
+    async fn run_at(&self, viewport: Viewport, scheme: Scheme) -> anyhow::Result<()> {
+        let fixture = Fixture::open_in(self.route, viewport, scheme).await?;
         if self.reduced_motion {
-            motion::set_reduced_motion(&fixture.page, true).await?;
+            browser::emulate_media(&fixture.page, scheme, Some(true)).await?;
             motion::assert_reduced_motion_matches(&fixture.page).await?;
         }
 
         let outcome = self.battery(&fixture).await;
 
         if let Err(error) = outcome {
-            let shot = fixture.screenshot(self.name).await;
+            let shot = fixture
+                .screenshot(&format!("{}-{}", self.name, scheme.name()))
+                .await;
             let where_to_look = match shot {
                 Ok(path) => format!("\n  screenshot: {}", path.display()),
                 Err(e) => format!("\n  (no screenshot: {e})"),
@@ -323,8 +337,11 @@ impl Suite {
         // a dialog - matches nothing at rest, and treating that as a failure
         // would make the check unusable for exactly the components that need
         // it most.
+        let light = fixture.scheme == Scheme::Light;
         let mut seen: Vec<bool> = vec![false; self.targets.len()];
-        self.measure_targets(page, &mut seen).await?;
+        if light {
+            self.measure_targets(page, &mut seen).await?;
+        }
 
         if self.snapshot {
             self.take_snapshot(fixture, "rest").await?;
@@ -335,7 +352,9 @@ impl Suite {
             self.reach(page, state).await?;
             contrast::assert_clean_except(page, self.root, self.waivers).await?;
             self.assert_coverage(page, &covers, &mut covered).await?;
-            self.measure_targets(page, &mut seen).await?;
+            if light {
+                self.measure_targets(page, &mut seen).await?;
+            }
             if self.snapshot {
                 self.take_snapshot(fixture, state.name).await?;
             }
@@ -357,7 +376,7 @@ impl Suite {
         // pass. Saying so is what stops a renamed role silently disabling the
         // check.
         for (target, matched) in self.targets.iter().zip(&seen) {
-            if !matched {
+            if light && !matched {
                 anyhow::bail!(
                     "target size: {} matched nothing at rest or in any declared state",
                     target.selector
@@ -367,9 +386,11 @@ impl Suite {
 
         // Last, so it covers everything the battery just did - including the
         // first mount, since the recorder attached before navigation.
-        fixture
-            .console
-            .assert_clean(&format!("the {} battery", self.name))?;
+        fixture.console.assert_clean(&format!(
+            "the {} battery ({})",
+            self.name,
+            fixture.scheme.name()
+        ))?;
         Ok(())
     }
 

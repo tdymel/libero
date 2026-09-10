@@ -7,7 +7,6 @@
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
-use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
 
 /// Emulate `prefers-reduced-motion: reduce` (or clear it).
 ///
@@ -15,15 +14,11 @@ use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedM
 /// gap. Left unwired deliberately: what each component should emit under
 /// forced colours is undecided, and a pass asserting nothing would only look
 /// like coverage.
+///
+/// Emulates the light scheme too: for a dark page use
+/// [`crate::browser::emulate_media`], which keeps both.
 pub async fn set_reduced_motion(page: &Page, reduced: bool) -> Result<()> {
-    let value = if reduced { "reduce" } else { "no-preference" };
-    page.execute(
-        SetEmulatedMediaParams::builder()
-            .features(vec![MediaFeature::new("prefers-reduced-motion", value)])
-            .build(),
-    )
-    .await?;
-    Ok(())
+    crate::browser::emulate_media(page, crate::Scheme::Light, Some(reduced)).await
 }
 
 /// The page must report `prefers-reduced-motion: reduce`.

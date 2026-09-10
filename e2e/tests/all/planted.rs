@@ -20,7 +20,7 @@
 use e2e::archetypes::{Combobox, Orientation, Overlay, RadioSet, RovingTabindex, count_tab_stops};
 use e2e::browser::block_on;
 use e2e::passes::{contrast, focus, keyboard, motion, pointer, target_size};
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Scheme, Viewport, wait};
 
 use crate::carousel;
 
@@ -730,6 +730,66 @@ fn collapse_animating_under_reduced_motion_fails_the_motion_check() {
             },
         )
         .await;
+    });
+}
+
+/// A text colour fixed for the light page: `#444` is 9.74:1 on white and
+/// about 2:1 on the dark surface. Green in the light run and red in the dark
+/// one, so the dark run measures a page that is really dark (todo 314).
+#[test]
+fn a_colour_fixed_for_the_light_page_fails_only_in_the_dark_run() {
+    block_on(async {
+        let plant = stylesheet("#presses { color: #444 !important; }");
+        let mut outcomes = Vec::new();
+        for scheme in [Scheme::Light, Scheme::Dark] {
+            let fixture = Fixture::open_in("/button", Viewport::Desktop, scheme)
+                .await
+                .unwrap_or_else(|e| panic!("opening /button ({}): {e}", scheme.name()));
+            fixture.page.evaluate(plant.as_str()).await.unwrap();
+            let outcome = contrast::assert_clean(&fixture.page, "[data-fixture-ready]").await;
+            let _ = fixture.close().await;
+            outcomes.push(outcome.map_err(|e| format!("{e:#}")));
+        }
+        assert!(
+            outcomes[0].is_ok(),
+            "the plant fails on the light page too, so it proves nothing about the dark run: {:?}",
+            outcomes[0]
+        );
+        match &outcomes[1] {
+            Err(error) => assert!(
+                error.contains("color-contrast") && error.contains("#444444"),
+                "the dark run failed, but not on the planted colour: {error}"
+            ),
+            Ok(()) => {
+                panic!("the dark run stayed green on #444 text: it is not measuring a dark page")
+            }
+        }
+    });
+}
+
+/// A page pinned to the light theme, the way a stored `lsx-color-scheme`
+/// pins it, under dark emulation: the scheme check must refuse it.
+#[test]
+fn a_page_pinned_light_under_dark_emulation_fails_the_scheme_check() {
+    block_on(async {
+        let fixture = Fixture::open_in("/button", Viewport::Desktop, Scheme::Dark)
+            .await
+            .unwrap_or_else(|e| panic!("opening /button (dark): {e}"));
+        fixture
+            .page
+            .evaluate("document.documentElement.setAttribute('data-lsx-theme', 'light')")
+            .await
+            .unwrap();
+        let outcome = fixture.assert_scheme().await;
+        let _ = fixture.close().await;
+        let error = format!(
+            "{:#}",
+            outcome.expect_err("a light-pinned page passed as dark")
+        );
+        assert!(
+            error.contains("not drawn in the dark scheme"),
+            "failed, but not for the pin: {error}"
+        );
     });
 }
 

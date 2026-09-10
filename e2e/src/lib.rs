@@ -20,7 +20,7 @@ pub mod suite;
 pub mod vendor;
 pub mod wait;
 
-pub use browser::{Fixture, Viewport};
+pub use browser::{Fixture, Scheme, Viewport};
 pub use suite::Suite;
 
 /// Where the fixture server is listening. Set by the runner.

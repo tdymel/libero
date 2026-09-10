@@ -10,7 +10,8 @@ use std::time::Duration;
 
 use anyhow::{Context, Result};
 use chromiumoxide::cdp::browser_protocol::emulation::{
-    SetDeviceMetricsOverrideParams, SetFocusEmulationEnabledParams,
+    MediaFeature, SetDeviceMetricsOverrideParams, SetEmulatedMediaParams,
+    SetFocusEmulationEnabledParams,
 };
 use chromiumoxide::cdp::browser_protocol::page::{
     CaptureScreenshotFormat, CaptureScreenshotParams,
@@ -45,6 +46,42 @@ impl Viewport {
             Viewport::Mobile => "mobile",
         }
     }
+}
+
+/// The colour scheme a page is opened under, through the system case:
+/// `prefers-color-scheme`, which is what an app naming no theme follows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Scheme {
+    Light,
+    Dark,
+}
+
+impl Scheme {
+    pub fn name(self) -> &'static str {
+        match self {
+            Scheme::Light => "light",
+            Scheme::Dark => "dark",
+        }
+    }
+}
+
+/// Emulate the colour scheme, and `prefers-reduced-motion` when given.
+///
+/// One call, because `Emulation.setEmulatedMedia` replaces the whole feature
+/// list: setting reduced motion alone would drop a dark scheme set earlier.
+pub async fn emulate_media(
+    page: &Page,
+    scheme: Scheme,
+    reduced_motion: Option<bool>,
+) -> Result<()> {
+    let mut features = vec![MediaFeature::new("prefers-color-scheme", scheme.name())];
+    if let Some(reduced) = reduced_motion {
+        let value = if reduced { "reduce" } else { "no-preference" };
+        features.push(MediaFeature::new("prefers-reduced-motion", value));
+    }
+    page.execute(SetEmulatedMediaParams::builder().features(features).build())
+        .await?;
+    Ok(())
 }
 
 /// Where this run's Chrome profile lives. The runner sets it and cleans it up;
@@ -118,6 +155,7 @@ pub fn block_on<F: std::future::Future>(fut: F) -> F::Output {
 pub struct Fixture {
     pub page: Page,
     pub viewport: Viewport,
+    pub scheme: Scheme,
     /// Attached **before** navigation, so it catches errors raised during the
     /// app's first mount. Attaching after `goto` - which is what this harness
     /// did at first - silently misses exactly the errors most worth having,
@@ -135,6 +173,13 @@ impl Fixture {
     /// (`codebase/testing`). The marker is rendered by the app itself, which a
     /// placeholder cannot fake.
     pub async fn open(route: &str, viewport: Viewport) -> Result<Self> {
+        Self::open_in(route, viewport, Scheme::Light).await
+    }
+
+    /// [`Fixture::open`] under a colour scheme. The emulation is in place
+    /// before navigation, so the first paint is already in that scheme, and
+    /// the page is checked to have resolved it (see [`Fixture::assert_scheme`]).
+    pub async fn open_in(route: &str, viewport: Viewport, scheme: Scheme) -> Result<Self> {
         // Resolved first, deliberately: it panics with an explanation when the
         // runner did not set it, and doing that *before* launching Chrome is
         // what stops a bare `cargo test` leaving a browser and a profile
@@ -209,6 +254,12 @@ impl Fixture {
             .await
             .context("emulate a focused page")?;
 
+        if scheme == Scheme::Dark {
+            emulate_media(&page, scheme, None)
+                .await
+                .context("emulate the dark scheme")?;
+        }
+
         // Before `goto`, deliberately. See the field's doc comment.
         let console = crate::passes::console::Recorder::attach(&page).await?;
 
@@ -221,6 +272,7 @@ impl Fixture {
         let fixture = Fixture {
             page,
             viewport,
+            scheme,
             console,
         };
         crate::wait::for_selector_kind("fixture-ready", &fixture.page, "[data-fixture-ready]")
@@ -231,7 +283,42 @@ impl Fixture {
                      \"not serving a web app\" placeholder, the build was still running."
                 )
             })?;
+        if scheme == Scheme::Dark {
+            fixture.assert_scheme().await?;
+        }
         Ok(fixture)
+    }
+
+    /// The page must be drawn in `self.scheme`: the media query matches, no
+    /// `data-lsx-theme` pins another one, and the body is painted dark.
+    ///
+    /// Without it an emulation that did nothing, or a stored
+    /// `lsx-color-scheme` pinning the light theme, leaves every dark pass
+    /// measuring the light page and reporting it clean.
+    pub async fn assert_scheme(&self) -> Result<()> {
+        let (matches, pinned, luminance): (bool, Option<String>, f64) = self
+            .page
+            .evaluate(
+                "(() => { \
+                   const [r, g, b, a = 1] = getComputedStyle(document.body).backgroundColor \
+                     .match(/[\\d.]+/g).map(Number); \
+                   return [matchMedia('(prefers-color-scheme: dark)').matches, \
+                     document.documentElement.getAttribute('data-lsx-theme'), \
+                     a === 0 ? -1 : (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255]; })()",
+            )
+            .await?
+            .into_value()?;
+        let dark = self.scheme == Scheme::Dark;
+        let pinned_other = pinned.as_deref().is_some_and(|p| p != self.scheme.name());
+        // A transparent body (-1) is unreadable, never "dark".
+        if matches != dark || pinned_other || luminance < 0.0 || (luminance < 0.5) != dark {
+            anyhow::bail!(
+                "the page is not drawn in the {} scheme: prefers-color-scheme: dark {matches}, \
+                 data-lsx-theme {pinned:?}, body luma {luminance:.2}",
+                self.scheme.name()
+            );
+        }
+        Ok(())
     }
 
     /// Write a PNG of the current page and return where it went.
