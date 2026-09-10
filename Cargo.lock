@@ -4782,6 +4782,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "native-tests"
+version = "0.1.0"
+dependencies = [
+ "blitz-dom",
+ "blitz-html",
+ "blitz-traits",
+ "dioxus",
+ "dioxus-native-dom",
+ "libero",
+]
+
+[[package]]
 name = "native-tls"
 version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"

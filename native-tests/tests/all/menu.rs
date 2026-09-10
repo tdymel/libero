@@ -1,0 +1,56 @@
+//! `Menu`, APG's menu button: Enter on the trigger opens it, Escape closes it
+//! and hands focus back to the trigger.
+
+use dioxus::prelude::*;
+use libero::components::{Button, Menu, MenuItem, use_menu};
+use native_tests::{Key, Page, mount};
+
+const TRIGGER: &str = "[aria-haspopup]";
+const MENU: &str = "[role=menu]";
+
+fn app() -> Element {
+    let menu = use_menu();
+    rsx! {
+        Menu {
+            state: menu,
+            items: vec![
+                MenuItem::new("Copy").onselect(|_| {}).into(),
+                MenuItem::new("Paste").onselect(|_| {}).into(),
+            ],
+            Button { attributes: menu.a11y_attributes(), "Actions" }
+        }
+    }
+}
+
+fn expanded(page: &Page) -> bool {
+    page.attr(TRIGGER, "aria-expanded")
+        .is_some_and(|v| v == "true")
+}
+
+#[test]
+fn enter_opens_it_and_escape_closes_it_with_focus_back_on_the_trigger() {
+    let mut page = mount(app);
+    page.focus(TRIGGER);
+    assert!(!expanded(&page));
+
+    page.press(Key::Enter);
+    assert!(expanded(&page), "Enter did not open it:\n{}", page.tree());
+    assert!(page.exists(MENU));
+    assert!(
+        page.is_focused("[role=menuitem]"),
+        "focus is on {}, not an item",
+        page.focus_owner()
+    );
+
+    page.press(Key::Escape);
+    assert!(
+        !expanded(&page),
+        "Escape did not close it:\n{}",
+        page.tree()
+    );
+    assert!(
+        page.is_focused(TRIGGER),
+        "focus is on {}, not the trigger",
+        page.focus_owner()
+    );
+}
