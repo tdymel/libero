@@ -117,6 +117,30 @@ fn a_range_picker_blanks_neighbour_days_and_tints_the_inside() {
 }
 
 #[test]
+fn a_day_button_is_named_by_its_full_date() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 18), onchange: move |_| {} }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    assert_eq!(html.matches("data-slot=\"day\"").count(), 42);
+    // Every day, a neighbour's too, carries its full date; the text stays the number.
+    assert_eq!(
+        html.matches("data-slot=\"day\"").count(),
+        html.matches(", 2026\"").count()
+    );
+    let at = html.find("data-date=\"2026-09-18\"").expect("the 18th");
+    let button = &html[at..at + html[at..].find("</button>").expect("the button ends")];
+    assert!(button.contains("aria-label=\"September 18, 2026\""));
+    assert!(button.ends_with(">18"));
+    assert!(html.contains("aria-label=\"August 31, 2026\""));
+}
+
+#[test]
 fn a_non_focusable_segmented_control_leaves_the_tab_order() {
     fn app() -> Element {
         rsx! {

@@ -31,136 +31,136 @@ generic
           StaticText "Sa"
         columnheader "Sunday"
           StaticText "Su"
-      row "31 1 2 3 4 5 6"
-        gridcell "31" [selected=false]
-          button "31"
+      row "August 31, 2026 September 1, 2026 September 2, 2026 September 3, 2026 September 4, 2026 September 5, 2026 September 6, 2026"
+        gridcell "August 31, 2026" [selected=false]
+          button "August 31, 2026"
             StaticText "31"
-        gridcell "1" [selected=false]
-          button "1"
+        gridcell "September 1, 2026" [selected=false]
+          button "September 1, 2026"
             StaticText "1"
-        gridcell "2" [selected=false]
-          button "2"
+        gridcell "September 2, 2026" [selected=false]
+          button "September 2, 2026"
             StaticText "2"
-        gridcell "3" [selected=false]
-          button "3"
+        gridcell "September 3, 2026" [selected=false]
+          button "September 3, 2026"
             StaticText "3"
-        gridcell "4" [selected=false]
-          button "4"
+        gridcell "September 4, 2026" [selected=false]
+          button "September 4, 2026"
             StaticText "4"
-        gridcell "5" [selected=false]
-          button "5"
+        gridcell "September 5, 2026" [selected=false]
+          button "September 5, 2026"
             StaticText "5"
-        gridcell "6" [selected=false]
-          button "6"
+        gridcell "September 6, 2026" [selected=false]
+          button "September 6, 2026"
             StaticText "6"
-      row "7 8 9 10 11 12 13"
-        gridcell "7" [selected=false]
-          button "7"
+      row "September 7, 2026 September 8, 2026 September 9, 2026 September 10, 2026 September 11, 2026 September 12, 2026 September 13, 2026"
+        gridcell "September 7, 2026" [selected=false]
+          button "September 7, 2026"
             StaticText "7"
-        gridcell "8" [selected=false]
-          button "8"
+        gridcell "September 8, 2026" [selected=false]
+          button "September 8, 2026"
             StaticText "8"
-        gridcell "9" [selected=false]
-          button "9"
+        gridcell "September 9, 2026" [selected=false]
+          button "September 9, 2026"
             StaticText "9"
-        gridcell "10" [selected=false]
-          button "10"
+        gridcell "September 10, 2026" [selected=false]
+          button "September 10, 2026"
             StaticText "10"
-        gridcell "11" [selected=false]
-          button "11"
+        gridcell "September 11, 2026" [selected=false]
+          button "September 11, 2026"
             StaticText "11"
-        gridcell "12" [selected=false]
-          button "12"
+        gridcell "September 12, 2026" [selected=false]
+          button "September 12, 2026"
             StaticText "12"
-        gridcell "13" [selected=false]
-          button "13"
+        gridcell "September 13, 2026" [selected=false]
+          button "September 13, 2026"
             StaticText "13"
-      row "14 15 16 17 18 19 20"
-        gridcell "14" [selected=false]
-          button "14"
+      row "September 14, 2026 September 15, 2026 September 16, 2026 September 17, 2026 September 18, 2026 September 19, 2026 September 20, 2026"
+        gridcell "September 14, 2026" [selected=false]
+          button "September 14, 2026"
             StaticText "14"
-        gridcell "15" [selected=false]
-          button "15"
+        gridcell "September 15, 2026" [selected=false]
+          button "September 15, 2026"
             StaticText "15"
-        gridcell "16" [selected=false]
-          button "16"
+        gridcell "September 16, 2026" [selected=false]
+          button "September 16, 2026"
             StaticText "16"
-        gridcell "17" [selected=false]
-          button "17"
+        gridcell "September 17, 2026" [selected=false]
+          button "September 17, 2026"
             StaticText "17"
-        gridcell "18" [selected=false]
-          button "18"
+        gridcell "September 18, 2026" [selected=false]
+          button "September 18, 2026"
             StaticText "18"
-        gridcell "19" [selected=false]
-          button "19"
+        gridcell "September 19, 2026" [selected=false]
+          button "September 19, 2026"
             StaticText "19"
-        gridcell "20" [selected=false]
-          button "20"
+        gridcell "September 20, 2026" [selected=false]
+          button "September 20, 2026"
             StaticText "20"
-      row "21 22 23 24 25 26 27"
-        gridcell "21" [selected=false]
-          button "21"
+      row "September 21, 2026 September 22, 2026 September 23, 2026 September 24, 2026 September 25, 2026 September 26, 2026 September 27, 2026"
+        gridcell "September 21, 2026" [selected=false]
+          button "September 21, 2026"
             StaticText "21"
-        gridcell "22" [selected=false]
-          button "22"
+        gridcell "September 22, 2026" [selected=false]
+          button "September 22, 2026"
             StaticText "22"
-        gridcell "23" [selected=false]
-          button "23"
+        gridcell "September 23, 2026" [selected=false]
+          button "September 23, 2026"
             StaticText "23"
-        gridcell "24" [selected=false]
-          button "24"
+        gridcell "September 24, 2026" [selected=false]
+          button "September 24, 2026"
             StaticText "24"
-        gridcell "25" [selected]
-          button "25"
+        gridcell "September 25, 2026" [selected]
+          button "September 25, 2026"
             StaticText "25"
-        gridcell "26" [selected=false]
-          button "26"
+        gridcell "September 26, 2026" [selected=false]
+          button "September 26, 2026"
             StaticText "26"
-        gridcell "27" [selected=false]
-          button "27"
+        gridcell "September 27, 2026" [selected=false]
+          button "September 27, 2026"
             StaticText "27"
-      row "28 29 30 1 2 3 4"
-        gridcell "28" [selected=false]
-          button "28"
+      row "September 28, 2026 September 29, 2026 September 30, 2026 October 1, 2026 October 2, 2026 October 3, 2026 October 4, 2026"
+        gridcell "September 28, 2026" [selected=false]
+          button "September 28, 2026"
             StaticText "28"
-        gridcell "29" [selected=false]
-          button "29"
+        gridcell "September 29, 2026" [selected=false]
+          button "September 29, 2026"
             StaticText "29"
-        gridcell "30" [selected=false]
-          button "30"
+        gridcell "September 30, 2026" [selected=false]
+          button "September 30, 2026"
             StaticText "30"
-        gridcell "1" [selected=false]
-          button "1"
+        gridcell "October 1, 2026" [selected=false]
+          button "October 1, 2026"
             StaticText "1"
-        gridcell "2" [selected=false]
-          button "2"
+        gridcell "October 2, 2026" [selected=false]
+          button "October 2, 2026"
             StaticText "2"
-        gridcell "3" [selected=false]
-          button "3"
+        gridcell "October 3, 2026" [selected=false]
+          button "October 3, 2026"
             StaticText "3"
-        gridcell "4" [selected=false]
-          button "4"
+        gridcell "October 4, 2026" [selected=false]
+          button "October 4, 2026"
             StaticText "4"
-      row "5 6 7 8 9 10 11"
-        gridcell "5" [selected=false]
-          button "5"
+      row "October 5, 2026 October 6, 2026 October 7, 2026 October 8, 2026 October 9, 2026 October 10, 2026 October 11, 2026"
+        gridcell "October 5, 2026" [selected=false]
+          button "October 5, 2026"
             StaticText "5"
-        gridcell "6" [selected=false]
-          button "6"
+        gridcell "October 6, 2026" [selected=false]
+          button "October 6, 2026"
             StaticText "6"
-        gridcell "7" [selected=false]
-          button "7"
+        gridcell "October 7, 2026" [selected=false]
+          button "October 7, 2026"
             StaticText "7"
-        gridcell "8" [selected=false]
-          button "8"
+        gridcell "October 8, 2026" [selected=false]
+          button "October 8, 2026"
             StaticText "8"
-        gridcell "9" [selected=false]
-          button "9"
+        gridcell "October 9, 2026" [selected=false]
+          button "October 9, 2026"
             StaticText "9"
-        gridcell "10" [selected=false]
-          button "10"
+        gridcell "October 10, 2026" [selected=false]
+          button "October 10, 2026"
             StaticText "10"
-        gridcell "11" [selected=false]
-          button "11"
+        gridcell "October 11, 2026" [selected=false]
+          button "October 11, 2026"
             StaticText "11"
 --> aria-controls [id="date-field-dialog"] (rendered above)

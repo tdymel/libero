@@ -1112,6 +1112,7 @@ fn Week(props: WeekProps) -> Element {
         onpick,
     } = props;
     let allowed = day_allowed(min, max, exclude_date.0);
+    let names = &use_theme().date;
 
     let day_cell = move |day: NaiveDate| {
         let outside = first_of_month(day) != month;
@@ -1135,6 +1136,8 @@ fn Week(props: WeekProps) -> Element {
                     "data-today": (today == Some(day)).then_some("true"),
                     "data-selected": picked.then_some("true"),
                     "data-in-range": in_range.then_some("true"),
+                    // APG: the full date, not only the number shown.
+                    "aria-label": format_date(day, names.format, names),
                     disabled: !allowed(day),
                     tabindex: if focusable && !outside && tab_stop == Some(day) { "0" } else { "-1" },
                     onmouseenter: move |_| {
