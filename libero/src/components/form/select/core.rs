@@ -11,7 +11,6 @@ use crate::{
             use_refocus_on_close,
         },
         layout::{BoxStyle, use_box},
-        use_combobox,
     },
     hooks::{
         ElementHandle, PopoverWidth, TYPEAHEAD_RESET, Typeahead, typeahead_match, use_element,
@@ -139,14 +138,35 @@ pub(crate) struct SelectionRenderArgs {
     pub id_prefix: String,
 }
 
+/// A skin's own drawing reads only compared props, so it may compare equal; a
+/// caller's never does, since its closure can read state no prop carries.
+#[derive(Clone, Copy)]
+pub(crate) struct SelectionDraw {
+    draw: Callback<SelectionRenderArgs, Element>,
+    by_caller: bool,
+}
+
+impl SelectionDraw {
+    pub(crate) fn new(draw: Callback<SelectionRenderArgs, Element>, by_caller: bool) -> Self {
+        Self { draw, by_caller }
+    }
+}
+
+impl PartialEq for SelectionDraw {
+    fn eq(&self, other: &Self) -> bool {
+        !self.by_caller && !other.by_caller && self.draw == other.draw
+    }
+}
+
 field_props! {
     pub(crate) struct SelectCoreProps {
-        /// Each row's content, already drawn by the skin. The core wraps every
-        /// one in a `ComboboxOption`, which is what wires `aria-selected`, the
-        /// highlight and the pick.
+        /// Each row's content, drawn by the skin only while open: an empty
+        /// list compares equal, so a closed select skips a re-render.
         rows: Vec<Element>,
-        /// Parallel to `rows`.
+        /// One per option, whether or not `rows` is drawn.
         selected: Vec<bool>,
+        /// Held by the skin, which draws `rows` only while it is open.
+        state: ComboboxState,
         /// One group label per row, parallel to `rows`, `None` for a row in no
         /// group. Filtered alongside the rows and handed on, so a search
         /// narrows the groups with the list.
@@ -167,7 +187,7 @@ field_props! {
         /// skin owns no state, so the cursor lives here and the selection is
         /// redrawn from it. `None` shows `placeholder`.
         #[props(default)]
-        selection: Option<Callback<SelectionRenderArgs, Element>>,
+        selection: Option<SelectionDraw>,
         /// The selection's labels, in order. A `multiple` trigger carries them
         /// as its hidden value text - the chips sit beside it - and its live
         /// region announces what they gained or lost.
@@ -246,7 +266,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let readonly = props.readonly.unwrap_or(false);
     let required = props.required.unwrap_or(false);
 
-    let state = use_combobox();
+    let state = props.state;
     let opened = state.is_open() && !disabled && !readonly;
     let searchable = props.searchable && !disabled;
 
@@ -278,7 +298,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             .filter(|(_, keep)| *keep)
             .map(|(index, _)| index)
             .collect(),
-        _ => (0..props.rows.len()).collect(),
+        // `selected`, not `rows`: a closed list draws no rows.
+        _ => (0..props.selected.len()).collect(),
     };
 
     // Removing the chip under the cursor leaves the index pointing at the one
@@ -415,7 +436,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     let id_prefix = format!("{}-chip", state.id());
     let drawn = props.selection.map(|selection| {
-        selection.call(SelectionRenderArgs {
+        selection.draw.call(SelectionRenderArgs {
             cursor: chip_cursor,
             id_prefix: id_prefix.clone(),
         })
@@ -844,6 +865,9 @@ fn select_rows(
     visible: &[usize],
     state: ComboboxState,
 ) -> (Vec<Element>, Vec<Option<String>>, Vec<bool>) {
+    if props.rows.is_empty() {
+        return Default::default();
+    }
     let groups = visible
         .iter()
         .map(|index| props.groups.get(*index).cloned().flatten())

@@ -3458,3 +3458,99 @@ mod pointer_guards {
         assert_eq!(heard, Vec::<String>::new());
     }
 }
+
+/// A closed `Select`'s `SelectCore` skips a parent re-render (todo 29). What it
+/// drew on an older render must still run the newest handler and show the newest
+/// caller-drawn selection.
+mod select_memo {
+    use super::*;
+    use libero::components::Select;
+
+    thread_local! {
+        static GENERATION: std::cell::Cell<u32> = const { std::cell::Cell::new(1) };
+        static PICKS: std::cell::RefCell<Vec<(u32, String)>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    fn city(value: &'static str, own_selection: bool) -> Element {
+        let generation = GENERATION.get();
+        let selection = own_selection
+            .then(|| Callback::new(move |city: String| rsx! { "{city} #{generation}" }));
+        rsx! {
+            LiberoProvider {
+                Select::<String> {
+                    options: vec!["Berlin".to_string(), "Bonn".to_string(), "Hamburg".to_string()],
+                    value: value.to_string(),
+                    selection,
+                    onchange: move |city: Option<String>| {
+                        PICKS.with_borrow_mut(|picks| picks.push((generation, city.unwrap_or_default())))
+                    },
+                }
+            }
+        }
+    }
+
+    fn mount(app: fn() -> Element) -> (VirtualDom, ElementId) {
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        GENERATION.set(1);
+        PICKS.with_borrow_mut(Vec::clear);
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+        let trigger = *find.keydown.last().expect("the trigger takes keys");
+        (dom, trigger)
+    }
+
+    fn rerender(dom: &mut VirtualDom, generation: u32) {
+        GENERATION.set(generation);
+        dom.mark_dirty(dioxus::core::ScopeId::APP);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    }
+
+    fn press(dom: &mut VirtualDom, trigger: ElementId, key: Key) {
+        dom.runtime()
+            .handle_event("keydown", Event::new(key_event(key), true), trigger);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    }
+
+    #[test]
+    fn a_closed_select_picks_through_the_newest_onchange() {
+        let (mut dom, trigger) = mount(|| city("Berlin", false));
+        rerender(&mut dom, 2);
+        rerender(&mut dom, 3);
+        // Typeahead on a closed select picks in place: "b" from Berlin is Bonn.
+        press(&mut dom, trigger, Key::Character("b".into()));
+        assert_eq!(PICKS.with_borrow(Clone::clone), [(3, "Bonn".to_string())]);
+    }
+
+    #[test]
+    fn a_callers_selection_redraws_on_its_own_state() {
+        let (mut dom, _) = mount(|| city("Berlin", true));
+        assert!(body(&dioxus_ssr::render(&dom)).contains("Berlin #1"));
+        rerender(&mut dom, 2);
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(
+            html.contains("Berlin #2"),
+            "a stale caller selection:\n{html}"
+        );
+    }
+
+    /// No rows are drawn while closed, so the highlight a list opens on is
+    /// counted over the options, not over the rows.
+    #[test]
+    fn opening_after_skipped_renders_highlights_the_selected_row() {
+        let (mut dom, trigger) = mount(|| city("Hamburg", false));
+        rerender(&mut dom, 2);
+        press(&mut dom, trigger, Key::ArrowDown);
+        let html = body(&dioxus_ssr::render(&dom));
+        let label = html
+            .find(r#"data-slot="label">Hamburg"#)
+            .unwrap_or_else(|| panic!("no Hamburg row:\n{html}"));
+        let row = &html[html[..label].rfind("<div").expect("the row")..label];
+        assert!(
+            row.contains("active"),
+            "Hamburg is not the highlight:\n{html}"
+        );
+    }
+}

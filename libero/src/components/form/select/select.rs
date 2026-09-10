@@ -3,12 +3,12 @@ use dioxus::prelude::*;
 use crate::components::form::{row_label, use_bound};
 
 use crate::{
-    components::{Input, OptionSource, Options, common::field_props},
+    components::{ComboboxState, Input, OptionSource, Options, common::field_props, use_combobox},
     hooks::use_theme,
     utils::warn,
 };
 
-use super::core::{SelectCore, SelectionRenderArgs};
+use super::core::{SelectCore, SelectionDraw, SelectionRenderArgs};
 
 /// One row, handed to `Select`'s and `MultiSelect`'s `option` callback. It
 /// draws the row's *content*: the row itself - its highlight, its
@@ -150,45 +150,54 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
         .map(|index| selected_index == Some(index))
         .collect();
     let row_disabled = list.disabled();
-    let rows = draw_rows(&values, &selected, &row_disabled, props.option.as_ref());
+    let state = use_combobox();
+    let rows = draw_open_rows(
+        state,
+        &values,
+        &selected,
+        &row_disabled,
+        props.option.as_ref(),
+    );
     // A single selection has no chips, so the cursor the core hands down is
     // always `None` here.
     let draw_selection = props.selection;
-    let selection = selected_index.map(|index| {
-        let value = values[index].clone();
-        Callback::new(move |_: SelectionRenderArgs| match &draw_selection {
-            Some(selection) => selection.call(value.clone()),
-            None => rsx! { "{value.label()}" },
-        })
-    });
+    let shown = selected_index.map(|index| values[index].clone());
+    let draw = use_callback(
+        move |_: SelectionRenderArgs| match (&draw_selection, &shown) {
+            (Some(selection), Some(value)) => selection.call(value.clone()),
+            (None, Some(value)) => rsx! { "{value.label()}" },
+            (_, None) => rsx! {},
+        },
+    );
+    let selection = selected_index.map(|_| SelectionDraw::new(draw, props.selection.is_some()));
 
-    // Closes over this skin's own `values` and the caller's filter, so `T`
-    // never reaches the core - it takes a `Vec<bool>` mask and nothing else.
-    //
-    // Built per render, which `Callback`'s `PartialEq` normally makes a trap:
-    // two callbacks from one scope compare equal, so a stale one can survive.
-    // It cannot here, because `SelectCore` also takes `rows: Vec<Element>`,
-    // which never compares equal - its props therefore never do either, and the
-    // fresh callback is always the one called. Anything that later drops `rows`
-    // from those props has to revisit this.
     let searchable = props.searchable.unwrap_or(false);
-    let matches = search_mask(searchable, values.clone(), props.filter);
+    let matches = use_search_mask(searchable, values.clone(), props.filter);
+    let row_labels = values.iter().map(Options::label).collect::<Vec<_>>();
 
+    // Stable, so a closed select's `SelectCore` compares equal and skips.
     let onchange = bound.emit(props.onchange);
     let clear = onchange.clone();
+    let onpick = use_callback(move |index: usize| {
+        if let (Some(onchange), Some(value)) = (&onchange, values.get(index)) {
+            onchange(Some(value.clone()));
+        }
+    });
+    let onclear = use_callback(move |_: ()| {
+        if let Some(clear) = &clear {
+            clear(None);
+        }
+    });
     rsx! {
         SelectCore {
             rows,
             selected,
+            state,
             groups: list.group_labels(),
             row_disabled,
-            row_labels: values.iter().map(Options::label).collect::<Vec<_>>(),
+            row_labels,
             loading: loading.then(|| theme.combobox.labels.loading.to_string()),
-            onpick: move |index: usize| {
-                if let (Some(onchange), Some(value)) = (&onchange, values.get(index)) {
-                    onchange(Some(value.clone()));
-                }
-            },
+            onpick,
             selection,
             placeholder: props.placeholder,
             name: bound.name().map(str::to_string),
@@ -198,11 +207,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             searchable,
             search_placeholder: props.search_placeholder,
             matches,
-            onclear: move |_| {
-                if let Some(clear) = &clear {
-                    clear(None);
-                }
-            },
+            onclear,
             label: props.label,
             description: props.description,
             helper: props.helper,
@@ -221,29 +226,43 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
 }
 
 /// Which rows a query keeps, through the caller's `filter` or by label. `None`
-/// unless `searchable`.
-pub(super) fn search_mask<T: Options>(
+/// unless `searchable`. A hook: the mask keeps one identity across renders and
+/// runs the newest `values` and `filter`, which only an open list calls.
+pub(super) fn use_search_mask<T: Options>(
     searchable: bool,
     values: Vec<T>,
     filter: Option<Callback<SelectFilterArgs<T>, bool>>,
 ) -> Option<Callback<String, Vec<bool>>> {
-    searchable.then(|| {
-        Callback::new(move |query: String| {
-            let needle = query.to_lowercase();
-            values
-                .iter()
-                .map(|value| match &filter {
-                    Some(filter) => filter.call(SelectFilterArgs {
-                        value: value.clone(),
-                        query: query.clone(),
-                    }),
-                    None => value.label().to_lowercase().contains(&needle),
-                })
-                // Annotated: a `Callback`'s return type is inferred through
-                // `SpawnIfAsync`, which leaves a bare `collect` ambiguous.
-                .collect::<Vec<bool>>()
-        })
-    })
+    let mask = use_callback(move |query: String| {
+        let needle = query.to_lowercase();
+        values
+            .iter()
+            .map(|value| match &filter {
+                Some(filter) => filter.call(SelectFilterArgs {
+                    value: value.clone(),
+                    query: query.clone(),
+                }),
+                None => value.label().to_lowercase().contains(&needle),
+            })
+            // Annotated: a `Callback`'s return type is inferred through
+            // `SpawnIfAsync`, which leaves a bare `collect` ambiguous.
+            .collect::<Vec<bool>>()
+    });
+    searchable.then_some(mask)
+}
+
+/// [`draw_rows`] while the list is open, nothing while it is closed.
+pub(super) fn draw_open_rows<T: Options>(
+    state: ComboboxState,
+    values: &[T],
+    selected: &[bool],
+    disabled: &[bool],
+    option: Option<&Callback<SelectOptionArgs<T>, Element>>,
+) -> Vec<Element> {
+    match state.is_open() {
+        true => draw_rows(values, selected, disabled, option),
+        false => Vec::new(),
+    }
 }
 
 /// Each row's content - the caller's `option`, or the label.

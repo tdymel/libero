@@ -3,14 +3,16 @@ use dioxus::prelude::*;
 use crate::components::form::use_bound;
 
 use crate::{
-    components::{Input, OptionSource, Options, common::field_props, form::removable_chip},
+    components::{
+        Input, OptionSource, Options, common::field_props, form::removable_chip, use_combobox,
+    },
     hooks::use_theme,
     utils::warn,
 };
 
 use super::{
-    core::{SelectCore, SelectionRenderArgs},
-    select::{SelectFilterArgs, SelectOptionArgs, SelectionArgs, draw_rows, search_mask},
+    core::{SelectCore, SelectionDraw, SelectionRenderArgs},
+    select::{SelectFilterArgs, SelectOptionArgs, SelectionArgs, draw_open_rows, use_search_mask},
 };
 
 field_props! {
@@ -101,86 +103,100 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
 
     let selected: Vec<bool> = values.iter().map(|option| held.contains(option)).collect();
     let row_disabled = list.disabled();
-    let rows = draw_rows(&values, &selected, &row_disabled, props.option.as_ref());
-    // The chips, redrawn from the cursor the core owns. Each wrapper carries the
-    // id `aria-activedescendant` points at; what is inside it is the skin's, or
-    // the caller's.
+    let state = use_combobox();
+    let rows = draw_open_rows(
+        state,
+        &values,
+        &selected,
+        &row_disabled,
+        props.option.as_ref(),
+    );
     let onchange = bound.emit(props.onchange);
     let size = props.size.copied_or(theme.multi_select.size);
     let disabled = bound.disabled(props.disabled);
     let readonly = props.readonly.unwrap_or(false);
+
+    // Every callback below is stable, so a closed select's `SelectCore`
+    // compares equal and skips. They still run the newest captures.
+    let removable = held.clone();
+    let remove_change = onchange.clone();
+    let onremove = use_callback(move |index: usize| drop_at(&removable, index, &remove_change));
+    // The chips, redrawn from the cursor the core owns. Each wrapper carries the
+    // id `aria-activedescendant` points at; what is inside it is the skin's, or
+    // the caller's.
     let picked = held.clone();
     let draw_selection = props.selection;
-    let chip_change = onchange.clone();
-    let selection = (!picked.is_empty()).then(|| {
-        Callback::new(move |args: SelectionRenderArgs| {
-            let chips = picked.iter().cloned().enumerate().map(|(index, value)| {
-                let removing = picked.clone();
-                let onchange = chip_change.clone();
-                // Guarded as the trigger's Backspace is: a caller's own
-                // `selection` gets `remove` too.
-                let remove = Callback::new(move |_: ()| {
-                    if !disabled && !readonly {
-                        drop_at(&removing, index, &onchange);
-                    }
-                });
-                match &draw_selection {
-                    Some(selection) => selection.call(SelectionArgs { value, remove }),
-                    None => removable_chip(value.label(), remove, size, disabled || readonly),
+    let draw = use_callback(move |args: SelectionRenderArgs| {
+        let chips = picked.iter().cloned().enumerate().map(|(index, value)| {
+            // Guarded as the trigger's Backspace is: a caller's own
+            // `selection` gets `remove` too.
+            let remove = Callback::new(move |_: ()| {
+                if !disabled && !readonly {
+                    onremove.call(index);
                 }
             });
-            rsx! {
-                for (index, chip) in chips.enumerate() {
-                    span {
-                        key: "{index}",
-                        "data-slot": "chip",
-                        id: "{args.id_prefix}-{index}",
-                        "data-cursor": (args.cursor == Some(index)).then_some("true"),
-                        {chip}
-                    }
+            match &draw_selection {
+                Some(selection) => selection.call(SelectionArgs { value, remove }),
+                None => removable_chip(value.label(), remove, size, disabled || readonly),
+            }
+        });
+        rsx! {
+            for (index, chip) in chips.enumerate() {
+                span {
+                    key: "{index}",
+                    "data-slot": "chip",
+                    id: "{args.id_prefix}-{index}",
+                    "data-cursor": (args.cursor == Some(index)).then_some("true"),
+                    {chip}
                 }
             }
-        })
+        }
     });
+    let selection = (!held.is_empty()).then(|| SelectionDraw::new(draw, props.selection.is_some()));
 
-    // The same mask `Select` builds, and the same memoization reasoning - see
-    // the comment there.
     let searchable = props.searchable.unwrap_or(false);
-    let matches = search_mask(searchable, values.clone(), props.filter);
+    let matches = use_search_mask(searchable, values.clone(), props.filter);
+    let row_labels = values.iter().map(Options::label).collect::<Vec<_>>();
 
     let current = held.clone();
     // Built before the pick closure takes `current`.
     let posted = current.iter().map(Options::value).collect::<Vec<_>>();
     let rules = props.validate.check(&current);
-    let removable = held.clone();
     let value_labels = held.iter().map(Options::label).collect::<Vec<_>>();
-    let (pick_change, remove_change, clear_change) = (onchange.clone(), onchange.clone(), onchange);
+    let (pick_change, clear_change) = (onchange.clone(), onchange);
+    let onpick = use_callback(move |index: usize| {
+        let (Some(onchange), Some(value)) = (&pick_change, values.get(index)) else {
+            return;
+        };
+        let mut next = current.clone();
+        match next.iter().position(|picked| picked == value) {
+            Some(at) => {
+                next.remove(at);
+            }
+            None => next.push(value.clone()),
+        }
+        onchange(next);
+    });
+    let onclear = use_callback(move |_: ()| {
+        if let Some(onchange) = &clear_change {
+            onchange(Vec::new());
+        }
+    });
     rsx! {
         SelectCore {
             rows,
             selected,
+            state,
             groups: list.group_labels(),
             row_disabled,
-            row_labels: values.iter().map(Options::label).collect::<Vec<_>>(),
+            row_labels,
             loading: loading.then(|| theme.combobox.labels.loading.to_string()),
             multiple: true,
-            onpick: move |index: usize| {
-                let (Some(onchange), Some(value)) = (&pick_change, values.get(index)) else {
-                    return;
-                };
-                let mut next = current.clone();
-                match next.iter().position(|picked| picked == value) {
-                    Some(at) => {
-                        next.remove(at);
-                    }
-                    None => next.push(value.clone()),
-                }
-                onchange(next);
-            },
+            onpick,
             selection,
             value_labels,
-            chip_count: removable.len(),
-            onremove: move |index: usize| drop_at(&removable, index, &remove_change),
+            chip_count: held.len(),
+            onremove,
             placeholder: props.placeholder,
             name: bound.name().map(str::to_string),
             form_values: posted,
@@ -189,11 +205,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             searchable,
             search_placeholder: props.search_placeholder,
             matches,
-            onclear: move |_| {
-                if let Some(onchange) = &clear_change {
-                    onchange(Vec::new());
-                }
-            },
+            onclear,
             label: props.label,
             description: props.description,
             helper: props.helper,
