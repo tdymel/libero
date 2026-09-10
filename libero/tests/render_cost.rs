@@ -76,13 +76,19 @@ fn flip() -> bool {
 const CHILDREN: usize = 200;
 const ROUNDS: usize = 80;
 
-/// One [`Shape`] per entry: a label, and the `rsx!` body to repeat.
+/// One [`Shape`] per entry: a label, the handlers, and the `rsx!` body to repeat.
+///
+/// Each `let name = closure;` becomes one `use_callback` in the app, shared by
+/// every copy: a closure built in render never compares equal, so passing one
+/// straight as a handler or render prop would price the harness, not the
+/// component.
 macro_rules! shapes {
-    ($($label:literal { $($item:tt)* })*) => {
+    ($($label:literal $(let $handler:ident = $callback:expr;)* { $($item:tt)* })*) => {
         &[$(Shape {
             name: $label,
             app: {
                 fn app() -> Element {
+                    $(let $handler = use_callback($callback);)*
                     rsx! {
                         LiberoProvider {
                             div { for _ in 0..CHILDREN { $($item)* } }
@@ -136,9 +142,10 @@ struct CostForm {
 /// the pair below prices reading the form's value against a `value` prop.
 #[component]
 fn UnboundForm(children: Element) -> Element {
+    let oninput = use_callback(|_: String| {});
     rsx! {
         Form::<()> {
-            TextField { name: "text", value: "", oninput: move |_| {}, validate: not_empty.error("r") }
+            TextField { name: "text", value: "", oninput, validate: not_empty.error("r") }
             {children}
         }
     }
@@ -254,14 +261,6 @@ fn wanted(label: &str) -> bool {
     })
 }
 
-/// A caller holding its handler in a `use_callback`, as a closure built in
-/// render defeats the field's memo.
-#[component]
-fn StableNumberField() -> Element {
-    let onchange = use_callback(move |_: i32| {});
-    rsx! { NumberField { value: 1i32, onchange, steppers: true } }
-}
-
 /// The cheapest component that can exist: one scope, one element, no styling.
 #[component]
 fn Leaf(children: Element) -> Element {
@@ -325,7 +324,7 @@ fn render_cost_per_component() {
         "Float" { Float { "x" } }
         "Header" { Header { "x" } }
         "ScrollArea" { ScrollArea { "x" } }
-        "Virtualize" { ScrollArea { Virtualize { count: 1, item: move |_| rsx! { "x" } } } }
+        "Virtualize" let item = |_: usize| rsx! { "x" }; { ScrollArea { Virtualize { count: 1, item } } }
         "Sidebar" { Sidebar { "x" } }
         "Splitter" { Splitter { initial_size: 50.0, panel_a: rsx! { div { "l" } }, panel_b: rsx! { div { "r" } } } }
 
@@ -338,100 +337,98 @@ fn render_cost_per_component() {
 
         "Button" { Button { "x" } }
         "ActionIcon" { ActionIcon { aria_label: "a", "x" } }
-        "NativeSelect" { NativeSelect { value: CostPane::One, onchange: move |_| {} } }
-        "Select" { Select { value: CostPane::One, onchange: move |_| {} } }
+        "NativeSelect" let onchange = |_: CostPane| {}; { NativeSelect { value: CostPane::One, onchange } }
+        "Select" let onchange = |_: Option<CostPane>| {}; { Select { value: CostPane::One, onchange } }
         // Closed, re-rendered: every closed portal holder on the page still
         // publishes its empty slot. `NativeSelect pick` is the same change
         // with no portal.
-        "Select pick" { Select { value: if flip() { CostPane::Two } else { CostPane::One }, onchange: move |_| {} } }
-        "NativeSelect pick" { NativeSelect { value: if flip() { CostPane::Two } else { CostPane::One }, onchange: move |_| {} } }
-        "MultiSelect" { MultiSelect { value: vec![CostPane::One], onchange: move |_| {} } }
-        "Autocomplete" { Autocomplete { value: "", options: vec![CostPane::One], oninput: move |_| {} } }
-        "TextField" { TextField { oninput: move |_| {} } }
-        "TextField+label" { TextField { oninput: move |_| {}, label: "l" } }
+        "Select pick" let onchange = |_: Option<CostPane>| {}; { Select { value: if flip() { CostPane::Two } else { CostPane::One }, onchange } }
+        "NativeSelect pick" let onchange = |_: CostPane| {}; { NativeSelect { value: if flip() { CostPane::Two } else { CostPane::One }, onchange } }
+        "MultiSelect" let onchange = |_: Vec<CostPane>| {}; { MultiSelect { value: vec![CostPane::One], onchange } }
+        "Autocomplete" let oninput = |_: String| {}; { Autocomplete { value: "", options: vec![CostPane::One], oninput } }
+        "TextField" let oninput = |_: String| {}; { TextField { oninput } }
+        "TextField+label" let oninput = |_: String| {}; { TextField { oninput, label: "l" } }
         // Every slot filled - what the field chrome costs over a bare control.
-        "TextField+slots" { TextField { oninput: move |_| {}, label: "l", description: "d", helper: "h", status: "e", required: true } }
-        "NumberField" { NumberField { value: 1i32, onchange: move |_| {} } }
-        "NumberField+steppers" { NumberField { value: 1i32, onchange: move |_| {}, steppers: true } }
-        // A `use_callback` handler: the field skips, the rows above price the closure.
-        "NumberField+steppers stable" { StableNumberField {} }
+        "TextField+slots" let oninput = |_: String| {}; { TextField { oninput, label: "l", description: "d", helper: "h", status: "e", required: true } }
+        "NumberField" let onchange = |_: i32| {}; { NumberField { value: 1i32, onchange } }
+        "NumberField+steppers" let onchange = |_: i32| {}; { NumberField { value: 1i32, onchange, steppers: true } }
         // A stepper press or an arrow key: the value moves every round.
-        "NumberField step" { NumberField { value: if flip() { 2i32 } else { 1 }, onchange: move |_| {} } }
-        "NumberField+steppers step" { NumberField { value: if flip() { 2i32 } else { 1 }, onchange: move |_| {}, steppers: true } }
-        "Textarea" { Textarea { oninput: move |_| {} } }
-        "PasswordField" { PasswordField { oninput: move |_| {} } }
-        "PasswordField-toggle" { PasswordField { oninput: move |_| {}, reveal_button: false } }
-        "PhoneField" { PhoneField { oninput: move |_| {} } }
+        "NumberField step" let onchange = |_: i32| {}; { NumberField { value: if flip() { 2i32 } else { 1 }, onchange } }
+        "NumberField+steppers step" let onchange = |_: i32| {}; { NumberField { value: if flip() { 2i32 } else { 1 }, onchange, steppers: true } }
+        "Textarea" let oninput = |_: String| {}; { Textarea { oninput } }
+        "PasswordField" let oninput = |_: String| {}; { PasswordField { oninput } }
+        "PasswordField-toggle" let oninput = |_: String| {}; { PasswordField { oninput, reveal_button: false } }
+        "PhoneField" let oninput = |_: String| {}; { PhoneField { oninput } }
         // The picker is a `ComboboxCore` shell, a button and a portal - the
         // escape hatch `reveal_button: false` is for `PasswordField`.
-        "PhoneField-picker" { PhoneField { oninput: move |_| {}, country_select: false } }
-        "TextField+frame" { TextField { oninput: move |_| {}, leading: rsx! { "<" }, trailing: rsx! { ">" } } }
+        "PhoneField-picker" let oninput = |_: String| {}; { PhoneField { oninput, country_select: false } }
+        "TextField+frame" let oninput = |_: String| {}; { TextField { oninput, leading: rsx! { "<" }, trailing: rsx! { ">" } } }
         // Rules never compare equal, so this one always re-renders with its parent.
-        "TextField+validate" { TextField { value: "", oninput: move |_| {}, validate: [not_empty.error("r")] } }
+        "TextField+validate" let oninput = |_: String| {}; { TextField { value: "", oninput, validate: [not_empty.error("r")] } }
         "Form" { Form::<()> { "x" } }
         "Fieldset" { Fieldset::<()> { "x" } }
         // Inside a form: registration and the composite lookup.
-        "Form+TextField" { Form::<()> { TextField { name: "n", oninput: move |_| {} } } }
+        "Form+TextField" let oninput = |_: String| {}; { Form::<()> { TextField { name: "n", oninput } } }
         "Form+TextField+validate" { UnboundForm { "x" } }
         // The same field bound by `name`: it reads the form's signal instead.
         "Form+bound TextField" { BoundForm { "x" } }
         // The only component whose cost scales with a prop - two elements per
         // cell, so the pair below is the per-cell price.
-        "PinField" { PinField { oninput: move |_| {} } }
+        "PinField" let oninput = |_: String| {}; { PinField { oninput } }
         // Two entries: the dropzone is the bigger surface, and both drive the
         // same hidden input.
-        "FileField" { FileField { onchange: move |_| {} } }
-        "FileField-dropzone" { FileField { onchange: move |_| {}, variant: "dropzone" } }
-        "PinField+6" { PinField { oninput: move |_| {}, length: 6usize } }
+        "FileField" let onchange = |_: Files| {}; { FileField { onchange } }
+        "FileField-dropzone" let onchange = |_: Files| {}; { FileField { onchange, variant: "dropzone" } }
+        "PinField+6" let oninput = |_: String| {}; { PinField { oninput, length: 6usize } }
         // Closed: the columns are not rendered until it opens, and nothing can
         // open one from a prop. The price of an *open* cascader is a browser
         // measurement, not this table's.
-        "Cascader" { Cascader { data: cost_tree(), onchange: move |_: Option<String>| {} } }
-        "Checkbox" { Checkbox { checked: true, onchange: move |_| {} } }
-        "Checkbox+label" { Checkbox { checked: true, onchange: move |_| {}, label: "l" } }
-        "Radio" { Radio { checked: true, onselect: move |_| {} } }
-        "RadioGroup" { RadioGroup { value: CostPane::One, onchange: move |_| {} } }
-        "Chip" { Chip { checked: true, onchange: move |_| {}, "x" } }
-        "Switch" { Switch { checked: true, onchange: move |_| {} } }
-        "Switch+label" { Switch { checked: true, onchange: move |_| {}, label: "l" } }
-        "Slider" { Slider { value: 50.0, oninput: move |_| {} } }
-        "Slider+label" { Slider { value: 50.0, oninput: move |_| {}, label: "l" } }
+        "Cascader" let onchange = |_: Option<String>| {}; { Cascader { data: cost_tree(), onchange } }
+        "Checkbox" let onchange = |_: bool| {}; { Checkbox { checked: true, onchange } }
+        "Checkbox+label" let onchange = |_: bool| {}; { Checkbox { checked: true, onchange, label: "l" } }
+        "Radio" let onselect = |_: ()| {}; { Radio { checked: true, onselect } }
+        "RadioGroup" let onchange = |_: CostPane| {}; { RadioGroup { value: CostPane::One, onchange } }
+        "Chip" let onchange = |_: bool| {}; { Chip { checked: true, onchange, "x" } }
+        "Switch" let onchange = |_: bool| {}; { Switch { checked: true, onchange } }
+        "Switch+label" let onchange = |_: bool| {}; { Switch { checked: true, onchange, label: "l" } }
+        "Slider" let oninput = |_: SliderChangeEvent| {}; { Slider { value: 50.0, oninput } }
+        "Slider+label" let oninput = |_: SliderChangeEvent| {}; { Slider { value: 50.0, oninput, label: "l" } }
         // The second thumb, and what a `Tooltip` costs twice.
-        "RangeSlider" { RangeSlider { value: (20.0, 80.0), oninput: move |_| {} } }
+        "RangeSlider" let oninput = |_: SliderChangeEvent<(f64, f64)>| {}; { RangeSlider { value: (20.0, 80.0), oninput } }
         // A plain `SliderCore` over a gradient: no bar, no `Tooltip`.
-        "HueSlider" { HueSlider { value: 200.0, oninput: move |_| {} } }
+        "HueSlider" let oninput = |_: SliderChangeEvent| {}; { HueSlider { value: 200.0, oninput } }
         "ColorSwatch" { ColorSwatch { color: ColorCode::hex(0x228be6) } }
         // The panel, a hue slider and nothing else - no alpha, no swatches.
-        "ColorPicker" { ColorPicker { value: ColorCode::hex(0x228be6), oninput: move |_| {} } }
+        "ColorPicker" let oninput = |_: SliderChangeEvent<ColorCode>| {}; { ColorPicker { value: ColorCode::hex(0x228be6), oninput } }
         // One drag frame. The two hexes differ in hue too, so the hue slider redraws.
-        "ColorPicker drag" { ColorPicker { value: ColorCode::hex(if flip() { 0x228be6 } else { 0x2f8fe0 }), oninput: move |_| {} } }
+        "ColorPicker drag" let oninput = |_: SliderChangeEvent<ColorCode>| {}; { ColorPicker { value: ColorCode::hex(if flip() { 0x228be6 } else { 0x2f8fe0 }), oninput } }
         // A panel drag frame: saturation and value move, the hue stays.
-        "ColorPicker pad" { ColorPicker { value: ColorCode::hsva(208.0, if flip() { 0.6 } else { 0.7 }, 0.8, 1.0), oninput: move |_| {} } }
-        "ColorPicker hue" { ColorPicker { value: ColorCode::hsva(if flip() { 208.0 } else { 210.0 }, 0.6, 0.8, 1.0), oninput: move |_| {} } }
-        "ColorPicker+alpha pad" { ColorPicker { value: ColorCode::hsva(208.0, if flip() { 0.6 } else { 0.7 }, 0.8, 1.0), oninput: move |_| {}, with_alpha: true } }
+        "ColorPicker pad" let oninput = |_: SliderChangeEvent<ColorCode>| {}; { ColorPicker { value: ColorCode::hsva(208.0, if flip() { 0.6 } else { 0.7 }, 0.8, 1.0), oninput } }
+        "ColorPicker hue" let oninput = |_: SliderChangeEvent<ColorCode>| {}; { ColorPicker { value: ColorCode::hsva(if flip() { 208.0 } else { 210.0 }, 0.6, 0.8, 1.0), oninput } }
+        "ColorPicker+alpha pad" let oninput = |_: SliderChangeEvent<ColorCode>| {}; { ColorPicker { value: ColorCode::hsva(208.0, if flip() { 0.6 } else { 0.7 }, 0.8, 1.0), oninput, with_alpha: true } }
         // Closed: the dropdown's picker is not rendered until it opens.
-        "ColorField" { ColorField { value: ColorCode::hex(0x228be6), oninput: move |_| {} } }
+        "ColorField" let oninput = |_: SliderChangeEvent<ColorCode>| {}; { ColorField { value: ColorCode::hex(0x228be6), oninput } }
         // 42 day buttons, each with its own click handler.
-        "DayPicker" { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} } }
+        "DayPicker" let onchange = |_: Option<NaiveDate>| {}; { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange } }
         // Seven days in one row, each with a month label.
-        "DayPicker pick" { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, if flip() { 15 } else { 14 }), onchange: move |_| {} } }
-        "DayPicker page" { DayPicker { value: NaiveDate::from_ymd_opt(2026, if flip() { 10 } else { 9 }, 14), onchange: move |_| {} } }
-        "DayPicker-mini" { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, calendar: "mini" } }
+        "DayPicker pick" let onchange = |_: Option<NaiveDate>| {}; { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, if flip() { 15 } else { 14 }), onchange } }
+        "DayPicker page" let onchange = |_: Option<NaiveDate>| {}; { DayPicker { value: NaiveDate::from_ymd_opt(2026, if flip() { 10 } else { 9 }, 14), onchange } }
+        "DayPicker-mini" let onchange = |_: Option<NaiveDate>| {}; { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange, calendar: "mini" } }
         // Closed: the dropdown's picker is not rendered until it opens.
-        "DayField" { DayField { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} } }
-        "TimePicker" { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, variant: "digital" } }
-        "TimePicker pick" { TimePicker { value: NaiveTime::from_hms_opt(9, if flip() { 35 } else { 30 }, 0), onchange: move |_| {}, variant: "digital" } }
-        "TimePicker-analog" { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, variant: "analog" } }
-        "TimePicker-analog pick" { TimePicker { value: NaiveTime::from_hms_opt(9, if flip() { 35 } else { 30 }, 0), onchange: move |_| {}, variant: "analog" } }
-        "MonthPicker" { MonthPicker { value: NaiveDate::from_ymd_opt(2026, 9, 1), onchange: move |_| {} } }
-        "DateRangePicker" { DateRangePicker { onchange: move |_| {} } }
+        "DayField" let onchange = |_: Option<NaiveDate>| {}; { DayField { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange } }
+        "TimePicker" let onchange = |_: Option<NaiveTime>| {}; { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange, variant: "digital" } }
+        "TimePicker pick" let onchange = |_: Option<NaiveTime>| {}; { TimePicker { value: NaiveTime::from_hms_opt(9, if flip() { 35 } else { 30 }, 0), onchange, variant: "digital" } }
+        "TimePicker-analog" let onchange = |_: Option<NaiveTime>| {}; { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange, variant: "analog" } }
+        "TimePicker-analog pick" let onchange = |_: Option<NaiveTime>| {}; { TimePicker { value: NaiveTime::from_hms_opt(9, if flip() { 35 } else { 30 }, 0), onchange, variant: "analog" } }
+        "MonthPicker" let onchange = |_: Option<NaiveDate>| {}; { MonthPicker { value: NaiveDate::from_ymd_opt(2026, 9, 1), onchange } }
+        "DateRangePicker" let onchange = |_: Option<DateRange<NaiveDate>>| {}; { DateRangePicker { onchange } }
         // A range end moving, as a hover preview does.
-        "DateRangePicker end" { DateRangePicker { value: DateRange::new(NaiveDate::from_ymd_opt(2026, 9, 10).expect("a day"), NaiveDate::from_ymd_opt(2026, 9, if flip() { 15 } else { 14 })), onchange: move |_| {} } }
-        "TimeField" { TimeField { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {} } }
-        "SegmentedControl" { SegmentedControl { value: CostPane::One, onchange: move |_| {} } }
-        "Tabs" { Tabs { value: CostPane::One, onchange: move |_| {}, panel: |_: CostPane| rsx! { "x" } } }
-        "Accordion" { Accordion { open: AccordionOpen::One(Some(CostPane::One)), onchange: move |_| {}, panel: |_: CostPane| rsx! { "x" } } }
-        "Accordion toggle" { Accordion { open: AccordionOpen::One(Some(if flip() { CostPane::Two } else { CostPane::One })), onchange: move |_| {}, panel: |_: CostPane| rsx! { "x" } } }
+        "DateRangePicker end" let onchange = |_: Option<DateRange<NaiveDate>>| {}; { DateRangePicker { value: DateRange::new(NaiveDate::from_ymd_opt(2026, 9, 10).expect("a day"), NaiveDate::from_ymd_opt(2026, 9, if flip() { 15 } else { 14 })), onchange } }
+        "TimeField" let onchange = |_: Option<NaiveTime>| {}; { TimeField { value: NaiveTime::from_hms_opt(9, 30, 0), onchange } }
+        "SegmentedControl" let onchange = |_: CostPane| {}; { SegmentedControl { value: CostPane::One, onchange } }
+        "Tabs" let onchange = |_: CostPane| {}; let panel = |_: CostPane| rsx! { "x" }; { Tabs { value: CostPane::One, onchange, panel } }
+        "Accordion" let onchange = |_: AccordionOpen<CostPane>| {}; let panel = |_: CostPane| rsx! { "x" }; { Accordion { open: AccordionOpen::One(Some(CostPane::One)), onchange, panel } }
+        "Accordion toggle" let onchange = |_: AccordionOpen<CostPane>| {}; let panel = |_: CostPane| rsx! { "x" }; { Accordion { open: AccordionOpen::One(Some(if flip() { CostPane::Two } else { CostPane::One })), onchange, panel } }
 
         "Icon" { Icon { "x" } }
         "Image" { Image { src: "/x.png" } }
