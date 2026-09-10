@@ -10,9 +10,9 @@ use crate::{
     hooks::use_theme,
     sx::{StaticSx, Sx, sx},
     theme::{
-        ASPECT_RATIO, BarPosition, IMAGE_LIST_BAR_BACKGROUND, IMAGE_LIST_BAR_BACKGROUND_TOP,
-        IMAGE_LIST_BAR_COLOR, IMAGE_LIST_BAR_PADDING, IMAGE_LIST_RADIUS, ImageListDefaults,
-        ImageListVariant, Size, SizeCss,
+        ASPECT_RATIO, BarPosition, CssVar, GRID_ZONE_GAP, IMAGE_LIST_BAR_BACKGROUND,
+        IMAGE_LIST_BAR_BACKGROUND_TOP, IMAGE_LIST_BAR_COLOR, IMAGE_LIST_BAR_PADDING,
+        IMAGE_LIST_RADIUS, ImageListDefaults, ImageListVariant, Size, SizeCss,
     },
     utils::warn,
 };
@@ -63,17 +63,24 @@ fn snap_cols(cols: u8) -> u8 {
     snapped
 }
 
-/// A quilted cell's aspect ratio: the list's, scaled by how much bigger the
-/// cell is than an ordinary one.
+/// A quilted cell's height, from its own width (`100cqi`, the `<li>` is the
+/// container): MUI's `rowHeight * rows + gap * (rows - 1)`, with the row height
+/// being an ordinary cell's width over `ratio`.
 ///
-/// This is the arithmetic MUI does with `rowHeight * rows + gap * (rows - 1)`,
-/// done from `ratio` instead - so a 2x2 cell is exactly twice the size of a
-/// 1x1 one and every row lands on the same height without anyone naming a
-/// pixel. A fixed pixel height does not survive a responsive column count;
-/// an aspect ratio does.
-fn quilt_ratio(ratio: f32, columns: u8, default_columns: u8, rows: u8) -> f32 {
+/// An aspect ratio per cell cannot carry the gap terms: a 2x1 cell's ratio
+/// asked for `w + g/2` and `1fr` gave every row that (todo 451). The zone's
+/// themed gap stands in for its column gap, which `min(gap, 4%)` can only
+/// shrink, so a wide cell asks at most an ordinary cell's height.
+fn quilt_height(ratio: f32, columns: u8, default_columns: u8, rows: u8) -> String {
     let widths = f32::from(columns) / f32::from(default_columns.max(1));
-    ratio * widths / f32::from(rows.max(1))
+    let rows = rows.max(1);
+    let gap = GRID_ZONE_GAP.value();
+    format!(
+        "calc({rows} * (100cqi - {} * {gap}) / {} + {} * {gap})",
+        widths - 1.0,
+        widths * ratio,
+        rows - 1
+    )
 }
 
 /// The span one cell takes when `cols` cells share a row.
@@ -93,6 +100,9 @@ fn span_for_cols(cols: u8) -> GridSpan {
 /// says which family it is in at the one place it is decided.
 const RATIO_BOX_STATE: &str = "ratio-box";
 
+/// A quilted cell's [`quilt_height`], published on its `<li>`.
+const QUILT_HEIGHT_VAR: CssVar = CssVar::new("--lsx-image-list-quilt-height");
+
 /// The `<ul>`. `GridZone` brings the grid, so this is the list reset it has no
 /// reason to carry - plus `woven`, which is the only variant whose rules are
 /// about the *relationship* between neighbouring cells and so cannot live on
@@ -101,11 +111,9 @@ static IMAGE_LIST_SX: StaticSx = StaticSx::new(|| {
     sx().list_style("none")
         .margin("0")
         .padding("0")
-        // Equal rows, with nothing naming a pixel. A cell's own ratio already
-        // scales with its width and height (see `quilt_ratio`), so the rows
-        // come out near-equal on their own; `1fr` absorbs the residue the gap
-        // terms leave, which an aspect ratio cannot see. This is the whole of
-        // what MUI needs `rowHeight` for.
+        // Equal rows, with nothing naming a pixel: every cell asks for its
+        // `quilt_height`, which is whole rows plus their gaps, and `1fr`
+        // keeps the rows even where a `Below` bar makes one taller.
         .when(
             ImageListVariant::Quilted.state_name(),
             sx().grid_auto_rows("1fr"),
@@ -175,6 +183,13 @@ fn media_base() -> Sx {
                 .width("100%")
                 .height("100%")
                 .selector("& > *", sx().height("100%").object_fit("cover")),
+        )
+        // After the ratio box, which it overrides: the cell's height is
+        // `quilt_height`, and `height: 100%` still fills a row `1fr` grew.
+        .when(
+            ImageListVariant::Quilted.state_name(),
+            sx().aspect_ratio("auto")
+                .min_height(QUILT_HEIGHT_VAR.value()),
         )
         .when(
             // The whole point of the variant: a cell keeps the picture's own
@@ -405,13 +420,12 @@ pub fn ImageList(props: ImageListProps) -> Element {
         }
         let rows = item.rows.filter(|_| quilted);
 
-        // Every quilted cell, not only a spanning one: the list-level ratio is
-        // suppressed under `quilted`, so an ordinary cell has to be told its
-        // own or it would fall back to the theme's and ignore the `ratio`
-        // prop. One class per distinct shape, not per cell - the registry
-        // recycles by content, and a quilt has a handful of shapes.
+        // Every quilted cell, not only a spanning one: an ordinary cell's
+        // height is the row height the rest are built from. One class per
+        // distinct shape, not per cell - the registry recycles by content, and
+        // a quilt has a handful of shapes.
         let cell_sx: Input<Sx> = match quilted.then(|| {
-            quilt_ratio(
+            quilt_height(
                 base_ratio,
                 span.columns(),
                 default_span.columns(),
@@ -419,8 +433,11 @@ pub fn ImageList(props: ImageListProps) -> Element {
             )
         }) {
             None => Input::Static(&IMAGE_LIST_CELL_SX),
-            Some(ratio) => Input::Value(
-                Sx::clone(&IMAGE_LIST_CELL_SX).var(ASPECT_RATIO.override_var(), ratio.to_string()),
+            // The track sizes the `<li>`, so containment costs it nothing.
+            Some(height) => Input::Value(
+                Sx::clone(&IMAGE_LIST_CELL_SX)
+                    .container_type("inline-size")
+                    .var(QUILT_HEIGHT_VAR, height),
             ),
         };
 
@@ -501,23 +518,31 @@ mod tests {
         assert_eq!(snap_cols(200), 12);
     }
 
-    /// An ordinary quilted cell keeps the list's ratio, and a cell twice as
-    /// wide and twice as tall keeps it too - which is the property that makes
-    /// every row the same height without a `rowHeight` in sight.
+    /// An ordinary cell is its width over the ratio, with no gap term: that
+    /// is the row height every other shape is built from.
     #[test]
-    fn a_proportional_quilt_cell_keeps_the_lists_ratio() {
+    fn an_ordinary_quilt_cell_is_its_width_over_the_ratio() {
+        let gap = GRID_ZONE_GAP.value();
         // Three columns, so an ordinary cell spans four tracks.
-        assert_eq!(quilt_ratio(1.5, 4, 4, 1), 1.5);
-        assert_eq!(quilt_ratio(1.5, 8, 4, 2), 1.5);
+        assert_eq!(
+            quilt_height(1.5, 4, 4, 1),
+            format!("calc(1 * (100cqi - 0 * {gap}) / 1.5 + 0 * {gap})")
+        );
     }
 
-    /// A cell that is not proportional is the case the arithmetic exists for:
-    /// twice as wide over one row is twice as wide a picture, and twice as
-    /// tall over one column is half.
+    /// A spanning cell takes its column gaps off its width and adds its row
+    /// gaps to its height, so it lands on whole rows at any gap.
     #[test]
-    fn an_out_of_proportion_quilt_cell_scales_on_both_axes() {
-        assert_eq!(quilt_ratio(1.0, 8, 4, 1), 2.0);
-        assert_eq!(quilt_ratio(1.0, 4, 4, 2), 0.5);
+    fn a_spanning_quilt_cell_adds_up_its_gaps() {
+        let gap = GRID_ZONE_GAP.value();
+        assert_eq!(
+            quilt_height(1.0, 8, 4, 2),
+            format!("calc(2 * (100cqi - 1 * {gap}) / 2 + 1 * {gap})")
+        );
+        assert_eq!(
+            quilt_height(1.0, 4, 4, 2),
+            format!("calc(2 * (100cqi - 0 * {gap}) / 1 + 1 * {gap})")
+        );
     }
 
     /// A row of `cols` cells fills the zone exactly - the property the whole

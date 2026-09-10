@@ -1,6 +1,6 @@
-//! `ImageList`'s `quilted` cells come out at `c*w + (c-1)*g` by `r*h + (r-1)*g`
-//! (todo 89(c)). Each cell's aspect ratio is exact only at zero gap, and
-//! `grid-auto-rows: 1fr` has to absorb the rest at every width and gap.
+//! `ImageList`'s `quilted` cells come out at `c*w + (c-1)*g` by `r*w + (r-1)*g`
+//! at ratio 1 (todos 89(c), 451): an ordinary cell stays square beside a wide
+//! one, at every width.
 
 use e2e::browser::block_on;
 use e2e::{Fixture, Viewport};
@@ -73,11 +73,10 @@ async fn measure(viewport: Viewport, widths: &[&str]) {
             "{width}: row and column gaps differ"
         );
         let [_, _, w, h, ..] = quilt.cells[1];
-        // The 2x1 cell's ratio asks for `w + g/2`, and `1fr` hands that to every row.
+        // The fixture's ratio is 1: the 2x1 cell used to ask `w + g/2` of every row.
         assert!(
-            close(h, w + g / 2.0),
-            "{width}: an ordinary cell is {w}x{h}, expected {w}x{}",
-            w + g / 2.0
+            close(h, w),
+            "{width}: an ordinary cell is {w}x{h}, expected {w}x{w}"
         );
 
         for (index, (&(c, r), cell)) in SHAPES.iter().zip(&quilt.cells).enumerate() {

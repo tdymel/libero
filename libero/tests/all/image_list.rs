@@ -168,12 +168,12 @@ fn quilted_app() -> Element {
 }
 
 /// `quilted` is the standard machinery with a row span, not a second engine:
-/// `grid-row: span n` from `GridItem`'s new `rows`, plus a per-cell aspect
-/// ratio scaled by how much bigger the cell is than an ordinary one. Nothing
+/// `grid-row: span n` from `GridItem`'s new `rows`, plus a per-cell height
+/// computed from the cell's own width (`cqi`), its gaps included. Nothing
 /// measures and no pixel height is named - which is why MUI's `rowHeight` is
 /// not needed to make the rows line up.
 #[test]
-fn a_quilted_cell_spans_rows_and_scales_its_own_ratio() {
+fn a_quilted_cell_spans_rows_and_adds_up_its_gaps() {
     let html = render(quilted_app);
     let body = body(&html);
     let css = html.replace(char::is_whitespace, "");
@@ -191,15 +191,20 @@ fn a_quilted_cell_spans_rows_and_scales_its_own_ratio() {
             .collect::<Vec<_>>()
             .join("}\n")
     );
-    // A 2x2 cell keeps the list's ratio; a 2x1 one is twice as wide. Both
-    // ride recycled classes, so they are in the sheet rather than in `style`.
+    // Each shape rides a recycled class, so it is in the sheet rather than in
+    // `style`: two rows plus one gap for the 2x2, one row for the 2x1, and
+    // both take one column gap off their width.
     assert!(
-        css.contains("--lsx-aspect-ratio-override:1"),
-        "a proportional cell keeps the list's ratio"
+        css.contains("container-type:inline-size"),
+        "a cell is the container its height is measured against"
     );
     assert!(
-        css.contains("--lsx-aspect-ratio-override:2"),
-        "a cell twice as wide over one row is twice as wide a picture"
+        css.contains("--lsx-image-list-quilt-height:calc(2*(100cqi-1*"),
+        "a 2x2 cell is two rows and a gap"
+    );
+    assert!(
+        css.contains("--lsx-image-list-quilt-height:calc(1*(100cqi-1*"),
+        "a 2x1 cell is one row"
     );
 }
 
