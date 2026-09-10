@@ -4,6 +4,7 @@
 //!
 //! A new component is `tests/all/<unit>.rs` plus its `mod` line here.
 
+mod accordion;
 mod autocomplete;
 mod button;
 mod calendar;
@@ -22,6 +23,7 @@ mod image_list;
 mod isolation;
 mod journal;
 mod lightbox;
+mod loader;
 mod mark;
 mod menu;
 mod menubar;
@@ -32,10 +34,12 @@ mod notifications;
 mod pagination;
 mod picker_dialog;
 mod planted;
+mod progress_bar;
 mod radio_group;
 mod scroll_area;
 mod segmented_control;
 mod select;
+mod skeleton;
 mod slider;
 mod splitter;
 mod spotlight;

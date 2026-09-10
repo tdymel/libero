@@ -1,0 +1,14 @@
+---
+source: e2e/src/suite.rs
+description: skeleton at mobile (rest)
+expression: tree
+---
+button "Reload"
+  StaticText "Reload"
+generic
+  generic
+    paragraph
+      StaticText "AL"
+  generic
+    paragraph
+      StaticText "Ada Lovelace"

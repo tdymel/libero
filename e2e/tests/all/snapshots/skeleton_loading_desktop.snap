@@ -1,0 +1,8 @@
+---
+source: e2e/src/suite.rs
+description: skeleton at desktop (loading)
+expression: tree
+---
+button "Stop loading"
+  StaticText "Stop loading"
+generic [busy=1]

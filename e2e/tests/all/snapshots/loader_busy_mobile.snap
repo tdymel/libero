@@ -1,0 +1,13 @@
+---
+source: e2e/src/suite.rs
+description: loader at mobile (busy)
+expression: tree
+---
+button "Cancel"
+  StaticText "Cancel"
+paragraph
+  StaticText "Uploading (oval)"
+paragraph
+  StaticText "Uploading (bars)"
+paragraph
+  StaticText "Uploading (dots)"

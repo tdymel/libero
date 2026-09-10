@@ -1,0 +1,26 @@
+---
+source: e2e/src/suite.rs
+description: accordion at mobile (open)
+expression: tree
+---
+generic
+  heading "Shipping" [level=3]
+    button "Shipping" [expanded]
+      StaticText "Shipping"
+  region "Shipping"
+    generic
+      paragraph
+        StaticText "Shipping is calculated at checkout."
+      button "Continue"
+        StaticText "Continue"
+  heading "Payment" [level=3]
+    button "Payment" [disabled] [expanded=false]
+      StaticText "Payment"
+  generic
+  heading "Review" [level=3]
+    button "Review" [expanded=false]
+      StaticText "Review"
+  generic
+--> aria-controls [id="checkout-region-0"] (rendered above)
+--> aria-controls [id="checkout-region-1"] (rendered above)
+--> aria-controls [id="checkout-region-2"] (rendered above)

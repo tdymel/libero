@@ -1,0 +1,13 @@
+---
+source: e2e/src/suite.rs
+description: progress_bar at mobile (rest)
+expression: tree
+---
+paragraph
+  StaticText "Upload"
+progressbar "Upload" = 40 [valuemax=100] [valuemin=0]
+button "Add 10%"
+  StaticText "Add 10%"
+paragraph
+  StaticText "Sync"
+progressbar "Sync" [valuemax=100] [valuemin=0]

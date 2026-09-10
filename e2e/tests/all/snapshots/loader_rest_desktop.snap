@@ -1,0 +1,7 @@
+---
+source: e2e/src/suite.rs
+description: loader at desktop (rest)
+expression: tree
+---
+button "Upload"
+  StaticText "Upload"

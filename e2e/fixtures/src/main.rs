@@ -24,6 +24,7 @@
 //!   proves nothing. `data-fixture-ready` is on an element only the real app
 //!   renders, and the harness waits for it.
 
+mod accordion;
 mod autocomplete;
 mod button;
 mod calendar;
@@ -41,6 +42,7 @@ mod focus_contrast;
 mod hover_card;
 mod image_list;
 mod lightbox;
+mod loader;
 mod mark;
 mod menu;
 mod menubar;
@@ -51,10 +53,12 @@ mod notifications;
 mod pagination;
 mod picker_dialog;
 mod planted;
+mod progress_bar;
 mod radio_group;
 mod scroll_area;
 mod segmented_control;
 mod select;
+mod skeleton;
 mod slider;
 mod splitter;
 mod spotlight;
@@ -72,6 +76,7 @@ type Routes = &'static [(&'static str, fn() -> Element)];
 
 /// Every module's `ROUTES`. Paths must be unique across them.
 const FIXTURES: &[Routes] = &[
+    accordion::ROUTES,
     autocomplete::ROUTES,
     button::ROUTES,
     calendar::ROUTES,
@@ -88,6 +93,7 @@ const FIXTURES: &[Routes] = &[
     hover_card::ROUTES,
     image_list::ROUTES,
     lightbox::ROUTES,
+    loader::ROUTES,
     mark::ROUTES,
     menu::ROUTES,
     menubar::ROUTES,
@@ -98,10 +104,12 @@ const FIXTURES: &[Routes] = &[
     pagination::ROUTES,
     picker_dialog::ROUTES,
     planted::ROUTES,
+    progress_bar::ROUTES,
     radio_group::ROUTES,
     scroll_area::ROUTES,
     segmented_control::ROUTES,
     select::ROUTES,
+    skeleton::ROUTES,
     slider::ROUTES,
     spotlight::ROUTES,
     splitter::ROUTES,
