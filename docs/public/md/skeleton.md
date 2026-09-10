@@ -92,6 +92,55 @@ fn Card() -> Element {
 # #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
 ```
 
+## Not flashing on a fast fetch
+
+A fetch that answers in 50 ms should not flash a placeholder. `Skeleton` has no
+delay of its own, because how long to wait is the caller's timing. Keep the
+region transparent until a grace period runs out - the layout is held either
+way - and let `libero::platform::timer()` end it. Use `opacity` for that, not
+`visibility`: the skeleton's grey opts back into `visibility: visible`.
+
+```rust
+use std::time::Duration;
+
+use dioxus::prelude::*;
+use libero::components::Skeleton;
+use libero::platform::timer;
+
+/// How long a fetch may take before its placeholder shows.
+const GRACE: Duration = Duration::from_millis(200);
+
+#[component]
+fn Card() -> Element {
+    let profile = use_resource(load_profile);
+    let loading = profile.read().is_none();
+    let mut slow = use_signal(|| false);
+    // Dropping the timer cancels it, so an unmounted card never writes `slow`.
+    let mut grace = use_signal(|| {
+        timer().map(|timer| timer.after(GRACE, Box::new(move || slow.set(true))))
+    });
+    use_drop(move || grace.set(None));
+
+    rsx! {
+        div {
+            "aria-busy": loading,
+            opacity: if loading && !slow() { "0" } else { "1" },
+            Skeleton { visible: loading,
+                ProfileCard { profile: profile.read().clone().unwrap_or_default() }
+            }
+        }
+    }
+}
+#
+# #[derive(Clone, PartialEq, Default)]
+# struct Profile;
+# async fn load_profile() -> Profile { Profile }
+# #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
+```
+
+The grace runs once, from mount. A card that fetches again later starts a new
+timer and sets `slow` back to `false` when it does.
+
 ## How it hides the content
 
 While `visible`, the root is `visibility: hidden` and only its `::after` - the

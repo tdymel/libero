@@ -1,6 +1,6 @@
 use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Box, Button, Code, Flex, Input, Skeleton, Text};
+use libero::components::{Box, Button, Code, CodeBlock, Flex, Input, Skeleton, Text};
 use libero::sx::sx;
 
 /// What the wrapper covers. A button in it, so the preview shows that covered
@@ -8,6 +8,37 @@ use libero::sx::sx;
 const CONTENT: &str = r#"Flex { direction: "row", gap: "sm", align: "center",
     Text { "Ada Lovelace" }
     Button { size: "xs", "Follow" }
+}"#;
+
+/// Todo 107: the grace before a placeholder shows is the caller's timing, so
+/// it is a recipe over `timer()` rather than a prop.
+// snippet: item #[derive(Clone, PartialEq, Default)] struct Profile;
+// snippet: item async fn load_profile() -> Profile { Profile }
+// snippet: item #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
+const GRACE_EXAMPLE: &str = r#"/// How long a fetch may take before its placeholder shows.
+const GRACE: Duration = Duration::from_millis(200);
+
+#[component]
+fn Card() -> Element {
+    let profile = use_resource(load_profile);
+    let loading = profile.read().is_none();
+    let mut slow = use_signal(|| false);
+    // Dropping the timer cancels it, so an unmounted card never writes `slow`.
+    let mut grace = use_signal(|| {
+        timer().map(|timer| timer.after(GRACE, Box::new(move || slow.set(true))))
+    });
+    use_drop(move || grace.set(None));
+
+    rsx! {
+        div {
+            "aria-busy": loading,
+            // `opacity`, not `visibility`: the skeleton's grey opts back into view.
+            opacity: if loading && !slow() { "0" } else { "1" },
+            Skeleton { visible: loading,
+                ProfileCard { profile: profile.read().clone().unwrap_or_default() }
+            }
+        }
+    }
 }"#;
 
 fn busy_region(values: &DemoValues) -> bool {
@@ -121,6 +152,14 @@ pub fn SkeletonPage() -> Element {
                     Code { source: "Loader" }
                     "."
                 }
+                Text {
+                    "A fetch that answers in 50 ms should not flash a placeholder. Keep the "
+                    "region transparent until a grace period runs out - the layout is held "
+                    "either way - and let "
+                    Code { source: "timer()" }
+                    " end it:"
+                }
+                CodeBlock { source: GRACE_EXAMPLE, language: "rust" }
             },
             Demo {
                 component: "Skeleton",
