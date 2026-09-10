@@ -2,10 +2,33 @@
 
 use dioxus::prelude::*;
 use libero::components::{GridSpan, ImageItem, ImageList};
+use libero::theme::responsive;
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/image-list-quilted", || rsx! { ImageListQuiltedPage {} })];
+pub const ROUTES: Routes = &[
+    ("/image-list-quilted", || rsx! { ImageListQuiltedPage {} }),
+    (
+        "/image-list-responsive",
+        || rsx! { ImageListResponsivePage {} },
+    ),
+];
+
+/// Todo 73: one column, two from `sm` (48rem), four from `md` (62rem).
+#[component]
+fn ImageListResponsivePage() -> Element {
+    let cell = || ImageItem::new(rsx! { div { style: "background: #777" } });
+
+    rsx! {
+        div { id: "responsive-frame",
+            ImageList {
+                cols: responsive(1).sm(2).md(4),
+                gap: "md",
+                items: vec![cell(), cell(), cell(), cell()],
+            }
+        }
+    }
+}
 
 /// Todo 89(c): every `quilted` shape against an ordinary cell, at gap `md`.
 /// The test sets `#quilt-frame`'s width; the cells are flat colour, no pictures.

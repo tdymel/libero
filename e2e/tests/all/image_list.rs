@@ -1,7 +1,8 @@
 //! `ImageList`'s `quilted` cells come out at `c*w + (c-1)*g` by `r*w + (r-1)*g`
 //! at ratio 1 (todos 89(c), 451): an ordinary cell stays square beside a wide
-//! one, at every width.
+//! one, at every width. And per-breakpoint `cols` follow the viewport (todo 73).
 
+use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::{Fixture, Viewport};
 use serde::Deserialize;
@@ -98,4 +99,64 @@ async fn measure(viewport: Viewport, widths: &[&str]) {
         .assert_clean("a quilted image list")
         .unwrap();
     fixture.close().await.unwrap();
+}
+
+/// The list's width, the gap between the first two cells when they share a
+/// row, and each cell's left, top and width.
+const MEASURE_ROW: &str = "(() => {
+    const list = document.querySelector('#responsive-frame [role=list]');
+    const cells = [...list.querySelectorAll(':scope > li')].map(li => {
+        const r = li.getBoundingClientRect();
+        return [r.left, r.top, r.width];
+    });
+    const [a, b] = cells;
+    const gap = a[1] === b[1] ? b[0] - (a[0] + a[2]) : 0;
+    return { list: list.getBoundingClientRect().width, gap, cells };
+})()";
+
+#[derive(Deserialize, Debug)]
+struct Row {
+    list: f64,
+    gap: f64,
+    cells: Vec<[f64; 3]>,
+}
+
+/// Todo 73: `responsive(1).sm(2).md(4)` lays out one, two and four cells to a
+/// row at a phone, tablet and desktop width, with no script measuring.
+#[test]
+fn responsive_cols_follow_the_viewport() {
+    block_on(async {
+        let fixture = Fixture::open("/image-list-responsive", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        for (width, cols) in [(390, 1.0), (800, 2.0), (1280, 4.0)] {
+            page.execute(SetDeviceMetricsOverrideParams::new(width, 900, 1.0, false))
+                .await
+                .unwrap();
+            let row: Row = page
+                .evaluate(MEASURE_ROW)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            eprintln!("{width}px: {row:?}");
+
+            let top = row.cells[0][1];
+            let in_first_row = row.cells.iter().filter(|cell| close(cell[1], top)).count();
+            let expected = (row.list - (cols - 1.0) * row.gap) / cols;
+            assert_eq!(in_first_row as f64, cols, "{width}px: {row:?}");
+            assert!(
+                row.cells.iter().all(|cell| close(cell[2], expected)),
+                "{width}px: cells should be {expected} wide: {row:?}"
+            );
+        }
+
+        fixture
+            .console
+            .assert_clean("a responsive image list")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
 }

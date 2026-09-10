@@ -53,7 +53,7 @@ Every prop set:
 
 ```rust,ignore
 ImageList {
-    cols: 3u8,
+    cols: 3,
     variant: "masonry",
     gap: "sm",
     radius: "md",
@@ -140,10 +140,20 @@ Three consequences:
 is a span of a twelve-track `GridZone`. Anything else snaps to the nearest and
 warns, naming the snap; a tie goes to the wider cell, so 5 becomes 4.
 
-There is one value, not one per breakpoint. Until per-breakpoint props land, a
-responsive gallery changes its columns through the caller's own
-`sx().breakpoint(..)`. The default is 2, which is the count that still works on a
-phone.
+`cols` also takes one count per viewport breakpoint, mobile-first:
+
+```rust,ignore
+ImageList {
+    // One column on a phone, two from `sm` (48rem), four from `md` (62rem).
+    cols: responsive(1).sm(2).md(4),
+    items: photos,
+}
+```
+
+Each count is snapped on its own. The CSS is plain `min-width` media queries, so
+server rendering gets it right and nothing measures. An `ImageItem::span` stays
+the same at every width. The default is 2, which is the count that still works on
+a phone.
 
 ## Variants
 
@@ -196,7 +206,7 @@ theme - at the cost of it reading as a solid bar rather than a fade.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `items` | `Vec<ImageItem>` | required | One cell each, in render order. |
-| `cols` | `u8` | `2` | Columns, snapped to a divisor of twelve. |
+| `cols` | `Responsive<u8>` | `2` | Columns, snapped to a divisor of twelve. `3`, or `responsive(1).sm(2).md(4)`. |
 | `variant` | `ImageListVariant` | `standard` | `standard`, `masonry`, `quilted` or `woven`. |
 | `gap` | `Size` | `xs` | Between cells. |
 | `radius` | `Size` | `sm` | Each cell's corner radius. |
@@ -235,7 +245,7 @@ list re-renders whenever its parent does. That is `Table`'s rows and
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `cols` | `u8` | `2` | Columns when the prop is unset. |
+| `cols` | `Responsive<u8>` | `responsive(2)` | Columns when the prop is unset. |
 | `variant` | `ImageListVariant` | `Standard` | |
 | `gap` | `Size` | `Size::Xs` | |
 | `radius` | `Size` | `Size::Sm` | |

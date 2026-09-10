@@ -1,7 +1,7 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
-use crate::theme::{CssVar, Size, SizeCss};
+use crate::theme::{CssVar, Responsive, Size, SizeCss, responsive};
 
 /// The scrim behind a `Bottom` bar, and behind a `Top` one. Two values rather
 /// than one rotated: a scrim fades *away* from its edge, so the gradient's
@@ -54,10 +54,9 @@ str_enum! {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ImageListDefaults {
     /// Snapped to a divisor of twelve by `ImageList` - a cell is a span of a
-    /// `GridZone`'s twelve tracks. `2` rather than MUI's larger counts: a
-    /// fixed column count has to be the one that still works on a phone
-    /// until per-breakpoint columns land.
-    pub cols: u8,
+    /// `GridZone`'s twelve tracks. `2` at every width: a theme that wants more
+    /// on a wide screen says `responsive(2).md(3)`.
+    pub cols: Responsive<u8>,
     pub variant: ImageListVariant,
     pub gap: Size,
     pub radius: Size,
@@ -70,7 +69,7 @@ pub struct ImageListDefaults {
 
 impl ImageListDefaults {
     pub const DEFAULT: Self = Self {
-        cols: 2,
+        cols: responsive(2),
         variant: ImageListVariant::Standard,
         gap: Size::Xs,
         radius: Size::Sm,

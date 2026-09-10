@@ -12,7 +12,7 @@ use crate::{
     theme::{
         ASPECT_RATIO, BarPosition, CssVar, GRID_ZONE_GAP, IMAGE_LIST_BAR_BACKGROUND,
         IMAGE_LIST_BAR_BACKGROUND_TOP, IMAGE_LIST_BAR_COLOR, IMAGE_LIST_BAR_PADDING,
-        IMAGE_LIST_RADIUS, ImageListDefaults, ImageListVariant, Size, SizeCss,
+        IMAGE_LIST_RADIUS, ImageListDefaults, ImageListVariant, Responsive, Size, SizeCss,
     },
     utils::warn,
 };
@@ -37,6 +37,27 @@ impl From<Option<u8>> for Input<u8> {
             Some(value) => Self::Value(value),
             None => Self::None,
         }
+    }
+}
+
+impl From<u8> for Input<Responsive<u8>> {
+    fn from(value: u8) -> Self {
+        Self::Value(value.into())
+    }
+}
+
+impl From<Option<u8>> for Input<Responsive<u8>> {
+    fn from(value: Option<u8>) -> Self {
+        match value {
+            Some(value) => Self::Value(value.into()),
+            None => Self::None,
+        }
+    }
+}
+
+impl From<Responsive<u8>> for Input<Responsive<u8>> {
+    fn from(value: Responsive<u8>) -> Self {
+        Self::Value(value)
     }
 }
 
@@ -93,6 +114,14 @@ fn span_for_cols(cols: u8) -> GridSpan {
         6 => GridSpan::Sixth,
         _ => GridSpan::Twelfth,
     }
+}
+
+/// The spans above the base, as viewport queries on the cell. User layer, as
+/// `GridItem`'s own `sp()` rules, or the base span's recycled class wins.
+fn span_breakpoints(spans: Responsive<GridSpan>) -> Sx {
+    spans.breakpoints().fold(sx(), |cell, (size, span)| {
+        cell.breakpoint(size, sx().grid_column(format!("span {}", span.columns())))
+    })
 }
 
 /// Every variant but `masonry` gives the cell a height of its own, from the
@@ -277,13 +306,12 @@ base_props! {
         /// One cell each, in render order.
         #[props(default)]
         items: Vec<ImageItem>,
-        /// Columns. Snapped to a divisor of twelve, since a cell is a span of
-        /// a `GridZone`'s twelve tracks.
+        /// Columns, each snapped to a divisor of twelve, since a cell is a span
+        /// of a `GridZone`'s twelve tracks.
         ///
-        /// One value, not one per breakpoint: `sx().breakpoint(..)` is the
-        /// way to change it with the viewport until per-breakpoint props land.
+        /// `cols: 3`, or per viewport breakpoint: `cols: responsive(1).sm(2).lg(3)`.
         #[props(default, into)]
-        cols: Input<u8>,
+        cols: Input<Responsive<u8>>,
         /// `"standard"` - every cell the same height - or `"masonry"`.
         #[props(default, into)]
         variant: Input<ImageListVariant>,
@@ -319,7 +347,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
     let variant = props.variant.copied_or(defaults.variant);
     let masonry = variant == ImageListVariant::Masonry;
     let quilted = variant == ImageListVariant::Quilted;
-    let cols = snap_cols(props.cols.copied_or(defaults.cols));
+    let cols = props.cols.copied_or(defaults.cols).map(snap_cols);
     let gap = props.gap.copied_or(defaults.gap);
     let radius = props.radius.copied_or(defaults.radius);
 
@@ -329,7 +357,13 @@ pub fn ImageList(props: ImageListProps) -> Element {
         );
     }
 
-    let default_span = span_for_cols(cols);
+    let spans = cols.map(span_for_cols);
+    let default_span = spans.base();
+    // Shared by every cell `cols` sizes; one class, however many cells.
+    let ordinary_cell_sx: Input<Sx> = match spans.breakpoints().next() {
+        None => Input::Static(&IMAGE_LIST_CELL_SX),
+        Some(_) => Input::Value(Sx::clone(&IMAGE_LIST_CELL_SX).and(span_breakpoints(spans))),
+    };
 
     let media_states: Input<States> = States::default()
         .with(variant.state_name(), true)
@@ -411,6 +445,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
         });
 
         let span = item.span.unwrap_or(default_span);
+        let cell_spans = item.span.map_or(spans, Responsive::new);
         if item.rows.is_some() && !quilted {
             warn(&format!(
                 "ImageList: ImageItem::rows is ignored by the {} variant - only quilted places a \
@@ -424,20 +459,31 @@ pub fn ImageList(props: ImageListProps) -> Element {
         // height is the row height the rest are built from. One class per
         // distinct shape, not per cell - the registry recycles by content, and
         // a quilt has a handful of shapes.
-        let cell_sx: Input<Sx> = match quilted.then(|| {
+        let height_at = |size: Option<Size>| {
+            let at = |spans: Responsive<GridSpan>| size.map_or(spans.base(), |size| spans.at(size));
             quilt_height(
                 base_ratio,
-                span.columns(),
-                default_span.columns(),
+                at(cell_spans).columns(),
+                at(spans).columns(),
                 rows.unwrap_or(1),
             )
-        }) {
-            None => Input::Static(&IMAGE_LIST_CELL_SX),
-            // The track sizes the `<li>`, so containment costs it nothing.
-            Some(height) => Input::Value(
-                Sx::clone(&IMAGE_LIST_CELL_SX)
-                    .container_type("inline-size")
-                    .var(QUILT_HEIGHT_VAR, height),
+        };
+        let cell_sx: Input<Sx> = match (quilted, item.span) {
+            (false, None) => ordinary_cell_sx.clone(),
+            (false, Some(_)) => Input::Static(&IMAGE_LIST_CELL_SX),
+            // The track sizes the `<li>`, so containment costs it nothing. A
+            // spanning cell's width relative to an ordinary one moves with
+            // `cols`, so its height is re-published at each breakpoint.
+            (true, _) => Input::Value(
+                spans.breakpoints().fold(
+                    Sx::clone(&IMAGE_LIST_CELL_SX)
+                        .container_type("inline-size")
+                        .var(QUILT_HEIGHT_VAR, height_at(None))
+                        .and(span_breakpoints(cell_spans)),
+                    |cell, (size, _)| {
+                        cell.breakpoint(size, sx().var(QUILT_HEIGHT_VAR, height_at(Some(size))))
+                    },
+                ),
             ),
         };
 

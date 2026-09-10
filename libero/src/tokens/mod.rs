@@ -8,6 +8,7 @@ mod color_shade;
 mod color_value;
 mod css_var;
 mod hex_color;
+mod responsive;
 mod size;
 mod sizes;
 
@@ -23,5 +24,6 @@ pub use css_var::{ColorCss, CssVar, NamedColorCss, SizeCss};
 pub use hex_color::HexColor;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(crate) use hex_color::{Ends, TEXT_CONTRAST};
+pub use responsive::{Responsive, responsive};
 pub use size::{NegativeSize, Size};
 pub use sizes::Sizes;

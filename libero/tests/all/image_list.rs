@@ -7,6 +7,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{GridSpan, Image, ImageBar, ImageItem, ImageList},
+    theme::responsive,
 };
 
 fn items() -> Vec<ImageItem> {
@@ -417,4 +418,98 @@ fn a_bar_never_becomes_the_pictures_name() {
         html.contains("Breakfast") && html.contains("@rgbagirl"),
         "{html}"
     );
+}
+
+/// An unsuffixed literal still reaches `cols`: the prop took a `u8` before it
+/// took a `Responsive<u8>`, and callers write `cols: 3`.
+#[test]
+fn a_bare_literal_is_still_a_column_count() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { ImageList { cols: 3, items: items() } }
+        }
+    }
+    let html = body(&render(app));
+
+    assert!(
+        attributes_of(&html, "li")
+            .get("data-state")
+            .is_some_and(|state| state.contains("span-third")),
+        "{html}"
+    );
+}
+
+/// The rules inside one viewport breakpoint, whitespace stripped.
+fn media_block<'a>(css: &'a str, width: &str) -> &'a str {
+    let open = format!("@media(min-width:{width}){{");
+    let start = css
+        .find(&open)
+        .unwrap_or_else(|| panic!("no {open} in the sheet"))
+        + open.len();
+    &css[start..start + css[start..].find("}}").expect("a closed block")]
+}
+
+fn responsive_app() -> Element {
+    rsx! {
+        LiberoProvider {
+            ImageList { cols: responsive(1).sm(2).lg(4), items: items() }
+        }
+    }
+}
+
+/// Mobile-first: the base count rides the cell's `data-state`, and each
+/// breakpoint re-spans the cell under its own `min-width` query.
+#[test]
+fn responsive_cols_span_the_cell_per_breakpoint() {
+    let html = render(responsive_app);
+    let css = html.replace(char::is_whitespace, "");
+
+    assert!(
+        attributes_of(&body(&html), "li")
+            .get("data-state")
+            .is_some_and(|state| state.contains("span-full")),
+        "one column below every breakpoint"
+    );
+    assert!(media_block(&css, "48rem").contains("grid-column:span6"));
+    assert!(media_block(&css, "75rem").contains("grid-column:span3"));
+}
+
+/// A cell with its own `span` keeps it at every width, so it does not share
+/// the class carrying the breakpoint rules.
+#[test]
+fn an_items_own_span_ignores_the_breakpoints() {
+    let body = body(&render(responsive_app));
+    let class = |cell: &str| attributes_of(cell, "li").get("class").cloned();
+    let ordinary = class(&body[body.find("<li").expect("a cell")..]);
+    let own = class(&body[body.rfind("<li").expect("the spanning cell")..]);
+
+    assert_ne!(ordinary, own);
+}
+
+/// Under `quilted`, a spanning cell's size relative to an ordinary one moves
+/// with `cols`: a `Half` cell is half of one column, one of two, two of four,
+/// so its `quilt_height` divides its own width by 0.5, 1 and 2.
+#[test]
+fn a_quilted_cell_rescales_its_height_per_breakpoint() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ImageList {
+                    variant: "quilted",
+                    cols: responsive(1).sm(2).lg(4),
+                    items: vec![
+                        ImageItem::new(rsx! { Image { src: "/a.svg", alt: "A" } })
+                            .span(GridSpan::Half),
+                    ],
+                }
+            }
+        }
+    }
+    let css = render(app).replace(char::is_whitespace, "");
+
+    let height = |widths: &str| format!("--lsx-image-list-quilt-height:calc(1*(100cqi-{widths}*");
+
+    assert!(css.contains(&height("-0.5")), "{css}");
+    assert!(media_block(&css, "48rem").contains(&height("0")));
+    assert!(media_block(&css, "75rem").contains(&height("1")));
 }

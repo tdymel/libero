@@ -6,13 +6,27 @@ use libero::{
         ActionIcon, Box, Code, GridSpan, Image, ImageBar, ImageItem, ImageList, Input, Text,
     },
     sx::sx,
-    theme::Theme,
+    theme::{Responsive, Theme, responsive},
     use_theme,
 };
 
 /// Four, not the theme's two: at two a wide cell is full width, so no row mixes
 /// widths - the case that found the stretched aspect-ratio box.
 const DEMO_COLS: &str = "4";
+
+/// The `responsive` switch's columns: one on a phone, two on a tablet, four
+/// from a laptop up.
+const RESPONSIVE_COLS: Responsive<u8> = responsive(1).sm(2).md(4);
+
+fn cols(values: &DemoValues, fallback: Responsive<u8>) -> Responsive<u8> {
+    match values.str("responsive") == "true" {
+        true => RESPONSIVE_COLS,
+        false => values
+            .str("cols")
+            .parse::<u8>()
+            .map_or(fallback, Into::into),
+    }
+}
 
 /// Six pictures with six **different intrinsic heights**. Equal ones would
 /// make `masonry` look identical to `standard` and demonstrate nothing - the
@@ -113,7 +127,7 @@ fn items(values: &DemoValues) -> Vec<ImageItem> {
     let bar = values.str("bar");
     let scrim = values.str("scrim") == "true";
     let cols = values.str("cols").parse::<u8>().unwrap_or(2);
-    let span = values.str("span") == "true";
+    let span = values.str("span") == "true" && values.str("responsive") != "true";
     let link = values.str("link") == "true";
     let rows = values.str("rows") == "true" && values.str("variant") == "quilted";
 
@@ -178,6 +192,7 @@ fn items_code(values: &DemoValues) -> String {
     // Only the featured cells get these, so the block has to pick them out.
     let mut featured = String::new();
     if values.str("span") == "true"
+        && values.str("responsive") != "true"
         && let Some(wide) = wide_span(values.str("cols").parse::<u8>().unwrap_or(2))
     {
         featured.push_str(&format!(
@@ -235,9 +250,9 @@ pub fn ImageListPage() -> Element {
             properties: vec![
                 props("ImageList", vec![
                     prop("items", "Vec<ImageItem>").doc("One cell each, in render order."),
-                    prop("cols", "u8")
+                    prop("cols", "Responsive<u8>")
                         .default(defaults.cols.to_string())
-                        .doc("Columns. Snapped to a divisor of twelve - 1, 2, 3, 4, 6 or 12 - because a cell is a span of a `GridZone`'s twelve tracks. One value, not one per breakpoint: use `sx().breakpoint(..)` until per-breakpoint props land."),
+                        .doc("Columns. `cols: 3`, or one count per viewport breakpoint: `cols: responsive(1).sm(2).md(4)` is one column below `sm`, two from `sm` and four from `md` up. Each count is snapped to a divisor of twelve - 1, 2, 3, 4, 6 or 12 - because a cell is a span of a `GridZone`'s twelve tracks. An `ImageItem::span` stays the same at every width."),
                     prop("variant", "ImageListVariant")
                         .default(defaults.variant.as_str())
                         .doc("`standard` gives every cell the same height; `masonry` keeps each picture's own and packs them with no dead space; `quilted` lets a cell take more than one row; `woven` shortens every second cell to 70%."),
@@ -309,13 +324,14 @@ pub fn ImageListPage() -> Element {
                 controls: vec![
                     Control::slider("cols", ["1", "2", "3", "4", "6"])
                         .default(DEMO_COLS)
-                        // Unquoted: `cols` is a `u8`. Omitted at the theme's
-                        // default, not the demo's, which differs.
+                        .hidden_when(|values| values.str("responsive") == "true")
+                        // Omitted at the theme's default, not the demo's, which
+                        // differs.
                         .code(|_, values| {
                             let value = values.str("cols");
                             match value == Theme::DEFAULT.image_list.cols.to_string() {
                                 true => vec![],
-                                false => vec![format!("cols: {value}u8")],
+                                false => vec![format!("cols: {value}")],
                             }
                         }),
                     Control::toggle("variant", ["standard", "masonry", "quilted", "woven"])
@@ -333,14 +349,24 @@ pub fn ImageListPage() -> Element {
                             "16:9" => vec!["ratio: 16.0 / 9.0".to_string()],
                             _ => vec![],
                         }),
+                    // Replaces the `cols` slider, which is hidden and so prints
+                    // nothing while this is on.
+                    Control::switch("responsive").code(|_, values| {
+                        match values.str("responsive") == "true" {
+                            true => vec![format!("cols: {RESPONSIVE_COLS}")],
+                            false => vec![],
+                        }
+                    }),
                     // Everything from here down is an `ImageItem` builder call
                     // rather than a prop, so `bar` prints the whole `items`
                     // block for all of them and the rest print nothing.
-                    // Nothing is wider than a one-column cell, so the control
-                    // would be a no-op there.
+                    // Hidden at one column, where nothing is wider, and under
+                    // `responsive`, where a fixed span would not follow `cols`.
                     Control::switch("span")
                         .default("true")
-                        .hidden_when(|values| values.str("cols") == "1")
+                        .hidden_when(|values| {
+                            values.str("cols") == "1" || values.str("responsive") == "true"
+                        })
                         .code(|_, _| vec![]),
                     // `rows` is quilted's vocabulary and nothing else's.
                     Control::switch("rows")
@@ -360,7 +386,7 @@ pub fn ImageListPage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     ImageList {
-                        cols: values.str("cols").parse::<u8>().unwrap_or(defaults.cols),
+                        cols: cols(&values, defaults.cols),
                         variant: values.str("variant"),
                         gap: values.str("gap"),
                         radius: values.str("radius"),
