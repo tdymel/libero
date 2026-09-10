@@ -1,0 +1,34 @@
+---
+source: e2e/src/suite.rs
+description: pagination at desktop (rest)
+expression: tree
+---
+navigation "Results pages"
+  list
+    listitem [level=1]
+      button "Go to first page"
+    listitem [level=1]
+      button "Go to previous page"
+    listitem [level=1]
+      button "Go to page 1"
+        StaticText "1"
+    listitem [level=1]
+      button "Page 2"
+        StaticText "2"
+    listitem [level=1]
+      button "Go to page 3"
+        StaticText "3"
+    listitem [level=1]
+      button "Go to page 4"
+        StaticText "4"
+    listitem [level=1]
+      button "Go to page 5"
+        StaticText "5"
+    listitem [level=1]
+      button "Go to page 10"
+        StaticText "10"
+    listitem [level=1]
+      button "Go to next page"
+    listitem [level=1]
+      button "Go to last page"
+generic

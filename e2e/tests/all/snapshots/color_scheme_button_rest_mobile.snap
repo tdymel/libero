@@ -1,0 +1,8 @@
+---
+source: e2e/src/suite.rs
+description: color_scheme_button at mobile (rest)
+expression: tree
+---
+button "Switch to the dark theme"
+paragraph
+  StaticText "Page text"

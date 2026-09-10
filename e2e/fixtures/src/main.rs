@@ -32,8 +32,10 @@ mod cascader;
 mod code;
 mod collapse;
 mod color_picker;
+mod color_scheme_button;
 mod common;
 mod drawer;
+mod file_field;
 mod floating_window;
 mod focus_contrast;
 mod hover_card;
@@ -46,6 +48,7 @@ mod modal;
 mod multi_select;
 mod negative;
 mod notifications;
+mod pagination;
 mod picker_dialog;
 mod planted;
 mod radio_group;
@@ -55,6 +58,7 @@ mod select;
 mod slider;
 mod splitter;
 mod spotlight;
+mod stepper;
 mod tabs;
 mod tags_field;
 mod tooltip;
@@ -76,7 +80,9 @@ const FIXTURES: &[Routes] = &[
     code::ROUTES,
     collapse::ROUTES,
     color_picker::ROUTES,
+    color_scheme_button::ROUTES,
     drawer::ROUTES,
+    file_field::ROUTES,
     floating_window::ROUTES,
     focus_contrast::ROUTES,
     hover_card::ROUTES,
@@ -89,6 +95,7 @@ const FIXTURES: &[Routes] = &[
     multi_select::ROUTES,
     negative::ROUTES,
     notifications::ROUTES,
+    pagination::ROUTES,
     picker_dialog::ROUTES,
     planted::ROUTES,
     radio_group::ROUTES,
@@ -98,6 +105,7 @@ const FIXTURES: &[Routes] = &[
     slider::ROUTES,
     spotlight::ROUTES,
     splitter::ROUTES,
+    stepper::ROUTES,
     tabs::ROUTES,
     tags_field::ROUTES,
     tooltip::ROUTES,

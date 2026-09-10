@@ -65,6 +65,19 @@ pub async fn assert_focused(page: &Page, selector: &str, during: &str) -> Result
     Ok(())
 }
 
+/// Wait for focus to land on `selector`, for a repair made in an effect after
+/// the render. On timeout it fails as `assert_focused` does, naming the holder.
+pub async fn wait_for_focus(page: &Page, selector: &str, during: &str) -> Result<()> {
+    let settled = crate::wait::until(&format!("focus on {selector} after {during}"), || async {
+        Ok(assert_focused(page, selector, during).await.is_ok())
+    })
+    .await;
+    match settled {
+        Ok(()) => Ok(()),
+        Err(_) => assert_focused(page, selector, during).await,
+    }
+}
+
 /// One element's ring-bearing styles.
 #[derive(Debug, Deserialize, Clone, PartialEq)]
 pub struct Ring {

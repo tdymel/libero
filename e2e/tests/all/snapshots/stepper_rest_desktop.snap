@@ -1,0 +1,20 @@
+---
+source: e2e/src/suite.rs
+description: stepper at desktop (rest)
+expression: tree
+---
+generic
+  list
+    listitem [level=1]
+      button "Account"
+        StaticText "Account"
+    listitem [level=1]
+      generic
+        StaticText "Shipping"
+    listitem [level=1]
+      generic
+        StaticText "Review"
+  region "Account"
+    button "Continue to shipping"
+      StaticText "Continue to shipping"
+      generic

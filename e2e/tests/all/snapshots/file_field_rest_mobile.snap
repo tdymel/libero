@@ -1,0 +1,10 @@
+---
+source: e2e/src/suite.rs
+description: file_field at mobile (rest)
+expression: tree
+---
+LabelText
+  StaticText "Attachments"
+button "Attachments"
+  StaticText "Drop files here, or click to pick"
+status [atomic] [live=polite]

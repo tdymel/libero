@@ -1,0 +1,23 @@
+---
+source: e2e/src/suite.rs
+description: stepper_vertical at mobile (rest)
+expression: tree
+---
+generic
+  list
+    listitem [level=1]
+      button "Account"
+        StaticText "Account"
+      region "Account"
+        generic
+          button "Continue to shipping"
+            StaticText "Continue to shipping"
+            generic
+    listitem [level=1]
+      generic
+        StaticText "Shipping"
+      region "Shipping"
+    listitem [level=1]
+      generic
+        StaticText "Review"
+      region "Review"
