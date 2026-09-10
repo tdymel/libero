@@ -1,11 +1,20 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use blitz_dom::BaseDocument;
-use blitz_traits::events::UiEvent;
+use blitz_traits::{events::UiEvent, shell};
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
-use crate::platform::{Dimensions, DocumentApi, ElementApi, PlatformError, Read};
+use crate::{
+    platform::{
+        ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi,
+        PlatformError, Read,
+    },
+    tokens::{ColorScheme, ColorSchemeSetting},
+};
 
 /// Blitz backs a mounted element with a `NodeHandle`, which carries the whole
 /// document - so an element can answer for its subtree, and (via [`document`])
@@ -39,6 +48,59 @@ thread_local! {
 
     /// Bumped to remount [`Outlet`]'s flush element. `None` until it renders.
     static FLUSHES: RefCell<Option<Signal<u64>>> = const { RefCell::new(None) };
+
+    /// A press whose focus move Blitz has not made yet: the focus owner at the
+    /// press, and the focusable it hit. See [`Listener`].
+    static PRESS: Cell<Option<(Option<NodeId>, NodeId)>> = const { Cell::new(None) };
+
+    /// The scheme Rust was last told, and who to tell when the viewport's
+    /// differs. See [`BlitzColorScheme`].
+    static SCHEME: Cell<ColorScheme> = const { Cell::new(ColorScheme::Light) };
+    static SCHEME_CALLBACKS: RefCell<Vec<SchemeCallback>> = const { RefCell::new(Vec::new()) };
+    static NEXT_CALLBACK: Cell<u64> = const { Cell::new(0) };
+}
+
+type SchemeCallback = (u64, Rc<dyn Fn(ColorScheme)>);
+
+/// Wraps the app natively, so a press's target is known until its click has
+/// bubbled. Blitz runs a click's handlers before it moves focus (web: after),
+/// so `remember_active()` in one would name the element focused before.
+#[component]
+pub(super) fn Listener(children: Element) -> Element {
+    rsx! {
+        div {
+            display: "contents",
+            onpointerdown: move |event| pressed(&event),
+            onclick: |_| PRESS.set(None),
+            onkeydown: |_| {
+                PRESS.set(None);
+                check_scheme();
+            },
+            {children}
+        }
+    }
+}
+
+fn pressed(event: &Event<PointerData>) {
+    let point = event.client_coordinates();
+    let press = anchor().and_then(|anchor| {
+        let doc = anchor.try_doc()?;
+        let hit = doc.hit(point.x as f32, point.y as f32)?.node_id;
+        let target = focusable_ancestor(&doc, hit)?;
+        Some((doc.get_focussed_node_id(), target))
+    });
+    PRESS.set(press);
+    check_scheme();
+}
+
+fn focusable_ancestor(doc: &BaseDocument, mut node_id: NodeId) -> Option<NodeId> {
+    loop {
+        let node = doc.get_node(node_id)?;
+        if node.is_focussable() {
+            return Some(node_id);
+        }
+        node_id = node.parent?;
+    }
 }
 
 type Deferred = (NodeHandle, Box<dyn FnOnce(&mut BaseDocument)>);
@@ -72,6 +134,7 @@ pub(super) fn Outlet() -> Element {
                         remember_document(handle);
                     }
                     run_deferred();
+                    check_scheme();
                 },
             }
         }
@@ -105,6 +168,79 @@ fn anchor() -> Option<NodeHandle> {
     ANCHOR.with(|anchor| anchor.borrow().clone())
 }
 
+pub(super) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
+    Some(&COLOR_SCHEME)
+}
+
+/// The viewport's scheme, which the shell keeps in step with the window theme.
+/// Blitz tells Rust nothing when it changes, so it is re-read when the
+/// document is next free: at [`Outlet`]'s mounts and on each press or key.
+struct BlitzColorScheme;
+
+static COLOR_SCHEME: BlitzColorScheme = BlitzColorScheme;
+
+fn viewport_scheme() -> Option<ColorScheme> {
+    let anchor = anchor()?;
+    let doc = anchor.try_doc()?;
+    Some(match doc.viewport().color_scheme {
+        shell::ColorScheme::Dark => ColorScheme::Dark,
+        shell::ColorScheme::Light => ColorScheme::Light,
+    })
+}
+
+fn check_scheme() {
+    let Some(scheme) = viewport_scheme() else {
+        return;
+    };
+    if SCHEME.replace(scheme) == scheme {
+        return;
+    }
+    let callbacks: Vec<_> = SCHEME_CALLBACKS.with(|callbacks| {
+        callbacks
+            .borrow()
+            .iter()
+            .map(|(_, callback)| callback.clone())
+            .collect()
+    });
+    for callback in callbacks {
+        callback(scheme);
+    }
+}
+
+impl ColorSchemeApi for BlitzColorScheme {
+    /// Before the first frame there is no document to ask, so this answers the
+    /// last scheme known, and the first [`Outlet`] mount corrects it.
+    fn system(&self) -> ColorScheme {
+        if let Some(scheme) = viewport_scheme() {
+            SCHEME.set(scheme);
+        }
+        SCHEME.get()
+    }
+
+    fn on_change(&self, callback: Box<dyn Fn(ColorScheme)>) -> Box<dyn ColorSchemeSubscription> {
+        let id = NEXT_CALLBACK.replace(NEXT_CALLBACK.get() + 1);
+        SCHEME_CALLBACKS.with(|callbacks| callbacks.borrow_mut().push((id, Rc::from(callback))));
+        Box::new(BlitzColorSchemeSubscription(id))
+    }
+
+    /// Blitz has no storage, so an override lives for the session.
+    fn stored(&self) -> Option<ColorSchemeSetting> {
+        None
+    }
+
+    fn store(&self, _setting: ColorSchemeSetting) {}
+}
+
+struct BlitzColorSchemeSubscription(u64);
+
+impl ColorSchemeSubscription for BlitzColorSchemeSubscription {}
+
+impl Drop for BlitzColorSchemeSubscription {
+    fn drop(&mut self) {
+        SCHEME_CALLBACKS.with(|callbacks| callbacks.borrow_mut().retain(|(id, _)| *id != self.0));
+    }
+}
+
 struct BlitzDocument;
 
 static DOCUMENT: BlitzDocument = BlitzDocument;
@@ -130,7 +266,12 @@ impl DocumentApi for BlitzDocument {
 
     fn active_element(&self) -> Option<Box<dyn ElementApi>> {
         let anchor = anchor()?;
-        let node_id = anchor.try_doc()?.get_focussed_node_id()?;
+        let focused = anchor.try_doc()?.get_focussed_node_id();
+        // Focus unmoved since a press means Blitz has yet to move it there.
+        let node_id = match PRESS.get() {
+            Some((before, target)) if before == focused => target,
+            _ => focused?,
+        };
         Some(Box::new(BlitzElement { anchor, node_id }))
     }
 

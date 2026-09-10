@@ -26,12 +26,13 @@ use blitz_traits::{
         BlitzKeyEvent, BlitzPointerEvent, BlitzPointerId, KeyState, MouseEventButton,
         MouseEventButtons, Point, PointerCoords, PointerDetails, UiEvent,
     },
-    shell::{ColorScheme, Viewport},
+    shell::Viewport,
 };
 use dioxus::prelude::*;
 use dioxus_native_dom::DioxusDocument;
 use libero::LiberoProvider;
 
+pub use blitz_traits::shell::ColorScheme;
 pub use dioxus::prelude::{Code, Key, Location, Modifiers};
 
 /// The viewport every test renders into, CSS pixels at scale 1.
@@ -42,16 +43,16 @@ const MAX_POLLS: usize = 200;
 
 /// Mounts `app` inside a [`LiberoProvider`] and settles the first render.
 pub fn mount(app: fn() -> Element) -> Page {
+    mount_in(app, ColorScheme::Light)
+}
+
+/// [`mount`], with the window theme set to `scheme`.
+pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
     let vdom = VirtualDom::new_with_props(Root, RootProps { app: App(app) });
     let mut doc = DioxusDocument::new(
         vdom,
         DocumentConfig {
-            viewport: Some(Viewport::new(
-                VIEWPORT.0,
-                VIEWPORT.1,
-                1.0,
-                ColorScheme::Light,
-            )),
+            viewport: Some(viewport(scheme)),
             html_parser_provider: Some(Arc::new(blitz_html::HtmlProvider)),
             ..Default::default()
         },
@@ -60,6 +61,10 @@ pub fn mount(app: fn() -> Element) -> Page {
     let mut page = Page { doc, time: 0.0 };
     page.settle();
     page
+}
+
+fn viewport(scheme: ColorScheme) -> Viewport {
+    Viewport::new(VIEWPORT.0, VIEWPORT.1, 1.0, scheme)
 }
 
 // A newtype, because `fn` pointers compare by an address codegen may merge.
@@ -126,6 +131,12 @@ impl Page {
     /// Sends one raw event through Blitz's pipeline and settles.
     pub fn dispatch(&mut self, event: UiEvent) {
         self.doc.handle_ui_event(event);
+        self.settle();
+    }
+
+    /// Switches the window theme, as the shell does on a theme-change event.
+    pub fn set_color_scheme(&mut self, scheme: ColorScheme) {
+        self.doc.inner.borrow_mut().set_viewport(viewport(scheme));
         self.settle();
     }
 

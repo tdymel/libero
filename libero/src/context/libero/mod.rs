@@ -359,8 +359,10 @@ pub fn LiberoProvider(
             dangerous_inner_html: "{context.layer_order_css}"
         }
         ThemeStyle {}
-        {children}
-        PortalOutlet {}
+        {backend::Listener(rsx! {
+            {children}
+            PortalOutlet {}
+        })}
         StyleOutlet {}
         backend::Outlet {}
     }

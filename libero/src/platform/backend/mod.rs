@@ -56,6 +56,18 @@ pub(crate) fn Outlet() -> Element {
     return rsx! {};
 }
 
+/// Wraps the app on a renderer that has to watch input from above it; only
+/// Blitz does (see `blitz::Listener`). Everywhere else this is `children`.
+#[allow(non_snake_case)]
+pub(crate) fn Listener(children: Element) -> Element {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    use dioxus::prelude::*;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return rsx! { blitz::Listener { {children} } };
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return children;
+}
+
 pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     #[cfg(target_arch = "wasm32")]
     return web::document();
@@ -65,13 +77,15 @@ pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     return None;
 }
 
-/// Only the web can tell Rust what the platform is set to, and only the web
+/// The web and Blitz can tell Rust what the platform is set to; only the web
 /// has somewhere to persist an override - see
 /// [`color_scheme`](crate::platform::color_scheme).
 pub(crate) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     #[cfg(target_arch = "wasm32")]
     return web::color_scheme();
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::color_scheme();
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return None;
 }
 

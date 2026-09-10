@@ -31,8 +31,8 @@ pub trait ColorSchemeApi {
 pub trait ColorSchemeSubscription {}
 
 /// `None` where the renderer cannot tell what the platform is set to - a
-/// webview, a headless build, and Blitz, which resolves the media query
-/// itself but hands Rust no way to ask.
+/// webview and a headless build. Blitz answers from its viewport, but only
+/// notices a change at its next press or key.
 pub fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     backend::color_scheme()
 }

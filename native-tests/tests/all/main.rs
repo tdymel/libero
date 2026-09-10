@@ -2,6 +2,9 @@
 //! one component; run one with `cargo test -p native-tests --test all switch::`.
 
 mod chip;
+mod color_scheme;
+mod dismiss;
+mod focus_return;
 mod hover_card;
 mod lightbox;
 mod menu;
