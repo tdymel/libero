@@ -25,17 +25,13 @@ fn a_light_window_resolves_light() {
     assert_eq!(page.text(SCHEME), "light");
 }
 
+/// Pins a gap: Blitz sends no theme-change event, and libero reads the scheme
+/// once at mount. Flips once Blitz notifies.
 #[test]
-fn a_theme_change_reaches_rust_at_the_next_press_or_key() {
+fn a_live_theme_change_does_not_reach_rust() {
     let mut page = mount(app);
     page.set_color_scheme(ColorScheme::Dark);
-    // Blitz sends no notification, so nothing has re-read it yet.
-    assert_eq!(page.text(SCHEME), "light");
-
     page.click(SCHEME);
-    assert_eq!(page.text(SCHEME), "dark");
-
-    page.set_color_scheme(ColorScheme::Light);
     page.press(Key::Tab);
     assert_eq!(page.text(SCHEME), "light");
 }

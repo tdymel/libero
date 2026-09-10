@@ -55,6 +55,47 @@ fn a_modal_opened_by_click_returns_focus_to_its_trigger() {
     );
 }
 
+fn stopping_app() -> Element {
+    let prompt = use_modal(|s: ModalScope<()>| {
+        rsx! {
+            Dialog {
+                title: "Unsaved changes",
+                Button { onclick: move |_| s.close(), "Keep editing" }
+            }
+        }
+    });
+    rsx! {
+        button { id: "elsewhere", "Elsewhere" }
+        button {
+            id: "open-modal",
+            onpointerdown: |event| event.stop_propagation(),
+            onclick: move |_| {
+                prompt.open();
+            },
+            "Close editor"
+        }
+    }
+}
+
+/// Pins a gap: libero's listener sits above the app in bubble phase (this
+/// dioxus has no capture listeners), so a trigger that stops its pointerdown
+/// hides the press and focus returns to the element focused before.
+#[test]
+fn a_trigger_that_stops_its_pointerdown_gets_the_old_answer() {
+    let mut page = mount(stopping_app);
+    page.click("#elsewhere");
+
+    page.click(TRIGGER);
+    assert!(page.exists(DIALOG));
+    page.press(Key::Escape);
+    assert!(!page.exists(DIALOG));
+    assert!(
+        page.is_focused("#elsewhere"),
+        "focus is on {}",
+        page.focus_owner()
+    );
+}
+
 #[test]
 fn a_modal_opened_by_keyboard_still_returns_focus_to_its_trigger() {
     let mut page = mount(app);

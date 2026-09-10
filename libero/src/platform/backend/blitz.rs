@@ -70,12 +70,10 @@ pub(super) fn Listener(children: Element) -> Element {
     rsx! {
         div {
             display: "contents",
+            // Bubble phase: this dioxus has no capture listeners.
             onpointerdown: move |event| pressed(&event),
             onclick: |_| PRESS.set(None),
-            onkeydown: |_| {
-                PRESS.set(None);
-                check_scheme();
-            },
+            onkeydown: |_| PRESS.set(None),
             {children}
         }
     }
@@ -90,7 +88,6 @@ fn pressed(event: &Event<PointerData>) {
         Some((doc.get_focussed_node_id(), target))
     });
     PRESS.set(press);
-    check_scheme();
 }
 
 fn focusable_ancestor(doc: &BaseDocument, mut node_id: NodeId) -> Option<NodeId> {
@@ -134,7 +131,10 @@ pub(super) fn Outlet() -> Element {
                         remember_document(handle);
                     }
                     run_deferred();
-                    check_scheme();
+                    // Once, at the provider's mount: see `BlitzColorScheme`.
+                    if flush == 0 {
+                        check_scheme();
+                    }
                 },
             }
         }
@@ -173,8 +173,8 @@ pub(super) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
 }
 
 /// The viewport's scheme, which the shell keeps in step with the window theme.
-/// Blitz tells Rust nothing when it changes, so it is re-read when the
-/// document is next free: at [`Outlet`]'s mounts and on each press or key.
+/// Read once, at [`Outlet`]'s first mount; `on_change` fires only for that
+/// correction, as Blitz sends no event on a live theme change.
 struct BlitzColorScheme;
 
 static COLOR_SCHEME: BlitzColorScheme = BlitzColorScheme;
@@ -266,12 +266,20 @@ impl DocumentApi for BlitzDocument {
 
     fn active_element(&self) -> Option<Box<dyn ElementApi>> {
         let anchor = anchor()?;
-        let focused = anchor.try_doc()?.get_focussed_node_id();
+        let doc = anchor.try_doc()?;
+        let focused = doc.get_focussed_node_id();
         // Focus unmoved since a press means Blitz has yet to move it there.
-        let node_id = match PRESS.get() {
-            Some((before, target)) if before == focused => target,
-            _ => focused?,
+        let pressed = PRESS.get().filter(|&(before, target)| {
+            before == focused
+                && doc
+                    .get_node(target)
+                    .is_some_and(|node| node.flags.is_in_document())
+        });
+        let node_id = match pressed {
+            Some((_, target)) => target,
+            None => focused?,
         };
+        drop(doc);
         Some(Box::new(BlitzElement { anchor, node_id }))
     }
 
