@@ -25,6 +25,7 @@ const CHIP_CONTRAST_VAR: CssVar = CssVar::new("--lsx-chip-contrast");
 const CHIP_HOVER_VAR: CssVar = CssVar::new("--lsx-chip-hover");
 const CHIP_CONTAINER_VAR: CssVar = CssVar::new("--lsx-chip-container");
 const CHIP_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-chip-on-container");
+const CHIP_ON_STATE_VAR: CssVar = CssVar::new("--lsx-chip-on-state");
 
 const CHIP_VARS: VariantVars<'static> = VariantVars {
     color: &CHIP_COLOR_VAR,
@@ -63,7 +64,7 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         .fold(base, |base, &variant| {
             base.when(
                 variant.state_name(),
-                interactive_variant_sx(variant, &CHIP_VARS, &CHIP_HOVER_VAR),
+                interactive_variant_sx(variant, &CHIP_VARS, &CHIP_HOVER_VAR, &CHIP_ON_STATE_VAR),
             )
         })
         // Folded after the variants, which is what makes it win: equal
@@ -73,7 +74,12 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         // sets `border-color: transparent`.
         .when(
             "checked",
-            interactive_variant_sx(Variant::Tonal, &CHIP_VARS, &CHIP_HOVER_VAR),
+            interactive_variant_sx(
+                Variant::Tonal,
+                &CHIP_VARS,
+                &CHIP_HOVER_VAR,
+                &CHIP_ON_STATE_VAR,
+            ),
         )
         .when("selectable", sx().overflow("visible"))
         .when("clickable", sx().cursor("pointer"))
@@ -117,6 +123,7 @@ fn chip_variables(variant: Variant, checked: bool, base: &ThemeAwareValue) -> St
             on_container: contrast_shade_color(base, ColorShade::S2),
             hover: shade_color(base, ColorShade::S3),
             selected: None,
+            on_state: None,
         }
     } else {
         variant_colors(variant, base)
@@ -130,6 +137,7 @@ fn chip_variables(variant: Variant, checked: bool, base: &ThemeAwareValue) -> St
             contrast_color(base).and_then(|color| color.resolve(None)),
         )
         .with(CHIP_HOVER_VAR, colors.hover)
+        .with(CHIP_ON_STATE_VAR, colors.on_state)
         .with(CHIP_CONTAINER_VAR, colors.container)
         .with(CHIP_ON_CONTAINER_VAR, colors.on_container)
         .render()

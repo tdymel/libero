@@ -25,6 +25,11 @@ fn ButtonPage() -> Element {
                 "Plain {plain}, busy {busy}"
             }
             Button { id: "to-landing", to: "/button/landing", "Go to landing" }
+            // Todo 452: one per label rule, for the hover contrast test.
+            Button { id: "outlined", variant: "outlined", "Outlined" }
+            Button { id: "standard-error", variant: "standard", color: "error", "Standard" }
+            Button { id: "elevated", variant: "elevated", color: "secondary", "Elevated" }
+            Button { id: "filled-muted", color: "muted", "Filled" }
         }
     }
 }

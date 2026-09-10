@@ -24,6 +24,7 @@ const ACTION_ICON_HOVER_VAR: CssVar = CssVar::new("--lsx-action-icon-hover");
 const ACTION_ICON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-container");
 const ACTION_ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-on-container");
 const ACTION_ICON_SELECTED_VAR: CssVar = CssVar::new("--lsx-action-icon-selected");
+const ACTION_ICON_ON_STATE_VAR: CssVar = CssVar::new("--lsx-action-icon-on-state");
 
 const ACTION_ICON_VARS: VariantVars<'static> = VariantVars {
     color: &ACTION_ICON_COLOR_VAR,
@@ -63,15 +64,25 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
             // The ungated base is `border: none` for a caller with its own
             // `sx`, so the width the variants' `border-color` needs joins
             // here rather than out there.
-            interactive_variant_sx(variant, &ACTION_ICON_VARS, &ACTION_ICON_HOVER_VAR)
-                .border_style("solid")
-                .border_width("1px")
-                // After the variant's `:hover`, which it ties on specificity -
-                // as on `Button`.
-                .when(
-                    "checked",
-                    variant_selected_sx(variant, &ACTION_ICON_COLOR_VAR, &ACTION_ICON_SELECTED_VAR),
+            interactive_variant_sx(
+                variant,
+                &ACTION_ICON_VARS,
+                &ACTION_ICON_HOVER_VAR,
+                &ACTION_ICON_ON_STATE_VAR,
+            )
+            .border_style("solid")
+            .border_width("1px")
+            // After the variant's `:hover`, which it ties on specificity -
+            // as on `Button`.
+            .when(
+                "checked",
+                variant_selected_sx(
+                    variant,
+                    &ACTION_ICON_VARS,
+                    &ACTION_ICON_SELECTED_VAR,
+                    &ACTION_ICON_ON_STATE_VAR,
                 ),
+            ),
         )
     });
 
@@ -141,6 +152,7 @@ fn action_icon_variables(
             contrast.and_then(|c| c.resolve(None)),
         )
         .with(ACTION_ICON_HOVER_VAR, colors.hover)
+        .with(ACTION_ICON_ON_STATE_VAR, colors.on_state)
         .with(ACTION_ICON_CONTAINER_VAR, colors.container)
         .with(ACTION_ICON_ON_CONTAINER_VAR, colors.on_container)
         .with(

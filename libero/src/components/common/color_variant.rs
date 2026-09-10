@@ -1,16 +1,9 @@
 use crate::sx::{ColorRole, ThemeAwareValue};
-use crate::tokens::{Color, ColorShade, ColorValue};
+use crate::tokens::{Color, ColorShade, ColorValue, HOVER_TINT_SHADE, SELECTED_TINT_SHADE};
 
 // A bare color name carries no shade, so it takes this over the sx
 // pipeline's generic default.
 const DEFAULT_SHADE: ColorShade = ColorShade::S6;
-
-// Transparent at rest, so these tint on hover instead of darkening.
-const HOVER_TINT_SHADE: ColorShade = ColorShade::S1;
-
-// One step past the hover tint, so a selected control still reads as selected
-// while the pointer is over it.
-const SELECTED_TINT_SHADE: ColorShade = ColorShade::S2;
 
 // Same, for a filled control, whose hover is already one step darker.
 const SELECTED_DARKER_STEPS: usize = 2;
@@ -91,6 +84,28 @@ pub(crate) fn contrast_shade_color(base: &ThemeAwareValue, shade: ColorShade) ->
     };
 
     Some(ColorValue::Contrast(*color, shade).value())
+}
+
+/// `base`'s label over the hover and selected tints: the text role, darkened
+/// where the theme's tint needs it. `None` for a literal base, which has no tint.
+pub(crate) fn on_tint_color(base: &ThemeAwareValue) -> Option<String> {
+    let ThemeAwareValue::ColorValue(shade @ ColorValue::Shade(..)) = base else {
+        return None;
+    };
+    let name = shade.on_tint_name()?;
+
+    Some(format!("var({name}, {})", text_color(base)?))
+}
+
+/// The foreground of [`hover_color`]'s filled step: a darker fill can need the
+/// other end (`muted`'s black label read 2.59:1 on its hover). `None` for a
+/// literal base.
+pub(crate) fn hover_contrast_color(base: &ThemeAwareValue) -> Option<String> {
+    let ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) = base else {
+        return None;
+    };
+
+    Some(ColorValue::Contrast(*color, shade.darker()).value())
 }
 
 /// Hover color for `base`: darker when `base` is already the background, a

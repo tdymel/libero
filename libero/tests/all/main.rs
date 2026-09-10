@@ -106,6 +106,7 @@ mod title;
 mod tooltip;
 mod tree;
 mod validation;
+mod variant_contrast;
 mod visually_hidden;
 
 /// Every `.rs` file in this directory must have a `mod` line above it.

@@ -163,7 +163,13 @@ mod tests {
         // matching class name would mean the badge grew one.
         assert_ne!(
             variant_chrome_sx(Variant::Filled, &ICON_VARS).class_name(),
-            interactive_variant_sx(Variant::Filled, &ICON_VARS, &ICON_COLOR_VAR).class_name()
+            interactive_variant_sx(
+                Variant::Filled,
+                &ICON_VARS,
+                &ICON_COLOR_VAR,
+                &ICON_COLOR_VAR
+            )
+            .class_name()
         );
     }
 }

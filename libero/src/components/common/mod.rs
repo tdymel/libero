@@ -19,8 +19,8 @@ pub use crate::sx::input::Input;
 pub(crate) use crate::sx::input::input_from_str;
 pub(crate) use base_props::base_props;
 pub(crate) use color_variant::{
-    base_color, contrast_color, contrast_shade_color, fill_color, hover_color, selected_color,
-    shade_color, text_color,
+    base_color, contrast_color, contrast_shade_color, fill_color, hover_color,
+    hover_contrast_color, on_tint_color, selected_color, shade_color, text_color,
 };
 pub(crate) use field_props::field_props;
 pub(crate) use icons::{

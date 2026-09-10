@@ -6,7 +6,7 @@ use crate::{
         common::{Orientation, focus_ring_sx, neighbour},
         form::Activation,
         inputs::{
-            BUTTON_COLOR_VAR, BUTTON_HOVER_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS,
+            BUTTON_HOVER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS,
             interactive_variant_sx, variant_selected_sx,
         },
         layout::use_box,
@@ -153,12 +153,22 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
             variant.state_name(),
             sx().selector(
                 SEGMENT,
-                interactive_variant_sx(variant, &BUTTON_VARS, &BUTTON_HOVER_VAR),
+                interactive_variant_sx(
+                    variant,
+                    &BUTTON_VARS,
+                    &BUTTON_HOVER_VAR,
+                    &BUTTON_ON_STATE_VAR,
+                ),
             )
             // After the variant's own `:hover`, which it ties on specificity.
             .selector(
                 "& > label[data-state~=\"checked\"]",
-                variant_selected_sx(variant, &BUTTON_COLOR_VAR, &BUTTON_SELECTED_VAR),
+                variant_selected_sx(
+                    variant,
+                    &BUTTON_VARS,
+                    &BUTTON_SELECTED_VAR,
+                    &BUTTON_ON_STATE_VAR,
+                ),
             ),
         )
     });

@@ -1,6 +1,6 @@
 use crate::CssLayer;
 use crate::css::{CssDeclaration, CssScope, Stylesheet, ToCssDeclarations};
-use crate::tokens::{Ends, TEXT_CONTRAST};
+use crate::tokens::{Ends, HOVER_TINT_SHADE, SELECTED_TINT_SHADE, ShadeRamp, TEXT_CONTRAST};
 
 use super::{
     CODE_BLOCK_BACKGROUND, CODE_BLOCK_COPY_HOVER_BACKGROUND, CODE_BLOCK_COPY_HOVER_TEXT,
@@ -578,6 +578,42 @@ fn push_color_declarations(
                 ends,
             ),
         ));
+    }
+
+    push_on_tint_declarations(declarations, color, base, text_base, fill_base, ends);
+}
+
+/// The label an unfilled control takes over its hover and selected tints:
+/// its resting label, darkened until it reads on both. Declared only where
+/// the resting one does not, since `on_tint_color` falls back to it.
+fn push_on_tint_declarations(
+    declarations: &mut Vec<CssDeclaration>,
+    color: Color,
+    base: HexColor,
+    text_base: HexColor,
+    fill_base: HexColor,
+    ends: Ends,
+) {
+    let ramp = color.shade_ramp();
+    // The neutral ramps label in the brand shade, as `ColorValue::as_text` says.
+    let label_base = match ramp {
+        ShadeRamp::Chromatic => text_base,
+        ShadeRamp::Neutral => base,
+    };
+    let tints = [
+        fill_base.shade(HOVER_TINT_SHADE, ramp, ends),
+        fill_base.shade(SELECTED_TINT_SHADE, ramp, ends),
+    ];
+
+    for shade in SHADES {
+        let label = label_base.shade(shade, ramp, ends);
+        let on_tint = label.readable_on(&tints, TEXT_CONTRAST, ends);
+        if on_tint == label {
+            continue;
+        }
+        if let Some(name) = ColorValue::Shade(color, shade).on_tint_name() {
+            declarations.push(CssDeclaration::new(name, on_tint.to_string()));
+        }
     }
 }
 

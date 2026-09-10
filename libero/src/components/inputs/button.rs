@@ -5,8 +5,8 @@ use crate::{
         HtmlTag, Input, States, Variant,
         common::{
             base_color, base_props, contrast_color, contrast_shade_color, fill_color,
-            focus_ring_sx, hover_color, input_from_str, selected_color, shade_color, shadow_sx,
-            text_color, variables,
+            focus_ring_sx, hover_color, hover_contrast_color, input_from_str, on_tint_color,
+            selected_color, shade_color, shadow_sx, text_color, variables,
         },
         feedback::Loader,
         layout::use_box,
@@ -46,6 +46,7 @@ pub(crate) const BUTTON_FILL_VAR: CssVar = CssVar::new("--lsx-button-fill");
 pub(crate) const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
 pub(crate) const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
 pub(crate) const BUTTON_SELECTED_VAR: CssVar = CssVar::new("--lsx-button-selected");
+pub(crate) const BUTTON_ON_STATE_VAR: CssVar = CssVar::new("--lsx-button-on-state");
 pub(crate) const BUTTON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-button-container");
 pub(crate) const BUTTON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-button-on-container");
 
@@ -75,6 +76,7 @@ pub(crate) const BUTTON_VARS: VariantVars<'static> = VariantVars {
 // The lightest tint on the ramp. A darker one cannot be labelled legibly:
 // black on `S1` clears 12:1 for every palette colour, on `S2` it is closer.
 const TONAL_CONTAINER: ColorShade = ColorShade::S1;
+const TONAL_SELECTED: ColorShade = ColorShade::S3;
 
 // M3's elevated button rests at level 1 and lifts to level 2 on hover.
 const ELEVATED_REST: Size = Size::Xs;
@@ -135,7 +137,16 @@ pub(crate) fn variant_chrome_sx(variant: Variant, vars: &VariantVars) -> Sx {
 /// [`variant_chrome_sx`] plus the hover response an interactive control needs:
 /// a filled or tinted variant darkens, an unfilled one tints, and `Elevated`
 /// lifts a level rather than changing its fill.
-pub(crate) fn interactive_variant_sx(variant: Variant, vars: &VariantVars, hover: &CssVar) -> Sx {
+///
+/// `on_state` is the label over the hover and selected fills, where the
+/// resting one does not read on them (an outlined `primary` label was 3.52:1
+/// on its hover tint, todo 452). `Tonal`'s hover keeps its container's label.
+pub(crate) fn interactive_variant_sx(
+    variant: Variant,
+    vars: &VariantVars,
+    hover: &CssVar,
+    on_state: &CssVar,
+) -> Sx {
     let color = vars.color;
 
     let fallback = match variant {
@@ -145,6 +156,15 @@ pub(crate) fn interactive_variant_sx(variant: Variant, vars: &VariantVars, hover
     };
 
     let mut hovered = sx().background(hover.value_or(fallback));
+    match variant {
+        Variant::Filled => {
+            hovered = hovered.color(on_state.value_or(vars.contrast.value_or("inherit")));
+        }
+        Variant::Tonal => {}
+        Variant::Elevated | Variant::Outlined | Variant::Standard => {
+            hovered = hovered.color(on_state.value_or(color.value()));
+        }
+    }
     if variant == Variant::Elevated {
         hovered = hovered.and(shadow_sx(SizeCss::SHADOW.value(ELEVATED_HOVER)));
     }
@@ -159,6 +179,7 @@ pub(crate) struct VariantColors {
     pub on_container: Option<String>,
     pub hover: Option<String>,
     pub selected: Option<String>,
+    pub on_state: Option<String>,
 }
 
 /// Which shades a variant tints with. The tinted variants pin absolute
@@ -178,7 +199,7 @@ pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> Varian
     let (hover, selected) = match variant {
         Variant::Tonal => (
             shade_color(base, ColorShade::S2),
-            shade_color(base, ColorShade::S3),
+            shade_color(base, TONAL_SELECTED),
         ),
         // A faint tint over the surface, the way the other unfilled variants
         // hover - the shadow is what actually moves.
@@ -189,11 +210,19 @@ pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> Varian
         _ => (hover_color(base, filled), selected_color(base, filled)),
     };
 
+    // `Tonal`'s only for its selected step: its hover keeps the container's.
+    let on_state = match variant {
+        Variant::Filled => hover_contrast_color(base),
+        Variant::Tonal => contrast_shade_color(base, TONAL_SELECTED),
+        Variant::Elevated | Variant::Outlined | Variant::Standard => on_tint_color(base),
+    };
+
     VariantColors {
         container,
         on_container,
         hover,
         selected,
+        on_state,
     }
 }
 
@@ -201,25 +230,34 @@ pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> Varian
 /// Ties that block's own `:hover` on specificity, so it has to stay *after* it
 /// in `interactive_variant_sx`'s output - source order is what settles the two.
 ///
-/// Only the background moves: the enclosing variant already sets the label
-/// colour every arm here would want, bar `Text`, whose accent label on its own
-/// tint is ~2.3:1. A literal `color` has no shade scale and so no selected
+/// The label is `on_state`, as on hover: the resting one need not read on the
+/// selected fill. A literal `color` has no shade scale and so no selected
 /// tint - falling back to the base colour would paint a full-strength
-/// background under an `inherit` label, so the untinted variants fall back to
+/// background under the resting label, so the untinted variants fall back to
 /// nothing at all.
 pub(crate) fn variant_selected_sx(
     variant: Variant,
-    color_var: &CssVar,
+    vars: &VariantVars,
     selected_var: &CssVar,
+    on_state: &CssVar,
 ) -> Sx {
+    let color = vars.color;
     match variant {
-        Variant::Filled | Variant::Tonal | Variant::Elevated => {
-            sx().background(selected_var.value_or(color_var.value()))
-        }
-        // Both label the surface's accent, which is ~2.3:1 on its own tint.
+        Variant::Filled => sx()
+            .background(selected_var.value_or(color.value()))
+            .color(on_state.value_or(vars.contrast.value_or("inherit"))),
+        Variant::Tonal => sx().background(selected_var.value_or(color.value())).color(
+            on_state.value_or(
+                vars.on_container
+                    .value_or(vars.contrast.value_or("inherit")),
+            ),
+        ),
+        Variant::Elevated => sx()
+            .background(selected_var.value_or(color.value()))
+            .color(on_state.value_or(color.value())),
         Variant::Outlined | Variant::Standard => sx()
             .background(selected_var.value_or("transparent"))
-            .color("inherit"),
+            .color(on_state.value_or(color.value())),
     }
 }
 
@@ -242,12 +280,22 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .fold(base, |base, &variant| {
             base.when(
                 variant.state_name(),
-                interactive_variant_sx(variant, &BUTTON_VARS, &BUTTON_HOVER_VAR)
-                    // After the variant's `:hover`, which it ties on specificity.
-                    .when(
-                        "checked",
-                        variant_selected_sx(variant, &BUTTON_COLOR_VAR, &BUTTON_SELECTED_VAR),
+                interactive_variant_sx(
+                    variant,
+                    &BUTTON_VARS,
+                    &BUTTON_HOVER_VAR,
+                    &BUTTON_ON_STATE_VAR,
+                )
+                // After the variant's `:hover`, which it ties on specificity.
+                .when(
+                    "checked",
+                    variant_selected_sx(
+                        variant,
+                        &BUTTON_VARS,
+                        &BUTTON_SELECTED_VAR,
+                        &BUTTON_ON_STATE_VAR,
                     ),
+                ),
             )
         })
         .when(
@@ -322,6 +370,7 @@ pub(crate) fn button_variables(
         .with(BUTTON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(BUTTON_HOVER_VAR, colors.hover)
         .with(BUTTON_SELECTED_VAR, selected)
+        .with(BUTTON_ON_STATE_VAR, colors.on_state)
         .with(BUTTON_CONTAINER_VAR, colors.container)
         .with(BUTTON_ON_CONTAINER_VAR, colors.on_container)
         .render()
@@ -571,8 +620,15 @@ mod tests {
 
     #[test]
     fn each_variant_renders_its_own_css() {
-        let class_of =
-            |variant| interactive_variant_sx(variant, &BUTTON_VARS, &BUTTON_HOVER_VAR).class_name();
+        let class_of = |variant| {
+            interactive_variant_sx(
+                variant,
+                &BUTTON_VARS,
+                &BUTTON_HOVER_VAR,
+                &BUTTON_ON_STATE_VAR,
+            )
+            .class_name()
+        };
 
         let classes: Vec<String> = Variant::ALL.iter().map(|v| class_of(*v)).collect();
         let mut unique = classes.clone();

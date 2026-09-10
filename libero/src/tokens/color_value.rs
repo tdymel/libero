@@ -4,6 +4,15 @@ use super::{Color, ColorShade, ShadeRamp, color::ColorVars};
 pub(crate) const TEXT_INFIX: &str = "text-";
 /// The var infix of the [`ColorValue::Fill`] ramp.
 pub(crate) const FILL_INFIX: &str = "fill-";
+/// The var infix of the text ramp re-based onto the hover and selected tints.
+pub(crate) const ON_TINT_INFIX: &str = "on-tint-";
+
+/// The fill shade an unfilled control tints to on hover: transparent at rest,
+/// so it tints instead of darkening.
+pub(crate) const HOVER_TINT_SHADE: ColorShade = ColorShade::S1;
+/// One step past the hover tint, so a selected control still reads as
+/// selected while the pointer is over it.
+pub(crate) const SELECTED_TINT_SHADE: ColorShade = ColorShade::S2;
 
 /// A colour named for what it is about to do. The three roles are three
 /// ramps at `:root`, not three names for one colour: `Shade` is the brand
@@ -76,6 +85,26 @@ impl ColorValue {
             ColorVars::Palette(own, other) => if contrast { other } else { own }.name(shade),
             // One var each, no per-shade variants.
             ColorVars::Named(own, other) => if contrast { other } else { own }.name().to_string(),
+        }
+    }
+
+    /// The var of this shade's label on a hover or selected tint. `None` for
+    /// anything but a palette shade, which has no tint to read on.
+    pub(crate) fn on_tint_name(self) -> Option<String> {
+        match (self, self.color().vars()) {
+            (Self::Shade(_, shade), ColorVars::Palette(own, _)) => {
+                Some(own.role_name(ON_TINT_INFIX, shade))
+            }
+            _ => None,
+        }
+    }
+
+    fn color(self) -> Color {
+        match self {
+            Self::Shade(color, _)
+            | Self::Contrast(color, _)
+            | Self::Text(color, _)
+            | Self::Fill(color, _) => color,
         }
     }
 

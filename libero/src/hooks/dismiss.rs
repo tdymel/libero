@@ -1060,7 +1060,8 @@ mod tests {
     /// tag, since a portal's outlet can render after it.
     fn state(dom: &VirtualDom) -> String {
         let html = dioxus_ssr::render(dom);
-        let at = html.rfind("state:").expect("the state marker");
+        // The space keeps a `--lsx-*-on-state:` declaration from matching.
+        let at = html.rfind("state: ").expect("the state marker");
         let marker = &html[at..];
         marker[..marker.find('<').unwrap_or(marker.len())].to_string()
     }
