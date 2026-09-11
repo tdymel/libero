@@ -394,6 +394,8 @@ struct View {
     level: Signal<DateLevel>,
     /// Only ever set by paging; until then the view follows the value.
     paged: Signal<Option<NaiveDate>>,
+    /// Where the back and forward buttons page to, written each render.
+    nav_targets: CopyValue<[NaiveDate; 2]>,
     /// The keyboard's day.
     active: Signal<Option<NaiveDate>>,
     focus: FocusRequest,
@@ -477,10 +479,12 @@ impl View {
             size,
             focusable,
             paged,
+            mut nav_targets,
             ..
         } = self;
+        nav_targets.write()[usize::from(forward)] = target;
         rsx! {
-            Nav { label, disabled, target, forward, size, focusable, paged }
+            Nav { label, disabled, targets: nav_targets, forward, size, focusable, paged }
         }
     }
 
@@ -900,6 +904,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let mut level = use_signal(|| lowest);
     let mut paged = use_signal(|| None::<NaiveDate>);
     let active = use_signal(|| None::<NaiveDate>);
+    let mut nav_targets = use_hook(|| CopyValue::new([FALLBACK_MONTH; 2]));
     let root = use_element();
     let focus = FocusRequest {
         root,
@@ -923,6 +928,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         lowest,
         level,
         paged,
+        nav_targets,
         active,
         focus,
         first,
@@ -973,22 +979,24 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
             view.strip_view(Strip::new(view, props.days))
         }
         DateLevel::Day => {
-            let months = (0..columns).map(|index| add_months(first, index));
-            // Items drawn inline: see `Week`.
+            nav_targets.set([add_months(first, -1), add_months(first, 1)]);
+            let months = (0..columns).map(|index| (index, add_months(first, index)));
+            // Items drawn inline: see `Week`. Keyed by column, so a page
+            // diffs the grid in place rather than remounting it.
             rsx! {
                 div { "data-slot": "header",
                     Nav {
                         label: names.previous_month,
                         disabled: min.is_some_and(|min| add_days(first, -1) < min),
-                        target: add_months(first, -1),
+                        targets: nav_targets,
                         forward: false,
                         size,
                         focusable,
                         paged,
                     }
-                    for month in months.clone() {
+                    for (index, month) in months.clone() {
                         button {
-                            key: "{month}",
+                            key: "{index}",
                             r#type: "button",
                             "data-slot": "title",
                             "aria-live": "polite",
@@ -1004,7 +1012,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                     Nav {
                         label: names.next_month,
                         disabled: max.is_some_and(|max| add_months(last, 1) > max),
-                        target: add_months(first, 1),
+                        targets: nav_targets,
                         forward: true,
                         size,
                         focusable,
@@ -1018,9 +1026,9 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                             hover.set(None);
                         }
                     },
-                    for month in months {
+                    for (index, month) in months {
                         div {
-                            key: "{month}",
+                            key: "{index}",
                             role: "grid",
                             "aria-label": format_date(month, names.month_format, names),
                             onkeydown,
@@ -1148,19 +1156,20 @@ fn Week(props: WeekProps) -> Element {
     let cell = move |offset: i64| {
         let day = day(offset);
         let (picked, in_range) = selection.marks(day, None);
-        (day, outside(day), picked, in_range)
+        (offset, day, outside(day), picked, in_range)
     };
 
     // Items drawn inline, not through a helper returning `rsx!`: a nested
-    // element per item costs about a microsecond each.
+    // element per item costs about a microsecond each. Keyed by column, so a
+    // page diffs the days in place rather than remounting them.
     rsx! {
         div { role: "row",
-            for day in (0..lead).map(day) {
-                div { key: "{day}", role: "gridcell", "data-slot": "blank" }
+            for offset in 0..lead {
+                div { key: "{offset}", role: "gridcell", "data-slot": "blank" }
             }
-            for (day, outside, picked, in_range) in (lead..7 - trail).map(cell) {
+            for (offset, day, outside, picked, in_range) in (lead..7 - trail).map(cell) {
                 div {
-                    key: "{day}",
+                    key: "{offset}",
                     role: "gridcell",
                     "aria-selected": if picked { "true" } else { "false" },
                     button {
@@ -1191,8 +1200,8 @@ fn Week(props: WeekProps) -> Element {
                     }
                 }
             }
-            for day in (7 - trail..7).map(day) {
-                div { key: "{day}", role: "gridcell", "data-slot": "blank" }
+            for offset in 7 - trail..7 {
+                div { key: "{offset}", role: "gridcell", "data-slot": "blank" }
             }
         }
     }
@@ -1218,12 +1227,12 @@ fn Weekdays(first_weekday: usize) -> Element {
 }
 
 /// A button that pages the calendar. Its own scope with its icon drawn inside,
-/// so it skips a re-render until its target moves.
+/// and its target read on click, so a page leaves its props equal.
 #[derive(Props, Clone, PartialEq)]
 struct NavProps {
     label: &'static str,
     disabled: bool,
-    target: NaiveDate,
+    targets: CopyValue<[NaiveDate; 2]>,
     forward: bool,
     size: Size,
     focusable: bool,
@@ -1232,7 +1241,7 @@ struct NavProps {
 
 #[component]
 fn Nav(props: NavProps) -> Element {
-    let (target, mut paged) = (props.target, props.paged);
+    let (targets, forward, mut paged) = (props.targets, props.forward, props.paged);
     rsx! {
         ActionIcon {
             aria_label: props.label,
@@ -1240,7 +1249,7 @@ fn Nav(props: NavProps) -> Element {
             size: ThemeAwareValue::Size(nav_size(props.size)),
             tabindex: if props.focusable { "0" } else { "-1" },
             disabled: props.disabled,
-            onclick: move |_| paged.set(Some(target)),
+            onclick: move |_| paged.set(Some(targets.peek()[usize::from(forward)])),
             if props.forward {
                 ChevronRightIcon {}
             } else {

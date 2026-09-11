@@ -6,6 +6,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, Key};
+use e2e::passes::pointer;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const STOP: &str = "[role=grid] [data-date='2026-03-18']:not([data-outside])";
@@ -100,6 +101,127 @@ fn the_keys_move_focus_through_the_grid() {
                 .unwrap();
             fixture.close().await.unwrap();
         }
+    });
+}
+
+/// The page buttons read their target on click, so each click pages from the
+/// month shown, also after a pick (todo 29: they skip the re-render).
+#[test]
+fn the_page_buttons_follow_the_month_shown() {
+    block_on(async {
+        let viewport = Viewport::ALL[0];
+        let fixture = Fixture::open("/calendar", viewport).await.unwrap();
+        let page = &fixture.page;
+        let clicks: &[(&str, &str)] = &[
+            ("[aria-label='Next month']", "April 2026"),
+            ("[aria-label='Next month']", "May 2026"),
+            ("[aria-label='Previous month']", "April 2026"),
+            ("[role=grid] [data-date='2026-04-10']", "April 2026"),
+            ("[aria-label='Next month']", "May 2026"),
+            ("[aria-label='Previous month']", "April 2026"),
+        ];
+        for (target, month) in clicks {
+            pointer::click(page, target).await.unwrap();
+            let check = format!(
+                "document.querySelector('[role=grid]').getAttribute('aria-label') === {month:?}"
+            );
+            wait::for_js_true(page, &check, &format!("{target} to show {month}"))
+                .await
+                .unwrap();
+        }
+        wait::for_js_true(
+            page,
+            "document.querySelector(\"[data-date='2026-04-10']\").hasAttribute('data-selected')",
+            "the picked day to stay marked",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the page buttons").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A range picked, previewed and paged: the days are drawn in place on a
+/// page (todo 29), so their marks must follow the dates, not the columns.
+#[test]
+fn a_range_keeps_its_marks_across_pages() {
+    block_on(async {
+        let fixture = Fixture::open("/calendar/range", Viewport::ALL[0])
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let day = |month: &str, date: &str| {
+            format!("[role=grid][aria-label='{month}'] [data-date='{date}']:not([data-outside])")
+        };
+        let has = |month: &str, date: &str, mark: &str| {
+            format!(
+                "(() => {{ const el = document.querySelector({:?}); return !!el && el.hasAttribute('{mark}'); }})()",
+                day(month, date)
+            )
+        };
+        let expect = |check: String, what: &'static str| async move {
+            wait::for_js_true(page, &check, what).await.unwrap();
+        };
+
+        pointer::click(page, &day("March 2026", "2026-03-10"))
+            .await
+            .unwrap();
+        pointer::hover(page, &day("March 2026", "2026-03-14"))
+            .await
+            .unwrap();
+        expect(
+            has("March 2026", "2026-03-12", "data-in-range"),
+            "the hover to preview the range",
+        )
+        .await;
+        pointer::click(page, &day("March 2026", "2026-03-14"))
+            .await
+            .unwrap();
+        expect(
+            has("March 2026", "2026-03-14", "data-selected"),
+            "the end to be picked",
+        )
+        .await;
+
+        pointer::click(page, "[aria-label='Next month']")
+            .await
+            .unwrap();
+        expect(
+            has("April 2026", "2026-04-12", "aria-label"),
+            "the grids to page forward",
+        )
+        .await;
+        expect(
+            format!(
+                "!document.querySelector('[data-in-range]:not([data-outside])') || {}",
+                has("March 2026", "2026-03-12", "data-in-range")
+            ),
+            "no April day to keep March's marks",
+        )
+        .await;
+        for _ in 0..2 {
+            pointer::click(page, "[aria-label='Previous month']")
+                .await
+                .unwrap();
+        }
+        expect(
+            has("March 2026", "2026-03-12", "data-in-range"),
+            "March's marks to return on its new column",
+        )
+        .await;
+        expect(
+            has("March 2026", "2026-03-10", "data-selected"),
+            "the start to stay picked",
+        )
+        .await;
+        expect(
+            "document.querySelectorAll('[data-in-range]:not([data-outside])').length === 3"
+                .to_string(),
+            "only the three days inside the range to be marked",
+        )
+        .await;
+        fixture.console.assert_clean("the range picker").unwrap();
+        fixture.close().await.unwrap();
     });
 }
 
