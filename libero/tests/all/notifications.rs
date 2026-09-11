@@ -298,6 +298,56 @@ fn a_store_write_redraws_only_the_notification_it_concerns() {
     assert_eq!(drawn, ["b"]);
 }
 
+/// The default template redraws its message apart from the `Alert` around it:
+/// every update, of the message, the title or both, still lands.
+#[test]
+fn the_default_template_follows_every_update() {
+    fn app() -> Element {
+        let notify = use_notifications();
+        use_context_provider(|| (notify, notify.show("Uploading 0%")));
+        rsx! {
+            LiberoProvider { Notifications {} }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.render_immediate(&mut NoOpMutations);
+    let (notify, id) = dom.in_scope(ScopeId::APP, || {
+        consume_context::<(NotificationHandle<NotificationData>, NotificationId)>()
+    });
+    let mut update = |data: NotificationData| {
+        dom.in_runtime(|| notify.update(id, data));
+        dom.render_immediate(&mut NoOpMutations);
+        let html = body(&dioxus_ssr::render(&dom));
+        items(&html)[0].to_string()
+    };
+
+    let shown = update("Uploading 40%".into());
+    assert!(shown.contains("Uploading 40%"), "{shown}");
+
+    let shown = update(NotificationData {
+        title: Some("Upload".into()),
+        message: "Uploading 80%".into(),
+        ..Default::default()
+    });
+    assert!(shown.contains("Upload</span>"), "{shown}");
+    assert!(shown.contains("Uploading 80%"), "{shown}");
+
+    let shown = update(NotificationData {
+        title: Some("Uploaded".into()),
+        ..Default::default()
+    });
+    assert!(shown.contains("Uploaded"), "{shown}");
+    assert!(!shown.contains("Uploading"), "{shown}");
+    assert!(!shown.contains("aria-describedby"), "{shown}");
+
+    let shown = update("Done".into());
+    assert!(!shown.contains("Uploaded"), "{shown}");
+    assert!(shown.contains("Done"), "{shown}");
+    assert!(shown.contains("aria-describedby"), "{shown}");
+}
+
 /// Short enough that a test waits milliseconds, not seconds.
 static FAST: Theme = Theme {
     notifications: NotificationsDefaults {

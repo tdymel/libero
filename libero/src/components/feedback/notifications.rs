@@ -570,13 +570,20 @@ pub fn use_notifications_with<T: 'static>(
 
 fn default_template(s: NotificationScope<NotificationData>) -> Element {
     let theme = use_theme();
-    let data = s.args();
+    // All but the message's text, so an update of only that ("Uploading 40%")
+    // redraws `NotificationMessage` and not the `Alert`.
+    let chrome = use_memo(move || {
+        let data = s.args();
+        let has_message = !data.message.is_empty();
+        (data.title, data.color, data.variant, data.icon, has_message)
+    });
+    let (title, color, variant, icon, has_message) = chrome();
     // `Alert` gives a message slot and `aria-describedby` to any children at
     // all, so an empty message passes none rather than an empty text node.
-    let message = if data.message.is_empty() {
-        VNode::empty()
+    let message = if has_message {
+        rsx! { NotificationMessage { args: s.args } }
     } else {
-        rsx! { "{data.message}" }
+        VNode::empty()
     };
 
     rsx! {
@@ -584,16 +591,31 @@ fn default_template(s: NotificationScope<NotificationData>) -> Element {
             // Not `alert`: the region around it is already live, and
             // a live region inside another is announced twice or not at all.
             role: "group",
-            title: data.title,
-            color: data.color,
-            variant: data.variant,
-            icon: data.icon,
+            title,
+            color,
+            variant,
+            icon,
             onclose: s.closable().then(|| EventHandler::new(move |()| s.close())),
             close_label: theme.notifications.close_label,
             sx: &DEFAULT_TEMPLATE_SX,
             children: message,
         }
     }
+}
+
+#[derive(Props, Clone, PartialEq)]
+struct MessageProps {
+    args: Signal<std::boxed::Box<dyn Any>>,
+}
+
+/// The default template's message text, the one scope an update of it redraws.
+fn NotificationMessage(props: MessageProps) -> Element {
+    let args = props.args.read();
+    let message = args
+        .downcast_ref::<NotificationData>()
+        .map(|data| data.message.as_str())
+        .unwrap_or_default();
+    rsx! { "{message}" }
 }
 
 /// Where the stacks and their notifications render. **Render it once**, near
@@ -698,45 +720,14 @@ pub fn Notifications(
                 .map(|item| item.id)
                 .collect(),
         );
-        let regions = [("assertive", assertive), ("polite", polite)];
 
         rsx! {
-            Float {
+            NotificationStack {
                 key: "{placement.as_str()}",
+                placement,
                 fixed: !contained,
-                placement: Input::Value(placement),
-                offset_x: edge_offset(placement, Axis::Horizontal),
-                offset_y: edge_offset(placement, Axis::Vertical),
-                z_index: Z_INDEX_NOTIFICATION.value(),
-                sx: &STACK_SX,
-                for (live, items) in regions {
-                    Box {
-                        key: "{live}",
-                        framework_sx: &REGION_SX,
-                        "aria-live": live,
-                        if !items.is_empty() {
-                            Box {
-                                component: HtmlTag::Ol,
-                                framework_sx: &LIST_SX,
-                                // Both: Safari with VoiceOver drops list
-                                // semantics from a `list-style: none` list.
-                                role: "list",
-                                for item in items {
-                                    NotificationItem {
-                                        key: "{item.id.0}",
-                                        store,
-                                        id: item.id,
-                                        draw: item.draw,
-                                        auto_close: item.auto_close,
-                                        leaving: item.leaving,
-                                        exit_ms: item.exit_ms,
-                                        live: item.live,
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                assertive,
+                polite,
             }
         }
     });
@@ -759,6 +750,60 @@ pub fn Notifications(
     }
     use_portal(Some(content));
     rsx! {}
+}
+
+#[derive(Props, Clone, PartialEq)]
+struct StackProps {
+    placement: Placement,
+    fixed: bool,
+    assertive: Vec<ItemProps>,
+    polite: Vec<ItemProps>,
+}
+
+/// One stack in a scope of its own: a list write redraws only the stack it
+/// changed, and a stack with nothing in it never redraws.
+fn NotificationStack(props: StackProps) -> Element {
+    let placement = props.placement;
+    let regions = [("assertive", props.assertive), ("polite", props.polite)];
+
+    rsx! {
+        Float {
+            fixed: props.fixed,
+            placement: Input::Value(placement),
+            offset_x: edge_offset(placement, Axis::Horizontal),
+            offset_y: edge_offset(placement, Axis::Vertical),
+            z_index: Z_INDEX_NOTIFICATION.value(),
+            sx: &STACK_SX,
+            for (live, items) in regions {
+                Box {
+                    key: "{live}",
+                    framework_sx: &REGION_SX,
+                    "aria-live": live,
+                    if !items.is_empty() {
+                        Box {
+                            component: HtmlTag::Ol,
+                            framework_sx: &LIST_SX,
+                            // Both: Safari with VoiceOver drops list
+                            // semantics from a `list-style: none` list.
+                            role: "list",
+                            for item in items {
+                                NotificationItem {
+                                    key: "{item.id.0}",
+                                    store: item.store,
+                                    id: item.id,
+                                    draw: item.draw,
+                                    auto_close: item.auto_close,
+                                    leaving: item.leaving,
+                                    exit_ms: item.exit_ms,
+                                    live: item.live,
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 enum Axis {
