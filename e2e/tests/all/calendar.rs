@@ -272,6 +272,110 @@ fn the_levels_keep_focus_and_the_month() {
     });
 }
 
+#[test]
+fn the_month_view_meets_the_baseline() {
+    Suite::new("calendar-month", "/calendar/month")
+        .focusable("[role=grid] [data-date='2026-03-01']")
+        .targets("[role=grid] [data-slot=cell]")
+        .run();
+}
+
+/// Rows of three gridcells, one of them selected, under a labelled grid.
+const GRID_SHAPE: &str = "(() => { const grid = document.querySelector('[role=grid]'); \
+     const rows = [...grid.children]; \
+     const cells = grid.querySelectorAll('[role=gridcell]'); \
+     return rows.length === 4 && rows.every(r => r.getAttribute('role') === 'row' \
+       && [...r.children].filter(c => c.getAttribute('role') === 'gridcell').length === 3) \
+       && cells.length === 12 \
+       && [...cells].every(c => ['true', 'false'].includes(c.getAttribute('aria-selected'))) \
+       && grid.querySelectorAll('[aria-selected=true]').length === 1; })()";
+
+/// The month and year views are APG grids like the day view: rows of cells,
+/// arrows, Home/End and PageUp/PageDown, a step off the page pages it (473).
+#[test]
+fn the_month_and_year_views_are_grids() {
+    block_on(async {
+        let fixture = Fixture::open("/calendar/month", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(page, GRID_SHAPE, "the month view's grid shape")
+            .await
+            .unwrap();
+
+        keyboard::tab_to(page, "[role=grid] [data-date='2026-03-01']", 10)
+            .await
+            .unwrap();
+        let steps: &[(Key, &str, &str, &str)] = &[
+            (keyboard::ARROW_RIGHT, "2026-04-01", "2026", "ArrowRight"),
+            (keyboard::ARROW_DOWN, "2026-07-01", "2026", "ArrowDown"),
+            (keyboard::END, "2026-09-01", "2026", "End"),
+            (keyboard::HOME, "2026-07-01", "2026", "Home"),
+            (keyboard::ARROW_UP, "2026-04-01", "2026", "ArrowUp"),
+            (keyboard::PAGE_DOWN, "2027-04-01", "2027", "PageDown"),
+            (keyboard::PAGE_UP, "2026-04-01", "2026", "PageUp"),
+            (keyboard::ARROW_UP, "2026-01-01", "2026", "ArrowUp"),
+            (
+                keyboard::ARROW_LEFT,
+                "2025-12-01",
+                "2025",
+                "ArrowLeft off the year",
+            ),
+        ];
+        for (key, date, grid, what) in steps {
+            keyboard::press(page, *key).await.unwrap();
+            expect_focus(page, date, grid, what, "desktop").await;
+        }
+
+        pointer::click(page, "[data-slot=title]").await.unwrap();
+        wait::for_js_true(page, GRID_SHAPE, "the year view's grid shape")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=grid]').getAttribute('aria-label') === '2020 – 2029' \
+             && document.querySelector(\"[role=gridcell][data-date='2026-01-01']\").getAttribute('aria-selected') === 'true'",
+            "the year view to label its decade and select 2026",
+        )
+        .await
+        .unwrap();
+        // The title hands focus to the year the view stood on.
+        expect_focus(page, "2025-01-01", "2020 – 2029", "the climb", "desktop").await;
+        // Rows run 2019-2021, ..., 2028-2030; 2030 belongs to the next decade.
+        let steps: &[(Key, &str, &str, &str)] = &[
+            (
+                keyboard::ARROW_DOWN,
+                "2028-01-01",
+                "2020 – 2029",
+                "ArrowDown",
+            ),
+            (
+                keyboard::END,
+                "2030-01-01",
+                "2030 – 2039",
+                "End onto the next decade",
+            ),
+            (
+                keyboard::ARROW_DOWN,
+                "2033-01-01",
+                "2030 – 2039",
+                "ArrowDown",
+            ),
+            (keyboard::PAGE_UP, "2023-01-01", "2020 – 2029", "PageUp"),
+        ];
+        for (key, date, grid, what) in steps {
+            keyboard::press(page, *key).await.unwrap();
+            expect_focus(page, date, grid, what, "desktop").await;
+        }
+
+        fixture
+            .console
+            .assert_clean("the month and year grids")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Waits until focus is on `date`'s own cell in the grid titled `month`.
 async fn expect_focus(page: &chromiumoxide::Page, date: &str, month: &str, what: &str, at: &str) {
     let check = format!(

@@ -354,7 +354,7 @@ impl FocusRequest {
             let mut request = self.request;
             request.set(Some(match target {
                 Focus::Title => "[data-slot='title']".to_string(),
-                Focus::Stop => ":is([role='grid'], [data-slot='cells']) [tabindex='0']".to_string(),
+                Focus::Stop => "[role='grid'] [tabindex='0']".to_string(),
                 Focus::Date(day) => format!("[data-date='{day}']:not([data-outside])"),
             }));
         }
@@ -698,12 +698,14 @@ impl View {
                 .any(|day| first_of_month(day) == month);
             rsx! {
                 button {
-                    key: "{month}",
                     r#type: "button",
+                    role: "gridcell",
+                    "aria-selected": if picked { "true" } else { "false" },
                     "data-slot": "cell",
                     "data-date": "{month}",
                     "data-selected": picked.then_some("true"),
                     "data-today": today.is_some_and(|today| first_of_month(today) == month).then_some("true"),
+                    "aria-label": format_date(month, (names.format)(DateLevel::Month), names),
                     disabled,
                     tabindex: self.tabindex(month == cell_stop),
                     onclick: move |_| {
@@ -739,10 +741,17 @@ impl View {
                 }
                 {self.nav(names.next_year, max.is_some_and(|max| year >= max.year()), add_months(first, 12), true)}
             }
-            div { "data-slot": "cells", onkeydown: move |event| self.cell_keydown(event, cell_stop),
-                for index in 0..12 {
-                    {cell(index)}
-                }
+            div {
+                "data-slot": "cells",
+                role: "grid",
+                "aria-label": "{year}",
+                onkeydown: move |event| self.cell_keydown(event, cell_stop),
+                // Rows written out, not looped: one template, cells diffed in
+                // place.
+                div { role: "row", {cell(0)} {cell(1)} {cell(2)} }
+                div { role: "row", {cell(3)} {cell(4)} {cell(5)} }
+                div { role: "row", {cell(6)} {cell(7)} {cell(8)} }
+                div { role: "row", {cell(9)} {cell(10)} {cell(11)} }
             }
         }
     }
@@ -780,8 +789,9 @@ impl View {
             let outside = !(0..10).contains(&offset);
             rsx! {
                 button {
-                    key: "{shown_year}",
                     r#type: "button",
+                    role: "gridcell",
+                    "aria-selected": if picked { "true" } else { "false" },
                     "data-slot": "cell",
                     "data-date": "{year_start}",
                     "data-outside": outside.then_some("true"),
@@ -815,10 +825,15 @@ impl View {
                 }
                 {self.nav(names.next_decade, max.is_some_and(|max| decade + 9 >= max.year()), add_months(first, 120), true)}
             }
-            div { "data-slot": "cells", onkeydown: move |event| self.cell_keydown(event, cell_stop),
-                for offset in -1..11 {
-                    {cell(offset)}
-                }
+            div {
+                "data-slot": "cells",
+                role: "grid",
+                "aria-label": "{decade} – {decade + 9}",
+                onkeydown: move |event| self.cell_keydown(event, cell_stop),
+                div { role: "row", {cell(-1)} {cell(0)} {cell(1)} }
+                div { role: "row", {cell(2)} {cell(3)} {cell(4)} }
+                div { role: "row", {cell(5)} {cell(6)} {cell(7)} }
+                div { role: "row", {cell(8)} {cell(9)} {cell(10)} }
             }
         }
     }

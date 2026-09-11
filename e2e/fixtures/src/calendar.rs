@@ -1,9 +1,10 @@
-//! `DatePicker`'s day grid, and `DateRangePicker`'s two.
+//! `DatePicker`'s day grid, `DateRangePicker`'s two, and `MonthPicker`'s
+//! month and year grids.
 
 use dioxus::prelude::*;
 use libero::{
     chrono::NaiveDate,
-    components::{Button, DatePicker, DateRange, DateRangePicker, Flex},
+    components::{Button, DatePicker, DateRange, DateRangePicker, Flex, MonthPicker},
 };
 
 use crate::Routes;
@@ -11,7 +12,26 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/calendar", || rsx! { CalendarPage {} }),
     ("/calendar/range", || rsx! { RangePage {} }),
+    ("/calendar/month", || rsx! { MonthPage {} }),
 ];
+
+/// March 2026 picked and `today`; its title climbs to the year view.
+#[component]
+fn MonthPage() -> Element {
+    let mut month = use_signal(|| NaiveDate::from_ymd_opt(2026, 3, 1));
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            MonthPicker {
+                value: month(),
+                today: NaiveDate::from_ymd_opt(2026, 3, 18),
+                onchange: move |next: Option<NaiveDate>| month.set(next),
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
 
 /// Picked and `today` pinned to the same Wednesday, so the grid and its tab
 /// stop never depend on the clock. Buttons either side give Tab a way in.

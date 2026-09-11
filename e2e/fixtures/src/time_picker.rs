@@ -11,7 +11,30 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/time-picker", || rsx! { TimePickerPage {} }),
     ("/time-picker/date-time", || rsx! { DateTimePage {} }),
+    ("/time-picker/analog", || rsx! { AnalogPage {} }),
 ];
+
+/// An analog face at a one-minute step, with seconds, from 10:00 with `min`
+/// 09:30.
+#[component]
+fn AnalogPage() -> Element {
+    let mut fine = use_signal(|| NaiveTime::from_hms_opt(10, 0, 0));
+    let shown = fine().map(|value| value.to_string()).unwrap_or_default();
+
+    rsx! {
+        TimePicker {
+            id: "fine",
+            variant: "analog",
+            twelve_hour: false,
+            step: 1,
+            with_seconds: true,
+            min: NaiveTime::from_hms_opt(9, 30, 0),
+            value: fine(),
+            onchange: move |next: Option<NaiveTime>| fine.set(next),
+        }
+        span { id: "fine-value", {shown} }
+    }
+}
 
 /// 24 hours and a 5-minute step pinned, so the options never depend on the
 /// theme's locale.

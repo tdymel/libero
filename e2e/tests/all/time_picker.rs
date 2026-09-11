@@ -5,7 +5,7 @@
 //! each echoing its value into `#<variant>-value`.
 
 use e2e::browser::block_on;
-use e2e::passes::keyboard;
+use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 
 const MINUTES: &str = "#digital [data-column='Minutes']";
@@ -137,14 +137,119 @@ fn a_time_picked_first_lands_on_today() {
 
 const HOURS_ANY: &str = "[data-column='Hours']";
 
+/// A one-minute step and seconds (todo 474): the face picks by the pointer's
+/// angle, not only at the marks, an hour keeps its minute inside `min`, and a
+/// release moves on to the seconds hand.
+#[test]
+fn the_analog_face_reaches_every_minute_and_second() {
+    block_on(async {
+        let fixture = Fixture::open("/time-picker/analog", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let value = |value: &'static str, what: &'static str| async move {
+            let check = format!("document.getElementById('fine-value').textContent === {value:?}");
+            wait::for_js_true(page, &check, what).await.unwrap();
+        };
+        // The face's label names the hand it shows; the readout buttons carry
+        // the same three labels.
+        let showing = |nth: usize, what: &'static str| async move {
+            let check = format!(
+                "document.querySelector('#fine [data-slot=face]').getAttribute('aria-label') \
+                 === document.querySelectorAll('#fine [data-slot=readout] button')[{nth}].getAttribute('aria-label')"
+            );
+            wait::for_js_true(page, &check, what).await.unwrap();
+        };
+
+        press_at(page, mark_centre(page, "#fine", "9").await).await;
+        value("09:30:00", "hour 9 to keep :30 inside min").await;
+        showing(1, "the release to move on to the minutes").await;
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('#fine [data-slot=ticks]')",
+            "a tick per minute",
+        )
+        .await
+        .unwrap();
+
+        press_at(page, face_point(page, 37.0 / 60.0).await).await;
+        value("09:37:00", "a press between the marks to pick minute 37").await;
+        showing(2, "the release to move on to the seconds").await;
+
+        press_at(page, face_point(page, 13.0 / 60.0).await).await;
+        value("09:37:13", "a press to pick second 13").await;
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('#fine [data-slot=hand]')",
+            "a seconds hand",
+        )
+        .await
+        .unwrap();
+
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        value("09:37:14", "ArrowUp to step a second").await;
+
+        pointer::click(page, "#fine [data-slot=readout] button:nth-of-type(2)")
+            .await
+            .unwrap();
+        showing(1, "the minutes button to show the minutes").await;
+        page.evaluate("document.querySelector('#fine [data-slot=face]').focus()")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        value("09:38:14", "ArrowUp to step a minute").await;
+
+        let (from, to) = (
+            face_point(page, 40.0 / 60.0).await,
+            face_point(page, 50.0 / 60.0).await,
+        );
+        pointer::drag(page, from, to, 8).await.unwrap();
+        value("09:50:14", "a drag to follow the pointer to minute 50").await;
+
+        fixture
+            .console
+            .assert_clean("the fine analog face")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A press and release at one point.
+async fn press_at(page: &chromiumoxide::Page, at: pointer::Point) {
+    pointer::drag(page, at, at, 1).await.unwrap();
+}
+
+/// The point on `#fine`'s outer ring a `turn` clockwise from 12.
+async fn face_point(page: &chromiumoxide::Page, turn: f64) -> pointer::Point {
+    page.evaluate(format!(
+        "(() => {{ const r = document.querySelector('#fine [data-slot=face]').getBoundingClientRect(); \
+         const a = {turn} * 2 * Math.PI; \
+         return {{ x: r.x + r.width / 2 + 0.4 * r.width * Math.sin(a), \
+                   y: r.y + r.height / 2 - 0.4 * r.height * Math.cos(a) }}; }})()"
+    ))
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
+/// The centre of the mark labelled `label` under `root`.
+async fn mark_centre(page: &chromiumoxide::Page, root: &str, label: &str) -> pointer::Point {
+    page.evaluate(format!(
+        "(() => {{ const r = [...document.querySelectorAll('{root} [data-slot=mark]')] \
+         .find(mark => mark.textContent === {label:?}).getBoundingClientRect(); \
+         return {{ x: r.x + r.width / 2, y: r.y + r.height / 2 }}; }})()"
+    ))
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
 const MARKS: &str = "[...document.querySelectorAll(\"#analog [data-slot='mark']\")]";
 
 async fn click_mark(page: &chromiumoxide::Page, label: &str) {
-    page.evaluate(format!(
-        "{MARKS}.find(mark => mark.textContent === {label:?}).click()"
-    ))
-    .await
-    .unwrap();
+    press_at(page, mark_centre(page, "#analog", label).await).await;
 }
 
 /// Waits until the analog picker reads `value` and `label` is its only picked

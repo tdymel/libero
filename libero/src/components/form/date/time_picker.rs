@@ -15,7 +15,9 @@ use crate::{
         common::{focus_ring_sx, input_from_str, inset_focus_ring_sx},
         layout::use_box,
     },
-    hooks::{ElementHandle, use_element, use_theme},
+    hooks::{
+        Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_theme,
+    },
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
     theme::{
@@ -87,16 +89,45 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .width(format!("calc(7 * {day})"))
                 .height(format!("calc(7 * {day})"))
                 .border_radius("50%")
-                .background("muted.1"),
+                .background("muted.1")
+                .cursor("pointer")
+                // A touch drags the hand rather than scrolling the page.
+                .touch_action("none")
+                .user_select("none"),
         )
         .selector(
             "& [data-slot='mark']",
             button
+                .clone()
                 .position("absolute")
                 .width(day.clone())
                 .height(day)
                 .border_radius("50%")
                 .padding("0"),
+        )
+        .selector(
+            "& [data-slot='mark'][data-disabled]",
+            sx().opacity("0.4")
+                .cursor("not-allowed")
+                .hover(sx().background("transparent")),
+        )
+        // One tick per step where the marks are coarser than the step.
+        .selector(
+            "& [data-slot='ticks']",
+            sx().position("absolute")
+                .inset("4%")
+                .border_radius("50%")
+                .background(
+                    "repeating-conic-gradient(from -0.5deg, color-mix(in srgb, currentColor 35%, transparent) 0 1deg, transparent 1deg var(--libero-clock-tick))",
+                ),
+        )
+        // The face's own fill over the middle leaves the ticks a thin ring.
+        .selector(
+            "& [data-slot='ticks'] > div",
+            sx().position("absolute")
+                .inset("4px")
+                .border_radius("50%")
+                .background("muted.1"),
         )
         .selector(
             "& [data-slot='hand'], & [data-slot='pivot']",
@@ -129,11 +160,16 @@ date_props! {
 }
 
 /// Which hand an analog picker is setting.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum Hand {
     Hour,
     Minute,
+    Second,
 }
+
+/// Where a mark's centre sits, as a share of the face's half width.
+const OUTER_RING: f64 = 0.8;
+const INNER_RING: f64 = 0.52;
 
 /// A time to pick - scrolling columns of hours, minutes and seconds, or an
 /// analog clock face that takes the hour, then the minute.
@@ -272,14 +308,81 @@ impl ClockView {
             return None;
         }
         let base = self.base;
-        let next = at(base.hour() % 12 + offset, base.minute(), base.second());
-        let next = self.min.map_or(next, |min| next.max(min));
-        Some(self.max.map_or(next, |max| next.min(max)))
+        Some(at(base.hour() % 12 + offset, base.minute(), base.second()))
     }
 
+    fn clamp(self, time: NaiveTime) -> NaiveTime {
+        let time = self.min.map_or(time, |min| time.max(min));
+        self.max.map_or(time, |max| time.min(max))
+    }
+
+    /// Emits `next` pulled inside `min` and `max`: an hour picked at 9 with
+    /// `min` 09:30 keeps `base`'s minute only where it is allowed.
     fn emit(self, next: NaiveTime) {
         if let Some(onchange) = &self.onchange {
-            onchange.call(Some(next));
+            onchange.call(Some(self.clamp(next)));
+        }
+    }
+
+    /// The hour a mark stands for, by its place on the ring.
+    fn hour_at(self, index: u32, inner: bool) -> u32 {
+        match (inner, index) {
+            (false, 0) => self.hour_of(12),
+            (false, index) => self.hour_of(index),
+            (true, 0) => 0,
+            (true, index) => index + 12,
+        }
+    }
+
+    /// The minutes a step of `hand` moves: an hour's are its own.
+    fn step_of(self, hand: Hand) -> u32 {
+        match hand {
+            Hand::Minute => u32::from(self.step),
+            _ => 1,
+        }
+    }
+
+    /// The time a point on the face picks for `shown`: `turn` is clockwise
+    /// from 12 in `0..1`, `reach` the distance from the centre over the half
+    /// width. `None` where `min` or `max` rule it out.
+    fn at_point(self, shown: Hand, turn: f64, reach: f64) -> Option<NaiveTime> {
+        let base = self.base;
+        let (hour, minute, second) = (base.hour(), base.minute(), base.second());
+        match shown {
+            Hand::Hour => {
+                let inner = !self.twelve && reach < (OUTER_RING + INNER_RING) / 2.0;
+                let hour = self.hour_at((turn * 12.0).round() as u32 % 12, inner);
+                self.within(at(hour, 0, 0), at(hour, 59, 59))
+                    .then(|| at(hour, minute, second))
+            }
+            Hand::Minute | Hand::Second => {
+                let step = f64::from(self.step_of(shown));
+                // The nearest step, or 0 from the other side of 12 when a
+                // step does not divide the hour.
+                let minutes = turn * 60.0;
+                let near = (minutes / step).round() * step;
+                let snapped = match near >= 60.0 || 60.0 - minutes < (minutes - near).abs() {
+                    true => 0,
+                    false => near as u32,
+                };
+                let (from, to) = match shown {
+                    Hand::Minute => (at(hour, snapped, 0), at(hour, snapped, 59)),
+                    _ => (at(hour, minute, snapped), at(hour, minute, snapped)),
+                };
+                self.within(from, to).then_some(match shown {
+                    Hand::Minute => at(hour, snapped, second),
+                    _ => to,
+                })
+            }
+        }
+    }
+
+    /// The hand an analog pick moves on to, if any.
+    fn after(self, hand: Hand) -> Option<Hand> {
+        match hand {
+            Hand::Hour => Some(Hand::Minute),
+            Hand::Minute if self.with_seconds => Some(Hand::Second),
+            _ => None,
         }
     }
 
@@ -297,24 +400,6 @@ impl ClockView {
             },
         };
         self.emit(next);
-    }
-
-    /// A mark on the analog face: an hour moves the hand on to the minutes.
-    fn pick_mark(self, shown: Hand, inner: bool, index: u32) {
-        let mut hand = self.hand;
-        match shown {
-            Hand::Hour => {
-                let hour = match (inner, index) {
-                    (false, 0) => self.hour_of(12),
-                    (false, index) => self.hour_of(index),
-                    (true, 0) => 0,
-                    (true, index) => index + 12,
-                };
-                self.emit(at(hour, self.base.minute(), 0));
-                hand.set(Hand::Minute);
-            }
-            Hand::Minute => self.emit(at(self.base.hour(), index * 5, 0)),
-        }
     }
 
     /// `handles` are the hours, minutes, seconds and meridiem columns.
@@ -471,12 +556,25 @@ impl ClockView {
                     }
                 })
                 .collect(),
+            Hand::Second => (0..12u32)
+                .map(|index| {
+                    let second = index * 5;
+                    let time = at(base.hour(), base.minute(), second);
+                    Mark {
+                        index,
+                        inner: false,
+                        label: TWO_DIGITS[second as usize],
+                        selected: value.is_some_and(|value| value.second() == second),
+                        disabled: !self.within(time, time),
+                    }
+                })
+                .collect(),
         }
     }
 
     /// The face is a slider over the hand it shows: the arrows step an hour,
-    /// or `step` minutes, past what `min` and `max` rule out; Enter moves from
-    /// the hour to the minute.
+    /// `step` minutes or a second, past what `min` and `max` rule out; Enter
+    /// moves on to the next hand.
     fn face_keydown(self, event: KeyboardEvent) {
         let mut hand = self.hand;
         let delta: i64 = match event.key() {
@@ -484,37 +582,50 @@ impl ClockView {
             Key::ArrowDown | Key::ArrowLeft => -1,
             Key::Enter => {
                 event.prevent_default();
-                if hand() == Hand::Hour {
-                    hand.set(Hand::Minute);
+                if let Some(next) = self.after(hand()) {
+                    hand.set(next);
                 }
                 return;
             }
             _ => return,
         };
         event.prevent_default();
-        let step = i64::from(self.step);
+        let step = i64::from(self.step_of(hand()));
+        // Off the step, the first press lands on it.
+        let snap = |value: u32| {
+            let value = i64::from(value);
+            let snapped = match delta > 0 {
+                true => (value / step + 1) * step,
+                false => (value + step - 1) / step * step - step,
+            };
+            // Round the hour onto a step, also one that does not divide it.
+            match snapped {
+                60.. => 0,
+                ..0 => (59 / step * step) as u32,
+                _ => snapped as u32,
+            }
+        };
         let mut next = self.base;
         for _ in 0..60 {
+            let (hour, minute, second) = (next.hour(), next.minute(), next.second());
             let (candidate, open) = match hand() {
                 Hand::Hour => {
-                    let hour = (i64::from(next.hour()) + delta).rem_euclid(24) as u32;
+                    let hour = (i64::from(hour) + delta).rem_euclid(24) as u32;
                     (
-                        at(hour, next.minute(), 0),
+                        at(hour, minute, second),
                         self.within(at(hour, 0, 0), at(hour, 59, 59)),
                     )
                 }
                 Hand::Minute => {
-                    let minute = i64::from(next.minute());
-                    // Off the step, the first press lands on it.
-                    let snapped = match delta > 0 {
-                        true => (minute / step + 1) * step,
-                        false => (minute + step - 1) / step * step - step,
-                    };
-                    let minute = snapped.rem_euclid(60) as u32;
+                    let minute = snap(minute);
                     (
-                        at(next.hour(), minute, 0),
-                        self.within(at(next.hour(), minute, 0), at(next.hour(), minute, 59)),
+                        at(hour, minute, second),
+                        self.within(at(hour, minute, 0), at(hour, minute, 59)),
                     )
+                }
+                Hand::Second => {
+                    let time = at(hour, minute, snap(second));
+                    (time, self.within(time, time))
                 }
             };
             next = candidate;
@@ -525,12 +636,14 @@ impl ClockView {
         }
     }
 
-    fn analog_view(self, pick_mark: Callback<(Hand, bool, u32)>) -> Element {
+    /// `face` is the face's element, `drag` its pointer handlers.
+    fn analog_view(self, face: ElementHandle, drag: Drag) -> Element {
         let ClockView {
             names,
             value,
             pm,
             twelve,
+            with_seconds,
             mut hand,
             ..
         } = self;
@@ -546,6 +659,7 @@ impl ClockView {
                     )
                 }
                 Hand::Minute => (f64::from(value.minute()) * 6.0, 40.0),
+                Hand::Second => (f64::from(value.second()) * 6.0, 40.0),
             };
             let style = format!(
                 "left: 50%; top: 50%; width: 2px; height: {radius}%; transform-origin: 50% 100%; transform: translate(-50%, -100%) rotate({degrees}deg)"
@@ -564,6 +678,29 @@ impl ClockView {
             })
             .unwrap_or("--");
         let minute_text = value.map_or("--", |value| TWO_DIGITS[value.minute() as usize]);
+        let second_text = value.map_or("--", |value| TWO_DIGITS[value.second() as usize]);
+        let seconds = with_seconds.then(|| {
+            rsx! {
+                span { ":" }
+                button {
+                    r#type: "button",
+                    "aria-label": names.seconds_label,
+                    "data-active": (hand() == Hand::Second).then_some("true"),
+                    "aria-pressed": if hand() == Hand::Second { "true" } else { "false" },
+                    tabindex,
+                    onclick: move |_| hand.set(Hand::Second),
+                    "{second_text}"
+                }
+            }
+        });
+        // Steps finer than the marks get a tick each.
+        let step = self.step_of(hand());
+        let ticks = (hand() != Hand::Hour && !step.is_multiple_of(5)).then(|| {
+            let style = format!("--libero-clock-tick: {}deg", step * 6);
+            rsx! {
+                div { "data-slot": "ticks", style, div {} }
+            }
+        });
         let halves = twelve.then(|| {
             let (am_at, pm_at) = (self.half(false), self.half(true));
             rsx! {
@@ -608,6 +745,12 @@ impl ClockView {
                 value.map(|value| value.minute()),
                 59,
             ),
+            Hand::Second => (
+                names.seconds_label,
+                second_text,
+                value.map(|value| value.second()),
+                59,
+            ),
         };
         rsx! {
             div { "data-slot": "readout",
@@ -630,6 +773,7 @@ impl ClockView {
                     onclick: move |_| hand.set(Hand::Minute),
                     "{minute_text}"
                 }
+                {seconds}
                 {halves}
             }
             div {
@@ -641,13 +785,19 @@ impl ClockView {
                 "aria-valuenow": face_now,
                 "aria-valuemin": 0,
                 "aria-valuemax": face_max,
+                onmounted: face.mount(),
                 onkeydown: move |event| self.face_keydown(event),
+                onpointerdown: drag.onpointerdown,
+                onpointermove: drag.onpointermove,
+                onpointerup: drag.onpointerup,
+                onpointercancel: drag.onpointercancel,
+                {ticks}
                 {pointer}
                 div {
                     "data-slot": "pivot",
                     style: "left: 50%; top: 50%; width: 6px; height: 6px; border-radius: 50%; transform: translate(-50%, -50%)",
                 }
-                ClockMarks { hand: hand(), marks, onpick: pick_mark }
+                ClockMarks { marks }
             }
         }
     }
@@ -693,10 +843,8 @@ pub(super) fn Clock(props: ClockProps) -> Element {
     // One identity across renders, so the columns' props compare equal and a
     // pick in one column skips the others.
     let pick = use_callback(move |(column, index): (Column, usize)| clock.pick(column, index));
-    // The same for a mark on the analog face.
-    let pick_mark = use_callback(move |(shown, inner, index): (Hand, bool, u32)| {
-        clock.pick_mark(shown, inner, index)
-    });
+    let face = use_element();
+    let drag = use_face_drag(clock, face);
 
     let body = match props.variant {
         TimePickerVariant::Digital => clock.digital_view(
@@ -710,7 +858,7 @@ pub(super) fn Clock(props: ClockProps) -> Element {
             focus_request,
             pick,
         ),
-        TimePickerVariant::Analog => clock.analog_view(pick_mark),
+        TimePickerVariant::Analog => clock.analog_view(face, drag),
     };
 
     let states: Input<States> = props
@@ -741,6 +889,94 @@ pub(super) fn Clock(props: ClockProps) -> Element {
             {hidden}
         },
     )
+}
+
+/// One press on the analog face.
+#[derive(Clone, Copy)]
+struct Press {
+    /// The face's centre and half width, once measured.
+    centre: Option<(f64, f64, f64)>,
+    picked: bool,
+    released: bool,
+}
+
+/// Pointer picks on the analog face: a press or a drag sets the hand shown to
+/// the pointer's angle, and the release moves on to the next hand.
+fn use_face_drag(clock: ClockView, face: ElementHandle) -> Drag {
+    let mut press = use_hook(|| CopyValue::new(None::<Press>));
+    let pick = move |clock: ClockView, x: f64, y: f64| {
+        let Some(Press {
+            centre: Some((cx, cy, half)),
+            ..
+        }) = press.cloned()
+        else {
+            return;
+        };
+        let (dx, dy) = (x - cx, y - cy);
+        let turn = (dx.atan2(-dy) / std::f64::consts::TAU).rem_euclid(1.0);
+        let Some(next) = clock.at_point((clock.hand)(), turn, dx.hypot(dy) / half) else {
+            return;
+        };
+        if let Some(press) = { press }.write().as_mut() {
+            press.picked = true;
+        }
+        if clock.value != Some(clock.clamp(next)) {
+            clock.emit(next);
+        }
+    };
+    let finish = move |clock: ClockView| {
+        let picked = press.cloned().is_some_and(|press| press.picked);
+        { press }.set(None);
+        let mut hand = clock.hand;
+        if let Some(next) = clock.after(hand()).filter(|_| picked) {
+            hand.set(next);
+        }
+    };
+    let onstart = use_callback(move |start: DragStart| {
+        // Started here, awaited in the task: see `platform::Read`.
+        let (offset, size) = (face.client_offset(), face.dimensions());
+        press.set(Some(Press {
+            centre: None,
+            picked: false,
+            released: false,
+        }));
+        spawn(async move {
+            let (Ok((left, top)), Ok(size)) = (offset.await, size.await) else {
+                press.set(None);
+                start.cancel.call(());
+                return;
+            };
+            let half = size.width / 2.0;
+            let Some(released) = press.write().as_mut().map(|press| {
+                press.centre = Some((left + half, top + size.height / 2.0, half));
+                press.released
+            }) else {
+                return;
+            };
+            pick(clock, start.client.x, start.client.y);
+            if released {
+                finish(clock);
+            }
+        });
+    });
+    let onmove = use_callback(move |step: DragMove| pick(clock, step.client.x, step.client.y));
+    let onend = use_callback(move |()| {
+        let measured = press.cloned().is_some_and(|press| press.centre.is_some());
+        match measured {
+            true => finish(clock),
+            false => {
+                if let Some(press) = press.write().as_mut() {
+                    press.released = true;
+                }
+            }
+        }
+    });
+    use_drag(DragOptions {
+        capture: face,
+        onstart,
+        onmove,
+        onend,
+    })
 }
 
 /// A column of the digital variant. Its own scope: a pick in another column
@@ -846,21 +1082,9 @@ struct Mark {
 
 /// The marks on the analog face. Its own scope with plain values, so a value
 /// change that moves no mark - a minute, while the face shows hours - skips
-/// it.
-#[derive(Props, Clone, PartialEq)]
-struct ClockMarksProps {
-    hand: Hand,
-    marks: Vec<Mark>,
-    onpick: Callback<(Hand, bool, u32)>,
-}
-
+/// it. Labels only: the face picks by the pointer's angle.
 #[component]
-fn ClockMarks(props: ClockMarksProps) -> Element {
-    let ClockMarksProps {
-        hand,
-        marks,
-        onpick,
-    } = props;
+fn ClockMarks(marks: Vec<Mark>) -> Element {
     let marks = marks.into_iter().map(|mark| {
         let Mark {
             index,
@@ -869,7 +1093,7 @@ fn ClockMarks(props: ClockMarksProps) -> Element {
             selected,
             disabled,
         } = mark;
-        let radius = if inner { 26.0 } else { 40.0 };
+        let radius = 50.0 * if inner { INNER_RING } else { OUTER_RING };
         let angle = f64::from(index) * std::f64::consts::PI / 6.0;
         let style = format!(
             "left: {:.3}%; top: {:.3}%; transform: translate(-50%, -50%)",
@@ -877,18 +1101,12 @@ fn ClockMarks(props: ClockMarksProps) -> Element {
             50.0 - radius * angle.cos()
         );
         rsx! {
-            button {
+            span {
                 key: "{label}",
-                r#type: "button",
                 "data-slot": "mark",
                 "data-selected": selected.then_some("true"),
-                disabled,
-                // The face is the tab stop; a click must not move focus
-                // onto a mark the hand change is about to replace.
-                tabindex: "-1",
-                onmousedown: move |event| event.prevent_default(),
+                "data-disabled": disabled.then_some("true"),
                 style,
-                onclick: move |_| onpick.call((hand, inner, index)),
                 "{label}"
             }
         }

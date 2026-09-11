@@ -493,8 +493,9 @@ fn one_picker_draws_what_the_value_type_calls_for() {
     }
     let html = body(&render(app));
 
-    // A day picker, the day grid of the date-time flow, and two months of range.
-    assert_eq!(html.matches("role=\"grid\"").count(), 4);
+    // A day picker, a month picker, the day grid of the date-time flow, and
+    // two months of range.
+    assert_eq!(html.matches("role=\"grid\"").count(), 5);
     assert!(html.contains("name=\"day\" value=\"2026-09-14\""));
     // A month is held as its first day.
     assert!(html.contains("name=\"month\" value=\"2026-09-01\""));
