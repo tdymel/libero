@@ -1,3 +1,4 @@
+use std::any::TypeId;
 use std::rc::Rc;
 
 use crate::components::form::{FieldPath, FieldStatus};
@@ -6,6 +7,9 @@ use crate::components::form::{FieldPath, FieldStatus};
 /// through [`Rule::error`] or [`Rule::warn`].
 pub struct Validator<V: 'static> {
     check: Rc<dyn Fn(&V) -> bool>,
+    /// The rule's type when it captures nothing: two such rules of one type
+    /// behave the same, so they compare equal.
+    stateless: Option<TypeId>,
     status: FieldStatus,
     on: Vec<String>,
 }
@@ -36,6 +40,7 @@ impl<V: 'static> Clone for Validator<V> {
     fn clone(&self) -> Self {
         Self {
             check: self.check.clone(),
+            stateless: self.stateless,
             status: self.status.clone(),
             on: self.on.clone(),
         }
@@ -66,9 +71,13 @@ pub trait Rule<V: 'static>: Fn(&V) -> bool + Sized + 'static {
 
 impl<V: 'static, F: Fn(&V) -> bool + 'static> Rule<V> for F {}
 
-fn validator<V: 'static>(rule: impl Fn(&V) -> bool + 'static, status: FieldStatus) -> Validator<V> {
+fn validator<V: 'static, F: Fn(&V) -> bool + 'static>(
+    rule: F,
+    status: FieldStatus,
+) -> Validator<V> {
     Validator {
         check: Rc::new(rule),
+        stateless: (size_of::<F>() == 0).then(TypeId::of::<F>),
         status,
         on: Vec::new(),
     }
@@ -120,12 +129,18 @@ impl<V: 'static> Clone for Validators<V> {
     }
 }
 
-/// Closures cannot be compared, so a non-empty set never equals the last one
-/// and its field re-renders with its parent. Two empty sets are equal, so a
-/// field without rules still memoizes.
+/// Equal when every rule captures nothing and matches the other's by type,
+/// message and targets, so a field with `not_empty` memoizes. A capturing
+/// closure never compares equal, and its field re-renders with its parent.
 impl<V: 'static> PartialEq for Validators<V> {
     fn eq(&self, other: &Self) -> bool {
-        self.0.is_empty() && other.0.is_empty()
+        self.0.len() == other.0.len()
+            && self.0.iter().zip(&other.0).all(|(a, b)| {
+                a.stateless.is_some()
+                    && a.stateless == b.stateless
+                    && a.status == b.status
+                    && a.on == b.on
+            })
     }
 }
 
@@ -216,12 +231,17 @@ mod tests {
     }
 
     #[test]
-    fn only_empty_sets_compare_equal() {
-        let empty = Validators::<String>::default();
-        let one: Validators<String> = [not_admin.error("Taken")].into();
+    fn only_rules_that_capture_nothing_compare_equal() {
+        let rules = || -> Validators<String> { [not_admin.error("Taken")].into() };
+        let min = 3;
+        let capturing: Validators<String> =
+            [(move |v: &String| v.len() > min).error("Short")].into();
 
-        assert!(empty == Validators::default());
-        assert!(one != one.clone());
+        assert!(Validators::<String>::default() == Validators::default());
+        assert!(rules() == rules());
+        assert!(rules() != [not_admin.error("Other")].into());
+        assert!(rules() != [(|v: &String| v.is_empty()).error("Taken")].into());
+        assert!(capturing != capturing.clone());
     }
 
     #[test]

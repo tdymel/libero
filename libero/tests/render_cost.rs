@@ -138,8 +138,8 @@ struct CostForm {
     text: String,
 }
 
-/// A field with rules never compares equal, so it re-renders with the form -
-/// the pair below prices reading the form's value against a `value` prop.
+/// A field inside a form that re-renders with its parent - the pair below
+/// prices reading the form's value against a `value` prop.
 #[component]
 fn UnboundForm(children: Element) -> Element {
     let oninput = use_callback(|_: String| {});
@@ -363,7 +363,7 @@ fn render_cost_per_component() {
         // escape hatch `reveal_button: false` is for `PasswordField`.
         "PhoneField-picker" let oninput = |_: String| {}; { PhoneField { oninput, country_select: false } }
         "TextField+frame" let oninput = |_: String| {}; { TextField { oninput, leading: rsx! { "<" }, trailing: rsx! { ">" } } }
-        // Rules never compare equal, so this one always re-renders with its parent.
+        // Rules that capture nothing compare equal, so this one memoizes.
         "TextField+validate" let oninput = |_: String| {}; { TextField { value: "", oninput, validate: [not_empty.error("r")] } }
         "Form" { Form::<()> { "x" } }
         "Fieldset" { Fieldset::<()> { "x" } }

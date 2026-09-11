@@ -678,6 +678,35 @@ fn a_fixed_line_leaves_the_summary_and_a_new_error_does_not_join_it() {
     );
 }
 
+thread_local! {
+    static MESSAGE: Cell<Option<Signal<&'static str>>> = const { Cell::new(None) };
+}
+
+/// Equal rules let the field skip its parent's render; a new message must not.
+#[test]
+fn a_changed_rule_message_redraws_a_field_that_otherwise_skips() {
+    fn app() -> Element {
+        let message = use_signal(|| "First");
+        MESSAGE.with(|cell| cell.set(Some(message)));
+        rsx! {
+            LiberoProvider {
+                Form::<()> {
+                    Spy {}
+                    TextField { name: "email", value: "", validate: [not_empty.error(message())] }
+                }
+            }
+        }
+    }
+
+    let (mut dom, _) = mount(app);
+    assert!(submit(&mut dom).contains("First"));
+
+    dom.in_runtime(|| MESSAGE.with(Cell::get).expect("mounted").set("Second"));
+    let after = settle(&mut dom);
+    assert!(after.contains("Second"), "the field kept a stale message");
+    assert!(!after.contains("First"));
+}
+
 #[test]
 fn is_valid_follows_the_fields_without_revealing_them() {
     fn app() -> Element {
