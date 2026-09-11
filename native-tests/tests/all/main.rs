@@ -3,7 +3,11 @@
 
 mod carousel;
 mod chip;
+mod choice;
+mod color;
 mod color_scheme;
+mod combobox;
+mod date;
 mod dismiss;
 mod focus_return;
 mod form;
@@ -13,6 +17,7 @@ mod lightbox;
 mod menu;
 mod overlays;
 mod pointer;
+mod range_slider;
 mod scroll;
 mod segmented_control;
 mod select;
@@ -21,4 +26,5 @@ mod spotlight;
 mod switch;
 mod table;
 mod tabs;
+mod text_field;
 mod tree;
