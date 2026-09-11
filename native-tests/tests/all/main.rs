@@ -10,6 +10,7 @@ mod hover_card;
 mod keyboard;
 mod lightbox;
 mod menu;
+mod pointer;
 mod segmented_control;
 mod select;
 mod slider;

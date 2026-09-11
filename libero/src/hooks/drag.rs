@@ -96,6 +96,37 @@ pub fn use_drag(options: DragOptions) -> Drag {
         dragging.set(false);
     });
 
+    let onpointermove = use_callback(move |event: Event<PointerData>| {
+        let Some(drag) = active() else {
+            return;
+        };
+        // A second finger on the same element is not this drag.
+        if event.pointer_id() != drag.pointer_id {
+            return;
+        }
+        let coordinates = event.client_coordinates();
+
+        onmove.call(DragMove {
+            start: drag.start,
+            client: DragPoint {
+                x: coordinates.x,
+                y: coordinates.y,
+            },
+        });
+    });
+
+    let end = use_callback(move |event: Event<PointerData>| {
+        let Some(drag) = active() else {
+            return;
+        };
+        if event.pointer_id() != drag.pointer_id {
+            return;
+        }
+        active.set(None);
+        dragging.set(false);
+        onend.call(());
+    });
+
     let onpointerdown = use_callback(move |event: Event<PointerData>| {
         // A right- or middle-click must not drag; an unreported button (some
         // webviews, and touch) still counts as primary.
@@ -130,40 +161,13 @@ pub fn use_drag(options: DragOptions) -> Drag {
             platform::focus_pressed(&event, &within);
         }
 
-        // Best-effort: where the platform has no capture this costs
-        // out-of-element tracking, not the drag.
-        let _ = capture.set_pointer_capture(event.pointer_id());
-    });
-
-    let onpointermove = use_callback(move |event: Event<PointerData>| {
-        let Some(drag) = active() else {
-            return;
-        };
-        // A second finger on the same element is not this drag.
-        if event.pointer_id() != drag.pointer_id {
-            return;
+        // Blitz has no capture and follows the pointer instead; where neither
+        // works, this costs out-of-element tracking, not the drag.
+        if capture.set_pointer_capture(event.pointer_id()).is_err()
+            && let Some(within) = capture.mounted()
+        {
+            platform::follow_pointer(&event, &within, onpointermove, end);
         }
-        let coordinates = event.client_coordinates();
-
-        onmove.call(DragMove {
-            start: drag.start,
-            client: DragPoint {
-                x: coordinates.x,
-                y: coordinates.y,
-            },
-        });
-    });
-
-    let end = use_callback(move |event: Event<PointerData>| {
-        let Some(drag) = active() else {
-            return;
-        };
-        if event.pointer_id() != drag.pointer_id {
-            return;
-        }
-        active.set(None);
-        dragging.set(false);
-        onend.call(());
     });
 
     Drag {

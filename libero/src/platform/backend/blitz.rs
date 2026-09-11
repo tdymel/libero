@@ -8,6 +8,7 @@ use blitz_traits::{events::UiEvent, shell};
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
+use super::INTERACTIVE;
 use crate::{
     platform::{
         ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi, KeyChord,
@@ -61,6 +62,13 @@ thread_local! {
     /// [`Listener`]'s own element.
     static WRAPPER: RefCell<Option<NodeHandle>> = const { RefCell::new(None) };
 
+    /// The node the last press hit, until its click has bubbled. See
+    /// [`nested_interactive`].
+    static HIT: Cell<Option<NodeId>> = const { Cell::new(None) };
+
+    /// The drag [`follow_pointer`] stands in pointer capture for.
+    static FOLLOW: Cell<Option<Follow>> = const { Cell::new(None) };
+
     /// The scheme Rust was last told, and who to tell when the viewport's
     /// differs. See [`BlitzColorScheme`].
     static SCHEME: Cell<ColorScheme> = const { Cell::new(ColorScheme::Light) };
@@ -93,16 +101,18 @@ pub(super) fn Listener(children: Element) -> Element {
             // Bubble phase: this dioxus has no capture listeners.
             onpointerdown: move |event| pressed(&event),
             onclick: |_| {
-                PRESS.set(None);
+                forget_press();
                 if BLANK_PRESS.take() {
                     refocus_wrapper();
                 }
             },
             onkeydown: |event| {
-                PRESS.set(None);
+                forget_press();
                 BLANK_PRESS.set(false);
                 keyed(&event);
             },
+            onpointermove: move |event| followed(&event, false),
+            onpointerup: move |event| followed(&event, true),
             {children}
         }
     }
@@ -254,15 +264,103 @@ impl Drop for BlitzKeySubscription {
 fn pressed(event: &Event<PointerData>) {
     let point = event.client_coordinates();
     let wrapper = WRAPPER.with(|wrapper| wrapper.borrow().as_ref().map(NodeHandle::node_id));
+    HIT.set(None);
     let press = anchor().and_then(|anchor| {
         let doc = anchor.try_doc()?;
         let hit = doc.hit(point.x as f32, point.y as f32)?.node_id;
+        HIT.set(Some(hit));
         // The wrapper is no press target: Blitz sends such a press's focus to `<html>`.
         let target = focusable_ancestor(&doc, hit).filter(|&target| Some(target) != wrapper);
         Some(target.map(|target| (doc.get_focussed_node_id(), target)))
     });
     BLANK_PRESS.set(matches!(press, Some(None)));
     PRESS.set(press.flatten());
+}
+
+fn forget_press() {
+    PRESS.set(None);
+    HIT.set(None);
+}
+
+/// The hit node and its ancestors, nearest first.
+fn ancestors(doc: &BaseDocument, node_id: NodeId) -> impl Iterator<Item = NodeId> + '_ {
+    std::iter::successors(Some(node_id), |&id| doc.get_node(id)?.parent)
+}
+
+/// [`HIT`], walked up to the nearest `boundary`: nested when an interactive
+/// element sits on the way, as the web's `closest` pair answers.
+pub(super) fn nested_interactive(boundary: &str) -> bool {
+    let nested = || -> Option<bool> {
+        let hit = HIT.get()?;
+        let anchor = anchor()?;
+        let doc = anchor.try_doc()?;
+        let boundaries = doc.query_selector_all(boundary).ok()?;
+        let path: Vec<NodeId> = ancestors(&doc, hit).collect();
+        let within = path.iter().position(|id| boundaries.contains(id))?;
+        let interactive = doc.query_selector_all_in(path[within], INTERACTIVE).ok()?;
+        Some(path[..within].iter().any(|id| interactive.contains(id)))
+    };
+    nested().unwrap_or(false)
+}
+
+/// A drag's moves and release, for the pointer it pressed with.
+#[derive(Clone, Copy)]
+struct Follow {
+    pointer_id: i32,
+    capture: NodeId,
+    onmove: Callback<Event<PointerData>>,
+    onup: Callback<Event<PointerData>>,
+}
+
+pub(super) fn follow_pointer(
+    event: &Event<PointerData>,
+    capture: &Rc<MountedData>,
+    onmove: Callback<Event<PointerData>>,
+    onup: Callback<Event<PointerData>>,
+) {
+    let Some(handle) = capture.downcast::<NodeHandle>() else {
+        return;
+    };
+    FOLLOW.set(Some(Follow {
+        pointer_id: event.pointer_id(),
+        capture: handle.node_id(),
+        onmove,
+        onup,
+    }));
+}
+
+/// Hands the followed drag what bubbled here from outside its element; what
+/// lands inside reached the element's own handlers already. Bubble phase, so
+/// an outside `stop_propagation` hides a move, and a release off the app
+/// (on `<html>`, outside this wrapper) is never seen.
+fn followed(event: &Event<PointerData>, up: bool) {
+    let Some(follow) = FOLLOW.get().filter(|f| f.pointer_id == event.pointer_id()) else {
+        return;
+    };
+    if up {
+        FOLLOW.set(None);
+    }
+    let point = event.client_coordinates();
+    let outside = anchor().and_then(|anchor| {
+        let doc = anchor.try_doc()?;
+        // Gone with its element, and so are the handlers.
+        if !doc
+            .get_node(follow.capture)
+            .is_some_and(|node| node.flags.is_in_document())
+        {
+            return None;
+        }
+        let inside = doc
+            .hit(point.x as f32, point.y as f32)
+            .is_some_and(|hit| ancestors(&doc, hit.node_id).any(|id| id == follow.capture));
+        Some(!inside)
+    });
+    match outside {
+        Some(true) if up => follow.onup.call(event.clone()),
+        Some(true) => follow.onmove.call(event.clone()),
+        Some(false) => {}
+        None => FOLLOW.set(None),
+    }
 }
 
 fn focusable_ancestor(doc: &BaseDocument, mut node_id: NodeId) -> Option<NodeId> {
@@ -684,8 +782,8 @@ impl ElementApi for BlitzElement {
         Err(PlatformError::Unsupported)
     }
 
-    /// Blitz has no pointer capture. A native drag keeps tracking anyway while
-    /// the handlers sit on a container the pointer stays inside.
+    /// Blitz has no pointer capture. `use_drag` keeps tracking outside its
+    /// element through [`follow_pointer`] instead.
     fn set_pointer_capture(&self, _pointer_id: i32) -> Result<(), PlatformError> {
         Err(PlatformError::Unsupported)
     }

@@ -187,6 +187,41 @@ async fn corners_on_thumb(fixture: &Fixture, centre: pointer::Point, offset: f64
         .unwrap()
 }
 
+/// The thumb is centred on its value by margins, not a `transform` (Blitz's
+/// client rect ignores that): its centre on the track's centre line, at the
+/// value's point of the half-thumb-inset travel.
+#[test]
+fn the_thumb_is_centred_on_its_value() {
+    block_on(async {
+        let fixture = Fixture::open("/slider", Viewport::Desktop).await.unwrap();
+        let [dx, dy]: [f64; 2] = fixture
+            .page
+            .evaluate(
+                "(() => { \
+                 const thumb = document.querySelector('[role=slider]'); \
+                 const t = thumb.getBoundingClientRect(); \
+                 let track = thumb.parentElement; \
+                 while (track.getBoundingClientRect().height >= t.height) track = track.parentElement; \
+                 const k = track.getBoundingClientRect(); \
+                 const [now, min, max] = ['now', 'min', 'max'] \
+                   .map((n) => Number(thumb.getAttribute('aria-value' + n))); \
+                 const at = (now - min) / (max - min); \
+                 const x = k.left + t.width / 2 + at * (k.width - t.width); \
+                 return [t.left + t.width / 2 - x, t.top + t.height / 2 - (k.top + k.height / 2)]; \
+                 })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            dx.abs() < 0.5 && dy.abs() < 0.5,
+            "the thumb is off its value by ({dx}, {dy})"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The bubble is a `role="tooltip"`, and a tooltip only means something to
 /// assistive technology through the element that points at it.
 #[test]

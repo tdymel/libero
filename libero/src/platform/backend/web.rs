@@ -10,6 +10,7 @@ use wasm_bindgen::{JsCast, JsValue};
 
 use wasm_bindgen::prelude::Closure;
 
+use super::INTERACTIVE;
 use crate::platform::{
     ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi, KeyChord,
     KeySubscription, KeyboardApi, PlatformError, Read, ScrollApi, ScrollSubscription, TimerApi,
@@ -63,11 +64,6 @@ pub(super) fn arrow_target(event: &Event<KeyboardData>) -> bool {
         .downcast::<web_sys::KeyboardEvent>()
         .is_some_and(stepping_target)
 }
-
-/// What HTML counts as interactive content, plus anything a caller made
-/// focusable. A label does not forward a click on any of these.
-const INTERACTIVE: &str = "a[href], button, input, select, textarea, summary, \
-    [tabindex], [contenteditable]:not([contenteditable=\"false\"])";
 
 /// The click's target, walked up to the nearest interactive element and the
 /// nearest `boundary`: nested when the first sits strictly inside the second.

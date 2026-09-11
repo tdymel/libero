@@ -28,7 +28,7 @@ mod task;
 mod timer;
 mod transition;
 
-pub(crate) use click::{nested_interactive, padding_press};
+pub(crate) use click::{follow_pointer, nested_interactive, padding_press};
 pub(crate) use clipboard::clipboard;
 pub use clock::{ClockApi, clock};
 pub use color_scheme::{ColorSchemeApi, ColorSchemeSubscription, color_scheme};

@@ -130,9 +130,8 @@ field_props! {
         #[props(default, into)]
         aria_label: Option<String>,
         /// `Card` draws the switch as a bordered surface and makes all of it
-        /// the hit area - pair it with a `description`. On the web a link or
-        /// button in the label or captions keeps its own click; natively the
-        /// card cannot tell, and toggles.
+        /// the hit area - pair it with a `description`. A link or button in
+        /// the label or captions keeps its own click.
         #[props(default, into)]
         variant: Input<ChoiceVariant>,
     }

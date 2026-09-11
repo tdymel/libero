@@ -1,5 +1,5 @@
-//! `Slider` under a pointer drag. The thumb is placed by a `transform`, which
-//! Blitz's client rect ignores, so the drag starts on the track instead.
+//! `Slider` under a pointer drag. A drag from the thumb and one leaving the
+//! slider are in `pointer.rs`.
 
 use dioxus::prelude::*;
 use libero::{
@@ -40,7 +40,7 @@ fn pressing_the_track_centre_and_dragging_right_follows_the_pointer() {
     );
 }
 
-/// The thumb's anchor is placed by `left`; its `transform` only centres it.
+/// The thumb's anchor is placed by `left` and centred by margins.
 #[test]
 fn the_thumb_moves_with_the_value() {
     let mut page = mount(app);

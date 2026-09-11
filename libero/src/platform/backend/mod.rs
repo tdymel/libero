@@ -15,7 +15,8 @@
 use std::rc::Rc;
 
 use dioxus::prelude::{
-    Element, Event, FocusData, KeyboardData, MountedData, MouseData, PointerData, TransitionData,
+    Callback, Element, Event, FocusData, KeyboardData, MountedData, MouseData, PointerData,
+    TransitionData,
 };
 
 use super::{ColorSchemeApi, DocumentApi, ElementApi, KeyboardApi, ScrollApi, TimerApi};
@@ -27,6 +28,12 @@ mod mounted;
 mod thread;
 #[cfg(target_arch = "wasm32")]
 mod web;
+
+/// What HTML counts as interactive content, plus anything a caller made
+/// focusable. A label does not forward a click on any of these.
+#[cfg(any(target_arch = "wasm32", feature = "native"))]
+const INTERACTIVE: &str = "a[href], button, input, select, textarea, summary, \
+    [tabindex], [contenteditable]:not([contenteditable=\"false\"])";
 
 /// The richest [`ElementApi`] this renderer can back `mounted` with.
 pub(crate) fn element(mounted: &Rc<MountedData>) -> Box<dyn ElementApi> {
@@ -173,15 +180,35 @@ pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     return false;
 }
 
-/// Only the web can see a click's target today - see
-/// [`nested_interactive`](crate::platform::nested_interactive).
+/// The web reads the click's target, Blitz the press `blitz::Listener` hit -
+/// see [`nested_interactive`](crate::platform::nested_interactive).
 pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bool {
     #[cfg(not(target_arch = "wasm32"))]
-    let _ = (event, boundary);
+    let _ = event;
     #[cfg(target_arch = "wasm32")]
     return web::nested_interactive(event, boundary);
-    #[cfg(not(target_arch = "wasm32"))]
-    return false;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::nested_interactive(boundary);
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return {
+        let _ = boundary;
+        false
+    };
+}
+
+/// Only Blitz needs it: it has no pointer capture, so `blitz::Listener` hands
+/// `capture` the moves and the release that land outside it - see
+/// [`follow_pointer`](crate::platform::follow_pointer).
+pub(crate) fn follow_pointer(
+    event: &Event<PointerData>,
+    capture: &Rc<MountedData>,
+    onmove: Callback<Event<PointerData>>,
+    onup: Callback<Event<PointerData>>,
+) {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    blitz::follow_pointer(event, capture, onmove, onup);
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    let _ = (event, capture, onmove, onup);
 }
 
 /// Only the web can see a click's target today - see

@@ -141,7 +141,9 @@ static SLIDER_THUMB_ANCHOR_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .top("50%")
         .left(along_track(SLIDER_THUMB_AT))
-        .transform("translate(-50%, -50%)")
+        // Centred by margins, not a `transform`: Blitz's client rect ignores
+        // that, so the thumb measured half a thumb off where it is drawn.
+        .margin(format!("calc({} / -2)", SLIDER_THUMB.value()))
         // Not inline: the tooltip's inline-block wrapper would sit on a
         // baseline and pull the thumb off the track's centre.
         .display("flex")
