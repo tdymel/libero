@@ -64,13 +64,41 @@ fn a_click_opens_the_date_dialog_and_leaves_focus_in_the_input() {
     assert!(page.is_focused(INPUT), "{}", page.focus_owner());
 }
 
-/// On the web focus alone opens it; Tab fires no `focus` natively.
+/// Buttons around it: a Tab from the input would otherwise enter the portaled
+/// dialog, and a Tab from nothing focused never reaches `LiberoProvider`.
+fn tabbed_date_field() -> Element {
+    rsx! {
+        button { id: "before", "Before" }
+        {date_field()}
+        button { id: "after", "After" }
+    }
+}
+
+/// On the web focus alone opens it; Tab fires no `focus` natively, so the
+/// silent move stands in.
 #[test]
-#[ignore = "N6 (focus events): Tab fires no focus event, so the dialog does not open"]
 fn tab_opens_the_date_dialog() {
-    let mut page = mount(date_field);
+    let mut page = mount(tabbed_date_field);
+    page.click("#before");
     page.tab();
     assert!(page.exists(DIALOG), "{}", page.tree());
+}
+
+/// And for `blur`: Tab out commits the typed text and closes the dialog.
+#[test]
+fn tab_out_of_the_date_field_commits_and_closes() {
+    let mut page = mount(tabbed_date_field);
+    page.click(INPUT);
+    clear(&mut page);
+    typing(&mut page, "October 3, 2026");
+    page.tab();
+    assert_eq!(page.text("#echo"), "2026-10-03", "{}", page.tree());
+    assert!(
+        !page.exists(DIALOG),
+        "focus on {}:\n{}",
+        page.focus_owner(),
+        page.tree()
+    );
 }
 
 #[test]

@@ -15,8 +15,8 @@ use crate::{
         },
         layout::{BoxStyle, use_box},
     },
-    hooks::{ElementHandle, use_root_id},
-    platform::{ElementApi, nested_interactive, next_task},
+    hooks::{ElementHandle, moved_out, use_root_id, use_silent_focus},
+    platform::{ElementApi, nested_interactive, next_task, silent_focus},
     sx::{StaticSx, Sx, sx},
     theme::{
         ChoiceVariant, FIELD_CARD_PADDING, FIELD_FRAME_GAP, FieldDefaults, PAPER_BACKGROUND,
@@ -421,18 +421,35 @@ impl<'a> FieldBuilder<'a> {
         if let Some(activation) = activation.as_ref().filter(|_| self.card) {
             wrapper = wrapper.event("onclick", activation.card_click());
         }
-        // `focusout` bubbles, so one listener on the wrapper sees the control
-        // lose focus whatever it is - and leaves a caller's own `onblur` alone.
-        if validated || scope.is_some() {
+        let touches = validated || scope.is_some();
+        let touch = {
             let hook = hook.clone();
-            wrapper = wrapper.event("onfocusout", move |_: FocusEvent| {
+            move || {
                 if !hook.touched.replace(true) {
                     Runtime::current().needs_update(hook.owner);
                 }
                 if let (Some(mut scope), Some(name)) = (scope, &name) {
                     scope.touch(name);
                 }
-            });
+            }
+        };
+        // Blitz's Tab fires no `focusout`: the same touch, from the silent move.
+        let silent = use_hook(|| silent_focus().is_some().then(ElementHandle::new));
+        use_silent_focus({
+            let touch = touch.clone();
+            move |moved| {
+                if touches && silent.is_some_and(|wrapper| moved_out(moved, &wrapper)) {
+                    touch();
+                }
+            }
+        });
+        if let Some(element) = &silent {
+            wrapper = wrapper.element(element);
+        }
+        // `focusout` bubbles, so one listener on the wrapper sees the control
+        // lose focus whatever it is - and leaves a caller's own `onblur` alone.
+        if touches {
+            wrapper = wrapper.event("onfocusout", move |_: FocusEvent| touch());
         }
 
         PreparedField {

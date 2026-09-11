@@ -19,7 +19,7 @@ use crate::{
         feedback::Alert,
         layout::{Box, Float, use_box},
     },
-    hooks::{use_portal, use_theme},
+    hooks::{use_portal, use_silent_focus, use_theme},
     platform::{ElementApi, TimerSubscription, backend, focus_entered_from, timer},
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -920,6 +920,18 @@ fn NotificationItem(props: ItemProps) -> Element {
         }
         let mut elements = store.elements;
         elements.write().remove(&id);
+    });
+    // Blitz's Tab fires neither `focusin` nor `focusout`: the silent move does.
+    use_silent_focus(move |moved| {
+        let Some(mounted) = store.elements.peek().get(&id).cloned() else {
+            return;
+        };
+        let mut focused = store.focused;
+        match (moved.was_in(&mounted), moved.is_in(&mounted)) {
+            (false, true) => focused.set(Some(id)),
+            (true, false) if *focused.peek() == Some(id) => focused.set(None),
+            _ => {}
+        }
     });
 
     let states: Input<States> = States::default().with("leaving", leaving).into();

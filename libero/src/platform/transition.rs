@@ -11,9 +11,10 @@ use super::backend;
 /// transition field ([[codebase/dioxus-event-data]]).
 ///
 /// The web and the desktop/Android WebView answer - a WebView runs a real
-/// browser engine and fires `transitionend` per property. Blitz and a server
-/// answer `None`, and [`use_presence`](crate::hooks::use_presence) takes an
-/// unreadable property as the exit it waits for.
+/// browser engine and fires `transitionend` per property. A server answers
+/// `None`, and [`use_presence`](crate::hooks::use_presence) takes an
+/// unreadable property as the exit it waits for. Blitz runs transitions but
+/// sends no `transitionend` at all, so its exits end on `use_presence`'s timer.
 pub(crate) fn transition_property(event: &Event<TransitionData>) -> Option<String> {
     backend::transition_property(event)
 }

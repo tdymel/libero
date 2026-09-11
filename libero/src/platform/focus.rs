@@ -12,6 +12,32 @@ pub(crate) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>
     backend::focus_pressed(event, within);
 }
 
+/// Focus moves a renderer makes without firing any focus event.
+pub(crate) trait SilentFocusApi {
+    /// Calls `callback` after such a move has landed, until the returned
+    /// subscription is dropped.
+    fn on_move(&self, callback: OnMove) -> Box<dyn SilentFocusSubscription>;
+}
+
+pub(crate) type OnMove = Box<dyn Fn(&dyn FocusMove)>;
+
+/// One silent move, the `focusout`/`focusin` pair it stands in for.
+pub(crate) trait FocusMove {
+    /// Whether focus was on `element` or inside it before the move.
+    fn was_in(&self, element: &Rc<MountedData>) -> bool;
+    /// Whether it is now.
+    fn is_in(&self, element: &Rc<MountedData>) -> bool;
+}
+
+/// Dropping it stops the callbacks.
+pub(crate) trait SilentFocusSubscription {}
+
+/// `None` where every focus move fires its events (the web). Blitz fires none
+/// for Tab, Shift+Tab and libero's own `focus()`/`blur()`, and reports those.
+pub(crate) fn silent_focus() -> Option<&'static dyn SilentFocusApi> {
+    backend::silent_focus()
+}
+
 /// For a `focusin` on the nearest ancestor matching `boundary`: the element
 /// focus left to get here, `Some(None)` when it came from `<body>`.
 ///

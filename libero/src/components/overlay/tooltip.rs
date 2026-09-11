@@ -11,7 +11,7 @@ use crate::{
     },
     hooks::{
         Align, DismissOptions, ElementHandle, PopoverOptions, escape_closes, use_dismiss,
-        use_element, use_popover, use_theme,
+        use_element, use_popover, use_silent_focus_within, use_theme,
     },
     platform::keyboard,
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
@@ -121,6 +121,16 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     let onclose = use_callback(move |()| {
         hover.set(false);
         focused.set(false);
+    });
+    // Blitz's Tab fires neither `focusin` nor `focusout`: the silent move does.
+    use_silent_focus_within(anchor, {
+        let pressed = pressed.clone();
+        move |within| {
+            let mut focused = focused;
+            if !within || !pressed.replace(false) {
+                focused.set(within);
+            }
+        }
     });
 
     // Every hook above the branch - `prepare()` is the hook.

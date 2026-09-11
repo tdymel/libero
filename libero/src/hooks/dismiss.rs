@@ -28,7 +28,10 @@ use dioxus::prelude::*;
 
 use crate::{
     hooks::{ElementHandle, FocusReturn, focus_return::use_focus_return},
-    platform::{ElementApi, KeySubscription, PlatformError, key_taken, keyboard, next_task},
+    platform::{
+        ElementApi, KeySubscription, PlatformError, SilentFocusSubscription, key_taken, keyboard,
+        next_task, silent_focus,
+    },
 };
 
 /// One open dismissible layer, identified only by when it opened.
@@ -283,7 +286,7 @@ pub(crate) struct DismissOptions {
     /// **Inert on the mounted floor.** A focusout closes the box only where the
     /// platform can say focus is outside: the web and Blitz can, the mounted
     /// floor answers `query_selector` `Unsupported` (todo 46). Blitz fires no
-    /// focus event for Tab, so there only a click moves focus out. Escape and
+    /// focus event for Tab; [`silent_focus`] reports that move instead. Escape and
     /// [`DismissHandle::dismiss`] close everywhere.
     pub outside: bool,
     /// A deliberate close hands focus back to whatever opened the box.
@@ -724,11 +727,19 @@ pub(crate) fn use_dismiss(
     // close anything: it only records the press, and the effect below acts, in
     // the runtime.
     let escape_tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
+    // Blitz's Tab fires no `focusout`: a silent move is judged where the
+    // document answers, and recorded here for the effect below, as Escape is.
+    let silent: Rc<RefCell<Option<Box<dyn SilentFocusSubscription>>>> =
+        use_hook(|| Rc::new(RefCell::new(None)));
+    let left_tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
     use_drop({
         let listening = listening.clone();
+        let silent = silent.clone();
         move || {
             listening.borrow_mut().take();
+            silent.borrow_mut().take();
             escape_tick.manually_drop();
+            left_tick.manually_drop();
         }
     });
 
@@ -771,6 +782,32 @@ pub(crate) fn use_dismiss(
         }
         seen.set(tick);
         handle.close(Dismissal::FromDocument);
+    });
+
+    use_effect(use_reactive!(|(open,)| {
+        let Some(api) = silent_focus().filter(|_| open && options.outside) else {
+            silent.borrow_mut().take();
+            return;
+        };
+        if silent.borrow().is_some() {
+            return;
+        }
+        *silent.borrow_mut() = Some(api.on_move(Box::new(move |_| {
+            if handle.focus_inside() == Some(false) {
+                let mut tick = left_tick;
+                let next = tick.peek().wrapping_add(1);
+                tick.set(next);
+            }
+        })));
+    }));
+    let mut left_seen = use_signal(|| 0u64);
+    use_effect(move || {
+        let tick = left_tick();
+        if tick == *left_seen.peek() {
+            return;
+        }
+        left_seen.set(tick);
+        handle.close(Dismissal::FocusMoved);
     });
 
     // Armed on the opening edge and consumed once the focus lands, so reopening

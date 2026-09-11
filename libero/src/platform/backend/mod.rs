@@ -19,7 +19,9 @@ use dioxus::prelude::{
     TransitionData,
 };
 
-use super::{ColorSchemeApi, DocumentApi, ElementApi, KeyboardApi, ScrollApi, TimerApi};
+use super::{
+    ColorSchemeApi, DocumentApi, ElementApi, KeyboardApi, ScrollApi, SilentFocusApi, TimerApi,
+};
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
 mod blitz;
@@ -160,6 +162,15 @@ pub(crate) fn keyboard() -> Option<&'static dyn KeyboardApi> {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::keyboard();
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return None;
+}
+
+/// Only Blitz moves focus without a focus event - see
+/// [`silent_focus`](crate::platform::silent_focus).
+pub(crate) fn silent_focus() -> Option<&'static dyn SilentFocusApi> {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::silent_focus();
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
     return None;
 }
 

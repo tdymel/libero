@@ -9,6 +9,10 @@ use blitz_traits::{events::UiEvent, shell};
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
+mod focus;
+
+pub(super) use focus::silent_focus;
+
 use super::INTERACTIVE;
 use crate::{
     platform::{
@@ -151,6 +155,7 @@ pub(super) fn Listener(children: Element) -> Element {
             onpointerdown: move |event| pressed(&event),
             onclick: |_| {
                 forget_press();
+                focus::clicked();
                 if BLANK_PRESS.take() {
                     refocus_wrapper();
                 }
@@ -158,6 +163,7 @@ pub(super) fn Listener(children: Element) -> Element {
             onkeydown: |event| {
                 forget_press();
                 BLANK_PRESS.set(false);
+                focus::keyed(&event);
                 keyed(&event);
             },
             onpointermove: move |event| followed(&event, false),
@@ -657,6 +663,7 @@ pub(super) fn Outlet() -> Element {
                         remember_document(handle);
                     }
                     run_deferred();
+                    focus::check();
                     // Once, at the provider's mount: see `BlitzColorScheme`.
                     if flush == 0 {
                         check_scheme();
@@ -671,6 +678,11 @@ pub(super) fn Outlet() -> Element {
 fn defer(anchor: &NodeHandle, run: impl FnOnce(&mut BaseDocument) + 'static) {
     let anchor = anchor.clone();
     later(move || run(&mut anchor.doc_mut()));
+}
+
+/// Makes [`Outlet`] flush at the end of this poll, sharing a pending flush.
+fn flush_soon() {
+    later(|| {});
 }
 
 /// Runs `run` now if the document is free, else at [`Outlet`]'s next flush,
@@ -986,6 +998,8 @@ impl ElementApi for BlitzElement {
     fn focus(&self) -> Result<(), PlatformError> {
         let node_id = self.node_id;
         self.command(move |doc| {
+            focus::watch(doc);
+            focus::requested(node_id);
             doc.set_focus_to(node_id);
         });
         Ok(())
@@ -995,6 +1009,7 @@ impl ElementApi for BlitzElement {
         let node_id = self.node_id;
         self.command(move |doc| {
             if doc.get_focussed_node_id() == Some(node_id) {
+                focus::watch(doc);
                 doc.clear_focus();
             }
         });

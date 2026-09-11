@@ -13,7 +13,7 @@ use crate::{
     context::WindowHost,
     hooks::{
         Drag, DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, escape_closes,
-        use_drag, use_element, use_id,
+        use_drag, use_element, use_id, use_silent_focus_within,
     },
     platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -261,6 +261,12 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     let id = use_hook(|| NEXT_WINDOW_ID.fetch_add(1, Ordering::Relaxed));
     use_effect(move || host.raise(id));
     use_drop(move || host.remove(id));
+    // Blitz's Tab fires no `focusin`: the silent move raises it instead.
+    use_silent_focus_within(root, move |within| {
+        if within {
+            host.raise(id);
+        }
+    });
     let z_index = match z_index {
         Input::None => Input::from(host.z_index(id).to_string()),
         caller => caller,

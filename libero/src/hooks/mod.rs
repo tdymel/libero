@@ -11,6 +11,7 @@ mod popover;
 mod portal;
 mod presence;
 mod ripple;
+mod silent_focus;
 mod stylesheet;
 mod theme;
 mod typeahead;
@@ -35,6 +36,7 @@ pub use popover::{
 pub use portal::use_portal;
 pub use presence::{Presence, use_presence};
 pub(crate) use ripple::{ripple_sx, use_ripple};
+pub(crate) use silent_focus::{moved_out, moved_within, use_silent_focus, use_silent_focus_within};
 pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
 pub use theme::{ThemeSetHandle, use_theme, use_theme_set};

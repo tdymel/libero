@@ -10,7 +10,7 @@ use crate::{
     },
     hooks::{
         Align, DismissOptions, ElementHandle, PopoverOptions, Side, use_dismiss, use_element,
-        use_popover, use_theme,
+        use_popover, use_silent_focus, use_theme,
     },
     platform::{ElementApi, next_task},
     sx::StaticSx,
@@ -154,6 +154,34 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             }
         });
     };
+    // Blitz's Tab and libero's own `focus()` fire neither event: the silent
+    // move stands in for both, with the trigger and the card as one.
+    use_silent_focus({
+        let (pressed, returning) = (pressed.clone(), returning.clone());
+        move |moved| {
+            let holds = |element: &ElementHandle, now: bool| {
+                element.mounted().is_some_and(|mounted| match now {
+                    true => moved.is_in(&mounted),
+                    false => moved.was_in(&mounted),
+                })
+            };
+            let within = |now| holds(&anchor, now) || holds(&floating, now);
+            let mut focused = focused;
+            match (within(false), within(true)) {
+                (false, true) => {
+                    if !returning.replace(false) && !pressed.replace(false) {
+                        dismiss.focus_return().remember_active();
+                        focused.set(true);
+                    }
+                }
+                (true, false) => {
+                    returning.set(false);
+                    focused.set(false);
+                }
+                _ => {}
+            }
+        }
+    });
 
     // A dialog with no name is announced as "dialog" and nothing else.
     crate::components::common::use_name_warning(

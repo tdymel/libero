@@ -9,7 +9,10 @@ use crate::{
         layout::use_box,
         surface::paper_sx,
     },
-    hooks::{PopoverOptions, use_element, use_field_list_layer, use_popover, use_theme},
+    hooks::{
+        PopoverOptions, moved_within, use_element, use_field_list_layer, use_popover,
+        use_silent_focus, use_theme,
+    },
     platform::{ElementApi, eye_dropper, next_task},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
@@ -286,6 +289,41 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             returning.set(false);
         }
     };
+    let mut focused = move || match returning() {
+        true => returning.set(false),
+        false => opened.set(true),
+    };
+    // Text that parsed was already emitted, so it goes back to the value's own
+    // spelling; text that did not stays only if asked.
+    let mut blurred = move || {
+        let parses = draft
+            .peek()
+            .as_ref()
+            .is_some_and(|text| text.parse::<ColorCode>().is_ok());
+        if fix_on_blur || parses {
+            draft.set(None);
+        }
+    };
+    // Blitz's Tab and libero's own `focus()` fire no focus event: the silent
+    // move stands in for the input's `focus`/`blur` and the box's `focusout`.
+    use_silent_focus(move |moved| {
+        let (input, dropdown) = (moved_within(moved, &anchor), moved_within(moved, &floating));
+        match input {
+            (false, true) => {
+                let mut focused = focused;
+                focused();
+            }
+            (true, false) => {
+                let mut blurred = blurred;
+                blurred();
+            }
+            _ => {}
+        }
+        if (input.0 || dropdown.0) && !input.1 && !dropdown.1 {
+            let mut opened = opened;
+            opened.set(false);
+        }
+    });
 
     let text = draft().unwrap_or_else(|| value.to_format(format));
     let dialog_id = format!("{}-dialog", field.id());
@@ -313,22 +351,11 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             }
             draft.set(Some(text));
         })
-        .event("onfocus", move |_: FocusEvent| match returning() {
-            true => returning.set(false),
-            false => opened.set(true),
-        })
+        .event("onfocus", move |_: FocusEvent| focused())
         .event("onclick", move |_: MouseEvent| opened.set(true))
         .event("onblur", move |_: FocusEvent| {
             settle();
-            // Text that parsed was already emitted, so it goes back to the
-            // value's own spelling; text that did not stays only if asked.
-            let parses = draft
-                .peek()
-                .as_ref()
-                .is_some_and(|text| text.parse::<ColorCode>().is_ok());
-            if fix_on_blur || parses {
-                draft.set(None);
-            }
+            blurred();
         })
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
             Key::ArrowDown if has_dropdown && !readonly => {

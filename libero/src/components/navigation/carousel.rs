@@ -17,7 +17,7 @@ use crate::{
     },
     hooks::{
         Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id,
-        use_theme,
+        use_silent_focus_within, use_theme,
     },
     platform::{ElementApi, TimerSubscription, arrow_target, key_taken, timer, typing_target},
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
@@ -791,6 +791,11 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let (position, positions) = snap_position(settled(), count, first, last, nav.clones > 0);
     let status = CarouselDefaults::format_label(theme.carousel.status_label, position, positions);
     let running = state.running;
+    // Blitz's Tab fires neither `focusin` nor `focusout`: the silent move does.
+    use_silent_focus_within(root_handle, move |within| {
+        let mut focused = state.focused;
+        focused.set(within)
+    });
 
     let root = use_box()
         .framework_sx(&CAROUSEL_ROOT_SX)

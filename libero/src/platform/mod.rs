@@ -40,7 +40,10 @@ pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;
 pub(crate) use eye_dropper::eye_dropper;
 pub(crate) use file_dialog::file_dialog;
-pub(crate) use focus::{focus_entered_from, focus_pressed};
+pub(crate) use focus::{
+    FocusMove, SilentFocusApi, SilentFocusSubscription, focus_entered_from, focus_pressed,
+    silent_focus,
+};
 pub(crate) use form::{emulates_submit, implicit_submit, submit_click, submit_event};
 pub(crate) use keyboard::arrow_target;
 pub(crate) use keyboard::key_taken;
