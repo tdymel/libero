@@ -162,6 +162,22 @@ pub struct Fixture {
     /// since a component that throws while mounting throws once and never
     /// again.
     pub console: crate::passes::console::Recorder,
+    closes_on_drop: ClosesOnDrop,
+}
+
+/// Closes a page that was never closed by hand: a failed `open` or a test that
+/// panicked or returned early. Leaked pages were the amplifier in todo 465.
+struct ClosesOnDrop(Option<Page>);
+
+impl Drop for ClosesOnDrop {
+    fn drop(&mut self) {
+        if let Some(page) = self.0.take() {
+            // Spawned: `Drop` cannot await, and it may run inside `block_on`.
+            harness().runtime.spawn(async move {
+                let _ = page.close().await;
+            });
+        }
+    }
 }
 
 impl Fixture {
@@ -232,6 +248,8 @@ impl Fixture {
             .await
             .context("open a page")
             .inspect_err(|error| stage("creating the page", navigation_started, error))?;
+        // Armed at once, so every `?` below closes the page too.
+        let closes_on_drop = ClosesOnDrop(Some(page.clone()));
 
         let (width, height) = viewport.size();
         let at = std::time::Instant::now();
@@ -274,6 +292,7 @@ impl Fixture {
             viewport,
             scheme,
             console,
+            closes_on_drop,
         };
         crate::wait::for_selector_kind("fixture-ready", &fixture.page, "[data-fixture-ready]")
             .await
@@ -347,9 +366,10 @@ impl Fixture {
         Ok(path)
     }
 
-    /// Close the page. A test that fails before this leaves one page behind,
-    /// which the browser reclaims at process exit.
-    pub async fn close(self) -> Result<()> {
+    /// Close the page and wait for it. A fixture dropped without this closes
+    /// its page in the background instead.
+    pub async fn close(mut self) -> Result<()> {
+        self.closes_on_drop.0 = None;
         self.page.close().await.context("close the page")
     }
 }
