@@ -364,91 +364,24 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         } else {
             index > 0 && derived_state(index - 1, reached, current) == StepState::Completed
         };
-        let item_states = States::default()
-            .with(step.state.state_name(), true)
-            .with("line-active", line_active);
-
         let clickable =
             onstepclick.is_some() && (derived != StepState::Pending || allow_next_steps);
-        let header_id = format!("{root}-step-{index}");
-        let is_current = current == Some(index);
-        let status = match step.state {
-            StepState::Completed => format!(", {completed_label}"),
-            StepState::Error => format!(", {error_label}"),
-            _ => String::new(),
-        };
-
-        let marker = match step.state {
-            StepState::Completed => rsx! { CheckIcon {} },
-            StepState::Error => rsx! { CloseIcon {} },
-            _ => rsx! { "{index + 1}" },
-        };
-        // Every part is a `span`: a `<button>` takes phrasing content only.
-        let inner = rsx! {
-            // The number repeats the list's own position, and the glyphs are
-            // drawing; the status text below is what a reader gets.
-            span { "data-step-marker": "", "aria-hidden": "true", {marker} }
-            span { "data-step-body": "",
-                // Name and status in one text node: Chromium puts a space
-                // between separate boxes, "Account , Completed" (todo 458).
-                span { "data-step-label": "",
-                    if step.rich.is_some() || !status.is_empty() {
-                        span { "aria-hidden": "true",
-                            {step.rich.unwrap_or_else(|| rsx! { "{step.name}" })}
-                        }
-                        VisuallyHidden { "{step.name}{status}" }
-                    } else {
-                        "{step.name}"
-                    }
-                }
-                if let Some(description) = step.description {
-                    span { "data-step-description": "", "{description}" }
-                }
-            }
-        };
-
-        // `aria-current` on the step's own element rather than the `<li>`:
-        // tabbing to a button announces the button, not its list item, so
-        // on the `<li>` a keyboard user would never hear which step is current.
-        let header = match onstepclick {
-            Some(onstepclick) if clickable => rsx! {
-                button {
-                    id: "{header_id}",
-                    r#type: "button",
-                    "data-step-header": "",
-                    "aria-current": if is_current { "step" },
-                    onclick: move |_| onstepclick.call(index),
-                    {inner}
-                }
-            },
-            // Not a control, so no tab stop - but `tabindex="-1"` lets the
-            // focus return land here when the steps are not clickable.
-            _ => rsx! {
-                span {
-                    id: "{header_id}",
-                    tabindex: "-1",
-                    "data-step-header": "",
-                    "aria-current": if is_current { "step" },
-                    {inner}
-                }
-            },
-        };
-
-        let body = vertical.then(|| {
-            rsx! {
-                Collapse {
-                    open: is_current,
-                    keep_mounted: false,
-                    id: "{root}-content-{index}",
-                    role: "region",
-                    aria_labelledby: "{header_id}",
-                    div { "data-step-content": "", {step.content} }
-                }
-            }
-        });
-
         rsx! {
-            li { key: "{index}", "data-state": item_states.data_state(), {header} {body} }
+            StepItem {
+                key: "{index}",
+                index,
+                root: root.clone(),
+                name: step.name,
+                rich: step.rich,
+                description: step.description,
+                state: step.state,
+                line_active,
+                is_current: current == Some(index),
+                onstepclick: onstepclick.filter(|_| clickable),
+                content: vertical.then_some(step.content),
+                completed_label,
+                error_label,
+            }
         }
     });
     let items: Vec<Element> = items.collect();
@@ -487,4 +420,107 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
                 {region}
             },
         )
+}
+
+/// One step. Its own scope, so a move redraws the steps it changes and the
+/// rest skip; `rich` and a vertical step's `content` are drawn and never do.
+#[component]
+fn StepItem(
+    index: usize,
+    root: String,
+    name: String,
+    rich: Option<Element>,
+    description: Option<String>,
+    state: StepState,
+    line_active: bool,
+    is_current: bool,
+    /// Only while the step can be picked.
+    onstepclick: Option<Callback<usize>>,
+    /// The vertical arm's body, under the step itself.
+    content: Option<Element>,
+    completed_label: &'static str,
+    error_label: &'static str,
+) -> Element {
+    let item_states = States::default()
+        .with(state.state_name(), true)
+        .with("line-active", line_active);
+    let header_id = format!("{root}-step-{index}");
+    let status = match state {
+        StepState::Completed => format!(", {completed_label}"),
+        StepState::Error => format!(", {error_label}"),
+        _ => String::new(),
+    };
+
+    let marker = match state {
+        StepState::Completed => rsx! { CheckIcon {} },
+        StepState::Error => rsx! { CloseIcon {} },
+        _ => rsx! { "{index + 1}" },
+    };
+    // Every part is a `span`: a `<button>` takes phrasing content only.
+    let inner = rsx! {
+        // The number repeats the list's own position, and the glyphs are
+        // drawing; the status text below is what a reader gets.
+        span { "data-step-marker": "", "aria-hidden": "true", {marker} }
+        span { "data-step-body": "",
+            // Name and status in one text node: Chromium puts a space
+            // between separate boxes, "Account , Completed" (todo 458).
+            span { "data-step-label": "",
+                if rich.is_some() || !status.is_empty() {
+                    span { "aria-hidden": "true",
+                        {rich.unwrap_or_else(|| rsx! { "{name}" })}
+                    }
+                    VisuallyHidden { "{name}{status}" }
+                } else {
+                    "{name}"
+                }
+            }
+            if let Some(description) = description {
+                span { "data-step-description": "", "{description}" }
+            }
+        }
+    };
+
+    // `aria-current` on the step's own element rather than the `<li>`:
+    // tabbing to a button announces the button, not its list item, so on the
+    // `<li>` a keyboard user would never hear which step is current.
+    let header = match onstepclick {
+        Some(onstepclick) => rsx! {
+            button {
+                id: "{header_id}",
+                r#type: "button",
+                "data-step-header": "",
+                "aria-current": if is_current { "step" },
+                onclick: move |_| onstepclick.call(index),
+                {inner}
+            }
+        },
+        // Not a control, so no tab stop - but `tabindex="-1"` lets the focus
+        // return land here when the steps are not clickable.
+        None => rsx! {
+            span {
+                id: "{header_id}",
+                tabindex: "-1",
+                "data-step-header": "",
+                "aria-current": if is_current { "step" },
+                {inner}
+            }
+        },
+    };
+
+    let body = content.map(|content| {
+        rsx! {
+            Collapse {
+                open: is_current,
+                keep_mounted: false,
+                id: "{root}-content-{index}",
+                role: "region",
+                aria_labelledby: "{header_id}",
+                div { "data-step-content": "", {content} }
+            }
+        }
+    });
+
+    rsx! {
+        li { "data-state": item_states.data_state(), {header} {body} }
+    }
 }

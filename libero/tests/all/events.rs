@@ -15,7 +15,7 @@ use libero::{
         Dialog, FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NativeSelect, NumberField,
         OptionList, Options, PasswordField, PhoneField, PinField, RadioGroup, RangeSlider, Rule,
         SegmentedControl, SelectionArgs, Slider, SliderChangeEvent, Table, Tabs, TagsField,
-        TextField, TimePicker, column, not_empty, use_form, use_menu,
+        TextField, TimePicker, Tree, TreeNode, column, not_empty, use_form, use_menu,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -3564,6 +3564,44 @@ mod select_memo {
         assert!(
             row.contains("active"),
             "Hamburg is not the highlight:\n{html}"
+        );
+    }
+}
+
+/// A toggle keeps a branch row's content element, so the listener the first
+/// render registered still toggles it. It used to swap templates, and the
+/// second click landed on whatever took over the freed id.
+#[test]
+fn a_tree_branch_row_toggles_on_every_click() {
+    fn app() -> Element {
+        let node = |id: &str| TreeNode::new(id, id.to_string());
+        rsx! {
+            LiberoProvider {
+                for _ in 0..3 {
+                    Tree { aria_label: "t", data: vec![node("a").children(vec![node("a1"), node("a2")])] }
+                }
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    assert_eq!(find.clicks.len(), 3, "one click listener per branch row");
+
+    for expanded in ["true", "false", "true"] {
+        for &row in &find.clicks {
+            dom.runtime()
+                .handle_event("click", Event::new(click_event(), true), row);
+        }
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = body(&dioxus_ssr::render(&dom));
+        assert_eq!(
+            html.matches(&format!(r#"aria-expanded="{expanded}""#))
+                .count(),
+            3,
+            "{html}"
         );
     }
 }

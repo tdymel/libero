@@ -72,6 +72,7 @@ mod slider;
 mod splitter;
 mod spotlight;
 mod stepper;
+mod table;
 mod tabs;
 mod tags_field;
 mod time_picker;
@@ -133,6 +134,7 @@ const FIXTURES: &[Routes] = &[
     spotlight::ROUTES,
     splitter::ROUTES,
     stepper::ROUTES,
+    table::ROUTES,
     tabs::ROUTES,
     tags_field::ROUTES,
     time_picker::ROUTES,

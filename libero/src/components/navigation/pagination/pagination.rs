@@ -248,6 +248,33 @@ pub fn Pagination(props: PaginationProps) -> Element {
         .prepare();
     let ellipsis = use_box().framework_sx(&PAGINATION_ELLIPSIS_SX).prepare();
 
+    let onchange = props.onchange;
+    // `Signal` is `Copy`, so the copy inside addresses the very same value and
+    // keeps this an `Fn` - it is called from several handlers.
+    let go = move |target: u32, will_disable: bool| {
+        // No handler means no page change, so nothing disables and nothing owes
+        // focus anywhere.
+        if will_disable && onchange.is_some() {
+            let mut owed_focus = owed_focus;
+            owed_focus.set(true);
+        }
+        if let Some(onchange) = onchange {
+            onchange.call(target);
+        }
+    };
+
+    // The target is worked out at the press, so an arrow's props hold still
+    // while the page moves and it skips the render.
+    let onarrow = use_callback(move |label: PaginationLabel| {
+        let target = match label {
+            PaginationLabel::First => 1,
+            PaginationLabel::Previous => page.saturating_sub(1).max(1),
+            PaginationLabel::Next => page.saturating_add(1).min(total),
+            PaginationLabel::Last | PaginationLabel::Page { .. } => total,
+        };
+        go(target, target == 1 || target == total)
+    });
+
     // `0` renders nothing at all rather than one disabled `1`: an empty result
     // set has no pages, and a lone control implies otherwise.
     if total == 0 {
@@ -269,43 +296,17 @@ pub fn Pagination(props: PaginationProps) -> Element {
         },
     };
 
-    let onchange = props.onchange;
-    // `Signal` is `Copy`, so the copy inside addresses the very same value and
-    // keeps this an `Fn` - it is called from several handlers.
-    let go = move |target: u32, will_disable: bool| {
-        // No handler means no page change, so nothing disables and nothing owes
-        // focus anywhere.
-        if will_disable && onchange.is_some() {
-            let mut owed_focus = owed_focus;
-            owed_focus.set(true);
-        }
-        if let Some(onchange) = onchange {
-            onchange.call(target);
-        }
-    };
-
-    let arrow_states = control_states.clone();
-    let arrow = |label: PaginationLabel, target: u32, at_end: bool, icon: Element| {
-        let control_disabled = disabled || at_end;
+    let arrow = |label: PaginationLabel, at_end: bool| {
         rsx! {
             li {
-                ActionIcon {
-                    aria_label: name(label),
-                    // The same style the page buttons use, so an arrow and a
-                    // number are one row rather than two shapes. `size` and
-                    // `radius` go through `ActionIcon`'s own props so its
-                    // geometry agrees rather than being overridden.
-                    sx: &PAGINATION_CONTROL_SX,
-                    states: arrow_states.clone(),
-                    size: PAGINATION_CONTROL_SIZE.value(size),
-                    radius: SizeCss::RADIUS.value(radius),
-                    disabled: control_disabled,
-                    onclick: move |_| {
-                        if !control_disabled {
-                            go(target, target == 1 || target == total)
-                        }
-                    },
-                    {icon}
+                PaginationArrow {
+                    label,
+                    name: name(label),
+                    states: control_states.clone(),
+                    size,
+                    radius,
+                    disabled: disabled || at_end,
+                    onarrow,
                 }
             }
         }
@@ -338,10 +339,10 @@ pub fn Pagination(props: PaginationProps) -> Element {
             vec![],
             rsx! {
                 if with_edges {
-                    {arrow(PaginationLabel::First, 1, page == 1, rsx! { ChevronFirstIcon {} })}
+                    {arrow(PaginationLabel::First, page == 1)}
                 }
                 if with_controls {
-                    {arrow(PaginationLabel::Previous, page.saturating_sub(1).max(1), page == 1, rsx! { ChevronLeftIcon {} })}
+                    {arrow(PaginationLabel::Previous, page == 1)}
                 }
                 for (key , item) in items.iter() {
                     li {
@@ -380,15 +381,54 @@ pub fn Pagination(props: PaginationProps) -> Element {
                     }
                 }
                 if with_controls {
-                    {arrow(PaginationLabel::Next, page.saturating_add(1).min(total), page == total, rsx! { ChevronRightIcon {} })}
+                    {arrow(PaginationLabel::Next, page == total)}
                 }
                 if with_edges {
-                    {arrow(PaginationLabel::Last, total, page == total, rsx! { ChevronLastIcon {} })}
+                    {arrow(PaginationLabel::Last, page == total)}
                 }
             },
         );
     nav.attr("aria-label", props.aria_label)
         .render(HtmlTag::Nav, props.attributes, list_element)
+}
+
+/// First, previous, next or last. Its own scope: `ActionIcon` takes the icon
+/// as children, so inline it redrew on every page.
+#[component]
+fn PaginationArrow(
+    label: PaginationLabel,
+    name: String,
+    states: Input<States>,
+    size: Size,
+    radius: Size,
+    disabled: bool,
+    onarrow: Callback<PaginationLabel>,
+) -> Element {
+    let icon = match label {
+        PaginationLabel::First => rsx! { ChevronFirstIcon {} },
+        PaginationLabel::Previous => rsx! { ChevronLeftIcon {} },
+        PaginationLabel::Next => rsx! { ChevronRightIcon {} },
+        PaginationLabel::Last | PaginationLabel::Page { .. } => rsx! { ChevronLastIcon {} },
+    };
+    rsx! {
+        ActionIcon {
+            aria_label: name,
+            // The same style the page buttons use, so an arrow and a number
+            // are one row rather than two shapes. `size` and `radius` go
+            // through `ActionIcon`'s own props so its geometry agrees.
+            sx: &PAGINATION_CONTROL_SX,
+            states,
+            size: PAGINATION_CONTROL_SIZE.value(size),
+            radius: SizeCss::RADIUS.value(radius),
+            disabled,
+            onclick: move |_| {
+                if !disabled {
+                    onarrow.call(label)
+                }
+            },
+            {icon}
+        }
+    }
 }
 
 /// The focus repair: the control the user just clicked disables in place, so

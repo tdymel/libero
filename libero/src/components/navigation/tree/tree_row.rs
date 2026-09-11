@@ -138,31 +138,33 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         .event("onclick", onclick)
         .render(HtmlTag::Div, Vec::new(), content);
 
-    // Split on `is_expanded` instead of putting an `if` in one block: a
-    // conditional node costs its slot on every render of every *leaf* too.
+    // A leaf skips the conditional slot. A branch keeps one template either
+    // way, so a toggle does not remount its content.
     let children = match is_expanded {
-        Some(true) => rsx! {
+        Some(open) => rsx! {
             {row_content}
-            List {
-                "role": "group",
-                size: props.size,
-                for (index , child) in node.children.iter().enumerate() {
-                    TreeRow {
-                        key: "{child.id}",
-                        node: child.clone(),
-                        size: props.size,
-                        depth: props.depth + 1,
-                        expanded: props.expanded,
-                        active: child_active(props.active.as_deref(), index),
-                        active_id: props.active_id,
-                        render_node: props.render_node.clone(),
-                        onexpandedchange: props.onexpandedchange,
-                        ancestor_disabled: disabled,
+            if open {
+                List {
+                    "role": "group",
+                    size: props.size,
+                    for (index , child) in node.children.iter().enumerate() {
+                        TreeRow {
+                            key: "{child.id}",
+                            node: child.clone(),
+                            size: props.size,
+                            depth: props.depth + 1,
+                            expanded: props.expanded,
+                            active: child_active(props.active.as_deref(), index),
+                            active_id: props.active_id,
+                            render_node: props.render_node.clone(),
+                            onexpandedchange: props.onexpandedchange,
+                            ancestor_disabled: disabled,
+                        }
                     }
                 }
             }
         },
-        _ => row_content,
+        None => row_content,
     };
 
     row.attr("role", "treeitem")

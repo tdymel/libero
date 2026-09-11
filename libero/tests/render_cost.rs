@@ -33,9 +33,14 @@
 //! entirely - the number is the parent's diff, not the component's render.
 //! Price those with a first render instead.
 
+use std::any::Any;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use dioxus::dioxus_core::{NoOpMutations, ScopeId, VirtualDom};
+use dioxus::dioxus_core::{
+    AttributeValue, ElementId, NoOpMutations, ScopeId, VirtualDom, WriteMutations,
+};
+use dioxus::html::{PlatformEventData, SerializedHtmlEventConverter, SerializedMouseData};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveTime};
 use libero::components::Title;
@@ -45,6 +50,15 @@ use libero::{LiberoProvider, components::*};
 enum CostPane {
     One,
     Two,
+}
+
+/// A stepper's worth of steps: a move leaves the others as they were.
+#[derive(Clone, PartialEq, Options)]
+enum CostStep {
+    One,
+    Two,
+    Three,
+    Four,
 }
 
 /// A row to measure: what to call it, the app, how many instances the app
@@ -238,6 +252,141 @@ const NOTIFICATION_SHAPES: &[Shape] = &[
     },
 ];
 
+/// The click listeners a rebuild registers, in order: the only way to address
+/// an element from outside the dom.
+#[derive(Default)]
+struct ClickListeners {
+    last: Option<ElementId>,
+    found: Vec<ElementId>,
+}
+
+impl WriteMutations for ClickListeners {
+    fn push_id(&mut self, id: ElementId) {
+        self.last = Some(id);
+    }
+    fn set_id(&mut self, id: ElementId) {
+        self.last = Some(id);
+    }
+    fn add_event_listener(&mut self, name: &str) {
+        if name == "click" {
+            self.found.extend(self.last);
+        }
+    }
+    fn child(&mut self, _index: usize) {}
+    fn pop(&mut self) {}
+    fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
+    fn create_text(&mut self, _value: &str) {}
+    fn clone(&mut self) {}
+    fn append_children(&mut self, _m: usize) {}
+    fn replace_with(&mut self, _m: usize) {}
+    fn insert_after(&mut self, _m: usize) {}
+    fn insert_before(&mut self, _m: usize) {}
+    fn set_attribute(&mut self, _name: &str, _ns: Option<&str>, _v: &AttributeValue) {}
+    fn set_text(&mut self, _value: &str) {}
+    fn remove_event_listener(&mut self, _name: &str) {}
+    fn remove(&mut self) {}
+}
+
+thread_local! {
+    /// The click listeners of the dom whose round runs next.
+    static CLICKS: std::cell::RefCell<Vec<ElementId>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Clicks one listener in every instance: the `nth` of the ones each instance
+/// registered on its first render, in order.
+fn click_each(dom: &mut VirtualDom, nth: usize) {
+    let runtime = dom.runtime();
+    CLICKS.with_borrow(|ids| {
+        assert_eq!(ids.len() % CHILDREN, 0, "every instance registers as many");
+        for instance in ids.chunks(ids.len() / CHILDREN) {
+            let data = Rc::new(PlatformEventData::new(Box::new(
+                SerializedMouseData::default(),
+            )));
+            runtime.handle_event(
+                "click",
+                Event::new(data as Rc<dyn Any>, true),
+                instance[nth],
+            );
+        }
+    });
+}
+
+/// The first click listener of every instance.
+fn click_round(dom: &mut VirtualDom) {
+    click_each(dom, 0);
+}
+
+/// Next, then previous: a carousel's controls are its only two listeners.
+fn carousel_round(dom: &mut VirtualDom) {
+    CLICKS.with_borrow(|ids| assert_eq!(ids.len(), 2 * CHILDREN, "two controls per carousel"));
+    click_each(dom, if flip() { 1 } else { 0 });
+}
+
+/// Three slides, one in view, with the controls and nothing else that clicks.
+fn carousel_slide_app() -> Element {
+    rsx! {
+        LiberoProvider {
+            div {
+                for _ in 0..CHILDREN {
+                    Carousel { aria_label: "c", slides: vec![rsx! { "a" }, rsx! { "b" }, rsx! { "c" }], controls: true, indicators: false }
+                }
+            }
+        }
+    }
+}
+
+/// A collapsed branch with two leaves: its row is the one click listener, and
+/// each click expands or collapses it.
+fn tree_expand_app() -> Element {
+    let leaf = |id: &str| TreeNode::new(id, id.to_string());
+    rsx! {
+        LiberoProvider {
+            div {
+                for _ in 0..CHILDREN {
+                    Tree { aria_label: "a", data: vec![leaf("a").children(vec![leaf("a1"), leaf("a2")])] }
+                }
+            }
+        }
+    }
+}
+
+/// Five rows under one sortable header, whose button is the one click
+/// listener: each click sorts, then flips the direction.
+fn table_sort_app() -> Element {
+    rsx! {
+        LiberoProvider {
+            div {
+                for _ in 0..CHILDREN {
+                    Table { data: vec![3u32, 1, 5, 2, 4], columns: vec![column("N").value(|n: &u32| *n).sortable()] }
+                }
+            }
+        }
+    }
+}
+
+/// Interactions held in a component's own state, which no prop reaches: each
+/// round clicks the control that changes it.
+const CLICK_SHAPES: &[Shape] = &[
+    Shape {
+        name: "Tree expand",
+        app: tree_expand_app,
+        count: CHILDREN,
+        round: click_round,
+    },
+    Shape {
+        name: "Carousel slide",
+        app: carousel_slide_app,
+        count: CHILDREN,
+        round: carousel_round,
+    },
+    Shape {
+        name: "Table sort",
+        app: table_sort_app,
+        count: CHILDREN,
+        round: click_round,
+    },
+];
+
 /// Whether `RENDER_COST` asks for this row. Unset or empty measures them all,
 /// and the controls always run - every row is read against `Leaf`.
 fn wanted(label: &str) -> bool {
@@ -274,19 +423,23 @@ fn Leaf(children: Element) -> Element {
 /// differences.
 fn measure(shapes: &[Shape]) -> Vec<(&'static str, f64)> {
     FLIP.store(false, Ordering::Relaxed);
+    dioxus::html::set_event_converter(Box::new(SerializedHtmlEventConverter));
     let mut doms: Vec<_> = shapes
         .iter()
         .map(|shape| {
             let mut dom = VirtualDom::new(shape.app);
-            dom.rebuild(&mut NoOpMutations);
-            (shape, dom, u64::MAX)
+            let mut clicks = ClickListeners::default();
+            dom.rebuild(&mut clicks);
+            (shape, dom, u64::MAX, clicks.found)
         })
         .collect();
 
     for round in 0..ROUNDS {
         FLIP.store(round % 2 == 0, Ordering::Relaxed);
-        for (shape, dom, best) in doms.iter_mut() {
+        for (shape, dom, best, clicks) in doms.iter_mut() {
+            CLICKS.set(std::mem::take(clicks));
             (shape.round)(dom);
+            *clicks = CLICKS.take();
             let started = std::time::Instant::now();
             dom.render_immediate(&mut NoOpMutations);
             *best = (*best).min(started.elapsed().as_nanos() as u64);
@@ -294,7 +447,7 @@ fn measure(shapes: &[Shape]) -> Vec<(&'static str, f64)> {
     }
 
     doms.into_iter()
-        .map(|(shape, _, best)| (shape.name, best as f64 / shape.count as f64))
+        .map(|(shape, _, best, _)| (shape.name, best as f64 / shape.count as f64))
         .collect()
 }
 
@@ -430,6 +583,17 @@ fn render_cost_per_component() {
         "Accordion" let onchange = |_: AccordionOpen<CostPane>| {}; let panel = |_: CostPane| rsx! { "x" }; { Accordion { open: AccordionOpen::One(Some(CostPane::One)), onchange, panel } }
         "Accordion toggle" let onchange = |_: AccordionOpen<CostPane>| {}; let panel = |_: CostPane| rsx! { "x" }; { Accordion { open: AccordionOpen::One(Some(if flip() { CostPane::Two } else { CostPane::One })), onchange, panel } }
 
+        // Navigation moves, each a static row and its `flip()` twin. Tree
+        // expand and Table sort are internal state: see `CLICK_SHAPES`.
+        "Tabs switch" let onchange = |_: CostPane| {}; let panel = |_: CostPane| rsx! { "x" }; { Tabs { value: if flip() { CostPane::Two } else { CostPane::One }, onchange, panel } }
+        "Pagination" let onchange = |_: u32| {}; { Pagination { total: 20, page: 5, onchange, aria_label: "p" } }
+        "Pagination page" let onchange = |_: u32| {}; { Pagination { total: 20, page: if flip() { 6 } else { 5 }, onchange, aria_label: "p" } }
+        "Stepper" let onstepclick = |_: CostStep| {}; let panel = |_: CostStep| rsx! { "x" }; { Stepper { value: Some(CostStep::Two), onstepclick, panel } }
+        "Stepper step" let onstepclick = |_: CostStep| {}; let panel = |_: CostStep| rsx! { "x" }; { Stepper { value: Some(if flip() { CostStep::Three } else { CostStep::Two }), onstepclick, panel } }
+        // `slides` is a `Vec<Element>`, so it never compares equal. A move
+        // is internal state: see `CLICK_SHAPES`.
+        "Carousel" let onindexchange = |_: usize| {}; { Carousel { aria_label: "c", slides: vec![rsx! { "a" }, rsx! { "b" }, rsx! { "c" }], onindexchange } }
+
         "Icon" { Icon { "x" } }
         "Image" { Image { src: "/x.png" } }
         "QrCode" { QrCode { data: "x", aria_label: "a" } }
@@ -461,6 +625,7 @@ fn render_cost_per_component() {
     let shapes: Vec<Shape> = shapes
         .iter()
         .chain(NOTIFICATION_SHAPES)
+        .chain(CLICK_SHAPES)
         .filter(|shape| wanted(shape.name))
         .copied()
         .collect();

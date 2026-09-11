@@ -10,10 +10,11 @@ pub(super) struct HeaderSpec {
     pub sortable: bool,
 }
 
-/// A row's cells, keyed by its position in the unsorted `data`.
+/// A row's cells, keyed by its position in the unsorted `data`. A cell is its
+/// text, or a caller's body and no text.
 pub(super) struct RowSpec {
     pub index: usize,
-    pub cells: Vec<Element>,
+    pub cells: Vec<(String, Option<Element>)>,
 }
 
 /// Row indices in sorted order. Stable, so equal keys keep source order, and
@@ -104,11 +105,13 @@ pub(super) fn render_body(
             for row in rows {
                 tr {
                     key: "{row.index}",
-                    for (index , cell) in row.cells.into_iter().enumerate() {
+                    for (index , (text , body)) in row.cells.into_iter().enumerate() {
                         td {
                             key: "{index}",
                             "data-align": headers.get(index).and_then(|spec| align_attr(spec.align)),
-                            {cell}
+                            // Text inline: a nested node per cell costs ~1 us a sort.
+                            "{text}"
+                            {body}
                         }
                     }
                 }

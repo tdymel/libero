@@ -53,6 +53,7 @@ mod slider;
 mod splitter;
 mod spotlight;
 mod stepper;
+mod table;
 mod tabs;
 mod tags_field;
 mod time_picker;

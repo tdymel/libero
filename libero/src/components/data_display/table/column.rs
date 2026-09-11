@@ -24,8 +24,13 @@ pub struct Column<T> {
     pub(super) align: CellAlign,
     pub(super) sortable: bool,
     pub(super) sort_key: Rc<dyn Fn(&T) -> SortKey>,
-    pub(super) render: Rc<dyn Fn(&T) -> Element>,
+    /// The cell as plain text, drawn inline in its `td`.
+    pub(super) text: Rc<dyn Fn(&T) -> String>,
+    /// A caller's cell body, which replaces `text`.
+    pub(super) render: Option<CellRender<T>>,
 }
+
+type CellRender<T> = Rc<dyn Fn(&T) -> Element>;
 
 impl ColumnHeader {
     /// Reads one cell out of a row. `V` decides how the column sorts and
@@ -39,10 +44,8 @@ impl ColumnHeader {
             align: V::align(),
             sortable: false,
             sort_key: Rc::new(move |row| sort_value(row).sort_key()),
-            render: Rc::new(move |row| {
-                let text = value(row).cell_text();
-                rsx! { "{text}" }
-            }),
+            text: Rc::new(move |row| value(row).cell_text()),
+            render: None,
         }
     }
 }
@@ -59,7 +62,7 @@ impl<T> Column<T> {
     /// Runs once per row inside `Table`'s own scope: no hooks, and capture
     /// signals rather than values - a captured value can't re-render the table.
     pub fn render(mut self, render: impl Fn(&T) -> Element + 'static) -> Self {
-        self.render = Rc::new(render);
+        self.render = Some(Rc::new(render));
         self
     }
 
@@ -78,6 +81,7 @@ impl<T> Clone for Column<T> {
             align: self.align,
             sortable: self.sortable,
             sort_key: self.sort_key.clone(),
+            text: self.text.clone(),
             render: self.render.clone(),
         }
     }

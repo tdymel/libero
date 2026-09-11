@@ -152,7 +152,13 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             cells: props
                 .columns
                 .iter()
-                .map(|column| (column.render)(&props.data[index]))
+                .map(|column| {
+                    let row = &props.data[index];
+                    match &column.render {
+                        Some(render) => (String::new(), Some(render(row))),
+                        None => ((column.text)(row), None),
+                    }
+                })
                 .collect(),
         })
         .collect();
