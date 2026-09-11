@@ -22,6 +22,7 @@ mod file_field;
 mod floating_window;
 mod focus_contrast;
 mod form;
+mod grid_zone;
 mod hover_card;
 mod icon;
 mod image_list;

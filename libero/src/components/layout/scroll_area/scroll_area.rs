@@ -290,10 +290,16 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             measure_area(root, geometry, UNLAID_TRIES);
         }
     };
-    // Re-runs once the root is actually mounted.
-    use_effect(measure);
+    // Re-runs once the root is mounted, and once a `Virtualize` asks: only then
+    // do scroll and resize events keep the geometry current.
+    use_effect(move || {
+        if virtualized() {
+            measure();
+        }
+    });
 
     let onscroll = props.onscroll;
+    let onscroll_prop = onscroll.is_some();
     let scrolled = move |event: ScrollPositionEvent| {
         if let Some(onscroll) = &onscroll {
             onscroll.call(event);
@@ -371,8 +377,16 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
 
     let variables: Input<Variables> = scroll_area_variables(props.scrollbar_color.as_ref()).into();
 
-    let content_states: Input<States> = States::default().with("virtualized", virtualized()).into();
-    let content_variables: Input<Variables> = scroll_area_content_variables(offsets()).into();
+    // Unvirtualized content is `display: contents` and reserves nothing.
+    let virtualized = virtualized();
+    let (content_states, content_variables): (Input<States>, Input<Variables>) = if virtualized {
+        (
+            States::default().with("virtualized", true).into(),
+            scroll_area_content_variables(offsets()).into(),
+        )
+    } else {
+        (Input::None, Input::None)
+    };
     let body = use_box()
         .framework_sx(&SCROLL_AREA_CONTENT_SX)
         .states(&content_states)
@@ -380,6 +394,14 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .prepare()
         .element(&content)
         .render(HtmlTag::Div, Vec::new(), props.children);
+
+    // A listener costs a render and, for `onresize`, an observer: attach each
+    // only while something reads it.
+    let tracks_scroll = virtualized
+        || onscroll_prop
+        || [ontopreached, onbottomreached, onleftreached, onrightreached]
+            .iter()
+            .any(Option::is_some);
 
     use_box()
         .framework_sx(
@@ -399,14 +421,17 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         // a strip of plain images or text, where the viewport is the only
         // thing there is to focus.
         .attr("tabindex", if props.focusable { "0" } else { "-1" })
-        .event("onscroll", onscroll)
-        .event("onscrollend", onscrollend)
-        .event("onresize", move |event: Event<ResizeData>| {
-            measure();
-            if let Some(onresize) = &onresize {
-                onresize.call(event);
-            }
-        })
+        .event("onscroll", tracks_scroll.then_some(onscroll))
+        .event("onscrollend", onscroll_prop.then_some(onscrollend))
+        .event(
+            "onresize",
+            (virtualized || onresize.is_some()).then_some(move |event: Event<ResizeData>| {
+                measure();
+                if let Some(onresize) = &onresize {
+                    onresize.call(event);
+                }
+            }),
+        )
         .render(HtmlTag::Div, props.attributes, body)
 }
 

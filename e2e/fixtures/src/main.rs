@@ -43,6 +43,7 @@ mod file_field;
 mod floating_window;
 mod focus_contrast;
 mod form;
+mod grid_zone;
 mod hover_card;
 mod icon;
 mod image_list;
@@ -103,6 +104,7 @@ const FIXTURES: &[Routes] = &[
     floating_window::ROUTES,
     focus_contrast::ROUTES,
     form::ROUTES,
+    grid_zone::ROUTES,
     hover_card::ROUTES,
     icon::ROUTES,
     image_list::ROUTES,

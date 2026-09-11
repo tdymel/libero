@@ -52,3 +52,47 @@ fn a_taller_pane_renders_rows_to_its_new_bottom() {
         fixture.close().await.unwrap();
     });
 }
+
+/// An area with only `on*reached` handlers still listens for scrolls (todo 29
+/// attaches `onscroll` only when something reads it).
+#[test]
+fn the_reached_callbacks_fire_at_both_ends() {
+    const AREA: &str = "document.querySelector('#edges')";
+    const COUNT: &str = "Number(document.querySelector('#{}-reached').textContent)";
+    let count = |edge: &str| COUNT.replace("{}", edge);
+
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/edges", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        page.evaluate(format!("{AREA}.scrollTop = {AREA}.scrollHeight"))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{} === 1", count("bottom")),
+            "onbottomreached at the bottom",
+        )
+        .await
+        .unwrap();
+
+        page.evaluate(format!("{AREA}.scrollTop = 0"))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{} === 1", count("top")),
+            "ontopreached back at the top",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("scrolling to both ends")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

@@ -5,7 +5,32 @@ use libero::components::{Flex, ScrollArea, Text, Virtualize};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/scroll-area", || rsx! { ScrollAreaPage {} })];
+pub const ROUTES: Routes = &[
+    ("/scroll-area", || rsx! { ScrollAreaPage {} }),
+    ("/scroll-area/edges", || rsx! { EdgesPage {} }),
+];
+
+/// A plain area with only `ontopreached`/`onbottomreached`, no `onscroll` and
+/// no `Virtualize`: the handlers alone must keep its scroll listener.
+#[component]
+fn EdgesPage() -> Element {
+    let mut top = use_signal(|| 0);
+    let mut bottom = use_signal(|| 0);
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            Text { id: "top-reached", "{top}" }
+            Text { id: "bottom-reached", "{bottom}" }
+            div { style: "height: 120px",
+                ScrollArea {
+                    id: "edges",
+                    ontopreached: move |()| top += 1,
+                    onbottomreached: move |()| bottom += 1,
+                    div { style: "height: 1000px", "Tall content" }
+                }
+            }
+        }
+    }
+}
 
 /// A pane a test resizes by script, round a virtualized list whose window must
 /// follow the pane's height. The caller's own `onresize` on the `ScrollArea`,

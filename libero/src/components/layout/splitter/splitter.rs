@@ -196,7 +196,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
 
     let drag = use_drag(DragOptions {
         capture: root,
-        onstart: Callback::new(move |start: DragStart| {
+        onstart: use_callback(move |start: DragStart| {
             let cancel = start.cancel;
             // Started here, awaited in the task: see `ElementApi::dimensions`.
             let size = root.dimensions();
@@ -223,7 +223,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
                 notify(SplitterResizeEvent::Start(a(), 100.0 - a()));
             });
         }),
-        onmove: Callback::new(move |event: DragMove| {
+        onmove: use_callback(move |event: DragMove| {
             let delta = event.delta();
             let pixels = if vertical { delta.x } else { delta.y };
             let delta_pct = pixels / container_size() * 100.0;
@@ -231,7 +231,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
             a.set(new_a);
             notify(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
         }),
-        onend: Callback::new(move |_| {
+        onend: use_callback(move |()| {
             notify(SplitterResizeEvent::End(a(), 100.0 - a()));
         }),
     });
