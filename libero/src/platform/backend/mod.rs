@@ -96,13 +96,29 @@ pub(crate) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     return None;
 }
 
-/// Only the web can report a scroll today. Off it this is `None`, which is the
-/// house rule for an absent capability - never an `Unsupported` stub.
+/// The web and Blitz can report a scroll. Elsewhere this is `None`, which is
+/// the house rule for an absent capability - never an `Unsupported` stub.
 pub(crate) fn scroll() -> Option<&'static dyn ScrollApi> {
     #[cfg(target_arch = "wasm32")]
     return web::scroll();
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::scroll();
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return None;
+}
+
+/// `scrollIntoView`'s `nearest`, vertically: how far a view spanning
+/// `view_top..view_bottom` has to scroll to show `top..bottom`, `None` if it
+/// already shows it. A box taller than the view aligns its top.
+#[cfg_attr(not(any(target_arch = "wasm32", feature = "native")), allow(dead_code))]
+fn nearest_scroll(top: f64, bottom: f64, view_top: f64, view_bottom: f64) -> Option<f64> {
+    if top < view_top || bottom - top > view_bottom - view_top {
+        Some(top - view_top)
+    } else if bottom > view_bottom {
+        Some(bottom - view_bottom)
+    } else {
+        None
+    }
 }
 
 /// A timer everywhere: the browser's own `setTimeout` on the web, and
@@ -255,4 +271,18 @@ pub(crate) fn prefers_reduced_motion() -> bool {
     return web::prefers_reduced_motion();
     #[cfg(not(target_arch = "wasm32"))]
     return false;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::nearest_scroll;
+
+    #[test]
+    fn nearest_scroll_moves_the_out_of_view_edge_only() {
+        assert_eq!(nearest_scroll(20.0, 40.0, 0.0, 100.0), None);
+        assert_eq!(nearest_scroll(120.0, 140.0, 0.0, 100.0), Some(40.0));
+        assert_eq!(nearest_scroll(-30.0, -10.0, 0.0, 100.0), Some(-30.0));
+        // Taller than the view: its top.
+        assert_eq!(nearest_scroll(50.0, 250.0, 0.0, 100.0), Some(50.0));
+    }
 }

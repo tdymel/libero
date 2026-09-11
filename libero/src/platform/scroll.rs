@@ -24,15 +24,9 @@ pub trait ScrollApi {
     fn on_scroll(&self, callback: Box<dyn Fn()>) -> Box<dyn ScrollSubscription>;
 }
 
-/// `None` where the renderer cannot report a scroll - everything but the web
-/// today, which leaves an open popover drifting off its anchor there, exactly
-/// as it did everywhere before this existed.
-///
-/// A Blitz arm is implementable and deliberately not written yet: Blitz owns
-/// the scroll (`scroll_node_by` is how libero scrolls a node at all), so the
-/// hook it needs is a document-side notification the shell can drain - the
-/// shape `UiEvent::Activate` already took for `click()`. That is fork work,
-/// which this change did not open.
+/// `None` where the renderer cannot report a scroll - a webview and a
+/// headless build, where an open popover drifts off its anchor. Blitz reports
+/// a wheel inside `LiberoProvider` and libero's own scroll commands.
 pub fn scroll() -> Option<&'static dyn ScrollApi> {
     backend::scroll()
 }

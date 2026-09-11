@@ -1,6 +1,7 @@
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
+    time::Duration,
 };
 
 use blitz_dom::BaseDocument;
@@ -12,7 +13,8 @@ use super::INTERACTIVE;
 use crate::{
     platform::{
         ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi, KeyChord,
-        KeySubscription, KeyboardApi, PlatformError, Read,
+        KeySubscription, KeyboardApi, PlatformError, Read, ScrollApi, ScrollSubscription,
+        TimerSubscription,
         keyboard::{takes_arrows, takes_typing},
         warn_reserved_chord,
     },
@@ -72,16 +74,59 @@ thread_local! {
     /// The scheme Rust was last told, and who to tell when the viewport's
     /// differs. See [`BlitzColorScheme`].
     static SCHEME: Cell<ColorScheme> = const { Cell::new(ColorScheme::Light) };
-    static SCHEME_CALLBACKS: RefCell<Vec<SchemeCallback>> = const { RefCell::new(Vec::new()) };
+    static SCHEME_CALLBACKS: Callbacks<dyn Fn(ColorScheme)> = const { Callbacks::new() };
     static NEXT_CALLBACK: Cell<u64> = const { Cell::new(0) };
+    /// Re-reads the viewport while anyone listens to the scheme.
+    static SCHEME_POLL: RefCell<Option<Box<dyn TimerSubscription>>> = const { RefCell::new(None) };
+
+    /// Who to tell that something scrolled. See [`BlitzScroll`].
+    static SCROLL_CALLBACKS: Callbacks<dyn Fn()> = const { Callbacks::new() };
+    /// A `scroll_into_view` waiting for its target's first layout. See [`show`].
+    static SHOW_RETRY: RefCell<Option<Box<dyn TimerSubscription>>> = const { RefCell::new(None) };
 
     /// Every [`BlitzKeyboard`] subscription: id, whether it skips text entry,
     /// callback. Called by [`Listener`]'s `onkeydown`.
     static KEY_CALLBACKS: RefCell<Vec<KeyCallback>> = const { RefCell::new(Vec::new()) };
 }
 
-type SchemeCallback = (u64, Rc<dyn Fn(ColorScheme)>);
 type KeyCallback = (u64, bool, Rc<dyn Fn(KeyChord) -> bool>);
+
+/// Subscribers, each under the id its subscription drops.
+struct Callbacks<F: ?Sized> {
+    list: RefCell<Vec<(u64, Rc<F>)>>,
+    next: Cell<u64>,
+}
+
+impl<F: ?Sized> Callbacks<F> {
+    const fn new() -> Self {
+        Self {
+            list: RefCell::new(Vec::new()),
+            next: Cell::new(0),
+        }
+    }
+
+    fn add(&self, callback: Rc<F>) -> u64 {
+        let id = self.next.replace(self.next.get() + 1);
+        self.list.borrow_mut().push((id, callback));
+        id
+    }
+
+    /// Whether any are left.
+    fn remove(&self, id: u64) -> bool {
+        let mut list = self.list.borrow_mut();
+        list.retain(|(other, _)| *other != id);
+        !list.is_empty()
+    }
+
+    /// A copy, so a callback may subscribe or unsubscribe.
+    fn snapshot(&self) -> Vec<Rc<F>> {
+        self.list
+            .borrow()
+            .iter()
+            .map(|(_, callback)| callback.clone())
+            .collect()
+    }
+}
 
 /// Wraps the app natively, so a press's target is known until its click has
 /// bubbled, and a key press reaches [`BlitzKeyboard`]. Blitz runs a click's
@@ -113,6 +158,8 @@ pub(super) fn Listener(children: Element) -> Element {
             },
             onpointermove: move |event| followed(&event, false),
             onpointerup: move |event| followed(&event, true),
+            // A wheel bubbles where its scroll does not: see `BlitzScroll`.
+            onwheel: |_| notify_scroll(),
             {children}
         }
     }
@@ -457,11 +504,15 @@ pub(super) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
 }
 
 /// The viewport's scheme, which the shell keeps in step with the window theme.
-/// Read once, at [`Outlet`]'s first mount; `on_change` fires only for that
-/// correction, as Blitz sends no event on a live theme change.
+/// Blitz sends no event on a live theme change, so it is read at [`Outlet`]'s
+/// first mount and then every [`SCHEME_INTERVAL`] while anyone subscribes.
+/// A timer's task finds the document free, unlike a handler's.
 struct BlitzColorScheme;
 
 static COLOR_SCHEME: BlitzColorScheme = BlitzColorScheme;
+
+/// How late a live theme switch reaches Rust at most; the CSS follows at once.
+const SCHEME_INTERVAL: Duration = Duration::from_millis(500);
 
 fn viewport_scheme() -> Option<ColorScheme> {
     let anchor = anchor()?;
@@ -479,14 +530,7 @@ fn check_scheme() {
     if SCHEME.replace(scheme) == scheme {
         return;
     }
-    let callbacks: Vec<_> = SCHEME_CALLBACKS.with(|callbacks| {
-        callbacks
-            .borrow()
-            .iter()
-            .map(|(_, callback)| callback.clone())
-            .collect()
-    });
-    for callback in callbacks {
+    for callback in SCHEME_CALLBACKS.with(Callbacks::snapshot) {
         callback(scheme);
     }
 }
@@ -502,8 +546,14 @@ impl ColorSchemeApi for BlitzColorScheme {
     }
 
     fn on_change(&self, callback: Box<dyn Fn(ColorScheme)>) -> Box<dyn ColorSchemeSubscription> {
-        let id = NEXT_CALLBACK.replace(NEXT_CALLBACK.get() + 1);
-        SCHEME_CALLBACKS.with(|callbacks| callbacks.borrow_mut().push((id, Rc::from(callback))));
+        let id = SCHEME_CALLBACKS.with(|callbacks| callbacks.add(Rc::from(callback)));
+        SCHEME_POLL.with(|poll| {
+            let mut poll = poll.borrow_mut();
+            if poll.is_none() {
+                *poll = super::thread::timer()
+                    .map(|timer| timer.every(SCHEME_INTERVAL, Box::new(check_scheme)));
+            }
+        });
         Box::new(BlitzColorSchemeSubscription(id))
     }
 
@@ -521,7 +571,46 @@ impl ColorSchemeSubscription for BlitzColorSchemeSubscription {}
 
 impl Drop for BlitzColorSchemeSubscription {
     fn drop(&mut self) {
-        SCHEME_CALLBACKS.with(|callbacks| callbacks.borrow_mut().retain(|(id, _)| *id != self.0));
+        if !SCHEME_CALLBACKS.with(|callbacks| callbacks.remove(self.0)) {
+            // Taken out before it drops, so no borrow is held across its drop.
+            let poll = SCHEME_POLL.with(|poll| poll.borrow_mut().take());
+            drop(poll);
+        }
+    }
+}
+
+pub(super) fn scroll() -> Option<&'static dyn ScrollApi> {
+    Some(&SCROLL)
+}
+
+/// Blitz dispatches `scroll` only to the node that scrolled, and it does not
+/// bubble. What moves it does: a wheel reaches [`Listener`], and libero's own
+/// `scroll_to`/`scroll_into_view` report themselves. Blitz scrolls nothing on
+/// a key or a mouse drag (measured on the harness).
+struct BlitzScroll;
+
+static SCROLL: BlitzScroll = BlitzScroll;
+
+fn notify_scroll() {
+    for callback in SCROLL_CALLBACKS.with(Callbacks::snapshot) {
+        callback();
+    }
+}
+
+impl ScrollApi for BlitzScroll {
+    fn on_scroll(&self, callback: Box<dyn Fn()>) -> Box<dyn ScrollSubscription> {
+        let id = SCROLL_CALLBACKS.with(|callbacks| callbacks.add(Rc::from(callback)));
+        Box::new(BlitzScrollSubscription(id))
+    }
+}
+
+struct BlitzScrollSubscription(u64);
+
+impl ScrollSubscription for BlitzScrollSubscription {}
+
+impl Drop for BlitzScrollSubscription {
+    fn drop(&mut self) {
+        SCROLL_CALLBACKS.with(|callbacks| callbacks.remove(self.0));
     }
 }
 
@@ -707,8 +796,8 @@ impl ElementApi for BlitzElement {
 
     fn client_offset(&self) -> Read<(f64, f64)> {
         self.read(|doc, node_id| {
-            let rect = doc.get_client_bounding_rect(node_id)?;
-            Some((rect.x, rect.y))
+            let (x, y, _, _) = client_rect(doc, node_id)?;
+            Some((x, y))
         })
     }
 
@@ -756,15 +845,18 @@ impl ElementApi for BlitzElement {
             let Some(offset) = doc.get_node(node_id).map(|node| *node.scroll_offset()) else {
                 return;
             };
-            doc.scroll_node_by(node_id, x - offset.x, y - offset.y, |_| {});
+            // A wheel's sign: a positive delta scrolls towards the start.
+            doc.scroll_node_by(node_id, offset.x - x, offset.y - y, |_| {});
+            notify_scroll();
         });
         Ok(())
     }
 
-    /// Not written: finding the scrolling ancestor needs Blitz's overflow
-    /// styles, and nothing native has asked for it.
+    /// The web's walk over Blitz's layout; `smooth` is ignored, as Blitz only
+    /// jumps.
     fn scroll_into_view(&self, _smooth: bool) -> Result<(), PlatformError> {
-        Err(PlatformError::Unsupported)
+        show(self.anchor.clone(), self.node_id, LAYOUT_TRIES);
+        Ok(())
     }
 
     /// Blitz has no `FileList`, and nothing native posts a form anyway.
@@ -809,4 +901,77 @@ impl ElementApi for BlitzElement {
         drop(doc);
         Ok(nodes.into_iter().map(|node_id| self.at(node_id)).collect())
     }
+}
+
+/// An effect runs before the shell lays out what it rendered, so a node
+/// mounted this frame has no box yet: retried after a frame, a few times.
+const LAYOUT_TRIES: u8 = 3;
+const LAYOUT_WAIT: Duration = Duration::from_millis(20);
+
+fn show(anchor: NodeHandle, node_id: NodeId, tries: u8) {
+    let element = BlitzElement {
+        anchor: anchor.clone(),
+        node_id,
+    };
+    element.command(move |doc| {
+        let unlaid = doc.get_node(node_id).is_some_and(|node| {
+            let size = node.final_layout().size;
+            size.width == 0.0 && size.height == 0.0
+        });
+        if unlaid && tries > 0 {
+            let retry = super::thread::timer().map(|timer| {
+                timer.after(
+                    LAYOUT_WAIT,
+                    Box::new(move || show(anchor, node_id, tries - 1)),
+                )
+            });
+            // The latest call wins, as a second scroll would override the first.
+            SHOW_RETRY.with(|slot| drop(slot.replace(retry)));
+        } else if let Some((scroller, delta)) = into_view(doc, node_id) {
+            doc.scroll_node_by(scroller, 0.0, -delta, |_| {});
+            notify_scroll();
+        }
+    });
+}
+
+/// `x, y, width, height` of a node's border box in the viewport.
+/// `get_client_bounding_rect` also subtracts the node's own scroll offset,
+/// which moves its contents, not its box: added back here.
+fn client_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f64)> {
+    let rect = doc.get_client_bounding_rect(node_id)?;
+    let own = doc.get_node(node_id)?.scroll_offset();
+    Some((rect.x + own.x, rect.y + own.y, rect.width, rect.height))
+}
+
+/// `WebElement::scroll_into_view`'s walk: the nearest ancestor that overflows
+/// with `overflow-y: auto | scroll`, and how far it scrolls. No
+/// `scroll-margin`: servo's stylo does not parse it.
+fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(NodeId, f64)> {
+    let (_, y, width, height) = client_rect(doc, node_id)?;
+    if width == 0.0 && height == 0.0 {
+        return None;
+    }
+    let mut ancestor = doc.get_node(node_id)?.parent;
+    let scroller = loop {
+        let node = doc.get_node(ancestor?)?;
+        if node.is_element()
+            && node.final_layout().scroll_height() > 0.0
+            && matches!(
+                doc.resolved_style_value(node.id, "overflow-y").as_str(),
+                "auto" | "scroll"
+            )
+        {
+            break node;
+        }
+        ancestor = node.parent;
+    };
+    let layout = scroller.final_layout();
+    let view_top = client_rect(doc, scroller.id)?.1 + f64::from(layout.border.top);
+    let client_height = layout.size.height
+        - layout.border.top
+        - layout.border.bottom
+        - layout.scrollbar_size.height;
+    let delta =
+        super::nearest_scroll(y, y + height, view_top, view_top + f64::from(client_height))?;
+    Some((scroller.id, delta))
 }

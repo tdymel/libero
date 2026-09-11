@@ -1,10 +1,14 @@
 //! `use_color_scheme` follows the window theme natively (todo 393).
 
+use std::time::Duration;
+
 use dioxus::prelude::*;
 use libero::hooks::use_color_scheme;
-use native_tests::{ColorScheme, Key, mount, mount_in};
+use native_tests::{ColorScheme, mount, mount_in};
 
 const SCHEME: &str = "#scheme";
+// libero's re-read interval, and a margin for a loaded machine.
+const TICK: Duration = Duration::from_millis(800);
 
 fn app() -> Element {
     let scheme = use_color_scheme();
@@ -25,13 +29,16 @@ fn a_light_window_resolves_light() {
     assert_eq!(page.text(SCHEME), "light");
 }
 
-/// Pins a gap: Blitz sends no theme-change event, and libero reads the scheme
-/// once at mount. Flips once Blitz notifies.
+/// Blitz sends no theme-change event, so libero re-reads the viewport on a
+/// timer: a switch reaches Rust within half a second, with no input.
 #[test]
-fn a_live_theme_change_does_not_reach_rust() {
+fn a_live_theme_change_reaches_rust_without_input() {
     let mut page = mount(app);
     page.set_color_scheme(ColorScheme::Dark);
-    page.click(SCHEME);
-    page.press(Key::Tab);
+    page.wait(TICK);
+    assert_eq!(page.text(SCHEME), "dark");
+
+    page.set_color_scheme(ColorScheme::Light);
+    page.wait(TICK);
     assert_eq!(page.text(SCHEME), "light");
 }

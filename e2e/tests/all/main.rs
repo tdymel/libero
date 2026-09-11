@@ -32,6 +32,7 @@ mod menu;
 mod menubar;
 mod modal;
 mod multi_select;
+mod nav_link;
 mod negative;
 mod notifications;
 mod number_field;

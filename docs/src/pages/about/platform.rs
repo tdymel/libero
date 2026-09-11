@@ -20,7 +20,7 @@ const ACCESSORS: [(&str, &str, &str); 5] = [
     (
         "scroll() -> Option<&'static dyn ScrollApi>",
         "on_scroll(callback) - anything scrolling, not just the page. Returns a ScrollSubscription.",
-        "None off the web.",
+        "None in a webview and a headless build. Natively it hears a wheel inside LiberoProvider and libero's own scroll_to/scroll_into_view.",
     ),
     (
         "document() -> Option<&'static dyn DocumentApi>",

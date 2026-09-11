@@ -11,6 +11,7 @@ mod keyboard;
 mod lightbox;
 mod menu;
 mod pointer;
+mod scroll;
 mod segmented_control;
 mod select;
 mod slider;

@@ -600,13 +600,7 @@ impl ElementApi for WebElement {
         let bottom = rect.bottom() + margin("bottom");
         let view_top = scroller.get_bounding_client_rect().top() + scroller.client_top() as f64;
         let view_bottom = view_top + scroller.client_height() as f64;
-        // `nearest`: the edge that is out of view, and the top one if the
-        // element is taller than the view.
-        let delta = if top < view_top || bottom - top > view_bottom - view_top {
-            top - view_top
-        } else if bottom > view_bottom {
-            bottom - view_bottom
-        } else {
+        let Some(delta) = super::nearest_scroll(top, bottom, view_top, view_bottom) else {
             return Ok(());
         };
         let options = web_sys::ScrollToOptions::new();

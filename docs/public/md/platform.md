@@ -22,7 +22,7 @@ that outlives the moment.
 |---|---|---|
 | `timer() -> Option<&'static dyn TimerApi>` | `after(delay, callback)`, `every(interval, callback)` - each returns a `TimerSubscription`. | Some on every renderer; `None` only outside a dioxus runtime. Inert during a server render. |
 | `keyboard() -> Option<&'static dyn KeyboardApi>` | `on_key(callback)`, `on_key_unfiltered(callback)` - each returns a `KeySubscription`. The callback gets a `KeyChord` and returns `true` to prevent the default. | Off the web. |
-| `scroll() -> Option<&'static dyn ScrollApi>` | `on_scroll(callback)` - anything scrolling, not just the page. Returns a `ScrollSubscription`. | Off the web. |
+| `scroll() -> Option<&'static dyn ScrollApi>` | `on_scroll(callback)` - anything scrolling, not just the page. Returns a `ScrollSubscription`. | In a webview and a headless build. Natively it hears a wheel inside `LiberoProvider` and libero's own `scroll_to`/`scroll_into_view`. |
 | `document() -> Option<&'static dyn DocumentApi>` | `active_element()`, `viewport()`. | Where the renderer exposes no document: a webview, and any headless build. |
 | `clock() -> Option<&'static dyn ClockApi>` | `today()` - the local calendar day. | Some on every renderer: JS `Date` on the web, the system clock and time zone off it. Call it after mount, never while rendering. |
 

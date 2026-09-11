@@ -23,8 +23,9 @@ use blitz_dom::{BaseDocument, Document, DocumentConfig, Node};
 use blitz_traits::{
     NodeId,
     events::{
-        BlitzKeyEvent, BlitzPointerEvent, BlitzPointerId, KeyState, MouseEventButton,
-        MouseEventButtons, Point, PointerCoords, PointerDetails, UiEvent,
+        BlitzKeyEvent, BlitzPointerEvent, BlitzPointerId, BlitzWheelDelta, BlitzWheelEvent,
+        KeyState, MouseEventButton, MouseEventButtons, Point, PointerCoords, PointerDetails,
+        UiEvent,
     },
     shell::Viewport,
 };
@@ -190,6 +191,32 @@ impl Page {
     pub fn hover(&mut self, selector: &str) {
         let (x, y) = self.centre(selector);
         self.dispatch(UiEvent::PointerMove(pointer(x, y, false)));
+    }
+
+    /// Turns the wheel over the first match's centre: a positive `dy` scrolls
+    /// down by that many pixels. Blitz scrolls what the pointer hovers, so
+    /// `hover` it first, once: a second move there dropped the next wheel.
+    pub fn wheel(&mut self, selector: &str, dy: f64) {
+        let (x, y) = self.centre(selector);
+        let coords = pointer(x, y, false).coords;
+        self.dispatch(UiEvent::Wheel(BlitzWheelEvent {
+            // Blitz's sign is a finger's: a negative delta scrolls down.
+            delta: BlitzWheelDelta::Pixels(0.0, -dy),
+            coords,
+            buttons: MouseEventButtons::empty(),
+            mods: Modifiers::empty(),
+            element: Point { x: 0.0, y: 0.0 },
+        }));
+    }
+
+    /// A node's vertical scroll offset.
+    pub fn scroll_top(&self, selector: &str) -> f64 {
+        let id = self.node(selector);
+        self.doc
+            .inner
+            .borrow()
+            .get_node(id)
+            .map_or(0.0, |node| node.scroll_offset().y)
     }
 
     /// Focuses the first match directly, the way `element.focus()` does.
