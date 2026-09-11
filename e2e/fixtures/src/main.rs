@@ -68,6 +68,7 @@ mod spotlight;
 mod stepper;
 mod tabs;
 mod tags_field;
+mod time_picker;
 mod tooltip;
 mod tree;
 
@@ -122,6 +123,7 @@ const FIXTURES: &[Routes] = &[
     stepper::ROUTES,
     tabs::ROUTES,
     tags_field::ROUTES,
+    time_picker::ROUTES,
     tooltip::ROUTES,
     tree::ROUTES,
 ];

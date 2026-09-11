@@ -201,13 +201,21 @@ enum Column {
 /// One option of a digital column. Plain values only: what a click picks is
 /// worked out from the column and the index, so the options do not change
 /// when another column's value does.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 struct Choice {
-    key: String,
-    label: String,
+    /// Also its key: labels are unique within a column.
+    label: &'static str,
     selected: bool,
     disabled: bool,
 }
+
+/// `00` to `59`, so a pick allocates no label.
+static TWO_DIGITS: [&str; 60] = [
+    "00", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15",
+    "16", "17", "18", "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31",
+    "32", "33", "34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47",
+    "48", "49", "50", "51", "52", "53", "54", "55", "56", "57", "58", "59",
+];
 
 fn at(hour: u32, minute: u32, second: u32) -> NaiveTime {
     NaiveTime::from_hms_opt(hour, minute, second).expect("in range")
@@ -356,8 +364,7 @@ impl ClockView {
                 let label = self.hour_label(index);
                 let hour = self.hour_of(label);
                 Choice {
-                    key: label.to_string(),
-                    label: format!("{label:02}"),
+                    label: TWO_DIGITS[label as usize],
                     selected: value.is_some_and(|value| value.hour() == hour),
                     disabled: !self.within(at(hour, 0, 0), at(hour, 59, 59)),
                 }
@@ -366,8 +373,7 @@ impl ClockView {
         let minutes = (0..60u32)
             .step_by(step as usize)
             .map(|minute| Choice {
-                key: minute.to_string(),
-                label: format!("{minute:02}"),
+                label: TWO_DIGITS[minute as usize],
                 selected: value.is_some_and(|value| value.minute() == minute),
                 disabled: !self.within(at(base.hour(), minute, 0), at(base.hour(), minute, 59)),
             })
@@ -377,8 +383,7 @@ impl ClockView {
                 .map(|second| {
                     let time = at(base.hour(), base.minute(), second);
                     Choice {
-                        key: second.to_string(),
-                        label: format!("{second:02}"),
+                        label: TWO_DIGITS[second as usize],
                         selected: value.is_some_and(|value| value.second() == second),
                         disabled: !self.within(time, time),
                     }
@@ -394,14 +399,12 @@ impl ClockView {
         let meridiem = twelve.then(|| {
             let choices = vec![
                 Choice {
-                    key: "am".into(),
-                    label: names.am.into(),
+                    label: names.am,
                     selected: value.is_some() && !pm,
                     disabled: self.half(false).is_none(),
                 },
                 Choice {
-                    key: "pm".into(),
-                    label: names.pm.into(),
+                    label: names.pm,
                     selected: value.is_some() && pm,
                     disabled: self.half(true).is_none(),
                 },
@@ -436,7 +439,7 @@ impl ClockView {
                     Mark {
                         index,
                         inner: false,
-                        label: label.to_string(),
+                        label: TWO_DIGITS[label as usize].trim_start_matches('0'),
                         selected: value.is_some_and(|value| value.hour() == hour),
                         disabled: !self.within(at(hour, 0, 0), at(hour, 59, 59)),
                     }
@@ -447,7 +450,7 @@ impl ClockView {
                     Mark {
                         index,
                         inner: true,
-                        label: format!("{hour:02}"),
+                        label: TWO_DIGITS[hour as usize],
                         selected: value.is_some_and(|value| value.hour() == hour),
                         disabled: !self.within(at(hour, 0, 0), at(hour, 59, 59)),
                     }
@@ -460,7 +463,7 @@ impl ClockView {
                     Mark {
                         index,
                         inner: false,
-                        label: format!("{minute:02}"),
+                        label: TWO_DIGITS[minute as usize],
                         selected: value.is_some_and(|value| value.minute() == minute),
                         disabled: minute % u32::from(step) != 0
                             || !self
@@ -557,12 +560,10 @@ impl ClockView {
                     true => (value.hour() + 11) % 12 + 1,
                     false => value.hour(),
                 };
-                format!("{hour:02}")
+                TWO_DIGITS[hour as usize]
             })
-            .unwrap_or_else(|| "--".into());
-        let minute_text = value
-            .map(|value| format!("{:02}", value.minute()))
-            .unwrap_or_else(|| "--".into());
+            .unwrap_or("--");
+        let minute_text = value.map_or("--", |value| TWO_DIGITS[value.minute() as usize]);
         let halves = twelve.then(|| {
             let (am_at, pm_at) = (self.half(false), self.half(true));
             rsx! {
@@ -597,13 +598,13 @@ impl ClockView {
         let (face_label, face_text, face_now, face_max) = match hand() {
             Hand::Hour => (
                 names.hours_label,
-                hour_text.clone(),
+                hour_text,
                 value.map(|value| value.hour()),
                 23,
             ),
             Hand::Minute => (
                 names.minutes_label,
-                minute_text.clone(),
+                minute_text,
                 value.map(|value| value.minute()),
                 59,
             ),
@@ -805,23 +806,6 @@ fn ClockColumn(props: ClockColumnProps) -> Element {
             "[data-column='{column:?}'] [data-index='{next}']"
         )));
     };
-    let options = choices.into_iter().enumerate().map(|(index, choice)| {
-        rsx! {
-            button {
-                key: "{choice.key}",
-                r#type: "button",
-                "data-slot": "option",
-                "data-index": "{index}",
-                "data-selected": choice.selected.then_some("true"),
-                "aria-pressed": if choice.selected { "true" } else { "false" },
-                disabled: choice.disabled,
-                tabindex: if focusable && stop == Some(index) { "0" } else { "-1" },
-                onfocus: move |_| active.set(Some((column, index))),
-                onclick: move |_| onpick.call((column, index)),
-                "{choice.label}"
-            }
-        }
-    });
     rsx! {
         div {
             "data-slot": "column",
@@ -829,19 +813,33 @@ fn ClockColumn(props: ClockColumnProps) -> Element {
             "aria-label": label,
             onmounted: handle.mount(),
             onkeydown,
-            {options}
+            for (index, choice) in choices.into_iter().enumerate() {
+                button {
+                    key: "{choice.label}",
+                    r#type: "button",
+                    "data-slot": "option",
+                    "data-index": index as i64,
+                    "data-selected": choice.selected.then_some("true"),
+                    "aria-pressed": if choice.selected { "true" } else { "false" },
+                    disabled: choice.disabled,
+                    tabindex: if focusable && stop == Some(index) { "0" } else { "-1" },
+                    onfocus: move |_| active.set(Some((column, index))),
+                    onclick: move |_| onpick.call((column, index)),
+                    "{choice.label}"
+                }
+            }
         }
     }
 }
 
 /// One mark on the analog face.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 struct Mark {
     /// Its place on the ring, 0 at the top.
     index: u32,
     /// On the inner ring of a 24-hour face.
     inner: bool,
-    label: String,
+    label: &'static str,
     selected: bool,
     disabled: bool,
 }
