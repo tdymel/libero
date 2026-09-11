@@ -11,6 +11,10 @@ type OnMove = Rc<RefCell<Box<dyn Fn(&dyn FocusMove)>>>;
 /// for as long as the component lives. Never where every move fires its
 /// events (the web). The latest render's `onmove` is the one called.
 pub(crate) fn use_silent_focus(onmove: impl Fn(&dyn FocusMove) + 'static) {
+    // Fixed per build, so the hook order holds; the web pays no hook slot.
+    if silent_focus().is_none() {
+        return;
+    }
     let slot = use_hook(|| {
         let current: OnMove = Rc::new(RefCell::new(Box::new(|_| {})));
         let subscription = silent_focus().map(|api| {

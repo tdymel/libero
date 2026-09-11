@@ -5,9 +5,9 @@ use dioxus::prelude::*;
 use libero::{
     chrono::{NaiveDate, NaiveTime},
     components::{
-        ColorCode, ColorField, DateField, FileField, Files, Flex, MultiSelect, NativeSelect,
-        NumberField, PhoneField, PinField, Select, SliderChangeEvent, TextField, Textarea,
-        TimeField,
+        Autocomplete, Cascader, CascaderOption, ColorCode, ColorField, DateField, FileField, Files,
+        Flex, MultiSelect, NativeSelect, NumberField, PhoneField, PinField, Select,
+        SliderChangeEvent, TagsField, TextField, Textarea, TimeField,
     },
 };
 
@@ -29,6 +29,10 @@ fn FieldFramePage() -> Element {
     let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 9, 25));
     let mut files = use_signal(Files::default);
     let mut time = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
+    let mut city = use_signal(String::new);
+    let mut place = use_signal(|| None::<String>);
+    // A held tag, so the control holds a chip before its input.
+    let mut topics = use_signal(|| vec!["rust".to_string()]);
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
@@ -121,6 +125,32 @@ fn FieldFramePage() -> Element {
                     label: "Attachment",
                     value: files(),
                     onchange: move |next: Files| files.set(next),
+                }
+            }
+            div { "data-case": "autocomplete",
+                Autocomplete {
+                    label: "City",
+                    options: vec!["Berlin".to_string(), "Dublin".to_string()],
+                    value: city(),
+                    oninput: move |next| city.set(next),
+                }
+            }
+            div { "data-case": "cascader",
+                Cascader {
+                    label: "Place",
+                    data: vec![
+                        CascaderOption::new("europe", "Europe")
+                            .children(vec![CascaderOption::new("paris", "Paris")]),
+                    ],
+                    value: place(),
+                    onchange: move |next: Option<String>| place.set(next),
+                }
+            }
+            div { "data-case": "tags",
+                TagsField {
+                    label: "Topics",
+                    value: topics(),
+                    onchange: move |next| topics.set(next),
                 }
             }
         }

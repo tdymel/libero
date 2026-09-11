@@ -249,8 +249,14 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         .event("onmouseenter", move |_: MouseEvent| {
             hovered.hover(true, open_delay)
         })
-        .event("onmouseleave", move |_: MouseEvent| {
-            hovered.hover(false, close_delay)
+        .event("onmouseleave", {
+            // A press on a trigger that held focus already fired no `focusin`
+            // to clear it, and would swallow the next keyboard focus.
+            let pressed = pressed.clone();
+            move |_: MouseEvent| {
+                pressed.set(false);
+                hovered.hover(false, close_delay)
+            }
         })
         .render(
             HtmlTag::Span,

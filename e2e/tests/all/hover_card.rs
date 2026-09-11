@@ -244,3 +244,28 @@ fn escape_in_a_read_only_color_field_closes_the_card() {
         fixture.close().await.unwrap();
     });
 }
+
+/// A press on a trigger that already holds focus fires no `focusin`, so it
+/// must not swallow the next keyboard focus: Tab away and back opens the card.
+#[test]
+fn a_second_click_does_not_swallow_the_next_keyboard_focus() {
+    block_on(async {
+        let fixture = Fixture::open("/hover-card", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, TRIGGER).await.unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        pointer::move_to(page, AWAY).await.unwrap();
+        wait::for_hidden(page, CARD).await.unwrap();
+
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        assert_focused(page, AFTER, "Tab past the closed card").await;
+        keyboard::press_shift(page, keyboard::TAB).await.unwrap();
+        assert_focused(page, TRIGGER, "Shift+Tab back to the trigger").await;
+        wait::for_visible(page, CARD)
+            .await
+            .unwrap_or_else(|e| panic!("keyboard focus did not open the card: {e}"));
+        fixture.close().await.unwrap();
+    });
+}
