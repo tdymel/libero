@@ -128,7 +128,9 @@ fn every_framed_field_takes_a_padding_press() {
             .unwrap();
         let page = &fixture.page;
 
-        for case in ["textarea", "native", "phone", "color", "date", "file"] {
+        for case in [
+            "textarea", "native", "phone", "color", "date", "time", "file",
+        ] {
             blur(page).await.unwrap();
             press(page, &bottom_padding(case)).await.unwrap();
             let frame = format!("[data-case={case}] [data-frame]");

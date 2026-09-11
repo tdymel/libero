@@ -3,10 +3,11 @@
 
 use dioxus::prelude::*;
 use libero::{
-    chrono::NaiveDate,
+    chrono::{NaiveDate, NaiveTime},
     components::{
         ColorCode, ColorField, DateField, FileField, Files, Flex, MultiSelect, NativeSelect,
         NumberField, PhoneField, PinField, Select, SliderChangeEvent, TextField, Textarea,
+        TimeField,
     },
 };
 
@@ -27,6 +28,7 @@ fn FieldFramePage() -> Element {
     let mut color = use_signal(|| "#1c7ed6".parse::<ColorCode>().unwrap());
     let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 9, 25));
     let mut files = use_signal(Files::default);
+    let mut time = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
@@ -105,6 +107,13 @@ fn FieldFramePage() -> Element {
                     label: "Arrival",
                     value: day(),
                     onchange: move |next| day.set(next),
+                }
+            }
+            div { "data-case": "time",
+                TimeField {
+                    label: "Start",
+                    value: time(),
+                    onchange: move |next| time.set(next),
                 }
             }
             div { "data-case": "file",
