@@ -67,6 +67,36 @@ fn a_drag_moves_the_grabbed_thumb_only() {
     });
 }
 
+/// Each thumb reaches its own closed value bubble through `aria-describedby`.
+/// The baseline's lone `tooltip` is the first thumb's, open from the focus-ring pass.
+#[test]
+fn each_thumb_is_described_by_its_value_bubble() {
+    block_on(async {
+        let fixture = Fixture::open("/range-slider", Viewport::Desktop)
+            .await
+            .unwrap();
+        let open: u32 = fixture
+            .page
+            .evaluate("document.querySelectorAll('[role=tooltip]:not([hidden])').length")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(open, 0, "no bubble is open before focus or hover");
+        for value in ["20", "80"] {
+            let selector = format!("[role=slider][aria-valuenow='{value}']");
+            let description = e2e::ax::description(&fixture.page, &selector)
+                .await
+                .unwrap();
+            assert_eq!(
+                description, value,
+                "the {value} thumb's computed description"
+            );
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn the_keys_move_the_focused_thumb() {
     block_on(async {

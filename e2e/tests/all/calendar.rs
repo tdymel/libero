@@ -225,6 +225,53 @@ fn a_range_keeps_its_marks_across_pages() {
     });
 }
 
+/// Climbing by the titles keeps focus in the calendar, and a year paged by
+/// key climbs back down to the month it came from, not January (todo 26).
+#[test]
+fn the_levels_keep_focus_and_the_month() {
+    block_on(async {
+        let fixture = Fixture::open("/calendar", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let focused = |what: &'static str, check: &'static str| async move {
+            let js = format!(
+                "(() => {{ const el = document.activeElement; return !!el && ({check}); }})()"
+            );
+            wait::for_js_true(page, &js, what).await.unwrap();
+        };
+
+        keyboard::tab_to(page, "[data-slot=title]", 10)
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        focused(
+            "the month view's title to hold focus",
+            "el.dataset.slot === 'title' && el.textContent === '2026'",
+        )
+        .await;
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        focused(
+            "the year view's 2026 cell to hold focus",
+            "el.dataset.date === '2026-01-01'",
+        )
+        .await;
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        focused(
+            "ArrowRight to focus 2027",
+            "el.dataset.date === '2027-01-01'",
+        )
+        .await;
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        focused(
+            "picking 2027 to focus March 2027",
+            "el.dataset.date === '2027-03-01'",
+        )
+        .await;
+
+        fixture.console.assert_clean("the level climb").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Waits until focus is on `date`'s own cell in the grid titled `month`.
 async fn expect_focus(page: &chromiumoxide::Page, date: &str, month: &str, what: &str, at: &str) {
     let check = format!(

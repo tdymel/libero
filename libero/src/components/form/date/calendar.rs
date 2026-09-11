@@ -564,7 +564,8 @@ impl View {
 
     /// A step off the shown year or decade pages it.
     fn cell_keydown(self, event: KeyboardEvent, cell_stop: NaiveDate) {
-        let (months_per_cell, cells_per_page, column) = match (self.level)() {
+        let level = (self.level)();
+        let (months_per_cell, cells_per_page, column) = match level {
             DateLevel::Day => return,
             DateLevel::Month => (1, 12, i64::from(cell_stop.month0() % 3)),
             DateLevel::Year => (
@@ -587,7 +588,12 @@ impl View {
         event.prevent_default();
         let (mut paged, mut active) = (self.paged, self.active);
         let next = self.clamp_cell(add_months(cell_stop, cells * months_per_cell));
-        paged.set(Some(next));
+        // A year cell is January 1; the page keeps the month a pick climbs back down to.
+        let page = match level {
+            DateLevel::Year => NaiveDate::from_ymd_opt(next.year(), self.first.month(), 1),
+            _ => None,
+        };
+        paged.set(Some(page.unwrap_or(next)));
         active.set(Some(next));
         self.focus.to(Focus::Date(next));
     }

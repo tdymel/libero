@@ -97,6 +97,46 @@ fn an_analog_pick_takes_the_hour_then_the_minute() {
     });
 }
 
+/// A time picked before any day lands on today, from the clock, when the
+/// picker has no `today` prop (todo 26).
+#[test]
+fn a_time_picked_first_lands_on_today() {
+    block_on(async {
+        let fixture = Fixture::open("/time-picker/date-time", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(
+            "[...document.querySelectorAll('label')].find(label => label.textContent === 'Time').click()",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!!document.querySelector(\"{HOURS_ANY} [data-index='10']\")"),
+            "the clock to replace the calendar",
+        )
+        .await
+        .unwrap();
+        click(page, &format!("{HOURS_ANY} [data-index='10']")).await;
+        let today = "(() => { const d = new Date(); \
+                     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })()";
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.getElementById('moment-value').textContent === {today} + ' 10:00:00'"
+            ),
+            "the time to land on today",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the date-time pick").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+const HOURS_ANY: &str = "[data-column='Hours']";
+
 const MARKS: &str = "[...document.querySelectorAll(\"#analog [data-slot='mark']\")]";
 
 async fn click_mark(page: &chromiumoxide::Page, label: &str) {

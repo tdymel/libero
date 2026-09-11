@@ -9,6 +9,7 @@ use super::{
     calendar::{Calendar, Selection},
     parse_time::MIDNIGHT,
     picker_field::FieldValue,
+    today::use_today,
 };
 use crate::{
     components::{
@@ -178,10 +179,13 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
     let mut part = use_signal(|| Part::Date);
     let (root, mut handoff) = use_handoff();
     let focusable = props.focusable;
-    let (value, onpick, today) = (props.value, props.onpick, props.today);
+    let (value, onpick) = (props.value, props.onpick);
+    let today = use_today(props.today);
+    // A time picked with no day and no clock waits here for the day pick.
+    let mut pending = use_signal(|| None::<NaiveTime>);
     let size = props.size.copied_or(use_theme().date_picker.size);
     let date = value.map(|value| value.date());
-    let time = value.map(|value| value.time());
+    let time = value.map(|value| value.time()).or(pending());
     let (min_time, max_time) = time_limits(date, props.min, props.max);
 
     let picker = match part() {
@@ -199,6 +203,7 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
                 onchange: move |day: Option<NaiveDate>| {
                     if let Some(day) = day {
                         onpick.call(Some(NaiveDateTime::new(day, time.unwrap_or(MIDNIGHT))));
+                        pending.set(None);
                         part.set(Part::Time);
                         handoff.set(focusable && root.query_selector(":focus").is_ok());
                     }
@@ -217,8 +222,10 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
                 size,
                 focusable: props.focusable,
                 onchange: move |next: Option<NaiveTime>| {
-                    if let (Some(day), Some(next)) = (date.or(today), next) {
-                        onpick.call(Some(NaiveDateTime::new(day, next)));
+                    match (date.or(today), next) {
+                        (Some(day), Some(next)) => onpick.call(Some(NaiveDateTime::new(day, next))),
+                        (None, next) => pending.set(next),
+                        _ => {}
                     }
                 },
             }
@@ -276,7 +283,10 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
     let mut part = use_signal(|| Part::Date);
     let (root, mut handoff) = use_handoff();
     let focusable = props.focusable;
-    let (value, onpick, today) = (props.value, props.onpick, props.today);
+    let (value, onpick) = (props.value, props.onpick);
+    let today = use_today(props.today);
+    // The start's time, picked with no day and no clock, as in `DateTimeFlow`.
+    let mut pending = use_signal(|| None::<NaiveTime>);
     let start = value.map(|range| range.start);
     let end = value.and_then(|range| range.end);
     let emit = move |start: NaiveDateTime, end: Option<NaiveDateTime>| {
@@ -295,8 +305,9 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
                 emit(start, Some(NaiveDateTime::new(day, time)));
             }
             _ => {
-                let time = start.map_or(MIDNIGHT, |start| start.time());
-                let next = NaiveDateTime::new(day, time);
+                let time = start.map(|start| start.time()).or(pending());
+                let next = NaiveDateTime::new(day, time.unwrap_or(MIDNIGHT));
+                pending.set(None);
                 emit(next, end.filter(|end| *end >= next));
             }
         }
@@ -324,7 +335,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
         },
         Part::Time => rsx! {
             TimePicker {
-                value: current.map(|value| value.time()),
+                value: current.map(|value| value.time()).or(pending().filter(|_| !editing_end)),
                 variant: Input::Value(props.variant),
                 with_seconds: props.with_seconds,
                 step: props.step,
@@ -334,6 +345,11 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
                 size,
                 focusable: props.focusable,
                 onchange: move |time: Option<NaiveTime>| {
+                    let day = start.map(|start| start.date()).or(today);
+                    if !editing_end && day.is_none() {
+                        pending.set(time);
+                        return;
+                    }
                     let Some(time) = time else {
                         return;
                     };
@@ -343,7 +359,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
                             emit(start, Some(NaiveDateTime::new(day, time)));
                         }
                         _ => {
-                            if let Some(day) = start.map(|start| start.date()).or(today) {
+                            if let Some(day) = day {
                                 emit(NaiveDateTime::new(day, time), end);
                             }
                         }

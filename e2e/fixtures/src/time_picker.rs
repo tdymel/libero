@@ -2,13 +2,16 @@
 
 use dioxus::prelude::*;
 use libero::{
-    chrono::NaiveTime,
-    components::{Flex, TimePicker},
+    chrono::{NaiveDateTime, NaiveTime},
+    components::{DatePicker, Flex, TimePicker},
 };
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/time-picker", || rsx! { TimePickerPage {} })];
+pub const ROUTES: Routes = &[
+    ("/time-picker", || rsx! { TimePickerPage {} }),
+    ("/time-picker/date-time", || rsx! { DateTimePage {} }),
+];
 
 /// 24 hours and a 5-minute step pinned, so the options never depend on the
 /// theme's locale.
@@ -39,5 +42,23 @@ fn TimePickerPage() -> Element {
             }
             span { id: "analog-value", {shown(analog())} }
         }
+    }
+}
+
+/// An empty date-time picker with no `today` prop: a time picked first takes
+/// its day from the clock.
+#[component]
+fn DateTimePage() -> Element {
+    let mut moment = use_signal(|| None::<NaiveDateTime>);
+    let shown = moment().map(|value| value.to_string()).unwrap_or_default();
+
+    rsx! {
+        DatePicker::<NaiveDateTime> {
+            variant: "digital",
+            twelve_hour: false,
+            value: moment(),
+            onchange: move |next: Option<NaiveDateTime>| moment.set(next),
+        }
+        span { id: "moment-value", {shown} }
     }
 }
