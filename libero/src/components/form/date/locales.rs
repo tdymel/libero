@@ -3,8 +3,9 @@
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Weekday};
 
+use super::calendar::{DateLevel, first_of_month};
 use super::format::{format_date, format_time};
-use super::parse::parse_date;
+use super::parse::{parse_at, parse_date};
 use super::parse_time::{parse_date_time, parse_time};
 use crate::theme::DateDefaults;
 
@@ -34,12 +35,32 @@ fn minutes() -> impl Iterator<Item = NaiveTime> {
 fn every_day_reads_back() {
     for (name, locale) in LOCALES {
         for day in days() {
-            let text = format_date(day, locale.format, &locale);
+            let format = (locale.format)(DateLevel::Day);
+            let text = format_date(day, format, &locale);
             assert_eq!(
-                parse_date(&text, locale.format, &locale, None),
+                parse_date(&text, format, &locale, None),
                 Ok(day),
                 "{name}: {text}"
             );
+        }
+    }
+}
+
+/// A month reads back as its first day, a year as its January 1.
+#[test]
+fn every_month_and_year_reads_back() {
+    for (name, locale) in LOCALES {
+        for day in days().filter(|day| day.day() == 15) {
+            let format = (locale.format)(DateLevel::Month);
+            let text = format_date(day, format, &locale);
+            let read = parse_at(&text, format, &locale, None, DateLevel::Month);
+            assert_eq!(read, Ok(first_of_month(day)), "{name}: {text}");
+
+            let format = (locale.format)(DateLevel::Year);
+            let text = format_date(day, format, &locale);
+            let read = parse_at(&text, format, &locale, None, DateLevel::Year);
+            let january = NaiveDate::from_ymd_opt(day.year(), 1, 1);
+            assert_eq!(read.ok(), january, "{name}: {text}");
         }
     }
 }
@@ -66,12 +87,12 @@ fn a_moment_reads_back() {
             for time in minutes().step_by(97) {
                 let text = format!(
                     "{} {}",
-                    format_date(day, locale.format, &locale),
+                    format_date(day, (locale.format)(DateLevel::Day), &locale),
                     format_time(time, locale.time_format, &locale)
                 );
                 let read = parse_date_time(
                     &text,
-                    locale.format,
+                    (locale.format)(DateLevel::Day),
                     locale.time_format,
                     &locale,
                     None,

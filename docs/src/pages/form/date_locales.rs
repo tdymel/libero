@@ -1,5 +1,5 @@
 // Three locales to copy: the names follow dayjs' `de`, `fr` and `ja` files,
-// Sunday first. Needs `DateDefaults` and `Weekday` in scope.
+// Sunday first. Needs `DateDefaults`, `DateLevel` and `Weekday` in scope.
 
 pub const GERMAN: DateDefaults = DateDefaults {
     months: [
@@ -34,7 +34,11 @@ pub const GERMAN: DateDefaults = DateDefaults {
     am: "AM",
     pm: "PM",
     first_weekday: Weekday::Mon,
-    format: "D. MMMM YYYY",
+    format: |level| match level {
+        DateLevel::Day => "D. MMMM YYYY",
+        DateLevel::Month => "MMMM YYYY",
+        DateLevel::Year => "YYYY",
+    },
     month_format: "MMMM YYYY",
     time_format: "HH:mm",
     range_separator: " – ",
@@ -85,7 +89,11 @@ pub const FRENCH: DateDefaults = DateDefaults {
     am: "AM",
     pm: "PM",
     first_weekday: Weekday::Mon,
-    format: "dddd D MMMM YYYY",
+    format: |level| match level {
+        DateLevel::Day => "dddd D MMMM YYYY",
+        DateLevel::Month => "MMMM YYYY",
+        DateLevel::Year => "YYYY",
+    },
     month_format: "MMMM YYYY",
     time_format: "HH[ h ]mm",
     range_separator: " – ",
@@ -130,7 +138,11 @@ pub const JAPANESE: DateDefaults = DateDefaults {
     am: "午前",
     pm: "午後",
     first_weekday: Weekday::Sun,
-    format: "YYYY年M月D日",
+    format: |level| match level {
+        DateLevel::Day => "YYYY年M月D日",
+        DateLevel::Month => "YYYY年M月",
+        DateLevel::Year => "YYYY年",
+    },
     month_format: "YYYY年M月",
     time_format: "Ah:mm",
     range_separator: " – ",

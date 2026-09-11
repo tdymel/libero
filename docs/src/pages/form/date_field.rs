@@ -7,23 +7,41 @@ use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, pr
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use libero::components::{
-    Code, DateField, DateRange, Flex, Kbd, Rule, Text, Validators, not_empty,
+    Code, DateField, DateLevel, DateRange, Flex, Kbd, Rule, Text, Validators, not_empty,
 };
 use libero::theme::DateDefaults;
 
 mod locales {
     use libero::chrono::Weekday;
+    use libero::components::DateLevel;
     use libero::theme::DateDefaults;
 
     include!("date_locales.rs");
 }
 
-const KINDS: [&str; 5] = ["date", "time", "date-time", "date-range", "date-time-range"];
+const KINDS: [&str; 7] = [
+    "date",
+    "month",
+    "year",
+    "time",
+    "date-time",
+    "date-range",
+    "date-time-range",
+];
 
 const LOCALES: [&str; 4] = ["en", "de", "fr", "ja"];
 
 /// The copyable constants, printed as they are written.
 const LOCALES_SOURCE: &str = include_str!("date_locales.rs");
+
+/// The level the picked kind is typed at.
+fn level_of(values: &DemoValues) -> DateLevel {
+    match values.str("value").as_str() {
+        "month" => DateLevel::Month,
+        "year" => DateLevel::Year,
+        _ => DateLevel::Day,
+    }
+}
 
 /// The picked locale's constant: its name and its values.
 fn locale_of(values: &DemoValues) -> Option<(&'static str, &'static DateDefaults)> {
@@ -85,9 +103,10 @@ pub fn DateFieldPage() -> Element {
                     prop("value", "Option<V>").doc("The value; strictly controlled. `None` is the empty field. Its type picks the dropdown."),
                     prop("onchange", "EventHandler<Option<V>>")
                         .doc("Called when typed text is committed - on blur or Enter - and on every pick. Emptied text commits `None`."),
+                    prop("level", "DateLevel").default("Day").doc("Types and picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for every other value."),
                     prop("format", "String")
-                        .default("DateDefaults::format")
-                        .doc("How the text shows a day, in dayjs tokens. Typing is lenient either way: only the order of day, month and year has to match."),
+                        .default("(DateDefaults::format)(level)")
+                        .doc("How the text shows the value, in dayjs tokens, at the field's level. Defaults to `(DateDefaults::format)(level)`: `MMMM D, YYYY`, `MMMM YYYY`, `YYYY` in English. Typing is lenient either way: only the order of day, month and year has to match."),
                     prop("time_format", "String").default("DateDefaults::time_format").doc("How the text shows a time."),
                     prop("min", "V::Bound").doc("The earliest value that can be picked or typed. For a range, the earliest end: a `NaiveDate` or `NaiveDateTime`."),
                     prop("max", "V::Bound").doc("The latest value, likewise."),
@@ -129,7 +148,15 @@ pub fn DateFieldPage() -> Element {
                     Code { source: "NaiveDateTime" }
                     " both, and a "
                     Code { source: "DateRange" }
-                    " of either picks two. The types are "
+                    " of either picks two. "
+                    Code { source: "level" }
+                    " makes a "
+                    Code { source: "NaiveDate" }
+                    " field a month or a year field, typed as "
+                    Code { source: "September 2026" }
+                    " or "
+                    Code { source: "2026" }
+                    ". The types are "
                     Code { source: "chrono" }
                     "'s, re-exported as "
                     Code { source: "libero::chrono" }
@@ -173,6 +200,8 @@ pub fn DateFieldPage() -> Element {
             },
             // snippet: item use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
             // snippet: let mut date = use_signal(|| None::<NaiveDate>);
+            // snippet: let mut month = use_signal(|| None::<NaiveDate>);
+            // snippet: let mut year = use_signal(|| None::<NaiveDate>);
             // snippet: let mut time = use_signal(|| None::<NaiveTime>);
             // snippet: let mut date_time = use_signal(|| None::<NaiveDateTime>);
             // snippet: let mut date_range = use_signal(|| None::<DateRange<NaiveDate>>);
@@ -189,17 +218,21 @@ pub fn DateFieldPage() -> Element {
                         Control::select("value", KINDS).default("date").code(|_, values| {
                             // A typed `value` alone does not name `V`: the
                             // `onchange` is what makes the snippet compile.
-                            let (name, kind) = match values.str("value").as_str() {
-                                "time" => ("time", "Option<NaiveTime>"),
-                                "date-time" => ("date_time", "Option<NaiveDateTime>"),
-                                "date-range" => ("date_range", "Option<DateRange<NaiveDate>>"),
-                                "date-time-range" => ("date_time_range", "Option<DateRange<NaiveDateTime>>"),
-                                _ => ("date", "Option<NaiveDate>"),
+                            let (name, kind, level) = match values.str("value").as_str() {
+                                "month" => ("month", "Option<NaiveDate>", Some("Month")),
+                                "year" => ("year", "Option<NaiveDate>", Some("Year")),
+                                "time" => ("time", "Option<NaiveTime>", None),
+                                "date-time" => ("date_time", "Option<NaiveDateTime>", None),
+                                "date-range" => ("date_range", "Option<DateRange<NaiveDate>>", None),
+                                "date-time-range" => ("date_time_range", "Option<DateRange<NaiveDateTime>>", None),
+                                _ => ("date", "Option<NaiveDate>", None),
                             };
-                            vec![
+                            let mut code = vec![
                                 format!("value: {name}() /* {kind} */"),
                                 format!("onchange: move |next| {name}.set(next)"),
-                            ]
+                            ];
+                            code.extend(level.map(|level| format!("level: DateLevel::{level}")));
+                            code
                         }),
                         Control::slider("size", SIZES).default("md"),
                         Control::slider("radius", SIZES).default("sm"),
@@ -209,7 +242,7 @@ pub fn DateFieldPage() -> Element {
                             let Some((_, locale)) = locale_of(values) else { return vec![] };
                             let mut code = Vec::new();
                             if values.str("value") != "time" {
-                                code.push(format!("format: {:?}", locale.format));
+                                code.push(format!("format: {:?}", (locale.format)(level_of(values))));
                             }
                             if has_time(values) {
                                 code.push(format!("time_format: {:?}", locale.time_format));
@@ -218,7 +251,7 @@ pub fn DateFieldPage() -> Element {
                         }),
                         Control::select("format", FORMATS)
                             .default("MMMM D, YYYY")
-                            .hidden_when(|values| values.str("value") == "time" || locale_of(values).is_some())
+                            .hidden_when(|values| !matches!(values.str("value").as_str(), "date" | "date-time" | "date-range" | "date-time-range") || locale_of(values).is_some())
                             .code(|_, values| match values.str("format").as_str() {
                                 "MMMM D, YYYY" => vec![],
                                 format => vec![format!("format: {format:?}")],
@@ -287,6 +320,8 @@ pub fn DateFieldPage() -> Element {
 #[component]
 fn DateFieldDemo(values: DemoValues) -> Element {
     let mut date = use_signal(|| day(14));
+    let mut month = use_signal(|| day(1));
+    let mut year = use_signal(|| NaiveDate::from_ymd_opt(2026, 1, 1));
     let mut time = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
     let mut date_time = use_signal(|| moment(14, 9));
     let mut date_range = use_signal(|| day(14).map(|start| DateRange::new(start, day(18))));
@@ -296,7 +331,12 @@ fn DateFieldDemo(values: DemoValues) -> Element {
     let size = values.str("size");
     let radius = values.str("radius");
     let locale = locale_of(&values).map(|(_, locale)| locale);
-    let format = locale.map_or_else(|| values.str("format"), |locale| locale.format.to_string());
+    let format = locale.map_or_else(
+        || values.str("format"),
+        |locale| (locale.format)(DateLevel::Day).to_string(),
+    );
+    // A month or year field takes the theme's own format, unless a locale sets one.
+    let level_format = locale.map(|locale| (locale.format)(level_of(&values)).to_string());
     let variant = values.str("variant");
     let exclude_date = is_on(&values, "exclude_weekends").then(|| Callback::new(is_weekend));
     let close_on_change = is_on(&values, "close_on_change");
@@ -324,6 +364,28 @@ fn DateFieldDemo(values: DemoValues) -> Element {
     let (min_moment, max_moment) = moment_limits(&values);
 
     let (field, readout) = match values.str("value").as_str() {
+        "month" => (
+            rsx! {
+                DateField {
+                    value: month(), onchange: move |next| month.set(next), level: DateLevel::Month,
+                    min: min_day, max: max_day, format: level_format, today, close_on_change,
+                    validate: rules(validate),
+                    size, radius, label, description, helper, placeholder, status, required, disabled,
+                }
+            },
+            shown(month()),
+        ),
+        "year" => (
+            rsx! {
+                DateField {
+                    value: year(), onchange: move |next| year.set(next), level: DateLevel::Year,
+                    min: min_day, max: max_day, format: level_format, today, close_on_change,
+                    validate: rules(validate),
+                    size, radius, label, description, helper, placeholder, status, required, disabled,
+                }
+            },
+            shown(year()),
+        ),
         "time" => (
             rsx! {
                 DateField {

@@ -167,7 +167,7 @@ pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
 pub use data_list::{DATA_LIST_GAP, DataListDefaults};
 pub use date::{
     CalendarVariant, DATE_PICKER_DAY, DATE_PICKER_DAY_SIZE_SIZE, DATE_PICKER_FONT_SIZE,
-    DATE_PICKER_FONT_SIZE_SIZE, DateDefaults, DateFieldDefaults, DatePickerDefaults,
+    DATE_PICKER_FONT_SIZE_SIZE, DateDefaults, DateFieldDefaults, DateLevel, DatePickerDefaults,
     DatePickerSizeLevel, TimePickerDefaults, TimePickerVariant,
 };
 pub use dialog::{DIALOG_SIZE, DialogDefaults};

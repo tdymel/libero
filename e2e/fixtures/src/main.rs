@@ -35,6 +35,7 @@ mod collapse;
 mod color_picker;
 mod color_scheme_button;
 mod common;
+mod date_field;
 mod drawer;
 mod field_frame;
 mod file_field;
@@ -91,6 +92,7 @@ const FIXTURES: &[Routes] = &[
     collapse::ROUTES,
     color_picker::ROUTES,
     color_scheme_button::ROUTES,
+    date_field::ROUTES,
     drawer::ROUTES,
     field_frame::ROUTES,
     file_field::ROUTES,

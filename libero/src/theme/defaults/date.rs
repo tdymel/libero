@@ -12,6 +12,26 @@ pub const DATE_PICKER_FONT_SIZE_SIZE: SizeCss = SizeCss::new("--lsx-date-picker-
 pub const DATE_PICKER_DAY: CssVar = CssVar::new("--lsx-date-picker-day");
 pub const DATE_PICKER_FONT_SIZE: CssVar = CssVar::new("--lsx-date-picker-font-size");
 
+/// The view a calendar shows: days of a month, months of a year, years of a
+/// decade. `DatePicker`'s `level` picks the lowest one - the one a pick lands
+/// on; `DateField`'s the one its text reads.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum DateLevel {
+    Day,
+    Month,
+    Year,
+}
+
+/// `DateDefaults::ENGLISH.format`. A named fn, so every copy of the theme
+/// holds the same address and compares equal.
+fn english_format(level: DateLevel) -> &'static str {
+    match level {
+        DateLevel::Day => "MMMM D, YYYY",
+        DateLevel::Month => "MMMM YYYY",
+        DateLevel::Year => "YYYY",
+    }
+}
+
 /// The words and conventions every date and time component shares: one place
 /// to translate. English by default; a translation replaces the names, a
 /// region the first weekday and the format.
@@ -30,6 +50,10 @@ pub const DATE_PICKER_FONT_SIZE: CssVar = CssVar::new("--lsx-date-picker-font-si
 ///   (`date_label` to `end_label`), the switches themselves and the
 ///   `TimePicker` columns.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(
+    unpredictable_function_pointer_comparisons,
+    reason = "`format` compares by address; a miss on a copied closure only re-renders"
+)]
 pub struct DateDefaults {
     // Names.
     /// `January` to `December`. `MMMM` in a format, and what a typed month
@@ -53,10 +77,26 @@ pub struct DateDefaults {
     // Conventions.
     /// The first column of a calendar.
     pub first_weekday: Weekday,
-    /// How a date is shown, in dayjs tokens: `YYYY`, `M`, `MM`, `MMM`,
-    /// `MMMM`, `D`, `DD`, `dd`, `ddd`, `dddd`. Text in `[brackets]` is
-    /// literal.
-    pub format: &'static str,
+    /// How a date field shows a day, a month or a year, in dayjs tokens:
+    /// `YYYY`, `M`, `MM`, `MMM`, `MMMM`, `D`, `DD`, `dd`, `ddd`, `dddd`. Text
+    /// in `[brackets]` is literal. Call it as `(names.format)(level)`.
+    ///
+    /// One level overridden, the rest English:
+    ///
+    /// ```
+    /// use libero::{components::DateLevel, theme::DateDefaults};
+    ///
+    /// const ISO_DAYS: DateDefaults = DateDefaults {
+    ///     format: |level| match level {
+    ///         DateLevel::Day => "YYYY-MM-DD",
+    ///         level => (DateDefaults::ENGLISH.format)(level),
+    ///     },
+    ///     ..DateDefaults::ENGLISH
+    /// };
+    /// assert_eq!((ISO_DAYS.format)(DateLevel::Day), "YYYY-MM-DD");
+    /// assert_eq!((ISO_DAYS.format)(DateLevel::Month), "MMMM YYYY");
+    /// ```
+    pub format: fn(DateLevel) -> &'static str,
     /// A calendar's month heading.
     pub month_format: &'static str,
     /// How a time is shown, in dayjs tokens: `H`, `HH`, `h`, `hh`, `m`, `mm`,
@@ -130,7 +170,7 @@ impl DateDefaults {
         am: "AM",
         pm: "PM",
         first_weekday: Weekday::Mon,
-        format: "MMMM D, YYYY",
+        format: english_format,
         month_format: "MMMM YYYY",
         time_format: "HH:mm",
         range_separator: " – ",

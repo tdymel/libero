@@ -24,9 +24,10 @@
 macro_rules! date_props {
     (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] format $($rest:ident)*) => {
         $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
-            /// How the text shows a day, in dayjs tokens. Defaults to the
-            /// theme's `DateDefaults::format`. Typing is lenient either way:
-            /// only the order of day, month and year has to match.
+            /// How the text shows the value, in dayjs tokens, at whatever
+            /// level the field is. Defaults to the theme's
+            /// `DateDefaults::format` for that level. Typing is lenient either
+            /// way: only the order of day, month and year has to match.
             #[props(default, into)]
             format: Option<String>,
         ] $($rest)*);
@@ -131,8 +132,8 @@ macro_rules! date_props {
     };
     (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] level $($rest:ident)*) => {
         $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
-            /// Whether a `NaiveDate` is picked as a day, a month or a year.
-            /// Days by default.
+            /// Whether a `NaiveDate` is picked or typed as a day, a month or a
+            /// year. Days by default.
             #[props(default)]
             level: Option<$crate::components::form::date::DateLevel>,
         ] $($rest)*);

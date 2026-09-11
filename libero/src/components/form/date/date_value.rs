@@ -154,7 +154,20 @@ impl Sealed for NaiveDate {
     ];
 
     fn accepts(self, options: &PickerOptions<NaiveDate>) -> bool {
-        day_allowed(options.min, options.max, options.exclude_date)(self)
+        let (min, max) = (options.min, options.max);
+        // As the picker's grid: a month or year that `min` and `max` reach.
+        match options.level {
+            DateLevel::Day => day_allowed(min, max, options.exclude_date)(self),
+            DateLevel::Month => {
+                let month = first_of_month(self);
+                !(min.is_some_and(|min| month < first_of_month(min))
+                    || max.is_some_and(|max| month > max))
+            }
+            DateLevel::Year => {
+                !(min.is_some_and(|min| self.year() < min.year())
+                    || max.is_some_and(|max| self.year() > max.year()))
+            }
+        }
     }
 
     fn closes(_: Option<Self>) -> bool {

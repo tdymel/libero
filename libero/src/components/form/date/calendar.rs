@@ -266,15 +266,9 @@ impl Selection {
     }
 }
 
-/// The view a calendar shows: days of a month, months of a year, years of a
-/// decade. `DatePicker`'s `level` picks the lowest one - the one a pick lands
-/// on.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub enum DateLevel {
-    Day,
-    Month,
-    Year,
-}
+// In the theme, whose `DateDefaults::format` takes it; the layers below
+// `components` may not import from it.
+pub use crate::theme::DateLevel;
 
 /// Where focus goes after the next render.
 #[derive(Clone, Copy, PartialEq)]
@@ -631,7 +625,7 @@ impl View {
                         "data-date": "{day}",
                         "data-today": (today == Some(day)).then_some("true"),
                         "data-selected": picked.then_some("true"),
-                        "aria-label": format_date(day, names.format, names),
+                        "aria-label": format_date(day, (names.format)(DateLevel::Day), names),
                         disabled: self.day_disabled(day),
                         tabindex: self.tabindex(day == stop),
                         onclick: move |_| {
@@ -1137,7 +1131,7 @@ fn Week(props: WeekProps) -> Element {
     let allowed = day_allowed(min, max, exclude_date.0);
     let names = &use_theme().date;
     // APG: the full date, not only the number shown.
-    let label = date_formatter(names.format, names);
+    let label = date_formatter((names.format)(DateLevel::Day), names);
     let (mut hover, mut active, mut paged) = (hover, active, paged);
 
     let day = move |offset: i64| add_days(first, offset);

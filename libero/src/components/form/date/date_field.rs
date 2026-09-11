@@ -17,7 +17,7 @@ use crate::{
 };
 
 date_props! {
-    field DateFieldProps<V: DateValue>(V, V::Bound): format, time_format, limits, exclude_date, today, clock, calendar, columns, close_on_change
+    field DateFieldProps<V: DateValue>(V, V::Bound): format, time_format, limits, exclude_date, today, clock, calendar, columns, close_on_change, level
 }
 
 /// One text field for every date and time value, with the [`DatePicker`](super::DatePicker)
@@ -30,12 +30,39 @@ date_props! {
 /// field shows an error. A typed `value` alone does not name `V`, so a typed
 /// `onchange` or a turbofish has to.
 ///
+/// `level` makes a `NaiveDate` field a month or a year field: the text reads
+/// `(DateDefaults::format)(level)` (`MMMM YYYY` or `YYYY` in English) unless
+/// `format` says otherwise, the value is the month's first day or the year's
+/// January 1, and the dropdown opens on that grid.
+///
+/// ```no_run
+/// # use chrono::NaiveDate;
+/// # use dioxus::prelude::*;
+/// # use libero::components::{DateField, DateLevel};
+/// # fn app() -> Element {
+/// let mut month = use_signal(|| NaiveDate::from_ymd_opt(2026, 9, 1));
+/// rsx! {
+///     DateField::<NaiveDate> {
+///         label: "Billing month",
+///         level: DateLevel::Month,
+///         value: month(),
+///         onchange: move |next| month.set(next),
+///     }
+/// }
+/// # }
+/// ```
+///
 /// Props a value type does not use are ignored, with a warning in debug
 /// builds: the clock props and `time_format` need a time, `format`, `today`
 /// and `exclude_date` a day, `columns` and `close_on_change` a day or a range
-/// of days, `calendar` and `days` a day or a date-time.
+/// of days, `calendar` and `days` a day or a date-time, `level` a single
+/// `NaiveDate`. A month or year field also ignores `exclude_date`, `columns`,
+/// `calendar` and `days`.
 #[component]
 pub fn DateField<V: DateValue>(props: DateFieldProps<V>) -> Element {
+    let level = used::<V, _>("level", props.level)
+        .flatten()
+        .unwrap_or(DateLevel::Day);
     use_ignored_props_warning::<V>(
         "DateField",
         &[
@@ -51,8 +78,14 @@ pub fn DateField<V: DateValue>(props: DateFieldProps<V>) -> Element {
             ("days", props.days.is_some()),
             ("columns", props.columns.is_some()),
             ("close_on_change", props.close_on_change.is_some()),
+            ("level", props.level.is_some()),
         ],
-        &[],
+        // A month or year dropdown has no excluded days, columns or mini
+        // calendar.
+        match level {
+            DateLevel::Day => &[],
+            _ => &["exclude_date", "columns", "calendar", "days"],
+        },
     );
     let options = FieldOptions {
         format: props.format.clone(),
@@ -68,6 +101,7 @@ pub fn DateField<V: DateValue>(props: DateFieldProps<V>) -> Element {
         close_on_change: props.close_on_change,
         calendar: props.calendar.clone(),
         days: props.days,
+        level,
     };
     date_field(picker_field!(props, props.today), options)
 }
@@ -89,6 +123,7 @@ pub(super) struct FieldOptions<B: 'static> {
     pub close_on_change: Option<bool>,
     pub calendar: Input<CalendarVariant>,
     pub days: Option<usize>,
+    pub level: DateLevel,
 }
 
 impl<B> Default for FieldOptions<B> {
@@ -107,6 +142,7 @@ impl<B> Default for FieldOptions<B> {
             close_on_change: None,
             calendar: Input::None,
             days: None,
+            level: DateLevel::Day,
         }
     }
 }
@@ -124,13 +160,14 @@ pub(super) fn date_field<V: DateValue>(
     let time = options
         .time_format
         .unwrap_or_else(|| time_format(names, options.twelve_hour, with_seconds));
+    let level = options.level;
     let picker = PickerOptions {
         min: options.min,
         max: options.max,
         exclude_date: options.exclude_date,
         allow_deselect: false,
         columns: options.columns,
-        level: DateLevel::Day,
+        level,
         variant: options.variant.copied_or(theme.time_picker.variant),
         with_seconds,
         step: options.step,
@@ -144,10 +181,15 @@ pub(super) fn date_field<V: DateValue>(
         .close_on_change
         .unwrap_or(theme.date_field.close_on_change);
     let formats = Formats {
-        date: options.format.unwrap_or_else(|| names.format.to_string()),
+        date: options
+            .format
+            .unwrap_or_else(|| (names.format)(level).to_string()),
         time,
         names,
+        level,
     };
+    // Only a day level passes the props a month or year dropdown drops.
+    let day = level == DateLevel::Day;
     use_picker_field(
         field,
         formats,
@@ -162,16 +204,17 @@ pub(super) fn date_field<V: DateValue>(
                     },
                     min: picker.min,
                     max: picker.max,
-                    exclude_date: used::<V, _>("exclude_date", picker.exclude_date).flatten(),
-                    columns: used::<V, _>("columns", picker.columns).flatten(),
+                    exclude_date: used::<V, _>("exclude_date", picker.exclude_date).flatten().filter(|_| day),
+                    columns: used::<V, _>("columns", picker.columns).flatten().filter(|_| day),
+                    level: used::<V, _>("level", level),
                     today: used::<V, _>("today", args.today).flatten(),
                     size: args.size,
                     variant: used::<V, _>("variant", picker.variant).map_or(Input::None, Input::Value),
                     with_seconds: used::<V, _>("with_seconds", picker.with_seconds),
                     step: used::<V, _>("step", picker.step).flatten(),
                     twelve_hour: used::<V, _>("twelve_hour", picker.twelve_hour),
-                    calendar: used::<V, _>("calendar", picker.calendar).map_or(Input::None, Input::Value),
-                    days: used::<V, _>("days", picker.days),
+                    calendar: used::<V, _>("calendar", picker.calendar).filter(|_| day).map_or(Input::None, Input::Value),
+                    days: used::<V, _>("days", picker.days).filter(|_| day),
                 }
             }
         },
@@ -231,6 +274,43 @@ mod tests {
             }
         });
         assert!(warnings.is_empty(), "{warnings:?}");
+    }
+
+    #[test]
+    fn a_month_field_shows_its_month_and_warns_about_columns() {
+        let warnings = warnings_of(|| {
+            rsx! {
+                LiberoProvider {
+                    DateField::<NaiveDate> {
+                        level: DateLevel::Month,
+                        value: NaiveDate::from_ymd_opt(2026, 9, 1),
+                        columns: 2,
+                    }
+                }
+            }
+        });
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains("`columns`"), "{warnings:?}");
+
+        let html = dioxus_ssr::render_element(rsx! {
+            LiberoProvider {
+                DateField::<NaiveDate> { level: DateLevel::Year, value: NaiveDate::from_ymd_opt(2026, 1, 1) }
+            }
+        });
+        assert!(html.contains(r#"value="2026""#), "{html}");
+    }
+
+    #[test]
+    fn a_time_field_warns_about_level() {
+        let warnings = warnings_of(|| {
+            rsx! {
+                LiberoProvider {
+                    DateField::<NaiveTime> { level: DateLevel::Month }
+                }
+            }
+        });
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains("`level`"), "{warnings:?}");
     }
 
     #[test]

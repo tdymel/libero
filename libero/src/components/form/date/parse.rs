@@ -3,7 +3,10 @@
 
 use chrono::NaiveDate;
 
-use super::format::{Token, tokens};
+use super::{
+    calendar::DateLevel,
+    format::{Token, tokens},
+};
 use crate::theme::DateDefaults;
 
 /// Typed text a field cannot read.
@@ -53,6 +56,18 @@ pub(super) fn parse_date(
     names: &DateDefaults,
     fallback_year: Option<i32>,
 ) -> Result<NaiveDate, Unreadable> {
+    parse_at(text, format, names, fallback_year, DateLevel::Day)
+}
+
+/// [`parse_date`] for a day, a month or a year. A month reads as its first
+/// day and needs a month; a year reads as its January 1 and needs a year.
+pub(super) fn parse_at(
+    text: &str,
+    format: &str,
+    names: &DateDefaults,
+    fallback_year: Option<i32>,
+    level: DateLevel,
+) -> Result<NaiveDate, Unreadable> {
     let literals = literal_words(format);
     let mut numbers = Vec::new();
     let mut named_month = None;
@@ -91,7 +106,8 @@ pub(super) fn parse_date(
             start += part.compact_width();
         }
     }
-    if numbers.len() + 1 == slots.len() {
+    // A year alone is all a year level reads, so it never falls back.
+    if numbers.len() + 1 == slots.len() && level != DateLevel::Year {
         slots.retain(|part| *part != Part::Year);
     }
     if numbers.len() != slots.len() {
@@ -107,8 +123,13 @@ pub(super) fn parse_date(
             _ => return Err(Unreadable),
         }
     }
+    let (year, month, day) = match level {
+        DateLevel::Day => (year.or(fallback_year), month, day),
+        DateLevel::Month => (year.or(fallback_year), month, Some(1)),
+        DateLevel::Year => (year, Some(1), Some(1)),
+    };
     NaiveDate::from_ymd_opt(
-        year.or(fallback_year).ok_or(Unreadable)?,
+        year.ok_or(Unreadable)?,
         month.ok_or(Unreadable)?,
         day.ok_or(Unreadable)?,
     )
@@ -325,5 +346,61 @@ mod tests {
     #[test]
     fn a_format_without_a_day_reads_nothing() {
         assert_eq!(parse("2 2026", "MM YYYY"), Err(Unreadable));
+    }
+
+    fn parse_level(text: &str, format: &str, level: DateLevel) -> Result<NaiveDate, Unreadable> {
+        parse_at(text, format, &DateDefaults::ENGLISH, Some(2026), level)
+    }
+
+    #[test]
+    fn a_month_reads_as_its_first_day() {
+        for text in ["02/2027", "2/2027", "2.2027", "022027", "feb 2027"] {
+            assert_eq!(
+                parse_level(text, "MM/YYYY", DateLevel::Month),
+                date(2027, 2, 1),
+                "{text}"
+            );
+        }
+        // Without a year, the fallback's.
+        assert_eq!(
+            parse_level("2", "MM/YYYY", DateLevel::Month),
+            date(2026, 2, 1)
+        );
+        // A day in the format is read, then dropped.
+        assert_eq!(
+            parse_level("14.2.2027", DMY, DateLevel::Month),
+            date(2027, 2, 1)
+        );
+        for text in ["13/2027", "2/27", ""] {
+            assert_eq!(
+                parse_level(text, "MM/YYYY", DateLevel::Month),
+                Err(Unreadable),
+                "{text}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_year_reads_as_its_january_first() {
+        assert_eq!(
+            parse_level("2027", "YYYY", DateLevel::Year),
+            date(2027, 1, 1)
+        );
+        assert_eq!(
+            parse_level(" 2027 ", "YYYY", DateLevel::Year),
+            date(2027, 1, 1)
+        );
+        assert_eq!(
+            parse_level("2027年", "YYYY年", DateLevel::Year),
+            date(2027, 1, 1)
+        );
+        // No fallback: a year field has nothing else to read.
+        for text in ["", "27", "feb", "1 2027"] {
+            assert_eq!(
+                parse_level(text, "YYYY", DateLevel::Year),
+                Err(Unreadable),
+                "{text}"
+            );
+        }
     }
 }

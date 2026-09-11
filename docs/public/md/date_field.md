@@ -33,6 +33,35 @@ They need no turbofish, and a value of the wrong type is a plain type mismatch.
 
 `DateValue` is sealed. The `chrono` types are re-exported as `libero::chrono`.
 
+## Months and years
+
+`level: DateLevel::Month` makes a `NaiveDate` field a month field: the text
+reads `(DateDefaults::format)(DateLevel::Month)` (`MMMM YYYY`), the value is the month's
+first day, and the dropdown opens on the month grid. `DateLevel::Year` reads
+`YYYY` and holds January 1. The `format` prop still overrides
+the text format. `min` and `max` accept a month or year they reach, as the grid
+does. A month without a year takes the current year; a year field reads only a
+four-digit year.
+
+```rust
+use dioxus::prelude::*;
+use libero::{chrono::NaiveDate, components::{DateField, DateLevel}};
+
+#[component]
+fn Demo() -> Element {
+    let mut month = use_signal(|| None::<NaiveDate>);
+
+    rsx! {
+        DateField {
+            label: "Billing month",
+            level: DateLevel::Month,
+            value: month(),
+            onchange: move |next| month.set(next),
+        }
+    }
+}
+```
+
 ## Usage
 
 ```rust
@@ -114,7 +143,8 @@ whatever the text shows: `2026-02-01`, `13:05:00`, `2026-02-01T13:05:00`, and
 |---|---|---|---|
 | `value` | `Option<V>` | - | Strictly controlled. |
 | `onchange` | `EventHandler<Option<V>>` | - | On commit (blur, Enter) and on every pick. |
-| `format` | `String` | `DateDefaults::format` | dayjs tokens: `YYYY M MM MMM MMMM D DD dd ddd dddd`, `[literal]`. |
+| `level` | `DateLevel` | `Day` | A `NaiveDate` as a day, a month (its first day) or a year (its January 1). |
+| `format` | `String` | `(DateDefaults::format)(level)` | dayjs tokens: `YYYY M MM MMM MMMM D DD dd ddd dddd`, `[literal]`. English: `MMMM D, YYYY`, `MMMM YYYY`, `YYYY`. |
 | `time_format` | `String` | `DateDefaults::time_format` | How a time shows. |
 | `min` / `max` | `V::Bound` | - | Limits for picking and typing. |
 | `exclude_date` | `Callback<NaiveDate, bool>` | - | Days that cannot be picked or typed. Ignored for a time. |

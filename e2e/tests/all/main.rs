@@ -14,6 +14,7 @@ mod code;
 mod collapse;
 mod color_picker;
 mod color_scheme_button;
+mod date_field;
 mod drawer;
 mod field_frame;
 mod file_field;

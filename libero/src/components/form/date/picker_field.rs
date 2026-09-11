@@ -8,8 +8,9 @@ use dioxus::prelude::*;
 
 use super::{
     DateRange,
+    calendar::DateLevel,
     format::{format_date, format_time},
-    parse::{Unreadable, parse_date},
+    parse::{Unreadable, parse_at},
     parse_time::{parse_date_time, parse_time},
     range::{iso_date_time, split_range},
     today::use_today,
@@ -50,6 +51,8 @@ pub struct Formats {
     pub date: String,
     pub time: String,
     pub names: &'static DateDefaults,
+    /// What a `NaiveDate` stands for: typed text reads as its first day.
+    pub level: DateLevel,
 }
 
 /// A value a date or time field can hold.
@@ -84,7 +87,13 @@ impl FieldValue for NaiveDate {
         today: Option<NaiveDate>,
     ) -> Result<Self, Unreadable> {
         let fallback_year = today.or(current).map(|day| day.year());
-        parse_date(text, &formats.date, formats.names, fallback_year)
+        parse_at(
+            text,
+            &formats.date,
+            formats.names,
+            fallback_year,
+            formats.level,
+        )
     }
 
     fn iso(self) -> String {
@@ -553,16 +562,17 @@ mod tests {
     }
 
     static WAVE_DASH: DateDefaults = DateDefaults {
-        format: "YYYY年M月D日",
+        format: |_| "YYYY年M月D日",
         range_separator: " ～ ",
         ..DateDefaults::ENGLISH
     };
 
     fn wave_dash_formats() -> Formats {
         Formats {
-            date: WAVE_DASH.format.to_string(),
+            date: (WAVE_DASH.format)(DateLevel::Day).to_string(),
             time: WAVE_DASH.time_format.to_string(),
             names: &WAVE_DASH,
+            level: DateLevel::Day,
         }
     }
 
@@ -581,5 +591,40 @@ mod tests {
         );
         let text = moments.show(&formats);
         assert_eq!(DateRange::read(&text, &formats, None, None), Ok(moments));
+    }
+
+    #[test]
+    fn months_and_years_read_back_what_they_show() {
+        let names = &DateDefaults::ENGLISH;
+        let at = |date: &str, level| Formats {
+            date: date.to_string(),
+            time: names.time_format.to_string(),
+            names,
+            level,
+        };
+        let day = |month, day| NaiveDate::from_ymd_opt(2026, month, day).expect("a real day");
+        let month = at((names.format)(DateLevel::Month), DateLevel::Month);
+        assert_eq!(day(9, 1).show(&month), "September 2026");
+        for text in ["September 2026", "sep 2026", "9/2026", "09.2026"] {
+            assert_eq!(
+                NaiveDate::read(text, &month, None, None),
+                Ok(day(9, 1)),
+                "{text}"
+            );
+        }
+        // Typed text lands on the month's first day.
+        let text = day(9, 25).show(&month);
+        assert_eq!(NaiveDate::read(&text, &month, None, None), Ok(day(9, 1)));
+
+        let year = at((names.format)(DateLevel::Year), DateLevel::Year);
+        assert_eq!(day(9, 25).show(&year), "2026");
+        assert_eq!(NaiveDate::read("2026", &year, None, None), Ok(day(1, 1)));
+
+        let japanese = at("YYYY年M月", DateLevel::Month);
+        assert_eq!(day(9, 1).show(&japanese), "2026年9月");
+        assert_eq!(
+            NaiveDate::read("2026年9月", &japanese, None, None),
+            Ok(day(9, 1))
+        );
     }
 }
