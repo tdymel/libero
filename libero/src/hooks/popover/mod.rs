@@ -174,7 +174,11 @@ pub(crate) fn use_popover_on(
         let mounted = floating.mount_token().is_some();
         if !open || !mounted {
             listening.borrow_mut().take();
-            placed.set(None);
+            // A `set` redraws even when unchanged: every opening ran this before
+            // its box mounted and redrew the whole consumer for nothing.
+            if placed.peek().is_some() {
+                placed.set(None);
+            }
             return;
         }
 

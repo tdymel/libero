@@ -5,7 +5,11 @@
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
+use e2e::{
+    Fixture, Suite, Viewport,
+    passes::{keyboard, pointer},
+    wait,
+};
 
 /// `a11y_attributes()` gives the trigger a generated id, so it is found by
 /// the attribute that makes it a menu button instead.
@@ -69,4 +73,65 @@ fn a_menu_opened_before_it_mounts_focuses_its_first_item() {
         fixture.close().await.unwrap();
         outcome.unwrap();
     });
+}
+
+/// Todo 29: a closed menu unmounts its submenu levels, so a reopen starts
+/// them closed, working, and on the items changed while closed.
+#[test]
+fn a_reopened_menu_starts_its_submenu_closed_on_fresh_items() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-submenu-reopen", Viewport::Desktop)
+            .await
+            .unwrap();
+        let outcome = reopen_the_submenu(&fixture.page).await;
+        let console = fixture.console.assert_clean("the submenu reopen");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}
+
+async fn reopen_the_submenu(page: &chromiumoxide::Page) -> anyhow::Result<()> {
+    const SHARE: &str = "[role=menuitem][aria-haspopup=menu]";
+    // A closed level may stay in the DOM, hidden.
+    let shown = format!(
+        "[...document.querySelectorAll('{MENU}')].filter(m => {{ \
+         const s = getComputedStyle(m); return s.visibility !== 'hidden' && s.display !== 'none'; }})"
+    );
+    let menus_read = |text: &str| {
+        format!(
+            "(() => {{ const m = {shown}; return m.length === 2 && m[1].textContent.includes('{text}'); }})()"
+        )
+    };
+    let focus_on = |text: &str| format!("document.activeElement?.textContent.trim() === '{text}'");
+
+    pointer::click(page, TRIGGER).await?;
+    wait::for_js_true(page, &focus_on("Share"), "focus on Share").await?;
+    keyboard::press(page, keyboard::ARROW_RIGHT).await?;
+    wait::for_js_true(page, &menus_read("Email"), "the submenu open").await?;
+
+    // An outside press closes the root with its submenu open.
+    pointer::click(page, "#rename").await?;
+    let closed = format!("{shown}.length === 0");
+    wait::for_js_true(page, &closed, "every level closed").await?;
+
+    pointer::click(page, TRIGGER).await?;
+    wait::for_js_true(page, &focus_on("Share"), "focus on Share again").await?;
+    let reopened = format!(
+        "{shown}.length === 1 \
+         && document.querySelector('{SHARE}').getAttribute('aria-expanded') !== 'true'"
+    );
+    wait::for_js_true(page, &reopened, "the submenu closed on reopen").await?;
+
+    keyboard::press(page, keyboard::ARROW_RIGHT).await?;
+    wait::for_js_true(page, &menus_read("Post"), "the renamed item").await?;
+    wait::for_js_true(page, &focus_on("Post"), "focus on Post").await?;
+    keyboard::press(page, keyboard::ENTER).await?;
+    wait::for_js_true(
+        page,
+        "document.querySelector('#picked').textContent === 'Post'",
+        "the renamed item picked",
+    )
+    .await
 }

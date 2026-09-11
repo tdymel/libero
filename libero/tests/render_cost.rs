@@ -28,12 +28,17 @@
 //! re-renders with the other of two values, so a component that skips an
 //! unchanged re-render still shows what a pick, a page or a drag costs.
 //!
+//! An `open` or `close` row prices one direction of an overlay: its round
+//! renders the other one untimed first. `Modal`, `Drawer` and `Spotlight` are
+//! one per app, not divided - two are never open at once.
+//!
 //! A row marked `memoized` came in below `Leaf`. That component takes no
 //! `children`, so its props compare equal and dioxus skips the re-render
 //! entirely - the number is the parent's diff, not the component's render.
 //! Price those with a first render instead.
 
 use std::any::Any;
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -44,6 +49,9 @@ use dioxus::html::{PlatformEventData, SerializedHtmlEventConverter, SerializedMo
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveTime};
 use libero::components::Title;
+use libero::hooks::{
+    DrawerOptions, ModalScope, PopoverOptions, use_drawer, use_element, use_modal, use_popover,
+};
 use libero::{LiberoProvider, components::*};
 
 #[derive(Clone, PartialEq, Options)]
@@ -85,23 +93,74 @@ fn flip() -> bool {
     FLIP.load(Ordering::Relaxed)
 }
 
+/// Whether an overlay row's overlays are open. Not [`FLIP`]: an overlay round
+/// sets it twice, and the rows after it in the same round read `FLIP`.
+static OPEN: AtomicBool = AtomicBool::new(false);
+
+fn opened() -> bool {
+    OPEN.load(Ordering::Relaxed)
+}
+
+/// What each copy of an overlay row does to open or close itself, when a
+/// handle does it rather than a prop.
+#[derive(Clone, Default)]
+struct Openers(Rc<RefCell<Vec<Opener>>>);
+
+type Opener = Rc<dyn Fn(bool)>;
+
+fn use_opener(opener: impl Fn(bool) + 'static) {
+    let openers = use_context::<Openers>();
+    use_hook(move || openers.0.borrow_mut().push(Rc::new(opener)));
+}
+
+/// Opens or closes every overlay of the app: through its handles, or by
+/// re-rendering the app, whose copies read [`opened`].
+fn set_open(dom: &mut VirtualDom, open: bool) {
+    OPEN.store(open, Ordering::Relaxed);
+    let openers = dom.in_scope(ScopeId::APP, || {
+        consume_context::<Openers>().0.borrow().clone()
+    });
+    if openers.is_empty() {
+        dom.mark_dirty(ScopeId::APP);
+    }
+    for opener in openers {
+        opener(open);
+    }
+}
+
+/// Prices an opening alone: closes and renders untimed, then opens. A plain
+/// [`flip`] row would keep the cheaper of the two directions.
+fn open_round(dom: &mut VirtualDom) {
+    set_open(dom, false);
+    dom.render_immediate(&mut NoOpMutations);
+    set_open(dom, true);
+}
+
+fn close_round(dom: &mut VirtualDom) {
+    set_open(dom, true);
+    dom.render_immediate(&mut NoOpMutations);
+    set_open(dom, false);
+}
+
 /// Children per app. Big enough that per-render fixed costs disappear into the
 /// per-item average.
 const CHILDREN: usize = 200;
 const ROUNDS: usize = 80;
 
-/// One [`Shape`] per entry: a label, the handlers, and the `rsx!` body to repeat.
+/// One [`Shape`] per entry: a label, an optional `round`, the handlers, and the
+/// `rsx!` body to repeat.
 ///
 /// Each `let name = closure;` becomes one `use_callback` in the app, shared by
 /// every copy: a closure built in render never compares equal, so passing one
 /// straight as a handler or render prop would price the harness, not the
 /// component.
 macro_rules! shapes {
-    ($($label:literal $(let $handler:ident = $callback:expr;)* { $($item:tt)* })*) => {
+    ($($label:literal $(round $round:ident;)? $(let $handler:ident = $callback:expr;)* { $($item:tt)* })*) => {
         &[$(Shape {
             name: $label,
             app: {
                 fn app() -> Element {
+                    use_context_provider(Openers::default);
                     $(let $handler = use_callback($callback);)*
                     rsx! {
                         LiberoProvider {
@@ -112,9 +171,11 @@ macro_rules! shapes {
                 app as fn() -> Element
             },
             count: CHILDREN,
-            round: rerender_app,
+            round: shapes!(@round $($round)?),
         }),*]
     };
+    (@round) => { rerender_app };
+    (@round $round:ident) => { $round };
 }
 
 /// An open floating window. The window itself is crate-private, so the row
@@ -176,6 +237,142 @@ fn BoundForm(children: Element) -> Element {
         }
     }
 }
+
+/// The docs page's popover: a trigger and a portaled box, opened by a signal.
+#[component]
+fn CostPopover() -> Element {
+    let open = use_signal(|| false);
+    use_opener(move |next| {
+        let mut open = open;
+        open.set(next);
+    });
+    let anchor = use_element();
+    let popover = use_popover(anchor, open(), PopoverOptions::new(8.0, 8.0));
+    let floating = *popover.floating();
+    popover.show(open().then(|| {
+        rsx! {
+            Box { role: "dialog", style: popover.style(), onmounted: floating.mount(), "p" }
+        }
+    }));
+    rsx! {
+        Button { onmounted: anchor.mount(), aria_expanded: "{open()}", "x" }
+    }
+}
+
+/// Three items, the trigger spreading the menu's aria wiring. `children`, so a
+/// parent re-render reaches the closed menu, as a caller's `items` do.
+#[component]
+fn CostMenu(children: Element) -> Element {
+    let menu = use_menu();
+    use_opener(move |open| match open {
+        true => menu.open(),
+        false => menu.close(),
+    });
+    let items = vec![
+        MenuItem::new("a").into(),
+        MenuItem::new("b").into(),
+        MenuItem::new("c").into(),
+    ];
+    rsx! {
+        Menu { state: menu, items, Button { attributes: menu.a11y_attributes(), {children} } }
+    }
+}
+
+/// A modal-family overlay, one per app: two are never open at once.
+fn overlay_app(body: fn() -> Element) -> Element {
+    use_context_provider(Openers::default);
+    rsx! {
+        LiberoProvider { {body()} }
+    }
+}
+
+#[component]
+fn CostModal() -> Element {
+    let modal = use_modal(|_: ModalScope<()>| rsx! { Dialog { aria_label: "d", "x" } });
+    use_opener(move |open| match open {
+        true => drop(modal.open()),
+        false => modal.close(),
+    });
+    rsx! {}
+}
+
+#[component]
+fn CostDrawer() -> Element {
+    let options = DrawerOptions {
+        aria_label: Some("d".into()),
+        ..Default::default()
+    };
+    let drawer = use_drawer(options, |_: ModalScope<()>| rsx! { "x" });
+    use_opener(move |open| match open {
+        true => drop(drawer.open()),
+        false => drawer.close(),
+    });
+    rsx! {}
+}
+
+/// Five actions, no filter typed: every row drawn.
+#[component]
+fn CostSpotlight() -> Element {
+    let actions = use_callback(|query: String| {
+        let all: Vec<_> = ["a", "b", "c", "d", "e"]
+            .into_iter()
+            .map(SpotlightAction::new)
+            .collect();
+        spotlight_filter(&query, &all)
+    });
+    let spotlight = use_spotlight(SpotlightOptions {
+        actions: Some(actions),
+        aria_label: Some("s".into()),
+        shortcut: None,
+        ..Default::default()
+    });
+    use_opener(move |open| match open {
+        true => spotlight.open(),
+        false => spotlight.close(),
+    });
+    rsx! {}
+}
+
+/// The modal-family rows: one overlay each, so "open" is the whole opening,
+/// not divided.
+const OVERLAY_SHAPES: &[Shape] = &[
+    Shape {
+        name: "Modal open",
+        app: || overlay_app(|| rsx! { CostModal {} }),
+        count: 1,
+        round: open_round,
+    },
+    Shape {
+        name: "Modal close",
+        app: || overlay_app(|| rsx! { CostModal {} }),
+        count: 1,
+        round: close_round,
+    },
+    Shape {
+        name: "Drawer open",
+        app: || overlay_app(|| rsx! { CostDrawer {} }),
+        count: 1,
+        round: open_round,
+    },
+    Shape {
+        name: "Drawer close",
+        app: || overlay_app(|| rsx! { CostDrawer {} }),
+        count: 1,
+        round: close_round,
+    },
+    Shape {
+        name: "Spotlight open",
+        app: || overlay_app(|| rsx! { CostSpotlight {} }),
+        count: 1,
+        round: open_round,
+    },
+    Shape {
+        name: "Spotlight close",
+        app: || overlay_app(|| rsx! { CostSpotlight {} }),
+        count: 1,
+        round: close_round,
+    },
+];
 
 /// A `Notifications` host showing `N` notifications, all in one stack.
 ///
@@ -618,12 +815,25 @@ fn render_cost_per_component() {
         "Dialog" { Dialog { "x" } }
         "Dialog+title" { Dialog { title: "t", close_button: true, "x" } }
         "Tooltip" { Tooltip { label: rsx! { "t" }, "x" } }
+        // Opened and closed through `open`, so the parent re-renders too: the
+        // static row above is part of both.
+        "Tooltip open" round open_round; { Tooltip { open: opened(), label: rsx! { "t" }, "x" } }
+        "Tooltip close" round close_round; { Tooltip { open: opened(), label: rsx! { "t" }, "x" } }
+        "HoverCard open" round open_round; { HoverCard { open: opened(), content: rsx! { "c" }, "aria-label": "a", "x" } }
+        "HoverCard close" round close_round; { HoverCard { open: opened(), content: rsx! { "c" }, "aria-label": "a", "x" } }
+        "Popover open" round open_round; { CostPopover {} }
+        "Popover close" round close_round; { CostPopover {} }
+        // Closed, re-rendered with its parent.
+        "Menu" { CostMenu { "x" } }
+        "Menu open" round open_round; { CostMenu { "x" } }
+        "Menu close" round close_round; { CostMenu { "x" } }
 
         "FocusTrap" { FocusTrap { "x" } }
         "VisuallyHidden" { VisuallyHidden { "x" } }
     };
     let shapes: Vec<Shape> = shapes
         .iter()
+        .chain(OVERLAY_SHAPES)
         .chain(NOTIFICATION_SHAPES)
         .chain(CLICK_SHAPES)
         .filter(|shape| wanted(shape.name))

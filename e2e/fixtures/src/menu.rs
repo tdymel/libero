@@ -8,6 +8,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/menu", || rsx! { MenuPage {} }),
     ("/menu-open-on-mount", || rsx! { MenuOpenOnMountPage {} }),
+    ("/menu-submenu-reopen", || rsx! { MenuSubmenuReopenPage {} }),
 ];
 
 /// A group, a separator, a disabled item and a submenu - the shapes a menu's
@@ -59,6 +60,38 @@ fn MenuOpenOnMountPage() -> Element {
             state: menu,
             items,
             Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+        }
+    }
+}
+
+/// A closed menu drops its submenu levels: a reopen must start them closed and
+/// show the items changed meanwhile.
+#[component]
+fn MenuSubmenuReopenPage() -> Element {
+    let menu = use_menu();
+    let mut renamed = use_signal(|| false);
+    let mut picked = use_signal(String::new);
+    let label = if renamed() { "Post" } else { "Email" };
+    let items = vec![
+        MenuItem::new("Share")
+            .submenu(vec![
+                MenuItem::new(label)
+                    .onselect(move |_| picked.set(label.to_string()))
+                    .into(),
+            ])
+            .into(),
+    ];
+
+    rsx! {
+        // Above the trigger, so the open levels do not cover it.
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            button { id: "rename", onclick: move |_| renamed.set(true), "Rename" }
+            p { id: "picked", "{picked}" }
+            Menu {
+                state: menu,
+                items,
+                Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+            }
         }
     }
 }

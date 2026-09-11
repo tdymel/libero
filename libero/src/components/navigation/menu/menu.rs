@@ -240,7 +240,9 @@ pub fn Menu(props: MenuProps) -> Element {
                 .render(HtmlTag::Div, Vec::new(), props.children)
         }
         MenuLevel {
-            items: props.items,
+            // Never equal while it holds items, so a closed level gets none and
+            // skips its parent's renders. Its submenu levels unmount meanwhile.
+            items: if open { props.items } else { Vec::new() },
             id: menu_id(&id),
             labelledby: trigger_id(&id),
             anchor: wrapper,
@@ -694,13 +696,12 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
     let child_request = use_signal(|| (0u64, 0usize));
     let typeahead = use_typeahead(TYPEAHEAD_RESET);
 
-    let close_all = props.close_all.unwrap_or_else(|| {
-        let onclose = props.onclose;
-        Callback::new(move |restore: bool| match restore {
-            true => dismiss.dismiss(),
-            false => onclose.call(()),
-        })
+    // A hook, not `Callback::new`: that allocated a new box on every render.
+    let own_close_all = use_callback(move |restore: bool| match restore {
+        true => dismiss.dismiss(),
+        false => onclose.call(()),
     });
+    let close_all = props.close_all.unwrap_or(own_close_all);
 
     let level = Level {
         floating,
@@ -731,13 +732,6 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         move |()| hover.cancel()
     });
 
-    // Labels for typeahead, `None` for an item it must skip.
-    let labels: Rc<Vec<Option<String>>> = Rc::new(
-        flat.iter()
-            .map(|item| (!item.disabled).then(|| item.label.clone()))
-            .collect(),
-    );
-
     // Two element handles per item that opens a submenu - the submenu's
     // anchor and its box. Kept across renders so neither changes under the
     // submenu; created on first need. The anchor is owned by this scope, the
@@ -753,40 +747,47 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         anchors[index]
     };
 
+    // Every submenu level stays mounted while this one is open, its own open or not.
+    let submenus: Vec<(usize, Vec<MenuEntry>, (ElementHandle, ElementHandle))> = flat
+        .iter()
+        .enumerate()
+        .filter_map(|(index, item)| Some((index, item.submenu_items()?.clone(), anchor_of(index))))
+        .collect();
+
     let expanded = open_child();
     let level_id = props.id.clone();
 
-    let mut index = 0usize;
-    let mut group = 0usize;
-    let mut submenus: Vec<(usize, Vec<MenuEntry>, (ElementHandle, ElementHandle))> = Vec::new();
-
-    let draw = ItemDraw {
-        level,
-        typeahead,
-        labels,
-        hover: hover.clone(),
-        // The roving `tabindex`: exactly one item is tabbable, the focused
-        // one, or where focus lands before anything has been focused.
-        tabbable: active().unwrap_or(first),
-        expanded,
-        level_id: level_id.clone(),
-    };
-    let mut draw_item = |item: &MenuItem, index: usize| -> Element {
-        let submenu = item.submenu_items().cloned();
-        let handles = submenu.is_some().then(|| anchor_of(index));
-        if let (Some(items), Some(handles)) = (submenu, handles) {
-            submenus.push((index, items, handles));
-        }
-        menu_item(&draw, item, index, handles.map(|(anchor, _)| anchor))
-    };
-
-    let rows = draw_rows(
-        &props.items,
-        &level_id,
-        &mut index,
-        &mut group,
-        &mut draw_item,
-    );
+    // Only an open level draws its rows: a closed one redraws with every
+    // parent render, and the rows only ever land in the portaled box.
+    let rows = open.then(|| {
+        let draw = ItemDraw {
+            level,
+            typeahead,
+            // Labels for typeahead, `None` for an item it must skip.
+            labels: Rc::new(
+                flat.iter()
+                    .map(|item| (!item.disabled).then(|| item.label.clone()))
+                    .collect(),
+            ),
+            hover: hover.clone(),
+            // The roving `tabindex`: exactly one item is tabbable, the focused
+            // one, or where focus lands before anything has been focused.
+            tabbable: active().unwrap_or(first),
+            expanded,
+            level_id: level_id.clone(),
+        };
+        let (mut index, mut group) = (0usize, 0usize);
+        draw_rows(
+            &props.items,
+            &level_id,
+            &mut index,
+            &mut group,
+            &mut |item, index| {
+                let anchor = item.submenu_items().is_some().then(|| anchor_of(index).0);
+                menu_item(&draw, item, index, anchor)
+            },
+        )
+    });
 
     let states: Input<States> = props
         .states
@@ -800,10 +801,10 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
-        .style(popover.style())
+        .style(open.then(|| popover.style()).flatten())
         .prepare();
 
-    popover.show(open.then(|| {
+    popover.show(rows.map(|rows| {
         let mut attributes = props.attributes.clone();
         attributes.extend(dismiss.floating_events());
         let onpointerenter = props.onpointerenter;
@@ -834,7 +835,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         for (index, items, (anchor, floating)) in submenus {
             MenuLevel {
                 key: "{index}",
-                items,
+                items: if open && expanded == Some(index) { items } else { Vec::new() },
                 id: format!("{}-{index}", props.id),
                 labelledby: format!("{}-item-{index}", props.id),
                 anchor,

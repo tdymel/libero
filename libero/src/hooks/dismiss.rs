@@ -811,19 +811,22 @@ pub(crate) fn use_dismiss(
     });
 
     // Armed on the opening edge and consumed once the focus lands, so reopening
-    // focuses again and a re-placement on scroll does not.
-    let mut entering = use_signal(|| false);
-    use_effect(use_reactive!(|(open,)| entering.set(open)));
+    // focuses again and a re-placement on scroll does not. Plain cells in one
+    // effect: every consumer pays for this hook, and none but a test focuses.
+    let entering = use_hook(|| Rc::new(std::cell::Cell::new((false, false))));
 
     let initial_focus = options.initial_focus;
     use_effect(use_reactive!(|(open, placed)| {
         // Read first, branch second - this subscribes the effect to the box
         // mounting, and it re-runs on a *re*-mount, which is every reopen.
         let mounted = floating.mount_token().is_some();
-        if !open || !placed || !mounted || !entering() {
+        let (was_open, armed) = entering.get();
+        let armed = if open != was_open { open } else { armed };
+        entering.set((open, armed));
+        if !open || !placed || !mounted || !armed {
             return;
         }
-        entering.set(false);
+        entering.set((open, false));
         if let Some(target) = initial_focus {
             let _ = target.focus();
         }
