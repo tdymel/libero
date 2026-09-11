@@ -182,16 +182,16 @@ fn a_locale_can_put_the_count_after_the_names() {
     );
 }
 
-/// The names are in the chip's own label as well as in its tooltip, so a
-/// tooltip clipped by an `overflow: hidden` ancestor is cosmetic. The chip is
-/// focusable, which is what makes the tooltip reachable without a pointer.
+/// The names are in the chip's own label as well as in its tooltip, which is
+/// rendered only while open. The chip is focusable, which is what makes the
+/// tooltip reachable without a pointer.
 #[test]
 fn the_hidden_names_are_reachable_by_keyboard() {
     let html = body(&render(group_app));
 
     assert!(html.contains("tabindex=\"0\""), "{html}");
     assert!(
-        html.contains("role=\"tooltip\">Katherine Johnson, Radia Perlman, Barbara Liskov"),
+        html.contains("aria-label=\"3 more: Katherine Johnson, Radia Perlman, Barbara Liskov\""),
         "{html}"
     );
 }

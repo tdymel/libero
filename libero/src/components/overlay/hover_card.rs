@@ -1,11 +1,8 @@
-use std::{
-    cell::{Cell, RefCell},
-    rc::Rc,
-    time::Duration,
-};
+use std::{cell::Cell, rc::Rc};
 
 use dioxus::prelude::*;
 
+use super::hover_intent::{TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
     components::{
         FOCUSABLE_SELECTOR, HtmlTag, Input, States, common::base_props, layout::use_box,
@@ -15,19 +12,10 @@ use crate::{
         Align, DismissOptions, ElementHandle, PopoverOptions, Side, use_dismiss, use_element,
         use_popover, use_theme,
     },
-    platform::{ElementApi, TimerSubscription, next_task, timer},
-    sx::{StaticSx, sx},
+    platform::{ElementApi, next_task},
+    sx::StaticSx,
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
-
-static HOVER_CARD_WRAPPER_SX: StaticSx = StaticSx::new(|| {
-    // `Tooltip`'s wrapper, for `Tooltip`'s reason: not `auto`, so a flex or
-    // grid parent's `align-items: stretch` cannot widen it past the trigger
-    // and anchor the card to the container instead.
-    sx().display("inline-block")
-        .width("max-content")
-        .max_width("100%")
-});
 
 // A surface, so background, corner and elevation are `paper_sx()`'s and the
 // `radius-{step}`/`shadow-{step}` tokens the card renders with are answered by
@@ -100,9 +88,9 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     // Two independent reasons to be open. A pointer that leaves does not
     // close a card the keyboard is still in, and focus leaving does not close
     // one the pointer is still over.
-    let mut hovered = use_signal(|| false);
+    let hovered = use_hover_intent();
     let mut focused = use_signal(|| false);
-    let open = !props.disabled.unwrap_or(false) && props.open.unwrap_or(hovered() || focused());
+    let open = !props.disabled.unwrap_or(false) && props.open.unwrap_or(hovered.get() || focused());
 
     let anchor = use_element();
     let popover = use_popover(
@@ -146,48 +134,6 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         },
     );
 
-    // The pointer delays. The timer's callback runs outside every scope, so it
-    // only records the outcome in a root-owned signal and the effect applies
-    // it ([[codebase/platform-timer]]). Replacing the subscription cancels it.
-    let fire = use_hook(|| Signal::new_in_scope(None::<bool>, ScopeId::ROOT));
-    let pending: Rc<RefCell<Option<Box<dyn TimerSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let pending = pending.clone();
-        move || {
-            pending.borrow_mut().take();
-            fire.manually_drop();
-        }
-    });
-    use_effect(move || {
-        let Some(target) = fire() else {
-            return;
-        };
-        let mut fire = fire;
-        fire.set(None);
-        hovered.set(target);
-    });
-    let hover = move |target: bool, delay: u32| {
-        let mut hovered = hovered;
-        pending.borrow_mut().take();
-        if *hovered.peek() == target {
-            return;
-        }
-        let timer = (delay > 0).then(timer).flatten();
-        match timer {
-            Some(timer) => {
-                *pending.borrow_mut() = Some(timer.after(
-                    Duration::from_millis(delay.into()),
-                    Box::new(move || {
-                        let mut fire = fire;
-                        fire.set(Some(target));
-                    }),
-                ));
-            }
-            None => hovered.set(target),
-        }
-    };
-
     // A click focuses the trigger too, and a card that opened for that focus
     // would stay up after the pointer has gone - `Tooltip`'s `:focus-visible`
     // rule, which Rust cannot ask. So a focus that follows a press is the
@@ -230,7 +176,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         .into();
 
     // Every hook above the branch - `prepare()` is the hook.
-    let wrapper = use_box().framework_sx(&HOVER_CARD_WRAPPER_SX).prepare();
+    let wrapper = use_box().framework_sx(&TRIGGER_WRAPPER_SX).prepare();
     let card = use_box()
         .framework_sx(&HOVER_CARD_SX)
         .class(&props.class)
@@ -246,12 +192,11 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     popover.show(open.then(|| {
         let mut attributes = props.attributes.clone();
         attributes.extend(dismiss.floating_events());
-        let (enter, leave) = (hover.clone(), hover.clone());
         card.element(&floating)
             .attr("role", "dialog")
-            .event("onmouseenter", move |_: MouseEvent| enter(true, 0))
+            .event("onmouseenter", move |_: MouseEvent| hovered.hover(true, 0))
             .event("onmouseleave", move |_: MouseEvent| {
-                leave(false, close_delay)
+                hovered.hover(false, close_delay)
             })
             .render(
                 HtmlTag::Div,
@@ -271,12 +216,13 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             )
     }));
 
-    let enter = hover.clone();
     wrapper
         .element(&anchor)
-        .event("onmouseenter", move |_: MouseEvent| enter(true, open_delay))
+        .event("onmouseenter", move |_: MouseEvent| {
+            hovered.hover(true, open_delay)
+        })
         .event("onmouseleave", move |_: MouseEvent| {
-            hover(false, close_delay)
+            hovered.hover(false, close_delay)
         })
         .render(
             HtmlTag::Span,

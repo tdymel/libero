@@ -1,6 +1,7 @@
 mod drawer;
 mod floating_window;
 mod hover_card;
+mod hover_intent;
 mod lightbox;
 mod modal;
 mod overlay;

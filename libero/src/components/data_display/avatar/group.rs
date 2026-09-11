@@ -167,8 +167,8 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
             .clone()
             .attr("data-state", chip_states.data_state())
             .attr("role", "img")
-            // The same names the tooltip shows. A tooltip clipped by an
-            // `overflow: hidden` ancestor is then cosmetic, not a loss.
+            // The same names the tooltip shows, which is rendered only while
+            // open.
             .attr("aria-label", more)
             // Focusable so the tooltip is reachable without a pointer. One
             // tab stop per group, which is what the hidden names cost.

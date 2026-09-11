@@ -753,6 +753,9 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
                     size,
                     open: (dragging() && active() == index).then_some(true),
                     label_id: bubble_id,
+                    // The thumb's hit area already spans the gap, and the
+                    // portaled bridge over it would take the press from it.
+                    sx: sx().selector("&::before", sx().pointer_events("none")),
                     {thumb}
                 }
             }

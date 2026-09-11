@@ -323,6 +323,7 @@ pub use title::{
 pub use tooltip::{
     TOOLTIP_BACKGROUND, TOOLTIP_COLOR, TOOLTIP_DURATION, TOOLTIP_FONT_SIZE, TooltipDefaults,
 };
+pub(crate) use tooltip::{TOOLTIP_IN, TOOLTIP_KEYFRAMES};
 pub use tree::TreeDefaults;
 pub use variant::Variant;
 pub use z_index::{

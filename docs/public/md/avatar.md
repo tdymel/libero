@@ -57,8 +57,7 @@ fn Demo() -> Element {
 what lets it count them. `max` is the number of circles, the chip included, so
 the chip always stands for at least two people - a `+1` is unrepresentable by
 construction. The chip is focusable and tooltipped, and its `aria-label` lists
-the same names, so a tooltip clipped by an `overflow: hidden` ancestor costs
-nothing but the hover.
+the same names.
 
 Members overlap by `spacing`, the first drawn on top, each separated from the
 next by a ring in the page colour (`--lsx-paper-background`).

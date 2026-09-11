@@ -8,7 +8,8 @@ button "Before"
 button "Save"
   StaticText "Save"
   generic
-tooltip "Saves the draft"
-  StaticText "Saves the draft"
 button "After"
   StaticText "After"
+generic
+  tooltip "Saves the draft"
+    StaticText "Saves the draft"

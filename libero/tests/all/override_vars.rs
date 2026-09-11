@@ -70,7 +70,8 @@ fn app() -> Element {
             Marquee { duration: 9000, "marquee" }
             Overlay { opacity: "0.5", z_index: "5", blur: "2px" }
             Scroller { aria_label: "Tags", fade_color: "red", span { "one" } }
-            Tooltip { label: rsx! { "t" }, z_index: "5", "x" }
+            // Open: the bubble is rendered only then.
+            Tooltip { label: rsx! { "t" }, z_index: "5", open: true, "x" }
         }
     }
 }

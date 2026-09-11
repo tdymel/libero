@@ -125,7 +125,7 @@ fetch only the file you need.
 - [Overlay](overlay.md): A full-viewport dim and blur layer with centred content - the backdrop behind a modal, or a loading screen.
 - [Popover](popover.md): A popover is a hook, not a component - `use_popover` portals a box to the document root and anchors it, flipping and shifting to stay on screen.
 - [Spotlight](spotlight.md): A command palette - `use_spotlight` opens a modal search box over caller-supplied actions, with grouped rows, arrow-key highlight and a Ctrl/Cmd+K hotkey.
-- [Tooltip](tooltip.md): A CSS-only label that appears while its child is hovered or focused.
+- [Tooltip](tooltip.md): A label that appears while its child is hovered or focused by keyboard, portaled so nothing clips it.
 
 ## Surface
 

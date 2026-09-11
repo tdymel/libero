@@ -8,6 +8,11 @@ pub const TOOLTIP_BACKGROUND: CssVar = CssVar::new("--lsx-tooltip-background");
 pub const TOOLTIP_COLOR: CssVar = CssVar::new("--lsx-tooltip-color");
 pub const TOOLTIP_DURATION: CssVar = CssVar::new("--lsx-tooltip-duration");
 
+/// The bubble's fade in. It mounts when it opens, so a keyframe, not a
+/// transition, and it unmounts when it closes, so there is no fade out.
+pub(crate) const TOOLTIP_KEYFRAMES: &str = "@keyframes lsx-tooltip-in{from{opacity:0;}}";
+pub(crate) const TOOLTIP_IN: &str = "lsx-tooltip-in";
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TooltipDefaults {
     pub side: Side,

@@ -1,14 +1,24 @@
+use std::{cell::Cell, rc::Rc};
+
 use dioxus::prelude::*;
 
+use super::hover_intent::{HoverIntent, TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
     components::{
         HtmlTag, Input, States,
         common::{base_props, input_from_str, variables},
         layout::use_box,
     },
-    hooks::use_theme,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CssVar, Size, SizeCss, TOOLTIP_DURATION, TooltipDefaults, Z_INDEX_FLOAT},
+    hooks::{
+        Align, DismissOptions, ElementHandle, PopoverOptions, escape_closes, use_dismiss,
+        use_element, use_popover, use_theme,
+    },
+    platform::keyboard,
+    sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
+    theme::{
+        CssVar, POPOVER_PADDING, Size, SizeCss, TOOLTIP_DURATION, TOOLTIP_IN, TooltipDefaults,
+        Z_INDEX_POPOVER,
+    },
 };
 
 use crate::theme::Side;
@@ -16,139 +26,37 @@ use crate::theme::Side;
 input_from_str!(Side);
 
 const TOOLTIP_GAP_VAR: CssVar = CssVar::new("--lsx-tooltip-gap");
-const TOOLTIP_OPEN_DELAY_VAR: CssVar = CssVar::new("--lsx-tooltip-open-delay");
-const TOOLTIP_CLOSE_DELAY_VAR: CssVar = CssVar::new("--lsx-tooltip-close-delay");
 
-/// The bubble, addressed from the wrapper's rules. Its own class is generated,
-/// so `role` - which it needs anyway - is what the wrapper can name.
-const BUBBLE: &str = "> [role=\"tooltip\"]";
-/// The same bubble, as the sibling of a focused trigger.
-const BUBBLE_SIBLING: &str = "[role=\"tooltip\"]";
+/// The bubble's widest, unless the viewport is narrower.
+const MAX_WIDTH: &str = "20rem";
 
-fn gap() -> String {
-    TOOLTIP_GAP_VAR.value_or(SizeCss::SPACING.value(Size::Xs))
-}
-
-/// `visibility` flips at the *end* of the fade out, and at the start of the
-/// wait going in - so a bubble on its way out stays hoverable until it is gone.
-///
-/// `scale` flips with it. A hidden bubble is still an absolutely positioned
-/// box, and that counts toward its scroll container's overflow whether it is
-/// visible or not, so a tooltip near an edge gave the container a scrollbar.
-/// Scaled to 0 it has no area to add. The individual property, so it composes
-/// with the side's `transform` rather than replacing it.
-fn closed_transition() -> String {
-    let delay = TOOLTIP_CLOSE_DELAY_VAR.value_or("0ms");
-    let duration = TOOLTIP_DURATION.value();
-
-    format!(
-        "opacity {duration} ease {delay}, visibility 0s linear calc({delay} + {duration}), \
-         scale 0s linear calc({delay} + {duration})"
-    )
-}
-
-fn closed_sx() -> Sx {
-    sx().opacity("0")
-        .visibility("hidden")
-        .with("scale", "0")
-        .transition(closed_transition())
-}
-
-fn open_sx() -> Sx {
-    let delay = TOOLTIP_OPEN_DELAY_VAR.value_or("0ms");
-    let duration = TOOLTIP_DURATION.value();
-
-    sx().opacity("1")
-        .visibility("visible")
-        .with("scale", "1")
-        .transition(format!(
-            "opacity {duration} ease {delay}, visibility 0s linear {delay}, scale 0s linear {delay}"
-        ))
-}
-
-static TOOLTIP_WRAPPER_SX: StaticSx = StaticSx::new(|| {
-    sx().position("relative")
-        .display("inline-block")
-        // Not `auto`, so a flex/grid parent's `align-items: stretch` cannot
-        // widen the wrapper past its trigger - which would centre the bubble
-        // on the container instead of on the trigger.
-        .width("max-content")
-        .max_width("100%")
-        .selector(
-            // `:focus-visible`, not `:focus-within`: a click focuses the
-            // trigger too, and the bubble would then stay up after it. A
-            // sibling rule, not `:has(:focus-visible)`, which never matches
-            // natively - so the trigger has to be the wrapper's child. Focus
-            // inside the bubble, which Tab reaches next, holds it open.
-            format!(
-                "&:hover {BUBBLE}, & > :focus-visible ~ {BUBBLE_SIBLING}, & {BUBBLE}:focus-within"
-            ),
-            open_sx(),
-        )
-        // Folded after the hover rules: equal specificity, so source order is
-        // what makes an explicitly controlled tooltip win.
-        .when("open", sx().selector(format!("& {BUBBLE}"), open_sx()))
-        .when("closed", sx().selector(format!("& {BUBBLE}"), closed_sx()))
-});
-
-/// `gap` is transparent padding, not empty space: a real gap would drop
-/// `:hover` the moment the pointer left the trigger, and the bubble could
-/// never be reached (WCAG 2.1 SC 1.4.13). Same reason there is no
-/// `pointer-events: none`.
-fn side_sx(side: Side) -> Sx {
-    let gap = gap();
-    let offset = format!("calc(100% + {gap})");
-
-    match side {
-        Side::Top => sx()
-            .bottom(offset)
-            .left("50%")
-            .transform("translateX(-50%)")
-            .selector(
-                "&::before",
-                sx().top("100%").left("0").right("0").height(gap),
-            ),
-        Side::Bottom => sx()
-            .top(offset)
-            .left("50%")
-            .transform("translateX(-50%)")
-            .selector(
-                "&::before",
-                sx().bottom("100%").left("0").right("0").height(gap),
-            ),
-        Side::Left => sx()
-            .right(offset)
-            .top("50%")
-            .transform("translateY(-50%)")
-            .selector(
-                "&::before",
-                sx().left("100%").top("0").bottom("0").width(gap),
-            ),
-        Side::Right => sx()
-            .left(offset)
-            .top("50%")
-            .transform("translateY(-50%)")
-            .selector(
-                "&::before",
-                sx().right("100%").top("0").bottom("0").width(gap),
-            ),
-    }
+/// `gap` is transparent padding, not empty space: the pointer crossing it
+/// never leaves the bubble, so it can reach it (WCAG 2.1 SC 1.4.13). On the
+/// side the bubble actually landed on, after any flip.
+fn bridge_sx(side: Side) -> Sx {
+    let gap = TOOLTIP_GAP_VAR.value();
+    let bridge = match side {
+        Side::Top => sx().top("100%").left("0").right("0").height(gap),
+        Side::Bottom => sx().bottom("100%").left("0").right("0").height(gap),
+        Side::Left => sx().left("100%").top("0").bottom("0").width(gap),
+        Side::Right => sx().right("100%").top("0").bottom("0").width(gap),
+    };
+    sx().selector("&::before", bridge)
 }
 
 static TOOLTIP_BUBBLE_SX: StaticSx = StaticSx::new(|| {
     let base = TooltipDefaults::theme_vars()
-        .position("absolute")
-        .z_index(Z_INDEX_FLOAT.overridable())
-        .width("max-content")
-        .max_width("min(20rem, 100vw)")
+        .z_index(Z_INDEX_POPOVER.overridable())
+        .max_width(format!(
+            "min({MAX_WIDTH}, calc(100vw - 2 * {}))",
+            POPOVER_PADDING.value()
+        ))
         .selector("&::before", sx().content("\"\"").position("absolute"))
-        .opacity("0")
-        .visibility("hidden")
-        .with("scale", "0")
-        .transition(closed_transition());
+        .animation(format!("{TOOLTIP_IN} {} ease", TOOLTIP_DURATION.value()))
+        .media(REDUCED_MOTION, sx().animation("none"));
 
     Side::ALL.iter().fold(base, |base, &side| {
-        base.when(side.state_name(), side_sx(side))
+        base.when(side.state_name(), bridge_sx(side))
     })
 });
 
@@ -156,6 +64,7 @@ base_props! {
     pub struct TooltipProps {
         /// The bubble's content.
         label: Element,
+        /// The preferred side. The bubble flips when that side has no room.
         #[props(default, into)]
         side: Input<Side>,
         /// Distance to the trigger, bridged so the pointer can cross it.
@@ -171,114 +80,194 @@ base_props! {
         #[props(default)]
         close_delay: Option<u32>,
         /// Forces the bubble open or closed; `None` leaves it to hover/focus.
+        /// A bubble forced open ignores Escape.
         #[props(default)]
         open: Option<bool>,
         /// Renders `children` bare - no wrapper, no bubble.
         #[props(default)]
         disabled: Option<bool>,
         /// The bubble's `id`, so the trigger can carry `aria-describedby`.
+        /// It resolves while the bubble is closed, too.
         #[props(default, into)]
         label_id: Option<String>,
         /// The trigger. `class`/`sx`/`states`/`attributes` style the *bubble*.
-        ///
-        /// Keyboard focus shows the bubble only when the focusable trigger is
-        /// a **direct child**: `Tooltip { Button { .. } }`, not
-        /// `Tooltip { div { Button { .. } } }`, which shows on hover alone.
-        /// Debug builds warn when no direct child can take focus.
         children: Element,
     }
 }
 
-/// A hover/focus label for its `children`. CSS-only: no callbacks, no
-/// viewport flipping, and an `overflow: hidden` ancestor clips it.
+/// A hover and keyboard-focus label for its `children`.
+///
+/// The bubble is portaled, so an `overflow: hidden` ancestor cannot clip it,
+/// flips when its side has no room, and closes on Escape (WCAG 1.4.13). Until
+/// it opens, it costs a wrapper and its listeners and nothing else.
 #[component]
 pub fn Tooltip(props: TooltipProps) -> Element {
     let theme = use_theme();
-    let side = props.side.copied_or(theme.tooltip.side);
-    let size = props.size.copied_or(theme.tooltip.size);
-    let gap = props.gap.copied_or(theme.tooltip.gap);
+    let hover = use_hover_intent();
+    let mut focused = use_signal(|| false);
+    // A click focuses the trigger too, and the bubble opens for keyboard focus
+    // only - `:focus-visible`, which Rust cannot ask. `HoverCard`'s rule.
+    let pressed = use_hook(|| Rc::new(Cell::new(false)));
+    // Where the document hears Escape, the open bubble's `use_dismiss` does.
+    let global_escape = use_hook(|| keyboard().is_some());
+    let anchor = use_element();
+    // Re-places the open bubble on every render here: a slider's thumb moves
+    // its anchor while its value bubble stays open.
+    let generation = use_hook(|| Rc::new(Cell::new(0u64)));
+    generation.set(generation.get().wrapping_add(1));
 
-    let variables: Input<crate::components::Variables> = variables()
-        .with(TOOLTIP_GAP_VAR, SizeCss::SPACING.value(gap))
-        .with(
-            TOOLTIP_OPEN_DELAY_VAR,
-            format!("{}ms", props.open_delay.unwrap_or(theme.tooltip.open_delay)),
-        )
-        .with(
-            TOOLTIP_CLOSE_DELAY_VAR,
-            format!(
-                "{}ms",
-                props.close_delay.unwrap_or(theme.tooltip.close_delay)
-            ),
-        )
-        .with(Z_INDEX_FLOAT.override_var(), props.z_index.resolve(None))
-        .into();
-
-    let wrapper_states: Input<States> = States::default()
-        .with("open", props.open == Some(true))
-        .with("closed", props.open == Some(false))
-        .into();
-
-    let bubble_states: Input<States> = props
-        .states
-        .unwrap_or_default()
-        .with(side.state_name(), true)
-        .with(size.state_name(), true)
-        .into();
+    // Escape, or a forced-open bubble released: closed until the pointer
+    // comes back or focus arrives again.
+    let onclose = use_callback(move |()| {
+        hover.set(false);
+        focused.set(false);
+    });
 
     // Every hook above the branch - `prepare()` is the hook.
-    let wrapper = use_box()
-        .framework_sx(&TOOLTIP_WRAPPER_SX)
-        .states(&wrapper_states)
-        .variables(&variables)
-        .prepare();
-    #[cfg(debug_assertions)]
-    let wrapper = wrapper.element(&use_trigger_check());
-    let bubble = use_box()
-        .framework_sx(&TOOLTIP_BUBBLE_SX)
-        .class(&props.class)
-        .sx(&props.sx)
-        .states(&bubble_states)
-        .prepare();
+    let wrapper = use_box().framework_sx(&TRIGGER_WRAPPER_SX).prepare();
 
     if props.disabled.unwrap_or(false) {
         return props.children;
     }
 
-    let bubble = bubble
-        .attr("role", "tooltip")
-        .attr("id", props.label_id)
-        .render(HtmlTag::Span, props.attributes, props.label);
+    let open_delay = props.open_delay.unwrap_or(theme.tooltip.open_delay);
+    let close_delay = props.close_delay.unwrap_or(theme.tooltip.close_delay);
+    let open = props.open.unwrap_or(hover.get() || focused());
+    let dismissible = props.open.is_none();
 
+    let bubble = match open {
+        true => rsx! {
+            TooltipBubble {
+                tooltip: props.clone(),
+                anchor,
+                hover,
+                generation: generation.get(),
+                onclose,
+            }
+        },
+        // A hidden element still describes the trigger that points at it.
+        false => match props.label_id.clone() {
+            Some(id) => rsx! {
+                span { id, role: "tooltip", hidden: true, {props.label.clone()} }
+            },
+            None => VNode::empty(),
+        },
+    };
+
+    let leave = pressed.clone();
+    let focus = pressed.clone();
+    let mut wrapper = wrapper
+        .element(&anchor)
+        .event("onmouseenter", move |_: MouseEvent| {
+            hover.hover(true, open_delay)
+        })
+        .event("onmouseleave", move |_: MouseEvent| {
+            leave.set(false);
+            hover.hover(false, close_delay);
+        })
+        .event("onpointerdown", move |_: PointerEvent| pressed.set(true))
+        .event("onfocusin", move |_: FocusEvent| {
+            if !focus.replace(false) {
+                focused.set(true);
+            }
+        })
+        .event("onfocusout", move |_: FocusEvent| focused.set(false));
+    // Off the web only the focused element hears Escape. Absent while closed,
+    // so it never swallows Escape for an enclosing `Modal`.
+    if open && dismissible && !global_escape {
+        wrapper = wrapper.event("onkeydown", move |event: KeyboardEvent| {
+            if escape_closes(&event) {
+                event.prevent_default();
+                event.stop_propagation();
+                onclose.call(());
+            }
+        });
+    }
     wrapper.render(HtmlTag::Span, Vec::new(), vec![props.children, bubble])
 }
 
-#[cfg(debug_assertions)]
-const NO_FOCUSABLE_TRIGGER: &str = "Tooltip: no direct child can take focus, so keyboard focus never shows the bubble. \
-     Put the focusable trigger directly inside `Tooltip`, not inside a wrapper element.";
+/// The open bubble. Its own component, so a closed tooltip runs none of the
+/// popover's and dismissal's hooks and effects - a page may hold hundreds.
+#[component]
+fn TooltipBubble(
+    tooltip: TooltipProps,
+    anchor: ElementHandle,
+    hover: HoverIntent,
+    generation: u64,
+    onclose: Callback<()>,
+) -> Element {
+    let theme = use_theme();
+    let side = tooltip.side.copied_or(theme.tooltip.side);
+    let size = tooltip.size.copied_or(theme.tooltip.size);
+    let gap = tooltip.gap.copied_or(theme.tooltip.gap);
+    let close_delay = tooltip.close_delay.unwrap_or(theme.tooltip.close_delay);
+    let padding = theme.popover.padding;
 
-/// Warns once per mount when no direct child of the wrapper is focusable.
-#[cfg(debug_assertions)]
-fn use_trigger_check() -> crate::hooks::ElementHandle {
-    let wrapper = crate::hooks::use_element();
-    use_effect(move || {
-        if wrapper.is_mounted() && lacks_focusable_trigger(&wrapper) {
-            crate::utils::warn(NO_FOCUSABLE_TRIGGER);
-        }
-    });
-    wrapper
-}
+    let popover = use_popover(
+        anchor,
+        true,
+        PopoverOptions::new(theme.spacing.get(gap).into(), padding)
+            .side(side)
+            .align(Align::Center)
+            .remeasure(generation),
+    );
+    let floating = *popover.floating();
+    // Focus never enters the bubble, so nothing to hand back and no focus to
+    // lose.
+    let dismiss = use_dismiss(
+        anchor,
+        floating,
+        true,
+        popover.placed(),
+        Some(onclose),
+        DismissOptions {
+            escape: tooltip.open.is_none(),
+            outside: false,
+            return_focus: false,
+            ..Default::default()
+        },
+    );
 
-/// The bubble is always a direct child: a renderer that cannot find it cannot
-/// answer `:scope` queries, and says nothing rather than something false.
-#[cfg(debug_assertions)]
-fn lacks_focusable_trigger(wrapper: &impl crate::platform::ElementApi) -> bool {
-    use crate::components::a11y::FOCUSABLE_SELECTOR;
+    let states: Input<States> = tooltip
+        .states
+        .unwrap_or_default()
+        .with(popover.placement().side.state_name(), true)
+        .with(size.state_name(), true)
+        .into();
+    let variables: Input<crate::components::Variables> = variables()
+        .with(TOOLTIP_GAP_VAR, SizeCss::SPACING.value(gap))
+        .with(
+            Z_INDEX_POPOVER.override_var(),
+            tooltip.z_index.resolve(None),
+        )
+        .into();
+    // The popover caps the box inline, where no caller `sx` could change it;
+    // the class carries the same cap instead.
+    let inline_cap = format!("max-width:calc(100vw - {}px);", 2.0 * padding);
+    let style = popover.style().map(|style| style.replace(&inline_cap, ""));
 
-    wrapper
-        .query_selector(&format!(":scope > {BUBBLE_SIBLING}"))
-        .is_ok()
-        && wrapper
-            .query_selector(&format!(":scope > {FOCUSABLE_SELECTOR}"))
-            .is_err()
+    let bubble = use_box()
+        .framework_sx(&TOOLTIP_BUBBLE_SX)
+        .class(&tooltip.class)
+        .sx(&tooltip.sx)
+        .states(&states)
+        .variables(&variables)
+        .style(style)
+        .prepare();
+
+    let mut attributes = tooltip.attributes.clone();
+    attributes.extend(dismiss.floating_events());
+    popover.show(Some(
+        bubble
+            .element(&floating)
+            .attr("role", "tooltip")
+            .attr("id", tooltip.label_id.clone())
+            .event("onmouseenter", move |_: MouseEvent| hover.hover(true, 0))
+            .event("onmouseleave", move |_: MouseEvent| {
+                hover.hover(false, close_delay)
+            })
+            .render(HtmlTag::Span, attributes, tooltip.label.clone()),
+    ));
+
+    rsx! {}
 }

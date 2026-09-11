@@ -10,7 +10,7 @@ use super::{
     INDICATOR_KEYFRAMES, KBD_BACKGROUND, KBD_COLOR, LOADER_KEYFRAMES, MARQUEE_KEYFRAMES,
     NOTIFICATION_KEYFRAMES, NamedColorCss, PROGRESS_BAR_KEYFRAMES, RIPPLE_KEYFRAMES,
     SKELETON_KEYFRAMES, Size, SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT,
-    TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, Theme, ThemeSet,
+    TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, TOOLTIP_KEYFRAMES, Theme, ThemeSet,
 };
 
 const SHADES: [ColorShade; 9] = [
@@ -131,6 +131,7 @@ fn base_layer_and_keyframes(theme: &Theme, color_scheme: &str) -> String {
     css.push_str(SKELETON_KEYFRAMES);
     css.push_str(MARQUEE_KEYFRAMES);
     css.push_str(NOTIFICATION_KEYFRAMES);
+    css.push_str(TOOLTIP_KEYFRAMES);
     css
 }
 

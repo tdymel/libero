@@ -16,8 +16,8 @@ const TRIGGER: &str = r#"Button { variant: "outlined", "Save" }"#;
 // snippet: in Tooltip { label: rsx! { "Save" }, .., Button { "Save" } }
 const STYLED: &str = r#"sx: sx().background("primary.6").white_space("normal").max_width("12rem")"#;
 
-/// The bubble escapes the trigger's box, and the demo card clips what leaves
-/// it - so the preview keeps a bubble's worth of room on every side.
+/// A bubble's worth of room on every side, so the preview shows the chosen
+/// side rather than a flip.
 fn wrap_room(_: &DemoValues, code: &str) -> String {
     format!(
         "Box {{\n    sx: sx().padding(\"40px\"),\n{}}}",
@@ -50,13 +50,13 @@ pub fn TooltipPage() -> Element {
                 prop("label", "Element").doc("The bubble's content."),
                 prop("side", "Side")
                     .default("top")
-                    .doc("Which side of the trigger the bubble sits on, centred on that side. No viewport flipping."),
+                    .doc("The preferred side of the trigger, centred on it. The bubble flips when that side has no room."),
                 prop("gap", "Size")
                     .default("xs")
                     .doc("Distance to the trigger, rendered as transparent padding so the pointer can cross it."),
                 prop("size", "Size").default("sm").doc("Font size of the bubble."),
                 prop("z_index", "ThemeAwareValue")
-                    .default("the float layer")
+                    .default("the popover layer")
                     .doc("Overrides the stacking level, for a bubble that loses to a neighbouring overlay."),
                 prop("open_delay", "u32")
                     .default("0")
@@ -66,21 +66,23 @@ pub fn TooltipPage() -> Element {
                     .doc("Milliseconds the bubble lingers after the pointer leaves."),
                 prop("open", "bool")
                     .default("unset")
-                    .doc("Forces the bubble open or closed; unset leaves it to hover and focus."),
+                    .doc("Forces the bubble open or closed; unset leaves it to hover and focus. A bubble forced open ignores Escape."),
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Renders `children` bare - no wrapper, no bubble."),
                 prop("label_id", "String")
-                    .doc("The bubble's `id`, so the trigger can carry `aria-describedby`."),
+                    .doc("The bubble's `id`, so the trigger can carry `aria-describedby`. It resolves while the bubble is closed, too."),
                 prop("children", "Element")
-                    .doc("The trigger. Keyboard focus shows the bubble only when the focusable trigger is a direct child. Note that `class`, `sx`, `states` and spread attributes style the *bubble*, not this."),
+                    .doc("The trigger. Note that `class`, `sx`, `states` and spread attributes style the *bubble*, not this."),
             ])],
             lead: rsx! {
                 Text {
-                    "A label that appears while its child is hovered or focused. Pure CSS - it "
+                    "A label that appears while its child is hovered or focused by keyboard. It "
                     "wraps the trigger in a "
                     Code { source: "span" }
-                    " and needs no state, so there are no open/close callbacks. "
+                    " and portals the bubble to the document root, so an "
+                    Code { source: "overflow: hidden" }
+                    " ancestor cannot clip it, and it flips when its side has no room. "
                     Code { source: "gap" }
                     " is rendered as transparent padding, not empty space, so the pointer can "
                     "travel from the trigger into the bubble without it closing. "
@@ -156,13 +158,10 @@ pub fn TooltipPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Keyboard focus shows the bubble only when the focusable trigger is a direct "
-                    "child of "
+                    "Keyboard focus anywhere inside "
                     Code { source: "Tooltip" }
-                    ". Wrapped in another element, as in "
-                    Code { source: r#"Tooltip {{ div {{ Button {{ "Save" }} }} }}"# }
-                    ", it shows on hover alone. Debug builds warn when no direct child can take "
-                    "focus."
+                    " shows the bubble; a click does not. Escape hides it until the pointer "
+                    "or focus comes back."
                 }
                 Text {
                     "The wrapper is not focusable, so an "
@@ -175,12 +174,6 @@ pub fn TooltipPage() -> Element {
                     label_id: "save-tip",
                     label: rsx! { "Saves the current draft" },
                     Button { aria_describedby: "save-tip", "Save" }
-                }
-                Text {
-                    "Escape does not dismiss it, and an ancestor with "
-                    Code { source: "overflow: hidden" }
-                    " - a scroll container, a card - clips it. Both need measurement and state; "
-                    "reach for a popover there."
                 }
             }
         }
