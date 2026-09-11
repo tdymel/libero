@@ -109,13 +109,14 @@ pub(crate) fn timer() -> Option<&'static dyn TimerApi> {
     return thread::timer();
 }
 
-/// Only the web can report a document-level key press today, for the same
-/// reason [`scroll`] cannot: the notification has to come from the renderer,
-/// and Blitz's would be fork work.
+/// The web listens on the window; Blitz hears a press bubble out of the app to
+/// `blitz::Listener`. The WebView floor and a server have neither.
 pub(crate) fn keyboard() -> Option<&'static dyn KeyboardApi> {
     #[cfg(target_arch = "wasm32")]
     return web::keyboard();
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::keyboard();
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return None;
 }
 
@@ -147,25 +148,28 @@ pub(crate) fn key_taken(event: &Event<KeyboardData>) -> bool {
     return false;
 }
 
-/// Only the web can see a key press's target today - see
-/// [`typing_target`](crate::platform::typing_target).
+/// The web reads the event's target; Blitz the focused node, where it sends a
+/// key press - see [`typing_target`](crate::platform::typing_target).
 pub(crate) fn typing_target(event: &Event<KeyboardData>) -> bool {
     #[cfg(not(target_arch = "wasm32"))]
     let _ = event;
     #[cfg(target_arch = "wasm32")]
     return web::typing_target(event);
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::typing_target();
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return false;
 }
 
-/// Only the web can see a key press's target today - see
-/// [`arrow_target`](crate::platform::arrow_target).
+/// As [`typing_target`] - see [`arrow_target`](crate::platform::arrow_target).
 pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     #[cfg(not(target_arch = "wasm32"))]
     let _ = event;
     #[cfg(target_arch = "wasm32")]
     return web::arrow_target(event);
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::arrow_target();
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return false;
 }
 

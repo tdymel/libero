@@ -71,9 +71,9 @@ pub fn Modal(props: ModalProps) -> Element {
     let z_index = use_modal_z_index();
     // A `Modal` is only ever rendered while it is open, so mounting *is*
     // opening. Its Escape stays a bubbled subtree `onkeydown` rather than
-    // moving to `KeyboardApi`: `platform::keyboard()` is `None` on every
-    // backend but the web, so the capability would regress Escape natively.
-    // Only the arbitration is shared.
+    // moving to `KeyboardApi`: `platform::keyboard()` is `None` on the WebView
+    // floor, so the capability would regress Escape there. Only the
+    // arbitration is shared.
     let layer = use_dismiss_layer();
     // The guard lives in this component's hook state, so the layer comes off
     // the stack when the modal unmounts, whatever path got it there. `Rc`

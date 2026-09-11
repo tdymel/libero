@@ -89,9 +89,12 @@ pub trait KeyboardApi {
     ) -> Box<dyn KeySubscription>;
 }
 
-/// `None` where the renderer cannot report a document-level key press -
-/// everything but the web today, the same hole [`scroll`](super::scroll) has and
-/// for the same reason.
+/// `None` where the renderer cannot report a document-level key press: the
+/// WebView floor and a server.
+///
+/// Natively (Blitz) a press is heard as it bubbles out of `LiberoProvider`, so
+/// a handler that stops its propagation hides it, and nothing is heard while
+/// focus sits on `<html>` or outside the provider.
 pub fn keyboard() -> Option<&'static dyn KeyboardApi> {
     backend::keyboard()
 }
@@ -119,9 +122,8 @@ pub(crate) fn key_taken(event: &Event<KeyboardData>) -> bool {
 /// worse, `prevent_default()`ing it - takes the caret out of a text field a
 /// caller put inside the component. Ask this first and return.
 ///
-/// Only the web can see an event's target, so every other renderer answers
-/// `false` - the same floor as [`key_taken`] and
-/// [`nested_interactive`](super::nested_interactive), and for the same reason.
+/// The web reads the event's target and Blitz the focused node; every other
+/// renderer answers `false`.
 pub(crate) fn typing_target(event: &Event<KeyboardData>) -> bool {
     backend::typing_target(event)
 }
@@ -138,8 +140,7 @@ pub(crate) fn typing_target(event: &Event<KeyboardData>) -> bool {
 /// in hand: a `range` inside the component is left alone for Home and End too,
 /// which is right, since Home steps a range to its minimum.
 ///
-/// Only the web can see an event's target, so every other renderer answers
-/// `false`.
+/// Answered where [`typing_target`] is, `false` elsewhere.
 pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     backend::arrow_target(event)
 }
@@ -154,9 +155,7 @@ pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
 /// as text left Ctrl+K dead after a click on a switch or a segmented control.
 /// A missing or unknown type is a text box, as it is to the browser. `select`
 /// counts: a key press there drives the native option search.
-///
-/// Only the web backend has a document key listener to filter today.
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+#[cfg_attr(not(any(target_arch = "wasm32", feature = "native")), allow(dead_code))]
 pub(crate) fn takes_typing(tag: &str, input_type: Option<&str>) -> bool {
     match tag {
         "TEXTAREA" | "SELECT" => true,
@@ -197,7 +196,7 @@ pub(crate) fn takes_typing(tag: &str, input_type: Option<&str>) -> bool {
 /// `SegmentedControl` each `prevent_default()` on the arrows, which
 /// [`key_taken`] already reports. This is the backstop for raw HTML a caller
 /// wrote.
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+#[cfg_attr(not(any(target_arch = "wasm32", feature = "native")), allow(dead_code))]
 pub(crate) fn takes_arrows(tag: &str, input_type: Option<&str>) -> bool {
     tag == "INPUT"
         && input_type.is_some_and(|kind| {

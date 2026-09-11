@@ -12,11 +12,11 @@
 //! its own box and trigger, and the consumer keeps whatever role, theming and
 //! ARIA its popup type needs.
 //!
-//! **Off the web, Escape reaches only the element that has focus.** There is no
-//! document-level listener there, so a consumer that can leave focus on its
-//! trigger - a combobox-shaped dropdown, any pointer-opened surface - has to
-//! spread `anchor_events()` too, or the surface cannot be dismissed from the
-//! keyboard at all.
+//! **Without [`keyboard()`], Escape reaches only the element that has focus**
+//! (the WebView floor). A consumer that can leave focus on its trigger - a
+//! combobox-shaped dropdown, any pointer-opened surface - has to spread
+//! `anchor_events()` too, or the surface cannot be dismissed from the keyboard
+//! there.
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -188,8 +188,8 @@ pub(crate) fn use_dismiss_layer() -> DismissLayer {
     DismissLayer { id, stack }
 }
 
-/// Puts a field's open list on the Escape stack, **on the web only**, for as
-/// long as `open` holds. `ComboboxCore`, `Cascader`, `ColorField` and the date
+/// Puts a field's open list on the Escape stack, **where [`keyboard()`]
+/// answers** (the web, Blitz), for as long as `open` holds. `ComboboxCore`, `Cascader`, `ColorField` and the date
 /// picker fields call it; each keeps its own Escape handler.
 ///
 /// On the web a `use_dismiss` box hears Escape in the capture phase at the
@@ -201,9 +201,11 @@ pub(crate) fn use_dismiss_layer() -> DismissLayer {
 /// dropdown - a date picker's calendar - which no query of the card's own
 /// subtree could see.
 ///
-/// Off the web it does not push, by the rule in [`DismissLayer`]: there every
-/// Escape transport is an element handler, the field's runs first, and
-/// [`escape_closes`] reads the default it prevented.
+/// Blitz hears the document transport last, in bubble phase, where the list's
+/// layer declines the press for the card just the same. Without `keyboard()`
+/// it does not push, by the rule in [`DismissLayer`]: every Escape transport
+/// is an element handler, the field's runs first, and [`escape_closes`] reads
+/// the default it prevented.
 ///
 /// **The field has to close its list when focus leaves it.** An open list
 /// with focus elsewhere hears no Escape, since its handlers are on the field

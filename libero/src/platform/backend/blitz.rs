@@ -10,8 +10,10 @@ use dioxus_native_dom::{NodeHandle, NodeId};
 
 use crate::{
     platform::{
-        ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi,
-        PlatformError, Read,
+        ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi, KeyChord,
+        KeySubscription, KeyboardApi, PlatformError, Read,
+        keyboard::{takes_arrows, takes_typing},
+        warn_reserved_chord,
     },
     tokens::{ColorScheme, ColorSchemeSetting},
 };
@@ -53,41 +55,214 @@ thread_local! {
     /// press, and the focusable it hit. See [`Listener`].
     static PRESS: Cell<Option<(Option<NodeId>, NodeId)>> = const { Cell::new(None) };
 
+    /// A press that hit nothing focusable, until its click. See [`refocus_wrapper`].
+    static BLANK_PRESS: Cell<bool> = const { Cell::new(false) };
+
+    /// [`Listener`]'s own element.
+    static WRAPPER: RefCell<Option<NodeHandle>> = const { RefCell::new(None) };
+
     /// The scheme Rust was last told, and who to tell when the viewport's
     /// differs. See [`BlitzColorScheme`].
     static SCHEME: Cell<ColorScheme> = const { Cell::new(ColorScheme::Light) };
     static SCHEME_CALLBACKS: RefCell<Vec<SchemeCallback>> = const { RefCell::new(Vec::new()) };
     static NEXT_CALLBACK: Cell<u64> = const { Cell::new(0) };
+
+    /// Every [`BlitzKeyboard`] subscription: id, whether it skips text entry,
+    /// callback. Called by [`Listener`]'s `onkeydown`.
+    static KEY_CALLBACKS: RefCell<Vec<KeyCallback>> = const { RefCell::new(Vec::new()) };
 }
 
 type SchemeCallback = (u64, Rc<dyn Fn(ColorScheme)>);
+type KeyCallback = (u64, bool, Rc<dyn Fn(KeyChord) -> bool>);
 
 /// Wraps the app natively, so a press's target is known until its click has
-/// bubbled. Blitz runs a click's handlers before it moves focus (web: after),
-/// so `remember_active()` in one would name the element focused before.
+/// bubbled, and a key press reaches [`BlitzKeyboard`]. Blitz runs a click's
+/// handlers before it moves focus (web: after), so `remember_active()` in one
+/// would name the element focused before.
 #[component]
 pub(super) fn Listener(children: Element) -> Element {
     rsx! {
         div {
             display: "contents",
+            tabindex: "-1",
+            onmounted: |event| {
+                if let Some(handle) = event.data().downcast::<NodeHandle>() {
+                    WRAPPER.with(|wrapper| *wrapper.borrow_mut() = Some(handle.clone()));
+                }
+            },
             // Bubble phase: this dioxus has no capture listeners.
             onpointerdown: move |event| pressed(&event),
-            onclick: |_| PRESS.set(None),
-            onkeydown: |_| PRESS.set(None),
+            onclick: |_| {
+                PRESS.set(None);
+                if BLANK_PRESS.take() {
+                    refocus_wrapper();
+                }
+            },
+            onkeydown: |event| {
+                PRESS.set(None);
+                BLANK_PRESS.set(false);
+                keyed(&event);
+            },
             {children}
         }
     }
 }
 
+/// Blitz focuses `<html>` after a click on nothing focusable, above this
+/// wrapper, where no key press would reach [`BlitzKeyboard`]. Taken back once
+/// that move is made, at the end of the poll; the web's equivalent is `<body>`.
+fn refocus_wrapper() {
+    let Some(wrapper) = WRAPPER.with(|wrapper| wrapper.borrow().clone()) else {
+        return;
+    };
+    let node_id = wrapper.node_id();
+    defer(&wrapper, move |doc| {
+        let root = doc.root_element().id;
+        if doc
+            .get_focussed_node_id()
+            .is_none_or(|focused| focused == root)
+        {
+            doc.set_focus_to(node_id);
+        }
+    });
+}
+
+/// Hands a press that bubbled out of the app to every key subscription.
+fn keyed(event: &Event<KeyboardData>) {
+    // Bubble phase runs last: a press a handler below took is not the document's.
+    if !event.default_action_enabled() || event.is_composing() {
+        return;
+    }
+    let typing = typing_target();
+    let callbacks: Vec<_> = KEY_CALLBACKS.with(|callbacks| {
+        callbacks
+            .borrow()
+            .iter()
+            .filter(|(_, skip_text_entry, _)| !(typing && *skip_text_entry))
+            .map(|(_, skip_text_entry, callback)| (*skip_text_entry, callback.clone()))
+            .collect()
+    });
+    let (key, modifiers) = (event.key(), event.modifiers());
+    let mut taken = false;
+    for (skip_text_entry, callback) in callbacks {
+        let handled = callback(KeyChord {
+            key: key.clone(),
+            modifiers,
+            repeat: event.is_auto_repeating(),
+        });
+        if handled && skip_text_entry {
+            warn_reserved_chord(&key, modifiers);
+        }
+        taken |= handled;
+    }
+    if taken {
+        event.prevent_default();
+    }
+}
+
+/// The focused element's upper-case tag, `type` attribute, and whether it
+/// sits in a `contenteditable`. Blitz sends a key press to the focused node.
+fn focused_element() -> Option<(String, Option<String>, bool)> {
+    let anchor = anchor()?;
+    let doc = anchor.try_doc()?;
+    let node = doc.get_node(doc.get_focussed_node_id()?)?;
+    let element = node.element_data()?;
+    let attr = |element: &blitz_dom::node::ElementData, name: &str| {
+        element
+            .attrs
+            .iter()
+            .find(|attr| *attr.name.local == *name)
+            .map(|attr| attr.value.clone())
+    };
+    let tag = element.name.local.to_string().to_ascii_uppercase();
+    let kind = attr(element, "type");
+    // The nearest `contenteditable` decides, as it inherits on the web.
+    let mut editable = false;
+    let mut next = Some(node);
+    while let Some(node) = next {
+        if let Some(value) = node
+            .element_data()
+            .and_then(|data| attr(data, "contenteditable"))
+        {
+            editable = !value.eq_ignore_ascii_case("false");
+            break;
+        }
+        next = node.parent.and_then(|parent| doc.get_node(parent));
+    }
+    Some((tag, kind, editable))
+}
+
+pub(super) fn typing_target() -> bool {
+    focused_element()
+        .is_some_and(|(tag, kind, editable)| editable || takes_typing(&tag, kind.as_deref()))
+}
+
+pub(super) fn arrow_target() -> bool {
+    focused_element().is_some_and(|(tag, kind, _)| takes_arrows(&tag, kind.as_deref()))
+}
+
+pub(super) fn keyboard() -> Option<&'static dyn KeyboardApi> {
+    Some(&KEYBOARD)
+}
+
+/// Key presses as they bubble out of the app to [`Listener`]. Unlike the web's
+/// capture listener, a handler that stops a press first hides it, and one
+/// while focus sits outside the wrapper never arrives.
+struct BlitzKeyboard;
+
+static KEYBOARD: BlitzKeyboard = BlitzKeyboard;
+
+impl BlitzKeyboard {
+    fn listen(
+        &self,
+        skip_text_entry: bool,
+        callback: Box<dyn Fn(KeyChord) -> bool>,
+    ) -> Box<dyn KeySubscription> {
+        let id = NEXT_CALLBACK.replace(NEXT_CALLBACK.get() + 1);
+        KEY_CALLBACKS.with(|callbacks| {
+            callbacks
+                .borrow_mut()
+                .push((id, skip_text_entry, Rc::from(callback)))
+        });
+        Box::new(BlitzKeySubscription(id))
+    }
+}
+
+impl KeyboardApi for BlitzKeyboard {
+    fn on_key(&self, callback: Box<dyn Fn(KeyChord) -> bool>) -> Box<dyn KeySubscription> {
+        self.listen(true, callback)
+    }
+
+    fn on_key_unfiltered(
+        &self,
+        callback: Box<dyn Fn(KeyChord) -> bool>,
+    ) -> Box<dyn KeySubscription> {
+        self.listen(false, callback)
+    }
+}
+
+struct BlitzKeySubscription(u64);
+
+impl KeySubscription for BlitzKeySubscription {}
+
+impl Drop for BlitzKeySubscription {
+    fn drop(&mut self) {
+        KEY_CALLBACKS.with(|callbacks| callbacks.borrow_mut().retain(|(id, _, _)| *id != self.0));
+    }
+}
+
 fn pressed(event: &Event<PointerData>) {
     let point = event.client_coordinates();
+    let wrapper = WRAPPER.with(|wrapper| wrapper.borrow().as_ref().map(NodeHandle::node_id));
     let press = anchor().and_then(|anchor| {
         let doc = anchor.try_doc()?;
         let hit = doc.hit(point.x as f32, point.y as f32)?.node_id;
-        let target = focusable_ancestor(&doc, hit)?;
-        Some((doc.get_focussed_node_id(), target))
+        // The wrapper is no press target: Blitz sends such a press's focus to `<html>`.
+        let target = focusable_ancestor(&doc, hit).filter(|&target| Some(target) != wrapper);
+        Some(target.map(|target| (doc.get_focussed_node_id(), target)))
     });
-    PRESS.set(press);
+    BLANK_PRESS.set(matches!(press, Some(None)));
+    PRESS.set(press.flatten());
 }
 
 fn focusable_ancestor(doc: &BaseDocument, mut node_id: NodeId) -> Option<NodeId> {
@@ -139,6 +314,17 @@ pub(super) fn Outlet() -> Element {
             }
         }
     }
+}
+
+/// Runs `run` at [`Outlet`]'s next flush, at the end of this poll.
+fn defer(anchor: &NodeHandle, run: impl FnOnce(&mut BaseDocument) + 'static) {
+    DEFERRED.with(|queue| queue.borrow_mut().push((anchor.clone(), Box::new(run))));
+    FLUSHES.with(|slot| {
+        if let Some(mut flushes) = *slot.borrow() {
+            let next = flushes.peek().wrapping_add(1);
+            flushes.set(next);
+        }
+    });
 }
 
 fn run_deferred() {
@@ -343,17 +529,7 @@ impl BlitzElement {
             run(&mut self.anchor.doc_mut());
             return;
         }
-        DEFERRED.with(|queue| {
-            queue
-                .borrow_mut()
-                .push((self.anchor.clone(), Box::new(run)))
-        });
-        FLUSHES.with(|slot| {
-            if let Some(mut flushes) = *slot.borrow() {
-                let next = flushes.peek().wrapping_add(1);
-                flushes.set(next);
-            }
-        });
+        defer(&self.anchor, run);
     }
 
     fn at(&self, node_id: NodeId) -> Box<dyn ElementApi> {

@@ -28,7 +28,6 @@ fn app() -> Element {
 }
 
 #[test]
-#[ignore = "Blitz: no document key notification, so no hotkey can be heard"]
 fn ctrl_k_opens_the_palette() {
     let mut page = mount(app);
     page.focus("#page");
