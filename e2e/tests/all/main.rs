@@ -39,6 +39,7 @@ mod picker_dialog;
 mod planted;
 mod progress_bar;
 mod radio_group;
+mod range_slider;
 mod scroll_area;
 mod segmented_control;
 mod select;

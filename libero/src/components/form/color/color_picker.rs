@@ -3,6 +3,8 @@ use dioxus::prelude::*;
 use super::{
     ColorCode, ColorSwatch, HueSlider, Swatches,
     alpha_slider::{COLOR_PICKER_RGB, PickerAlphaSlider},
+    color_code::round_alpha,
+    color_slider::CHECKERBOARD,
     saturation::{SATURATION_HUE, Saturation},
 };
 use crate::{
@@ -28,11 +30,18 @@ input_from_str!(ColorFormat);
 
 /// The swatch row's widest extent, set only when `swatches_per_row` caps it.
 const COLOR_PICKER_SWATCHES_WIDTH: CssVar = CssVar::new("--lsx-color-picker-swatches-width");
+/// The value's alpha, for the preview beside the alpha slider.
+const COLOR_PICKER_ALPHA: CssVar = CssVar::new("--lsx-color-picker-alpha");
 
 static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
     let spacing = COLOR_PICKER_SPACING.value();
     let preview = COLOR_PICKER_PREVIEW.value();
     let swatch = COLOR_PICKER_SWATCH.value();
+    let live = format!(
+        "rgba({}, {})",
+        COLOR_PICKER_RGB.value(),
+        COLOR_PICKER_ALPHA.value()
+    );
     ColorPickerDefaults::theme_vars()
         .display("flex")
         .flex_direction("column")
@@ -55,11 +64,14 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .min_width("0"),
         )
         // The preview keeps the picker's own scale, not the swatch's.
+        // Painted from the root's vars, so a drag leaves the swatch's props
+        // equal and it skips the redraw.
         .selector(
             "& [data-slot='preview'] > *",
             sx().width(preview.clone())
                 .height(preview.clone())
-                .min_width(preview),
+                .min_width(preview)
+                .background(format!("linear-gradient({live}, {live}), {CHECKERBOARD}")),
         )
         .selector(
             "& > [data-slot='swatches']",
@@ -204,6 +216,10 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                 format!("{r}, {g}, {b}")
             }),
         )
+        .with(
+            COLOR_PICKER_ALPHA,
+            (with_picker && with_alpha).then(|| round_alpha(value.alpha()).to_string()),
+        )
         .into();
 
     let root = use_box()
@@ -247,7 +263,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
         let preview = with_alpha.then(|| {
             rsx! {
                 div { "data-slot": "preview",
-                    ColorSwatch { color: value, size, radius }
+                    ColorSwatch { color: ColorCode::default(), size, radius }
                 }
             }
         });

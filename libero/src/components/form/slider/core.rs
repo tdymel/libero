@@ -11,8 +11,8 @@ use crate::{
         overlay::Tooltip,
     },
     hooks::{
-        DragMove, DragOptions, DragStart, drag_handle_sx, use_css, use_drag, use_element, use_id,
-        use_local_state, use_theme,
+        DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, use_css, use_drag,
+        use_element, use_id, use_local_state, use_theme,
     },
     platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -225,18 +225,14 @@ static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
         .white_space("nowrap")
 });
 
-fn slider_variables(
-    bar: (f64, f64),
-    base: &ThemeAwareValue,
-    thumb_fill: Option<String>,
-) -> Variables {
+/// On the bar, not the root: the root's scope skips a value move.
+fn bar_variables(bar: (f64, f64)) -> String {
     let (from, to) = bar;
     variables()
         .with(SLIDER_FILLED, Some(to.to_string()))
         .with(SLIDER_FILLED_FROM, Some(from.to_string()))
         .with(SLIDER_FILLED_SPAN, Some((to - from).to_string()))
-        .with(SLIDER_COLOR, base.resolve(None))
-        .with(SLIDER_THUMB_FILL, thumb_fill)
+        .render()
 }
 
 /// The `f64` engine every `Slider<V>` renders. Non-generic on purpose: this
@@ -303,8 +299,48 @@ pub(in crate::components::form) struct SliderCoreProps {
     focusable: bool,
 }
 
+/// What a value move changes. Only the thumbs' scope reads it, so the rest of
+/// the slider skips a drag frame.
+#[derive(Clone, PartialEq)]
+struct Live {
+    value: SliderCoreValue,
+    thumb_fill: Option<String>,
+}
+
 #[component]
 pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element {
+    // `snap` clamps on every render, and `f64::clamp` panics on an inverted
+    // or non-finite range - which `max: items.len() as f64 - 1.0` is for an
+    // empty list. `step.max(0.0)` already maps a NaN step to 0 (continuous).
+    let (min, max) = sane_bounds(props.min, props.max);
+    let live_now = Live {
+        value: props.value.snapped(min, max, props.step.max(0.0)),
+        thumb_fill: props.thumb_fill.clone(),
+    };
+    let mut live = use_signal(|| live_now.clone());
+    if *live.peek() != live_now {
+        live.set(live_now);
+    }
+    // The body keeps the value's shape only, so its props compare equal.
+    let shape = match props.value {
+        SliderCoreValue::Single(_) => SliderCoreValue::Single(0.0),
+        SliderCoreValue::Range { .. } => SliderCoreValue::Range { from: 0.0, to: 0.0 },
+    };
+    rsx! {
+        SliderBody {
+            live,
+            core: SliderCoreProps {
+                value: shape,
+                thumb_fill: None,
+                ..props
+            },
+        }
+    }
+}
+
+#[component]
+fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
+    let props = core;
     let theme = use_theme();
     let root_element = use_element();
     let track_element = use_element();
@@ -314,9 +350,6 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
     // Names each thumb's value bubble, so the thumb can point at it.
     let bubble_id = use_id();
 
-    // `snap` clamps on every render, and `f64::clamp` panics on an inverted
-    // or non-finite range - which `max: items.len() as f64 - 1.0` is for an
-    // empty list. `step.max(0.0)` already maps a NaN step to 0 (continuous).
     let (min, max) = sane_bounds(props.min, props.max);
     let step = props.step.max(0.0);
     let min_range = props.min_range.max(0.0);
@@ -324,7 +357,6 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
     let color = base_color(props.color.as_ref());
     let disabled = props.disabled.unwrap_or(false);
 
-    let value = props.value.snapped(min, max, step);
     let interactive = props.oninput.is_some() && !disabled;
     // `interactive` keeps the tab stop, `editable` moves the value: a
     // read-only thumb is still reached, read and posted.
@@ -341,21 +373,19 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
     let thumb_width = use_local_state(|| 0.0_f64);
     // What `End` reports, and what a range's moves are measured against: the
     // drag's own last value, which a controlled parent may not have echoed
-    // back yet.
-    let latest = use_local_state(|| value);
-    // Which thumb the pointer grabbed. Always 0 for a single thumb.
-    let active = use_local_state(|| 0_usize);
+    // back yet. Never rendered, so a write redraws nothing.
+    let mut latest = use_hook(|| CopyValue::new(live.peek().value));
+    // Which thumb the pointer grabbed. Always 0 for a single thumb. A signal:
+    // the thumbs' scope reads it for the open bubble.
+    let mut active = use_signal(|| 0_usize);
 
     let oninput = props.oninput;
-    let emit = {
-        let latest = latest.clone();
-        use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
-            latest.set(event.value());
-            if let Some(oninput) = &oninput {
-                oninput.call(event);
-            }
-        })
-    };
+    let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
+        latest.set(event.value());
+        if let Some(oninput) = &oninput {
+            oninput.call(event);
+        }
+    });
 
     // A `Callback`, not a closure: `LocalState` is not `Copy`, and two drag
     // handlers need this. Unsnapped - the grid is applied where the thumb is
@@ -376,31 +406,23 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
     };
 
     // The drag's two steps, both through `use_callback` so they see this
-    // render's `value` - the handlers `use_drag` holds do not.
-    let grab = {
-        let active = active.clone();
-        use_callback(move |raw: f64| {
-            let index = value.nearest(raw);
-            active.set(index);
-            emit.call(SliderChangeEvent::Start(
-                value.moved(index, raw, min, max, step, min_range),
-            ));
-            index
-        })
-    };
-    let slide = {
-        let (active, latest) = (active.clone(), latest.clone());
-        use_callback(move |raw: f64| {
-            emit.call(SliderChangeEvent::Change(latest.get().moved(
-                active.get(),
-                raw,
-                min,
-                max,
-                step,
-                min_range,
-            )));
-        })
-    };
+    // render's bounds - the handlers `use_drag` holds do not.
+    let grab = use_callback(move |raw: f64| {
+        let value = live.peek().value;
+        let index = value.nearest(raw);
+        active.set(index);
+        emit.call(SliderChangeEvent::Start(
+            value.moved(index, raw, min, max, step, min_range),
+        ));
+        index
+    });
+    let slide = use_callback(move |raw: f64| {
+        // Copied out first: `emit` writes `latest` while the call runs.
+        let (from, index) = (*latest.peek(), *active.peek());
+        emit.call(SliderChangeEvent::Change(
+            from.moved(index, raw, min, max, step, min_range),
+        ));
+    });
 
     let drag = use_drag(DragOptions {
         capture: root_element,
@@ -456,7 +478,8 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
             }
         }),
         onend: Callback::new(move |_| {
-            emit.call(SliderChangeEvent::End(latest.get()));
+            let last = *latest.peek();
+            emit.call(SliderChangeEvent::End(last));
         }),
     });
 
@@ -475,6 +498,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
         // `Change` then `End`: a key press settles on its value the moment it
         // lands, so a caller that commits on `End` - which is what the docs
         // ask for - has to hear about a keyboard edit too.
+        let value = live.peek().value;
         let go_to = |raw: f64| {
             event.prevent_default();
             let moved = value.moved(index, raw, min, max, step, min_range);
@@ -507,13 +531,118 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
         .with("plain", props.plain)
         .into();
 
-    let bar = value.bar(min, max);
     let root_variables: Input<Variables> =
-        slider_variables(bar, &color, props.thumb_fill.clone()).into();
-
+        variables().with(SLIDER_COLOR, color.resolve(None)).into();
     let track_class = use_css(Some(&SLIDER_TRACK_SX), CssLayer::Framework);
+    let track_style = props
+        .track
+        .as_ref()
+        .map(|background| format!("background: {background}"));
+
+    let hidden = props.name.clone().map(|name| {
+        rsx! { SliderHidden { live, name, disabled } }
+    });
+
+    use_box()
+        .framework_sx(&SLIDER_ROOT_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .variables(&root_variables)
+        .prepare()
+        .element(&root_element)
+        .event("onpointerdown", drag.onpointerdown)
+        .event("onpointermove", drag.onpointermove)
+        .event("onpointerup", drag.onpointerup)
+        .event("onpointercancel", drag.onpointercancel)
+        .render(
+            HtmlTag::Div,
+            props.attributes,
+            rsx! {
+                div {
+                    class: track_class,
+                    style: track_style,
+                    onmounted: track_element.mount(),
+                    SliderThumbs {
+                        live,
+                        min,
+                        max,
+                        step,
+                        min_range,
+                        size,
+                        interactive,
+                        label: props.label,
+                        marks: props.marks,
+                        aria_labels: [props.aria_label, props.aria_label_to],
+                        labelledby: props.labelledby,
+                        describedby: props.describedby,
+                        invalid: props.invalid,
+                        required: props.required,
+                        readonly: props.readonly,
+                        plain: props.plain,
+                        focusable,
+                        bubble_id,
+                        thumb_elements,
+                        onkeydown,
+                        dragging: drag.dragging,
+                        active,
+                    }
+                }
+                {hidden}
+            },
+        )
+}
+
+/// The bar, the marks and the thumbs: everything a value move redraws.
+#[derive(Props, Clone, PartialEq)]
+struct SliderThumbsProps {
+    live: Signal<Live>,
+    min: f64,
+    max: f64,
+    step: f64,
+    min_range: f64,
+    size: Size,
+    interactive: bool,
+    label: Option<Callback<f64, String>>,
+    marks: Vec<SliderMark>,
+    aria_labels: [Option<String>; 2],
+    labelledby: Option<String>,
+    describedby: Option<String>,
+    invalid: bool,
+    required: bool,
+    readonly: bool,
+    plain: bool,
+    focusable: bool,
+    bubble_id: Signal<String>,
+    thumb_elements: [ElementHandle; 2],
+    onkeydown: Callback<(usize, Event<KeyboardData>)>,
+    dragging: Signal<bool>,
+    active: Signal<usize>,
+}
+
+#[component]
+fn SliderThumbs(props: SliderThumbsProps) -> Element {
+    let SliderThumbsProps {
+        live,
+        min,
+        max,
+        step,
+        min_range,
+        size,
+        interactive,
+        focusable,
+        bubble_id,
+        thumb_elements,
+        onkeydown,
+        dragging,
+        active,
+        ..
+    } = props;
+    let Live { value, thumb_fill } = live();
+    let bar = value.bar(min, max);
+
     let bar_class = use_css(
-        Some(match props.value {
+        Some(match value {
             SliderCoreValue::Single(_) => &SLIDER_BAR_SX,
             SliderCoreValue::Range { .. } => &SLIDER_RANGE_BAR_SX,
         }),
@@ -543,7 +672,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
         }
     });
 
-    let aria_labels = [props.aria_label.clone(), props.aria_label_to.clone()];
+    let aria_labels = &props.aria_labels;
     let range = matches!(value, SliderCoreValue::Range { .. });
     let thumbs = value.thumbs().enumerate().map(|(index, thumb_value)| {
         let (thumb_min, thumb_max) = value.bounds(index, min, max, step, min_range);
@@ -606,6 +735,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
                 SLIDER_THUMB_AT,
                 Some(fraction(thumb_value, min, max).to_string()),
             )
+            .with(SLIDER_THUMB_FILL, thumb_fill.clone())
             .render();
 
         if props.plain {
@@ -621,7 +751,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
                 Tooltip {
                     label: rsx! { {bubble_text} },
                     size,
-                    open: ((drag.dragging)() && active.get() == index).then_some(true),
+                    open: (dragging() && active() == index).then_some(true),
                     label_id: bubble_id,
                     {thumb}
                 }
@@ -629,57 +759,33 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
         }
     });
 
-    let hidden = props.name.clone().map(|name| {
-        let inputs = value.thumbs().map(move |thumb_value| {
-            // `Some(true)` or nothing - see `SegmentedControl`: a `false`
-            // bool reaches a native renderer as the string "false", which
-            // reads as disabled.
-            rsx! {
-                input {
-                    r#type: "hidden",
-                    name: name.clone(),
-                    value: "{thumb_value}",
-                    disabled: disabled.then_some(true),
-                }
+    let bar_style = bar_variables(bar);
+    rsx! {
+        if !props.plain {
+            div { class: bar_class, style: bar_style }
+        }
+        {marks}
+        {thumbs}
+    }
+}
+
+/// The posted values, in their own scope for the same reason as the thumbs.
+#[component]
+fn SliderHidden(live: Signal<Live>, name: String, disabled: bool) -> Element {
+    let inputs = live.read().value.thumbs().map(move |thumb_value| {
+        // `Some(true)` or nothing - see `SegmentedControl`: a `false`
+        // bool reaches a native renderer as the string "false", which
+        // reads as disabled.
+        rsx! {
+            input {
+                r#type: "hidden",
+                name: name.clone(),
+                value: "{thumb_value}",
+                disabled: disabled.then_some(true),
             }
-        });
-        // A range posts its two values under one name, in track order:
-        // `FormData::get_all` reads them back as a pair.
-        rsx! { {inputs} }
+        }
     });
-
-    let track_style = props
-        .track
-        .as_ref()
-        .map(|background| format!("background: {background}"));
-
-    use_box()
-        .framework_sx(&SLIDER_ROOT_SX)
-        .class(&props.class)
-        .sx(&props.sx)
-        .states(&states)
-        .variables(&root_variables)
-        .prepare()
-        .element(&root_element)
-        .event("onpointerdown", drag.onpointerdown)
-        .event("onpointermove", drag.onpointermove)
-        .event("onpointerup", drag.onpointerup)
-        .event("onpointercancel", drag.onpointercancel)
-        .render(
-            HtmlTag::Div,
-            props.attributes,
-            rsx! {
-                div {
-                    class: track_class,
-                    style: track_style,
-                    onmounted: track_element.mount(),
-                    if !props.plain {
-                        div { class: bar_class }
-                    }
-                    {marks}
-                    {thumbs}
-                }
-                {hidden}
-            },
-        )
+    // A range posts its two values under one name, in track order:
+    // `FormData::get_all` reads them back as a pair.
+    rsx! { {inputs} }
 }

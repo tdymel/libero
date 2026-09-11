@@ -58,6 +58,7 @@ mod picker_dialog;
 mod planted;
 mod progress_bar;
 mod radio_group;
+mod range_slider;
 mod scroll_area;
 mod segmented_control;
 mod select;
@@ -113,6 +114,7 @@ const FIXTURES: &[Routes] = &[
     planted::ROUTES,
     progress_bar::ROUTES,
     radio_group::ROUTES,
+    range_slider::ROUTES,
     scroll_area::ROUTES,
     segmented_control::ROUTES,
     select::ROUTES,

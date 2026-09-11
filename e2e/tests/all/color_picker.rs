@@ -99,6 +99,46 @@ fn a_drag_moves_the_pad_and_leaves_the_thumb_focused() {
     });
 }
 
+/// The hue thumb's face and the preview are painted from vars, not redrawn:
+/// a hue step must still repaint both (todo 29).
+#[test]
+fn the_hue_thumb_and_the_preview_follow_the_value() {
+    block_on(async {
+        let fixture = Fixture::open("/color-picker-alpha", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let hue = "[role=slider][aria-label=Hue]";
+        let face = format!("getComputedStyle(document.querySelector({hue:?})).backgroundColor");
+        let preview_matches = "(() => { const n = parseInt(document.querySelector('#color').textContent.slice(1, 7), 16); \
+             const rgb = `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`; \
+             return getComputedStyle(document.querySelector('[data-slot=preview] > *')).backgroundImage.includes(rgb); })()";
+
+        wait::for_js_true(
+            page,
+            preview_matches,
+            "the preview to show the start colour",
+        )
+        .await
+        .unwrap();
+        keyboard::tab_to(page, hue, 10).await.unwrap();
+        wait::for_js_change(
+            page,
+            &face,
+            "Shift+ArrowRight to repaint the hue thumb",
+            || keyboard::press_shift(page, keyboard::ARROW_RIGHT),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(page, preview_matches, "the preview to show the new colour")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("a hue step").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn reading(page: &chromiumoxide::Page) -> String {
     page.evaluate(READING).await.unwrap().into_value().unwrap()
 }

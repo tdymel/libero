@@ -28,7 +28,13 @@ fn slider_renders_a_thumb_with_the_value_and_its_marks() {
     let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
 
     assert_eq!(root["data-state"], "size-md marks-labeled");
-    assert!(root["style"].contains("--lsx-slider-filled:0.25;"));
+    // On the bar, which redraws without the root.
+    let filled = html.find("--lsx-slider-filled:").unwrap();
+    let bar = attributes_of(&html[html[..filled].rfind("<div").unwrap()..], "div");
+    assert!(
+        bar["style"].contains("--lsx-slider-filled:0.25;"),
+        "{bar:?}"
+    );
 
     // The thumb carries the a11y contract; the mark carries its position.
     assert!(html.contains(r#"role="slider""#));
@@ -81,17 +87,10 @@ fn a_range_slider_renders_two_thumbs_and_posts_both_values() {
     }
 
     let html = render(app);
-    let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
 
     // The bar spans between the thumbs rather than from the track's start.
-    assert!(
-        root["style"].contains("--lsx-slider-filled-from:0.2;"),
-        "{root:?}"
-    );
-    assert!(
-        root["style"].contains("--lsx-slider-filled-span:0.6"),
-        "{root:?}"
-    );
+    assert!(html.contains("--lsx-slider-filled-from:0.2;"), "{html}");
+    assert!(html.contains("--lsx-slider-filled-span:0.6"), "{html}");
 
     assert_eq!(html.matches(r#"role="slider""#).count(), 2);
     assert!(html.contains("--lsx-slider-thumb-at:0.2"));
@@ -255,7 +254,7 @@ fn a_discrete_slider_derives_its_scale_from_the_value_type() {
     let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
 
     // `Pro` is the second of four options, so the scale is 0..=3.
-    assert!(root["style"].contains("--lsx-slider-filled:0.3333333333333333;"));
+    assert!(html.contains("--lsx-slider-filled:0.3333333333333333;"));
     assert!(html.contains("aria-valuenow=1"));
     assert!(html.contains("aria-valuemax=3"));
     assert!(html.contains(r#"aria-valuetext="Pro""#));

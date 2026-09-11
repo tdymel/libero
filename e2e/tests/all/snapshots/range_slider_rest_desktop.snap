@@ -1,0 +1,17 @@
+---
+source: e2e/src/suite.rs
+assertion_line: 586
+description: range_slider at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Price"
+generic
+  generic
+    generic
+    slider "Price Minimum" = 20 [valuemax=80] [valuemin=0]
+    tooltip "20"
+      StaticText "20"
+    slider "Price Maximum" = 80 [valuemax=100] [valuemin=20]
+paragraph
+  StaticText "20-80"
