@@ -13,13 +13,17 @@ use native_tests::{Key, Page, VIEWPORT, mount};
 
 const TRIGGER: &str = "#notify";
 const TIMED: &str = "#notify-timed";
+const SLOW: &str = "#notify-slow";
 const ITEM: &str = "[aria-live] li";
 const CLOSE: &str = "[aria-live] li [data-slot=close]";
+const ELSEWHERE: &str = "#elsewhere";
 
 fn app() -> Element {
     let notify = use_notifications();
     rsx! {
         Notifications {}
+        // Before the triggers, so a Tab from the last one enters the stack.
+        Button { id: "elsewhere", "Elsewhere" }
         Button {
             id: "notify",
             onclick: move |_| {
@@ -39,6 +43,16 @@ fn app() -> Element {
                 );
             },
             "Notify for a while"
+        }
+        Button {
+            id: "notify-slow",
+            onclick: move |_| {
+                notify.show_with(
+                    "Draft synced",
+                    NotificationOptions { auto_close: Some(AutoClose::After(300)), ..Default::default() },
+                );
+            },
+            "Notify for longer"
         }
     }
 }
@@ -139,6 +153,86 @@ fn closing_a_focused_one_hands_focus_on_and_back_out() {
         "focus is on {}",
         page.focus_owner()
     );
+}
+
+/// Shown from the keyboard, focus stays on the trigger: nothing pauses it
+/// (todo 471).
+#[test]
+fn one_shown_from_the_keyboard_closes_itself() {
+    let mut page = mount(app);
+    page.focus(TIMED);
+    page.press(Key::Enter);
+    finish(&mut page);
+    finish(&mut page);
+    assert!(
+        !page.exists(ITEM),
+        "it stayed with focus on {}:\n{}",
+        page.focus_owner(),
+        page.tree()
+    );
+}
+
+/// Tab fires no `focusin`/`focusout` natively: the silent focus move pauses
+/// and resumes it (todo 471).
+#[test]
+fn tabbing_into_one_pauses_it_until_focus_leaves() {
+    let mut page = mount(app);
+    page.focus(SLOW);
+    page.press(Key::Enter);
+    page.tab();
+    assert!(page.is_focused(CLOSE), "Tab went to {}", page.focus_owner());
+    finish(&mut page);
+    finish(&mut page);
+    assert!(page.exists(ITEM), "it closed under focus");
+
+    page.shift_tab();
+    finish(&mut page);
+    finish(&mut page);
+    assert!(
+        !page.exists(ITEM),
+        "it stayed after focus left for {}:\n{}",
+        page.focus_owner(),
+        page.tree()
+    );
+}
+
+/// Tabbed in, then clicked out: Blitz fires that click's `focusout`, so the
+/// pause ends there (todo 471).
+#[test]
+fn a_click_out_after_tabbing_in_resumes_it() {
+    for (target, out) in [(Some(ELSEWHERE), "a button"), (None, "nothing")] {
+        let mut page = mount(app);
+        page.focus(SLOW);
+        page.press(Key::Enter);
+        page.tab();
+        assert!(page.is_focused(CLOSE), "Tab went to {}", page.focus_owner());
+        match target {
+            Some(target) => page.click(target),
+            None => page.click_at(500.0, 400.0),
+        }
+        finish(&mut page);
+        finish(&mut page);
+        assert!(
+            !page.exists(ITEM),
+            "a click on {out} left it paused, focus on {}",
+            page.focus_owner()
+        );
+    }
+}
+
+#[test]
+fn the_pointer_on_one_pauses_it_until_it_leaves() {
+    let mut page = mount(app);
+    page.click(SLOW);
+    page.hover(ITEM);
+    finish(&mut page);
+    finish(&mut page);
+    assert!(page.exists(ITEM), "it closed under the pointer");
+
+    page.hover(TRIGGER);
+    finish(&mut page);
+    finish(&mut page);
+    assert!(!page.exists(ITEM), "it stayed:\n{}", page.tree());
 }
 
 #[test]

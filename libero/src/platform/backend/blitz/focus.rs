@@ -13,7 +13,7 @@ use blitz_dom::BaseDocument;
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
-use super::{NEXT_CALLBACK, ancestors, anchor, defer, flush_soon};
+use super::{NEXT_CALLBACK, WRAPPER, ancestors, anchor, defer, flush_soon};
 use crate::platform::{FocusMove, SilentFocusApi, SilentFocusSubscription, focus::OnMove};
 
 type Callback = (u64, Rc<dyn Fn(&dyn FocusMove)>);
@@ -24,10 +24,61 @@ thread_local! {
     static CALLBACKS: RefCell<Vec<Callback>> = const { RefCell::new(Vec::new()) };
     /// Where libero's last `focus()` went, until the flush. See [`clicked`].
     static REQUESTED: Cell<Option<NodeId>> = const { Cell::new(None) };
+    /// The focus owner at a press that cancelled its `mousedown`, until the
+    /// press has ended, and whether it gets focus back. See [`mouse_pressed`].
+    static KEPT: Cell<Option<(NodeId, bool)>> = const { Cell::new(None) };
+}
+
+/// A `mousedown` reaching [`Listener`](super::Listener). Cancelled, the web
+/// leaves focus where it is; Blitz moves it on the release all the same.
+pub(super) fn mouse_pressed(event: &Event<MouseData>) {
+    KEPT.set(None);
+    if event.default_action_enabled() {
+        return;
+    }
+    let wrapper = WRAPPER.with(|wrapper| wrapper.borrow().as_ref().map(NodeHandle::node_id));
+    // `<html>` or the wrapper: nothing of the app's held focus to keep.
+    let owner = anchor().as_ref().and_then(|anchor| {
+        let doc = anchor.try_doc()?;
+        let owner = doc.get_focussed_node_id()?;
+        (owner != doc.root_element().id && Some(owner) != wrapper).then_some((owner, true))
+    });
+    KEPT.set(owner);
+}
+
+/// The press is released and Blitz moves focus next: back it goes, unless
+/// libero moved it itself during the press.
+pub(super) fn released() {
+    let (Some((owner, restore)), Some(anchor)) = (KEPT.get(), anchor()) else {
+        return;
+    };
+    defer(&anchor, move |doc| {
+        KEPT.set(None);
+        let present = doc
+            .get_node(owner)
+            .is_some_and(|node| node.flags.is_in_document());
+        if restore && present && doc.get_focussed_node_id() != Some(owner) {
+            doc.set_focus_to(owner);
+        }
+    });
+}
+
+/// Whether a blur now is Blitz's move for a press that cancelled its
+/// `mousedown`, which [`released`] undoes.
+pub(in crate::platform::backend) fn press_kept_focus() -> bool {
+    KEPT.get().is_some()
+}
+
+/// A key ends any press.
+pub(super) fn forget_kept() {
+    KEPT.set(None);
 }
 
 pub(super) fn requested(node_id: NodeId) {
     REQUESTED.set(Some(node_id));
+    if let Some((owner, _)) = KEPT.get() {
+        KEPT.set(Some((owner, false)));
+    }
 }
 
 /// A click has bubbled out, and Blitz focuses its target next (the web: before

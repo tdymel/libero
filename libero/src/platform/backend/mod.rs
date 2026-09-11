@@ -174,6 +174,15 @@ pub(crate) fn silent_focus() -> Option<&'static dyn SilentFocusApi> {
     return None;
 }
 
+/// Only Blitz blurs for a press that cancelled its `mousedown` - see
+/// [`press_kept_focus`](crate::platform::press_kept_focus).
+pub(crate) fn press_kept_focus() -> bool {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::press_kept_focus();
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return false;
+}
+
 /// The web reads the `web_sys` event; every other renderer is asked for the
 /// payload the desktop and Android WebView deliver, which carries the property
 /// across the IPC. Blitz and a server hand over something else and answer

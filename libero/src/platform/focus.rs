@@ -38,6 +38,13 @@ pub(crate) fn silent_focus() -> Option<&'static dyn SilentFocusApi> {
     backend::silent_focus()
 }
 
+/// Whether the blur being handled comes from a press that cancelled its
+/// `mousedown`, where the web keeps focus put. Blitz moves it anyway and
+/// libero moves it back, so a field closing on blur ignores this one.
+pub(crate) fn press_kept_focus() -> bool {
+    backend::press_kept_focus()
+}
+
 /// For a `focusin` on the nearest ancestor matching `boundary`: the element
 /// focus left to get here, `Some(None)` when it came from `<body>`.
 ///

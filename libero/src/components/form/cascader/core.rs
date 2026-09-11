@@ -16,7 +16,7 @@ use crate::{
         ElementHandle, PopoverHandle, PopoverOptions, PopoverWidth, use_element,
         use_field_list_layer, use_popover, use_theme,
     },
-    platform::ElementApi,
+    platform::{ElementApi, press_kept_focus},
     str_enum::str_enum,
     sx::{StaticSx, Sx, sx},
     theme::Size,
@@ -1053,7 +1053,11 @@ fn search_header(
         // The trigger's blur no longer closes while searchable - this does,
         // and the rows and the list cancel `mousedown`, so a click inside
         // never reaches it.
-        .event("onblur", move |_: FocusEvent| state.close())
+        .event("onblur", move |_: FocusEvent| {
+            if !press_kept_focus() {
+                state.close();
+            }
+        })
         // **No `onkeydown` here.** The box is inside the portaled dropdown,
         // which carries the very same handler, so a second one would run the
         // whole table twice per key - and the second pass sees the state the
@@ -1306,7 +1310,7 @@ fn cascader_trigger(
         // While searchable the focus moves into the search box, so closing on
         // the trigger's blur would shut the list before a key could land.
         .event("onblur", move |_: FocusEvent| {
-            if !searchable {
+            if !searchable && !press_kept_focus() {
                 state.close();
             }
         })

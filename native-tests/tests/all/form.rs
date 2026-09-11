@@ -36,6 +36,17 @@ fn app() -> Element {
                 validate: not_empty.error("Email needed") }
             input { id: "loose", name: "loose" }
             input { id: "tick", r#type: "checkbox", name: "tick", checked: true }
+            input { id: "blank", r#type: "checkbox", name: "blank" }
+            select { name: "size",
+                option { value: "s", "Small" }
+                option { value: "m", selected: true, "Medium" }
+            }
+            select { name: "extras", multiple: true,
+                option { value: "bag", selected: true, "Bag" }
+                option { value: "box", "Box" }
+                option { value: "tag", selected: true, "Tag" }
+            }
+            select { name: "first", option { "Plain" } option { "Other" } }
             span { id: "plain", "Not a control" }
             button { id: "other", r#type: "button", "Other" }
             button { id: "cancels", onclick: |event: MouseEvent| event.prevent_default(), "Cancels" }
@@ -126,7 +137,52 @@ fn the_submit_carries_the_named_values() {
     page.click("#native-submit");
     assert_eq!(
         POSTED.with_borrow(Clone::clone),
-        r#"email=Text("a@b") loose=Text("xy") tick=Text("on")"#
+        r#"email=Text("a@b") extras=Text("bag") extras=Text("tag") first=Text("Plain") loose=Text("xy") size=Text("m") tick=Text("on")"#
+    );
+}
+
+/// Blitz keeps a click's tick off the `checked` attribute (todo 475).
+#[test]
+fn the_submit_carries_the_boxes_as_clicked() {
+    let mut page = filled();
+    page.click("#tick");
+    page.click("#blank");
+    page.click("#native-submit");
+    let posted = POSTED.with_borrow(Clone::clone);
+    assert!(
+        posted.contains(r#"blank=Text("on")"#) && !posted.contains("tick="),
+        "{posted}"
+    );
+}
+
+fn ticked(page: &Page, selector: &str) -> Option<bool> {
+    let doc = page.doc.inner.borrow();
+    doc.get_node(page.node(selector))
+        .and_then(|node| node.element_data())
+        .and_then(|data| data.checkbox_input_checked())
+}
+
+#[test]
+fn reset_restores_the_boxes() {
+    let mut page = filled();
+    page.click("#tick");
+    page.click("#blank");
+    assert_eq!(
+        (ticked(&page, "#tick"), ticked(&page, "#blank")),
+        (Some(false), Some(true))
+    );
+    page.click("#reset");
+    assert_eq!(
+        (ticked(&page, "#tick"), ticked(&page, "#blank")),
+        (Some(true), Some(false))
+    );
+    // The reset emptied the required email too.
+    type_text(&mut page, "#email", "a@b");
+    page.click("#native-submit");
+    let posted = POSTED.with_borrow(Clone::clone);
+    assert!(
+        posted.contains(r#"tick=Text("on")"#) && !posted.contains("blank="),
+        "{posted}"
     );
 }
 

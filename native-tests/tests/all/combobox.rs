@@ -108,9 +108,9 @@ fn a_click_on_a_multi_select_option_toggles_it() {
 }
 
 /// The rows cancel `mousedown` to keep focus on the trigger, which closes on
-/// blur. Blitz moves focus on a press regardless (`probe` in the gaps note).
+/// blur. Blitz moves focus on the press regardless; libero moves it back and
+/// the trigger ignores that blur (todo 472).
 #[test]
-#[ignore = "needs Blitz: it moves focus despite a cancelled mousedown, the trigger's blur closes the list"]
 fn a_click_on_a_multi_select_option_keeps_the_list_open() {
     let mut page = mount(multi);
     page.click(TRIGGER);
@@ -211,10 +211,9 @@ fn the_keys_walk_a_cascader_to_a_leaf() {
     assert_eq!(page.text("#echo"), "paris", "{}", page.tree());
 }
 
-/// A click on a branch opens its column on the web; natively the press blurs
-/// the trigger, whose `onblur` closes the list first.
+/// A click on a branch opens its column. Natively the press blurs the
+/// trigger all the same, which must not close the list (todo 472).
 #[test]
-#[ignore = "needs Blitz: it moves focus despite a cancelled mousedown, the trigger's blur closes the list"]
 fn clicks_walk_a_cascader_to_a_leaf() {
     let mut page = mount(cascader);
     page.click(TRIGGER);

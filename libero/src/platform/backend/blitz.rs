@@ -11,7 +11,7 @@ use dioxus_native_dom::{NodeHandle, NodeId};
 
 mod focus;
 
-pub(super) use focus::silent_focus;
+pub(super) use focus::{press_kept_focus, silent_focus};
 
 use super::INTERACTIVE;
 use crate::{
@@ -153,6 +153,7 @@ pub(super) fn Listener(children: Element) -> Element {
             },
             // Bubble phase: this dioxus has no capture listeners.
             onpointerdown: move |event| pressed(&event),
+            onmousedown: |event| focus::mouse_pressed(&event),
             onclick: |_| {
                 forget_press();
                 focus::clicked();
@@ -163,11 +164,15 @@ pub(super) fn Listener(children: Element) -> Element {
             onkeydown: |event| {
                 forget_press();
                 BLANK_PRESS.set(false);
+                focus::forget_kept();
                 focus::keyed(&event);
                 keyed(&event);
             },
             onpointermove: move |event| followed(&event, false),
-            onpointerup: move |event| followed(&event, true),
+            onpointerup: move |event| {
+                followed(&event, true);
+                focus::released();
+            },
             // A wheel bubbles where its scroll does not: see `BlitzScroll`.
             onwheel: |_| notify_scroll(),
             {children}
@@ -402,8 +407,54 @@ pub(super) fn implicit_submission(form: &Rc<MountedData>) -> bool {
     }
 }
 
-/// The named, enabled text controls and ticked boxes of `form`, as a submit
-/// would post them. Selects and files are left out.
+/// A box's `checked` attribute: what dioxus last wrote, its markup default.
+fn checked_attr(element: &blitz_dom::node::ElementData) -> bool {
+    element
+        .attr(local_name!("checked"))
+        .is_some_and(|checked| checked != "false")
+}
+
+/// The value a `<select>` posts: its selected options, else a single one's
+/// first option, as the web picks. Blitz changes none on input.
+fn select_values(doc: &BaseDocument, select: NodeId) -> Vec<String> {
+    let Some(element) = doc.get_node(select).and_then(|node| node.element_data()) else {
+        return Vec::new();
+    };
+    let multiple = element.attr(local_name!("multiple")).is_some();
+    let Ok(options) = doc.query_selector_all_in(select, "option") else {
+        return Vec::new();
+    };
+    let options: Vec<_> = options
+        .into_iter()
+        .filter_map(|id| {
+            let node = doc.get_node(id)?;
+            let option = node.element_data()?;
+            let value = option
+                .attr(local_name!("value"))
+                .map(str::to_string)
+                .unwrap_or_else(|| node.text_content().trim().to_string());
+            let selected = option
+                .attr(local_name!("selected"))
+                .is_some_and(|selected| selected != "false");
+            let disabled = option.attr(local_name!("disabled")).is_some();
+            Some((value, selected, disabled))
+        })
+        .collect();
+    let mut chosen = options
+        .iter()
+        .filter(|(_, selected, disabled)| *selected && !disabled);
+    match multiple {
+        true => chosen.map(|(value, ..)| value.clone()).collect(),
+        false => chosen
+            .next()
+            .or_else(|| options.iter().find(|(_, _, disabled)| !disabled))
+            .map(|(value, ..)| vec![value.clone()])
+            .unwrap_or_default(),
+    }
+}
+
+/// The named, enabled controls of `form`, as a submit would post them: text,
+/// ticked boxes and selects. Files are left out.
 pub(super) fn form_values(form: &Rc<MountedData>) -> Vec<(String, dioxus::html::FormValue)> {
     let Some(form) = form.downcast::<NodeHandle>() else {
         return Vec::new();
@@ -412,44 +463,54 @@ pub(super) fn form_values(form: &Rc<MountedData>) -> Vec<(String, dioxus::html::
         return Vec::new();
     };
     let form_id = form.node_id();
-    let Ok(controls) = doc.query_selector_all_in(form_id, "input[name], textarea[name]") else {
+    let Ok(controls) =
+        doc.query_selector_all_in(form_id, "input[name], textarea[name], select[name]")
+    else {
         return Vec::new();
     };
     controls
         .into_iter()
         .filter(|&id| owning_form(&doc, id) == Some(form_id))
-        .filter_map(|id| {
-            let element = doc.get_node(id)?.element_data()?;
-            let name = element.attr(local_name!("name"))?.to_string();
-            if element.attr(local_name!("disabled")).is_some() {
-                return None;
-            }
-            let kind = element
-                .attr(local_name!("type"))
-                .unwrap_or("text")
-                .to_ascii_lowercase();
-            let value = match kind.as_str() {
-                "checkbox" | "radio" => {
-                    let checked = element
-                        .attr(local_name!("checked"))
-                        .is_some_and(|checked| checked != "false");
-                    checked.then(|| {
-                        element
-                            .attr(local_name!("value"))
-                            .unwrap_or("on")
-                            .to_string()
-                    })?
+        .flat_map(|id| {
+            let posted = || -> Option<(String, Vec<String>)> {
+                let element = doc.get_node(id)?.element_data()?;
+                let name = element.attr(local_name!("name"))?.to_string();
+                if element.attr(local_name!("disabled")).is_some() {
+                    return None;
                 }
-                "submit" | "image" | "button" | "reset" | "file" => return None,
-                _ => match element.text_input_data() {
-                    Some(input) => input.editor.raw_text().to_string(),
-                    None => element
-                        .attr(local_name!("value"))
-                        .unwrap_or_default()
-                        .to_string(),
-                },
+                if &*element.name.local == "select" {
+                    return Some((name, select_values(&doc, id)));
+                }
+                let kind = element
+                    .attr(local_name!("type"))
+                    .unwrap_or("text")
+                    .to_ascii_lowercase();
+                let value = match kind.as_str() {
+                    // Blitz keeps a click's tick apart from the attribute.
+                    "checkbox" | "radio" => element
+                        .checkbox_input_checked()
+                        .unwrap_or_else(|| checked_attr(element))
+                        .then(|| {
+                            element
+                                .attr(local_name!("value"))
+                                .unwrap_or("on")
+                                .to_string()
+                        })?,
+                    "submit" | "image" | "button" | "reset" | "file" => return None,
+                    _ => match element.text_input_data() {
+                        Some(input) => input.editor.raw_text().to_string(),
+                        None => element
+                            .attr(local_name!("value"))
+                            .unwrap_or_default()
+                            .to_string(),
+                    },
+                };
+                Some((name, vec![value]))
             };
-            Some((name, dioxus::html::FormValue::Text(value)))
+            let (name, values) = posted().unwrap_or_default();
+            values
+                .into_iter()
+                .map(move |value| (name.clone(), dioxus::html::FormValue::Text(value)))
         })
         .collect()
 }
@@ -1147,8 +1208,9 @@ impl ElementApi for BlitzElement {
         Err(PlatformError::Unsupported)
     }
 
-    /// Blitz implements no form reset, so each text control is written back to
-    /// its markup default. Checkboxes and selects keep their state.
+    /// Blitz implements no form reset, so each text control and box is written
+    /// back to its markup default: what dioxus last wrote, the component's own
+    /// value for a controlled one. A `<select>` never changes on input here.
     fn reset(&self) -> Result<(), PlatformError> {
         let form = self.node_id;
         self.command(move |doc| {
@@ -1160,6 +1222,10 @@ impl ElementApi for BlitzElement {
                 .filter_map(|id| {
                     let node = doc.get_node(id)?;
                     let element = node.element_data()?;
+                    if element.checkbox_input_checked().is_some() {
+                        let checked = checked_attr(element);
+                        return Some((id, local_name!("checked"), checked.to_string()));
+                    }
                     element.text_input_data()?;
                     let default = match &*element.name.local {
                         "textarea" => node.text_content(),
@@ -1168,16 +1234,12 @@ impl ElementApi for BlitzElement {
                             .unwrap_or_default()
                             .to_string(),
                     };
-                    Some((id, default))
+                    Some((id, local_name!("value"), default))
                 })
                 .collect();
             let mut mutator = doc.mutate();
-            for (id, default) in defaults {
-                mutator.set_attribute(
-                    id,
-                    QualName::new(None, ns!(), local_name!("value")),
-                    &default,
-                );
+            for (id, name, default) in defaults {
+                mutator.set_attribute(id, QualName::new(None, ns!(), name), &default);
             }
         });
         Ok(())
