@@ -174,7 +174,7 @@ impl WindowBounds {
 }
 
 /// Reads the window's computed `min-*`/`max-*` and the viewport into `bounds`.
-/// Off the web there is no computed style, and `bounds` stays as it was.
+/// Where there is no computed style, `bounds` stays as it was.
 fn read_bounds(root: ElementHandle, mut bounds: Signal<Option<WindowBounds>>) {
     let reads = ["min-width", "min-height", "max-width", "max-height"]
         .map(|property| root.computed_px(property));
@@ -495,7 +495,8 @@ struct WindowGeometry {
     size: Signal<Option<(f64, f64)>>,
     /// The rendered border box, for the clamp. Kept current by `onresize`.
     measured: Signal<Option<(f64, f64)>>,
-    /// The caller's size bounds in pixels; `None` until read, and off the web.
+    /// The caller's size bounds in pixels; `None` until read, and where there
+    /// is no computed style.
     bounds: Signal<Option<WindowBounds>>,
     /// A keyboard move or resize reports once the new geometry has rendered.
     owed: Signal<Option<Option<Callback<WindowRect>>>>,

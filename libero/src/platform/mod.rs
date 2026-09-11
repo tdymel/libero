@@ -51,6 +51,6 @@ pub(crate) use motion::prefers_reduced_motion;
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
 pub(crate) use select::select_picker;
-pub(crate) use task::next_task;
+pub(crate) use task::{next_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};
 pub(crate) use transition::transition_property;

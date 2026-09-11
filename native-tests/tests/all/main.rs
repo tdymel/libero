@@ -1,30 +1,44 @@
 //! One binary for every native test, as `libero/tests/all` is. A unit mounts
 //! one component; run one with `cargo test -p native-tests --test all switch::`.
 
+mod accordion;
 mod carousel;
 mod chip;
 mod choice;
+mod collapse;
 mod color;
 mod color_scheme;
 mod combobox;
 mod date;
 mod dismiss;
+mod floating_window;
 mod focus_return;
 mod form;
+mod hit;
 mod hover_card;
+mod image_list;
 mod keyboard;
 mod lightbox;
 mod menu;
+mod menubar;
+mod modal;
+mod notifications;
 mod overlays;
+mod pagination;
 mod pointer;
+mod popover;
 mod range_slider;
 mod scroll;
+mod scroll_area;
 mod segmented_control;
 mod select;
 mod slider;
+mod splitter;
 mod spotlight;
+mod stepper;
 mod switch;
 mod table;
 mod tabs;
 mod text_field;
+mod tooltip;
 mod tree;

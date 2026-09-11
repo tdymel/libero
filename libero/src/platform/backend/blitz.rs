@@ -51,6 +51,10 @@ thread_local! {
     /// [`BlitzElement::command`].
     static DEFERRED: RefCell<Vec<Deferred>> = const { RefCell::new(Vec::new()) };
 
+    /// Reads waiting for the next poll's layout. See [`when_laid_out`].
+    static LAID_OUT: RefCell<Vec<Deferred>> = const { RefCell::new(Vec::new()) };
+    static LAID_OUT_WAIT: RefCell<Option<Box<dyn TimerSubscription>>> = const { RefCell::new(None) };
+
     /// Bumped to remount [`Outlet`]'s flush element. `None` until it renders.
     static FLUSHES: RefCell<Option<Signal<u64>>> = const { RefCell::new(None) };
 
@@ -622,7 +626,7 @@ fn focusable_ancestor(doc: &BaseDocument, mut node_id: NodeId) -> Option<NodeId>
     }
 }
 
-type Deferred = (NodeHandle, Box<dyn FnOnce(&mut BaseDocument)>);
+type Deferred = Box<dyn FnOnce()>;
 
 /// Mounted once by `LiberoProvider`. Its first mount is the document anchor;
 /// every later one runs the deferred commands.
@@ -665,7 +669,56 @@ pub(super) fn Outlet() -> Element {
 
 /// Runs `run` at [`Outlet`]'s next flush, at the end of this poll.
 fn defer(anchor: &NodeHandle, run: impl FnOnce(&mut BaseDocument) + 'static) {
-    DEFERRED.with(|queue| queue.borrow_mut().push((anchor.clone(), Box::new(run))));
+    let anchor = anchor.clone();
+    later(move || run(&mut anchor.doc_mut()));
+}
+
+/// Runs `run` now if the document is free, else at [`Outlet`]'s next flush,
+/// where it is: reads made there answer.
+pub(super) fn when_free(run: Box<dyn FnOnce()>) {
+    if anchor().is_none_or(|anchor| anchor.try_doc().is_some()) {
+        run();
+        return;
+    }
+    later(run);
+}
+
+/// Runs `run` where the document is free and laid out: effects run before the
+/// shell lays out what this poll mounted, so a timer waits for the next poll.
+pub(super) fn when_laid_out(run: Box<dyn FnOnce()>) {
+    let first = LAID_OUT.with(|waiting| {
+        let mut waiting = waiting.borrow_mut();
+        waiting.push(run);
+        waiting.len() == 1
+    });
+    if !first {
+        return;
+    }
+    let wait = super::thread::timer().map(|timer| {
+        timer.after(
+            Duration::ZERO,
+            Box::new(|| {
+                let waiting = LAID_OUT.with(|waiting| std::mem::take(&mut *waiting.borrow_mut()));
+                for run in waiting {
+                    when_free(run);
+                }
+            }),
+        )
+    });
+    LAID_OUT_WAIT.with(|slot| drop(slot.replace(wait)));
+}
+
+fn later(run: impl FnOnce() + 'static) {
+    let pending = DEFERRED.with(|queue| {
+        let mut queue = queue.borrow_mut();
+        queue.push(Box::new(run));
+        queue.len() > 1
+    });
+    // One remount per flush: a flush element replaced before its mount event
+    // ran panics in dioxus-native (a backdrop click closing a `Modal`).
+    if pending {
+        return;
+    }
     FLUSHES.with(|slot| {
         if let Some(mut flushes) = *slot.borrow() {
             let next = flushes.peek().wrapping_add(1);
@@ -676,8 +729,8 @@ fn defer(anchor: &NodeHandle, run: impl FnOnce(&mut BaseDocument) + 'static) {
 
 fn run_deferred() {
     let deferred = DEFERRED.with(|queue| std::mem::take(&mut *queue.borrow_mut()));
-    for (anchor, command) in deferred {
-        command(&mut anchor.doc_mut());
+    for run in deferred {
+        run();
     }
 }
 
@@ -1029,6 +1082,19 @@ impl ElementApi for BlitzElement {
                 width: image.width as f64,
                 height: image.height as f64,
             })
+        })
+    }
+
+    /// Stylo's resolved value, so a length arrives in `px` as on the web.
+    fn computed_px(&self, property: &str) -> Read<Option<f64>> {
+        self.read(|doc, node_id| {
+            doc.get_node(node_id)?;
+            let value = doc.resolved_style_value(node_id, property);
+            Some(
+                value
+                    .strip_suffix("px")
+                    .and_then(|px| px.trim().parse().ok()),
+            )
         })
     }
 

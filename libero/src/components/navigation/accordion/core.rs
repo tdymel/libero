@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{ChevronDownIcon, inset_focus_ring_sx},
+        common::{ChevronDownIcon, inset_focus_ring_sx, use_closing_focus},
         layout::{Collapse, use_box},
     },
     hooks::{id_selector, use_element},
@@ -165,34 +165,23 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
     // can say where focus was. The move itself waits for the effect.
     let open: Vec<usize> = (0..sections.len()).filter(|i| sections[*i].open).collect();
     let previous = use_hook(|| Rc::new(RefCell::new(open.clone())));
-    let owed = use_hook(|| Rc::new(RefCell::new(None::<usize>)));
+    let closing = use_closing_focus(root_element);
     {
         let mut previous = previous.borrow_mut();
         if *previous != open {
-            let closed = previous.iter().find(|i| {
-                !open.contains(i)
-                    && root_element
-                        .query_selector(&format!(
-                            "{} :focus",
-                            id_selector(&format!("{root}-region-{i}"))
-                        ))
-                        .is_ok()
+            let _ = previous.iter().filter(|i| !open.contains(i)).any(|i| {
+                closing.closing(
+                    id_selector(&format!("{root}-region-{i}")),
+                    id_selector(&format!("{root}-trigger-{i}")),
+                )
             });
-            if let Some(closed) = closed {
-                *owed.borrow_mut() = Some(*closed);
-            }
             *previous = open.clone();
         }
     }
-    let focus_root = root.clone();
-    let focus_owed = owed.clone();
+    let repay = closing.clone();
     use_effect(use_reactive!(|(open,)| {
         let _ = open;
-        if let Some(index) = focus_owed.borrow_mut().take() {
-            let _ = root_element
-                .query_selector(&id_selector(&format!("{focus_root}-trigger-{index}")))
-                .and_then(|trigger| trigger.focus());
-        }
+        repay.repay();
     }));
 
     let states: Input<States> = states

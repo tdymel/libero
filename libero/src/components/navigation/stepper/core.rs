@@ -5,11 +5,12 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, Orientation, States, Variables, VisuallyHidden,
-        common::{CheckIcon, CloseIcon, Rail, RailInset, focus_ring_sx, variables},
+        common::{
+            CheckIcon, CloseIcon, Rail, RailInset, focus_ring_sx, use_closing_focus, variables,
+        },
         layout::{Collapse, use_box},
     },
     hooks::{id_selector, use_element},
-    platform::ElementApi,
     str_enum::str_enum,
     sx::{StaticSx, Sx, sx},
     theme::{
@@ -316,31 +317,24 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
     // `Accordion` does: by the time an effect runs a zero-duration panel is
     // already gone. The move itself waits for the effect.
     let previous = use_hook(|| Rc::new(RefCell::new(current)));
-    let owed = use_hook(|| Rc::new(RefCell::new(None::<usize>)));
+    let closing = use_closing_focus(root_element);
     {
         let mut previous = previous.borrow_mut();
         if *previous != current {
-            if let Some(closed) = *previous
-                && root_element
-                    .query_selector(&format!(
-                        "{} :focus",
-                        id_selector(&format!("{root}-content-{closed}"))
-                    ))
-                    .is_ok()
-            {
-                *owed.borrow_mut() = Some(current.unwrap_or(closed));
+            if let Some(closed) = *previous {
+                let index = current.unwrap_or(closed);
+                closing.closing(
+                    id_selector(&format!("{root}-content-{closed}")),
+                    id_selector(&format!("{root}-step-{index}")),
+                );
             }
             *previous = current;
         }
     }
-    let focus_root = root.clone();
+    let repay = closing.clone();
     use_effect(use_reactive!(|(current,)| {
         let _ = current;
-        if let Some(index) = owed.borrow_mut().take() {
-            let _ = root_element
-                .query_selector(&id_selector(&format!("{focus_root}-step-{index}")))
-                .and_then(|header| header.focus());
-        }
+        repay.repay();
     }));
 
     let states: Input<States> = states
@@ -460,8 +454,11 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
     let items: Vec<Element> = items.collect();
 
     let region = match (vertical, current, content) {
+        // Keyed by step: a swap replaces the box, so a focused "Continue" is
+        // not patched into the next step's button (Blitz keeps focus there).
         (false, Some(current), Some(content)) => rsx! {
             div {
+                key: "{current}",
                 id: "{root}-content-{current}",
                 role: "region",
                 "aria-labelledby": "{root}-step-{current}",

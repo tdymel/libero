@@ -317,6 +317,24 @@ pub(crate) fn form_values(form: &Rc<MountedData>) -> Vec<(String, dioxus::html::
     return Vec::new();
 }
 
+/// Only Blitz renders with its document borrowed - see
+/// [`when_free`](crate::platform::when_free).
+pub(crate) fn when_free(run: Box<dyn FnOnce()>) {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    blitz::when_free(run);
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    run();
+}
+
+/// Only Blitz lays out after effects run - see
+/// [`when_laid_out`](crate::platform::when_laid_out).
+pub(crate) fn when_laid_out(run: Box<dyn FnOnce()>) {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    blitz::when_laid_out(run);
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    run();
+}
+
 /// Only the web can read a media query today - see
 /// [`prefers_reduced_motion`](crate::platform::prefers_reduced_motion).
 pub(crate) fn prefers_reduced_motion() -> bool {

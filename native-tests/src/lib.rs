@@ -170,6 +170,11 @@ impl Page {
     /// Pointer down and up at the centre of the first match.
     pub fn click(&mut self, selector: &str) {
         let (x, y) = self.centre(selector);
+        self.click_at(x, y);
+    }
+
+    /// Pointer down and up at a viewport point, e.g. on a backdrop.
+    pub fn click_at(&mut self, x: f32, y: f32) {
         self.dispatch(UiEvent::PointerDown(pointer(x, y, true)));
         self.dispatch(UiEvent::PointerUp(pointer(x, y, false)));
     }

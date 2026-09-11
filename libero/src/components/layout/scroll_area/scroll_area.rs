@@ -10,8 +10,8 @@ use crate::{
         common::{base_props, input_from_str, variables},
         layout::use_box,
     },
-    hooks::{use_element, use_theme},
-    platform::ElementApi,
+    hooks::{ElementHandle, use_element, use_theme},
+    platform::{ElementApi, when_laid_out},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
 };
@@ -230,6 +230,32 @@ fn scroll_metrics(data: &ScrollData) -> (f64, f64, f64, f64) {
     )
 }
 
+/// Measurements of no height asked again: Blitz may not have laid out a box
+/// mounted this frame.
+const UNLAID_TRIES: u8 = 3;
+
+/// Natively an effect runs before layout, with the document borrowed.
+fn measure_area(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometry>>, tries: u8) {
+    when_laid_out(move || {
+        let (size, offset) = (root.dimensions(), root.scroll_offset());
+        spawn(async move {
+            let measured = match (size.await, offset.await) {
+                (Ok(size), _) if size.height <= 0.0 && tries > 0 => {
+                    return measure_area(root, geometry, tries - 1);
+                }
+                (Ok(size), Ok((_, top))) => ScrollGeometry {
+                    offset: top,
+                    viewport: size.height,
+                },
+                _ => ScrollGeometry::default(),
+            };
+            if *geometry.peek() != Some(measured) {
+                geometry.set(Some(measured));
+            }
+        });
+    });
+}
+
 /// Scrolls its content, filling the parent by default. Read the scroll
 /// position via `onscroll`/`on*reached`; set it imperatively via
 /// `scroll_position_x`/`scroll_position_y` (reactive if bound to a signal,
@@ -260,22 +286,9 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     // A `Virtualize` child needs the viewport height before anything has been
     // scrolled, and again whenever a pane around it resizes.
     let measure = move || {
-        if !root.is_mounted() {
-            return;
+        if root.is_mounted() {
+            measure_area(root, geometry, UNLAID_TRIES);
         }
-        let (size, offset) = (root.dimensions(), root.scroll_offset());
-        spawn(async move {
-            let measured = match (size.await, offset.await) {
-                (Ok(size), Ok((_, top))) => ScrollGeometry {
-                    offset: top,
-                    viewport: size.height,
-                },
-                _ => ScrollGeometry::default(),
-            };
-            if *geometry.peek() != Some(measured) {
-                geometry.set(Some(measured));
-            }
-        });
     };
     // Re-runs once the root is actually mounted.
     use_effect(measure);
