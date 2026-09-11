@@ -136,10 +136,11 @@ fn every_framed_field_takes_a_padding_press() {
             let frame = format!("[data-case={case}] [data-frame]");
             in_control(page, &frame).await.unwrap();
             let state: String = page
-                .evaluate(format!(
-                    "(() => {{ const el = document.activeElement; \
-                     return el.tagName + ' expanded=' + el.getAttribute('aria-expanded'); }})()"
-                ))
+                .evaluate(
+                    "(() => { const el = document.activeElement; \
+                     return el.tagName + ' expanded=' + el.getAttribute('aria-expanded'); })()"
+                        .to_string(),
+                )
                 .await
                 .unwrap()
                 .into_value()
