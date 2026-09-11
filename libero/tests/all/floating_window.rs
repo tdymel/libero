@@ -149,6 +149,33 @@ fn the_title_bar_is_the_keyboard_move_handle() {
     assert_eq!(close["type"], "button", "{close:?}");
 }
 
+/// The title bar is its own memoized scope: a new title must still reach it.
+#[test]
+fn a_changed_title_redraws_the_title_bar() {
+    thread_local! {
+        static TITLE: std::cell::Cell<Option<Signal<String>>> = const { std::cell::Cell::new(None) };
+    }
+    fn app() -> Element {
+        let title = use_signal(|| "Inspector".to_string());
+        TITLE.set(Some(title));
+        rsx! {
+            LiberoProvider {
+                Opened { options: FloatingWindowOptions { title: Some(title()), ..options() } }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    let mut title = TITLE.get().expect("the app ran");
+    dom.in_runtime(|| title.set("Layers".into()));
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    let html = dioxus_ssr::render(&dom);
+    assert!(body(&html).contains(">Layers<"), "{html}");
+    assert!(!body(&html).contains(">Inspector<"), "{html}");
+}
+
 #[test]
 fn a_pinned_window_has_no_move_handle_stop() {
     let html = render(pinned_app);

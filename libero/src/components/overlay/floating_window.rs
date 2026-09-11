@@ -127,6 +127,14 @@ static WINDOW_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+static FLOAT_SX: StaticSx = StaticSx::new(|| {
+    sx().width("max-content")
+        .max_width("100dvw")
+        .max_height("100dvh")
+        .display("flex")
+        .flex_direction("column")
+});
+
 /// Arrow keys to a pixel delta, `None` for any other key.
 fn arrow_delta(key: &Key, step: f64) -> Option<(f64, f64)> {
     match key {
@@ -274,6 +282,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         resize_drag,
         ..
     } = geometry;
+    let move_key = use_callback(move |event| geometry.handle_key(event));
 
     // Not a dismiss layer: a window is non-modal and hears only presses from
     // inside it. It still skips one that something inside already took - an
@@ -377,37 +386,15 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
             HtmlTag::Div,
             Vec::new(),
             rsx! {
-                div { "data-window-title-bar": "",
-                    div {
-                        "data-window-handle": "",
-                        // Focusable because it is the keyboard move handle,
-                        // and named for that job; the heading inside it is
-                        // the window's name.
-                        role: if !pinned { "group" },
-                        tabindex: if !pinned { "0" },
-                        "aria-label": if !pinned { defaults.move_label },
-                        onpointerdown: move |event| {
-                            if !pinned {
-                                move_drag.onpointerdown.call(event);
-                            }
-                        },
-                        onkeydown: move |event| {
-                            if !pinned {
-                                geometry.handle_key(event);
-                            }
-                        },
-                        if let Some(title) = title.clone() {
-                            Title { id: title_id(), component: "h2", size: "sm", "{title}" }
-                        }
-                    }
-                    ActionIcon {
-                        variant: "standard",
-                        color: "muted",
-                        size: "sm",
-                        aria_label: defaults.close_label,
-                        onclick: move |_| onclose.call(()),
-                        CloseIcon {}
-                    }
+                WindowTitleBar {
+                    title,
+                    title_id,
+                    pinned,
+                    move_label: defaults.move_label,
+                    close_label: defaults.close_label,
+                    onclose,
+                    onpointerdown: move_drag.onpointerdown,
+                    onkeydown: move_key,
                 }
                 div { "data-window-body": "", {props.children} }
                 if resizable {
@@ -442,13 +429,56 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
             // `sx` reaches: an auto-width window stretches to this box, and the
             // column flexbox shrinks the window's height into it (`overflow:
             // hidden` drops a flex item's automatic minimum to 0).
-            sx: sx()
-                .width("max-content")
-                .max_width("100dvw")
-                .max_height("100dvh")
-                .display("flex")
-                .flex_direction("column"),
+            sx: &FLOAT_SX,
             {window}
+        }
+    }
+}
+
+/// Its own scope, so a drag frame or a host re-render skips the heading and
+/// the close button: every prop compares equal until the title changes.
+#[component]
+fn WindowTitleBar(
+    title: Option<String>,
+    title_id: Signal<String>,
+    pinned: bool,
+    move_label: &'static str,
+    close_label: &'static str,
+    onclose: Callback<()>,
+    onpointerdown: Callback<Event<PointerData>>,
+    onkeydown: Callback<Event<KeyboardData>>,
+) -> Element {
+    rsx! {
+        div { "data-window-title-bar": "",
+            div {
+                "data-window-handle": "",
+                // Focusable because it is the keyboard move handle, and named
+                // for that job; the heading inside it is the window's name.
+                role: if !pinned { "group" },
+                tabindex: if !pinned { "0" },
+                "aria-label": if !pinned { move_label },
+                onpointerdown: move |event| {
+                    if !pinned {
+                        onpointerdown.call(event);
+                    }
+                },
+                onkeydown: move |event| {
+                    if !pinned {
+                        onkeydown.call(event);
+                    }
+                },
+                if let Some(title) = title {
+                    Title { id: title_id(), component: "h2", size: "sm", "{title}" }
+                }
+            }
+            ActionIcon {
+                variant: "standard",
+                color: "muted",
+                size: "sm",
+                aria_label: close_label,
+                onclick: move |_| onclose.call(()),
+                CloseIcon {}
+            }
         }
     }
 }
@@ -522,7 +552,7 @@ fn use_window_geometry(
 
     let move_drag = use_drag(DragOptions {
         capture: root,
-        onstart: Callback::new(move |_: DragStart| {
+        onstart: use_callback(move |_: DragStart| {
             move_origin.set(None);
             let offset = root.client_offset();
             spawn(async move {
@@ -531,18 +561,18 @@ fn use_window_geometry(
                 }
             });
         }),
-        onmove: Callback::new(move |event: DragMove| {
+        onmove: use_callback(move |event: DragMove| {
             if let Some((x, y)) = move_origin() {
                 let delta = event.delta();
                 position.set(Some((x + delta.x, y + delta.y)));
             }
         }),
-        onend: Callback::new(move |()| report(root, onmove)),
+        onend: use_callback(move |()| report(root, onmove)),
     });
 
     let resize_drag = use_drag(DragOptions {
         capture: root,
-        onstart: Callback::new(move |_: DragStart| {
+        onstart: use_callback(move |_: DragStart| {
             size_origin.set(None);
             let dimensions = root.dimensions();
             spawn(async move {
@@ -551,7 +581,7 @@ fn use_window_geometry(
                 }
             });
         }),
-        onmove: Callback::new(move |event: DragMove| {
+        onmove: use_callback(move |event: DragMove| {
             if let Some((width, height)) = size_origin() {
                 let delta = event.delta();
                 size.set(Some((
@@ -560,7 +590,7 @@ fn use_window_geometry(
                 )));
             }
         }),
-        onend: Callback::new(move |()| report(root, onresize)),
+        onend: use_callback(move |()| report(root, onresize)),
     });
 
     WindowGeometry {
