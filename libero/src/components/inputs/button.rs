@@ -29,7 +29,9 @@ impl From<NavigationTarget> for Input<NavigationTarget> {
     }
 }
 
+// Sealed: only `#[props(into)]` names it, through the impl below.
 #[doc(hidden)]
+#[allow(unnameable_types)]
 pub struct RouteMarker;
 
 // A typed `Route`, as `Anchor`'s `to` takes. A `From<R: Routable>` would

@@ -2,9 +2,9 @@
 // A component's `mod.rs` only re-exports, so `code/code.rs`, `tree/tree.rs`
 // etc. are deliberate.
 #![allow(clippy::module_inception)]
-// dioxus' `Props` derive emits `*PropsBuilder`/`*PropsWithOwner` beside the
-// struct, where no item-level `allow` reaches them (todo 450).
-#![allow(unnameable_types)]
+// A public type reachable only through a private path is a leak: re-export it,
+// or seal it with an item-level `allow` (todo 469).
+#![warn(unnameable_types)]
 
 pub mod components;
 pub mod context;

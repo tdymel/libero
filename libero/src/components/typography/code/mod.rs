@@ -5,6 +5,6 @@ mod language_catalog;
 mod languages;
 mod token_theme;
 
-pub use code::Code;
-pub use code_block::CodeBlock;
+pub use code::{Code, CodeProps};
+pub use code_block::{CodeBlock, CodeBlockProps};
 pub use highlight::Language;

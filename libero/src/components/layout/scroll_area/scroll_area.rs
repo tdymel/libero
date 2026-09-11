@@ -53,6 +53,7 @@ fn visibility_token(visibility: ScrollbarVisibility) -> &'static str {
 /// nothing outside the crate can make one. It exists so the component's CSS
 /// stays below a caller's `sx`, which passing it as `sx` would not.
 #[doc(hidden)]
+#[allow(unnameable_types)]
 #[derive(Clone, Copy, PartialEq)]
 pub struct ScrollAreaBase(pub(crate) &'static StaticSx);
 

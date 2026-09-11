@@ -13,13 +13,13 @@ mod timeline;
 pub use avatar::{Avatar, AvatarGroup, AvatarGroupProps, AvatarProps, AvatarSpec};
 pub use badge::{Badge, BadgeProps};
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
-pub use icon::Icon;
+pub use icon::{Icon, IconProps};
 // Shared with `ActionIcon` so it renders identically to a plain `Icon`.
 pub use image::{Image, ImageFit, ImageProps};
 pub use indicator::{Indicator, IndicatorProps};
 pub use list::{List, ListItem, ListItemProps, ListProps};
 pub use marquee::{Marquee, MarqueeProps};
-pub use qr_code::QrCode;
+pub use qr_code::{QrCode, QrCodeProps};
 pub use table::{CellAlign, CellValue, Column, ColumnHeader, SortKey, Table, TableProps, column};
 pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelineProps};
 
