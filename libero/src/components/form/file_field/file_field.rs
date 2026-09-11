@@ -18,7 +18,7 @@ use crate::{
     hooks::{
         ElementHandle, LocalState, id_selector, use_css, use_element, use_local_state, use_theme,
     },
-    platform::{ElementApi, nested_interactive},
+    platform::{self, ElementApi, nested_interactive},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         FILE_FIELD_DROPZONE_HEIGHT, FILE_FIELD_PADDING, FILE_FIELD_RADIUS, FileFieldDefaults,
@@ -335,6 +335,18 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     use_input_mirror(input_element, mirrored, value.clone());
 
+    // The input's own picker, or the system dialog where the input opens none.
+    let accept = props.accept.clone().unwrap_or_default();
+    let open = use_callback(move |()| match platform::file_dialog() {
+        Some(dialog) => {
+            let picked = dialog.open(&accept, multiple);
+            spawn(async move { take.call(picked.await) });
+        }
+        None => {
+            let _ = input_element.click();
+        }
+    });
+
     let field_sx = full_width(&props.sx);
 
     let field = use_field()
@@ -453,7 +465,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         loading,
         active_descendant: chip_cursor.map(|index| format!("{id_prefix}-{index}")),
         keys: SurfaceKeys {
-            input: input_element,
+            open,
             interactive,
             editable,
             // A dropzone has no chips - its cards are ordinary tab stops
@@ -828,7 +840,8 @@ fn chip_cursor(cursor: Option<usize>, count: usize, cards: bool) -> Option<usize
 /// and Delete, and everything else opens the picker.
 #[derive(Clone, Copy, PartialEq)]
 struct SurfaceKeys {
-    input: ElementHandle,
+    /// Opens the picker.
+    open: Callback<()>,
     interactive: bool,
     /// The keys that open or remove. The chip cursor only reads, so a
     /// read-only field still walks it.
@@ -843,7 +856,7 @@ struct SurfaceKeys {
 impl SurfaceKeys {
     fn handle(self, event: KeyboardEvent) {
         let SurfaceKeys {
-            input,
+            open,
             interactive,
             editable,
             chips,
@@ -881,11 +894,11 @@ impl SurfaceKeys {
             // does that only for a real `<button>`, which the chips rule out.
             Key::Enter if editable => {
                 event.prevent_default();
-                let _ = input.click();
+                open.call(());
             }
             Key::Character(ref character) if editable && character == " " => {
                 event.prevent_default();
-                let _ = input.click();
+                open.call(());
             }
             _ => {}
         }
@@ -925,7 +938,7 @@ impl Surface {
             opening,
             ..
         } = self;
-        let input = keys.input;
+        let open = keys.open;
         let dragging_over = dragging.clone();
         let dragging_off = dragging.clone();
         style
@@ -949,7 +962,7 @@ impl Surface {
                 // After this dispatch: a synchronous click would re-enter this listener.
                 spawn(async move {
                     opening.set(true);
-                    let _ = input.click();
+                    open.call(());
                     opening.set(false);
                 });
             })

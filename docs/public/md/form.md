@@ -107,8 +107,8 @@ fn CheckButton() -> Element {
 | Method | Returns | What it does |
 |---|---|---|
 | `validate()` | `bool` | Checks like a submit without calling `onsubmit`: every status shows, and with an error the summary appears and takes focus. `true` when nothing is an error. |
-| `submit()` | `Result<(), PlatformError>` | Submits as the submit button would. Off the web it does nothing and returns `Unsupported`. |
-| `reset()` | - | The value back to `V::default()`, nothing touched, not submitted, no summary. On the web, uncontrolled controls reset too. A field with its own `value` and handler keeps what it shows - reset that state yourself. |
+| `submit()` | `Result<(), PlatformError>` | Submits as the submit button would. Where the renderer fires no submit (Blitz), the form runs its own handler; `Unsupported` once the form is gone. |
+| `reset()` | - | The value back to `V::default()`, nothing touched, not submitted, no summary. On the web, uncontrolled controls reset too; under Blitz, uncontrolled text fields. A field with its own `value` and handler keeps what it shows - reset that state yourself. |
 | `is_valid()` | `bool` | Whether nothing is an error, shown or not. Follows changes, so it can drive other UI. |
 | `clear_summary()` | - | Hides the summary. Resets nothing. |
 

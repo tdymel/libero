@@ -284,6 +284,39 @@ pub(crate) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>
     web::focus_pressed(event, within);
 }
 
+/// Only Blitz fires no `submit` - see
+/// [`emulates_submit`](crate::platform::emulates_submit).
+pub(crate) fn emulates_submit() -> bool {
+    cfg!(all(not(target_arch = "wasm32"), feature = "native"))
+}
+
+pub(crate) fn activated_submitter(form: &Rc<MountedData>) -> bool {
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    let _ = form;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::activated_submitter(form);
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return false;
+}
+
+pub(crate) fn implicit_submission(form: &Rc<MountedData>) -> bool {
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    let _ = form;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::implicit_submission(form);
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return false;
+}
+
+pub(crate) fn form_values(form: &Rc<MountedData>) -> Vec<(String, dioxus::html::FormValue)> {
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    let _ = form;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::form_values(form);
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return Vec::new();
+}
+
 /// Only the web can read a media query today - see
 /// [`prefers_reduced_motion`](crate::platform::prefers_reduced_motion).
 pub(crate) fn prefers_reduced_motion() -> bool {

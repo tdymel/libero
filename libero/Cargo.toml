@@ -74,6 +74,11 @@ blitz-traits = { version = "0.3.0-beta.2", optional = true }
 # copied text is gone before anything can paste it. Same version and feature
 # set as blitz-shell's, so cargo keeps one copy.
 arboard = { version = "3.6", optional = true, default-features = false }
+# The file dialog Blitz does not open for `input[type=file]`. The portal
+# backend only, as blitz-shell's copy in the lock, so no second copy.
+rfd = { version = "0.17", optional = true, default-features = false, features = ["xdg-portal"] }
+# Only to name `NativeFileData::byte_stream`'s return type for a picked file.
+futures-core = { version = "0.3", optional = true }
 
 # Render-to-string, for the component tests in `tests/` - the active tree's
 # own copy, so the tests build against exactly the dioxus this crate does.
@@ -92,7 +97,7 @@ dioxus-fork = []
 # Reach elements through Blitz directly when running under `dioxus-native`.
 # Nothing forces it on: without it `platform::backend` falls back to dioxus's
 # portable mounted handle, which cannot query a subtree or report focus.
-native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:arboard"]
+native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:arboard", "dep:rfd", "dep:futures-core"]
 default = [
     "code-lang-rust",
     "code-lang-bash",

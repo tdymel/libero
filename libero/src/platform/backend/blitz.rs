@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use blitz_dom::BaseDocument;
+use blitz_dom::{BaseDocument, QualName, local_name, ns};
 use blitz_traits::{events::UiEvent, shell};
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
@@ -256,6 +256,192 @@ pub(super) fn typing_target() -> bool {
 
 pub(super) fn arrow_target() -> bool {
     focused_element().is_some_and(|(tag, kind, _)| takes_arrows(&tag, kind.as_deref()))
+}
+
+/// The node a click just activated: the press's target, or for a key the
+/// focused node. `None` after a press on nothing focusable.
+fn activated(doc: &BaseDocument) -> Option<NodeId> {
+    match PRESS.get() {
+        Some((_, target)) => Some(target),
+        None if BLANK_PRESS.get() => None,
+        None => doc.get_focussed_node_id(),
+    }
+}
+
+/// A submit button, enabled or not.
+fn submit_button(doc: &BaseDocument, node_id: NodeId) -> Option<&blitz_dom::node::ElementData> {
+    let element = doc.get_node(node_id)?.element_data()?;
+    let kind = element
+        .attr(local_name!("type"))
+        .map(str::to_ascii_lowercase);
+    let submits = match &*element.name.local {
+        "button" => kind.as_deref().is_none_or(|kind| kind == "submit"),
+        "input" => matches!(kind.as_deref(), Some("submit" | "image")),
+        _ => false,
+    };
+    submits.then_some(element)
+}
+
+fn is_submitter(doc: &BaseDocument, node_id: NodeId) -> bool {
+    submit_button(doc, node_id)
+        .is_some_and(|element| element.attr(local_name!("disabled")).is_none())
+}
+
+/// The nearest `form` around `node_id`, the one a control belongs to.
+fn owning_form(doc: &BaseDocument, node_id: NodeId) -> Option<NodeId> {
+    let mut next = doc.get_node(node_id)?.parent;
+    while let Some(id) = next {
+        let node = doc.get_node(id)?;
+        if node
+            .element_data()
+            .is_some_and(|element| &*element.name.local == "form")
+        {
+            return Some(id);
+        }
+        next = node.parent;
+    }
+    None
+}
+
+pub(super) fn activated_submitter(form: &Rc<MountedData>) -> bool {
+    let Some(form) = form.downcast::<NodeHandle>() else {
+        return false;
+    };
+    let Some(doc) = form.try_doc() else {
+        return false;
+    };
+    activated(&doc).is_some_and(|target| {
+        is_submitter(&doc, target) && owning_form(&doc, target) == Some(form.node_id())
+    })
+}
+
+/// Input types that block implicit submission when a form has no submit
+/// button and more than one of them (HTML's "implicit submission").
+const BLOCKING: &[&str] = &[
+    "text",
+    "search",
+    "url",
+    "tel",
+    "email",
+    "password",
+    "date",
+    "month",
+    "week",
+    "time",
+    "datetime-local",
+    "number",
+];
+
+fn blocks_implicit_submission(element: &blitz_dom::node::ElementData) -> bool {
+    &*element.name.local == "input"
+        && BLOCKING.contains(
+            &element
+                .attr(local_name!("type"))
+                .unwrap_or("text")
+                .to_ascii_lowercase()
+                .as_str(),
+        )
+}
+
+pub(super) fn implicit_submission(form: &Rc<MountedData>) -> bool {
+    let Some(form) = form.downcast::<NodeHandle>() else {
+        return false;
+    };
+    let Some(doc) = form.try_doc() else {
+        return false;
+    };
+    let form_id = form.node_id();
+    let Some(focused) = doc.get_focussed_node_id() else {
+        return false;
+    };
+    let in_field = doc
+        .get_node(focused)
+        .and_then(|node| node.element_data())
+        .is_some_and(blocks_implicit_submission);
+    if !in_field || owning_form(&doc, focused) != Some(form_id) {
+        return false;
+    }
+    let owned = |selector: &str| -> Vec<NodeId> {
+        doc.query_selector_all_in(form_id, selector)
+            .map(|nodes| {
+                nodes
+                    .into_iter()
+                    .filter(|&id| owning_form(&doc, id) == Some(form_id))
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    // The web submits through the first submit button, and not at all when
+    // that one is disabled.
+    let default_button = owned("button, input")
+        .into_iter()
+        .find(|&id| submit_button(&doc, id).is_some());
+    match default_button {
+        Some(button) => is_submitter(&doc, button),
+        None => {
+            owned("input")
+                .into_iter()
+                .filter(|&id| {
+                    doc.get_node(id)
+                        .and_then(|node| node.element_data())
+                        .is_some_and(blocks_implicit_submission)
+                })
+                .count()
+                == 1
+        }
+    }
+}
+
+/// The named, enabled text controls and ticked boxes of `form`, as a submit
+/// would post them. Selects and files are left out.
+pub(super) fn form_values(form: &Rc<MountedData>) -> Vec<(String, dioxus::html::FormValue)> {
+    let Some(form) = form.downcast::<NodeHandle>() else {
+        return Vec::new();
+    };
+    let Some(doc) = form.try_doc() else {
+        return Vec::new();
+    };
+    let form_id = form.node_id();
+    let Ok(controls) = doc.query_selector_all_in(form_id, "input[name], textarea[name]") else {
+        return Vec::new();
+    };
+    controls
+        .into_iter()
+        .filter(|&id| owning_form(&doc, id) == Some(form_id))
+        .filter_map(|id| {
+            let element = doc.get_node(id)?.element_data()?;
+            let name = element.attr(local_name!("name"))?.to_string();
+            if element.attr(local_name!("disabled")).is_some() {
+                return None;
+            }
+            let kind = element
+                .attr(local_name!("type"))
+                .unwrap_or("text")
+                .to_ascii_lowercase();
+            let value = match kind.as_str() {
+                "checkbox" | "radio" => {
+                    let checked = element
+                        .attr(local_name!("checked"))
+                        .is_some_and(|checked| checked != "false");
+                    checked.then(|| {
+                        element
+                            .attr(local_name!("value"))
+                            .unwrap_or("on")
+                            .to_string()
+                    })?
+                }
+                "submit" | "image" | "button" | "reset" | "file" => return None,
+                _ => match element.text_input_data() {
+                    Some(input) => input.editor.raw_text().to_string(),
+                    None => element
+                        .attr(local_name!("value"))
+                        .unwrap_or_default()
+                        .to_string(),
+                },
+            };
+            Some((name, dioxus::html::FormValue::Text(value)))
+        })
+        .collect()
 }
 
 pub(super) fn keyboard() -> Option<&'static dyn KeyboardApi> {
@@ -880,9 +1066,40 @@ impl ElementApi for BlitzElement {
         Err(PlatformError::Unsupported)
     }
 
-    /// Blitz implements no form reset.
+    /// Blitz implements no form reset, so each text control is written back to
+    /// its markup default. Checkboxes and selects keep their state.
     fn reset(&self) -> Result<(), PlatformError> {
-        Err(PlatformError::Unsupported)
+        let form = self.node_id;
+        self.command(move |doc| {
+            let Ok(controls) = doc.query_selector_all_in(form, "input, textarea") else {
+                return;
+            };
+            let defaults: Vec<_> = controls
+                .into_iter()
+                .filter_map(|id| {
+                    let node = doc.get_node(id)?;
+                    let element = node.element_data()?;
+                    element.text_input_data()?;
+                    let default = match &*element.name.local {
+                        "textarea" => node.text_content(),
+                        _ => element
+                            .attr(local_name!("value"))
+                            .unwrap_or_default()
+                            .to_string(),
+                    };
+                    Some((id, default))
+                })
+                .collect();
+            let mut mutator = doc.mutate();
+            for (id, default) in defaults {
+                mutator.set_attribute(
+                    id,
+                    QualName::new(None, ns!(), local_name!("value")),
+                    &default,
+                );
+            }
+        });
+        Ok(())
     }
 
     /// Blitz fires no submit event from code.

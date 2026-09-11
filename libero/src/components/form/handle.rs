@@ -8,7 +8,7 @@ use dioxus::{
 use crate::{
     components::form::{FormScope, SummaryItem},
     hooks::ElementHandle,
-    platform::{ElementApi, PlatformError},
+    platform::{self, ElementApi, PlatformError},
 };
 
 /// Controls a [`Form`](crate::components::Form) from code: reset it, validate
@@ -35,6 +35,8 @@ pub(crate) struct Control {
     /// Puts the form's value back to `V::default()`, where `V` is still known.
     pub reset_value: Rc<dyn Fn()>,
     pub summary: Summary,
+    /// The form's submit handler: validation, then `onsubmit`.
+    pub submit: Callback<FormEvent>,
 }
 
 impl FormHandle {
@@ -88,22 +90,34 @@ impl FormHandle {
     }
 
     /// Submits the form as its submit button would: validation, then
-    /// `onsubmit`. Only the web can fire a submit from code; elsewhere this is
-    /// [`PlatformError::Unsupported`] and nothing happens.
+    /// `onsubmit`. Where the renderer cannot fire a submit, the form's handler
+    /// runs directly; [`PlatformError::Unsupported`] only once the form is gone.
     pub fn submit(&self) -> Result<(), PlatformError> {
-        self.element.request_submit()
+        match self.element.request_submit() {
+            Err(PlatformError::Unsupported) => {
+                let control = self.control().ok_or(PlatformError::Unsupported)?;
+                control
+                    .submit
+                    .call(platform::submit_event(self.element.mounted()));
+                Ok(())
+            }
+            submitted => submitted,
+        }
     }
 
     /// Back to the start: the form's value to its default, nothing touched,
     /// not submitted, no summary. On the web uncontrolled controls reset too,
-    /// the way a native reset does. A field with a `value` and handler of its
-    /// own keeps what it shows - reset that state yourself.
+    /// the way a native reset does; under Blitz uncontrolled text fields. A
+    /// field with a `value` and handler of its own keeps what it shows - reset
+    /// that state yourself.
     pub fn reset(&self) {
         // Before the value, so a bound control ends on the value's default
         // rather than on its markup default.
         let _ = self.element.reset();
         if let Some(control) = self.control() {
-            (control.reset_value)();
+            // In the form's scope: the store it reads is the form's, and a
+            // parent holding the handle is no descendant of it.
+            Runtime::current().in_scope(control.summary.owner, || (control.reset_value)());
             control.summary.set(Vec::new());
         }
         let mut scope = self.scope;

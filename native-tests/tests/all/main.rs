@@ -6,6 +6,7 @@ mod chip;
 mod color_scheme;
 mod dismiss;
 mod focus_return;
+mod form;
 mod hover_card;
 mod keyboard;
 mod lightbox;

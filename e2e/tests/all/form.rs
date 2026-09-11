@@ -46,6 +46,44 @@ fn a_bound_rule_follows_the_value_through_a_parent_render() {
     });
 }
 
+/// The web's own submit and reset, which Blitz emulates: both triggers run
+/// `onsubmit` once, and a reset empties the bound field.
+#[test]
+fn a_submit_button_and_the_handle_submit_once_each_and_reset_clears() {
+    block_on(async {
+        let fixture = Fixture::open("/form", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+
+        pointer::click(page, INPUT).await.unwrap();
+        keyboard::type_text(page, "a").await.unwrap();
+        click_button(page, "Send").await.unwrap();
+        submits(page, 1).await.unwrap();
+        click_button(page, "Submit").await.unwrap();
+        submits(page, 2).await.unwrap();
+
+        click_button(page, "Reset").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({INPUT:?}).value === ''"),
+            "the reset to empty the field",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("submitting a form").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn submits(page: &Page, count: u32) -> Result<()> {
+    wait::for_js_true(
+        page,
+        &format!("document.querySelector('[data-submits]').dataset.submits === '{count}'"),
+        &format!("{count} submits"),
+    )
+    .await
+}
+
 async fn click_button(page: &Page, text: &str) -> Result<()> {
     page.evaluate(format!(
         "[...document.querySelectorAll('button')].find(b => b.textContent.trim() === {text:?}).setAttribute('data-e2e', {text:?})"

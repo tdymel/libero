@@ -14,7 +14,7 @@ use crate::{
         layout::{Box, use_box},
     },
     hooks::use_element,
-    platform::ElementApi,
+    platform::{self, ElementApi},
     sx::{StaticSx, sx},
     theme::FormDefaults,
 };
@@ -129,6 +129,25 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let focus_requests = handle.focus_requests;
     let form_element = handle.element;
     let summary_element = use_element();
+
+    let posts = props
+        .attributes
+        .iter()
+        .any(|attribute| attribute.name == "action");
+    let onsubmit = props.onsubmit;
+    let submit = use_callback(move |event: FormEvent| {
+        if !handle.validate() {
+            event.prevent_default();
+            return;
+        }
+        if !posts {
+            event.prevent_default();
+        }
+        if let Some(onsubmit) = onsubmit {
+            onsubmit.call(event);
+        }
+    });
+
     let summary = use_hook(|| {
         let summary = Summary::new(focus_requests);
         handle.attach(Control {
@@ -140,6 +159,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
                 }
             }),
             summary: summary.clone(),
+            submit,
         });
         summary
     });
@@ -150,21 +170,17 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         }
     });
 
-    let posts = props
-        .attributes
-        .iter()
-        .any(|attribute| attribute.name == "action");
-    let onsubmit = props.onsubmit;
-    let handler = move |event: FormEvent| {
-        if !handle.validate() {
-            event.prevent_default();
-            return;
+    // Blitz fires no `submit`: its triggers run the same path.
+    let emulated = platform::emulates_submit();
+    let submit_click = move |event: MouseEvent| {
+        if event.default_action_enabled() && platform::submit_click(form_element.mounted()) {
+            submit.call(platform::submit_event(form_element.mounted()));
         }
-        if !posts {
+    };
+    let implicit_submit = move |event: KeyboardEvent| {
+        if platform::implicit_submit(&event, form_element.mounted()) {
             event.prevent_default();
-        }
-        if let Some(onsubmit) = onsubmit {
-            onsubmit.call(event);
+            submit.call(platform::submit_event(form_element.mounted()));
         }
     };
 
@@ -235,6 +251,8 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .prepare()
         .element(&form_element)
         .attr("novalidate", true)
-        .event("onsubmit", handler)
+        .event("onsubmit", move |event: FormEvent| submit.call(event))
+        .event("onclick", emulated.then_some(submit_click))
+        .event("onkeydown", emulated.then_some(implicit_submit))
         .render(HtmlTag::Form, props.attributes, children)
 }

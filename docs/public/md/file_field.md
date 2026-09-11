@@ -125,7 +125,9 @@ into the input whenever the two differ. Clearing, removing and dropping all post
 correctly as a result.
 
 That write is a web capability. Off the web there is no `FileList` and no native
-form post either, so nothing is lost.
+form post either, so nothing is lost. Under Blitz (`native` feature) the input
+opens no picker, so the field opens the system file dialog; `accept` narrows
+what it shows.
 
 ## Drawing a file yourself
 
