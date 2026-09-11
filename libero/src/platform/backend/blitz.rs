@@ -308,6 +308,22 @@ impl Drop for BlitzKeySubscription {
     }
 }
 
+/// Blitz lays `position: fixed` out against the parent box, so the outlet
+/// spans the viewport from its corner: a popover lands under its anchor and a
+/// modal's `inset: 0` covers the window. `absolute`, not `fixed`: no stacking
+/// context, so portaled z-indices still compete with the app's. It takes no
+/// hits; [`PortalEntry`] gives them back to what it holds.
+pub(super) const PORTAL_ROOT_STYLE: &str =
+    "position:absolute;left:0;top:0;width:100vw;height:100vh;pointer-events:none;";
+
+/// One portaled entry, taking hits again below [`PORTAL_ROOT_STYLE`].
+#[component]
+pub(super) fn PortalEntry(children: Element) -> Element {
+    rsx! {
+        div { display: "contents", pointer_events: "auto", {children} }
+    }
+}
+
 fn pressed(event: &Event<PointerData>) {
     let point = event.client_coordinates();
     let wrapper = WRAPPER.with(|wrapper| wrapper.borrow().as_ref().map(NodeHandle::node_id));

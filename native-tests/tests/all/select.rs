@@ -1,5 +1,5 @@
-//! `NativeSelect` is `onchange` on a real `<select>`; `Select` is a listbox
-//! libero draws itself.
+//! `Select` is a listbox libero draws itself. `NativeSelect` is a real
+//! `<select>` on the web; natively, where that opens no picker, the same listbox.
 
 use dioxus::prelude::*;
 use libero::components::{NativeSelect, Options, Select};
@@ -36,13 +36,42 @@ fn listbox() -> Element {
     }
 }
 
+fn native_labelled() -> Element {
+    rsx! {
+        NativeSelect {
+            label: "Fruit",
+            value: Some(Fruit::Cherry),
+            onchange: |_: Fruit| {},
+            option_label: |fruit: Fruit| format!("{fruit:?}!"),
+        }
+    }
+}
+
 #[test]
-#[ignore = "Blitz: a <select> opens no picker and ignores the arrows, so nothing fires change"]
+fn a_native_select_draws_a_listbox_natively() {
+    let mut page = mount(native);
+    assert!(!page.exists("select"), "{}", page.tree());
+    page.click("[role=combobox]");
+    page.click("[role=option]:nth-child(3)");
+    assert_eq!(page.text("#picked"), "Some(Cherry)", "{}", page.tree());
+}
+
+#[test]
 fn arrow_down_on_a_native_select_picks_the_next_option() {
     let mut page = mount(native);
-    page.focus("select");
+    page.focus("[role=combobox]");
     page.press(Key::ArrowDown);
+    page.press(Key::ArrowDown);
+    page.press(Key::Enter);
     assert_eq!(page.text("#picked"), "Some(Banana)", "{}", page.tree());
+}
+
+#[test]
+fn a_native_select_keeps_its_option_label() {
+    let mut page = mount(native_labelled);
+    assert_eq!(page.text("[role=combobox]"), "Cherry!", "{}", page.tree());
+    page.click("[role=combobox]");
+    assert_eq!(page.text("[role=option]"), "Apple!", "{}", page.tree());
 }
 
 #[test]

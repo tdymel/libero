@@ -118,7 +118,8 @@ const CARD: &str = "[role=dialog][aria-label='Ada Lovelace']";
 fn card_in_modal() -> Element {
     let modal = use_modal(|_: ModalScope<()>| {
         rsx! {
-            div { id: "modal-body",
+            // `Modal` leaves hits to its content, as `Dialog` takes them.
+            div { id: "modal-body", pointer_events: "auto",
                 Button { id: "inside", "Inside" }
                 HoverCard {
                     aria_label: "Ada Lovelace",
@@ -143,7 +144,6 @@ fn card_in_modal() -> Element {
 
 /// One Escape closes one layer: the pointer-opened card, then the `Modal`.
 #[test]
-#[ignore = "Blitz: pointer hits miss portaled `position: fixed` content, so the hover never reaches the trigger (468 N4)"]
 fn escape_closes_a_card_in_a_modal_before_the_modal() {
     let mut page = mount(card_in_modal);
     page.click("#open");

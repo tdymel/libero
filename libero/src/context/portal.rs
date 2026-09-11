@@ -1,5 +1,7 @@
 use dioxus::prelude::*;
 
+use crate::platform::backend;
+
 pub(crate) struct PortalEntry {
     pub(crate) id: u64,
     /// Already rendered in the registering component's own scope, not a
@@ -30,6 +32,7 @@ pub(crate) fn PortalOutlet() -> Element {
 
     rsx! {
         div {
+            style: backend::PORTAL_ROOT_STYLE,
             for (id , element) in host
                 .entries
                 .read()
@@ -38,7 +41,7 @@ pub(crate) fn PortalOutlet() -> Element {
             {
                 Fragment {
                     key: "{id}",
-                    {element}
+                    {backend::PortalEntry(element)}
                 }
             }
         }

@@ -2,12 +2,13 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, Options,
+        HtmlTag, Input, Options, Select, SelectOptionArgs,
         common::field_props,
-        form::{field_control_sx, use_bound, use_field, use_field_frame},
+        form::{field_control_sx, row_label, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::use_theme,
+    platform::select_picker,
     sx::StaticSx,
     utils::warn,
 };
@@ -78,6 +79,8 @@ fn repeats(posted: &[String]) -> bool {
 /// The real `<select>`, not a listbox: it keeps the OS picker on phones, works
 /// without wasm, and renders its selection correctly under SSR. Reach for it
 /// when those matter; reach for `Select` when the rows have to be styled.
+/// Under the `native` renderer a `<select>` opens no picker, so there it draws
+/// `Select`'s listbox from the same props.
 ///
 /// There is no `readonly`, unlike every other field: a native `<select>` has
 /// no read-only state. `Select` is the read-only picker.
@@ -101,6 +104,10 @@ fn repeats(posted: &[String]) -> bool {
 /// ```
 #[component]
 pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
+    // Fixed per build, so the hooks below always run in the same order.
+    if !select_picker() {
+        return listbox(props);
+    }
     let theme = use_theme();
 
     let size = props.size.copied_or(theme.native_select.size);
@@ -231,6 +238,54 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
         );
 
     field.render(frame.render(select))
+}
+
+/// `Select`'s listbox over the same props, where a `<select>` opens no picker.
+fn listbox<T: Options>(props: NativeSelectProps<T>) -> Element {
+    let theme = use_theme();
+    let option_label = props.option_label;
+    let label = move |value: &T| match &option_label {
+        Some(label) => label.call(value.clone()),
+        None => value.label(),
+    };
+    let option = use_callback(move |args: SelectOptionArgs<T>| row_label(label(&args.value)));
+    let selection = use_callback(move |value: T| rsx! { "{label(&value)}" });
+    let onchange = props.onchange;
+    // `Select` fires `None` only from `clearable`, which is never set here.
+    let pick = use_callback(move |value: Option<T>| {
+        if let (Some(onchange), Some(value)) = (&onchange, value) {
+            onchange.call(value);
+        }
+    });
+    let options = props
+        .options
+        .clone()
+        .unwrap_or_else(|| T::options().to_vec());
+
+    rsx! {
+        Select::<T> {
+            value: props.value,
+            onchange: props.onchange.is_some().then_some(pick),
+            name: props.name,
+            validate: props.validate,
+            options,
+            option: option_label.is_some().then_some(option),
+            selection: option_label.is_some().then_some(selection),
+            placeholder: props.placeholder,
+            label: props.label,
+            description: props.description,
+            helper: props.helper,
+            status: props.status,
+            size: props.size.copied_or(theme.native_select.size),
+            radius: props.radius.copied_or(theme.native_select.radius),
+            disabled: props.disabled,
+            required: props.required,
+            class: props.class,
+            sx: props.sx,
+            states: props.states,
+            attributes: props.attributes,
+        }
+    }
 }
 
 #[cfg(test)]

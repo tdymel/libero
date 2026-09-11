@@ -318,7 +318,8 @@ impl Page {
         out
     }
 
-    fn centre(&self, selector: &str) -> (f32, f32) {
+    /// The first match's `getBoundingClientRect()`: `(x, y, width, height)`.
+    pub fn rect(&self, selector: &str) -> (f64, f64, f64, f64) {
         let id = self.node(selector);
         let rect = self
             .doc
@@ -326,10 +327,27 @@ impl Page {
             .borrow()
             .get_client_bounding_rect(id)
             .unwrap_or_else(|| panic!("{selector:?} has no layout box"));
-        (
-            (rect.x + rect.width / 2.0) as f32,
-            (rect.y + rect.height / 2.0) as f32,
-        )
+        (rect.x, rect.y, rect.width, rect.height)
+    }
+
+    /// Whether a pointer at the first match's centre hits it or a descendant.
+    pub fn hits(&self, selector: &str) -> bool {
+        let target = self.node(selector);
+        let (x, y) = self.centre(selector);
+        let doc = self.doc.inner.borrow();
+        let mut hit = doc.hit(x, y).map(|hit| hit.node_id);
+        while let Some(id) = hit {
+            if id == target {
+                return true;
+            }
+            hit = doc.get_node(id).and_then(|node| node.parent);
+        }
+        false
+    }
+
+    fn centre(&self, selector: &str) -> (f32, f32) {
+        let (x, y, width, height) = self.rect(selector);
+        ((x + width / 2.0) as f32, (y + height / 2.0) as f32)
     }
 }
 

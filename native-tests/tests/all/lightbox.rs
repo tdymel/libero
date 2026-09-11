@@ -53,7 +53,6 @@ fn z_zooms_and_an_arrow_pans() {
 }
 
 #[test]
-#[ignore = "Blitz: no pointer hit lands on portaled `position: fixed` content, so the drag never reaches the picture"]
 fn a_drag_pans_a_zoomed_picture() {
     let mut page = mount(app);
     let zoomed = zoomed(&mut page);
