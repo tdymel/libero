@@ -8,7 +8,7 @@ use crate::{
     utils::warn,
 };
 
-use super::core::{SelectCore, SelectionDraw, SelectionRenderArgs};
+use super::core::{Picked, SelectCore, SelectionDraw, SelectionRenderArgs, use_picked};
 
 /// One row, handed to `Select`'s and `MultiSelect`'s `option` callback. It
 /// draws the row's *content*: the row itself - its highlight, its
@@ -170,6 +170,10 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
         },
     );
     let selection = selected_index.map(|_| SelectionDraw::new(draw, props.selection.is_some()));
+    let picked = use_picked(Picked {
+        selected,
+        form_values: vec![current.as_ref().map(Options::value).unwrap_or_default()],
+    });
 
     let searchable = props.searchable.unwrap_or(false);
     let matches = use_search_mask(searchable, values.clone(), props.filter);
@@ -191,7 +195,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     rsx! {
         SelectCore {
             rows,
-            selected,
+            picked,
             state,
             groups: list.group_labels(),
             row_disabled,
@@ -201,7 +205,6 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             selection,
             placeholder: props.placeholder,
             name: bound.name().map(str::to_string),
-            form_values: vec![current.as_ref().map(Options::value).unwrap_or_default()],
             rules: props.validate.check(&current),
             clearable: props.clearable.unwrap_or(false),
             searchable,

@@ -11,7 +11,7 @@ use crate::{
 };
 
 use super::{
-    core::{SelectCore, SelectionDraw, SelectionRenderArgs},
+    core::{Picked, SelectCore, SelectionDraw, SelectionRenderArgs, use_picked},
     select::{SelectFilterArgs, SelectOptionArgs, SelectionArgs, draw_open_rows, use_search_mask},
 };
 
@@ -163,6 +163,10 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     let posted = current.iter().map(Options::value).collect::<Vec<_>>();
     let rules = props.validate.check(&current);
     let value_labels = held.iter().map(Options::label).collect::<Vec<_>>();
+    let picked = use_picked(Picked {
+        selected,
+        form_values: posted,
+    });
     let (pick_change, clear_change) = (onchange.clone(), onchange);
     let onpick = use_callback(move |index: usize| {
         let (Some(onchange), Some(value)) = (&pick_change, values.get(index)) else {
@@ -185,7 +189,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     rsx! {
         SelectCore {
             rows,
-            selected,
+            picked,
             state,
             groups: list.group_labels(),
             row_disabled,
@@ -199,7 +203,6 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             onremove,
             placeholder: props.placeholder,
             name: bound.name().map(str::to_string),
-            form_values: posted,
             rules,
             clearable: props.clearable.unwrap_or(false),
             searchable,

@@ -129,6 +129,40 @@ mod select_listbox {
         );
     }
 
+    thread_local! {
+        static FRUIT: std::cell::Cell<Option<Signal<Fruit>>> = const { std::cell::Cell::new(None) };
+    }
+
+    /// A pick on a closed select skips `SelectCore` and redraws only what shows
+    /// the value, so the trigger and the posted value must still move.
+    #[test]
+    fn a_pick_on_a_closed_select_redraws_its_value_and_its_post() {
+        fn app() -> Element {
+            let fruit = use_signal(|| Fruit::Apple);
+            use_hook(|| FRUIT.set(Some(fruit)));
+            let onchange = use_callback(|_: Option<Fruit>| {});
+            rsx! {
+                LiberoProvider {
+                    Select { name: "fruit", value: fruit(), onchange }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let value = |dom: &VirtualDom| {
+            let html = body(&dioxus_ssr::render(dom));
+            let shown = html.contains(r#"data-slot="value">Cherry<"#);
+            let posted = html.contains(r#"value="Cherry""#);
+            (shown, posted)
+        };
+        assert_eq!(value(&dom), (false, false));
+
+        let mut fruit = FRUIT.get().expect("the app stored its signal");
+        dom.in_runtime(|| fruit.set(Fruit::Cherry));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        assert_eq!(value(&dom), (true, true), "the pick left a stale value");
+    }
+
     #[test]
     fn nothing_selected_shows_the_placeholder() {
         fn app() -> Element {

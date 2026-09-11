@@ -158,13 +158,35 @@ impl PartialEq for SelectionDraw {
     }
 }
 
+/// The selection, handed down in a signal rather than as props: a pick on a
+/// closed select then redraws the trigger's value, not the whole field.
+#[derive(Clone, PartialEq, Default)]
+pub(crate) struct Picked {
+    /// One per option, whether or not `rows` is drawn.
+    pub selected: Vec<bool>,
+    /// What the hidden inputs post, one `Options::value()` each - the shape a
+    /// native `<select multiple>` sends.
+    pub form_values: Vec<String>,
+}
+
+/// The skin's half of [`Picked`]: written in its render, and only on a change,
+/// so a re-render that picked nothing wakes no reader.
+pub(crate) fn use_picked(picked: Picked) -> Signal<Picked> {
+    let mut signal = use_signal(|| picked.clone());
+    if *signal.peek() != picked {
+        signal.set(picked);
+    }
+    signal
+}
+
 field_props! {
     pub(crate) struct SelectCoreProps {
         /// Each row's content, drawn by the skin only while open: an empty
         /// list compares equal, so a closed select skips a re-render.
         rows: Vec<Element>,
-        /// One per option, whether or not `rows` is drawn.
-        selected: Vec<bool>,
+        /// The selection. Read only where it is drawn, so a closed single
+        /// select skips a pick and only its value redraws.
+        picked: Signal<Picked>,
         /// Held by the skin, which draws `rows` only while it is open.
         state: ComboboxState,
         /// One group label per row, parallel to `rows`, `None` for a row in no
@@ -221,10 +243,6 @@ field_props! {
         /// cannot carry a `name` itself.
         #[props(default)]
         name: Option<String>,
-        /// What those hidden inputs post, one `Options::value()` each - the
-        /// shape a native `<select multiple>` sends.
-        #[props(default)]
-        form_values: Vec<String>,
         /// What the skin's `validate` rules say; `T` never reaches here.
         #[props(default)]
         rules: Option<crate::components::FieldStatus>,
@@ -232,7 +250,7 @@ field_props! {
         /// typeahead searches. Empty turns typeahead off.
         ///
         /// A `Vec<String>` rather than a callback, for the same reason
-        /// `selected` is a `Vec<bool>`: it erases the skin's `T` just as well,
+        /// `Picked::selected` is a `Vec<bool>`: it erases the skin's `T` just as well,
         /// and it lets the core do the matching itself against the disabled
         /// mask it already holds. `matches` cannot serve - it carries the
         /// caller's `filter` semantics, and typeahead is
@@ -288,19 +306,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let search = use_element();
     let trigger_element = use_element();
 
-    // Which rows survive the query, and what each one's index was in the full
-    // list. `onpick` reports the original index, so the skins never remap.
-    let visible: Vec<usize> = match (searchable, props.matches.as_ref(), query().is_empty()) {
-        (true, Some(matches), false) => matches
-            .call(query())
-            .into_iter()
-            .enumerate()
-            .filter(|(_, keep)| *keep)
-            .map(|(index, _)| index)
-            .collect(),
-        // `selected`, not `rows`: a closed list draws no rows.
-        _ => (0..props.selected.len()).collect(),
-    };
+    let picked = props.picked;
+    let visible = visible_rows(searchable, props.matches, query, picked);
 
     // Removing the chip under the cursor leaves the index pointing at the one
     // that took its place; past the end it clamps to the new last, and with no
@@ -311,16 +318,15 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         count => cursor().map(|index| index.min(count - 1)),
     };
 
-    let has_selection = props.selected.iter().any(|selected| *selected);
+    // Read, and so subscribed to, only where a pick changes what is drawn.
+    let has_selection = props.clearable && picked.read().selected.iter().any(|selected| *selected);
     let open = SelectOpen {
         state,
         cursor,
-        // A list opens on what is already selected, like a native `<select>` -
-        // counted among the rows actually on screen.
-        first_selected: visible
-            .iter()
-            .position(|index| props.selected.get(*index).copied().unwrap_or(false))
-            .unwrap_or(0),
+        picked,
+        query,
+        matches: props.matches,
+        searchable,
         trigger: trigger_element,
         disabled,
         readonly,
@@ -361,12 +367,6 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         buffer: typeahead.clone(),
         labels: props.row_labels.clone(),
         row_disabled: props.row_disabled.clone(),
-        // Where typeahead searches from: the highlight while the list is open,
-        // the selection while it is closed. Neither starts at the top.
-        from: match state.is_open() {
-            true => state.active(),
-            false => props.selected.iter().position(|selected| *selected),
-        },
         multiple: props.multiple,
         onpick: props.onpick,
         open,
@@ -435,18 +435,29 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     });
 
     let id_prefix = format!("{}-chip", state.id());
-    let drawn = props.selection.map(|selection| {
-        selection.draw.call(SelectionRenderArgs {
-            cursor: chip_cursor,
-            id_prefix: id_prefix.clone(),
-        })
-    });
-    let (content, chips) = select_value_content(
-        drawn,
-        multiple,
-        &props.value_labels,
-        props.placeholder.as_deref().unwrap_or_default(),
-    );
+    let placeholder = props.placeholder.clone().unwrap_or_default();
+    let (content, chips) = match multiple {
+        true => {
+            // The chips are drawn here, so a pick has to redraw this scope.
+            picked.read();
+            select_value_content(
+                props.selection.map(|selection| {
+                    selection.draw.call(SelectionRenderArgs {
+                        cursor: chip_cursor,
+                        id_prefix: id_prefix.clone(),
+                    })
+                }),
+                &props.value_labels,
+                &placeholder,
+            )
+        }
+        false => (
+            rsx! {
+                SelectValue { picked, selection: props.selection, placeholder }
+            },
+            None,
+        ),
+    };
 
     let trigger = select_trigger(
         field
@@ -488,7 +499,15 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         multiple,
         // A pick on a multi-select adds or drops a chip, which resizes the
         // trigger under an open list.
-        remeasure: props.selected.iter().filter(|selected| **selected).count() as u64,
+        remeasure: match opened {
+            true => picked
+                .read()
+                .selected
+                .iter()
+                .filter(|selected| **selected)
+                .count() as u64,
+            false => 0,
+        },
         // Focused once the list has been measured and is visible. Doing it any
         // earlier is a no-op that reports success.
         autofocus: searchable.then_some(search),
@@ -496,7 +515,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     field.render(rsx! {
         {listbox}
-        {select_hidden_inputs(props.name, &props.form_values, disabled)}
+        {select_hidden_inputs(props.name, picked, disabled)}
         if multiple {
             {announcer}
         }
@@ -573,16 +592,30 @@ fn select_listbox(list: Listbox) -> Element {
 struct SelectOpen {
     state: ComboboxState,
     cursor: Signal<Option<usize>>,
-    first_selected: usize,
+    picked: Signal<Picked>,
+    query: Signal<String>,
+    matches: Option<Callback<String, Vec<bool>>>,
+    searchable: bool,
     trigger: ElementHandle,
     disabled: bool,
     readonly: bool,
 }
 
 impl SelectOpen {
+    /// A list opens on what is already selected, like a native `<select>` -
+    /// counted among the rows actually on screen. Read at the press, since a
+    /// pick on a closed select does not redraw the scope holding this.
+    fn first_selected(self) -> usize {
+        let picked = self.picked.peek();
+        visible_rows(self.searchable, self.matches, self.query, self.picked)
+            .iter()
+            .position(|index| picked.selected.get(*index).copied().unwrap_or(false))
+            .unwrap_or(0)
+    }
+
     fn open(self, next: bool) {
         if next && !self.state.is_open() {
-            self.state.set_active(Some(self.first_selected));
+            self.state.set_active(Some(self.first_selected()));
             // One `aria-activedescendant`, one owner: the open list takes it.
             let mut cursor = self.cursor;
             cursor.set(None);
@@ -613,7 +646,6 @@ struct SelectTypeahead {
     buffer: Typeahead,
     labels: Vec<String>,
     row_disabled: Vec<bool>,
-    from: Option<usize>,
     multiple: bool,
     onpick: EventHandler<usize>,
     open: SelectOpen,
@@ -627,7 +659,13 @@ impl SelectTypeahead {
     fn type_to(&self, ch: char) -> bool {
         let state = self.open.state;
         let query = self.buffer.push(ch);
-        let found = typeahead_match(self.labels.len(), self.from, &query, |row| {
+        // Where typeahead searches from: the highlight while the list is open,
+        // the selection while it is closed. Neither starts at the top.
+        let from = match state.is_open() {
+            true => state.active(),
+            false => self.open.picked.peek().selected.iter().position(|on| *on),
+        };
+        let found = typeahead_match(self.labels.len(), from, &query, |row| {
             match self.row_disabled.get(row).copied().unwrap_or(false) {
                 true => None,
                 false => self.labels.get(row).map(String::as_str),
@@ -854,6 +892,28 @@ fn select_control(
     }
 }
 
+/// Which rows survive the query, and what each one's index was in the full
+/// list. `onpick` reports the original index, so the skins never remap.
+fn visible_rows(
+    searchable: bool,
+    matches: Option<Callback<String, Vec<bool>>>,
+    query: Signal<String>,
+    picked: Signal<Picked>,
+) -> Vec<usize> {
+    match (searchable, matches, query.read().is_empty()) {
+        (true, Some(matches), false) => matches
+            .call(query())
+            .into_iter()
+            .enumerate()
+            .filter(|(_, keep)| *keep)
+            .map(|(index, _)| index)
+            .collect(),
+        // `selected`, not `rows`: a closed list draws no rows. Peeked, as the
+        // count moves only with the options, which redraw the core anyway.
+        _ => (0..picked.peek().selected.len()).collect(),
+    }
+}
+
 /// The rows that survive the query, each wrapped in a `ComboboxOption`, plus
 /// the group label and the disabled flag for each.
 ///
@@ -879,12 +939,13 @@ fn select_rows(
 
     let onpick = props.onpick;
     let close_on_pick = !props.multiple;
+    let picked = props.picked.read();
     let rows = visible
         .iter()
         .copied()
         .filter_map(|index| {
             let row = props.rows.get(index)?.clone();
-            let selected = props.selected.get(index).copied().unwrap_or(false);
+            let selected = picked.selected.get(index).copied().unwrap_or(false);
             Some(rsx! {
                 ComboboxOption {
                     selected,
@@ -941,22 +1002,43 @@ fn select_search_box(
 /// chips.
 fn select_value_content(
     drawn: Option<Element>,
-    multiple: bool,
     value_labels: &[String],
     placeholder: &str,
 ) -> (Element, Option<Element>) {
-    match (drawn, multiple) {
-        (Some(drawn), false) => (rsx! { span { "data-slot": "value", {drawn} } }, None),
-        (Some(drawn), true) => {
+    match drawn {
+        Some(drawn) => {
             let spoken = value_labels.join(", ");
             (rsx! { VisuallyHidden { "{spoken}" } }, Some(drawn))
         }
-        (None, _) => (
-            rsx! {
-                span { "data-slot": "value", "data-placeholder": "true", "{placeholder}" }
-            },
-            None,
-        ),
+        None => (placeholder_value(placeholder), None),
+    }
+}
+
+fn placeholder_value(placeholder: &str) -> Element {
+    rsx! {
+        span { "data-slot": "value", "data-placeholder": "true", "{placeholder}" }
+    }
+}
+
+/// A single select's value inside the trigger, in a scope of its own: a pick
+/// rewrites `picked` and redraws this alone.
+#[component]
+fn SelectValue(
+    picked: Signal<Picked>,
+    selection: Option<SelectionDraw>,
+    placeholder: String,
+) -> Element {
+    // Only subscribes: `selection` already draws the skin's newest value.
+    picked.read();
+    match selection {
+        Some(selection) => {
+            let drawn = selection.draw.call(SelectionRenderArgs {
+                cursor: None,
+                id_prefix: String::new(),
+            });
+            rsx! { span { "data-slot": "value", {drawn} } }
+        }
+        None => placeholder_value(&placeholder),
     }
 }
 
@@ -965,11 +1047,11 @@ fn select_value_content(
 /// a disabled select sends nothing.
 fn select_hidden_inputs(
     name: Option<String>,
-    form_values: &[String],
+    picked: Signal<Picked>,
     disabled: bool,
 ) -> Option<Element> {
-    let values = form_values.to_vec();
     name.map(|name| {
+        let values = picked.read().form_values.clone();
         rsx! {
             for value in values.iter().cloned() {
                 input {
