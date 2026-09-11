@@ -1,3 +1,5 @@
+use std::{cell::Cell, rc::Rc};
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -6,6 +8,7 @@ use crate::{
         common::{focus_ring_sx, ring_overlay, ring_overlay_sx},
         layout::{BoxStyle, use_box},
     },
+    platform::padding_press,
     sx::{StaticSx, Sx, sx},
     theme::{FieldDefaults, PaperDefaults, SizeCss},
 };
@@ -63,6 +66,9 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
                 .color("text-dimmed"),
         )
 });
+
+/// A press on the frame's padding is a press on its control (todo 462).
+const FRAME: &str = "[data-frame]";
 
 /// The native control inside the frame, stripped of the chrome that is now the
 /// frame's. Every framed field renders its element with this as its
@@ -137,13 +143,46 @@ impl<'a> FieldFrameBuilder<'a> {
 
     /// Resolves the frame. **This is the hook** - see [`use_field_frame`].
     pub fn prepare(self) -> PreparedFrame {
+        // Whether the press under way began on the padding. A press a slot's
+        // own handler took (the multi-select chevron) must not be forwarded.
+        let pending = use_hook(|| Rc::new(Cell::new(false)));
         let mut frame = use_box().framework_sx(&FIELD_FRAME_SX);
         if let Some(states) = self.states {
             frame = frame.states(states);
         }
+        let frame = frame
+            .prepare()
+            .attr("data-frame", true)
+            .event("onmousedown", {
+                let pending = pending.clone();
+                move |event: MouseEvent| {
+                    pending.set(false);
+                    if !event.default_action_enabled() {
+                        return;
+                    }
+                    if let Some(control) = padding_press(&event, FRAME) {
+                        // Keeps the focus off the body and starts no selection.
+                        event.prevent_default();
+                        pending.set(true);
+                        // Outside the dispatch: dioxus drops a re-entrant listener.
+                        spawn(async move {
+                            let _ = control.focus();
+                        });
+                    }
+                }
+            })
+            .event("onclick", move |event: MouseEvent| {
+                if pending.replace(false)
+                    && let Some(control) = padding_press(&event, FRAME)
+                {
+                    spawn(async move {
+                        let _ = control.click();
+                    });
+                }
+            });
 
         PreparedFrame {
-            frame: frame.prepare(),
+            frame,
             leading: self.leading.map(|leading| slot("leading", leading)),
             trailing: self.trailing.map(|trailing| slot("trailing", trailing)),
         }

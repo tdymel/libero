@@ -36,6 +36,7 @@ mod color_picker;
 mod color_scheme_button;
 mod common;
 mod drawer;
+mod field_frame;
 mod file_field;
 mod floating_window;
 mod focus_contrast;
@@ -88,6 +89,7 @@ const FIXTURES: &[Routes] = &[
     color_picker::ROUTES,
     color_scheme_button::ROUTES,
     drawer::ROUTES,
+    field_frame::ROUTES,
     file_field::ROUTES,
     floating_window::ROUTES,
     focus_contrast::ROUTES,

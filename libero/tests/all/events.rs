@@ -35,6 +35,8 @@ struct FindClickListener {
     mousedown: Vec<ElementId>,
     blur: Vec<ElementId>,
     transitionend: Vec<ElementId>,
+    /// A field frame: its padding-press listeners act only on the web.
+    frame: Option<ElementId>,
 }
 
 impl WriteMutations for FindClickListener {
@@ -45,6 +47,9 @@ impl WriteMutations for FindClickListener {
         self.last = Some(id);
     }
     fn add_event_listener(&mut self, name: &str) {
+        if self.last.is_some() && self.last == self.frame {
+            return;
+        }
         if name == "click" {
             self.click = self.last;
             self.first_click = self.first_click.or(self.last);
@@ -78,7 +83,11 @@ impl WriteMutations for FindClickListener {
     fn replace_with(&mut self, _m: usize) {}
     fn insert_after(&mut self, _m: usize) {}
     fn insert_before(&mut self, _m: usize) {}
-    fn set_attribute(&mut self, _n: &str, _ns: Option<&str>, _v: &AttributeValue) {}
+    fn set_attribute(&mut self, name: &str, _ns: Option<&str>, _v: &AttributeValue) {
+        if name == "data-frame" {
+            self.frame = self.last;
+        }
+    }
     fn set_text(&mut self, _value: &str) {}
     fn remove_event_listener(&mut self, _name: &str) {}
     fn remove(&mut self) {}
@@ -3191,13 +3200,14 @@ mod range_close_on_change {
         static CLOSE: std::cell::Cell<bool> = const { std::cell::Cell::new(true) };
     }
 
-    /// The input's click listener comes first; every day button carries its
-    /// date in `data-date`.
+    /// The input's click listener comes first, after the frame's; every day
+    /// button carries its date in `data-date`.
     #[derive(Default)]
     struct FindDays {
         last: Option<ElementId>,
         first_click: Option<ElementId>,
         days: HashMap<String, ElementId>,
+        frame: Option<ElementId>,
     }
 
     impl WriteMutations for FindDays {
@@ -3208,11 +3218,14 @@ mod range_close_on_change {
             self.last = Some(id);
         }
         fn add_event_listener(&mut self, name: &str) {
-            if name == "click" {
+            if name == "click" && self.last != self.frame {
                 self.first_click = self.first_click.or(self.last);
             }
         }
         fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
+            if name == "data-frame" {
+                self.frame = self.last;
+            }
             if name == "data-date"
                 && let (AttributeValue::Text(day), Some(id)) = (value, self.last)
             {

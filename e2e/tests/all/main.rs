@@ -15,6 +15,7 @@ mod collapse;
 mod color_picker;
 mod color_scheme_button;
 mod drawer;
+mod field_frame;
 mod file_field;
 mod floating_window;
 mod focus_contrast;

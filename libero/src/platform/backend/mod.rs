@@ -180,6 +180,20 @@ pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bo
     return false;
 }
 
+/// Only the web can see a click's target today - see
+/// [`padding_press`](crate::platform::padding_press).
+pub(crate) fn padding_press(
+    event: &Event<MouseData>,
+    boundary: &str,
+) -> Option<Box<dyn ElementApi>> {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = (event, boundary);
+    #[cfg(target_arch = "wasm32")]
+    return web::padding_press(event, boundary);
+    #[cfg(not(target_arch = "wasm32"))]
+    return None;
+}
+
 /// Only the web can see a focus event's `relatedTarget` - see
 /// [`focus_entered_from`](crate::platform::focus_entered_from).
 pub(crate) fn focus_entered_from(

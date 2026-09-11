@@ -87,6 +87,55 @@ pub(super) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bo
     nested().unwrap_or(false)
 }
 
+pub(super) fn padding_press(
+    event: &Event<MouseData>,
+    boundary: &str,
+) -> Option<Box<dyn ElementApi>> {
+    let target = event
+        .downcast::<web_sys::MouseEvent>()?
+        .target()?
+        .dyn_into::<web_sys::Element>()
+        .ok()?;
+    let frame = target.closest(boundary).ok()??;
+    if let Some(hit) = target.closest(INTERACTIVE).ok()?
+        && hit != frame
+        && frame.contains(Some(&hit))
+    {
+        return None;
+    }
+    let is_control = |child: &web_sys::Element| {
+        !child.has_attribute("data-slot") && !child.has_attribute("data-ring")
+    };
+    // The frame's own child the press is in, if any: the control's is its own.
+    let mut at = target;
+    while at != frame {
+        let parent = at.parent_element()?;
+        if parent == frame && is_control(&at) {
+            return None;
+        }
+        at = parent;
+    }
+    let control = std::iter::successors(frame.first_element_child(), |child| {
+        child.next_element_sibling()
+    })
+    .find(is_control)?;
+    let stops = control.query_selector_all(INTERACTIVE).ok()?;
+    let tab_stop = |element: web_sys::Element| {
+        element
+            .dyn_into::<web_sys::HtmlElement>()
+            .ok()
+            .filter(|element| element.tab_index() >= 0)
+    };
+    let element = tab_stop(control.clone()).or_else(|| {
+        (0..stops.length())
+            .filter_map(|index| stops.item(index)?.dyn_into::<web_sys::Element>().ok())
+            .find_map(tab_stop)
+    })?;
+    Some(Box::new(WebElement {
+        element: element.into(),
+    }))
+}
+
 pub(super) fn focus_entered_from(
     event: &Event<FocusData>,
     boundary: &str,

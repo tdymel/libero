@@ -1,3 +1,5 @@
+use std::{cell::Cell, rc::Rc};
+
 use dioxus::html::{FileData, HasFileData};
 use dioxus::prelude::*;
 
@@ -16,7 +18,7 @@ use crate::{
     hooks::{
         ElementHandle, LocalState, id_selector, use_css, use_element, use_local_state, use_theme,
     },
-    platform::ElementApi,
+    platform::{ElementApi, nested_interactive},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         FILE_FIELD_DROPZONE_HEIGHT, FILE_FIELD_PADDING, FILE_FIELD_RADIUS, FileFieldDefaults,
@@ -284,6 +286,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     // writes the difference back. A `Signal` rather than a `use_local_state`,
     // which needs `Copy`.
     let mirrored = use_signal(|| (None::<usize>, Files::default()));
+    let opening = use_hook(|| Rc::new(Cell::new(false)));
 
     let size = props.size.copied_or(theme.file_field.size);
     let radius = props.radius.copied_or(theme.file_field.radius);
@@ -463,6 +466,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         },
         take,
         dragging,
+        opening,
         attributes: props.attributes.clone(),
     };
 
@@ -904,6 +908,8 @@ struct Surface {
     keys: SurfaceKeys,
     take: Callback<Vec<FileData>>,
     dragging: LocalState<bool>,
+    /// Set while the surface clicks its input.
+    opening: Rc<Cell<bool>>,
     attributes: Vec<Attribute>,
 }
 
@@ -916,6 +922,7 @@ impl Surface {
             keys,
             take,
             dragging,
+            opening,
             ..
         } = self;
         let input = keys.input;
@@ -932,10 +939,19 @@ impl Surface {
             .attr("aria-disabled", !interactive)
             .attr("aria-busy", self.loading.then_some("true"))
             .attr("aria-activedescendant", self.active_descendant)
-            .event("onclick", move |_: MouseEvent| {
-                if editable {
-                    let _ = input.click();
+            .event("onclick", move |event: MouseEvent| {
+                // A press on the input opens it natively; its own click bubbling
+                // back here while `opening` is not a second press.
+                if !editable || opening.get() || nested_interactive(&event, "[role=button]") {
+                    return;
                 }
+                let opening = opening.clone();
+                // After this dispatch: a synchronous click would re-enter this listener.
+                spawn(async move {
+                    opening.set(true);
+                    let _ = input.click();
+                    opening.set(false);
+                });
             })
             .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
             .event("ondragover", move |event: DragEvent| {
