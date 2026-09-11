@@ -19,6 +19,7 @@ fn nav_link_renders_a_link_with_its_active_background() {
     assert_eq!(attributes["href"], "https://example.com");
     assert!(attributes["style"].contains("--lsx-nav-link-active-background"));
     assert!(attributes["data-state"].contains("active"));
+    assert_eq!(attributes["aria-current"], "page");
 }
 
 /// Disabling the current page's link still marks it as the current page.

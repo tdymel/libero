@@ -35,6 +35,7 @@ mod collapse;
 mod color_picker;
 mod color_scheme_button;
 mod common;
+mod data_list;
 mod date_field;
 mod drawer;
 mod field_frame;
@@ -43,6 +44,7 @@ mod floating_window;
 mod focus_contrast;
 mod form;
 mod hover_card;
+mod icon;
 mod image_list;
 mod lightbox;
 mod loader;
@@ -93,6 +95,7 @@ const FIXTURES: &[Routes] = &[
     collapse::ROUTES,
     color_picker::ROUTES,
     color_scheme_button::ROUTES,
+    data_list::ROUTES,
     date_field::ROUTES,
     drawer::ROUTES,
     field_frame::ROUTES,
@@ -101,6 +104,7 @@ const FIXTURES: &[Routes] = &[
     focus_contrast::ROUTES,
     form::ROUTES,
     hover_card::ROUTES,
+    icon::ROUTES,
     image_list::ROUTES,
     lightbox::ROUTES,
     loader::ROUTES,

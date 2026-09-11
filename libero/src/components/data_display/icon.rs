@@ -8,7 +8,7 @@ use crate::{
         layout::use_box,
         variables,
     },
-    hooks::use_theme,
+    hooks::{use_cache, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, ICON_SIZE, Size, SizeCss},
 };
@@ -86,7 +86,17 @@ base_props! {
 pub fn Icon(props: IconProps) -> Element {
     let component = props.component.copied_or(HtmlTag::Span);
     let variant = props.variant.copied_or(use_theme().icon.variant);
-    let variables: Input<Variables> = icon_variables(&props, variant).into();
+    // Colour resolution is most of an icon's render, and its inputs rarely change.
+    let style = use_cache(
+        (
+            variant,
+            props.color.clone(),
+            props.size.clone(),
+            props.radius.clone(),
+        ),
+        |_| icon_variables(&props, variant).render(),
+    );
+    let style = Some(style).filter(|style| !style.is_empty());
 
     let states: Input<States> = props
         .states
@@ -99,7 +109,7 @@ pub fn Icon(props: IconProps) -> Element {
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
-        .variables(&variables)
+        .style(style)
         .prepare()
         .render(component, props.attributes, props.children)
 }

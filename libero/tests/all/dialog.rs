@@ -29,3 +29,30 @@ fn a_dialog_renders_the_paper_surface_under_its_own_chrome() {
     );
     assert!(html.contains("box-shadow:var(--lsx-shadow-xl);"), "{html}");
 }
+
+thread_local! {
+    static TITLE: std::cell::Cell<&'static str> = const { std::cell::Cell::new("First") };
+}
+
+/// The header memoizes, so a new title has to reach it through its props.
+#[test]
+fn a_changed_title_redraws_the_memoized_header() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Dialog { title: TITLE.get(), close_button: true, "content" }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    assert!(dioxus_ssr::render(&dom).contains("First"));
+
+    TITLE.set("Second");
+    dom.mark_dirty(ScopeId::APP);
+    dom.render_immediate(&mut dioxus::dioxus_core::NoOpMutations);
+    let html = dioxus_ssr::render(&dom);
+    assert!(html.contains("Second"), "{html}");
+    assert!(!html.contains("First"), "{html}");
+}

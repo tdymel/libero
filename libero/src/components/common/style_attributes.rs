@@ -35,7 +35,7 @@ pub(crate) fn use_style_attributes(
         Input::Value(sx) => Some(SxSource::Owned(sx)),
         Input::Static(sx) => Some(SxSource::Static(sx)),
     };
-    let written = use_hook(|| Rc::new(RefCell::new(Vec::<String>::new())));
+    let written = use_hook(|| Rc::new(RefCell::new(Written::default())));
     let class = use_box_css(
         class,
         focus_ring.then_some(&BOX_FOCUS_SX),
@@ -51,14 +51,32 @@ pub(crate) fn use_style_attributes(
     StyleAttributes {
         class,
         data_state: states.as_ref().and_then(States::data_state),
-        style: keep_dropped_vars(
-            match (variables_style, style) {
-                (Some(variables), Some(raw)) => Some(format!("{variables}{raw}")),
-                (Some(style), None) | (None, Some(style)) => Some(style),
-                (None, None) => None,
-            },
-            &mut written.borrow_mut(),
-        ),
+        style: written.borrow_mut().style(match (variables_style, style) {
+            (Some(variables), Some(raw)) => Some(format!("{variables}{raw}")),
+            (Some(style), None) | (None, Some(style)) => Some(style),
+            (None, None) => None,
+        }),
+    }
+}
+
+/// The custom properties an element has declared, and the last `style` in and
+/// out: an unchanged style skips [`keep_dropped_vars`]'s rescans.
+#[derive(Default)]
+struct Written {
+    names: Vec<String>,
+    last: Option<(Option<String>, Option<String>)>,
+}
+
+impl Written {
+    fn style(&mut self, style: Option<String>) -> Option<String> {
+        if let Some((input, output)) = &self.last
+            && *input == style
+        {
+            return output.clone();
+        }
+        let output = keep_dropped_vars(style.clone(), &mut self.names);
+        self.last = Some((style, output.clone()));
+        output
     }
 }
 
@@ -112,7 +130,30 @@ fn custom_properties(style: &str) -> impl Iterator<Item = &str> {
 
 #[cfg(test)]
 mod tests {
-    use super::keep_dropped_vars;
+    use super::{Written, keep_dropped_vars};
+
+    /// A repeated style reuses the last result, and a later change still
+    /// reverts what it dropped.
+    #[test]
+    fn a_repeated_style_answers_as_the_rescan_would() {
+        let mut written = Written::default();
+        let style = |s: &str| Some(s.to_string());
+
+        assert_eq!(written.style(style("--a:1;")), style("--a:1;"));
+        assert_eq!(written.style(style("--a:1;")), style("--a:1;"));
+        assert_eq!(
+            written.style(style("--b:2;")),
+            style("--b:2;--a:revert-layer;")
+        );
+        assert_eq!(
+            written.style(style("--b:2;")),
+            style("--b:2;--a:revert-layer;")
+        );
+        assert_eq!(
+            written.style(None),
+            style("--a:revert-layer;--b:revert-layer;")
+        );
+    }
 
     #[test]
     fn a_dropped_var_is_reverted_and_a_returning_one_is_not() {

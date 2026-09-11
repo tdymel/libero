@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, Box, Input, Paper, Title, Variables,
+        ActionIcon, Box, HtmlTag, Input, Title, Variables,
         common::{CloseIcon, attr, base_props, names_itself, use_name_warning},
+        layout::use_box,
         surface::paper_sx,
         variables,
     },
@@ -109,9 +110,8 @@ pub fn Dialog(props: DialogProps) -> Element {
         .merge(props.variables.unwrap_or_default())
         .into();
 
-    // Pushed onto the caller's own, not handed to `Paper` as props: the
-    // component's attributes have to render after the caller's to win a
-    // duplicate name, which is the order `BoxStyle::render` keeps.
+    // Pushed onto the caller's own: the component's attributes have to render
+    // after the caller's to win a duplicate name.
     let mut attributes = props.attributes;
     attributes.push(attr("role", "dialog"));
     if is_modal {
@@ -124,36 +124,63 @@ pub fn Dialog(props: DialogProps) -> Element {
         attributes.push(attr("aria-label", aria_label));
     }
 
+    let mut children = Vec::with_capacity(2);
+    if props.title.is_some() || close_button {
+        children.push(rsx! {
+            DialogHeader {
+                title: props.title,
+                title_id,
+                close_button,
+                close_label: props.close_label,
+            }
+        });
+    }
+    children.push(props.children);
+
+    // `Paper`'s body without its scope: a `Paper` taking `children` would
+    // re-render on every render of the dialog. Dialog sets no radius or shadow
+    // step, so `Paper` would pass `states` through unchanged.
+    use_box()
+        .framework_sx(&DIALOG_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .variables(&variables)
+        .prepare()
+        .render(HtmlTag::Div, attributes, children)
+}
+
+/// The title and close button, in a scope of their own: its props compare
+/// equal, so a dialog re-rendered for its `children` skips the header.
+#[component]
+fn DialogHeader(
+    title: Option<String>,
+    title_id: Signal<String>,
+    close_button: bool,
+    close_label: Option<String>,
+) -> Element {
+    let modal = try_use_context::<ModalContext>();
+    let close = use_callback(move |_: MouseEvent| {
+        if let Some(modal) = modal {
+            modal.close();
+        }
+    });
+
     rsx! {
-        Paper {
-            framework_sx: &DIALOG_BASE_SX,
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            variables,
-            attributes,
-            if props.title.is_some() || close_button {
-                Box { framework_sx: &DIALOG_HEADER_SX,
-                    if let Some(title) = props.title.clone() {
-                        Title { id: title_id(), size: "xl", sx: &DIALOG_HEADER_TITLE_SX, "{title}" }
-                    }
-                    if close_button {
-                        ActionIcon {
-                            variant: "standard",
-                            color: "muted",
-                            size: "sm",
-                            aria_label: props.close_label.clone().unwrap_or_else(|| "Close".to_string()),
-                            onclick: move |_| {
-                                if let Some(modal) = modal {
-                                    modal.close();
-                                }
-                            },
-                            CloseIcon {}
-                        }
-                    }
+        Box { framework_sx: &DIALOG_HEADER_SX,
+            if let Some(title) = title {
+                Title { id: title_id(), size: "xl", sx: &DIALOG_HEADER_TITLE_SX, "{title}" }
+            }
+            if close_button {
+                ActionIcon {
+                    variant: "standard",
+                    color: "muted",
+                    size: "sm",
+                    aria_label: close_label.unwrap_or_else(|| "Close".to_string()),
+                    onclick: close,
+                    CloseIcon {}
                 }
             }
-            {props.children}
         }
     }
 }

@@ -2,15 +2,18 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables, common::base_props, layout::use_box, variables,
+        HtmlTag, Input, States, Variables,
+        common::{attr, base_props, use_style_attributes},
+        layout::box_style,
+        variables,
     },
-    hooks::{use_element, use_theme},
+    hooks::{use_cache, use_element, use_theme},
     platform::{ElementApi, prefers_reduced_motion},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss},
 };
 
-use super::InternalAnchor;
+use super::render_anchor;
 
 // A literal hex/css color has no derivable "lighter shade", so it falls
 // through to the theme's default.
@@ -109,8 +112,10 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         NavigationTarget::External(_) => false,
     });
 
-    let variables: Input<Variables> =
-        nav_link_variables(props.color.as_ref(), theme.nav_link.color).into();
+    let style = use_cache(
+        (props.color.clone(), theme.nav_link.color),
+        |(color, default_color)| nav_link_variables(color.as_ref(), *default_color).render(),
+    );
     let states: Input<States> = props
         .states
         .unwrap_or_default()
@@ -135,38 +140,39 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         }
     }));
 
-    // One hook for every path, above the branch - see `Button`.
-    let boxed = use_box()
-        .framework_sx(&NAV_LINK_BASE_SX)
-        .class(&props.class)
-        .sx(&props.sx)
-        .states(&states)
-        .variables(&variables)
-        .prepare();
+    // One hook for every path, above the branch, and no `InternalAnchor`
+    // scope: that would resolve the styling a second time.
+    let style_attributes = use_style_attributes(
+        &props.class,
+        Some(&NAV_LINK_BASE_SX),
+        &props.sx,
+        &states,
+        &Input::None,
+        Some(style),
+        true,
+    );
 
     if disabled {
-        return boxed
+        return box_style(style_attributes)
             .attr("aria-disabled", "true")
             .attr("tabindex", "-1")
             .attr("aria-current", aria_current)
             .render(HtmlTag::A, props.attributes, props.children);
     }
 
-    rsx! {
-        InternalAnchor {
-            to: props.to,
-            target: props.target,
-            class: props.class,
-            sx: props.sx,
-            framework_sx: &NAV_LINK_BASE_SX,
-            states,
-            variables,
-            "aria-current": aria_current,
-            onmounted: element.mount(),
-            attributes: props.attributes,
-            {props.children}
-        }
+    let mut attributes = props.attributes;
+    if let Some(aria_current) = aria_current {
+        attributes.push(attr("aria-current", aria_current));
     }
+
+    render_anchor(
+        style_attributes,
+        props.to,
+        props.target,
+        Some(element.mount()),
+        attributes,
+        props.children,
+    )
 }
 
 #[cfg(test)]

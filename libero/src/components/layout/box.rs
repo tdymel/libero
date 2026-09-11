@@ -253,6 +253,12 @@ pub(crate) struct BoxStyle {
 }
 
 impl BoxStyle {
+    /// The resolved styling alone, for a path that renders something other
+    /// than an element (`render_anchor`). Drops attributes set on `self`.
+    pub fn into_style_attributes(self) -> StyleAttributes {
+        self.style
+    }
+
     /// An attribute the component sets itself, e.g. `type="button"`.
     ///
     /// A `false` boolean or a `None` is **not** pushed: it renders nothing

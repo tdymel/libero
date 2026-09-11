@@ -16,7 +16,7 @@ pub use anchor::{Anchor, AnchorProps, AnchorUnderline};
 pub use burger::{Burger, BurgerProps};
 pub(crate) use carousel::CarouselJump;
 pub use carousel::{Carousel, CarouselAlign, CarouselProps};
-pub(crate) use internal_anchor::InternalAnchor;
+pub(crate) use internal_anchor::{InternalAnchor, render_anchor};
 pub use menu::{Menu, MenuEdge, MenuEntry, MenuItem, MenuProps, MenuState, use_menu};
 pub use menubar::{Menubar, MenubarMenu, MenubarProps};
 pub use nav_link::{NavLink, NavLinkProps};

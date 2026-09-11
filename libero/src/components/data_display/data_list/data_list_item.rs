@@ -1,9 +1,8 @@
 use dioxus::prelude::*;
 
 use crate::components::{
-    HtmlTag, Input,
-    common::{IntoChildren, base_props},
-    layout::use_box,
+    Input,
+    common::{base_props, styling_attributes, use_style_attributes},
 };
 
 base_props! {
@@ -38,17 +37,36 @@ base_props! {
 pub fn DataListItem(props: DataListItemProps) -> Element {
     // The `<dd>`s carry no styling of their own, so they are plain elements -
     // a `Box` per description would be a component scope for nothing.
-    let term = use_box()
-        .class(&props.class)
-        .sx(&props.sx)
-        .states(&props.states)
-        .prepare()
-        .render(HtmlTag::Dt, props.attributes, props.label);
+    // Always a `<dt>`, so written inline: a rendered `Element` spliced in is a
+    // nested template.
+    let style = use_style_attributes(
+        &props.class,
+        None,
+        &props.sx,
+        &props.states,
+        &Input::None,
+        None,
+        true,
+    );
+    let attributes = styling_attributes(
+        Some(style.class),
+        style.data_state,
+        style.style,
+        props.attributes,
+    );
 
-    rsx! {
-        {term}
-        for (index, value) in props.children.into_children().into_iter().enumerate() {
-            dd { key: "{index}", {value} }
+    #[cfg(feature = "dioxus-fork")]
+    return rsx! {
+        dt { ..attributes, {props.label} }
+        for value in props.children {
+            dd { {value} }
         }
+    };
+
+    // One `Element` here, so one `<dd>` and no list to diff.
+    #[cfg(not(feature = "dioxus-fork"))]
+    rsx! {
+        dt { ..attributes, {props.label} }
+        dd { {props.children} }
     }
 }

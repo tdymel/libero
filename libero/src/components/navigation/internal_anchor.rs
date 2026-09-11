@@ -3,7 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, Variables,
-        common::{base_props, is_javascript_url, styling_attributes, use_style_attributes},
+        common::{
+            StyleAttributes, base_props, is_javascript_url, styling_attributes,
+            use_style_attributes,
+        },
         layout::box_style,
     },
     sx::StaticSx,
@@ -53,11 +56,6 @@ base_props! {
 /// `<button>` case needs one.
 #[component]
 pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
-    if let Some(message) = javascript_url_warning(&props.to) {
-        warn(&message);
-    }
-
-    // A hook both branches need, so it stays above the return.
     let style_attributes = use_style_attributes(
         &props.class,
         props.framework_sx,
@@ -68,8 +66,34 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
         true,
     );
 
-    let is_blank = props.target.as_deref() == Some("_blank");
-    let router_can_handle_target = props.target.is_none() || is_blank;
+    render_anchor(
+        style_attributes,
+        props.to,
+        props.target,
+        props
+            .onmounted
+            .map(|onmounted| move |event| onmounted.call(event)),
+        props.attributes,
+        props.children,
+    )
+}
+
+/// [`InternalAnchor`]'s body from styling already resolved. No hooks, so a
+/// component that resolved its own styling renders the link in its own scope.
+pub(crate) fn render_anchor(
+    style_attributes: StyleAttributes,
+    to: NavigationTarget,
+    target: Option<String>,
+    mut onmounted: Option<impl FnMut(MountedEvent) + 'static>,
+    attributes: Vec<Attribute>,
+    children: Element,
+) -> Element {
+    if let Some(message) = javascript_url_warning(&to) {
+        warn(&message);
+    }
+
+    let is_blank = target.as_deref() == Some("_blank");
+    let router_can_handle_target = target.is_none() || is_blank;
 
     if router_can_handle_target && try_router().is_some() {
         // `Link` renders its own `class` slot, so the class stays a prop and
@@ -78,21 +102,21 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
             None,
             style_attributes.data_state,
             style_attributes.style,
-            props.attributes,
+            attributes,
         );
 
         return rsx! {
             Link {
-                to: props.to,
+                to,
                 class: Some(style_attributes.class),
                 new_tab: is_blank,
                 onmounted: move |event| {
-                    if let Some(onmounted) = &props.onmounted {
-                        onmounted.call(event);
+                    if let Some(onmounted) = &mut onmounted {
+                        onmounted(event);
                     }
                 },
                 attributes,
-                {props.children}
+                {children}
             }
         };
     }
@@ -100,15 +124,13 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
     // Attached only when the caller wants it: an unused listener still costs a
     // diff every render.
     let mut anchor = box_style(style_attributes)
-        .attr("href", navigation_target_href(props.to))
-        .attr("target", props.target);
-    if let Some(onmounted) = props.onmounted {
-        anchor = anchor.event("onmounted", move |event: MountedEvent| {
-            onmounted.call(event)
-        });
+        .attr("href", navigation_target_href(to))
+        .attr("target", target);
+    if let Some(mut onmounted) = onmounted {
+        anchor = anchor.event("onmounted", move |event: MountedEvent| onmounted(event));
     }
 
-    anchor.render(HtmlTag::A, props.attributes, props.children)
+    anchor.render(HtmlTag::A, attributes, children)
 }
 
 #[cfg(test)]

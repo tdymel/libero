@@ -10,7 +10,7 @@ use crate::{
         },
         feedback::Loader,
         layout::use_box,
-        navigation::InternalAnchor,
+        navigation::render_anchor,
     },
     hooks::{ripple_sx, use_cache, use_ripple, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -509,7 +509,7 @@ pub fn Button(props: ButtonProps) -> Element {
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
-        .style(style.clone())
+        .style(style)
         .prepare();
 
     // `InternalAnchor` has no `onclick`: a link-mode Button navigates for
@@ -525,19 +525,16 @@ pub fn Button(props: ButtonProps) -> Element {
                 .render(HtmlTag::A, props.attributes, props.children);
         }
 
-        return rsx! {
-            InternalAnchor {
-                to,
-                target: props.target,
-                class: props.class,
-                sx: props.sx,
-                framework_sx: &BUTTON_BASE_SX,
-                states,
-                style,
-                attributes: props.attributes,
-                {props.children}
-            }
-        };
+        // Styling already resolved above: an `InternalAnchor` scope would
+        // resolve it again.
+        return render_anchor(
+            boxed.into_style_attributes(),
+            to,
+            props.target,
+            None::<fn(MountedEvent)>,
+            props.attributes,
+            props.children,
+        );
     }
 
     // The loader is `aria-hidden` - the button already has a name, and

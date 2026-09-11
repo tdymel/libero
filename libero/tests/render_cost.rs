@@ -452,6 +452,7 @@ fn render_cost_per_component() {
         "Overlay" { Overlay {} }
         "Paper" { Paper { "x" } }
         "Dialog" { Dialog { "x" } }
+        "Dialog+title" { Dialog { title: "t", close_button: true, "x" } }
         "Tooltip" { Tooltip { label: rsx! { "t" }, "x" } }
 
         "FocusTrap" { FocusTrap { "x" } }

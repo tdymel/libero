@@ -2,15 +2,15 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Input,
-        common::{base_props, input_from_str},
+        Input, States,
+        common::{base_props, input_from_str, use_style_attributes},
     },
     hooks::use_theme,
     sx::{StaticSx, Sx, sx},
     theme::{AnchorDefaults, Size},
 };
 
-use super::InternalAnchor;
+use super::render_anchor;
 
 pub use crate::theme::AnchorUnderline;
 
@@ -59,22 +59,31 @@ pub fn Anchor(props: AnchorProps) -> Element {
     let size = props.size.copied_or(theme.anchor.size);
     let underline = props.underline.copied_or(theme.anchor.underline);
 
-    let states = props
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(size.state_name(), true)
-        .with(underline.state_name(), true);
+        .with(underline.state_name(), true)
+        .into();
 
-    rsx! {
-        InternalAnchor {
-            to: props.to,
-            target: props.target,
-            class: props.class,
-            sx: props.sx,
-            framework_sx: &ANCHOR_BASE_SX,
-            states,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    // Resolved here rather than in an `InternalAnchor` scope, which `children`
+    // would re-render every time.
+    let style_attributes = use_style_attributes(
+        &props.class,
+        Some(&ANCHOR_BASE_SX),
+        &props.sx,
+        &states,
+        &Input::None,
+        None,
+        true,
+    );
+
+    render_anchor(
+        style_attributes,
+        props.to,
+        props.target,
+        None::<fn(MountedEvent)>,
+        props.attributes,
+        props.children,
+    )
 }
