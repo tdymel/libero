@@ -160,6 +160,9 @@ the `Dropzone` variant each card's remove button is a tab stop of its own.
 
 `loading` does not block picking; pass `disabled` for that.
 
+Without a `label` the control has no name of its own: set `aria_label`, or a
+screen reader announces an unnamed button.
+
 ## Props
 
 `FileField`
