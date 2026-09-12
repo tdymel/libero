@@ -1,0 +1,21 @@
+---
+source: e2e/src/suite.rs
+description: checkbox at mobile (rest)
+expression: tree
+---
+checkbox "Accept the terms" [checked=false]
+checkbox "All channels" [checked=false]
+checkbox "Select row" [checked=false]
+generic
+  checkbox "Priority support" [checked=false]
+  generic
+    StaticText "Answers within four hours, around the clock."
+checkbox "Share usage data" [checked=false] [invalid]
+LabelText
+  StaticText "Share usage data"
+generic
+  StaticText "You can withdraw consent at any time."
+generic
+  StaticText "Accept to continue."
+checkbox "Locked" [checked]
+checkbox "Unavailable" [checked=false] [disabled]

@@ -32,6 +32,8 @@ static CHECKBOX_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // The visually hidden input is absolutely positioned; without this it
         // escapes to the nearest positioned ancestor.
         .position("relative")
+        // On the control rather than the box, so `disabled` below reaches it.
+        .cursor("pointer")
         // The box is the whole control, so the ring hugs it rather than the
         // row. Drawn by the overlay after the box, because the focus is on
         // the input beside it.
@@ -54,7 +56,6 @@ static CHECKBOX_BOX_SX: StaticSx = StaticSx::new(|| {
         .border(format!("1px solid {}", CHECKBOX_BORDER.value()))
         .background(CHECKBOX_BACKGROUND.value())
         .color(CHECKBOX_MARK.value())
-        .cursor("pointer")
         .transition("background 150ms ease, border-color 150ms ease")
         .selector("& > svg", sx().width("65%").height("65%"))
 });
@@ -108,13 +109,12 @@ field_props! {
         /// form is submitted.
         #[props(default, into)]
         validate: crate::components::Validators<bool>,
-        /// Names the checkbox when it has no `label`; `attributes` cannot,
-        /// they land on the input but a caller may not want a visible label.
         /// What the field posts as. A path - `Signup::FIELDS.terms()` - also
         /// binds it to the surrounding `Form`'s value when the field has no
         /// `onchange`.
         #[props(default, into)]
         name: crate::components::FieldName<bool>,
+        /// Names the checkbox when it has no `label`.
         #[props(default, into)]
         aria_label: Option<String>,
         /// `Card` draws the checkbox as a bordered surface and makes all of

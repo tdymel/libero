@@ -140,7 +140,15 @@ pub fn CheckboxPage() -> Element {
                             "true" => Some(true),
                             _ => Some(false),
                         },
-                        onchange: EventHandler::new(move |_: bool| {}),
+                        // The preview writes `onchange` back into the switches,
+                        // so the box can be ticked; a mixed box turns `true`.
+                        onchange: {
+                            let values = values.clone();
+                            EventHandler::new(move |next: bool| {
+                                values.set("checked", next.to_string());
+                                values.set("indeterminate", "false");
+                            })
+                        },
                         indeterminate: (values.str("indeterminate") == "true").then_some(true),
                         label: (values.str("label") == "true")
                             .then(|| "Accept the terms".to_string()),
