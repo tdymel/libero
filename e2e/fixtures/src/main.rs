@@ -52,6 +52,7 @@ mod icon;
 mod image_list;
 mod lightbox;
 mod loader;
+mod long_labels;
 mod mark;
 mod menu;
 mod menubar;
@@ -120,6 +121,7 @@ const FIXTURES: &[Routes] = &[
     image_list::ROUTES,
     lightbox::ROUTES,
     loader::ROUTES,
+    long_labels::ROUTES,
     mark::ROUTES,
     menu::ROUTES,
     menubar::ROUTES,

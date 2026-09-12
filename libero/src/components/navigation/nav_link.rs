@@ -54,6 +54,8 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         .color("inherit")
         .text_decoration("none")
         .cursor("pointer")
+        // A long unbreakable label wraps instead of widening the page (1.4.10).
+        .with("overflow-wrap", "anywhere")
         // Keeps `scroll_into_view`'s `Nearest` off the container's edge.
         // Affects where a scroll lands, never whether one happens.
         .scroll_margin("8rem")

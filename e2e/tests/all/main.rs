@@ -33,6 +33,7 @@ mod isolation;
 mod journal;
 mod lightbox;
 mod loader;
+mod long_labels;
 mod mark;
 mod menu;
 mod menubar;

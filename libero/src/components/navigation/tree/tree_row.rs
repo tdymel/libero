@@ -49,6 +49,8 @@ static TREE_ROW_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .padding_right("8px")
         .border_radius("4px")
         .cursor("pointer")
+        // A long unbreakable label wraps instead of widening the page (1.4.10).
+        .with("overflow-wrap", "anywhere")
         .hover(sx().background("muted.2"))
 });
 

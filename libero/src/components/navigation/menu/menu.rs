@@ -103,10 +103,15 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
             sx().color("muted.5").cursor("not-allowed"),
         )
         // Wraps rather than truncates once the box meets the viewport's edge:
-        // an ellipsis hides the label from sighted users (1.4.10).
+        // an ellipsis hides the label from sighted users (1.4.10). Inside a
+        // long word too.
         .selector(
             "& [data-menu-label]",
-            sx().flex("1").padding("4px 0").white_space("normal"),
+            sx().flex("1")
+                .min_width("0")
+                .padding("4px 0")
+                .white_space("normal")
+                .with("overflow-wrap", "anywhere"),
         )
         .selector(
             "& [data-menu-section]",
