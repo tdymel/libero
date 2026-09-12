@@ -182,7 +182,6 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             labelledby: field.label_id(),
             describedby: field.describedby(),
             invalid: field.invalid(),
-            required,
             name: bound.name().map(str::to_string),
             // The same `use_callback` every render, so the core's props can
             // compare equal.

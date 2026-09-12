@@ -121,7 +121,6 @@ fn alpha_slider(props: AlphaSliderProps, track: String, thumb_fill: String) -> E
             labelledby: None,
             describedby: None,
             invalid: false,
-            required: false,
             name: None,
             // The same `use_callback` every render, so the core's props can
             // compare equal.

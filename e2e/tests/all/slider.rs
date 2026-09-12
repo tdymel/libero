@@ -249,6 +249,37 @@ fn the_states_meet_the_baseline() {
         .run();
 }
 
+/// Todo 532: ARIA 1.2 allows no `aria-required` on `role=slider`, and
+/// Chromium drops it from the AX tree anyway; the label keeps its asterisk.
+#[test]
+fn a_required_thumb_carries_no_aria_required() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "#quality [role=slider]")
+            .await
+            .unwrap();
+        let (required, asterisk): (Option<String>, bool) = page
+            .evaluate(
+                "(() => { const t = document.querySelector('#quality [role=slider]'); \
+                 const label = document.getElementById(t.getAttribute('aria-labelledby')); \
+                 return [t.getAttribute('aria-required'), label.textContent.includes('*')]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            (required.as_deref(), asterisk),
+            (None, true),
+            "the thumb's aria-required, the label's asterisk"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// APG's slider keys beyond the arrows: Page keys and Shift+arrow move ten
 /// steps.
 #[test]

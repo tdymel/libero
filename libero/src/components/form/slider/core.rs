@@ -288,7 +288,6 @@ pub(in crate::components::form) struct SliderCoreProps {
     describedby: Option<String>,
     /// The field's status is an error.
     invalid: bool,
-    required: bool,
     name: Option<String>,
     oninput: Option<EventHandler<SliderChangeEvent<SliderCoreValue>>>,
     /// A CSS `background` for the track in place of its grey - a hue or an
@@ -600,7 +599,6 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         labelledby: props.labelledby,
                         describedby: props.describedby,
                         invalid: props.invalid,
-                        required: props.required,
                         readonly: props.readonly,
                         plain: props.plain,
                         focusable,
@@ -632,7 +630,6 @@ struct SliderThumbsProps {
     labelledby: Option<String>,
     describedby: Option<String>,
     invalid: bool,
-    required: bool,
     readonly: bool,
     plain: bool,
     focusable: bool,
@@ -744,7 +741,8 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             .attr("aria-labelledby", labelledby)
             .attr("aria-describedby", describedby)
             .attr("aria-invalid", props.invalid.then_some("true"))
-            .attr("aria-required", props.required.then_some("true"))
+            // No `aria-required`: ARIA 1.2 does not allow it on `slider`, and a
+            // slider always holds a value anyway (todo 532).
             .attr("aria-disabled", !interactive)
             .attr("aria-readonly", props.readonly.then_some("true"))
             .element(&thumb_elements[index])

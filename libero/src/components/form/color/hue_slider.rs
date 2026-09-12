@@ -71,7 +71,6 @@ pub fn HueSlider(props: HueSliderProps) -> Element {
             labelledby: None,
             describedby: None,
             invalid: false,
-            required: false,
             name: None,
             // The same `use_callback` every render, so the core's props can
             // compare equal.
