@@ -1,7 +1,7 @@
 //! `Stepper`, each arm moved on by a button inside the current step's content.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Options, Stepper};
+use libero::components::{Button, Flex, OptionLabel, Options, Stepper};
 
 use crate::Routes;
 
@@ -11,7 +11,36 @@ pub const ROUTES: Routes = &[
         "/stepper-vertical",
         || rsx! { StepperPage { vertical: true } },
     ),
+    ("/stepper-long", || rsx! { LongLabelPage {} }),
 ];
+
+/// One label with no break opportunity, in every arm, for reflow at a narrow width.
+#[component]
+fn LongLabelPage() -> Element {
+    let label = |stage: Stage| match stage {
+        Stage::Shipping => OptionLabel::from("Versandkostenberechnungsgrundlagenverordnung"),
+        other => OptionLabel::from(other.label()),
+    };
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            for (id, orientation, position) in [
+                ("side", "horizontal", "side"),
+                ("below", "horizontal", "below"),
+                ("vertical", "vertical", "side"),
+            ] {
+                Stepper {
+                    key: "{id}",
+                    id,
+                    value: Some(Stage::Shipping),
+                    orientation,
+                    label_position: position,
+                    option_label: label,
+                    panel: |_: Stage| rsx! { "Body." },
+                }
+            }
+        }
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Stage {

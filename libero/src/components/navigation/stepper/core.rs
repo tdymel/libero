@@ -91,6 +91,9 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         .font("inherit")
         .color("inherit")
         .text_align("start")
+        // A long unbreakable word wraps inside the step instead of widening a
+        // narrow page (1.4.10).
+        .with("overflow-wrap", "anywhere")
         .selector("& [data-step-marker]", marker)
         // At least a marker tall and centred, so a one-line label sits on the
         // marker's middle and a label with a description grows downward.
@@ -99,6 +102,7 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
             sx().display("flex")
                 .flex_direction("column")
                 .justify_content("center")
+                .min_width("0")
                 .min_height(STEPPER_MARKER.value()),
         )
         .selector("& [data-step-label]", sx().font_weight("500"))
