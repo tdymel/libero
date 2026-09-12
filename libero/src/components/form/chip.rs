@@ -110,6 +110,12 @@ static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
         // icon among them would lose the `gap` - so the ellipsis is the
         // caller's span, as the rustdoc below says.
         .overflow("hidden")
+        // The whole pill is the hit area, not only the text: stretched over
+        // the positioned root, and not clipped by the label's own overflow.
+        .selector(
+            "&::after",
+            sx().content("\"\"").position("absolute").inset("0"),
+        )
 });
 
 /// Depends on `(variant, checked, color)` alone - see the `use_cache` below.
@@ -268,8 +274,10 @@ pub fn Chip(props: ChipProps) -> Element {
         // `InternalAnchor` has no `onclick`, so a link chip navigates for real.
         if let Some(to) = props.to.as_ref().cloned() {
             // `<a>` has no native `disabled`: dropping `to` stops navigation.
+            // Without `href` it is `generic`, so the role comes back by hand.
             if disabled {
                 return root
+                    .attr_default("role", "link")
                     .attr("aria-disabled", "true")
                     .attr("tabindex", "-1")
                     .render(HtmlTag::A, props.attributes, props.children);

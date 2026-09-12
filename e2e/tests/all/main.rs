@@ -11,6 +11,7 @@ mod calendar;
 mod carousel;
 mod cascader;
 mod checkbox;
+mod chip;
 mod code;
 mod collapse;
 mod color_picker;

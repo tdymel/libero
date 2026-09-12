@@ -31,6 +31,7 @@ mod calendar;
 mod carousel;
 mod cascader;
 mod checkbox;
+mod chip;
 mod code;
 mod collapse;
 mod color_picker;
@@ -98,6 +99,7 @@ const FIXTURES: &[Routes] = &[
     carousel::ROUTES,
     cascader::ROUTES,
     checkbox::ROUTES,
+    chip::ROUTES,
     code::ROUTES,
     collapse::ROUTES,
     color_picker::ROUTES,
