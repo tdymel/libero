@@ -30,20 +30,17 @@ impl PortalHost {
 pub(crate) fn PortalOutlet() -> Element {
     let host = use_context::<PortalHost>();
 
-    rsx! {
-        div {
-            style: backend::PORTAL_ROOT_STYLE,
-            for (id , element) in host
-                .entries
-                .read()
-                .iter()
-                .filter_map(|entry| Some((entry.id, entry.render.clone()?)))
-            {
-                Fragment {
-                    key: "{id}",
-                    {backend::PortalEntry(element)}
-                }
+    backend::PortalRoot(rsx! {
+        for (id , element) in host
+            .entries
+            .read()
+            .iter()
+            .filter_map(|entry| Some((entry.id, entry.render.clone()?)))
+        {
+            Fragment {
+                key: "{id}",
+                {backend::PortalEntry(element)}
             }
         }
-    }
+    })
 }

@@ -270,6 +270,10 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
     // The arrow keys step over the disabled segments, and every segment's
     // handler needs the whole set to do it.
     let disabled_segments: Vec<bool> = segments.iter().map(|segment| segment.disabled).collect();
+    // One tab stop, as `RadioGroup`: Blitz tabs through every radio of a group.
+    let tab_stop = selected
+        .filter(|&index| !disabled_segments[index])
+        .or_else(|| disabled_segments.iter().position(|off| !off));
 
     let mut own = States::default()
         .with(orientation.state_name(), true)
@@ -361,7 +365,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                 // as the string "false", and Blitz reads `disabled` by
                 // presence - so `false` would disable every segment.
                 disabled: segment.disabled.then_some(true),
-                tabindex: (!focusable).then_some("-1"),
+                tabindex: if focusable && tab_stop == Some(index) { "0" } else { "-1" },
                 onclick: activation.input_click(),
                 oninput: activation.input_input(),
                 onkeydown: keydown,

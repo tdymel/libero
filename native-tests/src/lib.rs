@@ -192,6 +192,20 @@ impl Page {
         self.dispatch(UiEvent::PointerUp(pointer(x + dx, y + dy, false)));
     }
 
+    /// The steps of a hand-driven drag, each settled: press, move with the
+    /// button held, release.
+    pub fn press_at(&mut self, x: f32, y: f32) {
+        self.dispatch(UiEvent::PointerDown(pointer(x, y, true)));
+    }
+
+    pub fn move_to(&mut self, x: f32, y: f32) {
+        self.dispatch(UiEvent::PointerMove(pointer(x, y, true)));
+    }
+
+    pub fn release_at(&mut self, x: f32, y: f32) {
+        self.dispatch(UiEvent::PointerUp(pointer(x, y, false)));
+    }
+
     /// Moves the pointer, no button held, to the first match's centre.
     pub fn hover(&mut self, selector: &str) {
         let (x, y) = self.centre(selector);

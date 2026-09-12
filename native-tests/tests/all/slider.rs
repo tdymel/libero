@@ -40,6 +40,33 @@ fn pressing_the_track_centre_and_dragging_right_follows_the_pointer() {
     );
 }
 
+/// The thumb sits under the pointer while the drag is on, with no transition
+/// easing it there: the animation clock is never advanced here.
+#[test]
+fn the_thumb_keeps_up_with_a_fast_drag() {
+    let mut page = mount(app);
+    let (tx, ty, tw, th) = page.rect(TRACK);
+    let y = (ty + th / 2.0) as f32;
+    let x0 = (tx + tw / 2.0) as f32;
+    page.press_at(x0, y);
+    for step in 1..=4u8 {
+        page.move_to(x0 + 40.0 * f32::from(step), y);
+    }
+    let now: f64 = page
+        .attr(THUMB, "aria-valuenow")
+        .and_then(|v| v.parse().ok())
+        .unwrap_or_default();
+    let (thumb_x, _, thumb_w, _) = page.rect(THUMB);
+    let centre = thumb_x + thumb_w / 2.0;
+    let pointer_x = f64::from(x0 + 160.0);
+    page.release_at(x0 + 160.0, y);
+    assert!(
+        (centre - pointer_x).abs() <= 12.0,
+        "value {now}, thumb centre {centre}, pointer {pointer_x}\n{}",
+        page.tree()
+    );
+}
+
 /// The thumb's anchor is placed by `left` and centred by margins.
 #[test]
 fn the_thumb_moves_with_the_value() {

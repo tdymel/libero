@@ -89,6 +89,8 @@ thread_local! {
 
     /// Who to tell that something scrolled. See [`BlitzScroll`].
     static SCROLL_CALLBACKS: Callbacks<dyn Fn()> = const { Callbacks::new() };
+    /// Puts [`PortalRoot`] back on the viewport's corner.
+    static REALIGN: Cell<Option<Callback<()>>> = const { Cell::new(None) };
     /// A `scroll_into_view` waiting for its target's first layout. See [`show`].
     static SHOW_RETRY: RefCell<Option<Box<dyn TimerSubscription>>> = const { RefCell::new(None) };
 
@@ -570,14 +572,79 @@ impl Drop for BlitzKeySubscription {
 /// modal's `inset: 0` covers the window. `absolute`, not `fixed`: no stacking
 /// context, so portaled z-indices still compete with the app's. It takes no
 /// hits; [`PortalEntry`] gives them back to what it holds.
-pub(super) const PORTAL_ROOT_STYLE: &str =
-    "position:absolute;left:0;top:0;width:100vw;height:100vh;pointer-events:none;";
+const PORTAL_ROOT_STYLE: &str = "position:absolute;width:100vw;height:100vh;pointer-events:none;";
+
+/// The portal outlet, shifted back onto the viewport's corner whenever
+/// something scrolls: an `absolute` box moves with a scrolled root, an offset
+/// parent and a top margin collapsing through `<main>`.
+#[component]
+pub(super) fn PortalRoot(children: Element) -> Element {
+    let mut shift = use_signal(|| (0.0, 0.0));
+    let scrolled = use_signal(|| 0u64);
+    let root = use_hook(|| Rc::new(RefCell::new(None::<NodeHandle>)));
+    use_hook(|| {
+        Rc::new(SCROLL.on_scroll(Box::new(move || {
+            let mut scrolled = scrolled;
+            let next = scrolled.peek().wrapping_add(1);
+            scrolled.set(next);
+        })))
+    });
+    let realign = use_callback({
+        let root = root.clone();
+        move |()| {
+            let Some(handle) = root.borrow().clone() else {
+                return;
+            };
+            let Some(doc) = handle.try_doc() else {
+                return;
+            };
+            let Some((x, y, ..)) = client_rect(&doc, handle.node_id()) else {
+                return;
+            };
+            drop(doc);
+            if x.abs() >= 0.5 || y.abs() >= 0.5 {
+                let (left, top) = *shift.peek();
+                shift.set((left - x, top - y));
+            }
+        }
+    });
+    use_hook(|| REALIGN.set(Some(realign)));
+    use_drop(|| REALIGN.set(None));
+    use_effect(move || {
+        scrolled();
+        realign.call(());
+    });
+    let (left, top) = shift();
+    rsx! {
+        div {
+            style: "{PORTAL_ROOT_STYLE}left:{left}px;top:{top}px;",
+            onmounted: move |event| {
+                if let Some(handle) = event.data().downcast::<NodeHandle>() {
+                    *root.borrow_mut() = Some(handle.clone());
+                }
+                // Laid out only after this poll's effects.
+                when_laid_out(Box::new(move || realign.call(())));
+            },
+            {children}
+        }
+    }
+}
 
 /// One portaled entry, taking hits again below [`PORTAL_ROOT_STYLE`].
 #[component]
 pub(super) fn PortalEntry(children: Element) -> Element {
     rsx! {
-        div { display: "contents", pointer_events: "auto", {children} }
+        div {
+            display: "contents",
+            pointer_events: "auto",
+            // The app's layout may have moved the outlet since the last scroll.
+            onmounted: |_| {
+                if let Some(realign) = REALIGN.get() {
+                    realign.call(());
+                }
+            },
+            {children}
+        }
     }
 }
 

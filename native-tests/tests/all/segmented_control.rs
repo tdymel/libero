@@ -54,3 +54,63 @@ fn arrow_right_selects_the_next_segment() {
     page.press(Key::ArrowRight);
     assert_eq!(selected(&page).as_deref(), Some("Right"), "{}", page.tree());
 }
+
+#[test]
+fn the_arrows_move_focus_with_the_selection_and_wrap() {
+    let mut page = mount(app);
+    page.focus("input[type=radio][checked]");
+    page.press(Key::ArrowLeft);
+    assert_eq!(selected(&page).as_deref(), Some("Left"), "{}", page.tree());
+    assert!(
+        page.is_focused("input[aria-label=Left]"),
+        "focus is on {}",
+        page.focus_owner()
+    );
+    page.press(Key::ArrowLeft);
+    assert_eq!(selected(&page).as_deref(), Some("Right"), "{}", page.tree());
+    assert!(
+        page.is_focused("input[aria-label=Right]"),
+        "focus is on {}",
+        page.focus_owner()
+    );
+    page.press(Key::ArrowDown);
+    assert_eq!(selected(&page).as_deref(), Some("Left"), "{}", page.tree());
+}
+
+/// A radio group is one tab stop, the checked radio: Tab in lands there and
+/// the next Tab leaves the strip.
+#[test]
+fn tab_enters_on_the_checked_segment_and_leaves_with_the_next_tab() {
+    fn app() -> Element {
+        let mut alignment = use_signal(|| Alignment::Center);
+        rsx! {
+            button { id: "before", "Before" }
+            SegmentedControl {
+                label: "Alignment",
+                value: alignment(),
+                onchange: move |next| alignment.set(next),
+            }
+            button { id: "after", "After" }
+        }
+    }
+    let mut page = mount(app);
+    page.focus("#before");
+    page.tab();
+    assert!(
+        page.is_focused("input[aria-label=Center]"),
+        "Tab landed on {}",
+        page.focus_owner()
+    );
+    page.tab();
+    assert!(
+        page.is_focused("#after"),
+        "the second Tab landed on {}",
+        page.focus_owner()
+    );
+    page.shift_tab();
+    assert!(
+        page.is_focused("input[aria-label=Center]"),
+        "Shift+Tab landed on {}",
+        page.focus_owner()
+    );
+}

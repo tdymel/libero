@@ -7,7 +7,7 @@ use libero::{
     components::{Button, Menu, MenuItem, use_menu},
     hooks::{ModalScope, use_modal},
 };
-use native_tests::{Page, VIEWPORT, mount};
+use native_tests::{Key, Page, VIEWPORT, mount};
 
 const TRIGGER: &str = "[aria-haspopup]";
 const MENU: &str = "[role=menu]";
@@ -95,6 +95,32 @@ fn a_click_on_a_menu_item_selects_it() {
 #[test]
 fn a_modal_is_centred_in_the_viewport() {
     let page = open_modal();
+    let (x, y, width, height) = page.rect(DIALOG);
+    let (cx, cy) = (x + width / 2.0, y + height / 2.0);
+    let (vw, vh) = (f64::from(VIEWPORT.0), f64::from(VIEWPORT.1));
+    assert!(
+        (cx - vw / 2.0).abs() <= 1.0 && (cy - vh / 2.0).abs() <= 1.0,
+        "dialog at ({x}, {y}) {width}x{height}"
+    );
+}
+
+/// The outlet follows a scrolled root back onto the viewport.
+#[test]
+fn a_modal_is_centred_in_a_scrolled_document() {
+    fn tall() -> Element {
+        rsx! {
+            {modal()}
+            div { height: "3000px" }
+        }
+    }
+    let mut page = mount(tall);
+    page.hover("#open");
+    page.wheel("#open", 250.0);
+    assert!(page.rect("#open").1 < 100.0, "the root did not scroll");
+    // The harness's pointer has no page offset, so a key opens it.
+    page.focus("#open");
+    page.press(Key::Enter);
+    page.wait(std::time::Duration::from_millis(50));
     let (x, y, width, height) = page.rect(DIALOG);
     let (cx, cy) = (x + width / 2.0, y + height / 2.0);
     let (vw, vh) = (f64::from(VIEWPORT.0), f64::from(VIEWPORT.1));

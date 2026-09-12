@@ -7,7 +7,7 @@ use libero::{
     components::{Box, Button},
     hooks::{Align, PopoverOptions, PopoverWidth, Side, use_element, use_popover},
 };
-use native_tests::{Page, VIEWPORT, mount};
+use native_tests::{Key, Page, VIEWPORT, mount};
 
 const ANCHOR: &str = "#anchor";
 const FLOATING: &str = "#floating";
@@ -23,6 +23,9 @@ struct DemoProps {
     /// Lets the anchor's top margin collapse through `<main>`.
     #[props(default)]
     collapse: bool,
+    /// Makes the document taller than the viewport, so the root scrolls.
+    #[props(default)]
+    tall: bool,
 }
 
 #[allow(non_snake_case)]
@@ -54,6 +57,9 @@ fn Demo(props: DemoProps) -> Element {
                 onmounted: anchor.mount(),
                 onclick: move |_| opened.toggle(),
                 "Anchor"
+            }
+            if props.tall {
+                div { height: "3000px" }
             }
         }
     };
@@ -93,10 +99,10 @@ fn it_lands_below_the_anchor_at_its_start() {
     );
 }
 
-/// The outlet is `position: absolute` at `top: 0`, and Blitz places it against
-/// `<main>`, which a first child's top margin collapsing through moves down.
+/// The outlet is `position: absolute`, and Blitz places it against `<main>`,
+/// which a first child's top margin collapsing through moves down: libero
+/// shifts it back.
 #[test]
-#[ignore = "needs Blitz: an absolute box is placed against its parent, not the initial containing block"]
 fn a_collapsed_top_margin_shifts_the_portal_outlet() {
     let mut page = mount(|| {
         rsx! { Demo { at: (200.0, 100.0), side: Side::Bottom, align: Align::Start, width: PopoverWidth::Auto, collapse: true } }
@@ -104,6 +110,54 @@ fn a_collapsed_top_margin_shifts_the_portal_outlet() {
     open(&mut page);
     let (_, ay, _, ah) = page.rect(ANCHOR);
     let (_, fy, ..) = page.rect(FLOATING);
+    assert!(
+        close_to(fy, ay + ah + GAP),
+        "anchor bottom {}, box top {fy}",
+        ay + ah
+    );
+}
+
+/// The outlet is in the document's flow, so a scrolled root moves it too.
+#[test]
+fn it_lands_below_the_anchor_in_a_scrolled_document() {
+    let mut page = mount(|| {
+        rsx! { Demo { at: (200.0, 500.0), side: Side::Bottom, align: Align::Start, width: PopoverWidth::Auto, tall: true } }
+    });
+    page.hover(ANCHOR);
+    page.wheel(ANCHOR, 300.0);
+    let (_, ay, _, ah) = page.rect(ANCHOR);
+    assert!(
+        close_to(ay, 200.0),
+        "the root did not scroll: anchor at {ay}"
+    );
+    // The harness's pointer has no page offset, so a key opens it.
+    page.focus(ANCHOR);
+    page.press(Key::Enter);
+    page.wait(std::time::Duration::from_millis(50));
+    let (_, ay, _, ah2) = page.rect(ANCHOR);
+    let (_, fy, ..) = page.rect(FLOATING);
+    assert!(
+        close_to(ah, ah2) && close_to(fy, ay + ah + GAP),
+        "anchor bottom {}, box top {fy}",
+        ay + ah
+    );
+}
+
+#[test]
+fn it_follows_the_anchor_when_the_document_scrolls_while_open() {
+    let mut page = mount(|| {
+        rsx! { Demo { at: (200.0, 500.0), side: Side::Bottom, align: Align::Start, width: PopoverWidth::Auto, tall: true } }
+    });
+    open(&mut page);
+    page.hover(ANCHOR);
+    page.wheel(ANCHOR, 200.0);
+    page.wait(std::time::Duration::from_millis(50));
+    let (_, ay, _, ah) = page.rect(ANCHOR);
+    let (_, fy, ..) = page.rect(FLOATING);
+    assert!(
+        close_to(ay, 300.0),
+        "the root did not scroll: anchor at {ay}"
+    );
     assert!(
         close_to(fy, ay + ah + GAP),
         "anchor bottom {}, box top {fy}",

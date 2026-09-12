@@ -44,6 +44,32 @@ fn arrow_right_moves_focus_and_selection_to_the_next_tab() {
 }
 
 #[test]
+fn arrow_left_wraps_and_home_and_end_jump() {
+    let mut page = mount(app);
+    page.focus(SELECTED);
+
+    page.press(Key::ArrowLeft);
+    assert_eq!(page.text(SELECTED), "Three", "{}", page.tree());
+    assert!(
+        page.is_focused(SELECTED),
+        "focus is on {}",
+        page.focus_owner()
+    );
+    page.press(Key::Home);
+    assert_eq!(page.text(SELECTED), "One", "{}", page.tree());
+    page.press(Key::End);
+    assert_eq!(page.text(SELECTED), "Three", "{}", page.tree());
+    assert!(
+        page.is_focused(SELECTED),
+        "focus is on {}",
+        page.focus_owner()
+    );
+    page.press(Key::ArrowRight);
+    assert_eq!(page.text(SELECTED), "One", "{}", page.tree());
+    assert_eq!(page.text("#inside"), "One");
+}
+
+#[test]
 fn tab_leaves_the_strip_and_shift_tab_comes_back_to_the_selected_tab() {
     let mut page = mount(app);
     page.focus(SELECTED);

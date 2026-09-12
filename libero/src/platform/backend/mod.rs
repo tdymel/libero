@@ -77,11 +77,15 @@ pub(crate) fn Listener(children: Element) -> Element {
     return children;
 }
 
-/// The portal outlet's `style`; only Blitz sets one (see `blitz::PORTAL_ROOT_STYLE`).
-#[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
-pub(crate) const PORTAL_ROOT_STYLE: Option<&str> = Some(blitz::PORTAL_ROOT_STYLE);
-#[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
-pub(crate) const PORTAL_ROOT_STYLE: Option<&str> = None;
+/// The portal outlet's box; only Blitz places it (see `blitz::PortalRoot`).
+#[allow(non_snake_case)]
+pub(crate) fn PortalRoot(children: Element) -> Element {
+    use dioxus::prelude::*;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return rsx! { blitz::PortalRoot { {children} } };
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return rsx! { div { {children} } };
+}
 
 /// Wraps one portaled entry; only Blitz needs a box (see `blitz::PortalEntry`).
 #[allow(non_snake_case)]
