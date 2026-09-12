@@ -13,7 +13,27 @@ pub const ROUTES: Routes = &[
     ("/select", || rsx! { SelectPage {} }),
     ("/select/field", || rsx! { SelectFieldPage {} }),
     ("/select/readonly", || rsx! { SelectReadonlyPage {} }),
+    ("/select/unlabelled", || rsx! { SelectUnlabelledPage {} }),
 ];
+
+/// Searchable and named by the caller's `aria-label` alone: the open search
+/// box takes the name over from the trigger.
+#[component]
+fn SelectUnlabelledPage() -> Element {
+    let mut value = use_signal(|| Some(Fruit::Banana));
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Select {
+                "aria-label": "Fruit",
+                searchable: true,
+                search_placeholder: "Search fruit",
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+        }
+    }
+}
 
 #[component]
 fn SelectPage() -> Element {

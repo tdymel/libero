@@ -3,7 +3,11 @@
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, ax, passes::keyboard, wait};
+use e2e::{
+    Fixture, Suite, Viewport, ax,
+    passes::{keyboard, pointer},
+    wait,
+};
 
 pub const TRIGGER: &str = "[role=combobox]";
 const LISTBOX: &str = "[role=listbox]";
@@ -150,6 +154,87 @@ fn arrow_up_home_and_end_open_a_closed_select() {
             .unwrap();
         }
 
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 487: with no `label`, the caller's `aria-label` names the trigger
+/// while closed and moves to the search box while open.
+#[test]
+fn a_caller_aria_label_follows_the_combobox_role() {
+    block_on(async {
+        let fixture = Fixture::open("/select/unlabelled", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let names = format!(
+            "(() => {{ const t = document.getElementById('lsx-1'); \
+             const s = document.querySelector({SEARCH:?}); \
+             return [t.getAttribute('aria-label'), s && s.getAttribute('aria-label')]; }})()"
+        );
+        let read = async || -> Vec<Option<String>> {
+            page.evaluate(names.as_str())
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap()
+        };
+
+        assert_eq!(
+            read().await,
+            [Some("Fruit".to_string()), None],
+            "closed: the trigger's and the search box's aria-label"
+        );
+
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({SEARCH:?})"),
+            "the search box to take focus",
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            read().await,
+            [None, Some("Fruit".to_string())],
+            "open: the trigger's and the search box's aria-label"
+        );
+        let tree = ax::snapshot(page, "body").await.unwrap();
+        assert!(
+            tree.contains(r#"combobox "Fruit""#),
+            "the open search box is not named by the caller's aria-label:\n{tree}"
+        );
+
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A click on the label focuses the trigger, as `<label for>` does on a
+/// native `<select>` (todo 483).
+#[test]
+fn a_click_on_the_label_focuses_the_trigger() {
+    label_click_focuses("/select", TRIGGER);
+}
+
+/// Clicks the page's first `<label>`, then waits for `control` to hold focus.
+/// Every field named by `aria-labelledby` shares this check.
+pub fn label_click_focuses(path: &str, control: &str) {
+    block_on(async {
+        let fixture = Fixture::open(path, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "label").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({control:?})"),
+            &format!("a click on the label to focus {control} on {path}"),
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean(&format!("the label click on {path}"))
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }

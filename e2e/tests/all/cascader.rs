@@ -11,6 +11,7 @@ use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const TRIGGER: &str = "[role=combobox]";
+const SEARCH: &str = "input[role=combobox]";
 
 /// `<cursor row's label>|<open columns>|<cursor row's aria-selected>`, or
 /// `closed`.
@@ -36,6 +37,77 @@ fn it_meets_the_baseline() {
             "[data-slot=column]:nth-child(2) [role=listbox]",
         )
         .run();
+}
+
+/// Todo 484: while the search box is open it is the combobox, so the role-less
+/// trigger may not keep `aria-expanded` or `aria-required` (axe
+/// `aria-allowed-attr`).
+#[test]
+fn a_searchable_field_meets_the_baseline() {
+    Suite::new("cascader_search", "/cascader/search")
+        .focusable(TRIGGER)
+        .targets("[role=option]")
+        .state(
+            "open",
+            &[Step::TabTo(TRIGGER), Step::Press(keyboard::ARROW_DOWN)],
+            "[role=listbox]",
+        )
+        .run();
+}
+
+/// The open search box carries the field's label, captions and states.
+#[test]
+fn the_open_search_box_is_announced_as_the_field() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader/search", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({SEARCH:?})"),
+            "the search box to take focus",
+        )
+        .await
+        .unwrap();
+
+        let wiring: Vec<Option<String>> = page
+            .evaluate(format!(
+                "(() => {{ const s = document.querySelector({SEARCH:?}); \
+                 const t = document.getElementById('lsx-1'); \
+                 return ['aria-labelledby', 'aria-describedby', 'aria-invalid', 'aria-required'] \
+                 .map(name => s.getAttribute(name)) \
+                 .concat(['aria-expanded', 'aria-required', 'role'].map(name => t.getAttribute(name))); }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            wiring,
+            [
+                Some("lsx-1-label".to_string()),
+                Some("lsx-1-description lsx-1-helper lsx-1-status".to_string()),
+                Some("true".to_string()),
+                Some("true".to_string()),
+                None,
+                None,
+                None,
+            ],
+            "the search box's labelledby, describedby, invalid, required; \
+             the trigger's expanded, required, role"
+        );
+
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 483: the label focuses the trigger it names by id.
+#[test]
+fn a_click_on_the_label_focuses_the_trigger() {
+    crate::select::label_click_focuses("/cascader", TRIGGER);
 }
 
 /// Down and Up skip the disabled root, Right opens a level, Left closes one,

@@ -11,7 +11,7 @@ generic
 status [atomic] [live=polite]
 generic
   generic
-    listbox
+    listbox "City"
       option "Amsterdam" [selected]
         StaticText "Amsterdam"
       option "Berlin" [selected=false]

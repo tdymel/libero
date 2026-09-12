@@ -129,6 +129,8 @@ pub(crate) struct FieldBuilder<'a> {
     inline: bool,
     card: bool,
     labelled_by: bool,
+    group: bool,
+    label_with_id: bool,
     activation: Option<Activation>,
     size: Size,
     radius: Size,
@@ -154,6 +156,8 @@ impl Default for FieldBuilder<'_> {
             inline: false,
             card: false,
             labelled_by: false,
+            group: false,
+            label_with_id: false,
             activation: None,
             size: Size::Md,
             radius: Size::Sm,
@@ -249,9 +253,27 @@ impl<'a> FieldBuilder<'a> {
     /// control `for` cannot name: an element with a `role`, or one another
     /// component owns. The field then hands the ids out instead of applying
     /// them - see [`PreparedField::label_id`].
+    ///
+    /// A click on the label focuses the control, as `<label for>` would.
     #[inline]
     pub fn labelled_by(mut self) -> Self {
         self.labelled_by = true;
+        self
+    }
+
+    /// The label names a group of controls, as a `<legend>` does: a click on
+    /// it focuses none of them.
+    #[inline]
+    pub fn names_group(mut self) -> Self {
+        self.group = true;
+        self
+    }
+
+    /// Gives a `<label for>` an id too, for a popup the control owns that
+    /// the label must also name - `Autocomplete`'s listbox.
+    #[inline]
+    pub fn label_with_id(mut self) -> Self {
+        self.label_with_id = true;
         self
     }
 
@@ -442,7 +464,11 @@ impl<'a> FieldBuilder<'a> {
                 }
             }
         });
-        if let Some(element) = &silent {
+        // The label of a `labelled_by` control finds that control in here.
+        let focuses = self.labelled_by && !self.group;
+        let own = use_hook(|| focuses.then(ElementHandle::new));
+        let root = silent.or(own);
+        if let Some(element) = &root {
             wrapper = wrapper.element(element);
         }
         // `focusout` bubbles, so one listener on the wrapper sees the control
@@ -457,9 +483,11 @@ impl<'a> FieldBuilder<'a> {
                 label,
                 self.required,
                 self.labelled_by,
+                self.label_with_id,
                 activation.clone(),
+                root.filter(|_| focuses),
             ),
-            labelled_by: self.labelled_by && !label.is_none(),
+            labelled_by: (self.labelled_by || self.label_with_id) && !label.is_none(),
             description: slot_node("description", &id_value, description),
             helper: slot_node("helper", &id_value, helper),
             status: status_node(&id_value, status),
@@ -697,7 +725,8 @@ impl PreparedField {
     }
 
     /// The label's own id, for a control named by `aria-labelledby`. `None`
-    /// when there is no label, or when the label names the control by `for`.
+    /// when there is no label, or when the label names the control by `for`
+    /// alone - see [`FieldBuilder::label_with_id`].
     pub fn label_id(&self) -> Option<String> {
         self.labelled_by.then(|| format!("{}-label", self.id))
     }
@@ -976,7 +1005,9 @@ fn label_node(
     label: &Caption,
     required: bool,
     labelled_by: bool,
+    with_id: bool,
     activation: Option<Activation>,
+    focuses: Option<ElementHandle>,
 ) -> Option<Element> {
     if label.is_none() {
         return None;
@@ -985,10 +1016,8 @@ fn label_node(
     // `for` names a labelable element. A control that is not one - a `role` on
     // a span, or an element another component owns - is named the other way
     // round, by an id the control points at.
-    let (named, points_at) = match labelled_by {
-        true => (Some(format!("{id}-label")), None),
-        false => (None, Some(id.to_string())),
-    };
+    let named = (labelled_by || with_id).then(|| format!("{id}-label"));
+    let points_at = (!labelled_by).then(|| id.to_string());
     let content = caption_content(label);
     // `aria-required` already tells AT; the asterisk is decoration.
     let asterisk = required.then(|| {
@@ -996,10 +1025,10 @@ fn label_node(
             span { "aria-hidden": "true", "data-slot": "required", "*" }
         }
     });
-    // Two arms, because a listener cannot be optional and most labels need
-    // none.
-    Some(match activation {
-        Some(activation) => rsx! {
+    // One arm per listener, because a listener cannot be optional and most
+    // labels need none.
+    Some(match (activation, focuses) {
+        (Some(activation), _) => rsx! {
             label {
                 id: named,
                 r#for: points_at,
@@ -1008,13 +1037,38 @@ fn label_node(
                 {asterisk}
             }
         },
-        None => rsx! {
+        (None, Some(root)) => rsx! {
+            label {
+                id: named.clone(),
+                onclick: focus_labelled(root, named.unwrap_or_default()),
+                {content}
+                {asterisk}
+            }
+        },
+        (None, None) => rsx! {
             label { id: named, r#for: points_at,
                 {content}
                 {asterisk}
             }
         },
     })
+}
+
+/// The label's click for a control it names by id: focuses the tab stop that
+/// id names - the control, or its first input (`PinField`'s group).
+fn focus_labelled(root: ElementHandle, label_id: String) -> impl FnMut(Event<MouseData>) + 'static {
+    let named = format!("[aria-labelledby~=\"{label_id}\"]");
+    let selector = format!(
+        "{named}[tabindex=\"0\"], {named} input:not([type=\"hidden\"]):not(:disabled):not([tabindex=\"-1\"])"
+    );
+    move |event| {
+        if nested_interactive(&event, CLICK_BOUNDARY) {
+            return;
+        }
+        if let Ok(control) = root.query_selector(&selector) {
+            let _ = control.focus();
+        }
+    }
 }
 
 pub(super) fn slot_node(slot: &'static str, id: &str, caption: &Caption) -> Option<Element> {

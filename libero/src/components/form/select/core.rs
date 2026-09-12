@@ -424,13 +424,23 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     // A hook, so it is prepared unconditionally and only used when searching.
     let search_box = use_box().framework_sx(&SEARCH_SX).prepare();
+    // The caller's name follows the combobox role: on the open search box, a
+    // role-less trigger may not carry it.
+    let searching = searchable && opened;
+    let (naming, attributes): (Vec<Attribute>, Vec<Attribute>) =
+        props.attributes.iter().cloned().partition(|attribute| {
+            searching && matches!(attribute.name, "aria-label" | "aria-labelledby")
+        });
     let header = searchable.then(|| {
         select_search_box(
-            search_box,
+            search_box.attr(
+                "placeholder",
+                props.search_placeholder.clone().unwrap_or_default(),
+            ),
             search,
             state,
             query,
-            props.search_placeholder.clone().unwrap_or_default(),
+            naming,
             &field,
             required,
         )
@@ -463,7 +473,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     // While the search box is open it is the combobox, so it takes the field's
     // wiring: a role-less trigger may not carry `aria-required` or `aria-expanded`.
-    let control = match searchable && opened {
+    let control = match searching {
         true => control.attr("id", field.id().to_string()),
         false => field
             .aria(control)
@@ -489,7 +499,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             chevron: !multiple && clear.is_none(),
         },
         content,
-        props.attributes,
+        attributes,
     );
     let control = select_control(multiple, value_slot, open, chips, trigger);
 
@@ -991,21 +1001,24 @@ fn select_rows(
 /// The search box at the top of the list. It owns the combobox role while it
 /// is there, so it carries the a11y attributes the trigger gives up - the
 /// field's label and captions included, or it is named by its placeholder.
+/// `naming` is the caller's own `aria-label`/`aria-labelledby`, moved off the
+/// trigger.
 fn select_search_box(
     search_box: BoxStyle,
     search: ElementHandle,
     state: ComboboxState,
     mut query: Signal<String>,
-    placeholder: String,
+    naming: Vec<Attribute>,
     field: &PreparedField,
     required: bool,
 ) -> Element {
+    let mut attributes = state.a11y_attributes();
+    attributes.extend(naming);
     search_box
         .element(&search)
         .attr_default("type", "text")
         .attr("value", query())
         .attr("data-controlled", true)
-        .attr("placeholder", placeholder)
         // Ours is the list underneath; the browser's would cover it.
         .attr("autocomplete", "off")
         .attr("aria-autocomplete", "list")
@@ -1026,7 +1039,7 @@ fn select_search_box(
                 state.close();
             }
         })
-        .render(HtmlTag::Input, state.a11y_attributes(), ())
+        .render(HtmlTag::Input, attributes, ())
 }
 
 /// What the trigger says it holds, and - for a multi-select - the chips that

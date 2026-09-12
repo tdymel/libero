@@ -7,8 +7,8 @@ use crate::{
         Box, ComboboxOption, HtmlTag, Input, States,
         common::{ChevronDownIcon, attr, field_props, input_from_str},
         form::{
-            ComboboxState, clear_button, combobox::COMBOBOX_DROPDOWN_SX, field_control_sx,
-            use_combobox, use_field, use_field_frame, use_refocus_on_close,
+            ComboboxState, PreparedField, clear_button, combobox::COMBOBOX_DROPDOWN_SX,
+            field_control_sx, use_combobox, use_field, use_field_frame, use_refocus_on_close,
         },
         layout::{BoxStyle, ScrollArea, use_box},
     },
@@ -441,7 +441,8 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
             controlled_id.clone(),
             descendant.clone(),
             props.search_placeholder.clone().unwrap_or_default(),
-            field.label_id(),
+            &field,
+            required,
         )
     });
 
@@ -459,10 +460,16 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     }));
 
     // ---- the trigger --------------------------------------------------
-    let trigger = cascader_trigger(
-        field
+    // While the search box is open it is the combobox, so it takes the field's
+    // wiring: a role-less trigger may not carry `aria-required` or `aria-expanded`.
+    let control = match searchable && opened {
+        true => control.attr("id", field.id().to_string()),
+        false => field
             .aria(control)
             .attr("aria-labelledby", field.label_id()),
+    };
+    let trigger = cascader_trigger(
+        control,
         Trigger {
             element: trigger_element,
             state,
@@ -523,8 +530,8 @@ fn option_id(id: &str, level: usize, index: usize) -> String {
 }
 
 /// Two elements cannot both be the combobox. While the search box is open it
-/// owns the role, `aria-controls` and `aria-activedescendant`; the trigger
-/// keeps only what says a list hangs off it.
+/// owns the role and the whole field wiring; the trigger keeps only what says
+/// a list hangs off it.
 fn trigger_aria(
     searchable: bool,
     opened: bool,
@@ -532,10 +539,7 @@ fn trigger_aria(
     descendant: Option<String>,
 ) -> Vec<Attribute> {
     if searchable && opened {
-        return vec![
-            attr("aria-haspopup", "listbox"),
-            attr("aria-expanded", "true"),
-        ];
+        return vec![attr("aria-haspopup", "listbox")];
     }
     let mut trigger = vec![
         attr("role", "combobox"),
@@ -1018,10 +1022,10 @@ fn search_header(
     controlled_id: String,
     descendant: Option<String>,
     placeholder: String,
-    // The field's label. While the box is open it is the combobox, so it is
-    // what a screen reader announces the field by - without this it was an
-    // unnamed combobox, measured in Chromium.
-    label_id: Option<String>,
+    // While the box is open it is the combobox, so it carries the field's
+    // label and captions - without them it was an unnamed combobox.
+    field: &PreparedField,
+    required: bool,
 ) -> Element {
     let CascaderSearch {
         element,
@@ -1042,7 +1046,10 @@ fn search_header(
         .attr("aria-haspopup", "listbox")
         .attr("aria-expanded", "true")
         .attr("aria-controls", controlled_id)
-        .attr("aria-labelledby", label_id)
+        .attr("aria-labelledby", field.label_id())
+        .attr("aria-describedby", field.describedby())
+        .attr("aria-invalid", field.invalid().then_some("true"))
+        .attr("aria-required", required.then_some("true"))
         .attr("aria-activedescendant", descendant)
         .event("oninput", move |event: FormEvent| {
             query.set(event.value());

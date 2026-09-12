@@ -44,6 +44,7 @@ mod notifications;
 mod number_field;
 mod pagination;
 mod picker_dialog;
+mod pin_field;
 mod planted;
 mod progress_bar;
 mod radio_group;

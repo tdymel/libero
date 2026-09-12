@@ -7,6 +7,12 @@ use e2e::{Fixture, Suite, Viewport, wait};
 const UPPER: &str = "document.querySelectorAll('[role=slider]')[1]";
 const READOUT: &str = "document.querySelector('#price-readout').textContent";
 
+/// Todo 483: the label, which names both thumbs, focuses the first.
+#[test]
+fn a_click_on_the_label_focuses_the_lower_thumb() {
+    crate::select::label_click_focuses("/range-slider", "[role=slider]");
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("range_slider", "/range-slider")

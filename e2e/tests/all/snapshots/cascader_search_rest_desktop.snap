@@ -1,0 +1,15 @@
+---
+source: e2e/src/suite.rs
+description: cascader_search at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Place"
+generic
+  StaticText "Where the parcel goes."
+generic
+  combobox "Place" [expanded=false] [haspopup=listbox] [invalid] [required]
+generic
+  StaticText "Cities only."
+generic
+  StaticText "Pick a place."

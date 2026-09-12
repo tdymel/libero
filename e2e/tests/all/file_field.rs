@@ -14,6 +14,12 @@ const SURFACE: &str = "[data-fixture-ready] [role=button]";
 const REMOVE_ALPHA: &str = "[aria-label=\"Remove alpha.txt\"]";
 const REMOVE_BETA: &str = "[aria-label=\"Remove beta.txt\"]";
 
+/// Todo 483: the label focuses the surface it names by id.
+#[test]
+fn a_click_on_the_label_focuses_the_surface() {
+    crate::select::label_click_focuses("/file-field", SURFACE);
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("file_field", "/file-field")

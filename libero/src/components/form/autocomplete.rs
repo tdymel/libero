@@ -143,7 +143,9 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .cloned()
         .collect();
 
+    // The label also names the listbox, which `for` cannot reach.
     let field = use_field()
+        .label_with_id()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
@@ -273,6 +275,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             radius,
             disabled: disabled || readonly,
             width: PopoverWidth::Match,
+            labelled_by: field.label_id(),
             {frame.render(input)}
         }
     };

@@ -12,6 +12,12 @@ const VALUE_NOW: &str = "document.querySelector('[role=slider]').getAttribute('a
 
 const THUMB: &str = "[role=slider]";
 
+/// Todo 483: the label focuses the thumb it names by id.
+#[test]
+fn a_click_on_the_label_focuses_the_thumb() {
+    crate::select::label_click_focuses("/slider", THUMB);
+}
+
 /// The generic battery.
 ///
 /// * **No `targets()`.** The thumb is drawn 16x16, and its 24x24 hit area is a

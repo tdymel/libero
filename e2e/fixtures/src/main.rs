@@ -63,6 +63,7 @@ mod notifications;
 mod number_field;
 mod pagination;
 mod picker_dialog;
+mod pin_field;
 mod planted;
 mod progress_bar;
 mod radio_group;
@@ -130,6 +131,7 @@ const FIXTURES: &[Routes] = &[
     number_field::ROUTES,
     pagination::ROUTES,
     picker_dialog::ROUTES,
+    pin_field::ROUTES,
     planted::ROUTES,
     progress_bar::ROUTES,
     radio_group::ROUTES,

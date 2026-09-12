@@ -130,6 +130,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
 
     let field = use_field()
         .labelled_by()
+        .names_group()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)

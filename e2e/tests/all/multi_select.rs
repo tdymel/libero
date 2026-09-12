@@ -13,6 +13,12 @@ pub const TRIGGER: &str = "[role=combobox]";
 const LISTBOX: &str = "[role=listbox]";
 const OPTION_COUNT: usize = 5;
 
+/// Todo 483: the label focuses the trigger it names by id.
+#[test]
+fn a_click_on_the_label_focuses_the_trigger() {
+    crate::select::label_click_focuses("/multi-select", TRIGGER);
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("multi_select", "/multi-select")

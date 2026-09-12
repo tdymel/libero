@@ -15,7 +15,7 @@ pub fn ButtonPage() -> Element {
                     .doc("Accent color; a theme color name or a literal CSS color."),
                 prop("variant", "Variant")
                     .default("filled")
-                    .doc("Visual style, in Material 3's descending emphasis order: `filled`, `tonal`, `elevated`, `outlined`, `text`."),
+                    .doc("Visual style, in Material 3's descending emphasis order: `filled`, `tonal`, `elevated`, `outlined`, `standard`."),
                 prop("radius", "Size")
                     .default("md")
                     .doc("Corner radius, independent of size."),
@@ -59,15 +59,23 @@ pub fn ButtonPage() -> Element {
                     Control::color("color"),
                     Control::toggle(
                         "variant",
-                        ["filled", "tonal", "elevated", "outlined", "text"],
+                        ["filled", "tonal", "elevated", "outlined", "standard"],
                     )
-                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Text"]),
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::switch("full_width"),
-                    Control::switch("selected"),
+                    // Off is still a toggle (`aria-pressed="false"`); unset
+                    // is a plain action.
+                    Control::toggle("selected", ["unset", "false", "true"])
+                        .labels(["Unset", "Off", "On"])
+                        .default("unset")
+                        .code(|_, values| match values.str("selected").as_str() {
+                            "unset" => vec![],
+                            value => vec![format!("selected: {value}")],
+                        }),
                     Control::switch("disabled"),
                     Control::switch("loading"),
                     // `to` and `target` together, since the preview's link
@@ -99,10 +107,9 @@ pub fn ButtonPage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         full_width: values.str("full_width") == "true",
-                        // `Some(false)` is still a toggle button
-                        // (`aria-pressed="false"`); unset is not.
                         selected: match values.str("selected").as_str() {
                             "true" => Some(true),
+                            "false" => Some(false),
                             _ => None,
                         },
                         disabled: values.str("disabled") == "true",

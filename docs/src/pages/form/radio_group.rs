@@ -203,6 +203,7 @@ pub fn RadioGroupPage() -> Element {
                     }),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("readonly"),
                     // The flag lives inside `options`, so the switch stands
                     // for one named option rather than for a prop of its own.
                     Control::switch("disabled_option").code(|_, values| {
@@ -233,6 +234,7 @@ pub fn RadioGroupPage() -> Element {
                         },
                         required: is_on(&values, "required").then_some(true),
                         disabled: is_on(&values, "disabled").then_some(true),
+                        readonly: is_on(&values, "readonly").then_some(true),
                         options: plan_options(&values),
                         value: plan(),
                         onchange: move |next| plan.set(Some(next)),
