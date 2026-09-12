@@ -27,10 +27,10 @@ const RATIO: &str = "((a, b) => {
 })";
 
 /// WCAG 1.4.11: an off switch is its track and thumb alone, so the track must
-/// part from the page and the thumb from the track at 3:1. The off track was
-/// `muted.3`, 1.3:1 on a white page, where Checkbox and Radio draw `muted.5`.
+/// part from the page and the thumb from the track at 3:1. The off track is
+/// `muted.3`, 1.3:1 on a white page; `muted.6` reaches 3.3:1.
 #[test]
-#[ignore = "todo 490: the off track stays muted.3 until the Maintainer decides"]
+#[ignore = "todo 490: the off-state colour is the Maintainer's call"]
 fn an_off_switch_parts_from_the_page() {
     block_on(async {
         for scheme in [Scheme::Light, Scheme::Dark] {
