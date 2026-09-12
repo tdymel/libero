@@ -87,7 +87,9 @@ fn switch_variables(checked: bool, base: &ThemeAwareValue) -> String {
             if checked {
                 fill_color(base)
             } else {
-                ThemeAwareValue::from("muted.3").resolve(None)
+                // WCAG 1.4.11: 3.3:1 on a white page and ~5:1 on the dark
+                // surface, where `muted.3` read 1.3:1 on white.
+                ThemeAwareValue::from("muted.6").resolve(None)
             },
         )
         .with(SWITCH_ON, Some(if checked { "1" } else { "0" }.to_string()))

@@ -1,0 +1,25 @@
+---
+source: e2e/src/suite.rs
+description: switch at mobile (rest)
+expression: tree
+---
+switch "Notifications" [checked=false]
+generic
+  StaticText "About once a month."
+generic
+  StaticText "You can turn this off later."
+generic
+  StaticText "Changes 0"
+switch "Accept terms" [checked=false] [invalid]
+LabelText
+  StaticText "Accept terms"
+generic
+  StaticText "Turn this on to continue."
+switch "Wi-Fi" [checked=false]
+switch "Locked" [checked]
+switch "Disabled" [checked=false] [disabled]
+generic
+  switch "Bluetooth" [checked=false]
+  generic
+    StaticText "Finds nearby devices."
+switch "Uncontrolled" [checked=false]

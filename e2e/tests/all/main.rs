@@ -55,6 +55,7 @@ mod slider;
 mod splitter;
 mod spotlight;
 mod stepper;
+mod switch;
 mod table;
 mod tabs;
 mod tags_field;

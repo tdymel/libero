@@ -74,6 +74,7 @@ mod slider;
 mod splitter;
 mod spotlight;
 mod stepper;
+mod switch;
 mod table;
 mod tabs;
 mod tags_field;
@@ -138,6 +139,7 @@ const FIXTURES: &[Routes] = &[
     spotlight::ROUTES,
     splitter::ROUTES,
     stepper::ROUTES,
+    switch::ROUTES,
     table::ROUTES,
     tabs::ROUTES,
     tags_field::ROUTES,
