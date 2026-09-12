@@ -171,3 +171,147 @@ async fn reopen_the_submenu(page: &chromiumoxide::Page) -> anyhow::Result<()> {
     )
     .await
 }
+
+const FOCUS_ON_CUT: &str = "document.activeElement?.textContent.trim() === 'Cut'";
+
+/// Todo 449: a click on a group's name focuses the menu box itself, which
+/// answered no key, so the arrows were dead until Tab.
+#[test]
+fn the_arrows_work_after_a_click_on_a_group_name() {
+    block_on(async {
+        let fixture = Fixture::open("/menu", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_js_true(page, FOCUS_ON_CUT, "focus on Cut").await?;
+            pointer::click(page, "[data-menu-group-label]").await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.getAttribute('role') === 'menu'",
+                "focus on the menu box",
+            )
+            .await?;
+            keyboard::press(page, keyboard::ARROW_DOWN).await?;
+            wait::for_js_true(page, FOCUS_ON_CUT, "ArrowDown onto the first item").await?;
+            keyboard::press(page, keyboard::END).await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.textContent.trim() === 'Share'",
+                "End onto the last item",
+            )
+            .await
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
+/// Todo 449: Alt+ArrowDown on the trigger opened the menu, default prevented.
+/// Alt+ArrowLeft (Back) in a submenu must not close it either.
+#[test]
+fn chords_on_the_trigger_and_in_a_submenu_go_to_the_browser() {
+    block_on(async {
+        let fixture = Fixture::open("/menu", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.evaluate(
+            "window.__prevented = []; \
+             window.addEventListener('keydown', e => { if (e.altKey) window.__prevented.push(e.defaultPrevented) })",
+        )
+        .await
+        .unwrap();
+        let focus_on =
+            |text: &str| format!("document.activeElement?.textContent.trim() === '{text}'");
+        let outcome = async {
+            keyboard::tab_to(page, TRIGGER, 10).await?;
+            keyboard::press_with(page, keyboard::ARROW_DOWN, keyboard::ALT).await?;
+            // Opening would have focused an item by now.
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            wait::for_js_true(page, &focus_on("Actions"), "the menu left closed").await?;
+
+            keyboard::press(page, keyboard::ARROW_UP).await?;
+            wait::for_js_true(page, &focus_on("Share"), "focus on Share").await?;
+            keyboard::press(page, keyboard::ARROW_RIGHT).await?;
+            wait::for_js_true(page, &focus_on("Email"), "focus in the submenu").await?;
+            keyboard::press_with(page, keyboard::ARROW_LEFT, keyboard::ALT).await?;
+            std::thread::sleep(std::time::Duration::from_millis(300));
+            wait::for_js_true(page, &focus_on("Email"), "the submenu left open").await?;
+            wait::for_js_true(
+                page,
+                "window.__prevented.length === 2 && !window.__prevented.some(Boolean)",
+                "no chord's default prevented",
+            )
+            .await
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
+/// Todo 449, 1.4.10: a label wider than a phone was cut off with an ellipsis.
+#[test]
+fn a_long_label_wraps_inside_the_viewport() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-choices", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_visible(page, MENU).await?;
+            wait::for_js_true(
+                page,
+                "(() => { \
+                   const menu = document.querySelector('[role=menu]').getBoundingClientRect(); \
+                   const labels = [...document.querySelectorAll('[data-menu-label]')]; \
+                   return menu.right <= innerWidth \
+                     && document.documentElement.scrollWidth <= innerWidth \
+                     && labels.every(l => l.scrollWidth <= l.clientWidth); \
+                 })()",
+                "every label shown whole inside the viewport",
+            )
+            .await
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
+/// A checked radio item is where the menu opens, and Space picks another.
+#[test]
+fn a_menu_of_choices_opens_on_the_checked_one() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-choices", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.getAttribute('role') === 'menuitemradio' \
+                 && document.activeElement.getAttribute('aria-checked') === 'true' \
+                 && document.activeElement.textContent.trim() === 'Name'",
+                "focus on the checked Name",
+            )
+            .await?;
+            keyboard::press(page, keyboard::ARROW_DOWN).await?;
+            keyboard::press(page, keyboard::SPACE).await?;
+            wait::for_js_true(
+                page,
+                "document.querySelector('#sort').textContent === 'Date'",
+                "Date picked",
+            )
+            .await
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}

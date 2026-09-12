@@ -102,9 +102,11 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
             "& [data-menu-index][aria-disabled=\"true\"]",
             sx().color("muted.5").cursor("not-allowed"),
         )
+        // Wraps rather than truncates once the box meets the viewport's edge:
+        // an ellipsis hides the label from sighted users (1.4.10).
         .selector(
             "& [data-menu-label]",
-            sx().flex("1").overflow("hidden").text_overflow("ellipsis"),
+            sx().flex("1").padding("4px 0").white_space("normal"),
         )
         .selector(
             "& [data-menu-section]",
@@ -212,7 +214,8 @@ pub fn Menu(props: MenuProps) -> Element {
                     }
                 })
                 .event("onkeydown", move |event: KeyboardEvent| {
-                    if disabled {
+                    // Alt+ArrowDown and the like are the browser's or the page's.
+                    if disabled || has_shortcut_modifier(&event) {
                         return;
                     }
                     match event.key() {
@@ -367,6 +370,26 @@ impl Level {
             .query_selector("[aria-haspopup=\"menu\"]")
             .and_then(|trigger| trigger.focus());
         self.close_all.call(false);
+    }
+
+    /// Keys on the box itself, which a click on a group label, a separator or
+    /// the padding focuses. An item's own keys bubble here too and pass.
+    fn box_keydown(self, event: KeyboardEvent) {
+        if !self.floating.is_focused() || self.len == 0 || has_shortcut_modifier(&event) {
+            return;
+        }
+        match event.key() {
+            Key::ArrowDown | Key::Home => {
+                event.prevent_default();
+                self.focus(0);
+            }
+            Key::ArrowUp | Key::End => {
+                event.prevent_default();
+                self.focus(self.len - 1);
+            }
+            Key::Tab => self.tab_out(),
+            _ => {}
+        }
     }
 
     fn choose(self, index: usize, onselect: Option<Callback<()>>, submenu: bool) {
@@ -829,6 +852,9 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
             })
             // Leaving the box abandons whatever the pointer was waiting on.
             .event("onmouseleave", move |_: MouseEvent| hover.cancel())
+            .event("onkeydown", move |event: KeyboardEvent| {
+                level.box_keydown(event)
+            })
             .render(HtmlTag::Div, attributes, rows)
     }));
 

@@ -9,7 +9,40 @@ pub const ROUTES: Routes = &[
     ("/menu", || rsx! { MenuPage {} }),
     ("/menu-open-on-mount", || rsx! { MenuOpenOnMountPage {} }),
     ("/menu-submenu-reopen", || rsx! { MenuSubmenuReopenPage {} }),
+    ("/menu-choices", || rsx! { MenuChoicesPage {} }),
 ];
+
+/// Radio items with one checked, and a label longer than a phone is wide.
+#[component]
+fn MenuChoicesPage() -> Element {
+    let menu = use_menu();
+    let mut sort = use_signal(|| "Name");
+    let choice = move |label: &'static str| {
+        MenuItem::new(label)
+            .checked(sort() == label)
+            .onselect(move |_| sort.set(label))
+            .into()
+    };
+    let items = vec![
+        MenuEntry::Group {
+            label: "Sort by".into(),
+            items: vec![choice("Name"), choice("Date"), choice("Size")],
+        },
+        MenuEntry::Separator,
+        MenuItem::new("Export every selected row as a comma separated values file")
+            .onselect(|_| {})
+            .into(),
+    ];
+
+    rsx! {
+        p { id: "sort", "{sort}" }
+        Menu {
+            state: menu,
+            items,
+            Button { variant: "outlined", attributes: menu.a11y_attributes(), "View" }
+        }
+    }
+}
 
 /// A group, a separator, a disabled item and a submenu - the shapes a menu's
 /// accessibility tree can take.
