@@ -777,8 +777,6 @@ pub fn Carousel(props: CarouselProps) -> Element {
         .clone()
         .unwrap_or_else(|| theme.carousel.label.to_string());
 
-    let nav = state.nav;
-    let settled = nav.settled;
     let root_states: Input<States> = props
         .states
         .clone()
@@ -788,9 +786,6 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let variables: Input<Variables> =
         carousel_variables(per_view, props.gap.as_ref().copied(), props.height.as_ref()).into();
 
-    let (position, positions) = snap_position(settled(), count, first, last, nav.clones > 0);
-    let status = CarouselDefaults::format_label(theme.carousel.status_label, position, positions);
-    let running = state.running;
     // Blitz's Tab fires neither `focusin` nor `focusout`: the silent move does.
     use_silent_focus_within(root_handle, move |within| {
         let mut focused = state.focused;
@@ -832,28 +827,19 @@ pub fn Carousel(props: CarouselProps) -> Element {
         props.attributes,
         rsx! {
             if !empty {
-                VisuallyHidden {
-                    id: status_id(),
-                    role: "status",
-                    // Off while it rotates on its own: an unattended change is not
-                    // worth interrupting a screen reader for, and it becomes
-                    // `polite` the moment the rotation stops. WCAG 2.2.2.
-                    aria_live: if running { "off" } else { "polite" },
-                    aria_atomic: "true",
-                    "{status}"
-                }
+                CarouselStatus { view }
             }
             Box { framework_sx: &CAROUSEL_VIEWPORT_SX,
                 {carousel_track(view, aria_label, props.draggable, drag, body)}
                 if controls {
-                    {carousel_controls(view)}
+                    CarouselControls { view }
                 }
             }
             if props.autoplay && !empty {
                 {carousel_pause_button(view)}
             }
             if indicators {
-                {carousel_indicators(view)}
+                CarouselIndicators { view }
             }
         },
     )
@@ -887,7 +873,7 @@ struct CarouselSetup {
 /// three reasons autoplay pauses, and the drag. Every effect that moves the
 /// strip lives in [`use_carousel_state`], so the component body is left with
 /// rendering.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 struct CarouselState {
     nav: Nav,
     paused: Signal<bool>,
@@ -904,7 +890,7 @@ struct CarouselState {
 
 /// One argument for every part of the carousel's chrome: the resolved props,
 /// the live state, the theme block and the ids.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 struct CarouselView {
     setup: CarouselSetup,
     state: CarouselState,
@@ -1175,11 +1161,8 @@ fn carousel_slides(
         ..
     } = view;
     let nav = state.nav;
-    let track = setup.track;
     let count = setup.count;
     let clones = nav.clones;
-    let current = nav.current;
-    let settled = nav.settled;
 
     let label_for = move |index: usize| match &slide_label {
         Some(label) => label.call(index),
@@ -1198,56 +1181,98 @@ fn carousel_slides(
         strip.push((index, slide.clone(), true));
     }
 
-    // Where the strip rests, for `inert`: `settled`, never `current`, or the
-    // slides would flip on every scroll frame. A controlled index the effect
-    // has not applied yet counts already, so the slide a caller moves to is
-    // live in the same render - `Lightbox` focuses its picture from an effect
-    // of its own, which may run before ours.
-    let rest = match setup.controlled {
-        Some(index) if Some(index) != *state.applied.peek() => nav.clamp_index(index),
-        _ => settled(),
-    };
-    let rest = nav.raw_for(rest);
-    let strip_len = nav.strip_count();
-
     strip
         .into_iter()
         .enumerate()
         .map(|(position, (index, slide, is_clone))| {
-            // No `current` token: nothing in `CAROUSEL_SLIDE_SX` styles one,
-            // and `data-current` below is what a caller actually reads.
-            let slide_states: Input<States> = states().with(setup.align.state_name(), true).into();
-            // Wholly offscreen at rest: out of the Tab order and the reading
-            // order. A press on it still reaches the track (measured).
-            let hidden = outside_viewport(position, rest, strip_len, setup.per_view, setup.align);
+            let label = (!is_clone).then(|| label_for(index));
             rsx! {
-                Box {
+                CarouselSlide {
                     key: "{position}",
-                    framework_sx: &CAROUSEL_SLIDE_SX,
-                    states: slide_states,
-                    role: if is_clone { None } else { Some("group") },
-                    aria_roledescription: if is_clone { None } else { Some("slide") },
-                    aria_label: if is_clone { None } else { Some(label_for(index)) },
-                    // A clone is the same content twice over, so it is hidden
-                    // rather than announced a second time.
-                    aria_hidden: is_clone.then(|| "true".to_string()),
-                    inert: hidden.then_some(true),
-                    // Focus inside a slide that has just gone `inert` - the
-                    // wheel, a drag, a native arrow on a button, a caller's
-                    // index - is blurred by the browser and lands on `<body>`.
-                    // The track takes it instead: it is what the keyboard
-                    // was on, one level up.
-                    onfocusout: move |_| {
-                        if hidden {
-                            let _ = track.element.focus();
-                        }
-                    },
-                    "data-current": (!is_clone && index == current()).then_some("true"),
-                    {slide}
+                    nav,
+                    controlled: setup.controlled,
+                    applied: state.applied,
+                    position,
+                    index,
+                    is_clone,
+                    label,
+                    slide,
                 }
             }
         })
         .collect()
+}
+
+/// One slide group. Its own scope, so a move redraws only the slides whose
+/// `data-current` or `inert` flips, not the track and every slide.
+#[component]
+fn CarouselSlide(
+    slide: Element,
+    nav: Nav,
+    controlled: Option<usize>,
+    applied: Signal<Option<usize>>,
+    position: usize,
+    index: usize,
+    is_clone: bool,
+    label: Option<String>,
+) -> Element {
+    let flags =
+        use_memo(use_reactive!(|nav,
+                                controlled,
+                                position,
+                                index,
+                                is_clone| {
+            // Where the strip rests, for `inert`: `settled`, never `current`, or the
+            // slides would flip on every scroll frame. A controlled index the effect
+            // has not applied yet counts already, so the slide a caller moves to is
+            // live in the same render - `Lightbox` focuses its picture from an effect
+            // of its own, which may run before ours.
+            let rest = match controlled {
+                Some(held) if Some(held) != *applied.peek() => nav.clamp_index(held),
+                _ => (nav.settled)(),
+            };
+            // Wholly offscreen at rest: out of the Tab order and the reading
+            // order. A press on it still reaches the track (measured).
+            let hidden = outside_viewport(
+                position,
+                nav.raw_for(rest),
+                nav.strip_count(),
+                nav.per_view,
+                nav.align,
+            );
+            (hidden, !is_clone && index == (nav.current)())
+        }));
+    let (hidden, current) = flags();
+    let track = nav.track;
+    // No `current` token: nothing in `CAROUSEL_SLIDE_SX` styles one, and
+    // `data-current` below is what a caller actually reads.
+    let slide_states: Input<States> = states().with(nav.align.state_name(), true).into();
+
+    rsx! {
+        Box {
+            framework_sx: &CAROUSEL_SLIDE_SX,
+            states: slide_states,
+            role: if is_clone { None } else { Some("group") },
+            aria_roledescription: if is_clone { None } else { Some("slide") },
+            aria_label: label,
+            // A clone is the same content twice over, so it is hidden
+            // rather than announced a second time.
+            aria_hidden: is_clone.then(|| "true".to_string()),
+            inert: hidden.then_some(true),
+            // Focus inside a slide that has just gone `inert` - the
+            // wheel, a drag, a native arrow on a button, a caller's
+            // index - is blurred by the browser and lands on `<body>`.
+            // The track takes it instead: it is what the keyboard
+            // was on, one level up.
+            onfocusout: move |_| {
+                if hidden {
+                    let _ = track.element.focus();
+                }
+            },
+            "data-current": current.then_some("true"),
+            {slide}
+        }
+    }
 }
 
 /// The scroll container, which is also the carousel's tab stop: the strip, the
@@ -1432,8 +1457,33 @@ fn track_key_target(key: Key, orientation: Orientation, nav: Nav, current: usize
 }
 
 /// The previous/next pair, over the viewport. A looping carousel has no ends,
-/// so its controls never disable.
-fn carousel_controls(view: CarouselView) -> Element {
+/// so its controls never disable. Its own scope, as the status and the dots:
+/// only these read `current`/`settled`, so a move skips the track.
+#[component]
+fn CarouselControls(view: CarouselView) -> Element {
+    let CarouselView { setup, state, .. } = view;
+    let current = state.nav.current;
+    let looping = state.nav.clones > 0;
+    let (first, last) = (setup.first, setup.last);
+    // Memos the strip hands down unread, so a move redraws only the button
+    // whose end flipped.
+    let at_start = use_memo(use_reactive!(
+        |looping, first| !looping && current() <= first
+    ));
+    let at_end = use_memo(use_reactive!(|looping, last| !looping && current() >= last));
+    let strip_states: Input<States> = states().with(setup.orientation.state_name(), true).into();
+
+    rsx! {
+        Box { framework_sx: &CAROUSEL_CONTROLS_SX, states: strip_states,
+            CarouselControl { view, forward: false, disabled: at_start }
+            CarouselControl { view, forward: true, disabled: at_end }
+        }
+    }
+}
+
+/// One control. Disabled by `aria-disabled` at its end, so it keeps its tab stop.
+#[component]
+fn CarouselControl(view: CarouselView, forward: bool, disabled: Memo<bool>) -> Element {
     let CarouselView {
         setup,
         state,
@@ -1446,55 +1496,72 @@ fn carousel_controls(view: CarouselView) -> Element {
     let orientation = setup.orientation;
     let current = nav.current;
     let looping = nav.clones > 0;
-    let at_start = !looping && current() <= setup.first;
-    let at_end = !looping && current() >= setup.last;
-    let control_states = |disabled: bool| -> Input<States> {
-        states()
-            .with(orientation.state_name(), true)
-            .with("disabled", disabled)
-            .into()
-    };
-    let strip_states: Input<States> = states().with(orientation.state_name(), true).into();
-    let track_id_value = track_id();
+    let disabled = disabled();
+    let control_states: Input<States> = states()
+        .with(orientation.state_name(), true)
+        .with("disabled", disabled)
+        .into();
 
     rsx! {
-        Box { framework_sx: &CAROUSEL_CONTROLS_SX, states: strip_states,
-            Box {
-                component: "button",
-                r#type: "button",
-                framework_sx: &CAROUSEL_CONTROL_SX,
-                states: control_states(at_start),
-                aria_controls: track_id_value.clone(),
-                aria_disabled: at_start.to_string(),
-                aria_label: theme.previous_label,
-                onclick: move |_| match (looping, current()) {
-                    (true, 0) => nav.go_to(count.saturating_sub(1)),
-                    (_, index) if !at_start => nav.go_to(index.saturating_sub(1)),
-                    _ => {}
-                },
-                {match orientation {
-                    Orientation::Horizontal => rsx! { ChevronLeftIcon {} },
-                    Orientation::Vertical => rsx! { ChevronUpIcon {} },
-                }}
-            }
-            Box {
-                component: "button",
-                r#type: "button",
-                framework_sx: &CAROUSEL_CONTROL_SX,
-                states: control_states(at_end),
-                aria_controls: track_id_value.clone(),
-                aria_disabled: at_end.to_string(),
-                aria_label: theme.next_label,
-                onclick: move |_| match looping && current() >= count.saturating_sub(1) {
-                    true => nav.go_to(0),
-                    false if !at_end => nav.go_to(current() + 1),
-                    false => {}
-                },
-                {match orientation {
-                    Orientation::Horizontal => rsx! { ChevronRightIcon {} },
-                    Orientation::Vertical => rsx! { ChevronDownIcon {} },
-                }}
-            }
+        Box {
+            component: "button",
+            r#type: "button",
+            framework_sx: &CAROUSEL_CONTROL_SX,
+            states: control_states,
+            aria_controls: track_id(),
+            aria_disabled: disabled.to_string(),
+            aria_label: if forward { theme.next_label } else { theme.previous_label },
+            onclick: move |_| {
+                let index = *current.peek();
+                match (forward, looping) {
+                    (false, true) if index == 0 => nav.go_to(count.saturating_sub(1)),
+                    (true, true) if index >= count.saturating_sub(1) => nav.go_to(0),
+                    _ if disabled => {}
+                    (false, _) => nav.go_to(index.saturating_sub(1)),
+                    (true, _) => nav.go_to(index + 1),
+                }
+            },
+            {match (orientation, forward) {
+                (Orientation::Horizontal, false) => rsx! { ChevronLeftIcon {} },
+                (Orientation::Vertical, false) => rsx! { ChevronUpIcon {} },
+                (Orientation::Horizontal, true) => rsx! { ChevronRightIcon {} },
+                (Orientation::Vertical, true) => rsx! { ChevronDownIcon {} },
+            }}
+        }
+    }
+}
+
+/// The live region: where the strip settled, out of the places it can rest.
+#[component]
+fn CarouselStatus(view: CarouselView) -> Element {
+    let CarouselView {
+        setup,
+        state,
+        theme,
+        status_id,
+        ..
+    } = view;
+    let nav = state.nav;
+    let settled = nav.settled;
+    let (position, positions) = snap_position(
+        settled(),
+        setup.count,
+        setup.first,
+        setup.last,
+        nav.clones > 0,
+    );
+    let status = CarouselDefaults::format_label(theme.status_label, position, positions);
+
+    rsx! {
+        VisuallyHidden {
+            id: status_id(),
+            role: "status",
+            // Off while it rotates on its own: an unattended change is not
+            // worth interrupting a screen reader for, and it becomes
+            // `polite` the moment the rotation stops. WCAG 2.2.2.
+            aria_live: if state.running { "off" } else { "polite" },
+            aria_atomic: "true",
+            "{status}"
         }
     }
 }
@@ -1525,7 +1592,8 @@ fn carousel_pause_button(view: CarouselView) -> Element {
 /// The dot strip: one dot per reachable position, which under a centred or end
 /// alignment does not start at zero. A looping carousel is one dot per real
 /// slide instead.
-fn carousel_indicators(view: CarouselView) -> Element {
+#[component]
+fn CarouselIndicators(view: CarouselView) -> Element {
     let CarouselView {
         setup,
         state,

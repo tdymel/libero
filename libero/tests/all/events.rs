@@ -11,11 +11,11 @@ use libero::{
     LiberoProvider,
     chrono::NaiveTime,
     components::{
-        ActionIcon, Box, Button, Checkbox, Chip, CodeBlock, Collapse, ColorCode, ColorField,
-        Dialog, FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NativeSelect, NumberField,
-        OptionList, Options, PasswordField, PhoneField, PinField, RadioGroup, RangeSlider, Rule,
-        SegmentedControl, SelectionArgs, Slider, SliderChangeEvent, Table, Tabs, TagsField,
-        TextField, TimePicker, Tree, TreeNode, column, not_empty, use_form, use_menu,
+        ActionIcon, Box, Button, Carousel, Checkbox, Chip, CodeBlock, Collapse, ColorCode,
+        ColorField, Dialog, FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NativeSelect,
+        NumberField, OptionList, Options, PasswordField, PhoneField, PinField, RadioGroup,
+        RangeSlider, Rule, SegmentedControl, SelectionArgs, Slider, SliderChangeEvent, Table, Tabs,
+        TagsField, TextField, TimePicker, Tree, TreeNode, column, not_empty, use_form, use_menu,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -778,6 +778,44 @@ fn a_failed_copy_is_announced() {
     };
     assert!(!status(&before).contains("Copy failed"), "{before}");
     assert!(status(&after).contains("Copy failed"), "{after}");
+}
+
+/// A control click reaches every scope that reads the index: the status, both
+/// controls, and `data-current`/`inert` on the two slides that swap.
+#[test]
+fn a_carousel_control_click_redraws_every_reader_of_the_index() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel {
+                    aria_label: "c",
+                    controls: true,
+                    indicators: false,
+                    slides: (0..3).map(|i| rsx! { div { "slide {i}" } }).collect(),
+                }
+            }
+        }
+    }
+
+    // The last click listener is the next control.
+    let (before, after) = click_the_last_listener(app);
+    let slide = |html: &str, n: usize| {
+        let at = html.find(&format!(r#"aria-label="{n} of 3""#)).unwrap();
+        let start = html[..at].rfind('<').unwrap();
+        html[start..at + html[at..].find('>').unwrap()].to_string()
+    };
+    for (html, current, gone) in [(&before, 1, 2), (&after, 2, 1)] {
+        assert!(html.contains(&format!("Slide {current} of 3")), "{html}");
+        assert!(
+            slide(html, current).contains(r#"data-current="true""#),
+            "{html}"
+        );
+        assert!(!slide(html, current).contains("inert"), "{html}");
+        assert!(!slide(html, gone).contains("data-current"), "{html}");
+        assert!(slide(html, gone).contains("inert"), "{html}");
+    }
+    assert_eq!(before.matches(r#"aria-disabled="true""#).count(), 1);
+    assert_eq!(after.matches(r#"aria-disabled="true""#).count(), 0);
 }
 
 /// The reveal button flips the input's `type` and its own name, both ways.
