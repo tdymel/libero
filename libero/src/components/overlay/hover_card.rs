@@ -214,6 +214,8 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         .prepare();
 
     if props.disabled.unwrap_or(false) {
+        // The slot outlives this branch: a card open when disabled would stay up.
+        popover.show(None);
         return props.children;
     }
 

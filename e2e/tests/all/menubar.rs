@@ -109,3 +109,36 @@ fn switching_menus_by_pointer_logs_nothing() {
         outcome.unwrap();
     });
 }
+
+/// Todo 449: Alt+ArrowRight (Forward) moved along the bar with the browser's
+/// default prevented. No chord may move along the bar or open a menu.
+#[test]
+fn shortcut_chords_pass_through() {
+    block_on(async {
+        let fixture = Fixture::open("/menubar", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            keyboard::tab_to(page, FIRST, 10).await?;
+            keyboard::assert_chords_ignored(
+                page,
+                &[
+                    keyboard::ARROW_RIGHT,
+                    keyboard::ARROW_LEFT,
+                    keyboard::ARROW_DOWN,
+                    keyboard::ARROW_UP,
+                    keyboard::HOME,
+                    keyboard::END,
+                ],
+                &format!(
+                    "[document.activeElement?.getAttribute('data-menubar-index'), \
+                     !!document.querySelector('{MENU}')]"
+                ),
+            )
+            .await
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}

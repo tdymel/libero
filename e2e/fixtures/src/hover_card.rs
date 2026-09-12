@@ -11,7 +11,27 @@ pub const ROUTES: Routes = &[
         "/hover-card-color-field",
         || rsx! { ColorFieldInCardPage {} },
     ),
+    ("/hover-card-disable", || rsx! { DisableWhileOpenPage {} }),
 ];
+
+/// A card forced open, and a button that disables it (todo 449).
+#[component]
+fn DisableWhileOpenPage() -> Element {
+    let mut disabled = use_signal(|| false);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "disable", onclick: move |_| disabled.set(true), "Disable" }
+            HoverCard {
+                aria_label: "Ada Lovelace",
+                id: "card",
+                open: true,
+                disabled: disabled(),
+                content: rsx! { Text { "Wrote the first algorithm meant for a machine." } },
+                Button { id: "trigger", "Ada Lovelace" }
+            }
+        }
+    }
+}
 
 /// A card with two controls, between two buttons so Tab has somewhere to come
 /// from and to go to past the trigger. Its delays are values nothing else on

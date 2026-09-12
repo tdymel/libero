@@ -269,3 +269,29 @@ fn a_second_click_does_not_swallow_the_next_keyboard_focus() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 449: `disabled` returned before the card's portal slot was told, so an
+/// open card stayed on the page.
+#[test]
+fn disabling_an_open_card_removes_it() {
+    block_on(async {
+        let fixture = Fixture::open("/hover-card-disable", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, COLOR_CARD).await.unwrap();
+        pointer::click(page, "#disable").await.unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('#card')",
+            "the disabled card left the page",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("disabling an open hover card")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
