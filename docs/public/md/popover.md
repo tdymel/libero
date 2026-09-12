@@ -16,14 +16,15 @@ shown later paints over the earlier.
 
 ## Usage
 
-The trigger's aria and its Escape are the consumer's, so this snippet carries both - see
-[Accessibility](#accessibility).
+The trigger's aria, the box's focus and its Escape are the consumer's, so this
+snippet carries them - see [Accessibility](#accessibility).
 
 ```rust
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button},
     hooks::{use_element, use_id, use_popover, Align, PopoverOptions, Side},
+    platform::ElementApi,
     sx::sx,
     use_theme,
 };
@@ -45,12 +46,37 @@ fn Demo() -> Element {
     );
     let floating = *popover.floating();
 
+    // A dialog takes focus once placed, once per opening.
+    let mut entered = use_signal(|| false);
+    use_effect(move || match (opened(), popover.placed()) {
+        (true, true) if !*entered.peek() => {
+            entered.set(true);
+            let _ = floating.focus();
+        }
+        (false, _) => entered.set(false),
+        _ => {}
+    });
+    // Escape and Tab close it and hand focus back to the trigger.
+    let mut close = move |event: &KeyboardEvent| {
+        opened.set(false);
+        let _ = anchor.focus();
+        if event.key() == Key::Escape || event.modifiers().shift() {
+            event.prevent_default();
+        }
+    };
+
     popover.show(opened().then(|| rsx! {
         Box {
             id: "{box_id}",
             // Plain text, so a dialog: a listbox has to hold options.
             role: "dialog",
             aria_label: "Example popover",
+            tabindex: "-1",
+            onkeydown: move |event: KeyboardEvent| {
+                if matches!(event.key(), Key::Escape | Key::Tab) {
+                    close(&event);
+                }
+            },
             style: popover.style(),
             onmounted: floating.mount(),
             sx: sx().background("surface").padding("var(--lsx-popover-padding)"),
@@ -62,8 +88,8 @@ fn Demo() -> Element {
         Button {
             onmounted: anchor.mount(),
             onclick: move |_| opened.toggle(),
-            // Focus stays on the trigger and the box is portaled, so the
-            // trigger is where Escape and Tab arrive.
+            // Focus is back here after a click that closed the box, or
+            // before the box is placed.
             onkeydown: move |event: KeyboardEvent| match event.key() {
                 Key::Escape if opened() => {
                     event.prevent_default();
@@ -76,7 +102,8 @@ fn Demo() -> Element {
             // The same signal the hook is given, never a second copy.
             aria_expanded: "{opened()}",
             aria_controls: "{box_id}",
-            "Open popover"
+            // One name; `aria-expanded` says whether it is open.
+            "Popover"
         }
     }
 }

@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Box, Button, Code, CodeBlock, Text},
     hooks::{Align, PopoverOptions, PopoverWidth, Side, use_element, use_id, use_popover},
+    platform::ElementApi,
     sx::sx,
     use_theme,
 };
@@ -140,6 +141,28 @@ fn PopoverDemo(
     let popover = use_popover(anchor, opened(), options);
     let floating = *popover.floating();
 
+    // A dialog takes focus once it opens, but only once placed: until then it
+    // is `visibility: hidden` and `focus()` moves nothing. Once per opening, so
+    // a re-measure does not pull focus back from a control on the page.
+    let mut entered = use_signal(|| false);
+    use_effect(move || match (opened(), popover.placed()) {
+        (true, true) if !*entered.peek() => {
+            entered.set(true);
+            let _ = floating.focus();
+        }
+        (false, _) => entered.set(false),
+        _ => {}
+    });
+    // Escape and Tab close it and hand focus back to the trigger; forwards,
+    // the browser's own Tab then moves on from there.
+    let mut close = move |event: &KeyboardEvent| {
+        opened.set(false);
+        let _ = anchor.focus();
+        if event.key() == Key::Escape || event.modifiers().shift() {
+            event.prevent_default();
+        }
+    };
+
     popover.show(opened().then(|| {
         rsx! {
             Box {
@@ -148,6 +171,12 @@ fn PopoverDemo(
                 // hold options.
                 role: "dialog",
                 aria_label: "Example popover",
+                tabindex: "-1",
+                onkeydown: move |event: KeyboardEvent| {
+                    if matches!(event.key(), Key::Escape | Key::Tab) {
+                        close(&event);
+                    }
+                },
                 style: popover.style(),
                 onmounted: floating.mount(),
                 sx: sx()
@@ -168,8 +197,8 @@ fn PopoverDemo(
             Button {
                 onmounted: anchor.mount(),
                 onclick: move |_| opened.toggle(),
-                // Focus never leaves the trigger, and the box is portaled, so
-                // the trigger is where Escape and Tab arrive.
+                // Focus is back here after a click that closed the box, or
+                // before the box is placed.
                 onkeydown: move |event: KeyboardEvent| match event.key() {
                     Key::Escape if opened() => {
                         event.prevent_default();
@@ -184,7 +213,8 @@ fn PopoverDemo(
                 aria_expanded: "{opened()}",
                 aria_controls: "{box_id}",
                 variant: "outlined",
-                if opened() { "Close" } else { "Open popover" }
+                // One name; `aria-expanded` says whether it is open.
+                "Popover"
             }
         }
     }
