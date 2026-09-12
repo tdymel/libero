@@ -20,7 +20,7 @@ generic
   generic
     combobox "Fruit" [expanded] [haspopup=listbox] [invalid] [required]
       generic
-    listbox
+    listbox "Fruit"
       group "Orchard"
         StaticText "Orchard"
         option "Apple" [selected=false]

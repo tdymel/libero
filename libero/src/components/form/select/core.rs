@@ -519,6 +519,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         // Focused once the list has been measured and is visible. Doing it any
         // earlier is a no-op that reports success.
         autofocus: searchable.then_some(search),
+        labelled_by: field.label_id(),
     });
 
     field.render(rsx! {
@@ -548,6 +549,7 @@ struct Listbox {
     remeasure: u64,
     /// The search box to focus once the list is measured, when there is one.
     autofocus: Option<ElementHandle>,
+    labelled_by: Option<String>,
 }
 
 fn select_listbox(list: Listbox) -> Element {
@@ -565,6 +567,7 @@ fn select_listbox(list: Listbox) -> Element {
         multiple,
         remeasure,
         autofocus,
+        labelled_by,
     } = list;
     let state = open.state;
 
@@ -588,6 +591,7 @@ fn select_listbox(list: Listbox) -> Element {
             autofocus,
             width: PopoverWidth::Min,
             remeasure,
+            labelled_by,
             {control}
         }
     }

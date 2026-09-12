@@ -15,7 +15,7 @@ status [atomic] [live=polite]
 status [atomic] [live=polite]
 generic
   generic
-    listbox [multiselectable]
+    listbox "Fruit" [multiselectable]
       option "Apple" [selected=false]
         StaticText "Apple"
       option "Banana" [selected=false]

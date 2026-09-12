@@ -60,6 +60,7 @@ pub(super) fn ComboboxDropdown(
     /// under it changes - or empties.
     header: Option<Element>,
     multiselectable: bool,
+    labelled_by: Option<String>,
     /// Re-provided here, not inherited: the dropdown is portaled, so it mounts
     /// under `PortalOutlet` rather than under `ComboboxCore`, and a context
     /// resolves along the mounted chain. Without this every row loses its `id`,
@@ -106,6 +107,7 @@ pub(super) fn ComboboxDropdown(
                     id: super::aria::listbox_id(&id),
                     "role": "listbox",
                     "aria-multiselectable": multiselectable.then_some("true"),
+                    "aria-labelledby": labelled_by,
                     for (label , start , end) in runs {
                         // A named run is wrapped and labelled; an unnamed one
                         // is bare, which is the markup an ungrouped list has

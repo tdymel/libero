@@ -113,6 +113,9 @@ base_props! {
         /// Sets `aria-multiselectable` on the listbox.
         #[props(default)]
         multiselectable: bool,
+        /// The id naming the listbox, usually the field's label.
+        #[props(default)]
+        labelled_by: Option<String>,
         /// What the list's width follows. `Match` reproduces the `width: 100%`
         /// it had while it was nested; a select, whose rows are the content,
         /// takes `Min` so a long row is never clipped.
@@ -251,6 +254,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 loading,
                 header: props.header,
                 multiselectable: props.multiselectable,
+                labelled_by: props.labelled_by,
                 context,
             }
         }
@@ -298,6 +302,7 @@ struct ComboboxPopupProps {
     loading: bool,
     header: Option<Element>,
     multiselectable: bool,
+    labelled_by: Option<String>,
     context: ComboboxContext,
 }
 
@@ -373,6 +378,7 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
                         loading: props.loading,
                         header: props.header,
                         multiselectable: props.multiselectable,
+                        labelled_by: props.labelled_by,
                         context,
                     }
                 },
