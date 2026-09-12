@@ -307,6 +307,13 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
                 .cursor("not-allowed")
                 .pointer_events("none"),
         )
+        // A disabled `Fieldset` disables the `<button>` natively (todo 499).
+        .selector(
+            "&:disabled",
+            sx().opacity("0.5")
+                .cursor("not-allowed")
+                .pointer_events("none"),
+        )
         .when("full-width", sx().width("100%"))
         .when("loading", loading_sx())
         // The base outline is suppressed above and re-added only here.

@@ -14,7 +14,7 @@ use crate::{
     },
     hooks::{use_cache, use_css, use_element, use_theme},
     platform::ElementApi,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{ChoiceVariant, CssVar, RADIO_CIRCLE, RadioDefaults},
     utils::warn,
 };
@@ -62,6 +62,9 @@ static RADIO_DOT_SX: StaticSx = StaticSx::new(|| {
         .height("50%")
         .border_radius("50%")
         .background(RADIO_COLOR.value())
+        // Forced colours would paint it `Canvas`, so a checked radio looked
+        // unchecked (todo 506).
+        .media(FORCED_COLORS, sx().background("CanvasText"))
         .transform(format!("scale({})", RADIO_ON.value()))
         .transition("transform 150ms ease")
 });

@@ -202,3 +202,44 @@ fn its_rows_are_undersized_so_the_spacing_exception_is_load_bearing() {
         }
     });
 }
+
+/// Forced colours paint every background `Canvas`, so the checked dot vanished
+/// and every radio looked unchecked (todo 506).
+#[test]
+fn the_checked_dot_shows_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/radio-group", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        e2e::wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        let [dot, page_bg]: [String; 2] = page
+            .evaluate(
+                "(() => {
+                    const dot = document.querySelector('input[type=radio]:checked ~ span > span');
+                    return [getComputedStyle(dot).backgroundColor,
+                            getComputedStyle(document.body).backgroundColor];
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_ne!(dot, page_bg, "the checked dot is painted the page's colour");
+        fixture.close().await.unwrap();
+    });
+}

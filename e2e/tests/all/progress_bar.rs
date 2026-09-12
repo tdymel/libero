@@ -27,6 +27,55 @@ fn fill(selector: &str) -> String {
     )
 }
 
+/// Forced colours paint every background `Canvas`, so the track and the fill
+/// vanished into the page (todo 506).
+#[test]
+fn track_and_fill_show_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/progress-bar", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        let bare: Vec<String> = page
+            .evaluate(format!(
+                "(() => {{
+                    const track = document.querySelector('{UPLOAD}');
+                    const bg = el => getComputedStyle(el).backgroundColor;
+                    const outlined = el => {{
+                        const s = getComputedStyle(el);
+                        return s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 1
+                            && s.outlineColor !== 'rgba(0, 0, 0, 0)';
+                    }};
+                    return [
+                        ['track', outlined(track) || bg(track) !== bg(document.body)],
+                        ['fill', bg(track.firstElementChild) !== bg(track)],
+                    ].filter(([, shows]) => !shows).map(([name]) => name);
+                }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(bare.is_empty(), "invisible in forced colours: {bare:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Both settings explicitly, since headless Chromium defaults to reduced: the
 /// animated reading is what proves the reduced one measured real motion.
 #[test]

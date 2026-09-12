@@ -14,7 +14,7 @@ use crate::{
         navigation::InternalAnchor,
     },
     hooks::{use_cache, use_element, use_id, use_theme},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ChipDefaults, ColorShade, CssVar, Size, SizeCss},
     utils::warn,
 };
@@ -83,12 +83,10 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         .when("selectable", sx().overflow("visible"))
         .when("clickable", sx().cursor("pointer"))
-        .when(
-            "disabled",
-            sx().opacity("0.5")
-                .cursor("not-allowed")
-                .pointer_events("none"),
-        )
+        .when("disabled", disabled_sx())
+        // A button chip ignores a disabled `Fieldset`, but the browser still
+        // disables its `<button>` (todo 499).
+        .selector("&:disabled", disabled_sx())
         // The root is not focusable; the visually hidden checkbox inside it
         // is, and the overlay after its label draws the root's ring. Scoped
         // to that child so the delete button's own ring - every `Box` gets
@@ -99,6 +97,12 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         // The `<button>`/`<a>` root focuses itself.
         .focus_visible(focus_ring_sx())
 });
+
+fn disabled_sx() -> Sx {
+    sx().opacity("0.5")
+        .cursor("not-allowed")
+        .pointer_events("none")
+}
 
 static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")

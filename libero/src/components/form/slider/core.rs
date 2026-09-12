@@ -15,7 +15,7 @@ use crate::{
         use_element, use_id, use_local_state, use_theme,
     },
     platform::{ElementApi, next_task},
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::NamedColorCss,
     theme::{
         Color, ColorShade, ColorValue, CssVar, OWN_SHADOW, SLIDER_THUMB, SLIDER_TRACK, Size,
@@ -107,6 +107,9 @@ static SLIDER_TRACK_SX: StaticSx = StaticSx::new(|| {
         // curve. The shared `radius` prop is not wired here for that reason.
         .border_radius("999px")
         .cursor("pointer")
+        // Forced colours drop the background but paint a transparent outline
+        // (todo 506).
+        .outline("1px solid transparent")
 });
 
 static SLIDER_BAR_SX: StaticSx = StaticSx::new(|| {
@@ -117,6 +120,7 @@ static SLIDER_BAR_SX: StaticSx = StaticSx::new(|| {
         .width(along_track(SLIDER_FILLED))
         .background(SLIDER_COLOR.value())
         .border_radius("inherit")
+        .media(FORCED_COLORS, sx().background("Highlight"))
 });
 
 /// A range fills *between* its thumbs, so the bar starts at the lower one's
@@ -133,6 +137,7 @@ static SLIDER_RANGE_BAR_SX: StaticSx = StaticSx::new(|| {
         ))
         .background(SLIDER_COLOR.value())
         .border_radius("inherit")
+        .media(FORCED_COLORS, sx().background("Highlight"))
 });
 
 /// Carries the thumb's position, because the `Tooltip` between them styles
@@ -194,6 +199,9 @@ static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
         .height(dot)
         .border_radius("50%")
         .background(ColorValue::Shade(Color::Muted, ColorShade::S4).value())
+        // Forced colours would paint it the track's `Canvas`; a filled one
+        // stays `Canvas`, on the `Highlight` bar.
+        .media(FORCED_COLORS, sx().background("CanvasText"))
         // White on the filled bar, the way the thumb is - the grey dot would
         // disappear into it.
         .when("filled", sx().background("surface"))
@@ -497,11 +505,18 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         if !editable {
             return;
         }
+        // `step: 0` has no grid, so a key moves 1% of the range, as a native
+        // `step="any"` range input does.
+        let unit = if step > 0.0 {
+            step
+        } else {
+            (max - min) / 100.0
+        };
         let distance = if event.modifiers().shift() {
             theme.slider.big_step
         } else {
             theme.slider.step
-        } * step;
+        } * unit;
 
         // `Change` then `End`: a key press settles on its value the moment it
         // lands, so a caller that commits on `End` - which is what the docs
@@ -518,8 +533,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         match event.key() {
             Key::ArrowRight | Key::ArrowUp => go_to(thumb + distance),
             Key::ArrowLeft | Key::ArrowDown => go_to(thumb - distance),
-            Key::PageUp => go_to(thumb + theme.slider.big_step * step),
-            Key::PageDown => go_to(thumb - theme.slider.big_step * step),
+            Key::PageUp => go_to(thumb + theme.slider.big_step * unit),
+            Key::PageDown => go_to(thumb - theme.slider.big_step * unit),
             Key::Home => go_to(min),
             Key::End => go_to(max),
             _ => {}

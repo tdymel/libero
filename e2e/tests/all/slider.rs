@@ -240,6 +240,220 @@ fn the_thumb_is_described_by_its_value_bubble() {
     });
 }
 
+/// The docs' switches through axe and the snapshot: required and discrete,
+/// formatted, read-only and disabled.
+#[test]
+fn the_states_meet_the_baseline() {
+    Suite::new("slider_states", "/slider/states")
+        .focusable("#quality [role=slider]")
+        .run();
+}
+
+/// APG's slider keys beyond the arrows: Page keys and Shift+arrow move ten
+/// steps.
+#[test]
+fn page_keys_and_shift_move_a_big_step() {
+    block_on(async {
+        use e2e::passes::keyboard;
+
+        let fixture = Fixture::open("/slider", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, THUMB, 10).await.unwrap();
+        for (key, shift, expected) in [
+            (keyboard::PAGE_UP, false, "50"),
+            (keyboard::PAGE_DOWN, false, "40"),
+            (keyboard::ARROW_RIGHT, true, "50"),
+            (keyboard::ARROW_LEFT, true, "40"),
+        ] {
+            match shift {
+                true => keyboard::press_shift(page, key).await.unwrap(),
+                false => keyboard::press(page, key).await.unwrap(),
+            }
+            wait::for_js_true(
+                page,
+                &format!("{VALUE_NOW} === '{expected}'"),
+                &format!("{} (shift {shift}) to reach {expected}", key.key),
+            )
+            .await
+            .unwrap();
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A discrete thumb reports its option's name, and the keys walk the options.
+#[test]
+fn a_discrete_thumb_reads_its_option() {
+    block_on(async {
+        use e2e::passes::keyboard;
+
+        let fixture = Fixture::open("/slider/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let thumb = "#quality [role=slider]";
+        let text = format!("document.querySelector('{thumb}').getAttribute('aria-valuetext')");
+        wait::for_js_true(page, &format!("{text} === 'Medium'"), "the option's name")
+            .await
+            .unwrap();
+        keyboard::tab_to(page, thumb, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{text} === 'High'"),
+            "ArrowRight to name High",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// `step: 0` is continuous, and the keys moved it by `0 * step`: nothing.
+#[test]
+fn a_continuous_step_still_moves_with_the_keys() {
+    block_on(async {
+        use e2e::passes::keyboard;
+
+        let fixture = Fixture::open("/slider/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let thumb = "#gain [role=slider]";
+        keyboard::tab_to(page, thumb, 10).await.unwrap();
+        wait::for_js_change(
+            page,
+            &format!("document.querySelector('{thumb}').getAttribute('aria-valuenow')"),
+            "ArrowRight to move a step-0 thumb",
+            || keyboard::press(page, keyboard::ARROW_RIGHT),
+        )
+        .await
+        .unwrap_or_else(|e| panic!("ArrowRight left a `step: 0` slider where it was: {e}"));
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Tab reaches a read-only thumb and skips a disabled one; no key moves the
+/// read-only one.
+#[test]
+fn tab_reaches_readonly_and_skips_disabled() {
+    block_on(async {
+        use e2e::passes::keyboard;
+
+        let fixture = Fixture::open("/slider/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#fixed [role=slider]", 10)
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::END).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        let state: Vec<String> = page
+            .evaluate(
+                "[document.querySelector('#fixed [role=slider]').getAttribute('aria-valuenow'), \
+                 document.activeElement.closest('#locked') ? 'locked' : 'elsewhere']",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            state,
+            ["30", "elsewhere"],
+            "[read-only value, focus after Tab]"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// WCAG 1.4.13: the value bubble a keyboard focus opens goes on Escape, and
+/// the focus and value stay.
+#[test]
+fn escape_hides_the_focus_bubble() {
+    block_on(async {
+        use e2e::passes::keyboard;
+
+        let fixture = Fixture::open("/slider", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, THUMB, 10).await.unwrap();
+        wait::for_visible(page, "[role=tooltip]").await.unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait::for_hidden(page, "[role=tooltip]")
+            .await
+            .unwrap_or_else(|e| panic!("Escape left the value bubble open: {e}"));
+        let kept: bool = page
+            .evaluate(format!(
+                "document.activeElement === document.querySelector('{THUMB}') && {VALUE_NOW} === '40'"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(kept, "Escape moved the focus or the value");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Forced colours paint every background `Canvas`: the track, the filled bar
+/// and the marks vanished, leaving a lone thumb (todo 506).
+#[test]
+fn track_bar_and_marks_show_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/slider/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        // `#quality` sits on Medium: bar, one filled mark on it, one mark past it.
+        let bare: Vec<String> = page
+            .evaluate(
+                "(() => {
+                    const bg = el => getComputedStyle(el).backgroundColor;
+                    const outlined = el => {
+                        const s = getComputedStyle(el);
+                        return s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 1
+                            && s.outlineColor !== 'rgba(0, 0, 0, 0)';
+                    };
+                    const thumb = document.querySelector('#quality [role=slider]');
+                    let track = thumb.parentElement;
+                    while (track.getBoundingClientRect().height >= thumb.getBoundingClientRect().height)
+                        track = track.parentElement;
+                    const [bar, ...rest] = track.children;
+                    const marks = rest.filter(el => !el.textContent && el.getBoundingClientRect().width < 10);
+                    const filled = marks.find(el => el.dataset.state === 'filled');
+                    const open = marks.find(el => el.dataset.state !== 'filled');
+                    return [
+                        ['track', outlined(track) || bg(track) !== bg(document.body)],
+                        ['bar', bg(bar) !== bg(track)],
+                        ['filled mark', bg(filled) !== bg(bar)],
+                        ['open mark', bg(open) !== bg(track)],
+                    ].filter(([, shows]) => !shows).map(([name]) => name);
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(bare.is_empty(), "invisible in forced colours: {bare:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A press on the track focuses the thumb from code, and that focus is the
 /// pointer's: the value bubble goes once the pointer leaves, as after a press
 /// on the thumb itself.

@@ -1,0 +1,33 @@
+---
+source: e2e/src/suite.rs
+description: slider_states at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Quality"
+generic
+  generic
+    generic
+    StaticText "Low"
+    StaticText "Medium"
+    StaticText "High"
+    slider "Quality" = 1 [valuemax=2] [valuemin=0]
+LabelText
+  StaticText "Gain"
+generic
+  generic
+    generic
+    slider "Gain" = 50 [valuemax=100] [valuemin=0]
+LabelText
+  StaticText "Fixed"
+generic
+  generic
+    generic
+    slider "Fixed" = 30 [valuemax=100] [valuemin=0]
+generic
+  generic
+    generic
+    slider "Locked" = 70 [disabled] [valuemax=100] [valuemin=0]
+generic
+  tooltip "Medium"
+    StaticText "Medium"

@@ -87,13 +87,15 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
     });
 
     // After the variants, so it also stops their `:hover` from triggering.
-    base.when(
-        "disabled",
+    // `:disabled` too: a disabled `Fieldset` disables the `<button>` (todo 499).
+    let disabled = || {
         sx().opacity("0.5")
             .cursor("not-allowed")
-            .pointer_events("none"),
-    )
-    .when("loading", loading_sx())
+            .pointer_events("none")
+    };
+    base.when("disabled", disabled())
+        .selector("&:disabled", disabled())
+        .when("loading", loading_sx())
 });
 
 /// `Button`'s loading shape: the caller's icon stays in the tree, hidden,

@@ -8,7 +8,7 @@ use crate::{
         variables,
     },
     hooks::use_theme,
-    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         ColorCss, ColorShade, INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION, PROGRESS_BAR_COLOR,
         PROGRESS_BAR_FILL, PROGRESS_BAR_INDETERMINATE_STATE, PROGRESS_BAR_RADIUS,
@@ -34,6 +34,9 @@ static PROGRESS_BAR_TRACK_SX: StaticSx = StaticSx::new(|| {
         .height(PROGRESS_BAR_SIZE.value())
         .border_radius(PROGRESS_BAR_RADIUS.value())
         .background(PROGRESS_BAR_TRACK.value())
+        // Forced colours drop the background but paint a transparent outline
+        // (todo 506).
+        .outline("1px solid transparent")
 });
 
 static PROGRESS_BAR_FILL_SX: StaticSx = StaticSx::new(|| {
@@ -42,6 +45,7 @@ static PROGRESS_BAR_FILL_SX: StaticSx = StaticSx::new(|| {
         // fill without restating the radius.
         .border_radius("inherit")
         .background(PROGRESS_BAR_COLOR.value_or(ColorCss::PRIMARY.value(ColorShade::S6)))
+        .media(FORCED_COLORS, sx().background("Highlight"))
         .when(
             DETERMINATE_STATE,
             sx().width(PROGRESS_BAR_FILL.value_or("0%"))

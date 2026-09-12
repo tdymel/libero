@@ -144,7 +144,8 @@ to `/form/slider` with the component.
 ## Accessibility
 
 Arrow keys move one `step`, Shift+arrow, PageUp and PageDown move `big_step` of
-them, Home and End jump to `min` and `max`.
+them, Home and End jump to `min` and `max`. A continuous `step: 0.0` has no
+grid, so there a step is 1% of the range.
 
 Without a `label`, name it with the `aria_label` prop; an `aria_label` passed
 through `attributes` lands on the field wrapper instead of the thumb. Pass

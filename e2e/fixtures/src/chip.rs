@@ -1,11 +1,31 @@
 //! `Chip`, in every kind its docs page shows: tag, filter, action, link.
 
 use dioxus::prelude::*;
-use libero::components::{Chip, Flex};
+use libero::components::{ActionIcon, Button, Chip, Fieldset, Flex};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/chip", || rsx! { ChipPage {} })];
+pub const ROUTES: Routes = &[
+    ("/chip", || rsx! { ChipPage {} }),
+    ("/chip/fieldset", || rsx! { ChipFieldsetPage {} }),
+];
+
+/// Button-rooted controls in a disabled `Fieldset`: the browser disables the
+/// `<button>`, so each has to look disabled too (todo 499).
+#[component]
+fn ChipFieldsetPage() -> Element {
+    rsx! {
+        Fieldset::<()> { label: "Actions", disabled: true,
+            Flex { direction: "row", gap: "md",
+                Chip { id: "fs-chip", onclick: move |_| {}, "Action" }
+                Button { id: "fs-button", onclick: move |_| {}, "Save" }
+                ActionIcon { id: "fs-icon", aria_label: "Delete", onclick: move |_| {},
+                    svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
+                }
+            }
+        }
+    }
+}
 
 /// Every chip reports what it last emitted into `data-emitted`.
 #[component]

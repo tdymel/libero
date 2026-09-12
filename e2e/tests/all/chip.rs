@@ -135,3 +135,35 @@ fn a_disabled_link_chip_is_still_a_link() {
         fixture.close().await.unwrap();
     });
 }
+
+/// A disabled `Fieldset` disables a `<button>` natively; the button chip,
+/// `Button` and `ActionIcon` must dim with it rather than look clickable (todo 499).
+#[test]
+fn buttons_in_a_disabled_fieldset_look_disabled() {
+    block_on(async {
+        let fixture = Fixture::open("/chip/fieldset", Viewport::Desktop)
+            .await
+            .unwrap();
+        let looks: Vec<String> = fixture
+            .page
+            .evaluate(
+                "['#fs-chip', '#fs-button', '#fs-icon'].map((id) => { \
+                 const el = document.querySelector(id); const s = getComputedStyle(el); \
+                 return `${id} ${el.matches(':disabled')} ${s.opacity} ${s.cursor}`; })",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            looks,
+            [
+                "#fs-chip true 0.5 not-allowed",
+                "#fs-button true 0.5 not-allowed",
+                "#fs-icon true 0.5 not-allowed",
+            ],
+            "[id :disabled opacity cursor]"
+        );
+        fixture.close().await.unwrap();
+    });
+}
