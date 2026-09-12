@@ -10,6 +10,7 @@ use crate::{
     },
     context::ModalContext,
     hooks::{escape_closes, use_dismiss_layer},
+    platform::key_taken,
     sx::{StaticSx, sx},
     theme::CssVar,
 };
@@ -123,6 +124,11 @@ pub fn Modal(props: ModalProps) -> Element {
             // close this modal right after the list inside it.
             if escape_closes(&event) && layer.is_top() {
                 close();
+            }
+            // A Tab the trap left alone found nothing to focus: stay put
+            // rather than walk out to the page behind.
+            if event.key() == Key::Tab && !key_taken(&event) {
+                event.prevent_default();
             }
         })
         .render(

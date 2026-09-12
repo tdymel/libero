@@ -181,6 +181,39 @@ pub(super) fn toggle_expanded(
     }
 }
 
+/// The closed, enabled branches beside `node`, `node` included: APG's `*`.
+fn closed_siblings<'a>(
+    order: &[VisibleNode<'a>],
+    node: &VisibleNode,
+    expanded: &HashSet<String>,
+) -> Vec<&'a str> {
+    order
+        .iter()
+        .filter(|other| other.parent_id == node.parent_id && other.has_children)
+        .filter(|other| !other.disabled && !expanded.contains(other.id))
+        .map(|other| other.id)
+        .collect()
+}
+
+/// One write and one `onexpandedchange` for the lot, not one per branch.
+fn expand_siblings(
+    order: &[VisibleNode],
+    node: &VisibleNode,
+    mut expanded: Signal<HashSet<String>>,
+    onexpandedchange: Option<EventHandler<HashSet<String>>>,
+) {
+    let closed = closed_siblings(order, node, &expanded.read());
+    if closed.is_empty() {
+        return;
+    }
+    let mut next = expanded.read().clone();
+    next.extend(closed.into_iter().map(str::to_string));
+    expanded.set(next.clone());
+    if let Some(onexpandedchange) = onexpandedchange {
+        onexpandedchange.call(next);
+    }
+}
+
 // A leaf's real link/button is kept out of the tab order (see
 // `TreeNodeRenderArgs::tabindex`), so it is never focused and Enter never
 // reaches it natively. This triggers it the way a click would.
@@ -346,10 +379,19 @@ fn TreeCore(props: TreeCoreProps) -> Element {
 
     let order = visible_order(&props.data, &expanded.read());
     let visible = |id: &String| order.iter().any(|node| node.id == id);
+    // Where the tab stop last sat, so a row removed from `data` hands it to
+    // the row that took its place rather than the first.
+    let mut last_index = use_hook(|| CopyValue::new(0_usize));
+    let vanished = active_id.read().as_ref().is_some_and(|id| !visible(id));
     let resolved_active = active_id
         .read()
         .clone()
         .filter(visible)
+        .or_else(|| {
+            vanished.then_some(())?;
+            let index = last_index().min(order.len().checked_sub(1)?);
+            Some(order[index].id.to_string())
+        })
         .or_else(|| {
             // Inside a collapsed branch, the branch that hides it.
             let path = path_to(&props.data, props.current.as_deref()?)?;
@@ -359,6 +401,21 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                 .find(|id| visible(id))
         })
         .or_else(|| order.first().map(|node| node.id.to_string()));
+    if let Some(index) = resolved_active
+        .as_deref()
+        .and_then(|id| order.iter().position(|node| node.id == id))
+    {
+        last_index.set(index);
+    }
+
+    // A focused row that leaves `data` takes focus with it. Read before the
+    // DOM update, while the doomed row still holds focus.
+    let refocus = vanished && root.query_selector(":focus").is_ok();
+    use_effect(use_reactive!(|resolved_active, refocus| {
+        if let Some(id) = resolved_active.filter(|_| refocus) {
+            focus_tree_item(&root, &id);
+        }
+    }));
     // The first row with that id, as `Tabs` resolves its value to the first
     // tab that matches.
     let active_path = resolved_active
@@ -449,6 +506,10 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                         click_tree_item(&root, &current);
                     }
                 }
+            }
+            Key::Character(ref c) if c == "*" && !has_shortcut_modifier(&event) => {
+                event.prevent_default();
+                expand_siblings(&order, node, expanded, onexpandedchange);
             }
             Key::Character(ref c) if c == " " && has_shortcut_modifier(&event) => {}
             // A space mid-query is part of "new folder", not an activation.
@@ -675,6 +736,22 @@ mod tests {
         let disabled: Vec<_> = order.iter().map(|node| (node.id, node.disabled)).collect();
         assert_eq!(disabled, [("a", true), ("a1", true), ("b", false)]);
         assert_eq!(order[1].parent_id, Some("a"));
+    }
+
+    /// Todo 516: `*` opens the closed, enabled branches on the focused row's
+    /// level only.
+    #[test]
+    fn star_opens_the_closed_enabled_branches_beside_the_row() {
+        let order = [
+            branch("a", None, false),
+            branch("b", None, true),
+            branch("c", None, false),
+            branch("c1", Some("c"), false),
+            node("d", "Leaf", false),
+        ];
+        let open: HashSet<String> = ["c".to_string()].into();
+        assert_eq!(closed_siblings(&order, &order[4], &open), ["a"]);
+        assert_eq!(closed_siblings(&order, &order[3], &open), ["c1"]);
     }
 
     #[test]

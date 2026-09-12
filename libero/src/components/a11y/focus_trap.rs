@@ -29,7 +29,9 @@ static FOCUS_TRAP_SX: StaticSx = StaticSx::new(|| sx().display("contents"));
 fn focus_first(root: &ElementHandle) {
     let target = root
         .query_selector("[data-autofocus]")
-        .or_else(|_| root.query_selector(FOCUSABLE_SELECTOR));
+        .or_else(|_| root.query_selector(FOCUSABLE_SELECTOR))
+        // Nothing to focus: the modal dialog itself (APG), not the page behind.
+        .or_else(|_| root.query_selector("[aria-modal=\"true\"]"));
     if let Ok(target) = target {
         let _ = target.focus();
     }

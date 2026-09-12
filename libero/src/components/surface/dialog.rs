@@ -116,6 +116,9 @@ pub fn Dialog(props: DialogProps) -> Element {
     attributes.push(attr("role", "dialog"));
     if is_modal {
         attributes.push(attr("aria-modal", "true"));
+        // Focusable by script and by a click on its text, so focus and the
+        // modal's keys stay inside when nothing in it takes focus (APG).
+        attributes.push(attr("tabindex", "-1"));
     }
     if props.aria_label.is_none() && props.title.is_some() {
         attributes.push(attr("aria-labelledby", title_id()));

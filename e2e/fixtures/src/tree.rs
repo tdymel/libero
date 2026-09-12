@@ -9,7 +9,45 @@ pub const ROUTES: Routes = &[
     ("/tree", || rsx! { TreePage {} }),
     ("/tree/links", || rsx! { LinkTreePage {} }),
     ("/tree/links/arrived", || rsx! { "arrived" }),
+    ("/tree/delete", || rsx! { DeleteTreePage {} }),
 ];
+
+/// Delete removes the focused row from `data`, as a file manager would.
+#[component]
+fn DeleteTreePage() -> Element {
+    let mut data = use_signal(|| {
+        ["a.rs", "b.rs", "c.rs"]
+            .map(|id| TreeNode::new(id, id))
+            .to_vec()
+    });
+
+    rsx! {
+        div {
+            onkeydown: move |event: KeyboardEvent| {
+                if event.key() != Key::Delete {
+                    return;
+                }
+                let focused = document::eval("return document.activeElement?.dataset.treeId");
+                spawn(async move {
+                    if let Ok(id) = focused.await
+                        && let Some(id) = id.as_str()
+                    {
+                        data.write().retain(|node| node.id != id);
+                    }
+                });
+            },
+            Tree {
+                aria_label: "Files",
+                data: data(),
+                render_node: move |args: TreeNodeRenderArgs<&'static str>| {
+                    rsx! {
+                        TreeItem { tabindex: args.tabindex, "{args.data}" }
+                    }
+                },
+            }
+        }
+    }
+}
 
 /// Leaves that are links, as the docs sidebar renders them: Enter on one has
 /// to navigate (todo 4).

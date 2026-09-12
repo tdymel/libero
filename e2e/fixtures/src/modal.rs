@@ -8,7 +8,32 @@ use libero::{
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/modal", || rsx! { ModalPage {} })];
+pub const ROUTES: Routes = &[
+    ("/modal", || rsx! { ModalPage {} }),
+    ("/modal/static", || rsx! { StaticModalPage {} }),
+];
+
+/// A dialog with nothing to focus: focus has to land on the dialog itself.
+#[component]
+fn StaticModalPage() -> Element {
+    let notice = use_modal(|_: ModalScope<()>| {
+        rsx! {
+            Dialog { title: "Saved", close_button: false,
+                Text { "Your changes are saved." }
+            }
+        }
+    });
+
+    rsx! {
+        Button {
+            id: "open-modal",
+            onclick: move |_| {
+                notice.open();
+            },
+            "Save"
+        }
+    }
+}
 
 /// The overlay archetype: opens, traps focus, Escape closes, focus returns.
 #[component]
@@ -18,7 +43,7 @@ fn ModalPage() -> Element {
             Dialog {
                 title: "Unsaved changes",
                 size: "sm",
-                Text { "notes.md has changes you have not saved." }
+                Text { id: "modal-text", "notes.md has changes you have not saved." }
                 Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
                 Button { variant: "filled", onclick: move |_| s.close(), "Discard" }
             }
