@@ -779,6 +779,7 @@ fn render_cost_per_component() {
         "Tabs" let onchange = |_: CostPane| {}; let panel = |_: CostPane| rsx! { "x" }; { Tabs { value: CostPane::One, onchange, panel } }
         "Accordion" let onchange = |_: AccordionOpen<CostPane>| {}; let panel = |_: CostPane| rsx! { "x" }; { Accordion { open: AccordionOpen::One(Some(CostPane::One)), onchange, panel } }
         "Accordion toggle" let onchange = |_: AccordionOpen<CostPane>| {}; let panel = |_: CostPane| rsx! { "x" }; { Accordion { open: AccordionOpen::One(Some(if flip() { CostPane::Two } else { CostPane::One })), onchange, panel } }
+        "Collapse toggle" { Collapse { open: flip(), "x" } }
 
         // Navigation moves, each a static row and its `flip()` twin. Tree
         // expand and Table sort are internal state: see `CLICK_SHAPES`.

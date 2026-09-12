@@ -9,7 +9,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_presence, use_theme},
-    sx::{REDUCED_MOTION, StaticSx, sx},
+    sx::{REDUCED_MOTION, StaticSx, Sx, sx},
     theme::{COLLAPSE_DURATION, COLLAPSE_EASING, COLLAPSE_OPACITY_CLOSED},
 };
 
@@ -70,13 +70,15 @@ static COLLAPSE_BASE_SX: StaticSx = StaticSx::new(|| {
                 .transition(format!("{rows}, visibility 0s linear {duration}"))
                 .media(REDUCED_MOTION, sx().transition("none")),
         )
+        .selector("& > div", content_sx())
 });
 
 /// `min-height: 0` lets the grid row actually reach zero, and `overflow:
 /// hidden` is load-bearing twice: it clips during the transition, and it stops
 /// the content's own margins collapsing out of the row and holding it open.
-/// Its `visibility` is inherited from the root.
-static COLLAPSE_CONTENT_SX: StaticSx = StaticSx::new(|| {
+/// Its `visibility` is inherited from the root. Hung off the root's class, so
+/// the content needs no class or style hook of its own.
+fn content_sx() -> Sx {
     let transition = format!(
         "opacity {} {}",
         COLLAPSE_DURATION.overridable(),
@@ -97,7 +99,7 @@ static COLLAPSE_CONTENT_SX: StaticSx = StaticSx::new(|| {
                 .transition(transition)
                 .media(REDUCED_MOTION, sx().transition("none")),
         )
-});
+}
 
 /// Only when the caller set one: an absent `duration` has to leave the theme's
 /// var alone rather than pinning it to the value it happens to hold.
@@ -179,17 +181,14 @@ pub fn Collapse(props: CollapseProps) -> Element {
         .into();
     let variables: Input<Variables> = collapse_variables(props.duration).into();
 
-    // Its own states, not the caller's: the caller's tokens belong to the
-    // element they were set on.
-    let content_states: Input<States> = States::default()
-        .with("open", visible)
-        .with("closed", !visible)
-        .into();
-    let content = use_box()
-        .framework_sx(&COLLAPSE_CONTENT_SX)
-        .states(&content_states)
-        .prepare()
-        .render(HtmlTag::Div, Vec::new(), mounted.then_some(props.children));
+    // Its own state, not the caller's tokens. Styled from the root's class, so
+    // a plain element rather than a second `use_box`.
+    let content_state = if visible { "open" } else { "closed" };
+    let content = rsx! {
+        div { "data-state": content_state,
+            {mounted.then_some(props.children)}
+        }
+    };
 
     use_box()
         .framework_sx(&COLLAPSE_BASE_SX)
