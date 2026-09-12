@@ -1,7 +1,10 @@
 //! `Chip`, in every kind its docs page shows: tag, filter, action, link.
 
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Button, Chip, Fieldset, Flex};
+use libero::components::{
+    ActionIcon, Button, Chip, ColorCode, ColorSwatch, Fieldset, Flex, Image, PhoneField, Tree,
+    TreeItem, TreeNode, TreeNodeRenderArgs,
+};
 
 use crate::Routes;
 
@@ -22,10 +25,27 @@ fn ChipFieldsetPage() -> Element {
                 ActionIcon { id: "fs-icon", aria_label: "Delete", onclick: move |_| {},
                     svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
                 }
+                // Todo 514: the other button-rooted components.
+                ColorSwatch { id: "fs-swatch", color: ColorCode::hex(0x40c057), onclick: move |_| {} }
+                TreeItem { id: "fs-tree-item", "Item" }
+                div { id: "fs-phone", PhoneField { label: "Phone", value: "", oninput: move |_| {} } }
+                div { id: "fs-image", width: "32px", height: "32px",
+                    Image { src: DOT, alt: "Dot", zoomable: true }
+                }
             }
+        }
+        // A row the tree disables dims itself; its `TreeItem` must not dim twice.
+        Tree {
+            aria_label: "Rows",
+            data: vec![TreeNode::new("on", "On"), TreeNode::new("off", "Off").disabled(true)],
+            render_node: move |args: TreeNodeRenderArgs<&'static str>| rsx! {
+                TreeItem { id: "tree-{args.id}", "{args.data}" }
+            },
         }
     }
 }
+
+const DOT: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 2 2'%3E%3Ccircle cx='1' cy='1' r='1'/%3E%3C/svg%3E";
 
 /// Every chip reports what it last emitted into `data-emitted`.
 #[component]

@@ -41,6 +41,8 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
         .color("surface")
         .when("on-light", sx().color("ink"))
         .when("clickable", sx().cursor("pointer"))
+        // A disabled `Fieldset` disables a clickable swatch's `<button>` (todo 514).
+        .selector("&:disabled", sx().opacity("0.5").cursor("not-allowed"))
 });
 
 base_props! {

@@ -136,8 +136,10 @@ fn a_disabled_link_chip_is_still_a_link() {
     });
 }
 
-/// A disabled `Fieldset` disables a `<button>` natively; the button chip,
-/// `Button` and `ActionIcon` must dim with it rather than look clickable (todo 499).
+/// A disabled `Fieldset` disables a `<button>` natively; every button-rooted
+/// control must dim with it rather than look clickable (todos 499, 514). The
+/// opacity is the product up the tree, so a wrapper's dimming counts and a
+/// double dimming shows.
 #[test]
 fn buttons_in_a_disabled_fieldset_look_disabled() {
     block_on(async {
@@ -147,9 +149,12 @@ fn buttons_in_a_disabled_fieldset_look_disabled() {
         let looks: Vec<String> = fixture
             .page
             .evaluate(
-                "['#fs-chip', '#fs-button', '#fs-icon'].map((id) => { \
-                 const el = document.querySelector(id); const s = getComputedStyle(el); \
-                 return `${id} ${el.matches(':disabled')} ${s.opacity} ${s.cursor}`; })",
+                "['#fs-chip', '#fs-button', '#fs-icon', '#fs-swatch', '#fs-tree-item', \
+                 '#fs-phone button', '#fs-image button', '#tree-off'].map((id) => { \
+                 const el = document.querySelector(id); let opacity = 1; \
+                 for (let at = el; at; at = at.parentElement) \
+                 opacity *= parseFloat(getComputedStyle(at).opacity); \
+                 return `${id} ${el.matches(':disabled')} ${opacity} ${getComputedStyle(el).cursor}`; })",
             )
             .await
             .unwrap()
@@ -161,6 +166,11 @@ fn buttons_in_a_disabled_fieldset_look_disabled() {
                 "#fs-chip true 0.5 not-allowed",
                 "#fs-button true 0.5 not-allowed",
                 "#fs-icon true 0.5 not-allowed",
+                "#fs-swatch true 0.5 not-allowed",
+                "#fs-tree-item true 0.5 not-allowed",
+                "#fs-phone button true 0.5 not-allowed",
+                "#fs-image button true 0.5 not-allowed",
+                "#tree-off true 0.5 not-allowed",
             ],
             "[id :disabled opacity cursor]"
         );

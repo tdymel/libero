@@ -12,7 +12,7 @@ use crate::{
     },
     hooks::{ElementHandle, use_element},
     platform::ElementApi,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
         CssVar, PAGINATION_ACTIVE_BACKGROUND, PAGINATION_ACTIVE_COLOR, PAGINATION_BORDER,
         PAGINATION_CONTROL_SIZE, PAGINATION_GAP, PaginationDefaults, Size, SizeCss,
@@ -72,6 +72,8 @@ static PAGINATION_LIST_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
         .gap(PAGINATION_GAP.value())
+        // Eleven `md` controls are 353px: without wrapping they overflow a phone.
+        .flex_wrap("wrap")
         .list_style("none")
         .margin("0")
         .padding("0")
@@ -108,6 +110,17 @@ static PAGINATION_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 .border_color("transparent"),
         )
         .when("disabled", sx().opacity("0.5").cursor("default"))
+        // The page buttons carry no `disabled` state, and a disabled `Fieldset`
+        // disables every `<button>` natively (todo 514).
+        .selector("&:disabled", sx().opacity("0.5").cursor("default"))
+        // Forced colours paint the current page's fill `Canvas`, like the rest.
+        .media(
+            FORCED_COLORS,
+            sx().when(
+                "current",
+                sx().background("Highlight").color("HighlightText"),
+            ),
+        )
 });
 
 static PAGINATION_ELLIPSIS_SX: StaticSx = StaticSx::new(|| {

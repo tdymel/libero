@@ -21,6 +21,13 @@ static TREE_ITEM_SX: StaticSx = StaticSx::new(|| {
         .font("inherit")
         .text_align("left")
         .cursor("pointer")
+        // Disabled by its row or by a `Fieldset` (todo 514). A disabled row
+        // already dims itself, so only the Fieldset's case dims here.
+        .selector("&:disabled", sx().cursor("not-allowed"))
+        .selector(
+            "&:disabled:not([aria-disabled=\"true\"] *)",
+            sx().opacity("0.5"),
+        )
 });
 
 base_props! {

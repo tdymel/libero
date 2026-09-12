@@ -89,3 +89,104 @@ fn a_disabling_arrow_hands_focus_to_the_current_page() {
         }
     });
 }
+
+/// `[id, :disabled, opacity, cursor]` of every button in the nav `id`.
+async fn looks(page: &Page, id: &str) -> Vec<String> {
+    page.evaluate(format!(
+        "[...document.querySelectorAll('#{id} button')].map((b) => {{ \
+         const s = getComputedStyle(b); \
+         return `${{b.textContent || b.getAttribute('aria-label')}} ${{b.matches(':disabled')}} \
+         ${{s.opacity}} ${{s.cursor}}`; }})"
+    ))
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
+/// The page buttons carry no `disabled` state, so `disabled: true` dimmed only
+/// the arrows; a disabled `Fieldset` dimmed nothing but the arrows (todo 514).
+#[test]
+fn every_control_of_a_disabled_pagination_looks_disabled() {
+    block_on(async {
+        let fixture = Fixture::open("/pagination/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        for id in ["pg-disabled", "pg-fieldset"] {
+            let looks = looks(&fixture.page, id).await;
+            assert_eq!(looks.len(), 9, "{id}: {looks:?}");
+            let enabled: Vec<_> = looks
+                .iter()
+                .filter(|look| !look.ends_with(" true 0.5 default"))
+                .collect();
+            assert!(enabled.is_empty(), "{id} looks enabled: {enabled:?}");
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Forced colours paint every background `Canvas`, so the current page's fill
+/// vanished and nothing but `aria-current` told it apart.
+#[test]
+fn the_current_page_shows_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/pagination/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        // The page itself is `Canvas`; a fill the same colour is no fill.
+        let [current, canvas]: [String; 2] = page
+            .evaluate(
+                "(() => { const probe = document.createElement('div'); \
+                 probe.style.background = 'Canvas'; document.body.append(probe); \
+                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+                 return [getComputedStyle(document.querySelector('#pg-xs [aria-current=page]')) \
+                 .backgroundColor, canvas]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_ne!(current, canvas, "the current page's fill is the page's own");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Eleven `md` controls are 353px, so the row ran out of a phone's nav (1.4.10).
+#[test]
+fn a_long_row_wraps_inside_a_phone() {
+    block_on(async {
+        let fixture = Fixture::open("/pagination/states", Viewport::Mobile)
+            .await
+            .unwrap();
+        let overflowing: Vec<String> = fixture
+            .page
+            .evaluate(
+                "[...document.querySelectorAll('nav')].filter((nav) => \
+                 [...nav.querySelectorAll('button')].some((b) => \
+                 b.getBoundingClientRect().right > nav.getBoundingClientRect().right + 0.5)) \
+                 .map((nav) => nav.id)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(overflowing.is_empty(), "overflowing: {overflowing:?}");
+        fixture.close().await.unwrap();
+    });
+}

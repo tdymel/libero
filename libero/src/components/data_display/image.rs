@@ -44,6 +44,8 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
         .background("transparent")
         .outline("none")
         .cursor("zoom-in")
+        // A disabled `Fieldset` disables the `<button>` (todo 514).
+        .selector("&:disabled", sx().opacity("0.5").cursor("not-allowed"))
         .focus_visible(focus_ring_sx())
 });
 
