@@ -518,8 +518,10 @@ pub fn Button(props: ButtonProps) -> Element {
         // `<a>` has no native `disabled`: dropping `to` stops navigation,
         // `aria-disabled`/`tabindex` handle the a11y tree and tab order.
         // `InternalAnchor` can't do this - it always resolves a real link.
+        // An `<a>` without `href` is `generic`, so the role comes back by hand.
         if disabled {
             return boxed
+                .attr_default("role", "link")
                 .attr("aria-disabled", "true")
                 .attr("tabindex", "-1")
                 .render(HtmlTag::A, props.attributes, props.children);

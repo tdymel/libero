@@ -30,6 +30,7 @@ fn ButtonPage() -> Element {
             Button { id: "standard-error", variant: "standard", color: "error", "Standard" }
             Button { id: "elevated", variant: "elevated", color: "secondary", "Elevated" }
             Button { id: "filled-muted", color: "muted", "Filled" }
+            Button { id: "disabled-link", to: "/button/landing", disabled: true, "Disabled link" }
         }
     }
 }

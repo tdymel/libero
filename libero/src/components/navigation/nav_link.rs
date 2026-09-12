@@ -152,8 +152,10 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         true,
     );
 
+    // An `<a>` without `href` is `generic`, so the role comes back by hand.
     if disabled {
         return box_style(style_attributes)
+            .attr_default("role", "link")
             .attr("aria-disabled", "true")
             .attr("tabindex", "-1")
             .attr("aria-current", aria_current)

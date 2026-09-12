@@ -128,6 +128,23 @@ fn a_hovered_button_s_label_reads_on_its_hover_fill() {
     });
 }
 
+/// An `<a>` without `href` maps to `generic`, which drops the link role and
+/// the name from content: a disabled link-mode button read as plain text.
+#[test]
+fn a_disabled_link_is_still_a_link() {
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        let tree = e2e::ax::snapshot(&fixture.page, "#disabled-link")
+            .await
+            .unwrap();
+        assert!(
+            tree.starts_with("link \"Disabled link\" [disabled]"),
+            "the disabled link is exposed as:\n{tree}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A marker on `window` survives only a client-side navigation, so it tells
 /// the router's `Link` apart from a full page load of the same URL.
 #[test]

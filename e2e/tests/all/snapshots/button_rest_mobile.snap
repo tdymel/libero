@@ -19,3 +19,5 @@ button "Elevated"
   StaticText "Elevated"
 button "Filled"
   StaticText "Filled"
+link "Disabled link" [disabled]
+  StaticText "Disabled link"
