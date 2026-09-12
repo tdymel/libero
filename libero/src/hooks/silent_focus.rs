@@ -43,6 +43,18 @@ pub(crate) fn use_silent_focus_within(element: ElementHandle, onchange: impl Fn(
     });
 }
 
+/// An element whose silent `focusout` calls `onout`, for the caller to mount.
+/// `None` where every move fires its events, so the web mounts nothing.
+pub(crate) fn use_silent_focus_out(onout: impl Fn() + 'static) -> Option<ElementHandle> {
+    let element = use_hook(|| silent_focus().is_some().then(ElementHandle::new));
+    use_silent_focus(move |moved| {
+        if element.is_some_and(|element| moved_out(moved, &element)) {
+            onout();
+        }
+    });
+    element
+}
+
 /// Whether `element` held focus before `moved` and does not after: its `focusout`.
 pub(crate) fn moved_out(moved: &dyn FocusMove, element: &ElementHandle) -> bool {
     moved_within(moved, element) == (true, false)

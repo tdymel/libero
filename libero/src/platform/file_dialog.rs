@@ -41,9 +41,26 @@ mod native {
     pub(super) static FILE_DIALOG: NativeFileDialog = NativeFileDialog;
 }
 
+/// Opens a file picker: `input`'s own where a file input opens one, else the
+/// system dialog, whose pick reaches `take` (none when cancelled).
+pub(crate) fn pick_files(
+    accept: &str,
+    multiple: bool,
+    input: impl FnOnce(),
+    take: impl FnOnce(Vec<FileData>) + 'static,
+) {
+    match file_dialog() {
+        Some(dialog) => {
+            let picked = dialog.open(accept, multiple);
+            dioxus::prelude::spawn(async move { take(picked.await) });
+        }
+        None => input(),
+    }
+}
+
 /// `None` where a file input opens the platform's own picker: the web and the
 /// WebView.
-pub(crate) fn file_dialog() -> Option<&'static dyn FileDialogApi> {
+fn file_dialog() -> Option<&'static dyn FileDialogApi> {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return Some(&native::FILE_DIALOG);
     #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]

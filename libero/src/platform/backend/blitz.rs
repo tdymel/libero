@@ -1051,19 +1051,59 @@ impl DocumentApi for BlitzDocument {
         Some(Box::new(BlitzElement { anchor, node_id }))
     }
 
-    /// Not natively, for now - so the theme switch rebuilds its sheet here
-    /// instead. **Conservative, not impossible**, and the comment that said
-    /// the root is unreachable was wrong: dioxus-native does build a real
-    /// `html`/`head`/`body`/`main` tree and `BaseDocument::root_element()`
-    /// reaches the `<html>` that `:root` matches. What is unverified is
-    /// whether mutating an attribute there marks the node dirty for a
-    /// restyle, so todo 69 phase 4 should try it before keeping this
-    /// fallback. `@media (prefers-color-scheme: dark)` *is* honoured
-    /// natively either way - stylo evaluates it off the window theme - so
-    /// only an explicit override needs this. See
-    /// [[codebase/blitz-platform-gaps]].
-    fn set_root_attribute(&self, _name: &str, _value: Option<&str>) -> bool {
-        false
+    /// On the `<html>` `root_element()` reaches; the mutator's write restyles
+    /// it (todo 480). The theme is a colour change, so svgs rebuild with it.
+    fn set_root_attribute(&self, name: &str, value: Option<&str>) -> bool {
+        let Some(anchor) = anchor() else {
+            return false;
+        };
+        let name = QualName::new(None, ns!(), name.into());
+        let value = value.map(str::to_string);
+        run_or_defer(&anchor, move |doc| {
+            let root = doc.root_element().id;
+            let mut mutator = doc.mutate();
+            match value {
+                Some(value) => mutator.set_attribute(root, name, &value),
+                None => mutator.clear_attribute(root, name),
+            }
+            drop(mutator);
+            rebuild_svgs(doc);
+        });
+        true
+    }
+
+    fn colors_changed(&self) {
+        if let Some(anchor) = anchor() {
+            run_or_defer(&anchor, rebuild_svgs);
+        }
+    }
+}
+
+/// Runs `run` now if the document is free, else at [`Outlet`]'s next flush.
+fn run_or_defer(anchor: &NodeHandle, run: impl FnOnce(&mut BaseDocument) + 'static) {
+    if anchor.try_doc().is_some() {
+        run(&mut anchor.doc_mut());
+    } else {
+        defer(anchor, run);
+    }
+}
+
+/// Blitz resolves an inline `<svg>`'s `currentColor` when it builds the box
+/// and keeps it (todo 478). Rewriting an attribute rebuilds the box.
+fn rebuild_svgs(doc: &mut BaseDocument) {
+    let Ok(svgs) = doc.query_selector_all("svg") else {
+        return;
+    };
+    let attrs: Vec<_> = svgs
+        .into_iter()
+        .filter_map(|id| {
+            let attr = doc.get_node(id)?.element_data()?.attrs().first()?.clone();
+            Some((id, attr))
+        })
+        .collect();
+    let mut mutator = doc.mutate();
+    for (id, attr) in attrs {
+        mutator.set_attribute(id, attr.name, &attr.value);
     }
 }
 
@@ -1107,11 +1147,7 @@ impl BlitzElement {
     /// while the document is borrowed mutably, which is the case that matters:
     /// nothing in libero holds a shared borrow across a command.
     fn command(&self, run: impl FnOnce(&mut BaseDocument) + 'static) {
-        if self.anchor.try_doc().is_some() {
-            run(&mut self.anchor.doc_mut());
-            return;
-        }
-        defer(&self.anchor, run);
+        run_or_defer(&self.anchor, run);
     }
 
     fn at(&self, node_id: NodeId) -> Box<dyn ElementApi> {

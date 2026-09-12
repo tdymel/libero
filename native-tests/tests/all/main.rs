@@ -14,6 +14,7 @@ mod dismiss;
 mod floating_window;
 mod focus_events;
 mod focus_return;
+mod focus_ring;
 mod form;
 mod hit;
 mod hover_card;

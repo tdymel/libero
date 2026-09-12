@@ -19,6 +19,11 @@ pub trait DocumentApi {
     /// `false` where the root is not reachable, which is how the theme switch
     /// learns it has to rebuild the sheet instead of flipping an attribute.
     fn set_root_attribute(&self, name: &str, value: Option<&str>) -> bool;
+
+    /// The theme's colours changed wholesale. A renderer that baked colours
+    /// into what it built redraws them; one that paints from live styles, the
+    /// web, has nothing to do.
+    fn colors_changed(&self) {}
 }
 
 /// `None` where the renderer exposes no document - a webview, where Rust holds

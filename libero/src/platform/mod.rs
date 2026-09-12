@@ -39,12 +39,12 @@ pub use document::{DocumentApi, document};
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;
 pub(crate) use eye_dropper::eye_dropper;
-pub(crate) use file_dialog::file_dialog;
+pub(crate) use file_dialog::pick_files;
 pub(crate) use focus::{
     FocusMove, SilentFocusApi, SilentFocusSubscription, focus_entered_from, focus_pressed,
     focus_visible, press_kept_focus, silent_focus,
 };
-pub(crate) use form::{emulates_submit, implicit_submit, submit_click, submit_event};
+pub(crate) use form::{submit_event, submit_listeners};
 pub(crate) use keyboard::arrow_target;
 pub(crate) use keyboard::key_taken;
 pub(crate) use keyboard::typing_target;

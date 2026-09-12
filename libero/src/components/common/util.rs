@@ -38,6 +38,10 @@ const NO_SHADOW: &str = "0 0 #0000";
 /// The stripe still yields to `--lsx-focus-contrast` where a surface
 /// publishes one: a component that knows what reads against itself keeps
 /// winning. Every number and both colours come from `theme.focus_ring`.
+///
+/// The stripe is drawn twice, as the outline and as a shadow between two halo
+/// shadows: Blitz paints the outline under the shadows (todo 478). The web
+/// paints the outline over the same pixels, and forced colours keep only it.
 pub(crate) fn focus_ring_sx() -> crate::sx::Sx {
     use crate::theme::{
         FOCUS_RING_COLOR, FOCUS_RING_HALO, FOCUS_RING_HALO_SPREAD, FOCUS_RING_OFFSET,
@@ -45,17 +49,15 @@ pub(crate) fn focus_ring_sx() -> crate::sx::Sx {
     };
     use crate::tokens::NamedColorCss;
 
+    let stripe = NamedColorCss::FOCUS_CONTRAST.value_or(FOCUS_RING_COLOR.value());
+    let (offset, width) = (FOCUS_RING_OFFSET.value(), FOCUS_RING_WIDTH.value());
+    let halo = FOCUS_RING_HALO.value();
     crate::sx::sx()
-        .outline(format!(
-            "{} solid {}",
-            FOCUS_RING_WIDTH.value(),
-            NamedColorCss::FOCUS_CONTRAST.value_or(FOCUS_RING_COLOR.value())
-        ))
-        .outline_offset(FOCUS_RING_OFFSET.value())
+        .outline(format!("{width} solid {stripe}"))
+        .outline_offset(offset.clone())
         .box_shadow(format!(
-            "0 0 0 {} {},{}",
+            "0 0 0 {offset} {halo},0 0 0 calc({offset} + {width}) {stripe},0 0 0 {} {halo},{}",
             FOCUS_RING_HALO_SPREAD.value(),
-            FOCUS_RING_HALO.value(),
             OWN_SHADOW.value_or(NO_SHADOW)
         ))
 }
@@ -159,12 +161,14 @@ mod tests {
             css.contains("outline-offset:var(--lsx-focus-ring-offset);"),
             "{css}"
         );
-        // The halo first, so the resting shadow it composes back in is
-        // painted under it rather than over it.
+        // Halo, stripe, halo, then the resting shadow under all three.
         assert!(
             css.contains(
-                "box-shadow:0 0 0 var(--lsx-focus-ring-halo-spread) \
-                 var(--lsx-focus-ring-halo),var(--lsx-own-shadow, 0 0 #0000);"
+                "box-shadow:0 0 0 var(--lsx-focus-ring-offset) var(--lsx-focus-ring-halo),\
+                 0 0 0 calc(var(--lsx-focus-ring-offset) + var(--lsx-focus-ring-width)) \
+                 var(--lsx-focus-contrast, var(--lsx-focus-ring-color)),\
+                 0 0 0 var(--lsx-focus-ring-halo-spread) var(--lsx-focus-ring-halo),\
+                 var(--lsx-own-shadow, 0 0 #0000);"
             ),
             "{css}"
         );

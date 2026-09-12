@@ -15,8 +15,8 @@ use crate::{
         },
         layout::{BoxStyle, use_box},
     },
-    hooks::{ElementHandle, moved_out, use_root_id, use_silent_focus},
-    platform::{ElementApi, nested_interactive, next_task, silent_focus},
+    hooks::{ElementHandle, use_root_id, use_silent_focus_out},
+    platform::{ElementApi, nested_interactive, next_task},
     sx::{StaticSx, Sx, sx},
     theme::{
         ChoiceVariant, FIELD_CARD_PADDING, FIELD_FRAME_GAP, FieldDefaults, PAPER_BACKGROUND,
@@ -434,11 +434,10 @@ impl<'a> FieldBuilder<'a> {
             }
         };
         // Blitz's Tab fires no `focusout`: the same touch, from the silent move.
-        let silent = use_hook(|| silent_focus().is_some().then(ElementHandle::new));
-        use_silent_focus({
+        let silent = use_silent_focus_out({
             let touch = touch.clone();
-            move |moved| {
-                if touches && silent.is_some_and(|wrapper| moved_out(moved, &wrapper)) {
+            move || {
+                if touches {
                     touch();
                 }
             }

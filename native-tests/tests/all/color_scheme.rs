@@ -13,8 +13,24 @@ const TICK: Duration = Duration::from_millis(800);
 fn app() -> Element {
     let scheme = use_color_scheme();
     rsx! {
-        button { id: "scheme", "{scheme.resolved().as_str()}" }
+        button { id: "scheme", onclick: move |_| scheme.toggle(), "{scheme.resolved().as_str()}" }
     }
+}
+
+/// A pinned scheme flips the root's attribute, as on the web, instead of
+/// rebuilding the theme sheet (todo 480).
+#[test]
+fn a_pinned_scheme_flips_the_root_attribute() {
+    let mut page = mount(app);
+    let light = page.computed("#scheme", "--lsx-ink");
+    page.click(SCHEME);
+    assert_eq!(page.text(SCHEME), "dark");
+    assert_eq!(page.attr("html", "data-lsx-theme").as_deref(), Some("dark"));
+    assert_ne!(page.computed("#scheme", "--lsx-ink"), light);
+
+    page.click(SCHEME);
+    assert_eq!(page.attr("html", "data-lsx-theme"), None);
+    assert_eq!(page.computed("#scheme", "--lsx-ink"), light);
 }
 
 #[test]

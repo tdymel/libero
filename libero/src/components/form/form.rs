@@ -170,19 +170,9 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         }
     });
 
-    // Blitz fires no `submit`: its triggers run the same path.
-    let emulated = platform::emulates_submit();
-    let submit_click = move |event: MouseEvent| {
-        if event.default_action_enabled() && platform::submit_click(form_element.mounted()) {
-            submit.call(platform::submit_event(form_element.mounted()));
-        }
-    };
-    let implicit_submit = move |event: KeyboardEvent| {
-        if platform::implicit_submit(&event, form_element.mounted()) {
-            event.prevent_default();
-            submit.call(platform::submit_event(form_element.mounted()));
-        }
-    };
+    // Where the renderer fires no `submit`, its triggers run the same path.
+    let (submit_click, implicit_submit) =
+        platform::submit_listeners(move || form_element.mounted(), submit).unzip();
 
     let items = summary.visible(&scope);
     let summary_node = (!items.is_empty()).then(|| {
@@ -252,7 +242,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .element(&form_element)
         .attr("novalidate", true)
         .event("onsubmit", move |event: FormEvent| submit.call(event))
-        .event("onclick", emulated.then_some(submit_click))
-        .event("onkeydown", emulated.then_some(implicit_submit))
+        .event("onclick", submit_click)
+        .event("onkeydown", implicit_submit)
         .render(HtmlTag::Form, props.attributes, children)
 }

@@ -215,6 +215,18 @@ fn ThemeStyle() -> Element {
     let context = use_context::<LiberoContext>();
     let css = context.theme_css.read().clone();
 
+    // Every rebuilt sheet after the first, once it is in the document.
+    let theme_css = context.theme_css;
+    let mounted = use_hook(|| Rc::new(std::cell::Cell::new(false)));
+    use_effect(move || {
+        theme_css.read();
+        if mounted.replace(true)
+            && let Some(document) = document()
+        {
+            document.colors_changed();
+        }
+    });
+
     rsx! {
         style {
             dangerous_inner_html: "{css}"

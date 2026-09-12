@@ -337,14 +337,15 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     // The input's own picker, or the system dialog where the input opens none.
     let accept = props.accept.clone().unwrap_or_default();
-    let open = use_callback(move |()| match platform::file_dialog() {
-        Some(dialog) => {
-            let picked = dialog.open(&accept, multiple);
-            spawn(async move { take.call(picked.await) });
-        }
-        None => {
-            let _ = input_element.click();
-        }
+    let open = use_callback(move |()| {
+        platform::pick_files(
+            &accept,
+            multiple,
+            || {
+                let _ = input_element.click();
+            },
+            move |picked| take.call(picked),
+        );
     });
 
     let field_sx = full_width(&props.sx);
