@@ -7,6 +7,7 @@
 
 use e2e::archetypes::{Orientation, RovingTabindex, reset_tab_position};
 use e2e::browser::block_on;
+use e2e::passes::pointer;
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
 
@@ -82,5 +83,139 @@ fn the_arrows_part_ways_from_a_selected_disabled_tab() {
                 .unwrap();
             fixture.close().await.unwrap();
         }
+    });
+}
+
+async fn settle(fixture: &Fixture) {
+    fixture
+        .page
+        .evaluate("new Promise(r => setTimeout(() => r(1), 100))")
+        .await
+        .unwrap();
+}
+
+/// The focused tab's index and which tab is selected, e.g. `"0:0"`.
+async fn focus_and_selection(fixture: &Fixture) -> String {
+    fixture
+        .page
+        .evaluate(
+            "(() => { const tabs = [...document.querySelectorAll('[role=tab]')]; \
+             return tabs.indexOf(document.activeElement) + ':' + \
+             tabs.findIndex(t => t.getAttribute('aria-selected') === 'true'); })()",
+        )
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
+}
+
+/// A click focuses a disabled tab without selecting it; the arrows then step
+/// from that tab, not from the selected one.
+#[test]
+fn the_arrows_step_from_the_focused_tab() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-disabled", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "[role=tab]:nth-child(2)")
+            .await
+            .unwrap();
+        settle(&fixture).await;
+        assert_eq!(
+            focus_and_selection(&fixture).await,
+            "1:0",
+            "after the click"
+        );
+
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        settle(&fixture).await;
+        assert_eq!(
+            focus_and_selection(&fixture).await,
+            "0:0",
+            "after ArrowLeft"
+        );
+
+        fixture
+            .console
+            .assert_clean("arrowing off a focused disabled tab")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Alt+Left is the browser's Back; a chord is not the strip's to take.
+#[test]
+fn shortcut_chords_pass_through() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.evaluate(
+            "window.__prevented = []; \
+             window.addEventListener('keydown', e => window.__prevented.push(e.defaultPrevented))",
+        )
+        .await
+        .unwrap();
+        reset_tab_position(page).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        for modifier in [keyboard::ALT, keyboard::CTRL, keyboard::META] {
+            keyboard::press_with(page, keyboard::ARROW_RIGHT, modifier)
+                .await
+                .unwrap();
+        }
+        settle(&fixture).await;
+        assert_eq!(focus_and_selection(&fixture).await, "0:0");
+        let prevented: String = page
+            .evaluate("window.__prevented.filter(Boolean).length + ''")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(prevented, "0", "a chord's default was prevented");
+
+        fixture.console.assert_clean("chords on a tab").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// WCAG 1.4.10: a strip wider than the phone scrolls inside itself, so the
+/// page does not, and End brings the last tab into view.
+#[test]
+fn a_crowded_strip_scrolls_inside_itself() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-crowded", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let (width, _) = Viewport::Mobile.size();
+        let page_width: i64 = page
+            .evaluate("document.documentElement.scrollWidth")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            page_width <= width,
+            "the page is {page_width}px wide at {width}px"
+        );
+
+        reset_tab_position(page).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        keyboard::press(page, keyboard::END).await.unwrap();
+        settle(&fixture).await;
+        let visible: bool = page
+            .evaluate(
+                "(() => { const list = document.querySelector('[role=tablist]').getBoundingClientRect(); \
+                 const last = document.querySelector('[role=tab]:last-child').getBoundingClientRect(); \
+                 return last.left >= list.left - 1 && last.right <= list.right + 1; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(visible, "End left the last tab outside the strip");
+
+        fixture.console.assert_clean("a crowded strip").unwrap();
+        fixture.close().await.unwrap();
     });
 }

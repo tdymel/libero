@@ -3,7 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{Variables, focus_ring_sx, inset_focus_ring_sx, neighbour, text_color, variables},
+        common::{
+            Variables, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx, neighbour,
+            text_color, variables,
+        },
         layout::use_box,
     },
     hooks::{id_selector, use_element},
@@ -18,15 +21,19 @@ use crate::{
 const TABS_COLOR: CssVar = CssVar::new("--lsx-tabs-color");
 
 static TABS_SX: StaticSx = StaticSx::new(|| {
-    let line = format!("1px solid {}", TABS_BORDER_COLOR.value());
+    let line = format!("inset 0 -1px 0 {}", TABS_BORDER_COLOR.value());
 
     TabsDefaults::theme_vars()
         .display("block")
         .selector(
             "& > [role=\"tablist\"]",
+            // Scrolls inside itself, so a crowded strip does not widen the
+            // page (WCAG 1.4.10). The line is an inset shadow: a border
+            // would clip the selected tab's underline where they overlap.
             sx().display("flex")
                 .align_items("stretch")
-                .border_bottom(line),
+                .overflow_x("auto")
+                .box_shadow(line),
         )
         .selector(
             "& [role=\"tab\"]",
@@ -40,9 +47,6 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 .background("transparent")
                 .border("0")
                 .border_bottom(format!("{} solid transparent", TABS_LINE.value()))
-                // The strip's own 1px line sits under the indicator, so the
-                // selected tab's border has to overlap it rather than stack.
-                .margin_bottom("-1px")
                 .padding(format!("{} {}", TABS_PAD_Y.value(), TABS_PAD_X.value()))
                 .font("inherit")
                 .color("inherit")
@@ -132,10 +136,12 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     let tab_stop = selected.or_else(|| disabled.iter().position(|off| !off));
     let root_element = use_element();
     let keydown_root = root.clone();
-    let onkeydown = use_callback(move |event: Event<KeyboardData>| {
-        let Some(at) = tab_stop else {
+    // Steps from the focused tab: a click focuses a disabled tab without
+    // selecting it.
+    let onkeydown = use_callback(move |(at, event): (usize, Event<KeyboardData>)| {
+        if has_shortcut_modifier(&event) {
             return;
-        };
+        }
         let next = match event.key() {
             Key::ArrowRight => neighbour(&disabled, at, 1),
             Key::ArrowLeft => neighbour(&disabled, at, -1),
@@ -186,7 +192,6 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                     id: "{list_id}",
                     role: "tablist",
                     "aria-orientation": "horizontal",
-                    onkeydown: move |event| onkeydown.call(event),
                     for (index, tab) in tabs.iter().enumerate() {
                         button {
                             key: "{index}",
@@ -204,6 +209,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                             "aria-disabled": if tab.disabled { "true" } else { "false" },
                             "aria-label": tab.name.clone(),
                             tabindex: if tab_stop == Some(index) { "0" } else { "-1" },
+                            onkeydown: move |event| onkeydown.call((index, event)),
                             onclick: {
                                 let disabled = tab.disabled;
                                 move |_| {
