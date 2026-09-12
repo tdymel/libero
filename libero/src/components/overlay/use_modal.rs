@@ -9,7 +9,7 @@ use dioxus::prelude::*;
 use crate::{
     components::Modal,
     context::{ModalContext, ModalHost},
-    hooks::{FocusReturn, use_focus_return, use_portal},
+    hooks::{FocusReturn, use_focus_return, use_portal_slot},
 };
 
 pub(crate) fn use_modal_z_index() -> i32 {
@@ -204,6 +204,8 @@ pub struct ModalHandle<S: 'static, R: 'static = ()> {
     args: Signal<Option<S>>,
     resolution: Signal<Resolution<R>>,
     closer: Callback<()>,
+    /// Publishes the modal's slot, or clears it once closed.
+    show: Callback<()>,
 }
 
 impl<S: 'static, R: 'static> Clone for ModalHandle<S, R> {
@@ -234,12 +236,17 @@ impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
         // down, and remembering it would clobber the trigger that is still the
         // right answer ([[todos]] item 37). `peek`: `open_with` is called from
         // handlers, and nothing here should subscribe.
-        if self.args.peek().is_none() {
+        let opening = self.args.peek().is_none();
+        if opening {
             focus_return.remember_active();
         }
 
         let mut slot = self.args;
         slot.set(Some(args.into()));
+        // Already open: the slot reads `args` and redraws itself.
+        if opening {
+            self.show.call(());
+        }
 
         Opening {
             resolution: self.resolution,
@@ -301,37 +308,60 @@ where
     // `use_callback`, not the closure directly: rsx rebuilds `render` every
     // render, and a context-provided handle is stored once - the swap keeps
     // captured values live instead of frozen at mount.
+    let slot = use_portal_slot();
     let closer = use_callback(move |()| {
         let mut args = args;
         args.set(None);
+        slot.show(None);
     });
     let render = use_callback(render);
 
-    let handle = ModalHandle {
+    // Runs in `ModalSlot`'s scope, so `args` and whatever `render` reads
+    // subscribe it, not this caller: opening redraws the modal alone.
+    let draw = use_callback(move |()| {
+        // `peek`: the generation only ever changes together with `args`, and
+        // reading it would redraw on every handler attached.
+        let generation = resolution.peek().generation;
+        args.read().is_some().then(|| {
+            let scope = ModalScope {
+                args,
+                resolution,
+                closer,
+                generation,
+            };
+            rsx! {
+                Modal {
+                    onclose: move |_| finish(resolution, closer, generation, None),
+                    {render.call(scope)}
+                }
+            }
+        })
+    });
+    // Bumped per publish, so the slot redraws when this caller does (fresh
+    // captures in `render`), and skips when the outlet redraws for another.
+    let mut drawn = use_hook(|| CopyValue::new(0_u64));
+    let show = use_callback(move |()| {
+        let open = args.peek().is_some();
+        let content = open.then(|| {
+            let tick = drawn();
+            drawn.set(tick + 1);
+            rsx! { ModalSlot { draw, tick } }
+        });
+        slot.show(content);
+    });
+    show.call(());
+
+    ModalHandle {
         args,
         resolution,
         closer,
-    };
+        show,
+    }
+}
 
-    // `peek`: the generation only ever changes together with `args`, which is
-    // already subscribed below, and reading it would re-render on every
-    // handler attached.
-    let generation = resolution.peek().generation;
-    let content = args.read().is_some().then(|| {
-        let scope = ModalScope {
-            args,
-            resolution,
-            closer,
-            generation,
-        };
-        rsx! {
-            Modal {
-                onclose: move |_| finish(resolution, closer, generation, None),
-                {render.call(scope)}
-            }
-        }
-    });
-    use_portal(content);
-
-    handle
+/// The open modal's own scope, drawn in the portal outlet.
+#[component]
+fn ModalSlot(draw: Callback<(), Option<Element>>, tick: u64) -> Element {
+    let _ = tick;
+    draw.call(()).unwrap_or_else(VNode::empty)
 }

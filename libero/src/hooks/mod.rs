@@ -34,6 +34,7 @@ pub use popover::{
     Align, Placed, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Rect, Side, use_popover,
 };
 pub use portal::use_portal;
+pub(crate) use portal::use_portal_slot;
 pub use presence::{Presence, use_presence};
 pub(crate) use ripple::{ripple_sx, use_ripple};
 pub(crate) use silent_focus::{moved_out, moved_within, use_silent_focus, use_silent_focus_within};

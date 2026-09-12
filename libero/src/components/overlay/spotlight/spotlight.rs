@@ -434,9 +434,10 @@ fn use_hotkey(handle: SpotlightHandle, shortcut: Option<char>) {
         }
     }));
 
-    let open = handle.is_open();
     let listening = slot.clone();
-    use_effect(use_reactive!(|(open, shortcut)| {
+    use_effect(use_reactive!(|shortcut| {
+        // Read here, so opening reruns this effect, not the host's render.
+        let open = handle.is_open();
         listening.borrow_mut().take();
         let (Some(key), Some(api)) = (shortcut, keyboard()) else {
             return;

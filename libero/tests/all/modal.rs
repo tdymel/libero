@@ -1,10 +1,12 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use crate::common::{body, render};
 
-use dioxus::prelude::*;
+use dioxus::{core::NoOpMutations, prelude::*};
 use libero::{
     LiberoProvider,
     components::Dialog,
-    hooks::{ModalScope, use_modal},
+    hooks::{ModalHandle, ModalScope, use_modal},
 };
 
 #[test]
@@ -96,4 +98,56 @@ fn dismissing_a_modal_settles_its_opening_with_no_result() {
 
     assert!(body.contains("Some(None)"), "got {body}");
     assert!(!body.contains("asking"), "the modal should be gone: {body}");
+}
+
+thread_local! {
+    static CALLER: std::cell::Cell<Option<(ModalHandle<()>, Signal<u32>)>> =
+        const { std::cell::Cell::new(None) };
+}
+static CALLER_RENDERS: AtomicUsize = AtomicUsize::new(0);
+
+/// Opening draws the modal in its own scope: the caller is not redrawn, and a
+/// caller redraw while open still reaches what `render` captured.
+#[test]
+fn opening_leaves_the_caller_alone_and_its_redraw_reaches_the_content() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Caller {} }
+        }
+    }
+
+    #[component]
+    fn Caller() -> Element {
+        CALLER_RENDERS.fetch_add(1, Ordering::Relaxed);
+        let count = use_signal(|| 0_u32);
+        let shown = count();
+        let modal = use_modal(move |_: ModalScope<()>| rsx! { Dialog { "count {shown}" } });
+        CALLER.set(Some((modal, count)));
+        rsx! {}
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let (modal, mut count) = CALLER.get().expect("the caller rendered");
+    let before = CALLER_RENDERS.load(Ordering::Relaxed);
+
+    dom.in_runtime(|| {
+        let _ = modal.open();
+    });
+    dom.render_immediate(&mut NoOpMutations);
+    assert_eq!(
+        CALLER_RENDERS.load(Ordering::Relaxed),
+        before,
+        "opening redrew the caller"
+    );
+    assert!(dioxus_ssr::render(&dom).contains("count 0"));
+
+    dom.in_runtime(|| count.set(7));
+    dom.render_immediate(&mut NoOpMutations);
+    let html = dioxus_ssr::render(&dom);
+    assert!(html.contains("count 7"), "stale content: {html}");
+
+    dom.in_runtime(|| modal.close());
+    dom.render_immediate(&mut NoOpMutations);
+    assert!(!dioxus_ssr::render(&dom).contains("count"));
 }

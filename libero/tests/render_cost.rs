@@ -296,6 +296,22 @@ fn CostModal() -> Element {
     rsx! {}
 }
 
+/// A modal whose caller draws a page of its own: prices what an opening redraws
+/// outside the overlay.
+#[component]
+fn CostModalCaller() -> Element {
+    let modal = use_modal(|_: ModalScope<()>| rsx! { Dialog { aria_label: "d", "x" } });
+    use_opener(move |open| match open {
+        true => drop(modal.open()),
+        false => modal.close(),
+    });
+    rsx! {
+        for i in 0..20 {
+            div { "data-i": "{i}", "{i}" }
+        }
+    }
+}
+
 #[component]
 fn CostDrawer() -> Element {
     let options = DrawerOptions {
@@ -347,6 +363,12 @@ const OVERLAY_SHAPES: &[Shape] = &[
         app: || overlay_app(|| rsx! { CostModal {} }),
         count: 1,
         round: close_round,
+    },
+    Shape {
+        name: "Modal open +caller",
+        app: || overlay_app(|| rsx! { CostModalCaller {} }),
+        count: 1,
+        round: open_round,
     },
     Shape {
         name: "Drawer open",
