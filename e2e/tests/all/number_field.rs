@@ -142,6 +142,35 @@ fn page_up_and_page_down_take_ten_steps() {
 
 const RANGED: &str = "#ranged";
 
+/// Todo 509: Ctrl/Alt/Meta with an arrow or Page key is the caret's or the
+/// browser's (Ctrl+PageDown switches tabs), not a step.
+#[test]
+fn modifier_chords_do_not_step() {
+    block_on(async {
+        let fixture = Fixture::open("/number-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, RANGED, 6).await.unwrap();
+        keyboard::assert_chords_ignored(
+            page,
+            &[
+                keyboard::ARROW_UP,
+                keyboard::ARROW_DOWN,
+                keyboard::PAGE_UP,
+                keyboard::PAGE_DOWN,
+            ],
+            &format!("document.querySelector({RANGED:?}).value"),
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("number field chords").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Select the field's text and type `text` over it.
 async fn retype(page: &Page, text: &str) -> Result<()> {
     page.evaluate("document.activeElement.select()").await?;

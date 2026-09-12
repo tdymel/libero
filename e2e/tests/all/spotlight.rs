@@ -195,6 +195,45 @@ fn the_arrows_move_the_highlight_and_enter_runs_it() {
     });
 }
 
+/// Todo 509: Ctrl/Alt/Meta with an arrow is the search box's caret or the
+/// browser's, never a highlight move.
+#[test]
+fn modifier_chords_leave_the_highlight() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!!document.querySelector({SEARCH:?}).getAttribute('aria-activedescendant')"),
+            "ArrowDown to highlight a row",
+        )
+        .await
+        .unwrap();
+        keyboard::assert_chords_ignored(
+            page,
+            &[
+                keyboard::ARROW_DOWN,
+                keyboard::ARROW_UP,
+                keyboard::HOME,
+                keyboard::END,
+            ],
+            &format!(
+                "[document.querySelector({SEARCH:?}).getAttribute('aria-activedescendant'), \
+                 document.activeElement === document.querySelector({SEARCH:?})]"
+            ),
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("spotlight chords").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Ctrl+K and Cmd+K each open the palette with focus in its search box, and
 /// the same chord from inside it closes it again.
 #[test]

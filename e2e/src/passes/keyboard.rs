@@ -181,6 +181,23 @@ pub async fn type_text(page: &Page, text: &str) -> Result<()> {
 /// (a JS expression) as it was and are not cancelled: the chord is the
 /// browser's (Alt+ArrowLeft is Back), as for a native control.
 pub async fn assert_chords_ignored(page: &Page, keys: &[Key], probe: &str) -> Result<()> {
+    assert_chords_ignored_with(
+        page,
+        &[("Alt", ALT), ("Ctrl", CTRL), ("Meta", META)],
+        keys,
+        probe,
+    )
+    .await
+}
+
+/// [`assert_chords_ignored`] for the given `(name, bits)` modifiers only, for a
+/// combobox where Alt+ArrowDown and Alt+ArrowUp open and close the list (APG).
+pub async fn assert_chords_ignored_with(
+    page: &Page,
+    modifiers: &[(&str, i64)],
+    keys: &[Key],
+    probe: &str,
+) -> Result<()> {
     let read = format!("JSON.stringify({probe})");
     let before: String = page.evaluate(read.as_str()).await?.into_value()?;
     page.evaluate(
@@ -190,10 +207,10 @@ pub async fn assert_chords_ignored(page: &Page, keys: &[Key], probe: &str) -> Re
          window.__chordCancelled.push(e.key); }); } 1",
     )
     .await?;
-    for (name, modifier) in [("Alt", ALT), ("Ctrl", CTRL), ("Meta", META)] {
+    for &(name, modifier) in modifiers {
         for key in keys {
             // Honoured, these two navigate away (Back, home page).
-            if modifier == ALT && matches!(key.key, "ArrowLeft" | "Home") {
+            if modifier & ALT != 0 && matches!(key.key, "ArrowLeft" | "Home") {
                 continue;
             }
             press_with(page, *key, modifier).await?;

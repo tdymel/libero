@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, HtmlTag, Input, NumberValue,
-        common::{MinusIcon, PlusIcon, field_props},
+        common::{MinusIcon, PlusIcon, field_props, navigation_chord},
         form::{FIELD_CONTROL_SX, LiveControl, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
@@ -262,6 +262,10 @@ fn NumberFieldShell<T: NumberValue>(
             }
         })
         .event("onkeydown", move |event: KeyboardEvent| {
+            // Ctrl+PageDown switches tabs, Ctrl+ArrowUp moves the caret.
+            if navigation_chord(&event).is_some() {
+                return;
+            }
             let steps = match event.key() {
                 Key::ArrowUp => 1,
                 Key::ArrowDown => -1,

@@ -5,7 +5,29 @@ use libero::components::{FileField, Files, Flex};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/file-field", || rsx! { FileFieldPage {} })];
+pub const ROUTES: Routes = &[
+    ("/file-field", || rsx! { FileFieldPage {} }),
+    ("/file-field/input", || rsx! { FileInputPage {} }),
+];
+
+/// The `Input` variant: dropped files become chips the arrows walk.
+#[component]
+fn FileInputPage() -> Element {
+    let mut files = use_signal(Files::default);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            FileField {
+                id: "attachments",
+                label: "Attachments",
+                placeholder: "Pick files",
+                multiple: true,
+                value: files(),
+                onchange: move |next: Files| files.set(next),
+            }
+        }
+    }
+}
 
 /// Starts empty: a `FileData` only comes from a pick or a drop, so the unit
 /// drops its files in.

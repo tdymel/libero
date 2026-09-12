@@ -94,6 +94,8 @@ impl Combobox<'_> {
                 .await?;
         }
 
+        self.assert_chords(page, &listbox, first).await?;
+
         keyboard::press(page, keyboard::ESCAPE).await?;
         wait::for_hidden(page, &listbox).await?;
         self.assert_expanded(page, false).await?;
@@ -101,6 +103,56 @@ impl Combobox<'_> {
         // Focus return, which for this pattern means focus never moved.
         focus::assert_focused(page, self.trigger, "Escape closing the list").await?;
         Ok(())
+    }
+
+    /// On an open list highlighting `first`: Ctrl and Meta chords are the
+    /// caret's or the browser's, Alt+ArrowDown keeps the highlight, Alt+ArrowUp
+    /// closes and Alt+ArrowDown reopens (APG). Todo 509.
+    async fn assert_chords(&self, page: &Page, listbox: &str, first: &str) -> Result<()> {
+        let probe = format!(
+            "(t => [t.getAttribute('aria-expanded'), t.getAttribute('aria-activedescendant')])(document.querySelector({}))",
+            serde_json::to_string(self.trigger)?
+        );
+        let navigation = [
+            keyboard::ARROW_DOWN,
+            keyboard::ARROW_UP,
+            keyboard::HOME,
+            keyboard::END,
+            keyboard::ARROW_LEFT,
+            keyboard::ARROW_RIGHT,
+        ];
+        keyboard::assert_chords_ignored_with(
+            page,
+            &[("Ctrl", keyboard::CTRL), ("Meta", keyboard::META)],
+            &navigation,
+            &probe,
+        )
+        .await?;
+        keyboard::assert_chords_ignored_with(
+            page,
+            &[("Alt", keyboard::ALT)],
+            &navigation[2..],
+            &probe,
+        )
+        .await?;
+
+        keyboard::press_with(page, keyboard::ARROW_DOWN, keyboard::ALT).await?;
+        page.evaluate("new Promise(r => setTimeout(() => r(1), 60))")
+            .await?;
+        self.expect_active(
+            page,
+            listbox,
+            first,
+            "pressing Alt+ArrowDown on the open list",
+        )
+        .await?;
+        keyboard::press_with(page, keyboard::ARROW_UP, keyboard::ALT).await?;
+        wait::for_hidden(page, listbox).await?;
+        self.assert_expanded(page, false).await?;
+        focus::assert_focused(page, self.trigger, "Alt+ArrowUp closing the list").await?;
+        keyboard::press_with(page, keyboard::ARROW_DOWN, keyboard::ALT).await?;
+        wait::for_visible(page, listbox).await?;
+        self.assert_expanded(page, true).await
     }
 
     async fn assert_closed(&self, page: &Page) -> Result<()> {

@@ -63,6 +63,40 @@ fn arrow_down_enters_the_dialog_and_escape_returns_to_the_input() {
     });
 }
 
+/// Todo 509: Ctrl/Meta+ArrowDown is the caret's and leaves focus in the input;
+/// Alt+ArrowDown enters the dialog like the plain key (APG).
+#[test]
+fn only_alt_arrow_down_enters_the_dialog() {
+    block_on(async {
+        for (route, input) in FIELDS {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, input, 5).await.unwrap();
+            wait::for_visible(page, DIALOG).await.unwrap();
+            keyboard::assert_chords_ignored_with(
+                page,
+                &[("Ctrl", keyboard::CTRL), ("Meta", keyboard::META)],
+                &[keyboard::ARROW_DOWN],
+                &format!("document.activeElement === document.querySelector({input:?})"),
+            )
+            .await
+            .unwrap_or_else(|e| panic!("{route}: {e}"));
+            keyboard::press_with(page, keyboard::ARROW_DOWN, keyboard::ALT)
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                &format!("document.querySelector({DIALOG:?})?.contains(document.activeElement)"),
+                "Alt+ArrowDown to move focus into the dialog",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("{route}: {e}"));
+            fixture.console.assert_clean(route).unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// A theme's own range separator reads back, typed with or without its spaces.
 #[test]
 fn a_typed_range_reads_at_the_theme_separator() {

@@ -18,6 +18,7 @@ use super::{
 use crate::{
     components::{
         Caption, ClassList, FieldName, HtmlTag, Input, States, Validators,
+        common::{NavigationChord, navigation_chord},
         form::{FIELD_CONTROL_SX, FieldStatus, use_bound, use_field, use_field_frame},
         layout::use_box,
         surface::paper_sx,
@@ -471,7 +472,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
             _ if readonly => {}
             Key::Enter => commit_on_enter(),
-            Key::ArrowDown => {
+            // APG: Alt+ArrowDown enters like ArrowDown; Ctrl/Meta is the caret's.
+            Key::ArrowDown if navigation_chord(&event) != Some(NavigationChord::Browser) => {
                 event.prevent_default();
                 opened.set(true);
                 entering.set(true);

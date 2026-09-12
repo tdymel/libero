@@ -32,6 +32,12 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 509: the chip cursor is not moved by a Ctrl/Alt/Meta arrow either.
+#[test]
+fn chords_on_a_closed_trigger_are_the_browsers() {
+    crate::select::closed_chords_are_the_browsers("/multi-select");
+}
+
 #[test]
 fn it_honours_the_combobox_contract() {
     block_on(async {

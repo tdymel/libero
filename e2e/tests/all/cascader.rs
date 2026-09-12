@@ -209,6 +209,75 @@ fn the_keyboard_walks_the_levels() {
     });
 }
 
+/// Todo 509: Ctrl/Meta chords and Alt+ArrowRight/End leave the walk alone;
+/// Alt+ArrowDown opens without moving the cursor, Alt+ArrowUp closes (APG).
+#[test]
+fn modifier_chords_leave_the_walk_alone() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        let caret_keys = [
+            keyboard::ARROW_DOWN,
+            keyboard::ARROW_UP,
+            keyboard::ARROW_RIGHT,
+            keyboard::ARROW_LEFT,
+            keyboard::HOME,
+            keyboard::END,
+        ];
+        let not_alt = [("Ctrl", keyboard::CTRL), ("Meta", keyboard::META)];
+        let alt = [("Alt", keyboard::ALT)];
+
+        keyboard::assert_chords_ignored_with(page, &not_alt, &caret_keys, CURSOR)
+            .await
+            .unwrap_or_else(|e| panic!("closed: {e}"));
+        keyboard::assert_chords_ignored_with(page, &alt, &caret_keys[1..], CURSOR)
+            .await
+            .unwrap_or_else(|e| panic!("closed: {e}"));
+
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        expect(page, "France|2|true", "ArrowRight into Europe", "desktop").await;
+        keyboard::assert_chords_ignored_with(page, &not_alt, &caret_keys, CURSOR)
+            .await
+            .unwrap_or_else(|e| panic!("open: {e}"));
+        keyboard::assert_chords_ignored_with(page, &alt, &caret_keys[2..], CURSOR)
+            .await
+            .unwrap_or_else(|e| panic!("open: {e}"));
+
+        keyboard::press_with(page, keyboard::ARROW_DOWN, keyboard::ALT)
+            .await
+            .unwrap();
+        page.evaluate("new Promise(r => setTimeout(() => r(1), 60))")
+            .await
+            .unwrap();
+        expect(
+            page,
+            "France|2|true",
+            "Alt+ArrowDown to keep the cursor",
+            "desktop",
+        )
+        .await;
+        keyboard::press_with(page, keyboard::ARROW_UP, keyboard::ALT)
+            .await
+            .unwrap();
+        expect(page, "closed", "Alt+ArrowUp to close", "desktop").await;
+        keyboard::press_with(page, keyboard::ARROW_DOWN, keyboard::ALT)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=combobox]').getAttribute('aria-expanded') === 'true'",
+            "Alt+ArrowDown to open",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("cascader chords").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A click on disabled Asia leaves the cursor on Europe: the ArrowDown after
 /// it lands on Oceania. Had the click opened Asia, the cursor would sit on
 /// Japan, alone in its column, and the key would leave it there. A click on

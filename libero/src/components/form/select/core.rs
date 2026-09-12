@@ -4,7 +4,8 @@ use crate::{
     components::{
         ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input, States, VisuallyHidden,
         common::{
-            ChevronDownIcon, attr, field_props, focus_ring_sx, has_shortcut_modifier, ring_overlay,
+            ChevronDownIcon, attr, field_props, focus_ring_sx, has_shortcut_modifier,
+            navigation_chord, ring_overlay,
         },
         form::{
             PreparedField, clear_button, field_control_sx, use_chip_announcer, use_field,
@@ -823,7 +824,8 @@ fn trigger_key(event: &KeyboardEvent, keys: TriggerKeys, typed: &SelectTypeahead
         onremove,
     } = keys;
     let state = open.state;
-    if open.disabled || open.readonly {
+    // A chord is the browser's, or Alt+ArrowDown/Up for `ComboboxCore` (APG).
+    if open.disabled || open.readonly || navigation_chord(event).is_some() {
         return;
     }
     match event.key() {

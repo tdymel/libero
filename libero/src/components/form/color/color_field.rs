@@ -4,7 +4,7 @@ use super::{ColorCode, ColorFormat, ColorPicker, ColorSwatch, Swatches};
 use crate::{
     components::{
         ActionIcon, HtmlTag, Input, States,
-        common::{EyeDropperIcon, field_props},
+        common::{EyeDropperIcon, NavigationChord, field_props, navigation_chord},
         form::{FIELD_CONTROL_SX, SliderChangeEvent, use_bound, use_field, use_field_frame},
         layout::use_box,
         surface::paper_sx,
@@ -358,7 +358,12 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             blurred();
         })
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
-            Key::ArrowDown if has_dropdown && !readonly => {
+            // APG: Alt+ArrowDown enters like ArrowDown; Ctrl/Meta is the caret's.
+            Key::ArrowDown
+                if has_dropdown
+                    && !readonly
+                    && navigation_chord(&event) != Some(NavigationChord::Browser) =>
+            {
                 event.prevent_default();
                 opened.set(true);
                 entering.set(true);

@@ -12,6 +12,45 @@ pub(crate) fn has_shortcut_modifier(event: &dioxus::prelude::KeyboardEvent) -> b
     modifiers.ctrl() || modifiers.alt() || modifiers.meta()
 }
 
+/// What an arrow, Home, End, PageUp or PageDown under Ctrl, Alt or Meta means
+/// to a field.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum NavigationChord {
+    /// Alt+ArrowDown: a combobox opens its popup (APG).
+    Open,
+    /// Alt+ArrowUp: a combobox closes its popup (APG).
+    Close,
+    /// Any other: the text caret's or the browser's (Alt+ArrowLeft is Back).
+    Browser,
+}
+
+/// The press's [`NavigationChord`]; `None` for a plain press or another key.
+pub(crate) fn navigation_chord(event: &dioxus::prelude::KeyboardEvent) -> Option<NavigationChord> {
+    use dioxus::prelude::{Key, ModifiersInteraction};
+
+    let navigation = matches!(
+        event.key(),
+        Key::ArrowDown
+            | Key::ArrowUp
+            | Key::ArrowLeft
+            | Key::ArrowRight
+            | Key::Home
+            | Key::End
+            | Key::PageUp
+            | Key::PageDown
+    );
+    if !navigation || !has_shortcut_modifier(event) {
+        return None;
+    }
+    let modifiers = event.data().modifiers();
+    let alt_only = modifiers.alt() && !modifiers.ctrl() && !modifiers.meta();
+    Some(match event.key() {
+        Key::ArrowDown if alt_only => NavigationChord::Open,
+        Key::ArrowUp if alt_only => NavigationChord::Close,
+        _ => NavigationChord::Browser,
+    })
+}
+
 /// A non-global attribute to push into a `Vec<Attribute>` by hand.
 pub(crate) fn attr<T>(
     name: &'static str,

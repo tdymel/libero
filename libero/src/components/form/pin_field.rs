@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States,
-        common::{field_props, input_from_str},
+        common::{field_props, input_from_str, navigation_chord},
         form::{FIELD_CONTROL_SX, PreparedFrame, use_bound, use_field, use_field_frame},
         layout::{BoxStyle, use_box},
     },
@@ -364,6 +364,10 @@ impl PinEdit {
     fn keys(&self, index: usize, event: Event<KeyboardData>) {
         let (root, length, readonly) = (&self.root, self.length, self.readonly);
         let modified = event.modifiers().ctrl() || event.modifiers().meta();
+        // Ctrl/Alt/Meta+arrow, Home or End is the caret's or the browser's.
+        if navigation_chord(&event).is_some() {
+            return;
+        }
         match event.key() {
             Key::ArrowLeft => {
                 event.prevent_default();

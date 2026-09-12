@@ -7,7 +7,9 @@ use crate::{
     CssLayer,
     components::{
         ActionIcon, HtmlTag, Input, States,
-        common::{CloseIcon, UploadIcon, field_props, focus_ring_sx, input_from_str},
+        common::{
+            CloseIcon, UploadIcon, field_props, focus_ring_sx, input_from_str, navigation_chord,
+        },
         feedback::Loader,
         form::{
             PreparedField, SelectionArgs, Setter, clear_button, field_control_sx, removable_chip,
@@ -866,7 +868,8 @@ impl SurfaceKeys {
             mut cursor,
             remove_at,
         } = self;
-        if !interactive {
+        // A chord is the browser's (Alt+ArrowLeft is Back).
+        if !interactive || navigation_chord(&event).is_some() {
             return;
         }
         match event.key() {

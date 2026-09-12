@@ -13,6 +13,8 @@ use e2e::{Fixture, Suite, Viewport, wait};
 const SURFACE: &str = "[data-fixture-ready] [role=button]";
 const REMOVE_ALPHA: &str = "[aria-label=\"Remove alpha.txt\"]";
 const REMOVE_BETA: &str = "[aria-label=\"Remove beta.txt\"]";
+/// The `Input` variant's control, which holds the chips.
+const CONTROL: &str = "#attachments";
 
 /// Todo 483: the label focuses the surface it names by id.
 #[test]
@@ -81,6 +83,41 @@ async fn open_with_two_files() -> Fixture {
         .await
         .unwrap();
     fixture
+}
+
+/// Todo 509: Ctrl/Alt/Meta+ArrowLeft/Right leave the chip cursor alone; the
+/// plain arrow still moves it.
+#[test]
+fn modifier_chords_leave_the_chip_cursor_alone() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/input", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, CONTROL).await.unwrap();
+        drop_files(page, CONTROL, files_on_disk()).await;
+        wait::for_selector(page, REMOVE_BETA).await.unwrap();
+        page.evaluate(format!("document.querySelector({CONTROL:?}).focus()"))
+            .await
+            .unwrap();
+
+        let probe =
+            format!("document.querySelector({CONTROL:?}).getAttribute('aria-activedescendant')");
+        keyboard::assert_chords_ignored(
+            page,
+            &[keyboard::ARROW_LEFT, keyboard::ARROW_RIGHT],
+            &probe,
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        wait::for_js_true(page, &format!("!!{probe}"), "ArrowLeft to reach a chip")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("file chip chords").unwrap();
+        fixture.close().await.unwrap();
+    });
 }
 
 /// The cards alone could come from `value`; the hidden input's `FileList` is

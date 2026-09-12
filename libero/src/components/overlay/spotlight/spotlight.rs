@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Dialog, Kbd, Loader, ScrollArea, VisuallyHidden,
-        common::{inset_focus_ring_sx, use_name_warning},
+        common::{inset_focus_ring_sx, navigation_chord, use_name_warning},
         form::{ComboboxState, use_combobox},
     },
     hooks::{ModalHandle, ModalScope, use_dismiss_layer, use_modal, use_theme},
@@ -578,7 +578,8 @@ fn spotlight_key(
     count: usize,
     run_row: impl Fn(usize),
 ) {
-    if count == 0 {
+    // A chord is the caret's or the browser's; the list is always open.
+    if count == 0 || navigation_chord(&event).is_some() {
         return;
     }
     match event.key() {

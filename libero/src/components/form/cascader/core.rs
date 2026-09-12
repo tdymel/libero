@@ -5,7 +5,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, ComboboxOption, HtmlTag, Input, States,
-        common::{ChevronDownIcon, attr, field_props, input_from_str},
+        common::{
+            ChevronDownIcon, NavigationChord, attr, field_props, input_from_str, navigation_chord,
+        },
         form::{
             ComboboxState, PreparedField, clear_button, combobox::COMBOBOX_DROPDOWN_SX,
             field_control_sx, use_combobox, use_field, use_field_frame, use_refocus_on_close,
@@ -578,6 +580,24 @@ impl CascaderKeys {
     fn handle(&self, event: KeyboardEvent) {
         if self.disabled {
             return;
+        }
+        // APG: Alt+ArrowDown opens without moving the cursor, Alt+ArrowUp
+        // closes; any other chord is the caret's or the browser's.
+        match navigation_chord(&event) {
+            Some(NavigationChord::Open) => {
+                event.prevent_default();
+                if !self.state.is_open() {
+                    (self.open)(true);
+                }
+                return;
+            }
+            Some(NavigationChord::Close) if self.state.is_open() => {
+                event.prevent_default();
+                self.state.close();
+                return;
+            }
+            Some(_) => return,
+            None => {}
         }
         if !self.state.is_open() {
             self.closed(event);

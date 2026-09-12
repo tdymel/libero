@@ -117,6 +117,47 @@ fn the_open_search_box_is_announced_as_the_field() {
     });
 }
 
+/// Todo 509: on a closed trigger no Ctrl/Alt/Meta chord opens the list or moves
+/// the chip cursor, bar Alt+ArrowDown (APG, the archetype checks it).
+#[test]
+fn chords_on_a_closed_select_are_the_browsers() {
+    closed_chords_are_the_browsers("/select");
+}
+
+pub fn closed_chords_are_the_browsers(route: &str) {
+    block_on(async {
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        let probe = format!(
+            "(t => [t.getAttribute('aria-expanded'), t.getAttribute('aria-activedescendant')])(document.querySelector({TRIGGER:?}))"
+        );
+        keyboard::assert_chords_ignored(
+            page,
+            &[
+                keyboard::ARROW_UP,
+                keyboard::HOME,
+                keyboard::END,
+                keyboard::ARROW_LEFT,
+                keyboard::ARROW_RIGHT,
+            ],
+            &probe,
+        )
+        .await
+        .unwrap_or_else(|e| panic!("{route}: {e}"));
+        keyboard::assert_chords_ignored_with(
+            page,
+            &[("Ctrl", keyboard::CTRL), ("Meta", keyboard::META)],
+            &[keyboard::ARROW_DOWN],
+            &probe,
+        )
+        .await
+        .unwrap_or_else(|e| panic!("{route}: {e}"));
+        fixture.console.assert_clean(route).unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// APG select-only combobox: a closed trigger opens on ArrowUp (on the
 /// selection, like ArrowDown), Home (first row) and End (last row).
 #[test]

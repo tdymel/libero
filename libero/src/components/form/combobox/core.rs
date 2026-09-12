@@ -2,8 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ClassList, HtmlTag, Input, States, a11y::VISUALLY_HIDDEN_FIXED_SX, common::base_props,
-        layout::use_box, surface::paper_sx,
+        ClassList, HtmlTag, Input, States,
+        a11y::VISUALLY_HIDDEN_FIXED_SX,
+        common::{NavigationChord, base_props, navigation_chord},
+        layout::use_box,
+        surface::paper_sx,
     },
     hooks::{
         ElementHandle, PopoverOptions, PopoverWidth, use_element, use_field_list_layer,
@@ -490,6 +493,23 @@ impl ComboboxKeys {
             }
         };
 
+        // APG: Alt+ArrowDown opens without moving the highlight.
+        match navigation_chord(&event) {
+            Some(NavigationChord::Open) => {
+                event.prevent_default();
+                if !opened {
+                    request(true);
+                }
+                return;
+            }
+            Some(NavigationChord::Close) if opened => {
+                event.prevent_default();
+                request(false);
+                return;
+            }
+            Some(_) => return,
+            None => {}
+        }
         match event.key() {
             Key::ArrowDown => {
                 event.prevent_default();
