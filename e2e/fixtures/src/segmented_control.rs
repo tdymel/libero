@@ -18,7 +18,35 @@ pub const ROUTES: Routes = &[
         || rsx! { SegmentedControlPage { readonly: true } },
     ),
     ("/segmented-control/field", || rsx! { FieldPage {} }),
+    ("/segmented-control/long", || rsx! { LongPage {} }),
 ];
+
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Weekday {
+    Monday,
+    Tuesday,
+    Wednesday,
+    Thursday,
+    Friday,
+    Saturday,
+    Sunday,
+}
+
+/// Seven segments, far wider than a phone.
+#[component]
+fn LongPage() -> Element {
+    let mut day = use_signal(|| Weekday::Wednesday);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            SegmentedControl {
+                label: "Day",
+                value: day(),
+                onchange: move |next| day.set(next),
+            }
+        }
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Alignment {

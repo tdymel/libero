@@ -231,3 +231,34 @@ fn tab_reaches_a_strip_whose_pick_is_disabled() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Seven segments ran 359px past a phone's page, which then scrolled sideways
+/// (WCAG 1.4.10, todo 525).
+#[test]
+fn a_long_strip_wraps_inside_a_phone() {
+    block_on(async {
+        let fixture = Fixture::open("/segmented-control/long", Viewport::Mobile)
+            .await
+            .unwrap();
+        let [page_overflow, strip_overflow]: [f64; 2] = fixture
+            .page
+            .evaluate(
+                "(() => { const strip = document.querySelector('[role=radiogroup]'); \
+                 const edge = strip.parentElement.getBoundingClientRect().right; \
+                 const right = Math.max(...[...strip.querySelectorAll('label')] \
+                 .map((l) => l.getBoundingClientRect().right)); \
+                 const root = document.documentElement; \
+                 return [root.scrollWidth - root.clientWidth, Math.max(0, right - edge)]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(page_overflow, 0.0, "the page scrolls sideways");
+        assert!(
+            strip_overflow < 0.5,
+            "a segment runs {strip_overflow}px past its box"
+        );
+        fixture.close().await.unwrap();
+    });
+}

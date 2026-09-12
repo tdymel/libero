@@ -38,6 +38,9 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         // Pins its own size, so a `Flex` column's `stretch` cannot widen it.
         .width("max-content")
+        // A long row wraps rather than run off a phone's page (WCAG 1.4.10).
+        .max_width("100%")
+        .flex_wrap("wrap")
         // The radio is what a screen reader and the keyboard use; the label
         // beside it is the whole of what anyone sees.
         .selector(
