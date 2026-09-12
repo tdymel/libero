@@ -30,6 +30,9 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
     field_control_sx()
         .display("flex")
         .align_items("center")
+        // The frame's height, not its contents': with no value and no
+        // placeholder the trigger was 0px tall (todo 532, as 520).
+        .align_self("stretch")
         .gap("4px")
         .cursor("pointer")
         .user_select("none")
@@ -73,6 +76,8 @@ static MULTI_VALUE_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .gap("4px")
         .flex("1 1 auto")
+        // Fills the frame, so the trigger can stretch to a whole chip row.
+        .align_self("stretch")
         // Without it a long chip pushes the frame wider instead of wrapping.
         .min_width("0")
         .cursor("pointer")

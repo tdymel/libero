@@ -146,6 +146,21 @@ fn FieldFramePage() -> Element {
                     onchange: move |next: Option<String>| place.set(next),
                 }
             }
+            // No value and no placeholder: the triggers' emptiest shape (todo 532).
+            div { "data-case": "select-bare",
+                Select::<Fruit> {
+                    label: "Bare fruit",
+                    value: None,
+                    onchange: move |_| {},
+                }
+            }
+            div { "data-case": "multi-bare",
+                MultiSelect::<Fruit> {
+                    label: "Bare fruits",
+                    value: Vec::new(),
+                    onchange: move |_| {},
+                }
+            }
             div { "data-case": "tags",
                 TagsField {
                     label: "Topics",

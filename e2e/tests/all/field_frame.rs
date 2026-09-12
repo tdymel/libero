@@ -283,6 +283,43 @@ fn a_file_field_opens_its_picker_once_per_press() {
     });
 }
 
+/// Todo 532: with no value and no placeholder a trigger shrank to its content,
+/// a 0px `MultiSelect` trigger; it fills the frame and takes a press at its centre.
+#[test]
+fn an_empty_trigger_fills_its_frame() {
+    block_on(async {
+        let fixture = Fixture::open("/field-frame", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        for case in ["select-bare", "multi-bare", "cascader"] {
+            let (trigger, frame, hit): (f64, f64, bool) = page
+                .evaluate(format!(
+                    "(() => {{ const f = document.querySelector('[data-case={case}] [data-frame]'); \
+                     f.scrollIntoView({{ block: 'center' }}); \
+                     const t = f.querySelector('[role=combobox]'); const s = getComputedStyle(f); \
+                     const inner = f.clientHeight - parseFloat(s.paddingTop) - parseFloat(s.paddingBottom); \
+                     const r = f.getBoundingClientRect(); \
+                     const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); \
+                     return [t.getBoundingClientRect().height, inner, t.contains(at)]; }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                (trigger - frame).abs() < 0.5 && hit,
+                "{case}: the trigger is {trigger}px tall in a {frame}px frame, \
+                 the frame's centre on it: {hit}"
+            );
+        }
+
+        fixture.console.assert_clean("bare triggers").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The focus is in the frame, outside its slots.
 async fn in_control(page: &Page, frame: &str) -> Result<()> {
     truthy(
