@@ -112,6 +112,13 @@ pub trait ElementApi {
     /// there either.
     fn set_files(&self, files: &[dioxus::html::FileData]) -> Result<(), PlatformError>;
 
+    /// Sets a checkbox `<input>`'s `indeterminate` property, the only mixed
+    /// state a browser exposes for it: HTML-AAM ignores `aria-checked` there.
+    fn set_indeterminate(&self, indeterminate: bool) -> Result<(), PlatformError> {
+        let _ = indeterminate;
+        Err(PlatformError::Unsupported)
+    }
+
     /// Routes further events from `pointer_id` here, so a drag keeps tracking
     /// once the pointer leaves and still gets its `pointerup`. Released
     /// automatically, hence no counterpart.

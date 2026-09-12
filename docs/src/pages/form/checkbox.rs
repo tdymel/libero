@@ -26,7 +26,7 @@ pub fn CheckboxPage() -> Element {
                         .doc("Pair it with `onchange`. Left out, the box keeps its own state unless a `name` binds it to the form around it."),
                     prop("indeterminate", "bool")
                         .default("false")
-                        .doc("Draws the mixed state and reads as `aria-checked=\"mixed\"`. Outranks `checked` visually; toggling from it gives `true`."),
+                        .doc("Draws the mixed state and reads as mixed to assistive tech. Outranks `checked` visually; toggling from it gives `true`."),
                     prop("onchange", "EventHandler<bool>")
                         .doc("Called with the value `checked` should take next."),
                     prop("label", "Caption")
@@ -107,7 +107,7 @@ pub fn CheckboxPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Accept the terms\"".to_string()],
-                            _ => vec![],
+                            _ => vec!["aria_label: \"Accept the terms\"".to_string()],
                         }
                     }),
                     // A card only reads as one with a description under
@@ -151,6 +151,8 @@ pub fn CheckboxPage() -> Element {
                         },
                         indeterminate: (values.str("indeterminate") == "true").then_some(true),
                         label: (values.str("label") == "true")
+                            .then(|| "Accept the terms".to_string()),
+                        aria_label: (values.str("label") != "true")
                             .then(|| "Accept the terms".to_string()),
                         description: describes(&values)
                             .then(|| "The licence and the privacy policy.".to_string()),

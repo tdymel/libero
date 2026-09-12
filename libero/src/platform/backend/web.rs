@@ -482,6 +482,14 @@ impl ElementApi for WebElement {
         Ok(())
     }
 
+    fn set_indeterminate(&self, indeterminate: bool) -> Result<(), PlatformError> {
+        self.element
+            .dyn_ref::<web_sys::HtmlInputElement>()
+            .ok_or(PlatformError::NotFound)?
+            .set_indeterminate(indeterminate);
+        Ok(())
+    }
+
     fn is_focused(&self) -> bool {
         web_sys::window()
             .and_then(|window| window.document())

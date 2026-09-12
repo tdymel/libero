@@ -4,7 +4,7 @@ Crate: `libero`
 Import: `use libero::components::Checkbox;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/checkbox.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A checkbox with its label beside the box, the field slots under both, and an indeterminate state that lives in Rust rather than in the DOM.
+Description: A checkbox with its label beside the box, the field slots under both, and an indeterminate state that lives in Rust.
 
 A checkbox. It takes the same slots every field takes - `label`,
 `description`, `helper`, `status` - but no frame: the box is the control, so
@@ -65,14 +65,13 @@ Checkbox {
 }
 ```
 
-It outranks `checked` visually - the box draws a dash - and reads as
-`aria-checked="mixed"`. Toggling from it gives `true`, the platform
-convention.
+It outranks `checked` visually - the box draws a dash - and reads as mixed.
+Toggling from it gives `true`, the platform convention.
 
-It is deliberately **not** the native `indeterminate` DOM property. That
-property has no HTML attribute, so nothing can write it through a render, and
-chasing it from Rust is the same desync the paragraph above exists to
-prevent. The state is ours; ARIA carries it to assistive tech.
+The state is ours: Rust writes it to the input's `indeterminate` DOM property
+after each render, because a browser ignores `aria-checked` on a native
+checkbox. Where that property cannot be written (natively, server-side),
+`aria-checked="mixed"` carries it. No style reads `:indeterminate`.
 
 ## Layout
 
@@ -117,7 +116,7 @@ Space toggles it. Without a `label`, give it an `aria_label`.
 | `size` | `Size` | `md` | The size of the box, and of the label and captions beside it. |
 | `radius` | `Size` | `sm` | Corner radius of the box, independent of `size`. |
 | `checked` | `bool` | - | Pair it with `onchange`. Left out, the box keeps its own state unless a `name` binds it to the form around it. |
-| `indeterminate` | `bool` | `false` | Draws the mixed state and reads as `aria-checked="mixed"`. |
+| `indeterminate` | `bool` | `false` | Draws the mixed state and reads as mixed to assistive tech. |
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. |
 | `label` | `Caption` | - | The caption beside the box. Names the checkbox through a `for`/`id` pair. |
 | `description` | `Caption` | - | Under the label: what checking it means. |

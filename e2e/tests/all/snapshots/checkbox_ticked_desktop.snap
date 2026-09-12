@@ -4,7 +4,7 @@ description: checkbox at desktop (ticked)
 expression: tree
 ---
 checkbox "Accept the terms" [checked]
-checkbox "All channels" [checked=false]
+checkbox "All channels" [checked=mixed]
 checkbox "Select row" [checked=false]
 generic
   checkbox "Priority support" [checked=false]

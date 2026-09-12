@@ -13,6 +13,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_cache, use_css, use_element, use_theme},
+    platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, ChoiceVariant, CssVar},
     utils::warn,
@@ -98,7 +99,7 @@ field_props! {
         /// unless a `name` binds it to the form around it.
         #[props(default)]
         checked: Option<bool>,
-        /// Draws the mixed state and reads as `aria-checked="mixed"`. Outranks
+        /// Draws the mixed state and reads as mixed to assistive tech. Outranks
         /// `checked` visually; toggling from it gives `true`.
         #[props(default)]
         indeterminate: Option<bool>,
@@ -172,10 +173,16 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         }
     };
 
+    let element = use_element();
+    // A browser reads a native checkbox's mixed state from the property alone;
+    // elsewhere `aria-checked="mixed"` below carries it.
+    use_effect(use_reactive!(|indeterminate| {
+        let _ = element.set_indeterminate(indeterminate);
+    }));
     let field = use_field()
         .inline()
         .card(card)
-        .activates(use_element(), toggle.clone())
+        .activates(element, toggle.clone())
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
@@ -241,9 +248,13 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         span {
             class: box_class,
             "aria-hidden": "true",
+            // Focuses the input as a native click would, so its blur shows the rules.
             onclick: move |_| {
                 if !card {
                     toggle();
+                    if !disabled {
+                        let _ = element.focus();
+                    }
                 }
             },
             CheckboxMarkIcon { indeterminate }

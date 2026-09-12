@@ -117,6 +117,10 @@ impl ElementApi for ElementHandle {
         self.get()?.set_files(files)
     }
 
+    fn set_indeterminate(&self, indeterminate: bool) -> Result<(), PlatformError> {
+        self.get()?.set_indeterminate(indeterminate)
+    }
+
     fn is_focused(&self) -> bool {
         self.get().is_ok_and(|element| element.is_focused())
     }
