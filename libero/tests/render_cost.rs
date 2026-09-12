@@ -754,6 +754,9 @@ fn render_cost_per_component() {
         "FileField" let onchange = |_: Files| {}; { FileField { onchange } }
         "FileField-dropzone" let onchange = |_: Files| {}; { FileField { onchange, variant: "dropzone" } }
         "PinField+6" let oninput = |_: String| {}; { PinField { oninput, length: 6usize } }
+        // A keystroke: one cell fills or clears every round.
+        "PinField type" let oninput = |_: String| {}; { PinField { value: if flip() { "123" } else { "12" }, oninput } }
+        "PinField+6 type" let oninput = |_: String| {}; { PinField { value: if flip() { "123" } else { "12" }, oninput, length: 6usize } }
         // Closed: the columns are not rendered until it opens, and nothing can
         // open one from a prop. The price of an *open* cascader is a browser
         // measurement, not this table's.

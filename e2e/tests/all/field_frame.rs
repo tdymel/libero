@@ -118,6 +118,55 @@ fn a_press_on_the_padding_is_a_press_on_the_control() {
     });
 }
 
+/// Typing fills one pin cell and moves on, Backspace clears it and steps back.
+/// A cell redraws only when its own character changes, so each keystroke
+/// checks every cell against the pin.
+#[test]
+fn typing_a_pin_fills_and_clears_one_cell_at_a_time() {
+    const BACKSPACE: keyboard::Key = keyboard::Key {
+        key: "Backspace",
+        code: "Backspace",
+        vk: 8,
+        text: None,
+    };
+    block_on(async {
+        let fixture = Fixture::open("/field-frame", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let cells = "[...document.querySelectorAll('[data-case=pin] input')]";
+        let pin_is = |pin: &str, focus: usize| {
+            format!(
+                "(() => {{ const cells = {cells}; \
+                 return cells.map(c => c.value).join('') === {pin:?} \
+                 && document.activeElement === cells[{focus}]; }})()"
+            )
+        };
+
+        page.evaluate(format!("{cells}[0].focus()")).await.unwrap();
+        let mut typed = String::new();
+        for (index, digit) in ["1", "2", "3", "4"].into_iter().enumerate() {
+            keyboard::type_text(page, digit).await.unwrap();
+            typed.push_str(digit);
+            wait::for_js_true(page, &pin_is(&typed, (index + 1).min(3)), "a digit")
+                .await
+                .unwrap();
+        }
+
+        keyboard::press(page, BACKSPACE).await.unwrap();
+        wait::for_js_true(page, &pin_is("123", 3), "the last cell cleared")
+            .await
+            .unwrap();
+        keyboard::press(page, BACKSPACE).await.unwrap();
+        wait::for_js_true(page, &pin_is("123", 2), "a step back from an empty cell")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("typing a pin").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The other framed fields: the padding focuses the control, not a slot's
 /// button. `PinField` has a frame per cell, so its second cell is pressed.
 #[test]

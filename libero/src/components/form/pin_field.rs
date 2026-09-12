@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use dioxus::prelude::*;
 
@@ -159,8 +159,8 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .prepare();
 
     // One prepared frame and one prepared control, rendered once per cell.
-    // Neither carries an id or an event, so a clone is a class, a `data-state`
-    // and the attribute list - no hook runs again.
+    // Neither carries an id, so a clone is a class, a `data-state`, the
+    // attribute list and the frame's two listeners - no hook runs again.
     let frame = use_field_frame().states(&states).prepare();
     let control = use_box()
         .framework_sx(&FIELD_CONTROL_SX)
@@ -196,7 +196,9 @@ pub fn PinField(props: PinFieldProps) -> Element {
         }
     });
 
-    let editor = PinEdit {
+    // One handle for the field's life, refreshed each render: a cell whose
+    // character did not change skips, and its handlers still see this render.
+    let edit = PinEdit {
         cells: cells.clone(),
         length,
         kind,
@@ -204,6 +206,8 @@ pub fn PinField(props: PinFieldProps) -> Element {
         readonly,
         report,
     };
+    let editor = use_hook(|| Editor(Rc::new(RefCell::new(edit.clone()))));
+    *editor.0.borrow_mut() = edit;
 
     let one_time_code = props.one_time_code.unwrap_or(true);
     let autofocus = props.autofocus.unwrap_or(false);
@@ -219,7 +223,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
             cells,
             editor,
             control,
-            frame,
+            frame: CellFrame { frame, states },
             id: field.id().to_string(),
             length,
             kind,
@@ -427,14 +431,45 @@ impl PinEdit {
     }
 }
 
+/// The field's current [`PinEdit`]. Always equal: the field refreshes it in
+/// place, so it never needs to redraw a cell.
+#[derive(Clone)]
+struct Editor(Rc<RefCell<PinEdit>>);
+
+impl PartialEq for Editor {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+impl Editor {
+    /// Cloned out, so `report` runs with the cell released.
+    fn current(&self) -> PinEdit {
+        self.0.borrow().clone()
+    }
+}
+
+/// The frame a cell sits in, equal while its `states` are: that is all its
+/// look reads, and its listeners hold only this field's own press state.
+#[derive(Clone)]
+struct CellFrame {
+    frame: PreparedFrame,
+    states: Input<States>,
+}
+
+impl PartialEq for CellFrame {
+    fn eq(&self, other: &Self) -> bool {
+        self.states == other.states
+    }
+}
+
 /// What one cell is drawn from. `control` and `frame` are prepared once and
-/// cloned per cell: neither carries an id or an event, so a clone is a class,
-/// a `data-state` and the attribute list - no hook runs again.
+/// cloned per cell, so no hook runs again.
 struct Cells {
     cells: Vec<Option<char>>,
-    editor: PinEdit,
+    editor: Editor,
     control: BoxStyle,
-    frame: PreparedFrame,
+    frame: CellFrame,
     id: String,
     length: usize,
     kind: PinKind,
@@ -470,35 +505,66 @@ fn pin_cells(parts: Cells, separator: Option<&Element>) -> Vec<Element> {
             children.push(separator.clone());
         }
 
-        let typed = editor.clone();
-        let keys = editor.clone();
-        let input = control
-            .clone()
-            .attr("id", format!("{id}-{}", index + 1))
-            .attr("type", input_type)
-            .attr("inputmode", (kind == PinKind::Numeric).then_some("numeric"))
-            .attr(
-                "autocomplete",
-                match one_time_code && index == 0 {
+        children.push(rsx! {
+            PinCell {
+                index,
+                cell: *cell,
+                editor: editor.clone(),
+                control: control.clone(),
+                frame: frame.clone(),
+                id: id.clone(),
+                kind,
+                input_type,
+                disabled,
+                readonly,
+                autocomplete: match one_time_code && index == 0 {
                     true => "one-time-code",
                     false => "off",
                 },
-            )
-            .attr("value", cell.map(String::from).unwrap_or_default())
-            .attr("data-controlled", true)
-            .attr("data-pin-index", index.to_string())
-            .attr("disabled", disabled)
-            .attr("readonly", readonly)
-            .attr("autofocus", autofocus && index == 0)
-            .event("oninput", move |event: FormEvent| {
-                typed.typed(index, event.value())
-            })
-            .event("onkeydown", move |event: Event<KeyboardData>| {
-                keys.keys(index, event)
-            })
-            .render(HtmlTag::Input, Vec::new(), ());
-
-        children.push(frame.clone().render(input));
+                autofocus: autofocus && index == 0,
+            }
+        });
     }
     children
+}
+
+/// One cell, in its own scope: a keystroke redraws the cell it changed.
+#[allow(clippy::too_many_arguments)]
+#[component]
+fn PinCell(
+    index: usize,
+    cell: Option<char>,
+    editor: Editor,
+    control: BoxStyle,
+    frame: CellFrame,
+    id: String,
+    kind: PinKind,
+    input_type: &'static str,
+    disabled: bool,
+    readonly: bool,
+    autocomplete: &'static str,
+    autofocus: bool,
+) -> Element {
+    let typed = editor.clone();
+    let keys = editor;
+    let input = control
+        .attr("id", format!("{id}-{}", index + 1))
+        .attr("type", input_type)
+        .attr("inputmode", (kind == PinKind::Numeric).then_some("numeric"))
+        .attr("autocomplete", autocomplete)
+        .attr("value", cell.map(String::from).unwrap_or_default())
+        .attr("data-controlled", true)
+        .attr("data-pin-index", index.to_string())
+        .attr("disabled", disabled)
+        .attr("readonly", readonly)
+        .attr("autofocus", autofocus)
+        .event("oninput", move |event: FormEvent| {
+            typed.current().typed(index, event.value())
+        })
+        .event("onkeydown", move |event: Event<KeyboardData>| {
+            keys.current().keys(index, event)
+        })
+        .render(HtmlTag::Input, Vec::new(), ());
+
+    frame.frame.render(input)
 }

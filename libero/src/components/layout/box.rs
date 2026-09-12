@@ -239,7 +239,7 @@ fn meaningful<T>(name: &'static str, value: impl IntoAttributeValue<T>) -> Optio
 /// `Clone` because a component can render the same resolved styling as several
 /// elements - `PinField`'s cells are one prepared frame, cloned per cell. The
 /// clone is a class, a `data-state` and the attribute list; no hook runs again.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub(crate) struct BoxStyle {
     style: StyleAttributes,
     /// The component's own attributes, rendered **after** the caller's - so on

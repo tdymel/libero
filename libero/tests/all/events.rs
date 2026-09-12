@@ -1377,6 +1377,40 @@ fn a_read_only_pin_field_answers_no_key_that_edits() {
     assert_eq!(PIN_EDITS.with_borrow(Clone::clone), Vec::<String>::new());
 }
 
+/// A cell whose character did not change skips its redraw, so its handlers
+/// must still edit the pin as it is now, not as it was when the cell drew.
+#[test]
+fn a_skipped_pin_cell_edits_the_current_pin() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                PinField {
+                    length: 4,
+                    oninput: move |next: String| {
+                        PIN_EDITS.with_borrow_mut(|edits| edits.push(next));
+                    },
+                }
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    PIN_EDITS.with_borrow_mut(Vec::clear);
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let last = find.input.expect("registered no input listener");
+
+    // The last cell stays empty: a pin has no holes, so each digit lands first.
+    for digit in ["1", "2"] {
+        dom.runtime()
+            .handle_event("input", Event::new(input_event(digit), true), last);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    }
+
+    assert_eq!(PIN_EDITS.with_borrow(Clone::clone), ["1", "12"]);
+}
+
 /// `Form` took its `value` store once, so a parent that handed over a
 /// different one - another record in an edit view - kept fields reading and
 /// writing the old store while the form's own rules read the new one (todo
