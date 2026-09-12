@@ -85,7 +85,7 @@ pub fn HoverCardPage() -> Element {
                 prop("content", "Element")
                     .doc("What the card shows. It may hold links and buttons - the card is a non-modal dialog, not a tooltip."),
                 prop("children", "Element")
-                    .doc("The trigger. Note that `class`, `sx`, `states` and spread attributes style the *card*, not this."),
+                    .doc("The trigger. It must hold a focusable element, a link or a button: its focus is the keyboard's only way to open the card. Note that `class`, `sx`, `states` and spread attributes style the *card*, not this."),
                 prop("side", "Side")
                     .default("Bottom")
                     .doc("Which side of the trigger the card opens on. It flips when that side has no room."),
@@ -192,6 +192,11 @@ pub fn HoverCardPage() -> Element {
                     Kbd { "Esc" } " closes it wherever focus is - even when the pointer opened "
                     "it and focus never left a text field - and hands focus back to the "
                     "trigger when it was inside."
+                }
+                Text {
+                    "So the trigger must take focus: put a link or a button in "
+                    Code { source: "children" }
+                    ", not plain text. A trigger with nothing focusable warns in the console."
                 }
                 Text {
                     "The card is a dialog, so name it: "

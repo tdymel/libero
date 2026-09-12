@@ -12,7 +12,22 @@ pub const ROUTES: Routes = &[
         || rsx! { ColorFieldInCardPage {} },
     ),
     ("/hover-card-disable", || rsx! { DisableWhileOpenPage {} }),
+    ("/hover-card-text", || rsx! { TextTriggerPage {} }),
 ];
+
+/// A plain-text trigger, which no keyboard can focus (todo 523).
+#[component]
+fn TextTriggerPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            HoverCard {
+                aria_label: "Ada Lovelace",
+                content: rsx! { Text { "Wrote the first algorithm meant for a machine." } },
+                Text { id: "trigger", "Ada Lovelace" }
+            }
+        }
+    }
+}
 
 /// A card forced open, and a button that disables it (todo 449).
 #[component]

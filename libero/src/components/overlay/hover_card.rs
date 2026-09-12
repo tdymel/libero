@@ -64,6 +64,8 @@ base_props! {
         #[props(default)]
         disabled: Option<bool>,
         /// The trigger. `class`/`sx`/`states`/`attributes` land on the *card*.
+        /// It must hold a focusable element, a link or a button: its focus is
+        /// the keyboard's only way to open the card.
         children: Element,
     }
 }
@@ -189,6 +191,18 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         "HoverCard: the card is a dialog and needs a name - pass `aria_label`, or \
          `aria-labelledby` pointing into `content`.",
     );
+    // Keyboard opens the card through the trigger's focus; plain text never takes it.
+    #[cfg(debug_assertions)]
+    use_effect(move || {
+        if let Err(crate::platform::PlatformError::NotFound) =
+            anchor.query_selector(FOCUSABLE_SELECTOR)
+        {
+            crate::utils::warn(
+                "HoverCard: `children` holds nothing focusable, so no keyboard can open the \
+                 card - wrap the trigger in a link or a button.",
+            );
+        }
+    });
 
     let states: Input<States> = props
         .states

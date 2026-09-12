@@ -50,7 +50,7 @@ fn Demo() -> Element {
 | prop | type | default | |
 |---|---|---|---|
 | `content` | `Element` | - | What the card shows. Links and buttons are fine. |
-| `children` | `Element` | - | The trigger. |
+| `children` | `Element` | - | The trigger. It must hold a focusable element, a link or a button: its focus is the keyboard's only way to open the card. |
 | `side` | `Side` | `Bottom` | Which side of the trigger the card opens on. Flips when there is no room. |
 | `align` | `Align` | `Start` | Where the card lines up along that side. |
 | `open_delay` | `u32` | `0` | Milliseconds the pointer must rest on the trigger before the card opens. |
@@ -72,6 +72,8 @@ Theme: `theme.hover_card` holds `open_delay`, `close_delay`, `radius` and
 - Escape closes it wherever focus is - on the web even when the pointer opened
   it and focus never left a text field - and hands focus back to the trigger
   when focus was inside.
+- So the trigger must take focus: put a link or a button in `children`, not
+  plain text. A trigger with nothing focusable warns in the console.
 
 The card is a dialog, so name it: `aria_label`, or `aria-labelledby` pointing
 into the content. An unnamed card warns in the console.

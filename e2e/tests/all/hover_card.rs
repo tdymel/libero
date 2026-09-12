@@ -295,3 +295,41 @@ fn disabling_an_open_card_removes_it() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 523: a plain-text trigger takes no focus, so no keyboard opens the
+/// card. A debug build says so; a focusable trigger stays quiet.
+#[test]
+fn a_trigger_with_nothing_focusable_warns() {
+    const WARNING: &str = "holds nothing focusable";
+    block_on(async {
+        let fixture = Fixture::open("/hover-card-text", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "new Promise((r) => setTimeout(() => r(true), 300))",
+            "the mount effect to run",
+        )
+        .await
+        .unwrap();
+        let messages = fixture.console.drain();
+        assert!(
+            messages.iter().any(|message| message.contains(WARNING)),
+            "no warning: {messages:?}"
+        );
+        fixture.close().await.unwrap();
+
+        let fixture = Fixture::open("/hover-card", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            "new Promise((r) => setTimeout(() => r(true), 300))",
+            "the mount effect to run",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("a button trigger").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
