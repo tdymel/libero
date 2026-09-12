@@ -240,8 +240,10 @@ pub fn CascaderPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Closed, the trigger opens on ArrowDown, ArrowUp, ArrowRight, Enter or "
-                    "Space. Open, ArrowDown and ArrowUp move inside the cursor's column and skip "
+                    "Closed, the trigger opens on ArrowDown, ArrowUp, ArrowRight, Enter, Space, "
+                    "Home or End. Typing a letter moves to the next row of the cursor's column "
+                    "that starts with it, unless searchable. Open, ArrowDown and ArrowUp move "
+                    "inside the cursor's column and skip "
                     "disabled rows, ArrowRight expands into the children, ArrowLeft goes back up "
                     "a level, Enter commits a leaf - or expands a branch, unless "
                     Code { source: "any_level" }

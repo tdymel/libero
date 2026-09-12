@@ -278,6 +278,115 @@ fn modifier_chords_leave_the_walk_alone() {
     });
 }
 
+/// APG select-only: on a closed list Home and End open on the first and last
+/// enabled root, Space like Enter on the first.
+#[test]
+fn home_end_and_space_open_a_closed_list() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        for (key, want, what) in [
+            (
+                keyboard::HOME,
+                "Europe|1|true",
+                "Home to open on the first root",
+            ),
+            (
+                keyboard::END,
+                "Oceania|1|true",
+                "End to open on the last root",
+            ),
+            (
+                keyboard::SPACE,
+                "Europe|1|true",
+                "Space to open on the first root",
+            ),
+        ] {
+            keyboard::press(page, key).await.unwrap();
+            expect(page, want, what, "desktop").await;
+            keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+            expect(page, "closed", "Escape to close", "desktop").await;
+        }
+        fixture
+            .console
+            .assert_clean("cascader Home/End/Space")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// In `"paths"` the opening keys arm a whole-path row. They armed a root, which
+/// is no row there, so the list opened with nothing highlighted.
+#[test]
+fn the_paths_layout_opens_on_a_row() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader/paths", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        for (key, want, what) in [
+            (
+                keyboard::ARROW_DOWN,
+                "Europe / France / Paris|1|true",
+                "ArrowDown to open on the first path",
+            ),
+            (
+                keyboard::END,
+                "Oceania / Australia / Sydney|1|true",
+                "End to open on the last enabled path",
+            ),
+        ] {
+            keyboard::press(page, key).await.unwrap();
+            expect(page, want, what, "desktop").await;
+            keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+            expect(page, "closed", "Escape to close", "desktop").await;
+        }
+        fixture.console.assert_clean("cascader paths").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// APG typeahead: a letter opens a closed list on the root it starts, moves
+/// within the cursor's column once open, and skips disabled Asia.
+#[test]
+fn typing_moves_to_the_row_it_starts() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        for (key, want, what) in [
+            (
+                letter("o", "KeyO", 79),
+                "Oceania|1|true",
+                "o to open on Oceania",
+            ),
+            (letter("e", "KeyE", 69), "Europe|1|true", "e to Europe"),
+            (
+                letter("a", "KeyA", 65),
+                "Europe|1|true",
+                "a to pass over disabled Asia",
+            ),
+        ] {
+            keyboard::press(page, key).await.unwrap();
+            expect(page, want, what, "desktop").await;
+            // Past the typeahead's reset, so the next letter starts afresh.
+            page.evaluate("new Promise(r => setTimeout(() => r(1), 600))")
+                .await
+                .unwrap();
+        }
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        expect(page, "France|2|true", "ArrowRight into Europe", "desktop").await;
+        keyboard::press(page, letter("g", "KeyG", 71))
+            .await
+            .unwrap();
+        expect(page, "Germany|2|true", "g to Germany", "desktop").await;
+        fixture.console.assert_clean("cascader typeahead").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A click on disabled Asia leaves the cursor on Europe: the ArrowDown after
 /// it lands on Oceania. Had the click opened Asia, the cursor would sit on
 /// Japan, alone in its column, and the key would leave it there. A click on
@@ -334,6 +443,16 @@ fn a_disabled_branch_does_not_open() {
             .unwrap();
         fixture.close().await.unwrap();
     });
+}
+
+/// A letter key with its keydown, which typeahead listens to.
+const fn letter(key: &'static str, code: &'static str, vk: i64) -> keyboard::Key {
+    keyboard::Key {
+        key,
+        code,
+        vk,
+        text: Some(key),
+    }
 }
 
 async fn expect(page: &chromiumoxide::Page, want: &str, what: &str, at: &str) {

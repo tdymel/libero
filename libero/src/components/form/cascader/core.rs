@@ -6,7 +6,8 @@ use crate::{
     components::{
         Box, ComboboxOption, HtmlTag, Input, States,
         common::{
-            ChevronDownIcon, NavigationChord, attr, field_props, input_from_str, navigation_chord,
+            ChevronDownIcon, NavigationChord, attr, field_props, has_shortcut_modifier,
+            input_from_str, navigation_chord,
         },
         form::{
             ComboboxState, PreparedField, clear_button, combobox::COMBOBOX_DROPDOWN_SX,
@@ -15,8 +16,8 @@ use crate::{
         layout::{BoxStyle, ScrollArea, use_box},
     },
     hooks::{
-        ElementHandle, PopoverHandle, PopoverOptions, PopoverWidth, use_element,
-        use_field_list_layer, use_popover, use_theme,
+        ElementHandle, PopoverHandle, PopoverOptions, PopoverWidth, TYPEAHEAD_RESET, Typeahead,
+        typeahead_match, use_element, use_field_list_layer, use_popover, use_theme, use_typeahead,
     },
     platform::{ElementApi, press_kept_focus},
     str_enum::str_enum,
@@ -107,6 +108,8 @@ static CASCADER_TRIGGER_SX: StaticSx = StaticSx::new(|| {
     field_control_sx()
         .display("flex")
         .align_items("center")
+        // The frame's height, not its contents' (todo 532, as 520).
+        .align_self("stretch")
         .gap("4px")
         .cursor("pointer")
         .user_select("none")
@@ -291,6 +294,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let query = use_signal(String::new);
     let search = use_element();
     let trigger_element = use_element();
+    let typed = use_typeahead(TYPEAHEAD_RESET);
 
     let nodes = props.options.0.clone();
     let any_level = props.any_level;
@@ -376,6 +380,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         state,
         open: open.clone(),
         commit: commit.clone(),
+        typed,
         disabled: disabled || readonly,
         searchable,
         any_level,
@@ -570,6 +575,7 @@ struct CascaderKeys {
     state: ComboboxState,
     open: Rc<dyn Fn(bool)>,
     commit: Rc<dyn Fn(Vec<usize>, bool)>,
+    typed: Typeahead,
     disabled: bool,
     searchable: bool,
     any_level: bool,
@@ -598,6 +604,9 @@ impl CascaderKeys {
             }
             Some(_) => return,
             None => {}
+        }
+        if self.typeahead(&event) {
+            return;
         }
         if !self.state.is_open() {
             self.closed(event);
@@ -628,31 +637,106 @@ impl CascaderKeys {
     fn closed(&self, event: KeyboardEvent) {
         let mut cursor = self.cursor;
         let open = &self.open;
-        match event.key() {
-            Key::ArrowDown | Key::ArrowRight | Key::Enter => {
-                event.prevent_default();
-                open(true);
-                if cursor.read().is_empty()
-                    && let Some(index) = first_enabled(&self.nodes)
-                {
-                    cursor.set(vec![index]);
-                }
-            }
-            Key::ArrowUp => {
-                event.prevent_default();
-                open(true);
-                if cursor.read().is_empty()
-                    && let Some(index) = last_enabled(&self.nodes)
-                {
-                    cursor.set(vec![index]);
-                }
-            }
-            Key::Character(ref character) if character == " " => {
-                event.prevent_default();
-                open(true);
-            }
-            _ => {}
+        let key = event.key();
+        let forward = match key {
+            Key::ArrowDown | Key::ArrowRight | Key::Enter | Key::Home => true,
+            Key::ArrowUp | Key::End => false,
+            Key::Character(ref character) if character == " " => true,
+            _ => return,
+        };
+        event.prevent_default();
+        open(true);
+        // APG select-only: Home and End open on the first and last row; the
+        // other keys keep the committed path, or arm the first (Up: last) row.
+        if (matches!(key, Key::Home | Key::End) || cursor.read().is_empty())
+            && let Some(next) = self.edge(forward)
+        {
+            cursor.set(next);
         }
+    }
+
+    /// The first or last enabled row of what opens: a root, or a `Paths` row.
+    fn edge(&self, forward: bool) -> Option<Vec<usize>> {
+        match self.layout {
+            CascaderLayout::Columns => match forward {
+                true => first_enabled(&self.nodes),
+                false => last_enabled(&self.nodes),
+            }
+            .map(|index| vec![index]),
+            CascaderLayout::Paths => step(
+                self.visible.len(),
+                |row| self.visible[row].disabled,
+                None,
+                forward,
+            )
+            .map(|row| self.visible[row].indices.clone()),
+        }
+    }
+
+    /// APG typeahead: a printable key moves to the next row of the cursor's
+    /// column that starts with it, and opens a closed list on the roots. Off
+    /// while `searchable`, where typing is the search box's.
+    fn typeahead(&self, event: &KeyboardEvent) -> bool {
+        if self.searchable || has_shortcut_modifier(event) {
+            return false;
+        }
+        let Key::Character(ref key) = event.key() else {
+            return false;
+        };
+        let Some(ch) = key.chars().next() else {
+            return false;
+        };
+        // A space mid-query is part of "new york", otherwise an activation.
+        if ch == ' ' && !self.typed.is_typing() {
+            return false;
+        }
+        let open = self.state.is_open();
+        let query = self.typed.push(ch);
+        let here = match open {
+            true => self.cursor.read().clone(),
+            false => Vec::new(),
+        };
+        let found = match self.layout {
+            CascaderLayout::Paths => {
+                let labels: Vec<String> = self
+                    .visible
+                    .iter()
+                    .map(|path| path.labels.join(" "))
+                    .collect();
+                let current = self.visible.iter().position(|path| path.indices == here);
+                typeahead_match(labels.len(), current, &query, |row| {
+                    (!self.visible[row].disabled).then(|| labels[row].as_str())
+                })
+                .map(|row| self.visible[row].indices.clone())
+            }
+            CascaderLayout::Columns => {
+                let (parents, current) = match here.split_last() {
+                    Some((last, parents)) => (parents.to_vec(), Some(*last)),
+                    None => (Vec::new(), None),
+                };
+                let column = children_at(&self.nodes, &parents);
+                typeahead_match(column.len(), current, &query, |index| {
+                    let mut path = parents.clone();
+                    path.push(index);
+                    (!disabled_at(&self.nodes, &path)).then(|| column[index].label.as_str())
+                })
+                .map(|index| {
+                    let mut next = parents.clone();
+                    next.push(index);
+                    next
+                })
+            }
+        };
+        let Some(next) = found else {
+            return false;
+        };
+        event.prevent_default();
+        if !open {
+            (self.open)(true);
+        }
+        let mut cursor = self.cursor;
+        cursor.set(next);
+        true
     }
 
     /// The flat list: Up, Down, Home, End and Enter.

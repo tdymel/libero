@@ -1,14 +1,33 @@
 //! `Cascader`.
 
 use dioxus::prelude::*;
-use libero::components::{Cascader, CascaderOption, FieldStatus, Flex, Text};
+use libero::components::{Cascader, CascaderLayout, CascaderOption, FieldStatus, Flex, Text};
 
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/cascader", || rsx! { CascaderPage {} }),
     ("/cascader/search", || rsx! { CascaderSearchPage {} }),
+    ("/cascader/paths", || rsx! { CascaderPathsPage {} }),
 ];
+
+/// The flat layout: one row per leaf path.
+#[component]
+fn CascaderPathsPage() -> Element {
+    let mut place = use_signal(|| None::<String>);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Cascader {
+                label: "Place",
+                layout: CascaderLayout::Paths,
+                data: places(),
+                value: place(),
+                onchange: move |next: Option<String>| place.set(next),
+            }
+        }
+    }
+}
 
 /// Three levels, with the middle root disabled so the keys and a click both
 /// have one to pass over. `#picked` shows the committed value.

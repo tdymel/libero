@@ -98,7 +98,9 @@ cannot be picked.
 
 | Key | State | Effect |
 |---|---|---|
-| `ArrowDown` / `ArrowUp` / `ArrowRight` / `Enter` / `Space` | closed | Opens. Down and Up seed the cursor on the first/last enabled root |
+| `ArrowDown` / `ArrowUp` / `ArrowRight` / `Enter` / `Space` | closed | Opens on the committed path, or with the cursor on the first (Up: last) enabled root |
+| `Home` / `End` | closed | Opens with the cursor on the first/last enabled root |
+| A letter | not searchable | The next enabled row of the cursor's column starting with the typed text; opens a closed list on the roots |
 | `ArrowDown` / `ArrowUp` | open | Moves within the cursor's column, skipping disabled rows |
 | `Home` / `End` | open | The first/last enabled row of that column |
 | `ArrowRight` | open, `"columns"` | Expands the cursor's node, cursor onto its first enabled child |
