@@ -11,11 +11,13 @@ pub const ROUTES: Routes = &[
 ];
 
 /// A plain button and a busy one, each counting its activations, and a
-/// link-mode button whose route is one only this page leads to.
+/// link-mode button whose route is one only this page leads to. Below them a
+/// busy submit button in a form, a long label, and a toggle pair per variant.
 #[component]
 fn ButtonPage() -> Element {
     let mut plain = use_signal(|| 0u32);
     let mut busy = use_signal(|| 0u32);
+    let mut submits = use_signal(|| 0u32);
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
@@ -31,6 +33,17 @@ fn ButtonPage() -> Element {
             Button { id: "elevated", variant: "elevated", color: "secondary", "Elevated" }
             Button { id: "filled-muted", color: "muted", "Filled" }
             Button { id: "disabled-link", to: "/button/landing", disabled: true, "Disabled link" }
+            form { id: "form", "data-submits": "{submits}", onsubmit: move |event| { event.prevent_default(); submits += 1; },
+                input { id: "field", aria_label: "Field" }
+                Button { id: "busy-submit", r#type: "submit", loading: true, "Send" }
+            }
+            Button { id: "long", "Save every change made to this rather long document title" }
+            for variant in ["filled", "tonal", "elevated", "outlined", "standard"] {
+                Flex { gap: "sm",
+                    Button { id: "off-{variant}", variant, selected: false, "Bold" }
+                    Button { id: "on-{variant}", variant, selected: true, "Bold" }
+                }
+            }
         }
     }
 }

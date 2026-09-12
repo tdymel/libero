@@ -18,6 +18,13 @@ fn it_meets_the_baseline() {
         .targets(PLAIN)
         .targets(BUSY)
         .targets(LINK)
+        .focusable("#long")
+        .focusable("#on-filled")
+        .focusable("#off-tonal")
+        .focusable("#on-tonal")
+        .focusable("#on-elevated")
+        .focusable("#on-outlined")
+        .focusable("#on-standard")
         .run();
 }
 
@@ -141,6 +148,39 @@ fn a_disabled_link_is_still_a_link() {
             tree.starts_with("link \"Disabled link\" [disabled]"),
             "the disabled link is exposed as:\n{tree}"
         );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Enter in a field is implicit submission, a synthetic click on the busy
+/// submit button. The scripted `requestSubmit` is the control: it lands after
+/// the key presses, so a count of exactly 1 means none of them submitted.
+#[test]
+fn a_loading_submit_button_does_not_submit_its_form() {
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let submits = "document.querySelector('#form').dataset.submits";
+
+        keyboard::tab_to(page, "#field", 20).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        keyboard::tab_to(page, "#busy-submit", 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+
+        page.evaluate("document.querySelector('#form').requestSubmit()")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &format!("{submits} !== '0'"), "the scripted submit")
+            .await
+            .unwrap();
+        let count: String = page.evaluate(submits).await.unwrap().into_value().unwrap();
+        assert_eq!(count, "1", "a loading submit button submitted its form");
+
+        fixture
+            .console
+            .assert_clean("submitting while busy")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }

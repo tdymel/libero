@@ -21,3 +21,31 @@ button "Filled"
   StaticText "Filled"
 link "Disabled link" [disabled]
   StaticText "Disabled link"
+form
+  textbox "Field"
+    generic
+  button "Send" [busy=1] [disabled]
+    StaticText "Send"
+    generic
+button "Save every change made to this rather long document title"
+  StaticText "Save every change made to this rather long document title"
+button "Bold" [pressed=false]
+  StaticText "Bold"
+button "Bold" [pressed]
+  StaticText "Bold"
+button "Bold" [pressed=false]
+  StaticText "Bold"
+button "Bold" [pressed]
+  StaticText "Bold"
+button "Bold" [pressed=false]
+  StaticText "Bold"
+button "Bold" [pressed]
+  StaticText "Bold"
+button "Bold" [pressed=false]
+  StaticText "Bold"
+button "Bold" [pressed]
+  StaticText "Bold"
+button "Bold" [pressed=false]
+  StaticText "Bold"
+button "Bold" [pressed]
+  StaticText "Bold"
