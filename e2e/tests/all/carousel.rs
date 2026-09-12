@@ -441,3 +441,56 @@ async fn dot_centre(page: &Page, n: usize) -> Result<pointer::Point> {
         .into_value()?;
     Ok(pointer::Point { x, y })
 }
+
+/// Forced colours paint every dot `Canvas`: the strip vanished, and with it
+/// which slide is current (todo 524).
+#[test]
+fn the_dots_show_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/carousel", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        // The dots fade their fill; read it once the fade has landed.
+        wait::for_js_true(
+            page,
+            "document.getAnimations().length === 0",
+            "the dots' fades to end",
+        )
+        .await
+        .unwrap();
+        // The page itself is `Canvas`; a fill the same colour is no fill.
+        let [current, other, canvas]: [String; 3] = page
+            .evaluate(format!(
+                "(() => {{ const probe = document.createElement('div'); \
+                 probe.style.background = 'Canvas'; document.body.append(probe); \
+                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+                 const dots = [...document.querySelectorAll({INDICATORS:?})]; \
+                 const current = dots.find((d) => d.getAttribute('aria-current') === 'true'); \
+                 const other = dots.find((d) => d !== current); \
+                 return [getComputedStyle(current).backgroundColor, \
+                 getComputedStyle(other).backgroundColor, canvas]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_ne!(other, canvas, "a dot's fill is the page's own");
+        assert_ne!(current, canvas, "the current dot's fill is the page's own");
+        assert_ne!(current, other, "the current dot looks like the others");
+        fixture.close().await.unwrap();
+    });
+}

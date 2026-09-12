@@ -20,7 +20,7 @@ use crate::{
         use_silent_focus_within, use_theme,
     },
     platform::{ElementApi, TimerSubscription, arrow_target, key_taken, timer, typing_target},
-    sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CAROUSEL_CONTROL_BACKGROUND, CAROUSEL_CONTROL_COLOR, CAROUSEL_CONTROL_HOVER_BACKGROUND,
         CAROUSEL_CONTROL_SIZE, CAROUSEL_CONTROLS_OFFSET, CAROUSEL_GAP, CAROUSEL_INDICATOR_COLOR,
@@ -228,6 +228,13 @@ static CAROUSEL_INDICATOR_SX: StaticSx = StaticSx::new(|| {
                 ),
         )
         .media(REDUCED_MOTION, sx().transition("none"))
+        // Forced colours paint every dot `Canvas`: the strip vanished, and the
+        // current dot with it.
+        .media(
+            FORCED_COLORS,
+            sx().background("CanvasText")
+                .when("current", sx().background("Highlight")),
+        )
         .focus_visible(focus_ring_sx())
         // WCAG 2.5.8: the dot is drawn 5px thick, so an invisible box at least
         // 24px on both axes and centred on it takes the pointer, as `Slider`'s thumb.

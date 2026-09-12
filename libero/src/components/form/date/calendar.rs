@@ -16,7 +16,7 @@ use crate::{
     },
     hooks::{ElementHandle, use_element, use_theme},
     platform::ElementApi,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CalendarVariant, DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DateDefaults, DatePickerDefaults,
         Size, SizeCss,
@@ -186,6 +186,16 @@ static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& [data-selected]:focus-visible",
             inset_focus_ring_sx("-4px"),
+        )
+        // Forced colours paint the picked day's fill `Canvas`, like every other.
+        .media(
+            FORCED_COLORS,
+            sx().selector(
+                "& [data-selected]",
+                sx().background("Highlight")
+                    .color("HighlightText")
+                    .hover(sx().background("Highlight")),
+            ),
         )
 });
 

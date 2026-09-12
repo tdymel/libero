@@ -399,3 +399,43 @@ async fn expect_focus(page: &chromiumoxide::Page, date: &str, month: &str, what:
         panic!("at {at}: {e}; focus is on {actual}");
     }
 }
+
+/// Forced colours paint the picked day's fill `Canvas`, like every other day's,
+/// so only `aria-selected` told it apart (todo 524).
+#[test]
+fn the_picked_day_shows_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/calendar", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        // The page itself is `Canvas`; a fill the same colour is no fill.
+        let [picked, canvas]: [String; 2] = page
+            .evaluate(format!(
+                "(() => {{ const probe = document.createElement('div'); \
+                 probe.style.background = 'Canvas'; document.body.append(probe); \
+                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+                 return [getComputedStyle(document.querySelector({STOP:?})).backgroundColor, \
+                 canvas]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_ne!(picked, canvas, "the picked day's fill is the page's own");
+        fixture.close().await.unwrap();
+    });
+}
