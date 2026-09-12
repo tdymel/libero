@@ -59,6 +59,7 @@ mod switch;
 mod table;
 mod tabs;
 mod tags_field;
+mod text_field;
 mod time_picker;
 mod tooltip;
 mod tree;

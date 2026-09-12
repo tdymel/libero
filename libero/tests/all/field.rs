@@ -1375,6 +1375,60 @@ fn an_unset_reveal_button_follows_the_theme() {
     assert!(body(&render(overridden)).contains("<button"));
 }
 
+static XS_FIELDS: libero::theme::Theme = libero::theme::Theme {
+    text_field: libero::theme::TextFieldDefaults {
+        size: libero::theme::Size::Xs,
+        radius: libero::theme::Size::Sm,
+    },
+    ..libero::theme::Theme::DEFAULT
+};
+
+/// The reveal button takes the field's size, the theme's default included, so
+/// it does not outgrow an `xs` frame.
+#[test]
+fn the_reveal_button_follows_the_field_size_from_the_theme() {
+    fn themed() -> Element {
+        rsx! {
+            LiberoProvider { themes: &XS_FIELDS, PasswordField { label: "Password" } }
+        }
+    }
+    fn explicit() -> Element {
+        rsx! {
+            LiberoProvider { themes: &XS_FIELDS, PasswordField { label: "Password", size: "xs" } }
+        }
+    }
+
+    // The size is an inline override of the icon's own size.
+    let style = |html: String| attributes_of(&body(&html), "button").get("style").cloned();
+    let explicit = style(render(explicit));
+    assert!(explicit.is_some());
+    assert_eq!(style(render(themed)), explicit);
+}
+
+/// A disabled `Fieldset` disables the reveal button along with the input.
+#[test]
+fn a_disabled_fieldset_disables_the_reveal_button() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Fieldset::<String> { label: "Locked", disabled: true,
+                    PasswordField { label: "Old password" }
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    assert!(
+        attributes_of(&body, "input").contains_key("disabled"),
+        "{body}"
+    );
+    assert!(
+        attributes_of(&body, "button").contains_key("disabled"),
+        "{body}"
+    );
+}
+
 /// The field shells skip a value change and a caller's new slot `Element`, so
 /// the control and the slot must still show the new one (todo 29).
 mod value_moves {

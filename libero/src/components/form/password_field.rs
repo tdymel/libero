@@ -4,7 +4,7 @@ use crate::{
     components::{
         ActionIcon, Input,
         common::{EyeIcon, EyeOffIcon, field_props},
-        form::TextField,
+        form::{Disabled, TextField},
     },
     hooks::use_theme,
     sx::ThemeAwareValue,
@@ -57,11 +57,14 @@ field_props! {
 #[component]
 pub fn PasswordField(props: PasswordFieldProps) -> Element {
     let mut revealed = use_signal(|| false);
+    let theme = use_theme();
     let reveal_button = props
         .reveal_button
-        .unwrap_or(use_theme().password_field.reveal_button);
+        .unwrap_or(theme.password_field.reveal_button);
 
-    let disabled = props.disabled.unwrap_or(false);
+    // A disabled `Fieldset` disables the input, so the toggle follows it.
+    let group = try_use_context::<Disabled>();
+    let disabled = props.disabled.unwrap_or(false) || group.is_some_and(|Disabled(group)| group());
     let hidden_label = props
         .reveal_label
         .clone()
@@ -77,11 +80,9 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
         true => shown_label,
         false => hidden_label,
     };
-    let size: Input<ThemeAwareValue> = props
-        .size
-        .as_ref()
-        .map(|size| ThemeAwareValue::Size(*size))
-        .into();
+    // The field's own size, theme default included, as the clear button takes it.
+    let size: Input<ThemeAwareValue> =
+        ThemeAwareValue::Size(props.size.copied_or(theme.text_field.size)).into();
 
     rsx! {
         TextField {
