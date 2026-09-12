@@ -78,8 +78,14 @@ fn Demo() -> Element {
     let mut open = use_signal(|| false);
 
     rsx! {
-        Button { onclick: move |_| open.toggle(), "Release notes" }
+        Button {
+            onclick: move |_| open.toggle(),
+            aria_expanded: open(),
+            aria_controls: "release-notes",
+            "Release notes"
+        }
         Collapse {
+            id: "release-notes",
             open: open(),
             keep_mounted: false,
             duration: 600,

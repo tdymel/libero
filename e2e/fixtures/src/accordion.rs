@@ -1,11 +1,34 @@
 //! `Accordion`, for its keys, its expanded state and its panels' labels.
 
 use dioxus::prelude::*;
-use libero::components::{Accordion, AccordionOpen, Button, Flex, OptionList, Options, Text};
+use libero::components::{
+    Accordion, AccordionOpen, Button, Flex, OptionLabel, OptionList, Options, Text,
+};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/accordion", || rsx! { AccordionPage {} })];
+pub const ROUTES: Routes = &[
+    ("/accordion", || rsx! { AccordionPage {} }),
+    ("/accordion-long", || rsx! { LongLabelPage {} }),
+];
+
+/// One label with no break opportunity, for reflow at a narrow width.
+#[component]
+fn LongLabelPage() -> Element {
+    let mut open = use_signal(|| AccordionOpen::One(None::<Step>));
+    rsx! {
+        Accordion {
+            id: "long",
+            open: open(),
+            onchange: move |next| open.set(next),
+            option_label: |step: Step| match step {
+                Step::Shipping => OptionLabel::from("Versandkostenberechnungsgrundlagenverordnung"),
+                other => OptionLabel::from(other.label()),
+            },
+            panel: |_: Step| rsx! { Text { "Body." } },
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Options)]
 enum Step {

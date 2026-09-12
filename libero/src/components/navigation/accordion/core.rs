@@ -51,6 +51,12 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
                 .text_align("start")
                 .cursor("pointer"),
         )
+        // A long unbreakable word wraps inside the label instead of pushing the
+        // chevron off a narrow screen (1.4.10).
+        .selector(
+            "& > [data-accordion-item] > [data-accordion-heading] > button > span:not([data-accordion-chevron])",
+            sx().min_width("0").with("overflow-wrap", "anywhere"),
+        )
         // `appearance: none` and `border: 0` take the UA ring with them. Inset,
         // because the trigger spans the full width and an outset ring would be
         // clipped by whatever holds the accordion.

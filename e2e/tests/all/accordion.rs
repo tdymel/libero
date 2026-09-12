@@ -26,6 +26,45 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// A label with no break opportunity wraps inside its trigger at 390px, so
+/// neither the page nor the trigger scrolls sideways and the chevron stays on
+/// screen (1.4.10).
+#[test]
+fn a_long_label_wraps_instead_of_widening_the_page() {
+    block_on(async {
+        let fixture = Fixture::open("/accordion-long", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#long-trigger-0").await.unwrap();
+        let widths: Vec<f64> = page
+            .evaluate(
+                "(() => {
+                    const b = document.querySelector('#long-trigger-0');
+                    const chevron = b.querySelector('[data-accordion-chevron]');
+                    return [document.documentElement.scrollWidth, innerWidth,
+                            b.scrollWidth, b.clientWidth,
+                            chevron.getBoundingClientRect().right];
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let [page_width, viewport, scroll, client, chevron] = widths[..] else {
+            panic!("{widths:?}");
+        };
+        assert!(
+            page_width <= viewport,
+            "the page scrolls sideways: {widths:?}"
+        );
+        assert!(scroll <= client, "the trigger overflows: {widths:?}");
+        assert!(chevron <= viewport, "the chevron is off screen: {widths:?}");
+        fixture.console.assert_clean("a long label").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `true` once trigger `index` reports `aria-expanded` as `expanded`.
 fn expanded(index: usize, expanded: bool) -> String {
     format!(

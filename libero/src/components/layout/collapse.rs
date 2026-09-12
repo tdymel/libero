@@ -149,8 +149,13 @@ base_props! {
 /// # fn app() -> Element {
 /// let mut open = use_signal(|| false);
 /// rsx! {
-///     Button { onclick: move |_| open.toggle(), "Details" }
-///     Collapse { open: open(), Text { "Shipping is calculated at checkout." } }
+///     Button {
+///         onclick: move |_| open.toggle(),
+///         aria_expanded: open(),
+///         aria_controls: "details",
+///         "Details"
+///     }
+///     Collapse { id: "details", open: open(), Text { "Shipping is calculated at checkout." } }
 /// }
 /// # }
 /// ```
