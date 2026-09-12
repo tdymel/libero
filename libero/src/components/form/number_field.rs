@@ -1,10 +1,12 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::{
     components::{
         ActionIcon, HtmlTag, Input, NumberValue,
         common::{MinusIcon, PlusIcon, field_props},
-        form::{FIELD_CONTROL_SX, use_bound, use_field, use_field_frame},
+        form::{FIELD_CONTROL_SX, LiveControl, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::use_theme,
@@ -96,6 +98,22 @@ field_props! {
 /// the buttons - the keys are what `role="spinbutton"` promises.
 #[component]
 pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
+    let mut props = props;
+    let value = props.value.take();
+    let mut live = use_signal(|| value);
+    if *live.peek() != value {
+        live.set(value);
+    }
+    rsx! { NumberFieldShell::<T> { live, field: props } }
+}
+
+/// Everything but the number, so a step skips it and redraws the control.
+#[component]
+fn NumberFieldShell<T: NumberValue>(
+    live: Signal<Option<T>>,
+    field: NumberFieldProps<T>,
+) -> Element {
+    let props = field;
     let theme = use_theme();
 
     let size = props.size.copied_or(theme.number_field.size);
@@ -107,7 +125,9 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
     // The native `readonly` stops typing; the arrow keys and the steppers are
     // ours, so they are refused here.
     let readonly = props.readonly.unwrap_or(false);
-    let current = bound.value().unwrap_or(props.value);
+    let bound_value = bound.value();
+    // Not a subscription: only rules and the control read the number.
+    let current = move || bound_value.unwrap_or_else(|| *live.peek());
 
     if props.onchange.is_none() && !bound.is_bound() {
         warn("NumberField: without `onchange` the value can never change.");
@@ -118,15 +138,10 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
     // holds - otherwise the caller's own value wins, which is what makes the
     // field controlled.
     let mut buffer = use_signal(String::new);
-    let display = match T::parse(&buffer()) {
-        Some(parsed) if Some(parsed) == current => buffer(),
-        _ => current.map(|value| value.format()).unwrap_or_default(),
-    };
 
     let min = props.min;
     let max = props.max;
     let step = props.step.unwrap_or_else(T::default_step);
-    let value = current;
     let onchange = props.onchange;
     let setter = bound.setter();
 
@@ -146,7 +161,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
             return;
         }
         // An empty field steps from zero, unless the type has none.
-        let Some(from) = value.or_else(T::zero) else {
+        let Some(from) = current().or_else(T::zero) else {
             return;
         };
         let next = match up {
@@ -157,13 +172,21 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         publish(next);
     });
     let publish = typed_publish;
+    // Rules read the number here, so only a validated field redraws per step.
+    let rules = (!props.validate.is_empty())
+        .then(|| {
+            props
+                .validate
+                .check(&bound_value.unwrap_or_else(|| live.cloned()))
+        })
+        .flatten();
 
     let field = use_field()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(props.validate.check(&current))
+        .rules(rules)
         .bound(&bound)
         .required(required)
         .disabled(disabled)
@@ -204,11 +227,9 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         // what carries the range to assistive technology - `min`/`max` on a
         // `type="text"` input mean nothing.
         .attr("role", "spinbutton")
-        .attr("aria-valuenow", value.map(|value| value.to_string()))
         .attr("aria-valuemin", min.map(|min| min.to_string()))
         .attr("aria-valuemax", max.map(|max| max.to_string()))
         .attr("name", bound.name().map(str::to_string))
-        .attr("value", display)
         .attr("data-controlled", true)
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
@@ -231,10 +252,22 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
             // Otherwise the caret jumps to the end of the text as well.
             event.prevent_default();
             nudge.call(up);
-        })
-        .render(HtmlTag::Input, props.attributes, ());
+        });
+    let attributes = props.attributes;
+    let draw = Rc::new(move || {
+        let current = bound_value.unwrap_or_else(|| live.cloned());
+        let display = match T::parse(&buffer()) {
+            Some(parsed) if Some(parsed) == current => buffer(),
+            _ => current.map(|value| value.format()).unwrap_or_default(),
+        };
+        input
+            .clone()
+            .attr("aria-valuenow", current.map(|value| value.to_string()))
+            .attr("value", display)
+            .render(HtmlTag::Input, attributes.clone(), ())
+    });
 
-    field.render(frame.render(input))
+    field.render(frame.render(rsx! { LiveControl { draw } }))
 }
 
 /// The two stepper buttons, a scope of their own: every prop compares equal

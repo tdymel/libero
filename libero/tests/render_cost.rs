@@ -719,6 +719,8 @@ fn render_cost_per_component() {
         "MultiSelect" let onchange = |_: Vec<CostPane>| {}; { MultiSelect { value: vec![CostPane::One], onchange } }
         "Autocomplete" let oninput = |_: String| {}; { Autocomplete { value: "", options: vec![CostPane::One], oninput } }
         "TextField" let oninput = |_: String| {}; { TextField { oninput } }
+        // A keystroke: the text moves every round.
+        "TextField type" let oninput = |_: String| {}; { TextField { value: if flip() { "a" } else { "b" }, oninput } }
         "TextField+label" let oninput = |_: String| {}; { TextField { oninput, label: "l" } }
         // Every slot filled - what the field chrome costs over a bare control.
         "TextField+slots" let oninput = |_: String| {}; { TextField { oninput, label: "l", description: "d", helper: "h", status: "e", required: true } }

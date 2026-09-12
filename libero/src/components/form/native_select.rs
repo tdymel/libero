@@ -1,10 +1,12 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::{
     components::{
         HtmlTag, Input, Options, Select, SelectOptionArgs,
         common::field_props,
-        form::{field_control_sx, row_label, use_bound, use_field, use_field_frame},
+        form::{LiveControl, field_control_sx, row_label, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::use_theme,
@@ -108,6 +110,19 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
     if !select_picker() {
         return listbox(props);
     }
+    let mut props = props;
+    let value = props.value.take();
+    let mut live = use_signal(|| value.clone());
+    if *live.peek() != value {
+        live.set(value);
+    }
+    rsx! { NativeSelectShell::<T> { live, field: props } }
+}
+
+/// Everything but the selection, so a pick skips it and redraws the options.
+#[component]
+fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectProps<T>) -> Element {
+    let props = field;
     let theme = use_theme();
 
     let size = props.size.copied_or(theme.native_select.size);
@@ -116,7 +131,7 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
-    let current = bound.value().unwrap_or_else(|| props.value.clone());
+    let bound_value = bound.value();
 
     if props.onchange.is_none() && !bound.is_bound() {
         warn("NativeSelect: without `onchange` the selection can never change.");
@@ -129,13 +144,6 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
     if values.is_empty() {
         warn("NativeSelect: no options - a `T` without static `options()` needs `options`.");
     }
-    let selected = current
-        .as_ref()
-        .and_then(|value| values.iter().position(|option| option == value));
-    if current.is_some() && selected.is_none() && !values.is_empty() {
-        warn("NativeSelect: `value` is not one of the options, so none is selected.");
-    }
-
     let labels: Vec<String> = values
         .iter()
         .map(|value| match &props.option_label {
@@ -143,13 +151,20 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
             None => value.label(),
         })
         .collect();
+    // Rules read the selection here, so only a validated select redraws per pick.
+    let rules = (!props.validate.is_empty())
+        .then(|| {
+            let current = bound_value.clone().unwrap_or_else(|| live.cloned());
+            props.validate.check(&current)
+        })
+        .flatten();
 
     let field = use_field()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(props.validate.check(&current))
+        .rules(rules)
         .bound(&bound)
         .required(required)
         .disabled(disabled)
@@ -179,6 +194,7 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
         );
     }
 
+    let choices = values.clone();
     let onchange = props.onchange;
     let setter = bound.setter();
     let pick = {
@@ -206,6 +222,34 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
     // parent's children already existing - which is what made the old
     // `value` path miss on the creating render, and what left SSR with no
     // selection at all.
+    let draw = Rc::new(move || {
+        let current = bound_value.clone().unwrap_or_else(|| live.cloned());
+        let selected = current
+            .as_ref()
+            .and_then(|value| choices.iter().position(|option| option == value));
+        if current.is_some() && selected.is_none() && !choices.is_empty() {
+            warn("NativeSelect: `value` is not one of the options, so none is selected.");
+        }
+        rsx! {
+            if selected.is_none() {
+                option {
+                    value: "",
+                    selected: true,
+                    disabled: true,
+                    hidden: true,
+                    "{placeholder}"
+                }
+            }
+            for (index, (label, value)) in labels.iter().zip(&posted).enumerate() {
+                option {
+                    key: "{index}",
+                    value: "{value}",
+                    selected: selected == Some(index),
+                    "{label}"
+                }
+            }
+        }
+    });
     let select = field
         .aria(control)
         .attr("name", bound.name().map(str::to_string))
@@ -216,25 +260,7 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
         .render(
             HtmlTag::Select,
             props.attributes,
-            rsx! {
-                if selected.is_none() {
-                    option {
-                        value: "",
-                        selected: true,
-                        disabled: true,
-                        hidden: true,
-                        "{placeholder}"
-                    }
-                }
-                for (index, (label, value)) in labels.iter().zip(&posted).enumerate() {
-                    option {
-                        key: "{index}",
-                        value: "{value}",
-                        selected: selected == Some(index),
-                        "{label}"
-                    }
-                }
-            },
+            rsx! { LiveControl { draw } },
         );
 
     field.render(frame.render(select))

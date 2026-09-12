@@ -18,6 +18,7 @@ mod data_list;
 mod date_field;
 mod drawer;
 mod field_frame;
+mod field_value;
 mod file_field;
 mod floating_window;
 mod focus_contrast;

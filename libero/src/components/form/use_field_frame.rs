@@ -210,6 +210,42 @@ impl PreparedFrame {
     }
 }
 
+/// A field's control in a scope of its own. The field's shell skips a value
+/// change; `draw` reads the value's signal, so only this scope redraws.
+#[derive(Props, Clone)]
+pub(crate) struct LiveControlProps {
+    draw: Rc<dyn Fn() -> Element>,
+}
+
+/// A new `draw` is a shell render, which always redraws the control.
+impl PartialEq for LiveControlProps {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.draw, &other.draw)
+    }
+}
+
+#[component]
+pub(crate) fn LiveControl(props: LiveControlProps) -> Element {
+    (props.draw)()
+}
+
+/// A caller's slot content in a signal, so the field's shell skips the new
+/// `Element` every caller render brings. `None` while the slot is empty.
+pub(crate) fn use_live_slot(content: Option<Element>) -> Option<Signal<Option<Element>>> {
+    let mut slot = use_signal(|| None::<Element>);
+    let filled = content.is_some();
+    if filled || slot.peek().is_some() {
+        slot.set(content);
+    }
+    filled.then_some(slot)
+}
+
+/// Draws a [`use_live_slot`] slot, alone on a caller render.
+#[component]
+pub(crate) fn LiveSlot(content: Signal<Option<Element>>) -> Element {
+    content.cloned().unwrap_or_else(|| rsx! {})
+}
+
 /// No ring overlay in a slot: a button there draws its own ring, around
 /// itself rather than the whole frame.
 fn slot(slot: &'static str, content: &Element) -> Element {

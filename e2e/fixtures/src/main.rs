@@ -39,6 +39,7 @@ mod data_list;
 mod date_field;
 mod drawer;
 mod field_frame;
+mod field_value;
 mod file_field;
 mod floating_window;
 mod focus_contrast;
@@ -101,6 +102,7 @@ const FIXTURES: &[Routes] = &[
     date_field::ROUTES,
     drawer::ROUTES,
     field_frame::ROUTES,
+    field_value::ROUTES,
     file_field::ROUTES,
     floating_window::ROUTES,
     focus_contrast::ROUTES,

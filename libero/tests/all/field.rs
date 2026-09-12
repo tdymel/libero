@@ -1374,3 +1374,69 @@ fn an_unset_reveal_button_follows_the_theme() {
     assert!(!html.contains("<button"), "{html}");
     assert!(body(&render(overridden)).contains("<button"));
 }
+
+/// The field shells skip a value change and a caller's new slot `Element`, so
+/// the control and the slot must still show the new one (todo 29).
+mod value_moves {
+    use super::*;
+
+    #[derive(Clone, PartialEq, Options)]
+    enum Size {
+        Small,
+        Large,
+    }
+
+    thread_local! {
+        static STEP: std::cell::Cell<Option<Signal<i32>>> = const { std::cell::Cell::new(None) };
+    }
+
+    #[test]
+    fn a_new_value_reaches_every_control_while_the_shell_skips() {
+        fn app() -> Element {
+            let step = use_signal(|| 1);
+            use_hook(|| STEP.set(Some(step)));
+            let oninput = use_callback(|_: String| {});
+            let onchange = use_callback(|_: i32| {});
+            let onpick = use_callback(|_: Size| {});
+            let size = if step() == 1 {
+                Size::Small
+            } else {
+                Size::Large
+            };
+            rsx! {
+                LiberoProvider {
+                    TextField {
+                        value: format!("text-{}", step()),
+                        oninput,
+                        trailing: rsx! { "slot-{step}" },
+                    }
+                    NumberField { value: step() * 10, onchange }
+                    NativeSelect { value: size, onchange: onpick }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(html.contains(r#"value="text-1""#), "{html}");
+        assert!(html.contains(r#"aria-valuenow="10""#), "{html}");
+        assert!(html.contains(r#"value="Small" selected"#), "{html}");
+
+        let mut step = STEP.get().expect("the app stored its signal");
+        dom.in_runtime(|| step.set(2));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(html.contains(r#"value="text-2""#), "stale text:\n{html}");
+        assert!(html.contains("slot-2"), "stale slot:\n{html}");
+        assert!(
+            html.contains(r#"aria-valuenow="20""#),
+            "stale number:\n{html}"
+        );
+        assert!(html.contains(r#"value="20""#), "stale number text:\n{html}");
+        assert!(
+            html.contains(r#"value="Large" selected"#),
+            "stale selection:\n{html}"
+        );
+        assert!(!html.contains(r#"value="Small" selected"#), "{html}");
+    }
+}

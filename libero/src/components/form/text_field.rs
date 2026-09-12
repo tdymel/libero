@@ -1,10 +1,15 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::{
     components::{
         HtmlTag, Input,
         common::field_props,
-        form::{FIELD_CONTROL_SX, use_bound, use_field, use_field_frame},
+        form::{
+            FIELD_CONTROL_SX, LiveControl, LiveSlot, use_bound, use_field, use_field_frame,
+            use_live_slot,
+        },
         layout::use_box,
     },
     hooks::use_theme,
@@ -50,6 +55,29 @@ field_props! {
 /// its own text.
 #[component]
 pub fn TextField(props: TextFieldProps) -> Element {
+    let mut props = props;
+    let value = props.value.take();
+    let mut live = use_signal(|| value.clone());
+    if *live.peek() != value {
+        live.set(value);
+    }
+    let leading = use_live_slot(props.leading.take());
+    let trailing = use_live_slot(props.trailing.take());
+    rsx! { TextFieldShell { live, leading, trailing, field: props } }
+}
+
+/// Everything but the text and the slots' content, so a keystroke or a
+/// caller's new slot `Element` skips it.
+#[component]
+fn TextFieldShell(
+    live: Signal<Option<String>>,
+    leading: Option<Signal<Option<Element>>>,
+    trailing: Option<Signal<Option<Element>>>,
+    field: TextFieldProps,
+) -> Element {
+    let props = field;
+    let leading = leading.map(|content| rsx! { LiveSlot { content } });
+    let trailing = trailing.map(|content| rsx! { LiveSlot { content } });
     let theme = use_theme();
 
     let size = props.size.copied_or(theme.text_field.size);
@@ -59,14 +87,23 @@ pub fn TextField(props: TextFieldProps) -> Element {
     let bound = use_bound(&props.name, props.oninput.is_some());
     let disabled = bound.disabled(props.disabled);
     let readonly = props.readonly.unwrap_or(false);
-    let value = bound.value().or_else(|| props.value.clone());
+    let bound_value = bound.value();
+    // Rules read the text here, so only a validated field redraws per keystroke.
+    let rules = (!props.validate.is_empty())
+        .then(|| {
+            bound.check(
+                &props.validate,
+                bound_value.clone().or_else(|| live.cloned()),
+            )
+        })
+        .flatten();
 
     let field = use_field()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(bound.check(&props.validate, value.clone()))
+        .rules(rules)
         .bound(&bound)
         .required(required)
         .disabled(disabled)
@@ -79,8 +116,8 @@ pub fn TextField(props: TextFieldProps) -> Element {
         .prepare();
 
     let frame = use_field_frame()
-        .leading(&props.leading)
-        .trailing(&props.trailing)
+        .leading(&leading)
+        .trailing(&trailing)
         .states(field.states())
         .prepare();
 
@@ -95,9 +132,6 @@ pub fn TextField(props: TextFieldProps) -> Element {
         .aria(control)
         .attr_default("type", "text")
         .attr("name", bound.name().map(str::to_string))
-        // A form reset leaves the text alone when this component sets it.
-        .attr("data-controlled", value.is_some())
-        .attr("value", value)
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
         .attr("readonly", readonly)
@@ -105,9 +139,18 @@ pub fn TextField(props: TextFieldProps) -> Element {
         .event(
             "oninput",
             oninput.map(|emit| move |event: FormEvent| emit(event.value())),
-        )
-        // Void element - `()` costs no dynamic node.
-        .render(HtmlTag::Input, props.attributes, ());
+        );
+    let attributes = props.attributes;
+    let draw = Rc::new(move || {
+        let value = bound_value.clone().or_else(|| live.cloned());
+        input
+            .clone()
+            // A form reset leaves the text alone when this component sets it.
+            .attr("data-controlled", value.is_some())
+            .attr("value", value)
+            // Void element - `()` costs no dynamic node.
+            .render(HtmlTag::Input, attributes.clone(), ())
+    });
 
-    field.render(frame.render(input))
+    field.render(frame.render(rsx! { LiveControl { draw } }))
 }
