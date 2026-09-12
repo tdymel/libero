@@ -14,13 +14,14 @@ use crate::{
 /// it, Tab strands focus on something invisible - and anything with
 /// `tabindex="-1"`, which a browser's Tab skips even on a button. Without that,
 /// Tab walked every roving item: all six of a lightbox's thumbnails, where the
-/// strip has one tab stop. Deliberately still matched: a
-/// visually-hidden-but-focusable element, which is what
-/// [`FocusTrapInitialFocus`] is.
+/// strip has one tab stop. `:disabled` too: a disabled button with
+/// `tabindex="0"` (a calendar's Nav at `min`) matched the `[tabindex]` arm.
+/// Deliberately still matched: a visually-hidden-but-focusable element, which
+/// is what [`FocusTrapInitialFocus`] is.
 pub(crate) const FOCUSABLE_SELECTOR: &str = concat!(
     ":is(a[href], button:not([disabled]), textarea:not([disabled]), ",
     "input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"]))",
-    ":not([hidden], [inert], [aria-hidden=\"true\"], [tabindex=\"-1\"], ",
+    ":not([hidden], [inert], [aria-hidden=\"true\"], [tabindex=\"-1\"], :disabled, ",
     "[hidden] *, [inert] *, [aria-hidden=\"true\"] *)"
 );
 
@@ -131,5 +132,15 @@ mod tests {
             excluded.contains(r#"[tabindex="-1"]"#),
             "{FOCUSABLE_SELECTOR}"
         );
+    }
+
+    /// A disabled button keeps no tab stop, whatever its `tabindex`.
+    #[test]
+    fn a_disabled_element_is_never_a_tab_stop() {
+        let (_, excluded) = FOCUSABLE_SELECTOR
+            .split_once("):not(")
+            .expect("an exclusion list after the :is(..)");
+
+        assert!(excluded.contains(":disabled"), "{FOCUSABLE_SELECTOR}");
     }
 }
