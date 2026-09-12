@@ -3660,7 +3660,8 @@ fn a_tree_branch_row_toggles_on_every_click() {
     let mut dom = VirtualDom::new(app);
     let mut find = FindClickListener::default();
     dom.rebuild(&mut find);
-    assert_eq!(find.clicks.len(), 3, "one click listener per branch row");
+    // A tree root's click listener only moves focus, so clicking it is a no-op.
+    assert_eq!(find.clicks.len(), 6, "one per branch row and tree root");
 
     for expanded in ["true", "false", "true"] {
         for &row in &find.clicks {

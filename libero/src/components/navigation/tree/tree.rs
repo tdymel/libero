@@ -198,6 +198,14 @@ fn tree_item_focused(root: &ElementHandle, target_id: &str) -> bool {
         .is_ok_and(|el| el.is_focused())
 }
 
+// The row's own content only (`> div`), not a nested row's in its group.
+fn row_control_focused(root: &ElementHandle, target_id: &str) -> bool {
+    let id = css_string(target_id);
+    let selector = format!("[data-tree-id={id}] > div :is(a, button)");
+    root.query_selector(&selector)
+        .is_ok_and(|el| el.is_focused())
+}
+
 // Scoped to this tree's own root, so two `Tree`s can reuse node ids without
 // colliding.
 fn focus_tree_item(root: &ElementHandle, target_id: &str) {
@@ -474,6 +482,16 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         }
     };
 
+    // A click on a row's own link or button leaves focus there, out of the
+    // keys' reach; the row the click made active takes it back.
+    let onclick = move |_: Event<MouseData>| {
+        if let Some(id) = active_id.peek().clone()
+            && row_control_focused(&root, &id)
+        {
+            focus_tree_item(&root, &id);
+        }
+    };
+
     let root_sx = props.sx.into_option().unwrap_or_default();
 
     rsx! {
@@ -486,6 +504,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             "role": "tree",
             "aria-label": props.aria_label,
             onkeydown,
+            onclick,
             attributes: props.attributes,
             for (index , node) in props.data.iter().enumerate() {
                 TreeRow {

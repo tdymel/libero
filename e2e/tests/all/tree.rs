@@ -9,7 +9,7 @@
 
 use e2e::archetypes::TreeWalk;
 use e2e::browser::block_on;
-use e2e::passes::keyboard;
+use e2e::passes::{keyboard, pointer};
 use e2e::wait;
 use e2e::{Fixture, Suite, Viewport};
 
@@ -56,6 +56,58 @@ fn enter_on_a_link_leaf_navigates() {
             .console
             .assert_clean("activating a link leaf")
             .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Review 449: a click on a row's button left focus on the button, where the
+/// arrow keys do nothing. The row takes focus back.
+#[test]
+fn the_arrows_work_after_a_click_on_a_row_button() {
+    block_on(async {
+        let fixture = Fixture::open("/tree", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "[data-tree-id='README.md'] button")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.dataset.treeId === 'README.md'",
+            "the clicked row to hold focus",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.dataset.treeId === 'docs'",
+            "Up to move to the row above",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("clicking a row").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The same for a link leaf, as the docs sidebar renders them.
+#[test]
+fn a_clicked_link_row_takes_focus() {
+    block_on(async {
+        let fixture = Fixture::open("/tree/links", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "[data-tree-id='/tree/links'] a")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.dataset.treeId === '/tree/links'",
+            "the clicked link row to hold focus",
+        )
+        .await
+        .unwrap();
         fixture.close().await.unwrap();
     });
 }
