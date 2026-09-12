@@ -497,56 +497,8 @@ impl DismissHandle {
 
     /// The Escape listener both surfaces share.
     fn escape_listener(&self) -> Attribute {
-        {
-            let handle = *self;
-            listener("onkeydown", move |event: Event<KeyboardData>| {
-                // `escape_closes`, the one rule every overlay's own Escape
-                // transport shares. Three of its four filters matter here.
-                //
-                // A held Escape is one intent, not a stream of them. Without
-                // the repeat filter it walks down the stack, closing the menu
-                // and then the modal behind it inside one press. A held
-                // ArrowDown scrolling a list still wants every repeat, so this
-                // is not a global filter.
-                //
-                // Mid-composition, Escape means "cancel the composition", not
-                // "dismiss". `KeyboardApi` drops a composing press on both its
-                // paths ahead of the filter ([[codebase/platform-api]]); this
-                // is the same guard on the element path, so the contract does
-                // not change with the transport. Reasoned rather than measured
-                // there and here alike - headless Chromium has no IME.
-                //
-                // A press a field inside took is not this box's (todo 348). A
-                // `Select` in a `HoverCard` closes its list, prevents the
-                // default and lets the press bubble on, so without this one
-                // Escape closed the list and the card around it.
-                if !escape_closes(&event) {
-                    return;
-                }
-                // No stack consultation here on purpose: a layer with only this
-                // transport never pushed, so it would always find itself not on
-                // top and never act.
-                //
-                // The press stops here. This is a *bubble-phase* stop on this
-                // box's own handler, declining to let a press past the layer
-                // that just consumed it, and it is not the thing the layer
-                // stack rejected - that was a capture-phase stop at the
-                // document, which kills every element handler for the press in
-                // the whole document and hands the veto to whichever subscriber
-                // ran first. `Menu`'s trigger stops its Escape the same way.
-                //
-                // Without it an enclosing `Modal` hears the same press and
-                // closes too. The earlier version of this comment called that
-                // "no worse than what shipped", which was true only because no
-                // non-portaled consumer existed yet - and this hook's own doc
-                // offers one two paragraphs up, a tooltip wanting dismissal
-                // without placement, which has no portal to be a sibling
-                // through.
-                event.prevent_default();
-                event.stop_propagation();
-                handle.close(Dismissal::FromInside);
-            })
-        }
+        let handle = *self;
+        escape_listener(move || handle.close(Dismissal::FromInside))
     }
 
     /// Whether focus is still somewhere that counts as inside this box. `false`
@@ -682,22 +634,9 @@ pub(crate) fn use_dismiss(
     options: DismissOptions,
 ) -> DismissHandle {
     let focus_return = use_focus_return();
-    let layer = use_dismiss_layer();
     let inside = use_signal(Vec::<(u64, ElementHandle)>::new);
     let inside_next = use_signal(|| 0u64);
-
-    // Decided once. Whether the document can be listened to is a property of
-    // the running renderer, not of this render.
-    //
-    // This is the first place in the codebase to read a platform capability at
-    // render time, so: [[codebase/platform-api]]'s "ask in an effect" rule is
-    // about *reads that need a mounted element*, and this needs none. It is
-    // also safe across hydration, which is the reason the rule looks like it
-    // should apply - SSR serialises no listeners, so the server and the client
-    // emit identical HTML whichever way this answers, and hydration walks nodes
-    // rather than attributes. Moving it into an effect costs a render and buys
-    // nothing anyone has been able to name.
-    let global = use_hook(|| keyboard().is_some());
+    let global = use_global_escape();
 
     let handle = DismissHandle {
         anchor,
@@ -714,74 +653,21 @@ pub(crate) fn use_dismiss(
         onfocusmoved: options.onfocusmoved,
     };
 
-    // The document subscription and the stack membership have exactly the same
-    // lifetime, so they are one slot: taking it drops both, and dropping the
-    // hook's own state on unmount drops it too. That is what makes a leaked
-    // layer impossible rather than merely unlikely.
-    type Listening = Rc<RefCell<Option<(Box<dyn KeySubscription>, LayerGuard)>>>;
-    let listening: Listening = use_hook(|| Rc::new(RefCell::new(None)));
+    use_document_escape(open && options.escape, global, move || {
+        handle.close(Dismissal::FromDocument)
+    });
 
-    // Bumped from the key callback, which runs outside every dioxus scope - so
-    // the signal is owned by the root and dropped by hand, the same obligation
-    // `use_popover`'s scroll callback has. The callback deliberately does not
-    // close anything: it only records the press, and the effect below acts, in
-    // the runtime.
-    let escape_tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
     // Blitz's Tab fires no `focusout`: a silent move is judged where the
     // document answers, and recorded here for the effect below, as Escape is.
     let silent: Rc<RefCell<Option<Box<dyn SilentFocusSubscription>>>> =
         use_hook(|| Rc::new(RefCell::new(None)));
     let left_tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
     use_drop({
-        let listening = listening.clone();
         let silent = silent.clone();
         move || {
-            listening.borrow_mut().take();
             silent.borrow_mut().take();
-            escape_tick.manually_drop();
             left_tick.manually_drop();
         }
-    });
-
-    let slot = listening.clone();
-    use_effect(use_reactive!(|(open,)| {
-        if !open || !global || !options.escape {
-            slot.borrow_mut().take();
-            return;
-        }
-        if slot.borrow().is_some() {
-            return;
-        }
-        let Some(api) = keyboard() else {
-            return;
-        };
-        // Unfiltered: a dismissible surface has to hear Escape from inside its
-        // own text field - a menu's filter box, a palette's search box.
-        let subscription = api.on_key_unfiltered(Box::new(move |chord| {
-            if chord.key != Key::Escape || chord.repeat || !layer.is_top() {
-                // Declining must not prevent the default, or this layer eats
-                // the press for the layer above it.
-                return false;
-            }
-            let mut tick = escape_tick;
-            let next = tick.peek().wrapping_add(1);
-            tick.set(next);
-            true
-        }));
-        *slot.borrow_mut() = Some((subscription, layer.push()));
-    }));
-
-    // Acts on what the key callback recorded. Comparing against what this scope
-    // has already seen is what keeps a reopen from closing immediately on a
-    // press from three opens ago.
-    let mut seen = use_signal(|| 0u64);
-    use_effect(move || {
-        let tick = escape_tick();
-        if tick == *seen.peek() {
-            return;
-        }
-        seen.set(tick);
-        handle.close(Dismissal::FromDocument);
     });
 
     use_effect(use_reactive!(|(open,)| {
@@ -833,6 +719,178 @@ pub(crate) fn use_dismiss(
     }));
 
     handle
+}
+
+/// Decided once. Whether the document can be listened to is a property of
+/// the running renderer, not of this render.
+///
+/// This is the first place in the codebase to read a platform capability at
+/// render time, so: [[codebase/platform-api]]'s "ask in an effect" rule is
+/// about *reads that need a mounted element*, and this needs none. It is
+/// also safe across hydration, which is the reason the rule looks like it
+/// should apply - SSR serialises no listeners, so the server and the client
+/// emit identical HTML whichever way this answers, and hydration walks nodes
+/// rather than attributes. Moving it into an effect costs a render and buys
+/// nothing anyone has been able to name.
+fn use_global_escape() -> bool {
+    use_hook(|| keyboard().is_some())
+}
+
+/// The document-level Escape transport and this layer's place on the stack,
+/// for as long as `listen` holds and `global` says the document can be heard.
+/// `onescape` runs in this scope, once per press this layer took.
+fn use_document_escape(listen: bool, global: bool, mut onescape: impl FnMut() + 'static) {
+    let layer = use_dismiss_layer();
+
+    // The document subscription and the stack membership have exactly the same
+    // lifetime, so they are one slot: taking it drops both, and dropping the
+    // hook's own state on unmount drops it too. That is what makes a leaked
+    // layer impossible rather than merely unlikely.
+    type Listening = Rc<RefCell<Option<(Box<dyn KeySubscription>, LayerGuard)>>>;
+    let listening: Listening = use_hook(|| Rc::new(RefCell::new(None)));
+
+    // Bumped from the key callback, which runs outside every dioxus scope - so
+    // the signal is owned by the root and dropped by hand, the same obligation
+    // `use_popover`'s scroll callback has. The callback deliberately does not
+    // close anything: it only records the press, and the effect below acts, in
+    // the runtime.
+    let escape_tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
+    use_drop({
+        let listening = listening.clone();
+        move || {
+            listening.borrow_mut().take();
+            escape_tick.manually_drop();
+        }
+    });
+
+    // Acts on what the key callback recorded, then keeps the subscription in
+    // step with `listen`: one effect, as every open box pays for it. Comparing
+    // against what this scope has already seen keeps a reopen from closing on
+    // a press from three opens ago; a plain cell, only this effect reads it.
+    let seen = use_hook(|| Rc::new(std::cell::Cell::new(0u64)));
+    let slot = listening.clone();
+    use_effect(use_reactive!(|(listen,)| {
+        let tick = escape_tick();
+        if tick != seen.replace(tick) {
+            onescape();
+        }
+        if !listen || !global {
+            slot.borrow_mut().take();
+            return;
+        }
+        if slot.borrow().is_some() {
+            return;
+        }
+        let Some(api) = keyboard() else {
+            return;
+        };
+        // Unfiltered: a dismissible surface has to hear Escape from inside its
+        // own text field - a menu's filter box, a palette's search box.
+        let subscription = api.on_key_unfiltered(Box::new(move |chord| {
+            if chord.key != Key::Escape || chord.repeat || !layer.is_top() {
+                // Declining must not prevent the default, or this layer eats
+                // the press for the layer above it.
+                return false;
+            }
+            let mut tick = escape_tick;
+            let next = tick.peek().wrapping_add(1);
+            tick.set(next);
+            true
+        }));
+        *slot.borrow_mut() = Some((subscription, layer.push()));
+    }));
+}
+
+/// What an Escape-only box spreads on itself. See [`use_escape_dismiss`].
+#[derive(Clone, Copy)]
+pub(crate) struct EscapeDismiss {
+    onclose: Callback<()>,
+    /// Escape is heard on the box itself: on, and no document transport.
+    local: bool,
+}
+
+impl EscapeDismiss {
+    /// [`DismissHandle::floating_events`] without the focus-out check: the
+    /// Escape listener where there is no document-level transport, else none.
+    pub(crate) fn floating_events(&self) -> Vec<Attribute> {
+        let mut events = Vec::new();
+        if self.local {
+            let onclose = self.onclose;
+            events.push(escape_listener(move || {
+                spawn(async move { onclose.call(()) });
+            }));
+        }
+        events
+    }
+}
+
+/// [`use_dismiss`] for a box focus never enters: Escape only, no focus-out
+/// check, no focus to hand back, no initial focus. A tooltip opens by the
+/// dozen, so it skips those hooks instead of switching them off.
+///
+/// `onclose` runs a task later, as in [`use_dismiss`]. The consumer's trigger
+/// keeps its own Escape listener where the document cannot be heard.
+pub(crate) fn use_escape_dismiss(open: bool, escape: bool, onclose: Callback<()>) -> EscapeDismiss {
+    let global = use_global_escape();
+    use_document_escape(open && escape, global, move || {
+        spawn(async move { onclose.call(()) });
+    });
+    EscapeDismiss {
+        onclose,
+        local: escape && !global,
+    }
+}
+
+/// The element-level Escape listener of [`DismissHandle`] and
+/// [`EscapeDismiss`]; `close` runs once the press is taken.
+fn escape_listener(mut close: impl FnMut() + 'static) -> Attribute {
+    listener("onkeydown", move |event: Event<KeyboardData>| {
+        // `escape_closes`, the one rule every overlay's own Escape
+        // transport shares. Three of its four filters matter here.
+        //
+        // A held Escape is one intent, not a stream of them. Without
+        // the repeat filter it walks down the stack, closing the menu
+        // and then the modal behind it inside one press. A held
+        // ArrowDown scrolling a list still wants every repeat, so this
+        // is not a global filter.
+        //
+        // Mid-composition, Escape means "cancel the composition", not
+        // "dismiss". `KeyboardApi` drops a composing press on both its
+        // paths ahead of the filter ([[codebase/platform-api]]); this
+        // is the same guard on the element path, so the contract does
+        // not change with the transport. Reasoned rather than measured
+        // there and here alike - headless Chromium has no IME.
+        //
+        // A press a field inside took is not this box's (todo 348). A
+        // `Select` in a `HoverCard` closes its list, prevents the
+        // default and lets the press bubble on, so without this one
+        // Escape closed the list and the card around it.
+        if !escape_closes(&event) {
+            return;
+        }
+        // No stack consultation here on purpose: a layer with only this
+        // transport never pushed, so it would always find itself not on
+        // top and never act.
+        //
+        // The press stops here. This is a *bubble-phase* stop on this
+        // box's own handler, declining to let a press past the layer
+        // that just consumed it, and it is not the thing the layer
+        // stack rejected - that was a capture-phase stop at the
+        // document, which kills every element handler for the press in
+        // the whole document and hands the veto to whichever subscriber
+        // ran first. `Menu`'s trigger stops its Escape the same way.
+        //
+        // Without it an enclosing `Modal` hears the same press and
+        // closes too. The earlier version of this comment called that
+        // "no worse than what shipped", which was true only because no
+        // non-portaled consumer existed yet - and this hook's own doc
+        // offers one two paragraphs up, a tooltip wanting dismissal
+        // without placement, which has no portal to be a sibling
+        // through.
+        event.prevent_default();
+        event.stop_propagation();
+        close();
+    })
 }
 
 /// Inside if any element says so, unknown if any cannot answer, else outside.

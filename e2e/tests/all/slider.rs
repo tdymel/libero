@@ -233,3 +233,38 @@ fn the_thumb_is_described_by_its_value_bubble() {
         fixture.close().await.unwrap();
     });
 }
+
+/// A press on the track focuses the thumb from code, and that focus is the
+/// pointer's: the value bubble goes once the pointer leaves, as after a press
+/// on the thumb itself.
+#[test]
+fn a_track_press_does_not_pin_the_value_bubble() {
+    block_on(async {
+        let fixture = Fixture::open("/slider", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let thumb = pointer::centre_of(page, THUMB).await.unwrap();
+        let on_track = pointer::Point {
+            x: thumb.x + 100.0,
+            y: thumb.y,
+        };
+        wait::for_js_change(page, VALUE_NOW, "a track press to move the thumb", || {
+            pointer::drag(page, on_track, on_track, 1)
+        })
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector('{THUMB}')"),
+            "the track press to focus the thumb",
+        )
+        .await
+        .unwrap();
+        pointer::move_to(page, pointer::Point { x: 2.0, y: 2.0 })
+            .await
+            .unwrap();
+        wait::for_hidden(page, "[role=tooltip]")
+            .await
+            .unwrap_or_else(|e| panic!("the value bubble stayed after a track press: {e}"));
+        fixture.close().await.unwrap();
+    });
+}

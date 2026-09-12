@@ -10,10 +10,10 @@ use crate::{
         layout::use_box,
     },
     hooks::{
-        Align, DismissOptions, ElementHandle, PopoverOptions, escape_closes, use_dismiss,
-        use_element, use_popover, use_silent_focus_within, use_theme,
+        Align, ElementHandle, PopoverOptions, escape_closes, use_element, use_escape_dismiss,
+        use_popover, use_silent_focus_within, use_theme,
     },
-    platform::keyboard,
+    platform::{focus_visible, keyboard},
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CssVar, POPOVER_PADDING, Size, SizeCss, TOOLTIP_DURATION, TOOLTIP_IN, TooltipDefaults,
@@ -59,6 +59,25 @@ static TOOLTIP_BUBBLE_SX: StaticSx = StaticSx::new(|| {
         base.when(side.state_name(), bridge_sx(side))
     })
 });
+
+/// Provided above a `Tooltip` whose trigger its caller focuses from code after
+/// a press outside it (a slider's track, todo 476): the next focus is a press's.
+#[derive(Clone, Default)]
+pub(crate) struct PressFocus(Rc<Cell<bool>>);
+
+impl PressFocus {
+    pub(crate) fn mark(&self) {
+        self.0.set(true);
+    }
+
+    pub(crate) fn clear(&self) {
+        self.0.set(false);
+    }
+
+    fn take(&self) -> bool {
+        self.0.replace(false)
+    }
+}
 
 base_props! {
     pub struct TooltipProps {
@@ -106,8 +125,10 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     let hover = use_hover_intent();
     let mut focused = use_signal(|| false);
     // A click focuses the trigger too, and the bubble opens for keyboard focus
-    // only - `:focus-visible`, which Rust cannot ask. `HoverCard`'s rule.
+    // only - `:focus-visible`, asked on the web, a press heuristic elsewhere.
     let pressed = use_hook(|| Rc::new(Cell::new(false)));
+    let press_focus = use_hook(try_consume_context::<PressFocus>);
+    let marked = move || press_focus.as_ref().is_some_and(PressFocus::take);
     // Where the document hears Escape, the open bubble's `use_dismiss` does.
     let global_escape = use_hook(|| keyboard().is_some());
     let anchor = use_element();
@@ -124,10 +145,10 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     });
     // Blitz's Tab fires neither `focusin` nor `focusout`: the silent move does.
     use_silent_focus_within(anchor, {
-        let pressed = pressed.clone();
+        let (pressed, marked) = (pressed.clone(), marked.clone());
         move |within| {
             let mut focused = focused;
-            if !within || !pressed.replace(false) {
+            if !within || !(pressed.replace(false) | marked()) {
                 focused.set(within);
             }
         }
@@ -176,8 +197,11 @@ pub fn Tooltip(props: TooltipProps) -> Element {
             hover.hover(false, close_delay);
         })
         .event("onpointerdown", move |_: PointerEvent| pressed.set(true))
-        .event("onfocusin", move |_: FocusEvent| {
-            if !focus.replace(false) {
+        .event("onfocusin", move |event: FocusEvent| {
+            // The web answers itself, except for a focus from code after a
+            // press outside this wrapper, which its caller marks (todo 476).
+            let pointer = focus.replace(false);
+            if !marked() && focus_visible(&event).unwrap_or(!pointer) {
                 focused.set(true);
             }
         })
@@ -223,20 +247,8 @@ fn TooltipBubble(
     );
     let floating = *popover.floating();
     // Focus never enters the bubble, so nothing to hand back and no focus to
-    // lose.
-    let dismiss = use_dismiss(
-        anchor,
-        floating,
-        true,
-        popover.placed(),
-        Some(onclose),
-        DismissOptions {
-            escape: tooltip.open.is_none(),
-            outside: false,
-            return_focus: false,
-            ..Default::default()
-        },
-    );
+    // lose: Escape alone.
+    let dismiss = use_escape_dismiss(true, tooltip.open.is_none(), onclose);
 
     let states: Input<States> = tooltip
         .states

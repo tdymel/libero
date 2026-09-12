@@ -8,13 +8,13 @@ use crate::{
         ClassList, HtmlTag, Input, States, Variables,
         common::{base_color, shadow_sx, variables},
         layout::use_box,
-        overlay::Tooltip,
+        overlay::{PressFocus, Tooltip},
     },
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, use_css, use_drag,
         use_element, use_id, use_local_state, use_theme,
     },
-    platform::ElementApi,
+    platform::{ElementApi, next_task},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::NamedColorCss,
     theme::{
@@ -349,6 +349,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let thumb_elements = [use_element(), use_element()];
     // Names each thumb's value bubble, so the thumb can point at it.
     let bubble_id = use_id();
+    let press_focus = use_context_provider(PressFocus::default);
 
     let (min, max) = sane_bounds(props.min, props.max);
     let step = props.step.max(0.0);
@@ -434,6 +435,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
 
             let (track_left, track_width, thumb_width) =
                 (track_left.clone(), track_width.clone(), thumb_width.clone());
+            let press_focus = press_focus.clone();
             // Started here, awaited in the task: a read resolves where it is
             // called, and under Blitz that has to be inside the handler - the
             // document is locked for as long as tasks are draining.
@@ -464,8 +466,14 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         // unreachable after a mouse drag. Which thumb to
                         // focus is only known once the pointer is mapped.
                         let index = grab.call(raw);
-                        if focusable {
-                            let _ = thumb_elements[index].focus();
+                        let thumb = thumb_elements[index];
+                        if focusable && !thumb.is_focused() {
+                            // A track press is outside the thumb's `Tooltip`:
+                            // tell it this focus is the pointer's (todo 476).
+                            press_focus.mark();
+                            let _ = thumb.focus();
+                            next_task().await;
+                            press_focus.clear();
                         }
                     }
                     None => event.cancel.call(()),

@@ -45,6 +45,13 @@ pub(crate) fn press_kept_focus() -> bool {
     backend::press_kept_focus()
 }
 
+/// Whether the element this `focusin` landed on matches `:focus-visible`: the
+/// browser's own call on keyboard vs pointer focus, script focus after a press
+/// included. `None` off the web; the caller keeps its own press heuristic there.
+pub(crate) fn focus_visible(event: &Event<FocusData>) -> Option<bool> {
+    backend::focus_visible(event)
+}
+
 /// For a `focusin` on the nearest ancestor matching `boundary`: the element
 /// focus left to get here, `Some(None)` when it came from `<body>`.
 ///

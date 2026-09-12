@@ -12,7 +12,7 @@ use crate::{
         Align, DismissOptions, ElementHandle, PopoverOptions, Side, use_dismiss, use_element,
         use_popover, use_silent_focus, use_theme,
     },
-    platform::{ElementApi, next_task},
+    platform::{ElementApi, focus_visible, next_task},
     sx::StaticSx,
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -136,8 +136,8 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
 
     // A click focuses the trigger too, and a card that opened for that focus
     // would stay up after the pointer has gone - `Tooltip`'s `:focus-visible`
-    // rule, which Rust cannot ask. So a focus that follows a press is the
-    // pointer's, not the keyboard's.
+    // rule. The web asks it (`focus_visible`); elsewhere a focus that follows
+    // a press is the pointer's, not the keyboard's.
     let pressed = use_hook(|| Rc::new(Cell::new(false)));
 
     // Focus leaving is decided a task later, when it has landed: any `focusin`
@@ -270,10 +270,12 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                     },
                     onfocusin: {
                         let returning = returning.clone();
-                        move |_| {
+                        move |event: FocusEvent| {
                             moves += 1;
+                            // The web answers itself (todo 477: no stale press).
                             let pointer = pressed.replace(false);
-                            if !returning.replace(false) && !pointer {
+                            let keyboard = focus_visible(&event).unwrap_or(!pointer);
+                            if !returning.replace(false) && keyboard {
                                 // The trigger holds focus now, so this is what
                                 // Escape hands it back to.
                                 dismiss.focus_return().remember_active();

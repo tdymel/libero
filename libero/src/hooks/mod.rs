@@ -21,7 +21,7 @@ pub use clipboard::{Clipboard, use_clipboard};
 pub use color_scheme::{ColorSchemeHandle, use_color_scheme};
 pub(crate) use dismiss::{
     DismissHandle, DismissOptions, escape_closes, use_dismiss, use_dismiss_layer,
-    use_field_list_layer,
+    use_escape_dismiss, use_field_list_layer,
 };
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
 pub use element::{ElementHandle, use_element};

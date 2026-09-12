@@ -132,6 +132,12 @@ pub(super) fn padding_press(
     }))
 }
 
+pub(super) fn focus_visible(event: &Event<FocusData>) -> Option<bool> {
+    let target = event.downcast::<web_sys::FocusEvent>()?.target()?;
+    let element = target.dyn_into::<web_sys::Element>().ok()?;
+    element.matches(":focus-visible").ok()
+}
+
 pub(super) fn focus_entered_from(
     event: &Event<FocusData>,
     boundary: &str,

@@ -204,6 +204,16 @@ pub(crate) fn transition_property(event: &Event<TransitionData>) -> Option<Strin
     };
 }
 
+/// Only the web can say - see [`focus_visible`](crate::platform::focus_visible).
+pub(crate) fn focus_visible(event: &Event<FocusData>) -> Option<bool> {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = event;
+    #[cfg(target_arch = "wasm32")]
+    return web::focus_visible(event);
+    #[cfg(not(target_arch = "wasm32"))]
+    return None;
+}
+
 /// Only the web has a document key listener that can take a press ahead of
 /// the element handlers - see [`key_taken`](crate::platform::key_taken).
 pub(crate) fn key_taken(event: &Event<KeyboardData>) -> bool {
