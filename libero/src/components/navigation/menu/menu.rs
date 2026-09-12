@@ -392,6 +392,14 @@ impl Level {
         labels: &[Option<String>],
         hover: &HoverDelay,
     ) {
+        // Ctrl/Alt/Meta with a navigation key is the browser's chord.
+        let navigation = matches!(
+            event.key(),
+            Key::ArrowDown | Key::ArrowUp | Key::ArrowLeft | Key::ArrowRight | Key::Home | Key::End
+        );
+        if navigation && has_shortcut_modifier(&event) {
+            return;
+        }
         match event.key() {
             Key::ArrowDown => {
                 event.prevent_default();

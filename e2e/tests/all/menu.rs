@@ -54,6 +54,42 @@ fn it_honours_the_overlay_contract() {
     });
 }
 
+/// Ctrl/Alt/Meta chords on an item are the browser's: no move, no submenu.
+#[test]
+fn modifier_chords_go_to_the_browser() {
+    block_on(async {
+        let fixture = Fixture::open("/menu", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.getAttribute('role') === 'menuitem'",
+            "focus on the first item",
+        )
+        .await
+        .unwrap();
+        keyboard::assert_chords_ignored(
+            page,
+            &[
+                keyboard::ARROW_DOWN,
+                keyboard::ARROW_UP,
+                keyboard::ARROW_RIGHT,
+                keyboard::ARROW_LEFT,
+                keyboard::HOME,
+                keyboard::END,
+            ],
+            "[document.activeElement.textContent, document.querySelectorAll('[role=menu]').length]",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("menu chords").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 408: the open request is older than the menu, so only its first
 /// placement can move focus onto the first item.
 #[test]

@@ -121,6 +121,23 @@ impl RadioSet<'_> {
                 .await?;
         }
 
+        // A native radio leaves Alt/Ctrl/Meta+arrow to the browser.
+        keyboard::assert_chords_ignored(
+            page,
+            &[
+                keyboard::ARROW_DOWN,
+                keyboard::ARROW_RIGHT,
+                keyboard::ARROW_UP,
+                keyboard::ARROW_LEFT,
+            ],
+            &format!(
+                "[{}, {}]",
+                self.index_js("document.activeElement")?,
+                self.checked_js()?
+            ),
+        )
+        .await?;
+
         // Space checks the focused radio. With selection following focus, a
         // keyboard never rests on an unchecked radio, so what Space can show
         // here is that it keeps the focused one checked and moves nothing.

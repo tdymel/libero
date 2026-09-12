@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, States, Variant,
-        common::{Orientation, focus_ring_sx, neighbour},
+        common::{Orientation, focus_ring_sx, has_shortcut_modifier, neighbour},
         form::Activation,
         inputs::{
             BUTTON_HOVER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS,
@@ -321,7 +321,9 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
             let disabled_segments = disabled_segments.clone();
             let root = root.clone();
             move |event: Event<KeyboardData>| {
-                if disabled || activation.keydown(&event) {
+                // A native radio leaves Alt/Ctrl/Meta+arrow to the browser:
+                // Alt+ArrowLeft is Back, not "pick the previous segment".
+                if disabled || activation.keydown(&event) || has_shortcut_modifier(&event) {
                     return;
                 }
                 let step = match event.key() {

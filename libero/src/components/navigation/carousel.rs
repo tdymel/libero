@@ -7,8 +7,8 @@ use crate::{
         Box, HtmlTag, Input, Orientation, States, Variables, VisuallyHidden,
         common::{
             ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, PauseIcon, PlayIcon,
-            base_props, focus_ring_sx, input_from_str, inset_focus_ring_sx, shadow_sx, states,
-            use_name_warning, variables,
+            base_props, focus_ring_sx, has_shortcut_modifier, input_from_str, inset_focus_ring_sx,
+            shadow_sx, states, use_name_warning, variables,
         },
         layout::{
             ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, scroll_area_base,
@@ -1363,7 +1363,11 @@ fn carousel_track(
     // `arrow_target` for raw HTML a caller wrote - an `<input type="range">`
     // or an `<input type="radio">`, which step on an arrow without typing.
     let onkeydown = move |event: Event<KeyboardData>| {
-        if key_taken(&event) || typing_target(&event) || arrow_target(&event) {
+        if key_taken(&event)
+            || typing_target(&event)
+            || arrow_target(&event)
+            || has_shortcut_modifier(&event)
+        {
             return;
         }
         let Some(target) = track_key_target(event.key(), orientation, nav, current()) else {
@@ -1638,6 +1642,9 @@ fn CarouselIndicators(view: CarouselView) -> Element {
                     tabindex: if index == current() { "0" } else { "-1" },
                     onclick: move |_| nav.go_to(index),
                     onkeydown: move |event: Event<KeyboardData>| {
+                        if has_shortcut_modifier(&event) {
+                            return;
+                        }
                         let Some(target) = indicator_key_target(event.key(), index, low, high, looping)
                         else {
                             return;

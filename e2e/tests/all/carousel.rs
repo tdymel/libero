@@ -185,6 +185,34 @@ pub async fn a_raw_radio_pair_in_a_slide_moves(fixture: &Fixture) -> Result<()> 
     assert_strip_held(page, before, "an arrow on a raw radio in a slide").await
 }
 
+/// Ctrl/Alt/Meta chords are the browser's, on the track and on the dots.
+#[test]
+fn modifier_chords_go_to_the_browser() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let keys = [
+            keyboard::ARROW_RIGHT,
+            keyboard::ARROW_LEFT,
+            keyboard::HOME,
+            keyboard::END,
+        ];
+        let probe = format!("[{INDEX}, document.activeElement.id]");
+
+        reach(page, BUTTON).await.unwrap();
+        keyboard::assert_chords_ignored(page, &keys, &probe)
+            .await
+            .unwrap();
+        reach(page, INDICATORS).await.unwrap();
+        keyboard::assert_chords_ignored(page, &keys, &probe)
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("carousel chords").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The positive control, and the reason the four checks above say anything.
 ///
 /// A `Button` is covered by no arm: it takes no arrows, the browser steps

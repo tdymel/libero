@@ -219,6 +219,22 @@ impl RovingTabindex<'_> {
             bail!("the backward arrow did not move within {}", self.items);
         }
 
+        // Ctrl/Alt/Meta chords are the browser's, as on a native control.
+        keyboard::assert_chords_ignored(
+            page,
+            &[
+                self.orientation.next(),
+                self.orientation.previous(),
+                keyboard::HOME,
+                keyboard::END,
+            ],
+            &format!(
+                "[...document.querySelectorAll({})].indexOf(document.activeElement)",
+                serde_json::to_string(self.items)?
+            ),
+        )
+        .await?;
+
         Ok(())
     }
 

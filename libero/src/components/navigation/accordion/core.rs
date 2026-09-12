@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{ChevronDownIcon, inset_focus_ring_sx, use_closing_focus},
+        common::{ChevronDownIcon, has_shortcut_modifier, inset_focus_ring_sx, use_closing_focus},
         layout::{Collapse, use_box},
     },
     hooks::{id_selector, use_element},
@@ -202,6 +202,10 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
             let Some([next, previous, first, last]) = targets else {
                 return;
             };
+            // Ctrl/Alt/Meta chords are the browser's.
+            if has_shortcut_modifier(&event) {
+                return;
+            }
             // Arrows move focus and never toggle - the opposite of `Tabs`.
             let to = match event.key() {
                 Key::ArrowDown => next,

@@ -12,7 +12,7 @@ use super::{
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{focus_ring_sx, input_from_str, inset_focus_ring_sx},
+        common::{focus_ring_sx, has_shortcut_modifier, input_from_str, inset_focus_ring_sx},
         layout::use_box,
     },
     hooks::{
@@ -576,6 +576,10 @@ impl ClockView {
     /// `step` minutes or a second, past what `min` and `max` rule out; Enter
     /// moves on to the next hand.
     fn face_keydown(self, event: KeyboardEvent) {
+        // Ctrl/Alt/Meta chords are the browser's.
+        if has_shortcut_modifier(&event) {
+            return;
+        }
         let mut hand = self.hand;
         let delta: i64 = match event.key() {
             Key::ArrowUp | Key::ArrowRight => 1,
@@ -1029,6 +1033,9 @@ fn ClockColumn(props: ClockColumnProps) -> Element {
         let Some(at) = stop.and_then(|stop| enabled.iter().position(|index| *index == stop)) else {
             return;
         };
+        if has_shortcut_modifier(&event) {
+            return;
+        }
         let next = match event.key() {
             Key::ArrowDown => enabled[(at + 1).min(enabled.len() - 1)],
             Key::ArrowUp => enabled[at.saturating_sub(1)],

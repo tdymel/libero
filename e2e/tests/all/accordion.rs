@@ -213,3 +213,34 @@ fn the_keys_toggle_sections_and_only_an_open_panel_is_a_landmark() {
         }
     });
 }
+
+/// Ctrl/Alt/Meta chords are the browser's: no focus move, no toggle.
+#[test]
+fn modifier_chords_go_to_the_browser() {
+    block_on(async {
+        let fixture = Fixture::open("/accordion", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, FIRST, 10).await.unwrap();
+        keyboard::assert_chords_ignored(
+            page,
+            &[
+                keyboard::ARROW_DOWN,
+                keyboard::ARROW_UP,
+                keyboard::HOME,
+                keyboard::END,
+            ],
+            &format!(
+                "[document.activeElement.id, ...[...document.querySelectorAll('{TRIGGER}')]\
+                 .map(t => t.getAttribute('aria-expanded'))]"
+            ),
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("accordion chords").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

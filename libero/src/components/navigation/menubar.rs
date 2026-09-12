@@ -274,6 +274,10 @@ pub fn Menubar(props: MenubarProps) -> Element {
             let typeahead = typeahead.clone();
             let labels = labels.clone();
             move |event: KeyboardEvent| {
+                // Ctrl/Alt/Meta chords are the browser's, typeahead included.
+                if has_shortcut_modifier(&event) {
+                    return;
+                }
                 let target = match event.key() {
                     Key::ArrowRight => row.step(index, true),
                     Key::ArrowLeft => row.step(index, false),

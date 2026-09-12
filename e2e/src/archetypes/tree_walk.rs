@@ -96,6 +96,24 @@ impl TreeWalk<'_> {
         }
 
         self.enter(page).await?;
+        // Ctrl/Alt/Meta chords are the browser's: no move, no expansion.
+        let rows = serde_json::to_string(self.rows)?;
+        keyboard::assert_chords_ignored(
+            page,
+            &[
+                keyboard::ARROW_DOWN,
+                keyboard::ARROW_UP,
+                keyboard::ARROW_RIGHT,
+                keyboard::ARROW_LEFT,
+                keyboard::HOME,
+                keyboard::END,
+            ],
+            &format!(
+                "[...document.querySelectorAll({rows})].map(row => \
+                 (row === document.activeElement) + ':' + row.getAttribute('aria-expanded'))"
+            ),
+        )
+        .await?;
         self.assert_vertical_walk(page, count).await?;
         self.assert_expansion(page).await?;
         self.assert_a_leaf_does_not_open(page).await

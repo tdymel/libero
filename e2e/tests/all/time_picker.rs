@@ -137,6 +137,55 @@ fn a_time_picked_first_lands_on_today() {
 
 const HOURS_ANY: &str = "[data-column='Hours']";
 
+/// Ctrl/Alt/Meta chords are the browser's, on a column and on the face.
+#[test]
+fn modifier_chords_go_to_the_browser() {
+    block_on(async {
+        let arrows = [
+            keyboard::ARROW_DOWN,
+            keyboard::ARROW_UP,
+            keyboard::ARROW_RIGHT,
+            keyboard::ARROW_LEFT,
+        ];
+
+        let fixture = Fixture::open("/time-picker", Viewport::Desktop)
+            .await
+            .unwrap();
+        let option = format!("{MINUTES} [data-index='6']");
+        fixture
+            .page
+            .evaluate(format!("document.querySelector({option:?}).focus()"))
+            .await
+            .unwrap();
+        keyboard::assert_chords_ignored(
+            &fixture.page,
+            &[arrows[0], arrows[1], keyboard::HOME, keyboard::END],
+            "[document.activeElement.dataset.index, document.getElementById('digital-value').textContent]",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+
+        let fixture = Fixture::open("/time-picker/analog", Viewport::Desktop)
+            .await
+            .unwrap();
+        fixture
+            .page
+            .evaluate("document.querySelector('#fine [data-slot=face]').focus()")
+            .await
+            .unwrap();
+        keyboard::assert_chords_ignored(
+            &fixture.page,
+            &arrows,
+            "[document.activeElement.dataset.slot, document.getElementById('fine-value').textContent]",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("time picker chords").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A one-minute step and seconds (todo 474): the face picks by the pointer's
 /// angle, not only at the marks, an hour keeps its minute inside `min`, and a
 /// release moves on to the seconds hand.

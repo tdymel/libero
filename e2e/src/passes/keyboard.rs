@@ -177,6 +177,50 @@ pub async fn type_text(page: &Page, text: &str) -> Result<()> {
     Ok(())
 }
 
+/// Ctrl, Alt and Meta with each of `keys` on the focused element leave `probe`
+/// (a JS expression) as it was and are not cancelled: the chord is the
+/// browser's (Alt+ArrowLeft is Back), as for a native control.
+pub async fn assert_chords_ignored(page: &Page, keys: &[Key], probe: &str) -> Result<()> {
+    let read = format!("JSON.stringify({probe})");
+    let before: String = page.evaluate(read.as_str()).await?.into_value()?;
+    page.evaluate(
+        "window.__chordCancelled = []; if (!window.__chordListener) { \
+         window.__chordListener = true; window.addEventListener('keydown', e => { \
+         if ((e.ctrlKey || e.altKey || e.metaKey) && e.defaultPrevented) \
+         window.__chordCancelled.push(e.key); }); } 1",
+    )
+    .await?;
+    for (name, modifier) in [("Alt", ALT), ("Ctrl", CTRL), ("Meta", META)] {
+        for key in keys {
+            // Honoured, these two navigate away (Back, home page).
+            if modifier == ALT && matches!(key.key, "ArrowLeft" | "Home") {
+                continue;
+            }
+            press_with(page, *key, modifier).await?;
+            page.evaluate("new Promise(r => setTimeout(() => r(1), 60))")
+                .await?;
+            let after: String = page.evaluate(read.as_str()).await?.into_value()?;
+            if after != before {
+                bail!(
+                    "{name}+{} changed {probe} from {before} to {after}",
+                    key.key
+                );
+            }
+            let cancelled: Vec<String> = page
+                .evaluate("window.__chordCancelled")
+                .await?
+                .into_value()?;
+            if !cancelled.is_empty() {
+                bail!(
+                    "{name}+{} was cancelled; the chord belongs to the browser",
+                    key.key
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Tab forward until `selector` holds focus, or fail.
 ///
 /// This is how the suite proves a control is *reachable*, which is a different

@@ -1,11 +1,24 @@
 //! `SegmentedControl`, for the `RadioSet` archetype.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, Options, SegmentedControl};
+use libero::components::{Flex, OptionList, Options, SegmentedControl};
 
 use crate::{Routes, common::Between};
 
-pub const ROUTES: Routes = &[("/segmented-control", || rsx! { SegmentedControlPage {} })];
+pub const ROUTES: Routes = &[
+    ("/segmented-control", || rsx! { SegmentedControlPage {} }),
+    ("/segmented-control/disabled-pick", || {
+        rsx! { DisabledSegmentPage { start: Alignment::Center } }
+    }),
+    ("/segmented-control/disabled-middle", || {
+        rsx! { DisabledSegmentPage { start: Alignment::Left } }
+    }),
+    (
+        "/segmented-control/readonly",
+        || rsx! { SegmentedControlPage { readonly: true } },
+    ),
+    ("/segmented-control/field", || rsx! { FieldPage {} }),
+];
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Alignment {
@@ -29,6 +42,49 @@ pub fn SegmentedControlPage(#[props(default)] readonly: bool) -> Element {
                 SegmentedControl {
                     label: "Alignment",
                     readonly,
+                    value: alignment(),
+                    onchange: move |next| alignment.set(next),
+                }
+            }
+        }
+    }
+}
+
+/// A vertical, full-width strip with every caption and an error.
+#[component]
+fn FieldPage() -> Element {
+    let mut alignment = use_signal(|| Alignment::Center);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Between {
+                SegmentedControl {
+                    label: "Alignment",
+                    description: "Where each line starts.",
+                    helper: "Applies to the whole document.",
+                    status: "Pick an alignment.",
+                    required: true,
+                    orientation: "vertical",
+                    full_width: true,
+                    value: alignment(),
+                    onchange: move |next| alignment.set(next),
+                }
+            }
+        }
+    }
+}
+
+/// `Center` disabled; `start: Center` is a pick that was disabled later.
+#[component]
+fn DisabledSegmentPage(start: Alignment) -> Element {
+    let mut alignment = use_signal(move || start);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Between {
+                SegmentedControl {
+                    label: "Alignment",
+                    options: OptionList::from_options().disabling(|align| *align == Alignment::Center),
                     value: alignment(),
                     onchange: move |next| alignment.set(next),
                 }

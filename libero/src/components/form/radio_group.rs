@@ -3,7 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, OptionSource, Options, States,
-        common::{Orientation, field_props, names_itself, neighbour, use_name_warning},
+        common::{
+            Orientation, field_props, has_shortcut_modifier, names_itself, neighbour,
+            use_name_warning,
+        },
         form::{Radio, use_bound, use_field},
         layout::use_box,
     },
@@ -199,7 +202,8 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     let arrows = {
         let option_disabled = option_disabled.clone();
         move |event: Event<KeyboardData>| {
-            if disabled {
+            // A native radio leaves Alt/Ctrl/Meta+arrow to the browser.
+            if disabled || has_shortcut_modifier(&event) {
                 return;
             }
             let step = match event.key() {
