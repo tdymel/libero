@@ -185,3 +185,48 @@ fn removing_a_file_moves_focus_to_what_took_its_place() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 520: with no placeholder and no files the control was 0px tall, so a
+/// drop at its centre landed on the frame and went nowhere.
+#[test]
+fn an_empty_control_fills_its_frame_and_takes_a_drop() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "#bare").await.unwrap();
+
+        let (control, frame): (f64, f64) = page
+            .evaluate(
+                "(() => { const c = document.querySelector('#bare'); \
+                 const f = c.closest('[data-frame]'); const s = getComputedStyle(f); \
+                 const inner = f.clientHeight - parseFloat(s.paddingTop) - parseFloat(s.paddingBottom); \
+                 return [c.getBoundingClientRect().height, inner]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            control > 0.0 && (control - frame).abs() < 0.5,
+            "the control is {control}px tall in a {frame}px frame"
+        );
+
+        // One file: a single-file field warns when it drops the second.
+        drop_files(page, "#bare", files_on_disk()[..1].to_vec()).await;
+        wait::for_js_true(
+            page,
+            "document.querySelector('#bare').textContent.includes('alpha.txt')",
+            "the file dropped at the control's centre to land",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("dropping on a bare control")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}

@@ -54,6 +54,9 @@ static FILE_CONTROL_SX: StaticSx = StaticSx::new(|| {
     field_control_sx()
         .display("flex")
         .align_items("center")
+        // The frame's height, not its contents': an empty placeholder left a
+        // 0px control that no click or drop could reach (todo 520).
+        .align_self("stretch")
         // Lets the control shrink inside the frame, which is what makes the
         // value slot's own ellipsis take effect instead of the frame growing.
         .min_width("0")
