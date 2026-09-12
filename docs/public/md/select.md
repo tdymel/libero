@@ -177,8 +177,9 @@ search that empties a group simply leaves its heading out.
 
 ## Accessibility
 
-Enter, Space and ArrowDown open the list on the selected row; the arrows, Home
-and End move the highlight; Enter picks; Escape and Tab close.
+Enter, Space, ArrowDown and ArrowUp open the list on the selected row, Home and
+End on the first and last row; open, the arrows, Home and End move the
+highlight; Enter picks; Escape and Tab close.
 
 Typing searches the labels. The characters are buffered for half a second, so
 "b", "e", "r" finds Berlin while a lone "b" after the pause cycles the rows
@@ -188,7 +189,8 @@ trigger changes the value in place**, as the native control does - which needs
 `onchange` to actually move `value`, since the search starts from the selected
 row: a control whose value never changes has typeahead land on the same row
 every press. Disabled rows are skipped. With `searchable` the search box replaces typeahead: it is a
-different affordance, and it takes the focus while the list is open.
+different affordance, and it takes the focus while the list is open - along with
+the combobox role and the field's label, captions and states.
 
 ## Props
 

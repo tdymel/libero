@@ -441,7 +441,8 @@ pub fn MultiSelectPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Closed, the trigger opens on ArrowDown, Enter or Space. Open, ArrowDown and "
+                    "Closed, the trigger opens on ArrowDown, ArrowUp, Enter or Space, and on Home "
+                    "or End at the first or last row. Open, ArrowDown and "
                     "ArrowUp move the highlight, Enter toggles the row and leaves the list open, "
                     "and Escape closes. ArrowLeft and ArrowRight move a cursor over the chips, "
                     "and Backspace or Delete removes the one it is on - or the last, with no "

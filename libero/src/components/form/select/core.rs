@@ -7,8 +7,8 @@ use crate::{
             ChevronDownIcon, attr, field_props, focus_ring_sx, has_shortcut_modifier, ring_overlay,
         },
         form::{
-            clear_button, field_control_sx, use_chip_announcer, use_field, use_field_frame,
-            use_refocus_on_close,
+            PreparedField, clear_button, field_control_sx, use_chip_announcer, use_field,
+            use_field_frame, use_refocus_on_close,
         },
         layout::{BoxStyle, use_box},
     },
@@ -431,6 +431,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             state,
             query,
             props.search_placeholder.clone().unwrap_or_default(),
+            &field,
+            required,
         )
     });
 
@@ -459,10 +461,16 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         ),
     };
 
-    let trigger = select_trigger(
-        field
+    // While the search box is open it is the combobox, so it takes the field's
+    // wiring: a role-less trigger may not carry `aria-required` or `aria-expanded`.
+    let control = match searchable && opened {
+        true => control.attr("id", field.id().to_string()),
+        false => field
             .aria(control)
             .attr("aria-labelledby", field.label_id()),
+    };
+    let trigger = select_trigger(
+        control,
         TriggerKeys {
             open,
             chip_count,
@@ -739,14 +747,11 @@ fn select_trigger(
     let (disabled, readonly) = (open.disabled, open.readonly);
 
     // Two elements cannot both be the combobox. While the search box is open it
-    // owns the role, `aria-controls` and `aria-activedescendant`; the trigger
-    // keeps only what says a list hangs off it.
+    // owns the role and the whole field wiring; the trigger keeps only what says
+    // a list hangs off it.
     let searching = searchable && opened;
     let mut attributes = match searching {
-        true => vec![
-            attr("aria-haspopup", "listbox"),
-            attr("aria-expanded", "true"),
-        ],
+        true => vec![attr("aria-haspopup", "listbox")],
         false => state.a11y_attributes(),
     };
     // Only while closed: the open list is the other owner of this attribute.
@@ -832,6 +837,19 @@ fn trigger_key(event: &KeyboardEvent, keys: TriggerKeys, typed: &SelectTypeahead
             };
             event.prevent_default();
             onremove.call(chip_cursor.unwrap_or(chip_count - 1));
+        }
+        // APG select-only: ArrowUp opens like ArrowDown, on the selection; Home
+        // and End open on the first and last row. `ComboboxCore` snaps a
+        // disabled one to its nearest enabled neighbour.
+        key @ (Key::ArrowUp | Key::Home | Key::End) if !state.is_open() => {
+            event.prevent_default();
+            open.open(true);
+            let last = open.picked.peek().selected.len().saturating_sub(1);
+            match key {
+                Key::Home => state.set_active(Some(0)),
+                Key::End => state.set_active(Some(last)),
+                _ => {}
+            }
         }
         // `ComboboxCore` opens on ArrowDown; a select-only combobox opens on
         // Enter and Space as well. Enter on an *open* list is the core's pick.
@@ -967,13 +985,16 @@ fn select_rows(
 }
 
 /// The search box at the top of the list. It owns the combobox role while it
-/// is there, so it carries the a11y attributes the trigger gives up.
+/// is there, so it carries the a11y attributes the trigger gives up - the
+/// field's label and captions included, or it is named by its placeholder.
 fn select_search_box(
     search_box: BoxStyle,
     search: ElementHandle,
     state: ComboboxState,
     mut query: Signal<String>,
     placeholder: String,
+    field: &PreparedField,
+    required: bool,
 ) -> Element {
     search_box
         .element(&search)
@@ -984,6 +1005,10 @@ fn select_search_box(
         // Ours is the list underneath; the browser's would cover it.
         .attr("autocomplete", "off")
         .attr("aria-autocomplete", "list")
+        .attr("aria-labelledby", field.label_id())
+        .attr("aria-describedby", field.describedby())
+        .attr("aria-invalid", field.invalid().then_some("true"))
+        .attr("aria-required", required.then_some("true"))
         .event("oninput", move |event: FormEvent| {
             query.set(event.value());
             // The list under the highlight just changed; arm its top row.

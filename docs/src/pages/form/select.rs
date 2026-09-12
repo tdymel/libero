@@ -405,7 +405,8 @@ pub fn SelectPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Closed, the trigger opens on ArrowDown, Enter or Space. Open, ArrowDown and "
+                    "Closed, the trigger opens on ArrowDown, ArrowUp, Enter or Space, and on Home "
+                    "or End at the first or last row. Open, ArrowDown and "
                     "ArrowUp move the highlight, Home and End jump to the ends, Enter picks and "
                     "Escape closes. Typing searches the labels: the characters are buffered for "
                     "half a second, so \"b\", \"e\", \"r\" finds Berlin while a lone \"b\" after the "
