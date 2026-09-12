@@ -87,6 +87,122 @@ fn the_dropdown_opens_on_the_month_grid() {
     });
 }
 
+/// The dropdown is portaled after the page: Tab past either end goes back
+/// through the text input, not to the end of the document (todo 449).
+#[test]
+fn tab_past_the_dropdown_moves_on_from_the_field() {
+    block_on(async {
+        let fixture = Fixture::open("/date-field/day", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        expect(
+            page,
+            "document.activeElement.getAttribute('data-date') === '2026-03-18'",
+            "Arrow Down to focus the held day",
+        )
+        .await;
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        expect(
+            page,
+            "document.activeElement.id === 'after' && !document.querySelector('[role=dialog]')",
+            "Tab from the days to land on the button after the field and close the dropdown",
+        )
+        .await;
+
+        keyboard::press_shift(page, keyboard::TAB).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        // The days, Next month, the title: Previous month is disabled at `min`.
+        for _ in 0..3 {
+            keyboard::press_shift(page, keyboard::TAB).await.unwrap();
+        }
+        expect(
+            page,
+            &format!("document.activeElement === document.querySelector({INPUT:?})"),
+            "Shift+Tab from the title to land on the text input",
+        )
+        .await;
+
+        fixture
+            .console
+            .assert_clean("tabbing out of the dropdown")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The same from the clock face of a date-time field, after a day pick moved
+/// focus there.
+#[test]
+fn tab_past_the_clock_face_moves_on_from_the_field() {
+    block_on(async {
+        let fixture = Fixture::open("/date-field/moment", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        expect(
+            page,
+            "document.activeElement.getAttribute('data-slot') === 'face'",
+            "a day pick to move focus to the clock face",
+        )
+        .await;
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        expect(
+            page,
+            "document.activeElement.id === 'after' && !document.querySelector('[role=dialog]')",
+            "Tab from the face to land on the button after the field",
+        )
+        .await;
+        expect(
+            page,
+            &readout_is("2026-03-19 09:30:00"),
+            "the picked day kept",
+        )
+        .await;
+
+        fixture
+            .console
+            .assert_clean("tabbing out of the face")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A digital column is a named group, so its buttons are heard with "Hours".
+#[test]
+fn a_digital_column_is_a_named_group() {
+    block_on(async {
+        let fixture = Fixture::open("/date-field/digital", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        expect(
+            page,
+            "document.activeElement.getAttribute('data-slot') === 'option'",
+            "Arrow Down to focus the held hour",
+        )
+        .await;
+        let tree = e2e::ax::snapshot(page, "[role=dialog]").await.unwrap();
+        for column in ["group \"Hours\"", "group \"Minutes\""] {
+            assert!(tree.contains(column), "no {column} in:\n{tree}");
+        }
+
+        fixture.console.assert_clean("the digital columns").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 fn value_is(text: &str) -> String {
     format!("document.querySelector({INPUT:?}).value === {text:?}")
 }

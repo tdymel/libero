@@ -17,7 +17,7 @@ use super::{
 };
 use crate::{
     components::{
-        Caption, ClassList, FieldName, HtmlTag, Input, States, Validators,
+        Caption, ClassList, FOCUSABLE_SELECTOR, FieldName, HtmlTag, Input, States, Validators,
         common::{NavigationChord, navigation_chord},
         form::{FIELD_CONTROL_SX, FieldStatus, use_bound, use_field, use_field_frame},
         layout::use_box,
@@ -523,12 +523,32 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 event.prevent_default()
             })
             .event("onfocusout", move |_: FocusEvent| settle())
-            .event("onkeydown", move |event: KeyboardEvent| {
-                if event.key() == Key::Escape {
+            .event("onkeydown", move |event: KeyboardEvent| match event.key() {
+                Key::Escape => {
                     event.prevent_default();
                     focus_input();
                     opened.set(false);
                 }
+                // Portaled after the page: Tab past either end goes back
+                // through the text input, then on as from the field.
+                Key::Tab => {
+                    let Ok(stops) = floating.query_selector_all(FOCUSABLE_SELECTOR) else {
+                        return;
+                    };
+                    let backwards = event.modifiers().shift();
+                    let edge = if backwards {
+                        stops.first()
+                    } else {
+                        stops.last()
+                    };
+                    if edge.is_some_and(|stop| stop.is_focused()) {
+                        if backwards {
+                            event.prevent_default();
+                        }
+                        focus_input();
+                    }
+                }
+                _ => {}
             })
             .render(
                 HtmlTag::Div,

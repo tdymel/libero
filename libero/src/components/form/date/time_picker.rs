@@ -1053,6 +1053,8 @@ fn ClockColumn(props: ClockColumnProps) -> Element {
         div {
             "data-slot": "column",
             "data-column": "{column:?}",
+            // A named group, so an option is heard with its column's name.
+            role: "group",
             "aria-label": label,
             onmounted: handle.mount(),
             onkeydown,
