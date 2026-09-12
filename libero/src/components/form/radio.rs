@@ -13,6 +13,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_cache, use_css, use_element, use_theme},
+    platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ChoiceVariant, CssVar, RADIO_CIRCLE, RadioDefaults},
     utils::warn,
@@ -126,8 +127,8 @@ pub fn Radio(props: RadioProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
     let checked = props.checked.unwrap_or(false);
-    // As on `Checkbox`: HTML's `readonly` does not apply to a radio, so the
-    // activation is refused here and said with `aria-readonly`.
+    // HTML's `readonly` does not apply to a radio, so the activation is refused
+    // here. ARIA has no `aria-readonly` on `radio` either: the radiogroup says it.
     let readonly = props.readonly.unwrap_or(false);
     let card = props.variant.copied_or(theme.radio.variant) == ChoiceVariant::Card;
 
@@ -148,10 +149,11 @@ pub fn Radio(props: RadioProps) -> Element {
         }
     };
 
+    let element = use_element();
     let field = use_field()
         .inline()
         .card(card)
-        .activates(use_element(), select)
+        .activates(element, select)
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
@@ -197,7 +199,6 @@ pub fn Radio(props: RadioProps) -> Element {
         .attr("checked", checked)
         .attr("data-controlled", true)
         .attr("disabled", disabled)
-        .attr("aria-readonly", readonly.then_some("true"))
         .attr("required", required)
         .attr("aria-label", props.aria_label)
         // Void element - `()` costs no dynamic node.
@@ -211,9 +212,13 @@ pub fn Radio(props: RadioProps) -> Element {
         span {
             class: circle_class,
             "aria-hidden": "true",
+            // Focuses the input as a native click would.
             onclick: move |_| {
                 if !card {
                     select();
+                    if !disabled {
+                        let _ = element.focus();
+                    }
                 }
             },
             span { class: dot_class }

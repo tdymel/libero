@@ -1,0 +1,18 @@
+---
+source: e2e/src/suite.rs
+description: radio_group_readonly at mobile (rest)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+LabelText
+  StaticText "Plan"
+radiogroup "Plan"
+  radio "Free" [checked=false]
+  radio "Pro" [checked]
+  radio "Team" [checked=false]
+radio "Terms" [checked=false]
+LabelText
+  StaticText "Terms"
+button "After"
+  StaticText "After"

@@ -69,6 +69,86 @@ fn it_honours_the_radio_group_contract() {
     });
 }
 
+/// The docs page's switches on at once: cards in a row, every caption, an
+/// error, `required` and a disabled option.
+#[test]
+fn a_card_field_meets_the_baseline() {
+    Suite::new("radio_group_field", "/radio-group/field")
+        .focusable(CHECKED)
+        .targets(ROWS)
+        .run();
+}
+
+/// Nothing checked and the first option disabled: Tab enters at the first
+/// option that can be picked, and Space checks it.
+#[test]
+fn an_unanswered_group_enters_at_the_first_enabled_option() {
+    block_on(async {
+        let fixture = Fixture::open("/radio-group/empty", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let focused =
+            format!("[...document.querySelectorAll({RADIOS:?})].indexOf(document.activeElement)");
+
+        keyboard::tab_to(page, "button", 5).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        let entered: i64 = page
+            .evaluate(focused.clone())
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(entered, 1, "Tab entered the group at radio {entered}");
+
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+        e2e::wait::for_js_true(
+            page,
+            &format!("document.querySelectorAll({RADIOS:?})[1].checked"),
+            "Space to check the focused radio",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A click on the drawn circle checks the radio and focuses it, as a click on
+/// a native radio does.
+#[test]
+fn a_circle_click_checks_and_focuses_the_radio() {
+    block_on(async {
+        let fixture = Fixture::open("/radio-group", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        e2e::passes::pointer::click(page, "input[data-radio-index=\"2\"] + span")
+            .await
+            .unwrap();
+        e2e::wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const r = document.querySelectorAll({RADIOS:?})[2]; \
+                 return r.checked && document.activeElement === r; }})()"
+            ),
+            "the clicked radio to be checked and focused",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Read-only: the group says so, and every radio stays a valid `radio`.
+#[test]
+fn a_readonly_group_meets_the_baseline() {
+    Suite::new("radio_group_readonly", "/radio-group/readonly")
+        .focusable(CHECKED)
+        .targets_spaced(ROWS)
+        .run();
+}
+
 /// The rows really are undersized, so the spacing exception is load-bearing.
 ///
 /// **Not a second implementation of WCAG 2.5.8.** Since todo 377
