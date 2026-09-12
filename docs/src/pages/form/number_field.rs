@@ -85,7 +85,7 @@ pub fn NumberFieldPage() -> Element {
                     prop("onchange", "EventHandler<T>")
                         .doc("Called with the number the caller should hold next. Silent while the buffer is not yet a number, so `-` and `1.` never reach it."),
                     prop("min", "Option<T>")
-                        .doc("Floor, enforced on typing and on the steppers alike."),
+                        .doc("Floor. Steps clamp to it; typed text below it clamps once the field is left or Enter is pressed."),
                     prop("max", "Option<T>")
                         .doc("Ceiling, same."),
                     prop("step", "Option<T>")
@@ -138,7 +138,7 @@ pub fn NumberFieldPage() -> Element {
                     Code { source: "1." }
                     " survive being typed and only a value your type could parse reaches "
                     Code { source: "onchange" }
-                    ". Arrow Up and Arrow Down always step it; "
+                    ". Arrow Up and Arrow Down always step it, Page Up and Page Down ten steps; "
                     Code { source: "steppers" }
                     " adds the buttons."
                 }

@@ -108,9 +108,12 @@ NumberField {
 }
 ```
 
-Arrow Up and Arrow Down do the same from the keyboard,
-with the default prevented so the caret does not jump. Both paths clamp to
-`min`/`max`, and an empty field steps from `T::zero()`.
+Arrow Up and Arrow Down do the same from the keyboard, Page Up and Page Down
+ten steps, with the default prevented so the caret does not jump. Every step
+clamps to `min`/`max`, and an empty field steps from `T::zero()`. Typed text
+out of range is kept while typing and clamps once the field is left or Enter
+is pressed, so `25` stays typable over a floor of `10`. A press on a stepper
+leaves the focus where it was.
 
 `increment_label` and `decrement_label` name the buttons; the glyphs are
 `aria-hidden`. Neither button is a tab stop - the field is, and the arrow keys
@@ -124,7 +127,7 @@ field's height.
 
 ## Accessibility
 
-The arrow keys step the value, as on any spinbutton. Leave `label` unset only
+Arrow Up and Arrow Down step the value, Page Up and Page Down ten steps. Leave `label` unset only
 when something else already names the field.
 
 ## Props
@@ -137,7 +140,7 @@ when something else already names the field.
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
 | `value` | `Option<T>` | - | The number in the field; strictly controlled. `None` is the empty field. |
 | `onchange` | `EventHandler<T>` | - | Called with the number the caller should hold next. |
-| `min` | `Option<T>` | - | Floor, enforced on typing and on the steppers alike. |
+| `min` | `Option<T>` | - | Floor. Steps clamp to it; typed text below it clamps once the field is left or Enter is pressed. |
 | `max` | `Option<T>` | - | Ceiling, same. |
 | `step` | `Option<T>` | `T::default_step()` | What one press of a stepper moves by. |
 | `steppers` | `bool` | `false` | Shows the minus/plus buttons in the trailing slot. |

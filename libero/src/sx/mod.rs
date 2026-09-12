@@ -19,7 +19,7 @@ pub(crate) use class_list::ClassList;
 pub(crate) use input::Input;
 pub(crate) use states::States;
 pub use static_sx::StaticSx;
-pub(crate) use sx::{REDUCED_MOTION, class_name_from_hash};
+pub(crate) use sx::{FORCED_COLORS, REDUCED_MOTION, class_name_from_hash};
 pub use sx::{Sx, sx};
 pub use sx_entry::SxEntry;
 

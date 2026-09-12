@@ -50,7 +50,8 @@ field_props! {
         /// submitted.
         #[props(default, into)]
         validate: crate::components::Validators<Option<T>>,
-        /// Floor, enforced on typing and on the steppers alike.
+        /// Floor. Steps clamp to it; typed text below it clamps once the field
+        /// is left or Enter is pressed.
         #[props(default)]
         min: Option<T>,
         /// Ceiling, same.
@@ -95,7 +96,8 @@ field_props! {
 /// value the caller's type could parse.
 ///
 /// Arrow Up and Arrow Down step the value whether or not `steppers` renders
-/// the buttons - the keys are what `role="spinbutton"` promises.
+/// the buttons, Page Up and Page Down ten steps - the keys are what
+/// `role="spinbutton"` promises.
 #[component]
 pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
     let mut props = props;
@@ -156,22 +158,25 @@ fn NumberFieldShell<T: NumberValue>(
     let typed_publish = publish.clone();
     // One identity across renders, so `Steppers` can skip. Safe as a
     // `use_callback`: nothing in it focuses or clicks, so it cannot re-enter.
-    let nudge = use_callback(move |up: bool| {
+    let nudge = use_callback(move |steps: i32| {
         if readonly {
             return;
         }
         // An empty field steps from zero, unless the type has none.
-        let Some(from) = current().or_else(T::zero) else {
+        let Some(mut next) = current().or_else(T::zero) else {
             return;
         };
-        let next = match up {
-            true => from.step_up(step),
-            false => from.step_down(step),
-        };
+        for _ in 0..steps.unsigned_abs() {
+            next = match steps > 0 {
+                true => next.step_up(step),
+                false => next.step_down(step),
+            };
+        }
         buffer.set(String::new());
         publish(next);
     });
     let publish = typed_publish;
+    let commit = publish.clone();
     // Rules read the number here, so only a validated field redraws per step.
     let rules = (!props.validate.is_empty())
         .then(|| {
@@ -238,20 +243,35 @@ fn NumberFieldShell<T: NumberValue>(
         .event("oninput", move |event: FormEvent| {
             let text = event.value();
             let publish = publish.clone();
-            if let Some(parsed) = T::parse(&text) {
+            // Out of range waits for the commit: clamping the "2" of "25"
+            // against a floor of 10 would make 25 untypable.
+            if let Some(parsed) = T::parse(&text)
+                && parsed.clamp_between(min, max) == parsed
+            {
                 publish(parsed);
             }
             buffer.set(text);
         })
+        // Fires when the field is left or Enter commits an edit.
+        .event("onchange", move |event: FormEvent| {
+            if let Some(parsed) = T::parse(&event.value())
+                && parsed.clamp_between(min, max) != parsed
+            {
+                buffer.set(String::new());
+                commit(parsed);
+            }
+        })
         .event("onkeydown", move |event: KeyboardEvent| {
-            let up = match event.key() {
-                Key::ArrowUp => true,
-                Key::ArrowDown => false,
+            let steps = match event.key() {
+                Key::ArrowUp => 1,
+                Key::ArrowDown => -1,
+                Key::PageUp => 10,
+                Key::PageDown => -10,
                 _ => return,
             };
             // Otherwise the caret jumps to the end of the text as well.
             event.prevent_default();
-            nudge.call(up);
+            nudge.call(steps);
         });
     let attributes = props.attributes;
     let draw = Rc::new(move || {
@@ -278,9 +298,14 @@ fn Steppers(
     disabled: bool,
     increment_label: Option<String>,
     decrement_label: Option<String>,
-    nudge: Callback<bool>,
+    nudge: Callback<i32>,
 ) -> Element {
-    let stepper_box = use_box().framework_sx(&STEPPERS_SX).prepare();
+    // A press keeps the focus where it was, as a native spinner does: on the
+    // field, its caret and its arrow keys.
+    let stepper_box = use_box()
+        .framework_sx(&STEPPERS_SX)
+        .prepare()
+        .event("onmousedown", |event: MouseEvent| event.prevent_default());
     stepper_box.render(
         HtmlTag::Div,
         Vec::new(),
@@ -294,7 +319,7 @@ fn Steppers(
                 // job from there.
                 tabindex: "-1",
                 disabled,
-                onclick: move |_| nudge.call(false),
+                onclick: move |_| nudge.call(-1),
                 MinusIcon {}
             }
             ActionIcon {
@@ -302,7 +327,7 @@ fn Steppers(
                 size: ThemeAwareValue::Size(stepper_size(size)),
                 tabindex: "-1",
                 disabled,
-                onclick: move |_| nudge.call(true),
+                onclick: move |_| nudge.call(1),
                 PlusIcon {}
             }
         },

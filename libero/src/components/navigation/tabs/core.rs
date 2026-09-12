@@ -11,7 +11,7 @@ use crate::{
     },
     hooks::{id_selector, use_element},
     platform::ElementApi,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
         CssVar, Size, SizeCss, TABS_BORDER_COLOR, TABS_GAP, TABS_HOVER, TABS_LINE, TABS_PAD_X,
         TABS_PAD_Y, TabsDefaults,
@@ -69,6 +69,16 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
             "& [role=\"tab\"][aria-selected=\"true\"]",
             sx().color(TABS_COLOR.value())
                 .border_bottom_color(TABS_COLOR.value()),
+        )
+        // Forced colours paint every transparent underline, so each tab would
+        // look selected; system colours keep only the selected one's.
+        .media(
+            FORCED_COLORS,
+            sx().selector("& [role=\"tab\"]", sx().border_bottom_color("Canvas"))
+                .selector(
+                    "& [role=\"tab\"][aria-selected=\"true\"]",
+                    sx().border_bottom_color("Highlight"),
+                ),
         )
         .selector(
             "& [role=\"tab\"][aria-disabled=\"true\"]",

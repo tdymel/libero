@@ -16,6 +16,52 @@ pub const TAB: &str = "[role=tab]";
 /// waiting on it returned at once and the snapshot raced the re-render.
 const SECOND_SELECTED: &str = "[role=tablist] > [role=tab]:nth-child(2)[aria-selected=true]";
 
+/// Forced colours paint every transparent underline, so each tab looked
+/// selected (todo 500). The selected one must keep a line the others lack.
+#[test]
+fn the_selected_tab_stands_out_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/tabs", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        let (selected, others): (String, Vec<String>) = page
+            .evaluate(
+                "(() => {
+                    const line = el => getComputedStyle(el).borderBottomColor;
+                    const tabs = [...document.querySelectorAll('[role=tablist] > [role=tab]')];
+                    return [
+                        line(tabs.find(t => t.getAttribute('aria-selected') === 'true')),
+                        tabs.filter(t => t.getAttribute('aria-selected') !== 'true').map(line),
+                    ];
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!others.is_empty(), "the fixture has one tab");
+        assert!(
+            others.iter().all(|other| *other != selected),
+            "the selected tab's line {selected} matches an unselected one: {others:?}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("tabs", "/tabs")

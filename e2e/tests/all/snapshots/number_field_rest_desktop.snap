@@ -1,0 +1,48 @@
+---
+source: e2e/src/suite.rs
+description: number_field at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Quantity"
+generic
+  spinbutton "Quantity" = 3 [valuemax=0] [valuemin=0] [valuetext=3]
+    generic
+      StaticText "3"
+  button "Decrease"
+  button "Increase"
+LabelText
+  StaticText "Seats"
+generic
+  spinbutton "Seats" = 50 [valuemax=99] [valuemin=10] [valuetext=50]
+    generic
+      StaticText "50"
+  button "Decrease"
+  button "Increase"
+generic
+  StaticText "10 to 99."
+generic
+LabelText
+  StaticText "Weight"
+generic
+  spinbutton "Weight" = 1.5 [valuemax=0] [valuemin=0] [valuetext=1.5]
+    generic
+      StaticText "1.5"
+  button "Decrease"
+  button "Increase"
+LabelText
+  StaticText "Locked"
+generic
+  spinbutton "Locked" = 7 [valuemax=0] [valuemin=0] [valuetext=7]
+    generic
+      StaticText "7"
+  button "Decrease" [disabled]
+  button "Increase" [disabled]
+LabelText
+  StaticText "Disabled"
+generic
+  spinbutton "Disabled" = 7 [disabled] [valuemax=0] [valuemin=0] [valuetext=7]
+    generic
+      StaticText "7"
+  button "Decrease" [disabled]
+  button "Increase" [disabled]

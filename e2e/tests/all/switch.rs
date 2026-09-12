@@ -76,6 +76,50 @@ fn an_off_switch_parts_from_the_page() {
     });
 }
 
+/// Forced colours drop every background, so the track and thumb need an
+/// outline the palette paints, or an off switch is invisible (todo 493).
+#[test]
+fn track_and_thumb_keep_an_outline_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/switch", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        let bare: Vec<String> = page
+            .evaluate(
+                "(() => {
+                    const track = document.querySelector('#plain ~ [aria-hidden]');
+                    return [['track', track], ['thumb', track.firstElementChild]]
+                        .filter(([, el]) => {
+                            const s = getComputedStyle(el);
+                            return s.outlineStyle === 'none' || parseFloat(s.outlineWidth) < 1
+                                || s.outlineColor === 'rgba(0, 0, 0, 0)';
+                        })
+                        .map(([name]) => name);
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(bare.is_empty(), "no forced-colours outline on: {bare:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 fn changes() -> &'static str {
     "document.querySelector('#changes').dataset.changes"
 }

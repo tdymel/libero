@@ -56,6 +56,9 @@ static SWITCH_TRACK_SX: StaticSx = StaticSx::new(|| {
         .height(SWITCH_TRACK_H.value())
         .border_radius(SWITCH_RADIUS.value())
         .background(SWITCH_COLOR_VAR.value())
+        // Forced colours drop the background but paint a transparent outline,
+        // so the track keeps its shape there. Costs no layout.
+        .outline("1px solid transparent")
         .cursor("pointer")
         .transition("background 150ms ease")
 });
@@ -68,6 +71,7 @@ static SWITCH_THUMB_SX: StaticSx = StaticSx::new(|| {
         .height(SWITCH_THUMB.value())
         .border_radius("50%")
         .background(SWITCH_THUMB_COLOR.value())
+        .outline("1px solid transparent")
         // The travel is the track minus the thumb and both insets.
         .transform(format!(
             "translate(calc({} * (({} - {} - 2 * {}))), -50%)",

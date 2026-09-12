@@ -8,6 +8,9 @@ use std::hash::{Hash, Hasher};
 /// the guard finds every component that has one.
 pub(crate) const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
+/// The one forced-colours query for [`Sx::media`], same reason.
+pub(crate) const FORCED_COLORS: &str = "(forced-colors: active)";
+
 #[derive(Debug, Clone, PartialEq, Default, Hash)]
 pub struct Sx {
     entries: Vec<SxEntry>,
