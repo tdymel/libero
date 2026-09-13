@@ -1,5 +1,6 @@
 //! A label with no break opportunity wraps instead of widening the page, in
-//! `Tree` rows, `NavLink` and `Menu` items (1.4.10, todo 518).
+//! `Tree` rows, `NavLink` and `Menu` items (1.4.10, todo 518), and in
+//! `Tabs`, `Timeline`, `Menubar` (todo 543).
 
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
@@ -12,10 +13,16 @@ const OVERFLOWS: &str = "(() => {
         ...[...document.querySelectorAll('[role=treeitem] > div')].map(e => ['tree row', e]),
         ...[...document.querySelectorAll('#nav a')].map(e => ['nav link', e]),
         ...[...document.querySelectorAll('[data-menu-index]')].map(e => ['menu item', e]),
+        ...['#tabs', '#timeline', '#menubar', '#menubar-crowded'].flatMap(root =>
+            [...document.querySelectorAll(`${root}, ${root} *`)].map(e => [root + ' ' + e.tagName, e])),
     ];
     const menu = document.querySelector('[role=menu]');
-    const out = parts.filter(([, e]) => e.scrollWidth > e.clientWidth)
+    // A crowded tab strip scrolls inside itself by design; each tab must still fit it.
+    const out = parts.filter(([, e]) => e.scrollWidth > e.clientWidth && e.getAttribute('role') !== 'tablist')
         .map(([what, e]) => [what, e.scrollWidth, e.clientWidth]);
+    const strip = document.querySelector('#tabs [role=tablist]');
+    for (const tab of strip.querySelectorAll('[role=tab]'))
+        if (tab.offsetWidth > strip.clientWidth) out.push(['tab', tab.offsetWidth, strip.clientWidth]);
     if (menu.getBoundingClientRect().right > innerWidth) out.push(['menu box', menu.getBoundingClientRect().right, innerWidth]);
     return out;
 })()";

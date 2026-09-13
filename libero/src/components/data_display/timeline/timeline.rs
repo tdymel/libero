@@ -61,6 +61,8 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
 
     let base = sx()
         .position("relative")
+        // A long word in the title or content wraps instead of widening the page (1.4.10).
+        .with("overflow-wrap", "anywhere")
         .var(TIMELINE_MARKER, TIMELINE_LINE_COLOR.value())
         .var(TIMELINE_CONNECTOR, TIMELINE_LINE_COLOR.value())
         // Both flip to the accent independently: the bullet for this event,

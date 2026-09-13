@@ -31,6 +31,9 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .flex_direction("row")
         .align_items("center")
+        // A crowded bar wraps, and a trigger longer than the bar wraps its
+        // label, instead of widening the page (1.4.10).
+        .flex_wrap("wrap")
         .gap(MENUBAR_GAP.value())
         .selector(
             TRIGGER,
@@ -48,7 +51,9 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
                 .font("inherit")
                 .font_size(MENUBAR_TRIGGER_FONT.value())
                 .color("inherit")
-                .white_space("nowrap")
+                .flex_shrink("0")
+                .max_width("100%")
+                .with("overflow-wrap", "anywhere")
                 .cursor("pointer")
                 .user_select("none"),
         )

@@ -50,7 +50,11 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 .padding(format!("{} {}", TABS_PAD_Y.value(), TABS_PAD_X.value()))
                 .font("inherit")
                 .color("inherit")
-                .white_space("nowrap")
+                // Sized to the whole label so a crowded strip scrolls, but never
+                // wider than the strip: a longer label wraps (1.4.10).
+                .flex_shrink("0")
+                .max_width("100%")
+                .with("overflow-wrap", "anywhere")
                 .cursor("pointer"),
         )
         // `appearance: none` and `border: 0` above take the UA's own focus
