@@ -34,6 +34,7 @@ mod checkbox;
 mod chip;
 mod code;
 mod collapse;
+mod color_field;
 mod color_picker;
 mod color_scheme_button;
 mod common;
@@ -104,6 +105,7 @@ const FIXTURES: &[Routes] = &[
     chip::ROUTES,
     code::ROUTES,
     collapse::ROUTES,
+    color_field::ROUTES,
     color_picker::ROUTES,
     color_scheme_button::ROUTES,
     data_list::ROUTES,

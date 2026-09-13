@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use super::{ColorCode, ColorFormat, ColorPicker, ColorSwatch, Swatches};
 use crate::{
     components::{
-        ActionIcon, HtmlTag, Input, States,
+        ActionIcon, FOCUSABLE_SELECTOR, HtmlTag, Input, States,
         common::{EyeDropperIcon, NavigationChord, field_props, navigation_chord},
         form::{FIELD_CONTROL_SX, SliderChangeEvent, use_bound, use_field, use_field_frame},
         layout::use_box,
@@ -378,7 +378,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
 
     // Portaled, so no `overflow: hidden` ancestor clips it. A mousedown in the
     // box is cancelled, so a click keeps focus on the text input; the keyboard
-    // enters the picker with Arrow Down and leaves it with Escape. The box
+    // enters the picker with Arrow Down and leaves it with Escape or Tab. The box
     // closes once focus is in neither.
     let picker_setter = bound.setter();
     popover.show(showing.then(|| {
@@ -391,12 +391,32 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                 event.prevent_default()
             })
             .event("onfocusout", move |_: FocusEvent| settle())
-            .event("onkeydown", move |event: KeyboardEvent| {
-                if event.key() == Key::Escape {
+            .event("onkeydown", move |event: KeyboardEvent| match event.key() {
+                Key::Escape => {
                     event.prevent_default();
                     focus_input();
                     opened.set(false);
                 }
+                // Portaled after the page: Tab past either end goes back
+                // through the text input, then on as from the field.
+                Key::Tab => {
+                    let Ok(stops) = floating.query_selector_all(FOCUSABLE_SELECTOR) else {
+                        return;
+                    };
+                    let backwards = event.modifiers().shift();
+                    let edge = if backwards {
+                        stops.first()
+                    } else {
+                        stops.last()
+                    };
+                    if edge.is_some_and(|stop| stop.is_focused()) {
+                        if backwards {
+                            event.prevent_default();
+                        }
+                        focus_input();
+                    }
+                }
+                _ => {}
             })
             .render(
                 HtmlTag::Div,

@@ -13,10 +13,10 @@ generic
 generic
   dialog "Choose color"
     generic
-      slider = 87 [valuemax=100] [valuemin=0]
+      slider "Saturation" = 87 [valuemax=100] [valuemin=0]
     generic
       generic
-        slider = 208 [valuemax=360] [valuemin=0]
+        slider "Hue" = 208 [valuemax=360] [valuemin=0]
     button "#fa5252"
     button "#40c057"
     button "#228be6"

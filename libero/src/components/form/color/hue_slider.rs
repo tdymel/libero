@@ -50,6 +50,8 @@ pub fn HueSlider(props: HueSliderProps) -> Element {
             oninput.call(event.map(|value| value.thumb(0)));
         }
     });
+    // A bare 0-360 reads as a number; the unit makes it an angle.
+    let valuetext = use_callback(|hue: f64| format!("{} degrees", hue.round()));
 
     rsx! {
         SliderCore {
@@ -64,7 +66,7 @@ pub fn HueSlider(props: HueSliderProps) -> Element {
             size: Input::Value(size),
             color: Input::None,
             disabled: props.disabled,
-            label: None,
+            label: Some(valuetext),
             marks: Vec::new(),
             aria_label: props.aria_label,
             aria_label_to: None,

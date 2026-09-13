@@ -100,6 +100,8 @@ fn alpha_slider(props: AlphaSliderProps, track: String, thumb_fill: String) -> E
             oninput.call(event.map(|value| value.thumb(0)));
         }
     });
+    // Alpha is heard as the opacity it gives, not as a 0-1 fraction.
+    let valuetext = use_callback(|alpha: f64| format!("{}%", (alpha * 100.0).round()));
 
     rsx! {
         SliderCore {
@@ -114,7 +116,7 @@ fn alpha_slider(props: AlphaSliderProps, track: String, thumb_fill: String) -> E
             size: Input::Value(size),
             color: Input::None,
             disabled: props.disabled,
-            label: None,
+            label: Some(valuetext),
             marks: Vec::new(),
             aria_label: props.aria_label,
             aria_label_to: None,

@@ -14,6 +14,7 @@ mod checkbox;
 mod chip;
 mod code;
 mod collapse;
+mod color_field;
 mod color_picker;
 mod color_scheme_button;
 mod data_list;

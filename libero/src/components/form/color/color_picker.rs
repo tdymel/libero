@@ -134,13 +134,13 @@ base_props! {
         /// `with_alpha`.
         #[props(default, into)]
         format: Input<ColorFormat>,
-        /// Names the saturation panel's thumb.
+        /// Names the saturation panel's thumb. "Saturation" by default.
         #[props(default, into)]
         saturation_label: Option<String>,
-        /// Names the hue slider's thumb.
+        /// Names the hue slider's thumb. "Hue" by default.
         #[props(default, into)]
         hue_label: Option<String>,
-        /// Names the alpha slider's thumb.
+        /// Names the alpha slider's thumb. "Alpha" by default.
         #[props(default, into)]
         alpha_label: Option<String>,
         /// `false` keeps the thumbs and swatches out of the tab order and
@@ -254,7 +254,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                 PickerAlphaSlider {
                     value: value.alpha(),
                     size,
-                    aria_label: props.alpha_label.clone(),
+                    aria_label: props.alpha_label.clone().or_else(|| Some("Alpha".into())),
                     focusable,
                     oninput: alpha_input,
                 }
@@ -272,7 +272,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
             Saturation {
                 value: color,
                 oninput,
-                aria_label: props.saturation_label.clone(),
+                aria_label: props.saturation_label.clone().or_else(|| Some("Saturation".into())),
                 focusable,
             }
             div { "data-slot": "body",
@@ -280,7 +280,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                     HueSlider {
                         value: value.hue(),
                         size,
-                        aria_label: props.hue_label.clone(),
+                        aria_label: props.hue_label.clone().or_else(|| Some("Hue".into())),
                         focusable,
                         oninput: hue_input,
                     }

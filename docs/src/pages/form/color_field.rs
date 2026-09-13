@@ -161,6 +161,7 @@ pub fn ColorFieldPage() -> Element {
                     Code { source: "ColorPicker" }
                     " keys apply. "
                     Kbd { "Escape" } " goes back to the text, and so does a swatch that closes the dropdown. "
+                    Kbd { "Tab" } " past either end of the dropdown leaves it as from the text. "
                     "Focus leaving both the text and the dropdown closes it. A mouse click in the dropdown leaves focus in the text."
                 }
             }
