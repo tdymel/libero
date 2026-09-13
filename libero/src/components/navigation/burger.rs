@@ -1,3 +1,4 @@
+use dioxus::dioxus_core::AttributeValue;
 use dioxus::prelude::*;
 
 use crate::{
@@ -96,6 +97,17 @@ fn is_orphan_disclosure(open: Option<bool>, attributes: &[Attribute]) -> bool {
             .any(|attribute| attribute.name == "aria-controls")
 }
 
+/// Removes a spread text `aria-label` and returns it.
+fn take_spread_label(attributes: &mut Vec<Attribute>) -> Option<String> {
+    let index = attributes.iter().position(|attribute| {
+        attribute.name == "aria-label" && matches!(attribute.value, AttributeValue::Text(_))
+    })?;
+    match attributes.remove(index).value {
+        AttributeValue::Text(label) => Some(label),
+        _ => None,
+    }
+}
+
 base_props! {
     pub struct BurgerProps {
         /// `Some(true)` draws the X and emits `aria-expanded="true"`.
@@ -109,6 +121,7 @@ base_props! {
         /// Replaces the theme's two labels. Runs during render, so it can
         /// read a live locale - the escape hatch from
         /// [`BurgerLabels`](crate::theme::BurgerLabels)' `&'static str`s.
+        /// A spread `"aria-label"` wins over both.
         #[props(default)]
         label: Option<Callback<bool, String>>,
         /// The glyph's width and height. The button around it is one spacing
@@ -152,15 +165,19 @@ pub fn Burger(props: BurgerProps) -> Element {
     let theme = use_theme();
     let open = props.open.unwrap_or(false);
 
-    let aria_label = match props.label {
-        Some(label) => label.call(open),
-        None => match open {
+    // `ActionIcon` writes its own `aria-label` over a spread one, so it moves over here.
+    let mut attributes = props.attributes;
+    let spread_label = take_spread_label(&mut attributes);
+    let aria_label = match (spread_label, props.label) {
+        (Some(label), _) => label,
+        (None, Some(label)) => label.call(open),
+        (None, None) => match open {
             true => theme.burger.labels.close.to_string(),
             false => theme.burger.labels.open.to_string(),
         },
     };
 
-    if is_orphan_disclosure(props.open, &props.attributes) {
+    if is_orphan_disclosure(props.open, &attributes) {
         warn(
             "Burger: `open` is set but no `aria-controls` was spread, so nothing says which panel this button expands.",
         );
@@ -200,7 +217,7 @@ pub fn Burger(props: BurgerProps) -> Element {
             class: props.class,
             sx: props.sx,
             states: props.states,
-            attributes: props.attributes,
+            attributes,
             {glyph}
         }
     }
@@ -269,7 +286,7 @@ mod tests {
         let names = |name: &'static str| {
             vec![Attribute::new(
                 name,
-                dioxus::dioxus_core::AttributeValue::Text("nav".to_string()),
+                AttributeValue::Text("nav".to_string()),
                 None,
                 false,
             )]
@@ -283,6 +300,19 @@ mod tests {
         assert!(is_orphan_disclosure(Some(true), &[]));
         assert!(is_orphan_disclosure(Some(true), &names("aria-label")));
         assert!(!is_orphan_disclosure(Some(true), &names("aria-controls")));
+    }
+
+    #[test]
+    fn a_spread_aria_label_is_taken_out_of_the_attributes() {
+        let text = |name: &'static str, value: &str| {
+            Attribute::new(name, AttributeValue::Text(value.to_string()), None, false)
+        };
+        let mut attributes = vec![text("aria-controls", "nav"), text("aria-label", "Menu")];
+
+        assert_eq!(take_spread_label(&mut attributes).as_deref(), Some("Menu"));
+        assert_eq!(attributes.len(), 1);
+        assert_eq!(attributes[0].name, "aria-controls");
+        assert_eq!(take_spread_label(&mut attributes), None);
     }
 
     #[test]
