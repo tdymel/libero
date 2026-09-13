@@ -140,6 +140,44 @@ fn a_circle_click_checks_and_focuses_the_radio() {
     });
 }
 
+/// The circle takes a click, so it shows `pointer` as `Checkbox`'s box does;
+/// a disabled one shows `not-allowed`.
+#[test]
+fn the_circle_shows_it_takes_a_click() {
+    block_on(async {
+        let fixture = Fixture::open("/radio-group/field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let cursors: Vec<String> = fixture
+            .page
+            .evaluate(format!(
+                "[...document.querySelectorAll({RADIOS:?})]\
+                 .map(r => getComputedStyle(r.nextElementSibling).cursor)"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(cursors, ["pointer", "pointer", "not-allowed"]);
+        fixture.close().await.unwrap();
+
+        let fixture = Fixture::open("/radio-group", Viewport::Desktop)
+            .await
+            .unwrap();
+        let cursor: String = fixture
+            .page
+            .evaluate(format!(
+                "getComputedStyle(document.querySelector({RADIOS:?}).nextElementSibling).cursor"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(cursor, "pointer", "a plain radio's circle");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Read-only: the group says so, and every radio stays a valid `radio`.
 #[test]
 fn a_readonly_group_meets_the_baseline() {

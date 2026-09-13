@@ -33,6 +33,8 @@ static RADIO_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // The visually hidden input is absolutely positioned; without this it
         // escapes to the nearest positioned ancestor.
         .position("relative")
+        // On the control rather than the circle, so `disabled` below reaches it.
+        .cursor("pointer")
         // Drawn by the overlay after the circle, because the focus is on the
         // input beside it - the same shape as `Checkbox`'s.
         .selector("& > [data-ring]", ring_overlay_sx())
