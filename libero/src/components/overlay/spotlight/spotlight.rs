@@ -86,7 +86,8 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
             sx().display("flex")
                 .flex_direction("column")
                 .flex("1")
-                .min_width("0"),
+                .min_width("0")
+                .with("overflow-wrap", "anywhere"),
         )
         .selector(
             "& [data-spotlight-shortcut]",
@@ -499,11 +500,23 @@ fn spotlight_rows(
                 let row = index;
                 index += 1;
                 let onclick = action.onclick;
+                let option_id = format!("{id}-option-{row}");
+                // Named by its label alone; the description and shortcut describe it.
+                let described = [
+                    action.description.as_ref().map(|_| format!("{option_id}-description")),
+                    action.shortcut.as_ref().map(|_| format!("{option_id}-shortcut")),
+                ]
+                .into_iter()
+                .flatten()
+                .collect::<Vec<_>>()
+                .join(" ");
                 rsx! {
                     div {
                         key: "{row}",
-                        id: "{id}-option-{row}",
+                        id: "{option_id}",
                         "role": "option",
+                        "aria-labelledby": "{option_id}-label",
+                        "aria-describedby": (!described.is_empty()).then_some(described),
                         "data-active": (active == Some(row)).then_some("true"),
                         // Or the click takes focus out of the search box.
                         onmousedown: move |event: MouseEvent| event.prevent_default(),
@@ -512,13 +525,17 @@ fn spotlight_rows(
                             span { "data-spotlight-icon": "", {icon} }
                         }
                         span { "data-spotlight-text": "",
-                            span { "{action.label}" }
+                            span { id: "{option_id}-label", "{action.label}" }
                             if let Some(description) = action.description {
-                                span { "data-spotlight-description": "", "{description}" }
+                                span {
+                                    id: "{option_id}-description",
+                                    "data-spotlight-description": "",
+                                    "{description}"
+                                }
                             }
                         }
                         if let Some(shortcut) = action.shortcut {
-                            span { "data-spotlight-shortcut": "",
+                            span { id: "{option_id}-shortcut", "data-spotlight-shortcut": "",
                                 for (position, key) in shortcut_keys(&shortcut).into_iter().enumerate() {
                                     if position > 0 {
                                         " + "

@@ -17,18 +17,23 @@ generic
         listbox "Command palette"
           group "Pages"
             StaticText "Pages"
-            option "Home The start page" [selected=false]
-              StaticText "Home"
-              StaticText "The start page"
+            option "Home" [selected=false]
+              generic
+                StaticText "Home"
+              generic
+                StaticText "The start page"
             option "Changelog" [selected=false]
-              StaticText "Changelog"
+              generic
+                StaticText "Changelog"
           group "Commands"
             StaticText "Commands"
-            option "New file Ctrl + N" [selected=false]
-              StaticText "New file"
+            option "New file" [selected=false]
               generic
-                StaticText "Ctrl"
-              StaticText "+"
+                StaticText "New file"
               generic
-                StaticText "N"
+                generic
+                  StaticText "Ctrl"
+                StaticText "+"
+                generic
+                  StaticText "N"
 --> aria-controls [id="lsx-N-listbox"] (rendered above)

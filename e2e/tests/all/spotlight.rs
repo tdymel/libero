@@ -265,3 +265,67 @@ fn ctrl_or_cmd_k_toggles_the_palette() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Each option is named by its label alone; the description and the shortcut
+/// hint describe it rather than run on into its name.
+#[test]
+fn an_option_is_named_by_its_label() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        let tree = e2e::ax::snapshot(page, DIALOG).await.unwrap();
+        for name in ["Home", "Changelog", "New file"] {
+            assert!(
+                tree.contains(&format!("option \"{name}\"")),
+                "no option named {name:?} alone:\n{tree}"
+            );
+        }
+        let described: Vec<String> = js(
+            page,
+            &format!(
+                "[...document.querySelectorAll({OPTIONS:?})].map(o => (o.getAttribute('aria-describedby') ?? '') \
+                 .split(' ').filter(Boolean).map(id => document.getElementById(id).textContent).join(' | '))"
+            ),
+        )
+        .await;
+        assert_eq!(described, ["The start page", "", "Ctrl + N"]);
+        fixture
+            .console
+            .assert_clean("spotlight option names")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A label with no break opportunity wraps inside its row at 320px (1.4.10).
+#[test]
+fn a_long_label_wraps_in_its_row() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    block_on(async {
+        let fixture = Fixture::open("/spotlight-long", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(SetDeviceMetricsOverrideParams::new(320, 640, 1.0, true))
+            .await
+            .unwrap();
+        open_by_keyboard(page).await;
+        let overflows: Vec<serde_json::Value> = js(
+            page,
+            &format!(
+                "[document.documentElement, document.querySelector({DIALOG:?}), ...document.querySelectorAll({OPTIONS:?})] \
+                 .filter(e => e.scrollWidth > e.clientWidth).map(e => [e.tagName, e.scrollWidth, e.clientWidth])"
+            ),
+        )
+        .await;
+        assert!(overflows.is_empty(), "320px: {overflows:?}");
+        fixture
+            .console
+            .assert_clean("spotlight long label")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
