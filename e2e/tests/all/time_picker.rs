@@ -263,6 +263,49 @@ fn the_analog_face_reaches_every_minute_and_second() {
     });
 }
 
+/// The face is an APG slider: Home/End go to the hand's first and last open
+/// value, Page Up/Down a quarter of the face (todo 533).
+#[test]
+fn the_face_takes_home_end_and_page_keys() {
+    block_on(async {
+        let fixture = Fixture::open("/time-picker/analog", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let focus_face =
+            || page.evaluate("document.querySelector('#fine [data-slot=face]').focus()");
+        let press = |key: keyboard::Key, value: &'static str, what: &'static str| async move {
+            keyboard::press(page, key).await.unwrap();
+            let check = format!("document.getElementById('fine-value').textContent === {value:?}");
+            wait::for_js_true(page, &check, what).await.unwrap();
+        };
+
+        focus_face().await.unwrap();
+        press(keyboard::END, "23:00:00", "End to the last hour").await;
+        press(
+            keyboard::HOME,
+            "09:30:00",
+            "Home to the first hour inside min",
+        )
+        .await;
+        press(keyboard::PAGE_UP, "12:30:00", "PageUp three hours on").await;
+
+        pointer::click(page, "#fine [data-slot=readout] button:nth-of-type(2)")
+            .await
+            .unwrap();
+        focus_face().await.unwrap();
+        press(keyboard::PAGE_UP, "12:45:00", "PageUp fifteen minutes on").await;
+        press(keyboard::END, "12:59:00", "End to the last minute").await;
+        press(keyboard::HOME, "12:00:00", "Home to the first minute").await;
+
+        fixture
+            .console
+            .assert_clean("the face's page keys")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A press and release at one point.
 async fn press_at(page: &chromiumoxide::Page, at: pointer::Point) {
     pointer::drag(page, at, at, 1).await.unwrap();

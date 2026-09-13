@@ -573,17 +573,42 @@ impl ClockView {
     }
 
     /// The face is a slider over the hand it shows: the arrows step an hour,
-    /// `step` minutes or a second, past what `min` and `max` rule out; Enter
-    /// moves on to the next hand.
+    /// `step` minutes or a second, past what `min` and `max` rule out; Page
+    /// Up/Down a quarter of the face, Home/End its first and last open value;
+    /// Enter moves on to the next hand.
     fn face_keydown(self, event: KeyboardEvent) {
         // Ctrl/Alt/Meta chords are the browser's.
         if has_shortcut_modifier(&event) {
             return;
         }
         let mut hand = self.hand;
-        let delta: i64 = match event.key() {
-            Key::ArrowUp | Key::ArrowRight => 1,
-            Key::ArrowDown | Key::ArrowLeft => -1,
+        let step = self.step_of(hand());
+        let page = match hand() {
+            Hand::Hour => 3,
+            _ => (15 / step).max(1),
+        };
+        let next = match event.key() {
+            Key::ArrowUp | Key::ArrowRight => self.stepped(self.base, 1),
+            Key::ArrowDown | Key::ArrowLeft => self.stepped(self.base, -1),
+            Key::PageUp => (0..page).try_fold(self.base, |from, _| self.stepped(from, 1)),
+            Key::PageDown => (0..page).try_fold(self.base, |from, _| self.stepped(from, -1)),
+            Key::Home | Key::End => {
+                let last = event.key() == Key::End;
+                let (hour, minute, second) =
+                    (self.base.hour(), self.base.minute(), self.base.second());
+                let edge = match (hand(), last) {
+                    (Hand::Hour, false) => at(0, minute, second),
+                    (Hand::Hour, true) => at(23, minute, second),
+                    (Hand::Minute, false) => at(hour, 0, second),
+                    (Hand::Minute, true) => at(hour, 59 / step * step, second),
+                    (Hand::Second, false) => at(hour, minute, 0),
+                    (Hand::Second, true) => at(hour, minute, 59),
+                };
+                match self.open(edge) {
+                    true => Some(edge),
+                    false => self.stepped(edge, if last { -1 } else { 1 }),
+                }
+            }
             Key::Enter => {
                 event.prevent_default();
                 if let Some(next) = self.after(hand()) {
@@ -594,6 +619,24 @@ impl ClockView {
             _ => return,
         };
         event.prevent_default();
+        if let Some(next) = next {
+            self.emit(next);
+        }
+    }
+
+    /// Whether the hand's value at `time` is one `min` and `max` allow.
+    fn open(self, time: NaiveTime) -> bool {
+        let (hand, hour, minute) = (self.hand, time.hour(), time.minute());
+        match hand() {
+            Hand::Hour => self.within(at(hour, 0, 0), at(hour, 59, 59)),
+            Hand::Minute => self.within(at(hour, minute, 0), at(hour, minute, 59)),
+            Hand::Second => self.within(time, time),
+        }
+    }
+
+    /// One step of the hand from `from`, past what `min` and `max` rule out.
+    fn stepped(self, from: NaiveTime, delta: i64) -> Option<NaiveTime> {
+        let hand = self.hand;
         let step = i64::from(self.step_of(hand()));
         // Off the step, the first press lands on it.
         let snap = |value: u32| {
@@ -609,35 +652,23 @@ impl ClockView {
                 _ => snapped as u32,
             }
         };
-        let mut next = self.base;
+        let mut next = from;
         for _ in 0..60 {
             let (hour, minute, second) = (next.hour(), next.minute(), next.second());
-            let (candidate, open) = match hand() {
-                Hand::Hour => {
-                    let hour = (i64::from(hour) + delta).rem_euclid(24) as u32;
-                    (
-                        at(hour, minute, second),
-                        self.within(at(hour, 0, 0), at(hour, 59, 59)),
-                    )
-                }
-                Hand::Minute => {
-                    let minute = snap(minute);
-                    (
-                        at(hour, minute, second),
-                        self.within(at(hour, minute, 0), at(hour, minute, 59)),
-                    )
-                }
-                Hand::Second => {
-                    let time = at(hour, minute, snap(second));
-                    (time, self.within(time, time))
-                }
+            next = match hand() {
+                Hand::Hour => at(
+                    (i64::from(hour) + delta).rem_euclid(24) as u32,
+                    minute,
+                    second,
+                ),
+                Hand::Minute => at(hour, snap(minute), second),
+                Hand::Second => at(hour, minute, snap(second)),
             };
-            next = candidate;
-            if open {
-                self.emit(next);
-                return;
+            if self.open(next) {
+                return Some(next);
             }
         }
+        None
     }
 
     /// `face` is the face's element, `drag` its pointer handlers.
