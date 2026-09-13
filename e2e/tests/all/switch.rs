@@ -12,6 +12,9 @@ fn it_meets_the_baseline() {
         .focusable("#aria")
         .focusable("#readonly")
         .focusable("#card")
+        // The 22px-tall track is the whole target of `aria_label`-only "Wi-Fi".
+        // The control, not the track, so its own hidden input is no neighbour.
+        .targets_spaced("span:has(> #aria)")
         .run();
 }
 
@@ -223,6 +226,51 @@ fn a_card_toggles_from_anywhere_on_it() {
             .unwrap();
 
         fixture.console.assert_clean("clicking the card").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A track click focuses the input as a native click would, so its blur
+/// shows the rules.
+#[test]
+fn a_track_click_focuses_the_switch() {
+    block_on(async {
+        let fixture = Fixture::open("/switch", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+
+        pointer::click(page, "#plain ~ [aria-hidden]")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &checked("plain"), "the track click")
+            .await
+            .unwrap();
+        let focused: String = page
+            .evaluate("document.activeElement.id")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(focused, "plain", "the track click left focus elsewhere");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The track shows `not-allowed` like the rest of a disabled switch.
+#[test]
+fn a_disabled_track_shows_it_takes_no_click() {
+    block_on(async {
+        let fixture = Fixture::open("/switch", Viewport::Desktop).await.unwrap();
+        let cursors: [String; 2] = fixture
+            .page
+            .evaluate(
+                "['#plain', '#disabled'].map(id => \
+                 getComputedStyle(document.querySelector(`${id} ~ [aria-hidden]`)).cursor)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(cursors, ["pointer", "not-allowed"]);
         fixture.close().await.unwrap();
     });
 }

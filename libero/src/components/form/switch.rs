@@ -13,6 +13,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_cache, use_css, use_element, use_theme},
+    platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         ChoiceVariant, CssVar, NamedColorCss, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H,
@@ -37,6 +38,8 @@ static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // The visually hidden input is absolutely positioned; without this it
         // escapes to the nearest positioned ancestor.
         .position("relative")
+        // On the control rather than the track, so `disabled` below reaches it.
+        .cursor("pointer")
         // The control wraps the track and nothing else, so the ring hugs the
         // track rather than the row. Drawn by the overlay after the track,
         // because the focus is on the input beside it.
@@ -59,7 +62,6 @@ static SWITCH_TRACK_SX: StaticSx = StaticSx::new(|| {
         // Forced colours drop the background but paint a transparent outline,
         // so the track keeps its shape there. Costs no layout.
         .outline("1px solid transparent")
-        .cursor("pointer")
         .transition("background 150ms ease")
 });
 
@@ -125,12 +127,12 @@ field_props! {
         /// is submitted.
         #[props(default, into)]
         validate: crate::components::Validators<bool>,
-        /// Names the switch when it has no `label`.
         /// What the field posts as. A path - `Signup::FIELDS.terms()` - also
         /// binds it to the surrounding `Form`'s value when the field has no
         /// `onchange`.
         #[props(default, into)]
         name: crate::components::FieldName<bool>,
+        /// Names the switch when it has no `label`.
         #[props(default, into)]
         aria_label: Option<String>,
         /// `Card` draws the switch as a bordered surface and makes all of it
@@ -191,10 +193,11 @@ pub fn Switch(props: SwitchProps) -> Element {
     // `role="switch"` is a button-like control, and ARIA's pattern for it
     // takes Enter as well as Space. A bare checkbox does not, on any
     // platform, so the key is handled here rather than left to the UA.
+    let element = use_element();
     let field = use_field()
         .inline()
         .card(card)
-        .activates(use_element(), toggle.clone())
+        .activates(element, toggle.clone())
         .enter_activates()
         .label(&props.label)
         .description(&props.description)
@@ -264,10 +267,14 @@ pub fn Switch(props: SwitchProps) -> Element {
             class: track_class,
             "aria-hidden": "true",
             // A card takes the click itself, so the track leaves it to the
-            // card rather than toggling twice.
+            // card rather than toggling twice. Focuses the input as a native
+            // click would, so its blur shows the rules.
             onclick: move |_| {
                 if !card {
                     toggle();
+                    if !disabled {
+                        let _ = element.focus();
+                    }
                 }
             },
             span { class: thumb_class }
