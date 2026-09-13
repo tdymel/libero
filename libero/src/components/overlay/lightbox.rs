@@ -915,6 +915,10 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         options.aria_label.is_some(),
         "Lightbox: no `aria_label`, falling back to the theme's. A dialog needs a name of its own to be told apart.",
     );
+    use_name_warning(
+        items.iter().all(|item| !item.alt.trim().is_empty()),
+        "Lightbox: a `LightboxItem` has an empty `alt`. Its picture is focusable and would have no name.",
+    );
     let label = options
         .aria_label
         .clone()

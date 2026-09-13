@@ -153,6 +153,34 @@ fn an_unnamed_lightbox_warns() {
     ));
 }
 
+/// Todo 567: a picture is a tab stop, so an empty `alt` is a nameless one.
+#[test]
+fn a_lightbox_item_without_alt_warns() {
+    #[component]
+    fn Gallery(alt: &'static str) -> Element {
+        let lightbox = use_lightbox(LightboxOptions {
+            aria_label: Some("Holiday photos".to_string()),
+            ..LightboxOptions::default()
+        });
+        use_hook(move || {
+            lightbox.open_with(vec![
+                LightboxItem::new("a.png", "A beach"),
+                LightboxItem::new("b.png", alt),
+            ])
+        });
+        rsx! {}
+    }
+    let empty_alt = "Lightbox: a `LightboxItem` has an empty `alt`";
+    assert!(warns(
+        || rsx! { LiberoProvider { Gallery { alt: " " } } },
+        empty_alt
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Gallery { alt: "A dune" } } },
+        empty_alt
+    ));
+}
+
 #[test]
 fn an_unnamed_spotlight_warns() {
     #[component]
