@@ -487,6 +487,36 @@ fn a_long_title_wraps_at_320px() {
     });
 }
 
+/// Alt+ArrowLeft is Back: neither handle may swallow a browser chord (todo 562).
+#[test]
+fn modifier_chords_are_left_to_the_browser() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open(page).await.unwrap();
+        let probe = "(r => [r.x, r.y, r.width, r.height])(document.querySelector('[role=dialog]').getBoundingClientRect())";
+        let arrows = [
+            keyboard::ARROW_LEFT,
+            keyboard::ARROW_RIGHT,
+            keyboard::ARROW_UP,
+            keyboard::ARROW_DOWN,
+        ];
+        keyboard::tab_to(page, SEPARATOR, TAB_BUDGET).await.unwrap();
+        let mut keys = arrows.to_vec();
+        keys.extend([keyboard::HOME, keyboard::END]);
+        keyboard::assert_chords_ignored(page, &keys, probe)
+            .await
+            .unwrap();
+        keyboard::tab_to(page, HANDLE, TAB_BUDGET).await.unwrap();
+        keyboard::assert_chords_ignored(page, &arrows, probe)
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Focus `selector` and press Enter on it.
 async fn activate(page: &Page, selector: &str) {
     page.evaluate(format!(

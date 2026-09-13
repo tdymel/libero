@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, HtmlTag, Input, Placement, Title, Variables,
-        common::{CloseIcon, focus_ring_sx, inset_focus_ring_sx},
+        common::{CloseIcon, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx},
         layout::{Float, use_box},
         surface::paper_sx,
         variables,
@@ -663,6 +663,10 @@ impl WindowGeometry {
     /// The title bar is the keyboard move handle: Arrow moves by a step,
     /// Shift+Arrow by a pixel.
     fn handle_key(self, event: Event<KeyboardData>) {
+        // Alt+ArrowLeft is Back: a chord is the browser's, not a move.
+        if has_shortcut_modifier(&event) {
+            return;
+        }
         let step = if event.modifiers().shift() {
             1.0
         } else {
@@ -688,6 +692,9 @@ impl WindowGeometry {
     /// Home/End ask for nothing and for everything, which the window's
     /// min/max constraints then clamp.
     fn resize_key(self, event: Event<KeyboardData>) {
+        if has_shortcut_modifier(&event) {
+            return;
+        }
         let key = event.key();
         let request = match key {
             Key::Home => Some(Err((0.0, 0.0))),
