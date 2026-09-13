@@ -40,7 +40,7 @@ fn it_meets_the_baseline_vertically() {
 /// The page's and each stepper's scroll and client widths, and the widest
 /// step header's right edge.
 const WIDTHS: &str = "(() => {
-    const steppers = ['#side', '#below', '#vertical'].map(id => {
+    const steppers = ['#side', '#below', '#vertical', '#plain'].map(id => {
         const s = document.querySelector(id);
         const right = Math.max(...[...s.querySelectorAll('[data-step-header]')]
             .map(h => h.getBoundingClientRect().right));
@@ -51,7 +51,7 @@ const WIDTHS: &str = "(() => {
 
 /// A label with no break opportunity wraps inside its step at 390px and at
 /// 320px, in every arm: neither the page nor the stepper scrolls sideways
-/// (1.4.10, todo 518).
+/// (1.4.10, todos 518, 525).
 #[test]
 fn a_long_label_wraps_instead_of_widening_the_page() {
     block_on(async {
@@ -70,8 +70,9 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
                 page_width <= viewport,
                 "{width}px: the page scrolls sideways: {widths:?}"
             );
-            for (arm, [scroll, client, right]) in
-                ["side", "below", "vertical"].iter().zip(&widths[1..])
+            for (arm, [scroll, client, right]) in ["side", "below", "vertical", "plain"]
+                .iter()
+                .zip(&widths[1..])
             {
                 assert!(
                     scroll <= client,
@@ -84,6 +85,95 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
             }
         }
         fixture.console.assert_clean("a long label").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Words of the `#plain` stepper's labels and descriptions split across lines.
+const SPLIT_WORDS: &str = "(() => {
+    const split = [];
+    for (const el of document.querySelectorAll('#plain [data-step-label] > :not([aria-hidden]), #plain [data-step-description], #plain [data-step-label]:not(:has(*))')) {
+        const text = el.firstChild;
+        if (!text || text.nodeType !== 3) continue;
+        for (const m of text.data.matchAll(/\\S+/g)) {
+            const r = document.createRange();
+            r.setStart(text, m.index);
+            r.setEnd(text, m.index + m[0].length);
+            if (r.getClientRects().length > 1) split.push(m[0]);
+        }
+    }
+    return split;
+})()";
+
+/// Three ordinary steps with descriptions fit a 320px page in the side arm
+/// without breaking a word (1.4.10, todo 525).
+#[test]
+fn ordinary_labels_fit_320px_whole() {
+    block_on(async {
+        let fixture = Fixture::open("/stepper-long", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#plain-step-1").await.unwrap();
+        page.execute(SetDeviceMetricsOverrideParams::new(320, 800, 1.0, true))
+            .await
+            .unwrap();
+        let split: Vec<String> = page
+            .evaluate(SPLIT_WORDS)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(split.is_empty(), "words broken across lines: {split:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Forced colours paint every fill `Canvas` and every ring `CanvasText`: the
+/// completed marker's fill and the current step's ring must stay apart from a
+/// pending step's (todo 524).
+#[test]
+fn completed_and_current_steps_show_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/stepper-long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        let [completed, canvas, current, pending]: [String; 4] = page
+            .evaluate(
+                "(() => { const probe = document.createElement('div'); \
+                 probe.style.background = 'Canvas'; document.body.append(probe); \
+                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+                 const marker = (i) => getComputedStyle(document.querySelector(`#plain-step-${i} [data-step-marker]`)); \
+                 return [marker(0).backgroundColor, canvas, marker(1).borderTopColor, marker(2).borderTopColor]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_ne!(
+            completed, canvas,
+            "the completed marker's fill is the page's own"
+        );
+        assert_ne!(
+            current, pending,
+            "the current ring looks like a pending one"
+        );
         fixture.close().await.unwrap();
     });
 }

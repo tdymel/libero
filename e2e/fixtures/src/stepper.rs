@@ -38,6 +38,15 @@ fn LongLabelPage() -> Element {
                     panel: |_: Stage| rsx! { "Body." },
                 }
             }
+            // Ordinary labels with a description. `side` needs ~360px for
+            // three steps, so it breaks words at 320px; `below` must not.
+            Stepper {
+                id: "plain",
+                value: Some(Stage::Shipping),
+                label_position: "below",
+                option_description: |stage: Stage| format!("About the {}", stage.label()),
+                panel: |_: Stage| rsx! { "Body." },
+            }
         }
     }
 }

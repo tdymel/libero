@@ -12,7 +12,7 @@ use crate::{
     },
     hooks::{id_selector, use_element},
     str_enum::str_enum,
-    sx::{StaticSx, Sx, sx},
+    sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
         CssVar, STEPPER_COLOR, STEPPER_COLOR_CONTRAST, STEPPER_CONNECTOR_COLOR,
         STEPPER_CONTENT_PADDING, STEPPER_DESCRIPTION_COLOR, STEPPER_DESCRIPTION_SIZE,
@@ -219,6 +219,21 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
             sx().background(STEPPER_ERROR.value())
                 .border_color(STEPPER_ERROR.value())
                 .color(STEPPER_ERROR_CONTRAST.value()),
+        )
+        // Forced colours paint every fill `Canvas` and every ring `CanvasText`:
+        // the completed fill and the current ring would vanish into the rest.
+        .media(
+            FORCED_COLORS,
+            sx().selector(
+                format!("{} [data-step-marker]", step("completed")),
+                sx().background("Highlight")
+                    .border_color("Highlight")
+                    .color("HighlightText"),
+            )
+            .selector(
+                format!("{} [data-step-marker]", step("active")),
+                sx().border_color("Highlight"),
+            ),
         )
         .when(Orientation::Horizontal.state_name(), horizontal)
         .when(
