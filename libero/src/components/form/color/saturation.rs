@@ -6,7 +6,10 @@ use dioxus::prelude::*;
 use super::ColorCode;
 use crate::{
     components::{
-        HtmlTag, Input, Variables, common::shadow_sx, form::SliderChangeEvent, layout::use_box,
+        HtmlTag, Input, Variables,
+        common::{has_shortcut_modifier, shadow_sx},
+        form::SliderChangeEvent,
+        layout::use_box,
         variables,
     },
     hooks::{
@@ -173,7 +176,8 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
     });
 
     let onkeydown = use_callback(move |event: Event<KeyboardData>| {
-        if !interactive {
+        // Alt+ArrowLeft is Back: a chord is the browser's, not a step.
+        if !interactive || has_shortcut_modifier(&event) {
             return;
         }
         let step = match event.modifiers().shift() {

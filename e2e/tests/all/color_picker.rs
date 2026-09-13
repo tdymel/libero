@@ -77,6 +77,43 @@ fn home_end_and_the_page_keys_move_the_pad() {
     });
 }
 
+/// Alt+ArrowLeft is Back: neither the pad nor the hue thumb swallows a
+/// browser chord (todo 562).
+#[test]
+fn modifier_chords_are_left_to_the_browser() {
+    block_on(async {
+        let fixture = Fixture::open("/color-picker", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let keys = [
+            keyboard::ARROW_LEFT,
+            keyboard::ARROW_RIGHT,
+            keyboard::ARROW_UP,
+            keyboard::ARROW_DOWN,
+            keyboard::PAGE_UP,
+            keyboard::PAGE_DOWN,
+            keyboard::HOME,
+            keyboard::END,
+        ];
+        keyboard::tab_to(page, THUMB, 10).await.unwrap();
+        keyboard::assert_chords_ignored(page, &keys, READING)
+            .await
+            .unwrap();
+
+        let hue = "[role=slider][aria-label=Hue]";
+        keyboard::tab_to(page, hue, 10).await.unwrap();
+        keyboard::assert_chords_ignored(
+            page,
+            &keys,
+            &format!("document.querySelector({hue:?}).getAttribute('aria-valuenow')"),
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Focus starts on a button outside, so a thumb that never takes focus fails
 /// here rather than passing on focus it already had. The drag runs from a
 /// quarter into the pad to three quarters, so the reading names where it
