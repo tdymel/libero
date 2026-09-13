@@ -13,7 +13,27 @@ pub const ROUTES: Routes = &[
     ("/calendar", || rsx! { CalendarPage {} }),
     ("/calendar/range", || rsx! { RangePage {} }),
     ("/calendar/month", || rsx! { MonthPage {} }),
+    ("/calendar/mini", || rsx! { MiniPage {} }),
 ];
+
+/// `CalendarPage`'s day as the one-row mini strip.
+#[component]
+fn MiniPage() -> Element {
+    let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 3, 18));
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            DatePicker {
+                value: day(),
+                today: NaiveDate::from_ymd_opt(2026, 3, 18),
+                calendar: "mini",
+                onchange: move |next: Option<NaiveDate>| day.set(next),
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
 
 /// March 2026 picked and `today`; its title climbs to the year view.
 #[component]

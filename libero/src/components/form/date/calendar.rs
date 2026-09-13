@@ -11,7 +11,10 @@ use super::{
 use crate::{
     components::{
         ActionIcon, ClassList, HtmlTag, Input, States, Variant,
-        common::{ChevronLeftIcon, ChevronRightIcon, focus_ring_sx, inset_focus_ring_sx},
+        common::{
+            ChevronLeftIcon, ChevronRightIcon, focus_ring_sx, has_shortcut_modifier,
+            inset_focus_ring_sx,
+        },
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
@@ -501,6 +504,10 @@ impl View {
 
     /// The day grid's keys, from `tab_stop` in weekday column `column`.
     fn day_keydown(self, event: KeyboardEvent, tab_stop: NaiveDate, column: i64) {
+        // Alt+ArrowLeft is Back, Ctrl+PageUp switches tabs: a chord is the browser's.
+        if has_shortcut_modifier(&event) {
+            return;
+        }
         let years = if event.modifiers().shift() { 12 } else { 1 };
         // Disabled days are skipped: `focus()` on one does nothing, and the
         // grid would lose its only tab stop. An arrow with nothing left to
@@ -581,6 +588,9 @@ impl View {
 
     /// A step off the shown year or decade pages it.
     fn cell_keydown(self, event: KeyboardEvent, cell_stop: NaiveDate) {
+        if has_shortcut_modifier(&event) {
+            return;
+        }
         let level = (self.level)();
         let (months_per_cell, cells_per_page, column) = match level {
             DateLevel::Day => return,
@@ -890,6 +900,9 @@ impl Strip {
     }
 
     fn keydown(self, view: View, event: KeyboardEvent) {
+        if has_shortcut_modifier(&event) {
+            return;
+        }
         let next = match event.key() {
             Key::ArrowLeft => view.seek(add_days(self.stop, -1), -1),
             Key::ArrowRight => view.seek(add_days(self.stop, 1), 1),

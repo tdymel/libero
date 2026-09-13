@@ -376,6 +376,39 @@ fn the_month_and_year_views_are_grids() {
     });
 }
 
+/// Alt+ArrowLeft is Back, Ctrl+PageUp switches tabs: the day grid, the month
+/// grid and the mini strip leave a browser chord alone (todo 562).
+#[test]
+fn modifier_chords_are_left_to_the_browser() {
+    const FOCUS: &str = "[document.activeElement.getAttribute('data-date'), \
+         document.querySelector('[role=grid]')?.getAttribute('aria-label')]";
+    let keys = [
+        keyboard::ARROW_LEFT,
+        keyboard::ARROW_RIGHT,
+        keyboard::ARROW_UP,
+        keyboard::ARROW_DOWN,
+        keyboard::PAGE_UP,
+        keyboard::PAGE_DOWN,
+        keyboard::HOME,
+        keyboard::END,
+    ];
+    block_on(async {
+        for (path, stop) in [
+            ("/calendar", STOP),
+            ("/calendar/month", "[role=grid] [data-date='2026-03-01']"),
+            ("/calendar/mini", "[data-date='2026-03-18']"),
+        ] {
+            let fixture = Fixture::open(path, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, stop, 10).await.unwrap();
+            keyboard::assert_chords_ignored(page, &keys, FOCUS)
+                .await
+                .unwrap_or_else(|e| panic!("{path}: {e}"));
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// Waits until focus is on `date`'s own cell in the grid titled `month`.
 async fn expect_focus(page: &chromiumoxide::Page, date: &str, month: &str, what: &str, at: &str) {
     let check = format!(
