@@ -1084,9 +1084,19 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
             subscription.set(None);
             return;
         };
+        // Reduced motion switched on while rotating pauses it; a Play pressed
+        // under it already stays pressed (todo 567).
+        let reduced = std::cell::Cell::new(prefers_reduced_motion());
         let handle = timer.every(
             Duration::from_millis(delay.max(1) as u64),
             Box::new(move || {
+                let now = prefers_reduced_motion();
+                if now && !reduced.replace(now) {
+                    let mut paused = paused;
+                    paused.set(true);
+                    return;
+                }
+                reduced.set(now);
                 let mut ticks = ticks;
                 ticks += 1;
             }),

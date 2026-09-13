@@ -602,6 +602,57 @@ fn autoplay_waits_for_its_control_under_reduced_motion() {
     });
 }
 
+/// Todo 567: reduced motion switched on while it rotates pauses it, not only
+/// at mount.
+#[test]
+fn autoplay_pauses_when_reduced_motion_turns_on() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let pause = "[aria-roledescription=carousel] button[aria-pressed]";
+        let start = index(page).await.unwrap();
+        wait::until("autoplay to advance", || async move {
+            Ok(index(page).await? != start)
+        })
+        .await
+        .unwrap();
+
+        motion::set_reduced_motion(page, true).await.unwrap();
+        motion::assert_reduced_motion_matches(page).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({pause:?}).getAttribute('aria-pressed') === 'true'"),
+            "the pause control to press once reduced motion is on",
+        )
+        .await
+        .unwrap();
+        let held = index(page).await.unwrap();
+        sleep(1200).await;
+        assert_eq!(
+            index(page).await.unwrap(),
+            held,
+            "rotated after reduced motion turned on"
+        );
+
+        // Play pressed under reduced motion is the reader's choice, and holds.
+        page.evaluate(format!("document.querySelector({pause:?}).click()"))
+            .await
+            .unwrap();
+        wait::until("autoplay to advance once started again", || async move {
+            Ok(index(page).await? != held)
+        })
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("autoplay after reduced motion turned on")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// On a short strip the pause control sat on top of Next: Next's focus ring
 /// was hidden (2.4.11) and a click on Next paused instead.
 #[test]
