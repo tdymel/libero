@@ -275,7 +275,7 @@ pub fn FloatingWindowPage() -> Element {
                 ]),
                 props("FloatingWindowHandle", vec![
                     prop("open()", "()").doc("Shows it and remembers where focus was. Does nothing when open."),
-                    prop("close()", "()").doc("Hides it and returns focus to whatever opened it."),
+                    prop("close()", "()").doc("Hides it and returns focus to whatever opened it, unless focus had already left the window."),
                     prop("toggle()", "()").doc("One or the other."),
                     prop("is_open()", "bool").doc("A subscribed read."),
                 ]),

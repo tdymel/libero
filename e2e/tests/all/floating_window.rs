@@ -46,8 +46,8 @@
 //! * **Pointer drag geometry.** `use_drag` is covered by its own hook tests,
 //!   and the keyboard path is the one that fails silently for a keyboard user.
 //!   Only the focus a drag leaves behind is asserted (todo 439c).
-//! * **Stacking.** One window on the page, so there is no order to measure;
-//!   `WindowHost`'s ordering has a unit test in `libero`.
+//! * **Stacking beyond open order.** `/floating-window-pair` checks that the
+//!   newer window stacks on top; raise-on-click is `WindowHost`'s unit test.
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -95,6 +95,7 @@ fn it_meets_the_baseline() {
         // the title away. `targets` was declared here first and went red
         // naming the 20x20, which is how the number above was measured.
         .targets_spaced(CLOSE)
+        .targets_spaced(SEPARATOR)
         .state(
             "open",
             &[Step::TabTo(TRIGGER), Step::Press(keyboard::ENTER)],
@@ -404,4 +405,99 @@ async fn assert_report(
 /// can hide inside it.
 fn close_to(a: f64, b: f64) -> bool {
     (a - b).abs() <= 1.0
+}
+
+/// Two windows: the newer one stacks on top, Escape closes only the window
+/// holding focus and hands focus to its own trigger, and a close from the page
+/// leaves focus where the user put it rather than pulling it to the trigger.
+#[test]
+fn each_window_closes_alone_and_a_close_from_the_page_keeps_focus() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window-pair", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        activate(page, "#open-first").await;
+        wait_for(page, "document.querySelectorAll('[role=dialog]').length === 1 && document.querySelector('[role=dialog]').contains(document.activeElement)", "the first window to take focus").await;
+        activate(page, "#open-second").await;
+        wait_for(
+            page,
+            "document.querySelectorAll('[role=dialog]').length === 2",
+            "the second window",
+        )
+        .await;
+        let z: Vec<i32> = page
+            .evaluate("[...document.querySelectorAll('[role=dialog]')].map(d => +getComputedStyle(d.parentElement).zIndex)")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(z[1] > z[0], "the window opened last stacks on top: {z:?}");
+
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        wait_for(page, "document.querySelectorAll('[role=dialog]').length === 1 && document.activeElement?.id === 'open-second'", "Escape to close only the second window and focus its trigger").await;
+
+        activate(page, "#close-first").await;
+        wait_for(
+            page,
+            "document.querySelectorAll('[role=dialog]').length === 0",
+            "the first window to close",
+        )
+        .await;
+        tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        let active: String = page
+            .evaluate("document.activeElement?.id ?? ''")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(active, "close-first", "a close from the page moved focus");
+        fixture.console.assert_clean("two windows").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A title with no break opportunity wraps in the title bar at 320px instead
+/// of being clipped by the window (1.4.10).
+#[test]
+fn a_long_title_wraps_at_320px() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+    block_on(async {
+        let fixture = Fixture::open("/floating-window-pair", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(SetDeviceMetricsOverrideParams::new(320, 640, 1.0, true))
+            .await
+            .unwrap();
+        activate(page, "#open-first").await;
+        wait::for_visible(page, DIALOG).await.unwrap();
+        let overflows: Vec<serde_json::Value> = page
+            .evaluate(
+                "[document.documentElement, document.querySelector('[role=dialog]'), document.querySelector('[role=dialog] h2')] \
+                 .filter(e => e.scrollWidth > e.clientWidth).map(e => [e.tagName, e.scrollWidth, e.clientWidth])",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(overflows.is_empty(), "320px: {overflows:?}");
+        fixture.console.assert_clean("a long title").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Focus `selector` and press Enter on it.
+async fn activate(page: &Page, selector: &str) {
+    page.evaluate(format!(
+        "document.querySelector({}).focus()",
+        serde_json::to_string(selector).unwrap()
+    ))
+    .await
+    .unwrap();
+    keyboard::press(page, keyboard::ENTER).await.unwrap();
+}
+
+async fn wait_for(page: &Page, js: &str, what: &str) {
+    wait::for_js_true(page, js, what).await.unwrap();
 }

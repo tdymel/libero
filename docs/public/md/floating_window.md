@@ -75,7 +75,7 @@ handle, so the body can close its own window.
 | `FloatingWindowHandle` | What |
 |---|---|
 | `open()` | Show it; remembers where focus was. No-op when open |
-| `close()` | Hide it; focus returns to whatever opened it |
+| `close()` | Hide it; focus returns to whatever opened it, unless it had already left the window |
 | `toggle()` | One or the other |
 | `is_open()` | Subscribed read |
 
@@ -115,7 +115,7 @@ run from 250, capped below the overlay layer however many windows are open.
 
 - Give it a `title`: it names the window.
 - It takes focus on open; Escape, the close button or `close()` hands focus
-  back to the trigger.
+  back to the trigger. A `close()` from elsewhere on the page leaves focus there.
 - The title bar is a tab stop: Arrow moves 10px (`move_step`), Shift+Arrow 1px.
 - On the resize handle Arrow resizes by `resize_step`, Shift+Arrow by 1px, and
   Home/End ask for the smallest/largest size the constraints allow.

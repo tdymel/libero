@@ -15,7 +15,7 @@ use crate::{
         Drag, DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, escape_closes,
         use_drag, use_element, use_id, use_silent_focus_within,
     },
-    platform::ElementApi,
+    platform::{ElementApi, PlatformError},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, PAPER_BORDER_COLOR, Size, SizeCss},
 };
@@ -207,6 +207,17 @@ fn read_bounds(root: ElementHandle, mut bounds: Signal<Option<WindowBounds>>) {
     });
 }
 
+/// Whether focus is known to be outside `root`. A platform that cannot say
+/// answers `false`, so focus still returns to the trigger.
+fn focus_elsewhere(root: &ElementHandle) -> bool {
+    match root.query_selector(":focus") {
+        Ok(_) => false,
+        _ if root.is_focused() => false,
+        Err(PlatformError::Unsupported) => false,
+        Err(_) => true,
+    }
+}
+
 /// Reads the window's current rect and hands it to `callback`. The reads
 /// start here, in the handler, and are awaited in the task - see
 /// `platform::Read`.
@@ -229,6 +240,8 @@ fn report(root: crate::hooks::ElementHandle, callback: Option<Callback<WindowRec
 pub(crate) struct FloatingWindowProps {
     options: FloatingWindowOptions,
     onclose: Callback<()>,
+    /// Hands the handle's `close` a way to ask whether focus left the window.
+    onmount: Callback<Callback<(), bool>>,
     children: Element,
 }
 
@@ -251,6 +264,9 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     let onclose = props.onclose;
     let title_id = use_id();
     let root = use_element();
+    let focus_left = use_callback(move |()| focus_elsewhere(&root));
+    let onmount = props.onmount;
+    use_hook(move || onmount.call(focus_left));
     crate::components::common::use_name_warning(
         title.is_some() || aria_label.is_some(),
         "FloatingWindow: no `title` or `aria_label` in its options, so it is announced as \

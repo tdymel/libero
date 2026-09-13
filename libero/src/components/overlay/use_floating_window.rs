@@ -10,6 +10,8 @@ use crate::{
 pub struct FloatingWindowHandle {
     open: Signal<bool>,
     focus_return: FocusReturn,
+    /// The open window's "has focus left me?", asked in its own scope.
+    focus_left: Signal<Option<Callback<(), bool>>>,
 }
 
 impl FloatingWindowHandle {
@@ -20,18 +22,24 @@ impl FloatingWindowHandle {
             return;
         }
         self.focus_return.remember_active();
+        let mut focus_left = self.focus_left;
+        focus_left.set(None);
         let mut open = self.open;
         open.set(true);
     }
 
-    /// Hides the window and returns focus to whatever opened it.
+    /// Hides the window and returns focus to whatever opened it, unless focus
+    /// has moved on to the page or another window: a non-modal window leaves it there.
     pub fn close(&self) {
         if !*self.open.peek() {
             return;
         }
+        let elsewhere = (*self.focus_left.peek()).is_some_and(|left| left.call(()));
         let mut open = self.open;
         open.set(false);
-        self.focus_return.restore();
+        if !elsewhere {
+            self.focus_return.restore();
+        }
     }
 
     pub fn toggle(&self) {
@@ -53,7 +61,8 @@ impl FloatingWindowHandle {
 /// window owns where it is and how big.
 ///
 /// It is not a modal: no focus trap, no overlay, and the page stays usable.
-/// Focus moves into the window on open and back to the trigger on close.
+/// Focus moves into the window on open and back to the trigger on close,
+/// unless it had already left the window.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -77,14 +86,20 @@ pub fn use_floating_window(
 ) -> FloatingWindowHandle {
     let open = use_signal(|| false);
     let focus_return = use_focus_return();
-    let handle = FloatingWindowHandle { open, focus_return };
+    let mut focus_left = use_signal(|| None);
+    let handle = FloatingWindowHandle {
+        open,
+        focus_return,
+        focus_left,
+    };
     // `use_callback`, so a closure rebuilt each render keeps its captures live.
     let render = use_callback(render);
     let onclose = use_callback(move |()| handle.close());
+    let onmount = use_callback(move |left| focus_left.set(Some(left)));
 
     let content = open().then(|| {
         rsx! {
-            FloatingWindow { options, onclose, {render.call(handle)} }
+            FloatingWindow { options, onclose, onmount, {render.call(handle)} }
         }
     });
     use_portal(content);

@@ -9,7 +9,44 @@ use libero::{
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/floating-window", || rsx! { FloatingWindowPage {} })];
+pub const ROUTES: Routes = &[
+    ("/floating-window", || rsx! { FloatingWindowPage {} }),
+    ("/floating-window-pair", || rsx! { WindowPairPage {} }),
+];
+
+/// Two windows over one page: stacking, one Escape per window, focus return
+/// from each, a close from the page, and a long title at 320px.
+#[component]
+fn WindowPairPage() -> Element {
+    let first = use_floating_window(
+        FloatingWindowOptions {
+            title: Some("Configurationinspectorforthecurrentlyselectedlayer".into()),
+            resizable: true,
+            ..Default::default()
+        },
+        |window| {
+            rsx! {
+                Button { id: "first-done", variant: "text", onclick: move |_| window.close(), "Done" }
+            }
+        },
+    );
+    let second = use_floating_window(
+        FloatingWindowOptions {
+            title: Some("Second".into()),
+            placement: "top-start".into(),
+            ..Default::default()
+        },
+        |_| rsx! { Text { "The second window." } },
+    );
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "open-first", variant: "outlined", onclick: move |_| first.open(), "First" }
+            Button { id: "open-second", variant: "outlined", onclick: move |_| second.open(), "Second" }
+            Button { id: "close-first", variant: "outlined", onclick: move |_| first.close(), "Close first" }
+        }
+    }
+}
 
 /// `FloatingWindow`: a non-modal window whose live state is its geometry.
 ///
