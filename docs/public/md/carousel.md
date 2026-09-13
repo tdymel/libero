@@ -149,7 +149,8 @@ it: a real pause control, pause on hover, and pause on focus landing anywhere
 inside. The pause control is a button rather than a hover affordance, because
 hovering helps neither a keyboard nor a touch user. While it rotates unattended
 the live region is `aria-live="off"`, and it becomes polite again the moment it
-stops.
+stops. Under `prefers-reduced-motion: reduce` it opens paused; the pause control
+starts it.
 
 ```rust,ignore
 Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: slides() }

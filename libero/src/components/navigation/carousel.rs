@@ -19,7 +19,10 @@ use crate::{
         Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id,
         use_silent_focus_within, use_theme,
     },
-    platform::{ElementApi, TimerSubscription, arrow_target, key_taken, timer, typing_target},
+    platform::{
+        ElementApi, TimerSubscription, arrow_target, key_taken, prefers_reduced_motion, timer,
+        typing_target,
+    },
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CAROUSEL_CONTROL_BACKGROUND, CAROUSEL_CONTROL_COLOR, CAROUSEL_CONTROL_HOVER_BACKGROUND,
@@ -687,7 +690,8 @@ base_props! {
         #[props(default)]
         draggable: bool,
         /// Advances on a timer. Ships with a pause control, and pauses itself
-        /// on hover and on focus within, per WCAG 2.2.2.
+        /// on hover and on focus within, per WCAG 2.2.2. Starts paused under
+        /// reduced motion.
         #[props(default)]
         autoplay: bool,
         /// Milliseconds between advances. Defaults to the theme's.
@@ -944,7 +948,8 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
     let mut current = use_signal(|| controlled.unwrap_or(0));
     let mut settled = use_signal(|| controlled.unwrap_or(0));
 
-    let paused = use_signal(|| false);
+    // Reduced motion starts paused: the pause control starts it (todo 551).
+    let paused = use_signal(prefers_reduced_motion);
     let hovered = use_signal(|| false);
     let focused = use_signal(|| false);
     let mut subscription = use_signal(|| None::<Box<dyn TimerSubscription>>);

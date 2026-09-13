@@ -33,6 +33,7 @@ use chromiumoxide::Page;
 use e2e::archetypes::reset_tab_position;
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
+use e2e::passes::motion;
 use e2e::passes::pointer;
 use e2e::passes::target_size::MINIMUM;
 use e2e::suite::Step;
@@ -549,6 +550,54 @@ fn autoplay_pauses_on_focus_and_on_its_control() {
         );
 
         fixture.console.assert_clean("autoplay").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 551: under reduced motion autoplay starts paused, and the control
+/// starts it.
+#[test]
+fn autoplay_waits_for_its_control_under_reduced_motion() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, true).await.unwrap();
+        // The pause state is read once, at mount.
+        page.reload().await.unwrap();
+        motion::assert_reduced_motion_matches(page).await.unwrap();
+        let pause = "[aria-roledescription=carousel] button[aria-pressed]";
+        wait::for_visible(page, pause).await.unwrap();
+        let start = index(page).await.unwrap();
+        sleep(1200).await;
+        assert_eq!(
+            index(page).await.unwrap(),
+            start,
+            "rotated under reduced motion"
+        );
+        let pressed: String = page
+            .evaluate(format!(
+                "document.querySelector({pause:?}).getAttribute('aria-pressed')"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(pressed, "true", "the pause control under reduced motion");
+
+        page.evaluate(format!("document.querySelector({pause:?}).click()"))
+            .await
+            .unwrap();
+        wait::until("autoplay to advance once started", || async move {
+            Ok(index(page).await? != start)
+        })
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("autoplay under reduced motion")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }
