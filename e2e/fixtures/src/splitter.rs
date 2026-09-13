@@ -5,7 +5,10 @@ use libero::components::{Button, Flex, Splitter, Text};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/splitter", || rsx! { SplitterPage {} })];
+pub const ROUTES: Routes = &[
+    ("/splitter", || rsx! { SplitterPage {} }),
+    ("/splitter/min-size", || rsx! { MinSizePage {} }),
+];
 
 /// A `Splitter` between two buttons, so focus has somewhere to be before a
 /// drag and a Shift+Tab never sits at the document edge.
@@ -23,6 +26,26 @@ fn SplitterPage() -> Element {
                 }
             }
             Button { id: "after", "After" }
+        }
+    }
+}
+
+/// `#raise` lifts `min_size` from 10 to 40 after the divider has moved.
+#[component]
+fn MinSizePage() -> Element {
+    let mut min_size = use_signal(|| 10.0);
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "raise", onclick: move |_| min_size.set(40.0), "Raise" }
+            div { style: "height: 160px",
+                Splitter {
+                    initial_size: 50.0,
+                    min_size: min_size(),
+                    aria_label: "Resize panes",
+                    panel_a: rsx! { Text { "Pane A" } },
+                    panel_b: rsx! { Text { "Pane B" } },
+                }
+            }
         }
     }
 }

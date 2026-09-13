@@ -182,6 +182,8 @@ pub fn Splitter(props: SplitterProps) -> Element {
         "Splitter: `initial_size` must be a finite number.",
     );
     let mut a = use_signal(|| initial_size.clamp(min_size, 100.0 - min_size));
+    // A `min_size` raised after mount pulls pane A up to the new floor.
+    let bounded = move || a().clamp(min_size, 100.0 - min_size);
     // Container width (vertical) or height (horizontal), measured once at
     // pointerdown to turn the drag's pixel delta into a percentage.
     let mut container_size = use_signal(|| 0.0_f64);
@@ -219,8 +221,9 @@ pub fn Splitter(props: SplitterProps) -> Element {
                 // it can see the press's target: this covers the other renderers.
                 let _ = divider.focus();
                 container_size.set(size);
-                start_a.set(a());
-                notify(SplitterResizeEvent::Start(a(), 100.0 - a()));
+                let from = bounded();
+                start_a.set(from);
+                notify(SplitterResizeEvent::Start(from, 100.0 - from));
             });
         }),
         onmove: use_callback(move |event: DragMove| {
@@ -232,7 +235,8 @@ pub fn Splitter(props: SplitterProps) -> Element {
             notify(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
         }),
         onend: use_callback(move |()| {
-            notify(SplitterResizeEvent::End(a(), 100.0 - a()));
+            let to = bounded();
+            notify(SplitterResizeEvent::End(to, 100.0 - to));
         }),
     });
 
@@ -243,7 +247,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
             theme.splitter.step
         };
 
-        let current = a();
+        let current = bounded();
         // `Change` then `End`: a key press settles on its size at once, and
         // `End` is where the docs tell a caller to persist the layout.
         let mut go_to = |new_a: f64| {
@@ -273,7 +277,8 @@ pub fn Splitter(props: SplitterProps) -> Element {
         .with("dragging", (drag.dragging)())
         .into();
 
-    let variables: Input<Variables> = splitter_variables(a(), props.divider_color.as_ref()).into();
+    let variables: Input<Variables> =
+        splitter_variables(bounded(), props.divider_color.as_ref()).into();
 
     // The two panes carry a static framework style and nothing else, so they
     // are classes on plain elements rather than component scopes.

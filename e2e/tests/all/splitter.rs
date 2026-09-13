@@ -60,3 +60,61 @@ fn a_drag_leaves_the_divider_focused_for_the_arrow_keys() {
         }
     });
 }
+
+/// A floor raised after the divider moved pulls pane A up to it, and the
+/// separator never reports a value outside its own bounds.
+#[test]
+fn a_raised_min_size_clamps_the_moved_divider() {
+    block_on(async {
+        let fixture = Fixture::open("/splitter/min-size", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, DIVIDER, 5).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{VALUE_NOW} === '50'"),
+            "the divider to start at 50",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::HOME).await.unwrap();
+        wait::for_js_true(page, &format!("{VALUE_NOW} === '10'"), "Home to reach 10")
+            .await
+            .unwrap();
+
+        pointer::click(page, "#raise").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=separator]').getAttribute('aria-valuemin') === '40'",
+            "the floor to rise to 40",
+        )
+        .await
+        .unwrap();
+
+        let now: String = page
+            .evaluate(VALUE_NOW)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(now, "40", "aria-valuenow below the raised aria-valuemin");
+        let pane_share: f64 = page
+            .evaluate(
+                "(() => { const s = document.querySelector('[role=separator]'); \
+                 const a = document.getElementById(s.getAttribute('aria-controls')); \
+                 return a.getBoundingClientRect().width / a.parentElement.getBoundingClientRect().width * 100; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            (pane_share - 40.0).abs() < 1.0,
+            "pane A is drawn at {pane_share:.1}%, under the 40% floor"
+        );
+
+        fixture.console.assert_clean("a raised min_size").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

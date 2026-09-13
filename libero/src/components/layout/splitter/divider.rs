@@ -106,7 +106,10 @@ pub(super) fn SplitterDivider(
             "aria-orientation",
             if vertical { "vertical" } else { "horizontal" },
         )
-        .attr("aria-valuenow", (a() as i64).to_string())
+        .attr(
+            "aria-valuenow",
+            (a().clamp(min_size, 100.0 - min_size) as i64).to_string(),
+        )
         .attr("aria-valuemin", (min_size as i64).to_string())
         .attr("aria-valuemax", ((100.0 - min_size) as i64).to_string())
         .event("onpointerdown", onpointerdown)
