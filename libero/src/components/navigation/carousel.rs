@@ -267,6 +267,16 @@ static CAROUSEL_PAUSE_SX: StaticSx = StaticSx::new(|| {
         .and(shadow_sx(SizeCss::SHADOW.value(Size::Sm)))
         .cursor("pointer")
         .selector("& > svg", sx().width("55%").height("55%"))
+        // Beside Next's column, not in it: on a short strip the corner is where
+        // Next sits, and the pause button covered it.
+        .when(
+            "beside-next",
+            sx().right(format!(
+                "calc(2 * {} + {})",
+                CAROUSEL_CONTROLS_OFFSET.value(),
+                CAROUSEL_CONTROL_SIZE.value()
+            )),
+        )
         .focus_visible(focus_ring_sx())
 });
 
@@ -421,8 +431,8 @@ fn is_clone(raw: usize, count: usize, clones: usize) -> bool {
 /// Whether a controlled index's scroll is instant: the first one after mount,
 /// or one that arrives with a swap of the slides ([`CarouselJump`]). Only when
 /// it moves at all: where the strip already is, no scroll settles, and a
-/// raised `seam` would never come down. A looping strip is placed by its own
-/// mount effect.
+/// raised `seam` would never come down. A looping strip mounts on a clone, so
+/// its first scroll always moves.
 fn instant_scroll(
     first_scroll: bool,
     swapped: bool,
@@ -431,7 +441,7 @@ fn instant_scroll(
     from: usize,
     first: usize,
 ) -> bool {
-    (first_scroll && clones == 0 && index != first) || (swapped && index != from)
+    (first_scroll && (clones > 0 || index != first)) || (swapped && index != from)
 }
 
 /// Provided by a caller that replaces a controlled carousel's slides and its
@@ -843,7 +853,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
                 }
             }
             if props.autoplay && !empty {
-                {carousel_pause_button(view)}
+                {carousel_pause_button(view, controls)}
             }
             if indicators {
                 CarouselIndicators { view }
@@ -980,14 +990,6 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         nav.pull_into_range();
     }));
 
-    // A looping strip opens on a clone unless it is put right: index 0 is
-    // `clones` items in.
-    use_effect(use_reactive!(|nav, clones| {
-        if clones > 0 {
-            nav.scroll_to_raw(nav.raw_for(*nav.current.peek()));
-        }
-    }));
-
     // The seam jump itself, from an effect rather than from the handler that
     // asks for it. The jump is only instant under the `seam` state's
     // `scroll-behavior: auto`, and a state raised in a handler is not in the
@@ -998,6 +1000,18 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
     use_effect(use_reactive!(|nav| {
         if seam() {
             nav.scroll_to_raw(nav.raw_for(*nav.current.peek()));
+        }
+    }));
+
+    // A looping strip opens on a clone: the first placement raises `seam` so it is
+    // instant. Placed after the seam effect, which would scroll before `seam` lands.
+    let mut placed = use_signal(|| false);
+    use_effect(use_reactive!(|nav, clones| {
+        if clones > 0 {
+            match std::mem::replace(&mut *placed.write(), true) {
+                false => seam.set(true),
+                true => nav.scroll_to_raw(nav.raw_for(*nav.current.peek())),
+            }
         }
     }));
 
@@ -1579,15 +1593,18 @@ fn CarouselStatus(view: CarouselView) -> Element {
 
 /// The autoplay toggle. Its name stays the same whether the slideshow runs or
 /// not: `aria-pressed` carries the state.
-fn carousel_pause_button(view: CarouselView) -> Element {
+fn carousel_pause_button(view: CarouselView, controls: bool) -> Element {
     let mut paused = view.state.paused;
     let theme = view.theme;
+    let beside_next = controls && view.setup.orientation == Orientation::Horizontal;
+    let pause_states: Input<States> = states().with("beside-next", beside_next).into();
 
     rsx! {
         Box {
             component: "button",
             r#type: "button",
             framework_sx: &CAROUSEL_PAUSE_SX,
+            states: pause_states,
             aria_label: theme.pause_label,
             aria_pressed: paused().to_string(),
             onclick: move |_| paused.toggle(),
@@ -2094,7 +2111,8 @@ mod tests {
         assert!(!instant_scroll(false, false, 0, 5, 0, 0));
         assert!(!instant_scroll(true, false, 0, 0, 0, 0));
         assert!(!instant_scroll(true, false, 0, 2, 2, 2));
-        assert!(!instant_scroll(true, false, 2, 5, 0, 0));
+        // A looping strip mounts on a clone: its first scroll always moves.
+        assert!(instant_scroll(true, false, 2, 0, 0, 0));
     }
 
     /// Todo 367: a swap counts once. The second read of the same count is no

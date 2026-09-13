@@ -442,6 +442,199 @@ async fn dot_centre(page: &Page, n: usize) -> Result<pointer::Point> {
     Ok(pointer::Point { x, y })
 }
 
+/// A clone showing in the viewport is the only live copy of its slide, so it
+/// cannot be `aria-hidden`: its button took Tab while hidden from a screen
+/// reader (axe `aria-hidden-focus`), and its slide was missing from the tree.
+#[test]
+#[ignore = "todo 544"]
+fn a_visible_clone_is_not_hidden_from_assistive_tech() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/loop", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('[aria-roledescription=carousel] [inert]').length > 0",
+            "the offscreen slides to go inert",
+        )
+        .await
+        .unwrap();
+        let hidden_focusable: Vec<String> = page
+            .evaluate(
+                "[...document.querySelectorAll('[aria-roledescription=carousel] [aria-hidden=true]')]\
+                 .flatMap(h => [...h.querySelectorAll('button, a[href], input, [tabindex]')])\
+                 .filter(el => !el.closest('[inert]'))\
+                 .map(el => el.textContent)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            hidden_focusable.is_empty(),
+            "focusable content under aria-hidden: {hidden_focusable:?}"
+        );
+        let names: Vec<String> = page
+            .evaluate(
+                "[...document.querySelectorAll('[aria-roledescription=slide]')]\
+                 .filter(el => !el.closest('[inert]'))\
+                 .map(el => el.getAttribute('aria-label'))",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            names,
+            ["5 of 5", "1 of 5", "2 of 5"],
+            "the live slide groups"
+        );
+        fixture
+            .console
+            .assert_clean("a looping carousel at rest")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// WCAG 2.2.2: autoplay advances, stops while focus is inside, and the pause
+/// control stops it for good. The status is silent while it rotates.
+#[test]
+fn autoplay_pauses_on_focus_and_on_its_control() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let live = "document.querySelector('[aria-roledescription=carousel] [role=status]')\
+                    .getAttribute('aria-live')";
+        let start = index(page).await.unwrap();
+        wait::until("autoplay to advance", || async move {
+            Ok(index(page).await? != start)
+        })
+        .await
+        .unwrap();
+        let polite: String = page.evaluate(live).await.unwrap().into_value().unwrap();
+        assert_eq!(polite, "off", "the status while rotating");
+
+        reach(page, TRACK).await.unwrap();
+        let held = index(page).await.unwrap();
+        sleep(1200).await;
+        assert_eq!(
+            index(page).await.unwrap(),
+            held,
+            "rotated with focus inside"
+        );
+        let polite: String = page.evaluate(live).await.unwrap().into_value().unwrap();
+        assert_eq!(polite, "polite", "the status once rotation stops");
+
+        let pause = "[aria-roledescription=carousel] button[aria-pressed]";
+        keyboard::tab_to(page, pause, TAB_BUDGET).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({pause:?}).getAttribute('aria-pressed') === 'true'"),
+            "the pause control to press",
+        )
+        .await
+        .unwrap();
+        reach(page, "#before").await.unwrap();
+        let held = index(page).await.unwrap();
+        sleep(1200).await;
+        assert_eq!(
+            index(page).await.unwrap(),
+            held,
+            "rotated after the pause control"
+        );
+
+        fixture.console.assert_clean("autoplay").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// On a short strip the pause control sat on top of Next: Next's focus ring
+/// was hidden (2.4.11) and a click on Next paused instead.
+#[test]
+fn the_pause_control_leaves_next_uncovered() {
+    block_on(async {
+        for viewport in [Viewport::Desktop, Viewport::Mobile] {
+            let fixture = Fixture::open("/carousel/autoplay", viewport).await.unwrap();
+            let hit: bool = fixture
+                .page
+                .evaluate(format!(
+                    "(() => {{ const next = document.querySelector({NEXT:?}); \
+                     const r = next.getBoundingClientRect(); \
+                     const at = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); \
+                     return next.contains(at); }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(hit, "something covers Next's centre at {viewport:?}");
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// A looping strip opens on slide 1, drawn where the component thinks it is.
+/// Smooth, the opening scroll swept past the clones, and in a background page
+/// never landed: the drawn slides were `inert` and the live ones offscreen.
+#[test]
+fn a_looping_strip_opens_on_its_first_slide() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/loop", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate_on_new_document(format!(
+            "window.__carouselSamples = []; \
+             requestAnimationFrame(function sample() {{ \
+             const t = document.querySelector({TRACK:?}); \
+             if (t) window.__carouselSamples.push(t.scrollLeft); \
+             if (window.__carouselSamples.length < 120) requestAnimationFrame(sample); }});"
+        ))
+        .await
+        .unwrap();
+        page.reload().await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "(() => {{ const t = document.querySelector({TRACK:?})?.getBoundingClientRect(); \
+                 const s = document.querySelector('[aria-label=\"1 of 5\"]')?.getBoundingClientRect(); \
+                 if (!t || !s) return false; const mid = s.x + s.width / 2; return mid > t.left && mid < t.right; }})()"
+            ),
+            "slide 1 to be drawn inside the track",
+        )
+        .await
+        .unwrap();
+        // Sampled from load: an instant placement has no frame between the two.
+        let between: Vec<f64> = page
+            .evaluate(format!(
+                "window.__carouselSamples.filter(v => v > 0 && \
+                 v < document.querySelector({TRACK:?}).scrollLeft - 1)"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            between.is_empty(),
+            "the opening scroll swept through {between:?}"
+        );
+        fixture
+            .console
+            .assert_clean("a looping carousel's mount")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn sleep(ms: u64) {
+    tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
+}
+
 /// Forced colours paint every dot `Canvas`: the strip vanished, and with it
 /// which slide is current (todo 524).
 #[test]

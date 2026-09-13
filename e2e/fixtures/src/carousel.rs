@@ -5,7 +5,52 @@ use libero::components::{Button, Carousel, Flex, Slider, SliderChangeEvent, Text
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/carousel", || rsx! { CarouselPage {} })];
+pub const ROUTES: Routes = &[
+    ("/carousel", || rsx! { CarouselPage {} }),
+    ("/carousel/loop", || rsx! { LoopPage {} }),
+    ("/carousel/autoplay", || rsx! { AutoplayPage {} }),
+];
+
+/// Five slides with a button each, three up and looping: at rest on slide 1
+/// the centred strip shows the clone of slide 5 on its left.
+#[component]
+fn LoopPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "600px",
+            Carousel {
+                aria_label: "Looping cards",
+                per_view: 3.0,
+                r#loop: true,
+                slides: (1..=5)
+                    .map(|n| rsx! {
+                        Button { variant: "outlined", "Open {n}" }
+                    })
+                    .collect(),
+            }
+        }
+    }
+}
+
+/// Autoplay on a short delay, so a test sees it advance within its wait.
+#[component]
+fn AutoplayPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Button { id: "before", variant: "outlined", "Before" }
+            Carousel {
+                aria_label: "Rotating",
+                autoplay: true,
+                autoplay_delay: 400u32,
+                indicators: true,
+                slides: (1..=4)
+                    .map(|n| rsx! {
+                        Text { "Slide {n}" }
+                    })
+                    .collect(),
+            }
+        }
+    }
+}
 
 /// The fixture for the one thing a carousel cannot get from structure: a key
 /// pressed **inside** a slide.
