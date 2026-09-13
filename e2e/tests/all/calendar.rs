@@ -400,28 +400,76 @@ async fn expect_focus(page: &chromiumoxide::Page, date: &str, month: &str, what:
     }
 }
 
+/// Switches the page to forced colours and waits until the media query reads so.
+async fn force_colours(page: &chromiumoxide::Page) {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    page.execute(
+        SetEmulatedMediaParams::builder()
+            .features(vec![MediaFeature::new("forced-colors", "active")])
+            .build(),
+    )
+    .await
+    .unwrap();
+    wait::for_js_true(
+        page,
+        "matchMedia('(forced-colors: active)').matches",
+        "forced colours to apply",
+    )
+    .await
+    .unwrap();
+}
+
+/// Forced colours turn every day's transparent border into a visible one, so
+/// today's did not stand out, and the range tint went `Canvas` (todo 537).
+#[test]
+fn today_and_the_range_show_in_forced_colours() {
+    block_on(async {
+        let fixture = Fixture::open("/calendar/range", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        force_colours(page).await;
+        let day = |date: &str| format!("[role=grid] [data-date='{date}']:not([data-outside])");
+        pointer::click(page, &day("2026-03-10")).await.unwrap();
+        pointer::click(page, &day("2026-03-13")).await.unwrap();
+        wait::for_visible(page, "[data-in-range]").await.unwrap();
+
+        // `Canvas` as this page resolves it; a border or fill that colour is none.
+        let colours: [String; 5] = page
+            .evaluate(format!(
+                "(() => {{ const probe = document.createElement('div'); \
+                 probe.style.background = 'Canvas'; document.body.append(probe); \
+                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+                 const at = s => getComputedStyle(document.querySelector(s)); \
+                 return [canvas, at({:?}).borderTopColor, at({:?}).borderTopColor, \
+                 at({range:?}).borderTopColor, at({range:?}).backgroundColor]; }})()",
+                day("2026-03-05"),
+                day("2026-03-18"),
+                range = day("2026-03-11"),
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let [canvas, plain, today, range_border, range_fill] = colours;
+        assert_eq!(plain, canvas, "a plain day draws a border");
+        assert_ne!(today, canvas, "today's border is not drawn");
+        assert!(
+            range_border != canvas || range_fill != canvas,
+            "an in-range day is marked neither by border ({range_border}) nor fill ({range_fill})"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Forced colours paint the picked day's fill `Canvas`, like every other day's,
 /// so only `aria-selected` told it apart (todo 524).
 #[test]
 fn the_picked_day_shows_in_forced_colours() {
-    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
     block_on(async {
         let fixture = Fixture::open("/calendar", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
-        page.execute(
-            SetEmulatedMediaParams::builder()
-                .features(vec![MediaFeature::new("forced-colors", "active")])
-                .build(),
-        )
-        .await
-        .unwrap();
-        wait::for_js_true(
-            page,
-            "matchMedia('(forced-colors: active)').matches",
-            "forced colours to apply",
-        )
-        .await
-        .unwrap();
+        force_colours(page).await;
         // The page itself is `Canvas`; a fill the same colour is no fill.
         let [picked, canvas]: [String; 2] = page
             .evaluate(format!(

@@ -187,10 +187,17 @@ static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             "& [data-selected]:focus-visible",
             inset_focus_ring_sx("-4px"),
         )
-        // Forced colours paint the picked day's fill `Canvas`, like every other.
+        // Forced colours paint the picked day's fill `Canvas`, like every other,
+        // drop the range tint, and draw every transparent border.
         .media(
             FORCED_COLORS,
             sx().selector(
+                "& :is([data-slot='day'], [data-slot='cell'])",
+                sx().border_color("Canvas"),
+            )
+            .selector("& [data-in-range]", sx().border_color("Highlight"))
+            .selector("& [data-today]", sx().border_color("CanvasText"))
+            .selector(
                 "& [data-selected]",
                 sx().background("Highlight")
                     .color("HighlightText")
