@@ -103,6 +103,10 @@ With `onstepclick`, completed steps and the current one are buttons, and
 pending ones too with `allow_next_steps`. Each is a tab stop in document order;
 Enter and Space activate. There are no arrow keys.
 
+With `OptionLabel::rich` the name replaces the drawn label for a screen reader,
+so it must contain the visible text: a voice-control user says what they see
+(WCAG 2.5.3).
+
 ## Theme
 
 `theme.stepper`: `size`, `sizes` (marker, font size, description font size, gap

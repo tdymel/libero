@@ -79,6 +79,9 @@ Plus `class`, `sx`, `states` and any global attribute (`id` seeds the ids below)
   `h3` assumes a section title above the accordion.
 - Every open panel is a region landmark, so a `Many` accordion with a dozen
   open sections produces a long landmark list.
+- With `OptionLabel::rich` the name replaces the drawn label for a screen
+  reader, so it must contain the visible text: a voice-control user says what
+  they see (WCAG 2.5.3).
 
 ## Theme
 
