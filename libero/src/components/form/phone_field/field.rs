@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input,
+        CaretKeys, ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input,
         common::{ChevronDownIcon, field_props},
         form::{FIELD_CONTROL_SX, use_bound, use_field, use_field_frame},
         layout::{BoxStyle, use_box},
@@ -131,7 +131,8 @@ field_props! {
         /// Draws a flag beside a country, in the picker and in the list. The
         /// library ships none: emoji flags render as two letters on Windows
         /// and an SVG sprite is ~44 KB gzipped, so a caller who wants flags
-        /// brings their own.
+        /// brings their own. Draw it decorative (`aria-hidden`, or `alt=""`):
+        /// the row and the button already say the country's name.
         #[props(default)]
         flag: Option<Callback<String, Element>>,
         /// Rules over the E.164, shown once the field loses focus or its form
@@ -288,6 +289,10 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let row_box = use_box().framework_sx(&ROW_SX).prepare();
 
     let opened = state.is_open() && !disabled && !readonly;
+    // The list opens on the current country, like a native `<select>`.
+    let home_row = offered(&props.countries)
+        .iter()
+        .position(|row| row.iso == country.iso);
     let rows = phone_rows(
         RowList {
             opened,
@@ -340,6 +345,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             picker_name: name_of(country),
             flag,
             opened,
+            home_row,
             disabled,
             readonly,
         },
@@ -358,6 +364,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             state,
             query,
             opened,
+            home_row,
             size,
             radius,
             disabled: disabled || readonly,
@@ -458,39 +465,57 @@ fn phone_rows(
     // Nothing is built while the list is closed. 240 rows is a `Vec<Element>`
     // and 240 name lookups per render, and a closed `ComboboxCore` draws none
     // of them - which is exactly the cost [[todos]] 29 is about.
-    match opened {
-        false => Vec::new(),
-        true => offered(codes)
-            .into_iter()
-            .filter(|country| {
-                needle.is_empty()
-                    || name_of(country).to_lowercase().contains(&needle)
-                    || country.iso.to_lowercase().starts_with(&needle)
-                    || country.dial.starts_with(needle.trim_start_matches('+'))
-            })
-            .map(|row| {
-                let name = name_of(row);
-                let drawn = flag.map(|flag| flag.call(row.iso.to_string()));
-                let pick = pick.clone();
-                let content = row_box.clone().render(
-                    HtmlTag::Div,
-                    Vec::new(),
-                    rsx! {
-                        {drawn}
-                        span { "data-slot": "name", "{name}" }
-                        span { "data-slot": "dial", "+{row.dial}" }
-                    },
-                );
-                rsx! {
-                    ComboboxOption {
-                        selected: row.iso == country.iso,
-                        onpick: move |_| pick(row, true),
-                        {content}
-                    }
-                }
-            })
-            .collect(),
+    if !opened {
+        return Vec::new();
     }
+    let dial = needle.trim_start_matches('+');
+    // Rank 0 starts with the query, 1 only contains it, so "fr" tops with France
+    // and Enter picks it, not the Central African Republic.
+    let rank = |country: &Country, name: &str| -> Option<u8> {
+        let lower = name.to_lowercase();
+        if needle.is_empty()
+            || lower.starts_with(&needle)
+            || country.iso.to_lowercase() == needle
+            || country.dial.starts_with(dial)
+        {
+            Some(0)
+        } else if lower.contains(&needle) || country.iso.to_lowercase().starts_with(&needle) {
+            Some(1)
+        } else {
+            None
+        }
+    };
+    let mut matched: Vec<(u8, &'static Country, String)> = offered(codes)
+        .into_iter()
+        .filter_map(|country| {
+            let name = name_of(country);
+            rank(country, &name).map(|rank| (rank, country, name))
+        })
+        .collect();
+    matched.sort_by_key(|(rank, _, _)| *rank);
+    matched
+        .into_iter()
+        .map(|(_, row, name)| {
+            let drawn = flag.map(|flag| flag.call(row.iso.to_string()));
+            let pick = pick.clone();
+            let content = row_box.clone().render(
+                HtmlTag::Div,
+                Vec::new(),
+                rsx! {
+                    {drawn}
+                    span { "data-slot": "name", "{name}" }
+                    span { "data-slot": "dial", "+{row.dial}" }
+                },
+            );
+            rsx! {
+                ComboboxOption {
+                    selected: row.iso == country.iso,
+                    onpick: move |_| pick(row, true),
+                    {content}
+                }
+            }
+        })
+        .collect()
 }
 
 /// What the country button shows and what its click toggles.
@@ -502,6 +527,8 @@ struct PickerButton {
     flag: Option<Callback<String, Element>>,
     /// Whether the list is drawn, which a disabled or read-only field never is.
     opened: bool,
+    /// The current country's row, which a click opens on.
+    home_row: Option<usize>,
     disabled: bool,
     readonly: bool,
 }
@@ -516,6 +543,7 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
         picker_name,
         flag,
         opened,
+        home_row,
         disabled,
         readonly,
     } = button;
@@ -524,13 +552,19 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
         .element(&element)
         // A button inside a form submits it unless it says otherwise.
         .attr_default("type", "button")
+        // What names the listbox.
+        .attr("id", picker_id(state))
         // Two elements cannot both be the combobox: while the list is open the
         // search box owns the role, `aria-controls` and the active descendant,
         // and the button keeps only what says a list hangs off it.
         .attr("aria-haspopup", "listbox")
         .attr("aria-expanded", opened.to_string())
-        // The content reads `DE +49`, which names a code and not a country.
-        .attr("aria-label", format!("Country: {picker_name}"))
+        // The content reads `DE +49`, which names a code and not a country; the
+        // name keeps it too, for speech input (WCAG 2.5.3).
+        .attr(
+            "aria-label",
+            format!("Country: {picker_name}, {} +{}", country.iso, country.dial),
+        )
         .attr("disabled", disabled)
         // Or clicking the button while the list is open closes it twice over:
         // the press blurs the search box, which closes the list, and the click
@@ -540,6 +574,9 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
         })
         .event("onclick", move |_: MouseEvent| {
             if !disabled && !readonly {
+                if !state.is_open() {
+                    state.set_active(home_row);
+                }
                 state.toggle();
             }
         })
@@ -567,6 +604,7 @@ struct Picker {
     state: ComboboxState,
     query: Signal<String>,
     opened: bool,
+    home_row: Option<usize>,
     size: Size,
     radius: Size,
     disabled: bool,
@@ -585,6 +623,7 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
         state,
         mut query,
         opened,
+        home_row,
         size,
         radius,
         disabled,
@@ -599,6 +638,10 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
                 onactive: move |row| state.set_active(Some(row)),
                 opened,
                 onopened: move |opened: bool| {
+                    // Over the row the opening arrow armed, as `Select` does.
+                    if opened && !state.is_open() {
+                        state.set_active(home_row);
+                    }
                     state.set_open(opened);
                     if !opened {
                         query.set(String::new());
@@ -614,11 +657,17 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
                 width: PopoverWidth::Min,
                 header: opened.then_some(search),
                 autofocus: search_element,
+                caret_keys: CaretKeys::Always,
+                labelled_by: Some(picker_id(state)),
                 {picker}
             }
         }),
         false => Some(prefix_box.render(HtmlTag::Span, Vec::new(), rsx! { "+{dial}" })),
     }
+}
+
+fn picker_id(state: ComboboxState) -> String {
+    format!("{}-picker", state.id())
 }
 
 /// What the national-number input shows and writes. The text is the

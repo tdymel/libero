@@ -137,10 +137,11 @@ fn the_picker_is_a_button_that_says_a_listbox_hangs_off_it() {
         button.get("aria-expanded").map(String::as_str),
         Some("false")
     );
-    // The content reads `US +1`, which names a code and not a country.
+    // The content reads `US +1`, which names a code and not a country; the name
+    // keeps it for speech input (2.5.3).
     assert_eq!(
         button.get("aria-label").map(String::as_str),
-        Some("Country: United States")
+        Some("Country: United States, US +1")
     );
     // Closed, there is no list to point at and nothing to announce.
     assert!(

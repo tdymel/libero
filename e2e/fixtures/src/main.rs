@@ -64,6 +64,7 @@ mod negative;
 mod notifications;
 mod number_field;
 mod pagination;
+mod phone_field;
 mod picker_dialog;
 mod pin_field;
 mod planted;
@@ -134,6 +135,7 @@ const FIXTURES: &[Routes] = &[
     notifications::ROUTES,
     number_field::ROUTES,
     pagination::ROUTES,
+    phone_field::ROUTES,
     picker_dialog::ROUTES,
     pin_field::ROUTES,
     planted::ROUTES,

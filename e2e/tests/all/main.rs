@@ -45,6 +45,7 @@ mod negative;
 mod notifications;
 mod number_field;
 mod pagination;
+mod phone_field;
 mod picker_dialog;
 mod pin_field;
 mod planted;
