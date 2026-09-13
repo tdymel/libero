@@ -55,6 +55,7 @@ mod lightbox;
 mod loader;
 mod long_labels;
 mod mark;
+mod marquee;
 mod menu;
 mod menubar;
 mod modal;
@@ -126,6 +127,7 @@ const FIXTURES: &[Routes] = &[
     loader::ROUTES,
     long_labels::ROUTES,
     mark::ROUTES,
+    marquee::ROUTES,
     menu::ROUTES,
     menubar::ROUTES,
     modal::ROUTES,

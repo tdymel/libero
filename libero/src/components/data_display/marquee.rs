@@ -157,6 +157,12 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
             "& > [data-slot='track']:focus-within",
             sx().animation_play_state("paused"),
         )
+        // The toggle could hide a focused link (2.4.11): transparent, not hidden, so Tab
+        // still reaches it. A sibling rule, not `:has()`, which Blitz drops.
+        .selector(
+            "& > [data-slot='track']:focus-within ~ [data-slot='pause']",
+            sx().opacity("0").pointer_events("none"),
+        )
         .when("fade-edges", fade_edges)
 });
 

@@ -84,7 +84,8 @@ fn Demo() -> Element {
 
 - **The pause toggle** is the WCAG 2.2.2 mechanism, a tab stop that `Enter` or
   `Space` toggles. `pause_on_hover` is not one, since neither a keyboard nor a
-  touch screen can hover.
+  touch screen can hover. It floats over the strip, so while focus is
+  on the content it turns transparent rather than cover a focused link.
 - **`paused` is strictly controlled when set.** The toggle then only reports
   through `onpausechange`; without the handler it does nothing.
 

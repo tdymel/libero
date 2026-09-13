@@ -36,6 +36,7 @@ mod lightbox;
 mod loader;
 mod long_labels;
 mod mark;
+mod marquee;
 mod menu;
 mod menubar;
 mod modal;
