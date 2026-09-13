@@ -6,7 +6,7 @@ use crate::{
     CssLayer,
     components::{
         ClassList, HtmlTag, Input, States, Variables,
-        common::{base_color, shadow_sx, variables},
+        common::{base_color, has_shortcut_modifier, shadow_sx, variables},
         layout::use_box,
         overlay::{PressFocus, Tooltip},
     },
@@ -501,7 +501,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     // One handler for both thumbs: the focused thumb is the one the keys
     // move, so the index comes from whichever element fired.
     let onkeydown = use_callback(move |(index, event): (usize, Event<KeyboardData>)| {
-        if !editable {
+        // Alt+ArrowLeft is Back, Ctrl+PageUp switches tabs: a chord is the browser's.
+        if !editable || has_shortcut_modifier(&event) {
             return;
         }
         // `step: 0` has no grid, so a key moves 1% of the range, as a native

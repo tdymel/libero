@@ -312,6 +312,36 @@ fn page_keys_and_shift_move_a_big_step() {
     });
 }
 
+/// Alt+ArrowLeft is Back, Ctrl+PageUp switches tabs: the thumb must not
+/// swallow a browser chord (todo 562).
+#[test]
+fn modifier_chords_are_left_to_the_browser() {
+    block_on(async {
+        use e2e::passes::keyboard;
+
+        let fixture = Fixture::open("/slider", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, THUMB, 10).await.unwrap();
+        keyboard::assert_chords_ignored(
+            page,
+            &[
+                keyboard::ARROW_LEFT,
+                keyboard::ARROW_RIGHT,
+                keyboard::ARROW_UP,
+                keyboard::ARROW_DOWN,
+                keyboard::PAGE_UP,
+                keyboard::PAGE_DOWN,
+                keyboard::HOME,
+                keyboard::END,
+            ],
+            VALUE_NOW,
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A discrete thumb reports its option's name, and the keys walk the options.
 #[test]
 fn a_discrete_thumb_reads_its_option() {

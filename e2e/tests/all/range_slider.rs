@@ -125,3 +125,31 @@ fn the_keys_move_the_focused_thumb() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Alt+ArrowLeft is Back: neither thumb swallows a browser chord (todo 562).
+#[test]
+fn modifier_chords_are_left_to_the_browser() {
+    block_on(async {
+        let fixture = Fixture::open("/range-slider", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let keys = [
+            keyboard::ARROW_LEFT,
+            keyboard::ARROW_RIGHT,
+            keyboard::PAGE_UP,
+            keyboard::PAGE_DOWN,
+            keyboard::HOME,
+            keyboard::END,
+        ];
+        keyboard::tab_to(page, "[role=slider]", 10).await.unwrap();
+        keyboard::assert_chords_ignored(page, &keys, READOUT)
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        keyboard::assert_chords_ignored(page, &keys, READOUT)
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
