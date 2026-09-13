@@ -94,7 +94,8 @@ static WINDOW_SX: StaticSx = StaticSx::new(|| {
             sx().flex("1")
                 .min_width("0")
                 .min_height("1.5em")
-                .selector("& h2", sx().margin("0"))
+                // A long word wraps instead of being clipped by the window (1.4.10).
+                .selector("& h2", sx().margin("0").with("overflow-wrap", "anywhere"))
                 .selector("&:focus-visible", inset_focus_ring_sx("-2px")),
         )
         .selector(
