@@ -1,9 +1,11 @@
 //! `NavLink`'s `scroll_into_view` scrolls its sidebar, not the page, just far
 //! enough to show the link and its `scroll-margin` (todo 468 N3 moved the
-//! `nearest` arithmetic into a function Blitz shares).
+//! `nearest` arithmetic into a function Blitz shares). Plus the baseline of
+//! `NavLink`, `Anchor` and `Burger` (todo 449).
 
 use e2e::browser::block_on;
-use e2e::{Fixture, Viewport, wait};
+use e2e::passes::keyboard;
+use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The link's bottom plus its 8rem margin meets the sidebar's bottom.
 const SHOWN_NEAREST: &str = "(() => { \
@@ -25,6 +27,124 @@ fn an_active_link_scrolls_its_sidebar_just_far_enough() {
             .unwrap();
 
         fixture.console.assert_clean("an active nav link").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The stripe's outer edge, left and right, against the sidebar's clip box.
+const RING_INSIDE_SIDEBAR: &str = "(() => { \
+    const bar = document.querySelector('#sidebar').getBoundingClientRect(); \
+    const link = document.querySelector('#here'); \
+    const style = getComputedStyle(link); \
+    const reach = parseFloat(style.outlineOffset) + parseFloat(style.outlineWidth); \
+    const rect = link.getBoundingClientRect(); \
+    return document.activeElement === link && style.outlineStyle !== 'none' \
+        && rect.left - reach >= bar.left && rect.right + reach <= bar.right; \
+})()";
+
+/// A full-width link in a scrolling sidebar: an outset ring would be clipped
+/// on both sides by the sidebar's `overflow`.
+#[test]
+fn the_focus_ring_is_not_clipped_by_the_sidebar() {
+    block_on(async {
+        let fixture = Fixture::open("/nav-link", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, "#here", 5).await.unwrap();
+        let inside: bool = page
+            .evaluate(RING_INSIDE_SIDEBAR)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(inside, "the focus ring reaches past the sidebar's edges");
+
+        fixture.close().await.unwrap();
+    });
+}
+
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("nav_link", "/nav-link/states")
+        .focusable("#active")
+        .focusable("#idle")
+        .focusable("#inline")
+        .focusable("#external")
+        .focusable("#burger")
+        .targets("#active")
+        .targets("#burger")
+        .targets_spaced("#burger-xs")
+        .targets_spaced("#burger-sm")
+        .tab_budget(20)
+        .no_snapshot()
+        .run();
+}
+
+fn burger(expression: &str) -> String {
+    format!("document.querySelector('#burger').{expression}")
+}
+
+/// Enter and Space toggle the disclosure; the name and `aria-expanded` follow,
+/// and focus stays on the burger.
+#[test]
+fn the_burger_toggles_its_panel_from_the_keyboard() {
+    block_on(async {
+        let fixture = Fixture::open("/nav-link/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, "#burger", 20).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} === 'true' && {} === 'Close navigation' \
+                 && !document.querySelector('#burger-panel').hidden \
+                 && document.activeElement.id === 'burger'",
+                burger("getAttribute('aria-expanded')"),
+                burger("getAttribute('aria-label')"),
+            ),
+            "Enter to open the panel",
+        )
+        .await
+        .unwrap();
+
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{} === 'false' && document.querySelector('#burger-panel').hidden",
+                burger("getAttribute('aria-expanded')"),
+            ),
+            "Space to close the panel",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("toggling a burger").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// `ActionIcon` writes its own `aria-label`; a caller's spread one must still
+/// name the burger.
+#[test]
+fn a_spread_aria_label_names_the_burger() {
+    block_on(async {
+        let fixture = Fixture::open("/nav-link/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        wait::for_js_true(
+            page,
+            "document.querySelector('#burger-xs')?.getAttribute('aria-label') === 'Menu xs'",
+            "the caller's aria-label on the burger",
+        )
+        .await
+        .unwrap();
+
         fixture.close().await.unwrap();
     });
 }

@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
-        common::{attr, base_props, use_style_attributes},
+        common::{attr, base_props, inset_focus_ring_sx, use_style_attributes},
         layout::box_style,
         variables,
     },
@@ -59,6 +59,8 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         // Keeps `scroll_into_view`'s `Nearest` off the container's edge.
         // Affects where a scroll lands, never whether one happens.
         .scroll_margin("8rem")
+        // Inset: a full-width link in a scrolling sidebar would clip an outset ring.
+        .focus_visible(inset_focus_ring_sx("-2px"))
         // Hover is neutral grey, not `color`: it shouldn't preview the
         // selected look. Active gets the light color tint instead.
         .hover(sx().background("muted.2"))
