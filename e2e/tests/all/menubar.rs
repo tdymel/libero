@@ -142,3 +142,117 @@ fn shortcut_chords_pass_through() {
         outcome.unwrap();
     });
 }
+
+fn trigger(index: usize) -> String {
+    format!("[role=menubar] [data-menubar-index=\"{index}\"]")
+}
+
+/// Which triggers read `aria-expanded="true"`, as "0 1 2 3" flags.
+const EXPANDED: &str = "[...document.querySelectorAll('[data-menubar-index]')]\
+     .map(t => t.getAttribute('aria-expanded') === 'true' ? 1 : 0).join('')";
+
+/// A touch tap: touch emulation must be on. CDP rejects a `touchEnd` without
+/// a point, though its docs ask for none.
+async fn tap(page: &chromiumoxide::Page, selector: &str) -> anyhow::Result<()> {
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchTouchEventParams, DispatchTouchEventType, TouchPoint,
+    };
+    let at = pointer::centre_of(page, selector).await?;
+    for kind in [
+        DispatchTouchEventType::TouchStart,
+        DispatchTouchEventType::TouchEnd,
+    ] {
+        let point = TouchPoint::builder()
+            .x(at.x)
+            .y(at.y)
+            .build()
+            .map_err(anyhow::Error::msg)?;
+        let event = DispatchTouchEventParams::builder()
+            .r#type(kind)
+            .touch_point(point)
+            .build()
+            .map_err(anyhow::Error::msg)?;
+        page.execute(event).await?;
+    }
+    Ok(())
+}
+
+/// Todo 449: a tap on another trigger while a menu was open sent the
+/// compatibility `mouseenter` first, which switched menus, and then the click,
+/// which closed the new one. The tap opened nothing.
+#[test]
+fn a_tap_on_another_trigger_opens_its_menu() {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    block_on(async {
+        let fixture = Fixture::open("/menubar-docs", Viewport::Mobile)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            page.execute(SetTouchEmulationEnabledParams::new(true))
+                .await?;
+            tap(page, &trigger(0)).await?;
+            wait::for_js_true(page, &format!("{EXPANDED} === '1000'"), "File open").await?;
+            tap(page, &trigger(1)).await?;
+            wait::for_js_true(page, &format!("{EXPANDED} === '0100'"), "Edit open").await?;
+            wait::for_js_true(
+                page,
+                "document.activeElement?.textContent.trim() === 'Undo'",
+                "focus on Undo",
+            )
+            .await
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}
+
+/// APG menubar: an open menu travels along the bar with Left and Right, from
+/// a submenu too; a disabled trigger takes focus, opens nothing, and the next
+/// one opens again on ArrowDown.
+#[test]
+fn an_open_menu_travels_along_the_bar() {
+    block_on(async {
+        let fixture = Fixture::open("/menubar-docs", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let focus_on =
+            |text: &str| format!("document.activeElement?.textContent.trim() === '{text}'");
+        let outcome = async {
+            use keyboard::{ARROW_DOWN, ARROW_LEFT, ARROW_RIGHT, ARROW_UP, ENTER, ESCAPE, press};
+            keyboard::tab_to(page, FIRST, 5).await?;
+            press(page, ENTER).await?;
+            wait::for_js_true(page, &focus_on("New"), "File open on New").await?;
+            press(page, ARROW_UP).await?;
+            press(page, ARROW_UP).await?;
+            wait::for_js_true(page, &focus_on("Open recent"), "Open recent").await?;
+            press(page, ARROW_RIGHT).await?;
+            wait::for_js_true(page, &focus_on("notes.md"), "the submenu on notes.md").await?;
+            press(page, ARROW_RIGHT).await?;
+            wait::for_js_true(page, &focus_on("Undo"), "Edit open on Undo").await?;
+            wait::for_js_true(page, &format!("{EXPANDED} === '0100'"), "only Edit open").await?;
+            press(page, ARROW_RIGHT).await?;
+            wait::for_js_true(page, &focus_on("View"), "focus on the disabled View").await?;
+            wait::for_js_true(page, &format!("{EXPANDED} === '0000'"), "no menu open").await?;
+            press(page, ARROW_DOWN).await?;
+            press(page, ARROW_RIGHT).await?;
+            wait::for_js_true(page, &focus_on("Help"), "focus on Help").await?;
+            press(page, ARROW_UP).await?;
+            wait::for_js_true(page, &focus_on("About"), "Help open on its last item").await?;
+            press(page, ARROW_LEFT).await?;
+            press(page, ARROW_LEFT).await?;
+            press(page, ARROW_DOWN).await?;
+            wait::for_js_true(page, &focus_on("Undo"), "Edit open again").await?;
+            press(page, ESCAPE).await?;
+            wait::for_js_true(page, &focus_on("Edit"), "Escape back on Edit").await?;
+            wait::for_js_true(page, &format!("{EXPANDED} === '0000'"), "all closed").await
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}

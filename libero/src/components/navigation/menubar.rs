@@ -1,4 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use dioxus::prelude::*;
 
@@ -218,6 +221,9 @@ pub fn Menubar(props: MenubarProps) -> Element {
     let bar = use_element();
     let current = use_signal(|| None::<usize>);
     let typeahead = use_typeahead(TYPEAHEAD_RESET);
+    // A tap sends a compatibility `mouseenter` before its click: switching
+    // there made the click close the menu it had just opened.
+    let touch: Rc<Cell<bool>> = use_hook(|| Rc::new(Cell::new(false)));
 
     // `use_menu()` in a loop over `menus` would hand hook slots from one menu
     // to another whenever the list changes length. The states are created
@@ -323,10 +329,16 @@ pub fn Menubar(props: MenubarProps) -> Element {
             }
         };
 
+        let onpointerenter = {
+            let touch = touch.clone();
+            move |event: PointerEvent| touch.set(event.data().pointer_type() == "touch")
+        };
+
         let onmouseenter = {
             let row = row.clone();
+            let touch = touch.clone();
             move |_: MouseEvent| {
-                if disabled {
+                if disabled || touch.get() {
                     return;
                 }
                 if row.open_index().is_some_and(|open| open != index) {
@@ -367,6 +379,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
                     "aria-disabled": disabled.then_some("true"),
                     onkeydown,
                     onclick,
+                    onpointerenter,
                     onmouseenter,
                     onfocus,
                     ..attributes,
