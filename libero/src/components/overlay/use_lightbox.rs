@@ -67,7 +67,7 @@ impl From<(Vec<LightboxItem>, usize)> for LightboxOpening {
 /// How the viewer behaves, shared by every opening.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LightboxOptions {
-    /// Wheel, double-click and `z` zoom; drag and arrow pan.
+    /// Wheel, double-click, `z`, `+` and `-` zoom; drag and arrow pan.
     pub zoom: bool,
     /// Upper scale bound. Defaults to the theme's.
     pub max_zoom: Option<f64>,

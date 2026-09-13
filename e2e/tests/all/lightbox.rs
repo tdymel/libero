@@ -255,6 +255,65 @@ async fn assert_tab_skips_inert(page: &Page) -> Result<()> {
     Ok(())
 }
 
+/// `z` only toggles to 2x; `+` and `-` step like the wheel, so the keyboard
+/// reaches `max_zoom` (the theme's 3x) and back (WCAG 2.1.1).
+#[test]
+fn plus_and_minus_zoom_to_max_zoom_and_back() {
+    const PLUS: keyboard::Key = keyboard::Key {
+        key: "+",
+        code: "Equal",
+        vk: 187,
+        text: Some("+"),
+    };
+    const MINUS: keyboard::Key = keyboard::Key {
+        key: "-",
+        code: "Minus",
+        vk: 189,
+        text: Some("-"),
+    };
+    const STYLE: &str =
+        "document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img').style.cssText";
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, true).await.unwrap();
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, DIALOG).await.unwrap();
+        wait_showing(page, 0).await.unwrap();
+        keyboard::tab_to(page, PICTURE, 12).await.unwrap();
+        for _ in 0..6 {
+            keyboard::press(page, PLUS).await.unwrap();
+        }
+        if wait::for_js_true(
+            page,
+            &format!("{STYLE}.includes('scale(3)')"),
+            "the picture at 3x",
+        )
+        .await
+        .is_err()
+        {
+            let style: String = page.evaluate(STYLE).await.unwrap().into_value().unwrap();
+            panic!("six presses of + left the picture at {style:?}, not the theme's max_zoom 3x");
+        }
+        for _ in 0..6 {
+            keyboard::press(page, MINUS).await.unwrap();
+        }
+        wait::for_js_true(
+            page,
+            &format!("!{STYLE}.includes('scale(')"),
+            "the picture fitted again",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("the lightbox keyboard zoom")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 421: zoom, pan to the edge, then turn the window into a phone. The pan
 /// has to be clamped to the new, smaller bounds, or the picture leaves its
 /// frame.

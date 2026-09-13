@@ -132,7 +132,7 @@ pub fn LightboxPage() -> Element {
             markdown: "/md/lightbox.md",
             properties: vec![
                 props("LightboxOptions", vec![
-                    prop("zoom", "bool").default("true").doc("Wheel, double-click and `z` zoom; drag and arrow pan."),
+                    prop("zoom", "bool").default("true").doc("Wheel, double-click, `z`, `+` and `-` zoom; drag and arrow pan."),
                     prop("max_zoom", "Option<f64>").default("theme (3.0)").doc("Upper scale bound."),
                     prop("thumbnails", "bool").default("true").doc("The strip under the stage. Never shown for one picture."),
                     prop("captions", "bool").default("true").doc("Shows each item's caption, linked to its picture."),
@@ -162,7 +162,11 @@ pub fn LightboxPage() -> Element {
                 Text {
                     "Double-click or press "
                     Kbd { "z" }
-                    " to zoom, scroll to zoom about the cursor, drag or use the arrows to pan. "
+                    " to zoom, "
+                    Kbd { "+" }
+                    " and "
+                    Kbd { "-" }
+                    " to step it, scroll to zoom about the cursor, drag or use the arrows to pan. "
                     "At the edge of a pan the arrows move to the next picture, so a zoomed "
                     "picture never traps the keyboard."
                 }

@@ -11,7 +11,7 @@ around it: each opening carries its pictures and where to start, and focus goes
 back to the thumbnail that opened it. `Image { zoomable }` ([Image](image.md))
 is this viewer with one picture.
 
-Double-click or press `z` to zoom, scroll to zoom about the cursor, drag or use
+Double-click or press `z` to zoom, `+` and `-` to step it, scroll to zoom about the cursor, drag or use
 the arrows to pan. At the edge of a pan the arrows move to the next picture, so
 a zoomed picture never traps the keyboard.
 
@@ -70,6 +70,7 @@ last picture.
 |---|---|
 | Double-click, `z` | Toggle between fitted and `min(2, max_zoom)`; a double-click zooms about the cursor |
 | Wheel | Zoom about the cursor, between fitted and `max_zoom` |
+| `+` / `-` | Zoom in / out a wheel step about the centre, between fitted and `max_zoom` |
 | Drag | Pan while zoomed |
 | `ArrowLeft` / `ArrowRight` | Pan while zoomed; at the pan edge, or when fitted, the previous / next picture |
 | `ArrowUp` / `ArrowDown` | Pan while zoomed |
@@ -122,7 +123,7 @@ Returns the same `ModalHandle` as `use_modal`; every method on it and on
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `zoom` | `bool` | `true` | Wheel, double-click and `z` zoom; drag and arrow pan. |
+| `zoom` | `bool` | `true` | Wheel, double-click, `z`, `+` and `-` zoom; drag and arrow pan. |
 | `max_zoom` | `Option<f64>` | theme (`3.0`) | Upper scale bound. |
 | `thumbnails` | `bool` | `true` | The strip under the stage. Never shown for one picture. |
 | `captions` | `bool` | `true` | Shows each item's caption, linked to its picture. |

@@ -294,6 +294,15 @@ enum Gesture {
     Swipe { delta: DragPoint },
 }
 
+/// One wheel notch, or one `+` / `-`, from `scale`: out when `closer`.
+fn wheel_step(scale: f64, closer: bool, max_zoom: f64) -> f64 {
+    match closer {
+        true => scale / WHEEL_FACTOR,
+        false => scale * WHEEL_FACTOR,
+    }
+    .clamp(1.0, max_zoom)
+}
+
 /// Whether a swipe travelled far enough, and mostly downwards, to close.
 fn swipe_closes(delta: DragPoint) -> bool {
     delta.y > SWIPE_CLOSE_DISTANCE && delta.y > delta.x.abs()
@@ -615,19 +624,25 @@ fn lightbox_slide(
                             return;
                         }
                     }
+                    // Ctrl/Cmd with `+` and `-` is the browser's own zoom.
+                    let plain = !event.modifiers().ctrl()
+                        && !event.modifiers().meta()
+                        && !event.modifiers().alt();
                     match event.key() {
                         Key::ArrowLeft => stage.go(i.saturating_sub(1), true),
                         Key::ArrowRight => stage.go(i + 1, true),
                         Key::Home => stage.go(0, true),
                         Key::End => stage.go(last, true),
-                        Key::Character(ref c)
-                            if c.eq_ignore_ascii_case("z")
-                                && !event.modifiers().ctrl()
-                                && !event.modifiers().meta()
-                                && !event.modifiers().alt() =>
-                        {
+                        Key::Character(ref c) if plain && c.eq_ignore_ascii_case("z") => {
                             zoom_about(root, image, zoom, fit, i, None, move |scale| {
                                 zooming.toggle_scale(scale)
+                            });
+                        }
+                        // The wheel's steps, so the keyboard reaches `max_zoom` too.
+                        Key::Character(ref c) if plain && matches!(c.as_str(), "+" | "=" | "-") => {
+                            let closer = c == "-";
+                            zoom_about(root, image, zoom, fit, i, None, move |scale| {
+                                wheel_step(scale, closer, max_zoom)
                             });
                         }
                         _ => return,
@@ -648,13 +663,7 @@ fn lightbox_slide(
                         fit,
                         i,
                         Some(DragPoint { x: client.x, y: client.y }),
-                        move |scale| {
-                            match closer {
-                                true => scale / WHEEL_FACTOR,
-                                false => scale * WHEEL_FACTOR,
-                            }
-                            .clamp(1.0, max_zoom)
-                        },
+                        move |scale| wheel_step(scale, closer, max_zoom),
                     );
                 },
                 ondoubleclick: move |event: Event<MouseData>| {
@@ -1144,6 +1153,13 @@ mod tests {
         };
 
         assert_eq!(zoomed.transform(), "scale(2) translate(50px, -20px)");
+    }
+
+    #[test]
+    fn a_wheel_step_stays_between_fitted_and_max_zoom() {
+        assert_eq!(wheel_step(1.0, false, 3.0), WHEEL_FACTOR);
+        assert_eq!(wheel_step(2.8, false, 3.0), 3.0);
+        assert_eq!(wheel_step(1.1, true, 3.0), 1.0);
     }
 
     #[test]
