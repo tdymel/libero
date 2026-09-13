@@ -113,6 +113,10 @@ base_props! {
         /// away.
         #[props(default = true)]
         close_on_pick: bool,
+        /// Leaves Home and End to the text caret while no row is highlighted,
+        /// for a trigger whose text is the value (APG editable combobox).
+        #[props(default)]
+        caret_keys: bool,
         /// Sets `aria-multiselectable` on the listbox.
         #[props(default)]
         multiselectable: bool,
@@ -194,6 +198,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         opened,
         disabled: props.disabled,
         close_on_pick: props.close_on_pick,
+        caret_keys: props.caret_keys,
     };
     let onkeydown = move |event: KeyboardEvent| keys.handle(event);
     let disabled = props.disabled;
@@ -473,6 +478,7 @@ struct ComboboxKeys {
     opened: bool,
     disabled: bool,
     close_on_pick: bool,
+    caret_keys: bool,
 }
 
 impl ComboboxKeys {
@@ -510,6 +516,8 @@ impl ComboboxKeys {
             Some(_) => return,
             None => {}
         }
+        // Typing leaves no highlight, and then Home/End are text editing keys.
+        let row_keys = opened && (active_row.is_some() || !self.caret_keys);
         match event.key() {
             Key::ArrowDown => {
                 event.prevent_default();
@@ -519,11 +527,11 @@ impl ComboboxKeys {
                 event.prevent_default();
                 go_to(self.arrows.up);
             }
-            Key::Home if opened => {
+            Key::Home if row_keys => {
                 event.prevent_default();
                 go_to(self.arrows.first);
             }
-            Key::End if opened => {
+            Key::End if row_keys => {
                 event.prevent_default();
                 go_to(self.arrows.last);
             }

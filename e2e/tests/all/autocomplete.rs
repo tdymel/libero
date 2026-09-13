@@ -138,3 +138,56 @@ fn its_status_region_is_mounted_and_silent_at_rest() {
         fixture.close().await.unwrap();
     });
 }
+
+/// While typing, nothing is highlighted, so Home and End move the caret (APG
+/// editable combobox), and a query matching nothing is not `[expanded]` over a
+/// popup that draws nothing (todo 449).
+#[test]
+fn typing_keeps_home_end_and_expanded_honest() {
+    editable_combobox_typing("/autocomplete", "e");
+}
+
+/// Types `query` (it must match a row), checks Home/End edit the text, then
+/// types a query matching nothing and checks the trigger collapses.
+pub fn editable_combobox_typing(route: &str, query: &str) {
+    block_on(async {
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::type_text(page, query).await.unwrap();
+        wait::for_visible(page, LISTBOX).await.unwrap();
+
+        let probe = format!(
+            "(t => [t.selectionStart, t.getAttribute('aria-activedescendant')])(document.querySelector({TRIGGER:?}))"
+        );
+        let read = async || -> (usize, Option<String>) {
+            page.evaluate(probe.as_str())
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap()
+        };
+        keyboard::press(page, keyboard::HOME).await.unwrap();
+        assert_eq!(read().await, (0, None), "{route}: Home while typing");
+        keyboard::press(page, keyboard::END).await.unwrap();
+        assert_eq!(
+            read().await,
+            (query.chars().count(), None),
+            "{route}: End while typing"
+        );
+
+        keyboard::type_text(page, "zzz").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector({TRIGGER:?}).getAttribute('aria-expanded') === 'false'"
+            ),
+            "a query matching nothing to collapse the combobox",
+        )
+        .await
+        .unwrap_or_else(|e| panic!("{route}: {e}"));
+
+        fixture.console.assert_clean(route).unwrap();
+        fixture.close().await.unwrap();
+    });
+}

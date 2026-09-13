@@ -177,7 +177,9 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     let suggestions = props.suggestions.clone();
     let has_suggestions = suggestions.is_some();
 
+    // The label also names the listbox, which `for` cannot reach.
     let field = use_field()
+        .label_with_id()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
@@ -290,9 +292,13 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 rows,
                 active: state.active(),
                 onactive: move |row| state.set_active(Some(row)),
-                opened: state.is_open() && !disabled && !readonly,
+                // No row left to offer is not open: `aria-expanded` must not
+                // claim a popup that draws nothing.
+                opened: state.is_open() && !disabled && !readonly && row_count > 0,
                 onopened: move |opened| state.set_open(opened),
                 state,
+                caret_keys: true,
+                labelled_by: field.label_id(),
                 size,
                 radius,
                 disabled: disabled || readonly,

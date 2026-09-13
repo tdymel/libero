@@ -197,6 +197,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             }
         })
         .collect();
+    let has_rows = !rows.is_empty();
 
     let clear_input = oninput.clone();
     let clear = clear_button(
@@ -267,9 +268,12 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             rows,
             active: state.active(),
             onactive: move |row| state.set_active(Some(row)),
-            opened: state.is_open() && !disabled && !readonly,
+            // Nothing to show is not open: `aria-expanded` must not claim a
+            // popup that draws nothing.
+            opened: state.is_open() && !disabled && !readonly && (has_rows || props.empty.is_some()),
             onopened: move |opened| state.set_open(opened),
             state,
+            caret_keys: true,
             empty: props.empty,
             size,
             radius,

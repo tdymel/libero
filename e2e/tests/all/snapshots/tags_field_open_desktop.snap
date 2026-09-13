@@ -14,7 +14,7 @@ status [atomic] [live=polite]
 status [atomic] [live=polite]
 generic
   generic
-    listbox
+    listbox "Topics"
       option "dioxus" [selected]
         StaticText "dioxus"
       option "wasm" [selected=false]
