@@ -200,6 +200,8 @@ pub fn Splitter(props: SplitterProps) -> Element {
         capture: root,
         onstart: use_callback(move |start: DragStart| {
             let cancel = start.cancel;
+            // Unmeasured until the task below lands: `onmove` skips moves till then.
+            container_size.set(0.0);
             // Started here, awaited in the task: see `ElementApi::dimensions`.
             let size = root.dimensions();
             spawn(async move {
@@ -227,6 +229,10 @@ pub fn Splitter(props: SplitterProps) -> Element {
             });
         }),
         onmove: use_callback(move |event: DragMove| {
+            // A move before the measure would divide by 0 and write `NaN%`.
+            if container_size() <= 0.0 {
+                return;
+            }
             let delta = event.delta();
             let pixels = if vertical { delta.x } else { delta.y };
             let delta_pct = pixels / container_size() * 100.0;
