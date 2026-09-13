@@ -5,7 +5,7 @@ use crate::{
     CssLayer,
     components::{
         HtmlTag, Input, Orientation, States, Variables,
-        common::{base_props, use_name_warning, variables},
+        common::{base_props, has_shortcut_modifier, use_name_warning, variables},
         layout::use_box,
     },
     hooks::{DragMove, DragOptions, DragStart, use_css, use_drag, use_element, use_id, use_theme},
@@ -241,6 +241,10 @@ pub fn Splitter(props: SplitterProps) -> Element {
     });
 
     let onkeydown = use_callback(move |event: Event<KeyboardData>| {
+        // Alt+ArrowLeft is Back: a chord is the browser's, not a step.
+        if has_shortcut_modifier(&event) {
+            return;
+        }
         let step = if event.modifiers().shift() {
             theme.splitter.big_step
         } else {

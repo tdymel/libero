@@ -61,6 +61,31 @@ fn a_drag_leaves_the_divider_focused_for_the_arrow_keys() {
     });
 }
 
+/// Alt+ArrowLeft is Back: the divider must not swallow a browser chord.
+#[test]
+fn modifier_chords_are_left_to_the_browser() {
+    block_on(async {
+        let fixture = Fixture::open("/splitter", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, DIVIDER, 5).await.unwrap();
+
+        keyboard::assert_chords_ignored(
+            page,
+            &[
+                keyboard::ARROW_LEFT,
+                keyboard::ARROW_RIGHT,
+                keyboard::HOME,
+                keyboard::END,
+            ],
+            VALUE_NOW,
+        )
+        .await
+        .unwrap();
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A floor raised after the divider moved pulls pane A up to it, and the
 /// separator never reports a value outside its own bounds.
 #[test]
