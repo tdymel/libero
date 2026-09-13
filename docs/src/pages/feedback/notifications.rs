@@ -538,7 +538,10 @@ pub fn NotificationsPage() -> Element {
                         .labels(["Polite", "Assertive"])
                         .default("polite"),
                     Control::switch("title").hidden_when(|values| values.str("template") == "upload"),
-                    Control::switch("closable").default("true"),
+                    // The upload template draws Dismiss once done, whatever this says.
+                    Control::switch("closable")
+                        .default("true")
+                        .hidden_when(|values| values.str("template") == "upload"),
                     Control::switch("contained"),
                 ],
                 render: move |values: DemoValues| {
@@ -583,7 +586,10 @@ pub fn NotificationsPage() -> Element {
                     Code { source: "live" }
                     " picks which one. A close button is reached with "
                     Kbd { "Tab" }
-                    " in document order, and focusing one pauses its timer. Closing the "
+                    " in document order, after the rest of the page, and focusing one pauses "
+                    "every timer. One with an action of its own, such as Undo, needs "
+                    Code { source: "AutoClose::Never" }
+                    ": a keyboard user would not reach it in time. Closing the "
                     "focused one moves focus to the next close button in its stack, the "
                     "previous one after the last, and back where it came from once the "
                     "stack is empty. Your own "
@@ -591,7 +597,7 @@ pub fn NotificationsPage() -> Element {
                     Code { source: "s.closable()" }
                     " and give it an "
                     Code { source: "aria_label" }
-                    ", the way the Card and Upload options here do."
+                    ", the way the Card option here does."
                 }
             }
         }

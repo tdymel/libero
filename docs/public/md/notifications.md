@@ -152,8 +152,13 @@ timers and the host compile once.
 - `NotificationOptions::live` picks how a notification is announced. It is
   `Polite` unless you say otherwise, and it is never derived from a colour -
   pass `Assertive` for what cannot wait.
-- **Focus is never moved**, on show or on close. A close button is reached by
-  Tab in document order, and Escape does nothing.
+- **Showing one never moves focus.** A close button is reached by Tab in
+  document order, after the rest of the page, and Escape does nothing.
+- Closing the focused one moves focus to the next close button in its stack,
+  the previous one after the last, and back where it came from once the stack
+  is empty. `clear()` with focus inside sends it back where it came from.
+- A notification with an action of its own, such as Undo, needs
+  `AutoClose::Never`: a keyboard user would not reach it in time.
 
 ## API
 
