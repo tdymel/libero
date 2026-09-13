@@ -351,10 +351,12 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         },
     );
 
+    let with_select = props
+        .country_select
+        .unwrap_or(theme.phone_field.country_select);
+    let dial_id = format!("{}-dial", field.id());
     let leading = phone_leading(
-        props
-            .country_select
-            .unwrap_or(theme.phone_field.country_select),
+        with_select,
         Picker {
             picker,
             prefix_box,
@@ -369,6 +371,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             radius,
             disabled: disabled || readonly,
             dial: country.dial,
+            dial_id: dial_id.clone(),
         },
         rows,
     );
@@ -383,9 +386,21 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .framework_sx(&FIELD_CONTROL_SX)
         .focus_ring(false)
         .prepare();
+    // `field.aria()` by hand: the bare dial code is visible text the input's
+    // name lacks, so it joins the description (2.5.3).
+    let describedby = match (with_select, field.describedby()) {
+        (true, captions) => captions,
+        (false, None) => Some(dial_id),
+        (false, Some(captions)) => Some(format!("{dial_id} {captions}")),
+    };
+    let control = control
+        .attr("id", field.id().to_string())
+        .attr("aria-describedby", describedby)
+        .attr("aria-invalid", field.invalid().then_some("true"))
+        .attr("aria-required", required.then_some("true"));
 
     let input = phone_input(
-        field.aria(control),
+        control,
         Entry {
             display,
             text,
@@ -609,6 +624,7 @@ struct Picker {
     radius: Size,
     disabled: bool,
     dial: &'static str,
+    dial_id: String,
 }
 
 /// The frame's leading slot: the country picker with its list, or - with
@@ -628,6 +644,7 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
         radius,
         disabled,
         dial,
+        dial_id,
     } = parts;
 
     match with_select {
@@ -662,7 +679,11 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
                 {picker}
             }
         }),
-        false => Some(prefix_box.render(HtmlTag::Span, Vec::new(), rsx! { "+{dial}" })),
+        false => Some(prefix_box.attr("id", dial_id).render(
+            HtmlTag::Span,
+            Vec::new(),
+            rsx! { "+{dial}" },
+        )),
     }
 }
 

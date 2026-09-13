@@ -163,6 +163,44 @@ fn a_pinned_country_renders_no_picker_at_all() {
     assert!(html.contains("+49"), "the dial code is not drawn:\n{html}");
 }
 
+/// Todo 559: the bare `+49` is visible text beside the input, so the input's
+/// description carries it, ahead of the field's own captions (2.5.3).
+#[test]
+fn a_pinned_dial_code_describes_the_input() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                PhoneField {
+                    label: "Mobile",
+                    description: "Work number",
+                    country: "DE",
+                    country_select: false,
+                    oninput: move |_: String| {},
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let input = attributes_of(&html, "input");
+    let ids = input
+        .get("aria-describedby")
+        .unwrap_or_else(|| panic!("the input has no description:\n{html}"));
+    let texts: Vec<&str> = ids
+        .split(' ')
+        .map(|id| {
+            let open = format!("id=\"{id}\"");
+            let at = html
+                .find(&open)
+                .unwrap_or_else(|| panic!("no #{id}:\n{html}"));
+            let from = at + html[at..].find('>').unwrap() + 1;
+            let len = html[from..].find('<').unwrap();
+            &html[from..from + len]
+        })
+        .collect();
+    assert_eq!(texts, ["+49", "Work number"], "{html}");
+}
+
 static PINNED: libero::theme::Theme = libero::theme::Theme {
     phone_field: libero::theme::PhoneFieldDefaults {
         country_select: false,
