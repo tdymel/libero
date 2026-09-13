@@ -46,11 +46,11 @@ pub use color::{
     ColorPicker, ColorPickerProps, ColorSwatch, ColorSwatchProps, HueSlider, HueSliderProps,
     ParseColorError, Swatches,
 };
+pub(crate) use combobox::{CaretKeys, ComboboxCore, row_label};
 pub use combobox::{
     Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps, ComboboxProps,
     ComboboxState, use_combobox,
 };
-pub(crate) use combobox::{ComboboxCore, row_label};
 pub use date::*;
 pub use field_status::FieldStatus;
 pub use fieldset::{Fieldset, FieldsetProps};

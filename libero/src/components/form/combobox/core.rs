@@ -113,10 +113,10 @@ base_props! {
         /// away.
         #[props(default = true)]
         close_on_pick: bool,
-        /// Leaves Home and End to the text caret while no row is highlighted,
-        /// for a trigger whose text is the value (APG editable combobox).
+        /// When Home and End move the text caret rather than the highlight
+        /// (APG editable combobox).
         #[props(default)]
-        caret_keys: bool,
+        caret_keys: CaretKeys,
         /// Sets `aria-multiselectable` on the listbox.
         #[props(default)]
         multiselectable: bool,
@@ -478,7 +478,19 @@ struct ComboboxKeys {
     opened: bool,
     disabled: bool,
     close_on_pick: bool,
-    caret_keys: bool,
+    caret_keys: CaretKeys,
+}
+
+/// Who owns Home and End while the list is open.
+#[derive(Clone, Copy, Default, PartialEq)]
+pub(crate) enum CaretKeys {
+    /// The rows: a trigger with no text caret.
+    #[default]
+    Off,
+    /// The caret until a row is highlighted: a trigger whose text is the value.
+    Unhighlighted,
+    /// The caret: a search box, which always arms a row as it filters.
+    Always,
 }
 
 impl ComboboxKeys {
@@ -517,7 +529,12 @@ impl ComboboxKeys {
             None => {}
         }
         // Typing leaves no highlight, and then Home/End are text editing keys.
-        let row_keys = opened && (active_row.is_some() || !self.caret_keys);
+        let row_keys = opened
+            && match self.caret_keys {
+                CaretKeys::Off => true,
+                CaretKeys::Unhighlighted => active_row.is_some(),
+                CaretKeys::Always => false,
+            };
         match event.key() {
             Key::ArrowDown => {
                 event.prevent_default();

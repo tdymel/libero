@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input, SelectionArgs,
+        CaretKeys, ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input, SelectionArgs,
         common::{field_props, ring_overlay},
         form::{
             clear_button, field_control_sx, removable_chip, row_label, use_bound,
@@ -297,7 +297,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 opened: state.is_open() && !disabled && !readonly && row_count > 0,
                 onopened: move |opened| state.set_open(opened),
                 state,
-                caret_keys: true,
+                caret_keys: CaretKeys::Unhighlighted,
                 labelled_by: field.label_id(),
                 size,
                 radius,

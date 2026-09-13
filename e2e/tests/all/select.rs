@@ -279,3 +279,57 @@ pub fn label_click_focuses(path: &str, control: &str) {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 547: the search box's Home and End edit the query, though typing arms
+/// the top row; the arrows still move the rows.
+#[test]
+fn home_and_end_edit_the_search_query() {
+    search_home_end_edit_the_query("/select/field", TRIGGER, "an");
+}
+
+/// Opens the list from `trigger`, types `query` (it must match a row) into the
+/// search box, and checks Home/End move the caret and leave the highlight.
+pub fn search_home_end_edit_the_query(route: &str, trigger: &str, query: &str) {
+    block_on(async {
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, trigger, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({SEARCH:?})"),
+            "the search box to take focus",
+        )
+        .await
+        .unwrap_or_else(|e| panic!("{route}: {e}"));
+        keyboard::type_text(page, query).await.unwrap();
+
+        let probe = format!(
+            "(s => [s.selectionStart, s.getAttribute('aria-activedescendant')])(document.querySelector({SEARCH:?}))"
+        );
+        let read = async || -> (usize, Option<String>) {
+            page.evaluate(probe.as_str())
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap()
+        };
+        let (_, armed) = read().await;
+        assert!(armed.is_some(), "{route}: typing arms a row");
+        keyboard::press(page, keyboard::HOME).await.unwrap();
+        assert_eq!(
+            read().await,
+            (0, armed.clone()),
+            "{route}: Home in the search box"
+        );
+        keyboard::press(page, keyboard::END).await.unwrap();
+        assert_eq!(
+            read().await,
+            (query.chars().count(), armed),
+            "{route}: End in the search box"
+        );
+
+        fixture.console.assert_clean(route).unwrap();
+        fixture.close().await.unwrap();
+    });
+}

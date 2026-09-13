@@ -38,6 +38,12 @@ fn chords_on_a_closed_trigger_are_the_browsers() {
     crate::select::closed_chords_are_the_browsers("/multi-select");
 }
 
+/// Todo 547: the search box's Home and End edit the query.
+#[test]
+fn home_and_end_edit_the_search_query() {
+    crate::select::search_home_end_edit_the_query("/multi-select/search", TRIGGER, "an");
+}
+
 #[test]
 fn it_honours_the_combobox_contract() {
     block_on(async {

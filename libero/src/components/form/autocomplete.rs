@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ComboboxCore, ComboboxOption, HtmlTag, Input, Options,
+        CaretKeys, ComboboxCore, ComboboxOption, HtmlTag, Input, Options,
         common::field_props,
         form::{FIELD_CONTROL_SX, clear_button, row_label, use_bound, use_field, use_field_frame},
         layout::use_box,
@@ -273,7 +273,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             opened: state.is_open() && !disabled && !readonly && (has_rows || props.empty.is_some()),
             onopened: move |opened| state.set_open(opened),
             state,
-            caret_keys: true,
+            caret_keys: CaretKeys::Unhighlighted,
             empty: props.empty,
             size,
             radius,

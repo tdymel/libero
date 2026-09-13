@@ -2,7 +2,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input, States, VisuallyHidden,
+        CaretKeys, ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input, States,
+        VisuallyHidden,
         common::{
             ChevronDownIcon, attr, field_props, focus_ring_sx, has_shortcut_modifier,
             navigation_chord, ring_overlay,
@@ -602,6 +603,11 @@ fn select_listbox(list: Listbox) -> Element {
             radius,
             disabled: open.disabled || open.readonly,
             close_on_pick: !multiple,
+            // Only the search box has a caret; a bare trigger's Home/End are the rows'.
+            caret_keys: match autofocus.is_some() {
+                true => CaretKeys::Always,
+                false => CaretKeys::Off,
+            },
             multiselectable: multiple,
             header,
             autofocus,
