@@ -26,7 +26,7 @@ const SATURATION_Y: CssVar = CssVar::new("--lsx-color-picker-saturation-y");
 pub(super) const SATURATION_HUE: CssVar = CssVar::new("--lsx-color-picker-saturation-hue");
 const SATURATION_COLOR: CssVar = CssVar::new("--lsx-color-picker-saturation-color");
 
-/// Arrow keys move this far, Shift+arrow ten times as far.
+/// Arrow keys move this far, Shift+arrow and Page Up/Down ten times as far.
 const KEY_STEP: f64 = 0.01;
 
 static PANEL_SX: StaticSx = StaticSx::new(|| {
@@ -187,6 +187,12 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
             Key::ArrowLeft => (saturation - step, brightness),
             Key::ArrowUp => (saturation, brightness + step),
             Key::ArrowDown => (saturation, brightness - step),
+            // APG slider: Home/End take `aria-valuenow`, the saturation, to
+            // its ends; Page Up/Down step the brightness ten.
+            Key::Home => (0.0, brightness),
+            Key::End => (1.0, brightness),
+            Key::PageUp => (saturation, brightness + KEY_STEP * 10.0),
+            Key::PageDown => (saturation, brightness - KEY_STEP * 10.0),
             _ => return,
         };
         event.prevent_default();

@@ -51,6 +51,32 @@ fn the_arrows_move_the_pad_on_both_axes() {
     });
 }
 
+/// The APG slider keys: Home/End take the saturation, the thumb's
+/// `aria-valuenow`, to its ends; Page Up/Down step the brightness ten.
+#[test]
+fn home_end_and_the_page_keys_move_the_pad() {
+    block_on(async {
+        let fixture = Fixture::open("/color-picker", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, THUMB, 10).await.unwrap();
+        expect(page, "87,84", "the starting colour").await;
+
+        keyboard::press(page, keyboard::PAGE_DOWN).await.unwrap();
+        expect(page, "87,74", "PageDown to lower the brightness ten").await;
+        keyboard::press(page, keyboard::PAGE_UP).await.unwrap();
+        expect(page, "87,84", "PageUp to raise it ten").await;
+        keyboard::press(page, keyboard::END).await.unwrap();
+        expect(page, "100,84", "End to full saturation").await;
+        keyboard::press(page, keyboard::HOME).await.unwrap();
+        expect(page, "0,84", "Home to no saturation").await;
+
+        fixture.console.assert_clean("the pad's page keys").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Focus starts on a button outside, so a thumb that never takes focus fails
 /// here rather than passing on focus it already had. The drag runs from a
 /// quarter into the pad to three quarters, so the reading names where it
