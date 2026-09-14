@@ -15,6 +15,8 @@ static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
         .padding("2px 6px")
         .font_family(CODE_FONT_FAMILY.value())
         .font_size("0.875em")
+        // An identifier has no break point; unbroken it runs out of a 320px column (WCAG 1.4.10).
+        .with("overflow-wrap", "anywhere")
 });
 
 base_props! {
