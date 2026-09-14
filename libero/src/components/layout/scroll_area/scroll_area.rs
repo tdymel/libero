@@ -78,9 +78,10 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         .when("axis-both", sx().overflow_x("auto").overflow_y("auto"))
         .when("axis-none", sx().overflow_x("hidden").overflow_y("hidden"))
+        // Shade 6: shade 5 was 2.07:1 on the light page, under WCAG 1.4.11's 3:1.
         .scrollbar_color(format!(
             "{} transparent",
-            SCROLL_AREA_THUMB_VAR.value_or(ColorCss::MUTED.value(ColorShade::S5))
+            SCROLL_AREA_THUMB_VAR.value_or(ColorCss::MUTED.value(ColorShade::S6))
         ))
         .when("visible-hidden", sx().scrollbar_width("none"));
 

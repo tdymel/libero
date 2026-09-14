@@ -2,8 +2,9 @@
 //! scroll (todo 425). The pane is resized by script, as a `Splitter` or a
 //! `FloatingWindow` would, with the window left alone.
 
-use e2e::browser::block_on;
-use e2e::{Fixture, Viewport, wait};
+use e2e::browser::{self, block_on};
+use e2e::passes::{focus, keyboard};
+use e2e::{Fixture, Scheme, Viewport, wait};
 
 /// The highest row index a `Virtualize` has in the document.
 const LAST_ROW: &str = "Math.max(...[...document.querySelectorAll('#list-pane [data-row]')].map(r => Number(r.dataset.row)))";
@@ -49,6 +50,85 @@ fn a_taller_pane_renders_rows_to_its_new_bottom() {
         .unwrap();
 
         fixture.console.assert_clean("a list pane resize").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Contrast of the `#region` area's scrollbar thumb against the page, under
+/// the scheme the document root is pinned to.
+const THUMB_CONTRAST: &str = r#"(() => {
+    const lum = c => {
+        const [r, g, b] = c.match(/[\d.]+/g).slice(0, 3).map(v => {
+            v = v / 255;
+            return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const thumb = getComputedStyle(document.querySelector('#region')).scrollbarColor.match(/rgba?\([^)]*\)/)[0];
+    const [a, b] = [lum(thumb), lum(getComputedStyle(document.body).backgroundColor)].sort((x, y) => y - x);
+    return (a + 0.05) / (b + 0.05);
+})()"#;
+
+/// WCAG 1.4.11: the thumb is the part that shows where the reader is and what
+/// they drag, and its colour is ours rather than the browser's.
+#[test]
+fn the_scrollbar_thumb_has_3_to_1_against_the_page() {
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/keyboard", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        for scheme in ["light", "dark"] {
+            page.evaluate(format!(
+                "document.documentElement.setAttribute('data-lsx-theme', '{scheme}')"
+            ))
+            .await
+            .unwrap();
+            let ratio: f64 = page
+                .evaluate(THUMB_CONTRAST)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(ratio >= 3.0, "the {scheme} thumb has {ratio:.2}:1");
+        }
+
+        fixture.console.assert_clean("reading the thumb").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A `focusable` area of plain text is a tab stop with a visible ring, and the
+/// browser scrolls it with the arrow keys once it holds focus.
+#[test]
+fn a_focusable_area_takes_tab_and_scrolls_with_the_arrows() {
+    const REGION: &str = "#region";
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/keyboard", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        // A smooth keyboard scroll never lands in a background page.
+        browser::emulate_media(page, Scheme::Light, Some(true))
+            .await
+            .unwrap();
+
+        let ring = focus::assert_focus_ring(page, REGION, 5).await.unwrap();
+        focus::assert_ring_contrast(&ring).unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#region').scrollTop > 0",
+            "ArrowDown to scroll the focused area",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("scrolling by keyboard")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }

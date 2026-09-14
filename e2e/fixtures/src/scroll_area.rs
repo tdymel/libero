@@ -8,7 +8,33 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/scroll-area", || rsx! { ScrollAreaPage {} }),
     ("/scroll-area/edges", || rsx! { EdgesPage {} }),
+    ("/scroll-area/keyboard", || rsx! { KeyboardPage {} }),
 ];
+
+/// Two areas of plain text, nothing focusable inside: one left at its
+/// defaults, one `focusable` and named as APG's scrollable region asks.
+#[component]
+fn KeyboardPage() -> Element {
+    let lines = || (0..40).map(|i| rsx! { p { key: "{i}", "Line {i}" } });
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            button { id: "before", "Before" }
+            div { style: "height: 120px",
+                ScrollArea { id: "plain", {lines()} }
+            }
+            div { style: "height: 120px",
+                ScrollArea {
+                    id: "region",
+                    focusable: true,
+                    role: "region",
+                    "aria-label": "Release notes",
+                    {lines()}
+                }
+            }
+            button { id: "after", "After" }
+        }
+    }
+}
 
 /// A plain area with only `ontopreached`/`onbottomreached`, no `onscroll` and
 /// no `Virtualize`: the handlers alone must keep its scroll listener.
