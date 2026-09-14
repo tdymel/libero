@@ -39,6 +39,40 @@ use e2e::passes::target_size::MINIMUM;
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
+/// Todo 618: the slide and the track clip flush at a slide's edge, which cut
+/// away the outset ring of a slide's focusable content. Every visible slide's
+/// button, the first one flush with the track's left edge.
+#[test]
+fn a_focused_slide_keeps_its_ring() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/loop", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "[aria-roledescription=slide] button", 10)
+            .await
+            .unwrap();
+        for stop in 0..3 {
+            if stop > 0 {
+                keyboard::press(page, keyboard::TAB).await.unwrap();
+            }
+            let clipped: f64 = page
+                .evaluate(crate::image_list::ring_clipped(
+                    "[aria-roledescription=carousel]",
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                clipped <= 0.0,
+                "slide button {stop}: the ring runs {clipped}px past the clip"
+            );
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The scroll container, which is also the tab stop and where the key handler
 /// sits. Not `[role=group]` alone: every slide is one too. The track is the
 /// group that describes itself with the live status region.

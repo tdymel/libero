@@ -29,7 +29,8 @@ use crate::{
         CAROUSEL_CONTROL_SIZE, CAROUSEL_CONTROLS_OFFSET, CAROUSEL_GAP, CAROUSEL_INDICATOR_COLOR,
         CAROUSEL_INDICATOR_CURRENT_COLOR, CAROUSEL_INDICATOR_CURRENT_LENGTH,
         CAROUSEL_INDICATOR_LENGTH, CAROUSEL_INDICATOR_THICKNESS, CAROUSEL_INDICATORS_GAP,
-        CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, CarouselDefaults, CssVar, NamedColorCss, Size, SizeCss,
+        CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, CarouselDefaults, CssVar, FOCUS_RING_WIDTH,
+        NamedColorCss, Size, SizeCss,
     },
 };
 
@@ -108,6 +109,12 @@ static CAROUSEL_SLIDE_SX: StaticSx = StaticSx::new(|| {
         .min_height("0")
         .border_radius(CAROUSEL_RADIUS.value())
         .overflow("hidden")
+        // The slide and the track clip flush at its edges, so a focusable slide
+        // content loses an outset ring (todo 618), as in `AspectRatio`.
+        .selector(
+            "& > :focus-visible",
+            inset_focus_ring_sx(&format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())),
+        )
         .flex(format!(
             "0 0 calc((100% - ({} - 1) * {}) / {})",
             CAROUSEL_PER_VIEW.overridable(),

@@ -4,8 +4,51 @@
 
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
+use e2e::passes::keyboard;
 use e2e::{Fixture, Viewport};
 use serde::Deserialize;
+
+/// How far the focused element's ring reaches past any ancestor up to `root`
+/// that clips its overflow, in px. Zero or less: the whole stripe shows.
+pub fn ring_clipped(root: &str) -> String {
+    format!(
+        "(() => {{ const el = document.activeElement; const s = getComputedStyle(el); \
+         const reach = parseFloat(s.outlineOffset) + parseFloat(s.outlineWidth); \
+         const r = el.getBoundingClientRect(); const stop = document.querySelector('{root}'); \
+         let worst = -Infinity; \
+         for (let clip = el.parentElement; clip && clip !== stop.parentElement; clip = clip.parentElement) {{ \
+           const cs = getComputedStyle(clip); \
+           if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue; \
+           const c = clip.getBoundingClientRect(); \
+           worst = Math.max(worst, c.left - (r.left - reach), (r.right + reach) - c.right, \
+             c.top - (r.top - reach), (r.bottom + reach) - c.bottom); }} \
+         return worst; }})()"
+    )
+}
+
+/// Todo 618: a `to` cell's link fills its `overflow: hidden` `<li>`, so an
+/// outset ring was cut away on all four sides (WCAG 2.4.7).
+#[test]
+fn a_focused_link_cell_keeps_its_ring() {
+    block_on(async {
+        let fixture = Fixture::open("/image-list-links", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "[role=list] a", 10).await.unwrap();
+        let clipped: f64 = page
+            .evaluate(ring_clipped("[role=list]"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            clipped <= 0.0,
+            "the ring runs {clipped}px past the cell's clip"
+        );
+        fixture.close().await.unwrap();
+    });
+}
 
 /// The gaps as laid out - the tall cell 0 sits beside ordinary cells 1 and 2 -
 /// and every `<li>`'s box, in fixture order.

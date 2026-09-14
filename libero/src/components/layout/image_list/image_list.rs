@@ -3,16 +3,17 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, LinkedImageScope, States, Variables,
-        common::{base_props, input_from_str, variables},
+        common::{base_props, input_from_str, inset_focus_ring_sx, variables},
         layout::use_box,
         navigation::InternalAnchor,
     },
     hooks::use_theme,
     sx::{StaticSx, Sx, sx},
     theme::{
-        ASPECT_RATIO, BarPosition, CssVar, GRID_ZONE_GAP, IMAGE_LIST_BAR_BACKGROUND,
-        IMAGE_LIST_BAR_BACKGROUND_TOP, IMAGE_LIST_BAR_COLOR, IMAGE_LIST_BAR_PADDING,
-        IMAGE_LIST_RADIUS, ImageListDefaults, ImageListVariant, Responsive, Size, SizeCss,
+        ASPECT_RATIO, BarPosition, CssVar, FOCUS_RING_WIDTH, GRID_ZONE_GAP,
+        IMAGE_LIST_BAR_BACKGROUND, IMAGE_LIST_BAR_BACKGROUND_TOP, IMAGE_LIST_BAR_COLOR,
+        IMAGE_LIST_BAR_PADDING, IMAGE_LIST_RADIUS, ImageListDefaults, ImageListVariant, Responsive,
+        Size, SizeCss,
     },
     utils::warn,
 };
@@ -233,10 +234,17 @@ fn media_base() -> Sx {
 /// rendered, and a `<button>` inside an anchor is invalid HTML - so the anchor
 /// is the picture and the tile is covered by a pseudo-element instead.
 fn link_base() -> Sx {
-    sx().color("inherit").text_decoration("none").selector(
-        "&::after",
-        sx().content("\"\"").position("absolute").inset("0"),
-    )
+    sx().color("inherit")
+        .text_decoration("none")
+        .selector(
+            "&::after",
+            sx().content("\"\"").position("absolute").inset("0"),
+        )
+        // The link fills the clipped cell, so an outset ring is cut away (todo 618).
+        .focus_visible(inset_focus_ring_sx(&format!(
+            "calc(-1 * {})",
+            FOCUS_RING_WIDTH.value()
+        )))
 }
 
 static IMAGE_LIST_MEDIA_SX: StaticSx = StaticSx::new(media_base);
