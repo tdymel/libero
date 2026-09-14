@@ -68,6 +68,19 @@ base_props! {
     }
 }
 
+/// What describes the picture rather than the root: on a zoomable image these
+/// go to the `<img>`, not to the `<button>` around it.
+const IMG_ATTRIBUTES: [&str; 8] = [
+    "loading",
+    "decoding",
+    "fetchpriority",
+    "srcset",
+    "sizes",
+    "crossorigin",
+    "referrerpolicy",
+    "usemap",
+];
+
 fn zoom_label(alt: &str) -> String {
     match alt.is_empty() {
         true => "Zoom in".to_string(),
@@ -162,11 +175,15 @@ pub fn Image(props: ImageProps) -> Element {
         props.zoomed_src.clone().unwrap_or_else(|| src.clone()),
         props.alt.clone(),
     );
+    let (img_attributes, attributes): (Vec<_>, Vec<_>) = props
+        .attributes
+        .into_iter()
+        .partition(|attribute| IMG_ATTRIBUTES.contains(&attribute.name));
     let image = image
         .attr("src", src)
         .attr("alt", "")
         .attr("role", "presentation")
-        .render(HtmlTag::Img, Vec::new(), ());
+        .render(HtmlTag::Img, img_attributes, ());
 
     rsx! {
         ZoomButton {
@@ -175,7 +192,7 @@ pub fn Image(props: ImageProps) -> Element {
             class: props.class,
             sx: props.sx,
             states: props.states,
-            attributes: props.attributes,
+            attributes,
             {image}
         }
     }

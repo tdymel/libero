@@ -1,0 +1,8 @@
+---
+source: e2e/src/suite.rs
+description: image at desktop (rest)
+expression: tree
+---
+image "A blue square"
+image "A brown square"
+button "Zoom in: A blue square" [haspopup=dialog]
