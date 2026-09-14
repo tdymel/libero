@@ -6,8 +6,9 @@
 //! fail for what it named (review 7, E9).
 
 use e2e::browser::block_on;
+use e2e::passes::keyboard::{self, TAB};
 use e2e::passes::{motion, pointer};
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Viewport, ax, wait};
 
 pub const TOGGLE: &str = "#toggle-details";
 pub const ROOT: &str = "#details";
@@ -53,6 +54,47 @@ fn reduced_motion_switches_its_transitions_off() {
             .console
             .assert_clean("the reduced-motion collapse")
             .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The focused element's id.
+async fn focused(page: &chromiumoxide::Page) -> String {
+    page.evaluate("document.activeElement?.id ?? ''")
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
+}
+
+/// A kept-mounted panel's content is out of the tab order and the tree while
+/// closed, and back in both once open.
+#[test]
+fn a_closed_kept_panel_is_neither_focusable_nor_announced() {
+    block_on(async {
+        let fixture = Fixture::open("/collapse-kept", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#toggle-kept").await.unwrap();
+        let focus_trigger = "document.querySelector('#toggle-kept').focus()";
+
+        page.evaluate(focus_trigger).await.unwrap();
+        keyboard::press(page, TAB).await.unwrap();
+        assert_eq!(focused(page).await, "after", "Tab skips the closed panel");
+        let closed = ax::snapshot(page, "#kept-frame").await.unwrap();
+        assert!(
+            !closed.contains("Inside"),
+            "closed panel announced: {closed}"
+        );
+
+        pointer::click(page, "#toggle-kept").await.unwrap();
+        wait::for_visible(page, "#inside").await.unwrap();
+        page.evaluate(focus_trigger).await.unwrap();
+        keyboard::press(page, TAB).await.unwrap();
+        assert_eq!(focused(page).await, "inside", "Tab enters the open panel");
+
+        fixture.console.assert_clean("the kept collapse").unwrap();
         fixture.close().await.unwrap();
     });
 }
