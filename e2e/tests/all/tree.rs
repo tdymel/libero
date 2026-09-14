@@ -187,3 +187,30 @@ fn it_walks_like_a_tree() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 596: a disabled row takes the pointer and shows `not-allowed`, but a
+/// press neither focuses it, off the roving stop, nor reaches its `TreeItem`.
+#[test]
+fn a_disabled_row_shows_not_allowed_and_takes_no_focus() {
+    block_on(async {
+        let fixture = Fixture::open("/chip/fieldset", Viewport::Desktop)
+            .await
+            .unwrap();
+        let row = "[data-tree-id=\"off\"]";
+        crate::action_icon::assert_disabled_look(&fixture.page, row).await;
+
+        pointer::click(&fixture.page, row).await.unwrap();
+        let focused: String = fixture
+            .page
+            .evaluate("document.activeElement.dataset.treeId ?? document.activeElement.id")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            !["off", "tree-off"].contains(&focused.as_str()),
+            "a press focused the disabled row: {focused}"
+        );
+        fixture.close().await.unwrap();
+    });
+}

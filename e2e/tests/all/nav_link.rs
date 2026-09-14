@@ -148,3 +148,17 @@ fn a_spread_aria_label_names_the_burger() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 596: a disabled link takes the pointer and shows `not-allowed`, with
+/// no hover tint. It has no `href`, so a click has nothing to follow.
+#[test]
+fn a_disabled_link_shows_not_allowed_and_no_hover() {
+    block_on(async {
+        let fixture = Fixture::open("/nav-link/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        crate::action_icon::assert_disabled_look(&fixture.page, "#disabled").await;
+        crate::action_icon::assert_disabled_look(&fixture.page, "#disabled-active").await;
+        fixture.close().await.unwrap();
+    });
+}

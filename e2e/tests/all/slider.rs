@@ -549,3 +549,41 @@ fn a_track_press_does_not_pin_the_value_bubble() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 596: a disabled slider takes the pointer and shows `not-allowed` over
+/// its thumb too, but opens no value bubble and a drag moves nothing.
+#[test]
+fn a_disabled_slider_shows_not_allowed_and_ignores_the_pointer() {
+    block_on(async {
+        let fixture = Fixture::open("/slider/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let thumb = "#locked [role=slider]";
+        crate::action_icon::assert_disabled_look(page, thumb).await;
+
+        let value = format!("document.querySelector('{thumb}').getAttribute('aria-valuenow')");
+        let from = pointer::centre_of(page, thumb).await.unwrap();
+        let to = pointer::Point {
+            x: from.x - 80.0,
+            y: from.y,
+        };
+        pointer::drag(page, from, to, 10).await.unwrap();
+        pointer::move_to(page, from).await.unwrap();
+        let (now, bubble): (String, bool) = page
+            .evaluate(format!(
+                "new Promise(r => setTimeout(() => r([{value}, \
+                 [...document.querySelectorAll('[role=tooltip]')].some(t => t.checkVisibility())]), 600))"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            (now.as_str(), bubble),
+            ("70", false),
+            "[value after a drag, a bubble open]"
+        );
+        fixture.close().await.unwrap();
+    });
+}

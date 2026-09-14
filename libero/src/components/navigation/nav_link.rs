@@ -63,18 +63,19 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(inset_focus_ring_sx("-2px"))
         // Hover is neutral grey, not `color`: it shouldn't preview the
         // selected look. Active gets the light color tint instead.
-        .hover(sx().background("muted.2"))
+        // Skips a disabled link, which needs no `pointer-events: none` then and
+        // shows `not-allowed` (todo 596). `:where` keeps `:hover`'s specificity.
+        .selector(
+            "&:hover:not(:where([data-state~=\"disabled\"]))",
+            sx().background("muted.2"),
+        )
         .when(
             "active",
             sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())
                 .hover(sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())),
         )
-        .when(
-            "disabled",
-            sx().opacity("0.5")
-                .cursor("not-allowed")
-                .pointer_events("none"),
-        )
+        // Without `href` it has nothing to follow.
+        .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
 });
 
 base_props! {

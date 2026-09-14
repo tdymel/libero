@@ -177,3 +177,19 @@ fn buttons_in_a_disabled_fieldset_look_disabled() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 596: a disabled filter chip and a disabled link chip take the pointer
+/// and show `not-allowed`, and a click on the filter chip still emits nothing.
+#[test]
+fn a_disabled_chip_shows_not_allowed_and_ignores_a_click() {
+    block_on(async {
+        let fixture = Fixture::open("/chip", Viewport::Desktop).await.unwrap();
+        crate::action_icon::assert_disabled_look(&fixture.page, "#off").await;
+        crate::action_icon::assert_disabled_look(&fixture.page, "#dead-link").await;
+
+        pointer::click(&fixture.page, "#off").await.unwrap();
+        settle(&fixture).await;
+        assert_eq!(emitted(&fixture).await, "", "the disabled chip emitted");
+        fixture.close().await.unwrap();
+    });
+}

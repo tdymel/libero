@@ -28,12 +28,14 @@ pub(super) struct TreeRowState {
 // The `<li role="treeitem">`. Deliberately no hover background: this element
 // contains its descendants' `<li>`s, so `:hover` here would paint the whole
 // ancestor chain. `disabled` does want that subtree-wide reach, so it stays.
+// Only the subtree drops the pointer: the `<li>` takes it and shows
+// `not-allowed` (todo 596), and its `onmousedown` refuses the focus.
 static TREE_ROW_SX: StaticSx = StaticSx::new(|| {
     sx().focus_visible(focus_ring_sx()).when(
         "disabled",
         sx().opacity("0.5")
             .cursor("not-allowed")
-            .pointer_events("none"),
+            .selector("& *", sx().pointer_events("none")),
     )
 });
 
@@ -70,7 +72,7 @@ pub(super) struct TreeRowProps {
     pub render_node: ErasedRenderNode,
     pub onexpandedchange: Option<EventHandler<HashSet<String>>>,
     /// Under a disabled branch: the row acts disabled, as `TREE_ROW_SX`'s
-    /// subtree-wide `pointer-events` already makes it for the mouse.
+    /// subtree-wide `pointer-events: none` already makes it for the mouse.
     #[props(default)]
     pub ancestor_disabled: bool,
 }
@@ -174,6 +176,12 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         .attr("aria-expanded", is_expanded.map(|value| value.to_string()))
         .attr("aria-disabled", disabled.then_some("true"))
         .attr("tabindex", li_tabindex)
+        // A press would focus a row the roving stop is not on, where no key works.
+        .event("onmousedown", move |event: Event<MouseData>| {
+            if disabled {
+                event.prevent_default();
+            }
+        })
         .render(HtmlTag::Li, Vec::new(), children)
 }
 

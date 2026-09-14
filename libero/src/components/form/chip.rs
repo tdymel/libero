@@ -98,10 +98,12 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(focus_ring_sx())
 });
 
+// No `pointer-events: none`, so `not-allowed` shows (todo 596): the variant's
+// `:hover` skips a disabled chip, and no click path is left to block.
 fn disabled_sx() -> Sx {
     sx().opacity("0.5")
         .cursor("not-allowed")
-        .pointer_events("none")
+        .selector("& > label", sx().cursor("not-allowed"))
 }
 
 static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {

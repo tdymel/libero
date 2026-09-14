@@ -70,15 +70,17 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
         // overlap whatever follows. Padding, not margin: a margin collapses
         // with the next sibling's and the reserve goes away.
         .when("marks-labeled", sx().padding_bottom("1.5em"))
+        // Nothing to grab: the track's pointer and the thumb's grab hand would
+        // promise a drag that `onstart` refuses.
+        .when("readonly", sx().selector("& *", sx().cursor("default")))
+        // No `pointer-events: none`, so `not-allowed` shows (todo 596): `onstart`
+        // refuses the drag, and the thumb's bubble is held shut. After `readonly`.
         .when(
             "disabled",
             sx().opacity("0.5")
                 .cursor("not-allowed")
-                .pointer_events("none"),
+                .selector("& *", sx().cursor("not-allowed")),
         )
-        // Nothing to grab: the track's pointer and the thumb's grab hand would
-        // promise a drag that `onstart` refuses.
-        .when("readonly", sx().selector("& *", sx().cursor("default")))
         // The track is the scale, so the thumb must read against any color on
         // it: white ring, dark halo, the picked color as its face.
         // The shadow only while unfocused: this selector outranks the thumb's
@@ -594,6 +596,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         min_range,
                         size,
                         interactive,
+                        disabled,
                         label: props.label,
                         marks: props.marks,
                         aria_labels: [props.aria_label, props.aria_label_to],
@@ -625,6 +628,7 @@ struct SliderThumbsProps {
     min_range: f64,
     size: Size,
     interactive: bool,
+    disabled: bool,
     label: Option<Callback<f64, String>>,
     marks: Vec<SliderMark>,
     aria_labels: [Option<String>; 2],
@@ -767,13 +771,18 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
         }
 
         // The drag keeps it open once the pointer has left the thumb; hover
-        // and keyboard focus are the tooltip's own doing.
+        // and keyboard focus are the tooltip's own doing. A disabled thumb
+        // takes the pointer now (todo 596), but still opens no bubble.
+        let open = match props.disabled {
+            true => Some(false),
+            false => (dragging() && active() == index).then_some(true),
+        };
         rsx! {
             span { class: anchor_class.clone(), style: "{at}",
                 Tooltip {
                     label: rsx! { {bubble_text} },
                     size,
-                    open: (dragging() && active() == index).then_some(true),
+                    open,
                     label_id: bubble_id,
                     // The thumb's hit area already spans the gap, and the
                     // portaled bridge over it would take the press from it.
