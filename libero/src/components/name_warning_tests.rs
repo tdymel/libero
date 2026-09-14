@@ -7,8 +7,8 @@ use dioxus::prelude::*;
 use crate::{
     LiberoProvider,
     components::{
-        Anchor, Checkbox, Dialog, Drawer, ProgressBar, Radio, RadioGroup, SegmentedControl,
-        Slider, Splitter, SpotlightOptions, Switch, use_spotlight,
+        Anchor, Checkbox, Dialog, Drawer, ProgressBar, Radio, RadioGroup, SegmentedControl, Slider,
+        Splitter, SpotlightOptions, Switch, use_spotlight,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
     utils::take_warnings,
