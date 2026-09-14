@@ -60,6 +60,7 @@ mod hover_card;
 mod icon;
 mod image;
 mod image_list;
+mod layout;
 mod lightbox;
 mod loader;
 mod long_labels;
@@ -146,6 +147,7 @@ const FIXTURES: &[Routes] = &[
     icon::ROUTES,
     image::ROUTES,
     image_list::ROUTES,
+    layout::ROUTES,
     lightbox::ROUTES,
     loader::ROUTES,
     long_labels::ROUTES,

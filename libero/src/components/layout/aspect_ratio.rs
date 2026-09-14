@@ -3,11 +3,11 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, Variables,
-        common::{base_props, variables},
+        common::{base_props, inset_focus_ring_sx, variables},
         layout::use_box,
     },
     sx::{StaticSx, sx},
-    theme::ASPECT_RATIO,
+    theme::{ASPECT_RATIO, FOCUS_RING_WIDTH},
     utils::warn,
 };
 
@@ -15,6 +15,11 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().aspect_ratio(ASPECT_RATIO.overridable())
         .overflow("hidden")
         .selector("& > *", sx().width("100%").height("100%"))
+        // The child fills the clipped box, so a ring drawn outside it is cut away.
+        .selector(
+            "& > *:focus-visible",
+            inset_focus_ring_sx(&format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())),
+        )
 });
 
 fn aspect_ratio_variables(ratio: Option<&f32>) -> Variables {

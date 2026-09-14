@@ -41,6 +41,7 @@ mod image;
 mod image_list;
 mod isolation;
 mod journal;
+mod layout;
 mod lightbox;
 mod loader;
 mod long_labels;

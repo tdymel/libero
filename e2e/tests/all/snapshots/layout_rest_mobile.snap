@@ -1,0 +1,27 @@
+---
+source: e2e/src/suite.rs
+description: layout at mobile (rest)
+expression: tree
+---
+generic
+  navigation "Sections"
+    list
+      listitem [level=1]
+        ListMarker "• "
+        link "Container"
+          StaticText "Container"
+  button "Toggle" [pressed=false]
+    StaticText "Toggle"
+  region "Container"
+    StaticText "A container keeps its gutters and never runs past a narrow screen."
+  generic
+    StaticText "First"
+    StaticText "Second"
+    StaticText "Third"
+  generic
+    StaticText "Centred"
+    generic
+      StaticText "New"
+  generic
+    link "Play the video"
+      StaticText "Play the video"
