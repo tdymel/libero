@@ -1,0 +1,14 @@
+---
+source: e2e/src/suite.rs
+description: action_icon at desktop (rest)
+expression: tree
+---
+button "Copy"
+button "Pin" [pressed=false]
+button "Bookmark" [pressed=false]
+button "Save" [busy=1] [disabled]
+button "Delete" [disabled]
+button "Small"
+button "Extra small"
+paragraph
+  StaticText "0"

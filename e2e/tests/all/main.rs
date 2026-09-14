@@ -5,6 +5,7 @@
 //! A new component is `tests/all/<unit>.rs` plus its `mod` line here.
 
 mod accordion;
+mod action_icon;
 mod autocomplete;
 mod button;
 mod calendar;

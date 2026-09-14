@@ -25,6 +25,7 @@
 //!   renders, and the harness waits for it.
 
 mod accordion;
+mod action_icon;
 mod autocomplete;
 mod button;
 mod calendar;
@@ -99,6 +100,7 @@ type Routes = &'static [(&'static str, fn() -> Element)];
 /// Every module's `ROUTES`. Paths must be unique across them.
 const FIXTURES: &[Routes] = &[
     accordion::ROUTES,
+    action_icon::ROUTES,
     autocomplete::ROUTES,
     button::ROUTES,
     calendar::ROUTES,
