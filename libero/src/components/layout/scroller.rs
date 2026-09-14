@@ -8,12 +8,12 @@ use crate::{
             states, variables,
         },
         layout::{
-            ScrollArea, ScrollAreaBase, ScrollAreaHandle, scroll_area_base, use_box,
-            use_scroll_area,
+            ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, scroll_area_base,
+            use_box, use_scroll_area,
         },
     },
-    hooks::{DragMove, DragOptions, DragStart, use_drag, use_id, use_theme},
-    platform::ElementApi,
+    hooks::{DragMove, DragOptions, DragStart, use_drag, use_element, use_id, use_theme},
+    platform::{ElementApi, next_task},
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size},
 };
@@ -64,6 +64,21 @@ fn step_target(offset: f64, amount: f64, forward: bool, max: f64) -> f64 {
         true => offset + amount,
         false => offset - amount,
     };
+    target.clamp(0.0, max.max(0.0))
+}
+
+/// The offset that shows an item (`start..end` along the viewport, in px)
+/// wholly clear of the controls, each `inset` wide; the start wins when both
+/// cannot. Moves only as far as needed, and never past the range.
+fn clear_of_controls(offset: f64, start: f64, end: f64, view: f64, inset: f64, max: f64) -> f64 {
+    let (start, end) = (offset + start, offset + end);
+    let mut target = offset;
+    if end > target + view - inset {
+        target = end - view + inset;
+    }
+    if start < target + inset {
+        target = start - inset;
+    }
     target.clamp(0.0, max.max(0.0))
 }
 
@@ -352,6 +367,62 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         });
     };
 
+    let root = use_element();
+    // Set while a scroll started below runs: something can cut it short, so
+    // its end checks again.
+    let mut clearing = use_hook(|| CopyValue::new(false));
+
+    // Chromium's focus scroll stops a tabbed item just inside the clip, under
+    // a control's fade (2.4.11). Once it has started, this scroll replaces it.
+    let clear_focus = move || {
+        spawn(async move {
+            next_task().await;
+            // A pointer focus leaves the strip where the pointer put it.
+            let Ok(item) = viewport.query_selector(":focus-visible") else {
+                return;
+            };
+            let control = root
+                .query_selector(":scope > button")
+                .ok()
+                .map(|control| control.dimensions());
+            let (at, size, left, view, offset, content) = (
+                item.client_offset(),
+                item.dimensions(),
+                viewport.client_offset(),
+                viewport.dimensions(),
+                viewport.scroll_offset(),
+                viewport.scroll_size(),
+            );
+            let inset = match control {
+                Some(control) => control.await.map_or(0.0, |size| size.width),
+                None => 0.0,
+            };
+            let (Ok((x, _)), Ok(size), Ok((left, _)), Ok(view), Ok((offset, _)), Ok(content)) = (
+                at.await,
+                size.await,
+                left.await,
+                view.await,
+                offset.await,
+                content.await,
+            ) else {
+                return;
+            };
+            let start = x - left;
+            let target = clear_of_controls(
+                offset,
+                start,
+                start + size.width,
+                view.width,
+                inset,
+                content.width - view.width,
+            );
+            if (target - offset).abs() >= EDGE_TOLERANCE {
+                clearing.set(true);
+                area.scroll_to(target, 0.0);
+            }
+        });
+    };
+
     // `ResizeObserver` delivers an initial observation, so this is also the
     // mount-time measurement - before any scroll, nothing else says whether
     // the strip overflows at all.
@@ -447,8 +518,15 @@ pub fn Scroller(props: ScrollerProps) -> Element {
             id: viewport_id(),
             role: "region",
             aria_label: props.aria_label,
-            onscroll: move |_| measure(),
+            onscroll: move |event: ScrollPositionEvent| {
+                measure();
+                if matches!(event, ScrollPositionEvent::End(..)) && *clearing.peek() {
+                    clearing.set(false);
+                    clear_focus();
+                }
+            },
             onresize: resized,
+            onfocusin: move |_| clear_focus(),
             onpointerdown,
             onpointermove,
             onpointerup,
@@ -512,6 +590,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         .states(&root_states)
         .variables(&root_variables)
         .prepare()
+        .element(&root)
         .render(
             HtmlTag::Div,
             props.attributes,
@@ -576,6 +655,24 @@ mod tests {
         assert_eq!(step_target(500.0, 200.0, true, 600.0), 600.0);
         assert_eq!(step_target(150.0, 200.0, false, 600.0), 0.0);
         assert_eq!(step_target(0.0, 200.0, true, -3.0), 0.0);
+    }
+
+    /// A 300px viewport, 40px controls, a 600px range.
+    #[test]
+    fn a_focused_item_is_scrolled_clear_of_the_controls() {
+        let clear = |offset, start, end| clear_of_controls(offset, start, end, 300.0, 40.0, 600.0);
+
+        // Just inside the clip, under the end control: 40px further.
+        assert_eq!(clear(100.0, 240.0, 300.0), 140.0);
+        // Under the start control.
+        assert_eq!(clear(100.0, 10.0, 60.0), 70.0);
+        // Already clear: stays.
+        assert_eq!(clear(100.0, 50.0, 250.0), 100.0);
+        // Wider than the gap between the controls: its start wins.
+        assert_eq!(clear(100.0, 20.0, 290.0), 80.0);
+        // The first and last items rest at the ends, where no control shows.
+        assert_eq!(clear(50.0, -40.0, 0.0), 0.0);
+        assert_eq!(clear(550.0, 300.0, 350.0), 600.0);
     }
 
     /// Chrome and Safari keep smooth scrolling under reduced motion, and a
