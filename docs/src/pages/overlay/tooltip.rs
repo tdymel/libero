@@ -12,7 +12,10 @@ const SIZES: [&str; 5] = ["xs", "sm", "md", "lg", "xl"];
 
 // snippet: in Tooltip { .., Button { "Save" } }
 const LABEL: &str = r#"label: rsx! { "Saves the current draft" }"#;
-const TRIGGER: &str = r#"Button { variant: "outlined", "Save" }"#;
+// The trigger points at the bubble, so a copied snippet is described too.
+// snippet: in Tooltip { label: rsx! { "Save" }, .., Button { "Save" } }
+const LABEL_ID: &str = r#"label_id: "draft-tip""#;
+const TRIGGER: &str = r#"Button { variant: "outlined", aria_describedby: "draft-tip", "Save" }"#;
 // snippet: in Tooltip { label: rsx! { "Save" }, .., Button { "Save" } }
 const STYLED: &str = r#"sx: sx().background("primary.6").white_space("normal").max_width("12rem")"#;
 
@@ -98,7 +101,7 @@ pub fn TooltipPage() -> Element {
                 component: "Tooltip",
                 children_text: "",
                 children_code: TRIGGER.to_string(),
-                fixed: vec![LABEL.to_string()],
+                fixed: vec![LABEL.to_string(), LABEL_ID.to_string()],
                 controls: vec![
                     Control::toggle("side", ["top", "right", "bottom", "left"])
                         .default(theme.tooltip.side.as_str()),
@@ -131,6 +134,7 @@ pub fn TooltipPage() -> Element {
                         sx: sx().padding("40px"),
                         Tooltip {
                             label: rsx! { "Saves the current draft" },
+                            label_id: "draft-tip",
                             side: values.str("side"),
                             size: values.str("size"),
                             gap: values.str("gap"),
@@ -149,7 +153,7 @@ pub fn TooltipPage() -> Element {
                                 ),
                                 _ => Input::None,
                             },
-                            Button { variant: "outlined", "Save" }
+                            Button { variant: "outlined", aria_describedby: "draft-tip", "Save" }
                         }
                     }
                 },
