@@ -3,10 +3,10 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Button, Flex, NotificationData, NotificationLive, NotificationOptions, NotificationScope,
-        Notifications, Paper, Text, use_notifications, use_notifications_with,
+        Button, Flex, Input, NotificationData, NotificationLive, NotificationOptions,
+        NotificationScope, Notifications, Paper, Text, use_notifications, use_notifications_with,
     },
-    theme::AutoClose,
+    theme::{AutoClose, Placement},
 };
 
 use crate::Routes;
@@ -17,6 +17,7 @@ pub const ROUTES: Routes = &[
         "/notifications-clear",
         || rsx! { NotificationsClearPage {} },
     ),
+    ("/notifications-host", || rsx! { NotificationsHostPage {} }),
 ];
 
 /// The component the framework was **not** built for.
@@ -123,6 +124,53 @@ fn NotificationsClearPage() -> Element {
             "Notify twice"
         }
     }
+}
+
+/// A contained host whose `placement` changes, and which unmounts from inside
+/// one of its notifications (todo 577). `#notify` sits outside the host, so it
+/// survives it; it only counts, and `Feeder` inside the host shows.
+#[component]
+fn NotificationsHostPage() -> Element {
+    let mounted = use_context_provider(|| Signal::new(true));
+    let mut placement = use_signal(|| Placement::BottomEnd);
+    let mut requested = use_context_provider(|| Signal::new(0u32));
+
+    rsx! {
+        Button { id: "notify", onclick: move |_| requested += 1, "Notify" }
+        Button { id: "move", onclick: move |_| placement.set(Placement::TopStart), "Move" }
+        if mounted() {
+            Notifications { contained: true, placement: Input::Value(placement()),
+                Feeder {}
+            }
+        }
+    }
+}
+
+#[component]
+fn Feeder() -> Element {
+    let notify = use_notifications_with(|s: NotificationScope<String>| {
+        let mut mounted = use_context::<Signal<bool>>();
+        rsx! {
+            Paper {
+                Text { "{s.args()}" }
+                Button { class: "drop-host", onclick: move |_| mounted.set(false), "Drop host" }
+            }
+        }
+    });
+    let requested = use_context::<Signal<u32>>();
+    use_effect(move || {
+        let count = requested();
+        if count > 0 {
+            notify.show_with(
+                format!("Message {count}"),
+                NotificationOptions {
+                    auto_close: Some(AutoClose::Never),
+                    ..Default::default()
+                },
+            );
+        }
+    });
+    rsx! {}
 }
 
 /// A delay nothing else on the page schedules, so the test's clock can hold

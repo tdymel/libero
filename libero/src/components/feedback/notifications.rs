@@ -185,6 +185,10 @@ struct Entry {
     /// scope.
     draw: Draw,
     placement: Option<Placement>,
+    /// The stack it was first drawn in. It stays there when the host's
+    /// `placement` changes: a move would remount it, announce it again and
+    /// restart its timer (todo 577).
+    drawn_in: Cell<Option<Placement>>,
     auto_close: Option<AutoClose>,
     live: NotificationLive,
     /// Closing: the exit is running, and it is removed when that ends.
@@ -461,6 +465,7 @@ impl<T: 'static> NotificationHandle<T> {
             args,
             draw,
             placement: options.placement,
+            drawn_in: Cell::new(None),
             auto_close: options.auto_close,
             live: options.live,
             leaving: false,
@@ -647,11 +652,13 @@ fn NotificationMessage(props: MessageProps) -> Element {
 /// by `Tab` in document order. Closing the focused notification hands focus to
 /// the next one in its stack (its `data-slot="close"`, else its first
 /// focusable), the previous one after the last, else back where it came from.
-/// A `clear()` with focus inside sends it back where it came from.
+/// A `clear()` with focus inside sends it back where it came from, and so does
+/// a contained host unmounting, if that element outlives it.
 #[component]
 pub fn Notifications(
     /// The stack a notification joins unless it names its own. Defaults to
-    /// `theme.notifications.placement`.
+    /// `theme.notifications.placement`. A change moves only notifications
+    /// shown after it.
     #[props(default, into)]
     placement: Input<Placement>,
     /// Shown at once per stack; the rest wait. Defaults to
@@ -695,8 +702,12 @@ pub fn Notifications(
     let stacks = Placement::ALL.iter().map(|&placement| {
         let items = entries
             .iter()
-            .filter(|entry| entry.placement.unwrap_or(host_placement) == placement)
+            .filter(|entry| {
+                let stack = entry.drawn_in.get().or(entry.placement);
+                stack.unwrap_or(host_placement) == placement
+            })
             .take(limit)
+            .inspect(|entry| entry.drawn_in.set(Some(placement)))
             .map(|entry| ItemProps {
                 store,
                 id: entry.id,
@@ -917,6 +928,12 @@ fn NotificationItem(props: ItemProps) -> Element {
         }
         if *focused.peek() == Some(id) {
             focused.set(None);
+            // Now, while the item is still in the document: a contained host
+            // going with it takes the scope a spawned focus would run in.
+            let return_to = store.return_to.try_peek().ok().and_then(|to| to.clone());
+            if let Some(target) = return_to.filter(|to| to.is_connected()) {
+                let _ = target.focus();
+            }
         }
         let mut elements = store.elements;
         elements.write().remove(&id);

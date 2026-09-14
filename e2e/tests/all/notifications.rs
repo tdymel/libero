@@ -517,6 +517,101 @@ fn closing_one_hands_focus_on_and_back_out_of_an_empty_stack() {
     });
 }
 
+/// A host whose `placement` changes leaves a shown notification in its stack:
+/// the same element, announced once. Only a new one goes to the new stack.
+/// Before, every shown one remounted in the new stack's region (todo 577).
+#[test]
+fn a_placement_change_leaves_shown_notifications_in_place() {
+    block_on(async {
+        let fixture = Fixture::open("/notifications-host", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let first = "[...document.querySelectorAll('[aria-live] li')]\
+                     .find(li => li.textContent.includes('Message 1'))";
+        let second = "[...document.querySelectorAll('[aria-live] li')]\
+                      .find(li => li.textContent.includes('Message 2'))";
+
+        let _: usize = js(page, format!("({ANNOUNCEMENTS})('Message 1')")).await;
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_js_true(page, &format!("!!{first}"), "the first notification")
+            .await
+            .unwrap();
+        let _: bool = js(page, format!("(window.__first = {first}, true)")).await;
+
+        pointer::click(page, "#move").await.unwrap();
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_js_true(page, &format!("!!{second}"), "the second notification")
+            .await
+            .unwrap();
+
+        let (same, apart, announced): (bool, bool, usize) = js(
+            page,
+            format!(
+                "[window.__first === {first}, \
+                  window.__first.closest('[aria-live]')?.parentElement !== \
+                  {second}.closest('[aria-live]').parentElement, \
+                  window.__announced]"
+            ),
+        )
+        .await;
+        assert!(same, "the shown notification was remounted");
+        assert!(
+            apart,
+            "the new notification did not go to the new placement"
+        );
+        assert_eq!(announced, 1, "the shown notification was announced again");
+
+        fixture.console.assert_clean("moving the host").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A contained host unmounting with focus inside a notification sends focus
+/// back where it came from, not to `<body>` (todo 577).
+#[test]
+fn a_contained_host_unmounting_hands_focus_back_out() {
+    const DROP: &str = ".drop-host";
+
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let at = viewport.name();
+            let fixture = Fixture::open("/notifications-host", viewport)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+
+            keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            keyboard::tab_to(page, DROP, 5)
+                .await
+                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            // Tab entered the notification from `#move`, the control after `#notify`.
+            let landed = wait::for_js_true(
+                page,
+                &format!(
+                    "!document.querySelector({DROP:?}) && \
+                     document.activeElement === document.querySelector('#move')"
+                ),
+                "the host's unmount to focus the control focus came from",
+            )
+            .await;
+            if let Err(e) = landed {
+                let active: String =
+                    js(page, "document.activeElement.outerHTML.slice(0, 80)".into()).await;
+                panic!("at {at}: {e}; focus is on {active}");
+            }
+
+            fixture
+                .console
+                .assert_clean(&format!("unmounting the host at {at}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// `clear()` with focus inside a notification sends it back where it came
 /// from, as closing the last one does (todo 440). Before, focus fell to `<body>`.
 #[test]
