@@ -23,6 +23,7 @@ mod color_picker;
 mod color_scheme_button;
 mod data_list;
 mod date_field;
+mod divider;
 mod drawer;
 mod field_frame;
 mod field_value;

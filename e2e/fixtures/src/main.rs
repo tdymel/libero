@@ -44,6 +44,7 @@ mod color_scheme_button;
 mod common;
 mod data_list;
 mod date_field;
+mod divider;
 mod drawer;
 mod field_frame;
 mod field_value;
@@ -126,6 +127,7 @@ const FIXTURES: &[Routes] = &[
     data_list::ROUTES,
     date_field::ROUTES,
     drawer::ROUTES,
+    divider::ROUTES,
     field_frame::ROUTES,
     field_value::ROUTES,
     file_field::ROUTES,

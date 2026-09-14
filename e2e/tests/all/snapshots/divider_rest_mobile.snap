@@ -1,0 +1,18 @@
+---
+source: e2e/src/suite.rs
+description: divider at mobile (rest)
+expression: tree
+---
+paragraph
+  StaticText "Above"
+separator
+separator "Or continue with"
+  generic
+    StaticText "Or continue with"
+paragraph
+  StaticText "Left"
+separator "Or"
+  generic
+    StaticText "Or"
+paragraph
+  StaticText "Right"

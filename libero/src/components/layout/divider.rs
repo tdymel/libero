@@ -8,7 +8,7 @@ use crate::{
         layout::use_box,
         variables,
     },
-    hooks::{use_css, use_theme},
+    hooks::{use_css, use_id, use_theme},
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -197,8 +197,17 @@ pub fn Divider(props: DividerProps) -> Element {
         CssLayer::Framework,
     );
 
+    // A separator is named only by its author, never by its content. Not with a
+    // caller's role: a global aria attribute would undo a `role: "none"`.
+    let label_id = use_id();
+    let caller_owns_it = props
+        .attributes
+        .iter()
+        .any(|attribute| matches!(attribute.name, "role" | "aria-label" | "aria-labelledby"));
+    let labelled_by = (has_label && !caller_owns_it).then_some(label_id.cloned());
+
     let label = match props.children {
-        Some(children) => rsx! { span { class: label_class, {children} } },
+        Some(children) => rsx! { span { id: label_id, class: label_class, {children} } },
         None => rsx! {},
     };
 
@@ -208,7 +217,9 @@ pub fn Divider(props: DividerProps) -> Element {
         .sx(&props.sx)
         .variables(&variables)
         .prepare()
-        .attr("role", "separator")
+        // A default, so a caller's `role: "none"` makes the rule decorative.
+        .attr_default("role", "separator")
+        .attr("aria-labelledby", labelled_by)
         .attr("aria-orientation", aria_orientation)
         .attr("data-state", data_state)
         .render(HtmlTag::Div, props.attributes, label)

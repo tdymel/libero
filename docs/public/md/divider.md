@@ -51,6 +51,12 @@ fn Demo() -> Element {
 }
 ```
 
+## Accessibility
+
+- The root is a `separator`. A label names it through `aria-labelledby`; your
+  own `aria-label` or `aria-labelledby` takes over.
+- A purely visual rule: pass `role: "none"` and it leaves the accessibility tree.
+
 ## Props
 
 | Prop | Type | Default | Description |
