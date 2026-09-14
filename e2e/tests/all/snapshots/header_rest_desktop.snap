@@ -1,0 +1,106 @@
+---
+source: e2e/src/suite.rs
+description: header at desktop (rest)
+expression: tree
+---
+banner
+  navigation "Main"
+    button "Home"
+      StaticText "Home"
+      generic
+button "Item 0"
+  StaticText "Item 0"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 1"
+  StaticText "Item 1"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 2"
+  StaticText "Item 2"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 3"
+  StaticText "Item 3"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 4"
+  StaticText "Item 4"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 5"
+  StaticText "Item 5"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 6"
+  StaticText "Item 6"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 7"
+  StaticText "Item 7"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 8"
+  StaticText "Item 8"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 9"
+  StaticText "Item 9"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 10"
+  StaticText "Item 10"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 11"
+  StaticText "Item 11"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 12"
+  StaticText "Item 12"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 13"
+  StaticText "Item 13"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 14"
+  StaticText "Item 14"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 15"
+  StaticText "Item 15"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 16"
+  StaticText "Item 16"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 17"
+  StaticText "Item 17"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 18"
+  StaticText "Item 18"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 19"
+  StaticText "Item 19"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 20"
+  StaticText "Item 20"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 21"
+  StaticText "Item 21"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 22"
+  StaticText "Item 22"
+paragraph
+  StaticText "Filler that makes the page scroll."
+button "Item 23"
+  StaticText "Item 23"
+paragraph
+  StaticText "Filler that makes the page scroll."

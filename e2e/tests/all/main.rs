@@ -32,6 +32,7 @@ mod floating_window;
 mod focus_contrast;
 mod form;
 mod grid_zone;
+mod header;
 mod hover_card;
 mod icon;
 mod image;

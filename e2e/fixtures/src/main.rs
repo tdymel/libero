@@ -53,6 +53,7 @@ mod floating_window;
 mod focus_contrast;
 mod form;
 mod grid_zone;
+mod header;
 mod hover_card;
 mod icon;
 mod image;
@@ -126,8 +127,8 @@ const FIXTURES: &[Routes] = &[
     color_scheme_button::ROUTES,
     data_list::ROUTES,
     date_field::ROUTES,
-    drawer::ROUTES,
     divider::ROUTES,
+    drawer::ROUTES,
     field_frame::ROUTES,
     field_value::ROUTES,
     file_field::ROUTES,
@@ -135,6 +136,7 @@ const FIXTURES: &[Routes] = &[
     focus_contrast::ROUTES,
     form::ROUTES,
     grid_zone::ROUTES,
+    header::ROUTES,
     hover_card::ROUTES,
     icon::ROUTES,
     image::ROUTES,

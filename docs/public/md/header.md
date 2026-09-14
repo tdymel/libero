@@ -59,6 +59,11 @@ nested inside `article`, `aside`, `main`, `nav` or `section` - so keep it at the
 top level of the page. Put a `nav` inside it for the navigation landmark. One
 banner per page.
 
+A `sticky` or `fixed` header can cover a focused element: the browser does not
+scroll one it thinks is on screen (WCAG 2.4.11). Give the page's scroller
+`scroll-padding-top` of the header's height, e.g.
+`html { scroll-padding-top: var(--lsx-header-height-md); }`.
+
 ## Props
 
 | Prop | Type | Default | Description |
