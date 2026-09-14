@@ -12,6 +12,7 @@ use crate::{
 const MARK_TINT_SHADE: ColorShade = ColorShade::S1;
 
 const MARK_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-mark-background");
+const MARK_COLOR_VAR: CssVar = CssVar::new("--lsx-mark-color");
 
 // A bare color name carries no shade, so it takes the tint shade rather than
 // the sx pipeline's generic default. Explicit shades and literal values pass
@@ -26,11 +27,10 @@ fn mark_background_color(value: Option<&ThemeAwareValue>, default_color: Color) 
     }
 }
 
-// The UA stylesheet forces `<mark>` to black text, illegible on a dark
-// caller-supplied background; `color:inherit` hands it back to the context.
-// No `var()` fallback needed - `mark_variables` always sets the background.
+// A hex background sets the text to black or white; anything else inherits,
+// never the UA's black. The background is always set.
 static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
-    sx().color("inherit")
+    sx().color(format!("var({}, inherit)", MARK_COLOR_VAR.name()))
         .background(MARK_BACKGROUND_VAR.value())
 });
 
@@ -41,13 +41,19 @@ static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
 /// unset, as `Blockquote` does.
 fn mark_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Variables {
     let background = mark_background_color(color, default_color);
+    // Literal black or white: a hex does not flip with the scheme, and `--lsx-ink` does.
+    let text = match &background {
+        ThemeAwareValue::RawColor(_, hex) => Some(hex.contrast().to_string()),
+        _ => None,
+    };
 
     variables()
         .with(MARK_BACKGROUND_VAR, background.resolve(None))
         .with(
             CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
-            background.focus_contrast(),
+            text.clone().or_else(|| background.focus_contrast()),
         )
+        .with(MARK_COLOR_VAR, text)
 }
 
 base_props! {
@@ -119,13 +125,26 @@ mod tests {
     #[test]
     fn an_explicit_shade_takes_its_own_contrast_twin() {
         let color = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Info, ColorShade::S6));
-        let variables = mark_variables(Some(&color), Color::Warning);
+        let variables = mark_variables(Some(&color), Color::Warning).to_string();
 
-        assert!(variables.to_string().contains(&format!(
+        assert!(variables.contains(&format!(
             "{}:{};",
             NamedColorCss::FOCUS_CONTRAST.name(),
             ColorValue::Contrast(Color::Info, ColorShade::S6).value()
         )));
+        assert!(!variables.contains(MARK_COLOR_VAR.name()), "{variables}");
+    }
+
+    /// A dark hex left the text to the page's: black on navy, 2.02:1.
+    #[test]
+    fn a_hex_sets_the_text_to_its_twin() {
+        let hex = ThemeAwareValue::from("#1e3a8a");
+        let variables = mark_variables(Some(&hex), Color::Warning).to_string();
+
+        assert!(
+            variables.contains(&format!("{}:#FFFFFF;", MARK_COLOR_VAR.name())),
+            "{variables}"
+        );
     }
 
     #[test]

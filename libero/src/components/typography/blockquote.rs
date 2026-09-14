@@ -39,8 +39,8 @@ struct Palette {
 
 /// A bare colour name carries no shade, so it takes the tint shade rather than
 /// the `sx` pipeline's generic default. An explicit shade tints at that shade
-/// and takes its own contrast twin. A literal passes through, and gives up the
-/// contrast twin because nothing can be derived from it.
+/// and takes its own contrast twin. A literal passes through; only a hex keeps
+/// a contrast twin, read off its own value.
 fn palette(value: Option<&ThemeAwareValue>, default_color: Color) -> Palette {
     let from_color = |color: Color| Palette {
         background: ThemeAwareValue::ColorValue(ColorValue::Shade(color, TINT_SHADE)),
@@ -60,10 +60,16 @@ fn palette(value: Option<&ThemeAwareValue>, default_color: Color) -> Palette {
                 *color, *shade,
             ))),
         },
+        // Literal black or white off a hex: under the page's text a dark one was 2.02:1.
         Some(other) => Palette {
             background: other.clone(),
             border: other.clone(),
-            contrast: None,
+            contrast: match other {
+                ThemeAwareValue::RawColor(_, hex) => {
+                    Some(ThemeAwareValue::String(hex.contrast().to_string()))
+                }
+                _ => None,
+            },
         },
     }
 }
