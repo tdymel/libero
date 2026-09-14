@@ -6,8 +6,8 @@ use crate::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
         common::{
-            base_color, field_props, fill_color, focus_ring_sx, ring_overlay, ring_overlay_sx,
-            variables,
+            base_color, field_props, fill_color, focus_ring_sx, names_itself, ring_overlay,
+            ring_overlay_sx, use_name_warning, variables,
         },
         form::use_field,
         layout::use_box,
@@ -171,6 +171,10 @@ pub fn Radio(props: RadioProps) -> Element {
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
+    use_name_warning(
+        !props.label.is_none() || props.aria_label.is_some() || names_itself(&props.attributes),
+        "Radio: no `label` or `aria_label`, so it is announced as just \"radio button\".",
+    );
 
     let states: Input<States> = field
         .states()

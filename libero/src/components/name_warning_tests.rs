@@ -7,8 +7,8 @@ use dioxus::prelude::*;
 use crate::{
     LiberoProvider,
     components::{
-        Anchor, Dialog, Drawer, ProgressBar, RadioGroup, SegmentedControl, Slider, Splitter,
-        SpotlightOptions, Switch, use_spotlight,
+        Anchor, Checkbox, Dialog, Drawer, ProgressBar, Radio, RadioGroup, SegmentedControl,
+        Slider, Splitter, SpotlightOptions, Switch, use_spotlight,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
     utils::take_warnings,
@@ -225,6 +225,51 @@ fn an_unnamed_switch_warns() {
     assert!(!warns(
         || rsx! { LiberoProvider { Switch { aria_label: "Wi-Fi" } } },
         prefix
+    ));
+}
+
+#[test]
+fn an_unnamed_checkbox_warns() {
+    let prefix = "Checkbox: no `";
+    assert!(warns(|| rsx! { LiberoProvider { Checkbox {} } }, prefix));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Checkbox { label: "Terms" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Checkbox { aria_label: "Terms" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Checkbox { "aria-labelledby": "terms" } } },
+        prefix
+    ));
+}
+
+#[test]
+fn an_unnamed_radio_warns() {
+    let prefix = "Radio: no `";
+    assert!(warns(|| rsx! { LiberoProvider { Radio {} } }, prefix));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Radio { label: "Monthly" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Radio { aria_label: "Monthly" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Radio { "aria-labelledby": "monthly" } } },
+        prefix
+    ));
+}
+
+/// A group's options carry their labels, so none of them warns.
+#[test]
+fn a_named_radio_group_warns_about_no_radio() {
+    assert!(!warns(
+        || rsx! { LiberoProvider { RadioGroup::<String> { label: "Plan", options: vec!["a".to_string()] } } },
+        "Radio: no `"
     ));
 }
 

@@ -7,7 +7,7 @@ use crate::{
         a11y::VISUALLY_HIDDEN_SX,
         common::{
             CheckboxMarkIcon, base_color, contrast_color, field_props, fill_color, focus_ring_sx,
-            ring_overlay, ring_overlay_sx, variables,
+            names_itself, ring_overlay, ring_overlay_sx, use_name_warning, variables,
         },
         form::{use_bound, use_field},
         layout::use_box,
@@ -198,6 +198,10 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
+    use_name_warning(
+        !props.label.is_none() || props.aria_label.is_some() || names_itself(&props.attributes),
+        "Checkbox: no `label` or `aria_label`, so it is announced as just \"checkbox\".",
+    );
 
     // The field's own states plus what only the box reads. `mixed` wins over
     // `checked`, the same way `aria-checked="mixed"` does.
