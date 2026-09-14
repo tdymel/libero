@@ -198,10 +198,11 @@ fn the_fade_reads_the_paper_token() {
     assert!(body(&html).contains(r#"data-state="horizontal fade-edges""#));
 }
 
-/// Keyboard focus inside the content pauses it, with no opt-in: a focused link
-/// must not drift away. Only the track's focus - the toggle is outside it.
+/// Keyboard focus inside the content stops it at its start, with no opt-in: a
+/// focused link must not drift away or freeze out of view. Only the track's
+/// focus - the toggle is outside it.
 #[test]
-fn focus_inside_the_track_pauses_it() {
+fn focus_inside_the_track_stops_it() {
     fn app() -> Element {
         rsx! {
             LiberoProvider { Marquee { a { href: "#", "Link" } } }
@@ -210,7 +211,6 @@ fn focus_inside_the_track_pauses_it() {
 
     let html = render(app);
     let class = marquee_class(&html);
-    let rule =
-        format!(".{class} > [data-slot='track']:focus-within{{animation-play-state:paused;}}");
+    let rule = format!(".{class} > [data-slot='track']:focus-within{{animation:none;}}");
     assert!(html.contains(&rule), "{rule} in {html}");
 }

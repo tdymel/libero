@@ -86,6 +86,10 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         .var(MARQUEE_SHIFT, shift("X"))
         .selector(TRACK, sx().width("max-content"))
         .selector(
+            format!("{TRACK}:focus-within"),
+            sx().width("auto").overflow_x("hidden"),
+        )
+        .selector(
             PAUSE,
             sx().top("0")
                 .bottom("0")
@@ -99,6 +103,10 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         .media(REDUCED_MOTION, sx().overflow_y("auto"))
         .var(MARQUEE_SHIFT, shift("Y"))
         .selector(TRACK, sx().flex_direction("column"))
+        .selector(
+            format!("{TRACK}:focus-within"),
+            sx().max_height("100%").overflow_y("hidden"),
+        )
         .selector(COPIES, sx().flex_direction("column"))
         .selector(PAUSE, sx().bottom(offset));
 
@@ -150,12 +158,12 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
                 sx().animation_play_state("paused"),
             ),
         )
-        // A focused link must not drift out of view (WCAG 2.4.11), whatever
-        // `pause_on_hover` says. The track and not the root, so focusing the
-        // toggle does not hold the motion it reports.
+        // A focused link must be in view (WCAG 2.4.11): pausing could freeze it
+        // outside the clip, so the track stops at its start and scrolls to it.
+        // The track and not the root, so focusing the toggle keeps the motion.
         .selector(
             "& > [data-slot='track']:focus-within",
-            sx().animation_play_state("paused"),
+            sx().animation("none"),
         )
         // The toggle could hide a focused link (2.4.11): transparent, not hidden, so Tab
         // still reaches it. A sibling rule, not `:has()`, which Blitz drops.
