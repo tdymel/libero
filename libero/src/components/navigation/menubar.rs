@@ -236,6 +236,10 @@ pub fn Menubar(props: MenubarProps) -> Element {
             let index = pool.len();
             pool.push(MenuState::new(format!("{}-{index}", id())));
         }
+        // A menu dropped while open would otherwise mount open when it comes back.
+        for state in &pool[len..] {
+            state.close();
+        }
         pool.iter().copied().collect()
     };
 

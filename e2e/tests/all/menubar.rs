@@ -256,3 +256,52 @@ fn an_open_menu_travels_along_the_bar() {
         outcome.unwrap();
     });
 }
+
+/// A menu dropped from `menus` while open comes back closed (todo 569).
+#[test]
+fn a_menu_dropped_while_open_comes_back_closed() {
+    block_on(async {
+        let fixture = Fixture::open("/menubar-shrink", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let view = "[role=menubar] [data-menubar-index=\"2\"]";
+        let toggle =
+            "document.getElementById('drop').dispatchEvent(new Event('input', { bubbles: true }))";
+
+        page.evaluate(format!("document.querySelector({view:?}).focus()"))
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!!document.querySelector({MENU:?})"),
+            "View open",
+        )
+        .await
+        .unwrap();
+
+        page.evaluate(toggle).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!document.querySelector({view:?})"),
+            "View dropped",
+        )
+        .await
+        .unwrap();
+        page.evaluate(toggle).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector({view:?})?.getAttribute('aria-expanded') === 'false' \
+                 && !document.querySelector({MENU:?})"
+            ),
+            "View back, closed",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("a dropped menu").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

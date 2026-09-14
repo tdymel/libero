@@ -8,7 +8,30 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/menubar", || rsx! { MenubarPage {} }),
     ("/menubar-docs", || rsx! { MenubarDocsPage {} }),
+    ("/menubar-shrink", || rsx! { MenubarShrinkPage {} }),
 ];
+
+/// `#drop`'s input event drops `View` and brings it back: no click, so an open
+/// menu stays open through it.
+#[component]
+fn MenubarShrinkPage() -> Element {
+    let mut view = use_signal(|| true);
+    let item = |name: &str| -> MenuEntry { MenuItem::new(name).onselect(|_| {}).into() };
+    let mut menus = vec![
+        MenubarMenu::new("File", vec![item("New")]),
+        MenubarMenu::new("Edit", vec![item("Undo")]),
+    ];
+    if view() {
+        menus.push(MenubarMenu::new("View", vec![item("Zoom in")]));
+    }
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Menubar { aria_label: "Editor", menus }
+            input { id: "drop", oninput: move |_| view.toggle() }
+        }
+    }
+}
 
 /// The docs page's bar: a submenu, a disabled `View`, and `Help` after it.
 #[component]
