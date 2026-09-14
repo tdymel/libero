@@ -74,6 +74,7 @@ mod tabs;
 mod tags_field;
 mod text_field;
 mod time_picker;
+mod timeline;
 mod tooltip;
 mod tree;
 

@@ -1,0 +1,89 @@
+---
+source: e2e/src/suite.rs
+description: timeline at desktop (rest)
+expression: tree
+---
+list
+  listitem [level=1]
+    generic
+      StaticText "Ordered"
+    paragraph
+      StaticText "On 12 May"
+  listitem [level=1]
+    generic
+      StaticText "Packed"
+    paragraph
+      StaticText "On 12 May"
+  listitem [level=1]
+    generic
+      StaticText "Shipped"
+    paragraph
+      StaticText "On 12 May"
+  listitem [level=1]
+    generic
+      StaticText "Delivered"
+    paragraph
+      StaticText "On 12 May"
+list
+  listitem [level=1]
+    generic
+      StaticText "Ordered"
+    paragraph
+      StaticText "On 12 May"
+  listitem [level=1]
+    generic
+      StaticText "Packed"
+    paragraph
+      StaticText "On 12 May"
+  listitem [level=1]
+    generic
+      StaticText "Shipped"
+    paragraph
+      StaticText "On 12 May"
+  listitem [level=1]
+    generic
+      StaticText "Delivered"
+    paragraph
+      StaticText "On 12 May"
+list
+  listitem [level=1]
+    generic
+      StaticText "Ordered"
+    paragraph
+      StaticText "On 12 May"
+  listitem [level=1]
+    generic
+      StaticText "Packed"
+    paragraph
+      StaticText "On 12 May"
+  listitem [level=1]
+    generic
+      StaticText "Shipped"
+    paragraph
+      StaticText "On 12 May"
+  listitem [level=1]
+    generic
+      StaticText "Delivered"
+    paragraph
+      StaticText "On 12 May"
+list
+  listitem [level=1]
+    generic
+      StaticText "Ordered"
+    paragraph
+      StaticText "On 12 May"
+  listitem [level=1]
+    generic
+      StaticText "Packed"
+    paragraph
+      StaticText "On 12 May"
+  listitem [level=1]
+    generic
+      StaticText "Shipped"
+    paragraph
+      StaticText "On 12 May"
+  listitem [level=1]
+    generic
+      StaticText "Delivered"
+    paragraph
+      StaticText "On 12 May"

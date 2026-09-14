@@ -124,14 +124,14 @@ static TIMELINE_BULLET_SX: StaticSx = StaticSx::new(|| {
             TIMELINE_MARKER.value()
         ))
         .color(TIMELINE_MARKER.value())
-        // A bullet holding a child inverts when active - a light glyph on a
-        // white ring is invisible, so the ring fills instead.
+        // An active bullet fills, so done and pending differ by shape, not by
+        // colour alone (1.4.1).
+        .when("active", sx().background(TIMELINE_MARKER.value()))
         .when(
             "with-child && active",
-            sx().background(TIMELINE_MARKER.value())
-                // The surface the bullet is drawn on: whatever contrast the
-                // ring had against the accent, the filled glyph now has.
-                .color(TIMELINE_BULLET_BACKGROUND.value()),
+            // The surface the bullet is drawn on: whatever contrast the
+            // ring had against the accent, the filled glyph now has.
+            sx().color(TIMELINE_BULLET_BACKGROUND.value()),
         )
         .when(
             TimelineAlign::Left.state_name(),

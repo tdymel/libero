@@ -139,9 +139,9 @@ pub fn TimelinePage() -> Element {
                     " - the rail shows position and count visually, and the list is how a "
                     "screen-reader user gets the same two facts. "
                     Code { source: "active" }
-                    " names the current event: bullets up to and including it draw in the "
-                    "accent, as do the connectors between them, so the rail reads as progress "
-                    "rather than as a highlight. Bullets are decorative and hidden from the "
+                    " names the current event: bullets up to and including it fill with the "
+                    "accent, and the connectors between them draw in it, so the rail reads as "
+                    "progress rather than as a highlight, and not by colour alone. Bullets are decorative and hidden from the "
                     "accessibility tree; the title is the text. A custom "
                     Code { source: ".bullet(..)" }
                     " is hidden too, so never put anything focusable in one - "

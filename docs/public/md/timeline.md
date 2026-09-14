@@ -73,6 +73,8 @@ fn Demo() -> Element {
 Two active states move independently. A bullet draws active for `0..=active`,
 and the connector *below* an event draws active for `0..active` - so the rail
 between completed events is filled, and the span below the current one is not.
+An active bullet fills with the accent where a pending one stays a ring, so
+done and pending differ by shape as well as by colour.
 
 ## Events
 
@@ -106,9 +108,9 @@ an otherwise unremarkable run - and `.line(..)` sets the connector *below* the
 event it is called on. The last event has no connector: a rail that runs past
 its final marker points at nothing.
 
-A `.bullet(..)` holding an icon inverts when active: the ring fills with the
-accent instead of outlining it, because a light glyph on a white ring is
-invisible.
+A `.bullet(..)` holding an icon inverts when active: the bullet fills with the
+accent and the glyph takes the surface colour, because a light glyph on a
+white ring is invisible.
 
 **Never put anything focusable in a bullet.** It is `aria-hidden="true"`, and
 `aria-hidden` does not remove an element from the tab order - a `Button` or a
