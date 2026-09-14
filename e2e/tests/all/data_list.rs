@@ -1,7 +1,14 @@
 //! `DataList`: the term is written inline, and still takes the list's styling.
 
 use e2e::browser::block_on;
+use e2e::suite::Suite;
 use e2e::{Fixture, Viewport};
+
+/// Pins the `term`/`definition` roles a styled `dl` keeps.
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("data_list", "/data-list").run();
+}
 
 /// The `<dt>` in column one and bold, its `<dd>` in column two with no margin.
 const LAID_OUT: &str = "(() => { \

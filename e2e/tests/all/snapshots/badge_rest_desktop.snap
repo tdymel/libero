@@ -1,0 +1,62 @@
+---
+source: e2e/src/suite.rs
+description: badge at desktop (rest)
+expression: tree
+---
+StaticText "PRIMARY"
+StaticText "SECONDARY"
+StaticText "ERROR"
+StaticText "INFO"
+StaticText "SUCCESS"
+StaticText "WARNING"
+StaticText "PRIMARY"
+StaticText "SECONDARY"
+StaticText "ERROR"
+StaticText "INFO"
+StaticText "SUCCESS"
+StaticText "WARNING"
+StaticText "PRIMARY"
+StaticText "SECONDARY"
+StaticText "ERROR"
+StaticText "INFO"
+StaticText "SUCCESS"
+StaticText "WARNING"
+StaticText "PRIMARY"
+StaticText "SECONDARY"
+StaticText "ERROR"
+StaticText "INFO"
+StaticText "SUCCESS"
+StaticText "WARNING"
+StaticText "PRIMARY"
+StaticText "SECONDARY"
+StaticText "ERROR"
+StaticText "INFO"
+StaticText "SUCCESS"
+StaticText "WARNING"
+StaticText "XS"
+StaticText "SM"
+StaticText "MD"
+StaticText "LG"
+StaticText "XL"
+StaticText "XXL"
+StaticText "9"
+generic
+  StaticText "Ctrl"
+generic
+  StaticText "Ctrl"
+generic
+  StaticText "Ctrl"
+generic
+  StaticText "Ctrl"
+generic
+  StaticText "Ctrl"
+generic
+  StaticText "Ctrl"
+list
+  listitem [level=1]
+    StaticText "First"
+  listitem [level=1]
+    StaticText "Second"
+    list
+      listitem [level=2]
+        StaticText "Nested"

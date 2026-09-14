@@ -28,6 +28,7 @@ mod accordion;
 mod action_icon;
 mod alert;
 mod autocomplete;
+mod badge;
 mod button;
 mod calendar;
 mod carousel;
@@ -104,6 +105,7 @@ const FIXTURES: &[Routes] = &[
     action_icon::ROUTES,
     alert::ROUTES,
     autocomplete::ROUTES,
+    badge::ROUTES,
     button::ROUTES,
     calendar::ROUTES,
     carousel::ROUTES,

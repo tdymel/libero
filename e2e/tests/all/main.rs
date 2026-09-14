@@ -8,6 +8,7 @@ mod accordion;
 mod action_icon;
 mod alert;
 mod autocomplete;
+mod badge;
 mod button;
 mod calendar;
 mod carousel;

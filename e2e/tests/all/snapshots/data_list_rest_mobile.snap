@@ -1,0 +1,10 @@
+---
+source: e2e/src/suite.rs
+description: data_list at mobile (rest)
+expression: tree
+---
+DescriptionList
+  term "Status"
+    StaticText "Status"
+  definition
+    StaticText "Active"
