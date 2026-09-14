@@ -88,13 +88,9 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         )
     });
 
-    // After the variants, so it also stops their `:hover` from triggering.
-    // `:disabled` too: a disabled `Fieldset` disables the `<button>` (todo 499).
-    let disabled = || {
-        sx().opacity("0.5")
-            .cursor("not-allowed")
-            .pointer_events("none")
-    };
+    // The variants' `:hover` skips a disabled control, so no `pointer-events:
+    // none`. `:disabled` too: a disabled `Fieldset` disables the `<button>` (todo 499).
+    let disabled = || sx().opacity("0.5").cursor("not-allowed");
     base.when("disabled", disabled())
         .selector("&:disabled", disabled())
         .when("loading", loading_sx())

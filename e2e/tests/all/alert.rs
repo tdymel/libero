@@ -37,8 +37,14 @@ fn a_long_title_wraps_rather_than_being_cut() {
             .unwrap()
             .into_value()
             .unwrap();
-        assert!(scroll <= client + 1.0, "the title is cut: {scroll} of {client}px shown");
-        assert!(lines > 1.5, "the long title should wrap, it takes {lines} lines");
+        assert!(
+            scroll <= client + 1.0,
+            "the title is cut: {scroll} of {client}px shown"
+        );
+        assert!(
+            lines > 1.5,
+            "the long title should wrap, it takes {lines} lines"
+        );
 
         fixture.console.assert_clean("the long title").unwrap();
         fixture.close().await.unwrap();

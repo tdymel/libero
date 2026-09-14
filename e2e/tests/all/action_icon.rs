@@ -74,3 +74,54 @@ fn a_toggle_reports_its_pressed_state() {
         fixture.close().await.unwrap();
     });
 }
+
+/// `[pointer hits it, cursor under the pointer, background and colour]`.
+const DISABLED_LOOK: &str = "(() => {
+    const el = document.querySelector('[data-disabled-probe]');
+    const r = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+    const s = getComputedStyle(el);
+    return [el.contains(hit), getComputedStyle(hit).cursor, s.backgroundColor + ' ' + s.color];
+})()";
+
+/// Todo 586: `pointer-events: none` handed the pointer to whatever sat
+/// underneath, so `cursor: not-allowed` never showed. The hover still paints
+/// nothing: the variant's `:hover` skips a disabled control.
+pub async fn assert_disabled_look(page: &chromiumoxide::Page, selector: &str) {
+    wait::for_visible(page, selector).await.unwrap();
+    page.evaluate(format!(
+        "document.querySelector('{selector}').setAttribute('data-disabled-probe', '')"
+    ))
+    .await
+    .unwrap();
+    let (_, _, rest): (bool, String, String) = page
+        .evaluate(DISABLED_LOOK)
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    pointer::hover(page, selector).await.unwrap();
+    let (hit, cursor, hovered): (bool, String, String) = page
+        .evaluate(DISABLED_LOOK)
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert!(
+        hit,
+        "{selector}: the pointer passes through to what is underneath"
+    );
+    assert_eq!(cursor, "not-allowed", "{selector}");
+    assert_eq!(hovered, rest, "{selector} changed colour under the pointer");
+}
+
+#[test]
+fn a_disabled_icon_shows_not_allowed_and_no_hover() {
+    block_on(async {
+        let fixture = Fixture::open("/action-icon", Viewport::Desktop)
+            .await
+            .unwrap();
+        assert_disabled_look(&fixture.page, "#disabled").await;
+        fixture.close().await.unwrap();
+    });
+}

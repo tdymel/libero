@@ -171,7 +171,12 @@ pub(crate) fn interactive_variant_sx(
         hovered = hovered.and(shadow_sx(SizeCss::SHADOW.value(ELEVATED_HOVER)));
     }
 
-    variant_chrome_sx(variant, vars).hover(hovered)
+    // Skips a disabled control, so it needs no `pointer-events: none` and can
+    // show `not-allowed` (todo 586). `:where` keeps the specificity of `:hover`.
+    variant_chrome_sx(variant, vars).selector(
+        "&:hover:not(:where(:disabled, [data-state~=\"disabled\"]))",
+        hovered,
+    )
 }
 
 /// Resolved values for the colour vars `variant` reads, from the caller's
@@ -300,20 +305,10 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
                 ),
             )
         })
-        .when(
-            "disabled",
-            // Also stops the variant's `:hover` from ever triggering.
-            sx().opacity("0.5")
-                .cursor("not-allowed")
-                .pointer_events("none"),
-        )
+        // No `pointer-events: none`: the variant's `:hover` skips it already.
+        .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
         // A disabled `Fieldset` disables the `<button>` natively (todo 499).
-        .selector(
-            "&:disabled",
-            sx().opacity("0.5")
-                .cursor("not-allowed")
-                .pointer_events("none"),
-        )
+        .selector("&:disabled", sx().opacity("0.5").cursor("not-allowed"))
         .when("full-width", sx().width("100%"))
         .when("loading", loading_sx())
         // The base outline is suppressed above and re-added only here.

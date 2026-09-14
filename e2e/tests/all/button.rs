@@ -9,6 +9,16 @@ const PLAIN: &str = "#plain";
 const BUSY: &str = "#busy";
 const LINK: &str = "#to-landing";
 
+/// Todo 586, in link mode: the one disabled `Button` the fixture has.
+#[test]
+fn a_disabled_link_shows_not_allowed_and_no_hover() {
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        crate::action_icon::assert_disabled_look(&fixture.page, "#disabled-link").await;
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("button", "/button")
