@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{ClassList, HtmlTag, Input, States, layout::use_box},
+    components::{ClassList, HtmlTag, Input, States, common::inset_focus_ring_sx, layout::use_box},
     sx::{StaticSx, Sx, sx},
     theme::TableDefaults,
 };
@@ -47,6 +47,9 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
                 .color("inherit")
                 .cursor("pointer"),
         )
+        // The library's ring, not the UA's. Inset, as in `Accordion`: the
+        // button fills its cell edge to edge.
+        .selector("& th button:focus-visible", inset_focus_ring_sx("-2px"))
         .selector(
             "& th button svg",
             sx().width("16px")
