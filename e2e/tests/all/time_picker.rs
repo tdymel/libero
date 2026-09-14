@@ -200,12 +200,13 @@ fn the_analog_face_reaches_every_minute_and_second() {
             let check = format!("document.getElementById('fine-value').textContent === {value:?}");
             wait::for_js_true(page, &check, what).await.unwrap();
         };
-        // The face's label names the hand it shows; the readout buttons carry
-        // the same three labels.
+        // The face's label names the hand it shows; each readout button is
+        // named by its shown digits, then the same label (2.5.3).
         let showing = |nth: usize, what: &'static str| async move {
             let check = format!(
-                "document.querySelector('#fine [data-slot=face]').getAttribute('aria-label') \
-                 === document.querySelectorAll('#fine [data-slot=readout] button')[{nth}].getAttribute('aria-label')"
+                "(() => {{ const b = document.querySelectorAll('#fine [data-slot=readout] button')[{nth}]; \
+                 return b.getAttribute('aria-label') === b.textContent + ' ' \
+                 + document.querySelector('#fine [data-slot=face]').getAttribute('aria-label'); }})()"
             );
             wait::for_js_true(page, &check, what).await.unwrap();
         };

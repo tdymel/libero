@@ -719,7 +719,7 @@ impl ClockView {
                 span { ":" }
                 button {
                     r#type: "button",
-                    "aria-label": names.seconds_label,
+                    "aria-label": "{second_text} {names.seconds_label}",
                     "data-active": (hand() == Hand::Second).then_some("true"),
                     "aria-pressed": if hand() == Hand::Second { "true" } else { "false" },
                     tabindex,
@@ -789,9 +789,10 @@ impl ClockView {
         };
         rsx! {
             div { "data-slot": "readout",
+                // The shown digits lead each name, so speech input can say them (2.5.3).
                 button {
                     r#type: "button",
-                    "aria-label": names.hours_label,
+                    "aria-label": "{hour_text} {names.hours_label}",
                     "data-active": (hand() == Hand::Hour).then_some("true"),
                     "aria-pressed": if hand() == Hand::Hour { "true" } else { "false" },
                     tabindex,
@@ -801,7 +802,7 @@ impl ClockView {
                 span { ":" }
                 button {
                     r#type: "button",
-                    "aria-label": names.minutes_label,
+                    "aria-label": "{minute_text} {names.minutes_label}",
                     "data-active": (hand() == Hand::Minute).then_some("true"),
                     "aria-pressed": if hand() == Hand::Minute { "true" } else { "false" },
                     tabindex,
