@@ -44,6 +44,7 @@ mod color_scheme_button;
 mod common;
 mod data_list;
 mod date_field;
+mod dialog;
 mod divider;
 mod drawer;
 mod field_frame;
@@ -83,6 +84,7 @@ mod qr_code;
 mod radio_group;
 mod range_slider;
 mod scroll_area;
+mod scroller;
 mod segmented_control;
 mod select;
 mod skeleton;
@@ -128,6 +130,7 @@ const FIXTURES: &[Routes] = &[
     color_scheme_button::ROUTES,
     data_list::ROUTES,
     date_field::ROUTES,
+    dialog::ROUTES,
     divider::ROUTES,
     drawer::ROUTES,
     field_frame::ROUTES,
@@ -167,6 +170,7 @@ const FIXTURES: &[Routes] = &[
     radio_group::ROUTES,
     range_slider::ROUTES,
     scroll_area::ROUTES,
+    scroller::ROUTES,
     segmented_control::ROUTES,
     select::ROUTES,
     skeleton::ROUTES,

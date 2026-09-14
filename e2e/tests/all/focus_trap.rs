@@ -14,7 +14,13 @@ async fn walk(page: &chromiumoxide::Page, presses: usize, backwards: bool) -> Ve
             true => keyboard::press_shift(page, keyboard::TAB).await.unwrap(),
             false => keyboard::press(page, keyboard::TAB).await.unwrap(),
         }
-        ids.push(page.evaluate(ACTIVE_ID).await.unwrap().into_value().unwrap());
+        ids.push(
+            page.evaluate(ACTIVE_ID)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap(),
+        );
     }
     ids
 }
@@ -24,9 +30,13 @@ async fn walk(page: &chromiumoxide::Page, presses: usize, backwards: bool) -> Ve
 #[test]
 fn tab_passes_over_a_stop_that_is_not_rendered() {
     block_on(async {
-        let fixture = Fixture::open("/focus-trap", Viewport::Desktop).await.unwrap();
+        let fixture = Fixture::open("/focus-trap", Viewport::Desktop)
+            .await
+            .unwrap();
         let page = &fixture.page;
-        focus::wait_for_focus(page, "#first", "mount").await.unwrap();
+        focus::wait_for_focus(page, "#first", "mount")
+            .await
+            .unwrap();
 
         // Native radios without a roving tabindex are each a stop here; see
         // the review's F4. Only the stops around them are pinned.
@@ -57,7 +67,9 @@ fn a_nested_trap_moves_focus_once_per_tab() {
             .await
             .unwrap();
         let page = &fixture.page;
-        focus::wait_for_focus(page, "#outer-1", "mount").await.unwrap();
+        focus::wait_for_focus(page, "#outer-1", "mount")
+            .await
+            .unwrap();
         keyboard::press(page, keyboard::ENTER).await.unwrap();
         focus::wait_for_focus(page, "#inner-1", "the inner trap mounting")
             .await
@@ -67,10 +79,7 @@ fn a_nested_trap_moves_focus_once_per_tab() {
             walk(page, 4, false).await,
             ["inner-2", "inner-3", "inner-1", "inner-2"]
         );
-        assert_eq!(
-            walk(page, 3, true).await,
-            ["inner-1", "inner-3", "inner-2"]
-        );
+        assert_eq!(walk(page, 3, true).await, ["inner-1", "inner-3", "inner-2"]);
         fixture.console.assert_clean("the nested traps").unwrap();
         fixture.close().await.unwrap();
     });
