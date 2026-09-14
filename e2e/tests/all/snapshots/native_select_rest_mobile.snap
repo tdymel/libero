@@ -1,0 +1,65 @@
+---
+source: e2e/src/suite.rs
+description: native_select at mobile (rest)
+expression: tree
+---
+LabelText
+  StaticText "Fruit"
+generic
+  StaticText "For the smoothie."
+generic
+  combobox "Fruit" = Pick one [expanded=false] [haspopup=menu] [invalid]
+    MenuListPopup
+      option "Pick one" [disabled]
+      option "Apple" [selected=false]
+      option "Banana" [selected=false]
+      option "Cherry" [selected=false]
+      option "Damson" [selected=false]
+      option "Elderberry" [selected=false]
+generic
+  StaticText "One per order."
+generic
+  StaticText "Fruit needed"
+button "Clear"
+  StaticText "Clear"
+LabelText
+  StaticText "Locked fruit"
+generic
+  combobox "Locked fruit" = Banana [expanded=false] [haspopup=menu]
+    MenuListPopup
+      option "Apple" [selected=false]
+      option "Banana" [selected]
+      option "Cherry" [selected=false]
+      option "Damson" [selected=false]
+      option "Elderberry" [selected=false]
+LabelText
+  StaticText "Off"
+generic
+  combobox "Off" = Apple [disabled] [expanded=false] [haspopup=menu]
+    MenuListPopup
+      option "Apple" [disabled]
+      option "Banana" [disabled]
+      option "Cherry" [disabled]
+      option "Damson" [disabled]
+      option "Elderberry" [disabled]
+LabelText
+  StaticText "Notes"
+generic
+  StaticText "Anything the team should know."
+generic
+  textbox "Notes" [required]
+    generic
+generic
+  StaticText "Markdown is not rendered."
+LabelText
+  StaticText "Terms"
+generic
+  textbox "Terms" = Read me. [readonly]
+    generic
+      StaticText "Read me."
+LabelText
+  StaticText "Closed"
+generic
+  textbox "Closed" = Too late. [disabled]
+    generic
+      StaticText "Too late."

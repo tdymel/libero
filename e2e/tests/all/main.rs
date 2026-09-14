@@ -41,6 +41,7 @@ mod menu;
 mod menubar;
 mod modal;
 mod multi_select;
+mod native_select;
 mod nav_link;
 mod negative;
 mod notifications;

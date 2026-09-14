@@ -60,6 +60,7 @@ mod menu;
 mod menubar;
 mod modal;
 mod multi_select;
+mod native_select;
 mod nav_link;
 mod negative;
 mod notifications;
@@ -132,6 +133,7 @@ const FIXTURES: &[Routes] = &[
     menubar::ROUTES,
     modal::ROUTES,
     multi_select::ROUTES,
+    native_select::ROUTES,
     nav_link::ROUTES,
     negative::ROUTES,
     notifications::ROUTES,
