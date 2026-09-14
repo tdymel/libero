@@ -4,7 +4,9 @@ use crate::{
     components::{
         HtmlTag, Input, States, Variables, Variant,
         common::base_props,
-        common::{base_color, contrast_color, fill_color, text_color},
+        common::{
+            base_color, contrast_color, fill_color, names_itself, text_color, use_name_warning,
+        },
         feedback::Loader,
         inputs::{VariantVars, interactive_variant_sx, variant_colors, variant_selected_sx},
         layout::use_box,
@@ -169,8 +171,9 @@ base_props! {
         variant: Input<Variant>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// `"sm"` is 20x20: it meets WCAG 2.5.8 only through the spacing
-        /// exception, so keep 2px clear of any other target (4px of another `sm`).
+        /// `"sm"` is 20x20 and `"xs"` 16x16: they meet WCAG 2.5.8 only through the
+        /// spacing exception, so keep 2px (`sm`) or 4px (`xs`) clear of any other
+        /// target, and twice that between two of them.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -227,6 +230,11 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
     let variant = props.variant.copied_or(use_theme().action_icon.variant);
     let variables: Input<Variables> =
         action_icon_variables(&props, variant, has_variant_styling).into();
+
+    use_name_warning(
+        !props.aria_label.trim().is_empty() || names_itself(&props.attributes),
+        "ActionIcon: an empty `aria_label`, so it is announced as just \"button\".",
+    );
 
     let ripple = use_ripple();
     let showing = ripple.showing();

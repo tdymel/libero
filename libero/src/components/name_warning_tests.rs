@@ -7,8 +7,8 @@ use dioxus::prelude::*;
 use crate::{
     LiberoProvider,
     components::{
-        Anchor, Checkbox, Dialog, Drawer, ProgressBar, Radio, RadioGroup, SegmentedControl, Slider,
-        Splitter, SpotlightOptions, Switch, use_spotlight,
+        ActionIcon, Anchor, Checkbox, Dialog, Drawer, ProgressBar, Radio, RadioGroup,
+        SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, use_spotlight,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
     utils::take_warnings,
@@ -224,6 +224,24 @@ fn an_unnamed_switch_warns() {
     ));
     assert!(!warns(
         || rsx! { LiberoProvider { Switch { aria_label: "Wi-Fi" } } },
+        prefix
+    ));
+}
+
+/// `aria_label` is required, but an empty one names nothing.
+#[test]
+fn an_action_icon_with_an_empty_label_warns() {
+    let prefix = "ActionIcon: an empty `aria_label`";
+    assert!(warns(
+        || rsx! { LiberoProvider { ActionIcon { aria_label: " ", "x" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { ActionIcon { aria_label: "Copy", "x" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { ActionIcon { aria_label: "", "aria-labelledby": "copy", "x" } } },
         prefix
     ));
 }
