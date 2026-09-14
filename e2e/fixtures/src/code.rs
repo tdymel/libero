@@ -29,6 +29,13 @@ fn CodePage() -> Element {
             CodeBlock { id: "numbered-block", language: "rust", line_numbers: true, source: "let a = 1;\nlet b = 2;" }
             // Todo 434: the leading `é` puts the scan's byte offsets apart from `RegExp`'s UTF-16 ones.
             Code { id: "nested-comment-code", language: "rust", source: "é /* a /* b */ c */ x" }
+            CodeBlock { id: "diff-block", language: "rust", header: true, copyable: true, diff: true,
+                source: "fn greet() {{\n-    old();\n+    new();\n}}"
+            }
+            CodeBlock { id: "wide-block", language: "rust", copyable: true, highlight_lines: "2",
+                // One token that starts in view: axe skips a token scrolled out whole.
+                source: "fn main() {{\n    let s = \"a string long enough to scroll the block sideways\";\n}}"
+            }
         }
     }
 }

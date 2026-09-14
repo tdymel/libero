@@ -112,28 +112,21 @@ static CODE_LINES_SX: StaticSx = StaticSx::new(|| {
 static CODE_LINE_ROW_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("row")
-        .when(
-            "highlighted",
-            sx().background("primary.1").box_shadow(format!(
-                "inset 3px 0 0 {}",
-                ColorCss::PRIMARY.value(ColorShade::S5)
-            )),
-        )
-        .when(
-            "diff-add",
-            sx().background("success.1").box_shadow(format!(
-                "inset 3px 0 0 {}",
-                ColorCss::SUCCESS.value(ColorShade::S5)
-            )),
-        )
-        .when(
-            "diff-remove",
-            sx().background("error.1").box_shadow(format!(
-                "inset 3px 0 0 {}",
-                ColorCss::ERROR.value(ColorShade::S5)
-            )),
-        )
+        .when("highlighted", marked_row_sx(ColorCss::PRIMARY))
+        .when("diff-add", marked_row_sx(ColorCss::SUCCESS))
+        .when("diff-remove", marked_row_sx(ColorCss::ERROR))
 });
+
+// A faint wash of the accent over the block's own ground: the `.1` tint took
+// the token colours under 4.5:1, and in dark mode it was a light tint.
+fn marked_row_sx(color: ColorCss) -> Sx {
+    let accent = color.value(ColorShade::S5);
+    sx().background(format!(
+        "color-mix(in srgb, {accent} 6%, {})",
+        CODE_BLOCK_BACKGROUND.value()
+    ))
+    .box_shadow(format!("inset 3px 0 0 {accent}"))
+}
 
 static CODE_BLOCK_LINE_NUMBER_SX: StaticSx = StaticSx::new(|| {
     sx().flex_shrink("0")

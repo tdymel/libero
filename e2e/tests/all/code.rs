@@ -16,8 +16,54 @@
 //! rather than in a user's hydration mismatch.
 
 use e2e::browser::block_on;
+use e2e::passes::keyboard;
 use e2e::wait;
-use e2e::{Fixture, Viewport};
+use e2e::{Fixture, Suite, Viewport};
+
+const COPY: &str = "#diff-block button";
+const FLOATING_COPY: &str = "#wide-block button";
+const WIDE_SCROLL: &str = "#wide-block [role=region]";
+
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("code", "/code")
+        .focusable(COPY)
+        .focusable(FLOATING_COPY)
+        .focusable(WIDE_SCROLL)
+        .targets(COPY)
+        .targets(FLOATING_COPY)
+        .contrast_covers("#diff-block")
+        .contrast_covers("#wide-block")
+        .run();
+}
+
+/// A keyboard copy is announced through the always-mounted status, and focus
+/// stays on the button, whose name does not change under it.
+#[test]
+fn a_keyboard_copy_is_announced() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, COPY, 10).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('#diff-block [role=status]').textContent === 'Copied'",
+            "the copy to be announced",
+        )
+        .await
+        .unwrap();
+        let name: String = page
+            .evaluate("document.activeElement.getAttribute('aria-label')")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(name, "Copy code");
+        fixture.console.assert_clean("a keyboard copy").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
 
 /// Read off `<code>`'s element children rather than its text: the spans **are**
 /// the result. A check on `textContent` would pass against a `Code` that

@@ -1,0 +1,57 @@
+---
+source: e2e/src/suite.rs
+description: code at desktop (rest)
+expression: tree
+---
+code
+  StaticText "é"
+  StaticText "if"
+  StaticText " x; "
+  StaticText "if"
+  StaticText " y"
+generic
+  StaticText "Rust"
+  button "Copy code"
+  status [atomic] [live=polite]
+  StaticText "let"
+  StaticText " a = "
+  StaticText "1"
+  StaticText ";"
+  StaticText "let"
+  StaticText " b = "
+  StaticText "2"
+  StaticText ";"
+code
+  StaticText "é "
+  StaticText "/* a /* b */ c */"
+  StaticText " x"
+generic
+  StaticText "Rust"
+  button "Copy code"
+  status [atomic] [live=polite]
+  StaticText "fn"
+  StaticText " "
+  StaticText "greet"
+  StaticText "() {"
+  StaticText "    "
+  StaticText "old"
+  StaticText "();"
+  StaticText "    "
+  StaticText "new"
+  StaticText "();"
+  StaticText "}"
+generic
+  StaticText "Rust"
+  button "Copy code"
+  status [atomic] [live=polite]
+  region "Rust code"
+    StaticText "fn"
+    StaticText " "
+    StaticText "main"
+    StaticText "() {"
+    StaticText "    "
+    StaticText "let"
+    StaticText " s = "
+    StaticText ""a string long enough to scroll the block sideways""
+    StaticText ";"
+    StaticText "}"
