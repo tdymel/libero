@@ -91,6 +91,7 @@ pub fn QrCode(props: QrCodeProps) -> Element {
         .render(
             HtmlTag::Div,
             props.attributes,
-            rsx! { div { dangerous_inner_html: "{svg}" } },
+            // The root is the image; the bare `<svg>` would be a second, nameless one.
+            rsx! { div { "aria-hidden": "true", dangerous_inner_html: "{svg}" } },
         )
 }

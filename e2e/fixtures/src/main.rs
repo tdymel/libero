@@ -28,6 +28,7 @@ mod accordion;
 mod action_icon;
 mod alert;
 mod autocomplete;
+mod avatar;
 mod badge;
 mod button;
 mod calendar;
@@ -53,6 +54,7 @@ mod form;
 mod grid_zone;
 mod hover_card;
 mod icon;
+mod image;
 mod image_list;
 mod lightbox;
 mod loader;
@@ -74,6 +76,7 @@ mod picker_dialog;
 mod pin_field;
 mod planted;
 mod progress_bar;
+mod qr_code;
 mod radio_group;
 mod range_slider;
 mod scroll_area;
@@ -105,6 +108,7 @@ const FIXTURES: &[Routes] = &[
     action_icon::ROUTES,
     alert::ROUTES,
     autocomplete::ROUTES,
+    avatar::ROUTES,
     badge::ROUTES,
     button::ROUTES,
     calendar::ROUTES,
@@ -129,6 +133,7 @@ const FIXTURES: &[Routes] = &[
     grid_zone::ROUTES,
     hover_card::ROUTES,
     icon::ROUTES,
+    image::ROUTES,
     image_list::ROUTES,
     lightbox::ROUTES,
     loader::ROUTES,
@@ -150,6 +155,7 @@ const FIXTURES: &[Routes] = &[
     pin_field::ROUTES,
     planted::ROUTES,
     progress_bar::ROUTES,
+    qr_code::ROUTES,
     radio_group::ROUTES,
     range_slider::ROUTES,
     scroll_area::ROUTES,

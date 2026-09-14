@@ -1,0 +1,6 @@
+---
+source: e2e/src/suite.rs
+description: qr_code at desktop (rest)
+expression: tree
+---
+image "QR code linking to example.com"
