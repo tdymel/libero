@@ -1,0 +1,109 @@
+//! `FocusTrap`: its Tab stops, a trap nested in another, and a modal dialog's
+//! trap entered from the dialog itself.
+
+use e2e::browser::block_on;
+use e2e::passes::{focus, keyboard, pointer};
+use e2e::{Fixture, Viewport, wait};
+
+const ACTIVE_ID: &str = "document.activeElement.id";
+
+async fn walk(page: &chromiumoxide::Page, presses: usize, backwards: bool) -> Vec<String> {
+    let mut ids = Vec::new();
+    for _ in 0..presses {
+        match backwards {
+            true => keyboard::press_shift(page, keyboard::TAB).await.unwrap(),
+            false => keyboard::press(page, keyboard::TAB).await.unwrap(),
+        }
+        ids.push(page.evaluate(ACTIVE_ID).await.unwrap().into_value().unwrap());
+    }
+    ids
+}
+
+/// A `display: none` button used to stall Tab on the stop before it, for
+/// good, and `<summary>` was never a stop.
+#[test]
+fn tab_passes_over_a_stop_that_is_not_rendered() {
+    block_on(async {
+        let fixture = Fixture::open("/focus-trap", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        focus::wait_for_focus(page, "#first", "mount").await.unwrap();
+
+        // Native radios without a roving tabindex are each a stop here; see
+        // the review's F4. Only the stops around them are pinned.
+        let not_radio = |ids: Vec<String>| -> Vec<String> {
+            ids.into_iter().filter(|id| !id.starts_with('r')).collect()
+        };
+        assert_eq!(
+            not_radio(walk(page, 6, false).await),
+            ["summary", "last", "first"],
+            "Tab from First"
+        );
+        assert_eq!(
+            not_radio(walk(page, 6, true).await),
+            ["last", "summary", "first"],
+            "Shift+Tab from First"
+        );
+        fixture.console.assert_clean("the focus trap").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Both traps used to answer the one press: focus skipped a stop and walked
+/// out into the outer trap.
+#[test]
+fn a_nested_trap_moves_focus_once_per_tab() {
+    block_on(async {
+        let fixture = Fixture::open("/focus-trap/nested", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus::wait_for_focus(page, "#outer-1", "mount").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        focus::wait_for_focus(page, "#inner-1", "the inner trap mounting")
+            .await
+            .unwrap();
+
+        assert_eq!(
+            walk(page, 4, false).await,
+            ["inner-2", "inner-3", "inner-1", "inner-2"]
+        );
+        assert_eq!(
+            walk(page, 3, true).await,
+            ["inner-1", "inner-3", "inner-2"]
+        );
+        fixture.console.assert_clean("the nested traps").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Focus on the dialog itself (a click on its text) is outside the stops:
+/// Shift+Tab went to the first one, not the last.
+#[test]
+fn shift_tab_from_the_dialog_itself_reaches_its_last_control() {
+    block_on(async {
+        let fixture = Fixture::open("/focus-trap/dialog", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, "#open-dialog", 3).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, "[role=dialog]").await.unwrap();
+
+        pointer::click(page, "#dialog-text").await.unwrap();
+        focus::assert_focused(page, "[role=dialog]", "a click on the text")
+            .await
+            .unwrap();
+        keyboard::press_shift(page, keyboard::TAB).await.unwrap();
+        focus::assert_focused(page, "#rename", "Shift+Tab from the dialog")
+            .await
+            .unwrap();
+
+        pointer::click(page, "#dialog-text").await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        focus::assert_focused(page, "[role=dialog] button", "Tab from the dialog")
+            .await
+            .unwrap();
+        fixture.console.assert_clean("the dialog trap").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

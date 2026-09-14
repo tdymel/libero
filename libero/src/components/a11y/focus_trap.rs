@@ -4,7 +4,7 @@ use super::visually_hidden::VISUALLY_HIDDEN_FIXED_SX;
 use crate::{
     components::{HtmlTag, Input, common::base_props, layout::use_box},
     hooks::{ElementHandle, use_element, use_local_state},
-    platform::ElementApi,
+    platform::{ElementApi, key_taken},
     sx::{StaticSx, sx},
 };
 
@@ -20,7 +20,9 @@ use crate::{
 /// is what [`FocusTrapInitialFocus`] is.
 pub(crate) const FOCUSABLE_SELECTOR: &str = concat!(
     ":is(a[href], button:not([disabled]), textarea:not([disabled]), ",
-    "input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"]))",
+    "input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"]), ",
+    "summary, iframe, audio[controls], video[controls], ",
+    "[contenteditable]:not([contenteditable=\"false\"]))",
     ":not([hidden], [inert], [aria-hidden=\"true\"], [tabindex=\"-1\"], :disabled, ",
     "[hidden] *, [inert] *, [aria-hidden=\"true\"] *)"
 );
@@ -28,12 +30,16 @@ pub(crate) const FOCUSABLE_SELECTOR: &str = concat!(
 static FOCUS_TRAP_SX: StaticSx = StaticSx::new(|| sx().display("contents"));
 
 fn focus_first(root: &ElementHandle) {
-    let target = root
-        .query_selector("[data-autofocus]")
-        .or_else(|_| root.query_selector(FOCUSABLE_SELECTOR))
-        // Nothing to focus: the modal dialog itself (APG), not the page behind.
-        .or_else(|_| root.query_selector("[aria-modal=\"true\"]"));
-    if let Ok(target) = target {
+    if let Ok(target) = root.query_selector("[data-autofocus]") {
+        let _ = target.focus();
+        return;
+    }
+    let items = root.query_selector_all(FOCUSABLE_SELECTOR);
+    if items.is_ok_and(|items| focus_next(&items, None, false)) {
+        return;
+    }
+    // Nothing to focus: the modal dialog itself (APG), not the page behind.
+    if let Ok(target) = root.query_selector("[aria-modal=\"true\"]") {
         let _ = target.focus();
     }
 }
@@ -44,29 +50,33 @@ fn cycle_focus(root: &ElementHandle, backwards: bool) -> bool {
     let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
         return false;
     };
-    if items.is_empty() {
-        return false;
-    }
-
     let index = items.iter().position(|item| item.is_focused());
-    let next = match index {
-        None => 0,
-        Some(i) if backwards => {
-            if i == 0 {
-                items.len() - 1
-            } else {
-                i - 1
-            }
+    focus_next(&items, index, backwards)
+}
+
+/// The stop after `index` that takes focus; from outside (`None`), the first
+/// or, backwards, the last. A `display: none` match ignores `focus()`, so it
+/// is passed over rather than stalling Tab on it.
+fn focus_next(items: &[Box<dyn ElementApi>], index: Option<usize>, backwards: bool) -> bool {
+    let len = items.len();
+    let mut first_ok = None;
+    for step in 1..=len {
+        let next = match (index, backwards) {
+            (None, false) => step - 1,
+            (None, true) => len - step,
+            (Some(i), false) => (i + step) % len,
+            (Some(i), true) => (i + len - step) % len,
+        };
+        if items[next].focus().is_err() {
+            continue;
         }
-        Some(i) => {
-            if i + 1 == items.len() {
-                0
-            } else {
-                i + 1
-            }
+        if items[next].is_focused() {
+            return true;
         }
-    };
-    items[next].focus().is_ok()
+        first_ok.get_or_insert(next);
+    }
+    // A renderer that applies focus later cannot confirm it: the plain next stop.
+    first_ok.is_some_and(|next| items[next].focus().is_ok())
 }
 
 base_props! {
@@ -92,7 +102,11 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
             focus_first(&root);
         })
         .event("onkeydown", move |event: Event<KeyboardData>| {
-            if event.key() == Key::Tab && cycle_focus(&root, event.modifiers().shift()) {
+            // A nested trap below already moved focus for this press.
+            if event.key() == Key::Tab
+                && !key_taken(&event)
+                && cycle_focus(&root, event.modifiers().shift())
+            {
                 event.prevent_default();
             }
         })
