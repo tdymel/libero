@@ -7,7 +7,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{LOADER_COLOR, LOADER_SIZE, LoaderDefaults, Size},
 };
 
@@ -106,11 +106,16 @@ static LOADER_BASE_SX: StaticSx = StaticSx::new(|| {
     // The negative delays start each bar partway through one shared 1.2s
     // cycle, 120ms apart, which is what makes the three read as one wave
     // rather than three loops that happen to be near each other.
+    // Forced colours paint backgrounds `Canvas`; the oval's border survives.
+    let forced = || sx().background_color("CanvasText");
     let bars = sx()
         .gap(gap)
         .selector(
             "& > span",
-            sx().flex("1").height("100%").background_color(c.clone()),
+            sx().flex("1")
+                .height("100%")
+                .background_color(c.clone())
+                .media(FORCED_COLORS, forced()),
         )
         .selector("& > span:nth-child(1)", bar("-240ms"))
         .selector("& > span:nth-child(2)", bar("-120ms"))
@@ -123,7 +128,8 @@ static LOADER_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().width(dot_size.clone())
                 .height(dot_size)
                 .border_radius("50%")
-                .background_color(c),
+                .background_color(c)
+                .media(FORCED_COLORS, forced()),
         )
         .selector("& > span:nth-child(1)", dot("0ms"))
         // Half the cycle behind its neighbours, so the row breathes from the

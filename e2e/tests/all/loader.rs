@@ -22,6 +22,50 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Forced colours paint every background `Canvas`, so the bars and the dots
+/// vanished into the page while the oval's border stayed.
+#[test]
+fn every_variant_shows_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/loader", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        pointer::click(page, UPLOAD).await.unwrap();
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        wait::for_visible(page, "#dots").await.unwrap();
+        let bare: Vec<String> = page
+            .evaluate(
+                "(() => {
+                    const page = getComputedStyle(document.body).backgroundColor;
+                    const oval = getComputedStyle(document.querySelector('#oval'), '::after');
+                    const rows = [['#oval', oval.borderTopColor !== page]];
+                    for (const el of document.querySelectorAll('#bars > span, #dots > span'))
+                        rows.push([el.parentElement.id, getComputedStyle(el).backgroundColor !== page]);
+                    return rows.filter(([, shows]) => !shows).map(([what]) => what);
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(bare.is_empty(), "invisible in forced colours: {bare:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// What each variant draws with, as `[what, opacity, transform]`: the oval's
 /// ring on `::after`, one row per bar or dot.
 const INK: &str = "[\
