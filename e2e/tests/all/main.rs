@@ -6,6 +6,7 @@
 
 mod accordion;
 mod action_icon;
+mod alert;
 mod autocomplete;
 mod button;
 mod calendar;

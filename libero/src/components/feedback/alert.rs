@@ -48,8 +48,7 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
         // that make `Outlined`'s border visible join here.
         .border_style("solid")
         .border_width("1px")
-        // Mantine's: a long unbroken title or message is cut at the radius
-        // rather than escaping the tint.
+        // Mantine's: nothing escapes the tint past the radius.
         .overflow("hidden")
         .and(AlertDefaults::theme_vars())
         .selector(
@@ -72,17 +71,14 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
                 .flex_direction("column")
                 .gap(ALERT_BODY_GAP.value())
                 // Takes the row, and `min-width: 0` is what lets it shrink
-                // below its content so the ellipsis below can ever apply.
+                // below its content so a long title wraps inside it.
                 .flex("1")
-                .min_width("0"),
+                .min_width("0")
+                // Wraps, never an ellipsis: cut text has no other place to be
+                // read (WCAG 1.4.10), and the root's `overflow` would clip it.
+                .with("overflow-wrap", "anywhere"),
         )
-        .selector(
-            "& [data-slot='title']",
-            sx().font_weight("600")
-                .overflow("hidden")
-                .text_overflow("ellipsis")
-                .white_space("nowrap"),
-        );
+        .selector("& [data-slot='title']", sx().font_weight("600"));
 
     // Chrome only, no `:hover` - `Badge`'s rule. An alert is not a target, and
     // a tint that moved under the pointer would claim it is.
@@ -161,7 +157,8 @@ base_props! {
         /// means no button.
         ///
         /// Closing is the caller unmounting the `Alert`. It does not hide
-        /// itself.
+        /// itself. The focused close button goes with it and focus falls to
+        /// `<body>`, so move it somewhere sensible (WCAG 2.4.3).
         #[props(default)]
         onclose: Option<EventHandler<()>>,
         /// The close button's accessible name. Defaults to

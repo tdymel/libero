@@ -26,6 +26,7 @@
 
 mod accordion;
 mod action_icon;
+mod alert;
 mod autocomplete;
 mod button;
 mod calendar;
@@ -101,6 +102,7 @@ type Routes = &'static [(&'static str, fn() -> Element)];
 const FIXTURES: &[Routes] = &[
     accordion::ROUTES,
     action_icon::ROUTES,
+    alert::ROUTES,
     autocomplete::ROUTES,
     button::ROUTES,
     calendar::ROUTES,

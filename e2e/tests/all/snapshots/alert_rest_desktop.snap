@@ -1,0 +1,118 @@
+---
+source: e2e/src/suite.rs
+description: alert at desktop (rest)
+expression: tree
+---
+button "Show the notice"
+  StaticText "Show the notice"
+alert "Card expiring" [atomic] [live=assertive]
+  generic
+    StaticText "Card expiring"
+  generic
+    StaticText "Update it before the next invoice."
+  button "Close"
+alert "Your subscription renews on the first of next month at the annual rate" [atomic] [live=assertive]
+  generic
+    StaticText "Your subscription renews on the first of next month at the annual rate"
+  generic
+    StaticText "Cancel before then to avoid the charge."
+alert "info filled" [atomic] [live=assertive]
+  generic
+    StaticText "info filled"
+  generic
+    StaticText "The message."
+alert "info tonal" [atomic] [live=assertive]
+  generic
+    StaticText "info tonal"
+  generic
+    StaticText "The message."
+alert "info outlined" [atomic] [live=assertive]
+  generic
+    StaticText "info outlined"
+  generic
+    StaticText "The message."
+alert "info elevated" [atomic] [live=assertive]
+  generic
+    StaticText "info elevated"
+  generic
+    StaticText "The message."
+alert "info standard" [atomic] [live=assertive]
+  generic
+    StaticText "info standard"
+  generic
+    StaticText "The message."
+alert "success filled" [atomic] [live=assertive]
+  generic
+    StaticText "success filled"
+  generic
+    StaticText "The message."
+alert "success tonal" [atomic] [live=assertive]
+  generic
+    StaticText "success tonal"
+  generic
+    StaticText "The message."
+alert "success outlined" [atomic] [live=assertive]
+  generic
+    StaticText "success outlined"
+  generic
+    StaticText "The message."
+alert "success elevated" [atomic] [live=assertive]
+  generic
+    StaticText "success elevated"
+  generic
+    StaticText "The message."
+alert "success standard" [atomic] [live=assertive]
+  generic
+    StaticText "success standard"
+  generic
+    StaticText "The message."
+alert "warning filled" [atomic] [live=assertive]
+  generic
+    StaticText "warning filled"
+  generic
+    StaticText "The message."
+alert "warning tonal" [atomic] [live=assertive]
+  generic
+    StaticText "warning tonal"
+  generic
+    StaticText "The message."
+alert "warning outlined" [atomic] [live=assertive]
+  generic
+    StaticText "warning outlined"
+  generic
+    StaticText "The message."
+alert "warning elevated" [atomic] [live=assertive]
+  generic
+    StaticText "warning elevated"
+  generic
+    StaticText "The message."
+alert "warning standard" [atomic] [live=assertive]
+  generic
+    StaticText "warning standard"
+  generic
+    StaticText "The message."
+alert "error filled" [atomic] [live=assertive]
+  generic
+    StaticText "error filled"
+  generic
+    StaticText "The message."
+alert "error tonal" [atomic] [live=assertive]
+  generic
+    StaticText "error tonal"
+  generic
+    StaticText "The message."
+alert "error outlined" [atomic] [live=assertive]
+  generic
+    StaticText "error outlined"
+  generic
+    StaticText "The message."
+alert "error elevated" [atomic] [live=assertive]
+  generic
+    StaticText "error elevated"
+  generic
+    StaticText "The message."
+alert "error standard" [atomic] [live=assertive]
+  generic
+    StaticText "error standard"
+  generic
+    StaticText "The message."
