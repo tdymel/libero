@@ -230,6 +230,8 @@ pub fn PinField(props: PinFieldProps) -> Element {
             input_type,
             disabled,
             readonly,
+            required,
+            invalid: field.invalid(),
             one_time_code,
             autofocus,
         },
@@ -257,7 +259,6 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .attr("aria-labelledby", field.label_id())
         .attr("aria-describedby", field.describedby())
         .attr("aria-invalid", field.invalid().then_some("true"))
-        .attr("aria-required", required.then_some("true"))
         .element(&root)
         .render(HtmlTag::Div, props.attributes, children);
 
@@ -330,11 +331,31 @@ impl PinEdit {
         cursor.min(next_len_floor(self.length))
     }
 
-    /// What arrived in one cell's `oninput`: a character, a replacement or a
-    /// paste.
+    /// Where a character for cell `index` lands: that cell when it is filled,
+    /// else the first empty one, since the pin has no holes.
+    fn landing(&self, index: usize) -> usize {
+        match self.cells[index] {
+            Some(_) => index,
+            None => self.cells.iter().flatten().count(),
+        }
+    }
+
+    /// What arrived in one cell's `oninput`: a paste, or a character a soft
+    /// keyboard typed without naming its key.
     fn typed(&self, index: usize, raw: String) {
         let (root, length) = (&self.root, self.length);
-        let accepted: Vec<char> = raw.chars().filter(|c| self.kind.accepts(*c)).collect();
+        let mut accepted: Vec<char> = raw.chars().filter(|c| self.kind.accepts(*c)).collect();
+        // The cell's old character sits on whichever side the caret was not.
+        if accepted.len() > 1
+            && let Some(old) = self.cells[index]
+        {
+            if accepted[0] == old {
+                accepted.remove(0);
+            } else if accepted.last() == Some(&old) {
+                accepted.pop();
+            }
+        }
+        let at = self.landing(index);
         match accepted.len() {
             // The cell was emptied - Backspace handles its own focus.
             0 if raw.is_empty() => self.edit(index, None),
@@ -342,18 +363,11 @@ impl PinEdit {
             // before they land, so this is a paste of junk.
             0 => {}
             1 => {
-                self.edit(index, Some(accepted[0]));
-                focus_cell(root, index + 1, length);
-            }
-            // Two characters in a cell that already held one is a
-            // replacement, not a paste: the caret sat beside the old
-            // character and the new one joined it.
-            2 if self.cells[index].is_some() => {
-                self.edit(index, Some(accepted[1]));
-                focus_cell(root, index + 1, length);
+                self.edit(at, Some(accepted[0]));
+                focus_cell(root, at + 1, length);
             }
             _ => {
-                let cursor = self.spread(index, accepted);
+                let cursor = self.spread(at, accepted);
                 focus_cell(root, cursor, length);
             }
         }
@@ -427,7 +441,17 @@ impl PinEdit {
                     // reaches the DOM - there is nothing to take back out
                     // of an input the value prop did not change.
                     Some(character) if !self.kind.accepts(character) => event.prevent_default(),
-                    _ => {}
+                    // Written here rather than by the browser, which would
+                    // put it beside the old one on whichever side the caret is.
+                    Some(character) => {
+                        event.prevent_default();
+                        if !readonly {
+                            let at = self.landing(index);
+                            self.edit(at, Some(character));
+                            focus_cell(root, at + 1, length);
+                        }
+                    }
+                    None => {}
                 }
             }
             _ => {}
@@ -480,6 +504,8 @@ struct Cells {
     input_type: &'static str,
     disabled: bool,
     readonly: bool,
+    required: bool,
+    invalid: bool,
     one_time_code: bool,
     autofocus: bool,
 }
@@ -497,6 +523,8 @@ fn pin_cells(parts: Cells, separator: Option<&Element>) -> Vec<Element> {
         input_type,
         disabled,
         readonly,
+        required,
+        invalid,
         one_time_code,
         autofocus,
     } = parts;
@@ -521,6 +549,8 @@ fn pin_cells(parts: Cells, separator: Option<&Element>) -> Vec<Element> {
                 input_type,
                 disabled,
                 readonly,
+                required,
+                invalid,
                 autocomplete: match one_time_code && index == 0 {
                     true => "one-time-code",
                     false => "off",
@@ -546,6 +576,8 @@ fn PinCell(
     input_type: &'static str,
     disabled: bool,
     readonly: bool,
+    required: bool,
+    invalid: bool,
     autocomplete: &'static str,
     autofocus: bool,
 ) -> Element {
@@ -561,6 +593,9 @@ fn PinCell(
         .attr("data-pin-index", index.to_string())
         .attr("disabled", disabled)
         .attr("readonly", readonly)
+        // `aria-required` is not allowed on the group, so each cell says it.
+        .attr("aria-required", required.then_some("true"))
+        .attr("aria-invalid", invalid.then_some("true"))
         .attr("autofocus", autofocus)
         .event("oninput", move |event: FormEvent| {
             typed.current().typed(index, event.value())

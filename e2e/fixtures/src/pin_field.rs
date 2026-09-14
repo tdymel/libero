@@ -5,7 +5,10 @@ use libero::components::{Flex, PinField};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/pin-field", || rsx! { PinFieldPage {} })];
+pub const ROUTES: Routes = &[
+    ("/pin-field", || rsx! { PinFieldPage {} }),
+    ("/pin-field/error", || rsx! { PinFieldErrorPage {} }),
+];
 
 /// Four cells under a label, which names the cells' group by id.
 #[component]
@@ -16,6 +19,26 @@ fn PinFieldPage() -> Element {
         Flex { direction: "column", gap: "md", max_width: "320px",
             PinField {
                 label: "Code",
+                length: 4usize,
+                value: pin(),
+                oninput: move |next: String| pin.set(next),
+            }
+        }
+    }
+}
+
+/// A required field showing an error under a helper.
+#[component]
+fn PinFieldErrorPage() -> Element {
+    let mut pin = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            PinField {
+                label: "Code",
+                helper: "It expires in ten minutes.",
+                status: "That code is wrong.",
+                required: true,
                 length: 4usize,
                 value: pin(),
                 oninput: move |next: String| pin.set(next),
