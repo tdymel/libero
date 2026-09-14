@@ -201,9 +201,10 @@ pub fn GridPage() -> Element {
                     "no template."
                 }
                 Text {
-                    "`masonry` and `dense` both make the visual order diverge from the DOM order, "
-                    "and Tab follows the DOM - don't reach for either where the reading order "
-                    "carries meaning."
+                    "`dense` makes the visual order diverge from the DOM order, and Tab follows "
+                    "the DOM - don't reach for it where the reading order carries meaning. "
+                    "`masonry` alone keeps them in step: each item starts no higher than the one "
+                    "before it."
                 }
             },
             // snippet: item #[component] fn Card(lines: usize, children: Element) -> Element { rsx! { {children} } }

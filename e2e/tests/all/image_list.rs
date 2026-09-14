@@ -5,7 +5,7 @@
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
-use e2e::{Fixture, Viewport};
+use e2e::{Fixture, Viewport, wait};
 use serde::Deserialize;
 
 /// How far the focused element's ring reaches past any ancestor up to `root`
@@ -199,6 +199,61 @@ fn responsive_cols_follow_the_viewport() {
         fixture
             .console
             .assert_clean("a responsive image list")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Every `<li>`'s top and left once the masonry engine has measured them all,
+/// in DOM order.
+const MEASURE_MASONRY: &str = "(() => {
+    const cells = [...document.querySelectorAll('#masonry-frame [role=list] > li')];
+    if (!cells.every(li => (li.dataset.state || '').split(' ').includes('measured'))) return null;
+    return cells.map(li => { const r = li.getBoundingClientRect(); return [r.top, r.left]; });
+})()";
+
+/// Todo 610: `masonry` only spans rows, and sparse auto-placement never moves
+/// back, so the reading order (by top, then left) is the DOM order.
+#[test]
+fn masonry_keeps_the_reading_order_of_the_dom() {
+    block_on(async {
+        let fixture = Fixture::open("/image-list-masonry", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("{MEASURE_MASONRY} !== null"),
+            "every cell measured",
+        )
+        .await
+        .unwrap();
+        let cells: Vec<[f64; 2]> = page
+            .evaluate(MEASURE_MASONRY)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        eprintln!("masonry: {cells:?}");
+
+        // Packed, not a plain grid: the second three do not share a row.
+        assert!(
+            !(close(cells[3][0], cells[4][0]) && close(cells[4][0], cells[5][0])),
+            "nothing packed: {cells:?}"
+        );
+        let mut visual: Vec<usize> = (0..cells.len()).collect();
+        visual.sort_by(|&a, &b| {
+            let (a, b) = (cells[a], cells[b]);
+            match close(a[0], b[0]) {
+                true => a[1].total_cmp(&b[1]),
+                false => a[0].total_cmp(&b[0]),
+            }
+        });
+        assert_eq!(visual, (0..cells.len()).collect::<Vec<_>>(), "{cells:?}");
+
+        fixture
+            .console
+            .assert_clean("a masonry image list")
             .unwrap();
         fixture.close().await.unwrap();
     });

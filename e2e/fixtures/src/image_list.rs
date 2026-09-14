@@ -1,4 +1,4 @@
-//! `ImageList`, and the gap arithmetic of its `quilted` variant.
+//! `ImageList`, the gap arithmetic of its `quilted` variant, and `masonry` order.
 
 use dioxus::prelude::*;
 use libero::components::{GridSpan, ImageBar, ImageItem, ImageList};
@@ -13,6 +13,7 @@ pub const ROUTES: Routes = &[
         || rsx! { ImageListResponsivePage {} },
     ),
     ("/image-list-links", || rsx! { ImageListLinksPage {} }),
+    ("/image-list-masonry", || rsx! { ImageListMasonryPage {} }),
 ];
 
 /// Todo 618: link cells fill their clipped `<li>`, and a bar holds a button.
@@ -34,6 +35,27 @@ fn ImageListLinksPage() -> Element {
                             button { id: "bar-action", "Act" }
                         })),
                 ],
+            }
+        }
+    }
+}
+
+/// Todo 610: cells of uneven heights, so `masonry` packs them short under
+/// tall.
+#[component]
+fn ImageListMasonryPage() -> Element {
+    const HEIGHTS: [u32; 9] = [120, 40, 80, 60, 100, 30, 90, 50, 70];
+
+    rsx! {
+        div { id: "masonry-frame", style: "width: 600px",
+            ImageList {
+                cols: 3u8,
+                variant: "masonry",
+                gap: "sm",
+                items: HEIGHTS
+                    .iter()
+                    .map(|height| ImageItem::new(rsx! { div { style: "height: {height}px; background: #777" } }))
+                    .collect::<Vec<_>>(),
             }
         }
     }

@@ -59,8 +59,10 @@ compose: a wall of mixed spans wants both.
 on a target with no DOM - nothing measures and the zone renders as an ordinary
 grid: unpacked, but correct.
 
-Both make visual order diverge from DOM order. Tab order always follows the DOM,
-so don't reach for either where the reading order carries meaning.
+`dense` makes visual order diverge from DOM order: a later item can land above an
+earlier one. Tab order always follows the DOM, so don't reach for it where the
+reading order carries meaning. `masonry` alone keeps the two in step: it only
+sets row spans, so each item still starts no higher than the one before it.
 
 ## Named areas
 
