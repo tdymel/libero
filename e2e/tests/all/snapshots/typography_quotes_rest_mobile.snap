@@ -1,0 +1,42 @@
+---
+source: e2e/src/suite.rs
+description: typography_quotes at mobile (rest)
+expression: tree
+---
+generic
+  figure
+    blockquote
+      StaticText "A primary quote."
+    Figcaption
+      StaticText "Speaker"
+  figure
+    blockquote
+      StaticText "A secondary quote."
+    Figcaption
+      StaticText "Speaker"
+  figure
+    blockquote
+      StaticText "A error quote."
+    Figcaption
+      StaticText "Speaker"
+  figure
+    blockquote
+      StaticText "A info quote."
+    Figcaption
+      StaticText "Speaker"
+  figure
+    blockquote
+      StaticText "A success quote."
+    Figcaption
+      StaticText "Speaker"
+  figure
+    blockquote
+      StaticText "A warning quote."
+    Figcaption
+      StaticText "Speaker"
+  figure
+    blockquote
+      StaticText "A navy quote."
+  figure
+    blockquote
+      StaticText "A yellow quote."

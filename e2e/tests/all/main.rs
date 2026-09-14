@@ -77,6 +77,7 @@ mod time_picker;
 mod timeline;
 mod tooltip;
 mod tree;
+mod typography;
 
 /// Every `.rs` file in this directory must have a `mod` line above it.
 ///

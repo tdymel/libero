@@ -1,0 +1,67 @@
+---
+source: e2e/src/suite.rs
+description: typography at desktop (rest)
+expression: tree
+---
+heading "Heading one" [level=1]
+  StaticText "Heading one"
+paragraph
+  StaticText "Default "
+  mark
+    StaticText "highlight"
+  StaticText " "
+  mark
+    StaticText "primary"
+  StaticText " "
+  mark
+    StaticText "secondary"
+  StaticText " "
+  mark
+    StaticText "error"
+  StaticText " "
+  mark
+    StaticText "info"
+  StaticText " "
+  mark
+    StaticText "success"
+  StaticText " "
+  mark
+    StaticText "warning"
+  StaticText " "
+  mark
+    StaticText "navy"
+  StaticText " "
+  mark
+    StaticText "yellow"
+paragraph
+  StaticText "Call "
+  code
+    StaticText "let"
+    StaticText " s: &str = "
+    StaticText ""x""
+    StaticText "; "
+    StaticText "// note"
+  StaticText " inline."
+paragraph
+  StaticText "A long name "
+  code
+    StaticText "a_very_long_identifier_without_any_break_opportunity_in_it"
+  StaticText " wraps."
+figure
+  blockquote
+    StaticText "Life is like riding a bicycle."
+  Figcaption
+    StaticText "Albert Einstein"
+    StaticText ", "
+    StaticText "Letter to his son Eduard"
+heading "Heading two" [level=2]
+  StaticText "Heading two"
+heading "Heading three" [level=3]
+  StaticText "Heading three"
+heading "Heading four" [level=4]
+  StaticText "Heading four"
+heading "Heading five" [level=5]
+  StaticText "Heading five"
+heading "Heading six" [level=6]
+  StaticText "Heading six"
+StaticText "Extra small text in a span."

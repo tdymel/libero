@@ -1,0 +1,81 @@
+//! `Text`, `Title`, `Blockquote`, `Mark` and inline `Code`, every colour the docs offer.
+//!
+//! Two pages, because contrast coverage only counts text inside the viewport.
+
+use dioxus::prelude::*;
+use libero::components::{Blockquote, Code, Flex, Mark, Text, Title};
+
+use crate::Routes;
+
+pub const ROUTES: Routes = &[
+    ("/typography", || rsx! { TypographyPage {} }),
+    ("/typography/quotes", || rsx! { QuotesPage {} }),
+];
+
+const COLORS: &[&str] = &[
+    "primary",
+    "secondary",
+    "error",
+    "info",
+    "success",
+    "warning",
+];
+
+/// A 320px column, the width WCAG 1.4.10 reflows to.
+#[component]
+fn TypographyPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Title { size: "xxl", "Heading one" }
+            Text { id: "marks",
+                "Default "
+                Mark { "highlight" }
+                for color in COLORS {
+                    " "
+                    Mark { color: *color, "{color}" }
+                }
+                // A hex is drawn as given in both schemes, so the text has to follow it.
+                " "
+                Mark { color: "#1e3a8a", "navy" }
+                " "
+                Mark { color: "#ffe066", "yellow" }
+            }
+            Text {
+                "Call "
+                Code { id: "code-rust", language: "rust", source: "let s: &str = \"x\"; // note" }
+                " inline."
+            }
+            Text {
+                "A long name "
+                Code { id: "code-long", source: "a_very_long_identifier_without_any_break_opportunity_in_it" }
+                " wraps."
+            }
+            Blockquote { id: "quote-default",
+                attribution: rsx! { "Albert Einstein" },
+                work: "Letter to his son Eduard",
+                "Life is like riding a bicycle."
+            }
+            Title { size: "xl", "Heading two" }
+            Title { size: "lg", "Heading three" }
+            Title { size: "md", "Heading four" }
+            Title { size: "sm", "Heading five" }
+            Title { size: "xs", "Heading six" }
+            Text { size: "xs", component: "span", "Extra small text in a span." }
+        }
+    }
+}
+
+/// One `Blockquote` per palette colour: tint, body text and attribution.
+#[component]
+fn QuotesPage() -> Element {
+    rsx! {
+        Flex { id: "quotes", direction: "column", gap: "xs", max_width: "320px",
+            for color in COLORS {
+                Blockquote { size: "xs", color: *color, attribution: rsx! { "Speaker" }, "A {color} quote." }
+            }
+            // A hex is drawn as given in both schemes, so the text has to follow it.
+            Blockquote { size: "xs", color: "#1e3a8a", "A navy quote." }
+            Blockquote { size: "xs", color: "#ffe066", "A yellow quote." }
+        }
+    }
+}

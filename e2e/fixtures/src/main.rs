@@ -96,6 +96,7 @@ mod time_picker;
 mod timeline;
 mod tooltip;
 mod tree;
+mod typography;
 
 use dioxus::prelude::*;
 use libero::LiberoProvider;
@@ -176,6 +177,7 @@ const FIXTURES: &[Routes] = &[
     timeline::ROUTES,
     tooltip::ROUTES,
     tree::ROUTES,
+    typography::ROUTES,
 ];
 
 fn main() {
