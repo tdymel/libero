@@ -5,6 +5,7 @@ use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard, pointer};
+use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const BUTTON: &str = "#scheme";
@@ -18,6 +19,52 @@ fn it_meets_the_baseline() {
         .targets(BUTTON)
         .dark_snapshot("the label names the next scheme, which follows the platform's")
         .run();
+}
+
+const TOGGLE: &str = "#split > button";
+const CHEVRON: &str = "#split > div > button";
+
+/// The split button: both halves are tab stops with a ring and 24px, and the
+/// picker's menu is checked in the open state. Nothing is picked, so nothing
+/// persists.
+#[test]
+fn the_split_button_meets_the_baseline() {
+    Suite::new("color_scheme_button_themes", "/color-scheme-button/themes")
+        .focusable(TOGGLE)
+        .focusable(CHEVRON)
+        .targets(TOGGLE)
+        .targets(CHEVRON)
+        .state(
+            "open",
+            &[Step::TabTo(CHEVRON), Step::Press(keyboard::ENTER)],
+            "[role=menu]",
+        )
+        .dark_snapshot("the label names the next scheme, which follows the platform's")
+        .run();
+}
+
+/// Escape closes the theme menu and hands focus back to the chevron.
+#[test]
+fn escape_returns_focus_to_the_chevron() {
+    block_on(async {
+        let fixture = Fixture::open("/color-scheme-button/themes", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, CHEVRON, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, "[role=menuitemradio][aria-checked=true]")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+        focus::wait_for_focus(page, CHEVRON, "Escape")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("the theme menu").unwrap();
+        fixture.close().await.unwrap();
+    });
 }
 
 /// Every test page shares one browser profile, and a stored `dark` would
