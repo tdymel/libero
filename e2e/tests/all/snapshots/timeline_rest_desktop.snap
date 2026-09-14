@@ -9,7 +9,7 @@ list
       StaticText "Ordered"
     paragraph
       StaticText "On 12 May"
-  listitem [level=1]
+  listitem [current=step] [level=1]
     generic
       StaticText "Packed"
     paragraph
@@ -35,7 +35,7 @@ list
       StaticText "Packed"
     paragraph
       StaticText "On 12 May"
-  listitem [level=1]
+  listitem [current=step] [level=1]
     generic
       StaticText "Shipped"
     paragraph
@@ -51,7 +51,7 @@ list
       StaticText "Ordered"
     paragraph
       StaticText "On 12 May"
-  listitem [level=1]
+  listitem [current=step] [level=1]
     generic
       StaticText "Packed"
     paragraph

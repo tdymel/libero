@@ -34,7 +34,7 @@ generic
           generic
             group "Thumbnails"
               group "1 of 6"
-                button "Go to slide 1"
+                button "Go to slide 1" [current=true]
               group "2 of 6"
                 button "Go to slide 2"
               group "3 of 6"

@@ -18,7 +18,7 @@ use anyhow::{Context, Result, bail};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::accessibility::{AxNode, AxNodeId, GetFullAxTreeParams};
 use chromiumoxide::cdp::browser_protocol::dom::{
-    BackendNodeId, DescribeNodeParams, GetDocumentParams, QuerySelectorParams,
+    BackendNodeId, DescribeNodeParams, GetDocumentParams, Node, QuerySelectorParams,
 };
 
 /// Render the accessibility subtree under `selector` as stable, indented text.
@@ -42,8 +42,9 @@ pub async fn snapshot(page: &Page, selector: &str) -> Result<String> {
         .find(|n| n.backend_dom_node_id == Some(backend_id))
         .with_context(|| format!("no accessibility node for {selector}"))?;
 
+    let current = current_by_node(page).await?;
     let mut out = String::new();
-    render(root, &by_id, 0, &mut out);
+    render(root, &by_id, &current, 0, &mut out);
 
     // Follow `aria-controls` out of the subtree, for a caller whose root does
     // not hold the portal outlet. A target the walk above already rendered is
@@ -75,7 +76,7 @@ pub async fn snapshot(page: &Page, selector: &str) -> Result<String> {
             ));
         } else {
             out.push_str(&format!("--> aria-controls {}\n", stable(&target)));
-            render(node, &by_id, 0, &mut out);
+            render(node, &by_id, &current, 0, &mut out);
         }
     }
 
@@ -158,12 +159,18 @@ fn stable(value: &str) -> String {
     out
 }
 
-fn render(node: &AxNode, by_id: &HashMap<AxNodeId, &AxNode>, depth: usize, out: &mut String) {
+fn render(
+    node: &AxNode,
+    by_id: &HashMap<AxNodeId, &AxNode>,
+    current: &HashMap<BackendNodeId, String>,
+    depth: usize,
+    out: &mut String,
+) {
     if node.ignored {
         // An ignored node contributes nothing to AT, but its children can.
         for child in node.child_ids.iter().flatten() {
             if let Some(child) = by_id.get(child) {
-                render(child, by_id, depth, out);
+                render(child, by_id, current, depth, out);
             }
         }
         return;
@@ -212,14 +219,19 @@ fn render(node: &AxNode, by_id: &HashMap<AxNodeId, &AxNode>, depth: usize, out: 
     if let Some(value) = value {
         out.push_str(&format!(" = {value}"));
     }
-    for state in states(node) {
+    let mut states = states(node);
+    if let Some(token) = node.backend_dom_node_id.and_then(|id| current.get(&id)) {
+        states.push(format!("current={token}"));
+        states.sort();
+    }
+    for state in states {
         out.push_str(&format!(" [{state}]"));
     }
     out.push('\n');
 
     for child in node.child_ids.iter().flatten() {
         if let Some(child) = by_id.get(child) {
-            render(child, by_id, depth + 1, out);
+            render(child, by_id, current, depth + 1, out);
         }
     }
 }
@@ -294,6 +306,35 @@ fn states(node: &AxNode) -> Vec<String> {
     }
     out.sort();
     out
+}
+
+/// Each element's `aria-current` token, by backend node id. The CDP tree
+/// reports no `current` property, so this one state comes off the DOM (todo 600).
+async fn current_by_node(page: &Page) -> Result<HashMap<BackendNodeId, String>> {
+    fn walk(node: &Node, out: &mut HashMap<BackendNodeId, String>) {
+        let attributes = node.attributes.as_deref().unwrap_or_default();
+        for pair in attributes.chunks(2) {
+            if let [name, value] = pair
+                && name == "aria-current"
+                && !value.is_empty()
+                && value != "false"
+            {
+                out.insert(node.backend_node_id, value.clone());
+            }
+        }
+        let nested = [&node.children, &node.shadow_roots];
+        for child in nested.into_iter().flatten().flatten() {
+            walk(child, out);
+        }
+    }
+
+    let doc = page
+        .execute(GetDocumentParams::builder().depth(-1).pierce(true).build())
+        .await
+        .context("get the document")?;
+    let mut out = HashMap::new();
+    walk(&doc.result.root, &mut out);
+    Ok(out)
 }
 
 /// The accessible description the browser computed for `selector` - what

@@ -6,7 +6,7 @@ expression: tree
 generic
   list
     listitem [level=1]
-      button "Account"
+      button "Account" [current=step]
         StaticText "Account"
     listitem [level=1]
       generic

@@ -9,7 +9,7 @@ generic
       button "Account, Completed"
         StaticText "Account, Completed"
     listitem [level=1]
-      button "Shipping"
+      button "Shipping" [current=step]
         StaticText "Shipping"
     listitem [level=1]
       generic

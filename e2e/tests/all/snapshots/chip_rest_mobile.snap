@@ -15,7 +15,7 @@ generic [disabled]
   checkbox "Unavailable" [checked=false] [disabled]
 button "Action"
   StaticText "Action"
-link "Link"
+link "Link" [current=page]
   StaticText "Link"
 link "Dead link" [disabled]
   StaticText "Dead link"

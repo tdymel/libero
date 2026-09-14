@@ -13,7 +13,7 @@ navigation "Results pages"
       button "Go to page 1"
         StaticText "1"
     listitem [level=1]
-      button "Page 2"
+      button "Page 2" [current=page]
         StaticText "2"
     listitem [level=1]
       button "Go to page 3"
