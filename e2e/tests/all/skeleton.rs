@@ -95,6 +95,70 @@ fn the_grace_recipe_keeps_a_fast_fetch_from_flashing() {
     });
 }
 
+/// Forced colours paint every background `Canvas`: the grey vanished while
+/// the content under it stayed hidden, so the card was blank.
+#[test]
+fn the_grey_shows_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/skeleton", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        pointer::click(page, RELOAD).await.unwrap();
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches \
+             && document.querySelectorAll('#profile [data-state~=visible]').length === 2",
+            "forced colours and both skeletons",
+        )
+        .await
+        .unwrap();
+        let bare: Vec<String> = page
+            .evaluate(
+                "(() => {
+                    const page = getComputedStyle(document.body).backgroundColor;
+                    return [...document.querySelectorAll('#profile [data-state~=visible]')]
+                        .filter(el => getComputedStyle(el, '::after').backgroundColor === page)
+                        .map(el => el.id);
+                })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(bare.is_empty(), "invisible in forced colours: {bare:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Loaded, the content is reachable again: `inert` is gone, not `inert="false"`,
+/// which the browser reads as present.
+#[test]
+fn a_loaded_skeleton_is_not_inert() {
+    block_on(async {
+        let fixture = Fixture::open("/skeleton", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#name-text").await.unwrap();
+        let inert: Vec<String> = page
+            .evaluate(
+                "[...document.querySelectorAll('#avatar, #name')]\
+                 .filter(el => el.inert || el.hasAttribute('aria-hidden')).map(el => el.id)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(inert.is_empty(), "still hidden once loaded: {inert:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The opacity each skeleton's `::after` is drawn at, as `[id, opacity]`.
 const GREYS: &str = "[...document.querySelectorAll('#profile [data-state~=visible]')]\
      .map(el => [el.id, getComputedStyle(el, '::after').opacity])";

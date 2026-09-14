@@ -7,7 +7,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         SKELETON_ANIMATION, SKELETON_COLOR, SKELETON_DURATION, SKELETON_HEIGHT, SKELETON_RADIUS,
         SKELETON_WIDTH, Size, SkeletonDefaults,
@@ -55,7 +55,9 @@ static SKELETON_BASE_SX: StaticSx = StaticSx::new(|| {
                         .position("absolute")
                         .inset("0")
                         .visibility("visible")
-                        .background(SKELETON_COLOR.value()),
+                        .background(SKELETON_COLOR.value())
+                        // Forced colours paint it `Canvas`: a blank card.
+                        .media(FORCED_COLORS, sx().background("GrayText")),
                 ),
         )
         // Only `::after` pulses, never the root: the root's opacity would fade
