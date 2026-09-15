@@ -9,7 +9,27 @@ pub const ROUTES: Routes = &[
     ("/cascader", || rsx! { CascaderPage {} }),
     ("/cascader/search", || rsx! { CascaderSearchPage {} }),
     ("/cascader/paths", || rsx! { CascaderPathsPage {} }),
+    ("/cascader/any-level", || rsx! { CascaderAnyLevelPage {} }),
 ];
+
+/// `any_level`: a branch is a pick of its own. `#picked` shows the committed value.
+#[component]
+fn CascaderAnyLevelPage() -> Element {
+    let mut place = use_signal(|| None::<String>);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Cascader {
+                label: "Place",
+                any_level: true,
+                data: places(),
+                value: place(),
+                onchange: move |next: Option<String>| place.set(next),
+            }
+            Text { id: "picked", {place().unwrap_or_default()} }
+        }
+    }
+}
 
 /// The flat layout: one row per leaf path.
 #[component]

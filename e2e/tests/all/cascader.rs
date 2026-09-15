@@ -4,6 +4,7 @@
 //! `/cascader` holds three roots: Europe (France: Paris, Lyon; Germany:
 //! Berlin), Asia, disabled (Japan: Tokyo), and Oceania (Australia: Sydney).
 //! Focus never leaves the trigger; the cursor is its `aria-activedescendant`.
+//! `/cascader/any-level` is the same tree with `any_level` on.
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
@@ -347,6 +348,36 @@ fn tab_on_a_branch_commits_nothing() {
         assert_eq!(picked, "", "Tab on a branch committed it");
         fixture.console.assert_clean("Tab on a branch").unwrap();
         fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 632: with `any_level` a branch is a pick, so Tab and Alt+ArrowUp on
+/// France commit it, then close.
+#[test]
+fn leaving_commits_the_highlighted_branch_with_any_level() {
+    block_on(async {
+        for (key, modifiers) in [(keyboard::TAB, 0), (keyboard::ARROW_UP, keyboard::ALT)] {
+            let fixture = Fixture::open("/cascader/any-level", Viewport::Desktop)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+            keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+            keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+            expect(page, "France|2|true", "ArrowRight into Europe", "desktop").await;
+            keyboard::press_with(page, key, modifiers).await.unwrap();
+            expect(page, "closed", &format!("{} to close", key.key), "desktop").await;
+            wait::for_js_true(
+                page,
+                "document.querySelector('#picked').textContent === 'france' \
+                 && document.querySelector('[role=combobox]').textContent.includes('Europe / France')",
+                &format!("{} to commit France", key.key),
+            )
+            .await
+            .unwrap();
+            fixture.console.assert_clean(key.key).unwrap();
+            fixture.close().await.unwrap();
+        }
     });
 }
 

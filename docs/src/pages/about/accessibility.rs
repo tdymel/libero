@@ -38,11 +38,19 @@ pub fn AccessibilityPage() -> Element {
                     Code { source: "Chip" }
                     ", "
                     Code { source: "SegmentedControl" }
-                    " and the current "
+                    ", the current "
+                    Code { source: "Pagination" }
+                    " page and the current "
                     Code { source: "Stepper" }
                     " marker draw it all round, an active "
                     Code { source: "NavLink" }
-                    " only at its start edge. A disabled control fades to half."
+                    " and a selected row in a "
+                    Code { source: "Select" }
+                    ", "
+                    Code { source: "MultiSelect" }
+                    " or "
+                    Code { source: "Combobox" }
+                    " list only at its start edge. A disabled control fades to half."
                 }
             }
 

@@ -5,14 +5,14 @@ use crate::{
         ActionIcon, HtmlTag, Input, States, Variables,
         common::{
             ChevronFirstIcon, ChevronLastIcon, ChevronLeftIcon, ChevronRightIcon, base_color,
-            base_props, contrast_color, fill_color,
+            base_props, contrast_color, fill_color, focus_ring_sx, on_state_sx,
         },
         layout::{BoxStyle, use_box},
         variables,
     },
     hooks::{ElementHandle, use_element},
     platform::ElementApi,
-    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         CssVar, PAGINATION_ACTIVE_BACKGROUND, PAGINATION_ACTIVE_COLOR, PAGINATION_BORDER,
         PAGINATION_CONTROL_SIZE, PAGINATION_GAP, PaginationDefaults, Size, SizeCss,
@@ -103,24 +103,20 @@ static PAGINATION_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .font_family("inherit")
         .line_height("1")
+        // The house on-state line, so the current page is not a fill alone
+        // (todo 631); the ring composes it back in while focused.
         .when(
             "current",
             sx().background(PAGINATION_ACTIVE_BACKGROUND.value())
                 .color(PAGINATION_ACTIVE_COLOR.value())
-                .border_color("transparent"),
+                .border_color("transparent")
+                .and(on_state_sx(None))
+                .focus_visible(focus_ring_sx()),
         )
         .when("disabled", sx().opacity("0.5").cursor("default"))
         // The page buttons carry no `disabled` state, and a disabled `Fieldset`
         // disables every `<button>` natively (todo 514).
         .selector("&:disabled", sx().opacity("0.5").cursor("default"))
-        // Forced colours paint the current page's fill `Canvas`, like the rest.
-        .media(
-            FORCED_COLORS,
-            sx().when(
-                "current",
-                sx().background("Highlight").color("HighlightText"),
-            ),
-        )
 });
 
 static PAGINATION_ELLIPSIS_SX: StaticSx = StaticSx::new(|| {

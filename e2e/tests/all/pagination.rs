@@ -22,6 +22,19 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 631: the current page was a fill only; it carries the house line now.
+#[test]
+fn the_current_page_shows_the_on_state_line() {
+    block_on(async {
+        let fixture = Fixture::open("/pagination", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        crate::button::assert_on_marker(page, CURRENT, "[aria-label=\"Go to page 3\"]").await;
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn wait_for_page(page: &Page, number: u32, route: &str) {
     wait::for_js_true(
         page,

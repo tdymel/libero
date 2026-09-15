@@ -14,9 +14,10 @@ what to do about it.
 
 A pressed, selected or current control never differs by colour alone. It
 carries a 2px line in its own text colour just inside its edge: `Button`,
-`ActionIcon`, `Chip`, `SegmentedControl` and the current `Stepper` marker draw
-it all round, an active `NavLink` only at its start edge. A disabled control
-fades to half.
+`ActionIcon`, `Chip`, `SegmentedControl`, the current `Pagination` page and the
+current `Stepper` marker draw it all round, an active `NavLink` and a selected
+row in a `Select`, `MultiSelect` or `Combobox` list only at its start edge. A
+disabled control fades to half.
 
 ## Forced colors and Windows High Contrast
 

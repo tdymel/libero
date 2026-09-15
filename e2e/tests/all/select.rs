@@ -42,6 +42,70 @@ fn a_searchable_field_meets_the_baseline() {
         .run();
 }
 
+/// `[active row is the selected one, selected row's box-shadow, its colour,
+/// an unselected idle row's box-shadow]`.
+const ROWS: &str = "(() => { const t = document.querySelector('[aria-activedescendant]'); \
+     const act = t && document.getElementById(t.getAttribute('aria-activedescendant')); \
+     const rows = [...document.querySelectorAll('[role=option]')]; \
+     const sel = rows.find(r => r.getAttribute('aria-selected') === 'true'); \
+     const off = rows.find(r => r !== act && r !== sel); \
+     const s = e => getComputedStyle(e); \
+     return [String(act === sel), s(sel).boxShadow, s(sel).color, s(off).boxShadow]; })()";
+
+/// Todo 631: the selected row carries the house line at its start edge, beside
+/// the tint, and keeps it inside the active row's ring. `Combobox`'s rows are
+/// the same `ComboboxOption`.
+pub fn selected_row_is_marked(route: &str) {
+    block_on(async {
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_visible(page, "[role=option]").await.unwrap();
+        let rows =
+            async || -> [String; 4] { page.evaluate(ROWS).await.unwrap().into_value().unwrap() };
+
+        let [on_it, shadow, color, _] = rows().await;
+        assert_eq!(on_it, "true", "{route}: the list opens on the selected row");
+        assert!(
+            shadow.contains(&format!("{color} 4px 0px 0px 0px inset"))
+                && shadow.matches("inset").count() > 4,
+            "{route}: the active selected row keeps its bar inside the ring: {shadow}"
+        );
+
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        let [on_it, shadow, color, off] = rows().await;
+        assert_eq!(
+            on_it, "false",
+            "{route}: ArrowDown moves off the selected row"
+        );
+        assert_eq!(
+            shadow,
+            format!("{color} 2px 0px 0px 0px inset"),
+            "{route}: the selected row's start bar"
+        );
+        assert!(
+            !off.contains("inset"),
+            "{route}: an idle row is marked: {off}"
+        );
+
+        crate::calendar::force_colours(page).await;
+        crate::button::assert_on_in_forced_colours(
+            page,
+            "[role=option][aria-selected=true]",
+            "[role=option]:not([aria-selected=true])",
+        )
+        .await;
+        fixture.console.assert_clean(route).unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+#[test]
+fn the_selected_row_shows_the_on_state_line() {
+    selected_row_is_marked("/select");
+}
+
 #[test]
 fn it_honours_the_combobox_contract() {
     block_on(async {

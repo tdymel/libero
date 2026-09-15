@@ -19,6 +19,12 @@ fn a_click_on_the_label_focuses_the_trigger() {
     crate::select::label_click_focuses("/multi-select", TRIGGER);
 }
 
+/// Todo 631: the selected row is not a tint alone.
+#[test]
+fn the_selected_row_shows_the_on_state_line() {
+    crate::select::selected_row_is_marked("/multi-select");
+}
+
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("multi_select", "/multi-select")
