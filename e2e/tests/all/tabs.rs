@@ -190,6 +190,49 @@ fn the_arrows_step_from_the_focused_tab() {
     });
 }
 
+/// Todo 502: in manual mode the arrows move only the focus, skipping the
+/// disabled tab; Enter and Space select the focused tab.
+#[test]
+fn manual_activation_selects_on_enter_and_space() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-manual", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        reset_tab_position(page).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        for (key, expected) in [
+            (keyboard::ARROW_RIGHT, "2:0"),
+            (keyboard::ENTER, "2:2"),
+            (keyboard::HOME, "0:2"),
+            (keyboard::END, "2:2"),
+            (keyboard::ARROW_RIGHT, "0:2"),
+            (keyboard::SPACE, "0:0"),
+        ] {
+            keyboard::press(page, key).await.unwrap();
+            settle(&fixture).await;
+            assert_eq!(
+                focus_and_selection(&fixture).await,
+                expected,
+                "after {key:?}"
+            );
+        }
+        let panel: String = page
+            .evaluate("document.querySelector('[role=tabpanel]').textContent")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(panel, "panel for Account");
+
+        fixture
+            .console
+            .assert_clean("manual tab activation")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Alt+Left is the browser's Back; a chord is not the strip's to take.
 #[test]
 fn shortcut_chords_pass_through() {

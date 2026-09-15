@@ -24,7 +24,7 @@ pub use pagination::{
     Pagination, PaginationItem, PaginationLabel, PaginationProps, pagination_range,
 };
 pub use stepper::{StepLabelPosition, StepState, Stepper, StepperProps};
-pub use tabs::{Tabs, TabsProps};
+pub use tabs::{Tabs, TabsActivation, TabsProps};
 pub use tree::{
     Tree, TreeItem, TreeItemProps, TreeLabel, TreeNode, TreeNodeRenderArgs, TreeProps, TreeValue,
     default_tree_render,

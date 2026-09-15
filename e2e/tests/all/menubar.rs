@@ -210,8 +210,8 @@ fn a_tap_on_another_trigger_opens_its_menu() {
 }
 
 /// APG menubar: an open menu travels along the bar with Left and Right, from
-/// a submenu too; a disabled trigger takes focus, opens nothing, and the next
-/// one opens again on ArrowDown.
+/// a submenu too; a disabled trigger takes focus and opens nothing, but the
+/// next enabled one opens its menu (todo 568).
 #[test]
 fn an_open_menu_travels_along_the_bar() {
     block_on(async {
@@ -237,18 +237,38 @@ fn an_open_menu_travels_along_the_bar() {
             press(page, ARROW_RIGHT).await?;
             wait::for_js_true(page, &focus_on("View"), "focus on the disabled View").await?;
             wait::for_js_true(page, &format!("{EXPANDED} === '0000'"), "no menu open").await?;
-            press(page, ARROW_DOWN).await?;
+            // Todo 568: the bar stays in open mode across the disabled trigger.
             press(page, ARROW_RIGHT).await?;
-            wait::for_js_true(page, &focus_on("Help"), "focus on Help").await?;
-            press(page, ARROW_UP).await?;
-            wait::for_js_true(page, &focus_on("About"), "Help open on its last item").await?;
+            wait::for_js_true(page, &focus_on("Documentation"), "Help open past View").await?;
+            wait::for_js_true(page, &format!("{EXPANDED} === '0001'"), "only Help open").await?;
             press(page, ARROW_LEFT).await?;
+            wait::for_js_true(page, &focus_on("View"), "back on the disabled View").await?;
             press(page, ARROW_LEFT).await?;
-            press(page, ARROW_DOWN).await?;
             wait::for_js_true(page, &focus_on("Undo"), "Edit open again").await?;
+            press(page, ARROW_RIGHT).await?;
+            wait::for_js_true(page, &focus_on("View"), "View once more").await?;
+            // Escape on the disabled trigger ends open mode.
+            press(page, ESCAPE).await?;
+            press(page, ARROW_LEFT).await?;
+            wait::for_js_true(page, &focus_on("Edit"), "Edit, closed").await?;
+            wait::for_js_true(page, &format!("{EXPANDED} === '0000'"), "no menu open").await?;
+            press(page, ARROW_DOWN).await?;
+            wait::for_js_true(page, &focus_on("Undo"), "Edit open by ArrowDown").await?;
             press(page, ESCAPE).await?;
             wait::for_js_true(page, &focus_on("Edit"), "Escape back on Edit").await?;
-            wait::for_js_true(page, &format!("{EXPANDED} === '0000'"), "all closed").await
+            wait::for_js_true(page, &format!("{EXPANDED} === '0000'"), "all closed").await?;
+            // Tabbing away from the disabled trigger ends open mode too.
+            press(page, ARROW_DOWN).await?;
+            wait::for_js_true(page, &focus_on("Undo"), "Edit open").await?;
+            press(page, ARROW_RIGHT).await?;
+            wait::for_js_true(page, &focus_on("View"), "on View again").await?;
+            press(page, keyboard::TAB).await?;
+            wait::for_js_true(page, &focus_on("after"), "focus past the bar").await?;
+            keyboard::press_with(page, keyboard::TAB, keyboard::SHIFT).await?;
+            wait::for_js_true(page, &focus_on("View"), "back on View").await?;
+            press(page, ARROW_RIGHT).await?;
+            wait::for_js_true(page, &focus_on("Help"), "Help, closed").await?;
+            wait::for_js_true(page, &format!("{EXPANDED} === '0000'"), "no menu open").await
         }
         .await;
 

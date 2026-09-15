@@ -1,7 +1,7 @@
 //! `Tabs`, the roving-tabindex archetype's pilot.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, OptionList, Options, Tabs, Text};
+use libero::components::{Flex, OptionList, Options, Tabs, TabsActivation, Text};
 
 use crate::Routes;
 
@@ -14,7 +14,26 @@ pub const ROUTES: Routes = &[
     ("/tabs-disabled", || rsx! { TabsDisabledPage {} }),
     ("/tabs-crowded", || rsx! { TabsCrowdedPage {} }),
     ("/tabs-named", || rsx! { TabsNamedPage {} }),
+    ("/tabs-manual", || rsx! { TabsManualPage {} }),
 ];
+
+/// Todo 502: manual activation, Billing disabled so the arrows skip it.
+#[component]
+fn TabsManualPage() -> Element {
+    let mut section = use_signal(|| Section::Account);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Tabs {
+                activation: TabsActivation::Manual,
+                value: section(),
+                onchange: move |next| section.set(next),
+                options: OptionList::from_options().disabling(|s| *s == Section::Billing),
+                panel: |s: Section| rsx! { Text { "panel for {s.label()}" } },
+            }
+        }
+    }
+}
 
 /// Todo 501: one strip named by `aria_label`, one by a heading.
 #[component]

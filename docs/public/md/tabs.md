@@ -147,6 +147,8 @@ picked.
 
 Only the selected tab is in the tab order. Left and Right move between tabs and
 select as they go, stepping over disabled ones; Home and End jump to the ends.
+With `activation: TabsActivation::Manual` the keys move only the focus, and
+Enter or Space selects the focused tab - for panels that are slow to build.
 
 Name the strip with `aria_label` or `aria_labelledby` on `Tabs`: both go to the
 `tablist`, not the root.
@@ -169,6 +171,7 @@ draws is what a screen reader cannot use, and that name becomes the tab's
 | `size` | `Size` | `md` | Tab strip size. |
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
 | `full_width` | `bool` | `false` | Tabs share the row evenly instead of sizing to their label. |
+| `activation` | `TabsActivation` | `Automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus; Enter or Space selects - for panels that are slow to build. |
 
 Like every component, `Tabs` also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.

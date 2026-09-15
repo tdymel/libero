@@ -52,8 +52,9 @@ fn Demo() -> Element {
 
 On a trigger: ArrowLeft/ArrowRight move along the bar, wrapping unless
 `loop_focus` is off; if a menu is open the new one opens. A disabled trigger
-takes focus like the others but opens nothing, so moving onto it closes the
-open menu. Home/End go to the first/last trigger. Enter, Space and
+takes focus like the others and opens nothing: moving onto it closes the open
+menu, but the next enabled trigger along opens its own, until Escape or Tab.
+Home/End go to the first/last trigger. Enter, Space and
 ArrowDown open the menu on its first item, ArrowUp on its last. Typing jumps to
 a trigger by its label.
 

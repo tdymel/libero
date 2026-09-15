@@ -828,7 +828,8 @@ fn a_carousel_control_click_redraws_every_reader_of_the_index() {
     assert_eq!(after.matches(r#"aria-disabled="true""#).count(), 0);
 }
 
-/// The reveal button flips the input's `type` and its own name, both ways.
+/// The reveal button flips the input's `type` and its `aria-pressed`, both ways,
+/// under one static name.
 #[test]
 fn clicking_the_reveal_button_toggles_the_password() {
     fn app() -> Element {
@@ -846,15 +847,17 @@ fn clicking_the_reveal_button_toggles_the_password() {
         (
             attributes_of(&html, "input")["type"].clone(),
             button["aria-label"].clone(),
+            button["aria-pressed"].clone(),
         )
     };
+    let expect = |kind: &str, pressed: &str| (kind.into(), "Show password".into(), pressed.into());
 
-    assert_eq!(state(&dom), ("password".into(), "Show password".into()));
-    for expected in [("text", "Hide password"), ("password", "Show password")] {
+    assert_eq!(state(&dom), expect("password", "false"));
+    for (kind, pressed) in [("text", "true"), ("password", "false")] {
         dom.runtime()
             .handle_event("click", Event::new(click_event(), true), reveal);
         dom.render_immediate(&mut dioxus::core::NoOpMutations);
-        assert_eq!(state(&dom), (expected.0.into(), expected.1.into()));
+        assert_eq!(state(&dom), expect(kind, pressed));
     }
 }
 

@@ -137,7 +137,7 @@ fn the_reveal_button_shows_a_password() {
         "{}",
         page.tree()
     );
-    assert!(page.exists("button[aria-label='Hide password']"));
+    assert!(page.exists("button[aria-label='Show password'][aria-pressed='true']"));
 }
 
 fn phone() -> Element {

@@ -145,6 +145,9 @@ struct Row {
     loop_focus: bool,
     /// The trigger focused last - the tab stop while no menu is open.
     current: Signal<Option<usize>>,
+    /// The disabled trigger an open menu was left for: the bar stays in open
+    /// mode, so the next enabled trigger opens its menu (APG, todo 568).
+    armed: Rc<Cell<Option<usize>>>,
 }
 
 impl Row {
@@ -189,17 +192,20 @@ impl Row {
     }
 
     /// Focus, or the open menu, moves to `index`. A disabled trigger takes
-    /// focus and opens nothing, so the open menu closes behind it.
+    /// focus and opens nothing, but keeps the bar in open mode for the next.
     fn go(&self, index: usize) {
-        match self.open_index() {
-            Some(open) if open != index && self.enabled(index) => {
-                self.switch(index, MenuFocus::First)
-            }
-            Some(_) => {
+        let open = self.open_index();
+        let open_mode = open.is_some() || self.armed.get().is_some();
+        let enabled = self.enabled(index);
+        // Set before the focus moves, so the old trigger's blur sees the new value.
+        self.armed.set((open_mode && !enabled).then_some(index));
+        match (open_mode, open) {
+            (true, open) if open != Some(index) && enabled => self.switch(index, MenuFocus::First),
+            (true, _) => {
                 self.focus(index);
                 self.close_others(index);
             }
-            None => self.focus(index),
+            (false, _) => self.focus(index),
         }
     }
 }
@@ -224,6 +230,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
     // A tap sends a compatibility `mouseenter` before its click: switching
     // there made the click close the menu it had just opened.
     let touch: Rc<Cell<bool>> = use_hook(|| Rc::new(Cell::new(false)));
+    let armed: Rc<Cell<Option<usize>>> = use_hook(|| Rc::new(Cell::new(None)));
 
     // `use_menu()` in a loop over `menus` would hand hook slots from one menu
     // to another whenever the list changes length. The states are created
@@ -250,6 +257,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
         disabled: props.menus.iter().map(|menu| menu.disabled).collect(),
         loop_focus,
         current,
+        armed,
     };
 
     // The single tab stop: the open menu's trigger, else the one focused
@@ -298,6 +306,10 @@ pub fn Menubar(props: MenubarProps) -> Element {
                     Key::ArrowLeft => row.step(index, false),
                     Key::Home => (len > 0).then_some(0),
                     Key::End => len.checked_sub(1),
+                    Key::Escape => {
+                        row.armed.set(None);
+                        return;
+                    }
                     Key::Character(ref text) if !has_shortcut_modifier(&event) => {
                         let Some(ch) = text.chars().next() else {
                             return;
@@ -360,6 +372,16 @@ pub fn Menubar(props: MenubarProps) -> Element {
             }
         };
 
+        // Focus leaving the armed trigger any other way ends open mode.
+        let onblur = {
+            let armed = row.armed.clone();
+            move |_: FocusEvent| {
+                if armed.get() == Some(index) {
+                    armed.set(None);
+                }
+            }
+        };
+
         let attributes = state.a11y_attributes();
         let label = menu.label.clone();
 
@@ -386,6 +408,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
                     onpointerenter,
                     onmouseenter,
                     onfocus,
+                    onblur,
                     ..attributes,
                     "{label}"
                 }

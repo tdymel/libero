@@ -58,8 +58,8 @@ fn the_captions_and_the_status_reach_assistive_technology() {
     });
 }
 
-/// Enter and Space flip the secret's visibility, the button's name follows,
-/// and the focus stays on the button.
+/// Enter and Space flip the secret's visibility, the button's `aria-pressed`
+/// follows, and the focus stays on the button.
 #[test]
 fn the_reveal_button_toggles_by_keyboard() {
     block_on(async {
@@ -76,9 +76,9 @@ fn the_reveal_button_toggles_by_keyboard() {
         focus::assert_focus_ring(page, button, 12).await.unwrap();
 
         keyboard::press(page, keyboard::ENTER).await.unwrap();
-        revealed(page, "text", "Hide password").await.unwrap();
+        revealed(page, "text", "true").await.unwrap();
         keyboard::press(page, keyboard::SPACE).await.unwrap();
-        revealed(page, "password", "Show password").await.unwrap();
+        revealed(page, "password", "false").await.unwrap();
         wait::for_js_true(
             page,
             &format!("document.querySelector({input:?}).value === 'hunter2'"),
@@ -153,16 +153,17 @@ async fn invalid(page: &Page, selector: &str, description: &str) -> Result<()> {
     Ok(())
 }
 
-/// The input's type, and the focused button's name.
-async fn revealed(page: &Page, kind: &str, name: &str) -> Result<()> {
+/// The input's type, and the focused button's static name and `aria-pressed`.
+async fn revealed(page: &Page, kind: &str, pressed: &str) -> Result<()> {
     wait::for_js_true(
         page,
         &format!(
             "(() => {{ const el = document.activeElement; \
              return document.querySelector('[data-case=password] input').type === {kind:?} \
-             && el.tagName === 'BUTTON' && el.getAttribute('aria-label') === {name:?}; }})()"
+             && el.tagName === 'BUTTON' && el.getAttribute('aria-label') === 'Show password' \
+             && el.getAttribute('aria-pressed') === {pressed:?}; }})()"
         ),
-        &format!("type={kind} with the focus on {name:?}"),
+        &format!("type={kind} with the focus on the toggle, aria-pressed={pressed}"),
     )
     .await
 }

@@ -3,13 +3,35 @@ use dioxus::prelude::*;
 use super::core::{TabSpec, TabsView, render_tabs};
 use crate::{
     components::{
-        ClassList, Input, OptionLabel, OptionSource, Options, States, common::base_color,
+        ClassList, Input, OptionLabel, OptionSource, Options, States,
+        common::{base_color, input_from_str},
     },
     hooks::{use_root_id, use_theme},
+    str_enum::str_enum,
     sx::{Sx, ThemeAwareValue},
     theme::Size,
     utils::warn,
 };
+
+str_enum! {
+    /// When an arrow key selects the tab it moves to.
+    pub enum TabsActivation {
+        /// Arrows select as they move: the panel follows the focus.
+        #[default]
+        Automatic = "automatic",
+        /// Arrows only move the focus; Enter or Space selects. For panels that
+        /// are slow to render or fetch (APG manual activation).
+        Manual = "manual",
+    }
+}
+
+input_from_str!(TabsActivation);
+
+impl From<TabsActivation> for Input<TabsActivation> {
+    fn from(value: TabsActivation) -> Self {
+        Input::Value(value)
+    }
+}
 
 // Hand-written rather than `base_props!`, which is not generic - as
 // `SliderProps` is.
@@ -53,6 +75,10 @@ pub struct TabsProps<T: Options> {
     /// Tabs share the row evenly instead of sizing to their label.
     #[props(default)]
     full_width: Option<bool>,
+    /// `Manual` lets the arrows move the focus without selecting; Enter or
+    /// Space selects the focused tab.
+    #[props(default, into)]
+    activation: Input<TabsActivation>,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -127,6 +153,7 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
             onselect: pick,
             color: base_color(props.color.as_ref()),
             full_width: props.full_width.unwrap_or(false),
+            manual: props.activation.copied_or(TabsActivation::Automatic) == TabsActivation::Manual,
             size: props.size.copied_or(theme.tabs.size),
             class: props.class,
             sx: props.sx,

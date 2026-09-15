@@ -36,14 +36,11 @@ field_props! {
         /// field, or one next to a revealed twin, has nothing to add.
         #[props(default)]
         reveal_button: Option<bool>,
-        /// Announced on the reveal button while the secret is hidden, e.g.
-        /// "Show PIN". Unset, the localization's `password_field.show`.
+        /// The reveal button's name in both states, e.g. "Show PIN":
+        /// `aria-pressed` carries whether the secret is shown. Unset, the
+        /// localization's `password_field.show`.
         #[props(default, into)]
         reveal_label: Option<String>,
-        /// Announced on the reveal button while the secret is shown. Unset,
-        /// the localization's `password_field.hide`.
-        #[props(default, into)]
-        hide_label: Option<String>,
     }
 }
 
@@ -73,22 +70,13 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
     // A disabled `Fieldset` disables the input, so the toggle follows it.
     let group = try_use_context::<Disabled>();
     let disabled = props.disabled.unwrap_or(false) || group.is_some_and(|Disabled(group)| group());
+    // One static name plus `aria-pressed`: a name that flips is announced as a
+    // different button, not as a state change (todo 498).
     let labels = use_localization().password_field;
-    let hidden_label = props
+    let aria_label = props
         .reveal_label
         .clone()
         .unwrap_or_else(|| labels.show.to_string());
-    let shown_label = props
-        .hide_label
-        .clone()
-        .unwrap_or_else(|| labels.hide.to_string());
-
-    // The icon shows what the click does, so it is the *opposite* of the
-    // current state: a struck-through eye while the secret is readable.
-    let aria_label = match revealed() {
-        true => shown_label,
-        false => hidden_label,
-    };
     // Sized off the field's own size, theme default included, as the clear button is.
     let size: Input<ThemeAwareValue> =
         ThemeAwareValue::Size(slot_icon_size(props.size.copied_or(theme.text_field.size))).into();
@@ -117,9 +105,11 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
             trailing: reveal_button.then(|| rsx! {
                 ActionIcon {
                     aria_label,
+                    "aria-pressed": revealed().to_string(),
                     size,
                     disabled,
                     onclick: move |_| revealed_at.set((!revealed()).then_some(settled)),
+                    // A struck-through eye while the secret is readable.
                     if revealed() {
                         EyeOffIcon {}
                     } else {

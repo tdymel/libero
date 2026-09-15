@@ -28,10 +28,7 @@ pub fn PasswordFieldPage() -> Element {
                         .doc("Offers the reveal button at all. A confirmation field, or one beside a revealed twin, has nothing to add."),
                     prop("reveal_label", "String")
                         .default("password_field.show")
-                        .doc("Announced on the reveal button while the secret is hidden, e.g. \"Show PIN\". Unset, the localization's `password_field.show` - \"Show password\" in English."),
-                    prop("hide_label", "String")
-                        .default("password_field.hide")
-                        .doc("Announced on the reveal button while the secret is shown. Unset, the localization's `password_field.hide` - \"Hide password\" in English."),
+                        .doc("The reveal button's name in both states, e.g. \"Show PIN\"; `aria-pressed` tells whether the secret is shown. Unset, the localization's `password_field.show` - \"Show password\" in English."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the control. Names the field through a `for`/`id` pair."),
                     prop("description", "Caption")

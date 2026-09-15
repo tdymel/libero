@@ -96,6 +96,7 @@ pub fn TabsPage() -> Element {
                     prop("size", "Size").default("md").doc("Tab strip size."),
                     prop("color", "ThemeAwareValue").default("primary").doc("Indicator and selected-label color."),
                     prop("full_width", "bool").default("false").doc("Tabs share the row evenly instead of sizing to their label."),
+                    prop("activation", "TabsActivation").default("Automatic").doc("`Automatic` selects as the arrows move. `Manual` moves only the focus; Enter or Space selects - for panels that are slow to build."),
                 ]),
                 props("OptionLabel", vec![
                     prop("name", "String").doc("The tab's visible text and accessible name."),
@@ -147,6 +148,9 @@ pub fn TabsPage() -> Element {
                     Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
+                    Control::toggle("activation", ["automatic", "manual"])
+                        .labels(["Automatic", "Manual"])
+                        .default("automatic"),
                     Control::switch("full_width"),
                     // The flag lives inside `options`, so the switch stands
                     // for one named tab rather than for a prop of its own.
@@ -170,6 +174,7 @@ pub fn TabsPage() -> Element {
                         },
                         size: values.str("size"),
                         full_width: values.str("full_width") == "true",
+                        activation: values.str("activation"),
                         option_label: match values.str("labels").as_str() {
                             "renamed" => Some(Callback::new(renamed)),
                             "rich" => Some(Callback::new(rich)),
@@ -190,7 +195,9 @@ pub fn TabsPage() -> Element {
                 Text {
                     "Only the selected tab is in the tab order. Left and Right move between "
                     "tabs and select as they go, stepping over disabled ones; Home and End "
-                    "jump to the ends. Name the strip with "
+                    "jump to the ends. With "
+                    Code { source: "activation: TabsActivation::Manual" }
+                    " the keys move only the focus, and Enter or Space selects. Name the strip with "
                     Code { source: "aria_label" }
                     " or "
                     Code { source: "aria_labelledby" }

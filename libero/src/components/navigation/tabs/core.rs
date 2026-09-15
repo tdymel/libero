@@ -124,6 +124,8 @@ pub(crate) struct TabsView {
     pub onselect: Callback<usize>,
     pub color: ThemeAwareValue,
     pub full_width: bool,
+    /// Arrows move the focus only; the tab's own click (Enter, Space) selects.
+    pub manual: bool,
     pub size: Size,
     pub class: Input<ClassList>,
     pub sx: Input<crate::sx::Sx>,
@@ -141,6 +143,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         onselect,
         color,
         full_width,
+        manual,
         size,
         class,
         sx: user_sx,
@@ -171,9 +174,11 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
             return;
         };
         event.prevent_default();
-        onselect.call(next);
-        // Auto activation: focus follows the selection, so the strip behaves
-        // like one control rather than a row of buttons.
+        // Auto activation: the selection follows the focus, so the strip
+        // behaves like one control rather than a row of buttons.
+        if !manual {
+            onselect.call(next);
+        }
         if let Ok(tab) =
             root_element.query_selector(&id_selector(&format!("{keydown_root}-tab-{next}")))
         {
