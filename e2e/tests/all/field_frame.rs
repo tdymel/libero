@@ -99,9 +99,13 @@ fn a_press_on_the_padding_is_a_press_on_the_control() {
         // The multi-select's chevron is no button, and opens the list once.
         let multi = "[data-case=multi] [role=combobox]";
         blur(page).await.unwrap();
-        press(page, &centre("[data-case=multi] [data-slot=trailing] > *"))
-            .await
-            .unwrap();
+        // The frame's own slot: each chip has a trailing slot too.
+        press(
+            page,
+            &centre("[data-case=multi] [data-frame] > [data-slot=trailing] > *"),
+        )
+        .await
+        .unwrap();
         expanded(page, multi, true).await.unwrap();
         keyboard::press(page, keyboard::ESCAPE).await.unwrap();
         expanded(page, multi, false).await.unwrap();
@@ -235,8 +239,8 @@ fn every_framed_field_takes_a_padding_press() {
     });
 }
 
-/// `FileField` opens its picker once per press: from the padding, which clicks
-/// the surface, as from the surface itself and from Enter.
+/// `FileField` opens its picker once per press: from the padding, as from the
+/// Browse button itself and from Enter.
 #[test]
 fn a_file_field_opens_its_picker_once_per_press() {
     block_on(async {
@@ -268,7 +272,7 @@ fn a_file_field_opens_its_picker_once_per_press() {
 
         press(page, &bottom_padding("file")).await.unwrap();
         settle(1).await;
-        press(page, &centre("[data-case=file] [role=button]"))
+        press(page, &centre("[data-case=file] [data-slot=browse]"))
             .await
             .unwrap();
         settle(2).await;
@@ -320,14 +324,16 @@ fn an_empty_trigger_fills_its_frame() {
     });
 }
 
-/// The focus is in the frame, outside its slots.
+/// The focus is in the frame, outside its slots. `FileField`'s Browse button
+/// is its control, in a slot of its own.
 async fn in_control(page: &Page, frame: &str) -> Result<()> {
     truthy(
         page,
         &format!(
             "(() => {{ const frame = document.querySelector({frame:?}); \
              const el = document.activeElement; \
-             return el !== frame && frame.contains(el) && !el.closest('[data-slot]'); }})()"
+             return el !== frame && frame.contains(el) \
+             && !el.closest('[data-slot]:not([data-slot=browse])'); }})()"
         ),
         &format!("the focus in {frame}'s control"),
     )
