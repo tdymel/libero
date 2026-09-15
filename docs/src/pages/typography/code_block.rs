@@ -67,7 +67,7 @@ pub fn CodeBlockPage() -> Element {
                     .doc("1-indexed lines to emphasize, e.g. `\"1,5-7,10\"`. Malformed segments are skipped, not rejected. A range past the last line stops at it."),
                 prop("diff", "bool")
                     .default("false")
-                    .doc("Reads `source` as a unified diff: a leading `+`/`-` colors the row and is stripped from what's shown, highlighted and copied. Wins over `highlight_lines`."),
+                    .doc("Reads `source` as a unified diff: a leading `+`/`-` colors the row, moves into a marker column read as \"added\"/\"removed\", and is kept out of what's highlighted and copied. Wins over `highlight_lines`."),
             ])],
             lead: rsx! {
                 Text {

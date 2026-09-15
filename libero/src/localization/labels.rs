@@ -71,6 +71,10 @@ pub struct CodeBlockLabels {
     pub copy_failed: &'static str,
     /// The header's language name when there is no known language.
     pub unrecognized_language: &'static str,
+    /// Read before a `diff` line that starts with `+`; the `+` is drawing only.
+    pub added: &'static str,
+    /// Read before a `diff` line that starts with `-`.
+    pub removed: &'static str,
 }
 
 impl CodeBlockLabels {
@@ -79,6 +83,8 @@ impl CodeBlockLabels {
         copied: "Copied",
         copy_failed: "Copy failed",
         unrecognized_language: "Unrecognized language",
+        added: "Added",
+        removed: "Removed",
     };
 }
 

@@ -18,6 +18,90 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todos 581 and 582: an untouched required select is required, not invalid,
+/// and its placeholder is dimmed until a pick while the options keep ink.
+#[test]
+fn an_empty_required_select_is_quiet_and_dimmed() {
+    block_on(async {
+        let fixture = Fixture::open("/native-select", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        // Chromium reports no `required` for a `<select>` either way, so the
+        // markup says it.
+        let snapshot = ax::snapshot(page, "[data-case=wired]").await.unwrap();
+        assert!(!snapshot.contains("[invalid]"), "{snapshot}");
+        let markup = format!(
+            "(() => {{ const s = document.querySelector({WIRED:?}); \
+             return s.getAttribute('aria-required') === 'true' && !s.required; }})()"
+        );
+        wait::for_js_true(page, &markup, "aria-required without native required")
+            .await
+            .unwrap();
+
+        let color = |selector: &str| {
+            format!("getComputedStyle(document.querySelector({selector:?})).color")
+        };
+        let ink = color("[data-case=refused] select");
+        let dimmed = format!(
+            "{} !== {ink} && {} === {ink}",
+            color(WIRED),
+            color("[data-case=wired] option[value=Apple]")
+        );
+        wait::for_js_true(page, &dimmed, "a dimmed placeholder over ink options")
+            .await
+            .unwrap();
+
+        keyboard::tab_to(page, WIRED, 8).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        let picked = format!("{} === {ink}", color(WIRED));
+        wait::for_js_true(page, &picked, "ink once Apple is picked")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("an empty required select")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 583: named groups are `<optgroup>`s, a disabled option is announced
+/// disabled and the arrows step over it.
+#[test]
+fn groups_and_a_disabled_option_reach_assistive_technology() {
+    block_on(async {
+        let fixture = Fixture::open("/native-select", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        const GROUPED: &str = "[data-case=grouped] select";
+
+        let snapshot = ax::snapshot(page, "[data-case=grouped]").await.unwrap();
+        assert!(snapshot.contains(r#"group "Stone""#), "{snapshot}");
+        assert!(
+            snapshot.contains(r#"option "Cherry" [disabled]"#),
+            "{snapshot}"
+        );
+        assert!(!snapshot.contains(r#"option "Banana""#), "{snapshot}");
+
+        keyboard::tab_to(page, GROUPED, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({GROUPED:?}).value === 'Damson'"),
+            "ArrowDown to skip Cherry",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("grouped options").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Description and helper describe the select, the rule shows on blur and
 /// goes with a pick, and `None` brings the placeholder back.
 #[test]

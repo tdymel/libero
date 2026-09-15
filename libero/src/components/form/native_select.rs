@@ -4,21 +4,32 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, Options, Select, SelectOptionArgs,
+        HtmlTag, Input, OptionSource, Options, Select, SelectOptionArgs,
         common::field_props,
         form::{LiveControl, field_control_sx, row_label, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::use_theme,
     platform::select_picker,
-    sx::StaticSx,
+    sx::{StaticSx, sx},
+    tokens::NamedColorCss,
     utils::warn,
 };
 
 /// The control keeps the UA's own chevron - drawing our own would mean
 /// `appearance: none`, and with it the native picker's arrow on every
 /// platform.
-static NATIVE_SELECT_CONTROL_SX: StaticSx = StaticSx::new(|| field_control_sx().cursor("pointer"));
+static NATIVE_SELECT_CONTROL_SX: StaticSx = StaticSx::new(|| {
+    field_control_sx()
+        .cursor("pointer")
+        // The placeholder dims like a text field's (todo 582). The options
+        // inherit the colour, so they take ink back.
+        .selector("&[data-placeholder]", sx().color("text-dimmed"))
+        .selector(
+            "&[data-placeholder] option, &[data-placeholder] optgroup",
+            sx().color(NamedColorCss::INK.value()),
+        )
+});
 
 // No `readonly`: HTML has no read-only `<select>`, and every way to stop a
 // native picker takes it out of the tab order or out of the post. `Select` is
@@ -45,9 +56,11 @@ field_props! {
         validate: crate::components::Validators<Option<T>>,
         /// The options to show. Defaults to every `Options::options()` - which
         /// `String` and any other runtime type leave empty, so those pass them
-        /// here.
-        #[props(default)]
-        options: Option<Vec<T>>,
+        /// here. A disabled [`OptionItem`](crate::components::OptionItem) is a
+        /// disabled `<option>`, a named group an `<optgroup>`; a pending
+        /// source draws no options.
+        #[props(default, into)]
+        options: OptionSource<T>,
         /// Overrides `Options::label`. Runs during render, so it can read a
         /// locale from context.
         ///
@@ -68,6 +81,19 @@ fn repeats(posted: &[String]) -> bool {
         .iter()
         .enumerate()
         .any(|(index, value)| posted[..index].contains(value))
+}
+
+/// `[start, end)` of each run of equal group labels: one `<optgroup>` per
+/// named run, as `OptionList::group` documents.
+fn runs(groups: &[Option<String>]) -> Vec<(usize, usize)> {
+    let mut runs: Vec<(usize, usize)> = Vec::new();
+    for (index, group) in groups.iter().enumerate() {
+        match runs.last_mut() {
+            Some((start, end)) if groups[*start] == *group => *end = index + 1,
+            _ => runs.push((index, index + 1)),
+        }
+    }
+    runs
 }
 
 /// A styled native `<select>` over an enum, with a label, a description,
@@ -132,16 +158,22 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
     let bound_value = bound.value();
+    // A memo, so the shell redraws when the select empties or fills, not per pick.
+    let unpicked = use_memo(move || live.read().is_none());
+    let unpicked = match &bound_value {
+        Some(value) => value.is_none(),
+        None => unpicked(),
+    };
 
     if props.onchange.is_none() && !bound.is_bound() {
         warn("NativeSelect: without `onchange` the selection can never change.");
     }
 
-    let values = props
-        .options
-        .clone()
-        .unwrap_or_else(|| T::options().to_vec());
-    if values.is_empty() {
+    let list = props.options.or_static();
+    let values = list.values();
+    let refused = list.disabled();
+    let groups = list.group_labels();
+    if values.is_empty() && !props.options.is_pending() {
         warn("NativeSelect: no options - a `T` without static `options()` needs `options`.");
     }
     let labels: Vec<String> = values
@@ -230,6 +262,28 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
         if current.is_some() && selected.is_none() && !choices.is_empty() {
             warn("NativeSelect: `value` is not one of the options, so none is selected.");
         }
+        let option = |index: usize| {
+            rsx! {
+                option {
+                    key: "{index}",
+                    value: "{posted[index]}",
+                    selected: selected == Some(index),
+                    disabled: refused[index],
+                    "{labels[index]}"
+                }
+            }
+        };
+        // One keyed node per `<option>` or `<optgroup>`: a nested unkeyed
+        // fragment panicked Dioxus' diff once the placeholder went.
+        let nodes = runs(&groups)
+            .into_iter()
+            .flat_map(|(start, end)| match &groups[start] {
+                Some(group) => vec![rsx! {
+                    optgroup { key: "g{start}", label: "{group}", {(start..end).map(option)} }
+                }],
+                None => (start..end).map(option).collect(),
+            })
+            .collect::<Vec<_>>();
         rsx! {
             if selected.is_none() {
                 option {
@@ -240,22 +294,17 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
                     "{placeholder}"
                 }
             }
-            for (index, (label, value)) in labels.iter().zip(&posted).enumerate() {
-                option {
-                    key: "{index}",
-                    value: "{value}",
-                    selected: selected == Some(index),
-                    "{label}"
-                }
-            }
+            {nodes.into_iter()}
         }
     });
     let select = field
         .aria(control)
         .attr("name", bound.name().map(str::to_string))
         .attr("disabled", disabled)
-        .attr("required", required)
+        // `aria-required` only: native `required` plus the empty placeholder
+        // matches `:invalid`, announced before anyone touched it (todo 581).
         .attr("data-controlled", true)
+        .attr("data-placeholder", unpicked)
         .event("onchange", move |event: FormEvent| pick.call(event.value()))
         .render(
             HtmlTag::Select,
@@ -283,10 +332,6 @@ fn listbox<T: Options>(props: NativeSelectProps<T>) -> Element {
             onchange.call(value);
         }
     });
-    let options = props
-        .options
-        .clone()
-        .unwrap_or_else(|| T::options().to_vec());
 
     rsx! {
         Select::<T> {
@@ -294,7 +339,7 @@ fn listbox<T: Options>(props: NativeSelectProps<T>) -> Element {
             onchange: props.onchange.is_some().then_some(pick),
             name: props.name,
             validate: props.validate,
-            options,
+            options: props.options,
             option: option_label.is_some().then_some(option),
             selection: option_label.is_some().then_some(selection),
             placeholder: props.placeholder,
@@ -316,7 +361,16 @@ fn listbox<T: Options>(props: NativeSelectProps<T>) -> Element {
 
 #[cfg(test)]
 mod tests {
-    use super::repeats;
+    use super::{repeats, runs};
+
+    /// Todo 583: adjacent equal labels are one `<optgroup>`, a repeat later is another.
+    #[test]
+    fn groups_split_into_runs() {
+        let group = |label: &str| Some(label.to_string());
+        let groups = [None, group("A"), group("A"), group("B"), group("A")];
+        assert_eq!(runs(&groups), [(0, 1), (1, 3), (3, 4), (4, 5)]);
+        assert!(runs(&[]).is_empty());
+    }
 
     /// Todo 20: a runtime set can post one value twice; the derive cannot.
     #[test]

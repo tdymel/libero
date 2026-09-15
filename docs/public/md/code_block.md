@@ -63,8 +63,9 @@ fn Demo() -> Element {
 ```
 
 `diff: true` reads `source` as a unified diff: a leading `+`/`-` colors the row
-and is stripped from what is shown, highlighted and copied - so the copy button
-still yields compilable code. It wins over `highlight_lines`.
+and moves into a marker column of its own, left out of a selection and of what
+is highlighted and copied - so the copy button still yields compilable code. It
+wins over `highlight_lines`.
 
 ```rust
 use dioxus::prelude::*;
@@ -102,9 +103,10 @@ that runs them; these 30 are where we started, not a closed set.
 
 ## Accessibility
 
-In `diff` mode added and removed lines are told apart by their tint alone - add
-a caption or surrounding prose when the distinction has to survive without
-color.
+In `diff` mode a changed line is read with the localization's
+`code_block.added` or `code_block.removed` before it; the visible `+`/`-` is
+hidden from readers. A line named by `highlight_lines` is marked by colour and
+a left bar only - say in prose why it matters when a reader needs to know.
 
 ## Props
 
@@ -117,7 +119,7 @@ color.
 | `max_lines` | `Option<u32>` | - | Caps the visible height to roughly this many lines and scrolls past it; unset grows to fit. Long lines always scroll horizontally regardless. |
 | `line_numbers` | `bool` | `theme.code_block.line_numbers` (`true`) | Toggles the line-number gutter. |
 | `highlight_lines` | `Option<String>` | - | 1-indexed lines to emphasize, e.g. `"1,5-7,10"`. Malformed segments are skipped, not rejected. A range past the last line stops at it. |
-| `diff` | `bool` | `false` | Reads `source` as a unified diff: a leading `+`/`-` colors the row and is stripped from what's shown, highlighted and copied. Wins over `highlight_lines`. |
+| `diff` | `bool` | `false` | Reads `source` as a unified diff: a leading `+`/`-` colors the row, moves into a marker column, and is kept out of what's highlighted and copied. Wins over `highlight_lines`. |
 
 Like every component, `CodeBlock` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.

@@ -33,6 +33,16 @@ generic
       option "Damson" [selected=false]
       option "Elderberry" [selected=false]
 LabelText
+  StaticText "Grouped fruit"
+generic
+  combobox "Grouped fruit" = Apple [expanded=false] [haspopup=menu]
+    MenuListPopup
+      group "Pome"
+        option "Apple" [selected]
+      group "Stone"
+        option "Cherry" [disabled]
+        option "Damson" [selected=false]
+LabelText
   StaticText "Off"
 generic
   combobox "Off" = Apple [disabled] [expanded=false] [haspopup=menu]

@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, FieldStatus, NativeSelect, Options, Text};
+use libero::components::{Code, FieldStatus, NativeSelect, OptionList, Options, Text};
 
 /// The enum is the option list, so the snippet has to show it.
 const SIZE_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
@@ -46,9 +46,9 @@ pub fn NativeSelectPage() -> Element {
                         .doc("The selected option; strictly controlled. `None` shows `placeholder` and selects nothing."),
                     prop("onchange", "EventHandler<T>")
                         .doc("Called with the option the caller should select next. Never fires for the placeholder, which cannot be picked."),
-                    prop("options", "Vec<T>")
+                    prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here, since only an enum lists its own."),
+                        .doc("Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here, since only an enum lists its own. A `Vec<T>` converts; an `OptionList` adds disabled options (`<option disabled>`) and named groups (`<optgroup>`). A pending source draws no options."),
                     prop("option_label", "Callback<T, String>")
                         .default("T::label()")
                         .doc("Overrides what the derive named an option. Returns a `String`, not an `OptionLabel`: an `<option>` holds text and nothing else."),
@@ -65,7 +65,7 @@ pub fn NativeSelectPage() -> Element {
                         .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Marks the field required, adds `aria-required` and shows an asterisk in the label."),
+                        .doc("Marks the field required, adds `aria-required` and shows an asterisk in the label. No native `required`, so an untouched select is not announced invalid; `validate` or the surrounding `Form` enforces it."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables interaction and dims the field. There is no `readonly`: a native `<select>` has no read-only state. For a picker that stays focusable and posted but cannot change, use `Select`."),
@@ -134,6 +134,14 @@ pub fn NativeSelectPage() -> Element {
                     }),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("disabled_option").code(|_, values| {
+                        match values.str("disabled_option").as_str() {
+                            "true" => vec![
+                                "options: OptionList::from_options().disabling(|size| *size == FontSize::Xl)".to_string(),
+                            ],
+                            _ => vec![],
+                        }
+                    }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     NativeSelect {
@@ -153,6 +161,10 @@ pub fn NativeSelectPage() -> Element {
                         },
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
+                        options: match values.str("disabled_option").as_str() {
+                            "true" => OptionList::from_options().disabling(|size| *size == FontSize::Xl),
+                            _ => OptionList::from_options(),
+                        },
                         value: value(),
                         onchange: move |next| value.set(Some(next)),
                     }

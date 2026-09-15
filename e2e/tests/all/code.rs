@@ -18,7 +18,7 @@
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
 use e2e::wait;
-use e2e::{Fixture, Suite, Viewport};
+use e2e::{Fixture, Suite, Viewport, ax};
 
 const COPY: &str = "#diff-block button";
 const FLOATING_COPY: &str = "#wide-block button";
@@ -151,6 +151,92 @@ fn a_nested_block_comment_is_one_comment_on_the_web() {
     });
 }
 
+/// Todo 595. The highlighted rows stay inside `pre > code`, so the block keeps
+/// its `code` role once the highlighter replaces the plain source.
+#[test]
+fn a_highlighted_code_block_keeps_its_code_role() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('#numbered-block pre > code > span').length === 2",
+            "the highlighter to draw the rows inside pre > code",
+        )
+        .await
+        .unwrap();
+        let snapshot = ax::snapshot(page, "#numbered-block").await.unwrap();
+        assert!(
+            snapshot.lines().any(|line| line.trim() == "code"),
+            "{snapshot}"
+        );
+        fixture.console.assert_clean("the code fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 594. A diff line is not colour alone: a visible `+`/`-` that is hidden
+/// from readers and from a selection, and a hidden word that is read.
+#[test]
+fn a_diff_line_says_added_or_removed() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        const MARKERS: &str = r#"[...document.querySelectorAll('#diff-block pre > code > span > [aria-hidden=true]')]
+            .map(m => m.textContent + (getComputedStyle(m).userSelect === 'none' ? '' : '!')).join('')"#;
+        // Line number, then marker, per row.
+        wait::for_js_true(
+            page,
+            &format!("{MARKERS} === '1 2-3+4 '"),
+            "a marker per row, unselectable",
+        )
+        .await
+        .unwrap();
+
+        let snapshot = ax::snapshot(page, "#diff-block").await.unwrap();
+        let text: Vec<&str> = snapshot.lines().map(str::trim).collect();
+        let at = |needle: &str| text.iter().position(|line| *line == needle).unwrap();
+        assert_eq!(
+            at(r#"StaticText "Removed""#) + 2,
+            at(r#"StaticText "old""#),
+            "{snapshot}"
+        );
+        assert_eq!(
+            at(r#"StaticText "Added""#) + 2,
+            at(r#"StaticText "new""#),
+            "{snapshot}"
+        );
+        assert!(!snapshot.contains(r#""+""#), "{snapshot}");
+
+        fixture.console.assert_clean("the code fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 594. A marked line keeps its left bar in forced colours, which drop
+/// the wash and the inset shadow that draw it otherwise.
+#[test]
+fn a_highlighted_line_keeps_its_bar_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        const BAR: &str = "(() => { const rows = [...document.querySelectorAll('#wide-block pre > code > span')]; \
+            return rows.length === 3 && rows.map(r => getComputedStyle(r).borderLeftWidth).join() === '0px,3px,0px'; })()";
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(page, BAR, "a bar on line 2 only")
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 424. The gutter is drawn only once highlighting resolves, which SSR
 /// never sees; read aloud, its numbers interleave with the code.
 #[test]
@@ -158,8 +244,8 @@ fn a_code_blocks_line_numbers_are_hidden_from_readers() {
     block_on(async {
         let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
 
-        // A row is a `div` holding exactly the gutter span and the content span.
-        const GUTTER: &str = r#"[...document.querySelectorAll('#numbered-block div')]
+        // A row is a `code` child holding exactly the gutter span and the content span.
+        const GUTTER: &str = r#"[...document.querySelectorAll('#numbered-block pre > code > span')]
             .filter(d => d.children.length === 2 && [...d.children].every(c => c.tagName === 'SPAN'))
             .map(d => [d.children[0].textContent, d.children[0].getAttribute('aria-hidden')])"#;
         wait::for_js_true(

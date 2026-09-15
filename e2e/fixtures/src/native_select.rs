@@ -1,9 +1,12 @@
 //! `NativeSelect` and `Textarea`: label and caption wiring, the placeholder,
-//! a refused pick, and the disabled and read-only states. One field per
+//! a refused pick, grouped and disabled options, and the disabled and
+//! read-only states. One field per
 //! `data-case`.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, NativeSelect, Options, Rule, Textarea, not_empty};
+use libero::components::{
+    Flex, NativeSelect, OptionItem, OptionList, Options, Rule, Textarea, not_empty,
+};
 
 use crate::{Routes, common::Fruit};
 
@@ -13,6 +16,7 @@ pub const ROUTES: Routes = &[("/native-select", || rsx! { NativeSelectPage {} })
 fn NativeSelectPage() -> Element {
     let mut pick = use_signal(|| None::<Fruit>);
     let mut kept = use_signal(|| Fruit::Banana);
+    let mut grouped = use_signal(|| Fruit::Apple);
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
@@ -38,6 +42,20 @@ fn NativeSelectPage() -> Element {
                     label: "Locked fruit",
                     value: kept(),
                     onchange: move |_| kept.set(Fruit::Banana),
+                }
+            }
+            // One option refused, the rest in named groups.
+            div { "data-case": "grouped",
+                NativeSelect {
+                    label: "Grouped fruit",
+                    value: grouped(),
+                    onchange: move |next| grouped.set(next),
+                    options: OptionList::grouped()
+                        .group("Pome", [Fruit::Apple])
+                        .group(
+                            "Stone",
+                            [OptionItem::new(Fruit::Cherry).disabled(true), Fruit::Damson.into()],
+                        ),
                 }
             }
             div { "data-case": "disabled",

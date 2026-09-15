@@ -17,6 +17,7 @@ use crate::{
         Clipboard, use_clipboard, use_css, use_element, use_localization, use_silent_focus_out,
         use_theme,
     },
+    localization::CodeBlockLabels,
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
     theme::{
@@ -94,6 +95,10 @@ static CODE_BLOCK_SCROLL_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(inset_focus_ring_sx("-2px"))
 });
 
+static CODE_LINES_PRE_SX: StaticSx = StaticSx::new(|| sx().display("block").margin("0"));
+
+// On the `code` inside the `pre`, so the rows keep their `pre > code`
+// semantics (todo 595).
 static CODE_LINES_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
@@ -127,7 +132,24 @@ fn marked_row_sx(color: ColorCss) -> Sx {
         CODE_BLOCK_BACKGROUND.value()
     ))
     .box_shadow(format!("inset 3px 0 0 {accent}"))
+    // Forced colours drop both, so the bar becomes a border there (todo 594).
+    .media(
+        "(forced-colors: active)",
+        sx().border_left("3px solid CanvasText"),
+    )
 }
+
+// Visible `+`/`-`, drawing only: the hidden label beside it is what is read.
+static CODE_DIFF_MARKER_SX: StaticSx = StaticSx::new(|| {
+    sx().flex_shrink("0")
+        .user_select("none")
+        .padding_right("8px")
+        .color(CODE_BLOCK_MUTED_TEXT.value())
+        .when("no-gutter", sx().padding_left("12px"))
+});
+
+// Kept out of a selection, like the marker it speaks for.
+static CODE_DIFF_LABEL_SX: StaticSx = StaticSx::new(|| sx().user_select("none"));
 
 static CODE_BLOCK_LINE_NUMBER_SX: StaticSx = StaticSx::new(|| {
     sx().flex_shrink("0")
@@ -194,9 +216,9 @@ base_props! {
         /// stops at it.
         #[props(default, into)]
         highlight_lines: Option<String>,
-        /// Reads `source` as a unified diff: a leading `+`/`-` colors the row
-        /// and is stripped from what's shown, highlighted and copied. Wins
-        /// over `highlight_lines`.
+        /// Reads `source` as a unified diff: a leading `+`/`-` colors the row,
+        /// moves into a marker column read as "added"/"removed", and is kept
+        /// out of what's highlighted and copied. Wins over `highlight_lines`.
         #[props(default)]
         diff: bool,
     }
@@ -263,18 +285,29 @@ fn parse_highlighted_lines(spec: &str, line_count: usize) -> (HashSet<usize>, Op
     (lines, overrun)
 }
 
+/// `None` outside a diff; a diff draws a marker column on every row.
+type DiffCell = Option<Option<DiffStatus>>;
+
 fn code_line_row(
     index: usize,
     line: &HighlightedLine,
     line_numbers: bool,
+    diff: DiffCell,
     row_state: Option<&'static str>,
+    labels: &CodeBlockLabels,
 ) -> Element {
     let states = row_state
         .map(|s| States::new().active(s))
         .unwrap_or_default();
+    let (marker, spoken) = match diff.flatten() {
+        Some(DiffStatus::Added) => ("+", Some(labels.added)),
+        Some(DiffStatus::Removed) => ("-", Some(labels.removed)),
+        None => (" ", None),
+    };
+    // A `span`: a row sits inside `code`, which holds phrasing content only.
     rsx! {
         Box {
-            component: "div",
+            component: "span",
             framework_sx: &CODE_LINE_ROW_SX,
             states,
             if line_numbers {
@@ -286,10 +319,22 @@ fn code_line_row(
                     {(index + 1).to_string()}
                 }
             }
+            if diff.is_some() {
+                Box {
+                    component: "span",
+                    framework_sx: &CODE_DIFF_MARKER_SX,
+                    states: States::new().with("no-gutter", !line_numbers),
+                    aria_hidden: "true",
+                    {marker}
+                }
+            }
+            if let Some(spoken) = spoken {
+                VisuallyHidden { sx: &CODE_DIFF_LABEL_SX, "{spoken} " }
+            }
             Box {
                 component: "span",
                 framework_sx: &CODE_LINE_CONTENT_SX,
-                states: States::new().with("no-gutter", !line_numbers),
+                states: States::new().with("no-gutter", !line_numbers && diff.is_none()),
                 for (text, class) in line.iter() {
                     span { class: *class, {text.as_str()} }
                 }
@@ -306,24 +351,30 @@ fn code_lines(
     lines: &[HighlightedLine],
     line_numbers: bool,
     highlighted_lines: &HashSet<usize>,
-    diff_statuses: &[Option<DiffStatus>],
+    diff_statuses: Option<&[Option<DiffStatus>]>,
+    labels: &CodeBlockLabels,
 ) -> Element {
     let gutter_width = format!("{}ch", lines.len().to_string().len());
 
     rsx! {
         Box {
-            component: "div",
-            framework_sx: &CODE_LINES_SX,
-            variables: gutter_variables(gutter_width),
-            for (index, line) in lines.iter().enumerate() {
-                {
-                    let row_state = match diff_statuses.get(index).copied().flatten() {
-                        Some(DiffStatus::Added) => Some("diff-add"),
-                        Some(DiffStatus::Removed) => Some("diff-remove"),
-                        None if highlighted_lines.contains(&(index + 1)) => Some("highlighted"),
-                        None => None,
-                    };
-                    code_line_row(index, line, line_numbers, row_state)
+            component: "pre",
+            framework_sx: &CODE_LINES_PRE_SX,
+            Box {
+                component: "code",
+                framework_sx: &CODE_LINES_SX,
+                variables: gutter_variables(gutter_width),
+                for (index, line) in lines.iter().enumerate() {
+                    {
+                        let diff = diff_statuses.map(|statuses| statuses.get(index).copied().flatten());
+                        let row_state = match diff.flatten() {
+                            Some(DiffStatus::Added) => Some("diff-add"),
+                            Some(DiffStatus::Removed) => Some("diff-remove"),
+                            None if highlighted_lines.contains(&(index + 1)) => Some("highlighted"),
+                            None => None,
+                        };
+                        code_line_row(index, line, line_numbers, diff, row_state, labels)
+                    }
                 }
             }
         }
@@ -492,7 +543,13 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .attr("role", scrolls.then_some("region"))
         .attr("aria-label", scrolls.then_some(scroll_label));
     let code = match &lines {
-        Some(lines) => code_lines(lines, line_numbers, &highlighted_lines, &diff_statuses),
+        Some(lines) => code_lines(
+            lines,
+            line_numbers,
+            &highlighted_lines,
+            props.diff.then_some(&diff_statuses[..]),
+            &labels,
+        ),
         None => rsx! {
             Box {
                 component: "pre",

@@ -83,7 +83,8 @@ that stands for "nothing picked yet".
 can hold rather than a sentinel option in the list. While it is `None` the
 `placeholder` shows as the selected entry, disabled and hidden - so the native
 control cannot silently take the first option, and once a real value is picked
-there is no way back to it.
+there is no way back to it. It is dimmed like a text field's placeholder, so an
+empty select does not look filled.
 
 ```rust
 use dioxus::prelude::*;
@@ -178,6 +179,45 @@ There is no rich form here the way [Tabs](tabs.md) and
 [SegmentedControl](segmented_control.md) have `OptionLabel::rich` - an icon per
 option needs a listbox rather than a native `<select>`.
 
+## Disabled and grouped options
+
+`options` takes the same `OptionList` as [Select](select.md). A disabled
+`OptionItem` renders as `<option disabled>`: shown and announced, but the picker
+and the arrow keys pass over it. A named group renders as an `<optgroup>`.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{NativeSelect, OptionItem, OptionList, Options};
+
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Fruit {
+    Apple,
+    Pear,
+    Cherry,
+    Plum,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut fruit = use_signal(|| None::<Fruit>);
+
+    rsx! {
+        NativeSelect {
+            label: "Fruit",
+            placeholder: "Pick a fruit",
+            value: fruit(),
+            options: OptionList::grouped()
+                .group("Pome", [Fruit::Apple, Fruit::Pear])
+                .group("Stone", [OptionItem::new(Fruit::Cherry).disabled(true), Fruit::Plum.into()]),
+            onchange: move |next| fruit.set(Some(next)),
+        }
+    }
+}
+```
+
+`OptionList::from_options().disabling(..)` keeps the enum's own list and refuses
+a few of it.
+
 ## Accessibility
 
 Leave `label` unset only when something else already names the select; a bare
@@ -195,14 +235,14 @@ ids first - so the validation message is never lost.
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
 | `value` | `Option<T>` | - | The selected option; strictly controlled. `None` shows `placeholder` and selects nothing. |
 | `onchange` | `EventHandler<T>` | - | Called with the option the caller should select next. Never fires for the placeholder, which cannot be picked. A handler that ignores the pick leaves it in the DOM: a `<select>`'s change cannot be cancelled. |
-| `options` | `Vec<T>` | `T::options()` | Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here, since only an enum lists its own. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here, since only an enum lists its own. A `Vec<T>` converts; an `OptionList` adds disabled options and named groups. A pending source draws no options. |
 | `option_label` | `Callback<T, String>` | `T::label()` | Overrides what the derive named an option. Returns a `String`, not an `OptionLabel`: an `<option>` holds text and nothing else. |
 | `placeholder` | `String` | - | Shown while `value` is `None`, as an unpickable first entry. |
 | `label` | `Caption` | - | The field's caption, above the control. Names the field through a `for`/`id` pair. |
 | `description` | `Caption` | - | Between the label and the control: what to pick. |
 | `helper` | `Caption` | - | Under the control: constraints, or what the choice affects. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
+| `required` | `bool` | `false` | Sets `aria-required` and marks the label. No native `required`, so an untouched select is not announced invalid; `validate` or the surrounding `Form` enforces it. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the field. There is no `readonly`: a native `<select>` has no read-only state. For a picker that stays focusable and posted but cannot change, use `Select`. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
@@ -240,7 +280,8 @@ starts at.
 ## Data attributes
 
 State tokens on the wrapper's and the frame's `data-state`, space separated. The
-`<select>` itself carries none - the frame styles it.
+`<select>` itself carries only `data-placeholder` while `value` is `None`, which
+dims it.
 
 | Token | Condition |
 |---|---|
