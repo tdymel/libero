@@ -1,7 +1,7 @@
 //! `FileField`, as a dropzone taking several files.
 
 use dioxus::prelude::*;
-use libero::components::{FileField, Files, Flex};
+use libero::components::{Button, FileField, Files, Flex};
 
 use crate::Routes;
 
@@ -9,7 +9,33 @@ pub const ROUTES: Routes = &[
     ("/file-field", || rsx! { FileFieldPage {} }),
     ("/file-field/input", || rsx! { FileInputPage {} }),
     ("/file-field/states", || rsx! { FileStatesPage {} }),
+    ("/file-field/modes", || rsx! { FileModesPage {} }),
 ];
+
+/// One `multiple` field the buttons switch to read-only or disabled once the
+/// unit has dropped its files in.
+#[component]
+fn FileModesPage() -> Element {
+    let mut files = use_signal(Files::default);
+    let mut mode = use_signal(|| "editable");
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            FileField {
+                id: "modes",
+                label: "Papers",
+                placeholder: "Pick files",
+                multiple: true,
+                readonly: mode() == "readonly",
+                disabled: mode() == "disabled",
+                value: files(),
+                onchange: move |next: Files| files.set(next),
+            }
+            Button { id: "to-readonly", onclick: move |_| mode.set("readonly"), "Read-only" }
+            Button { id: "to-disabled", onclick: move |_| mode.set("disabled"), "Disabled" }
+        }
+    }
+}
 
 /// The `Input` variant bare (no placeholder, todo 520), and required with an
 /// error.

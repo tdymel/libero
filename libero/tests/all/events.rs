@@ -2008,10 +2008,12 @@ fn a_read_only_file_field_removes_nothing() {
             })
             .collect()
     };
-    let surface = tag_at(&html, "role=\"button\"");
-    assert_eq!(surface.len(), 1, "{surface:?}");
-    assert!(surface[0].contains("tabindex=\"0\""), "{surface:?}");
-    assert!(!surface[0].contains("aria-disabled"), "{surface:?}");
+    // Todo 529: the Browse button stays a tab stop that says it refuses.
+    let browse = tag_at(&html, "data-slot=\"browse\"");
+    assert_eq!(browse.len(), 1, "{browse:?}");
+    assert!(browse[0].contains("tabindex=\"0\""), "{browse:?}");
+    assert!(browse[0].contains("aria-disabled=\"true\""), "{browse:?}");
+    assert!(!browse[0].contains("disabled=true"), "{browse:?}");
     let file = tag_at(&html, "type=\"file\"");
     assert!(
         !file[0].contains("disabled"),

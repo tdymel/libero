@@ -5,6 +5,7 @@ expression: tree
 ---
 LabelText
   StaticText "Attachments"
-button "Attachments"
-  StaticText "Drop files here, or click to pick"
+group "Attachments"
+  button "Attachments Drop files here, or click to pick"
+    StaticText "Drop files here, or click to pick"
 status [atomic] [live=polite]

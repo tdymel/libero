@@ -6,9 +6,10 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        ActionIcon, HtmlTag, Input, States,
+        ActionIcon, HtmlTag, Input, States, VisuallyHidden,
         common::{
             CloseIcon, UploadIcon, field_props, focus_ring_sx, input_from_str, navigation_chord,
+            ring_overlay, ring_overlay_sx,
         },
         feedback::Loader,
         form::{
@@ -44,12 +45,15 @@ enum FocusDebt {
     Took,
 }
 
-/// The one-line control, the `Select` trigger's shape: the value or the
-/// placeholder, and whatever the frame's trailing slot holds beside it.
-///
-/// A `div` with `role="button"`, not a `<button>`: the chips carry their own
-/// remove buttons, and an interactive descendant of a button is invalid -
-/// the same reason `MultiSelect`'s trigger is a `div`.
+/// The Browse button's text in the `Input` variant, heard after the label. One
+/// const until the localization (plan 28) takes it.
+const BROWSE_LABEL: &str = "Browse files";
+/// The Browse button's description on a `required` field: neither a group nor
+/// a button may carry `aria-required`.
+const REQUIRED_LABEL: &str = "Required";
+
+/// The `Input` variant's group, the `Select` trigger's shape: the chips, then
+/// the Browse button over the rest of the line.
 static FILE_CONTROL_SX: StaticSx = StaticSx::new(|| {
     field_control_sx()
         .display("flex")
@@ -65,13 +69,15 @@ static FILE_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         .selector(
             "& > [data-slot='value']",
-            sx().flex("1 1 auto")
+            sx().display("flex")
+                .flex("0 1 auto")
                 .min_width("0")
-                .overflow("hidden")
-                .text_overflow("ellipsis")
-                .white_space("nowrap"),
+                .gap("4px")
+                .margin("0")
+                .padding("0")
+                .list_style("none")
+                .overflow("hidden"),
         )
-        .selector("& [data-placeholder]", sx().color("text-dimmed"))
         // A filename has no spaces to break on, so without this one long one
         // pushes the frame past whatever width its parent allows.
         .selector(
@@ -83,25 +89,64 @@ static FILE_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 .white_space("nowrap"),
         )
         .selector("& [data-slot='chip'] > *", sx().max_width("100%"))
-        // The chip the keyboard is on. The ring goes on what was drawn, not on
-        // the wrapper, so it follows that element's own radius.
-        .selector(
-            "& [data-slot='chip'][data-cursor='true'] > *",
-            focus_ring_sx(),
-        )
+        // The ring goes on what was drawn, not on the item, so it follows that
+        // element's own radius.
+        .selector("& [data-slot='chip']:focus-visible", sx().outline("none"))
+        .selector("& [data-slot='chip']:focus-visible > *", focus_ring_sx())
         .when(
             "multiple",
             sx().selector(
                 "& > [data-slot='value']",
-                sx().display("flex")
-                    .flex_wrap("wrap")
-                    .gap("4px")
-                    // Chips wrap, and the single-line clip would cut the
-                    // second row off at the slot's edge.
-                    .overflow("visible"),
+                // Chips wrap, and the single-line clip would cut the second
+                // row off at the slot's edge.
+                sx().flex_wrap("wrap").overflow("visible"),
             ),
         )
         .when("disabled", sx().cursor("not-allowed"))
+});
+
+/// The `Input` variant's Browse button: the rest of the line, showing the
+/// placeholder while nothing is picked. The frame draws its ring.
+static FILE_BROWSE_SX: StaticSx = StaticSx::new(|| {
+    field_control_sx()
+        .display("flex")
+        .align_items("center")
+        .align_self("stretch")
+        .flex("1 1 0")
+        // Room to aim at beside a full row of chips.
+        .min_width("2em")
+        .text_align("start")
+        .cursor("pointer")
+        .selector(
+            "& [data-placeholder]",
+            sx().color("text-dimmed")
+                .min_width("0")
+                .overflow("hidden")
+                .text_overflow("ellipsis")
+                .white_space("nowrap"),
+        )
+        .selector("&:disabled", sx().cursor("not-allowed"))
+});
+
+/// The dropzone's Browse button: the whole surface inside its padding.
+static FILE_DROPZONE_BROWSE_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .flex_direction("column")
+        .align_items("center")
+        .justify_content("center")
+        .gap("4px")
+        .flex("1 1 auto")
+        .align_self("stretch")
+        .border("none")
+        .outline("none")
+        .background("transparent")
+        .padding("0")
+        .color("inherit")
+        .font_family("inherit")
+        .font_size("inherit")
+        .text_align("center")
+        .cursor("pointer")
+        .selector("&:disabled", sx().cursor("not-allowed"))
 });
 
 /// The tall surface. Same value, same input, same picker - only the thing the
@@ -128,10 +173,22 @@ static FILE_DROPZONE_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .text_align("center")
         .transition("border-color 150ms, background 150ms")
+        // The Browse button's ring is the surface's, out by the dashed border.
+        .position("relative")
+        .selector(
+            "& > [data-ring]",
+            ring_overlay_sx()
+                .inset("-2px")
+                .border_radius(FILE_FIELD_RADIUS.value()),
+        )
+        .selector("& :focus-visible ~ [data-ring]", focus_ring_sx())
         .selector("& [data-slot='hint']", sx().color("text-dimmed"))
         // Sized against the text, which is the one thing on the surface that
         // already scales.
-        .selector("& > svg", sx().width("2em").height("2em").color("muted.6"))
+        .selector(
+            "& [data-slot='browse'] > svg",
+            sx().width("2em").height("2em").color("muted.6"),
+        )
         .when(
             "dragging",
             sx().border_color("primary")
@@ -236,7 +293,7 @@ field_props! {
         /// An upload is in flight. Draws a `Loader` in the control - beside
         /// the selection in the `Input` variant, in place of the icon on a
         /// dropzone, on the card once a single-file dropzone has put its
-        /// surface away - and marks that control `aria-busy`.
+        /// surface away - and marks the field's group `aria-busy`.
         ///
         /// It blocks nothing: a `multiple` field can take more files while
         /// the first ones upload. `disabled` is the switch for that.
@@ -283,9 +340,10 @@ field_props! {
 pub fn FileField(props: FileFieldProps) -> Element {
     let theme = use_theme();
     let input_element = use_element();
-    // Where the focus goes when a card is removed: the card that took its
-    // place, or the surface when none is left.
-    let surface_element = use_element();
+    // Where the focus goes when a row is removed: the row that took its
+    // place, or the Browse button when none is left.
+    let browse_element = use_element();
+    // The chips or the cards, whichever the variant draws.
     let list_element = use_element();
     // What the input itself holds, and *which* input held it. A pick fills
     // the list; every other edit happens in Rust, and `use_input_mirror`
@@ -382,7 +440,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         loading.then_some(chip_size),
         clearable && has_files && editable,
         size,
-        surface_element,
+        browse_element,
         emit,
     );
     let chip_class = use_css(Some(&FILE_CHIP_SX), CssLayer::Framework);
@@ -401,11 +459,15 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     use_focus_debt(
         owed,
-        value.len(),
+        count,
         surface,
         list_element,
-        surface_element,
-        format!("{}-remove", field.id()),
+        browse_element,
+        // Each row's tab stop: a card's x, or the chip itself.
+        match cards {
+            true => format!("{}-remove", field.id()),
+            false => id_prefix.clone(),
+        },
     );
 
     // Read off the field before the closures below, which outlive the borrow
@@ -423,6 +485,25 @@ pub fn FileField(props: FileFieldProps) -> Element {
         owed.set(Some(FocusDebt::Removed(index)));
         emit.call(files.without(index));
     });
+    let files = value.clone();
+    // Backspace on the Browse button: the focus is not on the row, so it stays.
+    let drop_at = use_callback(move |index: usize| {
+        if editable {
+            emit.call(files.without(index));
+        }
+    });
+
+    let keys = ChipKeys {
+        interactive,
+        editable,
+        count,
+        remove_at,
+        drop_at,
+        list: list_element,
+        browse: browse_element,
+        id_prefix: id_prefix.clone(),
+        cursor,
+    };
 
     let rows = FileRows {
         draw: props.selection,
@@ -436,8 +517,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
         // surface, and one is enough.
         card_loader: (loading && !surface).then_some(chip_size),
         field_id: field.id().to_string(),
-        id_prefix: id_prefix.clone(),
         chip_cursor,
+        keys: keys.clone(),
         chip_class,
         card_class,
     };
@@ -462,7 +543,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
         .into();
 
     let control = Surface {
-        element: surface_element,
+        browse: browse_element,
+        id: field.id().to_string(),
         labelledby: labelledby.clone(),
         describedby,
         invalid,
@@ -470,19 +552,10 @@ pub fn FileField(props: FileFieldProps) -> Element {
         interactive,
         editable,
         loading,
-        active_descendant: chip_cursor.map(|index| format!("{id_prefix}-{index}")),
-        keys: SurfaceKeys {
-            open,
-            interactive,
-            editable,
-            // A dropzone has no chips - its cards are ordinary tab stops
-            // outside the control - so it only ever opens.
-            chips: !cards && interactive,
-            count,
-            chip_cursor,
-            cursor,
-            remove_at,
-        },
+        open,
+        // A dropzone has no chips - its cards are ordinary tab stops outside
+        // the group - so its button only ever opens.
+        keys: (!cards).then_some(keys),
         take,
         dragging,
         opening,
@@ -500,6 +573,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
             Chips {
                 trailing,
                 drawn,
+                list_element,
                 placeholder: props.placeholder.clone().unwrap_or_default(),
             },
             input,
@@ -558,27 +632,22 @@ fn full_width(caller: &Input<Sx>) -> Input<Sx> {
 
 /// The frame's trailing slot: the clear button, with the loader ahead of it -
 /// or the loader alone when there is nothing to clear. The loader is silent:
-/// it sits inside a control that the field's label already names, and
-/// `aria-busy` on that control is what says it is waiting.
+/// it sits beside a group that the field's label already names, and
+/// `aria-busy` on that group is what says it is waiting.
 fn trailing_slot(
     loader: Option<Size>,
     clearable: bool,
     size: Size,
-    surface_element: ElementHandle,
+    browse_element: ElementHandle,
     emit: Callback<Files>,
 ) -> Option<Element> {
     let spinner = loader.map(|size| rsx! { Loader { size } });
-    let clear = clear_button(
-        clearable,
-        size,
-        surface_element,
-        move |event: MouseEvent| {
-            // Clearing is not a click on the control, which would open the picker
-            // straight after emptying the field.
-            event.stop_propagation();
-            emit.call(Files::default());
-        },
-    )
+    let clear = clear_button(clearable, size, browse_element, move |event: MouseEvent| {
+        // Clearing is not a click on the control, which would open the picker
+        // straight after emptying the field.
+        event.stop_propagation();
+        emit.call(Files::default());
+    })
     .map(|button| {
         rsx! {
             {spinner.clone()}
@@ -627,7 +696,9 @@ fn file_input(
         .attr("capture", props.capture.clone())
         .attr("name", name)
         .attr("disabled", !interactive)
-        // It is the control that is focusable and named; this is plumbing.
+        // The native half of `required`: a form's own validation reads it.
+        .attr("required", props.required.unwrap_or(false))
+        // It is the Browse button that is focusable and named; this is plumbing.
         .attr("tabindex", "-1")
         .attr("aria-hidden", "true")
         .element(&element)
@@ -659,17 +730,17 @@ fn use_input_mirror(
     }));
 }
 
-/// Removing a row destroys the button the keyboard was on, and focus would
+/// Removing a row destroys the element the keyboard was on, and focus would
 /// otherwise fall to the body. It moves to the row that took this one's
 /// place, to the new last row when the removed one was last, and to the
-/// surface when the list is empty - which is also the only control left
-/// there. `focus_prefix` plus a row index is that row's remove button's id.
+/// Browse button when the list is empty. `focus_prefix` plus a row index is
+/// that row's tab stop's id: a card's x, or a chip.
 fn use_focus_debt(
     mut owed: Signal<Option<FocusDebt>>,
     remaining: usize,
     surface_survives: bool,
     list_element: ElementHandle,
-    surface_element: ElementHandle,
+    browse_element: ElementHandle,
     focus_prefix: String,
 ) {
     use_effect(use_reactive!(|remaining| {
@@ -678,29 +749,33 @@ fn use_focus_debt(
         };
         owed.set(None);
         let target = match debt {
-            // Nothing left to remove: the surface is the only control there.
+            // Nothing left to remove: the Browse button is what is left.
             FocusDebt::Removed(_) if remaining == 0 => None,
             // The row that took this one's place, clamped to the new last.
             FocusDebt::Removed(index) => Some(index.min(remaining - 1)),
             // A single-file dropzone puts its surface away once it holds a
             // file, so the x that replaced it is what the keyboard needs.
             FocusDebt::Took if !surface_survives && remaining > 0 => Some(0),
-            // The surface is still there, and still focused.
+            // The Browse button is still there, and still focused.
             FocusDebt::Took => return,
         };
-        match target {
-            Some(index) => {
-                if let Ok(button) =
-                    list_element.query_selector(&id_selector(&format!("{focus_prefix}-{index}")))
-                {
-                    let _ = button.focus();
-                }
-            }
-            None => {
-                let _ = surface_element.focus();
+        focus_row(list_element, browse_element, &focus_prefix, target);
+    }));
+}
+
+/// Focuses row `target` by its tab stop's id under `list`, or the Browse
+/// button for `None`.
+fn focus_row(list: ElementHandle, browse: ElementHandle, prefix: &str, target: Option<usize>) {
+    match target {
+        Some(index) => {
+            if let Ok(row) = list.query_selector(&id_selector(&format!("{prefix}-{index}"))) {
+                let _ = row.focus();
             }
         }
-    }));
+        None => {
+            let _ = browse.focus();
+        }
+    }
 }
 
 /// Draws the picked files, for one render: chips in the `Input` variant,
@@ -718,8 +793,9 @@ struct FileRows {
     /// The loader a card carries, once no surface is left to carry it.
     card_loader: Option<Size>,
     field_id: String,
-    id_prefix: String,
+    /// The chip that holds the list's one tab stop.
     chip_cursor: Option<usize>,
+    keys: ChipKeys,
     chip_class: Option<String>,
     card_class: Option<String>,
 }
@@ -759,19 +835,28 @@ impl FileRows {
                 li { key: "{index}", class: self.card_class.clone(), {content} }
             },
             false => {
-                let id_prefix = &self.id_prefix;
+                let keys = self.keys.clone();
+                let mut cursor = keys.cursor;
+                let id = format!("{}-{index}", keys.id_prefix);
+                // One tab stop for the whole list; the arrows walk the rest.
+                let stop =
+                    keys.interactive
+                        .then_some(match self.chip_cursor.unwrap_or(0) == index {
+                            true => "0",
+                            false => "-1",
+                        });
                 rsx! {
-                    span {
+                    li {
                         key: "{index}",
                         class: self.chip_class.clone(),
                         "data-slot": "chip",
-                        id: "{id_prefix}-{index}",
-                        "data-cursor": (self.chip_cursor == Some(index)).then_some("true"),
-                        // The default chip's own guard, applied here so a
-                        // caller's `selection` has it too: a press on its x
-                        // must not take the focus off the control, or the
-                        // removal strands it on the body.
+                        id,
+                        tabindex: stop,
+                        // Keeps a press on an x (a caller's too) from taking
+                        // the focus the removal hands on.
                         onmousedown: move |event: MouseEvent| event.prevent_default(),
+                        onfocus: move |_| cursor.set(Some(index)),
+                        onkeydown: move |event: KeyboardEvent| keys.handle(event, Some(index)),
                         {content}
                     }
                 }
@@ -780,17 +865,30 @@ impl FileRows {
     }
 }
 
-/// The `Input` variant's contents: the chips, or the placeholder.
-fn chip_slot(drawn: Vec<Element>, placeholder: &str) -> Element {
-    match drawn.is_empty() {
-        false => rsx! {
-            span { "data-slot": "value", {drawn.into_iter()} }
-        },
-        true => rsx! {
-            span { "data-slot": "value",
-                span { "data-placeholder": "true", "{placeholder}" }
+/// The `Input` variant's chips, a list inside the group. `None` while empty.
+fn chip_list(drawn: Vec<Element>, list_element: ElementHandle) -> Option<Element> {
+    (!drawn.is_empty()).then(|| {
+        rsx! {
+            // Safari with VoiceOver drops list semantics from a
+            // `list-style: none` list.
+            ul {
+                "data-slot": "value",
+                role: "list",
+                onmounted: list_element.mount(),
+                {drawn.into_iter()}
             }
-        },
+        }
+    })
+}
+
+/// The `Input` variant's Browse button: the placeholder while nothing is
+/// picked, and the hidden text that says what the button does.
+fn browse_content(placeholder: &str, empty: bool) -> Element {
+    rsx! {
+        if empty && !placeholder.is_empty() {
+            span { "data-placeholder": "true", "{placeholder}" }
+        }
+        VisuallyHidden { "{BROWSE_LABEL}" }
     }
 }
 
@@ -842,82 +940,67 @@ fn chip_cursor(cursor: Option<usize>, count: usize, cards: bool) -> Option<usize
     }
 }
 
-/// The control's keyboard. Two keyboards on one element, the way
-/// `MultiSelect`'s trigger has them: the chips answer Left, Right, Backspace
-/// and Delete, and everything else opens the picker.
-#[derive(Clone, Copy, PartialEq)]
-struct SurfaceKeys {
-    /// Opens the picker.
-    open: Callback<()>,
+/// The `Input` variant's keys, on each chip and on the Browse button: the
+/// arrows move the focus along the chips, Backspace and Delete remove.
+#[derive(Clone)]
+struct ChipKeys {
     interactive: bool,
-    /// The keys that open or remove. The chip cursor only reads, so a
-    /// read-only field still walks it.
+    /// The keys that remove. The arrows only read, so a read-only field still
+    /// walks the chips.
     editable: bool,
-    chips: bool,
     count: usize,
-    chip_cursor: Option<usize>,
-    cursor: Signal<Option<usize>>,
+    /// Removes a chip the focus is on, and owes the focus a new place.
     remove_at: Callback<usize>,
+    /// Removes a chip from the Browse button, where the focus stays.
+    drop_at: Callback<usize>,
+    list: ElementHandle,
+    browse: ElementHandle,
+    id_prefix: String,
+    /// The chip that last had the focus, and so holds the tab stop.
+    cursor: Signal<Option<usize>>,
 }
 
-impl SurfaceKeys {
-    fn handle(self, event: KeyboardEvent) {
-        let SurfaceKeys {
-            open,
-            interactive,
-            editable,
-            chips,
-            count,
-            chip_cursor,
-            mut cursor,
-            remove_at,
-        } = self;
+impl ChipKeys {
+    /// `at` is the chip the focus is on, `None` for the Browse button.
+    fn handle(&self, event: KeyboardEvent, at: Option<usize>) {
         // A chord is the browser's (Alt+ArrowLeft is Back).
-        if !interactive || navigation_chord(&event).is_some() {
+        if !self.interactive || self.count == 0 || navigation_chord(&event).is_some() {
             return;
         }
-        match event.key() {
-            Key::ArrowLeft if chips && count > 0 => {
+        let last = self.count - 1;
+        let target = match (event.key(), at) {
+            (Key::ArrowLeft, Some(index)) => Some(index.saturating_sub(1)),
+            // From the Browse button, the last chip - the one Backspace takes.
+            (Key::ArrowLeft, None) => Some(last),
+            // Past the last chip is the Browse button, not a wrap.
+            (Key::ArrowRight, Some(index)) => (index < last).then_some(index + 1),
+            (Key::Home, Some(_)) => Some(0),
+            (Key::End, Some(_)) => Some(last),
+            (Key::Backspace | Key::Delete, Some(index)) if self.editable => {
                 event.prevent_default();
-                cursor.set(Some(match chip_cursor {
-                    Some(index) => index.saturating_sub(1),
-                    // From no cursor, the last chip - the one Backspace would
-                    // have taken.
-                    None => count - 1,
-                }));
+                self.remove_at.call(index);
+                return;
             }
-            Key::ArrowRight if chips && count > 0 => {
+            (Key::Backspace | Key::Delete, None) if self.editable => {
                 event.prevent_default();
-                cursor.set(match chip_cursor {
-                    Some(index) if index + 1 < count => Some(index + 1),
-                    // Past the last chip is back to no cursor, not a wrap.
-                    _ => None,
-                });
+                self.drop_at.call(last);
+                return;
             }
-            Key::Backspace | Key::Delete if editable && chips && count > 0 => {
-                event.prevent_default();
-                remove_at.call(chip_cursor.unwrap_or(count - 1));
-            }
-            // A `role="button"` answers Enter and Space itself - the browser
-            // does that only for a real `<button>`, which the chips rule out.
-            Key::Enter if editable => {
-                event.prevent_default();
-                open.call(());
-            }
-            Key::Character(ref character) if editable && character == " " => {
-                event.prevent_default();
-                open.call(());
-            }
-            _ => {}
-        }
+            _ => return,
+        };
+        event.prevent_default();
+        focus_row(self.list, self.browse, &self.id_prefix, target);
     }
 }
 
-/// The focusable control both variants draw: the one-line input, or the drop
-/// surface. A click or Enter opens the picker; a drop takes the files.
+/// What both variants draw: a group named by the label - the frame's control,
+/// or the drop surface - holding the chips and a real Browse button. A click
+/// anywhere on it opens the picker; a drop takes the files.
 #[derive(Clone)]
 struct Surface {
-    element: ElementHandle,
+    browse: ElementHandle,
+    /// The field's id, which the Browse button carries.
+    id: String,
     labelledby: Option<String>,
     describedby: Option<String>,
     invalid: bool,
@@ -925,56 +1008,109 @@ struct Surface {
     interactive: bool,
     editable: bool,
     loading: bool,
-    active_descendant: Option<String>,
-    keys: SurfaceKeys,
+    open: Callback<()>,
+    /// The chips' keys, from the Browse button. `None` on a dropzone.
+    keys: Option<ChipKeys>,
     take: Callback<Vec<FileData>>,
     dragging: LocalState<bool>,
-    /// Set while the surface clicks its input.
+    /// Set while the button clicks its input.
     opening: Rc<Cell<bool>>,
     attributes: Vec<Attribute>,
 }
 
 impl Surface {
-    fn render(self, style: BoxStyle, children: Element) -> Element {
+    /// `chips` come before the button, `after` after its ring.
+    fn render(
+        self,
+        group: BoxStyle,
+        browse: BoxStyle,
+        chips: Option<Element>,
+        content: Element,
+        after: Option<Element>,
+    ) -> Element {
         let Surface {
-            element,
+            browse: element,
+            id,
+            labelledby,
+            describedby,
+            invalid,
+            required,
             interactive,
             editable,
+            loading,
+            open,
             keys,
             take,
             dragging,
             opening,
-            ..
+            attributes,
         } = self;
-        let open = keys.open;
+        let required_id = format!("{id}-required");
+        // The label, then the button's own text: "Receipt, Browse files".
+        let named = labelledby.as_ref().map(|label| format!("{label} {id}"));
+        let described = [
+            required.then_some(required_id.as_str()),
+            describedby.as_deref(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>()
+        .join(" ");
+        let press = move || {
+            // A press on the input opens it natively; its own click bubbling
+            // back here while `opening` is not a second press.
+            if !editable || opening.get() {
+                return;
+            }
+            let opening = opening.clone();
+            // After this dispatch: a synchronous click would re-enter this listener.
+            spawn(async move {
+                opening.set(true);
+                open.call(());
+                opening.set(false);
+            });
+        };
+        let button = browse
+            .element(&element)
+            .attr_default("type", "button")
+            .attr("id", id)
+            // What a click on the label looks for.
+            .attr("tabindex", "0")
+            .attr("data-slot", "browse")
+            .attr("aria-labelledby", named)
+            .attr(
+                "aria-describedby",
+                (!described.is_empty()).then_some(described),
+            )
+            .attr("aria-invalid", invalid.then_some("true"))
+            // Read-only stays a tab stop that refuses; disabled leaves the order.
+            .attr(
+                "aria-disabled",
+                (interactive && !editable).then_some("true"),
+            )
+            .attr("disabled", !interactive)
+            .event("onclick", {
+                let press = press.clone();
+                move |_: MouseEvent| press()
+            })
+            .event("onkeydown", move |event: KeyboardEvent| {
+                if let Some(keys) = &keys {
+                    keys.handle(event, None);
+                }
+            })
+            .render(HtmlTag::Button, attributes, content);
         let dragging_over = dragging.clone();
         let dragging_off = dragging.clone();
-        style
-            .element(&element)
-            .attr("role", "button")
-            .attr("tabindex", if interactive { "0" } else { "-1" })
-            .attr("aria-labelledby", self.labelledby)
-            .attr("aria-describedby", self.describedby)
-            .attr("aria-invalid", self.invalid.then_some("true"))
-            .attr("aria-required", self.required.then_some("true"))
-            .attr("aria-disabled", !interactive)
-            .attr("aria-busy", self.loading.then_some("true"))
-            .attr("aria-activedescendant", self.active_descendant)
+        group
+            .attr("role", "group")
+            .attr("aria-labelledby", labelledby)
+            .attr("aria-busy", loading.then_some("true"))
             .event("onclick", move |event: MouseEvent| {
-                // A press on the input opens it natively; its own click bubbling
-                // back here while `opening` is not a second press.
-                if !editable || opening.get() || nested_interactive(&event, "[role=button]") {
-                    return;
+                // The button, a chip and its x answer their own clicks.
+                if !nested_interactive(&event, "[role=group]") {
+                    press();
                 }
-                let opening = opening.clone();
-                // After this dispatch: a synchronous click would re-enter this listener.
-                spawn(async move {
-                    opening.set(true);
-                    open.call(());
-                    opening.set(false);
-                });
             })
-            .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
             .event("ondragover", move |event: DragEvent| {
                 if interactive {
                     // Without this the browser opens the file instead - which
@@ -995,7 +1131,19 @@ impl Surface {
                     take.call(event.files());
                 }
             })
-            .render(HtmlTag::Div, self.attributes, children)
+            .render(
+                HtmlTag::Div,
+                Vec::new(),
+                rsx! {
+                    {chips}
+                    {button}
+                    {ring_overlay()}
+                    if required {
+                        span { id: required_id, hidden: true, "{REQUIRED_LABEL}" }
+                    }
+                    {after}
+                },
+            )
     }
 }
 
@@ -1007,30 +1155,37 @@ impl PartialEq for Surface {
     }
 }
 
-/// The `Input` variant's control inside its frame.
+/// The `Input` variant's group inside its frame. `children` is the Browse
+/// button's content.
 #[component]
 fn FileInputControl(
     control: Surface,
     trailing: Option<Element>,
     frame_states: Input<States>,
     states: Input<States>,
+    chips: Option<Element>,
+    input: Element,
     children: Element,
 ) -> Element {
     let frame = use_field_frame()
         .trailing(&trailing)
         .states(&frame_states)
         .prepare();
-    // The frame draws the ring, so the control must not draw a second.
-    let style = use_box()
+    // The frame draws the ring, so neither box may draw a second.
+    let group = use_box()
         .framework_sx(&FILE_CONTROL_SX)
         .focus_ring(false)
         .states(&states)
         .prepare();
-    frame.render(control.render(style, children))
+    let browse = use_box()
+        .framework_sx(&FILE_BROWSE_SX)
+        .focus_ring(false)
+        .prepare();
+    frame.render(control.render(group, browse, chips, children, Some(input)))
 }
 
 /// The `Dropzone` variant's surface. `shown` is false once a single-file
-/// dropzone holds its file; the box is prepared either way.
+/// dropzone holds its file; the boxes are prepared either way.
 #[component]
 fn FileDropzoneControl(
     control: Surface,
@@ -1038,12 +1193,18 @@ fn FileDropzoneControl(
     shown: bool,
     children: Element,
 ) -> Element {
-    let style = use_box()
+    // The surface draws the ring, around the whole of itself.
+    let group = use_box()
         .framework_sx(&FILE_DROPZONE_SX)
+        .focus_ring(false)
         .states(&states)
         .prepare();
+    let browse = use_box()
+        .framework_sx(&FILE_DROPZONE_BROWSE_SX)
+        .focus_ring(false)
+        .prepare();
     match shown {
-        true => control.render(style, children),
+        true => control.render(group, browse, None, children, None),
         false => rsx! {},
     }
 }
@@ -1113,15 +1274,16 @@ fn default_card(
     }
 }
 
-/// What the `Input` variant draws inside its control.
+/// What the `Input` variant draws inside its group.
 struct Chips {
     trailing: Option<Element>,
     drawn: Vec<Element>,
+    list_element: ElementHandle,
     placeholder: String,
 }
 
-/// The `Input` variant: the files are chips inside the field's own control,
-/// and the native input is the control's own contents.
+/// The `Input` variant: the files are chips inside the field's own group,
+/// beside the Browse button, and the native input sits in there too.
 fn file_input_variant(
     field: PreparedField,
     control: Surface,
@@ -1133,9 +1295,11 @@ fn file_input_variant(
     let Chips {
         trailing,
         drawn,
+        list_element,
         placeholder,
     } = chips;
-    let value_slot = chip_slot(drawn, &placeholder);
+    let browse = browse_content(&placeholder, drawn.is_empty());
+    let chips = chip_list(drawn, list_element);
     let frame_states = field.states().clone();
 
     field.render(rsx! {
@@ -1144,8 +1308,9 @@ fn file_input_variant(
             trailing,
             frame_states,
             states,
-            {value_slot}
-            {input}
+            chips,
+            input,
+            {browse}
         }
         {announcer}
     })

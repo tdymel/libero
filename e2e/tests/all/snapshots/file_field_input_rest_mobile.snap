@@ -1,0 +1,13 @@
+---
+source: e2e/src/suite.rs
+description: file_field_input at mobile (rest)
+expression: tree
+---
+LabelText
+  StaticText "Attachments"
+generic
+  group "Attachments"
+    button "Attachments Pick files Browse files"
+      StaticText "Pick files"
+      StaticText "Browse files"
+status [atomic] [live=polite]

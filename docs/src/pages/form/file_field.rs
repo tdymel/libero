@@ -49,7 +49,7 @@ pub fn FileFieldPage() -> Element {
                         .doc("Shows an x that empties the field."),
                     prop("loading", "bool")
                         .default("false")
-                        .doc("An upload is in flight: a `Loader` beside the selection, or in place of the dropzone's icon, and `aria-busy` on the control. It blocks nothing - `disabled` does that."),
+                        .doc("An upload is in flight: a `Loader` beside the selection, or in place of the dropzone's icon, and `aria-busy` on the field's group. It blocks nothing - `disabled` does that."),
                     prop("selection", "Callback<SelectionArgs<FileData>, Element>")
                         .default("a Chip, or the filename")
                         .doc("Draws one picked file. A caller who overrides it draws the whole thing, remove control included - `args.remove` is the wiring."),
@@ -62,13 +62,13 @@ pub fn FileFieldPage() -> Element {
                     prop("size", "Size").default("md").doc("Control height, font size and the chips' own size."),
                     prop("radius", "Size").default("sm").doc("Corner radius of the frame."),
                     prop("label", "Caption")
-                        .doc("The field's caption. Names the control through `aria-labelledby` - a `div` with a role is not labelable."),
+                        .doc("The field's caption. Names the field's group, and the Browse button inside it, through `aria-labelledby`."),
                     prop("description", "Caption").doc("Between the label and the control: which files are wanted."),
                     prop("helper", "Caption").doc("Under the control: size limits, formats."),
                     prop("status", "FieldStatus")
                         .default("Valid")
                         .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
-                    prop("required", "bool").default("false").doc("Adds `aria-required` to the control and an asterisk to the label."),
+                    prop("required", "bool").default("false").doc("Adds `required` to the hidden input, a hidden \"Required\" to the Browse button's description, and an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables picking and dropping, and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
                 ]),

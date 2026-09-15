@@ -153,15 +153,26 @@ FileField {
 
 ## Accessibility
 
-Enter and Space open the picker. In the `Input` variant the control is one tab
-stop: Left and Right move a cursor over the chips, and Backspace or Delete
-removes the file under the cursor - the last one when there is no cursor. In
-the `Dropzone` variant each card's remove button is a tab stop of its own.
+The field is a group named by its label. Inside it sit the picked files and a
+Browse button, which opens the picker on Enter or Space. A click anywhere on
+the field opens it too.
+
+In the `Input` variant the files are a list with one tab stop. Left and Right
+move along the files, Home and End jump to the first and the last one, and
+Right past the last file returns to the Browse button. Backspace or Delete
+removes the focused file. On the Browse button, Left moves to the last file
+and Backspace removes it. In the `Dropzone` variant each card's remove button
+is a tab stop of its own.
+
+`required` puts a hidden "Required" in the Browse button's description. ARIA
+allows `aria-required` on neither a group nor a button. A read-only field
+keeps the Browse button and the files in the tab order and refuses every
+edit.
 
 `loading` does not block picking; pass `disabled` for that.
 
-Without a `label` the control has no name of its own: set `aria_label`, or a
-screen reader announces an unnamed button.
+Without a `label`, pass `aria_label`: it names the Browse button, which the
+field's `attributes` reach.
 
 ## Props
 
@@ -176,18 +187,18 @@ screen reader announces an unnamed button.
 | `capture` | `String` | - | Asks a phone for a fresh capture - `user` or `environment`. |
 | `placeholder` | `String` | - | Shown while nothing is picked. In the `Dropzone` variant it is the prompt, when `children` is empty. |
 | `clearable` | `bool` | `true` | Shows an x that empties the field. |
-| `loading` | `bool` | `false` | An upload is in flight: a `Loader` in the control and `aria-busy` on it. Blocks nothing. |
+| `loading` | `bool` | `false` | An upload is in flight: a `Loader` in the control and `aria-busy` on the field's group. Blocks nothing. |
 | `selection` | `Callback<SelectionArgs<FileData>, Element>` | a `Chip`, or the filename | Draws one picked file, remove control included. |
 | `name` | `String` | - | The hidden input's name, so the files post with a form. Its list is kept equal to `value`. |
 | `onchange` | `EventHandler<Files>` | - | Fires with the files the field should hold next - a pick, a drop, a removal or a clear. |
 | `children` | `Element` | - | The `Dropzone` variant's prompt. The `Input` variant shows `placeholder` instead. |
 | `size` | `Size` | `md` | Control height, font size and the chips' own size. |
 | `radius` | `Size` | `sm` | Corner radius of the frame. |
-| `label` | `Caption` | - | The field's caption. Names the control through `aria-labelledby`. |
+| `label` | `Caption` | - | The field's caption. Names the group and the Browse button through `aria-labelledby`. |
 | `description` | `Caption` | - | Between the label and the control. |
 | `helper` | `Caption` | - | Under the control. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Adds `aria-required` to the control and marks the label. |
+| `required` | `bool` | `false` | Adds `required` to the hidden input and a hidden "Required" to the Browse button's description, and marks the label. |
 | `disabled` | `bool` | `false` | Disables picking and dropping, and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
 
@@ -229,7 +240,7 @@ and on the card list, so their children inherit it.
 ## Data attributes
 
 The field wrapper carries `size-*`, `radius-*`, and `disabled`, `required` and
-the status token when they apply. The control carries the tokens below.
+the status token when they apply. The field's group carries the tokens below.
 
 | Token | Condition |
 |---|---|
