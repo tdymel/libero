@@ -79,7 +79,7 @@ fn a_pin_field_takes_one_digit_per_box_and_moves_on() {
 }
 
 fn number() -> Element {
-    let mut value = use_signal(|| 3i32);
+    let mut value = use_signal(|| Some(3i32));
     rsx! {
         NumberField {
             label: "Quantity",
@@ -87,7 +87,7 @@ fn number() -> Element {
             value: value(),
             onchange: move |next| value.set(next),
         }
-        span { id: "echo", "{value}" }
+        span { id: "echo", {value().map(|v| v.to_string()).unwrap_or_default()} }
     }
 }
 

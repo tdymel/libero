@@ -35,7 +35,10 @@ pub fn ImagePage() -> Element {
                     prop("radius", "Size")
                         .default("0")
                         .doc("Corner radius, a step on the radius scale. Anything else goes through `sx`."),
-                    prop("alt", "String").doc("Alt text. Empty marks the image decorative."),
+                    prop("alt", "Option<String>").doc("What the picture shows. Left unset, a debug build warns: describe it, or set `decorative`."),
+                    prop("decorative", "bool")
+                        .default("false")
+                        .doc("Marks the picture as decoration: `alt=\"\"` and `role=\"presentation\"`, hidden from assistive technology. Wins over `alt`, with a warning in a debug build."),
                     prop("zoomable", "bool")
                         .default("false")
                         .doc("Opens the picture in a single-picture Lightbox on click. Ignored inside a linked `ImageItem`, with a warning: the link wins."),

@@ -20,7 +20,7 @@ fn ImagePage() -> Element {
                 Image { id: "described", src: PICTURE, alt: "A blue square" }
             }
             div { width: "64px", height: "64px",
-                Image { id: "decorative", src: PICTURE }
+                Image { id: "decorative", src: PICTURE, decorative: true }
             }
             div { width: "64px", height: "64px",
                 Image {

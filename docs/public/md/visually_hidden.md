@@ -7,9 +7,9 @@ Index: [index.md](index.md) - every other component's markdown page
 Description: A `span` whose content is read by screen readers but removed from sighted layout - extra context for something ambiguous on its own.
 
 Content available to screen readers but removed from sighted layout - e.g. extra
-context for a link that's ambiguous out of context. It takes no props: it renders
-a `<span>` clipped to a 1px box off-flow, so the text stays in the accessibility
-tree while occupying no space.
+context for a link that's ambiguous out of context. It renders a `<span>`
+clipped to a 1px box off-flow, so the text stays in the accessibility tree while
+occupying no space.
 
 ## Usage
 
@@ -46,15 +46,27 @@ control itself when the whole accessible name is being replaced rather than
 extended.
 
 A focusable element inside a visually hidden span is a trap for a keyboard user:
-focus moves somewhere invisible. Keep the children to text.
+focus moves somewhere invisible. Keep the children to text, or set `focusable`.
 
-For a reveal-on-focus skip link, host it in a positioned parent and set
-`position: absolute` through `sx`. Otherwise Tab never scrolls it into view.
+## Skip link
+
+`focusable` shows the content, on a paper background, while focus is inside it
+(2.4.7). It stays `fixed` at its place in the flow, so put a skip link first on
+the page. Further down, host it in a positioned parent and set
+`position: absolute` through `sx`, or Tab never scrolls it into view.
+
+```rust,ignore
+VisuallyHidden {
+    focusable: true,
+    Anchor { to: "#main", "Skip to content" }
+}
+```
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
+| `focusable` | `bool` | `false` | Shows the content while focus is inside it, for a skip link. |
 | `children` | `Element` | required | The screen-reader-only content. |
 
 Like every component, `VisuallyHidden` also takes the shared props `sx`, `class`,

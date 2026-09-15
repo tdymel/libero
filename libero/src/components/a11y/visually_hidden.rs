@@ -2,7 +2,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{HtmlTag, Input, common::base_props, layout::use_box},
-    sx::{StaticSx, sx},
+    sx::{StaticSx, Sx, sx},
+    theme::PAPER_BACKGROUND,
 };
 
 /// The shared sr-only recipe, `absolute`. The hidden inputs of `Checkbox`,
@@ -27,7 +28,24 @@ pub(crate) static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(|| {
 /// is never overflow and scrolls nothing into view. `FocusTrapInitialFocus`
 /// (whose `FocusTrap` is `display: contents`) and the `VisuallyHidden`
 /// component (whose caller may supply no positioned parent) use it.
-pub(crate) static VISUALLY_HIDDEN_FIXED_SX: StaticSx = StaticSx::new(|| {
+pub(crate) static VISUALLY_HIDDEN_FIXED_SX: StaticSx = StaticSx::new(fixed_recipe);
+
+/// The fixed recipe, undone while focus is inside: a skip link shows itself on
+/// focus. Never the default, or a hidden native input would pop out.
+static VISUALLY_HIDDEN_FOCUSABLE_SX: StaticSx = StaticSx::new(|| {
+    fixed_recipe().selector(
+        "&:focus-within",
+        sx().width("auto")
+            .height("auto")
+            .margin("0")
+            .overflow("visible")
+            .clip_path("none")
+            .white_space("normal")
+            .background(PAPER_BACKGROUND.value()),
+    )
+});
+
+fn fixed_recipe() -> Sx {
     sx().position("fixed")
         .width("1px")
         .height("1px")
@@ -37,10 +55,13 @@ pub(crate) static VISUALLY_HIDDEN_FIXED_SX: StaticSx = StaticSx::new(|| {
         .clip_path("inset(50%)")
         .white_space("nowrap")
         .border_width("0")
-});
+}
 
 base_props! {
     pub struct VisuallyHiddenProps {
+        /// Shows the content while focus is inside it, for a skip link.
+        #[props(default)]
+        focusable: bool,
         children: Element,
     }
 }
@@ -50,12 +71,32 @@ base_props! {
 /// `fixed`, not the hosted inputs' `absolute`: it needs no positioned parent,
 /// so it never makes the page scrollable wherever it lands.
 ///
-/// For a reveal-on-focus skip link, host it in a positioned parent and set
+/// `focusable` reveals it while focus is inside, on a paper background. It
+/// stays `fixed` at its place in the flow, so a skip link belongs at the top
+/// of the page; further down, host it in a positioned parent and set
 /// `position: absolute` through `sx`, or Tab never scrolls it into view.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::VisuallyHidden;
+/// # fn app() -> Element {
+/// rsx! {
+///     VisuallyHidden { focusable: true,
+///         a { href: "#main", "Skip to content" }
+///     }
+/// }
+/// # }
+/// ```
 #[component]
 pub fn VisuallyHidden(props: VisuallyHiddenProps) -> Element {
+    let recipe = if props.focusable {
+        &VISUALLY_HIDDEN_FOCUSABLE_SX
+    } else {
+        &VISUALLY_HIDDEN_FIXED_SX
+    };
+
     use_box()
-        .framework_sx(&VISUALLY_HIDDEN_FIXED_SX)
+        .framework_sx(recipe)
         .class(&props.class)
         .sx(&props.sx)
         .states(&props.states)

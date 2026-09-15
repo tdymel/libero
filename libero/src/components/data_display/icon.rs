@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables, Variant,
-        common::{base_color, base_props, contrast_color, fill_color, text_color},
+        common::{base_color, base_props, contrast_color, fill_color, names_itself, text_color},
         inputs::{VariantVars, variant_chrome_sx, variant_colors},
         layout::use_box,
         variables,
@@ -82,6 +82,19 @@ base_props! {
 
 /// Wraps an svg child in a sized, colored badge. `color` sets the container's
 /// CSS `color`, which a `currentColor` svg then inherits.
+///
+/// Decorative (`aria-hidden`) unless named: pass `aria_label` or
+/// `aria_labelledby` and it becomes `role="img"` under that name.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Icon;
+/// # fn app() -> Element {
+/// rsx! {
+///     Icon { aria_label: "Verified", "✓" }
+/// }
+/// # }
+/// ```
 #[component]
 pub fn Icon(props: IconProps) -> Element {
     let component = props.component.copied_or(HtmlTag::Span);
@@ -103,6 +116,7 @@ pub fn Icon(props: IconProps) -> Element {
         .unwrap_or_default()
         .with(variant.state_name(), true)
         .into();
+    let named = names_itself(&props.attributes);
 
     use_box()
         .framework_sx(&ICON_BASE_SX)
@@ -111,6 +125,8 @@ pub fn Icon(props: IconProps) -> Element {
         .states(&states)
         .style(style)
         .prepare()
+        .attr_default("role", named.then_some("img"))
+        .attr_default("aria-hidden", (!named).then_some("true"))
         .render(component, props.attributes, props.children)
 }
 

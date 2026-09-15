@@ -42,10 +42,11 @@ field_props! {
         /// field - nobody has typed anything yet.
         #[props(default)]
         value: Option<T>,
-        /// Called with the number the caller should hold next. Silent while the
-        /// buffer is not yet a number, so `"-"` and `"1."` never reach it.
+        /// Called with the number the caller should hold next; `None` once the
+        /// field is emptied. Silent while the text is not yet a number, so
+        /// `"-"` and `"1."` never reach it.
         #[props(default)]
-        onchange: Option<EventHandler<T>>,
+        onchange: Option<EventHandler<Option<T>>>,
         /// Rules over the number, shown once the field loses focus or its form is
         /// submitted.
         #[props(default, into)]
@@ -93,7 +94,24 @@ field_props! {
 /// `type="number"`: a number input reports an empty string for anything a
 /// browser cannot parse, which would erase `"-"` and `"1."` as they are typed.
 /// The field keeps the raw text in an edit buffer instead and only publishes a
-/// value the caller's type could parse.
+/// value the caller's type could parse, or `None` for an emptied field. On
+/// commit (leaving the field, Enter) the text becomes the value's canonical
+/// form: an out-of-range number clamps, text that never parsed reverts.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::NumberField;
+/// # fn app() -> Element {
+/// let mut quantity = use_signal(|| Some(1u32));
+/// rsx! {
+///     NumberField {
+///         label: "Quantity",
+///         value: quantity(),
+///         onchange: move |next| quantity.set(next),
+///     }
+/// }
+/// # }
+/// ```
 ///
 /// Arrow Up and Arrow Down step the value whether or not `steppers` renders
 /// the buttons, Page Up and Page Down ten steps - the keys are what
@@ -135,11 +153,8 @@ fn NumberFieldShell<T: NumberValue>(
         warn("NumberField: without `onchange` the value can never change.");
     }
 
-    // The raw text, so that in-progress input survives a render. It is only
-    // what the control shows while it still parses to the value the caller
-    // holds - otherwise the caller's own value wins, which is what makes the
-    // field controlled.
-    let mut buffer = use_signal(String::new);
+    // The raw text, so that in-progress input survives a render. See `Edit`.
+    let mut buffer = use_signal(|| None::<Edit<T>>);
 
     let min = props.min;
     let max = props.max;
@@ -147,11 +162,11 @@ fn NumberFieldShell<T: NumberValue>(
     let onchange = props.onchange;
     let setter = bound.setter();
 
-    let publish = move |next: T| {
-        let next = next.clamp_between(min, max);
+    let publish = move |next: Option<T>| {
+        let next = next.map(|next| next.clamp_between(min, max));
         match (&onchange, &setter) {
             (Some(onchange), _) => onchange.call(next),
-            (None, Some(setter)) => setter.set(Some(next)),
+            (None, Some(setter)) => setter.set(next),
             (None, None) => {}
         }
     };
@@ -172,8 +187,8 @@ fn NumberFieldShell<T: NumberValue>(
                 false => next.step_down(step),
             };
         }
-        buffer.set(String::new());
-        publish(next);
+        buffer.set(None);
+        publish(Some(next));
     });
     let publish = typed_publish;
     let commit = publish.clone();
@@ -243,23 +258,29 @@ fn NumberFieldShell<T: NumberValue>(
         .event("oninput", move |event: FormEvent| {
             let text = event.value();
             let publish = publish.clone();
+            let mut held = current();
             // Out of range waits for the commit: clamping the "2" of "25"
             // against a floor of 10 would make 25 untypable.
-            if let Some(parsed) = T::parse(&text)
+            if text.trim().is_empty() {
+                held = None;
+                publish(None);
+            } else if let Some(parsed) = T::parse(&text)
                 && parsed.clamp_between(min, max) == parsed
             {
-                publish(parsed);
+                held = Some(parsed);
+                publish(held);
             }
-            buffer.set(text);
+            buffer.set(Some(Edit { text, held }));
         })
-        // Fires when the field is left or Enter commits an edit.
+        // Fires when the field is left or Enter commits an edit. Dropping the
+        // buffer redraws the canonical text, which also rewrites the DOM.
         .event("onchange", move |event: FormEvent| {
             if let Some(parsed) = T::parse(&event.value())
                 && parsed.clamp_between(min, max) != parsed
             {
-                buffer.set(String::new());
-                commit(parsed);
+                commit(Some(parsed));
             }
+            buffer.set(None);
         })
         .event("onkeydown", move |event: KeyboardEvent| {
             // Ctrl+PageDown switches tabs, Ctrl+ArrowUp moves the caret.
@@ -280,8 +301,8 @@ fn NumberFieldShell<T: NumberValue>(
     let attributes = props.attributes;
     let draw = Rc::new(move || {
         let current = bound_value.unwrap_or_else(|| live.cloned());
-        let display = match T::parse(&buffer()) {
-            Some(parsed) if Some(parsed) == current => buffer(),
+        let display = match &*buffer.read() {
+            Some(edit) if edit.shows(current) => edit.text.clone(),
             _ => current.map(|value| value.format()).unwrap_or_default(),
         };
         input
@@ -292,6 +313,23 @@ fn NumberFieldShell<T: NumberValue>(
     });
 
     field.render(frame.render(rsx! { LiveControl { draw } }))
+}
+
+/// Text typed since the last commit, and the value the caller holds once it
+/// has taken it in. The text shows while it parses to the caller's value, or
+/// while that value has not moved since (`"-"`, an out-of-range `"5"`). So the
+/// rendered `value` tracks the DOM text, and a commit that drops the buffer
+/// always writes the canonical text back.
+#[derive(Clone, PartialEq)]
+struct Edit<T> {
+    text: String,
+    held: Option<T>,
+}
+
+impl<T: NumberValue> Edit<T> {
+    fn shows(&self, current: Option<T>) -> bool {
+        self.held == current || T::parse(&self.text) == current
+    }
 }
 
 /// The two stepper buttons, a scope of their own: every prop compares equal

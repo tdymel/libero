@@ -61,8 +61,13 @@ base_props! {
         fit: Input<ImageFit>,
         #[props(default, into)]
         radius: Input<Size>,
+        /// What the picture shows. `None` warns in debug builds unless
+        /// `decorative` says the picture carries nothing.
         #[props(default, into)]
-        alt: String,
+        alt: Option<String>,
+        /// Marks the picture as decoration: `alt=""` and `role="presentation"`.
+        #[props(default)]
+        decorative: bool,
         #[props(default)]
         zoomable: bool,
     }
@@ -105,6 +110,16 @@ pub fn Image(props: ImageProps) -> Element {
     let in_link = use_hook(|| try_consume_context::<InLink>().is_some());
     // Once per mount, not per render.
     use_hook(|| {
+        match (props.alt.as_deref(), props.decorative) {
+            (None, false) => warn(
+                "Image: no `alt` - describe the picture, or set `decorative` when it carries \
+                 nothing.",
+            ),
+            (Some(alt), true) if !alt.is_empty() => {
+                warn("Image: `decorative` wins over `alt` - the picture renders alt=\"\".")
+            }
+            _ => {}
+        }
         if props.zoomable && in_link {
             warn(
                 "Image: zoomable is ignored inside a linked ImageItem - the link wins, and a \
@@ -129,7 +144,12 @@ pub fn Image(props: ImageProps) -> Element {
 
     let on_error_src = props.src.clone();
 
-    let decorative_role = props.alt.is_empty().then_some("presentation");
+    // No `alt` at all is left for a checker to flag, not made decorative.
+    let alt = match props.decorative {
+        true => Some(String::new()),
+        false => props.alt.clone(),
+    };
+    let decorative_role = (alt.as_deref() == Some("")).then_some("presentation");
 
     // One `use_box` on both paths, so `zoomable` can flip without moving a
     // hook: the `<img>` is the root when it can't zoom, and the picture inside
@@ -167,13 +187,13 @@ pub fn Image(props: ImageProps) -> Element {
     if !zoomable {
         return image
             .attr("src", src)
-            .attr("alt", props.alt)
+            .attr("alt", alt)
             .attr("role", decorative_role)
             .render(HtmlTag::Img, props.attributes, ());
     }
     let item = LightboxItem::new(
         props.zoomed_src.clone().unwrap_or_else(|| src.clone()),
-        props.alt.clone(),
+        alt.clone().unwrap_or_default(),
     );
     let (img_attributes, attributes): (Vec<_>, Vec<_>) = props
         .attributes
@@ -188,7 +208,7 @@ pub fn Image(props: ImageProps) -> Element {
     rsx! {
         ZoomButton {
             item,
-            alt: props.alt,
+            alt: alt.unwrap_or_default(),
             class: props.class,
             sx: props.sx,
             states: props.states,
@@ -288,5 +308,32 @@ mod tests {
             }
         });
         assert!(!alone.iter().any(|w| w.starts_with("Image:")), "{alone:?}");
+    }
+
+    /// Todo 602: a forgotten `alt` warns; an explicit one or `decorative` does not.
+    #[test]
+    fn a_missing_alt_warns_unless_decorative() {
+        let missing = warnings_of(|| rsx! { crate::LiberoProvider { Image { src: "/a.svg" } } });
+        assert!(
+            missing.iter().any(|w| w.starts_with("Image: no `alt`")),
+            "{missing:?}"
+        );
+
+        let decorative = warnings_of(|| {
+            rsx! { crate::LiberoProvider { Image { src: "/a.svg", decorative: true } } }
+        });
+        assert!(decorative.is_empty(), "{decorative:?}");
+
+        let empty =
+            warnings_of(|| rsx! { crate::LiberoProvider { Image { src: "/a.svg", alt: "" } } });
+        assert!(empty.is_empty(), "{empty:?}");
+
+        let both = warnings_of(|| {
+            rsx! { crate::LiberoProvider { Image { src: "/a.svg", alt: "A", decorative: true } } }
+        });
+        assert!(
+            both.iter().any(|w| w.contains("`decorative` wins")),
+            "{both:?}"
+        );
     }
 }

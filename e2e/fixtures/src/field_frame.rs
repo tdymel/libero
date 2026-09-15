@@ -18,7 +18,7 @@ pub const ROUTES: Routes = &[("/field-frame", || rsx! { FieldFramePage {} })];
 #[component]
 fn FieldFramePage() -> Element {
     let mut text = use_signal(|| "hello".to_string());
-    let mut quantity = use_signal(|| 3i32);
+    let mut quantity = use_signal(|| Some(3i32));
     let mut fruit = use_signal(|| Some(Fruit::Banana));
     let mut fruits = use_signal(|| vec![Fruit::Cherry]);
     let mut note = use_signal(|| "line one".to_string());

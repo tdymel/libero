@@ -1,0 +1,36 @@
+//! `VisuallyHidden { focusable }`: hidden until focus lands inside, then shown
+//! (todo 613, 2.4.7).
+
+use e2e::browser::block_on;
+use e2e::passes::keyboard;
+use e2e::{Fixture, Viewport, wait};
+
+const WIDTH: &str = "document.querySelector('#skip').getBoundingClientRect().width";
+
+#[test]
+fn a_focusable_skip_link_shows_on_focus() {
+    block_on(async {
+        let fixture = Fixture::open("/visually-hidden", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        let hidden: f64 = page.evaluate(WIDTH).await.unwrap().into_value().unwrap();
+        assert!(hidden <= 1.0, "hidden until focused, got {hidden}px");
+
+        keyboard::tab_to(page, "#skip-link", 3).await.unwrap();
+        wait::for_js_true(page, &format!("{WIDTH} > 20"), "the link to show on focus")
+            .await
+            .unwrap();
+
+        page.evaluate("document.activeElement.blur()")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &format!("{WIDTH} <= 1"), "the link to hide again")
+            .await
+            .unwrap();
+
+        fixture.console.assert_clean("the skip link").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

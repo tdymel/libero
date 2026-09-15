@@ -1778,7 +1778,7 @@ fn readonly_number() -> Element {
                 value: 3,
                 steppers: true,
                 readonly: READ_ONLY.get(),
-                onchange: move |next: i32| heard(next),
+                onchange: move |next: Option<i32>| heard(next.unwrap()),
             }
         }
     }
@@ -1816,9 +1816,9 @@ fn a_stepper_steps_from_the_value_after_the_last_press() {
                 NumberField {
                     value: value(),
                     steppers: true,
-                    onchange: move |next: i32| {
-                        heard(next);
-                        value.set(next);
+                    onchange: move |next: Option<i32>| {
+                        heard(next.unwrap());
+                        value.set(next.unwrap());
                     },
                 }
             }

@@ -485,7 +485,7 @@ fn a_number_field_without_a_value_renders_empty() {
                     label: "Weight",
                     placeholder: "kg",
                     value: None::<f64>,
-                    onchange: move |_: f64| {},
+                    onchange: move |_: Option<f64>| {},
                 }
             }
         }
@@ -1450,7 +1450,7 @@ mod value_moves {
             let step = use_signal(|| 1);
             use_hook(|| STEP.set(Some(step)));
             let oninput = use_callback(|_: String| {});
-            let onchange = use_callback(|_: i32| {});
+            let onchange = use_callback(|_: Option<i32>| {});
             let onpick = use_callback(|_: Size| {});
             let size = if step() == 1 {
                 Size::Small

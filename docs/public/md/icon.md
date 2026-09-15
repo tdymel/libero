@@ -65,10 +65,11 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-`Icon` has no accessible name. Give the svg a `<title>`, or the wrapper an
-`aria_label`, when the icon carries meaning on its own; mark it
-`aria_hidden: "true"` when it merely repeats adjacent text. For a clickable icon
-use [`ActionIcon`](action_icon.md), which requires an `aria_label`.
+`Icon` is decorative by default: `aria-hidden="true"`, so it adds nothing next
+to the text it repeats. When the icon carries meaning on its own, give it an
+`aria_label` (or `aria_labelledby`): it becomes `role="img"` under that name.
+For a clickable icon use [`ActionIcon`](action_icon.md), which requires an
+`aria_label`.
 
 ## Props
 

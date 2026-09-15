@@ -104,6 +104,7 @@ mod tooltip;
 mod trailing_button;
 mod tree;
 mod typography;
+mod visually_hidden;
 
 use dioxus::prelude::*;
 use libero::LiberoProvider;
@@ -192,6 +193,7 @@ const FIXTURES: &[Routes] = &[
     trailing_button::ROUTES,
     tree::ROUTES,
     typography::ROUTES,
+    visually_hidden::ROUTES,
 ];
 
 fn main() {

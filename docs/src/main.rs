@@ -372,7 +372,7 @@ fn AppShell() -> Element {
                     direction: "row",
                     align: "center",
                     sx: sx().gap("md"),
-                    Image { src: LOGO, sx: sx().width("auto").height("28px") }
+                    Image { src: LOGO, decorative: true, sx: sx().width("auto").height("28px") }
                     Title { size: "lg", component: "span", "Libero" }
                 }
                 // Looks like a search field, but it opens the Spotlight

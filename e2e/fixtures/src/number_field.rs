@@ -11,7 +11,7 @@ pub const ROUTES: Routes = &[("/number-field", || rsx! { NumberFieldPage {} })];
 /// mid-range with a floor of two digits; `#held` shows what its caller holds.
 #[component]
 pub fn NumberFieldPage() -> Element {
-    let mut quantity = use_signal(|| 3i32);
+    let mut quantity = use_signal(|| Some(3i32));
     let mut ranged = use_signal(|| Some(50i32));
     let mut weight = use_signal(|| Some(1.5f64));
 
@@ -32,7 +32,7 @@ pub fn NumberFieldPage() -> Element {
                 min: 10,
                 max: 99,
                 value: ranged(),
-                onchange: move |next| ranged.set(Some(next)),
+                onchange: move |next| ranged.set(next),
             }
             div { id: "held", "data-value": ranged().map(|v| v.to_string()).unwrap_or_default() }
             NumberField {
@@ -41,7 +41,7 @@ pub fn NumberFieldPage() -> Element {
                 step: 0.5,
                 steppers: true,
                 value: weight(),
-                onchange: move |next| weight.set(Some(next)),
+                onchange: move |next| weight.set(next),
             }
             NumberField {
                 id: "readonly",

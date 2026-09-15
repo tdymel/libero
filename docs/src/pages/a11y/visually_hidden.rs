@@ -1,10 +1,15 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Anchor, Text, VisuallyHidden};
 
 /// The point is what the hidden text is read *after*, so the link it sits in
-/// is part of the example - and the code block prints it.
-fn wrap_link(_: &DemoValues, code: &str) -> String {
+/// is part of the example - and the code block prints it. `focusable` is the
+/// other use, a skip link, so it prints that instead.
+fn wrap_link(values: &DemoValues, code: &str) -> String {
+    if values.str("focusable") == "true" {
+        return "VisuallyHidden {\n    focusable: true,\n    Anchor { to: \"#main\", \"Skip to content\" }\n}"
+            .to_string();
+    }
     format!(
         "Text {{\n    Anchor {{\n        to: \"https://example.com\",\n        \"Read more\"\n{}    }}\n}}",
         indent(&indent(code))
@@ -19,21 +24,31 @@ pub fn VisuallyHiddenPage() -> Element {
             source: "libero/src/components/a11y/visually_hidden.rs",
             markdown: "/md/visually_hidden.md",
             properties: vec![props("VisuallyHidden", vec![
+                prop("focusable", "bool")
+                    .default("false")
+                    .doc("Shows the content while focus is inside it, for a skip link."),
                 prop("children", "Element").doc("The screen-reader-only content."),
             ])],
             lead: rsx! {
                 Text {
                     "Content available to screen readers but removed from sighted layout - "
-                    "e.g. extra context for a link that's ambiguous out of context. It takes "
-                    "no props, so the demo below has nothing to vary: the preview reads "
-                    "\"Read more\", a screen reader reads \"Read more about focus management\"."
+                    "e.g. extra context for a link that's ambiguous out of context. The preview "
+                    "reads \"Read more\", a screen reader reads \"Read more about focus "
+                    "management\". With focusable on it is a skip link: Tab into the preview "
+                    "and it shows itself."
                 }
             },
             Demo {
                 component: "VisuallyHidden",
                 children_text: " about focus management",
-                controls: vec![],
-                render: move |_: DemoValues| rsx! {
+                controls: vec![Control::switch("focusable")],
+                render: move |values: DemoValues| if values.str("focusable") == "true" {
+                    rsx! {
+                        VisuallyHidden { focusable: true,
+                            Anchor { to: "#main", "Skip to content" }
+                        }
+                    }
+                } else { rsx! {
                     Text {
                         Anchor {
                             to: "https://example.com",
@@ -41,7 +56,7 @@ pub fn VisuallyHiddenPage() -> Element {
                             VisuallyHidden { " about focus management" }
                         }
                     }
-                },
+                } },
                 wrap: Wrap(wrap_link),
             }
         }

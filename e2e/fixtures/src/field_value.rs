@@ -11,7 +11,7 @@ pub const ROUTES: Routes = &[("/field-value", || rsx! { FieldValuePage {} })];
 #[component]
 fn FieldValuePage() -> Element {
     let mut text = use_signal(String::new);
-    let mut quantity = use_signal(|| 3i32);
+    let mut quantity = use_signal(|| Some(3i32));
     let mut pick = use_signal(|| Fruit::Banana);
     let mut secret = use_signal(String::new);
 
@@ -32,7 +32,7 @@ fn FieldValuePage() -> Element {
                     value: quantity(),
                     onchange: move |next| quantity.set(next),
                 }
-                span { "data-echo": "number", "{quantity}" }
+                span { "data-echo": "number", {quantity().map(|q| q.to_string()).unwrap_or_default()} }
             }
             div { "data-case": "native",
                 NativeSelect {

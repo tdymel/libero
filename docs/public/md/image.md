@@ -13,9 +13,10 @@ an optional click-to-zoom overlay. `fit` maps straight onto `object-fit`;
 ## Usage
 
 `Image` fills its box (`width: 100%; height: 100%`), so the box has to be sized
-before `fit` means anything - that is what the `sx` below is for. `alt` is
-required; an empty `alt` marks the image decorative and sets
-`role="presentation"`.
+before `fit` means anything - that is what the `sx` below is for. Give every
+image an `alt`, or set `decorative` for one that carries nothing: that renders
+`alt=""` and `role="presentation"`. An image with neither warns in a debug build
+and renders no `alt` at all, so a checker still flags it.
 
 ```rust
 use dioxus::prelude::*;
@@ -68,7 +69,7 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Leave `alt` empty only for a purely decorative image. A `zoomable` image takes
+Set `decorative` only for a purely decorative image. A `zoomable` image takes
 its names from `alt` - "Zoom in: <alt>" on the button, and the enlarged
 picture's - so give it one.
 
@@ -84,7 +85,8 @@ or the dialog's **Close** button close the overlay again.
 | `zoomed_src` | `String` | follows `src` | Source shown in the zoom overlay, if different from the inline image. |
 | `fit` | `ImageFit` | `cover` | Maps onto `object-fit`. |
 | `radius` | `Size` | `0` | Corner radius, a step on the radius scale. Anything else goes through `sx`. |
-| `alt` | `String` | required | Alt text. Empty marks the image decorative. |
+| `alt` | `Option<String>` | - | What the picture shows. Unset without `decorative`, a debug build warns. |
+| `decorative` | `bool` | `false` | Marks the picture as decoration: `alt=""` and `role="presentation"`. Wins over `alt`, with a warning in a debug build. |
 | `zoomable` | `bool` | `false` | Wraps the image in a click-to-zoom overlay. Ignored inside a linked `ImageItem`. |
 
 `ImageFit` takes `fill`, `contain`, `cover`, `none` or `scale-down`.

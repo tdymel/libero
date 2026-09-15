@@ -142,6 +142,43 @@ fn page_up_and_page_down_take_ten_steps() {
 
 const RANGED: &str = "#ranged";
 
+/// Todo 504: an emptied field hands its caller `None`, and text that never
+/// parsed reverts on commit, so text, value and `aria-valuenow` stay together.
+#[test]
+fn emptying_the_field_clears_the_value_and_junk_reverts() {
+    const BACKSPACE: keyboard::Key = keyboard::Key {
+        key: "Backspace",
+        code: "Backspace",
+        vk: 8,
+        text: None,
+    };
+    block_on(async {
+        let fixture = Fixture::open("/number-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, RANGED, 6).await.unwrap();
+        page.evaluate("document.activeElement.select()")
+            .await
+            .unwrap();
+        keyboard::press(page, BACKSPACE).await.unwrap();
+        held(page, RANGED, "").await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        held(page, RANGED, "").await.unwrap();
+
+        keyboard::tab_to(page, RANGED, 6).await.unwrap();
+        retype(page, "42").await.unwrap();
+        held(page, RANGED, "42").await.unwrap();
+        retype(page, "-").await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        held(page, RANGED, "42").await.unwrap();
+
+        fixture.console.assert_clean("emptying a number").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 509: Ctrl/Alt/Meta with an arrow or Page key is the caret's or the
 /// browser's (Ctrl+PageDown switches tabs), not a step.
 #[test]
@@ -177,13 +214,13 @@ async fn retype(page: &Page, text: &str) -> Result<()> {
     keyboard::type_text(page, text).await
 }
 
-/// The field and its caller agree on `value`.
+/// The field and its caller agree on `value`; `""` is the empty field.
 async fn held(page: &Page, selector: &str, value: &str) -> Result<()> {
     wait::for_js_true(
         page,
         &format!(
             "(() => {{ const el = document.querySelector({selector:?}); \
-             return el.value === {value:?} && el.getAttribute('aria-valuenow') === {value:?} \
+             return el.value === {value:?} && (el.getAttribute('aria-valuenow') ?? '') === {value:?} \
              && document.querySelector('#held').dataset.value === {value:?}; }})()"
         ),
         &format!("{selector} to hold {value}"),

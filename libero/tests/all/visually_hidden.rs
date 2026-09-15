@@ -43,6 +43,36 @@ fn visually_hidden_is_fixed() {
     );
 }
 
+/// Only `focusable` unclips on focus: a default reveal would pop a hidden
+/// native input out of its custom visual (todo 613).
+#[test]
+fn only_a_focusable_one_reveals_on_focus() {
+    fn plain() -> Element {
+        rsx! {
+            LiberoProvider {
+                VisuallyHidden { "screen reader only" }
+            }
+        }
+    }
+    fn focusable() -> Element {
+        rsx! {
+            LiberoProvider {
+                VisuallyHidden { focusable: true, a { href: "#main", "Skip" } }
+            }
+        }
+    }
+
+    let reveals = |html: &str| {
+        classes_of(html, "span")
+            .iter()
+            .any(|class| html.contains(&format!(".{class}:focus-within{{")))
+    };
+
+    assert!(!reveals(&render(plain)));
+    let html = render(focusable);
+    assert!(reveals(&html), "{html}");
+}
+
 /// The hosted inputs keep the shared `absolute` recipe. Tab onto one scrolls
 /// its `relative` label into view; under `fixed` it scrolled nothing and the
 /// label stayed off-screen (todo 63, measured on four pages).

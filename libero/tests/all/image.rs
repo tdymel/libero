@@ -20,6 +20,26 @@ fn image_renders_its_source_and_alt_text() {
     assert_eq!(attributes["alt"], "The logo");
 }
 
+/// Todo 602: `decorative` hides the picture; no `alt` renders none, so a
+/// checker still flags it rather than a silent `alt=""`.
+#[test]
+fn decorative_is_alt_empty_and_a_missing_alt_renders_none() {
+    fn decorative() -> Element {
+        rsx! { LiberoProvider { Image { src: "/logo.png", decorative: true } } }
+    }
+    fn missing() -> Element {
+        rsx! { LiberoProvider { Image { src: "/logo.png" } } }
+    }
+
+    let img = attributes_of(&render(decorative), "img");
+    assert_eq!(img["alt"], "");
+    assert_eq!(img["role"], "presentation");
+
+    let img = attributes_of(&render(missing), "img");
+    assert!(!img.contains_key("alt"), "{img:?}");
+    assert!(!img.contains_key("role"), "{img:?}");
+}
+
 /// A zoomable image opens a modal `Lightbox`, so its button is a dialog
 /// opener, not a toggle.
 #[test]

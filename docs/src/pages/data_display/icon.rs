@@ -38,7 +38,12 @@ pub fn IconPage() -> Element {
                     Code { source: "color" }
                     " sets the container's CSS color, which any child svg using "
                     Code { source: "currentColor" }
-                    " for its fill/stroke then inherits."
+                    " for its fill/stroke then inherits. Hidden from assistive technology "
+                    "unless named: an "
+                    Code { source: "aria_label" }
+                    " makes it "
+                    Code { source: "role=\"img\"" }
+                    "."
                 }
             },
             Demo {

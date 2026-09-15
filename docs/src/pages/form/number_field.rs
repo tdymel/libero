@@ -82,8 +82,8 @@ pub fn NumberFieldPage() -> Element {
                         .doc("Corner radius, independent of size."),
                     prop("value", "Option<T>")
                         .doc("The number in the field; strictly controlled. `None` is the empty field."),
-                    prop("onchange", "EventHandler<T>")
-                        .doc("Called with the number the caller should hold next. Silent while the buffer is not yet a number, so `-` and `1.` never reach it."),
+                    prop("onchange", "EventHandler<Option<T>>")
+                        .doc("Called with the number the caller should hold next; `None` once the field is emptied. Silent while the text is not yet a number, so `-` and `1.` never reach it. Leaving the field puts back the value's own text: out of range clamps, text that never parsed reverts."),
                     prop("min", "Option<T>")
                         .doc("Floor. Steps clamp to it; typed text below it clamps once the field is left or Enter is pressed."),
                     prop("max", "Option<T>")
@@ -166,15 +166,15 @@ pub fn NumberFieldPage() -> Element {
                             "f64" => vec![
                                 "step: 0.5".to_string(),
                                 "value: weight()".to_string(),
-                                "onchange: move |next| weight.set(Some(next))".to_string(),
+                                "onchange: move |next| weight.set(next)".to_string(),
                             ],
                             "cents" => vec![
                                 "value: price()".to_string(),
-                                "onchange: move |next| price.set(Some(next))".to_string(),
+                                "onchange: move |next| price.set(next)".to_string(),
                             ],
                             _ => vec![
                                 "value: quantity()".to_string(),
-                                "onchange: move |next| quantity.set(Some(next))".to_string(),
+                                "onchange: move |next| quantity.set(next)".to_string(),
                             ],
                         }),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
@@ -254,7 +254,7 @@ pub fn NumberFieldPage() -> Element {
                                 min: ranged.then_some(0.0f64),
                                 max: ranged.then_some(10.0f64),
                                 value: weight(),
-                                onchange: move |next| weight.set(Some(next)),
+                                onchange: move |next| weight.set(next),
                             }
                         },
                         "cents" => rsx! {
@@ -264,7 +264,7 @@ pub fn NumberFieldPage() -> Element {
                                 min: ranged.then_some(Cents(0)),
                                 max: ranged.then_some(Cents(10_000)),
                                 value: price(),
-                                onchange: move |next| price.set(Some(next)),
+                                onchange: move |next| price.set(next),
                             }
                         },
                         _ => rsx! {
@@ -274,7 +274,7 @@ pub fn NumberFieldPage() -> Element {
                                 min: ranged.then_some(1i32),
                                 max: ranged.then_some(99i32),
                                 value: quantity(),
-                                onchange: move |next| quantity.set(Some(next)),
+                                onchange: move |next| quantity.set(next),
                             }
                         },
                     }

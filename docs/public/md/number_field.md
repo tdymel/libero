@@ -27,7 +27,7 @@ fn Demo() -> Element {
             min: 1,
             max: 99,
             value: quantity(),
-            onchange: move |next| quantity.set(Some(next)),
+            onchange: move |next| quantity.set(next),
         }
     }
 }
@@ -35,7 +35,7 @@ fn Demo() -> Element {
 
 `value: None` is the empty field - a state the type holds rather than an empty
 string every caller special-cases. With `None` there is nothing for `T` to be
-inferred from, so that call site needs `None::<i32>` and an annotated handler:
+inferred from, so that call site needs `None::<i32>`:
 
 ```rust,ignore
 let mut quantity = use_signal(|| None::<i32>);
@@ -44,7 +44,7 @@ NumberField {
     label: "Quantity",
     placeholder: "How many?",
     value: quantity(),
-    onchange: move |next: i32| quantity.set(Some(next)),
+    onchange: move |next| quantity.set(next),
 }
 ```
 
@@ -54,11 +54,14 @@ The control is a text input with `inputmode="decimal"`, not `type="number"`. A
 number input reports an empty string for anything the browser cannot parse, so
 `-` and `1.` vanish as they are typed. This field keeps the raw text in a buffer
 instead and publishes only what `T::parse` accepted, so `onchange` never sees a
-half-typed number.
+half-typed number. Emptying the field publishes `None`.
 
 The buffer is what the control shows for as long as it still parses to the value
 the caller holds. The moment the caller's value says something else, the caller
-wins - which is what makes the field controlled.
+wins - which is what makes the field controlled. Leaving the field, or Enter,
+drops the buffer and shows the value's own text: out of range clamps, text that
+never parsed (`-`) reverts to the value. So the text, the value and
+`aria-valuenow` never drift apart.
 
 ## Your own number type
 
@@ -83,7 +86,7 @@ impl NumberValue for Cents {
 ```
 
 `NumberField { value: price(), onchange: .. }` then works with no further
-plumbing, and `onchange` hands back a `Cents`.
+plumbing, and `onchange` hands back an `Option<Cents>`.
 
 The trait's other methods have default bodies: `parse` (`FromStr`), `format`
 (`Display`), `zero` (parsing `"0"`, the stepper's starting point for an empty
@@ -104,7 +107,7 @@ NumberField {
     min: 1,
     max: 99,
     value: quantity(),
-    onchange: move |next| quantity.set(Some(next)),
+    onchange: move |next| quantity.set(next),
 }
 ```
 
@@ -139,7 +142,7 @@ when something else already names the field.
 | `size` | `Size` | `md` | Controls height, padding, and font size. |
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
 | `value` | `Option<T>` | - | The number in the field; strictly controlled. `None` is the empty field. |
-| `onchange` | `EventHandler<T>` | - | Called with the number the caller should hold next. |
+| `onchange` | `EventHandler<Option<T>>` | - | Called with the number the caller should hold next; `None` once the field is emptied. |
 | `min` | `Option<T>` | - | Floor. Steps clamp to it; typed text below it clamps once the field is left or Enter is pressed. |
 | `max` | `Option<T>` | - | Ceiling, same. |
 | `step` | `Option<T>` | `T::default_step()` | What one press of a stepper moves by. |

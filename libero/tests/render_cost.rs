@@ -724,11 +724,11 @@ fn render_cost_per_component() {
         "TextField+label" let oninput = |_: String| {}; { TextField { oninput, label: "l" } }
         // Every slot filled - what the field chrome costs over a bare control.
         "TextField+slots" let oninput = |_: String| {}; { TextField { oninput, label: "l", description: "d", helper: "h", status: "e", required: true } }
-        "NumberField" let onchange = |_: i32| {}; { NumberField { value: 1i32, onchange } }
-        "NumberField+steppers" let onchange = |_: i32| {}; { NumberField { value: 1i32, onchange, steppers: true } }
+        "NumberField" let onchange = |_: Option<i32>| {}; { NumberField { value: 1i32, onchange } }
+        "NumberField+steppers" let onchange = |_: Option<i32>| {}; { NumberField { value: 1i32, onchange, steppers: true } }
         // A stepper press or an arrow key: the value moves every round.
-        "NumberField step" let onchange = |_: i32| {}; { NumberField { value: if flip() { 2i32 } else { 1 }, onchange } }
-        "NumberField+steppers step" let onchange = |_: i32| {}; { NumberField { value: if flip() { 2i32 } else { 1 }, onchange, steppers: true } }
+        "NumberField step" let onchange = |_: Option<i32>| {}; { NumberField { value: if flip() { 2i32 } else { 1 }, onchange } }
+        "NumberField+steppers step" let onchange = |_: Option<i32>| {}; { NumberField { value: if flip() { 2i32 } else { 1 }, onchange, steppers: true } }
         "Textarea" let oninput = |_: String| {}; { Textarea { oninput } }
         "PasswordField" let oninput = |_: String| {}; { PasswordField { oninput } }
         "PasswordField-toggle" let oninput = |_: String| {}; { PasswordField { oninput, reveal_button: false } }
@@ -820,7 +820,7 @@ fn render_cost_per_component() {
         "Carousel" let onindexchange = |_: usize| {}; { Carousel { aria_label: "c", slides: vec![rsx! { "a" }, rsx! { "b" }, rsx! { "c" }], onindexchange } }
 
         "Icon" { Icon { "x" } }
-        "Image" { Image { src: "/x.png" } }
+        "Image" { Image { src: "/x.png", alt: "x" } }
         "QrCode" { QrCode { data: "x", aria_label: "a" } }
         "List" { List { ListItem { "x" } } }
         "DataList" { DataList { DataListItem { label: rsx! { "l" }, "x" } } }
