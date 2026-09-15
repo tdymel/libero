@@ -498,7 +498,8 @@ fn page_button(
         .attr("aria-current", current.then_some("page"))
         .attr("disabled", disabled)
         .event("onclick", move |_: Event<MouseData>| {
-            if !disabled {
+            // The current page is no change: no `onchange`, like Select's same-value pick.
+            if !disabled && !current {
                 go(number, false)
             }
         })

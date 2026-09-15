@@ -104,12 +104,30 @@ fn Demo() -> Element {
 }
 ```
 
-A long label is cut at the chip's edge, with no ellipsis: the chip lays its
-children out in a row, and it cannot put them in a box of their own without
-breaking an icon's spacing. If you want an ellipsis, wrap the text yourself:
+An icon goes in `icon`: it sits before the label with a gap, and never
+shrinks. The label is a span of its own, so a long one ends in "…" at the
+chip's edge while its full text stays the accessible name. An icon passed in
+`children` still renders, inside that span and without the gap. A remove x
+goes in `trailing`, after the label, so a long label never clips it.
 
-```rust,ignore
-Chip { span { style: "min-width: 0; overflow: hidden; text-overflow: ellipsis", "{label}" } }
+```rust
+use dioxus::prelude::*;
+use libero::components::Chip;
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Chip {
+            icon: rsx! {
+                svg { width: "14", height: "14", view_box: "0 0 24 24", fill: "currentColor",
+                    circle { cx: "12", cy: "12", r: "6" }
+                }
+            },
+            style: "max-width: 160px",
+            "Versandkostenberechnungsgrundlage"
+        }
+    }
+}
 ```
 
 ## Accessibility
@@ -133,7 +151,9 @@ Space toggles a selectable chip. Keep `children` to text and `Icon` - a
 | `onclick` | `EventHandler<MouseEvent>` | - | A plain action; its presence makes the chip a `<button>`. |
 | `to` | `NavigationTarget` | - | Renders a router-aware link instead. Takes precedence over `onclick`. |
 | `target` | `String` | - | Link target, e.g. `_blank`. Only with `to`. |
-| `children` | `Element` | required | Text and `Icon` only - a `<label>` hijacks clicks on nested controls. |
+| `icon` | `Element` | - | Drawn before the label, with a gap; it never shrinks. |
+| `trailing` | `Element` | - | Drawn after the label, with a gap; it never shrinks - a remove x. Outside a checkbox chip's `<label>`, so it may be a button, but not on an `onclick` or `to` chip. |
+| `children` | `Element` | required | The label, cut with "…" when the chip runs out of room. Text and `Icon` only - a `<label>` hijacks clicks on nested controls. |
 
 Like every component, `Chip` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

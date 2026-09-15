@@ -7,13 +7,20 @@ generic
   StaticText "Tag"
 generic
   checkbox "rust" [checked]
+  LabelText
+    StaticText "rust"
 generic
   checkbox "css" [checked]
-  StaticText "css"
+  LabelText
+    StaticText "css"
 generic
   checkbox "html" [checked=false]
+  LabelText
+    StaticText "html"
 generic [disabled]
   checkbox "Unavailable" [checked=false] [disabled]
+  LabelText
+    StaticText "Unavailable"
 button "Action"
   StaticText "Action"
 link "Link" [current=page]
@@ -22,9 +29,17 @@ link "Dead link" [disabled]
   StaticText "Dead link"
 generic
   checkbox "tonal" [checked=false]
+  LabelText
+    StaticText "tonal"
 generic
   checkbox "elevated" [checked=false]
+  LabelText
+    StaticText "elevated"
 generic
   checkbox "text" [checked=false]
+  LabelText
+    StaticText "text"
 generic
   checkbox "small" [checked=false]
+  LabelText
+    StaticText "small"

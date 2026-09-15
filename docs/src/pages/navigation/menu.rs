@@ -16,7 +16,7 @@ let mut sort = use_signal(|| "Name");
 let mut hidden = use_signal(|| false);
 let sort_by = move |name: &'static str| -> MenuEntry {
     MenuItem::new(name)
-        .checked(sort() == name)
+        .radio(sort() == name)
         .onselect(move |_| sort.set(name))
         .into()
 };
@@ -56,7 +56,7 @@ let items = vec![
         items: vec![sort_by("Name"), sort_by("Date"), sort_by("Size")],
     },
     MenuItem::new("Show hidden")
-        .toggled(hidden())
+        .checkbox(hidden())
         .onselect(move |_| hidden.toggle())
         .into(),
     MenuEntry::Separator,
@@ -129,7 +129,7 @@ fn MenuDemo(
     let mut hidden = use_signal(|| false);
     let sort_by = move |name: &'static str| -> MenuEntry {
         MenuItem::new(name)
-            .checked(sort() == name)
+            .radio(sort() == name)
             .onselect(move |_| sort.set(name))
             .into()
     };
@@ -171,7 +171,7 @@ fn MenuDemo(
             items: vec![sort_by("Name"), sort_by("Date"), sort_by("Size")],
         },
         MenuItem::new("Show hidden")
-            .toggled(hidden())
+            .checkbox(hidden())
             .onselect(move |_| hidden.toggle())
             .into(),
         MenuEntry::Separator,
@@ -256,10 +256,10 @@ pub fn MenuPage() -> Element {
                         .doc("At the far end - a badge. Part of the accessible name, and nothing interactive, for the same reason."),
                     prop("shortcut", "&str")
                         .doc("The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`\"Control+X\"`). Set as that attribute and drawn as a hint (\"Ctrl+X\") hidden from screen readers, so it stays out of the name. No platform mapping, and binding the key is yours."),
-                    prop("checked", "bool")
-                        .doc("Unset, a plain command. Set, it makes the item one choice of several: a `menuitemradio` announcing `aria-checked`, with a check before the label. Put the choices in one `Group`; keeping exactly one checked is yours. A menu holding a checked item opens on it."),
-                    prop("toggled", "bool")
-                        .doc("An independent on/off setting instead: a `menuitemcheckbox` announcing `aria-checked`, same check slot. Flip it in `onselect`. An item is `checked` or `toggled`; the later call wins."),
+                    prop("radio", "bool")
+                        .doc("Unset, a plain command. Set, it makes the item one choice of several: a `menuitemradio` announcing `aria-checked`, with a check before the label while `true`. Put the choices in one `Group`; keeping exactly one checked is yours. A menu holding a checked item opens on it."),
+                    prop("checkbox", "bool")
+                        .doc("An independent on/off setting instead: a `menuitemcheckbox` announcing `aria-checked`, same check slot. Flip it in `onselect`. An item is `radio` or `checkbox`; the later call wins."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Stays in the arrow-key order, cannot be chosen, and typeahead skips it."),

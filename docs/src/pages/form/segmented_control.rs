@@ -324,7 +324,7 @@ pub fn SegmentedControlPage() -> Element {
                 title: "Accessibility",
                 Text {
                     "Arrow keys move the selection; Tab enters and leaves the whole control. "
-                    "Enter submits the form around it, as on a native radio. Without a visible label, name it by spreading "
+                    "Space picks the focused segment, and so does Enter outside a Form; inside one Enter submits it, as on a native radio. Without a visible label, name it by spreading "
                     Code { source: "\"aria-label\"" }
                     ": the segments name the options, not the question."
                 }

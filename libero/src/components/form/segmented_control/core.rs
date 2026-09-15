@@ -215,6 +215,9 @@ pub(crate) struct SegmentedControlView {
     pub focusable: bool,
     /// Focusable and posted, but no click, key or arrow picks a segment.
     pub readonly: bool,
+    /// Enter picks, as Space does: outside a `Form`, where it has nothing to
+    /// submit.
+    pub enter: bool,
     /// What the radios post as, and what makes them one exclusive set.
     pub name: String,
     /// The field's wiring, which lands on the `radiogroup` because that is
@@ -267,6 +270,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         gap,
         focusable,
         readonly,
+        enter,
         name,
         labelledby,
         describedby,
@@ -300,8 +304,8 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
     let segment_states = format!("{} {}", size.state_name(), radius.radius_state_name());
 
     let items = segments.iter().enumerate().map(|(index, segment)| {
-        // The label's click, Space and a click on the radio itself all
-        // go through `Activation` - see it for why none of them may activate
+        // The label's click, Space, Enter outside a `Form` and a click on the
+        // radio itself all go through `Activation` - see it for why none of them may activate
         // the radio natively (todo 66). A control that is not focusable wants
         // no focus from its label: inside a dropdown that keeps focus on its
         // field, focusing here would blur the field and close it.
@@ -320,8 +324,9 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                     }
                 },
             )
+            .enter_activates(enter)
         };
-        // Enter is left to the browser, which submits the form around it as
+        // Inside a `Form`, Enter is left to the browser, which submits it as
         // for a native radio. The arrows move *and* select, which is what a
         // native radio group does and what Blitz, which does neither, now gets
         // too.

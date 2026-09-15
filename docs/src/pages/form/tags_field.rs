@@ -11,19 +11,21 @@ use libero::{
 // snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
 const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
     Chip { size: "xs", variant: "outlined",
-        "#{t.value}"
-        span { "data-slot": "remove",
-            ActionIcon {
-                aria_label: "Remove {t.value}",
-                size: "xs",
-                // A `<button>` inherits no colour of its own.
-                sx: sx().color("inherit"),
-                // The input is the field's one tab stop.
-                tabindex: "-1",
-                onclick: move |_| t.remove.call(()),
-                "x"
+        trailing: rsx! {
+            span { "data-slot": "remove",
+                ActionIcon {
+                    aria_label: "Remove {t.value}",
+                    size: "xs",
+                    // A `<button>` inherits no colour of its own.
+                    sx: sx().color("inherit"),
+                    // The input is the field's one tab stop.
+                    tabindex: "-1",
+                    onclick: move |_| t.remove.call(()),
+                    "x"
+                }
             }
-        }
+        },
+        "#{t.value}"
     }
 }"##;
 
@@ -45,17 +47,19 @@ fn topic_tag(t: SelectionArgs<String>) -> Element {
     let label = t.value.clone();
     rsx! {
         Chip { size: "xs", variant: "outlined",
-            "#{label}"
-            span { "data-slot": "remove",
-                ActionIcon {
-                    aria_label: "Remove {label}",
-                    size: "xs",
-                    sx: sx().color("inherit"),
-                    tabindex: "-1",
-                    onclick: move |_| t.remove.call(()),
-                    "x"
+            trailing: rsx! {
+                span { "data-slot": "remove",
+                    ActionIcon {
+                        aria_label: "Remove {label}",
+                        size: "xs",
+                        sx: sx().color("inherit"),
+                        tabindex: "-1",
+                        onclick: move |_| t.remove.call(()),
+                        "x"
+                    }
                 }
-            }
+            },
+            "#{label}"
         }
     }
 }

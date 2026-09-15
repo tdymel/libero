@@ -69,18 +69,18 @@ pub struct MenuItem {
 #[derive(Clone, Copy, PartialEq)]
 pub(super) enum Check {
     Radio(bool),
-    Toggle(bool),
+    Checkbox(bool),
 }
 
 impl Check {
     pub(super) fn is_checked(self) -> bool {
-        matches!(self, Check::Radio(true) | Check::Toggle(true))
+        matches!(self, Check::Radio(true) | Check::Checkbox(true))
     }
 
     pub(super) fn role(self) -> &'static str {
         match self {
             Check::Radio(_) => "menuitemradio",
-            Check::Toggle(_) => "menuitemcheckbox",
+            Check::Checkbox(_) => "menuitemcheckbox",
         }
     }
 }
@@ -150,21 +150,21 @@ impl MenuItem {
     /// a reader hears; keeping exactly one of them checked is the caller's.
     /// A menu holding a checked item opens with focus on it.
     ///
-    /// Replaces a [`toggled`](Self::toggled), with a debug warning: an item is
-    /// one or the other.
-    pub fn checked(self, checked: bool) -> Self {
+    /// Replaces a [`checkbox`](Self::checkbox), with a debug warning: an item
+    /// is one or the other.
+    pub fn radio(self, checked: bool) -> Self {
         self.with_check(Check::Radio(checked))
     }
 
     /// Makes it an independent on/off setting ("Show ruler") - a
     /// `menuitemcheckbox` announcing `aria-checked` - with a check drawn
-    /// before the label while `toggled`. Flipping it is the caller's, in
+    /// before the label while `checked`. Flipping it is the caller's, in
     /// [`onselect`](Self::onselect).
     ///
-    /// Replaces a [`checked`](Self::checked), with a debug warning: an item is
+    /// Replaces a [`radio`](Self::radio), with a debug warning: an item is
     /// one or the other.
-    pub fn toggled(self, toggled: bool) -> Self {
-        self.with_check(Check::Toggle(toggled))
+    pub fn checkbox(self, checked: bool) -> Self {
+        self.with_check(Check::Checkbox(checked))
     }
 
     fn with_check(mut self, check: Check) -> Self {
@@ -173,7 +173,7 @@ impl MenuItem {
             && before.role() != check.role()
         {
             warn(&format!(
-                "MenuItem \"{}\": both `checked` and `toggled` were called; the later one wins.",
+                "MenuItem \"{}\": both `radio` and `checkbox` were called; the later one wins.",
                 self.label
             ));
         }
@@ -255,13 +255,13 @@ mod tests {
     use super::{MenuItem, shortcut_hint};
 
     #[test]
-    fn checked_and_toggled_on_one_item_warn() {
+    fn radio_and_checkbox_on_one_item_warn() {
         crate::utils::take_warnings();
-        let _ = MenuItem::new("Ruler").checked(true).toggled(false);
+        let _ = MenuItem::new("Ruler").radio(true).checkbox(false);
         let warnings = crate::utils::take_warnings();
         assert_eq!(warnings.len(), 1, "{warnings:?}");
         assert!(warnings[0].contains("Ruler"), "{warnings:?}");
-        let _ = MenuItem::new("Ruler").toggled(true).toggled(false);
+        let _ = MenuItem::new("Ruler").checkbox(true).checkbox(false);
         assert!(crate::utils::take_warnings().is_empty());
     }
 

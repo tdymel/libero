@@ -9,7 +9,7 @@ use crate::{
             base_color, contrast_color, field_props, fill_color, focus_ring_sx, names_itself,
             ring_overlay, ring_overlay_sx, use_name_warning, variables,
         },
-        form::{use_bound, use_field},
+        form::{use_bound, use_field, use_form_context},
         layout::use_box,
     },
     hooks::{use_cache, use_css, use_element, use_theme},
@@ -149,8 +149,9 @@ field_props! {
 /// description, helper text and validation message under both.
 ///
 /// The browser never toggles the input itself - a label click and Space are
-/// taken in Rust, Enter submits the form around it - so the track, the DOM property, assistive tech
-/// and form submission never drift apart. Pass `checked` and handle `onchange`
+/// taken in Rust, and Enter too outside a `Form`; inside one Enter submits it -
+/// so the track, the DOM property, assistive tech and form submission never
+/// drift apart. Pass `checked` and handle `onchange`
 /// to own the state; with neither, and outside a form binding, the switch
 /// keeps its own.
 #[component]
@@ -192,13 +193,15 @@ pub fn Switch(props: SwitchProps) -> Element {
         }
     };
 
-    // Space toggles; Enter is left to the browser, which submits the form
-    // around it as for a native checkbox.
+    // Space toggles. Enter toggles too outside a `Form` (APG); inside one it is
+    // left to the browser, which submits as for a native checkbox.
+    let in_form = use_form_context().is_some();
     let element = use_element();
     let field = use_field()
         .inline()
         .card(card)
         .activates(element, toggle.clone())
+        .enter_activates(!in_form)
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)

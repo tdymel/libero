@@ -10,26 +10,10 @@ use crate::{
     theme::{CHIP_HEIGHT, Size},
 };
 
-/// A chip's own layout, so every field that draws one gets the long-label fix.
-static REMOVABLE_CHIP_SX: StaticSx = StaticSx::new(|| {
-    // Capped at its slot by `Chip`'s own `max-width`, and allowed below its
-    // content: a flex item's floor is otherwise its min-content size.
-    sx().min_width("0")
-        // A value can be arbitrarily long. The label is the only part that may
-        // shrink: without `min-width: 0` an unbroken 240-character label is its
-        // own floor, and the x was pushed clean out of its chip. Seen in a
-        // browser; the box model alone looked correct.
-        .selector(
-            "& > [data-slot='label']",
-            sx().min_width("0")
-                .overflow("hidden")
-                .text_overflow("ellipsis")
-                .white_space("nowrap"),
-        )
-        // It never shrinks - an x too narrow to hit is worse than a clipped
-        // label.
-        .selector("& > [data-slot='remove']", sx().flex("0 0 auto"))
-});
+/// Capped at its slot by `Chip`'s own `max-width`, and allowed below its
+/// content: a flex item's floor is otherwise its min-content size. `Chip`
+/// ellipsizes the label and keeps its `trailing` x whole.
+static REMOVABLE_CHIP_SX: StaticSx = StaticSx::new(|| sx().min_width("0"));
 
 /// The x. A native `<button>` inherits neither `color` nor `font-size` - it
 /// takes the UA's `buttontext` and 13.3px.
@@ -71,12 +55,7 @@ pub(crate) fn removable_chip(
     let remove_label = fill(current_localization().common.remove, &[("label", &label)]);
     rsx! {
         Chip { size, sx: &REMOVABLE_CHIP_SX,
-            // Its own element, so it is a flex item the chip can let shrink. A
-            // bare text node is an anonymous one, which no selector reaches.
-            span { "data-slot": "label", "{label}" }
-            span {
-                // Centred by the field's own sx - a bare inline span would hang
-                // the button off the label's baseline.
+            trailing: rsx! { span {
                 "data-slot": "remove",
                 // Load-bearing twice, and only the first reason is obvious. The
                 // field holds the focus that keeps its list open, so the press
@@ -100,7 +79,8 @@ pub(crate) fn removable_chip(
                     onclick: move |_| remove.call(()),
                     CloseIcon {}
                 }
-            }
+            } },
+            span { "data-slot": "label", "{label}" }
         }
     }
 }

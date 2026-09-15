@@ -5,7 +5,7 @@ use crate::{
     components::{
         Input, OptionLabel, OptionSource, Options, Variant,
         common::{Orientation, base_color, field_props, names_itself, use_name_warning},
-        form::{use_bound, use_field},
+        form::{use_bound, use_field, use_form_context},
         inputs::button_variables,
     },
     hooks::{use_cache, use_element, use_theme},
@@ -101,6 +101,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
     let current = bound.value().or_else(|| props.value.clone());
+    let in_form = use_form_context().is_some();
 
     if props.onchange.is_none() && !bound.is_bound() && !disabled {
         warn("SegmentedControl: without `onchange` the selection can never change.");
@@ -210,6 +211,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
             gap: props.gap.as_ref().copied(),
             focusable: props.focusable.unwrap_or(true),
             readonly: props.readonly.unwrap_or(false),
+            enter: !in_form,
             name,
             labelledby: field.label_id(),
             describedby: field.describedby(),

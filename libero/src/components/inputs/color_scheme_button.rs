@@ -180,7 +180,7 @@ pub fn ColorSchemeButton(props: ColorSchemeButtonProps) -> Element {
             .map(|&set| {
                 let theme_set = theme_set.clone();
                 MenuItem::new(set.name())
-                    .checked(set.name() == active)
+                    .radio(set.name() == active)
                     .onselect(move |_| theme_set.set(set.clone()))
                     .into()
             })

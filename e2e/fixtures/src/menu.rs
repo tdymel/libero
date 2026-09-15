@@ -21,7 +21,7 @@ fn MenuChoicesPage() -> Element {
     let mut grid = use_signal(|| false);
     let choice = move |label: &'static str| {
         MenuItem::new(label)
-            .checked(sort() == label)
+            .radio(sort() == label)
             .onselect(move |_| sort.set(label))
             .into()
     };
@@ -32,7 +32,7 @@ fn MenuChoicesPage() -> Element {
         },
         MenuEntry::Separator,
         MenuItem::new("Show grid")
-            .toggled(grid())
+            .checkbox(grid())
             .shortcut("Control+G")
             .onselect(move |_| grid.toggle())
             .into(),

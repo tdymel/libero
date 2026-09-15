@@ -38,7 +38,7 @@ fn Demo() -> Element {
             item("Redo"),
             MenuEntry::Separator,
             MenuItem::new("Word wrap")
-                .toggled(wrap())
+                .checkbox(wrap())
                 .onselect(move |_| wrap.toggle())
                 .into(),
         ]),
@@ -63,7 +63,7 @@ ArrowRight on a submenu item opens the submenu; ArrowLeft in a submenu closes
 it. Escape closes the menu and returns focus to its trigger; Tab closes it and
 leaves the bar. Everything else is `Menu`'s, including `MenuItem`'s
 `shortcut` (announced as `aria-keyshortcuts`; binding the key is yours) and
-`toggled` for an on/off setting.
+`checkbox` for an on/off setting.
 
 `aria_label` is required: it names the bar.
 

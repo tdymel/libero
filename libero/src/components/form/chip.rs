@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
+    CssLayer,
     components::{
         HtmlTag, Input, States, Variant,
         a11y::VISUALLY_HIDDEN_SX,
@@ -14,7 +15,7 @@ use crate::{
         layout::use_box,
         navigation::InternalAnchor,
     },
-    hooks::{use_cache, use_element, use_id, use_theme},
+    hooks::{use_cache, use_css, use_element, use_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ChipDefaults, ColorShade, CssVar, Size, SizeCss},
     utils::warn,
@@ -116,10 +117,8 @@ static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .gap(SizeCss::SPACING.value(Size::Xs))
         .cursor("pointer")
-        // No `text-overflow`: on a flex root it never applies (todo 94). The
-        // chip cannot wrap its children in a block of its own either, since an
-        // icon among them would lose the `gap` - so the ellipsis is the
-        // caller's span, as the rustdoc below says.
+        // No `text-overflow`: on a flex root it never applies (todo 94); the
+        // text span inside it draws the ellipsis.
         .overflow("hidden")
         // The whole pill is the hit area, not only the text: stretched over
         // the positioned root, and not clipped by the label's own overflow.
@@ -127,6 +126,25 @@ static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
             "&::after",
             sx().content("\"\"").position("absolute").inset("0"),
         )
+});
+
+/// The children's own block, so a long label ends in "…" (todo 636). The
+/// full text stays in the DOM, so the accessible name is never cut.
+static CHIP_TEXT_SX: StaticSx = StaticSx::new(|| {
+    sx().min_width("0")
+        .overflow("hidden")
+        .text_overflow("ellipsis")
+        .white_space("nowrap")
+});
+
+/// After the label, never shrinking, so a long label cannot clip a remove x.
+/// Lifted over a selectable chip's label `::after`, which would take its clicks.
+static CHIP_TRAILING_SX: StaticSx = StaticSx::new(|| {
+    sx().display("inline-flex")
+        .align_items("center")
+        .flex("0 0 auto")
+        .position("relative")
+        .z_index("1")
 });
 
 /// Depends on `(variant, checked, color)` alone - see the `use_cache` below.
@@ -201,15 +219,25 @@ base_props! {
         to: Input<NavigationTarget>,
         #[props(default)]
         target: Option<String>,
-        /// Text and `Icon` only: a `<label>` hijacks clicks on nested controls.
+        /// Drawn before the label, with a gap; it never shrinks.
+        #[props(default)]
+        icon: Option<Element>,
+        /// Drawn after the label, with a gap; it never shrinks - a remove x.
+        /// Outside a checkbox chip's `<label>`, so it may be a button - but not
+        /// on an `onclick` or `to` chip, whose root is one already.
+        #[props(default)]
+        trailing: Option<Element>,
+        /// The label. Text and `Icon` only: a `<label>` hijacks clicks on
+        /// nested controls. Cut with "…" when the chip runs out of room.
         children: Element,
     }
 }
 
 /// A compact token; `onchange` makes it a real checkbox.
 ///
-/// A long label is cut at the chip's edge. For an ellipsis, put the text in a
-/// span of its own: `span { style: "min-width: 0; overflow: hidden; text-overflow: ellipsis", "{label}" }`.
+/// A long label ends in "…" at the chip's edge. An icon goes in `icon` and a
+/// remove x in `trailing`; both keep their gap and never shrink:
+/// `Chip { icon: rsx! { MyIcon {} }, "rust" }`.
 #[component]
 pub fn Chip(props: ChipProps) -> Element {
     let theme = use_theme();
@@ -280,6 +308,23 @@ pub fn Chip(props: ChipProps) -> Element {
         .prepare();
     let input = use_box().framework_sx(&VISUALLY_HIDDEN_SX).prepare();
     let label = use_box().framework_sx(&CHIP_LABEL_SX).prepare();
+    let text_class = use_css(Some(&CHIP_TEXT_SX), CssLayer::Framework);
+    let trailing_class = use_css(Some(&CHIP_TRAILING_SX), CssLayer::Framework);
+
+    // `data-slot`, so a chip's own sx can reach the text block.
+    let labelled = rsx! {
+        {props.icon}
+        span { class: text_class, "data-slot": "text", {props.children} }
+    };
+    let trailing = rsx! {
+        if let Some(trailing) = props.trailing {
+            span { class: trailing_class, "data-slot": "trailing", {trailing} }
+        }
+    };
+    let content = rsx! {
+        {labelled.clone()}
+        {trailing.clone()}
+    };
 
     if !selectable {
         // `InternalAnchor` has no `onclick`, so a link chip navigates for real.
@@ -291,7 +336,7 @@ pub fn Chip(props: ChipProps) -> Element {
                     .attr_default("role", "link")
                     .attr("aria-disabled", "true")
                     .attr("tabindex", "-1")
-                    .render(HtmlTag::A, props.attributes, props.children);
+                    .render(HtmlTag::A, props.attributes, content);
             }
 
             return rsx! {
@@ -304,7 +349,7 @@ pub fn Chip(props: ChipProps) -> Element {
                     states,
                     style,
                     attributes: props.attributes,
-                    {props.children}
+                    {content}
                 }
             };
         }
@@ -318,13 +363,13 @@ pub fn Chip(props: ChipProps) -> Element {
                 })
                 .attr("disabled", disabled)
                 .attr_default("type", "button")
-                .render(HtmlTag::Button, props.attributes, props.children);
+                .render(HtmlTag::Button, props.attributes, content);
         }
 
         return root.attr("aria-disabled", disabled).render(
             HtmlTag::Span,
             props.attributes,
-            props.children,
+            content,
         );
     }
 
@@ -354,12 +399,14 @@ pub fn Chip(props: ChipProps) -> Element {
     let label = label
         .attr("for", id())
         .event("onclick", activation.label_click())
-        .render(HtmlTag::Label, Vec::new(), props.children);
+        .render(HtmlTag::Label, Vec::new(), labelled);
 
+    // The trailing slot sits beside the label, not in it: a `<label>` would
+    // take a button's click for the checkbox.
     root.attr("aria-disabled", disabled).render(
         HtmlTag::Span,
         props.attributes,
-        vec![input, label, ring_overlay()],
+        vec![input, label, trailing, ring_overlay()],
     )
 }
 

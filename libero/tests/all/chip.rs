@@ -117,3 +117,65 @@ fn a_chip_posts_its_value_under_the_shared_name_or_falls_back_to_on() {
     assert_eq!(input["name"], "agreed");
     assert!(!input.contains_key("value"), "{input:?}");
 }
+
+/// Todo 636: `icon` comes before the label's own span, which draws the
+/// ellipsis; every kind of chip gets both.
+#[test]
+fn the_icon_sits_before_the_ellipsizing_text_span() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { icon: rsx! { svg { id: "tag-icon" } }, "tag" }
+                Chip {
+                    icon: rsx! { svg { id: "filter-icon" } },
+                    checked: false,
+                    onchange: move |_| {},
+                    "filter"
+                }
+                Chip { icon: rsx! { svg { id: "action-icon" } }, onclick: move |_| {}, "action" }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    for (icon, text) in [
+        ("tag-icon", ">tag<"),
+        ("filter-icon", ">filter<"),
+        ("action-icon", ">action<"),
+    ] {
+        let rest = &html[html.find(icon).unwrap_or_else(|| panic!("{icon}: {html}"))..];
+        let span = rest
+            .find(r#"data-slot="text""#)
+            .unwrap_or_else(|| panic!("{icon}: {html}"));
+        assert!(rest[span..].contains(text), "{icon}: {html}");
+    }
+    assert_eq!(html.matches(r#"data-slot="text""#).count(), 3, "{html}");
+}
+
+/// `trailing` follows the text span; on a checkbox chip it sits beside the
+/// `<label>`, which would otherwise take a button's click for the checkbox.
+#[test]
+fn trailing_follows_the_label_and_stays_out_of_a_checkbox_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { trailing: rsx! { button { id: "tag-x" } }, "tag" }
+                Chip {
+                    trailing: rsx! { button { id: "filter-x" } },
+                    checked: false,
+                    onchange: move |_| {},
+                    "filter"
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let tag = html.find(">tag<").unwrap();
+    assert!(html.find("tag-x").unwrap() > tag, "{html}");
+    let label_end = html.find("</label>").unwrap();
+    let filter_x = html.find("filter-x").unwrap();
+    assert!(html[..label_end].contains(">filter<"), "{html}");
+    assert!(filter_x > label_end, "the x landed in the label: {html}");
+    assert_eq!(html.matches(r#"data-slot="trailing""#).count(), 2, "{html}");
+}

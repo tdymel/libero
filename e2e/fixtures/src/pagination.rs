@@ -43,6 +43,7 @@ fn PaginationStatesPage() -> Element {
 #[component]
 fn PaginationPage(delay_ms: u32) -> Element {
     let mut page = use_signal(|| 2u32);
+    let mut changes = use_signal(|| 0u32);
 
     rsx! {
         Flex { direction: "column", gap: "md",
@@ -52,6 +53,7 @@ fn PaginationPage(delay_ms: u32) -> Element {
                 aria_label: "Results pages",
                 with_edges: true,
                 onchange: move |next: u32| {
+                    changes += 1;
                     if delay_ms == 0 {
                         page.set(next);
                         return;
@@ -65,7 +67,7 @@ fn PaginationPage(delay_ms: u32) -> Element {
                     });
                 },
             }
-            span { id: "page", "data-page": "{page}" }
+            span { id: "page", "data-page": "{page}", "data-changes": "{changes}" }
         }
     }
 }

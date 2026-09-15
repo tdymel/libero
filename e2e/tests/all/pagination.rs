@@ -103,6 +103,31 @@ fn a_disabling_arrow_hands_focus_to_the_current_page() {
     });
 }
 
+/// Todo 526: the current page is no change, so its click emits nothing, like
+/// Select's same-value pick. Page 3 after it proves the first click was seen.
+#[test]
+fn clicking_the_current_page_emits_no_change() {
+    block_on(async {
+        let fixture = Fixture::open("/pagination", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, CURRENT).await.unwrap();
+        pointer::click(page, "[aria-label=\"Go to page 3\"]")
+            .await
+            .unwrap();
+        wait_for_page(page, 3, "/pagination").await;
+        let changes: String = page
+            .evaluate("document.querySelector('#page').dataset.changes")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(changes, "1", "only page 3 is a change");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `[id, :disabled, opacity, cursor]` of every button in the nav `id`.
 async fn looks(page: &Page, id: &str) -> Vec<String> {
     page.evaluate(format!(

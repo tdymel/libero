@@ -38,8 +38,12 @@ pub fn ChipPage() -> Element {
                     .doc("Renders a router-aware link instead. Takes precedence over `onclick`."),
                 prop("target", "String")
                     .doc("Link target, e.g. `_blank`. Only with `to`."),
+                prop("icon", "Element")
+                    .doc("Drawn before the label, with a gap; it never shrinks."),
+                prop("trailing", "Element")
+                    .doc("Drawn after the label, with a gap; it never shrinks - a remove x. Outside a checkbox chip's `label`, so it may be a button, but not on an `onclick` or `to` chip."),
                 prop("children", "Element")
-                    .doc("Text and `Icon` only - a `<label>` hijacks clicks on nested controls."),
+                    .doc("The label, cut with \"…\" when the chip runs out of room. Text and `Icon` only - a `<label>` hijacks clicks on nested controls."),
             ])],
             lead: rsx! {
                 Text {

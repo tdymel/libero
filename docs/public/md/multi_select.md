@@ -60,20 +60,23 @@ MultiSelect {
     },
     selection: move |s: SelectionArgs<Topping>| rsx! {
         Chip { size: "xs", variant: "outlined",
-            "{s.value.emoji()} {s.value.label()}"
-            span { onmousedown: move |event| event.prevent_default(),
-                onclick: move |event| event.stop_propagation(),
-                ActionIcon {
-                    aria_label: "Remove {s.value.label()}",
-                    size: "xs",
-                    // A `<button>` takes the UA's `buttontext`, not the chip's
-                    // colour, so the cross needs this or it stays black.
-                    sx: sx().color("inherit"),
-                    tabindex: "-1",
-                    onclick: move |_| s.remove.call(()),
-                    "x"
+            // After the label, so a long label never clips the x.
+            trailing: rsx! {
+                span { onmousedown: move |event| event.prevent_default(),
+                    onclick: move |event| event.stop_propagation(),
+                    ActionIcon {
+                        aria_label: "Remove {s.value.label()}",
+                        size: "xs",
+                        // A `<button>` takes the UA's `buttontext`, not the chip's
+                        // colour, so the cross needs this or it stays black.
+                        sx: sx().color("inherit"),
+                        tabindex: "-1",
+                        onclick: move |_| s.remove.call(()),
+                        "x"
+                    }
                 }
-            }
+            },
+            "{s.value.emoji()} {s.value.label()}"
         }
     },
 }

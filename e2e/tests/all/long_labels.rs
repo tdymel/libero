@@ -41,6 +41,17 @@ const SINGLE_LINE: &str = "(() => {
         const label = root.querySelector('[data-slot=label]');
         rows.push([id, oneLine(label), cut(label), root.textContent === long]);
     }
+    // Todo 636: the chip's text block draws the ellipsis, and the icon keeps its room.
+    for (const id of ['chip', 'chip-filter', 'chip-row', 'chip-icon', 'chip-trailing']) {
+        const root = document.getElementById(id);
+        const text = root.querySelector('[data-slot=text]');
+        const icon = root.querySelector('svg');
+        const x = root.querySelector('[data-slot=trailing]');
+        const r = e => e.getBoundingClientRect();
+        const whole = (!icon || (r(icon).width > 0 && r(text).left - r(icon).right >= 2))
+            && (!x || (r(x).left - r(text).right >= 2 && r(x).right <= r(root).right));
+        rows.push([id, oneLine(text), cut(text), text.textContent === long && whole]);
+    }
     for (const id of ['segmented', 'segmented-full']) {
         const label = [...document.querySelectorAll(`#${id} label`)].find(l => l.title === long);
         const span = label && label.querySelector('span');

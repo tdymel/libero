@@ -290,6 +290,16 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
+    /// Enter activates as well as Space, for a switch outside a `Form`; inside
+    /// one it is left to the browser, which submits.
+    #[inline]
+    pub fn enter_activates(mut self, enter: bool) -> Self {
+        if let Some(activation) = &mut self.activation {
+            activation.enter = enter;
+        }
+        self
+    }
+
     #[inline]
     pub fn size(mut self, size: Size) -> Self {
         self.size = size;
@@ -777,7 +787,8 @@ impl PreparedField {
 /// `:checked`, AT and the form post do not. So nothing is left to activate the
 /// input natively: the label's click is cancelled, and Space is answered on
 /// `keydown`, which stops the activation outright. Enter is left to the
-/// browser, which submits the form around it.
+/// browser, which submits the form around it; outside a `Form`, a switch and
+/// a segmented control take it too ([`enter_activates`](Self::enter_activates)).
 ///
 /// A field gets it through [`FieldBuilder::activates`]; a control whose label
 /// is its own - `Chip` - wires both halves itself, and one that renders its
@@ -789,6 +800,7 @@ pub(crate) struct Activation {
     /// Focuses the input instead, for a control with no handle per input.
     focus: Option<Rc<dyn Fn()>>,
     activate: Rc<dyn Fn()>,
+    enter: bool,
     /// Inside a card, whose own click activates too: the label's and the
     /// input's clicks stop where they are, or they would activate twice.
     card: bool,
@@ -800,6 +812,7 @@ impl Activation {
             element: Some(element),
             focus: None,
             activate: Rc::new(activate),
+            enter: false,
             card: false,
         }
     }
@@ -811,8 +824,16 @@ impl Activation {
             element: None,
             focus: Some(Rc::new(focus)),
             activate: Rc::new(activate),
+            enter: false,
             card: false,
         }
+    }
+
+    /// Enter activates as well as Space: a switch or segmented control
+    /// outside a `Form`, where Enter has no form to submit (todo 648).
+    pub(crate) fn enter_activates(mut self, enter: bool) -> Self {
+        self.enter = enter;
+        self
     }
 
     fn focus(&self) {
@@ -904,11 +925,11 @@ impl Activation {
         move |_| activate()
     }
 
-    /// Space answered on `keydown`, which stops the activation outright.
-    /// `true` when the key was Space, so a control with keys of its own knows
-    /// it is handled.
+    /// Space - and Enter, outside a `Form` - answered on `keydown`, which
+    /// stops the activation outright. `true` when the key was one of those, so
+    /// a control with keys of its own knows it is handled.
     pub(crate) fn keydown(&self, event: &Event<KeyboardData>) -> bool {
-        if !activates(event) {
+        if !activates(event, self.enter) {
             return false;
         }
         event.prevent_default();
@@ -921,8 +942,9 @@ impl Activation {
     /// A browser that clicks on `keyup` rather than checking the cancelled
     /// `keydown` would otherwise activate a second time.
     pub(crate) fn input_keyup(&self) -> impl FnMut(Event<KeyboardData>) + 'static {
+        let enter = self.enter;
         move |event| {
-            if activates(&event) {
+            if activates(&event, enter) {
                 event.prevent_default();
             }
         }
@@ -934,8 +956,12 @@ impl Activation {
 /// `card` too.
 const CLICK_BOUNDARY: &str = "label, div[data-state~=\"card\"]";
 
-fn activates(event: &KeyboardData) -> bool {
-    matches!(event.key(), Key::Character(ref c) if c == " ")
+fn activates(event: &KeyboardData, enter: bool) -> bool {
+    match event.key() {
+        Key::Character(ref c) => c == " ",
+        Key::Enter => enter,
+        _ => false,
+    }
 }
 
 fn attribute_text(attributes: &[Attribute], name: &str) -> Option<String> {

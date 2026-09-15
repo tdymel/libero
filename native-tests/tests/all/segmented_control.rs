@@ -2,7 +2,7 @@
 //! label, and the arrows on a focused radio, move the selection.
 
 use dioxus::prelude::*;
-use libero::components::{Options, SegmentedControl};
+use libero::components::{Form, Options, SegmentedControl};
 use native_tests::{Key, Page, mount};
 
 #[derive(Clone, Copy, PartialEq, Options)]
@@ -75,6 +75,46 @@ fn the_arrows_move_focus_with_the_selection_and_wrap() {
     );
     page.press(Key::ArrowDown);
     assert_eq!(selected(&page).as_deref(), Some("Left"), "{}", page.tree());
+}
+
+/// Outside a `Form`, Enter picks the focused segment as Space does (todo 648).
+#[test]
+fn enter_picks_the_focused_segment() {
+    let mut page = mount(app);
+    page.focus("input[aria-label=Left]");
+    page.press(Key::Enter);
+    assert_eq!(selected(&page).as_deref(), Some("Left"), "{}", page.tree());
+}
+
+/// Inside a `Form`, Enter submits it as for a native radio and picks nothing
+/// (todo 508).
+#[test]
+fn enter_in_a_form_submits_and_picks_nothing() {
+    fn app() -> Element {
+        let mut alignment = use_signal(|| Alignment::Center);
+        let mut submits = use_signal(|| 0u32);
+        rsx! {
+            Form::<()> { onsubmit: move |_| submits += 1,
+                SegmentedControl {
+                    label: "Alignment",
+                    value: alignment(),
+                    onchange: move |next| alignment.set(next),
+                }
+                button { r#type: "submit", "Save" }
+            }
+            span { id: "submits", "{submits}" }
+        }
+    }
+    let mut page = mount(app);
+    page.focus("input[aria-label=Left]");
+    page.press(Key::Enter);
+    assert_eq!(
+        selected(&page).as_deref(),
+        Some("Center"),
+        "{}",
+        page.tree()
+    );
+    assert_eq!(page.text("#submits"), "1", "{}", page.tree());
 }
 
 /// A radio group is one tab stop, the checked radio: Tab in lands there and

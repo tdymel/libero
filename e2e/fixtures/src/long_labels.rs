@@ -66,6 +66,18 @@ fn LongLabelsPage() -> Element {
                 Button { id: "button-full", full_width: true, "{LONG}" }
                 Chip { id: "chip", "{LONG}" }
                 Chip { id: "chip-filter", checked: false, onchange: move |_| {}, "{LONG}" }
+                Chip { id: "chip-icon",
+                    icon: rsx! {
+                        svg { width: "16", height: "16", view_box: "0 0 24 24",
+                            circle { cx: "12", cy: "12", r: "8" }
+                        }
+                    },
+                    "{LONG}"
+                }
+                Chip { id: "chip-trailing",
+                    trailing: rsx! { button { r#type: "button", aria_label: "Remove", "x" } },
+                    "{LONG}"
+                }
                 Flex { direction: "row", gap: "sm",
                     Button { id: "button-row", "{LONG}" }
                     Chip { id: "chip-row", "{LONG}" }

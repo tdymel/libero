@@ -963,8 +963,8 @@ struct ItemDraw {
 }
 
 /// One `menuitem` row - or `menuitemradio` / `menuitemcheckbox`, when the
-/// item is [`checked`](MenuItem::checked) / [`toggled`](MenuItem::toggled)
-/// either way: its three handlers, its aria, and the check, leading,
+/// item is [`radio`](MenuItem::radio) / [`checkbox`](MenuItem::checkbox):
+/// its three handlers, its aria, and the check, leading,
 /// trailing, shortcut and chevron slots.
 fn menu_item(
     draw: &ItemDraw,

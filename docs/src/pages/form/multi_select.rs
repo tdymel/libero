@@ -67,21 +67,23 @@ const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Topping>| rsx! 
 // snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
 const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rsx! {
     Chip { size: "xs", variant: "outlined",
-        "{s.value.emoji()} {s.value.label()}"
         // The chip is the caller's, remove control included. The keys stay
         // the control's either way.
-        span { onmousedown: move |event| event.prevent_default(),
-            onclick: move |event| event.stop_propagation(),
-            ActionIcon {
-                aria_label: "Remove {s.value.label()}",
-                size: "xs",
-                // A `<button>` inherits no colour of its own.
-                sx: sx().color("inherit"),
-                tabindex: "-1",
-                onclick: move |_| s.remove.call(()),
-                "x"
+        trailing: rsx! {
+            span { onmousedown: move |event| event.prevent_default(),
+                onclick: move |event| event.stop_propagation(),
+                ActionIcon {
+                    aria_label: "Remove {s.value.label()}",
+                    size: "xs",
+                    // A `<button>` inherits no colour of its own.
+                    sx: sx().color("inherit"),
+                    tabindex: "-1",
+                    onclick: move |_| s.remove.call(()),
+                    "x"
+                }
             }
-        }
+        },
+        "{s.value.emoji()} {s.value.label()}"
     }
 }"#;
 
@@ -230,19 +232,21 @@ fn topping_selection(s: SelectionArgs<Topping>) -> Element {
     let label = s.value.label();
     rsx! {
         Chip { size: "xs", variant: "outlined",
-            "{s.value.emoji()} {label}"
-            span {
-                onmousedown: move |event: MouseEvent| event.prevent_default(),
-                onclick: move |event: MouseEvent| event.stop_propagation(),
-                ActionIcon {
-                    aria_label: "Remove {label}",
-                    size: "xs",
-                    sx: sx().color("inherit"),
-                    tabindex: "-1",
-                    onclick: move |_| s.remove.call(()),
-                    "x"
+            trailing: rsx! {
+                span {
+                    onmousedown: move |event: MouseEvent| event.prevent_default(),
+                    onclick: move |event: MouseEvent| event.stop_propagation(),
+                    ActionIcon {
+                        aria_label: "Remove {label}",
+                        size: "xs",
+                        sx: sx().color("inherit"),
+                        tabindex: "-1",
+                        onclick: move |_| s.remove.call(()),
+                        "x"
+                    }
                 }
-            }
+            },
+            "{s.value.emoji()} {label}"
         }
     }
 }

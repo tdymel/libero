@@ -2,7 +2,7 @@
 //! the pointer, the input the keyboard.
 
 use dioxus::prelude::*;
-use libero::components::Switch;
+use libero::components::{Form, Switch};
 use native_tests::{Key, Page, mount};
 
 const INPUT: &str = "[role=switch]";
@@ -47,14 +47,37 @@ fn the_thumb_moves_once_its_transition_ends() {
     assert_ne!(off, on, "the thumb stayed at {off}");
 }
 
+/// Outside a `Form`, Enter toggles as Space does (todo 648).
 #[test]
-fn space_toggles_the_focused_switch_and_enter_does_not() {
+fn space_and_enter_toggle_the_focused_switch() {
     let mut page = mount(app);
     page.focus(INPUT);
     page.press(Key::Character(" ".into()));
     assert!(checked(&page), "Space");
-    // Enter is the form's: it submits, as for a native checkbox (todo 508).
     page.press(Key::Enter);
-    assert!(checked(&page), "Enter");
+    assert!(!checked(&page), "Enter");
     assert!(page.is_focused(INPUT));
+}
+
+fn form_app() -> Element {
+    let mut on = use_signal(|| false);
+    let mut submits = use_signal(|| 0u32);
+    rsx! {
+        Form::<()> { onsubmit: move |_| submits += 1,
+            Switch { checked: on(), onchange: move |v| on.set(v), label: "Wifi" }
+            button { r#type: "submit", "Save" }
+        }
+        span { id: "submits", "{submits}" }
+    }
+}
+
+/// Inside a `Form`, Enter is the form's: it submits, as for a native checkbox,
+/// and leaves the switch alone (todo 508).
+#[test]
+fn enter_in_a_form_submits_and_toggles_nothing() {
+    let mut page = mount(form_app);
+    page.focus(INPUT);
+    page.press(Key::Enter);
+    assert!(!checked(&page), "Enter toggled it");
+    assert_eq!(page.text("#submits"), "1", "{}", page.tree());
 }

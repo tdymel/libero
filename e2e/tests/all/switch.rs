@@ -86,10 +86,10 @@ fn checked(id: &str) -> String {
     format!("document.getElementById('{id}').checked")
 }
 
-/// Space, the label and the track each toggle it once. The browser's own flip
-/// is cancelled, so each press is one change.
+/// Space, Enter outside a `Form` (todo 648), the label and the track each
+/// toggle it once. The browser's own flip is cancelled, so each is one change.
 #[test]
-fn space_the_label_and_the_track_each_toggle_it_once() {
+fn space_enter_the_label_and_the_track_each_toggle_it_once() {
     block_on(async {
         let fixture = Fixture::open("/switch", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
@@ -99,14 +99,22 @@ fn space_the_label_and_the_track_each_toggle_it_once() {
         wait::for_js_true(page, &checked("plain"), "Space to turn it on")
             .await
             .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!{}", checked("plain")),
+            "Enter to turn it off",
+        )
+        .await
+        .unwrap();
         pointer::click(page, "label[for=plain]").await.unwrap();
-        wait::for_js_true(page, &format!("!{}", checked("plain")), "the label click")
+        wait::for_js_true(page, &checked("plain"), "the label click")
             .await
             .unwrap();
         pointer::click(page, "#plain ~ [aria-hidden]")
             .await
             .unwrap();
-        wait::for_js_true(page, &format!("{} === '3'", changes()), "the track click")
+        wait::for_js_true(page, &format!("{} === '4'", changes()), "the track click")
             .await
             .unwrap();
         let on: bool = page
@@ -115,7 +123,7 @@ fn space_the_label_and_the_track_each_toggle_it_once() {
             .unwrap()
             .into_value()
             .unwrap();
-        assert!(on, "three toggles left the switch off");
+        assert!(!on, "four toggles left the switch on");
 
         fixture.console.assert_clean("toggling the switch").unwrap();
         fixture.close().await.unwrap();

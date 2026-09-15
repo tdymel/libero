@@ -38,7 +38,7 @@ let menus = vec![
         item("Paste"),
         MenuEntry::Separator,
         MenuItem::new("Word wrap")
-            .toggled(wrap())
+            .checkbox(wrap())
             .onselect(move |_| wrap.toggle())
             .into(),
     ]),
@@ -128,7 +128,7 @@ fn MenubarDemo(
                 item("Paste"),
                 MenuEntry::Separator,
                 MenuItem::new("Word wrap")
-                    .toggled(wrap())
+                    .checkbox(wrap())
                     .onselect(move |_| wrap.toggle())
                     .into(),
             ],

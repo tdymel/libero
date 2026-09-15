@@ -1678,14 +1678,25 @@ fn a_read_only_checkable_refuses_every_activation() {
     }
 }
 
-/// Todo 508: Enter is left to the browser, which submits the form around the
-/// switch as it does for a native checkbox - it toggles nothing.
+fn switch_in_a_form() -> Element {
+    rsx! {
+        LiberoProvider {
+            Form::<()> {
+                Switch { label: "Wi-Fi", checked: false, onchange: move |on: bool| heard(on) }
+            }
+        }
+    }
+}
+
+/// Todo 648: outside a `Form`, Enter toggles a switch (APG). Inside one it is
+/// left to the browser, which submits as for a native checkbox (508).
 #[test]
-fn enter_on_a_switch_toggles_nothing() {
-    let (heard, _) = send(readonly_switch, false, "keydown", last_keydown, || {
-        key_event(Key::Enter)
-    });
-    assert_eq!(heard, Vec::<String>::new());
+fn enter_toggles_a_switch_outside_a_form_only() {
+    let enter = || key_event(Key::Enter);
+    let (heard, _) = send(readonly_switch, false, "keydown", last_keydown, enter);
+    assert_eq!(heard, ["true"], "outside a form");
+    let (heard, _) = send(switch_in_a_form, false, "keydown", last_keydown, enter);
+    assert_eq!(heard, Vec::<String>::new(), "inside a form");
 }
 
 fn readonly_slider() -> Element {
@@ -1814,14 +1825,34 @@ fn a_read_only_segmented_control_picks_nothing() {
     assert_eq!(heard, Vec::<String>::new());
 }
 
-/// Todo 508: Enter is left to the browser, which submits the form around the
-/// strip as it does for a native radio - it picks nothing.
+fn segments_in_a_form() -> Element {
+    let mut value = use_signal(|| Emphasis::Bold);
+    rsx! {
+        LiberoProvider {
+            Form::<()> {
+                SegmentedControl {
+                    label: "Emphasis",
+                    value: value(),
+                    onchange: move |next| {
+                        heard(next == Emphasis::Italic);
+                        value.set(next);
+                    },
+                }
+            }
+        }
+    }
+}
+
+/// Todo 648: outside a `Form`, Enter picks the segment, as Space does. Inside
+/// one it is left to the browser, which submits as for a native radio (508).
 #[test]
-fn enter_on_a_segment_picks_nothing() {
-    let (heard, html) = send(readonly_segments, false, "keydown", last_keydown, || {
-        key_event(Key::Enter)
-    });
-    assert_eq!(heard, Vec::<String>::new());
+fn enter_picks_a_segment_outside_a_form_only() {
+    let enter = || key_event(Key::Enter);
+    let (heard, html) = send(readonly_segments, false, "keydown", last_keydown, enter);
+    assert_eq!(heard, ["true"], "outside a form");
+    assert_eq!(checked_states(&html), [false, true]);
+    let (heard, html) = send(segments_in_a_form, false, "keydown", last_keydown, enter);
+    assert_eq!(heard, Vec::<String>::new(), "inside a form");
     assert_eq!(checked_states(&html), [true, false]);
 }
 

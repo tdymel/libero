@@ -173,8 +173,8 @@ fn a_disabled_menu_is_closed_not_hidden() {
     assert!(!trigger.contains_key("aria-controls"));
 }
 
-/// A `checked` item is a `menuitemradio` that says whether it is the one
-/// picked; an item that never called `checked` stays a plain `menuitem` with
+/// A `radio` item is a `menuitemradio` that says whether it is the one
+/// picked; an item that never called `radio` stays a plain `menuitem` with
 /// no `aria-checked` at all. Every radio row draws the check slot, so one
 /// group's labels line up, and only the checked one fills it - and the
 /// checked one is the menu's tab stop, where opening it lands.
@@ -192,8 +192,8 @@ fn a_checked_item_is_a_radio_that_says_so() {
                         MenuEntry::Group {
                             label: "Theme".into(),
                             items: vec![
-                                MenuItem::new("Light").checked(false).onselect(|_| {}).into(),
-                                MenuItem::new("Dark").checked(true).onselect(|_| {}).into(),
+                                MenuItem::new("Light").radio(false).onselect(|_| {}).into(),
+                                MenuItem::new("Dark").radio(true).onselect(|_| {}).into(),
                             ],
                         },
                         MenuItem::new("Settings").onselect(|_| {}).into(),
@@ -233,10 +233,10 @@ fn a_checked_item_is_a_radio_that_says_so() {
     assert!(!settings[0].contains("aria-checked"));
 }
 
-/// A `toggled` item is a `menuitemcheckbox` in the same check slot. A toggled
+/// A `checkbox` item is a `menuitemcheckbox` in the same check slot. An on/off
 /// setting is no choice in effect, so the menu still opens on its first item.
 #[test]
-fn a_toggled_item_is_a_checkbox_that_says_so() {
+fn a_checkbox_item_is_a_checkbox_that_says_so() {
     fn app() -> Element {
         let menu = use_menu();
         use_hook(|| menu.open());
@@ -247,8 +247,8 @@ fn a_toggled_item_is_a_checkbox_that_says_so() {
                     state: menu,
                     items: vec![
                         MenuItem::new("Undo").onselect(|_| {}).into(),
-                        MenuItem::new("Show ruler").toggled(true).onselect(|_| {}).into(),
-                        MenuItem::new("Show grid").toggled(false).onselect(|_| {}).into(),
+                        MenuItem::new("Show ruler").checkbox(true).onselect(|_| {}).into(),
+                        MenuItem::new("Show grid").checkbox(false).onselect(|_| {}).into(),
                     ],
                     Button { attributes: menu.a11y_attributes(), "View" }
                 }
@@ -269,9 +269,9 @@ fn a_toggled_item_is_a_checkbox_that_says_so() {
     assert!(undo[0].contains(r#"tabindex="0""#), "{}", undo[0]);
 }
 
-/// The later of `checked` and `toggled` wins: an item is one or the other.
+/// The later of `radio` and `checkbox` wins: an item is one or the other.
 #[test]
-fn checked_and_toggled_replace_each_other() {
+fn radio_and_checkbox_replace_each_other() {
     fn app() -> Element {
         let menu = use_menu();
         use_hook(|| menu.open());
@@ -281,8 +281,8 @@ fn checked_and_toggled_replace_each_other() {
                 Menu {
                     state: menu,
                     items: vec![
-                        MenuItem::new("A").checked(true).toggled(false).into(),
-                        MenuItem::new("B").toggled(true).checked(false).into(),
+                        MenuItem::new("A").radio(true).checkbox(false).into(),
+                        MenuItem::new("B").checkbox(true).radio(false).into(),
                     ],
                     Button { attributes: menu.a11y_attributes(), "Menu" }
                 }
