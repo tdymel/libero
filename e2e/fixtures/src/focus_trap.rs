@@ -15,7 +15,8 @@ pub const ROUTES: Routes = &[
     ("/focus-trap/dialog", || rsx! { DialogPage {} }),
 ];
 
-/// A radio group, a `display: none` button and a `<summary>` inside a trap.
+/// Two radio groups (one checked, one not), a `display: none` button and a
+/// `<summary>` inside a trap.
 #[component]
 fn StopsPage() -> Element {
     rsx! {
@@ -25,6 +26,8 @@ fn StopsPage() -> Element {
             input { id: "r1", r#type: "radio", name: "plan", value: "a" }
             input { id: "r2", r#type: "radio", name: "plan", value: "b", checked: true }
             input { id: "r3", r#type: "radio", name: "plan", value: "c" }
+            input { id: "s1", r#type: "radio", name: "size", value: "s" }
+            input { id: "s2", r#type: "radio", name: "size", value: "m" }
             button { id: "gone", style: "display: none", "Gone" }
             details { summary { id: "summary", "More" } "Details" }
             button { id: "last", "Last" }

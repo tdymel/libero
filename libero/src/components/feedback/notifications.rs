@@ -222,6 +222,8 @@ struct NotificationStore {
     elements: CopyValue<HashMap<NotificationId, Rc<MountedData>>>,
     /// What held focus before it entered the notifications (todo 423).
     return_to: CopyValue<Option<Rc<dyn ElementApi>>>,
+    /// `return_to` sits inside this contained host, and goes when it does.
+    return_in_host: CopyValue<bool>,
     /// Set while the store moves focus itself, so that move is no entry.
     handing_off: CopyValue<bool>,
     /// The runtime the store was made in. `show` creates a signal, which
@@ -230,6 +232,8 @@ struct NotificationStore {
     runtime: CopyValue<Weak<Runtime>>,
     /// The scope every signal of the store, and of each entry, belongs to.
     owner: ScopeId,
+    /// Names a contained host's box in a selector.
+    id: u64,
 }
 
 impl NotificationStore {
@@ -242,9 +246,11 @@ impl NotificationStore {
             drawn: CopyValue::new_in_scope(Vec::new(), owner),
             elements: CopyValue::new_in_scope(HashMap::new(), owner),
             return_to: CopyValue::new_in_scope(None, owner),
+            return_in_host: CopyValue::new_in_scope(false, owner),
             handing_off: CopyValue::new_in_scope(false, owner),
             runtime: CopyValue::new_in_scope(Rc::downgrade(&Runtime::current()), owner),
             owner,
+            id: NEXT_ID.fetch_add(1, Ordering::Relaxed),
         }
     }
 
@@ -262,6 +268,11 @@ impl NotificationStore {
     /// host, and a handle copied out of it may outlive it.
     fn alive(&self) -> bool {
         self.entries.try_peek().is_ok()
+    }
+
+    /// A contained host's box, `None` for the app's host.
+    fn host_selector(&self) -> Option<String> {
+        (self.owner != ScopeId::ROOT).then(|| format!("[data-notifications-host=\"{}\"]", self.id))
     }
 
     fn paused(&self) -> bool {
@@ -651,8 +662,9 @@ fn NotificationMessage(props: MessageProps) -> Element {
 /// by `Tab` in document order. Closing the focused notification hands focus to
 /// the next one in its stack (its `data-slot="close"`, else its first
 /// focusable), the previous one after the last, else back where it came from.
-/// A `clear()` with focus inside sends it back where it came from, and so does
-/// a contained host unmounting, if that element outlives it.
+/// A `clear()` with focus inside sends it back where it came from. So does a
+/// contained host unmounting, if that element sits outside the host; else
+/// focus moves to the last focusable before the host.
 #[component]
 pub fn Notifications(
     /// The stack a notification joins unless it names its own. Defaults to
@@ -755,6 +767,7 @@ pub fn Notifications(
         slot.show(None);
         return rsx! {
             Box { framework_sx: &CONTAINED_SX,
+                "data-notifications-host": store.id.to_string(),
                 {children}
                 {content}
             }
@@ -874,6 +887,15 @@ struct ItemProps {
     live: NotificationLive,
 }
 
+/// The last focusable before the contained host `host` selects, `item` being
+/// inside it.
+fn focusable_before(
+    item: &Rc<MountedData>,
+    host: &str,
+) -> Result<Option<std::boxed::Box<dyn ElementApi>>, crate::platform::PlatformError> {
+    backend::element(item).previous_focusable(&format!("{FOCUSABLE_SELECTOR}:not({host} *)"))
+}
+
 fn NotificationItem(props: ItemProps) -> Element {
     let store = props.store;
     let id = props.id;
@@ -920,6 +942,13 @@ fn NotificationItem(props: ItemProps) -> Element {
         }
     }));
 
+    // Its own element, held here: the store's copy goes with a contained host.
+    let own = use_hook(|| Rc::new(RefCell::new(None::<Rc<MountedData>>)));
+    let dropped = own.clone();
+    // What precedes a contained host, found as focus enters. Blitz holds its
+    // document through the unmount, so the drop cannot ask then.
+    let before_host = use_hook(|| Rc::new(RefCell::new(None::<std::boxed::Box<dyn ElementApi>>)));
+    let remembered = before_host.clone();
     use_drop(move || {
         subscription.borrow_mut().take();
         // Removed from under the pointer or with focus inside, it never sees
@@ -933,8 +962,36 @@ fn NotificationItem(props: ItemProps) -> Element {
             // Now, while the item is still in the document: a contained host
             // going with it takes the scope a spawned focus would run in.
             let return_to = store.return_to.try_peek().ok().and_then(|to| to.clone());
-            if let Some(target) = return_to.filter(|to| to.is_connected()) {
-                let _ = target.focus();
+            let return_to = return_to.filter(|to| to.is_connected());
+            // An entry that outlives its item: the host itself is going.
+            let host_going = store.host_selector().filter(|_| {
+                store
+                    .entries
+                    .try_peek()
+                    .map_or(true, |entries| entries.iter().any(|entry| entry.id == id))
+            });
+            let in_host = store
+                .return_in_host
+                .try_peek()
+                .map_or(true, |in_host| *in_host);
+            let before = host_going
+                .filter(|_| in_host || return_to.is_none())
+                .and_then(|host| {
+                    let own = dropped.borrow().clone()?;
+                    match focusable_before(&own, &host) {
+                        Ok(before) => before,
+                        Err(_) => remembered.borrow_mut().take(),
+                    }
+                });
+            // Nothing before the host, or no way to ask: where focus came from.
+            match (before, return_to) {
+                (Some(before), _) => {
+                    let _ = before.focus();
+                }
+                (None, Some(target)) => {
+                    let _ = target.focus();
+                }
+                (None, None) => {}
             }
         }
         let mut elements = store.elements;
@@ -947,7 +1004,12 @@ fn NotificationItem(props: ItemProps) -> Element {
         };
         let mut focused = store.focused;
         match (moved.was_in(&mounted), moved.is_in(&mounted)) {
-            (false, true) => focused.set(Some(id)),
+            (false, true) => {
+                if let Some(host) = store.host_selector() {
+                    *before_host.borrow_mut() = focusable_before(&mounted, &host).ok().flatten();
+                }
+                focused.set(Some(id))
+            }
             (true, false) if *focused.peek() == Some(id) => focused.set(None),
             _ => {}
         }
@@ -956,6 +1018,7 @@ fn NotificationItem(props: ItemProps) -> Element {
     let states: Input<States> = States::default().with("leaving", leaving).into();
     let (mut hovered, mut focused) = (store.hovered, store.focused);
     let (mut elements, mut return_to) = (store.elements, store.return_to);
+    let mut return_in_host = store.return_in_host;
 
     use_box()
         .framework_sx(&ITEM_SX)
@@ -963,6 +1026,7 @@ fn NotificationItem(props: ItemProps) -> Element {
         .prepare()
         .attr("data-notification", true)
         .event("onmounted", move |event: Event<MountedData>| {
+            own.replace(Some(event.data()));
             elements.write().insert(id, event.data());
         })
         .event("onmouseenter", move |_: Event<MouseData>| {
@@ -977,6 +1041,11 @@ fn NotificationItem(props: ItemProps) -> Element {
             if !*store.handing_off.peek()
                 && let Some(from) = focus_entered_from(&event, "[data-notification]")
             {
+                // The host as the boundary answers `None` for a `from` inside it.
+                let in_host = store.host_selector().is_some_and(|host| {
+                    from.is_some() && focus_entered_from(&event, &host).is_none()
+                });
+                return_in_host.set(in_host);
                 return_to.set(from.map(Rc::from));
             }
             focused.set(Some(id))

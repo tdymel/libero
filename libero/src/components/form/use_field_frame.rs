@@ -129,9 +129,18 @@ pub(crate) struct FieldFrameBuilder<'a> {
     leading: Option<&'a Element>,
     trailing: Option<&'a Element>,
     states: Option<&'a Input<States>>,
+    ondrop: Option<Rc<dyn Fn(DragEvent)>>,
 }
 
 impl<'a> FieldFrameBuilder<'a> {
+    /// Makes the whole frame a drop target: a drop the control did not take
+    /// (on the padding, in a slot) reaches `ondrop`. Opt-in; only `FileField`.
+    #[inline]
+    pub fn ondrop(mut self, ondrop: Option<impl Fn(DragEvent) + 'static>) -> Self {
+        self.ondrop = ondrop.map(|ondrop| Rc::new(ondrop) as Rc<dyn Fn(DragEvent)>);
+        self
+    }
+
     /// Rendered before the control - an icon, a currency prefix, the chips a
     /// `MultiSelect` has already picked.
     #[inline]
@@ -164,7 +173,7 @@ impl<'a> FieldFrameBuilder<'a> {
         if let Some(states) = self.states {
             frame = frame.states(states);
         }
-        let frame = frame
+        let mut frame = frame
             .prepare()
             .attr("data-frame", true)
             .event("onmousedown", {
@@ -194,6 +203,20 @@ impl<'a> FieldFrameBuilder<'a> {
                     });
                 }
             });
+        if let Some(ondrop) = self.ondrop {
+            // A drag the control already took is its own, as with the press.
+            frame = frame
+                .event("ondragover", |event: DragEvent| {
+                    if event.default_action_enabled() {
+                        event.prevent_default();
+                    }
+                })
+                .event("ondrop", move |event: DragEvent| {
+                    if event.default_action_enabled() {
+                        ondrop(event);
+                    }
+                });
+        }
 
         PreparedFrame {
             frame,

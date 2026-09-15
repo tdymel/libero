@@ -121,6 +121,21 @@ impl ElementApi for ElementHandle {
         self.get()?.set_indeterminate(indeterminate)
     }
 
+    fn set_value(&self, value: &str) -> Result<(), PlatformError> {
+        self.get()?.set_value(value)
+    }
+
+    fn attribute(&self, name: &str) -> Result<Option<String>, PlatformError> {
+        self.get()?.attribute(name)
+    }
+
+    fn previous_focusable(
+        &self,
+        selector: &str,
+    ) -> Result<Option<Box<dyn ElementApi>>, PlatformError> {
+        self.get()?.previous_focusable(selector)
+    }
+
     fn is_focused(&self) -> bool {
         self.get().is_ok_and(|element| element.is_focused())
     }

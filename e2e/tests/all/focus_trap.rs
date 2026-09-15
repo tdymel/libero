@@ -26,7 +26,9 @@ async fn walk(page: &chromiumoxide::Page, presses: usize, backwards: bool) -> Ve
 }
 
 /// A `display: none` button used to stall Tab on the stop before it, for
-/// good, and `<summary>` was never a stop.
+/// good, and `<summary>` was never a stop. A native radio group is one stop,
+/// its checked radio or else its first, as the browser's own Tab has it
+/// (todo 615).
 #[test]
 fn tab_passes_over_a_stop_that_is_not_rendered() {
     block_on(async {
@@ -38,21 +40,24 @@ fn tab_passes_over_a_stop_that_is_not_rendered() {
             .await
             .unwrap();
 
-        // Native radios without a roving tabindex are each a stop here; see
-        // the review's F4. Only the stops around them are pinned.
-        let not_radio = |ids: Vec<String>| -> Vec<String> {
-            ids.into_iter().filter(|id| !id.starts_with('r')).collect()
-        };
         assert_eq!(
-            not_radio(walk(page, 6, false).await),
-            ["summary", "last", "first"],
+            walk(page, 5, false).await,
+            ["r2", "s1", "summary", "last", "first"],
             "Tab from First"
         );
         assert_eq!(
-            not_radio(walk(page, 6, true).await),
-            ["last", "summary", "first"],
+            walk(page, 5, true).await,
+            ["last", "summary", "s1", "r2", "first"],
             "Shift+Tab from First"
         );
+
+        // The live state, not the markup: a click checks another radio.
+        pointer::click(page, "#r3").await.unwrap();
+        wait::for_js_true(page, "document.getElementById('r3').checked", "r3 checked")
+            .await
+            .unwrap();
+        assert_eq!(walk(page, 2, true).await, ["first", "last"], "Shift+Tab");
+        assert_eq!(walk(page, 2, false).await, ["first", "r3"], "Tab");
         fixture.console.assert_clean("the focus trap").unwrap();
         fixture.close().await.unwrap();
     });

@@ -169,6 +169,32 @@ fn typing_past_the_pin_lands_in_the_first_empty_cell() {
     });
 }
 
+/// Text with no key named, as an Android soft keyboard sends it: a cell whose
+/// value the edit leaves unchanged still shows the pin (todo 590).
+#[test]
+fn text_without_a_key_leaves_no_drifted_cell() {
+    block_on(async {
+        let fixture = Fixture::open("/pin-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        focus_at(page, 0, 0).await;
+        keyboard::type_text(page, "1").await.unwrap();
+        expect_cells(page, "1||| @1", "1 typed").await;
+
+        focus_at(page, 3, 0).await;
+        page.execute(InsertTextParams::new("5")).await.unwrap();
+        expect_cells(page, "1|5|| @2", "5 inserted in the last cell").await;
+
+        focus_at(page, 0, 1).await;
+        page.execute(InsertTextParams::new("1")).await.unwrap();
+        expect_cells(page, "1|5|| @1", "1 inserted after the 1").await;
+
+        fixture.console.assert_clean("pin field no key").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `aria-required` is not allowed on a group (axe `aria-allowed-attr`), so
 /// the cells carry it, and each cell reports the error too.
 #[test]

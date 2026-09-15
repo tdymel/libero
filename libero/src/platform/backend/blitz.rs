@@ -1447,6 +1447,68 @@ impl ElementApi for BlitzElement {
         Ok(())
     }
 
+    /// Through the `value` attribute, as [`reset`](Self::reset) writes it:
+    /// Blitz's text input follows it.
+    fn set_value(&self, value: &str) -> Result<(), PlatformError> {
+        let node_id = self.node_id;
+        let value = value.to_string();
+        self.command(move |doc| {
+            let text = doc
+                .get_node(node_id)
+                .and_then(|node| node.element_data()?.text_input_data())
+                .is_some();
+            if text {
+                let name = QualName::new(None, ns!(), local_name!("value"));
+                doc.mutate().set_attribute(node_id, name, &value);
+            }
+        });
+        Ok(())
+    }
+
+    fn attribute(&self, name: &str) -> Result<Option<String>, PlatformError> {
+        let doc = self.anchor.try_doc().ok_or(PlatformError::Unsupported)?;
+        let element = doc
+            .get_node(self.node_id)
+            .and_then(|node| node.element_data())
+            .ok_or(PlatformError::NotFound)?;
+        Ok(element
+            .attrs()
+            .iter()
+            .find(|attr| attr.name.local.as_ref() == name)
+            .map(|attr| attr.value.clone()))
+    }
+
+    /// A pre-order walk down to this node: everything it visits first comes
+    /// before it, ancestors included, and its own subtree comes after.
+    fn previous_focusable(
+        &self,
+        selector: &str,
+    ) -> Result<Option<Box<dyn ElementApi>>, PlatformError> {
+        let doc = self.anchor.try_doc().ok_or(PlatformError::Unsupported)?;
+        let matches = doc
+            .query_selector_all(selector)
+            .map_err(|_| PlatformError::NotFound)?;
+        let mut before = std::collections::HashSet::new();
+        let mut stack = vec![doc.root_element().id];
+        let mut found = false;
+        while let Some(id) = stack.pop() {
+            if id == self.node_id {
+                found = true;
+                break;
+            }
+            before.insert(id);
+            if let Some(node) = doc.get_node(id) {
+                stack.extend(node.children.iter().rev());
+            }
+        }
+        drop(doc);
+        if !found {
+            return Err(PlatformError::NotFound);
+        }
+        let node_id = matches.into_iter().rev().find(|id| before.contains(id));
+        Ok(node_id.map(|node_id| self.at(node_id)))
+    }
+
     /// Blitz fires no submit event from code.
     fn request_submit(&self) -> Result<(), PlatformError> {
         Err(PlatformError::Unsupported)

@@ -94,6 +94,10 @@ fn files_on_disk() -> Vec<String> {
 /// surface. Trusted events, unlike a `DataTransfer` built in the page.
 async fn drop_files(page: &Page, selector: &str, files: Vec<String>) {
     let at = pointer::centre_of(page, selector).await.unwrap();
+    drop_files_at(page, at.x, at.y, files).await;
+}
+
+async fn drop_files_at(page: &Page, x: f64, y: f64, files: Vec<String>) {
     for kind in [
         DispatchDragEventType::DragEnter,
         DispatchDragEventType::DragOver,
@@ -108,8 +112,8 @@ async fn drop_files(page: &Page, selector: &str, files: Vec<String>) {
             .unwrap();
         let params = DispatchDragEventParams::builder()
             .r#type(kind.clone())
-            .x(at.x)
-            .y(at.y)
+            .x(x)
+            .y(y)
             .data(data)
             .build()
             .unwrap();
@@ -444,6 +448,46 @@ fn an_empty_control_fills_its_frame_and_takes_a_drop() {
         fixture
             .console
             .assert_clean("dropping on a bare control")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A file dropped on the frame's padding is the field's, not the browser's to
+/// open (todo 531).
+#[test]
+fn a_drop_on_the_frame_padding_is_taken() {
+    block_on(async {
+        let fixture = Fixture::open("/file-field/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "#bare").await.unwrap();
+
+        let (x, y, on_frame): (f64, f64, bool) = page
+            .evaluate(
+                "(() => { const f = document.querySelector('#bare').closest('[data-frame]'); \
+                 const r = f.getBoundingClientRect(); const x = r.left + 3, y = r.top + r.height / 2; \
+                 return [x, y, document.elementFromPoint(x, y) === f]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(on_frame, "({x}, {y}) is not on the frame's own padding");
+
+        drop_files_at(page, x, y, files_on_disk()[..1].to_vec()).await;
+        wait::for_js_true(
+            page,
+            "document.querySelector('#bare').closest('[role=group]').textContent.includes('alpha.txt')",
+            "the file dropped on the padding to land",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("dropping on the frame padding")
             .unwrap();
         fixture.close().await.unwrap();
     });

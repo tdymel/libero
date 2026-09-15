@@ -591,6 +591,50 @@ fn a_contained_host_unmounting_hands_focus_back_out() {
     });
 }
 
+/// The same with the opener inside the host: it goes too, so focus moves to
+/// the focusable before the host (todo 589).
+#[test]
+fn a_contained_host_unmounting_with_its_opener_focuses_the_control_before_it() {
+    const DROP: &str = ".drop-host";
+
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let at = viewport.name();
+            let fixture = Fixture::open("/notifications-host-inside", viewport)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+
+            keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            keyboard::tab_to(page, DROP, 5)
+                .await
+                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            let landed = wait::for_js_true(
+                page,
+                &format!(
+                    "!document.querySelector({DROP:?}) && \
+                     document.activeElement === document.querySelector('#before')"
+                ),
+                "the host's unmount to focus the control before it",
+            )
+            .await;
+            if let Err(e) = landed {
+                let active: String =
+                    js(page, "document.activeElement.outerHTML.slice(0, 80)".into()).await;
+                panic!("at {at}: {e}; focus is on {active}");
+            }
+
+            fixture
+                .console
+                .assert_clean(&format!("unmounting the host at {at}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// `clear()` with focus inside a notification sends it back where it came
 /// from, as closing the last one does (todo 440). Before, focus fell to `<body>`.
 #[test]

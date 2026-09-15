@@ -119,6 +119,41 @@ pub trait ElementApi {
         Err(PlatformError::Unsupported)
     }
 
+    /// Writes a text control's current value, as typing would leave it. For a
+    /// control whose value prop did not change, which dioxus never writes again.
+    fn set_value(&self, value: &str) -> Result<(), PlatformError> {
+        let _ = value;
+        Err(PlatformError::Unsupported)
+    }
+
+    /// An attribute as the markup has it, `None` when it is absent. Not the
+    /// live state: a radio's `checked` attribute is its default, not whether
+    /// it is checked now.
+    ///
+    /// A plain `Result` rather than a [`Read`], like
+    /// [`is_focused`](Self::is_focused): a key handler has to decide before it
+    /// returns whether it takes the press.
+    fn attribute(&self, name: &str) -> Result<Option<String>, PlatformError> {
+        let _ = name;
+        Err(PlatformError::Unsupported)
+    }
+
+    /// The last element matching `selector` before this one in document order,
+    /// which counts its ancestors and not its own subtree: where Shift+Tab
+    /// would land if this element were gone. `Ok(None)` when nothing matches
+    /// before it.
+    ///
+    /// ```ignore
+    /// let before = item.previous_focusable(FOCUSABLE_SELECTOR)?;
+    /// ```
+    fn previous_focusable(
+        &self,
+        selector: &str,
+    ) -> Result<Option<Box<dyn ElementApi>>, PlatformError> {
+        let _ = selector;
+        Err(PlatformError::Unsupported)
+    }
+
     /// Routes further events from `pointer_id` here, so a drag keeps tracking
     /// once the pointer leaves and still gets its `pointerup`. Released
     /// automatically, hence no counterpart.

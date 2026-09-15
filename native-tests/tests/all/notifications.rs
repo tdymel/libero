@@ -6,7 +6,10 @@ use std::time::Duration;
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, NotificationOptions, Notifications, use_notifications},
+    components::{
+        Button, NotificationOptions, NotificationScope, Notifications, use_notifications,
+        use_notifications_with,
+    },
     theme::AutoClose,
 };
 use native_tests::{Key, Page, VIEWPORT, mount};
@@ -246,6 +249,65 @@ fn a_timed_one_closes_itself() {
         !page.exists(ITEM),
         "it did not close itself:\n{}",
         page.tree()
+    );
+}
+
+fn contained() -> Element {
+    let mut mounted = use_context_provider(|| Signal::new(true));
+    rsx! {
+        Button { id: "before", "Before" }
+        if mounted() {
+            Notifications { contained: true,
+                Inside {}
+            }
+        }
+        Button { id: "drop", onclick: move |_| mounted.set(false), "Drop" }
+    }
+}
+
+#[component]
+fn Inside() -> Element {
+    let notify = use_notifications_with(|_: NotificationScope<String>| {
+        let mut mounted = use_context::<Signal<bool>>();
+        rsx! {
+            Button { class: "drop-host", onclick: move |_| mounted.set(false), "Drop host" }
+        }
+    });
+    rsx! {
+        Button {
+            id: "notify",
+            onclick: move |_| {
+                notify.show_with(
+                    "Inside".to_string(),
+                    NotificationOptions { auto_close: Some(AutoClose::Never), ..Default::default() },
+                );
+            },
+            "Notify"
+        }
+    }
+}
+
+/// A contained host unmounting with focus inside and its opener inside too:
+/// focus moves to the focusable before the host (todo 589).
+#[test]
+fn a_contained_host_unmounting_focuses_the_control_before_it() {
+    let mut page = mount(contained);
+    page.focus(TRIGGER);
+    page.press(Key::Enter);
+    finish(&mut page);
+    page.tab();
+    assert!(
+        page.is_focused(".drop-host"),
+        "Tab went to {}",
+        page.focus_owner()
+    );
+    page.press(Key::Enter);
+    finish(&mut page);
+    assert!(!page.exists(".drop-host"), "{}", page.tree());
+    assert!(
+        page.is_focused("#before"),
+        "focus is on {}",
+        page.focus_owner()
     );
 }
 

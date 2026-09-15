@@ -1016,6 +1016,19 @@ struct Surface {
 }
 
 impl Surface {
+    /// The group's own drop, for the frame around it: the padding takes a file
+    /// too (todo 531). `None` when disabled, as the group's dragover is.
+    fn frame_drop(&self) -> Option<impl Fn(DragEvent) + 'static> {
+        let (take, dragging, editable) = (self.take, self.dragging.clone(), self.editable);
+        self.interactive.then_some(move |event: DragEvent| {
+            event.prevent_default();
+            dragging.set(false);
+            if editable {
+                take.call(event.files());
+            }
+        })
+    }
+
     /// `chips` come before the button, `after` after its ring.
     fn render(
         self,
@@ -1169,6 +1182,7 @@ fn FileInputControl(
     let frame = use_field_frame()
         .trailing(&trailing)
         .states(&frame_states)
+        .ondrop(control.frame_drop())
         .prepare();
     // The frame draws the ring, so neither box may draw a second.
     let group = use_box()

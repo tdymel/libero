@@ -344,6 +344,12 @@ impl PinEdit {
     /// keyboard typed without naming its key.
     fn typed(&self, index: usize, raw: String) {
         let (root, length) = (&self.root, self.length);
+        // Back to what the cell last rendered: dioxus writes it again only if
+        // the edit changes it, so an unchanged cell would keep the raw text.
+        let shown = self.cells[index].map(String::from).unwrap_or_default();
+        let _ = root
+            .query_selector(&format!("input[data-pin-index=\"{index}\"]"))
+            .and_then(|cell| cell.set_value(&shown));
         let mut accepted: Vec<char> = raw.chars().filter(|c| self.kind.accepts(*c)).collect();
         // The cell's old character sits on whichever side the caret was not.
         if accepted.len() > 1

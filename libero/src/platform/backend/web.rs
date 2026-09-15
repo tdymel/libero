@@ -496,6 +496,43 @@ impl ElementApi for WebElement {
         Ok(())
     }
 
+    fn set_value(&self, value: &str) -> Result<(), PlatformError> {
+        if let Some(input) = self.element.dyn_ref::<web_sys::HtmlInputElement>() {
+            input.set_value(value);
+        } else if let Some(text) = self.element.dyn_ref::<web_sys::HtmlTextAreaElement>() {
+            text.set_value(value);
+        } else {
+            return Err(PlatformError::NotFound);
+        }
+        Ok(())
+    }
+
+    fn attribute(&self, name: &str) -> Result<Option<String>, PlatformError> {
+        Ok(self.element.get_attribute(name))
+    }
+
+    /// The document's matches, last first, down to one this element follows:
+    /// `FOLLOWING` holds for an ancestor too, and not for a descendant.
+    fn previous_focusable(
+        &self,
+        selector: &str,
+    ) -> Result<Option<Box<dyn ElementApi>>, PlatformError> {
+        let nodes = web_sys::window()
+            .and_then(|window| window.document())
+            .ok_or(PlatformError::NotFound)?
+            .query_selector_all(selector)
+            .map_err(|_| PlatformError::NotFound)?;
+        let element = (0..nodes.length())
+            .rev()
+            .filter_map(|index| nodes.get(index)?.dyn_into::<web_sys::Element>().ok())
+            .find(|node| {
+                node.compare_document_position(&self.element)
+                    & web_sys::Node::DOCUMENT_POSITION_FOLLOWING
+                    != 0
+            });
+        Ok(element.map(|element| Box::new(WebElement { element }) as Box<dyn ElementApi>))
+    }
+
     fn is_focused(&self) -> bool {
         web_sys::window()
             .and_then(|window| window.document())

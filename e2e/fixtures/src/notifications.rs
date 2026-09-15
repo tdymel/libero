@@ -18,6 +18,10 @@ pub const ROUTES: Routes = &[
         || rsx! { NotificationsClearPage {} },
     ),
     ("/notifications-host", || rsx! { NotificationsHostPage {} }),
+    (
+        "/notifications-host-inside",
+        || rsx! { NotificationsHostInsidePage {} },
+    ),
 ];
 
 /// The component the framework was **not** built for.
@@ -171,6 +175,52 @@ fn Feeder() -> Element {
         }
     });
     rsx! {}
+}
+
+/// A contained host whose opener sits inside it, so the element focus came
+/// from goes with the host (todo 589). `#before` is the focusable before it.
+#[component]
+fn NotificationsHostInsidePage() -> Element {
+    let mounted = use_context_provider(|| Signal::new(true));
+
+    rsx! {
+        Button { id: "before", "Before" }
+        if mounted() {
+            Notifications { contained: true,
+                InsideFeeder {}
+            }
+        }
+        Button { id: "after", "After" }
+    }
+}
+
+#[component]
+fn InsideFeeder() -> Element {
+    let notify = use_notifications_with(|s: NotificationScope<String>| {
+        let mut mounted = use_context::<Signal<bool>>();
+        rsx! {
+            Paper {
+                Text { "{s.args()}" }
+                Button { class: "drop-host", onclick: move |_| mounted.set(false), "Drop host" }
+            }
+        }
+    });
+    rsx! {
+        Button {
+            id: "notify",
+            onclick: move |_| {
+                notify
+                    .show_with(
+                        "Inside".to_string(),
+                        NotificationOptions {
+                            auto_close: Some(AutoClose::Never),
+                            ..Default::default()
+                        },
+                    );
+            },
+            "Notify"
+        }
+    }
 }
 
 /// A delay nothing else on the page schedules, so the test's clock can hold
