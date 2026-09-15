@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Divider, HtmlTag, Input, States,
+        Divider, HtmlTag, Input, Kbd, States,
         common::{
             CheckIcon, ChevronRightIcon, base_props, has_shortcut_modifier, inset_focus_ring_sx,
         },
@@ -25,12 +25,12 @@ use crate::{
 };
 
 use super::{
-    entry::{MenuEntry, MenuItem, flatten},
+    entry::{Check, MenuEntry, MenuItem, flatten, shortcut_hint},
     state::{MenuFocus, MenuState, menu_id, trigger_id},
 };
 
-// Every row carries its index, whichever of `menuitem` and `menuitemradio`
-// it is, so the rules key on that rather than on a role.
+// Every row carries its index, whichever of the three item roles it has, so
+// the rules key on that rather than on a role.
 const ITEM: &str = "& [data-menu-index]";
 
 // A surface, so its background, border and corner are `paper_sx()`'s - the
@@ -754,9 +754,10 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         close_on_select: props.close_on_select,
     };
 
+    // Only a chosen radio: a toggled setting is no "choice in effect".
     let first = flat
         .iter()
-        .position(|item| item.checked == Some(true))
+        .position(|item| item.check == Some(Check::Radio(true)))
         .unwrap_or(0);
     use_level_focus(level, open, placed, props.request, props.initial, first);
     let hover = use_hover_delay(
@@ -961,9 +962,10 @@ struct ItemDraw {
     level_id: String,
 }
 
-/// One `menuitem` row - or a `menuitemradio` one, when the item is
-/// [`checked`](MenuItem::checked) either way: its three handlers, its aria,
-/// and the check, leading, trailing and chevron slots.
+/// One `menuitem` row - or `menuitemradio` / `menuitemcheckbox`, when the
+/// item is [`checked`](MenuItem::checked) / [`toggled`](MenuItem::toggled)
+/// either way: its three handlers, its aria, and the check, leading,
+/// trailing, shortcut and chevron slots.
 fn menu_item(
     draw: &ItemDraw,
     item: &MenuItem,
@@ -981,7 +983,7 @@ fn menu_item(
     } = draw;
     let (level, tabbable) = (*level, *tabbable);
     let has_submenu = item.submenu_items().is_some();
-    let checked = item.checked;
+    let check = item.check;
     let disabled = item.disabled;
     let onselect = item.onselect_callback();
     let item_id = format!("{level_id}-item-{index}");
@@ -1014,9 +1016,10 @@ fn menu_item(
         button {
             key: "{index}",
             r#type: "button",
-            "role": if checked.is_some() { "menuitemradio" } else { "menuitem" },
+            "role": check.map_or("menuitem", Check::role),
             id: "{item_id}",
-            "aria-checked": checked.map(|checked| checked.to_string()),
+            "aria-checked": check.map(|check| check.is_checked().to_string()),
+            "aria-keyshortcuts": item.shortcut.clone(),
             tabindex: if index == tabbable { "0" } else { "-1" },
             "data-menu-index": "{index}",
             "aria-disabled": disabled.then_some("true"),
@@ -1031,11 +1034,11 @@ fn menu_item(
             onclick,
             onkeydown,
             onmouseenter,
-            // Drawn on every radio row, checked or not, so the labels of one
-            // group line up.
-            if let Some(checked) = checked {
+            // Drawn on every checkable row, checked or not, so the labels of
+            // one group line up.
+            if let Some(check) = check {
                 span { "data-menu-check": "",
-                    if checked {
+                    if check.is_checked() {
                         CheckIcon {}
                     }
                 }
@@ -1046,6 +1049,12 @@ fn menu_item(
             span { "data-menu-label": "", "{item.label}" }
             if let Some(trailing) = item.trailing.clone() {
                 span { "data-menu-section": "trailing", {trailing} }
+            }
+            // Out of the name: `aria-keyshortcuts` announces it instead.
+            if let Some(keys) = item.shortcut.as_deref() {
+                span { "data-menu-section": "shortcut", "aria-hidden": "true",
+                    Kbd { {shortcut_hint(keys)} }
+                }
             }
             if has_submenu {
                 span { "data-menu-chevron": "", ChevronRightIcon {} }

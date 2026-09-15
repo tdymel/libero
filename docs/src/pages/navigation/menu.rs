@@ -13,6 +13,7 @@ const PREAMBLE: &str = r#"let menu = use_menu();
 let mut last = use_signal(|| String::from("nothing yet"));
 let pick = move |name: &'static str| move |_| last.set(name.to_string());
 let mut sort = use_signal(|| "Name");
+let mut hidden = use_signal(|| false);
 let sort_by = move |name: &'static str| -> MenuEntry {
     MenuItem::new(name)
         .checked(sort() == name)
@@ -25,15 +26,15 @@ let items = vec![
         label: "Edit".into(),
         items: vec![
             MenuItem::new("Cut")
-                .trailing(rsx! { Kbd { "Ctrl X" } })
+                .shortcut("Control+X")
                 .onselect(pick("Cut"))
                 .into(),
             MenuItem::new("Copy")
-                .trailing(rsx! { Kbd { "Ctrl C" } })
+                .shortcut("Control+C")
                 .onselect(pick("Copy"))
                 .into(),
             MenuItem::new("Paste")
-                .trailing(rsx! { Kbd { "Ctrl V" } })
+                .shortcut("Control+V")
                 .disabled(true)
                 .onselect(pick("Paste"))
                 .into(),
@@ -54,6 +55,10 @@ let items = vec![
         label: "Sort by".into(),
         items: vec![sort_by("Name"), sort_by("Date"), sort_by("Size")],
     },
+    MenuItem::new("Show hidden")
+        .toggled(hidden())
+        .onselect(move |_| hidden.toggle())
+        .into(),
     MenuEntry::Separator,
     MenuItem::new("Delete").onselect(pick("Delete")).into(),
 ];
@@ -121,6 +126,7 @@ fn MenuDemo(
     let mut last = use_signal(|| String::from("nothing yet"));
     let pick = move |name: &'static str| move |_| last.set(name.to_string());
     let mut sort = use_signal(|| "Name");
+    let mut hidden = use_signal(|| false);
     let sort_by = move |name: &'static str| -> MenuEntry {
         MenuItem::new(name)
             .checked(sort() == name)
@@ -133,15 +139,15 @@ fn MenuDemo(
             label: "Edit".into(),
             items: vec![
                 MenuItem::new("Cut")
-                    .trailing(rsx! { Kbd { "Ctrl X" } })
+                    .shortcut("Control+X")
                     .onselect(pick("Cut"))
                     .into(),
                 MenuItem::new("Copy")
-                    .trailing(rsx! { Kbd { "Ctrl C" } })
+                    .shortcut("Control+C")
                     .onselect(pick("Copy"))
                     .into(),
                 MenuItem::new("Paste")
-                    .trailing(rsx! { Kbd { "Ctrl V" } })
+                    .shortcut("Control+V")
                     .disabled(true)
                     .onselect(pick("Paste"))
                     .into(),
@@ -164,6 +170,10 @@ fn MenuDemo(
             label: "Sort by".into(),
             items: vec![sort_by("Name"), sort_by("Date"), sort_by("Size")],
         },
+        MenuItem::new("Show hidden")
+            .toggled(hidden())
+            .onselect(move |_| hidden.toggle())
+            .into(),
         MenuEntry::Separator,
         MenuItem::new("Delete").onselect(pick("Delete")).into(),
     ];
@@ -243,9 +253,13 @@ pub fn MenuPage() -> Element {
                     prop("leading", "Element")
                         .doc("Before the label - an icon. It sits inside the item's button, so nothing interactive."),
                     prop("trailing", "Element")
-                        .doc("At the far end - a shortcut hint. Nothing interactive, for the same reason."),
+                        .doc("At the far end - a badge. Part of the accessible name, and nothing interactive, for the same reason."),
+                    prop("shortcut", "&str")
+                        .doc("The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`\"Control+X\"`). Set as that attribute and drawn as a hint (\"Ctrl+X\") hidden from screen readers, so it stays out of the name. No platform mapping, and binding the key is yours."),
                     prop("checked", "bool")
                         .doc("Unset, a plain command. Set, it makes the item one choice of several: a `menuitemradio` announcing `aria-checked`, with a check before the label. Put the choices in one `Group`; keeping exactly one checked is yours. A menu holding a checked item opens on it."),
+                    prop("toggled", "bool")
+                        .doc("An independent on/off setting instead: a `menuitemcheckbox` announcing `aria-checked`, same check slot. Flip it in `onselect`. An item is `checked` or `toggled`; the later call wins."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Stays in the arrow-key order, cannot be chosen, and typeahead skips it."),
@@ -333,6 +347,16 @@ pub fn MenuPage() -> Element {
                     "item: \"s\" to the next one starting with S, \"sav\" to Save, and a pause "
                     "of half a second starts over. A disabled item stays in the arrow order "
                     "but cannot be chosen."
+                }
+                Text {
+                    "A shortcut hint belongs in "
+                    Code { source: "shortcut" }
+                    ", not "
+                    Code { source: "trailing" }
+                    ": it reaches a screen reader as "
+                    Code { source: "aria-keyshortcuts" }
+                    " rather than as part of the item's name. The menu does not listen for "
+                    "the key; bind it yourself."
                 }
             }
         }

@@ -14,6 +14,7 @@ let pick = move |name: &'static str| move |_| last.set(name.to_string());
 let item = move |name: &'static str| -> MenuEntry {
     MenuItem::new(name).onselect(pick(name)).into()
 };
+let mut wrap = use_signal(|| true);
 
 let menus = vec![
     MenubarMenu::new("File", vec![
@@ -24,7 +25,7 @@ let menus = vec![
             .into(),
         MenuEntry::Separator,
         MenuItem::new("Save")
-            .trailing(rsx! { Kbd { "Ctrl S" } })
+            .shortcut("Control+S")
             .onselect(pick("Save"))
             .into(),
     ]),
@@ -35,6 +36,11 @@ let menus = vec![
         item("Cut"),
         item("Copy"),
         item("Paste"),
+        MenuEntry::Separator,
+        MenuItem::new("Word wrap")
+            .toggled(wrap())
+            .onselect(move |_| wrap.toggle())
+            .into(),
     ]),
     MenubarMenu::new("View", vec![item("Zoom in"), item("Zoom out")]).disabled(true),
     MenubarMenu::new("Help", vec![item("Documentation"), item("About")]),
@@ -93,6 +99,7 @@ fn MenubarDemo(
     let pick = move |name: &'static str| move |_| last.set(name.to_string());
     let item =
         move |name: &'static str| -> MenuEntry { MenuItem::new(name).onselect(pick(name)).into() };
+    let mut wrap = use_signal(|| true);
 
     let menus = vec![
         MenubarMenu::new(
@@ -105,7 +112,7 @@ fn MenubarDemo(
                     .into(),
                 MenuEntry::Separator,
                 MenuItem::new("Save")
-                    .trailing(rsx! { Kbd { "Ctrl S" } })
+                    .shortcut("Control+S")
                     .onselect(pick("Save"))
                     .into(),
             ],
@@ -119,6 +126,11 @@ fn MenubarDemo(
                 item("Cut"),
                 item("Copy"),
                 item("Paste"),
+                MenuEntry::Separator,
+                MenuItem::new("Word wrap")
+                    .toggled(wrap())
+                    .onselect(move |_| wrap.toggle())
+                    .into(),
             ],
         ),
         MenubarMenu::new("View", vec![item("Zoom in"), item("Zoom out")]).disabled(true),

@@ -1,5 +1,7 @@
 use dioxus::prelude::*;
 
+use crate::utils::warn;
+
 /// One line of a [`Menu`](super::Menu), in order.
 #[derive(Clone, PartialEq)]
 pub enum MenuEntry {
@@ -36,12 +38,12 @@ enum Action {
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
-/// # use libero::components::{Kbd, MenuItem};
+/// # use libero::components::MenuItem;
 /// # fn app() -> Element {
 /// # fn copy() {}
 /// # let _ =
 /// MenuItem::new("Copy")
-///     .trailing(rsx! { Kbd { "Ctrl C" } })
+///     .shortcut("Control+C")
 ///     .onselect(move |_| copy())
 /// # ;
 /// # rsx! {}
@@ -50,16 +52,37 @@ enum Action {
 ///
 /// `leading` and `trailing` land inside the item's `<button>`, so they must not
 /// be interactive themselves: a button inside a button is invalid HTML and
-/// cannot be reached from the keyboard. An icon or a [`Kbd`](crate::components::Kbd)
-/// hint is what they are for.
+/// cannot be reached from the keyboard. An icon or a badge is what they are
+/// for; a shortcut hint is [`shortcut`](Self::shortcut)'s.
 #[derive(Clone)]
 pub struct MenuItem {
     pub(super) label: String,
     action: Action,
     pub(super) leading: Option<Element>,
     pub(super) trailing: Option<Element>,
-    pub(super) checked: Option<bool>,
+    pub(super) check: Option<Check>,
+    pub(super) shortcut: Option<String>,
     pub(super) disabled: bool,
+}
+
+/// A checkable item's kind and state: one choice of several, or a toggle.
+#[derive(Clone, Copy, PartialEq)]
+pub(super) enum Check {
+    Radio(bool),
+    Toggle(bool),
+}
+
+impl Check {
+    pub(super) fn is_checked(self) -> bool {
+        matches!(self, Check::Radio(true) | Check::Toggle(true))
+    }
+
+    pub(super) fn role(self) -> &'static str {
+        match self {
+            Check::Radio(_) => "menuitemradio",
+            Check::Toggle(_) => "menuitemcheckbox",
+        }
+    }
 }
 
 /// **Never equal**, the way an `Element` is never equal. An item holds a
@@ -82,7 +105,8 @@ impl MenuItem {
             action: Action::None,
             leading: None,
             trailing: None,
-            checked: None,
+            check: None,
+            shortcut: None,
             disabled: false,
         }
     }
@@ -113,7 +137,8 @@ impl MenuItem {
         self
     }
 
-    /// Drawn after the label, at the far end - a shortcut hint.
+    /// Drawn after the label, at the far end - a badge. It is part of the
+    /// accessible name; a shortcut hint belongs in [`shortcut`](Self::shortcut).
     pub fn trailing(mut self, trailing: Element) -> Self {
         self.trailing = Some(trailing);
         self
@@ -124,8 +149,54 @@ impl MenuItem {
     /// Put the choices in one [`MenuEntry::Group`], which is the radio group
     /// a reader hears; keeping exactly one of them checked is the caller's.
     /// A menu holding a checked item opens with focus on it.
-    pub fn checked(mut self, checked: bool) -> Self {
-        self.checked = Some(checked);
+    ///
+    /// Replaces a [`toggled`](Self::toggled), with a debug warning: an item is
+    /// one or the other.
+    pub fn checked(self, checked: bool) -> Self {
+        self.with_check(Check::Radio(checked))
+    }
+
+    /// Makes it an independent on/off setting ("Show ruler") - a
+    /// `menuitemcheckbox` announcing `aria-checked` - with a check drawn
+    /// before the label while `toggled`. Flipping it is the caller's, in
+    /// [`onselect`](Self::onselect).
+    ///
+    /// Replaces a [`checked`](Self::checked), with a debug warning: an item is
+    /// one or the other.
+    pub fn toggled(self, toggled: bool) -> Self {
+        self.with_check(Check::Toggle(toggled))
+    }
+
+    fn with_check(mut self, check: Check) -> Self {
+        if cfg!(debug_assertions)
+            && let Some(before) = self.check
+            && before.role() != check.role()
+        {
+            warn(&format!(
+                "MenuItem \"{}\": both `checked` and `toggled` were called; the later one wins.",
+                self.label
+            ));
+        }
+        self.check = Some(check);
+        self
+    }
+
+    /// The key that runs this item outside the menu, in `aria-keyshortcuts`
+    /// syntax: `"Control+X"`, `"Control+Shift+S"`. Announced through that
+    /// attribute and drawn as a hint at the far end, hidden from readers so
+    /// it stays out of the name. Drawn as given, `Control` shortened to
+    /// `Ctrl`: no platform mapping (`Meta` is not shown as Cmd). The menu does
+    /// not listen for it: binding the key is the caller's.
+    ///
+    /// ```no_run
+    /// # use libero::components::MenuItem;
+    /// # fn cut() {}
+    /// # let _ =
+    /// MenuItem::new("Cut").shortcut("Control+X").onselect(move |_| cut())
+    /// # ;
+    /// ```
+    pub fn shortcut(mut self, keys: &str) -> Self {
+        self.shortcut = Some(keys.to_string());
         self
     }
 
@@ -151,6 +222,17 @@ impl MenuItem {
     }
 }
 
+/// The visible hint for an `aria-keyshortcuts` value: its first alternative,
+/// with `Control` shortened to `Ctrl` - "Control+X Meta+X" draws "Ctrl+X".
+pub(super) fn shortcut_hint(keys: &str) -> String {
+    let first = keys.split_whitespace().next().unwrap_or_default();
+    first
+        .split('+')
+        .map(|key| if key == "Control" { "Ctrl" } else { key })
+        .collect::<Vec<_>>()
+        .join("+")
+}
+
 /// Every item, in order, through groups - the order the arrow keys walk and
 /// the index `data-menu-index` carries.
 pub(super) fn flatten(entries: &[MenuEntry]) -> Vec<&MenuItem> {
@@ -166,4 +248,27 @@ pub(super) fn flatten(entries: &[MenuEntry]) -> Vec<&MenuItem> {
     let mut out = Vec::new();
     walk(entries, &mut out);
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{MenuItem, shortcut_hint};
+
+    #[test]
+    fn checked_and_toggled_on_one_item_warn() {
+        crate::utils::take_warnings();
+        let _ = MenuItem::new("Ruler").checked(true).toggled(false);
+        let warnings = crate::utils::take_warnings();
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains("Ruler"), "{warnings:?}");
+        let _ = MenuItem::new("Ruler").toggled(true).toggled(false);
+        assert!(crate::utils::take_warnings().is_empty());
+    }
+
+    #[test]
+    fn the_hint_shortens_control_and_keeps_the_first_alternative() {
+        assert_eq!(shortcut_hint("Control+Shift+S"), "Ctrl+Shift+S");
+        assert_eq!(shortcut_hint("Control+X Meta+X"), "Ctrl+X");
+        assert_eq!(shortcut_hint("F2"), "F2");
+    }
 }

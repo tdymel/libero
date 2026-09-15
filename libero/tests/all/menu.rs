@@ -232,3 +232,107 @@ fn a_checked_item_is_a_radio_that_says_so() {
     assert!(settings[0].contains(r#"role="menuitem""#));
     assert!(!settings[0].contains("aria-checked"));
 }
+
+/// A `toggled` item is a `menuitemcheckbox` in the same check slot. A toggled
+/// setting is no choice in effect, so the menu still opens on its first item.
+#[test]
+fn a_toggled_item_is_a_checkbox_that_says_so() {
+    fn app() -> Element {
+        let menu = use_menu();
+        use_hook(|| menu.open());
+
+        rsx! {
+            LiberoProvider {
+                Menu {
+                    state: menu,
+                    items: vec![
+                        MenuItem::new("Undo").onselect(|_| {}).into(),
+                        MenuItem::new("Show ruler").toggled(true).onselect(|_| {}).into(),
+                        MenuItem::new("Show grid").toggled(false).onselect(|_| {}).into(),
+                    ],
+                    Button { attributes: menu.a11y_attributes(), "View" }
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let boxes = tags_with(&html, r#"role="menuitemcheckbox""#);
+
+    assert_eq!(boxes.len(), 2, "{html}");
+    assert!(boxes[0].contains(r#"aria-checked="true""#), "{}", boxes[0]);
+    assert!(boxes[1].contains(r#"aria-checked="false""#), "{}", boxes[1]);
+    assert!(!html.contains("menuitemradio"));
+    assert_eq!(html.matches("<svg").count(), 1, "one check, on Show ruler");
+
+    let undo = tags_with(&html, r#"data-menu-index="0""#);
+    assert!(undo[0].contains(r#"tabindex="0""#), "{}", undo[0]);
+}
+
+/// The later of `checked` and `toggled` wins: an item is one or the other.
+#[test]
+fn checked_and_toggled_replace_each_other() {
+    fn app() -> Element {
+        let menu = use_menu();
+        use_hook(|| menu.open());
+
+        rsx! {
+            LiberoProvider {
+                Menu {
+                    state: menu,
+                    items: vec![
+                        MenuItem::new("A").checked(true).toggled(false).into(),
+                        MenuItem::new("B").toggled(true).checked(false).into(),
+                    ],
+                    Button { attributes: menu.a11y_attributes(), "Menu" }
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let a = tags_with(&html, r#"data-menu-index="0""#);
+    let b = tags_with(&html, r#"data-menu-index="1""#);
+    assert!(a[0].contains(r#"role="menuitemcheckbox""#), "{}", a[0]);
+    assert!(a[0].contains(r#"aria-checked="false""#), "{}", a[0]);
+    assert!(b[0].contains(r#"role="menuitemradio""#), "{}", b[0]);
+    assert!(b[0].contains(r#"aria-checked="false""#), "{}", b[0]);
+}
+
+/// A `shortcut` lands on the item as `aria-keyshortcuts` and is drawn as a
+/// hint hidden from readers, so the name stays the label alone.
+#[test]
+fn a_shortcut_is_announced_by_attribute_not_by_name() {
+    fn app() -> Element {
+        let menu = use_menu();
+        use_hook(|| menu.open());
+
+        rsx! {
+            LiberoProvider {
+                Menu {
+                    state: menu,
+                    items: vec![
+                        MenuItem::new("Cut").shortcut("Control+X").onselect(|_| {}).into(),
+                        MenuItem::new("Delete").onselect(|_| {}).into(),
+                    ],
+                    Button { attributes: menu.a11y_attributes(), "Edit" }
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let cut = tags_with(&html, r#"data-menu-index="0""#);
+    assert!(
+        cut[0].contains(r#"aria-keyshortcuts="Control+X""#),
+        "{}",
+        cut[0]
+    );
+    let hint = tags_with(&html, r#"data-menu-section="shortcut""#);
+    assert_eq!(hint.len(), 1, "{html}");
+    assert!(hint[0].contains(r#"aria-hidden="true""#), "{}", hint[0]);
+    assert!(html.contains(">Ctrl+X<"), "{html}");
+
+    let delete = tags_with(&html, r#"data-menu-index="1""#);
+    assert!(!delete[0].contains("aria-keyshortcuts"), "{}", delete[0]);
+}

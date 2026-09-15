@@ -315,3 +315,68 @@ fn a_menu_of_choices_opens_on_the_checked_one() {
         outcome.unwrap();
     });
 }
+
+/// Todos 510, 511: a toggle is a `menuitemcheckbox`, its shortcut is
+/// `aria-keyshortcuts` and stays out of the name, and Space flips it.
+#[test]
+fn a_toggle_is_a_checkbox_whose_shortcut_stays_out_of_its_name() {
+    const GRID: &str = "[role=menuitemcheckbox]";
+    block_on(async {
+        let fixture = Fixture::open("/menu-choices", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_visible(page, MENU).await?;
+            let tree = e2e::ax::snapshot(page, MENU).await?;
+            anyhow::ensure!(
+                tree.contains("menuitemcheckbox \"Show grid\" ") && !tree.contains("Ctrl"),
+                "the toggle's name is its label alone:\n{tree}"
+            );
+            wait::for_js_true(
+                page,
+                &format!(
+                    "(() => {{ const g = document.querySelector('{GRID}'); \
+                     return g.getAttribute('aria-checked') === 'false' \
+                       && g.getAttribute('aria-keyshortcuts') === 'Control+G' \
+                       && g.textContent.includes('Ctrl+G'); }})()"
+                ),
+                "an unchecked toggle announcing its shortcut",
+            )
+            .await?;
+            // Name, Date, Size, then the toggle.
+            for _ in 0..3 {
+                keyboard::press(page, keyboard::ARROW_DOWN).await?;
+            }
+            wait::for_js_true(
+                page,
+                &format!("document.activeElement === document.querySelector('{GRID}')"),
+                "focus on the toggle",
+            )
+            .await?;
+            keyboard::press(page, keyboard::SPACE).await?;
+            wait::for_js_true(
+                page,
+                "document.querySelector('#grid').textContent === 'true'",
+                "the toggle flipped",
+            )
+            .await?;
+            pointer::click(page, TRIGGER).await?;
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.querySelector('{GRID}')?.getAttribute('aria-checked') === 'true'"
+                ),
+                "the toggle checked on reopen",
+            )
+            .await
+        }
+        .await;
+        let console = fixture.console.assert_clean("the menu toggle");
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+        console.unwrap();
+    });
+}

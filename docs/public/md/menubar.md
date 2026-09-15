@@ -25,14 +25,23 @@ use libero::components::{MenuEntry, MenuItem, Menubar, MenubarMenu};
 #[component]
 fn Demo() -> Element {
     let item = |name: &str| -> MenuEntry { MenuItem::new(name).onselect(|_| {}).into() };
+    let mut wrap = use_signal(|| true);
     let menus = vec![
         MenubarMenu::new("File", vec![
             item("New"),
             MenuItem::new("Open recent").submenu(vec![item("notes.md")]).into(),
             MenuEntry::Separator,
-            item("Save"),
+            MenuItem::new("Save").shortcut("Control+S").onselect(|_| {}).into(),
         ]),
-        MenubarMenu::new("Edit", vec![item("Undo"), item("Redo")]),
+        MenubarMenu::new("Edit", vec![
+            item("Undo"),
+            item("Redo"),
+            MenuEntry::Separator,
+            MenuItem::new("Word wrap")
+                .toggled(wrap())
+                .onselect(move |_| wrap.toggle())
+                .into(),
+        ]),
         MenubarMenu::new("View", vec![item("Zoom in")]).disabled(true),
     ];
     rsx! { Menubar { aria_label: "Main", menus } }
@@ -52,7 +61,9 @@ In an open menu: ArrowRight on an item without a submenu, and ArrowLeft on the
 top level, close the menu and open the neighbouring one on its first item.
 ArrowRight on a submenu item opens the submenu; ArrowLeft in a submenu closes
 it. Escape closes the menu and returns focus to its trigger; Tab closes it and
-leaves the bar. Everything else is `Menu`'s.
+leaves the bar. Everything else is `Menu`'s, including `MenuItem`'s
+`shortcut` (announced as `aria-keyshortcuts`; binding the key is yours) and
+`toggled` for an on/off setting.
 
 `aria_label` is required: it names the bar.
 

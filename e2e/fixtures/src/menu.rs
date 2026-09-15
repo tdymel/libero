@@ -12,11 +12,13 @@ pub const ROUTES: Routes = &[
     ("/menu-choices", || rsx! { MenuChoicesPage {} }),
 ];
 
-/// Radio items with one checked, and a label longer than a phone is wide.
+/// Radio items with one checked, a toggle with a shortcut, and a label longer
+/// than a phone is wide.
 #[component]
 fn MenuChoicesPage() -> Element {
     let menu = use_menu();
     let mut sort = use_signal(|| "Name");
+    let mut grid = use_signal(|| false);
     let choice = move |label: &'static str| {
         MenuItem::new(label)
             .checked(sort() == label)
@@ -29,6 +31,11 @@ fn MenuChoicesPage() -> Element {
             items: vec![choice("Name"), choice("Date"), choice("Size")],
         },
         MenuEntry::Separator,
+        MenuItem::new("Show grid")
+            .toggled(grid())
+            .shortcut("Control+G")
+            .onselect(move |_| grid.toggle())
+            .into(),
         MenuItem::new("Export every selected row as a comma separated values file")
             .onselect(|_| {})
             .into(),
@@ -36,6 +43,7 @@ fn MenuChoicesPage() -> Element {
 
     rsx! {
         p { id: "sort", "{sort}" }
+        p { id: "grid", "{grid}" }
         Menu {
             state: menu,
             items,

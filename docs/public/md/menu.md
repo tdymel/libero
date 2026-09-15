@@ -23,26 +23,31 @@ into the submenu. There is no "safe triangle".
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Kbd, Menu, MenuEntry, MenuItem, Text, use_menu};
+use libero::components::{Button, Flex, Menu, MenuEntry, MenuItem, Text, use_menu};
 
 #[component]
 fn Demo() -> Element {
     let menu = use_menu();
     let mut last = use_signal(|| String::from("nothing yet"));
     let pick = move |name: &'static str| move |_| last.set(name.to_string());
+    let mut hidden = use_signal(|| false);
 
     let items = vec![
         MenuEntry::Group {
             label: "Edit".into(),
             items: vec![
                 MenuItem::new("Cut")
-                    .trailing(rsx! { Kbd { "Ctrl X" } })
+                    .shortcut("Control+X")
                     .onselect(pick("Cut"))
                     .into(),
                 MenuItem::new("Paste").disabled(true).onselect(pick("Paste")).into(),
             ],
         },
         MenuEntry::Separator,
+        MenuItem::new("Show hidden")
+            .toggled(hidden())
+            .onselect(move |_| hidden.toggle())
+            .into(),
         MenuItem::new("Save").onselect(pick("Save")).into(),
         MenuItem::new("Share")
             .submenu(vec![MenuItem::new("Email").onselect(pick("Email")).into()])
@@ -79,8 +84,11 @@ item stays in the arrow order but cannot be chosen.
   menu.
 - `leading` and `trailing` sit inside the item's button: never put anything
   interactive there.
-- A picked-one-of-several item takes `checked`, not a checkmark in
-  `trailing`: a drawn mark says nothing to a screen reader.
+- A picked-one-of-several item takes `checked`, an on/off setting `toggled`,
+  not a checkmark in `trailing`: a drawn mark says nothing to a screen reader.
+- A shortcut hint takes `shortcut`, not a `Kbd` in `trailing`: it reaches a
+  screen reader as `aria-keyshortcuts` instead of joining the item's name. The
+  menu does not listen for the key; bind it yourself.
 
 ## Props
 
@@ -102,13 +110,22 @@ item stays in the arrow order but cannot be chosen.
 
 `MenuItem` builder: `new(label)`, `onselect(FnMut(()))`, `submenu(Vec<MenuEntry>)`
 (an item does one or the other; the later call wins), `leading(Element)`,
-`trailing(Element)`, `checked(bool)`, `disabled(bool)`.
+`trailing(Element)`, `shortcut(&str)`, `checked(bool)`, `toggled(bool)`,
+`disabled(bool)`.
 
 `checked` makes an item one choice of several: a `menuitemradio` announcing
 `aria-checked`, with a check drawn before the label while it is checked. Put
 the choices in one `Group`, which is the radio group a reader hears; keeping
 exactly one checked is yours. A menu with a checked item opens on it rather
 than on its first item, and it is the tab stop until another is focused.
+
+`toggled` makes it an independent on/off setting instead: a `menuitemcheckbox`
+announcing `aria-checked`, in the same check slot. Flip it in `onselect`. An
+item is one or the other; the later call wins, with a debug warning.
+
+`shortcut` takes `aria-keyshortcuts` syntax (`"Control+Shift+S"`), sets that
+attribute on the item and draws the hint at the far end ("Ctrl+Shift+S"),
+`aria-hidden`. Only `Control` is shortened; there is no platform mapping.
 
 ## Theme defaults
 
