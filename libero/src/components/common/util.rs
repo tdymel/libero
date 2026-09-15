@@ -104,14 +104,39 @@ pub(crate) fn focus_ring_sx() -> crate::sx::Sx {
 /// The same ring, inset into the element's own fill - a picked day, a
 /// highlighted option, the current thumbnail.
 ///
-/// No halo, on purpose. An inset ring's surround is the element's own fill,
+/// No outer halo, on purpose. An inset ring's surround is the element's own fill,
 /// which the component chose and can be sure of; a halo would only paint a
 /// light band *outside* an indicator that is drawn inside. `offset` is
 /// negative, and `-width` or beyond puts the whole stripe on the fill.
+///
+/// Drawn as offset inset shadows, which Blitz paints (it ignores
+/// `outline-offset` and inset spread); the outline stays, transparent, for
+/// forced colours. Past `-width`, a halo band covers the stripe's outer part.
 pub(crate) fn inset_focus_ring_sx(offset: &str) -> crate::sx::Sx {
+    use crate::theme::{FOCUS_RING_COLOR, FOCUS_RING_HALO, FOCUS_RING_WIDTH, OWN_SHADOW};
+    use crate::tokens::NamedColorCss;
+
+    let stripe = NamedColorCss::FOCUS_CONTRAST.value_or(FOCUS_RING_COLOR.value());
+    let width = FOCUS_RING_WIDTH.value();
+    let depth = format!("(-1 * ({offset}))");
+    let halo_depth = format!("({depth} - {width})");
     focus_ring_sx()
+        .outline(format!("{width} solid transparent"))
         .outline_offset(offset)
-        .box_shadow(crate::theme::OWN_SHADOW.value_or(NO_SHADOW))
+        .box_shadow(format!(
+            "{},{},{}",
+            inset_band(&halo_depth, &FOCUS_RING_HALO.value()),
+            inset_band(&depth, &stripe),
+            OWN_SHADOW.value_or(NO_SHADOW)
+        ))
+}
+
+/// Four offset inset shadows: a band `depth` deep round the padding box.
+fn inset_band(depth: &str, color: &str) -> String {
+    format!(
+        "inset calc{depth} 0 0 0 {color},inset calc(-1 * {depth}) 0 0 0 {color},\
+         inset 0 calc{depth} 0 0 {color},inset 0 calc(-1 * {depth}) 0 0 {color}"
+    )
 }
 
 /// A resting `box-shadow` on a focusable, written so the focus ring can
@@ -261,10 +286,28 @@ mod tests {
 
         assert!(css.contains("outline-offset:-4px;"), "{css}");
         assert!(!css.contains("--lsx-focus-ring-halo-spread"), "{css}");
+        assert!(css.contains(",var(--lsx-own-shadow, 0 0 #0000);"), "{css}");
+    }
+
+    /// Natively the outline lands outside, where a list clips it (todo 626):
+    /// the stripe is inset shadows, halo first so it paints over the stripe's inside.
+    #[test]
+    fn an_inset_ring_draws_its_stripe_as_inset_shadows() {
+        let css = Stylesheet::from(&inset_focus_ring_sx("-4px"));
+        let css = css.as_str();
+
         assert!(
-            css.contains("box-shadow:var(--lsx-own-shadow, 0 0 #0000);"),
+            css.contains("outline:var(--lsx-focus-ring-width) solid transparent;"),
             "{css}"
         );
+        let halo = css
+            .find("inset calc((-1 * (-4px)) - var(--lsx-focus-ring-width)) 0 0 0 var(--lsx-focus-ring-halo)")
+            .expect("the halo band");
+        let stripe = css
+            .find("inset calc(-1 * (-4px)) 0 0 0 var(--lsx-focus-contrast, var(--lsx-focus-ring-color))")
+            .expect("the stripe band");
+        assert!(halo < stripe, "{css}");
+        assert_eq!(css.matches("inset ").count(), 8, "{css}");
     }
 
     #[test]

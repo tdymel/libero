@@ -226,9 +226,13 @@ pub fn assert_ring_contrast(ring: &Ring) -> Result<()> {
         return Ok(());
     }
 
-    // Whichever property actually carries the indicator.
-    let indicator = if has_visible_outline(&ring.outline) {
+    // Whichever property actually carries the indicator. An inset ring's
+    // outline is transparent (forced colours only): its stripe is the deepest inset band.
+    let transparent = ring.outline_color.replace(' ', "").ends_with(",0)");
+    let indicator = if has_visible_outline(&ring.outline) && !transparent {
         ring.outline_color.as_str()
+    } else if let Some(stripe) = inset_stripe_color(&ring.box_shadow) {
+        stripe
     } else if ring.box_shadow != "none" {
         shadow_color(&ring.box_shadow)
     } else {
@@ -370,6 +374,31 @@ fn halo_color(shadow: &str) -> Option<&str> {
     }
 }
 
+/// The colour of the deepest inset shadow: `inset_focus_ring_sx` paints its
+/// stripe as the deepest band, a halo band over its outer part.
+fn inset_stripe_color(shadow: &str) -> Option<&str> {
+    let mut rest = shadow;
+    let mut deepest: Option<(f64, &str)> = None;
+    while let Some(start) = rest.find("rgb") {
+        let close = start + rest[start..].find(')')?;
+        let color = &rest[start..=close];
+        let tail = &rest[close + 1..];
+        let end = tail.find(',').unwrap_or(tail.len());
+        let lengths = &tail[..end];
+        if lengths.contains("inset") {
+            let depth = lengths
+                .split_whitespace()
+                .filter_map(|p| p.trim_end_matches("px").parse::<f64>().ok())
+                .fold(0.0, |max: f64, px| max.max(px.abs()));
+            if depth > 0.0 && deepest.is_none_or(|(most, _)| depth > most) {
+                deepest = Some((depth, color));
+            }
+        }
+        rest = &tail[end..];
+    }
+    deepest.map(|(_, color)| color)
+}
+
 /// The colour of the first shadow, as Chromium computes it:
 /// `rgb(34, 139, 230) 0px 0px 0px 2px`.
 fn shadow_color(shadow: &str) -> &str {
@@ -458,6 +487,23 @@ mod tests {
             "rgb(34, 139, 230) 0px 0px 0px 2px",
         );
         assert!(assert_ring_contrast(&strong).is_ok());
+    }
+
+    #[test]
+    fn an_inset_ring_is_measured_by_its_deepest_band() {
+        // Halo band 2px over a 4px stripe band, as a `-4px` inset ring computes.
+        let shadow = "rgb(255, 255, 255) 2px 0px 0px 0px inset, rgb(255, 255, 255) -2px 0px 0px 0px inset, \
+                      rgb(0, 0, 0) 4px 0px 0px 0px inset, rgb(0, 0, 0) -4px 0px 0px 0px inset, \
+                      rgba(0, 0, 0, 0) 0px 0px 0px 0px";
+        assert_eq!(inset_stripe_color(shadow), Some("rgb(0, 0, 0)"));
+        let inset = ring("rgba(0, 0, 0, 0) solid 2px", "rgba(0, 0, 0, 0)", shadow);
+        assert!(assert_ring_contrast(&inset).is_ok());
+        let faint = ring(
+            "rgba(0, 0, 0, 0) solid 2px",
+            "rgba(0, 0, 0, 0)",
+            "rgb(238, 238, 238) 2px 0px 0px 0px inset",
+        );
+        assert!(assert_ring_contrast(&faint).is_err());
     }
 
     #[test]

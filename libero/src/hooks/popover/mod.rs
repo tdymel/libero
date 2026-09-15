@@ -9,7 +9,10 @@ use dioxus::prelude::*;
 pub use options::{Align, Placement, PopoverOptions, PopoverWidth, Side};
 pub use place::{Placed, Rect};
 
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 use crate::{
     hooks::{
@@ -17,7 +20,7 @@ use crate::{
         element::use_element,
         portal::{PortalSlot, use_portal_slot},
     },
-    platform::{ElementApi, ScrollSubscription, document, scroll},
+    platform::{ElementApi, ScrollSubscription, document, scroll, when_laid_out},
 };
 
 use place::place;
@@ -155,6 +158,8 @@ pub(crate) fn use_popover_on(
     // listener, so a page full of closed dropdowns listens to nothing.
     let subscription: Rc<RefCell<Option<Box<dyn ScrollSubscription>>>> =
         use_hook(|| Rc::new(RefCell::new(None)));
+    // Whether this open already waited once for the box's first layout.
+    let waited: Rc<Cell<bool>> = use_hook(|| Rc::new(Cell::new(false)));
 
     use_drop({
         let subscription = subscription.clone();
@@ -174,6 +179,7 @@ pub(crate) fn use_popover_on(
         let mounted = floating.mount_token().is_some();
         if !open || !mounted {
             listening.borrow_mut().take();
+            waited.set(false);
             // A `set` redraws even when unchanged: every opening ran this before
             // its box mounted and redrew the whole consumer for nothing.
             if placed.peek().is_some() {
@@ -208,6 +214,7 @@ pub(crate) fn use_popover_on(
         let anchor_offset = anchor.client_offset();
         let floating_size = floating.dimensions();
         let viewport = document.viewport();
+        let waited = waited.clone();
 
         spawn(async move {
             let (Ok(anchor_size), Ok((x, y)), Ok(floating_size), Ok(viewport)) = (
@@ -218,6 +225,16 @@ pub(crate) fn use_popover_on(
             ) else {
                 return;
             };
+            // Not laid out yet: a native shell can run this before its next
+            // layout, and a 0x0 box placed at the anchor's edge overflows it.
+            if floating_size.width == 0.0 && floating_size.height == 0.0 && !waited.replace(true) {
+                when_laid_out(move || {
+                    let mut tick = scroll_tick;
+                    let next = tick.peek().wrapping_add(1);
+                    tick.set(next);
+                });
+                return;
+            }
 
             let rect = Rect {
                 x,

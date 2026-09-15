@@ -69,6 +69,9 @@ thread_local! {
     /// A press that hit nothing focusable, until its click. See [`refocus_wrapper`].
     static BLANK_PRESS: Cell<bool> = const { Cell::new(false) };
 
+    /// What the last press on nothing focusable hit, until a Tab. See [`tab_from_start`].
+    static START: Cell<Option<NodeId>> = const { Cell::new(None) };
+
     /// [`Listener`]'s own element.
     static WRAPPER: RefCell<Option<NodeHandle>> = const { RefCell::new(None) };
 
@@ -171,6 +174,7 @@ pub(super) fn Listener(children: Element) -> Element {
                 focus::forget_kept();
                 focus::keyed(&event);
                 keyed(&event);
+                tab_from_start(&event);
             },
             onpointermove: move |event| followed(&event, false),
             onpointerup: move |event| {
@@ -668,8 +672,45 @@ fn pressed(event: &Event<PointerData>) {
         let target = focusable_ancestor(&doc, hit).filter(|&target| Some(target) != wrapper);
         Some(target.map(|target| (doc.get_focussed_node_id(), target)))
     });
-    BLANK_PRESS.set(matches!(press, Some(None)));
+    let blank = matches!(press, Some(None));
+    BLANK_PRESS.set(blank);
+    START.set(HIT.get().filter(|_| blank));
     PRESS.set(press.flatten());
+}
+
+/// The web starts Tab and Shift+Tab from a clicked node that takes no focus;
+/// Blitz from the focus owner, the wrapper. So focus goes to that node first,
+/// and Blitz's move after this dispatch walks on from it.
+fn tab_from_start(event: &Event<KeyboardData>) {
+    if event.key() != Key::Tab {
+        return;
+    }
+    let Some(start) = START.take() else {
+        return;
+    };
+    if !event.default_action_enabled() {
+        return;
+    }
+    let (Some(anchor), Some(wrapper)) = (
+        anchor(),
+        WRAPPER.with(|wrapper| wrapper.borrow().as_ref().map(NodeHandle::node_id)),
+    ) else {
+        return;
+    };
+    let Some(doc) = anchor.try_doc() else {
+        return;
+    };
+    // Focus moved since the press: the web starts from the new owner too.
+    let unmoved = doc
+        .get_focussed_node_id()
+        .is_none_or(|focused| focused == wrapper || focused == doc.root_element().id);
+    let present = doc
+        .get_node(start)
+        .is_some_and(|node| node.flags.is_in_document());
+    drop(doc);
+    if unmoved && present {
+        anchor.doc_mut().set_focus_to(start);
+    }
 }
 
 fn forget_press() {

@@ -196,6 +196,40 @@ impl Page {
         self.dispatch(UiEvent::PointerUp(pointer(x, y, false)));
     }
 
+    /// [`click`](Self::click), but the vdom runs dry before the next layout, as
+    /// a window's shell may poll several times between two frames.
+    pub fn click_before_layout(&mut self, selector: &str) {
+        let (x, y) = self.centre(selector);
+        self.dispatch(UiEvent::PointerDown(pointer(x, y, true)));
+        self.dispatch_before_layout(UiEvent::PointerUp(pointer(x, y, false)));
+    }
+
+    /// [`press`](Self::press), polled dry before the next layout.
+    pub fn press_before_layout(&mut self, key: Key) {
+        let modifiers = Modifiers::empty();
+        self.doc.handle_ui_event(UiEvent::KeyDown(key_event(
+            key.clone(),
+            KeyState::Pressed,
+            modifiers,
+        )));
+        self.dispatch_before_layout(UiEvent::KeyUp(key_event(
+            key,
+            KeyState::Released,
+            modifiers,
+        )));
+    }
+
+    /// [`dispatch`](Self::dispatch), polled dry before the next layout.
+    pub fn dispatch_before_layout(&mut self, event: UiEvent) {
+        self.doc.handle_ui_event(event);
+        for _ in 0..MAX_POLLS {
+            if !self.doc.poll(None) {
+                break;
+            }
+        }
+        self.settle();
+    }
+
     /// Presses at the first match's centre, moves by `(dx, dy)` in eight steps,
     /// releases there.
     pub fn drag(&mut self, selector: &str, dx: f32, dy: f32) {

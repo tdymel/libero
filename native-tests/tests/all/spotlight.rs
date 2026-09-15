@@ -1,4 +1,5 @@
-//! `Spotlight`'s hotkey: Ctrl+K opens the palette from wherever focus is.
+//! `Spotlight`: Ctrl+K opens the palette from wherever focus is, and a
+//! narrowed list keeps its labels whole.
 
 use dioxus::prelude::*;
 use libero::components::{
@@ -24,6 +25,61 @@ fn app() -> Element {
     });
     rsx! {
         Button { id: "page", "Page" }
+    }
+}
+
+// Two rows keep their place when "G" drops the others: their labels are the ones that broke.
+fn narrowing() -> Element {
+    let all =
+        use_hook(|| {
+            let mut all = vec![
+                SpotlightAction::new("Getting Started").group("About"),
+                SpotlightAction::new("Theming").group("About"),
+                SpotlightAction::new("Getting Started").group("Form"),
+                SpotlightAction::new("Select").group("Inputs"),
+                SpotlightAction::new("MultiSelect").group("Inputs"),
+            ];
+            // A list this long, as in the docs: an eight-row tail never broke.
+            all.extend((0..60).map(|n| {
+                SpotlightAction::new(format!("Page {n}")).group(format!("Group {}", n / 8))
+            }));
+            all
+        });
+    let _spotlight = use_spotlight(SpotlightOptions {
+        actions: Some(Callback::new(move |query: String| {
+            spotlight_filter(&query, &all)
+        })),
+        aria_label: Some("Command palette".into()),
+        ..Default::default()
+    });
+    rsx! {
+        Button { id: "page", "Page" }
+    }
+}
+
+// Todo 627: the painted text, not the box, wrapped; so this counts the label's laid-out lines.
+#[test]
+#[ignore = "needs Blitz: a row that keeps its box after the list shrinks keeps a min-content text layout"]
+fn a_narrowed_list_keeps_each_label_on_one_line() {
+    let mut page = mount(narrowing);
+    page.focus("#page");
+    page.press_with(Key::Character("k".into()), Modifiers::CONTROL);
+    page.press_before_layout(Key::Character("G".into()));
+    let labels = page.query_all("[role=option] [id$=-label]");
+    assert!(!labels.is_empty(), "no rows:\n{}", page.tree());
+    let doc = page.doc.inner.borrow();
+    for id in labels {
+        let node = doc.get_node(id).expect("a label");
+        let lines = node
+            .element_data()
+            .and_then(|data| data.inline_layout_data.as_ref())
+            .map(|text| text.layout.len());
+        assert_eq!(
+            lines,
+            Some(1),
+            "{:?} broke into {lines:?} lines",
+            node.text_content()
+        );
     }
 }
 
