@@ -76,6 +76,32 @@ fn it_is_an_ordered_list_with_an_explicit_role() {
     assert_eq!(all(&html, "li").len(), 3, "{html}");
 }
 
+/// Todo 541: the caller's name lands on the list, not on the role-less root,
+/// where `aria-label` is prohibited.
+#[test]
+fn the_callers_name_goes_to_the_step_list() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Stepper::<Stage> { id: "a", aria_label: "Checkout", value: Some(Stage::Account) }
+                Stepper::<Stage> { id: "b", aria_labelledby: "heading", value: Some(Stage::Account) }
+            }
+        }
+    }
+
+    let html = render(app);
+    let lists = all(&html, "ol");
+    assert_eq!(lists[0]["aria-label"], "Checkout", "{html}");
+    assert_eq!(lists[1]["aria-labelledby"], "heading", "{html}");
+    // Once each, so the root lost it.
+    assert_eq!(html.matches("aria-label=\"Checkout\"").count(), 1, "{html}");
+    assert_eq!(
+        html.matches("aria-labelledby=\"heading\"").count(),
+        1,
+        "{html}"
+    );
+}
+
 #[test]
 fn position_derives_completed_active_and_pending() {
     let html = render(middle_app);

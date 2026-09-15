@@ -7,7 +7,7 @@ Index: [index.md](index.md) - every other component's markdown page
 Description: An on/off toggle - a visually hidden checkbox with `role="switch"`, drawn as a track and thumb, wearing the field slots.
 
 A checkbox styled as a track and thumb. A visually hidden `<input>` does the
-real work, so it is announced as a switch, and Space and Enter both toggle it.
+real work, so it is announced as a switch, and Space toggles it.
 
 It is a field like the others: the track sits where a
 [Checkbox](checkbox.md) puts its box, the label beside it, and the description,
@@ -37,7 +37,7 @@ fn Demo() -> Element {
 ## Who owns the on state
 
 The browser never toggles the input itself: a click on the label is cancelled,
-and Space and Enter are answered on `keydown`, so the switch only moves when
+and Space is answered on `keydown`, so the switch only moves when
 its state does - the browser's own flip never gets to disagree with Rust. That
 does not change.
 
@@ -86,14 +86,15 @@ Switch {
 }
 ```
 
-The same hidden input, one tab stop, Space and Enter to toggle; the focus
+The same hidden input, one tab stop, Space to toggle; the focus
 ring moves from the track to the card. On the web a link or button inside the
 label or a caption keeps its own click. Natively (Blitz) the whole card is one
 click target.
 
 ## Accessibility
 
-Space and Enter toggle it. Without a `label`, pass `aria_label` - but a visible
+Space toggles it. Enter submits the form around it, as on a native checkbox.
+Without a `label`, pass `aria_label` - but a visible
 label is better. With neither, it warns in a debug build.
 
 ## Props

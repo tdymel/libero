@@ -12,7 +12,20 @@ pub const ROUTES: Routes = &[
         || rsx! { StepperPage { vertical: true } },
     ),
     ("/stepper-long", || rsx! { LongLabelPage {} }),
+    ("/stepper-named", || rsx! { NamedPage {} }),
 ];
+
+/// Todo 541: one step list named by `aria_label`, one by a heading.
+#[component]
+fn NamedPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            Stepper { id: "labelled", aria_label: "Checkout", value: Some(Stage::Shipping) }
+            h2 { id: "heading", "Onboarding" }
+            Stepper { id: "labelledby", aria_labelledby: "heading", value: Some(Stage::Shipping) }
+        }
+    }
+}
 
 /// One label with no break opportunity, in every arm, for reflow at a narrow width.
 #[component]

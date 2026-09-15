@@ -366,6 +366,18 @@ fn blocks_implicit_submission(element: &blitz_dom::node::ElementData) -> bool {
         )
 }
 
+fn is_checkable(element: &blitz_dom::node::ElementData) -> bool {
+    &*element.name.local == "input"
+        && matches!(
+            element
+                .attr(local_name!("type"))
+                .unwrap_or("text")
+                .to_ascii_lowercase()
+                .as_str(),
+            "checkbox" | "radio"
+        )
+}
+
 pub(super) fn implicit_submission(form: &Rc<MountedData>) -> bool {
     let Some(form) = form.downcast::<NodeHandle>() else {
         return false;
@@ -377,11 +389,12 @@ pub(super) fn implicit_submission(form: &Rc<MountedData>) -> bool {
     let Some(focused) = doc.get_focussed_node_id() else {
         return false;
     };
-    let in_field = doc
-        .get_node(focused)
-        .and_then(|node| node.element_data())
-        .is_some_and(blocks_implicit_submission);
-    if !in_field || owning_form(&doc, focused) != Some(form_id) {
+    let focused_element = doc.get_node(focused).and_then(|node| node.element_data());
+    let in_field = focused_element.is_some_and(blocks_implicit_submission);
+    // A checkbox or radio submits through the default button only, as in
+    // Chromium: it never counts as the form's one field.
+    let in_checkable = focused_element.is_some_and(is_checkable);
+    if !(in_field || in_checkable) || owning_form(&doc, focused) != Some(form_id) {
         return false;
     }
     let owned = |selector: &str| -> Vec<NodeId> {
@@ -401,6 +414,7 @@ pub(super) fn implicit_submission(form: &Rc<MountedData>) -> bool {
         .find(|&id| submit_button(&doc, id).is_some());
     match default_button {
         Some(button) => is_submitter(&doc, button),
+        None if in_checkable => false,
         None => {
             owned("input")
                 .into_iter()

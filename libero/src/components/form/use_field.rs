@@ -290,16 +290,6 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
-    /// Enter activates as well as Space, for a `role="switch"`. A bare
-    /// checkbox or radio takes Space alone, on every platform.
-    #[inline]
-    pub fn enter_activates(mut self) -> Self {
-        if let Some(activation) = &mut self.activation {
-            activation.enter = true;
-        }
-        self
-    }
-
     #[inline]
     pub fn size(mut self, size: Size) -> Self {
         self.size = size;
@@ -785,8 +775,9 @@ impl PreparedField {
 /// honours `onchange` has its new `checked` written and then overwritten, and
 /// the next render sees nothing to write: the look moves, the property,
 /// `:checked`, AT and the form post do not. So nothing is left to activate the
-/// input natively: the label's click is cancelled, and Space - and Enter, for
-/// a switch - is answered on `keydown`, which stops the activation outright.
+/// input natively: the label's click is cancelled, and Space is answered on
+/// `keydown`, which stops the activation outright. Enter is left to the
+/// browser, which submits the form around it.
 ///
 /// A field gets it through [`FieldBuilder::activates`]; a control whose label
 /// is its own - `Chip` - wires both halves itself, and one that renders its
@@ -798,7 +789,6 @@ pub(crate) struct Activation {
     /// Focuses the input instead, for a control with no handle per input.
     focus: Option<Rc<dyn Fn()>>,
     activate: Rc<dyn Fn()>,
-    enter: bool,
     /// Inside a card, whose own click activates too: the label's and the
     /// input's clicks stop where they are, or they would activate twice.
     card: bool,
@@ -810,7 +800,6 @@ impl Activation {
             element: Some(element),
             focus: None,
             activate: Rc::new(activate),
-            enter: false,
             card: false,
         }
     }
@@ -822,15 +811,8 @@ impl Activation {
             element: None,
             focus: Some(Rc::new(focus)),
             activate: Rc::new(activate),
-            enter: false,
             card: false,
         }
-    }
-
-    /// Enter activates as well as Space - see [`FieldBuilder::enter_activates`].
-    pub(crate) fn enter_activates(mut self) -> Self {
-        self.enter = true;
-        self
     }
 
     fn focus(&self) {
@@ -876,8 +858,8 @@ impl Activation {
         }
     }
 
-    /// The input's half: attaches the element, and takes Space - and Enter,
-    /// for a switch - and whatever click still reaches it.
+    /// The input's half: attaches the element, and takes Space and whatever
+    /// click still reaches it.
     pub(crate) fn wire(&self, control: BoxStyle) -> BoxStyle {
         let keydown = self.clone();
         let control = match &self.element {
@@ -922,11 +904,11 @@ impl Activation {
         move |_| activate()
     }
 
-    /// Space - and Enter, for a switch - answered on `keydown`, which stops
-    /// the activation outright. `true` when the key was one of those, so a
-    /// control with keys of its own knows it is handled.
+    /// Space answered on `keydown`, which stops the activation outright.
+    /// `true` when the key was Space, so a control with keys of its own knows
+    /// it is handled.
     pub(crate) fn keydown(&self, event: &Event<KeyboardData>) -> bool {
-        if !activates(event, self.enter) {
+        if !activates(event) {
             return false;
         }
         event.prevent_default();
@@ -939,9 +921,8 @@ impl Activation {
     /// A browser that clicks on `keyup` rather than checking the cancelled
     /// `keydown` would otherwise activate a second time.
     pub(crate) fn input_keyup(&self) -> impl FnMut(Event<KeyboardData>) + 'static {
-        let enter = self.enter;
         move |event| {
-            if activates(&event, enter) {
+            if activates(&event) {
                 event.prevent_default();
             }
         }
@@ -953,12 +934,8 @@ impl Activation {
 /// `card` too.
 const CLICK_BOUNDARY: &str = "label, div[data-state~=\"card\"]";
 
-fn activates(event: &KeyboardData, enter: bool) -> bool {
-    match event.key() {
-        Key::Character(ref c) => c == " ",
-        Key::Enter => enter,
-        _ => false,
-    }
+fn activates(event: &KeyboardData) -> bool {
+    matches!(event.key(), Key::Character(ref c) if c == " ")
 }
 
 fn attribute_text(attributes: &[Attribute], name: &str) -> Option<String> {

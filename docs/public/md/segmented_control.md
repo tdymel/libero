@@ -233,7 +233,8 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Arrow keys move the selection; Tab enters and leaves the whole control. Without
+Arrow keys move the selection; Tab enters and leaves the whole control. Enter
+submits the form around it, as on a native radio. Without
 a visible `label`, name the control by spreading `"aria-label"`: the segments
 name the options, not the question. With neither, it warns in a debug build.
 

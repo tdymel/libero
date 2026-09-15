@@ -1,7 +1,7 @@
 //! `SegmentedControl`, for the `RadioSet` archetype.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, OptionList, Options, SegmentedControl};
+use libero::components::{Fields, Flex, Form, OptionList, Options, SegmentedControl};
 
 use crate::{Routes, common::Between};
 
@@ -19,7 +19,30 @@ pub const ROUTES: Routes = &[
     ),
     ("/segmented-control/field", || rsx! { FieldPage {} }),
     ("/segmented-control/long", || rsx! { LongPage {} }),
+    ("/segmented-control/form", || rsx! { FormPage {} }),
 ];
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Layout {
+    alignment: Alignment,
+}
+
+/// Todo 508: a bound strip in a `Form` with a submit button, counting submits.
+#[component]
+fn FormPage() -> Element {
+    let value = use_store(Layout::default);
+    let mut submits = use_signal(|| 0u32);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { id: "submits", "data-submits": "{submits}", "Submits {submits}" }
+            Form { value, onsubmit: move |_| submits += 1,
+                SegmentedControl { label: "Alignment", name: Layout::FIELDS.alignment() }
+                button { r#type: "submit", "Save" }
+            }
+        }
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Weekday {
@@ -48,9 +71,10 @@ fn LongPage() -> Element {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Options)]
+#[derive(Clone, Copy, PartialEq, Default, Options)]
 enum Alignment {
     Left,
+    #[default]
     Center,
     Right,
 }

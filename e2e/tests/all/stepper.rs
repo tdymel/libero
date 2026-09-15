@@ -254,3 +254,21 @@ fn moving_on_returns_focus_to_the_current_step() {
         }
     });
 }
+
+/// Todo 541: the caller's name reaches the step list, by label and by heading.
+#[test]
+fn the_step_list_takes_the_callers_name() {
+    block_on(async {
+        let fixture = Fixture::open("/stepper-named", Viewport::Desktop)
+            .await
+            .unwrap();
+        for (root, name) in [("#labelled", "Checkout"), ("#labelledby", "Onboarding")] {
+            let tree = e2e::ax::snapshot(&fixture.page, &format!("{root} > ol"))
+                .await
+                .unwrap();
+            assert!(tree.starts_with(&format!("list \"{name}\"")), "{tree}");
+        }
+        fixture.console.assert_clean("named steppers").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

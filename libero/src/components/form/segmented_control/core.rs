@@ -300,7 +300,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
     let segment_states = format!("{} {}", size.state_name(), radius.radius_state_name());
 
     let items = segments.iter().enumerate().map(|(index, segment)| {
-        // The label's click, Space, Enter and a click on the radio itself all
+        // The label's click, Space and a click on the radio itself all
         // go through `Activation` - see it for why none of them may activate
         // the radio natively (todo 66). A control that is not focusable wants
         // no focus from its label: inside a dropdown that keeps focus on its
@@ -320,12 +320,11 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                     }
                 },
             )
-            .enter_activates()
         };
-        // This is one control to its user, not a row of radios, so it answers
-        // Enter as well as Space - the same call `Switch` makes. The arrows
-        // move *and* select, which is what a native radio group does and what
-        // Blitz, which does neither, now gets too.
+        // Enter is left to the browser, which submits the form around it as
+        // for a native radio. The arrows move *and* select, which is what a
+        // native radio group does and what Blitz, which does neither, now gets
+        // too.
         let keydown = {
             let activation = activation.clone();
             let disabled_segments = disabled_segments.clone();

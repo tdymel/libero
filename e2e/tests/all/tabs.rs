@@ -265,3 +265,21 @@ fn a_crowded_strip_scrolls_inside_itself() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 501: the caller's name reaches the tablist, by label and by heading.
+#[test]
+fn the_tablist_takes_the_callers_name() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-named", Viewport::Desktop)
+            .await
+            .unwrap();
+        for (root, name) in [("#labelled", "Settings"), ("#labelledby", "Profile")] {
+            let tree = e2e::ax::snapshot(&fixture.page, &format!("{root} > [role=tablist]"))
+                .await
+                .unwrap();
+            assert!(tree.starts_with(&format!("tablist \"{name}\"")), "{tree}");
+        }
+        fixture.console.assert_clean("named tab strips").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

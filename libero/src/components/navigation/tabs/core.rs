@@ -190,6 +190,11 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     // it takes the same colour rather than a second one.
     let variables: Input<Variables> = variables().with(TABS_COLOR, text_color(&color)).into();
 
+    // The caller's name belongs on the tablist: `aria-label` is prohibited on
+    // the role-less root (APG).
+    let (naming, attributes): (Vec<Attribute>, Vec<Attribute>) = attributes
+        .into_iter()
+        .partition(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
     let list_id = format!("{root}-tablist");
     let panel_id = selected.map(|selected| format!("{root}-panel-{selected}"));
     let panel_labelled_by = selected.map(|selected| format!("{root}-tab-{selected}"));
@@ -210,6 +215,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                     id: "{list_id}",
                     role: "tablist",
                     "aria-orientation": "horizontal",
+                    ..naming,
                     for (index, tab) in tabs.iter().enumerate() {
                         button {
                             key: "{index}",

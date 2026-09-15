@@ -3,7 +3,9 @@
 //! libero's own path.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Fields, Form, Rule, TextField, not_empty, use_form};
+use libero::components::{
+    Button, Fields, Form, Options, Rule, SegmentedControl, Switch, TextField, not_empty, use_form,
+};
 use native_tests::{Key, Page, mount};
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -71,6 +73,30 @@ fn two_fields() -> Element {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Align {
+    Left,
+    Right,
+}
+
+/// A switch and a segmented control, with or without a submit button.
+#[component]
+fn Checkables(button: bool) -> Element {
+    let mut submits = use_signal(|| 0u32);
+    let mut on = use_signal(|| false);
+    let mut align = use_signal(|| Align::Left);
+    rsx! {
+        Form::<()> { onsubmit: move |_| submits += 1,
+            Switch { id: "switch", label: "Alerts", checked: on(), onchange: move |v| on.set(v) }
+            SegmentedControl { label: "Align", value: align(), onchange: move |v| align.set(v) }
+            if button {
+                button { r#type: "submit", "Send" }
+            }
+        }
+        span { id: "submits", "{submits}" }
+    }
+}
+
 fn submits(page: &Page) -> String {
     page.text("#submits")
 }
@@ -117,6 +143,24 @@ fn enter_submits_nothing_with_two_fields_and_no_button() {
     page.focus("#first");
     page.press(Key::Enter);
     assert_eq!(submits(&page), "0");
+}
+
+/// Todo 508: Enter in a switch or a segment submits through the submit button,
+/// as in Chromium, and toggles or picks nothing.
+#[test]
+fn enter_in_a_checkable_submits_through_the_button() {
+    let with: fn() -> Element = || rsx! { Checkables { button: true } };
+    let without: fn() -> Element = || rsx! { Checkables { button: false } };
+    for (app, button, expected) in [(with, true, ["1", "2"]), (without, false, ["0", "0"])] {
+        let mut page = mount(app);
+        page.focus("#switch");
+        page.press(Key::Enter);
+        assert_eq!(submits(&page), expected[0], "the switch, button {button}");
+        assert!(page.attr("#switch", "checked").is_none_or(|v| v == "false"));
+        page.focus("[role=radiogroup] input:checked");
+        page.press(Key::Enter);
+        assert_eq!(submits(&page), expected[1], "the segment, button {button}");
+    }
 }
 
 #[test]

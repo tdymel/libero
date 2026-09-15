@@ -103,6 +103,9 @@ With `onstepclick`, completed steps and the current one are buttons, and
 pending ones too with `allow_next_steps`. Each is a tab stop in document order;
 Enter and Space activate. There are no arrow keys.
 
+Name the steps with `aria_label` or `aria_labelledby` on `Stepper`: both go to
+the `<ol>`, not the root, so two steppers on a page are two named lists.
+
 With `OptionLabel::rich` the name replaces the drawn label for a screen reader,
 so it must contain the visible text: a voice-control user says what they see
 (WCAG 2.5.3).

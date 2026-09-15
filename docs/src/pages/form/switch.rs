@@ -53,8 +53,8 @@ pub fn SwitchPage() -> Element {
                 Text {
                     "A checkbox styled as a track and thumb. A visually hidden "
                     Code { source: "input" }
-                    " does the real work, so it is announced as a switch, and Space and Enter "
-                    "both toggle it. It takes the same slots every field takes, with the track "
+                    " does the real work, so it is announced as a switch. Space toggles it; "
+                    "Enter submits the form around it, as on a native checkbox. It takes the same slots every field takes, with the track "
                     "where a checkbox puts its box. The browser never toggles the input "
                     "itself, so the track, the DOM property and the form submission can never "
                     "disagree with Rust. "

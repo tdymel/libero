@@ -190,7 +190,11 @@ pub fn TabsPage() -> Element {
                 Text {
                     "Only the selected tab is in the tab order. Left and Right move between "
                     "tabs and select as they go, stepping over disabled ones; Home and End "
-                    "jump to the ends."
+                    "jump to the ends. Name the strip with "
+                    Code { source: "aria_label" }
+                    " or "
+                    Code { source: "aria_labelledby" }
+                    ": both go to the tablist, not the root."
                 }
             }
         }

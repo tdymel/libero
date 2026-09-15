@@ -148,8 +148,8 @@ field_props! {
 /// A checkbox styled as a track and thumb, with its label beside it and the
 /// description, helper text and validation message under both.
 ///
-/// The browser never toggles the input itself - a label click, Space and
-/// Enter are taken in Rust - so the track, the DOM property, assistive tech
+/// The browser never toggles the input itself - a label click and Space are
+/// taken in Rust, Enter submits the form around it - so the track, the DOM property, assistive tech
 /// and form submission never drift apart. Pass `checked` and handle `onchange`
 /// to own the state; with neither, and outside a form binding, the switch
 /// keeps its own.
@@ -192,15 +192,13 @@ pub fn Switch(props: SwitchProps) -> Element {
         }
     };
 
-    // `role="switch"` is a button-like control, and ARIA's pattern for it
-    // takes Enter as well as Space. A bare checkbox does not, on any
-    // platform, so the key is handled here rather than left to the UA.
+    // Space toggles; Enter is left to the browser, which submits the form
+    // around it as for a native checkbox.
     let element = use_element();
     let field = use_field()
         .inline()
         .card(card)
         .activates(element, toggle.clone())
-        .enter_activates()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)

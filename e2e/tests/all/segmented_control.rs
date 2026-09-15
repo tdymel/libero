@@ -182,6 +182,39 @@ fn the_group_carries_the_field_wiring() {
     });
 }
 
+/// Todo 508: Enter submits the form around the strip, as it does around a
+/// native radio, and keeps the pick.
+#[test]
+fn enter_submits_the_form() {
+    block_on(async {
+        let fixture = Fixture::open("/segmented-control/form", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        assert_eq!(
+            tab_in(&fixture).await,
+            1,
+            "Tab enters at the checked segment"
+        );
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        settle(&fixture).await;
+        assert_eq!(checked(&fixture).await, 2, "the arrow picked");
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        e2e::wait::for_js_true(
+            page,
+            "document.querySelector('#submits').dataset.submits === '1'",
+            "Enter to submit",
+        )
+        .await
+        .unwrap();
+        assert_eq!(checked(&fixture).await, 2, "Enter moved the pick");
+
+        fixture.console.assert_clean("Enter in a form").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Read-only: focusable, but no click, arrow, Space or Enter picks a segment.
 #[test]
 fn a_read_only_strip_keeps_its_pick() {

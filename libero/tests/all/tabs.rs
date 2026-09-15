@@ -157,6 +157,49 @@ fn a_caller_id_that_is_no_css_identifier_still_names_the_tabs() {
     }
 }
 
+/// Todo 501: the caller's name lands on the tablist, which APG names, and not
+/// on the role-less root, where `aria-label` is prohibited.
+#[test]
+fn the_callers_name_goes_to_the_tablist() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tabs {
+                    id: "t",
+                    aria_label: "Settings",
+                    value: Section::Account,
+                    onchange: move |_| {},
+                    panel: |_: Section| rsx! { "body" },
+                }
+                Tabs {
+                    id: "u",
+                    aria_labelledby: "heading",
+                    value: Section::Account,
+                    onchange: move |_| {},
+                    panel: |_: Section| rsx! { "body" },
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    // Once each, so the root lost it.
+    assert_eq!(body.matches("aria-label=\"Settings\"").count(), 1, "{body}");
+    assert_eq!(
+        body.matches("aria-labelledby=\"heading\"").count(),
+        1,
+        "{body}"
+    );
+    let list = attributes_of(&body, "div role=\"tablist\"");
+    assert_eq!(list["aria-label"], "Settings");
+    let second = &body[body.find("id=\"u\"").unwrap()..];
+    assert_eq!(
+        attributes_of(second, "div role=\"tablist\"")["aria-labelledby"],
+        "heading"
+    );
+}
+
 /// Todo 371: an `options` prop that was never set is not an empty list - it
 /// still means every `Options::options()`, with nothing disabled.
 #[test]

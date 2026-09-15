@@ -1613,11 +1613,11 @@ fn readonly_radio() -> Element {
     }
 }
 
-/// Todo 489: a read-only checkable refuses the click, and a switch its Enter
+/// Todo 489: a read-only checkable refuses the click, and a switch its Space
 /// too; each checked against the same control editable, where it must change.
 #[test]
 fn a_read_only_checkable_refuses_every_activation() {
-    let enter = || key_event(Key::Enter);
+    let space = || key_event(Key::Character(" ".into()));
     for (app, name, data) in [
         (
             readonly_checkbox as fn() -> Element,
@@ -1625,7 +1625,7 @@ fn a_read_only_checkable_refuses_every_activation() {
             click_event as fn() -> _,
         ),
         (readonly_switch, "click", click_event),
-        (readonly_switch, "keydown", enter),
+        (readonly_switch, "keydown", space),
         (readonly_radio, "click", click_event),
     ] {
         let pick = if name == "click" {
@@ -1638,6 +1638,16 @@ fn a_read_only_checkable_refuses_every_activation() {
         let (heard, _) = send(app, true, name, pick, data);
         assert_eq!(heard, Vec::<String>::new(), "{name}");
     }
+}
+
+/// Todo 508: Enter is left to the browser, which submits the form around the
+/// switch as it does for a native checkbox - it toggles nothing.
+#[test]
+fn enter_on_a_switch_toggles_nothing() {
+    let (heard, _) = send(readonly_switch, false, "keydown", last_keydown, || {
+        key_event(Key::Enter)
+    });
+    assert_eq!(heard, Vec::<String>::new());
 }
 
 fn readonly_slider() -> Element {
@@ -1730,7 +1740,7 @@ fn readonly_segments() -> Element {
 }
 
 /// Todo 306: the arrows move *and* select, so a read-only strip refuses them
-/// outright, as `RadioGroup` does - and the click, Enter and Space with them.
+/// outright, as `RadioGroup` does - and the click and Space with them.
 #[test]
 fn a_read_only_segmented_control_picks_nothing() {
     let (_, html) = send(readonly_segments, false, "keydown", first_keydown, || {
@@ -1759,15 +1769,22 @@ fn a_read_only_segmented_control_picks_nothing() {
     assert_eq!(heard, Vec::<String>::new());
     assert_eq!(checked_states(&html), [true, false]);
 
-    for key in [
-        || key_event(Key::Enter),
-        || key_event(Key::Character(" ".into())),
-    ] {
-        let (picked, _) = send(readonly_segments, false, "keydown", last_keydown, key);
-        assert_eq!(picked, ["true"], "the key is the control");
-        let (heard, _) = send(readonly_segments, true, "keydown", last_keydown, key);
-        assert_eq!(heard, Vec::<String>::new());
-    }
+    let space = || key_event(Key::Character(" ".into()));
+    let (picked, _) = send(readonly_segments, false, "keydown", last_keydown, space);
+    assert_eq!(picked, ["true"], "the key is the control");
+    let (heard, _) = send(readonly_segments, true, "keydown", last_keydown, space);
+    assert_eq!(heard, Vec::<String>::new());
+}
+
+/// Todo 508: Enter is left to the browser, which submits the form around the
+/// strip as it does for a native radio - it picks nothing.
+#[test]
+fn enter_on_a_segment_picks_nothing() {
+    let (heard, html) = send(readonly_segments, false, "keydown", last_keydown, || {
+        key_event(Key::Enter)
+    });
+    assert_eq!(heard, Vec::<String>::new());
+    assert_eq!(checked_states(&html), [true, false]);
 }
 
 fn readonly_number() -> Element {

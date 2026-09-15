@@ -86,10 +86,10 @@ fn checked(id: &str) -> String {
     format!("document.getElementById('{id}').checked")
 }
 
-/// APG's switch takes Space and Enter; the label and the track each toggle
-/// it once. The browser's own flip is cancelled, so each press is one change.
+/// Space, the label and the track each toggle it once. The browser's own flip
+/// is cancelled, so each press is one change.
 #[test]
-fn space_enter_the_label_and_the_track_each_toggle_it_once() {
+fn space_the_label_and_the_track_each_toggle_it_once() {
     block_on(async {
         let fixture = Fixture::open("/switch", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
@@ -99,22 +99,14 @@ fn space_enter_the_label_and_the_track_each_toggle_it_once() {
         wait::for_js_true(page, &checked("plain"), "Space to turn it on")
             .await
             .unwrap();
-        keyboard::press(page, keyboard::ENTER).await.unwrap();
-        wait::for_js_true(
-            page,
-            &format!("!{}", checked("plain")),
-            "Enter to turn it off",
-        )
-        .await
-        .unwrap();
         pointer::click(page, "label[for=plain]").await.unwrap();
-        wait::for_js_true(page, &checked("plain"), "the label click")
+        wait::for_js_true(page, &format!("!{}", checked("plain")), "the label click")
             .await
             .unwrap();
         pointer::click(page, "#plain ~ [aria-hidden]")
             .await
             .unwrap();
-        wait::for_js_true(page, &format!("{} === '4'", changes()), "the track click")
+        wait::for_js_true(page, &format!("{} === '3'", changes()), "the track click")
             .await
             .unwrap();
         let on: bool = page
@@ -123,9 +115,42 @@ fn space_enter_the_label_and_the_track_each_toggle_it_once() {
             .unwrap()
             .into_value()
             .unwrap();
-        assert!(!on, "four toggles left the switch on");
+        assert!(on, "three toggles left the switch off");
 
         fixture.console.assert_clean("toggling the switch").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 508: Enter submits the form around the switch, as it does around a
+/// native checkbox, and leaves it as it was; Space still toggles.
+#[test]
+fn enter_submits_the_form_and_space_toggles() {
+    block_on(async {
+        let fixture = Fixture::open("/switch/form", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let submits = "document.querySelector('#submits').dataset.submits";
+
+        keyboard::tab_to(page, "#alerts", 10).await.unwrap();
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+        wait::for_js_true(page, &checked("alerts"), "Space to turn it on")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(page, &format!("{submits} === '1'"), "Enter to submit")
+            .await
+            .unwrap();
+        let on: bool = page
+            .evaluate(checked("alerts"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(on, "Enter toggled the switch");
+
+        fixture.console.assert_clean("Enter in a form").unwrap();
         fixture.close().await.unwrap();
     });
 }

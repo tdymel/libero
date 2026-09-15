@@ -38,7 +38,8 @@ fn submit_click(form: Option<Rc<MountedData>>) -> bool {
 }
 
 /// Enter in a text field of `form`, which submits it on the web when the form
-/// has a submit button, or only one such field.
+/// has a submit button, or only one such field; in a checkbox or radio, only
+/// through a submit button.
 fn implicit_submit(event: &Event<KeyboardData>, form: Option<Rc<MountedData>>) -> bool {
     event.key() == Key::Enter
         && event.default_action_enabled()

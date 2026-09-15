@@ -1,11 +1,36 @@
 //! `Switch`, in every field slot and state its docs page shows.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, Switch};
+use libero::components::{Fields, Flex, Form, Switch};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/switch", || rsx! { SwitchPage {} })];
+pub const ROUTES: Routes = &[
+    ("/switch", || rsx! { SwitchPage {} }),
+    ("/switch/form", || rsx! { SwitchFormPage {} }),
+];
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Prefs {
+    alerts: bool,
+}
+
+/// Todo 508: a bound switch in a `Form` with a submit button, counting submits.
+#[component]
+fn SwitchFormPage() -> Element {
+    let value = use_store(Prefs::default);
+    let mut submits = use_signal(|| 0u32);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { id: "submits", "data-submits": "{submits}", "Submits {submits}" }
+            Form { value, onsubmit: move |_| submits += 1,
+                Switch { id: "alerts", label: "Alerts", name: Prefs::FIELDS.alerts() }
+                button { r#type: "submit", "Save" }
+            }
+        }
+    }
+}
 
 /// A controlled switch counting its changes, then one per state: error and
 /// required, `aria_label` only, readonly, disabled, card, and uncontrolled.

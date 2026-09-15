@@ -148,6 +148,9 @@ picked.
 Only the selected tab is in the tab order. Left and Right move between tabs and
 select as they go, stepping over disabled ones; Home and End jump to the ends.
 
+Name the strip with `aria_label` or `aria_labelledby` on `Tabs`: both go to the
+`tablist`, not the root.
+
 `OptionLabel::rich` takes the accessible name as its first argument: the rsx it
 draws is what a screen reader cannot use, and that name becomes the tab's
 `aria-label`.

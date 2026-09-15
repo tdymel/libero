@@ -13,7 +13,34 @@ pub const ROUTES: Routes = &[
     ),
     ("/tabs-disabled", || rsx! { TabsDisabledPage {} }),
     ("/tabs-crowded", || rsx! { TabsCrowdedPage {} }),
+    ("/tabs-named", || rsx! { TabsNamedPage {} }),
 ];
+
+/// Todo 501: one strip named by `aria_label`, one by a heading.
+#[component]
+fn TabsNamedPage() -> Element {
+    let mut section = use_signal(|| Section::Account);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Tabs {
+                id: "labelled",
+                aria_label: "Settings",
+                value: section(),
+                onchange: move |next| section.set(next),
+                panel: |s: Section| rsx! { Text { "panel for {s.label()}" } },
+            }
+            h2 { id: "heading", "Profile" }
+            Tabs {
+                id: "labelledby",
+                aria_labelledby: "heading",
+                value: section(),
+                onchange: move |next| section.set(next),
+                panel: |s: Section| rsx! { Text { "panel for {s.label()}" } },
+            }
+        }
+    }
+}
 
 /// The enum is the tab strip, so it is the fixture's whole configuration.
 #[derive(Clone, PartialEq, Options)]

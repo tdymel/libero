@@ -248,7 +248,11 @@ pub fn StepperPage() -> Element {
                     "With "
                     Code { source: "onstepclick" }
                     " each clickable step is a button and a tab stop, in document order; "
-                    "Enter and Space activate. There are no arrow keys."
+                    "Enter and Space activate. There are no arrow keys. Name the steps with "
+                    Code { source: "aria_label" }
+                    " or "
+                    Code { source: "aria_labelledby" }
+                    ": both go to the step list, not the root."
                 }
             }
         }

@@ -429,6 +429,12 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         _ => rsx! {},
     };
 
+    // The caller's name belongs on the list: `aria-label` is prohibited on
+    // the role-less root.
+    let (naming, attributes): (Vec<Attribute>, Vec<Attribute>) = attributes
+        .into_iter()
+        .partition(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
+
     use_box()
         .framework_sx(&STEPPER_SX)
         .class(&class)
@@ -443,7 +449,7 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
             rsx! {
                 // The explicit role is not redundant: Safari with VoiceOver
                 // drops list semantics from a `list-style: none` list.
-                ol { role: "list", {items.into_iter()} }
+                ol { role: "list", ..naming, {items.into_iter()} }
                 {region}
             },
         )

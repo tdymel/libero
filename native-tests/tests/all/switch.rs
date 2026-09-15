@@ -48,12 +48,13 @@ fn the_thumb_moves_once_its_transition_ends() {
 }
 
 #[test]
-fn space_and_enter_toggle_the_focused_switch() {
+fn space_toggles_the_focused_switch_and_enter_does_not() {
     let mut page = mount(app);
     page.focus(INPUT);
     page.press(Key::Character(" ".into()));
     assert!(checked(&page), "Space");
+    // Enter is the form's: it submits, as for a native checkbox (todo 508).
     page.press(Key::Enter);
-    assert!(!checked(&page), "Enter");
+    assert!(checked(&page), "Enter");
     assert!(page.is_focused(INPUT));
 }
