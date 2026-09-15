@@ -353,10 +353,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         })
         .event("onfocus", move |_: FocusEvent| focused())
         .event("onclick", move |_: MouseEvent| opened.set(true))
-        .event("onblur", move |_: FocusEvent| {
-            settle();
-            blurred();
-        })
+        .event("onblur", move |_: FocusEvent| blurred())
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
             // APG: Alt+ArrowDown enters like ArrowDown; Ctrl/Meta is the caret's.
             Key::ArrowDown
@@ -457,7 +454,8 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     }));
 
     let control = rsx! {
-        div { onmounted: anchor.mount(), {frame.render(input)} }
+        // On the wrapper, not the input: focus can also leave from the eyedropper.
+        div { onmounted: anchor.mount(), onfocusout: move |_| settle(), {frame.render(input)} }
     };
     field.render(control)
 }
