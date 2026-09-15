@@ -1052,7 +1052,7 @@ impl DocumentApi for BlitzDocument {
     }
 
     /// On the `<html>` `root_element()` reaches; the mutator's write restyles
-    /// it (todo 480). The theme is a colour change, so svgs rebuild with it.
+    /// it (todo 480). The theme is a colour change, so baked boxes rebuild with it.
     fn set_root_attribute(&self, name: &str, value: Option<&str>) -> bool {
         let Some(anchor) = anchor() else {
             return false;
@@ -1067,14 +1067,14 @@ impl DocumentApi for BlitzDocument {
                 None => mutator.clear_attribute(root, name),
             }
             drop(mutator);
-            rebuild_svgs(doc);
+            rebuild_baked_boxes(doc);
         });
         true
     }
 
     fn colors_changed(&self) {
         if let Some(anchor) = anchor() {
-            run_or_defer(&anchor, rebuild_svgs);
+            run_or_defer(&anchor, rebuild_baked_boxes);
         }
     }
 }
@@ -1088,17 +1088,27 @@ fn run_or_defer(anchor: &NodeHandle, run: impl FnOnce(&mut BaseDocument) + 'stat
     }
 }
 
-/// Blitz resolves an inline `<svg>`'s `currentColor` when it builds the box
-/// and keeps it (todo 478). Rewriting an attribute rebuilds the box.
-fn rebuild_svgs(doc: &mut BaseDocument) {
-    let Ok(svgs) = doc.query_selector_all("svg") else {
+/// Blitz bakes colours into boxes it builds and keeps them: an inline `<svg>`'s
+/// `currentColor` (todo 478), and the style of an anonymous block, the text of
+/// a flex or grid container (todo 621). Rewriting an attribute rebuilds them.
+fn rebuild_baked_boxes(doc: &mut BaseDocument) {
+    let Ok(elements) = doc.query_selector_all("*") else {
         return;
     };
-    let attrs: Vec<_> = svgs
+    let attrs: Vec<_> = elements
         .into_iter()
         .filter_map(|id| {
-            let attr = doc.get_node(id)?.element_data()?.attrs().first()?.clone();
-            Some((id, attr))
+            let node = doc.get_node(id)?;
+            let element = node.element_data()?;
+            let anonymous = node
+                .layout_children
+                .borrow()
+                .as_ref()
+                .is_some_and(|boxes| boxes.iter().any(|id| !node.children.contains(id)));
+            if !anonymous && &*element.name.local != "svg" {
+                return None;
+            }
+            Some((id, element.attrs().first()?.clone()))
         })
         .collect();
     let mut mutator = doc.mutate();

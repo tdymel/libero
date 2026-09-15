@@ -53,6 +53,8 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .flex_shrink("0")
         .border("none")
         .background("transparent")
+        // The UA's `buttontext` is black natively on either scheme (todo 628).
+        .color("inherit")
         .padding("0")
         .cursor("pointer")
         .outline("none")

@@ -5,7 +5,6 @@
 
 use std::time::Duration;
 
-use blitz_dom::node::{ImageData, SpecialElementData};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Icon},
@@ -76,28 +75,8 @@ fn the_stripe_is_painted_above_the_halo() {
     }
 }
 
-/// The stroke Blitz will paint the first `svg`'s first path with, as `rgb(..)`.
 fn painted_stroke(page: &Page) -> String {
-    let id = page.node("svg");
-    let doc = page.doc.inner.borrow();
-    let element = doc
-        .get_node(id)
-        .and_then(|node| node.element_data())
-        .unwrap();
-    let SpecialElementData::Image(image) = &element.special_data else {
-        panic!("the svg was not built as an image");
-    };
-    let ImageData::Svg(svg) = &**image else {
-        panic!("the svg was not built as an svg");
-    };
-    let tree = format!("{:?}", svg.tree.root());
-    let start = tree.find("Color { red: ").expect("no stroke colour") + "Color { red: ".len();
-    let rest = &tree[start..];
-    let channels: Vec<&str> = rest[..rest.find(" }").unwrap()]
-        .split(", ")
-        .map(|channel| channel.rsplit(": ").next().unwrap())
-        .collect();
-    format!("rgb({})", channels.join(", "))
+    page.painted_stroke("svg")
 }
 
 #[test]

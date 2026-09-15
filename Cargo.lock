@@ -4786,12 +4786,16 @@ dependencies = [
 name = "native-tests"
 version = "0.1.0"
 dependencies = [
+ "anyrender",
  "blitz-dom",
  "blitz-html",
+ "blitz-paint",
  "blitz-traits",
  "dioxus",
  "dioxus-native-dom",
+ "kurbo",
  "libero",
+ "peniko",
 ]
 
 [[package]]

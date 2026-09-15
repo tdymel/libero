@@ -22,3 +22,9 @@ blitz-dom = { version = "0.3.0-beta.2", default-features = false }
 # arrives empty and libero renders unstyled.
 blitz-html = { version = "0.3.0-beta.2", default-features = false }
 blitz-traits = "0.3.0-beta.2"
+# What Blitz paints, not what stylo computed: `Page::painted_*` records the
+# scene the shell would draw.
+blitz-paint = { version = "0.3.0-beta.2", default-features = false }
+anyrender = "0.13"
+kurbo = "0.13"
+peniko = "0.6"

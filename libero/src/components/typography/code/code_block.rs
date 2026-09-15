@@ -13,7 +13,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{Clipboard, use_clipboard, use_css, use_element, use_theme},
+    hooks::{Clipboard, use_clipboard, use_css, use_element, use_silent_focus_out, use_theme},
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
     theme::{
@@ -340,6 +340,11 @@ fn CopyButton(source: String, floating: bool) -> Element {
     } else {
         &CODE_COPY_BUTTON_SX
     };
+    // Blitz's Tab fires no `blur`: the same reset, from the silent move.
+    let silent = use_silent_focus_out(move || {
+        let mut clipboard = clipboard;
+        clipboard.reset();
+    });
 
     rsx! {
         ActionIcon {
@@ -354,6 +359,11 @@ fn CopyButton(source: String, floating: bool) -> Element {
             onmouseleave: move |_| clipboard.reset(),
             // A keyboard or touch user never leaves with a mouse.
             onblur: move |_| clipboard.reset(),
+            onmounted: move |event| {
+                if let Some(silent) = silent {
+                    silent.mount()(event);
+                }
+            },
             if clipboard.copied() {
                 CopiedIcon {}
             } else if clipboard.failed() {

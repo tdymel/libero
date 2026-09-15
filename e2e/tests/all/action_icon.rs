@@ -75,6 +75,43 @@ fn a_toggle_reports_its_pressed_state() {
     });
 }
 
+/// `[the icon's colour, its parent's]`.
+const PLAIN_COLORS: &str = "(() => {
+    const el = document.getElementById('plain');
+    return [getComputedStyle(el).color, getComputedStyle(el.parentElement).color];
+})()";
+
+/// Todo 628: an unstyled icon took the UA's `buttontext`, black on a pinned
+/// dark theme; it follows the text around it on either scheme.
+#[test]
+fn a_plain_icon_takes_the_surrounding_text_colour() {
+    block_on(async {
+        let fixture = Fixture::open("/action-icon", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#plain").await.unwrap();
+
+        for scheme in ["light", "dark"] {
+            page.evaluate(format!(
+                "document.documentElement.setAttribute('data-lsx-theme', '{scheme}')"
+            ))
+            .await
+            .unwrap();
+            let (icon, parent): (String, String) = page
+                .evaluate(PLAIN_COLORS)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(icon, parent, "the {scheme} icon");
+        }
+
+        fixture.console.assert_clean("reading the colours").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 491: without `variant` a pressed toggle painted nothing at all.
 #[test]
 fn a_pressed_toggle_shows_the_on_state_line_with_and_without_a_variant() {

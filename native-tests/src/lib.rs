@@ -19,7 +19,14 @@
 
 use std::{sync::Arc, thread, time::Duration};
 
-use blitz_dom::{BaseDocument, Document, DocumentConfig, Node};
+use anyrender::{
+    Paint, Scene,
+    recording::{GlyphRunCommand, RenderCommand},
+};
+use blitz_dom::{
+    BaseDocument, Document, DocumentConfig, Node,
+    node::{ImageData, SpecialElementData},
+};
 use blitz_traits::{
     NodeId,
     events::{
@@ -62,6 +69,16 @@ pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
     let mut page = Page { doc, time: 0.0 };
     page.settle();
     page
+}
+
+/// A painted colour in `computed`'s notation, so the two compare.
+fn css_color(color: peniko::Color) -> String {
+    let [r, g, b, a] = color.to_rgba8().to_u8_array();
+    if a == 255 {
+        format!("rgb({r}, {g}, {b})")
+    } else {
+        format!("rgba({r}, {g}, {b}, {})", a as f32 / 255.0)
+    }
 }
 
 fn viewport(scheme: ColorScheme) -> Viewport {
@@ -319,6 +336,66 @@ impl Page {
     pub fn computed(&self, selector: &str, property: &str) -> String {
         let id = self.node(selector);
         self.doc.inner.borrow().resolved_style_value(id, property)
+    }
+
+    /// The stroke Blitz will paint the first match's (an `svg`) first stroked
+    /// path with, as `rgb(..)`. Not `computed`: Blitz bakes it at box build.
+    pub fn painted_stroke(&self, selector: &str) -> String {
+        let id = self.node(selector);
+        let doc = self.doc.inner.borrow();
+        let element = doc
+            .get_node(id)
+            .and_then(|node| node.element_data())
+            .unwrap();
+        let SpecialElementData::Image(image) = &element.special_data else {
+            panic!("{selector:?} was not built as an image");
+        };
+        let ImageData::Svg(svg) = &**image else {
+            panic!("{selector:?} was not built as an svg");
+        };
+        let tree = format!("{:?}", svg.tree.root());
+        let start = tree.find("Color { red: ").expect("no stroke colour") + "Color { red: ".len();
+        let rest = &tree[start..];
+        let channels: Vec<&str> = rest[..rest.find(" }").unwrap()]
+            .split(", ")
+            .map(|channel| channel.rsplit(": ").next().unwrap())
+            .collect();
+        format!("rgb({})", channels.join(", "))
+    }
+
+    /// The scene Blitz would draw now, recorded rather than rasterised.
+    fn scene(&self) -> Scene {
+        let mut scene = Scene::new();
+        let mut doc = self.doc.inner.borrow_mut();
+        blitz_paint::paint_scene(&mut scene, &mut doc, 1.0, VIEWPORT.0, VIEWPORT.1, 0, 0);
+        scene
+    }
+
+    /// The colour Blitz paints the first match's text with, as `rgb(..)`. Not
+    /// `computed`: an anonymous block's text keeps the style of its box build.
+    pub fn painted_text(&self, selector: &str) -> String {
+        let (left, top, width, height) = self.rect(selector);
+        let rect = kurbo::Rect::new(left, top, left + width, top + height);
+        self.scene()
+            .commands
+            .iter()
+            .find_map(|command| match command {
+                RenderCommand::GlyphRun(GlyphRunCommand {
+                    transform,
+                    brush: Paint::Solid(color),
+                    glyphs,
+                    ..
+                }) if glyphs.iter().any(|glyph| {
+                    // Just above the baseline, inside the line box.
+                    let at = kurbo::Point::new(glyph.x as f64, glyph.y as f64 - 1.0);
+                    rect.contains(*transform * at)
+                }) =>
+                {
+                    Some(css_color(*color))
+                }
+                _ => None,
+            })
+            .unwrap_or_else(|| panic!("no text painted in {selector:?}"))
     }
 
     /// `<tag #id [attr=value ...]>` of a node, for assertion messages.

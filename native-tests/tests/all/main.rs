@@ -37,6 +37,7 @@ mod select;
 mod slider;
 mod splitter;
 mod spotlight;
+mod stale_colors;
 mod stepper;
 mod switch;
 mod table;
