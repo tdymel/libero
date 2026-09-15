@@ -1,7 +1,7 @@
 //! `Menu`, for the overlay archetype.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Menu, MenuEntry, MenuItem, use_menu};
+use libero::components::{Button, Flex, Menu, MenuEntry, MenuItem, Text, use_menu};
 
 use crate::Routes;
 
@@ -10,6 +10,7 @@ pub const ROUTES: Routes = &[
     ("/menu-open-on-mount", || rsx! { MenuOpenOnMountPage {} }),
     ("/menu-submenu-reopen", || rsx! { MenuSubmenuReopenPage {} }),
     ("/menu-choices", || rsx! { MenuChoicesPage {} }),
+    ("/menu-row", || rsx! { MenuRowPage {} }),
 ];
 
 /// Radio items with one checked, a toggle with a shortcut, and a label longer
@@ -82,6 +83,24 @@ fn MenuPage() -> Element {
                 items,
                 Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
             }
+        }
+    }
+}
+
+/// The docs demo's row: the trigger and the text beside it, centred.
+#[component]
+fn MenuRowPage() -> Element {
+    let menu = use_menu();
+    let items = vec![MenuItem::new("Save").onselect(|_| {}).into()];
+
+    rsx! {
+        Flex { direction: "row", align: "center", gap: "md",
+            Menu {
+                state: menu,
+                items,
+                Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+            }
+            Text { id: "menu-row-text", size: "sm", "Last chosen: nothing yet" }
         }
     }
 }

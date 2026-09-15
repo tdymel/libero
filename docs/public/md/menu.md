@@ -57,6 +57,7 @@ fn Demo() -> Element {
     rsx! {
         Flex {
             direction: "row",
+            align: "center",
             gap: "md",
             Menu {
                 state: menu,

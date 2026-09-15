@@ -425,6 +425,9 @@ fn AppShell() -> Element {
                         // one row of controls, one height.
                         .height(ICON_SIZE.value(Size::Lg))
                         .gap("sm")
+                        // Icon, label and hint are the button's flex items, not
+                        // text in its one-line label span.
+                        .selector("& > [data-slot='label']", sx().display("contents"))
                         .hover(sx().background("muted.1"))
                         .breakpoint(
                             Size::Sm,

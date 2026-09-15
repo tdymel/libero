@@ -1,7 +1,10 @@
 //! `Button`, as a button and as a router link.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Text};
+use libero::{
+    components::{Box, Button, Flex, Text},
+    sx::sx,
+};
 
 use crate::Routes;
 
@@ -12,7 +15,8 @@ pub const ROUTES: Routes = &[
 
 /// A plain button and a busy one, each counting its activations, and a
 /// link-mode button whose route is one only this page leads to. Below them a
-/// busy submit button in a form, a long label, and a toggle pair per variant.
+/// busy submit button in a form, a long label, buttons laying out element
+/// children, and a toggle pair per variant.
 #[component]
 fn ButtonPage() -> Element {
     let mut plain = use_signal(|| 0u32);
@@ -38,6 +42,30 @@ fn ButtonPage() -> Element {
                 Button { id: "busy-submit", r#type: "submit", loading: true, "Send" }
             }
             Button { id: "long", "Save every change made to this rather long document title" }
+            // The docs search field and colour swatches, cut down: a caller
+            // unwraps the label span to lay its element children out itself.
+            Button {
+                id: "search-like",
+                variant: "outlined",
+                sx: sx()
+                    .width("240px")
+                    .gap("sm")
+                    .justify_content("flex-start")
+                    .selector("& > [data-slot='label']", sx().display("contents")),
+                span { id: "search-icon", display: "inline-flex", width: "16px", height: "16px" }
+                "Search"
+                span { id: "search-kbd", display: "inline-block", width: "24px", height: "12px", margin_left: "auto" }
+            }
+            Button {
+                id: "swatch",
+                variant: "standard",
+                aria_label: "Blue",
+                sx: sx()
+                    .width("48px")
+                    .padding("0")
+                    .selector("& > [data-slot='label']", sx().display("contents")),
+                Box { id: "swatch-fill", sx: sx().width("100%").height("100%").background("blue") }
+            }
             for variant in ["filled", "tonal", "elevated", "outlined", "standard"] {
                 Flex { gap: "sm",
                     Button { id: "off-{variant}", variant, selected: false, "Bold" }

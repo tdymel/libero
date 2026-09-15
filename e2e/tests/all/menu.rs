@@ -54,6 +54,29 @@ fn it_honours_the_overlay_contract() {
     });
 }
 
+/// The docs demo's row: the trigger and the text beside it share a centre line.
+#[test]
+fn the_trigger_centres_beside_its_text() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-row", Viewport::Desktop).await.unwrap();
+        let offset: f64 = fixture
+            .page
+            .evaluate(format!(
+                "(() => {{ const mid = e => {{ const r = e.getBoundingClientRect(); return r.top + r.height / 2; }}; \
+                 const text = document.querySelector('#menu-row-text'); \
+                 const range = document.createRange(); range.selectNodeContents(text); \
+                 const line = range.getBoundingClientRect(); \
+                 return Math.abs(mid(document.querySelector('{TRIGGER}')) - (line.top + line.height / 2)); }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(offset <= 2.0, "trigger and text centres {offset}px apart");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Ctrl/Alt/Meta chords on an item are the browser's: no move, no submenu.
 #[test]
 fn modifier_chords_go_to_the_browser() {

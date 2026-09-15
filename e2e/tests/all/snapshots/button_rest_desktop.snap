@@ -29,6 +29,12 @@ form
     generic
 button "Save every change made to this rather long document title"
   StaticText "Save every change made to this rather long document title"
+button "Search"
+  generic
+  StaticText "Search"
+  generic
+button "Blue"
+  generic
 button "Bold" [pressed=false]
   StaticText "Bold"
 button "Bold" [pressed]

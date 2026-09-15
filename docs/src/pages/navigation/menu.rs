@@ -74,7 +74,7 @@ const TRIGGER: &str = r#"Button {
 
 fn wrap(_: &DemoValues, source: &str) -> String {
     format!(
-        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"row\",\n        gap: \"md\",\n{}        Text {{ size: \"sm\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
+        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"row\",\n        align: \"center\",\n        gap: \"md\",\n{}        Text {{ size: \"sm\", \"Last chosen: {{last()}}\" }}\n    }}\n}}",
         indent(&indent(source))
     )
 }
@@ -181,6 +181,7 @@ fn MenuDemo(
     rsx! {
         Flex {
             direction: "row",
+            align: "center",
             gap: "md",
             Menu {
                 state: menu,

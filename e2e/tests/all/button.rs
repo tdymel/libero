@@ -92,6 +92,40 @@ fn a_loading_button_swallows_enter_and_space() {
     });
 }
 
+/// `[failure, ...]` of the element-children layout; empty when it holds.
+const ELEMENT_CHILDREN: &str = "(() => {
+    const box = id => document.getElementById(id).getBoundingClientRect();
+    const out = [];
+    const [search, icon, kbd] = [box('search-like'), box('search-icon'), box('search-kbd')];
+    const pad = parseFloat(getComputedStyle(document.getElementById('search-like')).paddingRight);
+    if (Math.abs(search.right - pad - 1 - kbd.right) > 1) out.push(['kbd not at the end', kbd.right, search.right]);
+    if (icon.left - search.left > 24) out.push(['icon not at the start', icon.left, search.left]);
+    const [swatch, fill] = [box('swatch'), box('swatch-fill')];
+    if (fill.width < swatch.width - 2 || fill.height < swatch.height - 2)
+        out.push(['swatch fill collapsed', fill.width, fill.height, swatch.width, swatch.height]);
+    return out;
+})()";
+
+/// A caller that unwraps the label span gets its element children back as
+/// the button's flex items: its gap, auto margin and percentage sizes reach
+/// them. 481's span broke the docs search field and every docs colour swatch
+/// (d1dc0f03); the docs callers use this same rule.
+#[test]
+fn an_unwrapped_label_keeps_the_callers_flex_layout() {
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        let failures: Vec<serde_json::Value> = fixture
+            .page
+            .evaluate(ELEMENT_CHILDREN)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(failures.is_empty(), "{failures:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The label against the background as painted, `null` while either is
 /// translucent (the resting unfilled variants, or a transition under way).
 const PAIR: &str = "(selector => {

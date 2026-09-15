@@ -51,6 +51,16 @@ fn fill() -> libero::sx::Sx {
         .selector("& svg", sx().width("18px").height("18px"))
 }
 
+/// The swatch button: the fill is its flex item, not text in its one-line
+/// label span, so `fill`'s 100% is the button's box. The variant's hover tint
+/// would show as a halo around the fill.
+fn swatch_button() -> libero::sx::Sx {
+    sx().flex("1 1 0")
+        .padding("0")
+        .selector("& > [data-slot='label']", sx().display("contents"))
+        .hover(sx().background("transparent"))
+}
+
 /// A swatch per theme color the page offers, then one that opens a
 /// `ColorPicker` for any other color. A theme swatch sets its name, the
 /// picker sets a hex, so the code block prints whichever the caller would
@@ -124,9 +134,7 @@ pub fn ColorControl(
                                 onchange.call(option.clone());
                             }
                         },
-                        // The variant's hover tint would show as a halo
-                        // around the fill.
-                        sx: sx().flex("1 1 0").padding("0").hover(sx().background("transparent")),
+                        sx: swatch_button(),
                         Box {
                             sx: fill()
                                 .background(fill_color.clone())
@@ -158,7 +166,7 @@ pub fn ColorControl(
                                     onchange.call(custom().to_hex());
                                 }
                             },
-                            sx: sx().flex("1 1 0").padding("0").hover(sx().background("transparent")),
+                            sx: swatch_button(),
                             if is_custom {
                                 ColorSwatch {
                                     color: custom(),
