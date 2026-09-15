@@ -4,9 +4,10 @@ use crate::{
     components::{
         HtmlTag, Input, States, Variant,
         common::{
-            base_color, base_props, contrast_color, contrast_shade_color, fill_color,
-            focus_ring_sx, hover_color, hover_contrast_color, input_from_str, on_tint_color,
-            selected_color, shade_color, shadow_sx, text_color, variables,
+            base_color, base_props, contrast_color, contrast_shade_color, disabled_look_sx,
+            fill_color, focus_ring_sx, hover_color, hover_contrast_color, input_from_str,
+            on_state_sx, on_tint_color, selected_color, shade_color, shadow_sx, text_color,
+            variables,
         },
         feedback::Loader,
         layout::use_box,
@@ -241,7 +242,7 @@ pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> Varian
 /// selected fill. A literal `color` has no shade scale and so no selected
 /// tint - falling back to the base colour would paint a full-strength
 /// background under the resting label, so the untinted variants fall back to
-/// nothing at all.
+/// the ring of [`on_state_sx`] alone, which every variant carries.
 pub(crate) fn variant_selected_sx(
     variant: Variant,
     vars: &VariantVars,
@@ -249,7 +250,12 @@ pub(crate) fn variant_selected_sx(
     on_state: &CssVar,
 ) -> Sx {
     let color = vars.color;
-    match variant {
+    // The house on-state ring; `Elevated` keeps its resting lift under it.
+    let marker = match variant {
+        Variant::Elevated => on_state_sx(Some(&SizeCss::SHADOW.value(ELEVATED_REST))),
+        _ => on_state_sx(None),
+    };
+    let selected = match variant {
         Variant::Filled => sx()
             .background(selected_var.value_or(color.value()))
             .color(on_state.value_or(vars.contrast.value_or("inherit"))),
@@ -265,7 +271,10 @@ pub(crate) fn variant_selected_sx(
         Variant::Outlined | Variant::Standard => sx()
             .background(selected_var.value_or("transparent"))
             .color(on_state.value_or(color.value())),
-    }
+    };
+    // Outranks the plain focus rule, which would lose to the ring's
+    // `box-shadow` here; the ring composes the marker back in.
+    selected.and(marker).focus_visible(focus_ring_sx())
 }
 
 static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -306,9 +315,9 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
             )
         })
         // No `pointer-events: none`: the variant's `:hover` skips it already.
-        .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
+        .when("disabled", disabled_look_sx("not-allowed"))
         // A disabled `Fieldset` disables the `<button>` natively (todo 499).
-        .selector("&:disabled", sx().opacity("0.5").cursor("not-allowed"))
+        .selector("&:disabled", disabled_look_sx("not-allowed"))
         .when("full-width", sx().width("100%"))
         .when("loading", loading_sx())
         // The base outline is suppressed above and re-added only here.

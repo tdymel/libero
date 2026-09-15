@@ -75,6 +75,29 @@ fn a_toggle_reports_its_pressed_state() {
     });
 }
 
+/// Todo 491: without `variant` a pressed toggle painted nothing at all.
+#[test]
+fn a_pressed_toggle_shows_the_on_state_line_with_and_without_a_variant() {
+    use crate::button::{
+        assert_gray_in_forced_colours, assert_on_in_forced_colours, assert_on_marker,
+    };
+    block_on(async {
+        let fixture = Fixture::open("/action-icon", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        pointer::click(page, "#bare-toggle").await.unwrap();
+        assert_on_marker(page, "#bare-toggle", "#plain").await;
+        assert_on_marker(page, "#toggle", "#plain").await;
+        crate::calendar::force_colours(page).await;
+        assert_on_in_forced_colours(page, "#bare-toggle", "#plain").await;
+        assert_on_in_forced_colours(page, "#toggle", "#plain").await;
+        assert_gray_in_forced_colours(page, "#disabled").await;
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `[pointer hits it, cursor under the pointer, background and colour]`.
 const DISABLED_LOOK: &str = "(() => {
     const el = document.querySelector('[data-disabled-probe]');

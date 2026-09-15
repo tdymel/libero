@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, States, Variant,
-        common::{Orientation, focus_ring_sx, has_shortcut_modifier, neighbour},
+        common::{Orientation, disabled_look_sx, focus_ring_sx, has_shortcut_modifier, neighbour},
         form::Activation,
         inputs::{
             BUTTON_HOVER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS,
@@ -79,12 +79,6 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .selector("& > input:focus-visible + label", {
             focus_ring_sx().z_index("2")
         })
-        .selector(
-            "& > label[data-state~=\"disabled\"]",
-            sx().opacity("0.5")
-                .cursor("not-allowed")
-                .pointer_events("none"),
-        )
         .when(
             Orientation::Vertical.state_name(),
             // Stretch, or each segment sizes to its own label and the column
@@ -172,6 +166,17 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
                     &BUTTON_SELECTED_VAR,
                     &BUTTON_ON_STATE_VAR,
                 ),
+            )
+            // The selected look sets `box-shadow` more specifically than the
+            // ring above; this one outranks it and composes the marker back.
+            .selector(
+                "& > input:focus-visible + label[data-state~=\"checked\"]",
+                focus_ring_sx().z_index("2"),
+            )
+            // In here, so its `GrayText` outranks the variant's label colour.
+            .selector(
+                "& > label[data-state~=\"disabled\"]",
+                disabled_look_sx("not-allowed").pointer_events("none"),
             ),
         )
     });

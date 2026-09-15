@@ -3,7 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
-        common::{attr, base_props, inset_focus_ring_sx, use_style_attributes},
+        common::{
+            attr, base_props, disabled_look_sx, forced_on_sx, inset_focus_ring_sx, shadow_sx,
+            use_style_attributes,
+        },
         layout::box_style,
         variables,
     },
@@ -45,6 +48,9 @@ fn nav_link_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> 
     variables().with(NAV_LINK_ACTIVE_BACKGROUND_VAR, background.resolve(None))
 }
 
+/// The width of the house on-state line (see `on_ring_sx`).
+const ON_BAR: &str = "2px";
+
 static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
@@ -69,13 +75,21 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
             "&:hover:not(:where([data-state~=\"disabled\"]))",
             sx().background("muted.2"),
         )
+        // The house on-state line at the start edge only: a full ring would
+        // read as this link's inset focus ring.
         .when(
             "active",
-            sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())
-                .hover(sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())),
+            shadow_sx(format!("inset {ON_BAR} 0 0 currentColor"))
+                .background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())
+                .hover(sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value()))
+                .selector(
+                    "&:dir(rtl)",
+                    shadow_sx(format!("inset -{ON_BAR} 0 0 currentColor")),
+                )
+                .and(forced_on_sx()),
         )
         // Without `href` it has nothing to follow.
-        .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
+        .when("disabled", disabled_look_sx("not-allowed"))
 });
 
 base_props! {

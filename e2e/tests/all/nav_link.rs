@@ -16,6 +16,27 @@ const SHOWN_NEAREST: &str = "(() => { \
     return bar.scrollTop > 0 && Math.abs(gap) < 2 && window.scrollY === 0; \
 })()";
 
+/// Todo 574: the active link was a faint tint only.
+#[test]
+fn the_active_link_shows_the_on_state_bar() {
+    use crate::button::{
+        assert_gray_in_forced_colours, assert_on_in_forced_colours, assert_on_marker,
+    };
+    block_on(async {
+        let fixture = Fixture::open("/nav-link/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        assert_on_marker(page, "#active", "#idle").await;
+        crate::calendar::force_colours(page).await;
+        assert_on_in_forced_colours(page, "#active", "#idle").await;
+        assert_gray_in_forced_colours(page, "#disabled").await;
+        crate::button::assert_text_in_forced_colours(page, "#disabled-active", "HighlightText")
+            .await;
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn an_active_link_scrolls_its_sidebar_just_far_enough() {
     block_on(async {

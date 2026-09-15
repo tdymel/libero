@@ -6,7 +6,8 @@ use crate::{
     components::{
         ClassList, HtmlTag, Input, Orientation, States, Variables, VisuallyHidden,
         common::{
-            CheckIcon, CloseIcon, Rail, RailInset, focus_ring_sx, use_closing_focus, variables,
+            CheckIcon, CloseIcon, Rail, RailInset, focus_ring_sx, on_ring_sx, use_closing_focus,
+            variables,
         },
         layout::{Collapse, use_box},
     },
@@ -219,6 +220,12 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
             sx().background(STEPPER_ERROR.value())
                 .border_color(STEPPER_ERROR.value())
                 .color(STEPPER_ERROR_CONTRAST.value()),
+        )
+        // The house on-state ring thickens the current marker, so current and
+        // pending differ in shape too; an errored current step keeps it.
+        .selector(
+            "& > ol > li > [aria-current=\"step\"] [data-step-marker]",
+            on_ring_sx(None),
         )
         // Forced colours paint every fill `Canvas` and every ring `CanvasText`:
         // the completed fill and the current ring would vanish into the rest.

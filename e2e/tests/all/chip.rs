@@ -55,6 +55,23 @@ async fn focused(fixture: &Fixture) -> String {
         .unwrap()
 }
 
+/// Todo 491: a selected chip showed only a faint tint.
+#[test]
+fn a_selected_chip_shows_the_on_state_line() {
+    use crate::button::{
+        assert_gray_in_forced_colours, assert_on_in_forced_colours, assert_on_marker,
+    };
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/chip", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        assert_on_marker(page, "#rust", "#css").await;
+        crate::calendar::force_colours(page).await;
+        assert_on_in_forced_colours(page, "#rust", "#css").await;
+        assert_gray_in_forced_colours(page, "#off").await;
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn space_toggles_a_filter_chip_and_enter_does_not() {
     block_on(async {

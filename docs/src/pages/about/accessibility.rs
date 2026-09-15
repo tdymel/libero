@@ -27,11 +27,36 @@ pub fn AccessibilityPage() -> Element {
             },
 
             DocSection {
+                title: "On and disabled states",
+                Text {
+                    "A pressed, selected or current control never differs by colour alone. "
+                    "It carries a 2px line in its own text colour just inside its edge: "
+                    Code { source: "Button" }
+                    ", "
+                    Code { source: "ActionIcon" }
+                    ", "
+                    Code { source: "Chip" }
+                    ", "
+                    Code { source: "SegmentedControl" }
+                    " and the current "
+                    Code { source: "Stepper" }
+                    " marker draw it all round, an active "
+                    Code { source: "NavLink" }
+                    " only at its start edge. A disabled control fades to half."
+                }
+            }
+
+            DocSection {
                 title: "Forced colors and Windows High Contrast",
                 Text {
-                    "Libero does not support forced colors. No component carries a "
+                    "Libero supports forced colors only in part. The states above hold: an on "
+                    "state paints the system's "
+                    Code { source: "Highlight" }
+                    " pair and a disabled control's text turns "
+                    Code { source: "GrayText" }
+                    ". A few components carry their own "
                     Code { source: "(forced-colors: active)" }
-                    " arm, and nothing is tested in that mode."
+                    " arm; the rest of the library is not tested in that mode."
                 }
                 Text {
                     "Windows High Contrast is the mode this affects. In it the operating "
@@ -57,8 +82,8 @@ pub fn AccessibilityPage() -> Element {
                     "The reason we stop there: forced colors is a Windows platform mode, not "
                     "a WCAG success criterion at any conformance level, and covering it "
                     "properly means an arm on most of the library plus a test tier to keep it "
-                    "honest. We would rather say so than half-support it. If you need it, "
-                    "open an issue - a real user asking is what would change this."
+                    "honest. If you need more of it, open an issue - a real user asking is "
+                    "what would change this."
                 }
             }
         }

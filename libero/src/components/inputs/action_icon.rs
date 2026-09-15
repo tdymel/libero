@@ -5,7 +5,8 @@ use crate::{
         HtmlTag, Input, States, Variables, Variant,
         common::base_props,
         common::{
-            base_color, contrast_color, fill_color, names_itself, text_color, use_name_warning,
+            base_color, contrast_color, disabled_look_sx, fill_color, focus_ring_sx, names_itself,
+            on_state_sx, text_color, use_name_warning,
         },
         feedback::Loader,
         inputs::{VariantVars, interactive_variant_sx, variant_colors, variant_selected_sx},
@@ -58,7 +59,10 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .width(ACTION_ICON_SIZE.overridable())
         .height(ACTION_ICON_SIZE.overridable())
         .border_radius(ACTION_ICON_RADIUS.overridable())
-        .selector("& svg", sx().width("100%").height("100%"));
+        .selector("& svg", sx().width("100%").height("100%"))
+        // A chromeless toggle's only pressed look; a variant's own block below
+        // repeats it over its fill.
+        .when("checked", on_state_sx(None).focus_visible(focus_ring_sx()));
 
     let base = Variant::ALL.iter().fold(base, |base, &variant| {
         base.when(
@@ -90,7 +94,7 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
 
     // The variants' `:hover` skips a disabled control, so no `pointer-events:
     // none`. `:disabled` too: a disabled `Fieldset` disables the `<button>` (todo 499).
-    let disabled = || sx().opacity("0.5").cursor("not-allowed");
+    let disabled = || disabled_look_sx("not-allowed");
     base.when("disabled", disabled())
         .selector("&:disabled", disabled())
         .when("loading", loading_sx())

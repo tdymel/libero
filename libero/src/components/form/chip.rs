@@ -5,8 +5,9 @@ use crate::{
         HtmlTag, Input, States, Variant,
         a11y::VISUALLY_HIDDEN_SX,
         common::{
-            base_color, base_props, contrast_color, contrast_shade_color, fill_color,
-            focus_ring_sx, ring_overlay, ring_overlay_sx, shade_color, text_color, variables,
+            base_color, base_props, contrast_color, contrast_shade_color, disabled_look_sx,
+            fill_color, focus_ring_sx, on_ring_sx, on_state_sx, ring_overlay, ring_overlay_sx,
+            shade_color, text_color, variables,
         },
         form::{Activation, use_bound},
         inputs::{VariantColors, VariantVars, interactive_variant_sx, variant_colors},
@@ -79,6 +80,12 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
                 &CHIP_VARS,
                 &CHIP_HOVER_VAR,
                 &CHIP_ON_STATE_VAR,
+            )
+            .and(on_state_sx(None))
+            // An `Elevated` chip's hover lift would drop the ring otherwise.
+            .selector(
+                "&:hover:not(:where(:disabled, [data-state~=\"disabled\"]))",
+                on_ring_sx(None),
             ),
         )
         .when("selectable", sx().overflow("visible"))
@@ -101,9 +108,7 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
 // No `pointer-events: none`, so `not-allowed` shows (todo 596): the variant's
 // `:hover` skips a disabled chip, and no click path is left to block.
 fn disabled_sx() -> Sx {
-    sx().opacity("0.5")
-        .cursor("not-allowed")
-        .selector("& > label", sx().cursor("not-allowed"))
+    disabled_look_sx("not-allowed").selector("& > label", sx().cursor("not-allowed"))
 }
 
 static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {

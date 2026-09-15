@@ -26,6 +26,19 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 517: the disabled trigger faded only, which forced colours undo.
+#[test]
+fn a_disabled_trigger_is_gray_text_in_forced_colours() {
+    block_on(async {
+        let fixture = Fixture::open("/accordion", Viewport::Desktop)
+            .await
+            .unwrap();
+        crate::calendar::force_colours(&fixture.page).await;
+        crate::button::assert_gray_in_forced_colours(&fixture.page, "#checkout-trigger-1").await;
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A label with no break opportunity wraps inside its trigger at 390px, so
 /// neither the page nor the trigger scrolls sideways and the chevron stays on
 /// screen (1.4.10).

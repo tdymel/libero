@@ -434,7 +434,7 @@ async fn expect_focus(page: &chromiumoxide::Page, date: &str, month: &str, what:
 }
 
 /// Switches the page to forced colours and waits until the media query reads so.
-async fn force_colours(page: &chromiumoxide::Page) {
+pub async fn force_colours(page: &chromiumoxide::Page) {
     use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
     page.execute(
         SetEmulatedMediaParams::builder()

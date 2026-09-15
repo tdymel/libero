@@ -128,6 +128,47 @@ pub(crate) fn shadow_sx(shadow: String) -> crate::sx::Sx {
         .var(crate::theme::OWN_SHADOW, shadow)
 }
 
+/// The house on-state line: 2px of `currentColor` inside the edge.
+const ON_RING: &str = "inset 0 0 0 2px currentColor";
+
+/// The house marker for an on state (pressed, selected, current), so it never rests
+/// on a fill alone (1.4.1). `resting` is a shadow the element keeps under the ring.
+pub(crate) fn on_ring_sx(resting: Option<&str>) -> crate::sx::Sx {
+    shadow_sx(match resting {
+        Some(resting) => format!("{ON_RING},{resting}"),
+        None => ON_RING.to_string(),
+    })
+}
+
+/// [`on_ring_sx`] for a control, plus [`forced_on_sx`].
+pub(crate) fn on_state_sx(resting: Option<&str>) -> crate::sx::Sx {
+    on_ring_sx(resting).and(forced_on_sx())
+}
+
+/// The system's `Highlight` pair for an on state under forced colours, where
+/// the ring is gone. Outranks [`disabled_look_sx`]: `GrayText` does not read on `Highlight`.
+pub(crate) fn forced_on_sx() -> crate::sx::Sx {
+    let text = || crate::sx::sx().color("HighlightText");
+    crate::sx::sx().media(
+        crate::sx::FORCED_COLORS,
+        crate::sx::sx()
+            .background("Highlight")
+            .border_color("Highlight")
+            .color("HighlightText")
+            .when("disabled", text())
+            .selector("&:disabled", text()),
+    )
+}
+
+/// The house disabled look: faded to half, and the system's `GrayText` under
+/// forced colours, where the fade alone does not read as disabled.
+pub(crate) fn disabled_look_sx(cursor: &str) -> crate::sx::Sx {
+    crate::sx::sx().opacity("0.5").cursor(cursor).media(
+        crate::sx::FORCED_COLORS,
+        crate::sx::sx().color("GrayText").border_color("GrayText"),
+    )
+}
+
 /// The stand-in that draws a focus ring for an element the focus lands
 /// *inside* of - a field's frame, a checkbox's box. Placed after the
 /// focusable, so `:focus-visible ~ [data-ring]` reaches it: a sibling rule.

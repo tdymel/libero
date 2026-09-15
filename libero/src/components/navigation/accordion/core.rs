@@ -5,7 +5,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{ChevronDownIcon, has_shortcut_modifier, inset_focus_ring_sx, use_closing_focus},
+        common::{
+            ChevronDownIcon, disabled_look_sx, has_shortcut_modifier, inset_focus_ring_sx,
+            use_closing_focus,
+        },
         layout::{Collapse, use_box},
     },
     hooks::{id_selector, use_element},
@@ -70,7 +73,7 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& > [data-accordion-item] > [data-accordion-heading] > button[aria-disabled=\"true\"]",
-            sx().opacity("0.5").cursor("not-allowed"),
+            disabled_look_sx("not-allowed"),
         )
         // The transition is declared here, so its reduced-motion guard is
         // nested here too - at the same specificity, or it loses.

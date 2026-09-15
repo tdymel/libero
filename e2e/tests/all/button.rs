@@ -145,6 +145,102 @@ fn a_hovered_button_s_label_reads_on_its_hover_fill() {
     });
 }
 
+/// Whether `on` carries the house on-state line (an inset `box-shadow` in its
+/// own text colour) and `off` does not.
+fn marked(on: &str, off: &str) -> String {
+    format!(
+        "(() => {{ const s = q => getComputedStyle(document.querySelector(q)); \
+         const [on, off] = [s('{on}'), s('{off}')]; \
+         return on.boxShadow.startsWith(on.color) && on.boxShadow.includes('inset') \
+             && !off.boxShadow.includes('inset'); }})()"
+    )
+}
+
+/// Todo 491: the on state must not rest on a fill change alone (1.4.1).
+pub async fn assert_on_marker(page: &chromiumoxide::Page, on: &str, off: &str) {
+    if let Err(e) = wait::for_js_true(page, &marked(on, off), "the on-state line").await {
+        let shadows: Vec<String> = page
+            .evaluate(format!(
+                "['{on}', '{off}'].map(q => getComputedStyle(document.querySelector(q)).boxShadow)"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        panic!("{on} vs {off}: {e}; box-shadows {shadows:?}");
+    }
+}
+
+/// Forced colours drop the line: the on state has to paint `Highlight` instead.
+pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, off: &str) {
+    let [on_bg, off_bg, highlight]: [String; 3] = page
+        .evaluate(format!(
+            "(() => {{ const probe = document.createElement('div'); \
+             probe.style.background = 'Highlight'; document.body.append(probe); \
+             const highlight = getComputedStyle(probe).backgroundColor; probe.remove(); \
+             const bg = q => getComputedStyle(document.querySelector(q)).backgroundColor; \
+             return [bg('{on}'), bg('{off}'), highlight]; }})()"
+        ))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert_eq!(on_bg, highlight, "{on} is not Highlight in forced colours");
+    assert_ne!(off_bg, highlight, "{off} is Highlight too");
+}
+
+/// Todo 517: under forced colours a disabled control's text is `GrayText`,
+/// where the fade alone does not read as disabled.
+pub async fn assert_gray_in_forced_colours(page: &chromiumoxide::Page, selector: &str) {
+    assert_text_in_forced_colours(page, selector, "GrayText").await;
+}
+
+/// A disabled on state keeps `HighlightText`: `GrayText` does not read on `Highlight`.
+pub async fn assert_text_in_forced_colours(
+    page: &chromiumoxide::Page,
+    selector: &str,
+    system: &str,
+) {
+    let [color, expected]: [String; 2] = page
+        .evaluate(format!(
+            "(() => {{ const probe = document.createElement('div'); \
+             probe.style.color = '{system}'; document.body.append(probe); \
+             const expected = getComputedStyle(probe).color; probe.remove(); \
+             return [getComputedStyle(document.querySelector('{selector}')).color, expected]; }})()"
+        ))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert_eq!(
+        color, expected,
+        "{selector} is not {system} in forced colours"
+    );
+}
+
+#[test]
+fn a_pressed_button_shows_the_on_state_line_in_every_variant() {
+    const VARIANTS: [&str; 5] = ["filled", "tonal", "elevated", "outlined", "standard"];
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        for variant in VARIANTS {
+            assert_on_marker(page, &format!("#on-{variant}"), &format!("#off-{variant}")).await;
+        }
+        crate::calendar::force_colours(page).await;
+        for variant in VARIANTS {
+            assert_on_in_forced_colours(
+                page,
+                &format!("#on-{variant}"),
+                &format!("#off-{variant}"),
+            )
+            .await;
+        }
+        assert_gray_in_forced_colours(page, "#disabled-link").await;
+        fixture.close().await.unwrap();
+    });
+}
+
 /// An `<a>` without `href` maps to `generic`, which drops the link role and
 /// the name from content: a disabled link-mode button read as plain text.
 #[test]

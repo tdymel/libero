@@ -59,6 +59,40 @@ fn it_honours_the_radio_group_contract() {
     });
 }
 
+/// Todo 491: the picked segment showed only a faint tint.
+#[test]
+fn the_picked_segment_shows_the_on_state_line() {
+    use crate::button::{
+        assert_gray_in_forced_colours, assert_on_in_forced_colours, assert_on_marker,
+    };
+    const PICKED: &str = "[role=radiogroup] label[for$=\"-segment-1\"]";
+    const OTHER: &str = "[role=radiogroup] label[for$=\"-segment-0\"]";
+    block_on(async {
+        let fixture = Fixture::open("/segmented-control", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        assert_on_marker(page, PICKED, OTHER).await;
+        crate::calendar::force_colours(page).await;
+        assert_on_in_forced_colours(page, PICKED, OTHER).await;
+        fixture.close().await.unwrap();
+
+        let fixture = Fixture::open("/segmented-control/disabled-middle", Viewport::Desktop)
+            .await
+            .unwrap();
+        crate::calendar::force_colours(&fixture.page).await;
+        assert_gray_in_forced_colours(&fixture.page, PICKED).await;
+        fixture.close().await.unwrap();
+
+        let fixture = Fixture::open("/segmented-control/disabled-pick", Viewport::Desktop)
+            .await
+            .unwrap();
+        crate::calendar::force_colours(&fixture.page).await;
+        crate::button::assert_text_in_forced_colours(&fixture.page, PICKED, "HighlightText").await;
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn settle(fixture: &Fixture) {
     fixture
         .page

@@ -144,6 +144,23 @@ fn ordinary_labels_fit_320px_whole() {
     });
 }
 
+/// Todo 540: the current marker differed from a pending one by colour only.
+#[test]
+fn the_current_marker_carries_the_on_state_line() {
+    block_on(async {
+        let fixture = Fixture::open("/stepper-long", Viewport::Desktop)
+            .await
+            .unwrap();
+        crate::button::assert_on_marker(
+            &fixture.page,
+            "#plain-step-1 [data-step-marker]",
+            "#plain-step-2 [data-step-marker]",
+        )
+        .await;
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Forced colours paint every fill `Canvas` and every ring `CanvasText`: the
 /// completed marker's fill and the current step's ring must stay apart from a
 /// pending step's (todo 524).
