@@ -219,5 +219,11 @@ fn a_filled_alert_rings_its_children_in_its_text_colour() {
         children.contains("--lsx-focus-contrast:var(--lsx-alert-contrast, currentColor)"),
         "{children}"
     );
+    // Todo 630: the fill is their halo, or a white stripe sits on the page's white.
+    assert!(
+        children.contains("--lsx-focus-ring-halo:var(--lsx-alert-fill, var(--lsx-alert-color))"),
+        "{children}"
+    );
     assert!(!own.contains("--lsx-focus-contrast:"), "{own}");
+    assert!(!own.contains("--lsx-focus-ring-halo:"), "{own}");
 }

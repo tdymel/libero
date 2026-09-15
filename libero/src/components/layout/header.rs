@@ -10,8 +10,8 @@ use crate::{
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ColorShade, ColorValue, CssVar, HEADER_HEIGHT, NamedColorCss, PAPER_BACKGROUND, Size,
-        Z_INDEX_HEADER,
+        ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, HEADER_HEIGHT, NamedColorCss,
+        PAPER_BACKGROUND, Size, Z_INDEX_HEADER,
     },
 };
 
@@ -79,6 +79,7 @@ fn header_variables(props: &HeaderProps) -> Variables {
         .as_ref()
         .and_then(header_contrast_color)
         .and_then(|v| v.resolve(None));
+    let fill = base.as_ref().and_then(fill_color);
 
     variables()
         .with(
@@ -88,12 +89,13 @@ fn header_variables(props: &HeaderProps) -> Variables {
         // The banner is a fill under `HEADER_COLOR_VAR`, so it resolves
         // through the fill ramp: a `primary` header used to be `blue.6` with
         // white text on it, 3.56:1 (todo 239).
-        .with(HEADER_BACKGROUND_VAR, base.as_ref().and_then(fill_color))
+        .with(HEADER_BACKGROUND_VAR, fill.clone())
         .with(HEADER_COLOR_VAR, contrast.clone())
         // The background comes through a var, so `sx` cannot publish the
         // focus contrast from it (`codebase/sx`): without this every ring in a
         // coloured header is the primary shade on a primary banner. Only with
         // a `color`, so an uncoloured header inherits the page's.
+        .with(FOCUS_RING_HALO, contrast.as_ref().and(fill))
         .with(
             CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
             contrast,
@@ -167,6 +169,11 @@ mod tests {
         assert!(variables.contains(HEADER_BACKGROUND_VAR.name()));
         assert!(variables.contains(HEADER_COLOR_VAR.name()));
         assert!(variables.contains(NamedColorCss::FOCUS_CONTRAST.name()));
+        assert!(variables.contains(&format!(
+            "{}:{};",
+            FOCUS_RING_HALO.name(),
+            ColorValue::Fill(Color::Primary, HEADER_DEFAULT_SHADE).value()
+        )));
     }
 
     /// Unset means the themed default applies, so neither var is pinned.
@@ -177,5 +184,6 @@ mod tests {
         assert!(!variables.contains(HEADER_BACKGROUND_VAR.name()));
         assert!(!variables.contains(HEADER_COLOR_VAR.name()));
         assert!(!variables.contains(NamedColorCss::FOCUS_CONTRAST.name()));
+        assert!(!variables.contains(FOCUS_RING_HALO.name()));
     }
 }

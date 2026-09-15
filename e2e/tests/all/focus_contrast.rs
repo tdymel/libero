@@ -90,3 +90,36 @@ fn a_hex_background_rings_its_link_in_the_hex_twin_in_dark() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 630: in light a dark fill's white stripe met the page's white halo,
+/// 1.00:1. The fill is now the halo.
+#[test]
+fn a_dark_fill_is_the_halo_of_the_rings_inside_it_in_light() {
+    block_on(async {
+        let fixture = Fixture::open("/focus-contrast/hex", Viewport::Desktop)
+            .await
+            .unwrap();
+        let ring = focus::assert_focus_ring(&fixture.page, "#hex-link", 5)
+            .await
+            .unwrap();
+        focus::assert_ring_contrast(&ring).unwrap_or_else(|e| panic!("#hex-link: {e}"));
+        fixture.close().await.unwrap();
+
+        let fixture = Fixture::open("/focus-contrast/fills", Viewport::Desktop)
+            .await
+            .unwrap();
+        for target in ["#paper-link", "#filled-alert [data-slot=close]"] {
+            let ring = focus::assert_focus_ring(&fixture.page, target, 5)
+                .await
+                .unwrap();
+            focus::assert_ring_contrast(&ring).unwrap_or_else(|e| panic!("{target}: {e}"));
+            eprintln!(
+                "{target}: outline {} against {}",
+                ring.outline_color, ring.against
+            );
+        }
+
+        fixture.console.assert_clean("the dark fills").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

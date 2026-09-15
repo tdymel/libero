@@ -167,6 +167,8 @@ fn an_explicit_shade_paints_the_fill_its_twin_reads_on() {
         "--lsx-blockquote-background:var(--lsx-info-fill-6)",
         "--lsx-blockquote-color:var(--lsx-info-contrast-6)",
         "--lsx-focus-contrast:var(--lsx-info-contrast-6)",
+        // Todo 630: the fill is the ring's halo, or a white stripe sits on white.
+        "--lsx-focus-ring-halo:var(--lsx-info-fill-6)",
     ] {
         assert!(style.contains(pair), "{pair} in {style}");
     }

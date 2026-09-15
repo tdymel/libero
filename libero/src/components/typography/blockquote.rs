@@ -10,7 +10,8 @@ use crate::{
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         BLOCKQUOTE_BACKGROUND, BLOCKQUOTE_BORDER_COLOR, BLOCKQUOTE_CITE_OPACITY, BLOCKQUOTE_COLOR,
-        BlockquoteDefaults, Color, ColorShade, ColorValue, NamedColorCss, Size, TEXT_FONT_SIZE,
+        BlockquoteDefaults, Color, ColorShade, ColorValue, FOCUS_RING_HALO, NamedColorCss, Size,
+        TEXT_FONT_SIZE,
     },
 };
 
@@ -78,29 +79,23 @@ fn palette(value: Option<&ThemeAwareValue>, default_color: Color) -> Palette {
 /// literal colour, and ours is a `var()`, which is opaque to that inference -
 /// so a link inside a quote would draw its focus ring from the fallback,
 /// `primary.6`, against a `primary.1` tint. `Paper` owes the same debt for the
-/// same reason.
+/// same reason. The tint is the ring's halo beside it (todo 630).
 fn blockquote_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Variables {
     let palette = palette(color, default_color);
     let focus_contrast =
         crate::theme::CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string());
+    let background = palette.background.resolve(None);
+    let contrast = palette
+        .contrast
+        .as_ref()
+        .and_then(|contrast| contrast.resolve(None));
 
     variables()
-        .with(BLOCKQUOTE_BACKGROUND, palette.background.resolve(None))
+        .with(BLOCKQUOTE_BACKGROUND, background.clone())
         .with(BLOCKQUOTE_BORDER_COLOR, palette.border.resolve(None))
-        .with(
-            BLOCKQUOTE_COLOR,
-            palette
-                .contrast
-                .as_ref()
-                .and_then(|contrast| contrast.resolve(None)),
-        )
-        .with(
-            focus_contrast,
-            palette
-                .contrast
-                .as_ref()
-                .and_then(|contrast| contrast.resolve(None)),
-        )
+        .with(BLOCKQUOTE_COLOR, contrast.clone())
+        .with(FOCUS_RING_HALO, contrast.as_ref().and(background))
+        .with(focus_contrast, contrast)
 }
 
 /// Layout only. The frame lives on the `<blockquote>`; this exists to tie the

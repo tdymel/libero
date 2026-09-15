@@ -62,9 +62,10 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
         )
         // `appearance: none` and `border: 0` take the UA ring with them. Inset,
         // because the trigger spans the full width and an outset ring would be
-        // clipped by whatever holds the accordion.
+        // clipped by whatever holds the accordion. Doubled to outrank a
+        // `Button`'s own ring whatever the stylesheet order, as `Carousel`.
         .selector(
-            "& > [data-accordion-item] > [data-accordion-heading] > button:focus-visible",
+            "& > [data-accordion-item] > [data-accordion-heading] > button:focus-visible:focus-visible",
             inset_focus_ring_sx("-2px"),
         )
         .selector(

@@ -79,8 +79,8 @@ its field. See [Form](form.md).
   matters, as `Form` does with its summary. `Escape` does not close it.
 - **`outlined` carries no tint**, only a border, which is quiet for an error.
   Prefer `tonal` or `filled` where the severity must be seen. On `filled` the
-  close button's focus ring takes the text colour: white on `info` is about
-  2.8:1.
+  close button's focus ring takes the text colour on the fill as its halo:
+  white on `info` is about 4.5:1.
 
 ## Props
 

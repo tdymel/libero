@@ -29,8 +29,8 @@ use crate::{
         CAROUSEL_CONTROL_SIZE, CAROUSEL_CONTROLS_OFFSET, CAROUSEL_GAP, CAROUSEL_INDICATOR_COLOR,
         CAROUSEL_INDICATOR_CURRENT_COLOR, CAROUSEL_INDICATOR_CURRENT_LENGTH,
         CAROUSEL_INDICATOR_LENGTH, CAROUSEL_INDICATOR_THICKNESS, CAROUSEL_INDICATORS_GAP,
-        CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, CarouselDefaults, CssVar, FOCUS_RING_WIDTH,
-        NamedColorCss, Size, SizeCss,
+        CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, CarouselDefaults, CssVar, FOCUS_RING_HALO,
+        FOCUS_RING_WIDTH, NamedColorCss, Size, SizeCss,
     },
 };
 
@@ -156,6 +156,7 @@ static CAROUSEL_CONTROLS_SX: StaticSx = StaticSx::new(|| {
 /// the `--lsx-focus-contrast` that `background("white")` used to publish is
 /// declared by hand - the glyph colour, which is what reads against the fill -
 /// or the ring would fall back to whatever the page around the carousel set.
+/// The fill is the ring's halo, as `background()` publishes it.
 fn control_colors_sx() -> Sx {
     sx().background(CAROUSEL_CONTROL_BACKGROUND.value())
         .color(CAROUSEL_CONTROL_COLOR.value())
@@ -163,6 +164,7 @@ fn control_colors_sx() -> Sx {
             CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
             CAROUSEL_CONTROL_COLOR.value(),
         )
+        .var(FOCUS_RING_HALO, CAROUSEL_CONTROL_BACKGROUND.value())
 }
 
 static CAROUSEL_CONTROL_SX: StaticSx = StaticSx::new(|| {
@@ -2057,6 +2059,10 @@ mod tests {
             );
             assert!(
                 css.contains("--lsx-focus-contrast:var(--lsx-carousel-control-color)"),
+                "{css}"
+            );
+            assert!(
+                css.contains("--lsx-focus-ring-halo:var(--lsx-carousel-control-background)"),
                 "{css}"
             );
             assert!(!css.contains("--lsx-surface"), "{css}");

@@ -362,29 +362,21 @@ impl BoxStyle {
 /// The styled element every component is built from: any tag, the `sx`
 /// pipeline, the `data-state` machinery and the standard focus ring.
 ///
-/// **Filling a focusable `Box` means insetting its ring.** `background()`
-/// publishes `--lsx-focus-contrast` on the element for what is drawn *inside*
-/// it, and the standard ring is drawn 2px *outside*, where the surrounding
-/// surface's twin would be the right one. So a knob with
-/// `background("primary.6")` takes a **white** ring, on whatever the knob sits
-/// on: 1.11:1 on a light track, measured.
+/// **A filled focusable `Box` rings itself in its own colours.** `background()`
+/// publishes `--lsx-focus-contrast` and `--lsx-focus-ring-halo` on the element
+/// for what is drawn *inside* it, and the standard ring drawn 2px *outside*
+/// reads them too. So a knob with `background("primary.6")` takes a white
+/// stripe between two `primary.6` halo bands: the pair reads against itself,
+/// 4.86:1, whatever the knob sits on (todo 630; a white halo made it 1:1).
 ///
-/// The two-tone ring does not rescue this one, which is the natural guess:
-/// `--lsx-focus-contrast` overrides the **stripe** and not the halo, so on a
-/// fill whose twin is white both tones come out white and the pair has nothing
-/// left to read against itself (measured 2026-09-20: `outline-color` and
-/// `--lsx-focus-ring-halo` both `#FFFFFF`). An element cannot read its parent's
-/// value of a property it also sets, so nothing here can repair it for you -
-/// draw the ring inside the fill instead, where the published twin is right:
+/// To draw the ring inside the fill instead, inset it:
 ///
 /// ```ignore
 /// sx().background("primary.6")
-///     // The fill's own twin, on the fill: 4.86:1 rather than 1.11:1.
 ///     .focus_visible(sx().outline_offset("-4px"))
 /// ```
 ///
-/// `Calendar`, `TimePicker` and `Lightbox` all do exactly this for their
-/// filled parts.
+/// `Calendar`, `TimePicker` and `Lightbox` do this for their filled parts.
 #[component]
 pub fn Box(props: BoxProps) -> Element {
     let mut style = BoxBuilder {

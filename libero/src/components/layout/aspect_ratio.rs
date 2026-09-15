@@ -16,8 +16,9 @@ static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
         .overflow("hidden")
         .selector("& > *", sx().width("100%").height("100%"))
         // The child fills the clipped box, so a ring drawn outside it is cut away.
+        // Doubled to outrank a `Button`'s own ring, which ties it otherwise.
         .selector(
-            "& > *:focus-visible",
+            "& > *:focus-visible:focus-visible",
             inset_focus_ring_sx(&format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())),
         )
 });
@@ -87,5 +88,18 @@ mod tests {
         aspect_ratio_variables(Some(&1.5));
         aspect_ratio_variables(None);
         assert!(take_warnings().is_empty());
+    }
+
+    /// Todo 637: `.x > *:focus-visible` ties a `Button`'s `.y:focus-visible`
+    /// at 0-2-0; the doubled pseudo-class wins whatever the order.
+    #[test]
+    fn the_inset_ring_outranks_a_childs_own_ring() {
+        let sheet = crate::css::Stylesheet::from(&ASPECT_RATIO_BASE_SX);
+
+        assert!(
+            sheet.as_str().contains(" > *:focus-visible:focus-visible{"),
+            "{}",
+            sheet.as_str()
+        );
     }
 }

@@ -215,5 +215,9 @@ mod tests {
             css.contains("--lsx-focus-contrast:var(--lsx-paper-contrast);"),
             "{css}"
         );
+        assert!(
+            css.contains("--lsx-focus-ring-halo:var(--lsx-paper-background);"),
+            "{css}"
+        );
     }
 }

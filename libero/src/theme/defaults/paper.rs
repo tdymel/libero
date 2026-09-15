@@ -1,6 +1,8 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{Color, ColorShade, ColorValue, CssVar, NamedColorCss, Size, SizeCss};
+use crate::theme::{
+    Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, NamedColorCss, Size, SizeCss,
+};
 
 /// The library's one definition of a surface colour. Anything that paints
 /// itself as a sheet of paper - `Paper`, `Dialog`, and every skeleton or
@@ -67,12 +69,15 @@ impl PaperDefaults {
     /// this, never `background(PAPER_BACKGROUND.value())` alone: the var is
     /// opaque to `sx`, so the `--lsx-focus-contrast` that `background("white")`
     /// used to publish for free has to be declared by hand, or every focus
-    /// ring on the surface falls back to the primary shade.
+    /// ring on the surface falls back to the primary shade. The surface is the
+    /// ring's halo too, as `background()` publishes it.
     pub(crate) fn background_sx() -> Sx {
-        sx().background(PAPER_BACKGROUND.value()).var(
-            CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
-            PAPER_CONTRAST.value(),
-        )
+        sx().background(PAPER_BACKGROUND.value())
+            .var(
+                CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
+                PAPER_CONTRAST.value(),
+            )
+            .var(FOCUS_RING_HALO, PAPER_BACKGROUND.value())
     }
 
     /// The base declarations name the themed vars, so a surface that sets no

@@ -93,8 +93,12 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
             sx().padding_top(SizeCss::SPACING.value(Size::Md)),
         )
         // The panel is a tab stop too, and without this it gets the UA's
-        // outline rather than the house ring.
-        .selector("& > [role=\"tabpanel\"]:focus-visible", focus_ring_sx())
+        // outline rather than the house ring. Doubled to outrank a component's
+        // own ring whatever the stylesheet order, as `Carousel`.
+        .selector(
+            "& > [role=\"tabpanel\"]:focus-visible:focus-visible",
+            focus_ring_sx(),
+        )
         .when(
             "full-width",
             // The root pins its own width, or a flex parent shrinks it to the

@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Box, Button, Flex},
+    components::{Alert, Anchor, Box, Button, Flex, Paper},
     sx::sx,
 };
 
@@ -11,6 +11,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/focus-contrast", || rsx! { FocusContrastPage {} }),
     ("/focus-contrast/hex", || rsx! { HexPage {} }),
+    ("/focus-contrast/fills", || rsx! { FillsPage {} }),
 ];
 
 /// Todo 53, part one: what a `--lsx-focus-contrast` naming an undeclared
@@ -30,6 +31,22 @@ fn FocusContrastPage() -> Element {
         }
         Flex { direction: "column", gap: "md", max_width: "320px",
             Button { id: "ring-probe", "Probe" }
+        }
+    }
+}
+
+/// Todo 630: dark fills in light, where a white stripe met the page's white halo.
+#[component]
+fn FillsPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Paper { sx: sx().background("primary.9").padding("md"),
+                Anchor { id: "paper-link", to: "#", sx: sx().color("#FFFFFF"), "a link on a dark paper" }
+            }
+            Alert { id: "filled-alert", color: "info", variant: "filled", title: "Saved",
+                onclose: |_| {},
+                "The message."
+            }
         }
     }
 }

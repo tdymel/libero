@@ -199,9 +199,10 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         )
         // `appearance: none` and `border: 0` take the UA ring with the
         // button, and a non-clickable header only ever takes focus from the
-        // focus return - it needs a ring then too.
+        // focus return - it needs a ring then too. Doubled to outrank a
+        // `Button`'s own ring whatever the stylesheet order, as `Carousel`.
         .selector(
-            "& > ol > li > [data-step-header]:focus-visible",
+            "& > ol > li > [data-step-header]:focus-visible:focus-visible",
             focus_ring_sx().outline_offset("2px").border_radius("4px"),
         )
         .selector(

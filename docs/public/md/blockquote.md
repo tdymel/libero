@@ -122,6 +122,7 @@ out per size rather than as an `em`, because it is a sibling of the quote and an
 | `--lsx-blockquote-border-color` | The resolved accent bar color, set per instance on the `<blockquote>`. |
 | `--lsx-blockquote-color` | The tint's contrast color for the body text, set per instance. Unset for a literal other than a hex. |
 | `--lsx-focus-contrast` | The same contrast color, published for focus rings inside the quote. Unset for a literal other than a hex. |
+| `--lsx-focus-ring-halo` | The tint, published beside it as the ring's halo. Unset with it. |
 
 ## Data attributes
 

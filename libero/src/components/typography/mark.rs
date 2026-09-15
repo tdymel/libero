@@ -4,7 +4,7 @@ use crate::{
     components::{HtmlTag, Input, Variables, common::base_props, layout::use_box, variables},
     hooks::use_theme,
     sx::{ColorRole, StaticSx, ThemeAwareValue, sx},
-    theme::{Color, ColorShade, ColorValue, CssVar, NamedColorCss},
+    theme::{Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, NamedColorCss},
 };
 
 // Light enough to stay a tint rather than a fill, so text reads over it.
@@ -39,18 +39,20 @@ static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
 /// `background()` infers it only from a literal colour and ours is a `var()`.
 /// Without it a link inside a `Mark` draws its ring in `primary.6` on the
 /// tint. A literal the inference cannot read either (`"gold"`) leaves it
-/// unset, as `Blockquote` does.
+/// unset, as `Blockquote` does. The tint is the ring's halo beside it (todo 630).
 fn mark_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Variables {
     let background = mark_background_color(color, default_color);
     // A palette shade's `contrast-N`, or a hex's literal black or white.
     let text = background.focus_contrast();
+    let fill = background.resolve(None);
 
     variables()
-        .with(MARK_BACKGROUND_VAR, background.resolve(None))
+        .with(MARK_BACKGROUND_VAR, fill.clone())
         .with(
             CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
             text.clone(),
         )
+        .with(FOCUS_RING_HALO, text.as_ref().and(fill))
         .with(MARK_COLOR_VAR, text)
 }
 
@@ -84,14 +86,15 @@ mod tests {
     use super::*;
     use crate::tokens::ColorValue;
 
-    /// The fill tint, its twin as the ring and as the text.
+    /// The fill tint, also the ring's halo; its twin as the ring and as the text.
     fn palette_variables(color: Color, shade: ColorShade) -> String {
         let twin = ColorValue::Contrast(color, shade).value();
+        let fill = ColorValue::Fill(color, shade).value();
         format!(
-            "{}:{};{}:{twin};{}:{twin};",
+            "{}:{fill};{}:{twin};{}:{fill};{}:{twin};",
             MARK_BACKGROUND_VAR.name(),
-            ColorValue::Fill(color, shade).value(),
             NamedColorCss::FOCUS_CONTRAST.name(),
+            FOCUS_RING_HALO.name(),
             MARK_COLOR_VAR.name(),
         )
     }
@@ -144,9 +147,10 @@ mod tests {
         assert_eq!(
             variables,
             format!(
-                "{}:#1e3a8a;{}:#FFFFFF;{}:#FFFFFF;",
+                "{}:#1e3a8a;{}:#FFFFFF;{}:#1e3a8a;{}:#FFFFFF;",
                 MARK_BACKGROUND_VAR.name(),
                 NamedColorCss::FOCUS_CONTRAST.name(),
+                FOCUS_RING_HALO.name(),
                 MARK_COLOR_VAR.name()
             )
         );

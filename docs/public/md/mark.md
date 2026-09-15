@@ -58,6 +58,7 @@ Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,
 | `--lsx-mark-background` | The resolved tint, set per instance from `color` or the theme default. |
 | `--lsx-mark-color` | The tint's contrast color for the text, set per instance. Unset for a literal other than a hex. |
 | `--lsx-focus-contrast` | The same contrast color, published for focus rings inside the mark. |
+| `--lsx-focus-ring-halo` | The tint, published beside it as the ring's halo, so a dark shade's white ring still reads. |
 
 ## Data attributes
 

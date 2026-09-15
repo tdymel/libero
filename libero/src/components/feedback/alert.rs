@@ -13,8 +13,8 @@ use crate::{
     hooks::{use_root_id, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ALERT_BODY_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, AlertDefaults, Color, CssVar, NamedColorCss,
-        Size, SizeCss,
+        ALERT_BODY_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, AlertDefaults, Color, CssVar,
+        FOCUS_RING_HALO, NamedColorCss, Size, SizeCss,
     },
 };
 
@@ -90,13 +90,17 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
         // colour: an unset var here would not fall back, it would erase the
         // ring (`paper.md`). Only on the children: the alert's own ring sits
         // outside it, on the page, where the text colour is often white on
-        // white.
+        // white. The fill is their halo (todo 630).
         let chrome = match variant {
             Variant::Filled => chrome.selector(
                 "& > *",
                 sx().var(
                     CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
                     ALERT_CONTRAST_VAR.value_or("currentColor"),
+                )
+                .var(
+                    FOCUS_RING_HALO,
+                    ALERT_FILL_VAR.value_or(ALERT_COLOR_VAR.value()),
                 ),
             ),
             _ => chrome,

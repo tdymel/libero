@@ -1,4 +1,5 @@
 use crate::css::{AtRule, CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
+use crate::theme::FOCUS_RING_HALO;
 use crate::tokens::{NamedColorCss, Size};
 use crate::utils::warn;
 
@@ -200,11 +201,11 @@ fn breakpoint_at_rule(size: Size) -> AtRule {
 /// `background` and `background-color` also publish `--lsx-focus-contrast`,
 /// which inherits, so a descendant's focus ring can contrast against the
 /// nearest ancestor background - see `ThemeAwareValue::focus_contrast`.
+/// The background itself becomes the ring's halo, so stripe and halo stay a
+/// readable pair on a dark fill (todo 630).
 fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> Vec<CssDeclaration> {
-    let mut declarations = vec![CssDeclaration::new(
-        property.as_str(),
-        to_css_value(property, value),
-    )];
+    let css_value = to_css_value(property, value);
+    let mut declarations = vec![CssDeclaration::new(property.as_str(), css_value.clone())];
 
     if matches!(
         property,
@@ -215,6 +216,7 @@ fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> V
             NamedColorCss::FOCUS_CONTRAST.name(),
             contrast,
         ));
+        declarations.push(CssDeclaration::new(FOCUS_RING_HALO.name(), css_value));
     }
 
     declarations
@@ -725,6 +727,35 @@ mod tests {
             "{}:var(--lsx-primary-contrast-6);",
             NamedColorCss::FOCUS_CONTRAST.name()
         )));
+        assert!(css.contains(&format!(
+            "{}:var(--lsx-primary-fill-6);",
+            FOCUS_RING_HALO.name()
+        )));
+    }
+
+    /// Todo 630: the ring's halo is the fill its twin reads on, not the page.
+    #[test]
+    fn a_hex_background_is_the_halo_of_the_rings_inside_it() {
+        let css = Stylesheet::from(&sx().background("#1e3a8a"))
+            .as_str()
+            .to_string();
+
+        assert!(
+            css.contains(&format!("{}:#1e3a8a;", FOCUS_RING_HALO.name())),
+            "{css}"
+        );
+    }
+
+    /// A var or a keyword publishes no twin, so it leaves the halo alone too.
+    #[test]
+    fn an_opaque_background_publishes_no_halo() {
+        for value in ["var(--x)", "transparent"] {
+            let css = Stylesheet::from(&sx().background(value))
+                .as_str()
+                .to_string();
+
+            assert!(!css.contains(FOCUS_RING_HALO.name()), "{css}");
+        }
     }
 
     /// Todo 604: a hex does not flip with the scheme, so its ring must not

@@ -100,7 +100,7 @@ reaches the element.
 | Variable | Description |
 |---|---|
 | `--lsx-paper-background` | The surface colour. Anything that has to disappear against a surface reads this. |
-| `--lsx-paper-contrast` | What reads against the background. Published as `--lsx-focus-contrast`, so a focus ring inside a surface contrasts against it. |
+| `--lsx-paper-contrast` | What reads against the background. Published as `--lsx-focus-contrast`, so a focus ring inside a surface contrasts against it. The background is published as `--lsx-focus-ring-halo` beside it, as `sx().background()` does for a palette shade or hex. |
 | `--lsx-paper-border-color` | The `bordered` hairline colour. |
 | `--lsx-paper-radius` | The themed corner radius, as a reference into the radius scale. |
 | `--lsx-paper-shadow` | The themed elevation, as a reference into the shadow scale. |

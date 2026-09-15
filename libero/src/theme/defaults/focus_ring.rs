@@ -5,7 +5,8 @@ use crate::theme::{Color, ColorShade, ColorValue, CssVar};
 /// The dark stripe. Overridden per surface by `--lsx-focus-contrast`, which a
 /// surface publishes when it knows what reads against itself.
 pub const FOCUS_RING_COLOR: CssVar = CssVar::new("--lsx-focus-ring-color");
-/// The light halo drawn on both sides of the stripe.
+/// The light halo drawn on both sides of the stripe. Overridden, beside
+/// `--lsx-focus-contrast`, by the background that publishes it (todo 630).
 pub const FOCUS_RING_HALO: CssVar = CssVar::new("--lsx-focus-ring-halo");
 pub const FOCUS_RING_WIDTH: CssVar = CssVar::new("--lsx-focus-ring-width");
 pub const FOCUS_RING_OFFSET: CssVar = CssVar::new("--lsx-focus-ring-offset");

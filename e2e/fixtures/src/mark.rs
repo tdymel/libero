@@ -40,4 +40,6 @@ const MARK_COLORS: &[(&str, &str)] = &[
     ("mark-error", "error"),
     ("mark-info", "info"),
     ("mark-success", "success"),
+    // A dark shade: its white twin needs the fill as its halo (todo 630).
+    ("mark-info-6", "info.6"),
 ];
