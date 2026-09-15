@@ -201,6 +201,19 @@ fn the_keyboard_walks_the_levels() {
             .await
             .unwrap_or_else(|e| panic!("at {at}: {e}"));
 
+            // Todo 538: Enter on the committed leaf confirms, it does not clear.
+            keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+            expect(page, "Lyon|3|true", "ArrowDown to reopen on Lyon", at).await;
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            expect(page, "closed", "Enter on the committed leaf", at).await;
+            wait::for_js_true(
+                page,
+                "document.querySelector('#picked').textContent === 'lyon'",
+                "Lyon still committed",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
+
             fixture
                 .console
                 .assert_clean(&format!("the cascader keys at {at}"))

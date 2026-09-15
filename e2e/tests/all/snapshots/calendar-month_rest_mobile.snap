@@ -15,7 +15,7 @@ grid "2026"
       StaticText "Jan"
     gridcell "February 2026" [selected=false]
       StaticText "Feb"
-    gridcell "March 2026" [selected]
+    gridcell "March 2026" [current=date] [selected]
       StaticText "Mar"
   row "April 2026 May 2026 June 2026"
     gridcell "April 2026" [selected=false]

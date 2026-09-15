@@ -292,6 +292,10 @@ pub(in crate::components::form) struct SliderCoreProps {
     /// `aria-valuetext`.
     label: Option<Callback<f64, String>>,
     marks: Vec<SliderMark>,
+    /// `aria-hidden` on the mark captions, for a discrete scale whose
+    /// `aria-valuetext` already names each value (todo 513).
+    #[props(default)]
+    captions_hidden: bool,
     aria_label: Option<String>,
     /// Names the second thumb of a range; `aria_label` names the first.
     aria_label_to: Option<String>,
@@ -610,6 +614,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         disabled,
                         label: props.label,
                         marks: props.marks,
+                        captions_hidden: props.captions_hidden,
                         aria_labels: [props.aria_label, props.aria_label_to],
                         labelledby: props.labelledby,
                         describedby: props.describedby,
@@ -642,6 +647,7 @@ struct SliderThumbsProps {
     disabled: bool,
     label: Option<Callback<f64, String>>,
     marks: Vec<SliderMark>,
+    captions_hidden: bool,
     aria_labels: [Option<String>; 2],
     labelledby: Option<String>,
     describedby: Option<String>,
@@ -691,6 +697,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
     // second `use_box` would be a second hook for nothing.
     let thumb_style = use_box().framework_sx(&SLIDER_THUMB_SX).prepare();
 
+    let captions_hidden = props.captions_hidden.then_some("true");
     let marks = props.marks.iter().map(|mark| {
         let mark_at = fraction(mark.value, min, max);
         let at = variables()
@@ -700,7 +707,14 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
         // declaration keeps its last value ([[codebase/css-vars]]).
         let filled = (bar.0 <= mark_at && mark_at <= bar.1).then_some("filled");
         let caption = mark.label.clone().map(|label| {
-            rsx! { span { class: mark_label_class.clone(), style: "{at}", {label} } }
+            rsx! {
+                span {
+                    class: mark_label_class.clone(),
+                    style: "{at}",
+                    "aria-hidden": captions_hidden,
+                    {label}
+                }
+            }
         });
         rsx! {
             span { class: mark_class.clone(), "data-state": filled, style: "{at}" }

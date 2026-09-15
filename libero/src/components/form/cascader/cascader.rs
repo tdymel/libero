@@ -62,7 +62,8 @@ field_props! {
         /// as expanding. Off, only a leaf can be picked.
         #[props(default)]
         any_level: Option<bool>,
-        /// Picking the committed option again clears it. On by default.
+        /// Picking the committed option again clears it. Off by default:
+        /// APG keeps the value on a re-pick, so Enter only confirms.
         #[props(default)]
         allow_deselect: Option<bool>,
         /// `"columns"` (default) or `"paths"`. A search renders `"paths"`
@@ -253,7 +254,7 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
             display,
             separator,
             any_level: props.any_level.unwrap_or(false),
-            allow_deselect: props.allow_deselect.unwrap_or(true),
+            allow_deselect: props.allow_deselect.unwrap_or(false),
             layout: props.layout.copied_or_default(),
             searchable: props.searchable.unwrap_or(false),
             column_width: props

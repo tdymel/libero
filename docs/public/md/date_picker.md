@@ -80,7 +80,7 @@ unless `today` is set.
 ## Accessibility
 
 Days, months and years are one tab stop each: the picked cell, else today,
-else the first.
+else the first. Today's day, month and year carry `aria-current="date"`.
 
 | Key | Days | Months and years |
 |---|---|---|

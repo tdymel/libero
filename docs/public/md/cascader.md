@@ -105,7 +105,7 @@ cannot be picked.
 | `Home` / `End` | open | The first/last enabled row of that column |
 | `ArrowRight` | open, `"columns"` | Expands the cursor's node, cursor onto its first enabled child |
 | `ArrowLeft` | open, `"columns"` | Up one level. At the root, nothing |
-| `Enter` | open, leaf | Commits its value and closes |
+| `Enter` | open, leaf | Commits its value and closes. On the committed leaf it keeps the value (clears it with `allow_deselect`) |
 | `Enter` | open, branch | Expands. Commits too, with `any_level` |
 | `Space` | open, not searchable | As `Enter` |
 | `Tab` / `Alt+ArrowUp` | open | Commits the cursor's row if `Enter` would, closes, and (Tab) moves on |
@@ -129,7 +129,7 @@ Every field's shared props - `label`, `description`, `helper`,
 | `value` | `Option<T>` | `None` | The selected option's value. Controlled |
 | `onchange` | `EventHandler<Option<T>>` | - | The value to select next; `None` clears |
 | `any_level` | `bool` | `false` | A branch commits its own value as well as expanding |
-| `allow_deselect` | `bool` | `true` | Picking the selected option again clears it |
+| `allow_deselect` | `bool` | `false` | Picking the selected option again clears it. Off, a re-pick keeps the value |
 | `layout` | `CascaderLayout` | `"columns"` | `"columns"` or `"paths"` |
 | `searchable` | `bool` | `false` | A search box at the top of the list |
 | `filter` | `Callback<CascaderFilterArgs<T>, bool>` | - | Defaults to case-insensitive `contains` over the joined path |

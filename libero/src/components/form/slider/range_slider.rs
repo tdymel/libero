@@ -170,6 +170,8 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             step,
             min_range: props.min_range.map_or(0.0, SliderStep::as_f64),
             marks,
+            // The thumbs' `aria-valuetext` names a discrete value, so the captions would say it twice.
+            captions_hidden: V::options().is_some(),
             sx: control_sx,
             attributes: props.attributes,
             size: props.size,

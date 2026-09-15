@@ -137,7 +137,8 @@ words do not fit, and `format` where a bare number does not say the unit.
 To translate a discrete range, pass `format` as well: it replaces
 `SliderValue::label` in both bubbles, the mark captions and both thumbs'
 `aria-valuetext`, and runs during render, so it can read the current locale
-from context.
+from context. A discrete range's mark captions are `aria-hidden`, as
+`Slider`'s are: the thumbs' `aria-valuetext` names each value.
 
 ## Props
 

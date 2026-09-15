@@ -164,6 +164,8 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
             max,
             step,
             marks,
+            // The thumb's `aria-valuetext` names a discrete value, so the captions would say it twice.
+            captions_hidden: V::options().is_some(),
             sx: control_sx,
             attributes: props.attributes,
             size: props.size,

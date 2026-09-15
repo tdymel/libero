@@ -155,6 +155,10 @@ To translate a discrete slider, pass `format` as well: it replaces
 `SliderValue::label` in the bubble, the mark captions and `aria-valuetext`,
 and runs during render, so it can read the current locale from context.
 
+A discrete slider's mark captions are `aria-hidden`: the thumb's
+`aria-valuetext` already names each value. A continuous slider's captions stay
+exposed, since they can say more than the number.
+
 ## Props
 
 `Slider`

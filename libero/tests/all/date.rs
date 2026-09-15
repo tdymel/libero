@@ -346,6 +346,60 @@ fn a_month_picker_keeps_its_tab_stop_inside_its_limits() {
     assert!(stops[0].contains("data-date=\"2026-04-01\""));
 }
 
+/// Todo 534: today is exposed, not only drawn - on the day, the month and the year.
+#[test]
+fn today_is_the_one_cell_with_aria_current_date() {
+    fn day() -> Element {
+        rsx! {
+            LiberoProvider {
+                DayPicker {
+                    value: None,
+                    today: NaiveDate::from_ymd_opt(2026, 3, 18),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+    fn month() -> Element {
+        rsx! {
+            LiberoProvider {
+                MonthPicker {
+                    value: None,
+                    today: NaiveDate::from_ymd_opt(2026, 3, 18),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+    fn year() -> Element {
+        rsx! {
+            LiberoProvider {
+                YearPicker {
+                    value: None,
+                    today: NaiveDate::from_ymd_opt(2026, 3, 18),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    for (app, date) in [
+        (day as fn() -> Element, "2026-03-18"),
+        (month, "2026-03-01"),
+        (year, "2026-01-01"),
+    ] {
+        let html = body(&render(app));
+        let current = tags_with(&html, &["aria-current=\"date\""]);
+        assert_eq!(current.len(), 1, "{html}");
+        assert!(
+            current[0].contains(&format!("data-date=\"{date}\"")),
+            "{}",
+            current[0]
+        );
+        assert!(current[0].contains("data-today=\"true\""));
+    }
+}
+
 #[test]
 fn a_field_shows_its_format_and_posts_iso() {
     fn app() -> Element {

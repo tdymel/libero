@@ -657,6 +657,7 @@ impl View {
                         "data-slot": "day",
                         "data-date": "{day}",
                         "data-today": (today == Some(day)).then_some("true"),
+                        "aria-current": (today == Some(day)).then_some("date"),
                         "data-selected": picked.then_some("true"),
                         "aria-label": format_date(day, (names.format)(DateLevel::Day), names),
                         disabled: self.day_disabled(day).then_some(true),
@@ -724,6 +725,7 @@ impl View {
                 .into_iter()
                 .flatten()
                 .any(|day| first_of_month(day) == month);
+            let is_today = today.is_some_and(|today| first_of_month(today) == month);
             rsx! {
                 button {
                     r#type: "button",
@@ -732,7 +734,8 @@ impl View {
                     "data-slot": "cell",
                     "data-date": "{month}",
                     "data-selected": picked.then_some("true"),
-                    "data-today": today.is_some_and(|today| first_of_month(today) == month).then_some("true"),
+                    "data-today": is_today.then_some("true"),
+                    "aria-current": is_today.then_some("date"),
                     "aria-label": format_date(month, (names.format)(DateLevel::Month), names),
                     disabled,
                     tabindex: self.tabindex(month == cell_stop),
@@ -816,6 +819,7 @@ impl View {
                 .flatten()
                 .any(|day| day.year() == shown_year);
             let outside = !(0..10).contains(&offset);
+            let is_today = today.is_some_and(|today| today.year() == shown_year);
             rsx! {
                 button {
                     r#type: "button",
@@ -825,7 +829,8 @@ impl View {
                     "data-date": "{year_start}",
                     "data-outside": outside.then_some("true"),
                     "data-selected": picked.then_some("true"),
-                    "data-today": today.is_some_and(|today| today.year() == shown_year).then_some("true"),
+                    "data-today": is_today.then_some("true"),
+                    "aria-current": is_today.then_some("date"),
                     disabled,
                     tabindex: self.tabindex(year_start == cell_stop),
                     onclick: move |_| {
@@ -1225,6 +1230,7 @@ fn Week(props: WeekProps) -> Element {
                         "data-date": "{day}",
                         "data-outside": outside.then_some("true"),
                         "data-today": (today == Some(day)).then_some("true"),
+                        "aria-current": (today == Some(day)).then_some("date"),
                         "data-selected": picked.then_some("true"),
                         "data-in-range": in_range.then_some("true"),
                         "aria-label": label(day),

@@ -99,7 +99,7 @@ grid "March 2026"
       button "March 17, 2026"
         StaticText "17"
     gridcell "March 18, 2026" [selected]
-      button "March 18, 2026"
+      button "March 18, 2026" [current=date]
         StaticText "18"
     gridcell "March 19, 2026" [selected=false]
       button "March 19, 2026"

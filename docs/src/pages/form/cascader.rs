@@ -98,8 +98,8 @@ pub fn CascaderPage() -> Element {
                         .default("false")
                         .doc("Lets a branch be picked as well as expanded, as its own value. Off, only a leaf commits."),
                     prop("allow_deselect", "bool")
-                        .default("true")
-                        .doc("Picking the selected option again clears it."),
+                        .default("false")
+                        .doc("Picking the selected option again clears it. Off, a re-pick keeps the value."),
                     prop("layout", "CascaderLayout")
                         .default("columns")
                         .doc("`\"columns\"` draws one listbox per level; `\"paths\"` draws one row per full path. A search renders `\"paths\"` whatever this says."),
@@ -200,7 +200,7 @@ pub fn CascaderPage() -> Element {
                     }),
                     Control::switch("searchable"),
                     Control::switch("any_level"),
-                    Control::switch("allow_deselect").default("true"),
+                    Control::switch("allow_deselect"),
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
@@ -225,7 +225,7 @@ pub fn CascaderPage() -> Element {
                             },
                             searchable: (values.str("searchable") == "true").then_some(true),
                             any_level: (values.str("any_level") == "true").then_some(true),
-                            allow_deselect: Some(values.str("allow_deselect") == "true"),
+                            allow_deselect: (values.str("allow_deselect") == "true").then_some(true),
                             clearable: (values.str("clearable") == "true").then_some(true),
                             required: (values.str("required") == "true").then_some(true),
                             disabled: (values.str("disabled") == "true").then_some(true),

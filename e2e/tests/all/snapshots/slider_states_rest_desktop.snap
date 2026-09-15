@@ -8,9 +8,6 @@ LabelText
 generic
   generic
     generic
-    StaticText "Low"
-    StaticText "Medium"
-    StaticText "High"
     slider "Quality" = 1 [valuemax=2] [valuemin=0]
 LabelText
   StaticText "Gain"

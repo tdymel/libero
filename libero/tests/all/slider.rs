@@ -262,6 +262,27 @@ fn a_discrete_slider_derives_its_scale_from_the_value_type() {
     for tier in ["Free", "Pro", "Team", "Enterprise"] {
         assert!(body(&html).contains(&format!(">{tier}<")));
     }
+    // Todo 513: `aria-valuetext` names the value, so the captions stay silent.
+    assert_eq!(html.matches(r#"aria-hidden="true""#).count(), 4, "{html}");
+}
+
+/// A continuous slider's caption can say more than the number, so it stays exposed.
+#[test]
+fn a_continuous_slider_keeps_its_mark_captions_exposed() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: 25.0,
+                    aria_label: "Volume",
+                    marks: vec![SliderMark::labeled(50.0, "half")],
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    assert!(!render(app).contains("aria-hidden"));
 }
 
 /// `min`/`max` are written in the value's own type, and `step` is a stride
