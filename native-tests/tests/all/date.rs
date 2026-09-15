@@ -204,6 +204,28 @@ fn the_arrows_walk_the_days_and_enter_picks() {
     assert_eq!(page.text("#echo"), "2026-10-01", "{}", page.tree());
 }
 
+/// dioxus-native wrote `disabled="false"` on every allowed day, which Blitz
+/// matches as `:disabled`: the grid drew at 0.4 opacity, and a picked day's
+/// ring on that faded fill read as all white (todo 640).
+#[test]
+fn a_picked_day_focused_by_the_arrows_keeps_its_fill() {
+    const PICKED: &str = "[data-date='2026-09-25']";
+    let mut page = mount(picker);
+    page.focus(PICKED);
+    page.press(Key::ArrowRight);
+    page.press(Key::ArrowLeft);
+    assert!(page.is_focused(PICKED), "{}", page.focus_owner());
+    assert_eq!(page.attr(PICKED, "disabled"), None);
+    assert_eq!(page.computed(PICKED, "opacity"), "1");
+
+    let fill = page.computed(PICKED, "background-color");
+    let (x, y, _, height) = page.rect(PICKED);
+    let (x, mid) = (x as u32, (y + height / 2.0) as u32);
+    // Inside the 4px ring, left of the digits.
+    assert_eq!(page.painted_pixel(x + 7, mid), fill);
+    assert_ne!(page.painted_pixel(x + 3, mid), fill, "no ring drawn");
+}
+
 fn time_field() -> Element {
     let mut value = use_signal(|| NaiveTime::from_hms_opt(9, 30, 0));
     rsx! {

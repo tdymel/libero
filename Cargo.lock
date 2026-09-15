@@ -4787,6 +4787,7 @@ name = "native-tests"
 version = "0.1.0"
 dependencies = [
  "anyrender",
+ "anyrender_vello_cpu",
  "blitz-dom",
  "blitz-html",
  "blitz-paint",

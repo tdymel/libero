@@ -659,7 +659,7 @@ impl View {
                         "data-today": (today == Some(day)).then_some("true"),
                         "data-selected": picked.then_some("true"),
                         "aria-label": format_date(day, (names.format)(DateLevel::Day), names),
-                        disabled: self.day_disabled(day),
+                        disabled: self.day_disabled(day).then_some(true),
                         tabindex: self.tabindex(day == stop),
                         onclick: move |_| {
                             // Pinned, so the new value does not move the row.
@@ -716,8 +716,9 @@ impl View {
                 return rsx! {};
             };
             let month_end = add_days(add_months(month, 1), -1);
-            let disabled =
-                min.is_some_and(|min| month_end < min) || max.is_some_and(|max| month > max);
+            let disabled = (min.is_some_and(|min| month_end < min)
+                || max.is_some_and(|max| month > max))
+            .then_some(true);
             let picked = selection
                 .picks()
                 .into_iter()
@@ -806,8 +807,9 @@ impl View {
             };
             let shown_year = start.year();
             let year_start = NaiveDate::from_ymd_opt(shown_year, 1, 1).expect("a real day");
-            let disabled = min.is_some_and(|min| shown_year < min.year())
-                || max.is_some_and(|max| shown_year > max.year());
+            let disabled = (min.is_some_and(|min| shown_year < min.year())
+                || max.is_some_and(|max| shown_year > max.year()))
+            .then_some(true);
             let picked = selection
                 .picks()
                 .into_iter()
@@ -1226,7 +1228,8 @@ fn Week(props: WeekProps) -> Element {
                         "data-selected": picked.then_some("true"),
                         "data-in-range": in_range.then_some("true"),
                         "aria-label": label(day),
-                        disabled: !allowed(day),
+                        // dioxus-native writes `disabled="false"`, which Blitz reads as disabled.
+                        disabled: (!allowed(day)).then_some(true),
                         tabindex: if focusable && !outside && tab_stop == Some(day) { "0" } else { "-1" },
                         onmouseenter: move |_| {
                             if awaits_end {

@@ -248,3 +248,40 @@ fn a_timed_one_closes_itself() {
         page.tree()
     );
 }
+
+const OUTLET: &str = "[style^='position:absolute;width:100vw']";
+
+fn tall() -> Element {
+    rsx! {
+        {app()}
+        div { id: "tall", height: "3000px" }
+    }
+}
+
+/// An empty stack keeps its portal entry mounted: a wheel leaves the outlet
+/// alone until a notification is drawn, which puts it back on the viewport
+/// (todo 639).
+#[test]
+fn a_wheel_realigns_the_outlet_only_once_one_is_drawn() {
+    let mut page = mount(tall);
+    let resting = page.attr(OUTLET, "style");
+    page.hover(TRIGGER);
+    page.wheel(TRIGGER, 250.0);
+    assert!(page.rect(TRIGGER).1 < 0.0, "the root did not scroll");
+    assert_eq!(page.attr(OUTLET, "style"), resting, "realigned for nothing");
+
+    page.focus(TRIGGER);
+    page.press(Key::Enter);
+    finish(&mut page);
+    let (x, y, ..) = page.rect(OUTLET);
+    assert!(x.abs() < 0.5 && y.abs() < 0.5, "outlet at ({x}, {y})");
+
+    // Drawn now, so the next wheel realigns at once.
+    page.hover("#tall");
+    page.wheel("#tall", -100.0);
+    let (x, y, ..) = page.rect(OUTLET);
+    assert!(
+        x.abs() < 0.5 && y.abs() < 0.5,
+        "outlet at ({x}, {y}) after a wheel"
+    );
+}

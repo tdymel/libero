@@ -23,6 +23,7 @@ use anyrender::{
     Paint, Scene,
     recording::{GlyphRunCommand, RenderCommand},
 };
+use anyrender_vello_cpu::VelloCpuImageRenderer;
 use blitz_dom::{
     BaseDocument, Document, DocumentConfig, Node,
     node::{ImageData, SpecialElementData},
@@ -403,6 +404,22 @@ impl Page {
         let mut doc = self.doc.inner.borrow_mut();
         blitz_paint::paint_scene(&mut scene, &mut doc, 1.0, VIEWPORT.0, VIEWPORT.1, 0, 0);
         scene
+    }
+
+    /// The colour of the pixel at `(x, y)`, as `rgb(..)`: the scene rasterised
+    /// by the shell's CPU renderer, where a recorded command may still draw
+    /// nothing (a zero-blur shadow).
+    pub fn painted_pixel(&self, x: u32, y: u32) -> String {
+        let (width, height) = VIEWPORT;
+        let mut doc = self.doc.inner.borrow_mut();
+        let buffer = anyrender::render_to_buffer::<VelloCpuImageRenderer, _>(
+            |scene| blitz_paint::paint_scene(scene, &mut doc, 1.0, width, height, 0, 0),
+            width,
+            height,
+        );
+        let at = ((y * width + x) * 4) as usize;
+        let [r, g, b, a] = [0, 1, 2, 3].map(|i| buffer[at + i]);
+        css_color(peniko::Color::from_rgba8(r, g, b, a))
     }
 
     /// The colour Blitz paints the first match's text with, as `rgb(..)`. Not

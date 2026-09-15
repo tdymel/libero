@@ -19,7 +19,7 @@ use crate::{
         feedback::Alert,
         layout::{Box, Float, use_box},
     },
-    hooks::{use_portal, use_silent_focus, use_theme},
+    hooks::{use_portal_slot, use_silent_focus, use_theme},
     platform::{ElementApi, TimerSubscription, backend, focus_entered_from, timer},
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -743,6 +743,7 @@ pub fn Notifications(
         }
     });
     let stacks = stacks.collect::<Vec<_>>();
+    let idle = drawn.iter().all(Vec::is_empty);
     let mut stored = store.drawn;
     stored.set(drawn);
     let content = rsx! {
@@ -750,8 +751,9 @@ pub fn Notifications(
     };
     drop(entries);
 
+    let slot = use_portal_slot();
     if contained {
-        use_portal(None);
+        slot.show(None);
         return rsx! {
             Box { framework_sx: &CONTAINED_SX,
                 {children}
@@ -759,7 +761,8 @@ pub fn Notifications(
             }
         };
     }
-    use_portal(Some(content));
+    // The empty regions stay mounted; the outlet need not follow a scroll for them.
+    slot.show_idle(content, idle);
     rsx! {}
 }
 

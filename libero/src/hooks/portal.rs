@@ -29,6 +29,16 @@ impl PortalSlot {
     /// its own scope, which isn't a descendant of the one owning your signals -
     /// a cross-scope read, and a real hazard if your scope unmounts first.
     pub(crate) fn show(&self, content: Option<Element>) {
+        self.publish(content, false);
+    }
+
+    /// [`show`](Self::show) for content that stays mounted while it draws
+    /// nothing: `idle` tells the outlet so.
+    pub(crate) fn show_idle(&self, content: Element, idle: bool) {
+        self.publish(Some(content), idle);
+    }
+
+    fn publish(&self, content: Option<Element>, idle: bool) {
         let mut host = self.host;
         // A closed slot re-rendered closed: a write would re-render the
         // outlet for nothing, once per closed `Select` or `Menu` on the page.
@@ -43,10 +53,14 @@ impl PortalSlot {
         }
         let mut entries = host.entries.write();
         match entries.iter_mut().find(|entry| entry.id == self.id) {
-            Some(entry) => entry.render = content,
+            Some(entry) => {
+                entry.render = content;
+                entry.idle = idle;
+            }
             None => entries.push(PortalEntry {
                 id: self.id,
                 render: content,
+                idle,
             }),
         }
     }

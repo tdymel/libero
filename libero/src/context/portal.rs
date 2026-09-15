@@ -8,6 +8,9 @@ pub(crate) struct PortalEntry {
     /// closure `PortalOutlet` would call from its unrelated one - that would
     /// read signals from a non-ancestor scope.
     pub(crate) render: Option<Element>,
+    /// Mounted but drawing nothing (a notification stack's empty live
+    /// regions): a scroll need not realign the outlet for it.
+    pub(crate) idle: bool,
 }
 
 pub(crate) type PortalEntries = Signal<Vec<PortalEntry>>;
@@ -31,15 +34,15 @@ pub(crate) fn PortalOutlet() -> Element {
     let host = use_context::<PortalHost>();
 
     backend::PortalRoot(rsx! {
-        for (id , element) in host
+        for (id , element , idle) in host
             .entries
             .read()
             .iter()
-            .filter_map(|entry| Some((entry.id, entry.render.clone()?)))
+            .filter_map(|entry| Some((entry.id, entry.render.clone()?, entry.idle)))
         {
             Fragment {
                 key: "{id}",
-                {backend::PortalEntry(element)}
+                {backend::PortalEntry(element, idle)}
             }
         }
     })

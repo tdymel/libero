@@ -26,5 +26,7 @@ blitz-traits = "0.3.0-beta.2"
 # scene the shell would draw.
 blitz-paint = { version = "0.3.0-beta.2", default-features = false }
 anyrender = "0.13"
+# `Page::painted_pixel` rasterises that scene with the shell's CPU renderer.
+anyrender_vello_cpu = { version = "0.17", default-features = false }
 kurbo = "0.13"
 peniko = "0.6"

@@ -94,7 +94,8 @@ thread_local! {
     static SCROLL_CALLBACKS: Callbacks<dyn Fn()> = const { Callbacks::new() };
     /// Puts [`PortalRoot`] back on the viewport's corner.
     static REALIGN: Cell<Option<Callback<()>>> = const { Cell::new(None) };
-    /// Mounted [`PortalEntry`]s: with none, a scroll has nothing to realign.
+    /// Mounted [`PortalEntry`]s drawing something: with none, a scroll has
+    /// nothing to realign.
     static PORTAL_ENTRIES: Cell<usize> = const { Cell::new(0) };
     /// A `scroll_into_view` waiting for its target's first layout. See [`show`].
     static SHOW_RETRY: RefCell<Option<Box<dyn TimerSubscription>>> = const { RefCell::new(None) };
@@ -604,7 +605,8 @@ pub(super) fn PortalRoot(children: Element) -> Element {
     let root = use_hook(|| Rc::new(RefCell::new(None::<NodeHandle>)));
     use_hook(|| {
         Rc::new(SCROLL.on_scroll(Box::new(move || {
-            // An entry realigns as it mounts; until then a wheel costs no render.
+            // An entry realigns as it mounts or starts to draw; until then a
+            // wheel costs no render.
             if PORTAL_ENTRIES.get() == 0 {
                 return;
             }
@@ -654,23 +656,45 @@ pub(super) fn PortalRoot(children: Element) -> Element {
     }
 }
 
-/// One portaled entry, taking hits again below [`PORTAL_ROOT_STYLE`].
+/// One portaled entry, taking hits again below [`PORTAL_ROOT_STYLE`]. Counted
+/// in [`PORTAL_ENTRIES`] only while it draws: an `idle` one needs no realign.
 #[component]
-pub(super) fn PortalEntry(children: Element) -> Element {
-    use_hook(|| PORTAL_ENTRIES.set(PORTAL_ENTRIES.get() + 1));
-    use_drop(|| PORTAL_ENTRIES.set(PORTAL_ENTRIES.get() - 1));
+pub(super) fn PortalEntry(children: Element, idle: bool) -> Element {
+    let counted = use_hook(|| Rc::new(Cell::new(false)));
+    if counted.get() == idle {
+        counted.set(!idle);
+        let entries = PORTAL_ENTRIES.get();
+        PORTAL_ENTRIES.set(if idle { entries - 1 } else { entries + 1 });
+    }
+    use_drop({
+        let counted = counted.clone();
+        move || {
+            if counted.get() {
+                PORTAL_ENTRIES.set(PORTAL_ENTRIES.get() - 1);
+            }
+        }
+    });
+    // Waking up, it may find the outlet moved by a scroll it skipped.
+    let mounted = use_hook(|| Rc::new(Cell::new(false)));
+    use_effect(use_reactive!(|(idle,)| {
+        if mounted.replace(true) && !idle {
+            realign_portals();
+        }
+    }));
     rsx! {
         div {
             display: "contents",
             pointer_events: "auto",
             // The app's layout may have moved the outlet since the last scroll.
-            onmounted: |_| {
-                if let Some(realign) = REALIGN.get() {
-                    realign.call(());
-                }
-            },
+            onmounted: |_| realign_portals(),
             {children}
         }
+    }
+}
+
+fn realign_portals() {
+    if let Some(realign) = REALIGN.get() {
+        realign.call(());
     }
 }
 
