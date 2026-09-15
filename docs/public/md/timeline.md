@@ -177,7 +177,7 @@ Like every component, `Timeline` also takes the shared props `sx`, `class`,
 |---|---|---|---|
 | `align` | `TimelineAlign` | `Left` | Which side content sits on. |
 | `color` | `&'static str` | `"primary.6"` | The active accent. |
-| `line_color` | `&'static str` | `"muted.3"` | Inactive bullets and connectors. |
+| `line_color` | `&'static str` | `"muted.6"` | Inactive bullets and connectors, 3:1 on the page (WCAG 1.4.11). |
 | `bullet_background` | `&'static str` | `PAPER_BACKGROUND` | The bullet's fill, and the glyph colour once it inverts. Reads the surface token, so dark mode is a change to `PaperDefaults`. |
 | `radius` | `Size` | `Xl` | Bullet corner radius. |
 | `bullet_size` | `Size` | `Md` | Which step of `bullet_sizes` is the default. |

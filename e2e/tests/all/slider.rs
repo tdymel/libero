@@ -515,6 +515,27 @@ fn track_bar_and_marks_show_in_forced_colours() {
     });
 }
 
+/// WCAG 1.4.11: the unfilled track shows the range's extent, and an open mark
+/// on it is a ring around a hole, each at 3:1 (todo 512).
+#[test]
+fn the_track_and_an_open_mark_part_at_3_to_1() {
+    crate::boundary::assert_boundaries(
+        "/slider/states",
+        "const thumb = document.querySelector('#quality [role=slider]');
+         let track = thumb.parentElement;
+         while (track.getBoundingClientRect().height >= thumb.getBoundingClientRect().height)
+             track = track.parentElement;
+         const open = [...track.children].find(el => !el.textContent
+             && el.getBoundingClientRect().width < 10 && el.dataset.state !== 'filled');
+         const bg = el => CSS(el, 'backgroundColor');
+         return [
+             ['track on the page', RATIO(bg(track), PAGE(track))],
+             ['open mark ring on its hole', RATIO(CSS(open, 'borderTopColor'), bg(open))],
+             ['open mark ring on the page', RATIO(CSS(open, 'borderTopColor'), PAGE(track))],
+         ];",
+    );
+}
+
 /// A press on the track focuses the thumb from code, and that focus is the
 /// pointer's: the value bubble goes once the pointer leaves, as after a press
 /// on the thumb itself.

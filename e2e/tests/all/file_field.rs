@@ -30,6 +30,19 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// WCAG 1.4.11: the dashed border is all that shows the dropzone's extent
+/// (todo 490).
+#[test]
+fn the_dropzone_border_parts_at_3_to_1() {
+    crate::boundary::assert_boundaries(
+        "/file-field",
+        &format!(
+            "const surface = document.querySelector({SURFACE:?});
+             return [['dropzone border on the page', RATIO(CSS(surface, 'borderTopColor'), PAGE(surface))]];"
+        ),
+    );
+}
+
 /// Real files on disk, so the drop carries a `FileList` the page can read.
 fn files_on_disk() -> Vec<String> {
     let dir = std::env::temp_dir().join(format!("e2e-file-field-{}", std::process::id()));

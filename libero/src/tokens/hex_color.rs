@@ -412,6 +412,29 @@ mod tests {
         assert!((ratio(0x4C_50_55) - 8.12).abs() < 0.01, "muted.7");
     }
 
+    /// `muted.6` is the boundary shade of every control outline, off track and
+    /// pending ring: 3:1 on the page and on `Paper` in both library themes,
+    /// and `muted.5` below it is not (WCAG 1.4.11, todo 490).
+    #[test]
+    fn muted_6_is_the_first_boundary_shade_at_3_to_1() {
+        use crate::theme::Theme;
+
+        for theme in [Theme::DEFAULT, Theme::DARK] {
+            let ends = Ends {
+                surface: theme.surface,
+                ink: theme.ink,
+            };
+            let paper = HexColor::parse(theme.paper.background).expect("a hex paper");
+            let muted = |shade| theme.muted.shade(shade, ShadeRamp::Neutral, ends);
+            for background in [theme.surface, paper] {
+                let ratio = muted(ColorShade::S6).contrast_ratio(background);
+                assert!(ratio >= 3.0, "muted.6 on {background}: {ratio:.2}");
+            }
+            let ratio = muted(ColorShade::S5).contrast_ratio(theme.surface);
+            assert!(ratio < 3.0, "muted.5 on {}: {ratio:.2}", theme.surface);
+        }
+    }
+
     /// `blue.6` is the case Mantine's `autoContrast` alone cannot fix: white
     /// is the right foreground for it and only reaches 3.56:1, so the fill
     /// darkens instead of relabelling itself in black - but only as far as

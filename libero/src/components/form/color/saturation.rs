@@ -57,9 +57,11 @@ static THUMB_SX: StaticSx = StaticSx::new(|| {
         .border_radius("50%")
         .border_style("solid")
         .border_width("2px")
-        .border_color("surface")
+        // White, then a 60% black ring: one of the two is at least 3.4:1 on
+        // any colour of the pad, in either scheme (WCAG 1.4.11, todo 554).
+        .border_color("#ffffff")
         .and(shadow_sx(
-            "0 0 0 1px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(0, 0, 0, 0.3)".to_string(),
+            "0 0 0 1px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(0, 0, 0, 0.3)".to_string(),
         ))
         .background(SATURATION_COLOR.value())
         .cursor("grab")

@@ -10,6 +10,7 @@ mod alert;
 mod autocomplete;
 mod avatar;
 mod badge;
+mod boundary;
 mod button;
 mod calendar;
 mod carousel;

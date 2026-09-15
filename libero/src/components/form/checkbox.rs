@@ -63,7 +63,9 @@ static CHECKBOX_BOX_SX: StaticSx = StaticSx::new(|| {
 
 /// Depends on `(on, color)` alone - see the `use_cache` below.
 fn checkbox_variables(on: bool, base: &ThemeAwareValue) -> String {
-    let off = ThemeAwareValue::from("muted.5");
+    // The outline is all an unchecked box shows: muted.6 is the first step at
+    // 3:1 on the page in both schemes (WCAG 1.4.11, todo 490).
+    let off = ThemeAwareValue::from("muted.6");
     variables()
         .with(
             CHECKBOX_BACKGROUND,

@@ -103,7 +103,10 @@ static SLIDER_TRACK_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
         .flex("1 1 auto")
         .height(SLIDER_TRACK.value())
-        .background("muted.2")
+        // 3:1 on the page in both schemes: the track shows the range's extent
+        // (WCAG 1.4.11, todo 512). Through its var: a named shade would publish
+        // `--lsx-focus-contrast`, dark in dark mode, and the thumb's ring takes it.
+        .background(ColorValue::Shade(Color::Muted, ColorShade::S6).value())
         // A pill, always: the radius scale starts at 2px and a track is 2-10px
         // tall, so every step above the smallest clamped to the same half-height
         // curve. The shared `radius` prop is not wired here for that reason.
@@ -200,13 +203,21 @@ static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
         .width(dot.clone())
         .height(dot)
         .border_radius("50%")
-        .background(ColorValue::Shade(Color::Muted, ColorShade::S4).value())
+        // An open ring in the track's own colour: the hole reads at the
+        // track's 3:1 on either side of it (WCAG 1.4.11, todo 512).
+        .background("surface")
+        .border(format!(
+            "1px solid {}",
+            ColorValue::Shade(Color::Muted, ColorShade::S6).value()
+        ))
         // Forced colours would paint it the track's `Canvas`; a filled one
         // stays `Canvas`, on the `Highlight` bar.
         .media(FORCED_COLORS, sx().background("CanvasText"))
-        // White on the filled bar, the way the thumb is - the grey dot would
-        // disappear into it.
-        .when("filled", sx().background("surface"))
+        // White on the filled bar, the way the thumb is.
+        .when(
+            "filled",
+            sx().background("surface").border_color("transparent"),
+        )
 });
 
 static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {

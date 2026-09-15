@@ -202,6 +202,27 @@ fn the_hue_thumb_and_the_preview_follow_the_value() {
     });
 }
 
+/// WCAG 1.4.11: the saturation thumb's white border or its outer black ring,
+/// composited over the pad under it, reads at 3:1 in either scheme (todo 554).
+#[test]
+fn the_saturation_thumb_parts_from_the_pad() {
+    crate::boundary::assert_boundaries(
+        "/color-picker",
+        &format!(
+            "const thumb = document.querySelector({THUMB:?});
+             const pad = CSS(thumb, 'backgroundColor');
+             const alpha = Number(CSS(thumb, 'boxShadow').match(/rgba\\(0, 0, 0, ([\\d.]+)\\)/)[1]);
+             const ring = `rgb(${{pad.match(/[\\d.]+/g).slice(0, 3).map(c => c * (1 - alpha)).join(', ')}})`;
+             return [
+                 ['border or ring on the pad', Math.max(RATIO(CSS(thumb, 'borderTopColor'), pad), RATIO(ring, pad))],
+                 ['border or ring on white', Math.max(RATIO(CSS(thumb, 'borderTopColor'), 'rgb(255, 255, 255)'),
+                     RATIO('rgb(102, 102, 102)', 'rgb(255, 255, 255)') * (alpha >= 0.6))],
+                 ['border or ring on black', Math.max(RATIO(CSS(thumb, 'borderTopColor'), 'rgb(0, 0, 0)'), 0)],
+             ];"
+        ),
+    );
+}
+
 async fn reading(page: &chromiumoxide::Page) -> String {
     page.evaluate(READING).await.unwrap().into_value().unwrap()
 }

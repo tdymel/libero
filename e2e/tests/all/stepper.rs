@@ -37,6 +37,21 @@ fn it_meets_the_baseline_vertically() {
     suite("stepper_vertical", "/stepper-vertical").run();
 }
 
+/// WCAG 1.4.11: a pending marker is a ring alone, and the connector into it
+/// shows the path; both part from the page at 3:1, as Timeline's (todo 599).
+#[test]
+fn a_pending_ring_and_connector_part_at_3_to_1() {
+    crate::boundary::assert_boundaries(
+        "/stepper",
+        "const item = document.querySelector('ol > li:nth-child(3)');
+         const ring = item.querySelector('[data-step-marker]');
+         return [
+             ['pending ring on the page', RATIO(CSS(ring, 'borderTopColor'), PAGE(item))],
+             ['pending connector on the page', RATIO(CSS(item, 'borderTopColor', '::before'), PAGE(item))],
+         ];",
+    );
+}
+
 /// The page's and each stepper's scroll and client widths, and the widest
 /// step header's right edge.
 const WIDTHS: &str = "(() => {

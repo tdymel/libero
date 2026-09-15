@@ -390,6 +390,22 @@ async fn blur(page: &Page) -> Result<()> {
     Ok(())
 }
 
+/// WCAG 1.4.11: a field frame's border parts from the page outside and from
+/// its own surface inside at 3:1 (todo 490).
+#[test]
+fn a_frame_border_parts_at_3_to_1() {
+    crate::boundary::assert_boundaries(
+        "/field-frame",
+        "const frame = [...document.querySelectorAll('[data-frame]')]
+             .find(f => !/error|warning|disabled/.test(f.dataset.state || ''));
+         const border = CSS(frame, 'borderTopColor');
+         return [
+             ['frame border on the page', RATIO(border, PAGE(frame))],
+             ['frame border on its surface', RATIO(border, CSS(frame, 'backgroundColor'))],
+         ];",
+    );
+}
+
 async fn focused(page: &Page, selector: &str) -> Result<()> {
     truthy(
         page,

@@ -137,9 +137,10 @@ impl StepperDefaults {
         ),
         label_position: StepLabelPosition::Side,
         color: ColorValue::Shade(Color::Primary, ColorShade::S6),
-        pending_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
+        // Pending ring and connector: 3:1, as Timeline's (WCAG 1.4.11, todo 599).
+        pending_color: ColorValue::Shade(Color::Muted, ColorShade::S6),
         error_color: ColorValue::Shade(Color::Error, ColorShade::S6),
-        connector_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
+        connector_color: ColorValue::Shade(Color::Muted, ColorShade::S6),
         description_color: ColorValue::Shade(Color::Muted, ColorShade::S7),
         line_width: 2,
         content_padding: Size::Md,

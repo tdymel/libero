@@ -236,5 +236,6 @@ below, space separated.
 | `readonly` | `readonly` is set: the thumbs keep their tab stop, and neither a key nor a drag moves them. |
 | `marks-labeled` | At least one mark carries a label, so the captions need room. |
 
-A mark's tick is `muted.4`. A mark on the filled bar carries
-`data-state="filled"` and turns `surface`, so it stays visible on the bar.
+The unfilled track is `muted.6`, 3:1 on the page (WCAG 1.4.11). A mark is an
+open `surface` dot ringed in `muted.6`. A mark on the filled bar carries
+`data-state="filled"` and drops the ring, so it stays visible on the bar.

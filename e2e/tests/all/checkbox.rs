@@ -125,6 +125,16 @@ fn a_disabled_box_shows_it_takes_no_click() {
     });
 }
 
+/// WCAG 1.4.11: the outline is all an unchecked box shows (todo 490).
+#[test]
+fn an_unchecked_box_parts_from_the_page() {
+    crate::boundary::assert_boundaries(
+        "/checkbox",
+        "const box = document.querySelector('#terms + [aria-hidden]');
+         return [['unchecked outline on the page', RATIO(CSS(box, 'borderTopColor'), PAGE(box))]];",
+    );
+}
+
 /// A native checkbox takes focus from a click, and its blur is what shows the
 /// rules; the visually hidden input has to be handed it by hand.
 #[test]

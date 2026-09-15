@@ -66,7 +66,8 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
         .line_height("1.5")
         .padding("4px 8px")
         .border_bottom("1px solid")
-        .border_color("muted.3")
+        // The box's only boundary: 3:1, as a field frame (WCAG 1.4.11, todo 490).
+        .border_color("muted.6")
         .selector("::placeholder", sx().color("text-dimmed"))
 });
 

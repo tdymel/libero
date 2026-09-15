@@ -121,7 +121,8 @@ static FILE_DROPZONE_SX: StaticSx = StaticSx::new(|| {
         .min_height(FILE_FIELD_DROPZONE_HEIGHT.value())
         .padding(FILE_FIELD_PADDING.value())
         .border("2px dashed")
-        .border_color("muted.4")
+        // 3:1 on the page, as a field frame (WCAG 1.4.11, todo 490).
+        .border_color("muted.6")
         .border_radius(FILE_FIELD_RADIUS.value())
         .background("transparent")
         .cursor("pointer")

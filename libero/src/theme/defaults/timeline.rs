@@ -95,7 +95,9 @@ impl TimelineDefaults {
     pub const DEFAULT: Self = Self {
         align: TimelineAlign::Left,
         color: ColorValue::Shade(Color::Primary, ColorShade::S6),
-        line_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
+        // The pending ring and rail: 3:1 on the page and the dark `Paper`
+        // (WCAG 1.4.11, todo 599).
+        line_color: ColorValue::Shade(Color::Muted, ColorShade::S6),
         bullet_background: TIMELINE_BULLET_BACKGROUND_DEFAULT,
         radius: Size::Xl,
         bullet_size: Size::Md,
