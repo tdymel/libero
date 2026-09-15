@@ -336,7 +336,7 @@ the list stays open.
 | `option` | `Callback<ComboboxOptionArgs<T>, Element>` | - | Draws one row. Required. |
 | `children` | `Element` | - | The trigger, and anything else that belongs with it. |
 | `empty` | `Element` | - | Shown in place of the list when `options` is empty. |
-| `loading_label` | `String` | theme | What the status region says while `options` is pending. Unset, `theme.combobox.labels.loading` - "Loading" in `ComboboxLabels::ENGLISH`. |
+| `loading_label` | `String` | localization | What the status region says while `options` is pending. Unset, the localization's `common.loading` - "Loading" in English. |
 | `size` | `Size` | `md` | A row's height and font size. |
 | `radius` | `Size` | `sm` | The dropdown's corner radius. |
 | `disabled` | `bool` | `false` | Blocks the arrow keys. |

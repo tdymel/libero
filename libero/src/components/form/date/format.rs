@@ -4,7 +4,7 @@
 
 use chrono::{Datelike, NaiveDate, NaiveTime, Timelike};
 
-use crate::theme::DateDefaults;
+use crate::localization::DateLocale;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum Token<'a> {
@@ -102,21 +102,21 @@ pub(super) fn uses_twelve_hours(format: &str) -> bool {
 }
 
 /// The day as `format` shows it, with the names from `names`.
-pub(super) fn format_date(date: NaiveDate, format: &str, names: &DateDefaults) -> String {
+pub(super) fn format_date(date: NaiveDate, format: &str, names: &DateLocale) -> String {
     write(&tokens(format), Some(date), None, names)
 }
 
 /// [`format_date`] for many days, reading `format` once.
 pub(super) fn date_formatter<'a>(
     format: &'a str,
-    names: &'a DateDefaults,
+    names: &'a DateLocale,
 ) -> impl Fn(NaiveDate) -> String + 'a {
     let tokens = tokens(format);
     move |date| write(&tokens, Some(date), None, names)
 }
 
 /// The time as `format` shows it.
-pub(super) fn format_time(time: NaiveTime, format: &str, names: &DateDefaults) -> String {
+pub(super) fn format_time(time: NaiveTime, format: &str, names: &DateLocale) -> String {
     write(&tokens(format), None, Some(time), names)
 }
 
@@ -126,7 +126,7 @@ fn write(
     tokens: &[Token<'_>],
     date: Option<NaiveDate>,
     time: Option<NaiveTime>,
-    names: &DateDefaults,
+    names: &DateLocale,
 ) -> String {
     let mut text = String::new();
     for &token in tokens {
@@ -204,12 +204,12 @@ mod tests {
 
     fn format(format: &str) -> String {
         let day = NaiveDate::from_ymd_opt(2026, 9, 4).expect("a real day");
-        format_date(day, format, &DateDefaults::ENGLISH)
+        format_date(day, format, &DateLocale::ENGLISH)
     }
 
     fn time(hour: u32, minute: u32, second: u32, format: &str) -> String {
         let time = NaiveTime::from_hms_opt(hour, minute, second).expect("a real time");
-        format_time(time, format, &DateDefaults::ENGLISH)
+        format_time(time, format, &DateLocale::ENGLISH)
     }
 
     #[test]

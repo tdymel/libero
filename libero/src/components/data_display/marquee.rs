@@ -6,7 +6,7 @@ use crate::{
         common::{PauseIcon, PlayIcon, base_props, variables},
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{use_localization, use_theme},
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
         MARQUEE_ANIMATION, MARQUEE_DURATION, MARQUEE_FADE_SIZE, MARQUEE_GAP, MARQUEE_MIN_REPEAT,
@@ -233,6 +233,7 @@ base_props! {
 pub fn Marquee(props: MarqueeProps) -> Element {
     let theme = use_theme();
     let defaults = theme.marquee;
+    let labels = use_localization().marquee;
     let orientation = props.orientation.copied_or(Orientation::Horizontal);
     let repeat = props
         .repeat
@@ -306,7 +307,7 @@ pub fn Marquee(props: MarqueeProps) -> Element {
                     ActionIcon {
                         "data-slot": "pause",
                         variant: "elevated",
-                        aria_label: defaults.pause_label,
+                        aria_label: labels.pause,
                         aria_pressed: paused.to_string(),
                         onclick: toggle,
                         if paused {

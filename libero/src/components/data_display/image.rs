@@ -6,7 +6,8 @@ use crate::{
         common::{base_props, focus_ring_sx, input_from_str, states, variables},
         layout::use_box,
     },
-    hooks::{LightboxItem, LightboxOptions, use_lightbox, use_theme},
+    hooks::{LightboxItem, LightboxOptions, use_lightbox, use_localization, use_theme},
+    localization::{ImageLabels, fill},
     sx::{StaticSx, Sx, sx},
     theme::{IMAGE_RADIUS, ImageDefaults, Size, SizeCss},
     utils::warn,
@@ -86,10 +87,10 @@ const IMG_ATTRIBUTES: [&str; 8] = [
     "usemap",
 ];
 
-fn zoom_label(alt: &str) -> String {
+fn zoom_label(alt: &str, labels: &ImageLabels) -> String {
     match alt.is_empty() {
-        true => "Zoom in".to_string(),
-        false => format!("Zoom in: {alt}"),
+        true => labels.zoom.to_string(),
+        false => fill(labels.zoom_named, &[("alt", &alt)]),
     }
 }
 
@@ -247,7 +248,7 @@ fn ZoomButton(props: ZoomButtonProps) -> Element {
         .states(&props.states)
         .prepare();
 
-    let label = zoom_label(&props.alt);
+    let label = zoom_label(&props.alt, &use_localization().image);
     let item = props.item.clone();
     // A dialog opener, not a toggle: the open state lives in the modal
     // `Lightbox`, never on this button.

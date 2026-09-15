@@ -74,17 +74,14 @@ Burger { onclick: move |_| modal.open() }
 **Spread `aria-controls` whenever `open` is set**, naming the element that
 opens, or `Burger` warns. Nothing sets it internally.
 
-**The accessible name is the theme's**, and it changes with `open`. Translate
-it once in `BurgerLabels`, or per burger with `label` when the locale is only
-known at runtime:
+**The accessible name is the localization's**, and it changes with `open`.
+Translate it once in the [localization](theming.md#localization)'s
+`BurgerLabels`, or per burger with `label`:
 
 ```rust,ignore
-Theme {
-    burger: BurgerDefaults {
-        labels: BurgerLabels { open: "Menü öffnen", close: "Menü schließen" },
-        ..BurgerDefaults::DEFAULT
-    },
-    ..Theme::DEFAULT
+Localization {
+    burger: BurgerLabels { open: "Menü öffnen", close: "Menü schließen" },
+    ..Localization::ENGLISH
 }
 
 // Or, when the locale is only known at runtime:
@@ -103,7 +100,7 @@ the other.
 
 `BurgerDefaults` carries `size` (`md`), the six-step `sizes` scale
 (12/18/24/34/42/52px - Mantine's five plus an `xxl` of ours),
-`transition_duration` (`300ms`), `transition_timing` (`ease`) and `labels`.
+`transition_duration` (`300ms`) and `transition_timing` (`ease`).
 Motion is a theme decision, not a per-call-site one; an off-scale one-off goes
 through `sx` like any other off-scale value.
 

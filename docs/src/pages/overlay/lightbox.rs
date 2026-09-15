@@ -139,7 +139,7 @@ pub fn LightboxPage() -> Element {
                     prop("controls", "bool").default("true").doc("The previous / next arrows."),
                     prop("preload", "usize").default("1").doc("Neighbours each side loaded eagerly; the rest are lazy."),
                     prop("close_on_swipe_down", "bool").default("true").doc("A downward touch swipe closes. Off while zoomed."),
-                    prop("aria_label", "Option<String>").default("theme (\"Gallery\")").doc("Names the dialog."),
+                    prop("aria_label", "Option<String>").default("localization (\"Gallery\")").doc("Names the dialog."),
                 ]),
                 props("LightboxItem", vec![
                     prop("src", "String").doc("The picture."),

@@ -8,7 +8,7 @@ use crate::{
         common::{inset_focus_ring_sx, navigation_chord, use_name_warning},
         form::{ComboboxState, use_combobox},
     },
-    hooks::{ModalHandle, ModalScope, use_dismiss_layer, use_modal, use_theme},
+    hooks::{ModalHandle, ModalScope, use_dismiss_layer, use_localization, use_modal, use_theme},
     platform::{KeyChord, KeySubscription, keyboard, warn_reserved_chord},
     sx::{StaticSx, sx},
     theme::{
@@ -119,10 +119,10 @@ pub struct SpotlightOptions {
     /// **Capture a `Signal`, not a `Vec`**, if the list itself changes: the
     /// closure is stored, so a captured `Vec` is the one from when it was made.
     pub actions: Option<Callback<String, Vec<SpotlightAction>>>,
-    /// The search box's placeholder. Unset, the theme's.
+    /// The search box's placeholder. Unset, the localization's.
     pub placeholder: Option<String>,
     /// Drawn, and announced, when a non-empty query matches nothing. Unset,
-    /// the theme's text.
+    /// the localization's text.
     pub nothing_found: Option<Element>,
     /// A cap on the rows drawn, counted through the groups.
     pub limit: Option<usize>,
@@ -245,10 +245,10 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
     });
     use_name_warning(
         options.aria_label.is_some(),
-        "use_spotlight: no `aria_label`, falling back to the theme's. A dialog needs a name of its own to be told apart.",
+        "use_spotlight: no `aria_label`, falling back to the localization's. A dialog needs a name of its own to be told apart.",
     );
 
-    let labels = theme.spotlight.labels;
+    let labels = use_localization().spotlight;
     let close_on_action = options.close_on_action;
     let highlight_first = options.highlight_first_on_query;
     let onquery = options.onquery;

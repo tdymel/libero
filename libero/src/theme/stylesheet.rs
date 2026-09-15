@@ -241,13 +241,11 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         lightbox,
         avatar,
         avatar_group,
-        avatar_labels: _,
         kbd,
         menu,
         menubar,
         pagination,
-        pagination_labels: _,
-        // Chrome and labels only - read by the component, never a var.
+        // Chrome only - read by the component, never a var.
         color_scheme_button: _,
         anchor,
         file_field,
@@ -272,7 +270,6 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         text_field: _,
         textarea: _,
         number_field: _,
-        date: _,
         date_field: _,
         time_picker: _,
         native_select: _,

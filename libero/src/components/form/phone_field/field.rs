@@ -10,7 +10,10 @@ use crate::{
         layout::{BoxStyle, use_box},
         use_combobox,
     },
-    hooks::{ElementHandle, PopoverWidth, use_element, use_theme},
+    hooks::{
+        ElementHandle, PopoverWidth, current_localization, use_element, use_localization, use_theme,
+    },
+    localization::fill,
     platform::ElementApi,
     sx::{StaticSx, sx},
     theme::Size,
@@ -313,6 +316,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .prepare();
     let prefix_box = use_box().framework_sx(&PREFIX_SX).prepare();
     let search_box = use_box().framework_sx(&SEARCH_SX).prepare();
+    let localization = use_localization();
 
     // Built only while the list is open - it is the only time `ComboboxCore`
     // renders it, and it carries three event closures.
@@ -321,8 +325,8 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .attr_default("type", "text")
         .attr("value", query())
         .attr("data-controlled", true)
-        .attr("placeholder", "Search")
-        .attr("aria-label", "Search countries")
+        .attr("placeholder", localization.common.search)
+        .attr("aria-label", localization.phone_field.search)
         // Ours is the list underneath; the browser's would cover it.
         .attr("autocomplete", "off")
         .attr("aria-autocomplete", "list")
@@ -579,7 +583,14 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
         // name keeps it too, for speech input (WCAG 2.5.3).
         .attr(
             "aria-label",
-            format!("Country: {picker_name}, {} +{}", country.iso, country.dial),
+            fill(
+                current_localization().phone_field.country,
+                &[
+                    ("name", &picker_name),
+                    ("iso", &country.iso),
+                    ("dial", &country.dial),
+                ],
+            ),
         )
         .attr("disabled", disabled)
         // Read-only keeps the tab stop but says the button does nothing.

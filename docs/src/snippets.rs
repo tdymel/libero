@@ -51,6 +51,7 @@ use crate::components::{DemoCode, DemoValues};
 const PRELUDE: &str = "use dioxus::prelude::*;
 use libero::components::*;
 use libero::hooks::*;
+use libero::localization::*;
 use libero::platform::*;
 use libero::sx::*;
 use libero::theme::*;

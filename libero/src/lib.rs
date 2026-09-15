@@ -9,6 +9,7 @@
 pub mod components;
 pub mod context;
 pub mod hooks;
+pub mod localization;
 #[cfg(doctest)]
 mod md_examples;
 pub mod platform;
@@ -27,5 +28,6 @@ pub(crate) use context::CssLayer;
 pub use context::{LiberoContext, LiberoProvider};
 pub use css::Stylesheet;
 pub use hooks::{
-    ColorSchemeHandle, ThemeSetHandle, use_color_scheme, use_stylesheet, use_theme, use_theme_set,
+    ColorSchemeHandle, LocalizationHandle, ThemeSetHandle, use_color_scheme, use_localization,
+    use_localization_handle, use_stylesheet, use_theme, use_theme_set,
 };

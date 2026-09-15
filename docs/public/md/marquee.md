@@ -121,7 +121,9 @@ Like every component, `Marquee` also takes the shared props `sx`, `class`,
 | `pause_control` | `bool` | `true`, for WCAG 2.2.2. |
 | `fade_edges` | `bool` | `false`: the fade is only right on a `Paper`-coloured surface. |
 | `fade_size` | `&'static str` | How far the fade reaches in - `5%`. |
-| `pause_label` | `&'static str` | The toggle's accessible name - `"Pause"`. |
+
+The toggle's accessible name, `"Pause"`, is `MarqueeLabels::pause` in the
+[localization](theming.md#localization).
 
 ## CSS variables
 

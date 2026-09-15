@@ -44,11 +44,6 @@ pub struct ScrollerDefaults {
     pub fade_color: &'static str,
     /// Mouse drag-to-pan. Touch and trackpad scroll natively either way.
     pub draggable: bool,
-    /// English literals, the `DateDefaults` precedent: no i18n mechanism yet
-    /// (todo 28). "Backward"/"forward" rather than "left"/"right", so the
-    /// names do not lie under a right-to-left page.
-    pub scroll_start_label: &'static str,
-    pub scroll_end_label: &'static str,
 }
 
 impl ScrollerDefaults {
@@ -59,8 +54,6 @@ impl ScrollerDefaults {
         control_sizes: Sizes::new(24, 32, 40, 48, 56, 64),
         fade_color: SCROLLER_FADE_DEFAULT,
         draggable: false,
-        scroll_start_label: "Scroll backward",
-        scroll_end_label: "Scroll forward",
     };
 
     fn size_sx(size: Size) -> Sx {

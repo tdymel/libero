@@ -574,7 +574,6 @@ pub fn use_notifications_with<T: 'static>(
 }
 
 fn default_template(s: NotificationScope<NotificationData>) -> Element {
-    let theme = use_theme();
     // All but the message's text, so an update of only that ("Uploading 40%")
     // redraws `NotificationMessage` and not the `Alert`.
     let chrome = use_memo(move || {
@@ -600,8 +599,8 @@ fn default_template(s: NotificationScope<NotificationData>) -> Element {
             color,
             variant,
             icon,
+            // No `close_label`: `Alert`'s own default, `common.close`.
             onclose: s.closable().then(|| EventHandler::new(move |()| s.close())),
-            close_label: theme.notifications.close_label,
             sx: &DEFAULT_TEMPLATE_SX,
             children: message,
         }

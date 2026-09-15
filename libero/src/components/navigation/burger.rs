@@ -8,7 +8,7 @@ use crate::{
         inputs::ActionIcon,
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::use_localization,
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         BURGER_COLOR, BURGER_LINE_SIZE, BURGER_SIZE, BURGER_SIZES, BURGER_TRANSITION_DURATION,
@@ -118,10 +118,9 @@ base_props! {
         /// `Option`, not a bare `EventHandler` - see `Button`.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
-        /// Replaces the theme's two labels. Runs during render, so it can
-        /// read a live locale - the escape hatch from
-        /// [`BurgerLabels`](crate::theme::BurgerLabels)' `&'static str`s.
-        /// A spread `"aria-label"` wins over both.
+        /// Replaces the localization's two labels,
+        /// [`BurgerLabels`](crate::localization::BurgerLabels). Runs during
+        /// render. A spread `"aria-label"` wins over both.
         #[props(default)]
         label: Option<Callback<bool, String>>,
         /// The glyph's width and height. The button around it is one spacing
@@ -162,7 +161,7 @@ base_props! {
 /// a static sidebar must not steal focus.
 #[component]
 pub fn Burger(props: BurgerProps) -> Element {
-    let theme = use_theme();
+    let labels = use_localization().burger;
     let open = props.open.unwrap_or(false);
 
     // `ActionIcon` writes its own `aria-label` over a spread one, so it moves over here.
@@ -172,8 +171,8 @@ pub fn Burger(props: BurgerProps) -> Element {
         (Some(label), _) => label,
         (None, Some(label)) => label.call(open),
         (None, None) => match open {
-            true => theme.burger.labels.close.to_string(),
-            false => theme.burger.labels.open.to_string(),
+            true => labels.close.to_string(),
+            false => labels.open.to_string(),
         },
     };
 
@@ -227,7 +226,7 @@ pub fn Burger(props: BurgerProps) -> Element {
 mod tests {
     use super::*;
     use crate::css::Stylesheet;
-    use crate::theme::BurgerLabels;
+    use crate::localization::BurgerLabels;
 
     #[test]
     fn an_unsized_burger_grows_the_button_around_the_themed_glyph() {

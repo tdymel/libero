@@ -110,6 +110,8 @@ its text: `hex` by default, `hexa` with alpha, or any of `rgb`, `rgba`, `hsl`,
 - Swatches are buttons.
 
 Name the three thumbs with `saturation_label`, `hue_label` and `alpha_label`.
+Unset, the names and the announced values come from the localization's `color`
+group.
 
 `focusable: false` takes all of it out of the tab order and stops a drag from
 focusing a thumb. It exists for a picker inside a dropdown whose text input must
@@ -185,9 +187,9 @@ and draws `children` in black or white, whichever reads on the color.
 | `name` | `String` | | Hidden input, so the color posts. |
 | `format` | `ColorFormat` | `hex` / `hexa` | The hidden input's text. |
 | `focusable` | `bool` | `true` | `false` for a picker in a dropdown. |
-| `saturation_label` | `String` | | Names the panel's thumb. |
-| `hue_label` | `String` | | Names the hue thumb. |
-| `alpha_label` | `String` | | Names the alpha thumb. |
+| `saturation_label` | `String` | `color.saturation` | Names the panel's thumb. |
+| `hue_label` | `String` | `color.hue` | Names the hue thumb. |
+| `alpha_label` | `String` | `color.alpha` | Names the alpha thumb. |
 
 Plus `class`, `sx`, `states` and global attributes on the root.
 

@@ -123,5 +123,6 @@ run from 250, capped below the overlay layer however many windows are open.
 ## Theme
 
 `theme.floating_window`: `placement`, `radius`, `shadow`, `move_step`,
-`resize_step`, `move_label`, `resize_label`, `close_label`. Plain values read
-from Rust; the chrome is `Paper`'s.
+`resize_step`. Plain values read from Rust; the chrome is `Paper`'s. The
+handles' names are `FloatingWindowLabels` in the
+[localization](theming.md#localization), the close button's `common.close`.

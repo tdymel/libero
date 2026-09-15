@@ -9,6 +9,7 @@ pub(crate) use stylesheet_registry::{SheetRank, StylesheetKey};
 use super::{ModalHost, PortalHost, PortalOutlet, WindowHost};
 use crate::{
     css::Stylesheet,
+    localization::Localization,
     platform::{backend, color_scheme, document},
     theme::{THEME_ATTRIBUTE, Theme, ThemeSet},
     tokens::{ColorScheme, ColorSchemeSetting},
@@ -31,6 +32,9 @@ pub struct LiberoContext {
     /// `HexColor` off the theme re-renders when the theme changes, and so
     /// stays in step with the CSS vars that changed without it.
     pub theme: Signal<&'static Theme>,
+    /// Every string libero shows a reader. A `Signal`, so a language switch
+    /// re-renders its readers without touching the theme's sheet.
+    pub localization: Signal<&'static Localization>,
     /// The active theme's name, so a switch can tell a repeat from a change
     /// and the pair from a rebuild.
     pub(crate) active: Signal<&'static str>,
@@ -56,6 +60,7 @@ impl LiberoContext {
     pub(crate) fn new(
         themes: Signal<ThemeSet>,
         theme: Signal<&'static Theme>,
+        localization: Signal<&'static Localization>,
         active: Signal<&'static str>,
         scheme_setting: Signal<ColorSchemeSetting>,
         system_scheme: Signal<ColorScheme>,
@@ -65,6 +70,7 @@ impl LiberoContext {
         Self {
             themes,
             theme,
+            localization,
             active,
             scheme_setting,
             system_scheme,
@@ -268,9 +274,14 @@ pub fn LiberoProvider(
     /// all still follows `prefers-color-scheme`.
     #[props(default, into)]
     themes: ThemeSet,
+    /// Every string libero shows a reader. Read at mount; switch it later with
+    /// [`use_localization_handle`](crate::hooks::use_localization_handle).
+    #[props(default = &Localization::ENGLISH)]
+    localization: &'static Localization,
     children: Element,
 ) -> Element {
     let themes = use_hook(|| themes.clone());
+    let localization = use_signal(|| localization);
     // Read once, at mount, so the first render already paints the scheme the
     // app was last left in rather than flashing the light one.
     let setting = use_hook(|| {
@@ -304,6 +315,7 @@ pub fn LiberoProvider(
         LiberoContext::new(
             theme_set,
             theme_signal,
+            localization,
             active,
             scheme_setting,
             system_scheme,

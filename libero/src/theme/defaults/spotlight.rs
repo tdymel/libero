@@ -9,28 +9,6 @@ pub const SPOTLIGHT_SEARCH_FONT_SIZE: CssVar = CssVar::new("--lsx-spotlight-sear
 pub const SPOTLIGHT_GROUP_COLOR: CssVar = CssVar::new("--lsx-spotlight-group-color");
 pub const SPOTLIGHT_DESCRIPTION_COLOR: CssVar = CssVar::new("--lsx-spotlight-description-color");
 
-/// Every string a `Spotlight` says to a reader. Swapped whole for a locale -
-/// the [`ComboboxLabels`](crate::theme::ComboboxLabels) shape.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct SpotlightLabels {
-    /// Names the dialog, unless `SpotlightOptions::aria_label` does.
-    pub label: &'static str,
-    pub placeholder: &'static str,
-    /// Shown, and announced, when a query matches nothing.
-    pub nothing_found: &'static str,
-    /// Announced while `SpotlightOptions::loading` is set.
-    pub loading: &'static str,
-}
-
-impl SpotlightLabels {
-    pub const ENGLISH: Self = Self {
-        label: "Command palette",
-        placeholder: "Search...",
-        nothing_found: "Nothing found",
-        loading: "Searching",
-    };
-}
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SpotlightDefaults {
     /// The palette's width, capped by the viewport.
@@ -45,7 +23,6 @@ pub struct SpotlightDefaults {
     pub search_font_size: &'static str,
     pub group_color: ColorValue,
     pub description_color: ColorValue,
-    pub labels: SpotlightLabels,
 }
 
 impl SpotlightDefaults {
@@ -60,7 +37,6 @@ impl SpotlightDefaults {
         // for text this small.
         group_color: ColorValue::Shade(Color::Muted, ColorShade::S7),
         description_color: ColorValue::Shade(Color::Muted, ColorShade::S7),
-        labels: SpotlightLabels::ENGLISH,
     };
 }
 

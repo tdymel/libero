@@ -115,5 +115,6 @@ so it must contain the visible text: a voice-control user says what they see
 `theme.stepper`: `size`, `sizes` (marker, font size, description font size, gap
 between marker and label, spacing between steps), `label_position`, `color`,
 `pending_color`, `error_color`, `connector_color`, `description_color`,
-`line_width`, `content_padding`, `completed_label`, `error_label`. The vertical
-arm's height animation is `theme.collapse.duration`.
+`line_width`, `content_padding`. The vertical arm's height animation is
+`theme.collapse.duration`. The status words are `StepperLabels` (`completed`,
+`error`) in the [localization](theming.md#localization).

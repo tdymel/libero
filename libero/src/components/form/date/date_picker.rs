@@ -6,7 +6,10 @@ use super::{
     format::uses_twelve_hours,
     props::date_props,
 };
-use crate::{components::Input, hooks::use_theme};
+use crate::{
+    components::Input,
+    hooks::{use_localization, use_theme},
+};
 
 date_props! {
     picker DatePickerProps<V: DateValue>(V, V::Bound): limits, exclude_date, allow_deselect, columns, level, calendar, today, clock
@@ -30,6 +33,7 @@ date_props! {
 #[component]
 pub fn DatePicker<V: DateValue>(props: DatePickerProps<V>) -> Element {
     let theme = use_theme();
+    let time_format = use_localization().date.time_format;
     let level = props.level.unwrap_or(DateLevel::Day);
     use_ignored_props_warning::<V>(
         "DatePicker",
@@ -74,7 +78,7 @@ pub fn DatePicker<V: DateValue>(props: DatePickerProps<V>) -> Element {
             step: props.step,
             twelve_hour: props
                 .twelve_hour
-                .unwrap_or_else(|| uses_twelve_hours(theme.date.time_format)),
+                .unwrap_or_else(|| uses_twelve_hours(time_format)),
             calendar: props.calendar.copied_or(theme.date_picker.calendar),
             days: props.days.unwrap_or(theme.date_picker.days),
         },

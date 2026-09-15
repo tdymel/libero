@@ -72,11 +72,6 @@ pub struct StepperDefaults {
     pub line_width: u8,
     /// Around a vertical step's content.
     pub content_padding: Size,
-    /// Read by a screen reader after a completed step's label. The marker's
-    /// check is drawing only.
-    pub completed_label: &'static str,
-    /// Read after an errored step's label, so the error is not colour alone.
-    pub error_label: &'static str,
 }
 
 /// The auto-contrast twin of a shade, so a filled marker's glyph comes from
@@ -144,8 +139,6 @@ impl StepperDefaults {
         description_color: ColorValue::Shade(Color::Muted, ColorShade::S7),
         line_width: 2,
         content_padding: Size::Md,
-        completed_label: "Completed",
-        error_label: "Error",
     };
 
     pub fn size_sx(size: Size) -> Sx {

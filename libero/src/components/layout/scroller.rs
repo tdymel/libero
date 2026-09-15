@@ -12,7 +12,10 @@ use crate::{
             use_box, use_scroll_area,
         },
     },
-    hooks::{DragMove, DragOptions, DragStart, use_drag, use_element, use_id, use_theme},
+    hooks::{
+        DragMove, DragOptions, DragStart, use_drag, use_element, use_id, use_localization,
+        use_theme,
+    },
     platform::{ElementApi, next_task},
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size},
@@ -329,6 +332,7 @@ base_props! {
 #[component]
 pub fn Scroller(props: ScrollerProps) -> Element {
     let theme = use_theme();
+    let labels = use_localization().scroller;
     // Always called, so the hook order does not depend on the prop.
     let own = use_scroller();
     let handle = props.handle.unwrap_or(own);
@@ -555,8 +559,8 @@ pub fn Scroller(props: ScrollerProps) -> Element {
                 states: control_states,
                 aria_controls: viewport_id.clone(),
                 aria_label: match forward {
-                    true => theme.scroller.scroll_end_label,
-                    false => theme.scroller.scroll_start_label,
+                    true => labels.forward,
+                    false => labels.backward,
                 },
                 // `aria-disabled`, not `disabled`: a focused button that
                 // becomes `disabled` drops focus to the page. Out of the tab

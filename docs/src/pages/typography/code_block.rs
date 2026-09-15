@@ -54,7 +54,7 @@ pub fn CodeBlockPage() -> Element {
                 prop("language", "Language").doc(LANGUAGE_DOC),
                 prop("header", "bool")
                     .default("theme.code_block.header")
-                    .doc("A bar above the code naming the language, or \"Unrecognized language\" if it isn't in the catalog or its `code-lang-*` feature is off."),
+                    .doc("A bar above the code naming the language, or the localization's `code_block.unrecognized_language` if it isn't in the catalog or its `code-lang-*` feature is off."),
                 prop("copyable", "bool")
                     .default("theme.code_block.copyable")
                     .doc("Without `header`, floats in the top-right corner."),

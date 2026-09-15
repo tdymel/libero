@@ -112,7 +112,7 @@ color.
 |---|---|---|---|
 | `source` | `String` | required | The text to render, highlighted when `language` names a grammar this build compiles in. Line numbers and the copy button need a real string, so this is the only way to pass content. |
 | `language` | `Language` | - | Unrecognized values fall back to no highlighting rather than a guess. |
-| `header` | `bool` | `theme.code_block.header` (`true`) | A bar above the code naming the language, or "Unrecognized language" if it isn't in the catalog or its `code-lang-*` feature is off. |
+| `header` | `bool` | `theme.code_block.header` (`true`) | A bar above the code naming the language, or the localization's `code_block.unrecognized_language` if it isn't in the catalog or its `code-lang-*` feature is off. |
 | `copyable` | `bool` | `theme.code_block.copyable` (`true`) | Without `header`, floats in the top-right corner. |
 | `max_lines` | `Option<u32>` | - | Caps the visible height to roughly this many lines and scrolls past it; unset grows to fit. Long lines always scroll horizontally regardless. |
 | `line_numbers` | `bool` | `theme.code_block.line_numbers` (`true`) | Toggles the line-number gutter. |

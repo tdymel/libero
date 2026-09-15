@@ -14,7 +14,8 @@ use libero::{
         DateField, DateLevel, DatePicker, DateRange, DateRangePicker, DayField, DayPicker,
         MonthPicker, SegmentedControl, TimePicker, YearPicker,
     },
-    theme::{CalendarVariant, DateDefaults, Theme},
+    localization::{DateLocale, Localization},
+    theme::CalendarVariant,
 };
 
 #[test]
@@ -191,17 +192,17 @@ fn a_picker_draws_six_weeks_from_the_first_weekday() {
 /// The weekday arrays are Sunday first whatever `first_weekday` says; the
 /// grid and its headers rotate to it.
 #[test]
-fn a_sunday_first_theme_starts_the_grid_and_the_headers_on_sunday() {
-    static SUNDAY: Theme = Theme {
-        date: DateDefaults {
+fn a_sunday_first_locale_starts_the_grid_and_the_headers_on_sunday() {
+    static SUNDAY: Localization = Localization {
+        date: DateLocale {
             first_weekday: Weekday::Sun,
-            ..DateDefaults::ENGLISH
+            ..DateLocale::ENGLISH
         },
-        ..Theme::DEFAULT
+        ..Localization::ENGLISH
     };
     fn app() -> Element {
         rsx! {
-            LiberoProvider { themes: &SUNDAY,
+            LiberoProvider { localization: &SUNDAY,
                 DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} }
             }
         }

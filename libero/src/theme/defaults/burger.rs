@@ -22,26 +22,6 @@ pub const BURGER_LINE_SIZE: CssVar = CssVar::new("--lsx-burger-line-size");
 pub const BURGER_TRANSITION_DURATION: CssVar = CssVar::new("--lsx-burger-transition-duration");
 pub const BURGER_TRANSITION_TIMING: CssVar = CssVar::new("--lsx-burger-transition-timing");
 
-/// The two words a burger announces itself with: one place to translate.
-/// Split out of [`BurgerDefaults`] on purpose - the geometry beside them is
-/// not locale, and a translation should be able to replace the labels without
-/// restating a pixel scale. The [`DateDefaults`](crate::theme::DateDefaults)
-/// precedent.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct BurgerLabels {
-    /// Names the button while the panel is closed.
-    pub open: &'static str,
-    /// Names the button while the panel is open.
-    pub close: &'static str,
-}
-
-impl BurgerLabels {
-    pub const ENGLISH: Self = Self {
-        open: "Open navigation",
-        close: "Close navigation",
-    };
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BurgerDefaults {
     /// The glyph's width and height, not the button's.
@@ -54,7 +34,6 @@ pub struct BurgerDefaults {
     /// An off-scale one-off goes through `sx`.
     pub transition_duration: &'static str,
     pub transition_timing: &'static str,
-    pub labels: BurgerLabels,
 }
 
 impl BurgerDefaults {
@@ -65,7 +44,6 @@ impl BurgerDefaults {
         sizes: Sizes::new(12, 18, 24, 34, 42, 52),
         transition_duration: "300ms",
         transition_timing: "ease",
-        labels: BurgerLabels::ENGLISH,
     };
 }
 

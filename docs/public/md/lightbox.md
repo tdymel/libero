@@ -162,10 +162,11 @@ Returns the same `ModalHandle` as `use_modal`; every method on it and on
 | `thumbnails_per_view` | `f64` | Thumbnails visible at once before the strip scrolls. |
 | `thumbnails_gap` | `Size` | Space between thumbnails. |
 | `max_zoom` | `f64` | Default upper scale bound, `1.0` being the picture as first shown. |
-| `label` | `&'static str` | The dialog's default name. |
-| `close_label` | `&'static str` | The close button's name. |
-| `thumbnails_label` | `&'static str` | The strip's region name. |
-| `thumbnail_label` | `&'static str` | A thumbnail's name; `{n}` is the slide number. |
+
+The words are `LightboxLabels` in the [localization](theming.md#localization):
+`label` (the dialog's default name), `thumbnails` (the strip's region name) and
+`thumbnail` (a thumbnail's name; `{n}` is the slide number). The close button's
+name is `common.close`.
 
 ## CSS variables
 

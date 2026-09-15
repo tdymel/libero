@@ -235,6 +235,61 @@ walks its ramp the right way, and the `muted` ramp is mixed between `ink` and
 down is anything the theme states as a literal CSS colour - `Theme::DARK`
 spells out five `*Defaults` for exactly that reason.
 
+## Localization
+
+The words are not in the theme. Every string a component says on its own - an
+accessible name, an announcement, a month name, a date format - comes from
+`LiberoProvider`'s `localization`, which defaults to `Localization::ENGLISH`. It
+is shaped like a theme: one plain struct, a group per component plus `common`
+for the words many share, changed with struct update syntax in a `static`. A
+string with a value in it is a template with named holes, such as
+`"Go to page {n}"`, so a language can put the value wherever it belongs.
+
+```rust,ignore
+static GERMAN: Localization = Localization {
+    common: CommonLabels {
+        close: "Schließen",
+        loading: "Wird geladen",
+        ..CommonLabels::ENGLISH
+    },
+    pagination: PaginationLabels {
+        page: "Gehe zu Seite {n}",
+        current_page: "Seite {n}",
+        ..PaginationLabels::ENGLISH
+    },
+    ..Localization::ENGLISH
+};
+
+fn App() -> Element {
+    rsx! {
+        LiberoProvider {
+            localization: &GERMAN,
+            Router::<Route> {}
+        }
+    }
+}
+```
+
+`use_localization_handle()` switches it at runtime, and every component that
+reads it re-renders; `use_localization()` reads it. A prop that names what only
+the call site knows, such as a dialog's close button, still wins over it.
+
+```rust,ignore
+let localization = use_localization_handle();
+
+rsx! {
+    Button { onclick: move |_| localization.set(&GERMAN), "Deutsch" }
+}
+```
+
+The groups live in `libero::localization`: `CommonLabels`, `DateLocale`,
+`PaginationLabels`, `AvatarLabels`, `BurgerLabels`, `ColorSchemeButtonLabels`,
+`SpotlightLabels`, `CarouselLabels`, `LightboxLabels`, `FloatingWindowLabels`,
+`ScrollerLabels`, `StepperLabels`, `MarqueeLabels`, `ChipsLabels`,
+`ImageLabels`, `CodeBlockLabels`, `ColorLabels`, `PhoneFieldLabels`,
+`PasswordFieldLabels`, `NumberFieldLabels` and `FileFieldLabels`, each with an `ENGLISH`
+const. `fill(template, &[("n", &3)])` fills a template's holes.
+
 ## Reading the theme
 
 `use_theme()` returns the active `&'static Theme`. Components use it for the

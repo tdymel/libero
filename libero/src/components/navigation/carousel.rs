@@ -17,8 +17,9 @@ use crate::{
     },
     hooks::{
         Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id,
-        use_silent_focus_within, use_theme,
+        use_localization, use_silent_focus_within, use_theme,
     },
+    localization::{CarouselLabels, fill},
     platform::{
         ElementApi, TimerSubscription, arrow_target, key_taken, prefers_reduced_motion, timer,
         typing_target,
@@ -29,8 +30,8 @@ use crate::{
         CAROUSEL_CONTROL_SIZE, CAROUSEL_CONTROLS_OFFSET, CAROUSEL_GAP, CAROUSEL_INDICATOR_COLOR,
         CAROUSEL_INDICATOR_CURRENT_COLOR, CAROUSEL_INDICATOR_CURRENT_LENGTH,
         CAROUSEL_INDICATOR_LENGTH, CAROUSEL_INDICATOR_THICKNESS, CAROUSEL_INDICATORS_GAP,
-        CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, CarouselDefaults, CssVar, FOCUS_RING_HALO,
-        FOCUS_RING_WIDTH, NamedColorCss, Size, SizeCss,
+        CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, CssVar, FOCUS_RING_HALO, FOCUS_RING_WIDTH,
+        NamedColorCss, Size, SizeCss,
     },
 };
 
@@ -740,6 +741,7 @@ base_props! {
 #[component]
 pub fn Carousel(props: CarouselProps) -> Element {
     let theme = use_theme();
+    let labels = &use_localization().carousel;
     let track = use_scroll_area();
     // The indicators sit outside the track, so the roving focus looks them up
     // from the root.
@@ -794,19 +796,19 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let view = CarouselView {
         setup,
         state,
-        theme: &theme.carousel,
+        labels,
         track_id,
         status_id,
         root: root_handle,
     };
 
     // A named region beats an unnamed one even when the name is generic, so
-    // the theme's stands in - and `use_carousel_state`'s warning still says to
-    // do better.
+    // the localization's stands in - and `use_carousel_state`'s warning still
+    // says to do better.
     let aria_label = props
         .aria_label
         .clone()
-        .unwrap_or_else(|| theme.carousel.label.to_string());
+        .unwrap_or_else(|| labels.label.to_string());
 
     let root_states: Input<States> = props
         .states
@@ -919,13 +921,19 @@ struct CarouselState {
     running: bool,
 }
 
+/// `template` with `{n}` one-based, because it is read aloud, and `{m}` the
+/// count.
+pub(crate) fn numbered(template: &str, index: usize, count: usize) -> String {
+    fill(template, &[("n", &(index + 1)), ("m", &count)])
+}
+
 /// One argument for every part of the carousel's chrome: the resolved props,
-/// the live state, the theme block and the ids.
+/// the live state, the strings and the ids.
 #[derive(Clone, Copy, PartialEq)]
 struct CarouselView {
     setup: CarouselSetup,
     state: CarouselState,
-    theme: &'static CarouselDefaults,
+    labels: &'static CarouselLabels,
     track_id: Signal<String>,
     status_id: Signal<String>,
     root: ElementHandle,
@@ -1203,7 +1211,7 @@ fn carousel_slides(
     let CarouselView {
         setup,
         state,
-        theme,
+        labels,
         ..
     } = view;
     let nav = state.nav;
@@ -1212,7 +1220,7 @@ fn carousel_slides(
 
     let label_for = move |index: usize| match &slide_label {
         Some(label) => label.call(index),
-        None => CarouselDefaults::format_label(theme.slide_label, index, count),
+        None => numbered(labels.slide, index, count),
     };
 
     let mut strip: Vec<(usize, Element, bool)> = Vec::with_capacity(nav.strip_count());
@@ -1537,7 +1545,7 @@ fn CarouselControl(view: CarouselView, forward: bool, disabled: Memo<bool>) -> E
     let CarouselView {
         setup,
         state,
-        theme,
+        labels,
         track_id,
         ..
     } = view;
@@ -1560,7 +1568,7 @@ fn CarouselControl(view: CarouselView, forward: bool, disabled: Memo<bool>) -> E
             states: control_states,
             aria_controls: track_id(),
             aria_disabled: disabled.to_string(),
-            aria_label: if forward { theme.next_label } else { theme.previous_label },
+            aria_label: if forward { labels.next } else { labels.previous },
             onclick: move |_| {
                 let index = *current.peek();
                 match (forward, looping) {
@@ -1587,7 +1595,7 @@ fn CarouselStatus(view: CarouselView) -> Element {
     let CarouselView {
         setup,
         state,
-        theme,
+        labels,
         status_id,
         ..
     } = view;
@@ -1600,7 +1608,7 @@ fn CarouselStatus(view: CarouselView) -> Element {
         setup.last,
         nav.clones > 0,
     );
-    let status = CarouselDefaults::format_label(theme.status_label, position, positions);
+    let status = numbered(labels.status, position, positions);
 
     rsx! {
         VisuallyHidden {
@@ -1620,7 +1628,7 @@ fn CarouselStatus(view: CarouselView) -> Element {
 /// not: `aria-pressed` carries the state.
 fn carousel_pause_button(view: CarouselView, controls: bool) -> Element {
     let mut paused = view.state.paused;
-    let theme = view.theme;
+    let labels = view.labels;
     let beside_next = controls && view.setup.orientation == Orientation::Horizontal;
     let pause_states: Input<States> = states().with("beside-next", beside_next).into();
 
@@ -1630,7 +1638,7 @@ fn carousel_pause_button(view: CarouselView, controls: bool) -> Element {
             r#type: "button",
             framework_sx: &CAROUSEL_PAUSE_SX,
             states: pause_states,
-            aria_label: theme.pause_label,
+            aria_label: labels.pause,
             aria_pressed: paused().to_string(),
             onclick: move |_| paused.toggle(),
             if paused() {
@@ -1650,7 +1658,7 @@ fn CarouselIndicators(view: CarouselView) -> Element {
     let CarouselView {
         setup,
         state,
-        theme,
+        labels,
         track_id,
         root,
         ..
@@ -1677,11 +1685,7 @@ fn CarouselIndicators(view: CarouselView) -> Element {
                     states: states()
                         .with(orientation.state_name(), true)
                         .with("current", index == current()),
-                    aria_label: CarouselDefaults::format_label(
-                        theme.indicator_label,
-                        index - low,
-                        high - low + 1,
-                    ),
+                    aria_label: numbered(labels.indicator, index - low, high - low + 1),
                     aria_current: (index == current()).then(|| "true".to_string()),
                     // Roving: one tab stop for the whole strip. The
                     // arrows move the slide and the focus with it -

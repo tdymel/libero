@@ -24,12 +24,13 @@ use crate::{
         surface::paper_sx,
     },
     hooks::{
-        PopoverOptions, moved_within, use_element, use_field_list_layer, use_popover_on,
-        use_silent_focus, use_theme,
+        PopoverOptions, moved_within, use_element, use_field_list_layer, use_localization,
+        use_popover_on, use_silent_focus, use_theme,
     },
+    localization::DateLocale,
     platform::{ElementApi, next_task},
     sx::{StaticSx, Sx},
-    theme::{DateDefaults, Size, SizeCss, Z_INDEX_POPOVER},
+    theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
 
 static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
@@ -54,7 +55,7 @@ const DROPDOWN_ENTRY: &str = ":is([data-slot='months'], [data-slot='cells'], [da
 pub struct Formats {
     pub date: String,
     pub time: String,
-    pub names: &'static DateDefaults,
+    pub names: &'static DateLocale,
     /// What a `NaiveDate` stands for: typed text reads as its first day.
     pub level: DateLevel,
 }
@@ -74,7 +75,7 @@ pub trait FieldValue: Copy + PartialEq + 'static {
     /// What the hidden input posts: ISO 8601.
     fn iso(self) -> String;
     /// Names the dropdown's dialog.
-    fn dialog_label(names: &DateDefaults) -> &'static str {
+    fn dialog_label(names: &DateLocale) -> &'static str {
         names.date_label
     }
 }
@@ -123,7 +124,7 @@ impl FieldValue for NaiveTime {
         self.to_string()
     }
 
-    fn dialog_label(names: &DateDefaults) -> &'static str {
+    fn dialog_label(names: &DateLocale) -> &'static str {
         names.time_label
     }
 }
@@ -199,7 +200,7 @@ impl<T: FieldValue + Ord> FieldValue for DateRange<T> {
         )
     }
 
-    fn dialog_label(names: &DateDefaults) -> &'static str {
+    fn dialog_label(names: &DateLocale) -> &'static str {
         T::dialog_label(names)
     }
 }
@@ -268,7 +269,7 @@ pub(super) use picker_field;
 /// Controlled: renders `value` and asks for a new one through `onchange`.
 /// Typed text stays as typed until the field blurs or Enter is pressed; text
 /// that `V` cannot read, or that `accepts` refuses, stays and shows
-/// `DateDefaults::invalid_date`.
+/// `DateLocale::invalid_date`.
 pub(super) fn use_picker_field<V: FieldValue>(
     field: PickerField<'_, V>,
     formats: Formats,
@@ -276,7 +277,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     dropdown: impl FnOnce(DropdownArgs<V>) -> Element,
 ) -> Element {
     let theme = use_theme();
-    let names = &theme.date;
+    let names = &use_localization().date;
     let defaults = &theme.date_field;
     let size = field.size.copied_or(defaults.size);
     let radius = field.radius.copied_or(defaults.radius);
@@ -604,10 +605,10 @@ mod tests {
         assert!(!css.contains("var(--lsx-paper-shadow)"), "{css}");
     }
 
-    static WAVE_DASH: DateDefaults = DateDefaults {
+    static WAVE_DASH: DateLocale = DateLocale {
         format: |_| "YYYY年M月D日",
         range_separator: " ～ ",
-        ..DateDefaults::ENGLISH
+        ..DateLocale::ENGLISH
     };
 
     fn wave_dash_formats() -> Formats {
@@ -638,7 +639,7 @@ mod tests {
 
     #[test]
     fn months_and_years_read_back_what_they_show() {
-        let names = &DateDefaults::ENGLISH;
+        let names = &DateLocale::ENGLISH;
         let at = |date: &str, level| Formats {
             date: date.to_string(),
             time: names.time_format.to_string(),

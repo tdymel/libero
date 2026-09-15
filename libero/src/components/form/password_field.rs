@@ -6,7 +6,7 @@ use crate::{
         common::{EyeIcon, EyeOffIcon, field_props},
         form::{Disabled, FormScope, TextField, slot_icon_size},
     },
-    hooks::use_theme,
+    hooks::{use_localization, use_theme},
     sx::ThemeAwareValue,
 };
 
@@ -36,10 +36,12 @@ field_props! {
         /// field, or one next to a revealed twin, has nothing to add.
         #[props(default)]
         reveal_button: Option<bool>,
-        /// Announced on the reveal button while the secret is hidden.
+        /// Announced on the reveal button while the secret is hidden, e.g.
+        /// "Show PIN". Unset, the localization's `password_field.show`.
         #[props(default, into)]
         reveal_label: Option<String>,
-        /// Announced on the reveal button while the secret is shown.
+        /// Announced on the reveal button while the secret is shown. Unset,
+        /// the localization's `password_field.hide`.
         #[props(default, into)]
         hide_label: Option<String>,
     }
@@ -71,14 +73,15 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
     // A disabled `Fieldset` disables the input, so the toggle follows it.
     let group = try_use_context::<Disabled>();
     let disabled = props.disabled.unwrap_or(false) || group.is_some_and(|Disabled(group)| group());
+    let labels = use_localization().password_field;
     let hidden_label = props
         .reveal_label
         .clone()
-        .unwrap_or_else(|| "Show password".to_string());
+        .unwrap_or_else(|| labels.show.to_string());
     let shown_label = props
         .hide_label
         .clone()
-        .unwrap_or_else(|| "Hide password".to_string());
+        .unwrap_or_else(|| labels.hide.to_string());
 
     // The icon shows what the click does, so it is the *opposite* of the
     // current state: a struck-through eye while the secret is readable.

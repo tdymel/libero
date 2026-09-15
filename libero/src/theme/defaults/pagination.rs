@@ -16,7 +16,7 @@ pub const PAGINATION_ACTIVE_COLOR: CssVar = CssVar::new("--lsx-pagination-active
 const ACTIVE_SHADE: ColorShade = ColorShade::S6;
 
 /// Geometry and colour. The strings a reader sees live in
-/// [`PaginationLabels`], which is swapped whole for a locale.
+/// [`Localization::pagination`](crate::localization::Localization::pagination).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PaginationDefaults {
     pub size: Size,
@@ -80,45 +80,4 @@ impl ToCssDeclarations for PaginationDefaults {
         declarations.push(PAGINATION_ACTIVE_COLOR.declare(on_active.value()));
         declarations
     }
-}
-
-/// Every string `Pagination` puts in front of a reader, in one struct that a
-/// locale swaps whole.
-///
-/// Separate from [`PaginationDefaults`] because geometry and language are
-/// changed by different people for different reasons - the `DateDefaults`
-/// arrangement, which is locale-only and sits beside `DatePickerDefaults`
-/// rather than inside it.
-///
-/// The `<nav>`'s own name is **not** here. `aria_label` is a required prop, so
-/// the caller supplies it and localises it themselves; a default sitting here
-/// would be set by a translator, read by nothing, and indistinguishable from
-/// their own wiring being wrong (Bob3, reviewing C4).
-///
-/// **`format!("{page_label} {n}")` assumes the number goes last**, which is
-/// wrong in plenty of languages. `Pagination`'s `label` prop is the escape
-/// hatch for a language this shape cannot reach; see [`todos`] item 28 for the
-/// i18n work this is waiting on.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct PaginationLabels {
-    /// Prefix for a page the reader is not on: `Go to page 4`.
-    pub page_label: &'static str,
-    /// Prefix for the current page: `Page 4`. `aria-current` already says
-    /// "current", so repeating "go to" on the page you are on is a lie.
-    pub current_page_label: &'static str,
-    pub previous_label: &'static str,
-    pub next_label: &'static str,
-    pub first_label: &'static str,
-    pub last_label: &'static str,
-}
-
-impl PaginationLabels {
-    pub const ENGLISH: Self = Self {
-        page_label: "Go to page",
-        current_page_label: "Page",
-        previous_label: "Go to previous page",
-        next_label: "Go to next page",
-        first_label: "Go to first page",
-        last_label: "Go to last page",
-    };
 }

@@ -130,7 +130,7 @@ fn an_unnamed_slider_warns() {
     ));
 }
 
-/// The theme's label stands in, but the warning still asks for a real name,
+/// The localization's label stands in, but the warning still asks for a real name,
 /// like `Carousel`'s.
 #[test]
 fn an_unnamed_lightbox_warns() {

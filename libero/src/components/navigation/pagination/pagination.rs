@@ -10,7 +10,8 @@ use crate::{
         layout::{BoxStyle, use_box},
         variables,
     },
-    hooks::{ElementHandle, use_element},
+    hooks::{ElementHandle, use_element, use_localization},
+    localization::fill,
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -165,9 +166,8 @@ base_props! {
         /// First and last. Off by default.
         #[props(default)]
         with_edges: Option<bool>,
-        /// Overrides every accessible name. Runs during render, so it can read
-        /// a locale the theme's `PaginationLabels` cannot express - a language
-        /// that does not put the number last.
+        /// Overrides every accessible name, the localization's
+        /// `PaginationLabels`. Runs during render.
         #[props(default)]
         label: Option<Callback<PaginationLabel, String>>,
     }
@@ -184,7 +184,7 @@ base_props! {
 pub fn Pagination(props: PaginationProps) -> Element {
     let theme = use_theme();
     let defaults = theme.pagination;
-    let labels = theme.pagination_labels;
+    let labels = use_localization().pagination;
 
     let list = use_element();
 
@@ -296,12 +296,12 @@ pub fn Pagination(props: PaginationProps) -> Element {
             PaginationLabel::Page {
                 number,
                 current: true,
-            } => format!("{} {number}", labels.current_page_label),
-            PaginationLabel::Page { number, .. } => format!("{} {number}", labels.page_label),
-            PaginationLabel::First => labels.first_label.to_string(),
-            PaginationLabel::Previous => labels.previous_label.to_string(),
-            PaginationLabel::Next => labels.next_label.to_string(),
-            PaginationLabel::Last => labels.last_label.to_string(),
+            } => fill(labels.current_page, &[("n", &number)]),
+            PaginationLabel::Page { number, .. } => fill(labels.page, &[("n", &number)]),
+            PaginationLabel::First => labels.first.to_string(),
+            PaginationLabel::Previous => labels.previous.to_string(),
+            PaginationLabel::Next => labels.next.to_string(),
+            PaginationLabel::Last => labels.last.to_string(),
         },
     };
 

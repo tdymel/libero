@@ -164,7 +164,8 @@ removes the focused file. On the Browse button, Left moves to the last file
 and Backspace removes it. In the `Dropzone` variant each card's remove button
 is a tab stop of its own.
 
-`required` puts a hidden "Required" in the Browse button's description. ARIA
+`required` puts a hidden "Required" (the localization's `file_field.required`)
+in the Browse button's description. ARIA
 allows `aria-required` on neither a group nor a button. A read-only field
 keeps the Browse button and the files in the tab order and refuses every
 edit.
@@ -185,7 +186,7 @@ field's `attributes` reach.
 | `variant` | `FileFieldVariant` | `input` | `input` is one line in the field frame; `dropzone` is a tall surface to drop onto or click. |
 | `accept` | `String` | - | The `accept` attribute: `.pdf`, `image/png`, `image/*`, or a comma-separated list. The picker applies it, and so does a drop. |
 | `capture` | `String` | - | Asks a phone for a fresh capture - `user` or `environment`. |
-| `placeholder` | `String` | - | Shown while nothing is picked. In the `Dropzone` variant it is the prompt, when `children` is empty. |
+| `placeholder` | `String` | - | Shown while nothing is picked. In the `Dropzone` variant it is the prompt, when `children` is empty; with neither, the localization's `file_field.drop_file` or `drop_files`. |
 | `clearable` | `bool` | `true` | Shows an x that empties the field. |
 | `loading` | `bool` | `false` | An upload is in flight: a `Loader` in the control and `aria-busy` on the field's group. Blocks nothing. |
 | `selection` | `Callback<SelectionArgs<FileData>, Element>` | a `Chip`, or the filename | Draws one picked file, remove control included. |

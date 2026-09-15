@@ -54,6 +54,38 @@ rsx! {
     }
 }"#;
 
+// snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] Home {} }
+// snippet: item #[component] fn Home() -> Element { rsx! {} }
+const LOCALIZATION: &str = r#"static GERMAN: Localization = Localization {
+    common: CommonLabels {
+        close: "Schließen",
+        loading: "Wird geladen",
+        ..CommonLabels::ENGLISH
+    },
+    pagination: PaginationLabels {
+        page: "Gehe zu Seite {n}",
+        current_page: "Seite {n}",
+        ..PaginationLabels::ENGLISH
+    },
+    ..Localization::ENGLISH
+};
+
+fn App() -> Element {
+    rsx! {
+        LiberoProvider {
+            localization: &GERMAN,
+            Router::<Route> {}
+        }
+    }
+}"#;
+
+// snippet: ignore - `GERMAN` is the app's own
+const SWITCH_LOCALIZATION: &str = r#"let localization = use_localization_handle();
+
+rsx! {
+    Button { onclick: move |_| localization.set(&GERMAN), "Deutsch" }
+}"#;
+
 // snippet: ignore - `Control` is the docs site's own
 const READING_THE_THEME: &str = r#"let theme = use_theme();
 
@@ -349,6 +381,45 @@ pub fn ThemingPage() -> Element {
                     " restates five "
                     Code { source: "*Defaults" }
                     " for exactly that."
+                }
+            }
+
+            DocSection {
+                title: "Localization",
+                Text {
+                    "The words are not in the theme. Every string a component says on its own - "
+                    "an accessible name, an announcement, a month name, a date format - comes "
+                    "from "
+                    Code { source: "LiberoProvider" }
+                    "'s "
+                    Code { source: "localization" }
+                    ", which defaults to "
+                    Code { source: "Localization::ENGLISH" }
+                    ". It is shaped like a theme: one plain struct, a group per component plus "
+                    Code { source: "common" }
+                    " for the words many share, changed with struct update syntax in a "
+                    Code { source: "static" }
+                    ". A string with a value in it is a template with named holes, such as "
+                    Code { source: "\"Go to page {{n}}\"" }
+                    ", so a language can put the value wherever it belongs."
+                }
+                CodeBlock { source: LOCALIZATION, language: "rust" }
+                Text {
+                    Code { source: "use_localization_handle()" }
+                    " switches it at runtime, and every component that reads it re-renders; "
+                    Code { source: "use_localization()" }
+                    " reads it. A prop that names what only the call site knows, such as a "
+                    "dialog's close button, still wins over it."
+                }
+                CodeBlock { source: SWITCH_LOCALIZATION, language: "rust" }
+                Text {
+                    "The groups live in "
+                    Code { source: "libero::localization" }
+                    ", each with an "
+                    Code { source: "ENGLISH" }
+                    " const, and "
+                    Code { source: "fill(template, &[(\"n\", &3)])" }
+                    " fills a template's holes."
                 }
             }
 

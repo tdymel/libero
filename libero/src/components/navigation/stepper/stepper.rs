@@ -6,7 +6,7 @@ use crate::{
         ClassList, Input, OptionLabel, Options, Orientation, States,
         common::{base_color, contrast_color, fill_color, input_from_str, text_color},
     },
-    hooks::{use_root_id, use_theme},
+    hooks::{use_localization, use_root_id, use_theme},
     sx::{Sx, ThemeAwareValue},
     theme::{Size, StepLabelPosition},
     utils::warn,
@@ -108,6 +108,7 @@ pub struct StepperProps<T: Options> {
 pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
     let root = use_root_id(&props.attributes);
     let theme = use_theme();
+    let labels = use_localization().stepper;
 
     // Hardcoded, not themed: the shared `Orientation` defaults to vertical,
     // and a themed default would have to move it below `components`.
@@ -193,8 +194,8 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
             label_position: props.label_position.copied_or(theme.stepper.label_position),
             size: props.size.copied_or(theme.stepper.size),
             color,
-            completed_label: theme.stepper.completed_label,
-            error_label: theme.stepper.error_label,
+            completed_label: labels.completed,
+            error_label: labels.error,
             class: props.class,
             sx: props.sx,
             states: props.states,

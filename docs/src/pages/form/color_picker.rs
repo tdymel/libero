@@ -99,9 +99,9 @@ pub fn ColorPickerPage() -> Element {
                     prop("focusable", "bool")
                         .default("true")
                         .doc("`false` keeps the thumbs and swatches out of the tab order, for a picker in a dropdown whose input must keep focus."),
-                    prop("saturation_label", "String").default("Saturation").doc("Names the saturation panel's thumb."),
-                    prop("hue_label", "String").default("Hue").doc("Names the hue slider's thumb."),
-                    prop("alpha_label", "String").default("Alpha").doc("Names the alpha slider's thumb."),
+                    prop("saturation_label", "String").default("color.saturation").doc("Names the saturation panel's thumb. Unset, the localization's `color.saturation`."),
+                    prop("hue_label", "String").default("color.hue").doc("Names the hue slider's thumb. Unset, the localization's `color.hue`."),
+                    prop("alpha_label", "String").default("color.alpha").doc("Names the alpha slider's thumb. Unset, the localization's `color.alpha`."),
                 ]),
                 props("HueSlider", vec![
                     prop("value", "f64").doc("Degrees, `0-360`. Strictly controlled."),

@@ -5,8 +5,8 @@ use dioxus::prelude::*;
 use libero::{
     chrono::NaiveDate,
     components::{ColorCode, ColorField, DateField, DateRange, Flex, SliderChangeEvent},
-    hooks::use_theme_set,
-    theme::{DateDefaults, Theme, ThemeSet},
+    localization::{DateLocale, Localization},
+    use_localization_handle,
 };
 
 use crate::Routes;
@@ -18,12 +18,12 @@ pub const ROUTES: Routes = &[
 ];
 
 /// A range separator none of the built-in fallbacks match.
-static WAVE_DASH: Theme = Theme {
-    date: DateDefaults {
+static WAVE_DASH: Localization = Localization {
+    date: DateLocale {
         range_separator: " ～ ",
-        ..DateDefaults::ENGLISH
+        ..DateLocale::ENGLISH
     },
-    ..Theme::DEFAULT
+    ..Localization::ENGLISH
 };
 
 #[component]
@@ -65,8 +65,8 @@ fn DateFieldPage() -> Element {
 
 #[component]
 fn DateRangeFieldPage() -> Element {
-    let themes = use_theme_set();
-    use_effect(move || themes.set(ThemeSet::from(&WAVE_DASH)));
+    let localization = use_localization_handle();
+    use_effect(move || localization.set(&WAVE_DASH));
     let mut stay = use_signal(|| None::<DateRange<NaiveDate>>);
 
     rsx! {

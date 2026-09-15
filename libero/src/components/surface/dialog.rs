@@ -9,7 +9,7 @@ use crate::{
         variables,
     },
     context::ModalContext,
-    hooks::use_id,
+    hooks::{current_localization, use_id},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, DIALOG_SIZE, PAPER_RADIUS, Size, SizeCss},
     utils::warn,
@@ -80,7 +80,8 @@ base_props! {
         /// closes the modal instead.
         #[props(default)]
         onclose: Option<EventHandler<()>>,
-        /// Accessible name for the close button.
+        /// Accessible name for the close button, e.g. "Close cart". Unset, the
+        /// localization's `common.close`.
         #[props(default, into)]
         close_label: Option<String>,
         #[props(default, into)]
@@ -207,7 +208,7 @@ fn DialogHeader(
                     variant: "standard",
                     color: "muted",
                     size: "sm",
-                    aria_label: close_label.unwrap_or_else(|| "Close".to_string()),
+                    aria_label: close_label.unwrap_or_else(|| current_localization().common.close.to_string()),
                     onclick: move |_: MouseEvent| close.call(()),
                     CloseIcon {}
                 }

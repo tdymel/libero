@@ -84,9 +84,10 @@ fn Demo() -> Element {
 
 ## Accessible names
 
-Every string lives in `theme.pagination_labels`, which is English by default and
-swapped whole for a locale. That struct assumes the number goes last, which is
-wrong in plenty of languages, so `label` is the escape hatch. It sees the five
+Every string lives in the [localization](theming.md#localization)'s
+`pagination`, which is English by default. Its page names are templates, so a
+language puts `{n}` wherever it belongs. `label` is the escape hatch for a name
+a template cannot express. It sees the five
 named controls and never the ellipsis, so an exhaustive match has no dead
 branch.
 
@@ -159,8 +160,8 @@ and any extra HTML attributes, all of which land on the `<nav>`.
 
 ## Theme defaults
 
-Two structs, because geometry and language are changed by different people for
-different reasons - the `DateDefaults` arrangement.
+Geometry is in the theme and language in the localization, because they are
+changed by different people for different reasons.
 
 `PaginationDefaults` on `theme.pagination`:
 
@@ -174,16 +175,16 @@ different reasons - the `DateDefaults` arrangement.
 | `font_sizes` | `Sizes<u16>` | Font size per size step, in px |
 | `border` | `&'static str` | Control border colour |
 
-`PaginationLabels` on `theme.pagination_labels`, English by default and swapped
-whole for a locale. The `<nav>`'s own name is not here: `aria_label` is a
-required prop, so the caller supplies and localises it.
+`PaginationLabels` on `Localization::pagination`, English by default. The
+`<nav>`'s own name is not here: `aria_label` is a required prop, so the caller
+supplies and localises it.
 
 | Field | Default |
 |---|---|
-| `page_label` | `Go to page` |
-| `current_page_label` | `Page` |
-| `previous_label` / `next_label` | `Go to previous page` / `Go to next page` |
-| `first_label` / `last_label` | `Go to first page` / `Go to last page` |
+| `page` | `Go to page {n}` |
+| `current_page` | `Page {n}` |
+| `previous` / `next` | `Go to previous page` / `Go to next page` |
+| `first` / `last` | `Go to first page` / `Go to last page` |
 
 ## CSS variables
 

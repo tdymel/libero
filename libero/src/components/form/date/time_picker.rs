@@ -16,12 +16,14 @@ use crate::{
         layout::use_box,
     },
     hooks::{
-        Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_theme,
+        Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element,
+        use_localization, use_theme,
     },
+    localization::DateLocale,
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
     theme::{
-        DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DateDefaults, DatePickerDefaults, Size, SizeCss,
+        DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DatePickerDefaults, Size, SizeCss,
         TimePickerVariant,
     },
 };
@@ -179,6 +181,7 @@ const INNER_RING: f64 = 0.52;
 #[component]
 pub fn TimePicker(props: TimePickerProps) -> Element {
     let theme = use_theme();
+    let time_format = use_localization().date.time_format;
     NaiveTime::picker(PickerArgs {
         value: props.value,
         onchange: props.onchange,
@@ -190,7 +193,7 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
             step: props.step,
             twelve_hour: props
                 .twelve_hour
-                .unwrap_or_else(|| uses_twelve_hours(theme.date.time_format)),
+                .unwrap_or_else(|| uses_twelve_hours(time_format)),
             ..PickerOptions::default()
         },
         today: None,
@@ -260,7 +263,7 @@ fn at(hour: u32, minute: u32, second: u32) -> NaiveTime {
 /// What both variants read, for one render.
 #[derive(Clone, Copy)]
 struct ClockView {
-    names: &'static DateDefaults,
+    names: &'static DateLocale,
     value: Option<NaiveTime>,
     min: Option<NaiveTime>,
     max: Option<NaiveTime>,
@@ -848,7 +851,7 @@ pub(super) fn Clock(props: ClockProps) -> Element {
 
     let hand = use_signal(|| Hand::Hour);
     let clock = ClockView {
-        names: &theme.date,
+        names: &use_localization().date,
         value,
         min: props.min,
         max: props.max,

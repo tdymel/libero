@@ -484,8 +484,8 @@ pub fn ComboboxPage() -> Element {
                     prop("empty", "Element")
                         .doc("Shown in place of the list when `options` is empty."),
                     prop("loading_label", "String")
-                        .default("theme")
-                        .doc("What the status region says while `options` is pending. A pending list replaces the rows and `empty` with a `Loader` and marks the dropdown `aria-busy`; it wins over `empty`, so an async list does not flash \"no results\" on every keystroke. Unset, `theme.combobox.labels.loading` - \"Loading\" in `ComboboxLabels::ENGLISH`."),
+                        .default("localization")
+                        .doc("What the status region says while `options` is pending. A pending list replaces the rows and `empty` with a `Loader` and marks the dropdown `aria-busy`; it wins over `empty`, so an async list does not flash \"no results\" on every keystroke. Unset, the localization's `common.loading` - \"Loading\" in English."),
                     prop("size", "Size")
                         .default("md")
                         .doc("A row's height and font size."),

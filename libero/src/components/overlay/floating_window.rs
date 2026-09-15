@@ -250,6 +250,8 @@ pub(crate) struct FloatingWindowProps {
 #[component]
 pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     let defaults = crate::hooks::use_theme().floating_window;
+    let localization = crate::hooks::use_localization();
+    let labels = localization.floating_window;
     let FloatingWindowOptions {
         title,
         aria_label,
@@ -415,8 +417,8 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                     title,
                     title_id,
                     pinned,
-                    move_label: defaults.move_label,
-                    close_label: defaults.close_label,
+                    move_label: labels.move_handle,
+                    close_label: localization.common.close,
                     onclose,
                     onpointerdown: move_drag.onpointerdown,
                     onkeydown: move_key,
@@ -426,7 +428,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                     div {
                         role: "separator",
                         tabindex: "0",
-                        "aria-label": defaults.resize_label,
+                        "aria-label": labels.resize_handle,
                         // One handle resizes two axes, so a single number is
                         // a compromise: the width, with the whole size in words.
                         // Real pixels: ARIA's implicit 0..100 clamps the value.

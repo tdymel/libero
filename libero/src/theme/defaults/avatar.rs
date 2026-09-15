@@ -92,35 +92,6 @@ impl AvatarGroupDefaults {
     };
 }
 
-/// Every string `AvatarGroup`'s overflow chip puts in front of a reader, in
-/// one struct that a locale swaps whole - the [`PaginationLabels`] shape.
-///
-/// Templates, not prefixes, so a language can put the count after the names:
-/// `{n}` is the hidden count, `{names}` their names joined by `, `.
-///
-/// [`PaginationLabels`]: super::PaginationLabels
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct AvatarLabels {
-    /// The chip's visible text: `+3`.
-    pub count_label: &'static str,
-    /// The chip's accessible name: `3 more: Ada, Grace, Linus`.
-    pub more_label: &'static str,
-}
-
-impl AvatarLabels {
-    pub const ENGLISH: Self = Self {
-        count_label: "+{n}",
-        more_label: "{n} more: {names}",
-    };
-
-    /// `{n}` first, so a name that happens to contain `{n}` stays literal.
-    pub(crate) fn fill(template: &str, count: usize, names: &str) -> String {
-        template
-            .replace("{n}", &count.to_string())
-            .replace("{names}", names)
-    }
-}
-
 impl ToCssDeclarations for AvatarGroupDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

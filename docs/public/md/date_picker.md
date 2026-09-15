@@ -140,8 +140,9 @@ Props that only some value types use are ignored by the rest.
 
 ## Theme
 
-`Theme::date` (`DateDefaults`) holds the month and weekday names, the first
-weekday, the formats and the button labels - one place to translate.
+`Localization::date` (`DateLocale`, see [localization](theming.md#localization))
+holds the month and weekday names, the first weekday, the formats and the
+button labels - one place to translate.
 `Theme::date_picker` and `Theme::time_picker` hold the size steps, the
 default calendar and its `days`, and the default clock variant and minute
 `step`.

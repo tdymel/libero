@@ -30,14 +30,6 @@ pub struct LightboxDefaults {
     /// The upper scale bound, `1.0` being the picture as first shown: scaled
     /// down into the stage, never above its natural size.
     pub max_zoom: f64,
-    /// English literals, the `DateDefaults` precedent: no i18n mechanism yet
-    /// (todo 28).
-    pub label: &'static str,
-    pub close_label: &'static str,
-    /// Names the thumbnail strip, which is a region of its own.
-    pub thumbnails_label: &'static str,
-    /// `{n}` is replaced with the slide number.
-    pub thumbnail_label: &'static str,
 }
 
 impl LightboxDefaults {
@@ -48,10 +40,6 @@ impl LightboxDefaults {
         thumbnails_per_view: 7.0,
         thumbnails_gap: Size::Xs,
         max_zoom: 3.0,
-        label: "Gallery",
-        close_label: "Close",
-        thumbnails_label: "Thumbnails",
-        thumbnail_label: "Go to slide {n}",
     };
 }
 

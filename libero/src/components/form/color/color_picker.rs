@@ -15,7 +15,7 @@ use crate::{
         layout::use_box,
         variables,
     },
-    hooks::use_theme,
+    hooks::{use_localization, use_theme},
     sx::{StaticSx, sx},
     theme::{
         COLOR_PICKER_PREVIEW, COLOR_PICKER_SPACING, COLOR_PICKER_SWATCH, COLOR_PICKER_WIDTH,
@@ -134,13 +134,15 @@ base_props! {
         /// `with_alpha`.
         #[props(default, into)]
         format: Input<ColorFormat>,
-        /// Names the saturation panel's thumb. "Saturation" by default.
+        /// Names the saturation panel's thumb. Unset, the localization's
+        /// `color.saturation`.
         #[props(default, into)]
         saturation_label: Option<String>,
-        /// Names the hue slider's thumb. "Hue" by default.
+        /// Names the hue slider's thumb. Unset, the localization's `color.hue`.
         #[props(default, into)]
         hue_label: Option<String>,
-        /// Names the alpha slider's thumb. "Alpha" by default.
+        /// Names the alpha slider's thumb. Unset, the localization's
+        /// `color.alpha`.
         #[props(default, into)]
         alpha_label: Option<String>,
         /// `false` keeps the thumbs and swatches out of the tab order and
@@ -248,13 +250,14 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
         emit(event, ColorCode::with_alpha);
     });
 
+    let labels = use_localization().color;
     let picker = with_picker.then(|| {
         let alpha = with_alpha.then(|| {
             rsx! {
                 PickerAlphaSlider {
                     value: value.alpha(),
                     size,
-                    aria_label: props.alpha_label.clone().or_else(|| Some("Alpha".into())),
+                    aria_label: props.alpha_label.clone().or_else(|| Some(labels.alpha.into())),
                     focusable,
                     oninput: alpha_input,
                 }
@@ -272,7 +275,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
             Saturation {
                 value: color,
                 oninput,
-                aria_label: props.saturation_label.clone().or_else(|| Some("Saturation".into())),
+                aria_label: props.saturation_label.clone().or_else(|| Some(labels.saturation.into())),
                 focusable,
             }
             div { "data-slot": "body",
@@ -280,7 +283,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                     HueSlider {
                         value: value.hue(),
                         size,
-                        aria_label: props.hue_label.clone().or_else(|| Some("Hue".into())),
+                        aria_label: props.hue_label.clone().or_else(|| Some(labels.hue.into())),
                         focusable,
                         oninput: hue_input,
                     }

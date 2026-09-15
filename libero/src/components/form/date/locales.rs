@@ -7,7 +7,7 @@ use super::calendar::{DateLevel, first_of_month};
 use super::format::{format_date, format_time};
 use super::parse::{parse_at, parse_date};
 use super::parse_time::{parse_date_time, parse_time};
-use crate::theme::DateDefaults;
+use crate::localization::{DateLocale, Localization};
 
 // The docs file is the source; this test only reads it.
 include!(concat!(
@@ -15,11 +15,11 @@ include!(concat!(
     "/../docs/src/pages/form/date_locales.rs"
 ));
 
-const LOCALES: [(&str, DateDefaults); 4] = [
-    ("en", DateDefaults::ENGLISH),
-    ("de", GERMAN),
-    ("fr", FRENCH),
-    ("ja", JAPANESE),
+const LOCALES: [(&str, DateLocale); 4] = [
+    ("en", DateLocale::ENGLISH),
+    ("de", GERMAN.date),
+    ("fr", FRENCH.date),
+    ("ja", JAPANESE.date),
 ];
 
 fn days() -> impl Iterator<Item = NaiveDate> {
@@ -107,8 +107,8 @@ fn a_moment_reads_back() {
 #[test]
 fn the_weekday_names_follow_dayjs_sunday_first() {
     let sunday = NaiveDate::from_ymd_opt(2026, 3, 1).expect("a Sunday");
-    assert_eq!(format_date(sunday, "dddd", &GERMAN), "Sonntag");
-    assert_eq!(format_date(sunday, "dddd", &FRENCH), "dimanche");
-    assert_eq!(format_date(sunday, "dddd", &JAPANESE), "日曜日");
-    assert_eq!(JAPANESE.first_weekday, Weekday::Sun);
+    assert_eq!(format_date(sunday, "dddd", &GERMAN.date), "Sonntag");
+    assert_eq!(format_date(sunday, "dddd", &FRENCH.date), "dimanche");
+    assert_eq!(format_date(sunday, "dddd", &JAPANESE.date), "日曜日");
+    assert_eq!(JAPANESE.date.first_weekday, Weekday::Sun);
 }

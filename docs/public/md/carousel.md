@@ -219,17 +219,17 @@ Like every component, `Carousel` also takes the shared props `sx`, `class`,
 | `control_hover_background` | `ColorValue` | `muted.1` | A previous/next button's fill under the pointer. |
 | `control_color` | `ColorValue` | `muted.7` | The controls' glyph, and their focus ring. Change it with `control_background`. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
-| `label` | `&'static str` | `Carousel` | Stands in when a caller omits `aria_label` - which also warns. |
-| `previous_label` / `next_label` | `&'static str` | `Previous slide` / `Next slide` | The controls' names. |
-| `indicator_label` | `&'static str` | `Go to slide {n}` | An indicator's name. |
-| `slide_label` | `&'static str` | `{n} of {m}` | A slide group's name. |
-| `status_label` | `&'static str` | `Slide {n} of {m}` | What the live region reads. `{m}` counts resting positions, not slides. |
-| `pause_label` | `&'static str` | `Pause slideshow` | The autoplay control's name. It does not change when paused: `aria-pressed` carries the state. |
 
-The label fields are English literals on the theme, the same as `DateDefaults`.
-The library has no i18n mechanism yet, so overriding them on the theme - or
-passing `aria_label` and `slide_label` per instance - is how a carousel speaks
-another language today.
+The words are `CarouselLabels` in the [localization](theming.md#localization):
+
+| Field | Default | Description |
+|---|---|---|
+| `label` | `Carousel` | Stands in when a caller omits `aria_label` - which also warns. |
+| `previous` / `next` | `Previous slide` / `Next slide` | The controls' names. |
+| `indicator` | `Go to slide {n}` | An indicator's name. |
+| `slide` | `{n} of {m}` | A slide group's name. |
+| `status` | `Slide {n} of {m}` | What the live region reads. `{m}` counts resting positions, not slides. |
+| `pause` | `Pause slideshow` | The autoplay control's name. It does not change when paused: `aria-pressed` carries the state. |
 
 ## CSS variables
 

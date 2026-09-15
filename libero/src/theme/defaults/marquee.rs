@@ -44,9 +44,6 @@ pub struct MarqueeDefaults {
     pub fade_edges: bool,
     /// Any CSS length or percentage of the marquee's length.
     pub fade_size: &'static str,
-    /// The pause toggle's name. It stays the same whether the marquee is
-    /// running or not: `aria-pressed` carries the state.
-    pub pause_label: &'static str,
 }
 
 impl MarqueeDefaults {
@@ -58,7 +55,6 @@ impl MarqueeDefaults {
         pause_control: true,
         fade_edges: false,
         fade_size: "5%",
-        pause_label: "Pause",
     };
 }
 

@@ -4,6 +4,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{ActionIcon, Chip, Input, VisuallyHidden, common::CloseIcon},
+    hooks::{current_localization, use_localization},
+    localization::{ChipsLabels, fill},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CHIP_HEIGHT, Size},
 };
@@ -66,6 +68,7 @@ pub(crate) fn removable_chip(
     // shrinks against its chip as the field grows.
     let icon_size: Input<ThemeAwareValue> =
         ThemeAwareValue::String(format!("calc({} * 0.6)", CHIP_HEIGHT.value(size))).into();
+    let remove_label = fill(current_localization().common.remove, &[("label", &label)]);
     rsx! {
         Chip { size, sx: &REMOVABLE_CHIP_SX,
             // Its own element, so it is a flex item the chip can let shrink. A
@@ -87,7 +90,7 @@ pub(crate) fn removable_chip(
                 // list under the chip that just went away.
                 onclick: move |event: MouseEvent| event.stop_propagation(),
                 ActionIcon {
-                    aria_label: "Remove {label}",
+                    aria_label: remove_label,
                     size: icon_size,
                     disabled,
                     sx: &REMOVE_BUTTON_SX,
@@ -119,6 +122,7 @@ struct Announced {
 /// once per change. Always mounted: a region inserted together with its text
 /// is not announced. Call it unconditionally; it is a hook.
 pub(crate) fn use_chip_announcer(labels: Vec<String>) -> Element {
+    let words = &use_localization().chips;
     let announced = use_hook(|| {
         Rc::new(RefCell::new(Announced {
             labels: labels.clone(),
@@ -128,7 +132,7 @@ pub(crate) fn use_chip_announcer(labels: Vec<String>) -> Element {
     });
     let mut announced = announced.borrow_mut();
     if announced.labels != labels {
-        if let Some(message) = chip_change(&announced.labels, &labels) {
+        if let Some(message) = chip_change(&announced.labels, &labels, words) {
             announced.message = Some(message);
             announced.count += 1;
         }
@@ -150,7 +154,7 @@ pub(crate) fn use_chip_announcer(labels: Vec<String>) -> Element {
 /// What a list gained and lost, as one sentence - `None` when it only moved.
 /// Counted, not compared as sets: a list allowed to hold "a" twice lost one
 /// when one of them goes.
-fn chip_change(before: &[String], after: &[String]) -> Option<String> {
+fn chip_change(before: &[String], after: &[String], words: &ChipsLabels) -> Option<String> {
     let mut removed: Vec<String> = Vec::new();
     let mut remaining = after.to_vec();
     for label in before {
@@ -161,15 +165,14 @@ fn chip_change(before: &[String], after: &[String]) -> Option<String> {
             None => removed.push(label.clone()),
         }
     }
-    let added = remaining;
+    let (added, removed) = (remaining.join(", "), removed.join(", "));
     match (added.is_empty(), removed.is_empty()) {
         (true, true) => None,
-        (false, true) => Some(format!("Added {}", added.join(", "))),
-        (true, false) => Some(format!("Removed {}", removed.join(", "))),
-        (false, false) => Some(format!(
-            "Added {}. Removed {}",
-            added.join(", "),
-            removed.join(", ")
+        (false, true) => Some(fill(words.added, &[("labels", &added)])),
+        (true, false) => Some(fill(words.removed, &[("labels", &removed)])),
+        (false, false) => Some(fill(
+            words.added_and_removed,
+            &[("added", &added), ("removed", &removed)],
         )),
     }
 }
@@ -177,6 +180,7 @@ fn chip_change(before: &[String], after: &[String]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::chip_change;
+    use crate::localization::ChipsLabels;
 
     fn labels(values: &[&str]) -> Vec<String> {
         values.iter().map(|value| value.to_string()).collect()
@@ -184,7 +188,9 @@ mod tests {
 
     #[test]
     fn a_change_names_what_came_and_what_went() {
-        let change = |before: &[&str], after: &[&str]| chip_change(&labels(before), &labels(after));
+        let change = |before: &[&str], after: &[&str]| {
+            chip_change(&labels(before), &labels(after), &ChipsLabels::ENGLISH)
+        };
         assert_eq!(change(&["a"], &["a", "b"]), Some("Added b".into()));
         assert_eq!(change(&["a", "b"], &["b"]), Some("Removed a".into()));
         assert_eq!(change(&["a", "b"], &[]), Some("Removed a, b".into()));

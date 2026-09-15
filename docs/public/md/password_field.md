@@ -65,10 +65,10 @@ PasswordField {
 
 The button carries the two icons the library ships - libero has no icon set
 otherwise, and a reveal button with no glyph is a blank button. It is named for
-what the click does, not for the current state: `reveal_label` (default
-`"Show password"`) while the secret is hidden, `hide_label` (default
-`"Hide password"`) while it is shown. Both are props because neither string can
-be localised from the outside otherwise.
+what the click does, not for the current state: `reveal_label` while the secret
+is hidden, `hide_label` while it is shown. Unset, they come from the
+localization's `password_field` group ("Show password", "Hide password" in
+English); set them when the secret is not a password, e.g. "Show PIN".
 
 The button is disabled with the field, so a disabled password cannot be read.
 
@@ -92,8 +92,8 @@ Leave `label` unset only when something else already names the field.
 | `oninput` | `EventHandler<String>` | - | Fires per keystroke with the text the field should hold next. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
 | `reveal_button` | `bool` | `theme.password_field.reveal_button` (`true`) | Offers the reveal button at all. |
-| `reveal_label` | `String` | `Show password` | Announced on the reveal button while the secret is hidden. |
-| `hide_label` | `String` | `Hide password` | Announced on the reveal button while the secret is shown. |
+| `reveal_label` | `String` | `password_field.show` | Announced on the reveal button while the secret is hidden. Unset, the localization's `password_field.show` - "Show password" in English. |
+| `hide_label` | `String` | `password_field.hide` | Announced on the reveal button while the secret is shown. Unset, the localization's `password_field.hide` - "Hide password" in English. |
 | `label` | `Caption` | - | The field's caption, above the control. Names the field through a `for`/`id` pair. |
 | `description` | `Caption` | - | Between the label and the control: what to enter. |
 | `helper` | `Caption` | - | Under the control: the password rules. |

@@ -55,9 +55,6 @@ pub struct NotificationsDefaults {
     /// Milliseconds. Read in Rust too: it is how long a closing notification
     /// stays mounted.
     pub transition_duration: u32,
-    /// The default template's close button. An English literal, like
-    /// `AlertDefaults`'s (todo 28).
-    pub close_label: &'static str,
 }
 
 impl NotificationsDefaults {
@@ -71,7 +68,6 @@ impl NotificationsDefaults {
         gap: Size::Sm,
         offset: Size::Md,
         transition_duration: 200,
-        close_label: "Close",
     };
 }
 

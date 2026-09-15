@@ -55,7 +55,7 @@ has none of that. Outside a modal, pass `onclose` for a working close button:
 | `title` | `String` | - | Heading, and the accessible name unless `aria_label` overrides it. |
 | `close_button` | `bool` | in a modal, or with `onclose` | Header button. Inside a modal it closes the modal, outside one it calls `onclose`. |
 | `onclose` | `EventHandler<()>` | - | Called by the close button outside a modal. Inside one the button closes the modal instead. |
-| `close_label` | `String` | `Close` | Accessible name for the close button. |
+| `close_label` | `String` | `common.close` | Accessible name for the close button, e.g. "Close cart". Unset, the localization's `common.close` - "Close" in English. |
 | `radius` | `Size` | `md` | Corner radius, a step on the radius scale. Anything else goes through `sx`. |
 | `size` | `ThemeAwareValue` | `md` | Caps the dialog's width from the dialog scale (`md` is 510px). |
 | `variables` | `Variables` | - | Layered onto `Dialog`'s own - e.g. `Drawer`'s anchor/size vars. |

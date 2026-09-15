@@ -6,7 +6,7 @@ use crate::{
     components::{
         Input, OptionSource, Options, common::field_props, form::removable_chip, use_combobox,
     },
-    hooks::use_theme,
+    hooks::{use_localization, use_theme},
     utils::warn,
 };
 
@@ -84,6 +84,7 @@ field_props! {
 #[component]
 pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     let theme = use_theme();
+    let common = use_localization().common;
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let held = bound.value().unwrap_or_else(|| props.value.clone());
@@ -194,7 +195,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             groups: list.group_labels(),
             row_disabled,
             row_labels,
-            loading: loading.then(|| theme.combobox.labels.loading.to_string()),
+            loading: loading.then(|| common.loading.to_string()),
             multiple: true,
             onpick,
             selection,

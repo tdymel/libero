@@ -240,7 +240,9 @@ pub fn use_notifications_with<T: 'static>(
 | `gap` | `Size` | `Sm`, between two notifications. |
 | `offset` | `Size` | `Md`, from the viewport's (or the contained host's) edge. |
 | `transition_duration` | `u32` | `200` ms, the entry and the exit. |
-| `close_label` | `&'static str` | `Close`, the default template's close button. |
+
+The default template's close button is named by the localization's
+`common.close`.
 
 The stacks sit on `z_index.notification` (2100), above modals and the
 dropdowns opened inside them.

@@ -14,8 +14,9 @@ use crate::{
     },
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, use_drag, use_element,
-        use_local_state,
+        use_local_state, use_localization,
     },
+    localization::fill,
     platform::ElementApi,
     sx::{StaticSx, sx},
     theme::{COLOR_PICKER_SATURATION_HEIGHT, COLOR_PICKER_THUMB, CssVar, Size, SizeCss},
@@ -254,10 +255,12 @@ fn SaturationThumb(
     // the up and down keys still move the brightness - so the text names
     // both, or an Up/Down press would announce nothing.
     let percent = |fraction: f64| (fraction * 100.0).round();
-    let valuetext = format!(
-        "Saturation {}%, brightness {}%",
-        percent(value.saturation()),
-        percent(value.value()),
+    let valuetext = fill(
+        use_localization().color.saturation_value,
+        &[
+            ("s", &percent(value.saturation())),
+            ("v", &percent(value.value())),
+        ],
     );
     thumb_style
         .attr("role", "slider")

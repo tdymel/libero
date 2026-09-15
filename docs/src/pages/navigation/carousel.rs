@@ -98,7 +98,7 @@ pub fn CarouselPage() -> Element {
                     prop("indicators", "bool")
                         .default(theme.carousel.indicators.to_string())
                         .doc("The dot strip - one per scroll position, which is fewer than the slides when per_view is above 1."),
-                    prop("aria_label", "String").doc("Names the region. Leaving it unset falls back to the theme label and warns."),
+                    prop("aria_label", "String").doc("Names the region. Leaving it unset falls back to the localization's label and warns."),
                     prop("draggable", "bool")
                         .default("false")
                         .doc("Mouse drag-to-scroll. Touch already swipes natively."),

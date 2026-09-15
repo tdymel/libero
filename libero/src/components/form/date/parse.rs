@@ -7,7 +7,7 @@ use super::{
     calendar::DateLevel,
     format::{Token, tokens},
 };
-use crate::theme::DateDefaults;
+use crate::localization::DateLocale;
 
 /// Typed text a field cannot read.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -53,7 +53,7 @@ pub(super) enum Piece<'a> {
 pub(super) fn parse_date(
     text: &str,
     format: &str,
-    names: &DateDefaults,
+    names: &DateLocale,
     fallback_year: Option<i32>,
 ) -> Result<NaiveDate, Unreadable> {
     parse_at(text, format, names, fallback_year, DateLevel::Day)
@@ -64,7 +64,7 @@ pub(super) fn parse_date(
 pub(super) fn parse_at(
     text: &str,
     format: &str,
-    names: &DateDefaults,
+    names: &DateLocale,
     fallback_year: Option<i32>,
     level: DateLevel,
 ) -> Result<NaiveDate, Unreadable> {
@@ -204,7 +204,7 @@ pub(super) fn pieces(text: &str) -> Vec<Piece<'_>> {
 
 /// `1` for January. An exact full or short name wins; otherwise a prefix has
 /// to name exactly one month.
-fn month_named(word: &str, names: &DateDefaults) -> Option<u32> {
+fn month_named(word: &str, names: &DateLocale) -> Option<u32> {
     let months = || (0..12).map(|index| (index, names.months[index], names.months_short[index]));
     if let Some((index, ..)) = months()
         .find(|(_, long, short)| long.to_lowercase() == word || short.to_lowercase() == word)
@@ -218,7 +218,7 @@ fn month_named(word: &str, names: &DateDefaults) -> Option<u32> {
     prefixed.next().is_none().then_some(index as u32 + 1)
 }
 
-fn is_weekday(word: &str, names: &DateDefaults) -> bool {
+fn is_weekday(word: &str, names: &DateLocale) -> bool {
     [names.weekdays, names.weekdays_short, names.weekdays_min]
         .iter()
         .flatten()
@@ -232,7 +232,7 @@ mod tests {
     const DMY: &str = "DD.MM.YYYY";
 
     fn parse(text: &str, format: &str) -> Result<NaiveDate, Unreadable> {
-        parse_date(text, format, &DateDefaults::ENGLISH, None)
+        parse_date(text, format, &DateLocale::ENGLISH, None)
     }
 
     fn date(year: i32, month: u32, day: u32) -> Result<NaiveDate, Unreadable> {
@@ -303,7 +303,7 @@ mod tests {
             parse_date(
                 "4 OF March",
                 "D [of] MMMM",
-                &DateDefaults::ENGLISH,
+                &DateLocale::ENGLISH,
                 Some(2026)
             ),
             date(2026, 3, 4)
@@ -314,7 +314,7 @@ mod tests {
 
     #[test]
     fn a_missing_year_takes_the_fallback() {
-        let names = &DateDefaults::ENGLISH;
+        let names = &DateLocale::ENGLISH;
         assert_eq!(parse_date("1.2", DMY, names, Some(2026)), date(2026, 2, 1));
         assert_eq!(
             parse_date("2/1", "MM/DD/YYYY", names, Some(2026)),
@@ -349,7 +349,7 @@ mod tests {
     }
 
     fn parse_level(text: &str, format: &str, level: DateLevel) -> Result<NaiveDate, Unreadable> {
-        parse_at(text, format, &DateDefaults::ENGLISH, Some(2026), level)
+        parse_at(text, format, &DateLocale::ENGLISH, Some(2026), level)
     }
 
     #[test]

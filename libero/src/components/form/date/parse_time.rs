@@ -5,7 +5,7 @@
 use chrono::{NaiveDateTime, NaiveTime};
 
 use super::parse::{Piece, Unreadable, literal_words, parse_date, pieces};
-use crate::theme::DateDefaults;
+use crate::localization::DateLocale;
 
 pub(super) const MIDNIGHT: NaiveTime = match NaiveTime::from_hms_opt(0, 0, 0) {
     Some(midnight) => midnight,
@@ -23,7 +23,7 @@ pub(super) const MIDNIGHT: NaiveTime = match NaiveTime::from_hms_opt(0, 0, 0) {
 pub(super) fn parse_time(
     text: &str,
     format: &str,
-    names: &DateDefaults,
+    names: &DateLocale,
 ) -> Result<NaiveTime, Unreadable> {
     let literals = literal_words(format);
     let mut numbers = Vec::new();
@@ -88,7 +88,7 @@ pub(super) fn parse_date_time(
     text: &str,
     format: &str,
     time_format: &str,
-    names: &DateDefaults,
+    names: &DateLocale,
     fallback_year: Option<i32>,
     fallback_time: Option<NaiveTime>,
 ) -> Result<NaiveDateTime, Unreadable> {
@@ -136,7 +136,7 @@ fn time_marker(text: &str, format: &str, time_format: &str) -> Option<usize> {
     text.find(':').into_iter().chain(word).min()
 }
 
-fn is_meridiem(word: &str, names: &DateDefaults) -> bool {
+fn is_meridiem(word: &str, names: &DateLocale) -> bool {
     let word = word.to_lowercase();
     word == names.am.to_lowercase() || word == names.pm.to_lowercase()
 }
@@ -148,7 +148,7 @@ mod tests {
     use super::*;
 
     fn time(text: &str) -> Result<NaiveTime, Unreadable> {
-        parse_time(text, "HH:mm", &DateDefaults::ENGLISH)
+        parse_time(text, "HH:mm", &DateLocale::ENGLISH)
     }
 
     fn at(hour: u32, minute: u32, second: u32) -> Result<NaiveTime, Unreadable> {
@@ -178,7 +178,7 @@ mod tests {
 
     #[test]
     fn a_word_the_time_format_writes_is_skipped() {
-        let names = &DateDefaults::ENGLISH;
+        let names = &DateLocale::ENGLISH;
         assert_eq!(parse_time("14 h 05", "HH[ h ]mm", names), at(14, 5, 0));
         assert_eq!(parse_time("14 h 05", "HH:mm", names), Err(Unreadable));
         let read = |text: &str| {
@@ -195,7 +195,7 @@ mod tests {
             "1.2.2026 PM 1:05",
             "D.M.YYYY",
             "A h:mm",
-            &DateDefaults::ENGLISH,
+            &DateLocale::ENGLISH,
             None,
             None,
         );
@@ -213,7 +213,7 @@ mod tests {
 
     #[test]
     fn a_date_time_reads_the_date_then_the_time() {
-        let names = &DateDefaults::ENGLISH;
+        let names = &DateLocale::ENGLISH;
         let expected = NaiveDateTime::new(
             NaiveDate::from_ymd_opt(2026, 2, 1).expect("a real day"),
             NaiveTime::from_hms_opt(13, 5, 0).expect("a real time"),

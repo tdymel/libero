@@ -8,7 +8,7 @@ use crate::{
         layout::use_box,
         navigation::{Menu, MenuEntry, MenuItem, use_menu},
     },
-    hooks::{Align, use_color_scheme, use_theme, use_theme_set},
+    hooks::{Align, use_color_scheme, use_localization, use_theme, use_theme_set},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ACTION_ICON_SIZE, ColorSchemeSetting, ThemeSet},
 };
@@ -67,9 +67,9 @@ base_props! {
         /// checked. Unset, it is the toggle alone.
         #[props(default)]
         themes: Option<&'static [&'static ThemeSet]>,
-        /// Replaces the theme's three toggle names. Given the setting a press
-        /// moves to, it names what the press does. Runs during render, so it
-        /// can read a live locale.
+        /// Replaces the localization's three toggle names. Given the setting a
+        /// press moves to, it names what the press does. Runs during render,
+        /// so it can read a live locale.
         #[props(default)]
         label: Option<Callback<ColorSchemeSetting, String>>,
         #[props(default)]
@@ -110,7 +110,7 @@ pub fn ColorSchemeButton(props: ColorSchemeButtonProps) -> Element {
     let scheme = use_color_scheme();
     let theme_set = use_theme_set();
     let menu = use_menu();
-    let labels = theme.color_scheme_button.labels;
+    let labels = use_localization().color_scheme_button;
 
     let next = scheme.next_in_cycle();
     let aria_label = match props.label {

@@ -10,7 +10,7 @@ use crate::{
         layout::use_box,
         surface::paper_sx,
     },
-    hooks::{use_root_id, use_theme},
+    hooks::{use_localization, use_root_id, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         ALERT_BODY_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, AlertDefaults, Color, CssVar,
@@ -181,7 +181,7 @@ base_props! {
         #[props(default)]
         onclose: Option<EventHandler<()>>,
         /// The close button's accessible name. Defaults to
-        /// `theme.alert.close_label`.
+        /// `Localization::common.close`.
         #[props(default, into)]
         close_label: Option<String>,
         /// The message.
@@ -221,6 +221,7 @@ base_props! {
 #[component]
 pub fn Alert(props: AlertProps) -> Element {
     let theme = use_theme();
+    let common = use_localization().common;
     // Adopts a caller's own `id`, so the aria wiring below and the caller
     // never render two.
     let id = use_root_id(&props.attributes);
@@ -250,7 +251,7 @@ pub fn Alert(props: AlertProps) -> Element {
     let close_label = props
         .close_label
         .clone()
-        .unwrap_or_else(|| theme.alert.close_label.to_string());
+        .unwrap_or_else(|| common.close.to_string());
 
     let onclose = props.onclose;
     let icon = props.icon.clone();

@@ -7,6 +7,7 @@ mod element;
 mod focus_return;
 mod id;
 mod local_state;
+mod localization;
 mod popover;
 mod portal;
 mod presence;
@@ -29,6 +30,8 @@ pub use focus_return::{FocusReturn, use_focus_return};
 pub(crate) use id::id_selector;
 pub use id::{use_id, use_root_id};
 pub(crate) use local_state::{LocalState, use_local_state};
+pub(crate) use localization::current_localization;
+pub use localization::{LocalizationHandle, use_localization, use_localization_handle};
 pub(crate) use popover::use_popover_on;
 pub use popover::{
     Align, Placed, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Rect, Side, use_popover,

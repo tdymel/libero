@@ -97,11 +97,11 @@ pub fn NumberFieldPage() -> Element {
                         .default("false")
                         .doc("Shows the minus/plus buttons in the trailing slot. Off by default: a number is usually typed, and the arrow keys step it either way."),
                     prop("increment_label", "String")
-                        .default("Increase")
-                        .doc("Announced on the stepper that raises the value."),
+                        .default("number_field.increase")
+                        .doc("Announced on the stepper that raises the value, e.g. \"Add a guest\". Unset, the localization's `number_field.increase` - \"Increase\" in English."),
                     prop("decrement_label", "String")
-                        .default("Decrease")
-                        .doc("Announced on the stepper that lowers it."),
+                        .default("number_field.decrease")
+                        .doc("Announced on the stepper that lowers it. Unset, the localization's `number_field.decrease` - \"Decrease\" in English."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the control. Names the field through a `for`/`id` pair."),
                     prop("description", "Caption")

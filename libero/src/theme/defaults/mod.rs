@@ -107,7 +107,7 @@ pub use aspect_ratio::{ASPECT_RATIO, AspectRatioDefaults};
 pub use autocomplete::AutocompleteDefaults;
 pub use avatar::{
     AVATAR_FONT_SIZE, AVATAR_GROUP_INDEX, AVATAR_GROUP_RING, AVATAR_GROUP_SPACING, AVATAR_RADII,
-    AVATAR_RADIUS, AVATAR_SIZE, AvatarDefaults, AvatarGroupDefaults, AvatarLabels,
+    AVATAR_RADIUS, AVATAR_SIZE, AvatarDefaults, AvatarGroupDefaults,
 };
 pub use badge::{
     BADGE_BOX, BADGE_FONT, BADGE_FONT_SIZE, BADGE_FONT_WEIGHT, BADGE_HEIGHT, BADGE_LETTER_SPACING,
@@ -121,7 +121,7 @@ pub use blockquote::{
 };
 pub use burger::{
     BURGER_COLOR, BURGER_LINE_SIZE, BURGER_SIZE, BURGER_SIZES, BURGER_TRANSITION_DURATION,
-    BURGER_TRANSITION_TIMING, BurgerDefaults, BurgerLabels,
+    BURGER_TRANSITION_TIMING, BurgerDefaults,
 };
 pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, ButtonDefaults, ButtonSizeLevel,
@@ -155,19 +155,19 @@ pub use color_picker::{
     COLOR_PICKER_WIDTH, COLOR_PICKER_WIDTH_SIZE, ColorFormat, ColorPickerDefaults,
     ColorPickerSizeLevel,
 };
-pub use color_scheme_button::{ColorSchemeButtonDefaults, ColorSchemeButtonLabels};
+pub use color_scheme_button::ColorSchemeButtonDefaults;
 pub use color_swatch::{
     COLOR_SWATCH_RADIUS, COLOR_SWATCH_SIZE, COLOR_SWATCH_SIZE_SIZE, ColorSwatchDefaults,
 };
 pub use combobox::{
     COMBOBOX_FONT_SIZE, COMBOBOX_PADDING, COMBOBOX_PADDING_X, COMBOBOX_ROW_HEIGHT,
-    ComboboxDefaults, ComboboxLabels, ComboboxSizeLevel,
+    ComboboxDefaults, ComboboxSizeLevel,
 };
 pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
 pub use data_list::{DATA_LIST_GAP, DataListDefaults};
 pub use date::{
     CalendarVariant, DATE_PICKER_DAY, DATE_PICKER_DAY_SIZE_SIZE, DATE_PICKER_FONT_SIZE,
-    DATE_PICKER_FONT_SIZE_SIZE, DateDefaults, DateFieldDefaults, DateLevel, DatePickerDefaults,
+    DATE_PICKER_FONT_SIZE_SIZE, DateFieldDefaults, DateLevel, DatePickerDefaults,
     DatePickerSizeLevel, TimePickerDefaults, TimePickerVariant,
 };
 pub use dialog::{DIALOG_SIZE, DialogDefaults};
@@ -246,7 +246,6 @@ pub use overlay::{OVERLAY_BLUR, OVERLAY_OPACITY, OverlayDefaults};
 pub use pagination::{
     PAGINATION_ACTIVE_BACKGROUND, PAGINATION_ACTIVE_COLOR, PAGINATION_BORDER,
     PAGINATION_CONTROL_SIZE, PAGINATION_FONT_SIZE, PAGINATION_GAP, PaginationDefaults,
-    PaginationLabels,
 };
 pub use paper::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, PAPER_SHADOW, PaperDefaults};
 pub use password_field::PasswordFieldDefaults;
@@ -282,7 +281,7 @@ pub use splitter::{SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, SplitterDefaults};
 pub use spotlight::{
     SPOTLIGHT_DESCRIPTION_COLOR, SPOTLIGHT_GROUP_COLOR, SPOTLIGHT_MAX_LIST_HEIGHT,
     SPOTLIGHT_PADDING, SPOTLIGHT_SEARCH_FONT_SIZE, SPOTLIGHT_TOP_OFFSET, SPOTLIGHT_WIDTH,
-    SpotlightDefaults, SpotlightLabels,
+    SpotlightDefaults,
 };
 pub use stepper::{
     STEPPER_COLOR, STEPPER_COLOR_CONTRAST, STEPPER_CONNECTOR_COLOR, STEPPER_CONTENT_PADDING,

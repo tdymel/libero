@@ -8,9 +8,10 @@ use crate::{
         common::{base_props, focus_ring_sx, variables},
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{use_localization, use_theme},
+    localization::fill,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{AVATAR_GROUP_INDEX, AVATAR_GROUP_SPACING, AvatarLabels, Size, SizeCss},
+    theme::{AVATAR_GROUP_INDEX, AVATAR_GROUP_SPACING, Size, SizeCss},
 };
 
 /// How far the focused overflow chip rises above the members. The chip paints
@@ -72,11 +73,11 @@ base_props! {
 /// row its paint order. The chip is focusable, so the names it hides are
 /// reachable by keyboard and not only by pointer.
 ///
-/// The chip's text comes from the theme's [`AvatarLabels`], which a locale
-/// swaps whole.
+/// The chip's text comes from [`Localization::avatar`](crate::localization::Localization::avatar).
 #[component]
 pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     let theme = use_theme();
+    let labels = &use_localization().avatar;
     let spacing = props.spacing.copied_or(theme.avatar_group.spacing);
     let size = props.size.copied_or(theme.avatar.size);
     let variant = props.variant.copied_or(theme.avatar.variant);
@@ -155,9 +156,9 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
             .map(|person| person.name.as_str())
             .collect();
         let names = names.join(", ");
-        let labels = &theme.avatar_labels;
-        let count = AvatarLabels::fill(labels.count_label, hidden, &names);
-        let more = AvatarLabels::fill(labels.more_label, hidden, &names);
+        let holes: &[(&str, &dyn std::fmt::Display)] = &[("n", &hidden), ("names", &names)];
+        let count = fill(labels.count, holes);
+        let more = fill(labels.more, holes);
 
         let chip_states = States::default()
             .with("grouped", true)

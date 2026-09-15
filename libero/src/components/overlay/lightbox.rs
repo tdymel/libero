@@ -12,13 +12,14 @@ use crate::{
     hooks::{
         Drag, DragMove, DragOptions, DragPoint, DragStart, ElementHandle, LightboxItem,
         LightboxOpening, LightboxOptions, drag_handle_sx, id_selector, use_drag, use_element,
-        use_id, use_modal_close, use_theme,
+        use_id, use_localization, use_modal_close, use_theme,
     },
+    localization::fill,
     platform::{Dimensions, ElementApi},
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
-        CarouselDefaults, CssVar, LIGHTBOX_STAGE_HEIGHT, LIGHTBOX_THUMBNAIL_SIZE,
-        LIGHTBOX_THUMBNAILS_GAP, LIGHTBOX_WIDTH, Size, SizeCss,
+        CssVar, LIGHTBOX_STAGE_HEIGHT, LIGHTBOX_THUMBNAIL_SIZE, LIGHTBOX_THUMBNAILS_GAP,
+        LIGHTBOX_WIDTH, Size, SizeCss,
     },
 };
 
@@ -739,7 +740,7 @@ fn lightbox_thumbnails(
                     framework_sx: &LIGHTBOX_THUMBNAIL_SX,
                     states: thumbnail_states,
                     id: thumbnail_id(&base_id(), i),
-                    aria_label: CarouselDefaults::format_label(thumbnail_label, i, count),
+                    aria_label: fill(thumbnail_label, &[("n", &(i + 1)), ("m", &count)]),
                     aria_current: is_current.then(|| "true".to_string()),
                     // Roving: one tab stop for the strip.
                     tabindex: if is_current { "0" } else { "-1" },
@@ -774,6 +775,7 @@ fn lightbox_thumbnails(
 #[component]
 pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> Element {
     let theme = use_theme();
+    let localization = use_localization();
     let close = use_modal_close();
     let stage = use_element();
     let base_id = use_id();
@@ -913,7 +915,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         .collect();
     use_name_warning(
         options.aria_label.is_some(),
-        "Lightbox: no `aria_label`, falling back to the theme's. A dialog needs a name of its own to be told apart.",
+        "Lightbox: no `aria_label`, falling back to the localization's. A dialog needs a name of its own to be told apart.",
     );
     use_name_warning(
         items.iter().all(|item| !item.alt.trim().is_empty()),
@@ -922,7 +924,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     let label = options
         .aria_label
         .clone()
-        .unwrap_or_else(|| theme.lightbox.label.to_string());
+        .unwrap_or_else(|| localization.lightbox.label.to_string());
 
     let stage_body = match count {
         // One picture has nothing to page through, so no carousel: its region
@@ -948,13 +950,13 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     let thumbnails_variables: Input<Variables> = variables()
         .with(LIGHTBOX_THUMBNAILS_SHOWN, shown.to_string())
         .into();
-    let thumbnails = lightbox_thumbnails(stage_parts, &items, theme.lightbox.thumbnail_label);
+    let thumbnails = lightbox_thumbnails(stage_parts, &items, localization.lightbox.thumbnail);
     let show_thumbnails = options.thumbnails && count > 1;
 
     rsx! {
         Dialog {
             aria_label: label.clone(),
-            close_label: theme.lightbox.close_label,
+            close_label: localization.common.close,
             sx: &LIGHTBOX_DIALOG_SX,
             Box {
                 framework_sx: &LIGHTBOX_BODY_SX,
@@ -975,7 +977,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                 if show_thumbnails {
                     Box { framework_sx: &LIGHTBOX_THUMBNAILS_SX, variables: thumbnails_variables,
                         Carousel {
-                            aria_label: theme.lightbox.thumbnails_label,
+                            aria_label: localization.lightbox.thumbnails,
                             slides: thumbnails,
                             // Follows the picture, never leads it: a clamped
                             // index near the ends is the strip's business.

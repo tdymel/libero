@@ -12,7 +12,7 @@ use super::{
 };
 use crate::{
     components::Input,
-    hooks::use_theme,
+    hooks::{use_localization, use_theme},
     theme::{CalendarVariant, TimePickerVariant},
 };
 
@@ -31,7 +31,7 @@ date_props! {
 /// `onchange` or a turbofish has to.
 ///
 /// `level` makes a `NaiveDate` field a month or a year field: the text reads
-/// `(DateDefaults::format)(level)` (`MMMM YYYY` or `YYYY` in English) unless
+/// `(DateLocale::format)(level)` (`MMMM YYYY` or `YYYY` in English) unless
 /// `format` says otherwise, the value is the month's first day or the year's
 /// January 1, and the dropdown opens on that grid.
 ///
@@ -155,7 +155,7 @@ pub(super) fn date_field<V: DateValue>(
     options: FieldOptions<V::Bound>,
 ) -> Element {
     let theme = use_theme();
-    let names = &theme.date;
+    let names = &use_localization().date;
     let with_seconds = options.with_seconds.unwrap_or(false);
     let time = options
         .time_format

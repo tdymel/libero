@@ -4,7 +4,7 @@ use crate::components::form::{row_label, use_bound};
 
 use crate::{
     components::{ComboboxState, Input, OptionSource, Options, common::field_props, use_combobox},
-    hooks::use_theme,
+    hooks::{use_localization, use_theme},
     utils::warn,
 };
 
@@ -122,6 +122,7 @@ field_props! {
 #[component]
 pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     let theme = use_theme();
+    let common = use_localization().common;
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let current = bound.value().unwrap_or_else(|| props.value.clone());
@@ -200,7 +201,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             groups: list.group_labels(),
             row_disabled,
             row_labels,
-            loading: loading.then(|| theme.combobox.labels.loading.to_string()),
+            loading: loading.then(|| common.loading.to_string()),
             onpick,
             selection,
             placeholder: props.placeholder,

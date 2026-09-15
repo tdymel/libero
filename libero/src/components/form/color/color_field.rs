@@ -13,8 +13,8 @@ use crate::{
         surface::paper_sx,
     },
     hooks::{
-        PopoverOptions, moved_within, use_element, use_field_list_layer, use_popover_on,
-        use_silent_focus, use_theme,
+        PopoverOptions, moved_within, use_element, use_field_list_layer, use_localization,
+        use_popover_on, use_silent_focus, use_theme,
     },
     platform::{ElementApi, eye_dropper, next_task},
     sx::{StaticSx, ThemeAwareValue, sx},
@@ -199,10 +199,11 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     });
 
     let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(slot_icon_size(size)).into();
+    let labels = use_localization().color;
     let trailing = (with_eye_dropper && has_eye_dropper() && !disabled && !readonly).then(|| {
         rsx! {
             ActionIcon {
-                aria_label: "Pick a color from the screen",
+                aria_label: labels.eye_dropper,
                 size: icon_size,
                 onclick: move |_| {
                     let Some(api) = eye_dropper() else {
@@ -387,7 +388,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             .element(popover.floating())
             .attr("id", dialog_id)
             .attr("role", "dialog")
-            .attr("aria-label", "Choose color")
+            .attr("aria-label", labels.choose)
             .event("onmousedown", move |event: MouseEvent| {
                 event.prevent_default()
             })

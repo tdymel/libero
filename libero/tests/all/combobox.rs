@@ -2,7 +2,7 @@
 //! and its `aria-activedescendant` names only a row that is in the DOM:
 //! never one while the list is loading or empty, and a highlight past the end
 //! names the last row, the one drawn as active. What the list says while it
-//! loads comes from the theme, and it is said by a status region that is always
+//! loads comes from the localization, and it is said by a status region that is always
 //! mounted and sits outside the `aria-busy` dropdown.
 
 use crate::common::body;
@@ -14,7 +14,7 @@ use libero::{
         Button, Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxState, OptionList,
         use_combobox,
     },
-    theme::{ComboboxDefaults, ComboboxLabels, Theme},
+    localization::{CommonLabels, Localization},
 };
 use std::cell::{Cell, RefCell};
 
@@ -187,14 +187,12 @@ fn a_highlight_past_the_end_names_the_last_row() {
     assert!(id.ends_with("-option-0"), "{id}");
 }
 
-static GERMAN: Theme = Theme {
-    combobox: ComboboxDefaults {
-        labels: ComboboxLabels {
-            loading: "Wird geladen",
-        },
-        ..Theme::DEFAULT.combobox
+static GERMAN: Localization = Localization {
+    common: CommonLabels {
+        loading: "Wird geladen",
+        ..CommonLabels::ENGLISH
     },
-    ..Theme::DEFAULT
+    ..Localization::ENGLISH
 };
 
 /// An open, loading list, so the loader and its text are on screen.
@@ -223,12 +221,12 @@ fn Loading(label: Option<String>) -> Element {
 }
 
 #[test]
-fn the_loading_label_comes_from_the_theme() {
+fn the_loading_label_comes_from_the_localization() {
     fn english() -> Element {
         rsx! { LiberoProvider { Loading {} } }
     }
     fn german() -> Element {
-        rsx! { LiberoProvider { themes: &GERMAN, Loading {} } }
+        rsx! { LiberoProvider { localization: &GERMAN, Loading {} } }
     }
 
     let html = loading(english);
@@ -240,13 +238,13 @@ fn the_loading_label_comes_from_the_theme() {
     assert!(!html.contains(">Loading<"), "{html}");
 }
 
-/// The prop still wins over the theme, for a label a static string cannot
-/// express - one naming what is being searched.
+/// The prop still wins over the localization, for a label a static string
+/// cannot express - one naming what is being searched.
 #[test]
-fn a_loading_label_prop_beats_the_theme() {
+fn a_loading_label_prop_beats_the_localization() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { themes: &GERMAN,
+            LiberoProvider { localization: &GERMAN,
                 Loading { label: "Searching fruit" }
             }
         }

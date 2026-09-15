@@ -35,9 +35,6 @@ pub struct AlertDefaults {
     pub gap: Size,
     pub body_gap: Size,
     pub icon_size: &'static str,
-    /// An English literal, like `DateDefaults`'s. The library has no i18n
-    /// story yet (todo 28); a project overrides it once here.
-    pub close_label: &'static str,
 }
 
 impl AlertDefaults {
@@ -52,7 +49,6 @@ impl AlertDefaults {
         gap: Size::Md,
         body_gap: Size::Xs,
         icon_size: "20px",
-        close_label: "Close",
     };
 
     pub fn theme_vars() -> Sx {

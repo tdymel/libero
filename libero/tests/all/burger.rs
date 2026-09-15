@@ -7,20 +7,17 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::Burger,
-    theme::{BurgerDefaults, BurgerLabels, Theme},
+    localization::{BurgerLabels, Localization},
 };
 
-/// A translated theme, to prove the two words are the theme's and not the
+/// A translation, to prove the two words are the localization's and not the
 /// component's. `&'static` because `LiberoProvider` takes one.
-static GERMAN: Theme = Theme {
-    burger: BurgerDefaults {
-        labels: BurgerLabels {
-            open: "Menü öffnen",
-            close: "Menü schließen",
-        },
-        ..Theme::DEFAULT.burger
+static GERMAN: Localization = Localization {
+    burger: BurgerLabels {
+        open: "Menü öffnen",
+        close: "Menü schließen",
     },
-    ..Theme::DEFAULT
+    ..Localization::ENGLISH
 };
 
 /// The root is a real `<button type="button">` - `ActionIcon`'s, so the ripple
@@ -80,10 +77,10 @@ fn aria_expanded_appears_only_when_opened_is_some() {
     );
 }
 
-/// The name is the theme's, not the caller's, so every burger in a project
-/// announces itself the same way - and a translation replaces two strings.
+/// The name is the localization's, not the caller's, so every burger in a
+/// project announces itself the same way - and a translation replaces two strings.
 #[test]
-fn the_accessible_name_comes_from_the_theme_and_follows_opened() {
+fn the_accessible_name_comes_from_the_localization_and_follows_opened() {
     fn english_closed() -> Element {
         rsx! { LiberoProvider { Burger { open: false, "aria-controls": "nav" } } }
     }
@@ -92,7 +89,7 @@ fn the_accessible_name_comes_from_the_theme_and_follows_opened() {
     }
     fn german_open() -> Element {
         rsx! {
-            LiberoProvider { themes: &GERMAN,
+            LiberoProvider { localization: &GERMAN,
                 Burger { open: true, "aria-controls": "nav" }
             }
         }
@@ -111,12 +108,12 @@ fn the_accessible_name_comes_from_the_theme_and_follows_opened() {
 }
 
 /// The escape hatch from `&'static str`: it runs during render, so it can read
-/// a locale that is only known at runtime. It beats the theme, both ways.
+/// a locale that is only known at runtime. It beats the localization, both ways.
 #[test]
-fn the_label_callback_overrides_the_theme_on_both_states() {
+fn the_label_callback_overrides_the_localization_on_both_states() {
     fn open() -> Element {
         rsx! {
-            LiberoProvider { themes: &GERMAN,
+            LiberoProvider { localization: &GERMAN,
                 Burger {
                     open: true,
                     "aria-controls": "nav",

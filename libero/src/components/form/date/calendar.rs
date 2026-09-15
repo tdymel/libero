@@ -17,12 +17,12 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{ElementHandle, use_element, use_theme},
+    hooks::{ElementHandle, use_element, use_localization},
+    localization::DateLocale,
     platform::ElementApi,
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        CalendarVariant, DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DateDefaults, DatePickerDefaults,
-        Size, SizeCss,
+        CalendarVariant, DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DatePickerDefaults, Size, SizeCss,
     },
 };
 
@@ -286,7 +286,7 @@ impl Selection {
     }
 }
 
-// In the theme, whose `DateDefaults::format` takes it; the layers below
+// In the theme, since `DateLocale::format` takes it and the layers below
 // `components` may not import from it.
 pub use crate::theme::DateLevel;
 
@@ -401,7 +401,7 @@ pub(super) fn use_focus_after_render(root: ElementHandle) -> Signal<Option<Strin
 /// What the keys and the views of every level read, for one render.
 #[derive(Clone, Copy)]
 struct View {
-    names: &'static DateDefaults,
+    names: &'static DateLocale,
     selection: Selection,
     onpick: EventHandler<NaiveDate>,
     lowest: DateLevel,
@@ -941,8 +941,7 @@ impl Strip {
 /// values, so the props compare properly.
 #[component]
 pub(super) fn Calendar(props: CalendarProps) -> Element {
-    let theme = use_theme();
-    let names = &theme.date;
+    let names = &use_localization().date;
     let selection = props.selection;
     let onpick = props.onpick;
     let columns = props.columns.max(1) as i64;
@@ -1187,7 +1186,7 @@ fn Week(props: WeekProps) -> Element {
         onpick,
     } = props;
     let allowed = day_allowed(min, max, exclude_date.0);
-    let names = &use_theme().date;
+    let names = &use_localization().date;
     // APG: the full date, not only the number shown.
     let label = date_formatter((names.format)(DateLevel::Day), names);
     let (mut hover, mut active, mut paged) = (hover, active, paged);
@@ -1265,7 +1264,7 @@ fn Week(props: WeekProps) -> Element {
 /// calendar's state, so it skips every re-render.
 #[component]
 fn Weekdays(first_weekday: usize) -> Element {
-    let names = &use_theme().date;
+    let names = &use_localization().date;
     rsx! {
         div { role: "row",
             for index in 0..7 {

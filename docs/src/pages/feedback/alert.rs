@@ -41,8 +41,8 @@ pub fn AlertPage() -> Element {
                 prop("onclose", "EventHandler<()>")
                     .doc("Its presence is what shows the close button. Closing is yours: unmount the alert."),
                 prop("close_label", "String")
-                    .default("Close")
-                    .doc("The close button's accessible name."),
+                    .default("common.close")
+                    .doc("The close button's accessible name. Unset, the localization's `common.close` - \"Close\" in English."),
                 prop("children", "Element").doc("The message, and the alert's description through `aria-describedby`."),
             ])],
             lead: rsx! {

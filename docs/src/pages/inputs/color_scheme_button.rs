@@ -28,7 +28,7 @@ pub fn ColorSchemeButtonPage() -> Element {
                 prop("themes", "&'static [&'static ThemeSet]")
                     .doc("Opts into the theme picker: a chevron beside the toggle opening a menu of these sets, the active one checked. The pair is then a named `group`, and `class`, `sx` and extra attributes land on it."),
                 prop("label", "Callback<ColorSchemeSetting, String>")
-                    .doc("Replaces the theme's three toggle names. Given the setting a press moves to, it names what the press does."),
+                    .doc("Replaces the localization's three toggle names. Given the setting a press moves to, it names what the press does."),
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables interaction and dims the button."),

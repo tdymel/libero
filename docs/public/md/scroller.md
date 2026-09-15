@@ -142,7 +142,9 @@ Like every component, `Scroller` also takes the shared props `sx`, `class`,
 | `control_sizes` | `Sizes<u16>` | Control width per step, px: `24`, `32`, `40`, `48`, `56`, `64`. |
 | `fade_color` | `&'static str` | `var(--lsx-paper-background)`, so dark mode is a change to `PaperDefaults`. |
 | `draggable` | `bool` | `false`. |
-| `scroll_start_label` / `scroll_end_label` | `&'static str` | `"Scroll backward"` / `"Scroll forward"`. |
+
+The controls' names, `"Scroll backward"` / `"Scroll forward"`, are
+`ScrollerLabels` in the [localization](theming.md#localization).
 
 ## CSS variables
 

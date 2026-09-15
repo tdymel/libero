@@ -36,7 +36,7 @@ They need no turbofish, and a value of the wrong type is a plain type mismatch.
 ## Months and years
 
 `level: DateLevel::Month` makes a `NaiveDate` field a month field: the text
-reads `(DateDefaults::format)(DateLevel::Month)` (`MMMM YYYY`), the value is the month's
+reads `(DateLocale::format)(DateLevel::Month)` (`MMMM YYYY`), the value is the month's
 first day, and the dropdown opens on the month grid. `DateLevel::Year` reads
 `YYYY` and holds January 1. The `format` prop still overrides
 the text format. `min` and `max` accept a month or year they reach, as the grid
@@ -114,12 +114,12 @@ time. A range splits on `–`, `—`, ` - ` or ` to `.
 
 Emptied text commits `None`. Text that is not a value the field accepts -
 including one outside `min`/`max` or excluded - stays, and the field shows
-`DateDefaults::invalid_date` as its error.
+`DateLocale::invalid_date` as its error.
 
 ## Accessibility
 
 The input is a `combobox` whose dropdown is a non-modal `dialog`, named by
-`DateDefaults::date_label` (`time_label` for a time). Focus opens the dropdown
+`DateLocale::date_label` (`time_label` for a time). Focus opens the dropdown
 and stays in the text input, so typing works at once.
 
 | Key | In the text input | In the dropdown |
@@ -144,8 +144,8 @@ whatever the text shows: `2026-02-01`, `13:05:00`, `2026-02-01T13:05:00`, and
 | `value` | `Option<V>` | - | Strictly controlled. |
 | `onchange` | `EventHandler<Option<V>>` | - | On commit (blur, Enter) and on every pick. |
 | `level` | `DateLevel` | `Day` | A `NaiveDate` as a day, a month (its first day) or a year (its January 1). |
-| `format` | `String` | `(DateDefaults::format)(level)` | dayjs tokens: `YYYY M MM MMM MMMM D DD dd ddd dddd`, `[literal]`. English: `MMMM D, YYYY`, `MMMM YYYY`, `YYYY`. |
-| `time_format` | `String` | `DateDefaults::time_format` | How a time shows. |
+| `format` | `String` | `(DateLocale::format)(level)` | dayjs tokens: `YYYY M MM MMM MMMM D DD dd ddd dddd`, `[literal]`. English: `MMMM D, YYYY`, `MMMM YYYY`, `YYYY`. |
+| `time_format` | `String` | `DateLocale::time_format` | How a time shows. |
 | `min` / `max` | `V::Bound` | - | Limits for picking and typing. |
 | `exclude_date` | `Callback<NaiveDate, bool>` | - | Days that cannot be picked or typed. Ignored for a time. |
 | `today` | `NaiveDate` | clock | Marked day, and the year a yearless text takes. |
@@ -167,7 +167,7 @@ Props that only some value types use are ignored by the rest.
 ## Theme
 
 `Theme::date_field` (`DateFieldDefaults`): `size`, `radius`,
-`close_on_change`. Names and formats come from `Theme::date`, a
-`DateDefaults`. Its weekday arrays are Sunday first, as dayjs' locale files
-have them. The docs' `locale` control prints German, French and Japanese
-constants to copy.
+`close_on_change`. Names and formats come from `Localization::date`, a
+`DateLocale` (see [localization](theming.md#localization)). Its weekday arrays
+are Sunday first, as dayjs' locale files have them. The docs' `locale` control
+swaps in German, French and Japanese localizations and prints them to copy.

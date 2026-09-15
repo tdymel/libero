@@ -7,6 +7,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{Avatar, AvatarGroup, AvatarSpec},
+    localization::{AvatarLabels, Localization},
 };
 
 fn people() -> Vec<AvatarSpec> {
@@ -154,21 +155,21 @@ fn the_overflow_chip_counts_the_people_it_hides() {
     );
 }
 
-static COUNT_LAST: libero::theme::Theme = libero::theme::Theme {
-    avatar_labels: libero::theme::AvatarLabels {
-        count_label: "{n}+",
-        more_label: "{names} ({n} weitere)",
+static COUNT_LAST: Localization = Localization {
+    avatar: AvatarLabels {
+        count: "{n}+",
+        more: "{names} ({n} weitere)",
     },
-    ..libero::theme::Theme::DEFAULT
+    ..Localization::ENGLISH
 };
 
-/// The chip's text is a template in the theme, so a language can put the
-/// count after the names.
+/// The chip's text is a template in the localization, so a language can put
+/// the count after the names.
 #[test]
 fn a_locale_can_put_the_count_after_the_names() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { themes: &COUNT_LAST, AvatarGroup { max: 3, people: people() } }
+            LiberoProvider { localization: &COUNT_LAST, AvatarGroup { max: 3, people: people() } }
         }
     }
 

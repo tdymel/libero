@@ -15,7 +15,7 @@ use crate::{
     components::{
         ClassList, HtmlTag, Input, OptionLabel, Options, SegmentedControl, States, layout::use_box,
     },
-    hooks::{ElementHandle, use_element, use_theme},
+    hooks::{ElementHandle, use_element, use_localization, use_theme},
     platform::ElementApi,
     sx::Sx,
     theme::{Size, TimePickerVariant},
@@ -74,7 +74,7 @@ fn time_limits(
 /// keep one identity across renders, so the control skips a re-render that
 /// does not change the part.
 fn part_switch(part: Signal<Part>, size: Size, focusable: bool) -> Element {
-    let names = &use_theme().date;
+    let names = &use_localization().date;
     let mut part = part;
     let onchange = use_callback(move |next: Part| part.set(next));
     let label = use_callback(move |part: Part| {
@@ -277,7 +277,7 @@ pub(super) struct DateTimeRangeFlowProps {
 #[component]
 pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
     let theme = use_theme();
-    let names = &theme.date;
+    let names = &use_localization().date;
     let size = props.size.copied_or(theme.date_picker.size);
     let mut side = use_signal(|| Side::Start);
     let mut part = use_signal(|| Part::Date);

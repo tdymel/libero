@@ -70,8 +70,8 @@ fn Demo() -> Element {
 ## Accessibility
 
 Set `decorative` only for a purely decorative image. A `zoomable` image takes
-its names from `alt` - "Zoom in: <alt>" on the button, and the enlarged
-picture's - so give it one.
+its names from `alt` - "Zoom in: <alt>" on the button (the localization's
+`image.zoom_named`), and the enlarged picture's - so give it one.
 
 A `zoomable` image is a tab stop: Space or Enter zooms, and Escape, the backdrop
 or the dialog's **Close** button close the overlay again.

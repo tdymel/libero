@@ -47,24 +47,22 @@ fn Demo() -> Element {
 }
 ```
 
-The names come from the theme, so a translation is one struct:
+The names come from the [localization](theming.md#localization), so a
+translation is one struct:
 
 ```rust
-use libero::theme::{ColorSchemeButtonDefaults, ColorSchemeButtonLabels, Theme};
+use libero::localization::{ColorSchemeButtonLabels, Localization};
 
-static GERMAN: Theme = Theme {
-    color_scheme_button: ColorSchemeButtonDefaults {
-        labels: ColorSchemeButtonLabels {
-            to_light: "Helles Design",
-            to_dark: "Dunkles Design",
-            to_system: "Wie das System",
-            group: "Design",
-            picker: "Design wählen",
-            themes: "Designs",
-        },
-        ..ColorSchemeButtonDefaults::DEFAULT
+static GERMAN: Localization = Localization {
+    color_scheme_button: ColorSchemeButtonLabels {
+        to_light: "Helles Design",
+        to_dark: "Dunkles Design",
+        to_system: "Wie das System",
+        group: "Design",
+        picker: "Design wählen",
+        themes: "Designs",
     },
-    ..Theme::DEFAULT
+    ..Localization::ENGLISH
 };
 ```
 
@@ -91,7 +89,7 @@ narrower than 24px (WCAG 2.5.8).
 | `size` | `ThemeAwareValue` | `md` | Button size; the glyph takes 55% of it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of size. |
 | `themes` | `&'static [&'static ThemeSet]` | - | Opts into the theme picker: a chevron beside the toggle opening a menu of these sets, the active one checked. The pair is then a named `group`, and `class`, `sx` and extra attributes land on it. |
-| `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the theme's three toggle names. Given the setting a press moves to, it names what the press does. |
+| `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the localization's three toggle names. Given the setting a press moves to, it names what the press does. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the button. |
 
 Like every component, `ColorSchemeButton` also takes the shared props `sx`,
@@ -105,7 +103,10 @@ Like every component, `ColorSchemeButton` also takes the shared props `sx`,
 |---|---|---|
 | `variant` | `Variant` | Default `variant` when the prop is omitted (`outlined`). |
 | `color` | `Color` | Default `color` when the prop is omitted (`muted`). |
-| `labels` | `ColorSchemeButtonLabels` | `to_light`, `to_dark`, `to_system` (the toggle's names), `group`, `picker` and `themes` (the picker's). |
+
+The names are `ColorSchemeButtonLabels` in the localization: `to_light`,
+`to_dark`, `to_system` (the toggle's names), `group`, `picker` and `themes`
+(the picker's).
 
 ## CSS variables
 

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{ActionIcon, Input, common::CloseIcon, form::slot_icon_size},
-    hooks::ElementHandle,
+    hooks::{ElementHandle, current_localization},
     platform::ElementApi,
     sx::ThemeAwareValue,
     theme::Size,
@@ -27,7 +27,7 @@ pub(crate) fn clear_button(
     show.then(|| {
         rsx! {
             ActionIcon {
-                aria_label: "Clear",
+                aria_label: current_localization().common.clear,
                 size: icon_size,
                 onclick: move |event: MouseEvent| {
                     let _ = target.focus();

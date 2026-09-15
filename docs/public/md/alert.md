@@ -92,7 +92,7 @@ its field. See [Form](form.md).
 | `variant` | `Variant` | `tonal` | Chrome, shared with `Button` and `Badge`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. No hover response - an alert is not a target. |
 | `radius` | `Size` | `md` | A step on the radius scale. Anything else goes through `sx`. |
 | `onclose` | `EventHandler<()>` | - | Shows the close button, and fires when it is pressed. |
-| `close_label` | `String` | `Close` | The close button's accessible name. |
+| `close_label` | `String` | `common.close` | The close button's accessible name. Unset, the localization's `common.close` - "Close" in English. |
 | `children` | `Element` | - | The message, and the description through `aria-describedby`. |
 
 Like every component, `Alert` also takes the shared props `sx`, `class`,
@@ -111,7 +111,6 @@ Like every component, `Alert` also takes the shared props `sx`, `class`,
 | `gap` | `Size` | `Md` - icon to text to close button. |
 | `body_gap` | `Size` | `Xs` - title to message. |
 | `icon_size` | `&'static str` | `20px`, the icon slot's width and height. |
-| `close_label` | `&'static str` | `Close`. |
 
 ## CSS variables
 

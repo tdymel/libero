@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{ClassList, Input, OptionSource, States},
-    hooks::use_theme,
+    hooks::use_localization,
     sx::Sx,
     theme::Size,
 };
@@ -72,7 +72,7 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
 /// everything below compiles once.
 #[component]
 pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Element {
-    let theme = use_theme();
+    let common = use_localization().common;
     let list = props.options.list();
     let values = list.values();
     let count = values.len();
@@ -131,7 +131,7 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
             loading: loading.then(|| {
                 props
                     .loading_label
-                    .unwrap_or_else(|| theme.combobox.labels.loading.to_string())
+                    .unwrap_or_else(|| common.loading.to_string())
             }),
             size: props.size,
             radius: props.radius,

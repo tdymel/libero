@@ -11,7 +11,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{current_localization, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::Size,
     utils::warn,
@@ -70,10 +70,12 @@ field_props! {
         /// buttons are the most expensive thing a field can carry.
         #[props(default)]
         steppers: bool,
-        /// Announced on the stepper that raises the value.
+        /// Announced on the stepper that raises the value, e.g. "Add a guest".
+        /// Unset, the localization's `number_field.increase`.
         #[props(default, into)]
         increment_label: Option<String>,
-        /// Announced on the stepper that lowers it.
+        /// Announced on the stepper that lowers it. Unset, the localization's
+        /// `number_field.decrease`.
         #[props(default, into)]
         decrement_label: Option<String>,
     }
@@ -344,6 +346,7 @@ fn Steppers(
         .framework_sx(&STEPPERS_SX)
         .prepare()
         .event("onmousedown", |event: MouseEvent| event.prevent_default());
+    let labels = current_localization().number_field;
     stepper_box.render(
         HtmlTag::Div,
         Vec::new(),
@@ -351,7 +354,7 @@ fn Steppers(
         // box are a few pixels each, which is not a target anyone can hit.
         rsx! {
             ActionIcon {
-                aria_label: decrement_label.unwrap_or_else(|| "Decrease".to_string()),
+                aria_label: decrement_label.unwrap_or_else(|| labels.decrease.to_string()),
                 size: ThemeAwareValue::Size(slot_icon_size(size)),
                 sx: &DECREMENT_SX,
                 // Not a tab stop: the field is, and the arrow keys do the same
@@ -362,7 +365,7 @@ fn Steppers(
                 MinusIcon {}
             }
             ActionIcon {
-                aria_label: increment_label.unwrap_or_else(|| "Increase".to_string()),
+                aria_label: increment_label.unwrap_or_else(|| labels.increase.to_string()),
                 size: ThemeAwareValue::Size(slot_icon_size(size)),
                 sx: &INCREMENT_SX,
                 tabindex: "-1",

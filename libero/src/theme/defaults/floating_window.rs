@@ -12,11 +12,6 @@ pub struct FloatingWindowDefaults {
     pub move_step: u16,
     /// Pixels an arrow key resizes it by. Shift resizes by one.
     pub resize_step: u16,
-    /// Names the title bar, which is the keyboard move handle.
-    pub move_label: &'static str,
-    /// Names the corner resize handle.
-    pub resize_label: &'static str,
-    pub close_label: &'static str,
 }
 
 impl FloatingWindowDefaults {
@@ -26,8 +21,5 @@ impl FloatingWindowDefaults {
         shadow: Size::Xl,
         move_step: 10,
         resize_step: 10,
-        move_label: "Move window",
-        resize_label: "Resize window",
-        close_label: "Close",
     };
 }

@@ -81,7 +81,7 @@ pub fn BurgerPage() -> Element {
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("`Burger` never owns the open state; the panel does, and the caller already holds that signal to drive the panel itself."),
                 prop("label", "Callback<bool, String>")
-                    .doc("Replaces the theme's two labels, keyed by `open`. It runs during render, so it can read a live locale."),
+                    .doc("Replaces the localization's two labels, keyed by `open`. It runs during render, so it can read a live locale."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
                     .doc("The glyph's width and height. The bars are a twelfth of it thick, and the button around it is one `spacing.xs` larger. Below 24px it still takes presses in an invisible 24x24 box."),

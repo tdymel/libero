@@ -72,22 +72,6 @@ pub struct CarouselDefaults {
     pub control_color: ColorValue,
     /// Milliseconds between automatic advances, when `autoplay` is on.
     pub autoplay_delay: u32,
-    /// English literals, the `DateDefaults` precedent. The library has no i18n
-    /// mechanism yet (todo 28); a caller overrides these on the theme, or
-    /// passes `aria_label`/`slide_label` per instance.
-    pub label: &'static str,
-    pub previous_label: &'static str,
-    pub next_label: &'static str,
-    /// `{n}` is replaced with the slide number.
-    pub indicator_label: &'static str,
-    /// `{n}` of `{m}` - a slide group's accessible name.
-    pub slide_label: &'static str,
-    /// What the live region reads when the slide settles.
-    pub status_label: &'static str,
-    /// The autoplay button's name. It stays the same whether the slideshow
-    /// runs or not: `aria-pressed` carries the state, so it never reads
-    /// "Play, pressed".
-    pub pause_label: &'static str,
 }
 
 impl ToCssDeclarations for CarouselDefaults {
@@ -132,43 +116,5 @@ impl CarouselDefaults {
         control_hover_background: ColorValue::Shade(Color::Muted, ColorShade::S1),
         control_color: ColorValue::Shade(Color::Muted, ColorShade::S7),
         autoplay_delay: 4000,
-        label: "Carousel",
-        previous_label: "Previous slide",
-        next_label: "Next slide",
-        indicator_label: "Go to slide {n}",
-        slide_label: "{n} of {m}",
-        status_label: "Slide {n} of {m}",
-        pause_label: "Pause slideshow",
     };
-
-    /// `"{n} of {m}"` with both holes filled. One-based, because it is read
-    /// aloud.
-    pub(crate) fn format_label(template: &str, index: usize, count: usize) -> String {
-        template
-            .replace("{n}", &(index + 1).to_string())
-            .replace("{m}", &count.to_string())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_label_template_fills_both_holes_one_based() {
-        assert_eq!(
-            CarouselDefaults::format_label("Slide {n} of {m}", 2, 7),
-            "Slide 3 of 7"
-        );
-        assert_eq!(
-            CarouselDefaults::format_label("Go to slide {n}", 0, 7),
-            "Go to slide 1"
-        );
-    }
-
-    /// A template with no hole is a legitimate override, not an error.
-    #[test]
-    fn a_template_without_holes_is_returned_unchanged() {
-        assert_eq!(CarouselDefaults::format_label("Bild", 4, 9), "Bild");
-    }
 }

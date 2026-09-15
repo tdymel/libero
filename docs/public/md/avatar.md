@@ -105,10 +105,10 @@ Barbara Liskov, Margaret Hamilton".
 `name` is the avatar's accessible name. Pass `alt: ""` wherever the person's
 name is already visible beside the avatar, or it is announced twice.
 
-The chip's text is English by default. To translate it, set
-`theme.avatar_labels`: `{n}` is the hidden count and `{names}` their names, so
-a language can put the count wherever it belongs, e.g.
-`AvatarLabels { count_label: "+{n}", more_label: "{n} weitere: {names}" }`.
+The chip's text is English by default. To translate it, set the
+[localization](theming.md#localization)'s `avatar`: `{n}` is the hidden count
+and `{names}` their names, so a language can put the count wherever it belongs,
+e.g. `AvatarLabels { count: "+{n}", more: "{n} weitere: {names}" }`.
 
 ## Props
 
@@ -159,7 +159,9 @@ Like every component, both also take the shared props `sx`, `class`, `style`,
 
 ## Theme defaults
 
-`AvatarDefaults`, `AvatarGroupDefaults` and `AvatarLabels` on the theme.
+`AvatarDefaults` and `AvatarGroupDefaults` on the theme. The chip's words are
+`AvatarLabels` in the localization: `count` (`+{n}`, the visible text) and
+`more` (`{n} more: {names}`, the accessible name).
 
 | Field | Type | Default | Description |
 |---|---|---|---|
@@ -171,8 +173,6 @@ Like every component, both also take the shared props `sx`, `class`, `style`,
 | `avatar.radii` | `Sizes<&'static str>` | `2px, 4px, 8px, 16px, 32px, 9999px` | The avatar's own radius scale. `xxl` is a circle at every size. |
 | `avatar_group.spacing` | `Size` | `sm` | How far each circle is pulled over the one before it. |
 | `avatar_group.ring` | `&'static str` | `2px` | Width of the ring in the page colour that separates two overlapping members. |
-| `avatar_labels.count_label` | `&'static str` | `+{n}` | The chip's visible text. `{n}` is the hidden count. |
-| `avatar_labels.more_label` | `&'static str` | `{n} more: {names}` | The chip's accessible name. `{names}` is the hidden names, joined by `, `. |
 
 ## CSS variables
 

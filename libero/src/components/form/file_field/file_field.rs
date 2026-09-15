@@ -19,8 +19,10 @@ use crate::{
         layout::{BoxStyle, use_box},
     },
     hooks::{
-        ElementHandle, LocalState, id_selector, use_css, use_element, use_local_state, use_theme,
+        ElementHandle, LocalState, current_localization, id_selector, use_css, use_element,
+        use_local_state, use_theme,
     },
+    localization::fill,
     platform::{self, ElementApi, nested_interactive},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -44,13 +46,6 @@ enum FocusDebt {
     /// Files arrived; focus the first row when the surface stood down.
     Took,
 }
-
-/// The Browse button's text in the `Input` variant, heard after the label. One
-/// const until the localization (plan 28) takes it.
-const BROWSE_LABEL: &str = "Browse files";
-/// The Browse button's description on a `required` field: neither a group nor
-/// a button may carry `aria-required`.
-const REQUIRED_LABEL: &str = "Required";
 
 /// The `Input` variant's group, the `Select` trigger's shape: the chips, then
 /// the Browse button over the rest of the line.
@@ -884,17 +879,18 @@ fn chip_list(drawn: Vec<Element>, list_element: ElementHandle) -> Option<Element
 /// The `Input` variant's Browse button: the placeholder while nothing is
 /// picked, and the hidden text that says what the button does.
 fn browse_content(placeholder: &str, empty: bool) -> Element {
+    let browse = current_localization().file_field.browse;
     rsx! {
         if empty && !placeholder.is_empty() {
             span { "data-placeholder": "true", "{placeholder}" }
         }
-        VisuallyHidden { "{BROWSE_LABEL}" }
+        VisuallyHidden { "{browse}" }
     }
 }
 
 /// What the surface holds: an icon, or `loader` while an upload is in flight,
 /// then the prompt. `children` when the caller wrote one, `placeholder` next,
-/// and an English default last - the shape `Dialog`'s `close_label` set. Then
+/// and the localization's last - the shape `Dialog`'s `close_label` set. Then
 /// a hint read off `accept` rather than written beside it, so the prompt
 /// cannot claim something the picker would refuse.
 fn dropzone_prompt(props: &FileFieldProps, loader: Option<Size>) -> Element {
@@ -906,9 +902,10 @@ fn dropzone_prompt(props: &FileFieldProps, loader: Option<Size>) -> Element {
         (true, _) => props.children.clone(),
         (false, Some(placeholder)) => rsx! { span { "{placeholder}" } },
         (false, None) => {
+            let labels = current_localization().file_field;
             let text = match props.multiple {
-                true => "Drop files here, or click to pick",
-                false => "Drop a file here, or click to pick",
+                true => labels.drop_files,
+                false => labels.drop_file,
             };
             rsx! { span { "{text}" } }
         }
@@ -1046,6 +1043,8 @@ impl Surface {
             attributes,
         } = self;
         let required_id = format!("{id}-required");
+        // Neither a group nor a button may carry `aria-required`.
+        let required_label = current_localization().file_field.required;
         // The label, then the button's own text: "Receipt, Browse files".
         let named = labelledby.as_ref().map(|label| format!("{label} {id}"));
         let described = [
@@ -1139,7 +1138,7 @@ impl Surface {
                     {button}
                     {ring_overlay()}
                     if required {
-                        span { id: required_id, hidden: true, "{REQUIRED_LABEL}" }
+                        span { id: required_id, hidden: true, "{required_label}" }
                     }
                     {after}
                 },
@@ -1245,6 +1244,7 @@ fn default_card(
 ) -> Element {
     let name = file.name();
     let size = format_size(file.size());
+    let remove_label = fill(current_localization().common.remove, &[("label", &name)]);
     rsx! {
         span { "data-slot": "name", "{name}" }
         span { "data-slot": "size", "{size}" }
@@ -1257,7 +1257,7 @@ fn default_card(
                     // The id is how the focus finds the row that takes this
                     // one's place: a list cannot hold a hook per row.
                     id,
-                    aria_label: "Remove {name}",
+                    aria_label: remove_label,
                     size: icon_size,
                     sx: sx()
                         .color("inherit")

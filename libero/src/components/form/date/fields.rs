@@ -13,7 +13,7 @@ use super::{
     picker_field::picker_field,
     props::date_props,
 };
-use crate::{components::Input, theme::DateDefaults};
+use crate::{components::Input, localization::DateLocale};
 
 /// Whether a day passes `min`, `max` and `exclude_date`.
 pub(super) fn day_allowed(
@@ -44,7 +44,7 @@ pub(super) fn moment_allowed(
 /// The time format a field shows when the caller names none: the theme's,
 /// adjusted for `with_seconds` and `twelve_hour`; separators, padding and text stay.
 pub(super) fn time_format(
-    names: &DateDefaults,
+    names: &DateLocale,
     twelve_hour: Option<bool>,
     with_seconds: bool,
 ) -> String {
@@ -270,9 +270,9 @@ mod tests {
     use super::*;
 
     fn adjusted(theme: &'static str, twelve_hour: Option<bool>, with_seconds: bool) -> String {
-        let names = DateDefaults {
+        let names = DateLocale {
             time_format: theme,
-            ..DateDefaults::ENGLISH
+            ..DateLocale::ENGLISH
         };
         time_format(&names, twelve_hour, with_seconds)
     }

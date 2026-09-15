@@ -1,5 +1,5 @@
 //! `ColorSchemeButton`'s rendered contract: the glyph and the name say where a
-//! press goes, the name comes from the theme, and `themes` adds a
+//! press goes, the name comes from the localization, and `themes` adds a
 //! picker beside the toggle.
 
 use crate::common::{attributes_of, body, render};
@@ -9,9 +9,8 @@ use libero::{
     LiberoProvider,
     components::ColorSchemeButton,
     hooks::use_color_scheme,
-    theme::{
-        ColorSchemeButtonDefaults, ColorSchemeButtonLabels, ColorSchemeSetting, Theme, ThemeSet,
-    },
+    localization::{ColorSchemeButtonLabels, Localization},
+    theme::{ColorSchemeSetting, ThemeSet},
 };
 
 /// The three glyphs, told apart by a path only each one draws.
@@ -92,25 +91,21 @@ fn themes_add_a_picker_beside_the_toggle() {
     assert!(html.contains(r#"aria-expanded="false""#), "{html}");
 }
 
-static GERMAN: Theme = Theme {
-    color_scheme_button: ColorSchemeButtonDefaults {
-        labels: ColorSchemeButtonLabels {
-            to_light: "Helles Design",
-            to_dark: "Dunkles Design",
-            ..ColorSchemeButtonLabels::ENGLISH
-        },
-        ..ColorSchemeButtonDefaults::DEFAULT
+static GERMAN: Localization = Localization {
+    color_scheme_button: ColorSchemeButtonLabels {
+        to_light: "Helles Design",
+        to_dark: "Dunkles Design",
+        ..ColorSchemeButtonLabels::ENGLISH
     },
-    ..Theme::DEFAULT
+    ..Localization::ENGLISH
 };
 
-/// The two names are the theme's, so a translation is one struct.
+/// The two names are the localization's, so a translation is one struct.
 #[test]
-fn the_name_comes_from_the_theme() {
+fn the_name_comes_from_the_localization() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider {
-                themes: ThemeSet::pair("German", &GERMAN, &Theme::DARK),
+            LiberoProvider { localization: &GERMAN,
                 ColorSchemeButton {}
             }
         }
@@ -124,10 +119,10 @@ fn the_name_comes_from_the_theme() {
     );
 }
 
-/// `label` replaces the theme's names, and is handed the setting a press
-/// moves to.
+/// `label` replaces the localization's names, and is handed the setting a
+/// press moves to.
 #[test]
-fn a_label_callback_replaces_the_theme_s_names() {
+fn a_label_callback_replaces_the_localization_s_names() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {

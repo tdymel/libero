@@ -13,7 +13,10 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{Clipboard, use_clipboard, use_css, use_element, use_silent_focus_out, use_theme},
+    hooks::{
+        Clipboard, use_clipboard, use_css, use_element, use_localization, use_silent_focus_out,
+        use_theme,
+    },
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
     theme::{
@@ -23,8 +26,6 @@ use crate::{
     },
     utils::warn,
 };
-
-const UNRECOGNIZED_LANGUAGE_LABEL: &str = "Unrecognized language";
 
 // Shared with `max_lines`' height math, so neither drifts from
 // `CODE_LINES_SX`'s actual line-height and padding.
@@ -332,6 +333,7 @@ fn code_lines(
 #[component]
 fn CopyButton(source: String, floating: bool) -> Element {
     let mut clipboard: Clipboard = use_clipboard();
+    let labels = use_localization().code_block;
     // No `variant`/`color`, so `ActionIcon` adds no background of its own and
     // these fully control the look. Passed as `Input::Static`, so the CSS is
     // built once for the process rather than per copy button.
@@ -348,7 +350,7 @@ fn CopyButton(source: String, floating: bool) -> Element {
 
     rsx! {
         ActionIcon {
-            aria_label: "Copy code",
+            aria_label: labels.copy,
             sx: button_sx,
             // Reset first, so a second copy empties the status and fills it
             // again rather than leaving the same text a reader skips.
@@ -376,9 +378,9 @@ fn CopyButton(source: String, floating: bool) -> Element {
         // arrives - the check icon alone says nothing.
         VisuallyHidden { role: "status",
             if clipboard.copied() {
-                "Copied"
+                {labels.copied}
             } else if clipboard.failed() {
-                "Copy failed"
+                {labels.copy_failed}
             }
         }
     }
@@ -388,6 +390,7 @@ fn CopyButton(source: String, floating: bool) -> Element {
 pub fn CodeBlock(props: CodeBlockProps) -> Element {
     use_token_theme();
     let theme = use_theme();
+    let labels = use_localization().code_block;
     let header = props.header.unwrap_or(theme.code_block.header);
     let copyable = props.copyable.unwrap_or(theme.code_block.copyable);
     let line_numbers = props.line_numbers.unwrap_or(theme.code_block.line_numbers);
@@ -426,7 +429,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     let lines = highlighted.read().clone().flatten();
     let label = language
         .map(Language::label)
-        .unwrap_or(UNRECOGNIZED_LANGUAGE_LABEL);
+        .unwrap_or(labels.unrecognized_language);
     let copy_source = copyable.then(|| display_source.clone());
     let (highlighted_lines, overrun) = props
         .highlight_lines

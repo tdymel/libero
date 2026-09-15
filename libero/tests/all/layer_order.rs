@@ -1,4 +1,4 @@
-//! `hooks`, `theme`, `sx`, `tokens` and `css` sit below `components` in the
+//! `hooks`, `localization`, `theme`, `sx`, `tokens` and `css` sit below `components` in the
 //! layer order, so none may import from it (todos 178, 359). A source scan, so a module no test compiles
 //! into a render is covered too. Comments and the `#[cfg(test)]` module at a
 //! file's end are skipped: a test may render a component.
@@ -105,7 +105,7 @@ fn the_scan_finds_an_upward_import() {
 fn the_layers_below_components_import_nothing_from_it() {
     let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     let mut hits = Vec::new();
-    for layer in ["hooks", "theme", "sx", "tokens", "css"] {
+    for layer in ["hooks", "localization", "theme", "sx", "tokens", "css"] {
         scan(&src.join(layer), &src, &mut hits);
     }
     assert!(

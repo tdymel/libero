@@ -28,7 +28,7 @@ pub fn DialogPage() -> Element {
                         .doc("Header button. Inside a modal it closes the modal, outside one it calls onclose."),
                     prop("onclose", "EventHandler<()>")
                         .doc("Called by the close button outside a modal. Inside one the button closes the modal instead."),
-                    prop("close_label", "String").default("Close").doc("Accessible name for the close button."),
+                    prop("close_label", "String").default("common.close").doc("Accessible name for the close button, e.g. \"Close cart\". Unset, the localization's `common.close` - \"Close\" in English."),
                     prop("radius", "Size").default("md").doc("Corner radius, a step on the radius scale. Anything else goes through `sx`."),
                     prop("size", "ThemeAwareValue")
                         .default("md")

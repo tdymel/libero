@@ -153,8 +153,8 @@ when something else already names the field.
 | `step` | `Option<T>` | `T::default_step()` | What one press of a stepper moves by. |
 | `steppers` | `bool` | `false` | Shows the minus/plus buttons in the trailing slot. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
-| `increment_label` | `String` | `Increase` | Announced on the stepper that raises the value. |
-| `decrement_label` | `String` | `Decrease` | Announced on the stepper that lowers it. |
+| `increment_label` | `String` | `number_field.increase` | Announced on the stepper that raises the value. Unset, the localization's `number_field.increase` - "Increase" in English. |
+| `decrement_label` | `String` | `number_field.decrease` | Announced on the stepper that lowers it. Unset, the localization's `number_field.decrease` - "Decrease" in English. |
 | `label` | `Caption` | - | The field's caption, above the control. |
 | `description` | `Caption` | - | Between the label and the control: what to enter. |
 | `helper` | `Caption` | - | Under the control: units, ranges, what the number means. |

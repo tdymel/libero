@@ -11,7 +11,8 @@ use crate::{
         form::SliderChangeEvent,
         form::slider::{SliderCore, SliderCoreValue},
     },
-    hooks::use_theme,
+    hooks::{use_localization, use_theme},
+    localization::fill,
     theme::Size,
 };
 
@@ -51,7 +52,8 @@ pub fn HueSlider(props: HueSliderProps) -> Element {
         }
     });
     // A bare 0-360 reads as a number; the unit makes it an angle.
-    let valuetext = use_callback(|hue: f64| format!("{} degrees", hue.round()));
+    let template = use_localization().color.hue_value;
+    let valuetext = use_callback(move |hue: f64| fill(template, &[("value", &hue.round())]));
 
     rsx! {
         SliderCore {

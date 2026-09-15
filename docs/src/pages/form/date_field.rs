@@ -9,12 +9,13 @@ use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use libero::components::{
     Code, DateField, DateLevel, DateRange, Flex, Kbd, Rule, Text, Validators, not_empty,
 };
-use libero::theme::DateDefaults;
+use libero::localization::Localization;
+use libero::use_localization_handle;
 
 mod locales {
     use libero::chrono::Weekday;
     use libero::components::DateLevel;
-    use libero::theme::DateDefaults;
+    use libero::localization::{DateLocale, Localization};
 
     include!("date_locales.rs");
 }
@@ -34,17 +35,8 @@ const LOCALES: [&str; 4] = ["en", "de", "fr", "ja"];
 /// The copyable constants, printed as they are written.
 const LOCALES_SOURCE: &str = include_str!("date_locales.rs");
 
-/// The level the picked kind is typed at.
-fn level_of(values: &DemoValues) -> DateLevel {
-    match values.str("value").as_str() {
-        "month" => DateLevel::Month,
-        "year" => DateLevel::Year,
-        _ => DateLevel::Day,
-    }
-}
-
 /// The picked locale's constant: its name and its values.
-fn locale_of(values: &DemoValues) -> Option<(&'static str, &'static DateDefaults)> {
+fn locale_of(values: &DemoValues) -> Option<(&'static str, &'static Localization)> {
     match values.str("locale").as_str() {
         "de" => Some(("GERMAN", &locales::GERMAN)),
         "fr" => Some(("FRENCH", &locales::FRENCH)),
@@ -105,9 +97,9 @@ pub fn DateFieldPage() -> Element {
                         .doc("Called when typed text is committed - on blur or Enter - and on every pick. Emptied text commits `None`."),
                     prop("level", "DateLevel").default("Day").doc("Types and picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for every other value."),
                     prop("format", "String")
-                        .default("(DateDefaults::format)(level)")
-                        .doc("How the text shows the value, in dayjs tokens, at the field's level. Defaults to `(DateDefaults::format)(level)`: `MMMM D, YYYY`, `MMMM YYYY`, `YYYY` in English. Typing is lenient either way: only the order of day, month and year has to match."),
-                    prop("time_format", "String").default("DateDefaults::time_format").doc("How the text shows a time."),
+                        .default("(DateLocale::format)(level)")
+                        .doc("How the text shows the value, in dayjs tokens, at the field's level. Defaults to the localization's `(DateLocale::format)(level)`: `MMMM D, YYYY`, `MMMM YYYY`, `YYYY` in English. Typing is lenient either way: only the order of day, month and year has to match."),
+                    prop("time_format", "String").default("DateLocale::time_format").doc("How the text shows a time."),
                     prop("min", "V::Bound").doc("The earliest value that can be picked or typed. For a range, the earliest end: a `NaiveDate` or `NaiveDateTime`."),
                     prop("max", "V::Bound").doc("The latest value, likewise."),
                     prop("exclude_date", "Callback<NaiveDate, bool>").doc("Days that cannot be picked or typed. Ignored for a time."),
@@ -130,7 +122,7 @@ pub fn DateFieldPage() -> Element {
                     prop("helper", "Caption").doc("Under the control."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state. Text the field cannot accept shows `DateDefaults::invalid_date` instead."),
+                        .doc("Validation state. Text the field cannot accept shows `DateLocale::invalid_date` instead."),
                     prop("required", "bool").default("false").doc("Adds `required` to the input and an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
@@ -171,13 +163,17 @@ pub fn DateFieldPage() -> Element {
                     "The form gets ISO 8601, whatever the text shows."
                 }
                 Text {
-                    "Names, formats and labels come from a "
-                    Code { source: "DateDefaults" }
-                    " in your theme's "
+                    "Names, formats and labels come from the "
+                    Code { source: "DateLocale" }
+                    " in the "
+                    Code { source: "Localization" }
+                    "'s "
                     Code { source: "date" }
+                    ", given to "
+                    Code { source: "LiberoProvider" }
                     ". The "
                     Code { source: "locale" }
-                    " control prints a German, French or Japanese one to copy; the preview keeps English names and takes only its formats."
+                    " control swaps in a German, French or Japanese one and prints it to copy."
                 }
                 Text {
                     "A typed "
@@ -210,7 +206,10 @@ pub fn DateFieldPage() -> Element {
                 component: "DateField",
                 children_text: "",
                 wrap: Wrap(|values: &DemoValues, source: &str| match locale_of(values) {
-                    Some((name, _)) => format!("use chrono::Weekday;\n\n{}\n\n{source}", constant_source(name)),
+                    Some((name, _)) => format!(
+                        "use chrono::Weekday;\n\n// Given to the root: `LiberoProvider {{ localization: &{name}, .. }}`.\n{}\n\n{source}",
+                        constant_source(name)
+                    ),
                     None => source.to_string(),
                 }),
                 controls: {
@@ -236,19 +235,8 @@ pub fn DateFieldPage() -> Element {
                         }),
                         Control::slider("size", SIZES).default("md"),
                         Control::slider("radius", SIZES).default("sm"),
-                        // The preview's theme stays English: only the locale's
-                        // formats reach it, as props.
-                        Control::select("locale", LOCALES).default("en").code(|_, values| {
-                            let Some((_, locale)) = locale_of(values) else { return vec![] };
-                            let mut code = Vec::new();
-                            if values.str("value") != "time" {
-                                code.push(format!("format: {:?}", (locale.format)(level_of(values))));
-                            }
-                            if has_time(values) {
-                                code.push(format!("time_format: {:?}", locale.time_format));
-                            }
-                            code
-                        }),
+                        // Swaps the site's localization, so it adds no prop.
+                        Control::select("locale", LOCALES).default("en").code(|_, _| vec![]),
                         Control::select("format", FORMATS)
                             .default("MMMM D, YYYY")
                             .hidden_when(|values| !matches!(values.str("value").as_str(), "date" | "date-time" | "date-range" | "date-time-range") || locale_of(values).is_some())
@@ -331,12 +319,14 @@ fn DateFieldDemo(values: DemoValues) -> Element {
     let size = values.str("size");
     let radius = values.str("radius");
     let locale = locale_of(&values).map(|(_, locale)| locale);
-    let format = locale.map_or_else(
-        || values.str("format"),
-        |locale| (locale.format)(DateLevel::Day).to_string(),
-    );
-    // A month or year field takes the theme's own format, unless a locale sets one.
-    let level_format = locale.map(|locale| (locale.format)(level_of(&values)).to_string());
+    let localization = use_localization_handle();
+    let site = use_hook(|| localization.get());
+    use_effect(use_reactive!(
+        |locale| localization.set(locale.unwrap_or(site))
+    ));
+    use_drop(move || localization.set(site));
+    // A locale's own formats come through the localization, not as props.
+    let format = locale.is_none().then(|| values.str("format"));
     let variant = values.str("variant");
     let exclude_date = is_on(&values, "exclude_weekends").then(|| Callback::new(is_weekend));
     let close_on_change = is_on(&values, "close_on_change");
@@ -348,7 +338,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
     let required = is_on(&values, "required").then_some(true);
     let disabled = is_on(&values, "disabled").then_some(true);
     let time_format = match locale {
-        Some(locale) => Some(locale.time_format.to_string()),
+        Some(_) => None,
         None => Some(values.str("time_format")).filter(|format| format != "default"),
     };
     let columns = values.str("columns").parse::<usize>().ok();
@@ -368,7 +358,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
             rsx! {
                 DateField {
                     value: month(), onchange: move |next| month.set(next), level: DateLevel::Month,
-                    min: min_day, max: max_day, format: level_format, today, close_on_change,
+                    min: min_day, max: max_day, today, close_on_change,
                     validate: rules(validate),
                     size, radius, label, description, helper, placeholder, status, required, disabled,
                 }
@@ -379,7 +369,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
             rsx! {
                 DateField {
                     value: year(), onchange: move |next| year.set(next), level: DateLevel::Year,
-                    min: min_day, max: max_day, format: level_format, today, close_on_change,
+                    min: min_day, max: max_day, today, close_on_change,
                     validate: rules(validate),
                     size, radius, label, description, helper, placeholder, status, required, disabled,
                 }
