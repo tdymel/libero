@@ -101,6 +101,7 @@ mod text_field;
 mod time_picker;
 mod timeline;
 mod tooltip;
+mod trailing_button;
 mod tree;
 mod typography;
 
@@ -188,6 +189,7 @@ const FIXTURES: &[Routes] = &[
     time_picker::ROUTES,
     timeline::ROUTES,
     tooltip::ROUTES,
+    trailing_button::ROUTES,
     tree::ROUTES,
     typography::ROUTES,
 ];
