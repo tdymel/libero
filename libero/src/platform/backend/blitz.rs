@@ -1332,12 +1332,14 @@ impl ElementApi for BlitzElement {
         })
     }
 
+    /// Taffy's `scroll_width` is the overflow, the furthest offset, not the
+    /// content's size: the box's own size is added back (todo 652).
     fn scroll_size(&self) -> Read<Dimensions> {
         self.read(|doc, node_id| {
             let layout = doc.get_node(node_id)?.final_layout();
             Some(Dimensions {
-                width: layout.scroll_width() as f64,
-                height: layout.scroll_height() as f64,
+                width: (layout.size.width + layout.scroll_width()) as f64,
+                height: (layout.size.height + layout.scroll_height()) as f64,
             })
         })
     }

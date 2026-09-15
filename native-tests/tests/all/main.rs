@@ -34,6 +34,7 @@ mod popover;
 mod range_slider;
 mod scroll;
 mod scroll_area;
+mod scroll_size;
 mod segmented_control;
 mod select;
 mod slider;

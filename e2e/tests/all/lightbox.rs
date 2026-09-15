@@ -426,6 +426,70 @@ async fn zoomed_resize(page: &Page) -> Result<()> {
     Ok(())
 }
 
+/// Todo 652: the picture showing sits in the middle of the viewport, on both
+/// axes, at every viewport. The dialog, its frame and the drawn picture are
+/// all measured, so a failure says which of them is off.
+#[test]
+fn the_current_picture_is_centred_in_the_viewport() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/lightbox", viewport).await.unwrap();
+            centred(&fixture.page)
+                .await
+                .unwrap_or_else(|e| panic!("at {}: {e}", viewport.name()));
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// Centre offsets from the viewport's, `[x, y]`, of the dialog, the frame and
+/// the picture as `object-fit` draws it.
+const CENTRES_JS: &str = r#"(() => {
+    const dialog = document.querySelector('[role=dialog]');
+    const frame = dialog.querySelector('[data-lightbox-frame] img[tabindex="0"]').parentElement;
+    const img = frame.querySelector('img');
+    const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+    const off = r => [r.left + r.width / 2 - vw / 2, r.top + r.height / 2 - vh / 2];
+    const f = frame.getBoundingClientRect(), i = img.getBoundingClientRect();
+    const r = Math.min(i.width / img.naturalWidth, i.height / img.naturalHeight, 1);
+    const w = img.naturalWidth * r, h = img.naturalHeight * r;
+    const drawn = { left: i.left + (i.width - w) / 2, top: i.top + (i.height - h) / 2, width: w, height: h };
+    return [off(dialog.getBoundingClientRect()), off(f), off(drawn)].map(p => p.map(Math.round));
+})()"#;
+
+async fn centred(page: &Page) -> Result<()> {
+    motion::set_reduced_motion(page, true).await?;
+    keyboard::tab_to(page, TRIGGER, 5).await?;
+    keyboard::press(page, keyboard::ENTER).await?;
+    wait::for_visible(page, DIALOG).await?;
+    wait_showing(page, 0).await?;
+    wait::for_js_true(
+        page,
+        "document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img')?.naturalWidth > 0",
+        "the first picture to decode",
+    )
+    .await?;
+    assert_centred(page, 0).await?;
+    keyboard::tab_to(page, PICTURE, 12).await?;
+    keyboard::press(page, keyboard::ARROW_RIGHT).await?;
+    wait_showing(page, 1).await?;
+    assert_centred(page, 1).await?;
+    keyboard::press(page, keyboard::END).await?;
+    wait_showing(page, 5).await?;
+    assert_centred(page, 5).await
+}
+
+async fn assert_centred(page: &Page, index: usize) -> Result<()> {
+    let [dialog, frame, picture]: [[f64; 2]; 3] = page.evaluate(CENTRES_JS).await?.into_value()?;
+    // The frame is below the close button, so only its width is centred.
+    if dialog.iter().any(|d| d.abs() > 1.0) || frame[0].abs() > 1.0 || picture[0].abs() > 1.0 {
+        bail!(
+            "picture {index} off the viewport's centre by [x, y]: dialog {dialog:?}, frame {frame:?}, picture {picture:?}"
+        );
+    }
+    Ok(())
+}
+
 /// Todo 323. Open on the last picture (index 5), then swap in a second
 /// gallery at index 2 while the viewer is open. The strip has to jump: every
 /// scroll the stage reports after the swap is already at the new offset. A

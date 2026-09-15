@@ -16,25 +16,26 @@ width from the dialog scale (`md` is 510px).
 
 ## Usage
 
-`Dialog` does no positioning of its own. Rendered inline like this it still
-carries the centering `margin` it wants inside a modal, so the example zeroes it
-out.
+`Dialog` does no positioning of its own. Rendered inline like this, its close
+button calls `onclose`, so the example owns the open state.
 
 ```rust
 use dioxus::prelude::*;
-use libero::{
-    components::{Dialog, Text, Title},
-    sx::sx,
-};
+use libero::components::{Button, Dialog, Text};
 
 #[component]
 fn Demo() -> Element {
+    let mut open = use_signal(|| true);
+
     rsx! {
-        Dialog {
-            aria_label: "Dialog surface",
-            sx: sx().margin("0"),
-            Title { size: "lg", "Dialog surface" }
-            Text { "Dialog rendered inline, without a modal's portal and backdrop." }
+        if open() {
+            Dialog {
+                title: "Unsaved changes",
+                onclose: move |_| open.set(false),
+                Text { "notes.md has changes you have not saved." }
+            }
+        } else {
+            Button { variant: "outlined", onclick: move |_| open.set(true), "Reopen" }
         }
     }
 }

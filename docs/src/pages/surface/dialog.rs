@@ -1,16 +1,49 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
-use libero::{
-    components::{Code, Dialog, Text, Title},
-    sx::sx,
-};
+use libero::components::{Button, Code, Dialog, Text};
 
-const CONTENT: &str = r#"Title { size: "lg", component: "h2", "Dialog surface" }
-Text { "Dialog rendered inline, without a modal's portal and backdrop." }"#;
+const CONTENT: &str = r#"Text { "notes.md has changes you have not saved." }"#;
 
-/// Inline, the surface keeps the centering margin it wants in a modal - and it
-/// names itself, since nothing else here does.
-const FIXED: [&str; 2] = [r#"aria_label: "Dialog surface""#, r#"sx: sx().margin("0")"#];
+/// Outside a modal the close button calls `onclose`, so the snippet owns the
+/// open state and a way back.
+fn wrap_open(values: &DemoValues, code: &str) -> String {
+    if values.str("close_button") != "true" {
+        return code.to_string();
+    }
+    format!(
+        "let mut open = use_signal(|| true);\n\n\
+         rsx! {{\n    \
+             if open() {{\n{}    }} else {{\n        \
+                 Button {{ variant: \"outlined\", onclick: move |_| open.set(true), \"Reopen\" }}\n    \
+             }}\n\
+         }}",
+        indent(&indent(code)),
+    )
+}
+
+/// The open state needs a scope of its own: `Demo` calls its `render` closure
+/// from its own.
+#[component]
+fn DialogDemo(titled: bool, close_button: bool, size: String, radius: String) -> Element {
+    let mut open = use_signal(|| true);
+
+    // Without the button the snippet has no open state, so nor does this.
+    if close_button && !open() {
+        return rsx! {
+            Button { variant: "outlined", onclick: move |_| open.set(true), "Reopen" }
+        };
+    }
+    rsx! {
+        Dialog {
+            title: titled.then(|| "Unsaved changes".to_string()),
+            aria_label: (!titled).then(|| "Unsaved changes".to_string()),
+            onclose: close_button.then_some(EventHandler::new(move |_| open.set(false))),
+            size,
+            radius,
+            Text { "notes.md has changes you have not saved." }
+        }
+    }
+}
 
 #[component]
 pub fn DialogPage() -> Element {
@@ -48,7 +81,7 @@ pub fn DialogPage() -> Element {
                     Code { source: "title" }
                     " and closes itself from its own header button; open one with "
                     Code { source: "use_modal" }
-                    ". Outside a modal the button calls "
+                    ". Outside a modal, as here, the button calls "
                     Code { source: "onclose" }
                     ". "
                     Code { source: "size" }
@@ -59,21 +92,37 @@ pub fn DialogPage() -> Element {
                 component: "Dialog",
                 children_text: "",
                 children_code: CONTENT.to_string(),
-                fixed: FIXED.map(str::to_string).to_vec(),
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl"]).default("md"),
+                    // Unnamed, a dialog is announced as just "dialog": off
+                    // names it through `aria_label` instead.
+                    Control::switch("title")
+                        .default("true")
+                        .code(|_, values| match values.str("title").as_str() {
+                            "true" => vec![r#"title: "Unsaved changes""#.to_string()],
+                            _ => vec![r#"aria_label: "Unsaved changes""#.to_string()],
+                        }),
+                    // On by default once `onclose` is set, so that is the line.
+                    Control::switch("close_button")
+                        .default("true")
+                        .code(|_, values| match values.str("close_button").as_str() {
+                            "true" => vec!["onclose: move |_| open.set(false)".to_string()],
+                            _ => vec![],
+                        }),
                 ],
                 render: move |values: DemoValues| rsx! {
-                    Dialog {
-                        aria_label: "Dialog surface",
+                    DialogDemo {
+                        titled: values.str("title") == "true",
+                        close_button: values.str("close_button") == "true",
                         size: values.str("size"),
                         radius: values.str("radius"),
-                        sx: sx().margin("0"),
-                        Title { size: "lg", component: "h2", "Dialog surface" }
-                        Text { "Dialog rendered inline, without a modal's portal and backdrop." }
                     }
                 },
+                wrap: Wrap(wrap_open),
+                // The size scale runs to 900px: side by side, every step
+                // from md up is the pane's width.
+                wide_preview: true,
             }
         }
     }
