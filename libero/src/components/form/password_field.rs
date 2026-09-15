@@ -4,7 +4,7 @@ use crate::{
     components::{
         ActionIcon, Input,
         common::{EyeIcon, EyeOffIcon, field_props},
-        form::{Disabled, TextField},
+        form::{Disabled, FormScope, TextField},
     },
     hooks::use_theme,
     sx::ThemeAwareValue,
@@ -53,10 +53,16 @@ field_props! {
 /// narrower contract. Everything `TextField` grows, this grows too.
 ///
 /// Reveal state is the component's own: a password that starts visible is not
-/// a state a caller should be able to ask for.
+/// a state a caller should be able to ask for. A submit or a reset of the
+/// surrounding `Form` hides the secret again.
 #[component]
 pub fn PasswordField(props: PasswordFieldProps) -> Element {
-    let mut revealed = use_signal(|| false);
+    // Revealed at a count of the form's submits and resets, so the next one
+    // hides the secret again (todo 497).
+    let form = try_use_context::<FormScope>();
+    let settled = form.map_or(0, |form| form.settled());
+    let mut revealed_at = use_signal(|| None::<u32>);
+    let revealed = move || revealed_at() == Some(settled);
     let theme = use_theme();
     let reveal_button = props
         .reveal_button
@@ -110,7 +116,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
                     aria_label,
                     size,
                     disabled,
-                    onclick: move |_| revealed.toggle(),
+                    onclick: move |_| revealed_at.set((!revealed()).then_some(settled)),
                     if revealed() {
                         EyeOffIcon {}
                     } else {

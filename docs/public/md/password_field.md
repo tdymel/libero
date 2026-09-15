@@ -72,6 +72,10 @@ be localised from the outside otherwise.
 
 The button is disabled with the field, so a disabled password cannot be read.
 
+Every submit and every reset of the surrounding `Form` hides the secret again -
+a native reset button included - so a revealed password does not stay on screen
+after the form is sent. A plain `form {}` element does not reach the field.
+
 ## Accessibility
 
 Leave `label` unset only when something else already names the field.

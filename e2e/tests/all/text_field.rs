@@ -95,6 +95,47 @@ fn the_reveal_button_toggles_by_keyboard() {
     });
 }
 
+/// A submit and a reset of the `Form` each hide a revealed secret again.
+#[test]
+fn a_submit_or_a_reset_hides_the_secret_again() {
+    block_on(async {
+        let fixture = Fixture::open("/text-field/form", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let case = "[data-case=password-form]";
+        let input = format!("{case} input");
+        let reveal = format!("{case} [data-slot=trailing] button");
+
+        keyboard::tab_to(page, &reveal, 32).await.unwrap();
+        for trigger in ["[type=submit]", "[type=reset]"] {
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            secret_type(page, &input, "text").await.unwrap();
+            let target = format!("{case} {trigger}");
+            keyboard::tab_to(page, &target, 4).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            secret_type(page, &input, "password").await.unwrap();
+            // Back from the submit button to the reveal button.
+            keyboard::press_shift(page, keyboard::TAB).await.unwrap();
+        }
+
+        fixture
+            .console
+            .assert_clean("hiding a password on submit and reset")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn secret_type(page: &Page, input: &str, kind: &str) -> Result<()> {
+    wait::for_js_true(
+        page,
+        &format!("document.querySelector({input:?}).type === {kind:?}"),
+        &format!("{input} type={kind}"),
+    )
+    .await
+}
+
 /// `aria-invalid` is set exactly when `description` names an error, and the
 /// description reads `description`.
 async fn invalid(page: &Page, selector: &str, description: &str) -> Result<()> {

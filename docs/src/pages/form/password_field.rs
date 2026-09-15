@@ -64,7 +64,10 @@ pub fn PasswordFieldPage() -> Element {
                     Code { source: "text" }
                     ", with the reveal toggle in its trailing slot. It takes the same slots "
                     "every field has, and the reveal state is its own - a password that starts "
-                    "visible is not a state a caller should be able to ask for."
+                    "visible is not a state a caller should be able to ask for. Every submit "
+                    "and every reset of the surrounding "
+                    Code { source: "Form" }
+                    " hides the secret again."
                 }
             },
             // snippet: let mut value = use_signal(String::new);

@@ -23,6 +23,8 @@ pub(crate) struct FormScope {
     /// Bumped by a reset. A field keeps its touched flag to itself, so it
     /// compares this on render and drops the flag when it moved.
     generation: Signal<u32>,
+    /// Bumped by every submit and every reset, not only the first submit.
+    settled: Signal<u32>,
     next_key: Signal<usize>,
     /// The scope that created the signals above. Cleanup runs inside it: a
     /// field or fieldset drops while dioxus diffs whatever unmounts the page,
@@ -68,6 +70,7 @@ impl FormScope {
             touched: Signal::new(BTreeSet::new()),
             submitted: Signal::new(false),
             generation: Signal::new(0),
+            settled: Signal::new(0),
             next_key: Signal::new(0),
             owner: current_scope_id(),
         }
@@ -100,9 +103,21 @@ impl FormScope {
         *self.generation.peek()
     }
 
+    /// How many submits and resets the form has seen. Reactive, so what a
+    /// field shows only while it is edited - a revealed password - can end.
+    pub fn settled(&self) -> u32 {
+        (self.settled)()
+    }
+
+    /// Counts a submit or a reset - see [`settled`](Self::settled).
+    pub fn settle(&mut self) {
+        self.settled += 1;
+    }
+
     /// Back to pristine: nothing touched, not submitted, and every registered
     /// field re-rendered so it drops its own touched flag.
     pub fn reset(&mut self) {
+        self.settle();
         if !self.touched.peek().is_empty() {
             self.touched.write().clear();
         }

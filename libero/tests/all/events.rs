@@ -36,6 +36,8 @@ struct FindClickListener {
     mousedown: Vec<ElementId>,
     blur: Vec<ElementId>,
     transitionend: Vec<ElementId>,
+    submit: Option<ElementId>,
+    reset: Option<ElementId>,
     /// A field frame: its padding-press listeners act only on the web.
     frame: Option<ElementId>,
 }
@@ -73,6 +75,12 @@ impl WriteMutations for FindClickListener {
         }
         if name == "transitionend" {
             self.transitionend.extend(self.last);
+        }
+        if name == "submit" {
+            self.submit = self.last;
+        }
+        if name == "reset" {
+            self.reset = self.last;
         }
     }
     fn child(&mut self, _index: usize) {}
@@ -846,6 +854,35 @@ fn clicking_the_reveal_button_toggles_the_password() {
             .handle_event("click", Event::new(click_event(), true), reveal);
         dom.render_immediate(&mut dioxus::core::NoOpMutations);
         assert_eq!(state(&dom), (expected.0.into(), expected.1.into()));
+    }
+}
+
+/// Every submit and every reset of the form hides a revealed secret again.
+#[test]
+fn a_submit_or_a_reset_hides_the_revealed_password() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { Form::<()> { PasswordField { label: "Password" } } } }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let reveal = find.click.expect("registered no click listener");
+    let submit = find.submit.expect("registered no submit listener");
+    let reset = find.reset.expect("registered no reset listener");
+    let kind = |dom: &VirtualDom| attributes_of(&dioxus_ssr::render(dom), "input")["type"].clone();
+
+    // Twice through: the second submit hides it as the first did.
+    for (name, target) in [("submit", submit), ("submit", submit), ("reset", reset)] {
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), reveal);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        assert_eq!(kind(&dom), "text", "revealed before the {name}");
+        dom.runtime()
+            .handle_event(name, Event::new(input_event(""), true), target);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        assert_eq!(kind(&dom), "password", "hidden by the {name}");
     }
 }
 

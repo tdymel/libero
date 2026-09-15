@@ -136,6 +136,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .any(|attribute| attribute.name == "action");
     let onsubmit = props.onsubmit;
     let submit = use_callback(move |event: FormEvent| {
+        scope.settle();
         if !handle.validate() {
             event.prevent_default();
             return;
@@ -242,6 +243,8 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .element(&form_element)
         .attr("novalidate", true)
         .event("onsubmit", move |event: FormEvent| submit.call(event))
+        // A native reset button resets no state of ours, but ends a reveal.
+        .event("onreset", move |_: FormEvent| scope.settle())
         .event("onclick", submit_click)
         .event("onkeydown", implicit_submit)
         .render(HtmlTag::Form, props.attributes, children)

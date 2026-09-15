@@ -3,11 +3,16 @@
 //! `data-case`.
 
 use dioxus::prelude::*;
-use libero::components::{Fieldset, Flex, PasswordField, Rule, TextField, Textarea, not_empty};
+use libero::components::{
+    Fieldset, Flex, Form, PasswordField, Rule, TextField, Textarea, not_empty,
+};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/text-field", || rsx! { TextFieldPage {} })];
+pub const ROUTES: Routes = &[
+    ("/text-field", || rsx! { TextFieldPage {} }),
+    ("/text-field/form", || rsx! { PasswordFormPage {} }),
+];
 
 #[component]
 fn TextFieldPage() -> Element {
@@ -58,6 +63,20 @@ fn TextFieldPage() -> Element {
                     required: true,
                     validate: not_empty.error("Bio needed"),
                 }
+            }
+        }
+    }
+}
+
+/// On a page of its own: the other cases walk the whole tab cycle.
+#[component]
+fn PasswordFormPage() -> Element {
+    rsx! {
+        div { "data-case": "password-form",
+            Form::<()> {
+                PasswordField { label: "Secret" }
+                button { r#type: "submit", "Send" }
+                button { r#type: "reset", "Clear" }
             }
         }
     }
