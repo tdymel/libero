@@ -22,7 +22,7 @@ position, so snapping between them stays legible.
 | `open` | `bool` | unset | `true` draws the X, and either value emits `aria-expanded`, which makes the button a disclosure. Omit it for a burger that opens something that is not one |
 | `onclick` | `EventHandler<MouseEvent>` | | `Burger` never owns the open state |
 | `label` | `Callback<bool, String>` | theme | Replaces the theme's two labels, keyed by `open` |
-| `size` | `ThemeAwareValue` | `md` | The glyph's width and height; the bars are a twelfth of it thick, and the button is one `spacing.xs` larger |
+| `size` | `ThemeAwareValue` | `md` | The glyph's width and height; the bars are a twelfth of it thick, and the button is one `spacing.xs` larger. Below 24px (`xs`, `sm`) it takes presses in an invisible 24x24 box, as every `ActionIcon` does |
 | `color` | `ThemeAwareValue` | `currentColor` | The bars. Unset they inherit |
 | `disabled` | `bool` | `false` | Passed through to the button |
 

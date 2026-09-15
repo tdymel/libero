@@ -80,8 +80,8 @@ pub use text_field::{TextField, TextFieldProps};
 pub use textarea::{Textarea, TextareaProps};
 pub(crate) use use_field::{Activation, PreparedField, Setter, use_bound, use_field};
 pub(crate) use use_field_frame::{
-    FIELD_CONTROL_SX, LiveControl, LiveSlot, PreparedFrame, field_control_sx, use_field_frame,
-    use_live_slot,
+    FIELD_CONTROL_SX, LiveControl, LiveSlot, PreparedFrame, field_control_sx, slot_icon_size,
+    use_field_frame, use_live_slot,
 };
 pub(crate) use validation::{
     Binding, Disabled, FieldEntry, FormScope, Source, SummaryItem, issues_of,

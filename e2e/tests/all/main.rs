@@ -36,6 +36,7 @@ mod focus_trap;
 mod form;
 mod grid_zone;
 mod header;
+mod hit_area;
 mod hover_card;
 mod icon;
 mod image;

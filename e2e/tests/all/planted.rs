@@ -980,15 +980,14 @@ fn a_floating_window_that_ignores_home_on_its_separator_never_reaches_the_minimu
     });
 }
 
-/// `FloatingWindow`'s close button crammed against the move handle.
+/// `FloatingWindow`'s close button crammed against the move handle, with its
+/// 24x24 hit area stripped.
 ///
-/// It is 20x20 - an `ActionIcon` at `size: "sm"` - so it is under WCAG 2.5.8's
-/// 24x24 outright and `floating_window::it_meets_the_baseline` declares it with
-/// `targets_spaced`. A spacing exception is silently green on a target with no
-/// neighbours in reach, so the declaration is only worth having once something
-/// has watched it fail on **this** component (todo 377). The plant takes the
-/// title bar's gap away and shrinks the move handle from `flex: 1` to a strip,
-/// which brings the two centres inside the 24px circle.
+/// Drawn 20x20, the close button meets WCAG 2.5.8 through its invisible 24x24
+/// press box (todos 505, 566). Without that box it would lean on the spacing
+/// exception, which is silently green on a target with no neighbours in reach
+/// (todo 377). The plant strips the box, takes the gap away and shrinks the
+/// move handle to a strip, bringing the two centres inside the 24px circle.
 #[test]
 fn a_floating_windows_crammed_title_bar_fails_the_spacing_exception() {
     block_on(async {
@@ -996,6 +995,7 @@ fn a_floating_windows_crammed_title_bar_fails_the_spacing_exception() {
             "/floating-window",
             Some(&stylesheet(
                 "[data-window-title-bar] { gap: 0 !important; } \
+                 [data-window-title-bar] button::before { content: none !important; } \
                  [data-window-handle] { flex: 0 0 8px !important; min-width: 0 !important; }",
             )),
             "spacing exception fails",

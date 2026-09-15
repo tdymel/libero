@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     hooks::{LocalState, use_local_state},
     sx::{REDUCED_MOTION, Sx, sx},
-    theme::{CssVar, RIPPLE_ANIMATION, RIPPLE_STATE},
+    theme::{CssVar, RIPPLE_ANIMATION, RIPPLE_CLIP_ANIMATION, RIPPLE_STATE},
 };
 
 const RIPPLE_X_VAR: CssVar = CssVar::new("--lsx-ripple-x");
@@ -85,39 +85,74 @@ pub(crate) fn ripple_sx(base: Sx) -> Sx {
                 .transform("translate(-50%, -50%) scale(0)")
                 .pointer_events("none"),
         )
-        .when(
-            RIPPLE_STATE[0],
-            sx().selector("::after", ripple_animation_sx(0)),
+        .and(ripple_states_sx(RIPPLE_ANIMATION))
+}
+
+/// [`ripple_sx`] without `overflow: hidden`: the circle grows as a `clip-path`
+/// inside the box, so a `::before` may reach past it as a hit area.
+pub(crate) fn clipped_ripple_sx(base: Sx) -> Sx {
+    base.position("relative")
+        .selector(
+            "::after",
+            sx().content("\"\"")
+                .position("absolute")
+                .inset("0")
+                .border_radius("inherit")
+                .background("currentColor")
+                .opacity("0")
+                .pointer_events("none"),
         )
-        .when(
-            RIPPLE_STATE[1],
-            sx().selector("::after", ripple_animation_sx(1)),
-        )
+        .and(ripple_states_sx(RIPPLE_CLIP_ANIMATION))
+}
+
+fn ripple_states_sx(names: [&str; 2]) -> Sx {
+    sx().when(
+        RIPPLE_STATE[0],
+        sx().selector("::after", ripple_animation_sx(names[0])),
+    )
+    .when(
+        RIPPLE_STATE[1],
+        sx().selector("::after", ripple_animation_sx(names[1])),
+    )
 }
 
 /// No ripple at all under reduced motion: it is decoration, the click does
 /// the same without it.
-fn ripple_animation_sx(which: usize) -> Sx {
-    sx().animation(format!(
-        "{} 550ms ease-out forwards",
-        RIPPLE_ANIMATION[which]
-    ))
-    .media(REDUCED_MOTION, sx().animation("none"))
+fn ripple_animation_sx(name: &str) -> Sx {
+    sx().animation(format!("{name} 550ms ease-out forwards"))
+        .media(REDUCED_MOTION, sx().animation("none"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::css::Stylesheet;
+    use crate::theme::RIPPLE_KEYFRAMES;
 
     /// Both animation names have to stop, or the second click replays one.
     #[test]
     fn reduced_motion_switches_both_ripples_off() {
-        let css = Stylesheet::from(&ripple_sx(sx()));
+        for (base, names) in [
+            (ripple_sx(sx()), RIPPLE_ANIMATION),
+            (clipped_ripple_sx(sx()), RIPPLE_CLIP_ANIMATION),
+        ] {
+            assert_both_stop(&Stylesheet::from(&base), names);
+        }
+    }
+
+    /// Nothing clips the host, so a `::before` hit area reaches past it.
+    #[test]
+    fn the_clipped_ripple_leaves_the_host_unclipped() {
+        let css = Stylesheet::from(&clipped_ripple_sx(sx()));
+        assert!(!css.as_str().contains("overflow"), "{}", css.as_str());
+        assert!(RIPPLE_KEYFRAMES.contains("@keyframes lsx-ripple-clip-a{"));
+    }
+
+    fn assert_both_stop(css: &Stylesheet, names: [&str; 2]) {
         let css = css.as_str();
         let reduced = css.find(REDUCED_MOTION).expect("a reduced-motion block");
 
-        for (state, name) in RIPPLE_STATE.iter().zip(RIPPLE_ANIMATION) {
+        for (state, name) in RIPPLE_STATE.iter().zip(names) {
             let running = css.find(name).expect("the ripple animation");
             let stopped = css
                 .find(&format!(

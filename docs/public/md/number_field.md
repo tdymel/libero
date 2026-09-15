@@ -126,7 +126,12 @@ The steppers take their size from the field's, one icon step per two field
 steps. `ActionIcon`'s scale (16, 20, 24, 32, 40, 48px) climbs faster than a
 field's content box (18, 20, 22, 24, 26, 28px), so matching the steps directly
 would put a 24px button in a 22px box at `md` and let the steppers decide the
-field's height.
+field's height. The reveal, clear and eye-dropper buttons of the other fields
+take the same step, so fields of one size line up in a row.
+
+Each stepper takes presses in an invisible box 24px wide and tall (WCAG 2.5.8),
+though it is drawn at 16 or 20px. The two boxes meet in the middle of the 2px
+gap, so neither takes the other's presses.
 
 ## Accessibility
 

@@ -87,14 +87,9 @@ fn it_meets_the_baseline() {
         // reporting no contrast violation in the open state and axe never
         // having looked at the window read the same (todo 327).
         .contrast_covers(DIALOG)
-        // Measured 20x20 at both viewports (an `ActionIcon` at `size: "sm"`,
-        // as `Notifications`' close button is). So it is under 2.5.8's 24x24
-        // outright and conforms through the **spacing exception** instead: the
-        // 24px circle on its centre reaches no other target, because the
-        // title bar's move handle is `flex: 1` and its centre is the width of
-        // the title away. `targets` was declared here first and went red
-        // naming the 20x20, which is how the number above was measured.
-        .targets_spaced(CLOSE)
+        // Drawn 20x20 (an `ActionIcon` at `size: "sm"`), it takes presses in
+        // an invisible 24x24 box (todos 505, 566), so it meets 2.5.8 outright.
+        .targets(CLOSE)
         .targets_spaced(SEPARATOR)
         .state(
             "open",

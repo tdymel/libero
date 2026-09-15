@@ -10,7 +10,7 @@ use crate::{
     },
     platform::padding_press,
     sx::{StaticSx, Sx, sx},
-    theme::{FieldDefaults, PaperDefaults, SizeCss},
+    theme::{FieldDefaults, PaperDefaults, Size, SizeCss},
 };
 
 /// The bordered box a control sits in. Shared by every framed field, so the
@@ -70,6 +70,19 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
 
 /// A press on the frame's padding is a press on its control (todo 462).
 const FRAME: &str = "[data-frame]";
+
+/// The `ActionIcon` step for a slot button (stepper, reveal, clear, eye
+/// dropper) in a field of `size`. `ActionIcon`'s scale (16, 20, 24, 32, 40,
+/// 48px) climbs faster than a field's content box (18, 20, 22, 24, 26, 28px):
+/// at `md` an `md` icon is 24px in a 22px box and would grow the frame 2px
+/// (todo 495). Two field steps per icon step fits every step.
+pub(crate) const fn slot_icon_size(size: Size) -> Size {
+    match size {
+        Size::Xs | Size::Sm => Size::Xs,
+        Size::Md | Size::Lg => Size::Sm,
+        Size::Xl | Size::Xxl => Size::Md,
+    }
+}
 
 /// The native control inside the frame, stripped of the chrome that is now the
 /// frame's. Every framed field renders its element with this as its

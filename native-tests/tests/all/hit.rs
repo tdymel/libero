@@ -4,6 +4,7 @@
 //! translated box.
 
 use dioxus::prelude::*;
+use libero::components::ActionIcon;
 use native_tests::mount;
 
 fn app() -> Element {
@@ -34,6 +35,31 @@ fn inline_content_without_padding_around_it_takes_its_hits() {
     for id in ["#margin", "#wrapped", "#flex"] {
         assert!(page.hits(id), "{id} at {:?} takes no hit", page.rect(id));
     }
+}
+
+/// Todos 505, 566: a 20px `ActionIcon`'s `::before` takes presses 11.5px out
+/// from its centre, and none past its 24px box.
+#[test]
+fn a_small_action_icon_takes_presses_in_its_24px_box() {
+    fn icon_app() -> Element {
+        let mut count = use_signal(|| 0);
+        rsx! {
+            div { display: "flex", padding: "20px",
+                ActionIcon { id: "icon", aria_label: "Go", size: "sm", onclick: move |_| count += 1,
+                    svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
+                }
+            }
+            span { id: "count", "{count}" }
+        }
+    }
+    let mut page = mount(icon_app);
+    let (x, y, width, height) = page.rect("#icon");
+    assert_eq!((width, height), (20.0, 20.0));
+    let (cx, cy) = ((x + width / 2.0) as f32, (y + height / 2.0) as f32);
+    for (dx, dy) in [(11.5, 0.0), (0.0, -11.5), (-11.5, 11.5), (13.0, 0.0)] {
+        page.click_at(cx + dx, cy + dy);
+    }
+    assert_eq!(page.text("#count"), "3", "the 24px box or the miss past it");
 }
 
 #[test]

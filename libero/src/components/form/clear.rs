@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{ActionIcon, Input, common::CloseIcon},
+    components::{ActionIcon, Input, common::CloseIcon, form::slot_icon_size},
     hooks::ElementHandle,
     platform::ElementApi,
     sx::ThemeAwareValue,
@@ -23,7 +23,7 @@ pub(crate) fn clear_button(
     target: ElementHandle,
     mut onclear: impl FnMut(MouseEvent) + 'static,
 ) -> Option<Element> {
-    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
+    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(slot_icon_size(size)).into();
     show.then(|| {
         rsx! {
             ActionIcon {

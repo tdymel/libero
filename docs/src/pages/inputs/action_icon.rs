@@ -21,7 +21,7 @@ pub fn ActionIconPage() -> Element {
                     .doc("Accent color; a theme color name or a literal CSS color. Setting it turns on variant styling even if `variant` itself is unset (as `filled`)."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
-                    .doc("Button size, independent of the wrapped icon's own size."),
+                    .doc("Button size, independent of the wrapped icon's own size. Below 24px it still takes presses in an invisible 24x24 box."),
                 prop("radius", "ThemeAwareValue")
                     .default("sm")
                     .doc("Corner radius, independent of size."),

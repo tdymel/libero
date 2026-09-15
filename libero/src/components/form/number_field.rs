@@ -6,7 +6,9 @@ use crate::{
     components::{
         ActionIcon, HtmlTag, Input, NumberValue,
         common::{MinusIcon, PlusIcon, field_props, navigation_chord},
-        form::{FIELD_CONTROL_SX, LiveControl, use_bound, use_field, use_field_frame},
+        form::{
+            FIELD_CONTROL_SX, LiveControl, slot_icon_size, use_bound, use_field, use_field_frame,
+        },
         layout::use_box,
     },
     hooks::use_theme,
@@ -22,18 +24,12 @@ use crate::{
 static STEPPERS_SX: StaticSx =
     StaticSx::new(|| sx().display("flex").align_items("center").gap("2px"));
 
-/// The icon step a stepper takes for a field step. `ActionIcon`'s own scale
-/// (16, 20, 24, 32, 40, 48px) climbs faster than a field's content box
-/// (18, 20, 22, 24, 26, 28px), so the two cannot be the same step: at `md` an
-/// `md` icon is 24px in a 22px box and the steppers would set the field's
-/// height. Two field steps per icon step fits every step with room to spare.
-const fn stepper_size(size: Size) -> Size {
-    match size {
-        Size::Xs | Size::Sm => Size::Xs,
-        Size::Md | Size::Lg => Size::Sm,
-        Size::Xl | Size::Xxl => Size::Md,
-    }
-}
+/// Each stepper's 24px hit area stops at the middle of the 2px gap, so the two
+/// meet instead of overlapping; the spare width goes outwards.
+static DECREMENT_SX: StaticSx =
+    StaticSx::new(|| sx().selector("::before", sx().left("calc(100% - 23px)").right("-1px")));
+static INCREMENT_SX: StaticSx =
+    StaticSx::new(|| sx().selector("::before", sx().left("-1px").right("calc(100% - 23px)")));
 
 field_props! {
     extends(input);
@@ -356,7 +352,8 @@ fn Steppers(
         rsx! {
             ActionIcon {
                 aria_label: decrement_label.unwrap_or_else(|| "Decrease".to_string()),
-                size: ThemeAwareValue::Size(stepper_size(size)),
+                size: ThemeAwareValue::Size(slot_icon_size(size)),
+                sx: &DECREMENT_SX,
                 // Not a tab stop: the field is, and the arrow keys do the same
                 // job from there.
                 tabindex: "-1",
@@ -366,7 +363,8 @@ fn Steppers(
             }
             ActionIcon {
                 aria_label: increment_label.unwrap_or_else(|| "Increase".to_string()),
-                size: ThemeAwareValue::Size(stepper_size(size)),
+                size: ThemeAwareValue::Size(slot_icon_size(size)),
+                sx: &INCREMENT_SX,
                 tabindex: "-1",
                 disabled,
                 onclick: move |_| nudge.call(1),

@@ -5,7 +5,7 @@ use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
-/// The 16px and 20px sizes pass 2.5.8 through the spacing exception only.
+/// The 16px and 20px sizes take presses in an invisible 24x24 box.
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("action_icon", "/action-icon")
@@ -14,8 +14,8 @@ fn it_meets_the_baseline() {
         .focusable("#loading")
         .targets("#plain")
         .targets("#toggle")
-        .targets_spaced("#sm")
-        .targets_spaced("#xs")
+        .targets("#sm")
+        .targets("#xs")
         .run();
 }
 

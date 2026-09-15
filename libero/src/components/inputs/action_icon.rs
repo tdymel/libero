@@ -14,7 +14,7 @@ use crate::{
         navigation::InternalAnchor,
         variables,
     },
-    hooks::{ripple_sx, use_ripple, use_theme},
+    hooks::{clipped_ripple_sx, use_ripple, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, CssVar, ICON_SIZE, LOADER_SIZE, SizeCss},
     utils::warn,
@@ -28,6 +28,9 @@ const ACTION_ICON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-contain
 const ACTION_ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-on-container");
 const ACTION_ICON_SELECTED_VAR: CssVar = CssVar::new("--lsx-action-icon-selected");
 const ACTION_ICON_ON_STATE_VAR: CssVar = CssVar::new("--lsx-action-icon-on-state");
+
+/// Half the shortfall below 24px, out on each side of the box; `0` from 24px up.
+const HIT_AREA_INSET: &str = "min(0px, calc((100% - 24px) / 2))";
 
 const ACTION_ICON_VARS: VariantVars<'static> = VariantVars {
     color: &ACTION_ICON_COLOR_VAR,
@@ -46,7 +49,7 @@ const ACTION_ICON_VARS: VariantVars<'static> = VariantVars {
 // means a plain declaration here would beat a `:hover` rule from their
 // lower-priority `sx`.
 static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
-    let base = ripple_sx(sx())
+    let base = clipped_ripple_sx(sx())
         .display("inline-flex")
         .align_items("center")
         .justify_content("center")
@@ -62,6 +65,14 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .height(ACTION_ICON_SIZE.overridable())
         .border_radius(ACTION_ICON_RADIUS.overridable())
         .selector("& svg", sx().width("100%").height("100%"))
+        // WCAG 2.5.8: an invisible 24x24 press target round a smaller icon,
+        // the drawn box unchanged (todos 505, 566). Nothing at 24px and up.
+        .selector(
+            "::before",
+            sx().content("\"\"")
+                .position("absolute")
+                .inset(HIT_AREA_INSET),
+        )
         // A chromeless toggle's only pressed look; a variant's own block below
         // repeats it over its fill.
         .when("checked", on_state_sx(None).focus_visible(focus_ring_sx()));
@@ -173,9 +184,9 @@ base_props! {
         variant: Input<Variant>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// `"sm"` is 20x20 and `"xs"` 16x16: they meet WCAG 2.5.8 only through the
-        /// spacing exception, so keep 2px (`sm`) or 4px (`xs`) clear of any other
-        /// target, and twice that between two of them.
+        /// `"sm"` is 20x20 and `"xs"` 16x16. Below 24px the button takes presses
+        /// in an invisible 24x24 box centred on it (WCAG 2.5.8), so keep 2px
+        /// (`sm`) or 4px (`xs`) clear of any other target.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         #[props(default, into)]

@@ -4,7 +4,7 @@ use crate::{
     components::{
         ActionIcon, Input,
         common::{EyeIcon, EyeOffIcon, field_props},
-        form::{Disabled, FormScope, TextField},
+        form::{Disabled, FormScope, TextField, slot_icon_size},
     },
     hooks::use_theme,
     sx::ThemeAwareValue,
@@ -86,9 +86,9 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
         true => shown_label,
         false => hidden_label,
     };
-    // The field's own size, theme default included, as the clear button takes it.
+    // Sized off the field's own size, theme default included, as the clear button is.
     let size: Input<ThemeAwareValue> =
-        ThemeAwareValue::Size(props.size.copied_or(theme.text_field.size)).into();
+        ThemeAwareValue::Size(slot_icon_size(props.size.copied_or(theme.text_field.size))).into();
 
     rsx! {
         TextField {

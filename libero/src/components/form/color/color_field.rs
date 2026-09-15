@@ -5,7 +5,10 @@ use crate::{
     components::{
         ActionIcon, FOCUSABLE_SELECTOR, HtmlTag, Input, States,
         common::{EyeDropperIcon, NavigationChord, field_props, navigation_chord},
-        form::{FIELD_CONTROL_SX, SliderChangeEvent, use_bound, use_field, use_field_frame},
+        form::{
+            FIELD_CONTROL_SX, SliderChangeEvent, slot_icon_size, use_bound, use_field,
+            use_field_frame,
+        },
         layout::use_box,
         surface::paper_sx,
     },
@@ -195,7 +198,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         }
     });
 
-    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
+    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(slot_icon_size(size)).into();
     let trailing = (with_eye_dropper && has_eye_dropper() && !disabled && !readonly).then(|| {
         rsx! {
             ActionIcon {

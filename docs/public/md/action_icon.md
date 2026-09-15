@@ -86,13 +86,18 @@ fn Demo() -> Element {
 
 `aria_label` is a required prop, because the button's only content is an `svg`.
 
+Below 24px (`xs` is 16px, `sm` 20px) the button takes presses in an invisible
+24x24 box centred on it (WCAG 2.5.8), while it is drawn at its own size. That
+box reaches 2px (`sm`) or 4px (`xs`) past each edge. Keep other targets at
+least that far away, or the one drawn later takes the overlap.
+
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `variant` | `Variant` | - | Chrome, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color. |
 | `color` | `ThemeAwareValue` | - | Accent color; a theme color name or a literal CSS color. Setting it turns on variant styling even if `variant` itself is unset (as `theme.action_icon.variant`, `filled`). |
-| `size` | `ThemeAwareValue` | `md` | Button size, independent of the wrapped icon's own size. |
+| `size` | `ThemeAwareValue` | `md` | Button size, independent of the wrapped icon's own size. Below 24px it still takes presses in an invisible 24x24 box. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of size. |
 | `aria_label` | `String` | required | An icon-only button has no visible text for a screen reader to announce. |
 | `selected` | `bool` | - | Turns the button into a toggle: `aria-pressed`, and the selected look once `variant` or `color` turns the chrome on. Omit to keep it a plain action. |

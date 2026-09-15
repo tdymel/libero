@@ -84,7 +84,7 @@ pub fn BurgerPage() -> Element {
                     .doc("Replaces the theme's two labels, keyed by `open`. It runs during render, so it can read a live locale."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
-                    .doc("The glyph's width and height. The bars are a twelfth of it thick, and the button around it is one `spacing.xs` larger."),
+                    .doc("The glyph's width and height. The bars are a twelfth of it thick, and the button around it is one `spacing.xs` larger. Below 24px it still takes presses in an invisible 24x24 box."),
                 prop("color", "ThemeAwareValue")
                     .default("currentColor")
                     .doc("The bars. Unset they inherit, so styling the button's `color` reaches them."),

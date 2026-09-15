@@ -24,7 +24,7 @@
 //! centre of each undersized target's bounding box, and no circle may touch
 //! another target or another undersized target's circle. That is what
 //! [`assert_sizes_spaced`] computes, and it is the only thing that makes a
-//! `RadioGroup` row or a `Notifications` close button conform. It is not on by
+//! `RadioGroup` row conform. It is not on by
 //! default: a unit opts in with `Suite::targets_spaced`, so the page says which
 //! controls lean on the exception rather than the pass quietly relaxing for
 //! everything.
@@ -95,14 +95,31 @@ pub struct Spaced {
     pub neighbours: Vec<Size>,
 }
 
+/// `box(el)`: `el`'s press target. A positioned, unclipped element's own
+/// `::before` takes its presses too: `ActionIcon`'s invisible 24x24 hit area
+/// round a smaller button (todos 505, 566).
+const PRESS_BOX: &str = r#"const box = el => {
+    const r = el.getBoundingClientRect();
+    let [x0, y0, x1, y1] = [r.x, r.y, r.right, r.bottom];
+    const s = getComputedStyle(el), b = getComputedStyle(el, '::before');
+    if (b.content !== 'none' && b.position === 'absolute' && b.pointerEvents !== 'none'
+        && s.position !== 'static' && s.overflowX === 'visible' && s.overflowY === 'visible') {
+        const px = v => parseFloat(v) || 0;
+        x0 = Math.min(x0, r.x + px(s.borderLeftWidth) + px(b.left));
+        y0 = Math.min(y0, r.y + px(s.borderTopWidth) + px(b.top));
+        x1 = Math.max(x1, r.right - px(s.borderRightWidth) - px(b.right));
+        y1 = Math.max(y1, r.bottom - px(s.borderBottomWidth) - px(b.bottom));
+    }
+    return { width: x1 - x0, height: y1 - y0, x: x0, y: y0 };
+};"#;
+
 /// Measure every element matching `selector`.
 pub async fn measure_all(page: &Page, selector: &str) -> Result<Vec<Size>> {
     let sizes = page
         .evaluate(format!(
-            r#"[...document.querySelectorAll({})].map(el => {{
-                const r = el.getBoundingClientRect();
-                return {{ width: r.width, height: r.height, x: r.x, y: r.y }};
-            }})"#,
+            r#"(() => {{ {PRESS_BOX}
+                return [...document.querySelectorAll({})].map(box);
+            }})()"#,
             serde_json::to_string(selector)?
         ))
         .await?
@@ -114,11 +131,7 @@ pub async fn measure_all(page: &Page, selector: &str) -> Result<Vec<Size>> {
 pub async fn measure_spacing(page: &Page, selector: &str) -> Result<Vec<Spaced>> {
     let measured = page
         .evaluate(format!(
-            r#"(() => {{
-                const box = el => {{
-                    const r = el.getBoundingClientRect();
-                    return {{ width: r.width, height: r.height, x: r.x, y: r.y }};
-                }};
+            r#"(() => {{ {PRESS_BOX}
                 const shown = el => {{
                     const r = el.getBoundingClientRect();
                     if (r.width <= 0 || r.height <= 0) return false;

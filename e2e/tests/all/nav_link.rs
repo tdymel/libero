@@ -94,8 +94,8 @@ fn it_meets_the_baseline() {
         .focusable("#burger")
         .targets("#active")
         .targets("#burger")
-        .targets_spaced("#burger-xs")
-        .targets_spaced("#burger-sm")
+        .targets("#burger-xs")
+        .targets("#burger-sm")
         .tab_budget(20)
         .no_snapshot()
         .run();

@@ -55,16 +55,14 @@ const EXIT_MS: u32 = 200;
 /// polite one in its region and the assertive one in the other. The resting
 /// tree is the empty case, the 18 silent regions with no list in them.
 ///
-/// `targets_spaced`, not `targets`: the close button is 20x20 and meets WCAG
-/// 2.5.8 only through the spacing exception, so what it has to prove is
-/// clearance rather than size (todo 366). It is the press target itself - the
-/// click handler is on that button, and the card around it dismisses nothing -
-/// so its own box is the region a press acts on.
+/// `targets`: the close button is drawn 20x20 but takes presses in a 24x24 box
+/// (todos 505, 566), so it meets WCAG 2.5.8 outright. The click handler is on
+/// that button, and the card around it dismisses nothing.
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("notifications", "/notifications")
         .focusable(TRIGGER)
-        .targets_spaced(CLOSE)
+        .targets(CLOSE)
         .state("polite", &[Step::Click(TRIGGER)], "[aria-live=polite] li")
         .state(
             "assertive",
@@ -385,28 +383,18 @@ fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
 
 /// WCAG 2.5.8 for the close button, with the numbers written down (todo 366).
 ///
-/// The baseline above declares it with `targets_spaced`, which passes it
-/// silently. This is what a reviewer reads instead: the button is under 24px
-/// and conforms only because nothing else comes within reach of the 24px
-/// circle on it. If it ever grows to 24x24 the exception stops mattering and
-/// the declaration should become a plain `targets`.
-///
-/// Measured 2026-09-20, device scale 1: 20x20 at both viewports, with **no**
-/// other target inside the circle's reach - a stacked notification's own close
-/// button is a card's height away. So the clearance here is unforced, and what
-/// the declaration guards is a future layout that crowds it. That the
-/// computation can refuse a real case is proved separately, on two 20x20
-/// buttons edge to edge (`negative.rs`).
+/// Drawn 20x20, it takes presses in an invisible 24x24 box (todos 505, 566),
+/// so the press target measures 24x24 at both viewports and the baseline
+/// declares it with plain `targets`.
 ///
 /// **It asserts the count, not only the verdict.** The defect todo 366 was
 /// filed for was not a wrong measurement, it was no measurement: the unit had
 /// no target selector at all and reported green. A selector that matches
 /// nothing gives that same green, so a rename of `[data-slot=close]` has to
 /// turn this red rather than quietly reduce it to a no-op.
-/// `Suite::targets_spaced` guards the same thing from the other side - it
-/// fails a selector that matched in no state - and this pins the exact count.
+/// This pins the exact count.
 #[test]
-fn its_close_button_is_undersized_and_clears_its_neighbours() {
+fn its_close_button_takes_presses_in_a_24px_box() {
     block_on(async {
         for viewport in Viewport::ALL {
             let fixture = Fixture::open("/notifications", viewport).await.unwrap();
@@ -415,7 +403,7 @@ fn its_close_button_is_undersized_and_clears_its_neighbours() {
             pointer::click(page, TRIGGER).await.unwrap();
             wait::for_visible(page, CLOSE).await.unwrap();
 
-            let measured = target_size::measure_spacing(page, CLOSE).await.unwrap();
+            let measured = target_size::measure_all(page, CLOSE).await.unwrap();
             assert_eq!(
                 measured.len(),
                 1,
@@ -427,16 +415,7 @@ fn its_close_button_is_undersized_and_clears_its_neighbours() {
                 measured.len()
             );
             println!("{}: {measured:?}", viewport.name());
-            assert!(
-                measured[0].target.width < target_size::MINIMUM
-                    || measured[0].target.height < target_size::MINIMUM,
-                "at {}: the close button now measures {}x{}, so it meets 2.5.8 outright and \
-                 the baseline should declare it with `targets` rather than `targets_spaced`",
-                viewport.name(),
-                measured[0].target.width,
-                measured[0].target.height
-            );
-            target_size::assert_sizes_spaced(CLOSE, &measured).unwrap();
+            target_size::assert_sizes(CLOSE, &measured).unwrap();
 
             fixture.close().await.unwrap();
         }
