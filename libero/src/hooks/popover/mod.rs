@@ -17,6 +17,7 @@ use std::{
 use crate::{
     hooks::{
         ElementHandle,
+        dismiss::{DismissHandle, DismissOptions, use_dismiss},
         element::use_element,
         portal::{PortalSlot, use_portal_slot},
     },
@@ -39,6 +40,17 @@ pub struct PopoverHandle {
     /// The collision padding, which the width cap leaves at both edges.
     padding: f64,
     slot: PortalSlot,
+    /// `None` from `use_popover_on`, whose consumers run their own `use_dismiss`.
+    dismiss: Option<PopoverDismiss>,
+}
+
+/// [`PopoverOptions::dismiss`]'s wiring: `use_dismiss` plus the caller's close.
+#[derive(Clone, Copy)]
+struct PopoverDismiss {
+    handle: DismissHandle,
+    onclose: CopyValue<Option<Box<dyn FnMut()>>>,
+    /// Open with `dismiss` on.
+    active: bool,
 }
 
 impl PopoverHandle {
@@ -114,6 +126,40 @@ impl PopoverHandle {
     pub fn show(&self, content: Option<Element>) {
         self.slot.show(content);
     }
+
+    /// What Escape and a press outside call, with
+    /// [`PopoverOptions::dismiss`] on. Call it on every render after
+    /// [`use_popover`]; the latest closure wins.
+    ///
+    /// ```ignore
+    /// popover.on_dismiss(move || opened.set(false));
+    /// ```
+    pub fn on_dismiss(&self, onclose: impl FnMut() + 'static) {
+        if let Some(dismiss) = self.dismiss {
+            let mut slot = dismiss.onclose;
+            slot.set(Some(Box::new(onclose)));
+        }
+    }
+
+    /// Spread on the trigger: the press-outside check, and Escape where the
+    /// document cannot be listened to. Empty unless open with `dismiss` on.
+    pub fn anchor_events(&self) -> Vec<Attribute> {
+        let Some(dismiss) = self.dismiss.filter(|dismiss| dismiss.active) else {
+            return Vec::new();
+        };
+        let mut events = dismiss.handle.anchor_events();
+        events.push(dismiss.handle.focusout_listener());
+        events
+    }
+
+    /// Spread on the box, as [`anchor_events`](Self::anchor_events) on the
+    /// trigger. Empty unless `dismiss` is on.
+    pub fn floating_events(&self) -> Vec<Attribute> {
+        match self.dismiss {
+            Some(dismiss) => dismiss.handle.floating_events(),
+            None => Vec::new(),
+        }
+    }
 }
 
 /// Anchors a portaled box to `anchor`, flipping and shifting it to stay in the
@@ -128,16 +174,60 @@ impl PopoverHandle {
 /// It keeps following even when the anchor leaves the viewport: `place()` flips
 /// and shifts as usual, so the box ends up clamped at the edge rather than
 /// hidden or closed. Closing is the caller's business - this hook owns no open
-/// state.
+/// state. [`PopoverOptions::dismiss`] asks it for Escape and a press outside
+/// (focus leaving the trigger and the box); Escape hands focus to `anchor`.
+///
+/// ```ignore
+/// let popover = use_popover(anchor, opened(), PopoverOptions::new(gap, padding).dismiss(true));
+/// popover.on_dismiss(move || opened.set(false));
+/// // `attributes: popover.anchor_events()` on the trigger,
+/// // `attributes: popover.floating_events()` and `tabindex: "-1"` on the box.
+/// ```
 pub fn use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -> PopoverHandle {
-    use_popover_on(anchor, use_element(), open, options)
+    let mut popover = use_popover_on(anchor, use_element(), open, options);
+
+    let onclose = use_hook(|| CopyValue::new(None::<Box<dyn FnMut()>>));
+    let close = use_callback(move |()| {
+        let mut onclose = onclose;
+        if let Some(close) = onclose.write().as_mut() {
+            close();
+        }
+    });
+    let active = open && options.dismiss;
+    let handle = use_dismiss(
+        anchor,
+        popover.floating,
+        active,
+        popover.placed.peek().is_some(),
+        Some(close),
+        DismissOptions {
+            escape: options.dismiss,
+            outside: options.dismiss,
+            ..Default::default()
+        },
+    );
+    // Focus goes back to the trigger, whatever held it when the box opened.
+    let focus_return = handle.focus_return();
+    use_effect(use_reactive!(|(active,)| {
+        if active {
+            focus_return.remember_element(anchor);
+        }
+    }));
+
+    popover.dismiss = options.dismiss.then_some(PopoverDismiss {
+        handle,
+        onclose,
+        active,
+    });
+    popover
 }
 
 /// [`use_popover`] on a floating handle the caller made, for a box some scope
 /// other than this one has to read. A handle is owned by the scope that made
 /// it, and dioxus warns when a scope that is not its descendant reads it: a
 /// `Menu` level's box is read by every level above it, so the root `Menu`
-/// owns them all.
+/// owns them all. Also the library's own entry: it skips the `dismiss` wiring,
+/// which each consumer does with its own `use_dismiss`.
 pub(crate) fn use_popover_on(
     anchor: ElementHandle,
     floating: ElementHandle,
@@ -254,5 +344,6 @@ pub(crate) fn use_popover_on(
         width: options.width,
         padding: options.padding,
         slot,
+        dismiss: None,
     }
 }

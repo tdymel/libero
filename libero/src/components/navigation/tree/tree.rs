@@ -268,7 +268,9 @@ base_props! {
         /// The id of the node where the user is - a nav's current page. Tab
         /// into the tree lands on it rather than on the first row, until the
         /// arrow keys move on; when it changes, the tab stop follows it. Inside
-        /// a collapsed branch, the tab stop goes to the branch.
+        /// a collapsed branch, the tab stop goes to the branch. Its row carries
+        /// `aria-current="true"`; `Tree` has no selection, every row is
+        /// `aria-selected="false"`.
         #[props(default, into)]
         current: Option<String>,
         /// Notification only - it doesn't drive rendering.
@@ -419,6 +421,10 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     // The first row with that id, as `Tabs` resolves its value to the first
     // tab that matches.
     let active_path = resolved_active
+        .as_deref()
+        .and_then(|id| visible_path(&props.data, &expanded.read(), id));
+    let current_path = props
+        .current
         .as_deref()
         .and_then(|id| visible_path(&props.data, &expanded.read(), id));
 
@@ -575,6 +581,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     depth: 0,
                     expanded,
                     active: child_active(active_path.as_deref(), index),
+                    current: child_active(current_path.as_deref(), index),
                     active_id,
                     render_node: props.render_node.clone(),
                     onexpandedchange: props.onexpandedchange,

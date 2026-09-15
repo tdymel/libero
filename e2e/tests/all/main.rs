@@ -63,6 +63,7 @@ mod phone_field;
 mod picker_dialog;
 mod pin_field;
 mod planted;
+mod popover;
 mod progress_bar;
 mod qr_code;
 mod radio_group;

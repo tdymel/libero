@@ -17,7 +17,8 @@ use crate::{
     },
     hooks::{
         ElementHandle, PopoverHandle, PopoverOptions, PopoverWidth, TYPEAHEAD_RESET, Typeahead,
-        typeahead_match, use_element, use_field_list_layer, use_popover, use_theme, use_typeahead,
+        typeahead_match, use_element, use_field_list_layer, use_popover_on, use_theme,
+        use_typeahead,
     },
     platform::{ElementApi, press_kept_focus},
     str_enum::str_enum,
@@ -1362,8 +1363,9 @@ fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
     // Escape, so a `HoverCard` around this field leaves the press to it.
     use_field_list_layer(opened);
     let anchor = use_element();
-    let popover = use_popover(
+    let popover = use_popover_on(
         anchor,
+        use_element(),
         opened,
         PopoverOptions::new(gap, padding)
             // The columns are the content and are wider than the trigger, so

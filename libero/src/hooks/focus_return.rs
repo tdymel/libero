@@ -74,6 +74,13 @@ impl FocusReturn {
         trigger.set(active.map(Trigger::Active));
     }
 
+    /// Remembers `element` as a snapshot, consumed by the next
+    /// [`restore`](Self::restore) like [`remember_active`](Self::remember_active).
+    pub(crate) fn remember_element(&self, element: ElementHandle) {
+        let mut trigger = self.trigger;
+        trigger.set(Some(Trigger::Active(Rc::new(element))));
+    }
+
     /// Names where focus should land if the trigger is gone by the time the
     /// overlay closes - for a confirm-delete dialog, the list or table the
     /// deleted row lived in.

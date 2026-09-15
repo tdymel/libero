@@ -11,7 +11,7 @@ use crate::{
     },
     hooks::{
         Align, ElementHandle, PopoverOptions, escape_closes, use_element, use_escape_dismiss,
-        use_popover, use_silent_focus_within, use_theme,
+        use_popover_on, use_silent_focus_within, use_theme,
     },
     platform::{focus_visible, keyboard},
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
@@ -237,8 +237,9 @@ fn TooltipBubble(
     let close_delay = tooltip.close_delay.unwrap_or(theme.tooltip.close_delay);
     let padding = theme.popover.padding;
 
-    let popover = use_popover(
+    let popover = use_popover_on(
         anchor,
+        use_element(),
         true,
         PopoverOptions::new(theme.spacing.get(gap).into(), padding)
             .side(side)

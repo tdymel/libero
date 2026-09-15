@@ -10,7 +10,7 @@ use crate::{
     },
     hooks::{
         ElementHandle, PopoverOptions, PopoverWidth, use_element, use_field_list_layer,
-        use_popover, use_theme,
+        use_popover_on, use_theme,
     },
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
@@ -327,8 +327,9 @@ struct ComboboxPopupProps {
 #[component]
 fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
     let theme = use_theme();
-    let popover = use_popover(
+    let popover = use_popover_on(
         props.anchor,
+        use_element(),
         true,
         PopoverOptions::new(theme.popover.gap, theme.popover.padding)
             // Portaling takes away the positioned wrapper a `width: 100%` used

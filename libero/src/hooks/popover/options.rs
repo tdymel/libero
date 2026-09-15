@@ -44,6 +44,10 @@ pub struct PopoverOptions {
     /// For an anchor that resizes while the box is open - a multi-select
     /// whose trigger grows a chip on every pick. Nothing else re-measures.
     pub remeasure: u64,
+    /// Escape anywhere and a press outside close the box: wire it with
+    /// [`PopoverHandle::on_dismiss`](super::PopoverHandle::on_dismiss) and the
+    /// handle's `anchor_events`/`floating_events`. Off by default.
+    pub dismiss: bool,
 }
 
 impl PopoverOptions {
@@ -59,6 +63,7 @@ impl PopoverOptions {
             shift: true,
             width: PopoverWidth::default(),
             remeasure: 0,
+            dismiss: false,
         }
     }
 
@@ -99,6 +104,11 @@ impl PopoverOptions {
 
     pub fn remeasure(mut self, key: u64) -> Self {
         self.remeasure = key;
+        self
+    }
+
+    pub fn dismiss(mut self, dismiss: bool) -> Self {
+        self.dismiss = dismiss;
         self
     }
 }

@@ -68,6 +68,9 @@ pub(super) struct TreeRowProps {
     /// every row off that path, so moving the stop re-renders only the rows it
     /// leaves and enters.
     pub active: Option<Vec<usize>>,
+    /// Where `Tree`'s `current` row is, relative to this row, as `active`.
+    #[props(default)]
+    pub current: Option<Vec<usize>>,
     pub active_id: Signal<Option<String>>,
     pub render_node: ErasedRenderNode,
     pub onexpandedchange: Option<EventHandler<HashSet<String>>>,
@@ -159,6 +162,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
                             depth: props.depth + 1,
                             expanded: props.expanded,
                             active: child_active(props.active.as_deref(), index),
+                            current: child_active(props.current.as_deref(), index),
                             active_id: props.active_id,
                             render_node: props.render_node.clone(),
                             onexpandedchange: props.onexpandedchange,
@@ -171,8 +175,13 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         None => row_content,
     };
 
+    let is_current = props.current.as_deref().is_some_and(<[usize]>::is_empty);
     row.attr("role", "treeitem")
         .attr("data-tree-id", node.id.to_string())
+        // No selection model: without an explicit "false" Chrome announces the
+        // tab-stop row as selected. `current` speaks through `aria-current`.
+        .attr("aria-selected", "false")
+        .attr("aria-current", is_current.then_some("true"))
         .attr("aria-expanded", is_expanded.map(|value| value.to_string()))
         .attr("aria-disabled", disabled.then_some("true"))
         .attr("tabindex", li_tabindex)

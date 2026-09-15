@@ -10,7 +10,7 @@ use crate::{
     },
     hooks::{
         Align, DismissOptions, ElementHandle, PopoverOptions, Side, use_dismiss, use_element,
-        use_popover, use_silent_focus, use_theme,
+        use_popover_on, use_silent_focus, use_theme,
     },
     platform::{ElementApi, focus_visible, next_task},
     sx::StaticSx,
@@ -80,6 +80,10 @@ base_props! {
 /// Keyboard: focusing the trigger opens the card, Tab moves from the trigger
 /// into it and from its last focusable element on to whatever follows the
 /// trigger, Shift+Tab walks back, and Escape closes it.
+///
+/// A preview for sighted users: the trigger does not point at the card, so a
+/// screen reader hears nothing when focus opens it. Essential content goes in a
+/// click-opened popover ([`use_popover`](crate::hooks::use_popover)).
 #[component]
 pub fn HoverCard(props: HoverCardProps) -> Element {
     let theme = use_theme();
@@ -95,8 +99,9 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     let open = !props.disabled.unwrap_or(false) && props.open.unwrap_or(hovered.get() || focused());
 
     let anchor = use_element();
-    let popover = use_popover(
+    let popover = use_popover_on(
         anchor,
+        use_element(),
         open,
         PopoverOptions::new(theme.popover.gap, theme.popover.padding)
             .side(props.side)

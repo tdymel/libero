@@ -81,6 +81,7 @@ mod phone_field;
 mod picker_dialog;
 mod pin_field;
 mod planted;
+mod popover;
 mod progress_bar;
 mod qr_code;
 mod radio_group;
@@ -171,6 +172,7 @@ const FIXTURES: &[Routes] = &[
     picker_dialog::ROUTES,
     pin_field::ROUTES,
     planted::ROUTES,
+    popover::ROUTES,
     progress_bar::ROUTES,
     qr_code::ROUTES,
     radio_group::ROUTES,

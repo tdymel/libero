@@ -13,7 +13,7 @@ use crate::{
         surface::paper_sx,
     },
     hooks::{
-        PopoverOptions, moved_within, use_element, use_field_list_layer, use_popover,
+        PopoverOptions, moved_within, use_element, use_field_list_layer, use_popover_on,
         use_silent_focus, use_theme,
     },
     platform::{ElementApi, eye_dropper, next_task},
@@ -245,8 +245,9 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // On the Escape stack exactly while the key handler below would take
     // Escape, so a `HoverCard` around this field leaves the press to it.
     use_field_list_layer(showing);
-    let popover = use_popover(
+    let popover = use_popover_on(
         anchor,
+        use_element(),
         showing,
         PopoverOptions::new(theme.popover.gap, theme.popover.padding),
     );

@@ -82,6 +82,47 @@ fn the_tab_stop_starts_on_the_current_node() {
     assert!(tab_stops[0].contains("Beta"));
 }
 
+/// No selection model: every row says `aria-selected="false"`, so Chrome does
+/// not announce the tab stop as selected; `current` is `aria-current` instead.
+#[test]
+fn rows_are_unselected_and_the_current_row_is_aria_current() {
+    fn app() -> Element {
+        let data = vec![
+            TreeNode::new("a", "Alpha".to_string()),
+            TreeNode::new("b", "Beta".to_string())
+                .children(vec![TreeNode::new("c", "Gamma".to_string())]),
+        ];
+
+        rsx! {
+            LiberoProvider {
+                Tree {
+                    aria_label: "Files",
+                    data,
+                    default_expanded: ["b".to_string()].into(),
+                    current: "c",
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let rows: Vec<&str> = body.split("<li").skip(1).collect();
+
+    assert_eq!(rows.len(), 3);
+    assert!(rows.iter().all(|row| {
+        let tag = &row[..row.find('>').unwrap()];
+        tag.contains(r#"aria-selected="false""#)
+    }));
+    let current: Vec<&&str> = rows
+        .iter()
+        .filter(|row| row[..row.find('>').unwrap()].contains("aria-current"))
+        .collect();
+    assert_eq!(current.len(), 1);
+    assert!(current[0].contains(r#"aria-current="true""#));
+    assert!(current[0].contains("Gamma"));
+}
+
 /// A `current` hidden in a collapsed branch hands the tab stop to the branch.
 #[test]
 fn a_collapsed_current_node_puts_the_tab_stop_on_its_branch() {

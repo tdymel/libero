@@ -185,6 +185,14 @@ pub fn HoverCardPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
+                    "A hover card is a preview for sighted users. The trigger says nothing "
+                    "about the card, so a screen reader does not announce it when focus opens "
+                    "it. Keep the card to extras the trigger's own target already offers; "
+                    "content a user needs goes in a popover ("
+                    Code { source: "use_popover" }
+                    ") that a click opens."
+                }
+                Text {
                     "Focusing the trigger from the keyboard opens the card; a click does not "
                     "keep it open. " Kbd { "Tab" } " on the trigger moves into the card, "
                     Kbd { "Tab" } " past its last link moves on to whatever follows the "

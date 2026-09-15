@@ -4,7 +4,7 @@ description: tree at mobile (rest)
 expression: tree
 ---
 tree "Project files"
-  treeitem "src" [expanded=false] [level=1] [selected]
+  treeitem "src" [expanded=false] [level=1] [selected=false]
     button "src"
       StaticText "src"
   treeitem "docs" [expanded=false] [level=1] [selected=false]

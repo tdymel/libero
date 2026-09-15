@@ -477,22 +477,28 @@ impl DismissHandle {
         }
 
         if self.outside {
-            let handle = *self;
-            events.push(listener("onfocusout", move |_: Event<FocusData>| {
-                // On the web focus lands after `focusout`, so the answer is
-                // taken after the next task. Blitz moves focus first and cannot
-                // answer from a task, so its answer is the one taken here.
-                let early = handle.focus_inside();
-                spawn(async move {
-                    next_task().await;
-                    if handle.focus_inside().or(early) == Some(false) {
-                        handle.close(Dismissal::FocusMoved);
-                    }
-                });
-            }));
+            events.push(self.focusout_listener());
         }
 
         events
+    }
+
+    /// Closes once focus has left the anchor, the box and every registered
+    /// element. `use_popover` also puts it on the anchor.
+    pub(crate) fn focusout_listener(&self) -> Attribute {
+        let handle = *self;
+        listener("onfocusout", move |_: Event<FocusData>| {
+            // On the web focus lands after `focusout`, so the answer is
+            // taken after the next task. Blitz moves focus first and cannot
+            // answer from a task, so its answer is the one taken here.
+            let early = handle.focus_inside();
+            spawn(async move {
+                next_task().await;
+                if handle.focus_inside().or(early) == Some(false) {
+                    handle.close(Dismissal::FocusMoved);
+                }
+            });
+        })
     }
 
     /// The Escape listener both surfaces share.

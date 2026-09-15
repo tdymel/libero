@@ -3,7 +3,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Button, Code, CodeBlock, Text},
+    components::{Box, Button, Code, CodeBlock, Kbd, Text},
     hooks::{Align, PopoverOptions, PopoverWidth, Side, use_element, use_id, use_popover},
     platform::ElementApi,
     sx::sx,
@@ -102,14 +102,22 @@ fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
     if values.str("shift") == "false" {
         options.push_str("\n    .shift(false)");
     }
+    options.push_str("\n    .dismiss(true)");
 
     format!(
-        "let anchor = use_element();\nlet popover = use_popover(anchor, opened(), {options});\n\n\
+        "let anchor = use_element();\nlet popover = use_popover(anchor, opened(), {options});\n\
+         popover.on_dismiss(move || opened.set(false));\n\n\
          popover.show(opened().then(|| rsx! {{\n\
          {}\
-         }}));",
+         }}));\n\n\
+         rsx! {{\n\
+         {}\
+         }}",
         indent(
-            "Box {\n    style: popover.style(),\n    onmounted: popover.floating().mount(),\n    \"Popover content\"\n}"
+            "Box {\n    tabindex: \"-1\",\n    attributes: popover.floating_events(),\n    style: popover.style(),\n    onmounted: popover.floating().mount(),\n    \"Popover content\"\n}"
+        ),
+        indent(
+            "Button {\n    onmounted: anchor.mount(),\n    onclick: move |_| opened.toggle(),\n    attributes: popover.anchor_events(),\n    \"Popover\"\n}"
         )
     )
 }
@@ -137,8 +145,11 @@ fn PopoverDemo(
         .align(align_of(&align))
         .width(width_of(&width))
         .flip(flip)
-        .shift(shift);
+        .shift(shift)
+        .dismiss(true);
     let popover = use_popover(anchor, opened(), options);
+    // Escape anywhere and a press outside.
+    popover.on_dismiss(move || opened.set(false));
     let floating = *popover.floating();
 
     // A dialog takes focus once it opens, but only once placed: until then it
@@ -153,12 +164,12 @@ fn PopoverDemo(
         (false, _) => entered.set(false),
         _ => {}
     });
-    // Escape and Tab close it and hand focus back to the trigger; forwards,
-    // the browser's own Tab then moves on from there.
+    // Tab closes it and hands focus back to the trigger; forwards, the
+    // browser's own Tab then moves on from there.
     let mut close = move |event: &KeyboardEvent| {
         opened.set(false);
         let _ = anchor.focus();
-        if event.key() == Key::Escape || event.modifiers().shift() {
+        if event.modifiers().shift() {
             event.prevent_default();
         }
     };
@@ -171,9 +182,11 @@ fn PopoverDemo(
                 // hold options.
                 role: "dialog",
                 aria_label: "Example popover",
+                // Focusable, so a click on its text stays inside.
                 tabindex: "-1",
+                attributes: popover.floating_events(),
                 onkeydown: move |event: KeyboardEvent| {
-                    if matches!(event.key(), Key::Escape | Key::Tab) {
+                    if event.key() == Key::Tab {
                         close(&event);
                     }
                 },
@@ -197,15 +210,13 @@ fn PopoverDemo(
             Button {
                 onmounted: anchor.mount(),
                 onclick: move |_| opened.toggle(),
+                attributes: popover.anchor_events(),
                 // Focus is back here after a click that closed the box, or
                 // before the box is placed.
-                onkeydown: move |event: KeyboardEvent| match event.key() {
-                    Key::Escape if opened() => {
-                        event.prevent_default();
+                onkeydown: move |event: KeyboardEvent| {
+                    if event.key() == Key::Tab && opened() {
                         opened.set(false);
                     }
-                    Key::Tab if opened() => opened.set(false),
-                    _ => {}
                 },
                 aria_haspopup: "dialog",
                 // The same signal the hook is given, never a second copy -
@@ -253,6 +264,9 @@ pub fn PopoverPage() -> Element {
                     prop("remeasure", "u64")
                         .default("0")
                         .doc("Not a placement input: changing it re-measures. For an anchor that resizes while the box is open - nothing else re-measures."),
+                    prop("dismiss", "bool")
+                        .default("false")
+                        .doc("Escape anywhere and a press outside close the box, through `on_dismiss`. Spread `anchor_events()` on the trigger and `floating_events()` on the box."),
                 ]).without_base_props(),
             ],
             lead: rsx! {
@@ -270,7 +284,7 @@ pub fn PopoverPage() -> Element {
                     "shown later paints over the earlier."
                 }
             },
-            // snippet: let opened = use_signal(|| false);
+            // snippet: let mut opened = use_signal(|| false);
             // snippet: let theme = use_theme();
             Demo {
                 component: "PopoverDemo",
@@ -324,12 +338,20 @@ pub fn PopoverPage() -> Element {
                     "over an open box is announced as closed."
                 }
                 Text {
-                    "Escape must close the box (WCAG 2.1 SC 1.4.13), and closing it is the "
-                    "consumer's. Off the web only the element that actually holds focus hears "
-                    "the press, and the box is portaled, so a surface that leaves focus on its "
-                    "trigger has to listen on the trigger as well or it cannot be dismissed "
-                    "from the keyboard at all. Focus is deliberately not trapped - Tab closes "
-                    "the surface and moves on. If you animate the close, give the closing box "
+                    "Escape must close the box (WCAG 2.1 SC 1.4.13). "
+                    Code { source: "dismiss(true)" }
+                    " does it, plus a press outside: "
+                    Kbd { "Esc" }
+                    " anywhere closes the box and hands focus back to the trigger when it was "
+                    "on the trigger or in the box; focus leaving both closes it and stays where "
+                    "it went. Give the box "
+                    Code { source: "tabindex=\"-1\"" }
+                    ", or a click on its text moves focus out and closes it. Safari does not "
+                    "focus a button on click, so there a press outside a pointer-opened box "
+                    "does not close it. Off the web only the element holding focus hears "
+                    Kbd { "Esc" }
+                    ", which is why both event lists are spread. Focus is deliberately not "
+                    "trapped - Tab closes the surface and moves on. If you animate the close, give the closing box "
                     Code { source: "visibility: hidden" }
                     " or "
                     Code { source: "inert" }
@@ -345,9 +367,12 @@ pub fn PopoverPage() -> Element {
                     "the web answers today - natively an open popover drifts when the page "
                     "scrolls. Nothing tracks a resize on any backend; "
                     Code { source: "remeasure" }
-                    " is the only answer there. Off the web, closing when focus leaves is "
-                    "unreliable: every focusout counts as leaving, including focus moving from "
-                    "the trigger into the content, so close on a signal of your own there."
+                    " is the only answer there. "
+                    Code { source: "dismiss" }
+                    "'s press outside needs a renderer that can say where focus is: the web "
+                    "and Blitz can, a WebView cannot, so there only "
+                    Kbd { "Esc" }
+                    " and your own handlers close the box."
                 }
             }
         }
