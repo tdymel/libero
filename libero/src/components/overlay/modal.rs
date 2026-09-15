@@ -41,7 +41,7 @@ static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
 });
 
 base_props! {
-    pub struct ModalProps {
+    pub(crate) struct ModalProps {
         #[props(default)]
         onclose: Option<EventHandler<()>>,
         children: Element,
@@ -49,13 +49,11 @@ base_props! {
 }
 
 /// A focus-trapped, dimmed layer that locks scroll and stacks above earlier
-/// modals. Render it conditionally - Escape/backdrop only *request* a close
-/// via `onclose`. Descendants close it via
-/// [`crate::hooks::use_modal_close`] or [`ModalContext`].
-///
-/// No opinion on content - pass `role`/`aria-modal`/`aria-label` yourself.
+/// modals. Crate-only: it returns no focus on close, which
+/// [`crate::hooks::use_modal`] and `use_drawer` add around it.
+/// Escape/backdrop only *request* a close via `onclose`.
 #[component]
-pub fn Modal(props: ModalProps) -> Element {
+pub(crate) fn Modal(props: ModalProps) -> Element {
     // Forwarded through `use_callback`, not stored directly: a context
     // provider runs once, but rsx builds a fresh `EventHandler` every render,
     // so storing the prop would freeze descendants on the closure - and the
@@ -67,7 +65,9 @@ pub fn Modal(props: ModalProps) -> Element {
             onclose.call(());
         }
     });
-    use_context_provider(|| ModalContext { onclose });
+    use_context_provider(|| ModalContext {
+        onclose: Some(onclose),
+    });
 
     let z_index = use_modal_z_index();
     // A `Modal` is only ever rendered while it is open, so mounting *is*

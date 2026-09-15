@@ -30,6 +30,37 @@ fn a_dialog_renders_the_paper_surface_under_its_own_chrome() {
     assert!(html.contains("box-shadow:var(--lsx-shadow-xl);"), "{html}");
 }
 
+/// Todo 611: outside a modal the button has something to close only with an
+/// `onclose`, so that is what turns it on by default.
+#[test]
+fn outside_a_modal_onclose_turns_the_close_button_on() {
+    fn with_onclose() -> Element {
+        rsx! {
+            LiberoProvider {
+                Dialog { title: "Tip", onclose: |_| {}, "content" }
+            }
+        }
+    }
+    fn without() -> Element {
+        rsx! {
+            LiberoProvider {
+                Dialog { title: "Tip", "content" }
+            }
+        }
+    }
+    fn switched_off() -> Element {
+        rsx! {
+            LiberoProvider {
+                Dialog { title: "Tip", onclose: |_| {}, close_button: false, "content" }
+            }
+        }
+    }
+
+    assert!(body(&render(with_onclose)).contains("aria-label=\"Close\""));
+    assert!(!body(&render(without)).contains("aria-label=\"Close\""));
+    assert!(!body(&render(switched_off)).contains("aria-label=\"Close\""));
+}
+
 thread_local! {
     static TITLE: std::cell::Cell<&'static str> = const { std::cell::Cell::new("First") };
 }

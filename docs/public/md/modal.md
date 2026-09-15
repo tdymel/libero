@@ -163,7 +163,7 @@ use libero::{components::Button, context::ModalContext};
 
 #[component]
 fn CloseIfModal() -> Element {
-    let Some(modal) = try_use_context::<ModalContext>() else {
+    let Some(modal) = try_use_context::<ModalContext>().filter(ModalContext::is_modal) else {
         return rsx! {};
     };
 
@@ -235,11 +235,13 @@ out of the render closure, which cannot capture the `ModalScope`.
 
 Provided by every `use_modal` to what it renders; `use_context::<ModalContext>()`
 inside, `try_use_context` where a component may or may not be in a modal.
-`Copy`.
+A floating window provides an empty one, so its content is not modal and
+cannot close a modal around it. `Copy`.
 
 | Method | Returns | Description |
 |---|---|---|
-| `close()` | `()` | Dismisses the modal - the same outcome as `ModalScope::close`. Deferred a microtask, so it is safe from a click inside the modal. |
+| `is_modal()` | `bool` | Whether the content is in a modal; `false` for the empty one. |
+| `close()` | `()` | Dismisses the modal - the same outcome as `ModalScope::close`. Deferred a microtask, so it is safe from a click inside the modal. Does nothing outside one. |
 
 ## Theme defaults
 

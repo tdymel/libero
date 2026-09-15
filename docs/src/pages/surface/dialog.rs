@@ -24,8 +24,10 @@ pub fn DialogPage() -> Element {
                     prop("aria_label", "String").doc("Accessible name for the dialog; overrides title as the name."),
                     prop("title", "String").doc("Heading, and the accessible name unless aria_label overrides it."),
                     prop("close_button", "bool")
-                        .default("in a modal")
-                        .doc("Header button that closes the surrounding modal. On by default inside one, where it has something to close."),
+                        .default("in a modal, or with onclose")
+                        .doc("Header button. Inside a modal it closes the modal, outside one it calls onclose."),
+                    prop("onclose", "EventHandler<()>")
+                        .doc("Called by the close button outside a modal. Inside one the button closes the modal instead."),
                     prop("close_label", "String").default("Close").doc("Accessible name for the close button."),
                     prop("radius", "Size").default("md").doc("Corner radius, a step on the radius scale. Anything else goes through `sx`."),
                     prop("size", "ThemeAwareValue")
@@ -46,6 +48,8 @@ pub fn DialogPage() -> Element {
                     Code { source: "title" }
                     " and closes itself from its own header button; open one with "
                     Code { source: "use_modal" }
+                    ". Outside a modal the button calls "
+                    Code { source: "onclose" }
                     ". "
                     Code { source: "size" }
                     " caps its width from the dialog scale (md is 510px)."

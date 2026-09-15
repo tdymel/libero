@@ -12,14 +12,21 @@ pub const ROUTES: Routes = &[("/dialog", || rsx! { DialogPage {} })];
 
 #[component]
 fn DialogPage() -> Element {
+    let mut open = use_signal(|| true);
     rsx! {
         div { style: "position: relative",
             VisuallyHidden { sx: sx().position("absolute"),
                 a { id: "skip", href: "#main", "Skip to content" }
             }
         }
-        Dialog { id: "inline", title: "Filters", close_button: true, sx: sx().margin("0"),
-            Text { "Narrow the list." }
+        if open() {
+            Dialog {
+                id: "inline",
+                title: "Filters",
+                onclose: move |_| open.set(false),
+                sx: sx().margin("0"),
+                Text { "Narrow the list." }
+            }
         }
         Paper { id: "paper", bordered: true, sx: sx().padding("md"), "Bordered paper" }
         Paper { id: "card", component: "a", href: "#card", sx: sx().padding("md"), "Card link" }

@@ -10,7 +10,8 @@ The dialog surface itself - padding, radius, shadow, and the `role`/`aria-modal`
 wiring. It is a [`Paper`](paper.md): the background, its focus contrast and the
 default radius are the surface's, and only the chrome above is its own. It
 never sets `bordered`, so the surface's border colour does not reach it. Inside a modal it also names itself from `title` and closes itself from
-its own header button; open one with [`use_modal`](modal.md). `size` caps its
+its own header button; open one with [`use_modal`](modal.md). Outside a modal
+the button calls `onclose`. `size` caps its
 width from the dialog scale (`md` is 510px).
 
 ## Usage
@@ -43,7 +44,8 @@ fn Demo() -> Element {
 
 Give it a name: `title`, or `aria_label`, which overrides it. The focus trap
 and Escape/backdrop dismissal come from the modal layer; a `Dialog` on its own
-has none of that.
+has none of that. Outside a modal, pass `onclose` for a working close button:
+`close_button: true` without it closes nothing, and warns in debug builds.
 
 ## Props
 
@@ -51,7 +53,8 @@ has none of that.
 |---|---|---|---|
 | `aria_label` | `String` | - | Accessible name for the dialog; overrides `title` as the name. |
 | `title` | `String` | - | Heading, and the accessible name unless `aria_label` overrides it. |
-| `close_button` | `bool` | in a modal | Header button that closes the surrounding modal. On by default inside one, where it has something to close. |
+| `close_button` | `bool` | in a modal, or with `onclose` | Header button. Inside a modal it closes the modal, outside one it calls `onclose`. |
+| `onclose` | `EventHandler<()>` | - | Called by the close button outside a modal. Inside one the button closes the modal instead. |
 | `close_label` | `String` | `Close` | Accessible name for the close button. |
 | `radius` | `Size` | `md` | Corner radius, a step on the radius scale. Anything else goes through `sx`. |
 | `size` | `ThemeAwareValue` | `md` | Caps the dialog's width from the dialog scale (`md` is 510px). |

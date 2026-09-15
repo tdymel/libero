@@ -227,7 +227,7 @@ pub fn ModalPage() -> Element {
                     ", whose "
                     Code { source: "close()" }
                     " does the same; reach for the context when a component has to ask "
-                    Code { source: "try_use_context::<ModalContext>()" }
+                    Code { source: "is_modal()" }
                     " whether it is inside a modal at all."
                 }
                 Text {

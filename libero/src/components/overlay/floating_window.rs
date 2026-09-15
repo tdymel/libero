@@ -10,7 +10,7 @@ use crate::{
         surface::paper_sx,
         variables,
     },
-    context::WindowHost,
+    context::{ModalContext, WindowHost},
     hooks::{
         Drag, DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, escape_closes,
         use_drag, use_element, use_id, use_silent_focus_within,
@@ -262,6 +262,8 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         onresize,
     } = props.options;
     let onclose = props.onclose;
+    // Non-modal: content opened from a modal must not inherit its close.
+    use_context_provider(|| ModalContext::NONE);
     let title_id = use_id();
     let root = use_element();
     let focus_left = use_callback(move |()| focus_elsewhere(&root));
@@ -732,7 +734,42 @@ impl WindowGeometry {
 
 #[cfg(test)]
 mod tests {
-    use super::WindowBounds;
+    use dioxus::prelude::*;
+
+    use super::{FloatingWindow, FloatingWindowOptions, WindowBounds};
+    use crate::{
+        LiberoProvider,
+        components::{Dialog, Modal},
+    };
+
+    /// Todo 527: rendered inline in a modal, not portaled, the window still
+    /// cuts its content off from the modal's close.
+    #[test]
+    fn a_window_inside_a_modal_is_not_modal() {
+        fn app() -> Element {
+            let onclose = use_callback(|()| {});
+            rsx! {
+                LiberoProvider {
+                    Modal {
+                        FloatingWindow {
+                            options: FloatingWindowOptions {
+                                title: Some("Window".into()),
+                                ..Default::default()
+                            },
+                            onclose,
+                            onmount: |_| {},
+                            Dialog { title: "Inner", "inner content" }
+                        }
+                    }
+                }
+            }
+        }
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        let html = dioxus_ssr::render(&dom);
+        assert!(html.contains("inner content"), "{html}");
+        assert!(!html.contains("aria-modal=\"true\""), "{html}");
+    }
 
     const BOUNDS: WindowBounds = WindowBounds {
         min: (240.0, 120.0),

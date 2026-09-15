@@ -34,6 +34,34 @@ fn an_inline_dialog_is_named_by_its_title_and_not_modal() {
     });
 }
 
+/// Todo 611: outside a modal the close button calls `onclose`.
+#[test]
+fn the_close_button_of_an_inline_dialog_calls_onclose() {
+    block_on(async {
+        let fixture = Fixture::open("/dialog", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, "#inline").await.unwrap();
+        page.find_element("#inline button[aria-label='Close']")
+            .await
+            .unwrap()
+            .click()
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "!document.querySelector('#inline')",
+            "the dialog to close",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("closing the inline dialog")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `component: "a"` makes a card link; it has to show the keyboard ring.
 #[test]
 fn a_paper_link_shows_a_focus_ring() {

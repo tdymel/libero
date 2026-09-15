@@ -12,6 +12,7 @@ use crate::{
     hooks::use_id,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, DIALOG_SIZE, PAPER_RADIUS, Size, SizeCss},
+    utils::warn,
 };
 
 const DIALOG_RADIUS_VAR: CssVar = CssVar::new("--lsx-dialog-radius");
@@ -72,10 +73,13 @@ base_props! {
         /// Heading, and the accessible name unless `aria_label` overrides it.
         #[props(default, into)]
         title: Option<String>,
-        /// Defaults to on inside a `Modal`, which is the only place it has
-        /// something to close.
+        /// Defaults to on inside a modal, or when `onclose` is set.
         #[props(default)]
         close_button: Option<bool>,
+        /// Called by the close button outside a modal. Inside one the button
+        /// closes the modal instead.
+        #[props(default)]
+        onclose: Option<EventHandler<()>>,
         /// Accessible name for the close button.
         #[props(default, into)]
         close_label: Option<String>,
@@ -93,19 +97,48 @@ base_props! {
 /// Dialog surface: `role="dialog"`, plus `aria-modal="true"` when nested in a
 /// modal (auto-detected). Inside one it also names itself from `title` and
 /// closes itself from its own button, so a modal opened with
-/// [`crate::hooks::use_modal`] needs no closing wiring. No positioning of its
-/// own - anchor it with [`crate::components::Float`] or your own layout.
+/// [`crate::hooks::use_modal`] needs no closing wiring. Outside one the button
+/// calls `onclose`. No positioning of its own - anchor it with
+/// [`crate::components::Float`] or your own layout.
+///
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::Dialog;
+/// # fn app() -> Element {
+/// let mut open = use_signal(|| true);
+/// rsx! {
+///     if open() {
+///         Dialog { title: "Tip", onclose: move |_| open.set(false), "Drag to reorder." }
+///     }
+/// }
+/// # }
+/// ```
 #[component]
 pub fn Dialog(props: DialogProps) -> Element {
-    let modal = try_use_context::<ModalContext>();
+    let modal = try_use_context::<ModalContext>().filter(ModalContext::is_modal);
     let is_modal = modal.is_some();
-    let close_button = props.close_button.unwrap_or(is_modal);
+    let close_button = props
+        .close_button
+        .unwrap_or(is_modal || props.onclose.is_some());
     let title_id = use_id();
     use_name_warning(
         props.aria_label.is_some() || props.title.is_some() || names_itself(&props.attributes),
         "Dialog: no `title`, `aria_label` or `aria-labelledby`, so it is announced as just \
          \"dialog\".",
     );
+    let dead_button = close_button && !is_modal && props.onclose.is_none();
+    use_hook(move || {
+        if dead_button {
+            warn("Dialog: `close_button` outside a modal and no `onclose`, so it closes nothing.");
+        }
+    });
+    // Stable for the memoized header; swaps in this render's `onclose`.
+    let onclose = props.onclose;
+    let close = use_callback(move |()| match (modal, &onclose) {
+        (Some(modal), _) => modal.close(),
+        (None, Some(onclose)) => onclose.call(()),
+        (None, None) => {}
+    });
     let variables: Input<Variables> = dialog_variables(&props)
         .merge(props.variables.unwrap_or_default())
         .into();
@@ -135,6 +168,7 @@ pub fn Dialog(props: DialogProps) -> Element {
                 title_id,
                 close_button,
                 close_label: props.close_label,
+                close,
             }
         });
     }
@@ -161,14 +195,8 @@ fn DialogHeader(
     title_id: Signal<String>,
     close_button: bool,
     close_label: Option<String>,
+    close: Callback<()>,
 ) -> Element {
-    let modal = try_use_context::<ModalContext>();
-    let close = use_callback(move |_: MouseEvent| {
-        if let Some(modal) = modal {
-            modal.close();
-        }
-    });
-
     rsx! {
         Box { framework_sx: &DIALOG_HEADER_SX,
             if let Some(title) = title {
@@ -180,7 +208,7 @@ fn DialogHeader(
                     color: "muted",
                     size: "sm",
                     aria_label: close_label.unwrap_or_else(|| "Close".to_string()),
-                    onclick: close,
+                    onclick: move |_: MouseEvent| close.call(()),
                     CloseIcon {}
                 }
             }

@@ -61,20 +61,31 @@ impl ModalHost {
 }
 
 /// Lets a dialog rendered by [`crate::hooks::use_modal`] close itself.
+/// Non-modal surfaces (popover, FloatingWindow) provide an empty one, so their
+/// content is not modal and cannot close a modal around them.
 #[derive(Clone, Copy)]
 pub struct ModalContext {
-    pub(crate) onclose: EventHandler<()>,
+    pub(crate) onclose: Option<EventHandler<()>>,
 }
 
 impl ModalContext {
+    /// The boundary a non-modal surface provides.
+    pub(crate) const NONE: Self = Self { onclose: None };
+
+    /// Whether this content sits in a modal.
+    pub fn is_modal(&self) -> bool {
+        self.onclose.is_some()
+    }
+
     /// Deferred a microtask: closing synchronously from a click still
     /// bubbling through the torn-down modal re-enters the same
     /// `EventHandler` and panics with `AlreadyBorrowedMut`.
     pub fn close(&self) {
-        let onclose = self.onclose;
-        spawn(async move {
-            onclose.call(());
-        });
+        if let Some(onclose) = self.onclose {
+            spawn(async move {
+                onclose.call(());
+            });
+        }
     }
 }
 
