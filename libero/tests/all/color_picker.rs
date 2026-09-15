@@ -3,7 +3,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ColorCode, ColorField, ColorPicker},
+    components::{ColorCode, ColorField, ColorPicker, Swatches},
 };
 
 /// The panel's one `role="slider"` holds the saturation, but Up and Down move
@@ -27,6 +27,53 @@ fn the_saturation_thumb_says_saturation_and_brightness() {
         html.contains(r#"aria-valuetext="Saturation 40%, brightness 70%""#),
         "{html}"
     );
+}
+
+/// The swatch equal to the value is pressed and checked; a grey's drifted hue
+/// still matches, because the comparison is by the colour drawn (todo 553).
+#[test]
+fn the_swatch_equal_to_the_value_is_pressed() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ColorPicker {
+                    value: ColorCode::hsva(123.0, 0.0, 0.0, 1.0),
+                    oninput: move |_| {},
+                    swatches: ["#fa5252", "#000000"],
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+    assert!(
+        html.contains(r##"aria-label="#fa5252" aria-pressed="false""##),
+        "{html}"
+    );
+    let pressed = html
+        .split(r##"aria-label="#000000" aria-pressed="true""##)
+        .nth(1)
+        .unwrap_or_else(|| panic!("black is not pressed: {html}"));
+    assert!(pressed.split("</button>").next().unwrap().contains("<svg"));
+    assert_eq!(html.matches("<svg").count(), 1, "{html}");
+}
+
+/// A caller's label replaces the hex name.
+#[test]
+fn a_labelled_swatch_is_named_by_its_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ColorPicker {
+                    value: ColorCode::default(),
+                    oninput: move |_| {},
+                    swatches: Swatches::labelled([("#fa5252", "Red")]),
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+    assert!(html.contains(r#"aria-label="Red""#), "{html}");
+    assert!(!html.contains("#fa5252"), "{html}");
 }
 
 thread_local! {

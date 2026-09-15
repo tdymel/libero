@@ -14,6 +14,7 @@ use crate::{
         use_combobox,
     },
     hooks::{ElementHandle, PopoverWidth, use_element, use_theme},
+    platform::ElementApi,
     sx::{StaticSx, sx},
     theme::Size,
     utils::warn,
@@ -115,11 +116,11 @@ field_props! {
         /// who overrides it draws the whole chip, remove control included -
         /// `args.remove` is the wiring.
         ///
-        /// Give that control `tabindex: "-1"`: the input is the field's one
-        /// tab stop, and Backspace is how a keyboard removes a tag. A button
-        /// that is a tab stop is destroyed under the focus when it removes its
-        /// own tag, and the focus falls to the page. The field already cancels
-        /// `mousedown` on each tag, so a click never moves the focus there.
+        /// Make that control a `<button>` with `tabindex: "-1"`: the input is
+        /// the field's one tab stop, and the chip cursor (ArrowLeft from an
+        /// empty input) focuses each tag's button in turn. The field already
+        /// cancels `mousedown` on each tag, so a click never moves the focus
+        /// there.
         #[props(default)]
         tag: Option<Callback<SelectionArgs<String>, Element>>,
     }
@@ -129,7 +130,9 @@ field_props! {
 /// editor between them.
 ///
 /// A comma - or any `split_chars` entry - and Enter both commit what was typed;
-/// Backspace on an empty input takes the last tag back. `suggestions` adds a
+/// Backspace on an empty input takes the last tag back. ArrowLeft on an empty
+/// input walks the tags, Delete or Backspace removes the focused one and
+/// ArrowRight past the last returns to the input. `suggestions` adds a
 /// dropdown, which is the only thing that makes this more than a text field
 /// with chips, and a picked suggestion becomes the same kind of tag a typed one
 /// does.
@@ -163,6 +166,10 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     let state = use_combobox();
     // What the x hands the focus to once it has cleared the field.
     let input_element = use_element();
+    let cursor = TagCursor {
+        slot: use_element(),
+        input: input_element,
+    };
 
     let rules = TagRules {
         allow_duplicates: props.allow_duplicates.unwrap_or(false),
@@ -215,7 +222,14 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         }
     });
 
-    let tags = tags_field_chips(&held, &onchange, props.tag, size, disabled || readonly);
+    let tags = tags_field_chips(
+        &held,
+        &onchange,
+        props.tag,
+        size,
+        disabled || readonly,
+        cursor,
+    );
 
     let rows = tags_field_rows(suggestions, &held, &text(), &add, text, state);
     let row_count = rows.len();
@@ -265,13 +279,13 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             required,
             row_count,
             placeholder: props.placeholder,
-            element: input_element,
+            cursor,
         },
         onchange.clone(),
         props.attributes,
     );
 
-    let control = slot.render(
+    let control = slot.element(&cursor.slot).render(
         HtmlTag::Div,
         Vec::new(),
         // The input is not the frame's child, so the frame's own ring overlay
@@ -389,17 +403,58 @@ fn split(text: &str, split_chars: &[String]) -> Vec<String> {
     pieces
 }
 
-/// The chips, one per held tag. The input is the one tab stop, so removing one
-/// never destroys the control the keyboard was on and there is no focus debt
-/// to repay ([[principles/focus-after-removal]] - "where this does not
-/// apply").
+/// Where the chip cursor moves the focus: the tags' slot and the draft input.
+#[derive(Clone, Copy)]
+struct TagCursor {
+    slot: ElementHandle,
+    input: ElementHandle,
+}
+
+impl TagCursor {
+    /// Focuses tag `index`'s button, or the input for `None`.
+    fn focus(self, index: Option<usize>) {
+        let _ = match index {
+            Some(index) => self
+                .slot
+                .query_selector(&tag_selector(index))
+                .and_then(|button| button.focus()),
+            None => self.input.focus(),
+        };
+    }
+
+    /// Whether the focus is on tag `index`'s button.
+    fn holds(self, index: usize) -> bool {
+        self.slot
+            .query_selector(&tag_selector(index))
+            .is_ok_and(|button| button.is_focused())
+    }
+}
+
+fn tag_selector(index: usize) -> String {
+    format!("[data-tag-index='{index}'] button")
+}
+
+/// Where the cursor goes once tag `index` of `count` is removed: the next tag,
+/// which slides into its place, else the one before, else the input.
+fn after_removal(index: usize, count: usize) -> Option<usize> {
+    match index + 1 < count {
+        true => Some(index),
+        false => index.checked_sub(1),
+    }
+}
+
+/// The chips, one per held tag. The input is the one tab stop; the chip cursor
+/// moves the focus onto a tag's button, and a removal moves it on before the
+/// tag goes ([[principles/focus-after-removal]]).
 fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
     held: &[String],
     onchange: &Option<F>,
     draw_tag: Option<Callback<SelectionArgs<String>, Element>>,
     size: Size,
     locked: bool,
+    cursor: TagCursor,
 ) -> Element {
+    let count = held.len();
     let chips = held.iter().cloned().enumerate().map(|(index, value)| {
         let list = held.to_vec();
         let onchange = onchange.clone();
@@ -409,25 +464,49 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
             let (false, Some(onchange)) = (locked, &onchange) else {
                 return;
             };
+            // A mouse removal never focused the tag, so only the keyboard's
+            // focus is moved.
+            if cursor.holds(index) {
+                cursor.focus(after_removal(index, count));
+            }
             let mut next = list.clone();
             next.remove(index);
             onchange(next);
         });
-        match &draw_tag {
+        let chip = match &draw_tag {
             Some(tag) => tag.call(SelectionArgs { value, remove }),
             None => removable_chip(value, remove, size, locked),
-        }
+        };
+        (chip, remove)
     });
 
     rsx! {
-        for (index , chip) in chips.enumerate() {
+        for (index , (chip , remove)) in chips.enumerate() {
             span {
                 key: "{index}",
                 "data-slot": "tag",
+                "data-tag-index": "{index}",
                 // The default chip's own guard, applied here so a caller's
                 // `tag` has it too: a press on its x must not take the focus
                 // off the input, or the removal strands it on the body.
                 onmousedown: move |event: MouseEvent| event.prevent_default(),
+                onkeydown: move |event: KeyboardEvent| {
+                    let key = event.key();
+                    // Tab leaves, Escape closes the list and chords are the
+                    // browser's; every other key is the cursor's, not the
+                    // combobox's around it.
+                    if matches!(key, Key::Tab | Key::Escape) || !event.modifiers().is_empty() {
+                        return;
+                    }
+                    event.stop_propagation();
+                    match key {
+                        Key::ArrowLeft => cursor.focus(Some(index.saturating_sub(1))),
+                        Key::ArrowRight => cursor.focus(Some(index + 1).filter(|next| *next < count)),
+                        Key::Delete | Key::Backspace if !locked => remove.call(()),
+                        _ => return,
+                    }
+                    event.prevent_default();
+                },
                 {chip}
             }
         }
@@ -508,7 +587,7 @@ struct Draft {
     required: bool,
     row_count: usize,
     placeholder: Option<String>,
-    element: ElementHandle,
+    cursor: TagCursor,
 }
 
 /// The draft input: the field's id, label and `aria-describedby` land here,
@@ -531,7 +610,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         required,
         row_count,
         placeholder,
-        element,
+        cursor,
     } = draft;
     // One `Rc` per path that can add a tag: typing a splitter, Enter and blur
     // all merge through the same closure.
@@ -610,6 +689,15 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                     next.pop();
                     onchange(next);
                 }
+                // Only on an empty draft: the caret's position is not readable
+                // here, and leaving would commit the draft on blur.
+                Key::ArrowLeft
+                    if text().is_empty() && !held.is_empty() && event.modifiers().is_empty() =>
+                {
+                    event.prevent_default();
+                    event.stop_propagation();
+                    cursor.focus(Some(held.len() - 1));
+                }
                 _ => {}
             }
         })
@@ -624,7 +712,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
             }
             state.close();
         })
-        .element(&element)
+        .element(&cursor.input)
         .render(HtmlTag::Input, attributes, ())
 }
 
@@ -689,6 +777,16 @@ mod tests {
             merge(&tags(&["Rust"]), tags(&["rust"]), &rules(true, None), &None),
             Some(tags(&["Rust", "rust"]))
         );
+    }
+
+    /// The cursor stays in the chips while any are left, and prefers the tag
+    /// that slides into the removed one's place.
+    #[test]
+    fn the_cursor_lands_on_the_next_tag_then_the_previous_then_the_input() {
+        assert_eq!(after_removal(0, 3), Some(0));
+        assert_eq!(after_removal(1, 3), Some(1));
+        assert_eq!(after_removal(2, 3), Some(1));
+        assert_eq!(after_removal(0, 1), None);
     }
 
     /// Nothing added means nothing changed, so a refused edit never emits an

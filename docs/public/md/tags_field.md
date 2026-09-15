@@ -73,6 +73,9 @@ duplicate rule cannot disagree between them:
 | blur | Commits what was typed rather than throwing it away |
 | `Backspace`, empty input | Removes the last tag |
 | `Backspace`, non-empty | Edits the text. Never removes a tag |
+| `ArrowLeft`, empty input | Moves the focus onto the last tag's x - the chip cursor |
+| `ArrowLeft` / `ArrowRight` on a tag | Walks the tags; `ArrowRight` past the last returns to the input |
+| `Delete` / `Backspace` / `Enter` on a tag | Removes it; the focus moves to the next tag, else the previous, else the input |
 | `ArrowDown` / `ArrowUp` | Moves the suggestion highlight, and opens the list. Dead without `suggestions` |
 | `Escape` | Closes the list, keeps the text |
 
@@ -97,7 +100,7 @@ adds those two rather than being rejected whole.
 | `name` | `FieldName<Vec<String>>` | - | One hidden input per tag; a path also binds |
 | `placeholder` | `String` | - | Shown while there are no tags |
 | `clearable` | `bool` | `false` | An x that empties the field |
-| `tag` | `Callback<SelectionArgs<String>, Element>` | a `Chip` | Draws one tag, remove control included. Give that control `tabindex: "-1"` |
+| `tag` | `Callback<SelectionArgs<String>, Element>` | a `Chip` | Draws one tag, remove control included. Make that control a `<button>` with `tabindex: "-1"` |
 | `label` | `Caption` | - | The field's caption, above the control |
 | `description` | `Caption` | - | Between the label and the control |
 | `helper` | `Caption` | - | Under the control |
@@ -129,9 +132,11 @@ component's own arithmetic rather than a theme key.
 ## Accessibility
 
 The whole field is one tab stop, plus the Clear button when `clearable` shows
-it. Backspace on an empty input removes the last tag; the arrows belong to the text, so there is no chip cursor. A custom `tag`
-must give its remove control `tabindex: "-1"`, or each tag adds a tab stop, and
-removing a tag from the keyboard drops the focus to the page. The field cancels
+it. Backspace on an empty input removes the last tag. ArrowLeft on an empty
+input starts the chip cursor on the last tag's x; the arrows walk the tags and
+Delete or Backspace removes the focused one. A custom `tag` must make its
+remove control a `<button>` with `tabindex: "-1"`: the cursor focuses that
+button, and without the `tabindex` each tag adds a tab stop. The field cancels
 `mousedown` on every tag itself, so a click never moves the focus there.
 
 ## Data attributes

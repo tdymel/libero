@@ -23,6 +23,42 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// The swatch equal to the value is pressed and carries the only check mark;
+/// picking another moves both (todo 553).
+#[test]
+fn the_picked_swatch_is_pressed_and_checked() {
+    const PRESSED: &str = "[...document.querySelectorAll('[data-slot=swatches] > button')]\
+         .map(b => b.getAttribute('aria-pressed') + (b.querySelector('svg') ? '+check' : '')).join(',')";
+    block_on(async {
+        let fixture = Fixture::open("/color-picker-swatches", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!("{PRESSED} === 'true+check,false,false'"),
+            "the value's swatch to start pressed",
+        )
+        .await
+        .unwrap();
+
+        keyboard::tab_to(page, "[aria-label='#40c057']", 10)
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{PRESSED} === 'false,true+check,false'"),
+            "Enter on the green swatch to press it",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("the swatches").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn the_arrows_move_the_pad_on_both_axes() {
     block_on(async {

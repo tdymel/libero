@@ -8,7 +8,26 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/color-picker", || rsx! { ColorPickerPage {} }),
     ("/color-picker-alpha", || rsx! { ColorPickerAlphaPage {} }),
+    (
+        "/color-picker-swatches",
+        || rsx! { ColorPickerSwatchesPage {} },
+    ),
 ];
+
+/// A palette whose first swatch is the value, for the pressed state.
+#[component]
+fn ColorPickerSwatchesPage() -> Element {
+    let mut color = use_signal(|| "#fa5252".parse::<ColorCode>().unwrap());
+
+    rsx! {
+        ColorPicker {
+            value: color(),
+            with_picker: false,
+            swatches: ["#fa5252", "#40c057", "#f8f9fa"],
+            oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+        }
+    }
+}
 
 /// With the alpha slider and the preview, which paints from the root's vars.
 #[component]

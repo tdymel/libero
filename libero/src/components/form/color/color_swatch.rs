@@ -38,8 +38,10 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
                 "inset 0 0 0 1px rgba(0, 0, 0, 0.1), inset 0 0 4px rgba(0, 0, 0, 0.1)".to_string(),
             ),
         )
-        .color("surface")
-        .when("on-light", sx().color("ink"))
+        // Fixed, not the scheme's `surface`/`ink`: the swatch's color does not
+        // flip with the scheme, so neither may the mark on it.
+        .color("#fff")
+        .when("on-light", sx().color("#000"))
         .when("clickable", sx().cursor("pointer"))
         // A disabled `Fieldset` disables a clickable swatch's `<button>` (todo 514).
         .selector("&:disabled", sx().opacity("0.5").cursor("not-allowed"))

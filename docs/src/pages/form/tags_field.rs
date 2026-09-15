@@ -113,7 +113,7 @@ pub fn TagsFieldPage() -> Element {
                         .doc("Shows an x that empties the field, at the end of the frame."),
                     prop("tag", "Callback<SelectionArgs<String>, Element>")
                         .default("Chip")
-                        .doc("Draws one tag. A caller who overrides it draws the whole chip, remove control included - `args.remove` is the wiring. Give that control `tabindex: \"-1\"`; the field already keeps a click on it from taking the focus."),
+                        .doc("Draws one tag. A caller who overrides it draws the whole chip, remove control included - `args.remove` is the wiring. Make that control a `<button>` with `tabindex: \"-1\"`: the chip cursor focuses it. The field already keeps a click on it from taking the focus."),
                     prop("label", "Caption").doc("The field's caption, above the control."),
                     prop("description", "Caption").doc("Between the label and the control: what to enter."),
                     prop("helper", "Caption").doc("Under the control: formatting rules, or what the entry affects."),
@@ -259,14 +259,14 @@ pub fn TagsFieldPage() -> Element {
                 Text {
                     "The whole field is one tab stop, plus the Clear button when "
                     Code { source: "clearable" }
-                    " shows it. Backspace on an empty input removes the "
-                    "last tag; the arrows belong to the text, so there is no chip cursor. "
-                    "A custom "
+                    " shows it. Backspace on an empty input removes the last tag. ArrowLeft on "
+                    "an empty input moves onto the tags: the arrows walk them, Delete or "
+                    "Backspace removes the focused one, and ArrowRight past the last returns "
+                    "to the input. A custom "
                     Code { source: "tag" }
-                    " must give its remove control "
+                    " must make its remove control a button with "
                     Code { source: "tabindex: \"-1\"" }
-                    ", or each tag adds a tab stop, and removing a tag from the keyboard drops "
-                    "the focus to the page."
+                    ": the cursor focuses it, and without the tabindex each tag adds a tab stop."
                 }
             }
         }

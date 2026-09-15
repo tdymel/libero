@@ -10,7 +10,7 @@ use super::{
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
-        common::{base_props, input_from_str},
+        common::{CheckIcon, base_props, input_from_str},
         form::SliderChangeEvent,
         layout::use_box,
         variables,
@@ -90,6 +90,10 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .height(swatch.clone())
                 .min_width(swatch),
         )
+        .selector(
+            "& > [data-slot='swatches'] svg",
+            sx().width("60%").height("60%"),
+        )
 });
 
 base_props! {
@@ -104,7 +108,9 @@ base_props! {
         /// Shows the alpha slider and the preview swatch beside it.
         #[props(default)]
         with_alpha: Option<bool>,
-        /// Preset colors under the panel. Takes `ColorCode`s or CSS strings.
+        /// Preset colors under the panel. Takes `ColorCode`s or CSS strings,
+        /// named by their hex; `Swatches::labelled` names them. The one equal
+        /// to `value` is pressed and checked.
         #[props(default, into)]
         swatches: Swatches,
         /// Caps how many swatches share a row. Unset, they wrap to fill the
@@ -296,10 +302,18 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
 
     let onswatchclick = props.onswatchclick;
     let presets = props.swatches;
+    // Only a match reaches the row, so a drag between swatches leaves its props
+    // equal and it skips the redraw.
+    let selected = Some(value.to_rgba()).filter(|picked| {
+        presets
+            .iter()
+            .any(|&swatch| swatch_color(swatch, with_alpha).to_rgba() == *picked)
+    });
     let swatches = (!presets.is_empty()).then(|| {
         rsx! {
             SwatchRow {
                 swatches: presets,
+                selected,
                 with_alpha,
                 size,
                 radius,
@@ -336,6 +350,8 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
 #[derive(Props, Clone, PartialEq)]
 struct SwatchRowProps {
     swatches: Swatches,
+    /// The value as `rgba()`, set only when a swatch equals it.
+    selected: Option<String>,
     with_alpha: bool,
     size: Size,
     radius: Size,
@@ -348,6 +364,7 @@ struct SwatchRowProps {
 fn SwatchRow(props: SwatchRowProps) -> Element {
     let SwatchRowProps {
         swatches,
+        selected,
         with_alpha,
         size,
         radius,
@@ -355,17 +372,19 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
         oninput,
         onswatchclick,
     } = props;
-    let buttons = swatches.iter().copied().map(|color| {
-        let color = match with_alpha {
-            true => color,
-            false => color.opaque(),
-        };
+    let buttons = swatches.iter().copied().enumerate().map(|(index, color)| {
+        let color = swatch_color(color, with_alpha);
+        let pressed = selected.as_ref() == Some(&color.to_rgba());
+        let name = swatches
+            .label(index)
+            .map_or_else(|| color.to_string(), str::to_string);
         rsx! {
             ColorSwatch {
                 color,
                 size,
                 radius,
-                aria_label: color.to_string(),
+                aria_label: name,
+                aria_pressed: pressed.to_string(),
                 tabindex: (!focusable).then_some("-1"),
                 onclick: move |_| {
                     if let Some(oninput) = &oninput {
@@ -379,10 +398,21 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
                         onswatchclick.call(color);
                     }
                 },
+                if pressed {
+                    CheckIcon {}
+                }
             }
         }
     });
     rsx! {
         div { "data-slot": "swatches", {buttons} }
+    }
+}
+
+/// A swatch as the picker offers it: opaque unless alpha can be picked.
+fn swatch_color(color: ColorCode, with_alpha: bool) -> ColorCode {
+    match with_alpha {
+        true => color,
+        false => color.opaque(),
     }
 }

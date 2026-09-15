@@ -9,10 +9,22 @@ use libero::components::{
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
-/// Mantine's own default swatches.
-const SWATCHES: [&str; 14] = [
-    "#2e2e2e", "#868e96", "#fa5252", "#e64980", "#be4bdb", "#7950f2", "#4c6ef5", "#228be6",
-    "#15aabf", "#12b886", "#40c057", "#82c91e", "#fab005", "#fd7e14",
+/// Mantine's own default swatches, with its names for them.
+const SWATCHES: [(&str, &str); 14] = [
+    ("#2e2e2e", "Dark"),
+    ("#868e96", "Gray"),
+    ("#fa5252", "Red"),
+    ("#e64980", "Pink"),
+    ("#be4bdb", "Grape"),
+    ("#7950f2", "Violet"),
+    ("#4c6ef5", "Indigo"),
+    ("#228be6", "Blue"),
+    ("#15aabf", "Cyan"),
+    ("#12b886", "Teal"),
+    ("#40c057", "Green"),
+    ("#82c91e", "Lime"),
+    ("#fab005", "Yellow"),
+    ("#fd7e14", "Orange"),
 ];
 
 const HUE_SLIDER: &str = r#"let mut hue = use_signal(|| 200.0);
@@ -79,7 +91,7 @@ pub fn ColorPickerPage() -> Element {
                         .default("false")
                         .doc("Shows the alpha slider and the preview swatch beside it."),
                     prop("swatches", "Swatches")
-                        .doc("Preset colors under the panel. Takes `ColorCode`s or CSS strings; a string that is no color is skipped with a warning."),
+                        .doc("Preset colors under the panel. Takes `ColorCode`s or CSS strings; a string that is no color is skipped with a warning. Named by their hex; `Swatches::labelled` names them. The one equal to `value` is pressed and checked."),
                     prop("swatches_per_row", "usize").doc("Caps how many swatches share a row. Unset, they wrap to fill the width - seven per row at a size step's own width."),
                     prop("with_picker", "bool")
                         .default("true")
@@ -172,17 +184,14 @@ pub fn ColorPickerPage() -> Element {
                     Control::slider("radius", SIZES).default("xxl").hidden_when(|values| !picker(values)),
                     Control::switch("with_alpha").hidden_when(|values| !picker(values)),
                     Control::switch("swatches").hidden_when(|values| !picker(values)).code(|_, values| match is_on(values, "swatches") {
-                        // The whole list, seven to a line, so the snippet
-                        // needs no constant of ours.
+                        // The whole list, one swatch to a line, so the
+                        // snippet needs no constant of ours.
                         true => {
                             let rows = SWATCHES
-                                .chunks(7)
-                                .map(|row| {
-                                    let row: Vec<String> = row.iter().map(|c| format!("{c:?}")).collect();
-                                    format!("    {}", row.join(", "))
-                                })
+                                .iter()
+                                .map(|(color, name)| format!("    ({color:?}, {name:?}),"))
                                 .collect::<Vec<_>>();
-                            vec![format!("swatches: [\n{},\n]", rows.join(",\n"))]
+                            vec![format!("swatches: Swatches::labelled([\n{}\n])", rows.join("\n"))]
                         }
                         false => vec![],
                     }),
@@ -229,6 +238,12 @@ pub fn ColorPickerPage() -> Element {
                     " or larger where 2.5.8 has to be met."
                 }
                 Text {
+                    "The swatch equal to the value is pressed and checked. Swatches are named by "
+                    "their hex, which a screen reader spells out; name them with "
+                    Code { source: "Swatches::labelled" }
+                    "."
+                }
+                Text {
                     "The saturation panel is its own target - a press anywhere in it moves "
                     "the thumb, and the panel is far larger than 24x24 at every size - so it "
                     "meets 2.5.8 throughout."
@@ -244,7 +259,7 @@ fn ColorPickerDemo(values: DemoValues) -> Element {
     let mut color = use_signal(|| ColorCode::hex(0x228be6));
 
     let swatches = match is_on(&values, "swatches") {
-        true => Swatches::from(SWATCHES),
+        true => Swatches::labelled(SWATCHES),
         false => Swatches::default(),
     };
     let full_width = is_on(&values, "full_width");

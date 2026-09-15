@@ -86,6 +86,18 @@ share a row.
 
 `onswatchclick` fires after `oninput` when one is clicked.
 
+The swatch equal to `value` is pressed (`aria-pressed`) and carries a check
+mark. A swatch is named by its hex; `Swatches::labelled` gives each one a name
+instead:
+
+```rust,ignore
+ColorPicker {
+    value: color(),
+    oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+    swatches: Swatches::labelled([("#fa5252", "Red"), ("#40c057", "Green")]),
+}
+```
+
 `with_picker: false` leaves only the swatches - a palette. Without `swatches`
 that draws nothing, and a debug build warns about it.
 
@@ -107,7 +119,8 @@ its text: `hex` by default, `hexa` with alpha, or any of `rgb`, `rgba`, `hsl`,
   Up/Down, one percent per press, ten with Shift.
 - The hue slider moves one degree per arrow; the alpha slider one percent.
   Both take Home, End, PageUp and PageDown like a `Slider`.
-- Swatches are buttons.
+- Swatches are toggle buttons: the one equal to the value is pressed. They
+  are named by their hex unless `Swatches::labelled` names them.
 
 Name the three thumbs with `saturation_label`, `hue_label` and `alpha_label`.
 Unset, the names and the announced values come from the localization's `color`
@@ -177,7 +190,7 @@ and draws `children` in black or white, whichever reads on the color.
 | `value` | `ColorCode` | required | Strictly controlled. |
 | `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | | Every new color, bracketed by `Start`/`End` on a drag. A key press or a swatch click emits `Change` then `End`. |
 | `with_alpha` | `bool` | `false` | Alpha slider and preview swatch. |
-| `swatches` | `Swatches` | | Preset colors; `ColorCode`s or CSS strings. |
+| `swatches` | `Swatches` | | Preset colors; `ColorCode`s or CSS strings, or `Swatches::labelled` for named ones. The one equal to `value` is pressed. |
 | `swatches_per_row` | `usize` | | Caps swatches per row; unset, they wrap. |
 | `with_picker` | `bool` | `true` | `false` leaves only the swatches; warns in debug without any. |
 | `onswatchclick` | `EventHandler<ColorCode>` | | A swatch was clicked, after `oninput`. |

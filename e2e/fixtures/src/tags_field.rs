@@ -8,7 +8,10 @@ use libero::components::{Flex, TagsField};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/tags-field", || rsx! { TagsFieldPage {} })];
+pub const ROUTES: Routes = &[
+    ("/tags-field", || rsx! { TagsFieldPage {} }),
+    ("/tags-field/cursor", || rsx! { TagsCursorPage {} }),
+];
 
 /// A tag already held, and five suggestions of which one is that tag - so the
 /// list shows four rows, and "anything already held drops out of the list" is
@@ -26,6 +29,28 @@ fn TagsFieldPage() -> Element {
                     .iter()
                     .map(|s| s.to_string())
                     .collect::<Vec<_>>(),
+                value: topics(),
+                onchange: move |next| topics.set(next),
+            }
+        }
+    }
+}
+
+/// Four tags and no suggestions, for the chip cursor.
+#[component]
+fn TagsCursorPage() -> Element {
+    let mut topics = use_signal(|| {
+        ["rust", "dioxus", "wasm", "css"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect::<Vec<_>>()
+    });
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TagsField {
+                id: "cursor",
+                label: "Topics",
                 value: topics(),
                 onchange: move |next| topics.set(next),
             }
