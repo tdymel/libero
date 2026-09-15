@@ -24,16 +24,34 @@ fn rule<'a>(html: &'a str, selector: &str) -> &'a str {
     &rule[..rule.find('}').expect("an unterminated rule")]
 }
 
+/// Only error and warning interrupt; the default `info`, the rest of the
+/// palette and a literal colour are a polite `status`.
 #[test]
-fn it_defaults_to_role_alert() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider { Alert { "Saved." } }
-        }
+fn the_role_follows_the_colour() {
+    fn role_of(app: fn() -> Element) -> Option<String> {
+        attributes_of(&body(&render(app)), "div").remove("role")
+    }
+    fn default() -> Element {
+        rsx! { LiberoProvider { Alert { "Saved." } } }
+    }
+    fn error() -> Element {
+        rsx! { LiberoProvider { Alert { color: "error", "Failed." } } }
+    }
+    fn warning_shade() -> Element {
+        rsx! { LiberoProvider { Alert { color: "warning.7", "Expiring." } } }
+    }
+    fn success() -> Element {
+        rsx! { LiberoProvider { Alert { color: "success", "Saved." } } }
+    }
+    fn literal() -> Element {
+        rsx! { LiberoProvider { Alert { color: "#c00", "Saved." } } }
     }
 
-    let attributes = attributes_of(&body(&render(app)), "div");
-    assert_eq!(attributes.get("role").map(String::as_str), Some("alert"));
+    assert_eq!(role_of(default).as_deref(), Some("status"));
+    assert_eq!(role_of(error).as_deref(), Some("alert"));
+    assert_eq!(role_of(warning_shade).as_deref(), Some("alert"));
+    assert_eq!(role_of(success).as_deref(), Some("status"));
+    assert_eq!(role_of(literal).as_deref(), Some("status"));
 }
 
 /// The `attr_default` contract, and the thing `Form`'s summary depends on. A
@@ -43,7 +61,7 @@ fn it_defaults_to_role_alert() {
 fn a_callers_role_replaces_the_default_and_appears_once() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { Alert { role: "status", "Saved." } }
+            LiberoProvider { Alert { role: "log", "Saved." } }
         }
     }
 
@@ -52,7 +70,7 @@ fn a_callers_role_replaces_the_default_and_appears_once() {
     let open_tag = &root[..root.find('>').unwrap()];
 
     assert_eq!(open_tag.matches("role=").count(), 1, "{open_tag}");
-    assert!(open_tag.contains(r#"role="status""#), "{open_tag}");
+    assert!(open_tag.contains(r#"role="log""#), "{open_tag}");
 }
 
 #[test]

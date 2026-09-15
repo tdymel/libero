@@ -107,7 +107,9 @@ base_props! {
         /// A ring in the surface colour, so the dot reads on top of a picture.
         #[props(default)]
         with_border: Option<bool>,
-        /// A ping behind the dot. Stops under `prefers-reduced-motion`.
+        /// A ping behind the dot, repeating until you set it back to `false`:
+        /// turn it off when the work ends (WCAG 2.2.2). Stops under
+        /// `prefers-reduced-motion`.
         #[props(default)]
         processing: Option<bool>,
     }

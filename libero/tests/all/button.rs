@@ -28,13 +28,16 @@ fn loading_keeps_the_label_and_marks_the_button_busy() {
         attributes["data-state"].contains("loading"),
         "{attributes:?}"
     );
-    assert!(html.contains("<span>Save changes</span>"), "{html}");
+    assert!(
+        html.contains(r#"<span data-slot="label">Save changes</span>"#),
+        "{html}"
+    );
     assert!(html.contains(r#"aria-hidden="true""#), "{html}");
 }
 
-/// Off, the button is exactly what it was: no wrapper, no loader, no ARIA.
+/// Off, no loader and no ARIA: only the label span, which the ellipsis needs.
 #[test]
-fn not_loading_renders_the_children_bare() {
+fn not_loading_renders_only_the_label() {
     fn app() -> Element {
         rsx! {
             LiberoProvider { Button { "Save changes" } }
@@ -46,7 +49,33 @@ fn not_loading_renders_the_children_bare() {
 
     assert!(!attributes.contains_key("aria-busy"), "{attributes:?}");
     assert!(!attributes.contains_key("aria-disabled"), "{attributes:?}");
-    assert!(!html.contains("<span"), "{html}");
+    assert_eq!(html.matches("<span").count(), 1, "{html}");
+    assert!(
+        html.contains(r#"<span data-slot="label">Save changes</span></button>"#),
+        "{html}"
+    );
+}
+
+/// One line that never outgrows its box: a long label is cut with an
+/// ellipsis, where the fixed height used to clip it (todo 481).
+#[test]
+fn a_long_label_ends_in_an_ellipsis() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Button { "Save changes" } }
+        }
+    }
+
+    let html = render(app);
+    let class = classes_of(&body(&html), "button");
+    let class = class.first().expect("a framework class");
+    assert!(
+        html.contains(&format!(
+            ".{class} > [data-slot='label']{{min-width:0;overflow:hidden;text-overflow:ellipsis;}}"
+        )),
+        "{html}"
+    );
+    assert!(html.contains("max-width:100%;min-width:0;"), "{html}");
 }
 
 /// The tint is the lightest shade and its label the *contrast* of that shade,

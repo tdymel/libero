@@ -66,7 +66,7 @@ pub fn IndicatorPage() -> Element {
                     .doc("A ring in the surface color, `--lsx-paper-background`, so the dot reads on top of a picture."),
                 prop("processing", "bool")
                     .default("false")
-                    .doc("A ping growing and fading behind the dot. Stops under `prefers-reduced-motion`."),
+                    .doc("A ping growing and fading behind the dot, repeating until you set it back to `false`: turn it off when the work ends (WCAG 2.2.2). Stops under `prefers-reduced-motion`."),
             ])],
             lead: rsx! {
                 Text {

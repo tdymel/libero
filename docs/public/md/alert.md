@@ -4,11 +4,11 @@ Crate: `libero`
 Import: `use libero::components::Alert;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/alert.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A tinted surface for something the reader has to know - a title that names it, an optional icon and close button, and `role="alert"` as a default you can replace.
+Description: A tinted surface for something the reader has to know - a title that names it, an optional icon and close button, and a role picked by its color that you can replace.
 
 A tinted surface for something the reader has to know: an error summary, a
-warning, a note. It renders `role="alert"` as a default your own `role`
-replaces. It takes no focus and does not close on Escape, because it is not an
+warning, a note. An `error` or `warning` color renders `role="alert"`, every
+other color the polite `role="status"`; your own `role` replaces either. It takes no focus and does not close on Escape, because it is not an
 overlay.
 
 ## Usage
@@ -69,8 +69,10 @@ its field. See [Form](form.md).
 
 ## Accessibility
 
-- **`role="alert"` is a default, not an override.** A message that should wait
-  its turn passes `role: "status"`.
+- **The role follows `color`.** `error` and `warning` render `role="alert"`,
+  which interrupts a screen reader; `info`, `success`, the other palette colors
+  and a literal CSS color render `role="status"`, which waits its turn. Your
+  own `role` wins over either.
 - **The icon is `aria-hidden`**, so the severity has to be in the title or the
   message too.
 - **An alert never takes focus on its own.** Focus it from outside where that
@@ -86,7 +88,7 @@ its field. See [Form](form.md).
 |---|---|---|---|
 | `title` | `String` | - | The heading, and the accessible name through `aria-labelledby`. |
 | `icon` | `Element` | - | A leading glyph, rendered `aria-hidden`. |
-| `color` | `ThemeAwareValue` | `info` | The tint; a theme color name or a literal CSS color. |
+| `color` | `ThemeAwareValue` | `info` | The tint; a theme color name or a literal CSS color. `error` and `warning` make the role `alert`, the rest `status`. |
 | `variant` | `Variant` | `tonal` | Chrome, shared with `Button` and `Badge`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. No hover response - an alert is not a target. |
 | `radius` | `Size` | `md` | A step on the radius scale. Anything else goes through `sx`. |
 | `onclose` | `EventHandler<()>` | - | Shows the close button, and fires when it is pressed. |

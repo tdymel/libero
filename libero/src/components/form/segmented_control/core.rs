@@ -67,7 +67,18 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 .font_weight("600")
                 .cursor("pointer")
                 .user_select("none")
-                .white_space("nowrap"),
+                .white_space("nowrap")
+                // One line that never outgrows the strip (todo 481): a long
+                // label ends in an ellipsis, and `title` shows the whole.
+                .max_width("100%")
+                .min_width("0")
+                .overflow("hidden"),
+        )
+        .selector(
+            "& > label > span",
+            sx().min_width("0")
+                .overflow("hidden")
+                .text_overflow("ellipsis"),
         )
         // The overlapped border would otherwise cut into the next segment's
         // focus ring and selected background.
@@ -132,16 +143,7 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
             "full-width",
             sx().width("100%").when(
                 Orientation::Horizontal.state_name(),
-                sx().selector(
-                    SEGMENT,
-                    sx().flex("1 1 0").min_width("0").overflow("hidden"),
-                )
-                .selector(
-                    "& > label > span",
-                    sx().min_width("0")
-                        .overflow("hidden")
-                        .text_overflow("ellipsis"),
-                ),
+                sx().selector(SEGMENT, sx().flex("1 1 0")),
             ),
         );
 
@@ -384,6 +386,8 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
             label {
                 r#for: "{root}-segment-{index}",
                 "data-state": segment_state(&segment_states, segment.disabled, selected == Some(index)),
+                // The whole name, where an ellipsis cuts the visible one.
+                title: segment.name.clone(),
                 onclick: activation.label_click(),
                 {segment.content.clone()}
             }

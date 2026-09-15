@@ -14,7 +14,7 @@ const MESSAGE: &str = "Your card ends 09/26. Update it before the next invoice."
 #[component]
 pub fn AlertPage() -> Element {
     let theme = use_theme();
-    // Mounted on demand: `role="alert"` mounted with its text on first paint
+    // Mounted on demand: a live region mounted with its text on first paint
     // is the live-region shape `Notifications` avoids.
     let mut shown = use_signal(|| false);
     let trigger = use_element();
@@ -31,7 +31,7 @@ pub fn AlertPage() -> Element {
                     .doc("A leading glyph, rendered `aria-hidden`. The library ships no icon set; this is your own."),
                 prop("color", "ThemeAwareValue")
                     .default("info")
-                    .doc("The tint; a theme color name or a literal CSS color. Severity is yours to state - `Form`'s summary passes `error`."),
+                    .doc("The tint; a theme color name or a literal CSS color. Severity is yours to state - `Form`'s summary passes `error`. Also picks the role: `error` and `warning` are `alert`, the rest `status`."),
                 prop("variant", "Variant")
                     .default("tonal")
                     .doc("Chrome, shared with `Button` and `Badge`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. No hover response - an alert is not a target."),
@@ -47,13 +47,17 @@ pub fn AlertPage() -> Element {
             ])],
             lead: rsx! {
                 Text {
-                    "A tinted surface for something the reader has to know. It renders "
+                    "A tinted surface for something the reader has to know. An "
+                    Code { source: "error" }
+                    " or "
+                    Code { source: "warning" }
+                    " color renders "
                     Code { source: "role=\"alert\"" }
-                    " as a default your own "
+                    ", which interrupts a screen reader; every other color renders the polite "
+                    Code { source: "role=\"status\"" }
+                    ". Your own "
                     Code { source: "role" }
-                    " replaces - a message that should wait its turn takes "
-                    Code { source: "role: \"status\"" }
-                    ". It takes no focus and does not close on Escape: it is not an overlay. "
+                    " replaces either. It takes no focus and does not close on Escape: it is not an overlay. "
                     "The icon is "
                     Code { source: "aria-hidden" }
                     ": it repeats what the title already says. "

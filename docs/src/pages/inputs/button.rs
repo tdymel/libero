@@ -39,7 +39,8 @@ pub fn ButtonPage() -> Element {
                     .doc("Renders as a router-aware link instead of a `<button>`. A path/URL or a typed route (`Route::Foo {}`)."),
                 prop("target", "String")
                     .doc("The link's `target` attribute, when `to` is set."),
-                prop("children", "Element").doc("The button's label."),
+                prop("children", "Element")
+                    .doc("The button's label, on one line: a long one ends in an ellipsis and stays the full accessible name."),
             ]).extends("button")],
             lead: rsx! {
                 Text {

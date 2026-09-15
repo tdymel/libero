@@ -99,7 +99,7 @@ impl ColorValue {
         }
     }
 
-    fn color(self) -> Color {
+    pub(crate) fn color(self) -> Color {
         match self {
             Self::Shade(color, _)
             | Self::Contrast(color, _)

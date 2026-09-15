@@ -144,7 +144,7 @@ pub fn SegmentedControlPage() -> Element {
                         .doc("Space between the segments. Set it and they stop sharing borders - each keeps its own, and its own radius."),
                     prop("full_width", "bool")
                         .default("false")
-                        .doc("Segments share the width evenly instead of sizing to their label."),
+                        .doc("Segments share the width evenly instead of sizing to their label. Either way a label too long for the strip ends in an ellipsis, with the whole name as its `title`."),
                     prop("focusable", "bool")
                         .default("true")
                         .doc("`false` keeps the segments out of the tab order, and a click leaves focus where it is - for a control inside a field's dropdown."),

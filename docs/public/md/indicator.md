@@ -65,6 +65,9 @@ fn Demo(unread: u32) -> Element {
   noun is the caller's vocabulary.
 - To have the indicator itself read out, pass `aria_hidden: "false"` plus a
   `role="status"` of your own.
+- **`processing` pings until you turn it off.** Set it back to `false` when the
+  work ends: motion that starts on its own and never stops fails WCAG 2.2.2.
+  Only `prefers-reduced-motion` stops it for you.
 - **Contrast is the palette's.** A theme color's fill labels the count at
   4.5:1 or better. A literal CSS `color` brings no contrast twin, so check its
   label yourself.
@@ -79,7 +82,7 @@ fn Demo(unread: u32) -> Element {
 | `color` | `ThemeAwareValue` | `error` | The fill; a theme color name or a literal CSS color. A theme color also brings the `-contrast` twin the label reads with. |
 | `radius` | `Size` | `xxl` | A step on the indicator's own radius scale, `1px` to `6px`. The default, `xxl`, is `9999px`: round at every diameter. |
 | `with_border` | `bool` | `false` | A ring in the surface color, `--lsx-paper-background`, so the dot reads on top of a picture. |
-| `processing` | `bool` | `false` | A ping growing and fading behind the dot. Stops under `prefers-reduced-motion`. |
+| `processing` | `bool` | `false` | A ping growing and fading behind the dot, repeating until you set it back to `false`. Stops under `prefers-reduced-motion`. |
 
 Like every component, `Indicator` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.

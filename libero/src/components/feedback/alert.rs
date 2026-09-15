@@ -13,8 +13,8 @@ use crate::{
     hooks::{use_root_id, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ALERT_BODY_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, AlertDefaults, CssVar, NamedColorCss, Size,
-        SizeCss,
+        ALERT_BODY_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, AlertDefaults, Color, CssVar, NamedColorCss,
+        Size, SizeCss,
     },
 };
 
@@ -124,6 +124,20 @@ fn alert_variables(props: &AlertProps, base: &ThemeAwareValue, variant: Variant)
         )
 }
 
+/// `alert` interrupts the reader, so only `error` and `warning` earn it; the
+/// rest, a literal colour included, is a polite `status`.
+fn alert_role(color: &ThemeAwareValue) -> &'static str {
+    let severity = match color {
+        ThemeAwareValue::Color(color) => Some(*color),
+        ThemeAwareValue::ColorValue(value) => Some(value.color()),
+        _ => None,
+    };
+    match severity {
+        Some(Color::Error | Color::Warning) => "alert",
+        _ => "status",
+    }
+}
+
 base_props! {
     pub struct AlertProps {
         /// The heading, and the region's accessible name via
@@ -139,7 +153,8 @@ base_props! {
         icon: Option<Element>,
         /// The tint base; a theme colour name or a literal CSS colour.
         /// Defaults to `theme.alert.color`, which is `info` - severity is the
-        /// caller's to state.
+        /// caller's to state. It also picks the role: `error` and `warning`
+        /// are `alert`, the rest `status`.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// The five M3 arms, shared with `Button` and `Badge` - minus their
@@ -173,9 +188,10 @@ base_props! {
 /// A tinted surface that states something the reader has to know: an error
 /// summary, a warning, a note.
 ///
-/// Renders `role="alert"` **as a default the caller's own `role` wins over**,
-/// so a caller that needs `role="status"` - or `Form`'s summary, which brings
-/// its own `role` and `tabindex` - is not fighting the component.
+/// The role follows `color`: `error` and `warning` render `role="alert"`, every
+/// other colour `role="status"`. **A default the caller's own `role` wins
+/// over**, so `Form`'s summary, which brings its own `role` and `tabindex`, is
+/// not fighting the component.
 ///
 /// It takes no focus, has no keyboard behaviour of its own and does not close
 /// on `Escape`: it is not an overlay, and nothing gives it focus. The close
@@ -212,6 +228,7 @@ pub fn Alert(props: AlertProps) -> Element {
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::from(theme.alert.color));
     let base = base_color(Some(&color));
+    let role = alert_role(&color);
 
     let variables: Input<Variables> = alert_variables(&props, &base, variant).into();
     let states: Input<States> = props
@@ -272,7 +289,7 @@ pub fn Alert(props: AlertProps) -> Element {
         // where the caller supplied none. `Form`'s summary sets its own, and
         // a duplicate `role` attribute drops one of the two
         // non-deterministically - SSR keeps the first, the DOM the last.
-        .attr_default("role", "alert")
+        .attr_default("role", role)
         .attr("id", id())
         .attr("aria-labelledby", title_id)
         .attr("aria-describedby", body_id)

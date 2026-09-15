@@ -110,9 +110,10 @@ static CAROUSEL_SLIDE_SX: StaticSx = StaticSx::new(|| {
         .border_radius(CAROUSEL_RADIUS.value())
         .overflow("hidden")
         // The slide and the track clip flush at its edges, so a focusable slide
-        // content loses an outset ring (todo 618), as in `AspectRatio`.
+        // content loses an outset ring (todo 618), as in `AspectRatio`. Doubled
+        // to outrank a `Button`'s own ring, which ties it otherwise.
         .selector(
-            "& > :focus-visible",
+            "& > :focus-visible:focus-visible",
             inset_focus_ring_sx(&format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())),
         )
         .flex(format!(

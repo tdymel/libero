@@ -60,7 +60,27 @@ fn Demo() -> Element {
 }
 ```
 
+The label stays on one line and never widens its container: a long one ends
+in an ellipsis. The button wraps its children in a `span` for that, so an
+`Icon` beside the text sits inline, centred on it.
+
 ## Accessibility
+
+A cut label is still the full accessible name. Sighted users see the whole
+of it only if you pass it as `title` too:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::Button;
+
+#[component]
+fn Demo() -> Element {
+    let label = "Download the quarterly report as a spreadsheet";
+    rsx! {
+        Button { title: label, "{label}" }
+    }
+}
+```
 
 `selected: Some(..)` makes it a toggle button, announced as pressed or not.
 `None` announces no state, so an unset `selected` and `Some(false)` are not the
@@ -81,7 +101,7 @@ same. On a link `selected` keeps only the look.
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler; not called when the button renders as a link. |
 | `to` | `NavigationTarget` | - | Renders as a router-aware link instead of a `<button>`. A path/URL or a typed route (`Route::Foo {}`). |
 | `target` | `String` | - | The link's `target` attribute, when `to` is set. |
-| `children` | `Element` | required | The button's label. |
+| `children` | `Element` | required | The button's label, on one line: a long one ends in an ellipsis and stays the full accessible name. |
 
 `Button` also takes the `<button>` HTML attributes (`type`, `form`, `name`,
 `value`, ...) and, like every component, the shared props `sx`, `class`,

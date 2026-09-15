@@ -255,7 +255,7 @@ name the options, not the question. With neither, it warns in a debug build.
 | `size` | `Size` | `md` | Shared by every segment, and by the captions around them. |
 | `radius` | `Size` | `md` | Corner radius of the control's outer corners; inner ones are square. |
 | `gap` | `Size` | - | Space between the segments. Set it and they stop sharing borders - each keeps its own, and its own radius. |
-| `full_width` | `bool` | `false` | Segments share the width evenly instead of sizing to their label. |
+| `full_width` | `bool` | `false` | Segments share the width evenly instead of sizing to their label. Either way a label too long for the strip ends in an ellipsis, with the whole name as its `title`. |
 | `focusable` | `bool` | `true` | `false` keeps the segments out of the tab order, and a click leaves focus where it is - for a control inside a field's dropdown. |
 | `label` | `Caption` | - | The question. Names the group through `aria-labelledby`, since `for` cannot name a `role="radiogroup"`. |
 | `description` | `Caption` | - | Between the label and the segments: how to choose. |

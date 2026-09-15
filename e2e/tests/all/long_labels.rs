@@ -24,7 +24,29 @@ const OVERFLOWS: &str = "(() => {
     for (const tab of strip.querySelectorAll('[role=tab]'))
         if (tab.offsetWidth > strip.clientWidth) out.push(['tab', tab.offsetWidth, strip.clientWidth]);
     if (menu.getBoundingClientRect().right > innerWidth) out.push(['menu box', menu.getBoundingClientRect().right, innerWidth]);
+    // Todo 481: these keep one line and cut the label, so only their boxes must fit.
+    for (const e of document.querySelectorAll('#single-line, #single-line *'))
+        if (e.getBoundingClientRect().right > innerWidth + 0.5) out.push(['single line ' + (e.id || e.tagName), e.getBoundingClientRect().right, innerWidth]);
     return out;
+})()";
+
+/// Per todo 481 control: `[id, one line, ellipsis drawn, full text in its title or text]`.
+const SINGLE_LINE: &str = "(() => {
+    const long = 'Versandkostenberechnungsgrundlagenverordnungsentwurfsbearbeitungsstelle';
+    const oneLine = e => !!e && getComputedStyle(e).whiteSpace === 'nowrap';
+    const cut = e => !!e && getComputedStyle(e).textOverflow === 'ellipsis' && e.scrollWidth > e.clientWidth;
+    const rows = [];
+    for (const id of ['button', 'button-full', 'button-row']) {
+        const root = document.getElementById(id);
+        const label = root.querySelector('[data-slot=label]');
+        rows.push([id, oneLine(label), cut(label), root.textContent === long]);
+    }
+    for (const id of ['segmented', 'segmented-full']) {
+        const label = [...document.querySelectorAll(`#${id} label`)].find(l => l.title === long);
+        const span = label && label.querySelector('span');
+        rows.push([id, oneLine(span), cut(span), !!label]);
+    }
+    return rows;
 })()";
 
 #[test]
@@ -47,6 +69,15 @@ fn a_long_label_wraps_instead_of_widening_the_page() {
                 .into_value()
                 .unwrap();
             assert!(overflows.is_empty(), "{width}px: {overflows:?}");
+            let single: Vec<(String, bool, bool, bool)> = page
+                .evaluate(SINGLE_LINE)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            for (id, one_line, cut, full) in &single {
+                assert!(*one_line && *cut && *full, "{width}px {id}: {single:?}");
+            }
             pointer::click(page, "[aria-haspopup=menu]").await.unwrap();
             wait::for_js_true(
                 page,

@@ -289,7 +289,20 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         .white_space("nowrap")
         .text_decoration("none")
-        .outline("none");
+        .outline("none")
+        // One line that never outgrows its container (WCAG 1.4.10): a long
+        // label ends in an ellipsis. `min-width: 0` lets a flex row shrink it.
+        .max_width("100%")
+        .min_width("0")
+        // `text-overflow` never applies on a flex root, so the label is a span.
+        .selector(
+            "& > [data-slot='label']",
+            sx().min_width("0")
+                .overflow("hidden")
+                .text_overflow("ellipsis"),
+        )
+        // An icon among the text is inline there, not a flex item.
+        .selector("& > [data-slot='label'] > *", sx().vertical_align("middle"));
 
     Variant::ALL
         .iter()
@@ -324,26 +337,19 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(focus_ring_sx())
 });
 
-/// While `loading`, the button holds exactly two children: the caller's own,
-/// wrapped, and the loader.
+/// While `loading`, the button holds exactly two children: the label and the
+/// loader.
 ///
-/// The children stay in the tree at `opacity: 0` rather than being swapped for
-/// the loader: they are the button's accessible name, and they hold its width,
-/// so the button neither goes nameless nor jumps when the wait starts. The
+/// The label stays in the tree at `opacity: 0` rather than being swapped for
+/// the loader: it is the button's accessible name, and it holds its width, so
+/// the button neither goes nameless nor jumps when the wait starts. The
 /// loader sits on top, centred, at half the active size's height - each step
 /// gets its own rule, since the button republishes no unsuffixed height to
 /// read.
 fn loading_sx() -> Sx {
     let base = sx()
         .cursor("progress")
-        .selector(
-            "& > span:first-child",
-            sx().display("inline-flex")
-                .align_items("center")
-                .justify_content("center")
-                .gap("inherit")
-                .opacity("0"),
-        )
+        .selector("& > [data-slot='label']", sx().opacity("0"))
         .selector(
             "& > span:last-child",
             sx().position("absolute").inset("0").margin("auto"),
@@ -427,6 +433,8 @@ base_props! {
         to: Input<NavigationTarget>,
         #[props(default)]
         target: Option<String>,
+        /// The label, on one line: a long one ends in an ellipsis. It stays
+        /// the full accessible name; pass `title` to show it on hover too.
         children: Element,
     }
 }
@@ -523,6 +531,10 @@ pub fn Button(props: ButtonProps) -> Element {
         .style(style)
         .prepare();
 
+    let label = rsx! {
+        span { "data-slot": "label", {props.children} }
+    };
+
     // `InternalAnchor` has no `onclick`: a link-mode Button navigates for
     // real and loses the ripple, which only makes sense on a `<button>`.
     if let Some(to) = props.to.as_ref().cloned() {
@@ -535,7 +547,7 @@ pub fn Button(props: ButtonProps) -> Element {
                 .attr_default("role", "link")
                 .attr("aria-disabled", "true")
                 .attr("tabindex", "-1")
-                .render(HtmlTag::A, props.attributes, props.children);
+                .render(HtmlTag::A, props.attributes, label);
         }
 
         // Styling already resolved above: an `InternalAnchor` scope would
@@ -546,7 +558,7 @@ pub fn Button(props: ButtonProps) -> Element {
             props.target,
             None::<fn(MountedEvent)>,
             props.attributes,
-            props.children,
+            label,
         );
     }
 
@@ -554,11 +566,11 @@ pub fn Button(props: ButtonProps) -> Element {
     // `aria-busy` on it is what says it is waiting.
     let children = if loading {
         rsx! {
-            span { {props.children} }
+            {label}
             Loader { size, color: "currentColor" }
         }
     } else {
-        props.children
+        label
     };
 
     // `<button>` defaults to `submit`, which submits an enclosing form; a

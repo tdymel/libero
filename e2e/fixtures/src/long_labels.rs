@@ -1,11 +1,13 @@
 //! One label with no break opportunity in each of `Tree` (default row and
 //! `TreeItem`), `NavLink` and `Menu`, for reflow at a narrow width (todo 518),
-//! and in `Tabs`, `Timeline`, `Menubar` (todo 543).
+//! and in `Tabs`, `Timeline`, `Menubar` (todo 543). One more in `Button`,
+//! `Chip` and `SegmentedControl`, which keep one line (todo 481).
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Flex, Menu, MenuItem, Menubar, MenubarMenu, NavLink, OptionLabel, Options, Tabs,
-    Timeline, TimelineEvent, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, use_menu,
+    Button, Chip, Flex, Menu, MenuItem, Menubar, MenubarMenu, NavLink, OptionLabel, Options,
+    SegmentedControl, Tabs, Timeline, TimelineEvent, Tree, TreeItem, TreeNode, TreeNodeRenderArgs,
+    use_menu,
 };
 
 use crate::Routes;
@@ -58,7 +60,32 @@ fn LongLabelsPage() -> Element {
                 option_label: move |pick: Pick| OptionLabel::from(pick.name()),
                 panel: |_| rsx! { "Panel" },
             }
-            // SegmentedControl and Chip keep Button's fixed height: todo 481.
+            // Todo 481: one line, cut with an ellipsis.
+            div { id: "single-line",
+                Button { id: "button", "{LONG}" }
+                Button { id: "button-full", full_width: true, "{LONG}" }
+                Chip { id: "chip", "{LONG}" }
+                Chip { id: "chip-filter", checked: false, onchange: move |_| {}, "{LONG}" }
+                Flex { direction: "row", gap: "sm",
+                    Button { id: "button-row", "{LONG}" }
+                    Chip { id: "chip-row", "{LONG}" }
+                }
+                SegmentedControl {
+                    id: "segmented",
+                    aria_label: "Long",
+                    value: Pick::Short,
+                    onchange: move |_| {},
+                    option_label: move |pick: Pick| OptionLabel::from(pick.name()),
+                }
+                SegmentedControl {
+                    id: "segmented-full",
+                    aria_label: "Long, full width",
+                    full_width: true,
+                    value: Pick::Short,
+                    onchange: move |_| {},
+                    option_label: move |pick: Pick| OptionLabel::from(pick.name()),
+                }
+            }
             Timeline {
                 id: "timeline",
                 items: vec![

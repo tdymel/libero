@@ -5,7 +5,7 @@ expression: tree
 ---
 button "Show the notice"
   StaticText "Show the notice"
-alert "Card expiring" [atomic] [live=assertive]
+status "Card expiring" [atomic] [live=polite]
   generic
     StaticText "Card expiring"
   generic
@@ -16,52 +16,52 @@ alert "Your subscription renews on the first of next month at the annual rate" [
     StaticText "Your subscription renews on the first of next month at the annual rate"
   generic
     StaticText "Cancel before then to avoid the charge."
-alert "info filled" [atomic] [live=assertive]
+status "info filled" [atomic] [live=polite]
   generic
     StaticText "info filled"
   generic
     StaticText "The message."
-alert "info tonal" [atomic] [live=assertive]
+status "info tonal" [atomic] [live=polite]
   generic
     StaticText "info tonal"
   generic
     StaticText "The message."
-alert "info outlined" [atomic] [live=assertive]
+status "info outlined" [atomic] [live=polite]
   generic
     StaticText "info outlined"
   generic
     StaticText "The message."
-alert "info elevated" [atomic] [live=assertive]
+status "info elevated" [atomic] [live=polite]
   generic
     StaticText "info elevated"
   generic
     StaticText "The message."
-alert "info standard" [atomic] [live=assertive]
+status "info standard" [atomic] [live=polite]
   generic
     StaticText "info standard"
   generic
     StaticText "The message."
-alert "success filled" [atomic] [live=assertive]
+status "success filled" [atomic] [live=polite]
   generic
     StaticText "success filled"
   generic
     StaticText "The message."
-alert "success tonal" [atomic] [live=assertive]
+status "success tonal" [atomic] [live=polite]
   generic
     StaticText "success tonal"
   generic
     StaticText "The message."
-alert "success outlined" [atomic] [live=assertive]
+status "success outlined" [atomic] [live=polite]
   generic
     StaticText "success outlined"
   generic
     StaticText "The message."
-alert "success elevated" [atomic] [live=assertive]
+status "success elevated" [atomic] [live=polite]
   generic
     StaticText "success elevated"
   generic
     StaticText "The message."
-alert "success standard" [atomic] [live=assertive]
+status "success standard" [atomic] [live=polite]
   generic
     StaticText "success standard"
   generic
