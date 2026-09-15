@@ -9,7 +9,8 @@ pub struct SplitterDefaults {
     /// Which size level `divider_size` uses when unset.
     pub size: Size,
     pub divider_sizes: Sizes<u8>,
-    /// Invisible hit-target thickness, fixed regardless of `divider_size`.
+    /// Invisible hit-target thickness per `divider_size`; 24 meets WCAG 2.5.8
+    /// without leaning on the panes' spacing.
     pub hit_sizes: Sizes<u8>,
     /// Percent floor applied to both panes.
     pub min_size: f64,
@@ -23,7 +24,7 @@ impl SplitterDefaults {
     pub const DEFAULT: Self = Self {
         size: Size::Sm,
         divider_sizes: Sizes::new(1, 1, 2, 3, 4, 6),
-        hit_sizes: Sizes::new(10, 10, 12, 14, 16, 20),
+        hit_sizes: Sizes::new(24, 24, 24, 24, 24, 24),
         min_size: 10.0,
         step: 1.0,
         big_step: 10.0,

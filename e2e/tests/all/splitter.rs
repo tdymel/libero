@@ -86,6 +86,88 @@ fn modifier_chords_are_left_to_the_browser() {
     });
 }
 
+/// The drag-free path (WCAG 2.5.7): a single click only focuses, a double-click
+/// collapses pane A to the floor and the next one restores it.
+#[test]
+fn a_double_click_toggles_pane_a_collapsed() {
+    block_on(async {
+        let fixture = Fixture::open("/splitter", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let value_is = |value: &'static str| format!("{VALUE_NOW} === '{value}'");
+        wait::for_js_true(page, &value_is("50"), "the divider to start at 50")
+            .await
+            .unwrap();
+
+        pointer::click(page, DIVIDER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({DIVIDER:?})"),
+            "a click to focus the divider",
+        )
+        .await
+        .unwrap();
+        let now: String = page
+            .evaluate(VALUE_NOW)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(now, "50", "a single click moved the divider");
+
+        // Pointer capture sends every `dblclick` to the root: one in a pane is not the divider's.
+        let pane_a: String = page
+            .evaluate("document.querySelector('[role=separator]').getAttribute('aria-controls')")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        pointer::double_click(page, &format!("[id={pane_a:?}]"))
+            .await
+            .unwrap();
+        let now: String = page
+            .evaluate(VALUE_NOW)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(now, "50", "a double-click in pane A moved the divider");
+
+        pointer::double_click(page, DIVIDER).await.unwrap();
+        wait::for_js_true(page, &value_is("10"), "a double-click to collapse pane A")
+            .await
+            .unwrap();
+        pointer::double_click(page, DIVIDER).await.unwrap();
+        wait::for_js_true(page, &value_is("50"), "a double-click to restore pane A")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a divider double-click")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// WCAG 2.5.8 on its own terms: the default hit area is 24px across the line.
+#[test]
+fn the_default_hit_area_is_24px_thick() {
+    block_on(async {
+        let fixture = Fixture::open("/splitter", Viewport::Desktop).await.unwrap();
+        let width: f64 = fixture
+            .page
+            .evaluate(format!(
+                "document.querySelector({DIVIDER:?}).getBoundingClientRect().width"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(width, 24.0, "the divider's hit area is {width}px thick");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A floor raised after the divider moved pulls pane A up to it, and the
 /// separator never reports a value outside its own bounds.
 #[test]

@@ -68,9 +68,9 @@ fn Demo() -> Element {
 
 `onresize` reports both panes' resulting percentages, A first -
 `SplitterResizeEvent::Start`/`Change`/`End`, so a drag is bracketed the same way
-a scroll is. A key press emits `Change` then `End`, because it settles on its
-size at once - so persisting the layout on `End` also catches a keyboard
-resize.
+a scroll is. A key press or double-click emits `Change` then `End`, because it
+settles on its size at once - so persisting the layout on `End` also catches a
+keyboard or double-click resize.
 
 ## Accessibility
 
@@ -81,6 +81,10 @@ Once the divider has focus, Arrow keys move by `SplitterDefaults::step` (1%),
 Shift+Arrow by `big_step` (10%), Home and End jump to the `min_size` floor and
 its mirror. Left/Right act on a vertical divider, Up/Down on a horizontal one.
 
+Without a drag (WCAG 2.5.7), double-click the divider: it collapses pane A to
+the `min_size` floor, and the next double-click restores the size it had. A
+single click only focuses the divider. Its hit area is 24px thick (WCAG 2.5.8).
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -90,7 +94,7 @@ its mirror. Left/Right act on a vertical divider, Up/Down on a horizontal one.
 | `min_size` | `f64` | `10` | % floor applied to both panes, capped at 50. |
 | `divider_size` | `Size` | `sm` | Which size level the divider uses. |
 | `divider_color` | `ThemeAwareValue` | - | The divider's color. Unset it is grey. |
-| `onresize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' resulting sizes as percentages. A key press emits `Change` then `End`. |
+| `onresize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' resulting sizes as percentages. A key press or double-click emits `Change` then `End`. |
 | `aria_label` | `Option<String>` | - | Names the divider, after the pane it resizes. Unset warns in a debug build. |
 | `panel_a` | `Element` | required | Pane A (left/top). |
 | `panel_b` | `Element` | required | Pane B (right/bottom). Nest another `Splitter` in a pane for more than two. |
@@ -106,7 +110,7 @@ Like every component, `Splitter` also takes the shared props `sx`, `class`,
 |---|---|---|
 | `size` | `Size` | Which size level `divider_size` uses when unset (`sm`). |
 | `divider_sizes` | `Sizes<u8>` | Visible line thickness in px per size step - `1, 1, 2, 3, 4, 6`. |
-| `hit_sizes` | `Sizes<u8>` | Invisible hit-target thickness in px - `10, 10, 12, 14, 16, 20`. Fixed regardless of `divider_size`. |
+| `hit_sizes` | `Sizes<u8>` | Invisible hit-target thickness in px per size step - `24` at every step, the WCAG 2.5.8 minimum. |
 | `min_size` | `f64` | Percent floor applied to both panes (`10`). |
 | `step` | `f64` | Percent moved per arrow key press (`1`). |
 | `big_step` | `f64` | Percent moved per Shift+arrow press (`10`). |

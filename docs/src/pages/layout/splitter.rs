@@ -100,7 +100,7 @@ pub fn SplitterPage() -> Element {
                 prop("divider_size", "Size").default("sm").doc("Which size level the divider uses."),
                 prop("divider_color", "ThemeAwareValue").doc("The divider's color."),
                 prop("onresize", "EventHandler<SplitterResizeEvent>")
-                    .doc("Fires as the divider moves, with both panes' resulting sizes as percentages. A key press emits `Change` then `End`."),
+                    .doc("Fires as the divider moves, with both panes' resulting sizes as percentages. A key press or double-click emits `Change` then `End`."),
                 prop("aria_label", "Option<String>")
                     .doc("Names the divider, after the pane it resizes. Unset warns in a debug build."),
                 prop("panel_a", "Element").doc("Pane A (left/top)."),
@@ -175,6 +175,11 @@ pub fn SplitterPage() -> Element {
                         Kbd { "←" } " " Kbd { "→" } ", or " Kbd { "↑" } " " Kbd { "↓" }
                         " when horizontal: move it, with " Kbd { "Shift" } " in bigger steps. "
                         Kbd { "Home" } " " Kbd { "End" } ": to either limit."
+                    }
+                    ListItem {
+                        "Without a drag: double-click the divider to collapse pane A to "
+                        Code { source: "min_size" }
+                        ", and again to restore it."
                     }
                 }
             }

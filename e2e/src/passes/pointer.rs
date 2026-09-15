@@ -54,6 +54,17 @@ pub async fn centre_of(page: &Page, selector: &str) -> Result<Point> {
 }
 
 async fn mouse(page: &Page, kind: DispatchMouseEventType, at: Point, buttons: i64) -> Result<()> {
+    mouse_n(page, kind, at, buttons, 1).await
+}
+
+/// `clicks` is the press's click count: 2 on the second press makes a `dblclick`.
+async fn mouse_n(
+    page: &Page,
+    kind: DispatchMouseEventType,
+    at: Point,
+    buttons: i64,
+    clicks: i64,
+) -> Result<()> {
     page.execute(
         DispatchMouseEventParams::builder()
             .r#type(kind)
@@ -61,7 +72,7 @@ async fn mouse(page: &Page, kind: DispatchMouseEventType, at: Point, buttons: i6
             .y(at.y)
             .button(MouseButton::Left)
             .buttons(buttons)
-            .click_count(1)
+            .click_count(clicks)
             .build()
             .map_err(anyhow::Error::msg)?,
     )
@@ -107,5 +118,16 @@ pub async fn click(page: &Page, selector: &str) -> Result<()> {
     mouse(page, DispatchMouseEventType::MouseMoved, at, 0).await?;
     mouse(page, DispatchMouseEventType::MousePressed, at, 1).await?;
     mouse(page, DispatchMouseEventType::MouseReleased, at, 0).await?;
+    Ok(())
+}
+
+/// Double-click an element at its centre: two clicks, then the `dblclick`.
+pub async fn double_click(page: &Page, selector: &str) -> Result<()> {
+    let at = centre_of(page, selector).await?;
+    mouse(page, DispatchMouseEventType::MouseMoved, at, 0).await?;
+    for clicks in 1..=2 {
+        mouse_n(page, DispatchMouseEventType::MousePressed, at, 1, clicks).await?;
+        mouse_n(page, DispatchMouseEventType::MouseReleased, at, 0, clicks).await?;
+    }
     Ok(())
 }

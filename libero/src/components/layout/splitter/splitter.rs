@@ -189,11 +189,26 @@ pub fn Splitter(props: SplitterProps) -> Element {
     let mut container_size = use_signal(|| 0.0_f64);
     let mut start_a = use_signal(|| 0.0_f64);
 
+    // Where a double-click restores pane A to after it collapsed it.
+    let mut restore_to = use_signal(|| initial_size.clamp(min_size, 100.0 - min_size));
+    // Pointer capture retargets the `dblclick` to the root, so the root learns
+    // from the bubbling press whether the divider took it.
+    let mut divider_pressing = use_signal(|| false);
+    let mut pressed_divider = use_signal(|| false);
+
     let onresize = props.onresize;
     let notify = move |event: SplitterResizeEvent| {
         if let Some(onresize) = &onresize {
             onresize.call(event);
         }
+    };
+    // `Change` then `End`: a key press or double-click settles on its size at
+    // once, and `End` is where the docs tell a caller to persist the layout.
+    let settle = move |new_a: f64| {
+        let new_a = new_a.clamp(min_size, 100.0 - min_size);
+        a.set(new_a);
+        notify(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
+        notify(SplitterResizeEvent::End(new_a, 100.0 - new_a));
     };
 
     let drag = use_drag(DragOptions {
@@ -258,14 +273,10 @@ pub fn Splitter(props: SplitterProps) -> Element {
         };
 
         let current = bounded();
-        // `Change` then `End`: a key press settles on its size at once, and
-        // `End` is where the docs tell a caller to persist the layout.
+        let mut settle = settle;
         let mut go_to = |new_a: f64| {
             event.prevent_default();
-            let new_a = new_a.clamp(min_size, 100.0 - min_size);
-            a.set(new_a);
-            notify(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
-            notify(SplitterResizeEvent::End(new_a, 100.0 - new_a));
+            settle(new_a);
         };
 
         match event.key() {
@@ -277,6 +288,33 @@ pub fn Splitter(props: SplitterProps) -> Element {
             Key::End => go_to(100.0 - min_size),
             _ => {}
         }
+    });
+
+    // WCAG 2.5.7's drag-free path: collapse pane A to the floor, or restore it.
+    // A double-click, so the click that focuses the divider moves nothing.
+    let ondoubleclick = use_callback(move |_: Event<MouseData>| {
+        // A double-click in a pane, a nested splitter's included, is not ours.
+        if !pressed_divider() {
+            return;
+        }
+        let mut settle = settle;
+        let current = bounded();
+        if current > min_size {
+            restore_to.set(current);
+            settle(min_size);
+        } else {
+            // A restore point at the floor would restore nothing.
+            let to = restore_to();
+            settle(if to > min_size { to } else { 50.0 });
+        }
+    });
+    let ondividerdown = use_callback(move |event: Event<PointerData>| {
+        divider_pressing.set(true);
+        drag.onpointerdown.call(event);
+    });
+    let onrootdown = use_callback(move |_: Event<PointerData>| {
+        pressed_divider.set(divider_pressing());
+        divider_pressing.set(false);
     });
 
     let states: Input<States> = props
@@ -303,6 +341,9 @@ pub fn Splitter(props: SplitterProps) -> Element {
         .variables(&variables)
         .prepare()
         .element(&root)
+        .event("onpointerdown", onrootdown)
+        // The DOM's name: `.event` skips the rsx `ondoubleclick` mapping.
+        .event("ondblclick", ondoubleclick)
         .event("onpointermove", drag.onpointermove)
         .event("onpointerup", drag.onpointerup)
         .event("onpointercancel", drag.onpointercancel)
@@ -319,7 +360,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
                     min_size,
                     aria_label: props.aria_label,
                     controls: panel_a_id(),
-                    onpointerdown: drag.onpointerdown,
+                    onpointerdown: ondividerdown,
                     onkeydown,
                 }
                 div { class: panel_b_class, {panel_b} }
