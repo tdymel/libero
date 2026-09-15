@@ -117,8 +117,9 @@ fn cite_url_is_an_attribute_on_the_blockquote() {
 fn one_colour_resolves_the_tint_the_bar_and_the_text() {
     let style = attributes_of(&render(full_app), "blockquote")["style"].clone();
 
+    // The fill ramp, the one `contrast-N` is computed on (todo 605).
     assert!(
-        style.contains("--lsx-blockquote-background:var(--lsx-info-1)"),
+        style.contains("--lsx-blockquote-background:var(--lsx-info-fill-1)"),
         "{style}"
     );
     assert!(
@@ -149,6 +150,26 @@ fn a_tinted_quote_publishes_the_focus_contrast_twin() {
     // referent is undeclared never falls back, and the ring disappears. So the
     // referent has to exist.
     assert!(html.contains("--lsx-info-contrast-1:"), "{html}");
+}
+
+/// Todo 605: the brand `info.6` under its twin was white at 2.78:1. The twin
+/// is computed on `fill-6`, so an explicit shade paints that.
+#[test]
+fn an_explicit_shade_paints_the_fill_its_twin_reads_on() {
+    fn shaded() -> Element {
+        rsx! {
+            LiberoProvider { Blockquote { color: "info.6", "A quote." } }
+        }
+    }
+    let style = attributes_of(&render(shaded), "blockquote")["style"].clone();
+
+    for pair in [
+        "--lsx-blockquote-background:var(--lsx-info-fill-6)",
+        "--lsx-blockquote-color:var(--lsx-info-contrast-6)",
+        "--lsx-focus-contrast:var(--lsx-info-contrast-6)",
+    ] {
+        assert!(style.contains(pair), "{pair} in {style}");
+    }
 }
 
 /// Both size axes are independent, and both have to reach the stylesheet -

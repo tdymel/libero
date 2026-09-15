@@ -28,13 +28,16 @@ fn Demo() -> Element {
 ```
 
 A bare theme color name is tinted to a light shade; an explicit shade
-(`"error.4"`) or a literal CSS color (`"gold"`) passes through untouched.
+(`"error.4"`) keeps its shade. A theme color paints its fill shade, the one its
+contrast color is computed on, and sets the text to that contrast color. A hex
+sets black or white text; any other literal CSS color (`"gold"`) passes through
+and the text inherits.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ThemeAwareValue` | `warning`, tinted | Any theme color or literal value; a bare theme color is tinted to a light shade. |
+| `color` | `ThemeAwareValue` | `warning`, tinted | Any theme color or literal value; a bare theme color is tinted to a light shade. A theme color paints its fill shade and sets the text to its contrast twin; a hex sets black or white text. |
 | `children` | `Element` | required | The highlighted content. |
 
 Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,
@@ -53,6 +56,8 @@ Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,
 | Variable | Description |
 |---|---|
 | `--lsx-mark-background` | The resolved tint, set per instance from `color` or the theme default. |
+| `--lsx-mark-color` | The tint's contrast color for the text, set per instance. Unset for a literal other than a hex. |
+| `--lsx-focus-contrast` | The same contrast color, published for focus rings inside the mark. |
 
 ## Data attributes
 

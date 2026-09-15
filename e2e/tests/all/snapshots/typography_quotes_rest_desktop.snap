@@ -40,3 +40,9 @@ generic
   figure
     blockquote
       StaticText "A yellow quote."
+  figure
+    blockquote
+      StaticText "A info.6 quote."
+  figure
+    blockquote
+      StaticText "A error.8 quote."

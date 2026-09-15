@@ -727,6 +727,20 @@ mod tests {
         )));
     }
 
+    /// Todo 604: a hex does not flip with the scheme, so its ring must not
+    /// either. `--lsx-ink` on #1e3a8a was 1.66:1 in dark.
+    #[test]
+    fn a_hex_background_publishes_a_literal_focus_contrast() {
+        for (hex, ring) in [("#1e3a8a", "#FFFFFF"), ("#fff3bf", "#000000")] {
+            let css = Stylesheet::from(&sx().background(hex)).as_str().to_string();
+
+            assert!(
+                css.contains(&format!("{}:{ring};", NamedColorCss::FOCUS_CONTRAST.name())),
+                "{css}"
+            );
+        }
+    }
+
     #[test]
     fn sx_selector_ampersand_with_space_expands_to_descendant_combinator() {
         // A plain pattern is trimmed before being appended, so a leading

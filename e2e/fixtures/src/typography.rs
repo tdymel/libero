@@ -21,6 +21,9 @@ const COLORS: &[&str] = &[
     "warning",
 ];
 
+/// Mid and dark shades, where a brightness-picked twin or the page text failed.
+const SHADES: &[&str] = &["info.6", "error.8"];
+
 /// A 320px column, the width WCAG 1.4.10 reflows to.
 #[component]
 fn TypographyPage() -> Element {
@@ -39,6 +42,11 @@ fn TypographyPage() -> Element {
                 Mark { color: "#1e3a8a", "navy" }
                 " "
                 Mark { color: "#ffe066", "yellow" }
+                // Todo 605: white on info.6 was 2.78:1; page text on dark error.8, 2.36:1.
+                for color in SHADES {
+                    " "
+                    Mark { color: *color, "{color}" }
+                }
             }
             Text {
                 "Call "
@@ -76,6 +84,9 @@ fn QuotesPage() -> Element {
             // A hex is drawn as given in both schemes, so the text has to follow it.
             Blockquote { size: "xs", color: "#1e3a8a", "A navy quote." }
             Blockquote { size: "xs", color: "#ffe066", "A yellow quote." }
+            for color in SHADES {
+                Blockquote { size: "xs", color: *color, "A {color} quote." }
+            }
         }
     }
 }

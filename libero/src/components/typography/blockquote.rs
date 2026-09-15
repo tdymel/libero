@@ -38,28 +38,25 @@ struct Palette {
 }
 
 /// A bare colour name carries no shade, so it takes the tint shade rather than
-/// the `sx` pipeline's generic default. An explicit shade tints at that shade
-/// and takes its own contrast twin. A literal passes through; only a hex keeps
-/// a contrast twin, read off its own value.
+/// the `sx` pipeline's generic default. A palette tint paints in the fill role,
+/// `fill-N`, the colour its `contrast-N` twin is computed on (todo 605). A
+/// literal passes through; only a hex keeps a contrast twin, read off its own
+/// value.
 fn palette(value: Option<&ThemeAwareValue>, default_color: Color) -> Palette {
-    let from_color = |color: Color| Palette {
-        background: ThemeAwareValue::ColorValue(ColorValue::Shade(color, TINT_SHADE)),
+    let from_shade = |color: Color, shade: ColorShade| Palette {
+        background: ThemeAwareValue::ColorValue(ColorValue::Fill(color, shade)),
         border: ThemeAwareValue::ColorValue(ColorValue::Shade(color, ACCENT_SHADE)),
         contrast: Some(ThemeAwareValue::ColorValue(ColorValue::Contrast(
-            color, TINT_SHADE,
+            color, shade,
         ))),
     };
 
     match value {
-        None => from_color(default_color),
-        Some(ThemeAwareValue::Color(color)) => from_color(*color),
-        Some(ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade))) => Palette {
-            background: ThemeAwareValue::ColorValue(ColorValue::Shade(*color, *shade)),
-            border: ThemeAwareValue::ColorValue(ColorValue::Shade(*color, ACCENT_SHADE)),
-            contrast: Some(ThemeAwareValue::ColorValue(ColorValue::Contrast(
-                *color, *shade,
-            ))),
-        },
+        None => from_shade(default_color, TINT_SHADE),
+        Some(ThemeAwareValue::Color(color)) => from_shade(*color, TINT_SHADE),
+        Some(ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade))) => {
+            from_shade(*color, *shade)
+        }
         // Literal black or white off a hex: under the page's text a dark one was 2.02:1.
         Some(other) => Palette {
             background: other.clone(),

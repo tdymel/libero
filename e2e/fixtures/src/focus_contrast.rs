@@ -1,11 +1,17 @@
-//! The focus ring's `--lsx-focus-contrast` fallback.
+//! The focus ring's `--lsx-focus-contrast` fallback, and the one a hex publishes.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex};
+use libero::{
+    components::{Anchor, Box, Button, Flex},
+    sx::sx,
+};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/focus-contrast", || rsx! { FocusContrastPage {} })];
+pub const ROUTES: Routes = &[
+    ("/focus-contrast", || rsx! { FocusContrastPage {} }),
+    ("/focus-contrast/hex", || rsx! { HexPage {} }),
+];
 
 /// Todo 53, part one: what a `--lsx-focus-contrast` naming an undeclared
 /// referent does to the ring.
@@ -24,6 +30,16 @@ fn FocusContrastPage() -> Element {
         }
         Flex { direction: "column", gap: "md", max_width: "320px",
             Button { id: "ring-probe", "Probe" }
+        }
+    }
+}
+
+/// Todo 604: a link on a caller's hex background, whose ring is read off the hex.
+#[component]
+fn HexPage() -> Element {
+    rsx! {
+        Box { sx: sx().background("#1e3a8a").padding("md").max_width("320px"),
+            Anchor { id: "hex-link", to: "#", sx: sx().color("#FFFFFF"), "a link on navy" }
         }
     }
 }

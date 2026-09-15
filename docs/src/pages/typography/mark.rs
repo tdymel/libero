@@ -17,7 +17,7 @@ pub fn MarkPage() -> Element {
             properties: vec![props("Mark", vec![
                 prop("color", "ThemeAwareValue")
                     .default("warning, tinted")
-                    .doc("Any theme color or literal value; a bare theme color is tinted to a light shade."),
+                    .doc("Any theme color or literal value; a bare theme color is tinted to a light shade. A theme color paints its fill shade and sets the text to its contrast twin; a hex sets black or white text."),
                 prop("children", "Element").doc("The highlighted content."),
             ])],
             lead: rsx! {

@@ -68,11 +68,8 @@ impl ThemeAwareValue {
             Self::ColorValue(ColorValue::Shade(color, shade) | ColorValue::Fill(color, shade)) => {
                 Some(ColorValue::Contrast(*color, *shade).value())
             }
-            Self::RawColor(_, hex) => Some(if hex.contrast().rgb() == 0x00_00_00 {
-                NamedColorCss::INK.value()
-            } else {
-                NamedColorCss::SURFACE.value()
-            }),
+            // A literal: the hex does not flip with the scheme, `--lsx-ink` does.
+            Self::RawColor(_, hex) => Some(hex.contrast().to_string()),
             _ => None,
         }
     }

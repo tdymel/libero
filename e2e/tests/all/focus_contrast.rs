@@ -26,8 +26,8 @@
 //! element rather than `:root`, is a different case and was not measured.
 
 use e2e::browser::block_on;
-use e2e::passes::keyboard;
-use e2e::{Fixture, Viewport};
+use e2e::passes::{focus, keyboard};
+use e2e::{Fixture, Scheme, Viewport};
 
 const PROBE: &str = "#ring-probe";
 
@@ -67,6 +67,26 @@ fn an_undeclared_focus_contrast_resolves_to() {
             format!("outline: {outline}\noutline-color: {colour}")
         );
 
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 604: in dark, `--lsx-ink`/`--lsx-surface` for a hex put the stripe on
+/// the page's dark end, 1.66:1 on navy. The hex's own twin does not flip.
+#[test]
+fn a_hex_background_rings_its_link_in_the_hex_twin_in_dark() {
+    block_on(async {
+        let fixture = Fixture::open_in("/focus-contrast/hex", Viewport::Desktop, Scheme::Dark)
+            .await
+            .unwrap();
+
+        let ring = focus::assert_focus_ring(&fixture.page, "#hex-link", 5)
+            .await
+            .unwrap();
+        assert_eq!(ring.outline_color, "rgb(255, 255, 255)", "{ring:?}");
+        focus::assert_ring_contrast(&ring).unwrap();
+
+        fixture.console.assert_clean("the hex ring").unwrap();
         fixture.close().await.unwrap();
     });
 }

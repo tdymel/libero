@@ -16,6 +16,7 @@ const LINKS: &[&str] = &[
     "#mark-error",
     "#mark-info",
     "#mark-success",
+    // No dark shade ("info.6"): its white twin meets the white halo at 1:1, a filed todo.
 ];
 
 #[test]

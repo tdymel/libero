@@ -33,6 +33,12 @@ paragraph
   StaticText " "
   mark
     StaticText "yellow"
+  StaticText " "
+  mark
+    StaticText "info.6"
+  StaticText " "
+  mark
+    StaticText "error.8"
 paragraph
   StaticText "Call "
   code

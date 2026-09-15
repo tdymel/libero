@@ -26,7 +26,7 @@ pub fn BlockquotePage() -> Element {
                     .doc("Body font size, line height, padding and the accent bar's width."),
                 prop("color", "ThemeAwareValue")
                     .default("primary, tinted")
-                    .doc("The accent bar, and the background tint derived from it. A bare theme color is tinted to its lightest shade."),
+                    .doc("The accent bar, and the background tint derived from it. A bare theme color is tinted to its lightest shade. A theme color paints its fill shade under its contrast twin as text."),
                 prop("radius", "Size")
                     .default("sm")
                     .doc("Rounds the two corners away from the accent bar."),

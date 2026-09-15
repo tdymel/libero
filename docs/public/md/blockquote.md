@@ -54,17 +54,18 @@ fn Demo() -> Element {
 
 A bare theme color name (`"info"`) gives a shade-1 tint, a shade-6 accent bar and
 the tint's own contrast color for the text. An explicit shade (`"info.2"`) tints
-at that shade, keeps the shade-6 bar and takes that shade's contrast color. A
-literal CSS color (`"gold"`) is used as-is for both the background and the bar,
-and the text color is left to inherit, because no contrast color can be derived
-from a literal.
+at that shade, keeps the shade-6 bar and takes that shade's contrast color. The
+tint is the shade's fill color, the one its contrast color is computed on. A
+literal CSS color (`"gold"`) is used as-is for both the background and the bar.
+A hex sets black or white text; any other literal leaves the text to inherit,
+because no contrast color can be derived from it.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Body font size, line height, padding and the accent bar's width. |
-| `color` | `ThemeAwareValue` | `primary`, tinted | The accent bar, and the background tint derived from it. A bare theme color is tinted to its lightest shade. |
+| `color` | `ThemeAwareValue` | `primary`, tinted | The accent bar, and the background tint derived from it. A bare theme color is tinted to its lightest shade. A theme color paints its fill shade under its contrast twin as text. |
 | `radius` | `Size` | `sm` | Rounds the two corners away from the accent bar. |
 | `attribution` | `Element` | - | Who said it, rendered in a `<figcaption>` outside the quote. A person's name goes here as plain text - it does not become a `<cite>`. |
 | `work` | `String` | - | The title of the work quoted, rendered as a `<cite>` in the `<figcaption>`. Not a person. Follows `attribution` after a comma when both are set. |
@@ -119,8 +120,8 @@ out per size rather than as an `em`, because it is a sibling of the quote and an
 | `--lsx-blockquote-cite-opacity` | The `<figcaption>`'s opacity. Declared on `:root` from the theme. |
 | `--lsx-blockquote-background` | The resolved tint, set per instance on the `<blockquote>`. |
 | `--lsx-blockquote-border-color` | The resolved accent bar color, set per instance on the `<blockquote>`. |
-| `--lsx-blockquote-color` | The tint's contrast color for the body text, set per instance. Unset when `color` is a literal. |
-| `--lsx-focus-contrast` | The same contrast color, published for focus rings inside the quote. Unset when `color` is a literal. |
+| `--lsx-blockquote-color` | The tint's contrast color for the body text, set per instance. Unset for a literal other than a hex. |
+| `--lsx-focus-contrast` | The same contrast color, published for focus rings inside the quote. Unset for a literal other than a hex. |
 
 ## Data attributes
 
