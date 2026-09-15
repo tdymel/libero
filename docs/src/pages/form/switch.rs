@@ -42,7 +42,7 @@ pub fn SwitchPage() -> Element {
                     .doc("Disables interaction and dims the switch."),
                 prop("readonly", "bool")
                     .default("false")
-                    .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                    .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. Sets `aria-readonly`, which Chromium does not announce on a switch: say it in the label or description where it matters."),
                 prop("aria_label", "String")
                     .doc("Names the switch when it has no `label`."),
                 prop("variant", "ChoiceVariant")

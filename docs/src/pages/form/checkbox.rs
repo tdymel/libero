@@ -46,7 +46,7 @@ pub fn CheckboxPage() -> Element {
                         .doc("Disables interaction and dims the checkbox."),
                     prop("readonly", "bool")
                         .default("false")
-                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. Sets `aria-readonly`, which Chromium does not announce on a checkbox: say it in the label or description where it matters."),
                     prop("aria_label", "String")
                         .doc("Names the checkbox when it has no `label`."),
                     prop("variant", "ChoiceVariant")

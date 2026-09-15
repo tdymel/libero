@@ -124,7 +124,7 @@ Space toggles it. Without a `label`, give it an `aria_label`.
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
 | `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the checkbox. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. Sets `aria-readonly`, which Chromium does not announce on a checkbox: say it in the label or description where it matters. |
 | `aria_label` | `String` | - | Names the checkbox when it has no `label`. |
 | `variant` | `ChoiceVariant` | `plain` | `card` draws the checkbox as a bordered surface that is its own hit area. |
 

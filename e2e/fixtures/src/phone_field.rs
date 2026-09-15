@@ -8,6 +8,10 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/phone-field", || rsx! { PhoneFieldPage {} }),
     ("/phone-field/error", || rsx! { PhoneFieldErrorPage {} }),
+    (
+        "/phone-field/readonly",
+        || rsx! { PhoneFieldReadonlyPage {} },
+    ),
 ];
 
 /// A three-band flag, `aria-hidden`: the docs page's own.
@@ -54,6 +58,15 @@ fn PhoneFieldErrorPage() -> Element {
                 required: true,
                 status: FieldStatus::Error("Enter a phone number.".into()),
             }
+        }
+    }
+}
+
+#[component]
+fn PhoneFieldReadonlyPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            PhoneField { label: "Mobile", country: "DE", readonly: true }
         }
     }
 }

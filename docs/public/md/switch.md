@@ -113,7 +113,7 @@ label is better. With neither, it warns in a debug build.
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
 | `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the switch. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. Sets `aria-readonly`, which Chromium does not announce on a switch: say it in the label or description where it matters. |
 | `aria_label` | `String` | - | Names the switch when it has no `label`. |
 | `variant` | `ChoiceVariant` | `plain` | `card` draws the switch as a bordered surface that is its own hit area. |
 

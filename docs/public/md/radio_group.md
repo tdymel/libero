@@ -138,7 +138,7 @@ card is still one click target, so a link inside it picks the option.
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
 | `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
 | `disabled` | `bool` | `false` | Disables every option and dims the group. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. Sets `aria-readonly` on the group, which Chromium does not announce: say it in the label or description where it matters. |
 
 ### `Radio`
 
@@ -149,6 +149,7 @@ card is still one click target, so a link inside it picks the option.
 | `name` | `String` | - | Shared by every radio in one group. `RadioGroup` sets it. |
 | `tabindex` | `String` | - | Which radio is the group's tab stop. `RadioGroup` sets it. |
 | `aria_label` | `String` | - | Names the radio when it has no `label`. |
+| `readonly` | `bool` | `false` | Refuses the pick. ARIA has no read-only radio: `RadioGroup` says it on the group, a lone radio says nothing. |
 | `variant` | `ChoiceVariant` | `plain` | `card` draws the radio as a bordered surface that is its own hit area. |
 
 Both also take the field props - `label`, `description`, `helper`, `status`,

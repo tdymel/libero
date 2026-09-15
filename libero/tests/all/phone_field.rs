@@ -148,6 +148,28 @@ fn the_picker_is_a_button_that_says_a_listbox_hangs_off_it() {
         !html.contains("role=\"listbox\""),
         "a closed picker rendered its list:\n{html}"
     );
+    assert!(!button.contains_key("aria-disabled"), "{html}");
+}
+
+fn locked() -> Element {
+    rsx! {
+        LiberoProvider {
+            PhoneField { label: "Mobile", country: "US", readonly: true }
+        }
+    }
+}
+
+/// Read-only keeps the picker a tab stop but says it does nothing (todo 558).
+#[test]
+fn a_read_only_picker_is_aria_disabled_and_still_focusable() {
+    let html = body(&render(locked));
+
+    let button = attributes_of(&html, "button");
+    assert_eq!(
+        button.get("aria-disabled").map(String::as_str),
+        Some("true")
+    );
+    assert!(!button.contains_key("disabled"), "{html}");
 }
 
 /// `country_select: false` pins the country and is one tab stop fewer: the

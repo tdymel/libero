@@ -112,6 +112,45 @@ fn the_button_and_its_listbox_are_named() {
     });
 }
 
+/// Read-only: the picker stays a tab stop, is announced as unavailable, and no
+/// key or click opens it (todo 558).
+#[test]
+fn a_read_only_picker_is_focusable_but_opens_nothing() {
+    block_on(async {
+        let fixture = Fixture::open("/phone-field/readonly", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, PICKER, 10).await.unwrap();
+        for key in [keyboard::ENTER, keyboard::SPACE, keyboard::ARROW_DOWN] {
+            keyboard::press(page, key).await.unwrap();
+        }
+        pointer::click(page, PICKER).await.unwrap();
+
+        let tree = ax::snapshot(page, "body").await.unwrap();
+        assert!(
+            tree.contains(r#"button "Country: Germany, DE +49" [disabled]"#),
+            "the read-only picker is not announced as unavailable:\n{tree}"
+        );
+        assert!(
+            tree.contains("[expanded=false]"),
+            "the list opened:\n{tree}"
+        );
+        assert!(!tree.contains("listbox \""), "the list opened:\n{tree}");
+        let focused: bool = page
+            .evaluate(format!(
+                "document.activeElement === document.querySelector({PICKER:?})"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(focused, "the picker lost the focus");
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A query ranks the names starting with it first, so Enter picks France for
 /// "fr", not the Central African Republic.
 #[test]

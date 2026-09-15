@@ -109,7 +109,7 @@ pub fn RadioGroupPage() -> Element {
                         .doc("Disables every option and dims the group."),
                     prop("readonly", "bool")
                         .default("false")
-                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. Sets `aria-readonly` on the group, which Chromium does not announce: say it in the label or description where it matters."),
                 ]),
                 props("Radio", vec![
                     prop("checked", "bool")
@@ -122,6 +122,9 @@ pub fn RadioGroupPage() -> Element {
                         .doc("`RadioGroup` makes exactly one radio the group's tab stop and takes the rest out of the tab order."),
                     prop("aria_label", "String")
                         .doc("Names the radio when it has no `label`."),
+                    prop("readonly", "bool")
+                        .default("false")
+                        .doc("Refuses the pick. ARIA has no read-only radio: `RadioGroup` says it on the group, a lone radio says nothing."),
                     prop("variant", "ChoiceVariant")
                         .default("plain")
                         .doc("`card` draws the radio as a bordered surface and makes all of it the hit area."),

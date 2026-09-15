@@ -13,9 +13,10 @@ use libero::{
     components::{
         ActionIcon, Box, Button, Carousel, Checkbox, Chip, CodeBlock, Collapse, ColorCode,
         ColorField, Dialog, FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NativeSelect,
-        NumberField, OptionList, Options, PasswordField, PhoneField, PinField, RadioGroup,
-        RangeSlider, Rule, SegmentedControl, SelectionArgs, Slider, SliderChangeEvent, Table, Tabs,
-        TagsField, TextField, TimePicker, Tree, TreeNode, column, not_empty, use_form, use_menu,
+        NumberField, OptionList, Options, PasswordField, PhoneField, PinField, Radio, RadioGroup,
+        RangeSlider, Rule, SegmentedControl, SelectionArgs, Slider, SliderChangeEvent, Switch,
+        Table, Tabs, TagsField, TextField, TimePicker, Tree, TreeNode, column, not_empty, use_form,
+        use_menu,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -1571,6 +1572,72 @@ fn last_click(find: &FindClickListener) -> ElementId {
 
 fn input_listener(find: &FindClickListener) -> ElementId {
     find.input.expect("registered no input listener")
+}
+
+fn readonly_checkbox() -> Element {
+    rsx! {
+        LiberoProvider {
+            Checkbox {
+                label: "Agree",
+                checked: false,
+                readonly: READ_ONLY.get(),
+                onchange: move |on: bool| heard(on),
+            }
+        }
+    }
+}
+
+fn readonly_switch() -> Element {
+    rsx! {
+        LiberoProvider {
+            Switch {
+                label: "Wi-Fi",
+                checked: false,
+                readonly: READ_ONLY.get(),
+                onchange: move |on: bool| heard(on),
+            }
+        }
+    }
+}
+
+fn readonly_radio() -> Element {
+    rsx! {
+        LiberoProvider {
+            Radio {
+                label: "Tea",
+                checked: false,
+                readonly: READ_ONLY.get(),
+                onselect: move |_| heard("tea"),
+            }
+        }
+    }
+}
+
+/// Todo 489: a read-only checkable refuses the click, and a switch its Enter
+/// too; each checked against the same control editable, where it must change.
+#[test]
+fn a_read_only_checkable_refuses_every_activation() {
+    let enter = || key_event(Key::Enter);
+    for (app, name, data) in [
+        (
+            readonly_checkbox as fn() -> Element,
+            "click",
+            click_event as fn() -> _,
+        ),
+        (readonly_switch, "click", click_event),
+        (readonly_switch, "keydown", enter),
+        (readonly_radio, "click", click_event),
+    ] {
+        let pick = if name == "click" {
+            last_click
+        } else {
+            last_keydown
+        };
+        let (changed, _) = send(app, false, name, pick, data);
+        assert_eq!(changed.len(), 1, "{name} changed nothing while editable");
+        let (heard, _) = send(app, true, name, pick, data);
+        assert_eq!(heard, Vec::<String>::new(), "{name}");
+    }
 }
 
 fn readonly_slider() -> Element {

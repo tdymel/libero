@@ -581,6 +581,8 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
             format!("Country: {picker_name}, {} +{}", country.iso, country.dial),
         )
         .attr("disabled", disabled)
+        // Read-only keeps the tab stop but says the button does nothing.
+        .attr("aria-disabled", (readonly && !disabled).then_some("true"))
         // Or clicking the button while the list is open closes it twice over:
         // the press blurs the search box, which closes the list, and the click
         // that follows opens it again.
