@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 use crate::common::{attributes_of, body, render};
 
 use dioxus::prelude::*;
@@ -41,8 +43,10 @@ fn a_table_marks_only_sortable_headers_and_aligns_by_cell_type() {
     assert!(body.contains("Ada"));
     assert!(body.contains("36"));
 
-    // Only the sortable column advertises a sort affordance.
-    assert_eq!(body.matches("aria-sort=\"none\"").count(), 1);
+    // Only the sortable column is a button; nothing is sorted, so no header
+    // carries `aria-sort` (APG: the sorted column only).
+    assert_eq!(body.matches("data-sortable").count(), 1);
+    assert!(!body.contains("aria-sort"));
     assert_eq!(body.matches("<button").count(), 1);
     // The arrow is always in the markup, so sorting can't resize the header.
     assert_eq!(body.matches("<svg").count(), 1);
@@ -80,4 +84,108 @@ fn a_custom_render_replaces_the_cell_body() {
 
     assert!(body.contains("7 pts"));
     assert!(body.contains("<mark"));
+}
+
+#[derive(Clone, PartialEq)]
+struct Item {
+    name: &'static str,
+}
+
+/// The attributes of the scroll region's `div`, wherever `role` sits in it.
+fn region(html: &str) -> BTreeMap<String, String> {
+    let at = html.find("role=\"region\"").expect("no scroll region");
+    let start = html[..at].rfind("<div").unwrap();
+    attributes_of(&html[start..], "div")
+}
+
+#[test]
+fn a_caption_names_the_table_and_the_scroll_region() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    caption: "Stock",
+                    scroll: true,
+                    data: vec![Item { name: "Apple" }],
+                    columns: vec![column("Name").value(|item: &Item| item.name.to_string())],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let caption = attributes_of(&html, "caption");
+    let region = region(&html);
+
+    assert!(body(&html).contains(">Stock</caption>"));
+    assert_eq!(region["aria-labelledby"], caption["id"]);
+    assert_eq!(region["tabindex"], "0");
+}
+
+#[test]
+fn a_scroll_region_copies_the_callers_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Stock",
+                    scroll: true,
+                    data: vec![Item { name: "Apple" }],
+                    columns: vec![column("Name").value(|item: &Item| item.name.to_string())],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert_eq!(region(&html)["aria-label"], "Stock");
+    assert_eq!(attributes_of(&html, "table")["aria-label"], "Stock");
+}
+
+#[test]
+fn no_scroll_means_no_region_and_no_caption() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Stock",
+                    data: vec![Item { name: "Apple" }],
+                    columns: vec![column("Name").value(|item: &Item| item.name.to_string())],
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(!body.contains("role=\"region\""));
+    assert!(!body.contains("<caption"));
+}
+
+#[test]
+fn the_empty_slot_spans_every_column_only_without_rows() {
+    fn table(data: Vec<Item>) -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "Stock",
+                    empty: rsx! { "Nothing in stock" },
+                    data,
+                    columns: vec![
+                        column("Name").value(|item: &Item| item.name.to_string()),
+                        column("Also").value(|item: &Item| item.name.to_string()),
+                    ],
+                }
+            }
+        }
+    }
+
+    let empty = body(&render(|| table(Vec::new())));
+    assert!(empty.contains("colspan=\"2\""), "{empty}");
+    assert!(empty.contains("Nothing in stock"));
+
+    let full = body(&render(|| table(vec![Item { name: "Apple" }])));
+    assert!(!full.contains("Nothing in stock"));
+    assert!(!full.contains("data-empty"));
 }

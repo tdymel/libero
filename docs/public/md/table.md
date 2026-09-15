@@ -8,7 +8,7 @@ Description: A sortable data table built from a row type and a list of column de
 
 Data in, table out. Each column is built with `column(..)` - a header, a `value`
 that reads one cell out of a row, and whatever else that column needs. `Table`
-itself takes only `data` and `columns`.
+itself needs only `data` and `columns`.
 
 The cell's type does the quiet work: `value` reads it for the column's sort order
 and alignment, then erases it, which is why columns over different cell types
@@ -43,7 +43,7 @@ fn Demo() -> Element {
 
     rsx! {
         Table {
-            aria_label: "Team members",
+            caption: "Team members",
             data: people,
             columns: vec![
                 column("Name").value(|p: &Person| p.name.clone()).sortable(),
@@ -123,10 +123,44 @@ fn Demo() -> Element {
 `align` on the column overrides whatever the cell type chose, for the case where
 one column should not follow its type.
 
+A table wider than its container takes `scroll: true`, and `empty` fills the
+body while `data` has no rows:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Table, column};
+
+#[derive(Clone, PartialEq)]
+struct Person {
+    name: String,
+}
+
+#[component]
+fn Demo() -> Element {
+    let people: Vec<Person> = Vec::new();
+
+    rsx! {
+        Table {
+            caption: "Team members",
+            scroll: true,
+            empty: rsx! { "No team members yet." },
+            data: people,
+            columns: vec![column("Name").value(|p: &Person| p.name.clone()).sortable()],
+        }
+    }
+}
+```
+
 ## Accessibility
 
-Give it an accessible name with `aria_label` when the surrounding text doesn't
-already provide one. A sortable header is a tab stop; Space or Enter sorts.
+Name every table: `caption` shows a title and names it, `aria_labelledby`
+points at a heading already on the page, or `aria_label` names it without text.
+An unnamed table warns in the console in debug builds.
+
+A table wider than its container needs `scroll: true`: the wrapper is a
+`role="region"` named like the table and a tab stop, so a keyboard user can
+scroll it with the arrow keys. A sortable header is a button; Enter or Space
+sorts. Only the sorted header carries `aria-sort`.
 
 ## Props
 
@@ -136,6 +170,9 @@ already provide one. A sortable header is a tab stop; Space or Enter sorts.
 |---|---|---|---|
 | `data` | `Vec<T>` | required | One row each, in source order until a column is sorted. |
 | `columns` | `Vec<Column<T>>` | required | Built with `column(..)`. |
+| `caption` | `Option<String>` | - | A visible title above the header row, and the table's accessible name. |
+| `empty` | `Option<Element>` | - | Shown in one full-width row when `data` is empty. |
+| `scroll` | `bool` | `false` | Wraps the table in a named, focusable `role="region"` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes - `aria_label` among them.
@@ -184,4 +221,6 @@ default `start`.
 |---|---|
 | `data-align="center"` | The column's alignment is `center`. |
 | `data-align="end"` | The column's alignment is `end` - what every numeric cell type picks. |
-| `aria-sort` | On sortable headers only: `none`, `ascending`, or `descending`. |
+| `data-sortable` | On a sortable header. |
+| `aria-sort` | On the sorted header only: `ascending` or `descending`. |
+| `data-empty` | On the body row that holds `empty`. |

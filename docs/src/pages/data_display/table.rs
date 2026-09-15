@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, Table, Text, column};
 
@@ -31,7 +31,7 @@ fn people() -> Vec<Person> {
 
 // snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, bonus: f64 }
 // snippet: let people: Vec<Person> = Vec::new();
-// snippet: in Table { aria_label: "Team members", data: people, .. }
+// snippet: in Table { caption: "Team members", data: people, .. }
 const COLUMNS: &str = r#"columns: vec![
         column("Name").value(|p: &Person| p.name.clone()).sortable(),
         column("Role")
@@ -43,7 +43,17 @@ const COLUMNS: &str = r#"columns: vec![
 
 /// The rows are the fixture, and the snippet only compiles with them, so the
 /// code block carries the struct and the data above the `Table` itself.
-fn wrap_data(_: &DemoValues, code: &str) -> String {
+fn wrap_data(values: &DemoValues, code: &str) -> String {
+    let people = match no_rows(values) {
+        true => "let people: Vec<Person> = Vec::new();",
+        false => {
+            r#"let people = vec![
+    Person { name: "Ada Lovelace".into(), role: "Owner".into(), bonus: Some(12.5) },
+    Person { name: "Grace Hopper".into(), role: "Admin".into(), bonus: Some(8.0) },
+    Person { name: "Alan Turing".into(), role: "Viewer".into(), bonus: None },
+];"#
+        }
+    };
     format!(
         r#"#[derive(Clone, PartialEq)]
 struct Person {{
@@ -52,14 +62,15 @@ struct Person {{
     bonus: Option<f64>,
 }}
 
-let people = vec![
-    Person {{ name: "Ada Lovelace".into(), role: "Owner".into(), bonus: Some(12.5) }},
-    Person {{ name: "Grace Hopper".into(), role: "Admin".into(), bonus: Some(8.0) }},
-    Person {{ name: "Alan Turing".into(), role: "Viewer".into(), bonus: None }},
-];
+{people}
 
 {code}"#
     )
+}
+
+/// The `empty` switch empties `data` too, or the slot would never show.
+fn no_rows(values: &DemoValues) -> bool {
+    values.str("empty") == "true"
 }
 
 #[component]
@@ -73,6 +84,9 @@ pub fn TablePage() -> Element {
                 props("Table", vec![
                     prop("data", "Vec<T>").doc("One row each, in source order until a column is sorted."),
                     prop("columns", "Vec<Column<T>>").doc("Built with `column(..)`."),
+                    prop("caption", "Option<String>").doc("A visible title above the header row, and the table's accessible name."),
+                    prop("empty", "Option<Element>").doc("Shown in one full-width row when `data` is empty."),
+                    prop("scroll", "bool").default("false").doc("Wraps the table in a named, focusable `role=\"region\"` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                 ]),
                 props("column()", vec![
                     prop("header", "String").doc("The column's title, given as the argument to `column(..)`."),
@@ -90,7 +104,7 @@ pub fn TablePage() -> Element {
                     Code { source: "value" }
                     " that reads one cell out of a row, and whatever else that column needs. "
                     Code { source: "Table" }
-                    " itself takes only "
+                    " itself needs only "
                     Code { source: "data" }
                     " and "
                     Code { source: "columns" }
@@ -116,16 +130,24 @@ pub fn TablePage() -> Element {
                 component: "Table",
                 children_text: "",
                 fixed: vec![
-                    r#"aria_label: "Team members""#.to_string(),
+                    r#"caption: "Team members""#.to_string(),
                     "data: people".to_string(),
                     COLUMNS.to_string(),
                 ],
-                controls: vec![],
+                controls: vec![
+                    Control::switch("scroll"),
+                    Control::switch("empty").code(|_, values| match no_rows(values) {
+                        true => vec![r#"empty: rsx! { "No team members yet." }"#.to_string()],
+                        false => vec![],
+                    }),
+                ],
                 wrap: Wrap(wrap_data),
-                render: move |_: DemoValues| rsx! {
+                render: move |values: DemoValues| rsx! {
                     Table {
-                        aria_label: "Team members",
-                        data: people(),
+                        caption: "Team members",
+                        scroll: values.str("scroll") == "true",
+                        empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
+                        data: if no_rows(&values) { Vec::new() } else { people() },
                         columns: vec![
                             column("Name").value(|p: &Person| p.name.clone()).sortable(),
                             column("Role")
@@ -136,6 +158,23 @@ pub fn TablePage() -> Element {
                         ],
                     }
                 },
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "Name every table: "
+                    Code { source: "caption" }
+                    " shows a title and names it, or "
+                    Code { source: "aria_labelledby" }
+                    " points at a heading already on the page, or "
+                    Code { source: "aria_label" }
+                    " names it without text. An unnamed table warns in the console in debug builds."
+                }
+                Text {
+                    "A table wider than its container needs "
+                    Code { source: "scroll: true" }
+                    ": the region is a tab stop, so a keyboard user can scroll it with the arrow keys. A sortable header is a button; Enter or Space sorts."
+                }
             }
         }
     }

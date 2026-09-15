@@ -4,10 +4,10 @@
 use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::passes::keyboard;
+use e2e::passes::{focus, keyboard};
 use e2e::{Fixture, Viewport, wait};
 
-const SORT: &str = "th[aria-sort] button";
+const SORT: &str = "th[data-sortable] button";
 
 #[test]
 fn a_header_click_sorts_and_flips_the_rows() {
@@ -70,6 +70,130 @@ fn the_sort_button_keeps_focus_and_draws_the_library_ring() {
             fixture.close().await.unwrap();
         }
     });
+}
+
+/// `aria-sort` sits on the sorted header only; an unsorted sortable header
+/// still hints its arrow on hover, via `data-sortable` (todo 587).
+#[test]
+fn only_the_sorted_header_carries_aria_sort_and_the_others_still_hint() {
+    block_on(async {
+        let fixture = Fixture::open("/table/wide", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let first = "th[data-sortable]:nth-child(1)";
+        let second = "th[data-sortable]:nth-child(2)";
+
+        assert_eq!(count(page, "th[aria-sort]").await, 0.0);
+        e2e::passes::pointer::hover(page, second).await.unwrap();
+        arrow_opacity(page, second, "0.5").await.unwrap();
+
+        page.find_element(&format!("{first} button"))
+            .await
+            .unwrap()
+            .click()
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{first}').getAttribute('aria-sort') === 'ascending'"),
+            "the first header to read ascending",
+        )
+        .await
+        .unwrap();
+        assert_eq!(count(page, "th[aria-sort]").await, 1.0);
+        arrow_opacity(page, first, "1").await.unwrap();
+        e2e::passes::pointer::hover(page, second).await.unwrap();
+        arrow_opacity(page, second, "0.5").await.unwrap();
+
+        fixture.console.assert_clean("hinting a sort").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A wide table scrolls inside its region, not the page; the region is a
+/// named tab stop with the library ring (todo 588). Arrow-key scrolling is
+/// not asserted: headless Chromium drops it in most runs, `ScrollArea` too.
+#[test]
+fn a_wide_table_scrolls_in_a_named_focusable_region() {
+    const REGION: &str = "[role=region]";
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let at = viewport.name();
+            let fixture = Fixture::open("/table/wide", viewport).await.unwrap();
+            let page = &fixture.page;
+
+            let state: String = page
+                .evaluate(format!(
+                    "(() => {{ const r = document.querySelector({REGION:?}); \
+                     const c = document.querySelector('caption'); \
+                     return [r.scrollWidth > r.clientWidth, \
+                     document.documentElement.scrollWidth <= innerWidth, \
+                     r.getAttribute('aria-labelledby') === c.id, \
+                     c.textContent].join('|'); }})()"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(
+                state, "true|true|true|Fruit catalogue",
+                "at {at}: overflows itself, not the page; named by its caption"
+            );
+
+            let ring = focus::assert_focus_ring(page, REGION, 3)
+                .await
+                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            focus::assert_ring_contrast(&ring).unwrap_or_else(|e| panic!("at {at}: {e}"));
+
+            fixture
+                .console
+                .assert_clean("scrolling a wide table")
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+#[test]
+fn an_empty_table_shows_its_empty_slot_across_every_column() {
+    block_on(async {
+        let fixture = Fixture::open("/table/empty", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        wait::for_js_true(
+            page,
+            "(() => { const td = document.querySelector('tbody td'); \
+             return !!td && td.colSpan === 2 && td.textContent === 'No fruit'; })()",
+            "the empty row to span both columns",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("an empty table").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn count(page: &Page, selector: &str) -> f64 {
+    page.evaluate(format!("document.querySelectorAll({selector:?}).length"))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
+}
+
+async fn arrow_opacity(page: &Page, header: &str, expected: &str) -> Result<()> {
+    wait::for_js_true(
+        page,
+        &format!(
+            "getComputedStyle(document.querySelector('{header} svg')).opacity === {expected:?}"
+        ),
+        &format!("{header}'s arrow at opacity {expected}"),
+    )
+    .await
 }
 
 async fn click(page: &Page) -> Result<()> {

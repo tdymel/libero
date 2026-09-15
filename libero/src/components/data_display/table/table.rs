@@ -1,7 +1,12 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{ClassList, HtmlTag, Input, States, common::inset_focus_ring_sx, layout::use_box},
+    components::{
+        ClassList, HtmlTag, Input, States,
+        common::{attr, inset_focus_ring_sx, names_itself, use_name_warning},
+        layout::use_box,
+    },
+    hooks::use_id,
     sx::{StaticSx, Sx, sx},
     theme::TableDefaults,
 };
@@ -9,7 +14,7 @@ use crate::{
 use super::{
     cell_value::{SortDirection, SortKey},
     column::Column,
-    core::{HeaderSpec, RowSpec, active_sort, render_body, sorted_order},
+    core::{CaptionSpec, HeaderSpec, RowSpec, active_sort, render_body, sorted_order},
 };
 
 static TABLE_SX: StaticSx = StaticSx::new(|| {
@@ -22,6 +27,12 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             sx().text_align("start").vertical_align("middle"),
         )
         .selector("& thead th", sx().font_weight("600"))
+        .selector(
+            "& caption",
+            sx().text_align("start")
+                .font_weight("600")
+                .padding(TableDefaults::padding()),
+        )
         .selector(
             "& th[data-align=\"center\"], & td[data-align=\"center\"]",
             sx().text_align("center"),
@@ -58,10 +69,11 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
                 .opacity("0")
                 .transition("opacity 150ms, transform 150ms"),
         )
-        // `aria-sort` is on sortable headers only, so it doubles as the
-        // styling state: a hint on hover, solid once the column is sorted.
+        // `aria-sort` sits on the sorted header only, so it doubles as the
+        // styling state: a hint on hover elsewhere, solid once sorted.
         .selector(
-            "& th[aria-sort=\"none\"]:hover svg, & th[aria-sort=\"none\"]:focus-within svg",
+            "& th[data-sortable]:not([aria-sort]):hover svg, \
+             & th[data-sortable]:not([aria-sort]):focus-within svg",
             sx().opacity("0.5"),
         )
         .selector(
@@ -84,12 +96,25 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+static TABLE_SCROLL_SX: StaticSx = StaticSx::new(|| sx().overflow_x("auto").max_width("100%"));
+
 #[derive(Props, Clone, PartialEq)]
 pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// One row each, in source order until a column is sorted.
     data: Vec<T>,
     /// Built with [`column`](super::column).
     columns: Vec<Column<T>>,
+    /// A visible title above the header row, and the table's accessible name.
+    #[props(default, into)]
+    caption: Option<String>,
+    /// Shown in one full-width row when `data` is empty.
+    #[props(default)]
+    empty: Option<Element>,
+    /// Wraps the table in a named, focusable `role="region"` that scrolls
+    /// sideways, so a table wider than its parent stays keyboard-scrollable.
+    /// Named like the table; `class`, `sx` and `attributes` stay on the table.
+    #[props(default)]
+    scroll: bool,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -119,13 +144,37 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
 /// # } }
 /// ```
 ///
-/// Give it an accessible name with `aria_label` when the surrounding text
-/// doesn't already provide one.
+/// Name it with `caption`, or with `aria_label` / `aria_labelledby` when the
+/// title sits elsewhere. A wide one takes `scroll: true`:
+///
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Table, column};
+/// # fn app() -> Element {
+/// # #[derive(Clone, PartialEq)] struct User { name: String }
+/// # let users = use_signal(Vec::<User>::new);
+/// # rsx! {
+/// Table {
+///     caption: "Users",
+///     scroll: true,
+///     empty: rsx! { "No users yet." },
+///     data: users(),
+///     columns: vec![column("Name").value(|u: &User| u.name.clone())],
+/// }
+/// # } }
+/// ```
 // Generic shim: only the projection below compiles per `T`; the body it hands
 // off to is non-generic.
 #[component]
 pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let sort = use_signal(|| None::<(String, SortDirection)>);
+    let caption_id = use_id();
+    use_name_warning(
+        props.caption.is_some() || names_itself(&props.attributes),
+        "Table: no `caption`, `aria_label` or `aria-labelledby`, so it is announced without a \
+         name.",
+    );
+    let scroll = use_box().framework_sx(&TABLE_SCROLL_SX).prepare();
 
     let headers: Vec<HeaderSpec> = props
         .columns
@@ -166,7 +215,24 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         })
         .collect();
 
-    use_box()
+    let caption = props.caption.map(|text| CaptionSpec {
+        text,
+        id: caption_id(),
+    });
+    // The region carries the table's own name: its caption, else a copy of
+    // the caller's label.
+    let region_name: Vec<Attribute> = match &caption {
+        Some(spec) => vec![attr("aria-labelledby", spec.id.clone())],
+        None if props.scroll => props
+            .attributes
+            .iter()
+            .filter(|a| matches!(a.name, "aria-label" | "aria-labelledby"))
+            .cloned()
+            .collect(),
+        None => Vec::new(),
+    };
+
+    let table = use_box()
         .framework_sx(&TABLE_SX)
         .class(&props.class)
         .sx(&props.sx)
@@ -175,6 +241,13 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .render(
             HtmlTag::Table,
             props.attributes,
-            render_body(headers, rows, active, sort),
-        )
+            render_body(caption, headers, rows, props.empty, active, sort),
+        );
+    if !props.scroll {
+        return table;
+    }
+    scroll
+        .attr("role", "region")
+        .attr("tabindex", "0")
+        .render(HtmlTag::Div, region_name, table)
 }

@@ -53,13 +53,26 @@ fn align_attr(align: CellAlign) -> Option<&'static str> {
     (align != CellAlign::Start).then(|| align.as_str())
 }
 
+/// The caption's text and the id the scroll region names itself by.
+pub(super) struct CaptionSpec {
+    pub text: String,
+    pub id: String,
+}
+
 pub(super) fn render_body(
+    caption: Option<CaptionSpec>,
     headers: Vec<HeaderSpec>,
     rows: Vec<RowSpec>,
+    empty: Option<Element>,
     active: Option<(usize, SortDirection)>,
     mut sort: Signal<Option<(String, SortDirection)>>,
 ) -> Element {
+    let columns = headers.len().max(1);
+    let empty = empty.filter(|_| rows.is_empty());
     rsx! {
+        if let Some(spec) = caption {
+            caption { id: spec.id, "{spec.text}" }
+        }
         thead {
             tr {
                 for (index , spec) in headers.iter().enumerate() {
@@ -68,11 +81,12 @@ pub(super) fn render_body(
                         scope: "col",
                         "data-align": align_attr(spec.align),
                         "data-sortable": spec.sortable.then_some(true),
-                        // Only a sortable column may advertise `aria-sort`.
-                        aria_sort: spec.sortable.then(|| match active {
-                            Some((column, direction)) if column == index => direction.aria_value(),
-                            _ => "none",
-                        }),
+                        // On the sorted column only (APG): a "none" on every
+                        // other one is read out as "not sorted" at each.
+                        aria_sort: match active {
+                            Some((column, direction)) if column == index => Some(direction.aria_value()),
+                            _ => None,
+                        },
                         if spec.sortable {
                             button {
                                 r#type: "button",
@@ -90,8 +104,8 @@ pub(super) fn render_body(
                                 },
                                 "{spec.header}"
                                 // Always rendered, so sorting a column can't
-                                // change its header's width. The `aria-sort`
-                                // on the `th` is what fades and flips it.
+                                // change its header's width. The `th`'s
+                                // `aria-sort` is what shows and flips it.
                                 ArrowDownIcon {}
                             }
                         } else {
@@ -102,6 +116,11 @@ pub(super) fn render_body(
             }
         }
         tbody {
+            if let Some(empty) = empty {
+                tr { "data-empty": true,
+                    td { colspan: "{columns}", {empty} }
+                }
+            }
             for row in rows {
                 tr {
                     key: "{row.index}",

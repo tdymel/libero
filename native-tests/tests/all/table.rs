@@ -11,9 +11,9 @@ struct Person {
     age: u32,
 }
 
-const HEADER: &str = "th[aria-sort]";
-const BUTTON: &str = "th[aria-sort] button";
-const ARROW: &str = "th[aria-sort] svg";
+const HEADER: &str = "th[data-sortable]";
+const BUTTON: &str = "th[data-sortable] button";
+const ARROW: &str = "th[data-sortable] svg";
 
 fn app() -> Element {
     let data = vec![
