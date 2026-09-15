@@ -7,7 +7,7 @@
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, passes::keyboard};
+use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
 
 pub const TRIGGER: &str = "[role=combobox]";
 const LISTBOX: &str = "[role=listbox]";
@@ -42,6 +42,107 @@ fn chords_on_a_closed_trigger_are_the_browsers() {
 #[test]
 fn home_and_end_edit_the_search_query() {
     crate::select::search_home_end_edit_the_query("/multi-select/search", TRIGGER, "an");
+}
+
+/// Todo 519: Tab and Alt+ArrowUp only close; a pick toggles, so leaving must
+/// not add the highlight. Cherry is held, the list opens on it, then Damson.
+#[test]
+fn tab_closes_without_a_pick() {
+    leaving_keeps_the_value(keyboard::TAB, 0);
+}
+
+#[test]
+fn alt_arrow_up_closes_without_a_pick() {
+    leaving_keeps_the_value(keyboard::ARROW_UP, keyboard::ALT);
+}
+
+/// Todo 519: Space and Enter toggle the highlight and keep the list open.
+#[test]
+fn space_toggles_and_stays_open() {
+    picking_keeps_the_list(keyboard::SPACE);
+}
+
+#[test]
+fn enter_toggles_and_stays_open() {
+    picking_keeps_the_list(keyboard::ENTER);
+}
+
+async fn open_on_damson(page: &chromiumoxide::Page) {
+    keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+    keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+    wait::for_visible(page, "[role=option]").await.unwrap();
+    keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+    page.evaluate("new Promise(r => setTimeout(() => r(1), 60))")
+        .await
+        .unwrap();
+}
+
+fn leaving_keeps_the_value(key: keyboard::Key, modifiers: i64) {
+    block_on(async {
+        let fixture = Fixture::open("/multi-select", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_on_damson(page).await;
+        keyboard::press_with(page, key, modifiers).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("!document.querySelector({LISTBOX:?})"),
+            &format!("{} to close the list", key.key),
+        )
+        .await
+        .unwrap();
+        page.evaluate("new Promise(r => setTimeout(() => r(1), 100))")
+            .await
+            .unwrap();
+        let text: String = page
+            .evaluate("document.body.innerText")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            text.contains("Cherry") && !text.contains("Damson"),
+            "{}: the chips should read Cherry alone, the page reads {text:?}",
+            key.key
+        );
+        fixture.console.assert_clean(key.key).unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+fn picking_keeps_the_list(key: keyboard::Key) {
+    block_on(async {
+        let fixture = Fixture::open("/multi-select", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_on_damson(page).await;
+        keyboard::press(page, key).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "!!document.querySelector({LISTBOX:?}) \
+                 && document.querySelectorAll('[role=option][aria-selected=true]').length === 2"
+            ),
+            &format!("{} to add Damson with the list open", key.key),
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, key).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "!!document.querySelector({LISTBOX:?}) \
+                 && document.querySelectorAll('[role=option][aria-selected=true]').length === 1"
+            ),
+            &format!("{} again to drop Damson with the list open", key.key),
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean(key.key).unwrap();
+        fixture.close().await.unwrap();
+    });
 }
 
 #[test]

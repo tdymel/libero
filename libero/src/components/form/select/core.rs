@@ -609,6 +609,9 @@ fn select_listbox(list: Listbox) -> Element {
                 true => CaretKeys::Always,
                 false => CaretKeys::Off,
             },
+            commit_on_leave: !multiple,
+            // A search box types its spaces.
+            space_picks: autofocus.is_none(),
             multiselectable: multiple,
             header,
             autofocus,
@@ -887,9 +890,11 @@ fn trigger_key(event: &KeyboardEvent, keys: TriggerKeys, typed: &SelectTypeahead
         }
         // A browser or OS shortcut is never typeahead.
         Key::Character(_) if has_shortcut_modifier(event) => {}
-        // A space mid-query is part of "new york", not an activation.
+        // A space mid-query is part of "new york", not an activation: kept
+        // from `ComboboxCore`, whose Space picks.
         Key::Character(ref key) if key == " " && typed.on && typed.buffer.is_typing() => {
             event.prevent_default();
+            event.stop_propagation();
             typed.type_to(' ');
         }
         Key::Character(ref key) if key == " " && !state.is_open() => {
@@ -998,7 +1003,11 @@ fn select_rows(
                     // `index` is the row's place in the *full* list, so a
                     // filtered list still reports what the skin expects.
                     onpick: move |_| {
-                        onpick.call(index);
+                        // A single select's re-pick changes nothing, so it
+                        // emits nothing, as a native `<select>` (Tab commits).
+                        if !(close_on_pick && selected) {
+                            onpick.call(index);
+                        }
                         if close_on_pick {
                             state.close();
                         }

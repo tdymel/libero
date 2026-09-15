@@ -179,7 +179,9 @@ search that empties a group simply leaves its heading out.
 
 Enter, Space, ArrowDown and ArrowUp open the list on the selected row, Home and
 End on the first and last row; open, the arrows, Home and End move the
-highlight; Enter picks; Escape and Tab close.
+highlight; Enter or Space picks; Tab and Alt+ArrowUp pick the highlighted row,
+then close; Escape closes without a pick. With `searchable`, Space in the
+search box types.
 
 Typing searches the labels. The characters are buffered for half a second, so
 "b", "e", "r" finds Berlin while a lone "b" after the pause cycles the rows

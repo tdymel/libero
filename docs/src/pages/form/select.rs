@@ -409,8 +409,9 @@ pub fn SelectPage() -> Element {
                 Text {
                     "Closed, the trigger opens on ArrowDown, ArrowUp, Enter or Space, and on Home "
                     "or End at the first or last row. Open, ArrowDown and "
-                    "ArrowUp move the highlight, Home and End jump to the ends, Enter picks and "
-                    "Escape closes. Typing searches the labels: the characters are buffered for "
+                    "ArrowUp move the highlight, Home and End jump to the ends, and Enter or "
+                    "Space picks. Tab and Alt+ArrowUp pick the highlighted row too, then close; "
+                    "only Escape closes without a pick. Typing searches the labels: the characters are buffered for "
                     "half a second, so \"b\", \"e\", \"r\" finds Berlin while a lone \"b\" after the "
                     "pause cycles the rows starting with it. A closed trigger changes the value "
                     "in place, the way a native "
@@ -423,8 +424,8 @@ pub fn SelectPage() -> Element {
                     "changes has typeahead land on the same row every press. Disabled options are "
                     "read out but skipped by the arrows, by typeahead and by the mouse. With "
                     Code { source: "searchable" }
-                    " the search box replaces typeahead, and takes the focus while the list is "
-                    "open."
+                    " the search box replaces typeahead, takes the focus while the list is "
+                    "open, and types its spaces rather than picking."
                 }
             }
         }

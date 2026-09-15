@@ -199,6 +199,114 @@ fn arrow_up_home_and_end_open_a_closed_select() {
     });
 }
 
+/// Todos 485, 519 (APG select-only): Tab, Alt+ArrowUp and Space commit the
+/// highlight, then close. The list opens on Banana; ArrowDown moves to Cherry.
+#[test]
+fn tab_commits_the_highlight() {
+    leaving_commits("/select", keyboard::TAB, 0, "Cherry");
+}
+
+#[test]
+fn alt_arrow_up_commits_the_highlight() {
+    leaving_commits("/select", keyboard::ARROW_UP, keyboard::ALT, "Cherry");
+}
+
+#[test]
+fn space_commits_the_highlight() {
+    leaving_commits("/select", keyboard::SPACE, 0, "Cherry");
+}
+
+/// Searchable: the search box has the focus, and Tab still commits (Banana,
+/// then Damson past the disabled Cherry).
+#[test]
+fn tab_commits_from_the_search_box() {
+    leaving_commits("/select/field", keyboard::TAB, 0, "Damson");
+}
+
+/// Opens `route`'s list, moves one row down, presses `key` with `modifiers`,
+/// and expects a closed list showing `expected`.
+pub fn leaving_commits(route: &str, key: keyboard::Key, modifiers: i64, expected: &str) {
+    block_on(async {
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_visible(page, "[role=option]").await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        page.evaluate("new Promise(r => setTimeout(() => r(1), 60))")
+            .await
+            .unwrap();
+        keyboard::press_with(page, key, modifiers).await.unwrap();
+        let check = format!(
+            "(t => t.getAttribute('aria-expanded') === 'false' && t.textContent.includes({expected:?}))(document.querySelector({TRIGGER:?}))"
+        );
+        wait::for_js_true(page, &check, &format!("{} to commit {expected}", key.key))
+            .await
+            .unwrap_or_else(|e| panic!("{route}, {}: {e}", key.key));
+        fixture.console.assert_clean(route).unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Space in the search box is typing, and in typeahead a space mid-query is
+/// part of the query: neither commits.
+#[test]
+fn space_while_typing_commits_nothing() {
+    block_on(async {
+        for (route, searchable) in [("/select/field", true), ("/select", false)] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+            // Open first: typeahead on a closed single select picks in place.
+            keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+            wait::for_visible(page, "[role=option]").await.unwrap();
+            if searchable {
+                wait::for_js_true(
+                    page,
+                    &format!("document.activeElement === document.querySelector({SEARCH:?})"),
+                    "the search box to take focus",
+                )
+                .await
+                .unwrap();
+            }
+            // A real keydown: typeahead listens to it, `type_text` sends none.
+            keyboard::press(page, KEY_D).await.unwrap();
+            keyboard::press(page, keyboard::SPACE).await.unwrap();
+            page.evaluate("new Promise(r => setTimeout(() => r(1), 100))")
+                .await
+                .unwrap();
+            // A search box that took the space is still open, whatever it
+            // matches. The trigger keeps the field's id, role or not.
+            let (open, value): (bool, String) = page
+                .evaluate(format!(
+                    "(s => [s ? s.value === 'd ' : !!document.querySelector({LISTBOX:?}), \
+                     document.getElementById('lsx-1').textContent])(document.querySelector({SEARCH:?}))"
+                ))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(
+                value.contains("Banana"),
+                "{route}: Space while typing changed the value to {value:?}"
+            );
+            assert!(
+                open,
+                "{route}: Space while typing closed the list or was not typed"
+            );
+            fixture.console.assert_clean(route).unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+const KEY_D: keyboard::Key = keyboard::Key {
+    key: "d",
+    code: "KeyD",
+    vk: 68,
+    text: Some("d"),
+};
+
 /// Todo 487: with no `label`, the caller's `aria-label` names the trigger
 /// while closed and moves to the search box while open.
 #[test]

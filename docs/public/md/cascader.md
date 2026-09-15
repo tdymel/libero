@@ -107,9 +107,9 @@ cannot be picked.
 | `ArrowLeft` | open, `"columns"` | Up one level. At the root, nothing |
 | `Enter` | open, leaf | Commits its value and closes |
 | `Enter` | open, branch | Expands. Commits too, with `any_level` |
+| `Space` | open, not searchable | As `Enter` |
+| `Tab` / `Alt+ArrowUp` | open | Commits the cursor's row if `Enter` would, closes, and (Tab) moves on |
 | `Escape` | open | Closes and keeps the value |
-| `Tab` | open | Closes and moves on |
-| `Space` | open, not searchable | Swallowed, so the page does not scroll |
 
 In `"paths"` - and so while searching - `ArrowLeft` and `ArrowRight` are left
 alone, so they move the search box's caret.

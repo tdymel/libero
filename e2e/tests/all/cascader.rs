@@ -278,6 +278,131 @@ fn modifier_chords_leave_the_walk_alone() {
     });
 }
 
+/// Todos 485, 519 (APG select-only): Tab, Alt+ArrowUp and Space on a leaf
+/// commit its path, then close.
+#[test]
+fn tab_commits_the_highlighted_leaf() {
+    leaving_commits_lyon(keyboard::TAB, 0);
+}
+
+#[test]
+fn alt_arrow_up_commits_the_highlighted_leaf() {
+    leaving_commits_lyon(keyboard::ARROW_UP, keyboard::ALT);
+}
+
+#[test]
+fn space_commits_the_highlighted_leaf() {
+    leaving_commits_lyon(keyboard::SPACE, 0);
+}
+
+fn leaving_commits_lyon(key: keyboard::Key, modifiers: i64) {
+    block_on(async {
+        let fixture = Fixture::open("/cascader", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        for step in [
+            keyboard::ARROW_DOWN,
+            keyboard::ARROW_RIGHT,
+            keyboard::ARROW_RIGHT,
+            keyboard::ARROW_DOWN,
+        ] {
+            keyboard::press(page, step).await.unwrap();
+        }
+        expect(page, "Lyon|3|true", "the walk to Lyon", "desktop").await;
+        keyboard::press_with(page, key, modifiers).await.unwrap();
+        expect(page, "closed", &format!("{} to close", key.key), "desktop").await;
+        wait::for_js_true(
+            page,
+            "document.querySelector('#picked').textContent === 'lyon'",
+            &format!("{} to commit Lyon", key.key),
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean(key.key).unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A branch is no pick without `any_level`: Tab on France only closes.
+#[test]
+fn tab_on_a_branch_commits_nothing() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        expect(page, "France|2|true", "ArrowRight into Europe", "desktop").await;
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        expect(page, "closed", "Tab to close", "desktop").await;
+        page.evaluate("new Promise(r => setTimeout(() => r(1), 100))")
+            .await
+            .unwrap();
+        let picked: String = page
+            .evaluate("document.querySelector('#picked').textContent")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(picked, "", "Tab on a branch committed it");
+        fixture.console.assert_clean("Tab on a branch").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// `"paths"`: Space commits the highlighted row; the search box takes Tab to
+/// commit as well.
+#[test]
+fn space_and_tab_commit_a_path_row() {
+    block_on(async {
+        for (route, key) in [
+            ("/cascader/paths", keyboard::SPACE),
+            ("/cascader/search", keyboard::TAB),
+        ] {
+            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+            keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+            wait::for_visible(page, "[role=option]").await.unwrap();
+            if route == "/cascader/search" {
+                keyboard::type_text(page, "lyon").await.unwrap();
+                wait::for_js_true(
+                    page,
+                    "document.querySelectorAll('[role=option]').length === 1",
+                    "the query to leave Lyon alone",
+                )
+                .await
+                .unwrap();
+                keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+            } else {
+                keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+            }
+            // Lyon's row, whoever holds the active descendant.
+            let label = "(() => { const a = document.activeElement.getAttribute('aria-activedescendant'); \
+                 const row = a && document.getElementById(a); \
+                 const l = row && row.querySelector('[data-slot=label]'); return l ? l.textContent : ''; })()";
+            wait::for_js_true(
+                page,
+                &format!("{label} === 'Europe / France / Lyon'"),
+                &format!("{route}: ArrowDown to Lyon"),
+            )
+            .await
+            .unwrap();
+            keyboard::press(page, key).await.unwrap();
+            wait::for_js_true(
+                page,
+                "!document.querySelector('[role=listbox]') \
+                 && document.getElementById('lsx-1').textContent.includes('Europe / France / Lyon')",
+                &format!("{route}: {} to commit Lyon", key.key),
+            )
+            .await
+            .unwrap();
+            fixture.console.assert_clean(route).unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// APG select-only: on a closed list Home and End open on the first and last
 /// enabled root, Space like Enter on the first.
 #[test]

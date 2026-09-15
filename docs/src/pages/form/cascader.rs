@@ -245,9 +245,10 @@ pub fn CascaderPage() -> Element {
                     "that starts with it, unless searchable. Open, ArrowDown and ArrowUp move "
                     "inside the cursor's column and skip "
                     "disabled rows, ArrowRight expands into the children, ArrowLeft goes back up "
-                    "a level, Enter commits a leaf - or expands a branch, unless "
+                    "a level, Enter (or Space, unless searchable) commits a leaf - or expands a branch, unless "
                     Code { source: "any_level" }
-                    " - and Escape closes without changing the value. In "
+                    " - and Escape closes without changing the value. Tab and Alt+ArrowUp "
+                    "commit the highlighted row when Enter would, then close. In "
                     Code { source: "\"paths\"" }
                     ", and so while searching, ArrowLeft and ArrowRight belong to the search "
                     "box's caret instead."

@@ -443,8 +443,8 @@ pub fn MultiSelectPage() -> Element {
                 Text {
                     "Closed, the trigger opens on ArrowDown, ArrowUp, Enter or Space, and on Home "
                     "or End at the first or last row. Open, ArrowDown and "
-                    "ArrowUp move the highlight, Enter toggles the row and leaves the list open, "
-                    "and Escape closes. ArrowLeft and ArrowRight move a cursor over the chips, "
+                    "ArrowUp move the highlight, Enter or Space toggles the row and leaves the "
+                    "list open, and Escape, Tab or Alt+ArrowUp close it without a pick. ArrowLeft and ArrowRight move a cursor over the chips, "
                     "and Backspace or Delete removes the one it is on - or the last, with no "
                     "cursor. Typing searches the labels, buffered for half a second, and opens "
                     "the list on the match - unlike "
@@ -454,8 +454,8 @@ pub fn MultiSelectPage() -> Element {
                     "that is the one keyboard difference between the two. Disabled options are "
                     "read out but skipped by the arrows, by typeahead and by the mouse. With "
                     Code { source: "searchable" }
-                    " the search box replaces typeahead, and takes the focus while the list is "
-                    "open."
+                    " the search box replaces typeahead, takes the focus while the list is "
+                    "open, and types its spaces rather than toggling."
                 }
             }
         }

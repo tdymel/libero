@@ -123,8 +123,9 @@ clicks all pass over it.
 ## Accessibility
 
 Enter, Space and ArrowDown open the list on the selected row; the arrows, Home
-and End move the highlight; Enter toggles the highlighted row and keeps the
-list open; Escape and Tab close. Disabled rows are skipped.
+and End move the highlight; Enter or Space toggles the highlighted row and keeps
+the list open; Escape, Tab and Alt+ArrowUp close without a pick. Disabled rows
+are skipped.
 
 Typing searches the labels, buffered for half a second the way a native
 `<select>`'s typeahead is, and **opens the list on the match** rather than

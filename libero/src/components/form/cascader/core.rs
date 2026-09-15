@@ -381,6 +381,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         state,
         open: open.clone(),
         commit: commit.clone(),
+        committed: committed.clone(),
         typed,
         disabled: disabled || readonly,
         searchable,
@@ -576,6 +577,7 @@ struct CascaderKeys {
     state: ComboboxState,
     open: Rc<dyn Fn(bool)>,
     commit: Rc<dyn Fn(Vec<usize>, bool)>,
+    committed: Option<Vec<usize>>,
     typed: Typeahead,
     disabled: bool,
     searchable: bool,
@@ -600,7 +602,7 @@ impl CascaderKeys {
             }
             Some(NavigationChord::Close) if self.state.is_open() => {
                 event.prevent_default();
-                self.state.close();
+                self.leave();
                 return;
             }
             Some(_) => return,
@@ -620,17 +622,80 @@ impl CascaderKeys {
                 event.prevent_default();
                 self.state.close();
             }
-            Key::Tab => self.state.close(),
-            // The page must not scroll under an open list. While `searchable`
-            // the focus is in the search box, where a space is ordinary
-            // typing.
+            Key::Tab => self.leave(),
+            // APG select-only: Space is Enter. While `searchable` the focus is
+            // in the search box, where a space is ordinary typing.
             Key::Character(ref character) if character == " " && !self.searchable => {
                 event.prevent_default();
+                self.activate();
             }
             Key::ArrowDown | Key::ArrowUp | Key::Home | Key::End | Key::Enter if paths_layout => {
                 self.paths(event)
             }
             _ => self.columns(event),
+        }
+    }
+
+    /// APG select-only: Tab and Alt+ArrowUp keep a pickable highlight, then
+    /// close. Re-picking the committed path would clear it under `allow_deselect`.
+    fn leave(&self) {
+        let here = self.cursor.read().clone();
+        let pickable = match self.layout {
+            CascaderLayout::Paths => self
+                .visible
+                .iter()
+                .any(|path| path.indices == here && !path.disabled),
+            CascaderLayout::Columns => {
+                !here.is_empty()
+                    && !disabled_at(&self.nodes, &here)
+                    && (self.any_level || children_at(&self.nodes, &here).is_empty())
+            }
+        };
+        if pickable && self.committed.as_ref() != Some(&here) {
+            (self.commit)(here, true);
+        }
+        self.state.close();
+    }
+
+    /// Enter, or Space on a list with no search box, on the highlight.
+    fn activate(&self) -> bool {
+        let here = self.cursor.read().clone();
+        match self.layout {
+            CascaderLayout::Paths => {
+                // Nothing highlighted means Enter is not ours: it bubbles, so a
+                // form still submits.
+                let Some(path) = self.visible.iter().find(|path| path.indices == here) else {
+                    return false;
+                };
+                if !path.disabled {
+                    // A `Paths` row is a whole path, so there is nothing left
+                    // to drill into - every pick here is the end.
+                    (self.commit)(path.indices.clone(), true);
+                }
+                true
+            }
+            CascaderLayout::Columns => {
+                if here.is_empty() || disabled_at(&self.nodes, &here) {
+                    return false;
+                }
+                let children = children_at(&self.nodes, &here);
+                if children.is_empty() {
+                    (self.commit)(here, true);
+                    return true;
+                }
+                // A branch expands. With `any_level` it is picked on the way,
+                // and the list stays open so the walk can go on.
+                if self.any_level {
+                    (self.commit)(here.clone(), false);
+                }
+                if let Some(index) = first_enabled(children) {
+                    let mut cursor = self.cursor;
+                    let mut next = here;
+                    next.push(index);
+                    cursor.set(next);
+                }
+                true
+            }
         }
     }
 
@@ -747,16 +812,8 @@ impl CascaderKeys {
         let row = visible.iter().position(|path| path.indices == here);
         let key = event.key();
         if key == Key::Enter {
-            // Nothing highlighted means Enter is not ours: it bubbles, so a
-            // form still submits.
-            let Some(path) = row.and_then(|row| visible.get(row)) else {
-                return;
-            };
-            event.prevent_default();
-            if !path.disabled {
-                // A `Paths` row is a whole path, so there is nothing left to
-                // drill into - every pick here is the end.
-                (self.commit)(path.indices.clone(), true);
+            if self.activate() {
+                event.prevent_default();
             }
             return;
         }
@@ -823,27 +880,8 @@ impl CascaderKeys {
                     cursor.set(next);
                 }
             }
-            Key::Enter => {
-                if here.is_empty() || disabled_at(nodes, &here) {
-                    return;
-                }
-                event.prevent_default();
-                let children = children_at(nodes, &here);
-                if children.is_empty() {
-                    (self.commit)(here, true);
-                    return;
-                }
-                // A branch expands. With `any_level` it is picked on the way,
-                // and the list stays open so the walk can go on.
-                if self.any_level {
-                    (self.commit)(here.clone(), false);
-                }
-                if let Some(index) = first_enabled(children) {
-                    let mut next = here;
-                    next.push(index);
-                    cursor.set(next);
-                }
-            }
+            // Unhandled, Enter bubbles, so a form still submits.
+            Key::Enter if self.activate() => event.prevent_default(),
             _ => {}
         }
     }

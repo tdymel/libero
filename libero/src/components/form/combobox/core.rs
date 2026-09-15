@@ -117,6 +117,13 @@ base_props! {
         /// (APG editable combobox).
         #[props(default)]
         caret_keys: CaretKeys,
+        /// APG select-only: Tab and Alt+ArrowUp pick the highlight before
+        /// closing.
+        #[props(default)]
+        commit_on_leave: bool,
+        /// Space picks the highlight, like Enter: a list with no text to type in.
+        #[props(default)]
+        space_picks: bool,
         /// Sets `aria-multiselectable` on the listbox.
         #[props(default)]
         multiselectable: bool,
@@ -199,6 +206,8 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         disabled: props.disabled,
         close_on_pick: props.close_on_pick,
         caret_keys: props.caret_keys,
+        commit_on_leave: props.commit_on_leave,
+        space_picks: props.space_picks,
     };
     let onkeydown = move |event: KeyboardEvent| keys.handle(event);
     let disabled = props.disabled;
@@ -479,6 +488,8 @@ struct ComboboxKeys {
     disabled: bool,
     close_on_pick: bool,
     caret_keys: CaretKeys,
+    commit_on_leave: bool,
+    space_picks: bool,
 }
 
 /// Who owns Home and End while the list is open.
@@ -500,6 +511,18 @@ impl ComboboxKeys {
             return;
         }
         let request = |next: bool| self.onopened.call(next);
+        let pick = || {
+            if let Some(pick) = (self.active_pick)() {
+                pick.call(());
+            }
+        };
+        // Leaving an open select-only list keeps what the highlight is on.
+        let leave = || {
+            if self.commit_on_leave && active_row.is_some() {
+                pick();
+            }
+            request(false);
+        };
         // A list of nothing but disabled rows has nowhere to go, and the
         // arrows then only open it.
         let go_to = |row: Option<usize>| {
@@ -522,7 +545,7 @@ impl ComboboxKeys {
             }
             Some(NavigationChord::Close) if opened => {
                 event.prevent_default();
-                request(false);
+                leave();
                 return;
             }
             Some(_) => return,
@@ -556,9 +579,16 @@ impl ComboboxKeys {
             // form still submits.
             Key::Enter if opened && active_row.is_some() => {
                 event.prevent_default();
-                if let Some(pick) = (self.active_pick)() {
-                    pick.call(());
+                pick();
+                if self.close_on_pick {
+                    request(false);
                 }
+            }
+            Key::Character(ref key)
+                if key == " " && self.space_picks && opened && active_row.is_some() =>
+            {
+                event.prevent_default();
+                pick();
                 if self.close_on_pick {
                     request(false);
                 }
@@ -567,7 +597,7 @@ impl ComboboxKeys {
                 event.prevent_default();
                 request(false);
             }
-            Key::Tab if opened => request(false),
+            Key::Tab if opened => leave(),
             _ => {}
         }
     }
