@@ -369,14 +369,22 @@ impl Page {
     /// `getComputedStyle(match).getPropertyValue(property)`: the computed
     /// value, or the used one for layout-dependent properties.
     pub fn computed(&self, selector: &str, property: &str) -> String {
-        let id = self.node(selector);
+        self.computed_of(self.node(selector), property)
+    }
+
+    pub fn computed_of(&self, id: NodeId, property: &str) -> String {
         self.doc.inner.borrow().resolved_style_value(id, property)
     }
 
     /// The stroke Blitz will paint the first match's (an `svg`) first stroked
     /// path with, as `rgb(..)`. Not `computed`: Blitz bakes it at box build.
     pub fn painted_stroke(&self, selector: &str) -> String {
-        let id = self.node(selector);
+        self.painted_stroke_of(self.node(selector))
+    }
+
+    /// [`painted_stroke`](Self::painted_stroke) of a node.
+    pub fn painted_stroke_of(&self, id: NodeId) -> String {
+        let selector = self.describe(id);
         let doc = self.doc.inner.borrow();
         let element = doc
             .get_node(id)
@@ -410,6 +418,12 @@ impl Page {
     /// by the shell's CPU renderer, where a recorded command may still draw
     /// nothing (a zero-blur shadow).
     pub fn painted_pixel(&self, x: u32, y: u32) -> String {
+        let [r, g, b, a] = self.painted_pixels(&[(x, y)])[0];
+        css_color(peniko::Color::from_rgba8(r, g, b, a))
+    }
+
+    /// [`painted_pixel`](Self::painted_pixel) for many points, rasterised once.
+    pub fn painted_pixels(&self, points: &[(u32, u32)]) -> Vec<[u8; 4]> {
         let (width, height) = VIEWPORT;
         let mut doc = self.doc.inner.borrow_mut();
         let buffer = anyrender::render_to_buffer::<VelloCpuImageRenderer, _>(
@@ -417,9 +431,13 @@ impl Page {
             width,
             height,
         );
-        let at = ((y * width + x) * 4) as usize;
-        let [r, g, b, a] = [0, 1, 2, 3].map(|i| buffer[at + i]);
-        css_color(peniko::Color::from_rgba8(r, g, b, a))
+        points
+            .iter()
+            .map(|&(x, y)| {
+                let at = ((y * width + x) * 4) as usize;
+                [0, 1, 2, 3].map(|i| buffer[at + i])
+            })
+            .collect()
     }
 
     /// The colour Blitz paints the first match's text with, as `rgb(..)`. Not
@@ -479,8 +497,13 @@ impl Page {
 
     /// Whether a pointer at the first match's centre hits it or a descendant.
     pub fn hits(&self, selector: &str) -> bool {
-        let target = self.node(selector);
         let (x, y) = self.centre(selector);
+        self.hits_at(selector, x, y)
+    }
+
+    /// Whether a pointer at `(x, y)` hits the first match or a descendant.
+    pub fn hits_at(&self, selector: &str, x: f32, y: f32) -> bool {
+        let target = self.node(selector);
         let doc = self.doc.inner.borrow();
         let mut hit = doc.hit(x, y).map(|hit| hit.node_id);
         while let Some(id) = hit {

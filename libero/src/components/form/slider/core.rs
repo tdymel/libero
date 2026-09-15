@@ -807,6 +807,9 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
                 Tooltip {
                     label: rsx! { {bubble_text} },
                     size,
+                    // Clear of the thumb's hit area, which overhangs a sub-24px
+                    // thumb by up to 6px: the bubble took those presses (todo 649).
+                    gap: Size::Sm,
                     open,
                     label_id: bubble_id,
                     // The thumb's hit area already spans the gap, and the
