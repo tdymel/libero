@@ -545,8 +545,20 @@ impl Suite {
             .await?
             .into_value()?;
         if !has_root {
+            // Seen blank in full runs (todo 597): says whether the page reloaded
+            // under the test rather than the component removing the app.
+            let page_state: String = page
+                .evaluate(
+                    "(() => { const n = performance.getEntriesByType('navigation')[0]; \
+                     return `${location.href}, ${document.readyState}, navigation ${n && n.type}, \
+                     ${Math.round(performance.now())}ms since it began`; })()",
+                )
+                .await
+                .map_err(anyhow::Error::from)
+                .and_then(|value| Ok(value.into_value::<String>()?))
+                .unwrap_or_else(|error| format!("unreadable: {error}"));
             anyhow::bail!(
-                "the suite root {} matched nothing in the {:?} state",
+                "the suite root {} matched nothing in the {:?} state ({page_state})",
                 self.root,
                 state.name
             );

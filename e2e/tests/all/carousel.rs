@@ -542,6 +542,7 @@ fn autoplay_pauses_on_focus_and_on_its_control() {
             .await
             .unwrap();
         let page = &fixture.page;
+        instant_scroll(page).await;
         let live = "document.querySelector('[aria-roledescription=carousel] [role=status]')\
                     .getAttribute('aria-live')";
         let start = index(page).await.unwrap();
@@ -554,6 +555,14 @@ fn autoplay_pauses_on_focus_and_on_its_control() {
         assert_eq!(polite, "off", "the status while rotating");
 
         reach(page, TRACK).await.unwrap();
+        // The status turns polite in the render that stops the timer.
+        wait::for_js_true(
+            page,
+            &format!("{live} === 'polite'"),
+            "the status once rotation stops",
+        )
+        .await
+        .unwrap();
         let held = index(page).await.unwrap();
         sleep(1200).await;
         assert_eq!(
@@ -561,8 +570,6 @@ fn autoplay_pauses_on_focus_and_on_its_control() {
             held,
             "rotated with focus inside"
         );
-        let polite: String = page.evaluate(live).await.unwrap().into_value().unwrap();
-        assert_eq!(polite, "polite", "the status once rotation stops");
 
         let pause = "[aria-roledescription=carousel] button[aria-pressed]";
         keyboard::tab_to(page, pause, TAB_BUDGET).await.unwrap();
@@ -645,6 +652,7 @@ fn autoplay_pauses_when_reduced_motion_turns_on() {
             .await
             .unwrap();
         let page = &fixture.page;
+        instant_scroll(page).await;
         let pause = "[aria-roledescription=carousel] button[aria-pressed]";
         let start = index(page).await.unwrap();
         wait::until("autoplay to advance", || async move {
@@ -763,6 +771,19 @@ fn a_looping_strip_opens_on_its_first_slide() {
             .unwrap();
         fixture.close().await.unwrap();
     });
+}
+
+/// A smooth scroll crawls in a background page, and its late settle reads
+/// the index back from where it stopped: a "rotation" the autoplay never
+/// made. The autoplay units are about the timer, so the strip jumps.
+async fn instant_scroll(page: &Page) {
+    page.evaluate(format!(
+        "(() => {{ const s = document.createElement('style'); \
+         s.textContent = '{TRACK} {{ scroll-behavior: auto !important; }}'; \
+         document.head.append(s); }})()"
+    ))
+    .await
+    .unwrap();
 }
 
 async fn sleep(ms: u64) {
