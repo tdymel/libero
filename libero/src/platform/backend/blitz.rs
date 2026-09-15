@@ -91,6 +91,8 @@ thread_local! {
     static SCROLL_CALLBACKS: Callbacks<dyn Fn()> = const { Callbacks::new() };
     /// Puts [`PortalRoot`] back on the viewport's corner.
     static REALIGN: Cell<Option<Callback<()>>> = const { Cell::new(None) };
+    /// Mounted [`PortalEntry`]s: with none, a scroll has nothing to realign.
+    static PORTAL_ENTRIES: Cell<usize> = const { Cell::new(0) };
     /// A `scroll_into_view` waiting for its target's first layout. See [`show`].
     static SHOW_RETRY: RefCell<Option<Box<dyn TimerSubscription>>> = const { RefCell::new(None) };
 
@@ -584,6 +586,10 @@ pub(super) fn PortalRoot(children: Element) -> Element {
     let root = use_hook(|| Rc::new(RefCell::new(None::<NodeHandle>)));
     use_hook(|| {
         Rc::new(SCROLL.on_scroll(Box::new(move || {
+            // An entry realigns as it mounts; until then a wheel costs no render.
+            if PORTAL_ENTRIES.get() == 0 {
+                return;
+            }
             let mut scrolled = scrolled;
             let next = scrolled.peek().wrapping_add(1);
             scrolled.set(next);
@@ -633,6 +639,8 @@ pub(super) fn PortalRoot(children: Element) -> Element {
 /// One portaled entry, taking hits again below [`PORTAL_ROOT_STYLE`].
 #[component]
 pub(super) fn PortalEntry(children: Element) -> Element {
+    use_hook(|| PORTAL_ENTRIES.set(PORTAL_ENTRIES.get() + 1));
+    use_drop(|| PORTAL_ENTRIES.set(PORTAL_ENTRIES.get() - 1));
     rsx! {
         div {
             display: "contents",
