@@ -127,7 +127,21 @@ pub async fn press_with(page: &Page, key: Key, modifiers: i64) -> Result<()> {
     dispatch(page, key, modifiers).await
 }
 
+/// Ctrl+PageUp, Ctrl+PageDown and Ctrl+Tab switch the browser's active tab
+/// before the page sees the key. A later Alt+ArrowLeft from any unit then sends
+/// that tab, another test's page, Back to `about:blank` (todo 597).
+fn switches_tabs(key: Key, modifiers: i64) -> bool {
+    modifiers & CTRL != 0 && matches!(key.key, "PageUp" | "PageDown" | "Tab")
+}
+
 async fn dispatch(page: &Page, key: Key, modifiers: i64) -> Result<()> {
+    if switches_tabs(key, modifiers) {
+        bail!(
+            "Ctrl+{} switches the browser's tab and never reaches the page; \
+             sending it breaks other tests (todo 597)",
+            key.key
+        );
+    }
     let base = |kind: DispatchKeyEventType| -> DispatchKeyEventParamsBuilder {
         let mut b = DispatchKeyEventParams::builder()
             .r#type(kind)
@@ -211,6 +225,10 @@ pub async fn assert_chords_ignored_with(
         for key in keys {
             // Honoured, these two navigate away (Back, home page).
             if modifier & ALT != 0 && matches!(key.key, "ArrowLeft" | "Home") {
+                continue;
+            }
+            // The page never sees these; see [`switches_tabs`].
+            if switches_tabs(*key, modifier) {
                 continue;
             }
             press_with(page, *key, modifier).await?;

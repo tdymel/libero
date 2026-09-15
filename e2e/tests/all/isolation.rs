@@ -5,6 +5,34 @@ use e2e::browser::block_on;
 use e2e::passes::keyboard;
 use e2e::{Fixture, Viewport, wait};
 
+/// A chord one unit sends leaves every other page where it was (todo 597).
+/// Ctrl+PageDown used to activate another test's page, and Alt+ArrowLeft then
+/// sent that page Back to `about:blank`.
+#[test]
+fn a_chord_in_one_page_does_not_navigate_another() {
+    block_on(async {
+        let other = Fixture::open("/loader", Viewport::Desktop).await.unwrap();
+        let sender = Fixture::open("/menu", Viewport::Desktop).await.unwrap();
+        let page = &sender.page;
+        let outcome = async {
+            let refused = keyboard::press_with(page, keyboard::PAGE_DOWN, keyboard::CTRL).await;
+            anyhow::ensure!(refused.is_err(), "Ctrl+PageDown was sent");
+            keyboard::assert_chords_ignored(page, &[keyboard::PAGE_UP, keyboard::PAGE_DOWN], "1")
+                .await?;
+            keyboard::press_with(page, keyboard::ARROW_LEFT, keyboard::ALT).await?;
+            page.evaluate("new Promise(r => setTimeout(() => r(1), 300))")
+                .await?;
+            let href: String = other.page.evaluate("location.href").await?.into_value()?;
+            anyhow::ensure!(href.ends_with("/loader"), "the other page went to {href}");
+            Ok(())
+        }
+        .await;
+        let _ = sender.close().await;
+        let _ = other.close().await;
+        outcome.unwrap();
+    });
+}
+
 /// An open combobox stays open while another test opens a page beside it.
 #[test]
 fn a_page_keeps_focus_while_another_opens() {
