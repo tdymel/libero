@@ -1,0 +1,13 @@
+---
+source: e2e/src/suite.rs
+description: image_list at desktop (rest)
+expression: tree
+---
+list
+  listitem [level=1]
+    figure
+      image "A blue field"
+      Figcaption
+        StaticText "Morning"
+  listitem [level=1]
+    image "Another blue field"

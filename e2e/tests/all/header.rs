@@ -25,13 +25,25 @@ async fn clearance_after_shift_tab(padded: bool) -> f64 {
     )
     .await
     .unwrap();
-    if padded {
-        page.evaluate(
-            "document.documentElement.style.scrollPaddingTop = 'var(--lsx-header-height-md)'",
+    if !padded {
+        page.evaluate("document.documentElement.style.scrollPaddingTop = '0px'")
+            .await
+            .unwrap();
+    }
+    // The banner publishes both on `:root` itself.
+    let published: String = page
+        .evaluate(
+            "(() => { const root = getComputedStyle(document.documentElement); \
+             return root.getPropertyValue('--lsx-header-height').trim() + '|' + root.scrollPaddingTop; })()",
         )
         .await
+        .unwrap()
+        .into_value()
         .unwrap();
-    }
+    assert!(
+        published.starts_with("64px|"),
+        "the banner published no height: {published}"
+    );
     keyboard::press_shift(page, TAB).await.unwrap();
 
     let clearance: f64 = page
@@ -49,8 +61,45 @@ async fn clearance_after_shift_tab(padded: bool) -> f64 {
     clearance
 }
 
+/// The sticky banner's size is what `:root` gets; a static header never publishes.
+#[test]
+fn a_static_header_never_publishes_its_height() {
+    block_on(async {
+        let fixture = Fixture::open("/header-static", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#nested").await.unwrap();
+        let heights: String = page
+            .evaluate(
+                "(() => { const root = getComputedStyle(document.documentElement); \
+                 const lg = root.getPropertyValue('--lsx-header-height-lg').trim(); \
+                 return [root.getPropertyValue('--lsx-header-height').trim(), lg, \
+                 document.querySelector('#nested').getBoundingClientRect().height].join('|'); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let parts: Vec<&str> = heights.split('|').collect();
+        assert_eq!(
+            parts[0], parts[1],
+            "root is not the banner's lg height: {heights}"
+        );
+        assert_eq!(
+            parts[2], "48",
+            "the nested header lost its own xs size: {heights}"
+        );
+        fixture
+            .console
+            .assert_clean("the static header fixture")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Without `scroll-padding-top` the browser leaves a button it thinks is on
-/// screen where it is, under a sticky header; the docs tell callers to set it.
+/// screen where it is, under a sticky header; the banner sets it on `:root`.
 #[test]
 fn scroll_padding_keeps_focus_clear_of_a_sticky_header() {
     block_on(async {

@@ -34,7 +34,7 @@ fn a_sidebar_names_its_side_in_data_state() {
 
     let html = render(app);
 
-    let state = &attributes_of(&html, "div")["data-state"];
+    let state = &attributes_of(&html, "aside")["data-state"];
     assert!(state.contains("side-right"), "got {state}");
 }
 
@@ -54,6 +54,23 @@ fn an_unsized_sidebar_takes_the_themes_default_size() {
 
     let html = render(app);
 
-    let state = &attributes_of(&html, "div")["data-state"];
+    let state = &attributes_of(&html, "aside")["data-state"];
     assert!(state.contains("size-lg"), "got {state}");
+}
+
+#[test]
+fn a_sidebar_is_an_aside_unless_told_otherwise() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Sidebar { id: "rail", "rail" }
+                Sidebar { id: "menu", component: "nav", "menu" }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert_eq!(attributes_of(&html, "aside")["id"], "rail");
+    assert_eq!(attributes_of(&html, "nav")["id"], "menu");
 }

@@ -66,7 +66,7 @@ fn controls() -> Vec<Control> {
                 "space-around",
             ],
         ),
-        Control::select("wrap", ["nowrap", "wrap", "wrap-reverse"]),
+        Control::select("wrap", ["auto", "wrap", "nowrap"]),
     ];
 
     // A rule between row children has to be the other way round, so the
@@ -103,7 +103,7 @@ pub fn FlexPage() -> Element {
                     .default("md")
                     .doc("Space between children."),
                 prop("wrap", "FlexWrap")
-                    .default("nowrap")
+                    .default("follows direction - nowrap for column, wrap for row")
                     .doc("Whether children wrap onto new lines. Also accepts a `bool`."),
                 prop("divider", "Element")
                     .doc("Rendered between each child, not before the first or after the last. Needs the dioxus-fork feature - upstream main cannot split children apart."),
@@ -129,7 +129,7 @@ pub fn FlexPage() -> Element {
                         gap: values.str("gap"),
                         align: or_unset(values.str("align")),
                         justify: or_unset(values.str("justify")),
-                        wrap: values.str("wrap"),
+                        wrap: or_unset(values.str("wrap")),
                         divider: divider_element(&values),
                         Box {
                             sx: sx().padding("8px 16px").background("primary.1"),

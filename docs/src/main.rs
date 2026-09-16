@@ -17,7 +17,7 @@ use libero::{
     hooks::use_element,
     platform::ElementApi,
     sx::sx,
-    theme::{HEADER_HEIGHT, ICON_SIZE, PAPER_BACKGROUND, Size, ThemeSet, Z_INDEX_HEADER},
+    theme::{HEADER_HEIGHT_VAR, ICON_SIZE, PAPER_BACKGROUND, Size, ThemeSet, Z_INDEX_HEADER},
 };
 
 mod components;
@@ -463,7 +463,9 @@ fn AppShell() -> Element {
             Flex {
                 direction: "row",
                 align: "stretch",
-                sx: sx().height(format!("calc(100vh - {})", HEADER_HEIGHT.value(Size::Md))),
+                // Nav and page side by side at every width.
+                wrap: false,
+                sx: sx().height(format!("calc(100vh - {})", HEADER_HEIGHT_VAR.value())),
                 DocsNav { open, burger }
                 ScrollArea {
                     sx: sx()

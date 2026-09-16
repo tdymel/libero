@@ -33,6 +33,7 @@ fn Demo() -> Element {
     rsx! {
         Flex {
             direction: "row",
+            wrap: false,
             sx: sx().height("120px").width("100%").border("1px solid").border_color("muted.3"),
             Sidebar {
                 Text { "Navigation" }
@@ -61,6 +62,7 @@ fn Demo() -> Element {
     rsx! {
         Flex {
             direction: "row",
+            wrap: false,
             sx: sx().height("120px").width("100%").border("1px solid").border_color("muted.3"),
             Flex {
                 direction: "column",
@@ -82,10 +84,9 @@ means height - so the parent wants `direction: "column"`.
 
 ## Accessibility
 
-The root has no landmark role of its own: what the panel *is* depends on what
-you put in it. Wrap navigation content in a `<nav>` (or pass `role`/`aria-label`
-through the attributes) so it is announced as a landmark; a settings or
-inspector panel is better named with `aria-label` on a `region`.
+The root is an `aside`, the `complementary` landmark. A panel that is the site
+navigation passes `component: "nav"` instead; give it an `aria_label` when the
+page has more than one landmark of that kind.
 
 ## Props
 
@@ -93,6 +94,7 @@ inspector panel is better named with `aria-label` on a `region`.
 |---|---|---|---|
 | `side` | `SidebarSide` | `left` | Which edge this panel borders and which axis `size` applies to. It does not place the panel - an in-flow item is positioned by its parent's layout, so put it at the matching end of the DOM yourself. |
 | `size` | `Size` | `md` | The panel's width (or height, on a `top`/`bottom` side). |
+| `component` | `HtmlTag` | `aside` | Element to render as, e.g. `nav` for a navigation panel. |
 | `children` | `Element` | required | The panel's content, scrolled by an inner `ScrollArea`. |
 
 `SidebarSide` is `left`, `right`, `top` or `bottom`.

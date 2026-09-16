@@ -1,8 +1,8 @@
 //! The plain layout wrappers: `Box` as other tags, `Container`, `Flex`,
-//! `Center`, `Float` and `AspectRatio`, in a 320px column (WCAG 1.4.10).
+//! `Center`, `Float`, `AspectRatio` and `Sidebar`, in a 320px column (WCAG 1.4.10).
 
 use dioxus::prelude::*;
-use libero::components::{AspectRatio, Box as LBox, Center, Container, Flex, Float};
+use libero::components::{AspectRatio, Box as LBox, Center, Container, Flex, Float, Sidebar};
 
 use crate::Routes;
 
@@ -23,10 +23,11 @@ fn LayoutPage() -> Element {
             Container { id: "container", component: "section", aria_label: "Container",
                 "A container keeps its gutters and never runs past a narrow screen."
             }
-            Flex { id: "row", direction: "row", wrap: true,
-                LBox { component: "span", "First" }
-                LBox { component: "span", "Second" }
-                LBox { component: "span", "Third" }
+            // No `wrap`: a row wraps by default, or these overflow 320px.
+            Flex { id: "row", direction: "row",
+                LBox { component: "span", "The first row item" }
+                LBox { component: "span", "The second row item" }
+                LBox { component: "span", "The third row item" }
             }
             Center { id: "stage", position: "relative", min_height: "64px",
                 "Centred"
@@ -36,5 +37,7 @@ fn LayoutPage() -> Element {
                 LBox { id: "ratio-link", component: "a", href: "#ratio", "Play the video" }
             }
         }
+        // Outside the 320px column: only its landmark is under test here.
+        Sidebar { id: "sidebar", aria_label: "Filters", size: "xs", "Filters" }
     }
 }

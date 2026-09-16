@@ -1,17 +1,26 @@
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
+
 use dioxus::prelude::*;
 
 use crate::{
+    CssLayer,
     components::{
         HtmlTag, Input, States, Variables,
         common::{base_props, fill_color, input_from_str},
         layout::use_box,
         variables,
     },
+    css::Stylesheet,
+    hooks::{use_css, use_id},
+    platform::document,
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, HEADER_HEIGHT, NamedColorCss,
-        PAPER_BACKGROUND, Size, Z_INDEX_HEADER,
+        ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, HEADER_HEIGHT, HEADER_HEIGHT_VAR,
+        NamedColorCss, PAPER_BACKGROUND, Size, Z_INDEX_HEADER,
     },
 };
 
@@ -55,11 +64,48 @@ fn header_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
 const HEADER_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-header-background");
 const HEADER_COLOR_VAR: CssVar = CssVar::new("--lsx-header-color");
 
+/// The root attribute naming the Header that publishes its height.
+const PUBLISHER_ATTRIBUTE: &str = "data-lsx-header";
+
+thread_local! {
+    /// Mounted sticky/fixed Headers, oldest first: the last one publishes, and
+    /// unmounting it hands the root back to the one before.
+    static PUBLISHERS: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+}
+
+fn set_publishing(id: &str, publishes: bool) {
+    let top = PUBLISHERS.with_borrow_mut(|stack| {
+        stack.retain(|other| other != id);
+        if publishes {
+            stack.push(id.to_string());
+        }
+        stack.last().cloned()
+    });
+    if let Some(document) = document() {
+        document.set_root_attribute(PUBLISHER_ATTRIBUTE, top.as_deref());
+    }
+}
+
+/// This Header's height and the scroll padding on `:root`, live while the root
+/// names it. Focus moved under a stuck banner is then scrolled clear (2.4.11).
+fn publish_css(id: &str, height: &str) -> String {
+    format!(
+        ":root[{PUBLISHER_ATTRIBUTE}=\"{id}\"]{{{}:{height};scroll-padding-top:{};}}",
+        HEADER_HEIGHT_VAR.name(),
+        HEADER_HEIGHT_VAR.value()
+    )
+}
+
 static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
         .width("100%")
-        .height(HEADER_HEIGHT.overridable(Size::Md))
+        .with(
+            HEADER_HEIGHT_VAR.name(),
+            HEADER_HEIGHT.overridable(Size::Md),
+        )
+        // Content that wraps (200% text, 320 px) grows the banner instead of spilling.
+        .min_height(HEADER_HEIGHT_VAR.value())
         .padding_left("md")
         .padding_right("md")
         .background(HEADER_BACKGROUND_VAR.value_or(PAPER_BACKGROUND.value()))
@@ -105,8 +151,8 @@ fn header_variables(props: &HeaderProps) -> Variables {
 
 base_props! {
     pub struct HeaderProps {
-        /// `Sticky` (default) needs no offset; `Fixed` is viewport-relative
-        /// and you offset your own content, as with `Drawer`'s `anchor`.
+        /// `Sticky` (default) needs no offset; `Fixed` is viewport-relative:
+        /// offset your content by `var(--lsx-header-height)`.
         #[props(default, into)]
         position: Input<HeaderPosition>,
         #[props(default, into)]
@@ -132,6 +178,33 @@ pub fn Header(props: HeaderProps) -> Element {
         .with("static", position == HeaderPosition::Static)
         .with("fixed", position == HeaderPosition::Fixed)
         .into();
+
+    // A sticky or fixed Header publishes its height on `:root`, the last one
+    // mounted winning. The size's own CSS, so nothing is measured.
+    let id = use_id();
+    let published = use_hook(|| Rc::new((id.peek().clone(), Cell::new(false))));
+    let publishes = position != HeaderPosition::Static;
+    let height = props
+        .size
+        .resolve(Some(HEADER_HEIGHT))
+        .unwrap_or_else(|| HEADER_HEIGHT.value(Size::Md));
+    use_css(
+        publishes.then(|| Stylesheet::from(publish_css(&published.0, &height).as_str())),
+        CssLayer::Framework,
+    );
+    // No document (SSR, headless): nothing to publish on, and nothing to leak.
+    if published.1.get() != publishes && document().is_some() {
+        published.1.set(publishes);
+        set_publishing(&published.0, publishes);
+    }
+    use_drop({
+        let published = published.clone();
+        move || {
+            if published.1.get() {
+                set_publishing(&published.0, false);
+            }
+        }
+    });
 
     use_box()
         .framework_sx(&HEADER_BASE_SX)
@@ -174,6 +247,32 @@ mod tests {
             FOCUS_RING_HALO.name(),
             ColorValue::Fill(Color::Primary, HEADER_DEFAULT_SHADE).value()
         )));
+    }
+
+    #[test]
+    fn a_publisher_sets_its_height_and_scroll_padding_on_the_root() {
+        assert_eq!(
+            publish_css("lsx-7", "var(--lsx-header-height-lg)"),
+            ":root[data-lsx-header=\"lsx-7\"]{--lsx-header-height:var(--lsx-header-height-lg);\
+             scroll-padding-top:var(--lsx-header-height);}"
+        );
+    }
+
+    #[test]
+    fn the_last_publisher_wins_and_unmounting_restores_the_one_before() {
+        set_publishing("a", true);
+        set_publishing("b", true);
+        assert_eq!(
+            PUBLISHERS.with_borrow(|s| s.last().cloned()).as_deref(),
+            Some("b")
+        );
+        set_publishing("b", false);
+        assert_eq!(
+            PUBLISHERS.with_borrow(|s| s.last().cloned()).as_deref(),
+            Some("a")
+        );
+        set_publishing("a", false);
+        assert!(PUBLISHERS.with_borrow(Vec::is_empty));
     }
 
     /// Unset means the themed default applies, so neither var is pinned.

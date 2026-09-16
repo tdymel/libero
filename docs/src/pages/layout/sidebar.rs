@@ -39,6 +39,7 @@ pub fn SidebarPage() -> Element {
                     .default("left")
                     .doc("Which edge this panel borders and which axis `size` applies to. It does not place the panel - an in-flow item is positioned by its parent's layout, so put it at the matching end of the DOM yourself."),
                 prop("size", "Size").default("md").doc("The panel's width (or height, on a top/bottom side)."),
+                prop("component", "HtmlTag").default("aside").doc("Element to render as, e.g. nav for a navigation panel."),
                 prop("children", "Element").doc("The panel's content, scrolled by an inner `ScrollArea`."),
             ])],
             lead: rsx! {

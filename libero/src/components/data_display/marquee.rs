@@ -212,7 +212,8 @@ base_props! {
         /// Fades both ends into the surface colour, `Paper`'s background.
         #[props(default)]
         fade_edges: Option<bool>,
-        /// What scrolls. Rendered once per copy.
+        /// What scrolls. Rendered once per copy; interactive children work
+        /// only in the first copy, the others are `inert`.
         children: Element,
     }
 }

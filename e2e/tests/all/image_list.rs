@@ -5,8 +5,14 @@
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, wait};
 use serde::Deserialize;
+
+/// Todo 609: the captioned cell is a `figure`, its bar the `figcaption`.
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("image_list", "/image-list-captions").run();
+}
 
 /// How far the focused element's ring reaches past any ancestor up to `root`
 /// that clips its overflow, in px. Zero or less: the whole stripe shows.

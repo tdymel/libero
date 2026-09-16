@@ -1,4 +1,4 @@
-//! `Box`, `Container`, `Flex`, `Center`, `Float` and `AspectRatio`: native
+//! `Box`, `Container`, `Flex`, `Center`, `Float`, `AspectRatio` and `Sidebar`: native
 //! semantics through `component`, reflow at 320px and focus rings that no
 //! wrapper clips.
 
@@ -25,7 +25,7 @@ fn box_renders_the_asked_tag_with_the_callers_attributes() {
 
         let seen: Vec<String> = page
             .evaluate(
-                "['#poly-nav', '#poly-link', '#poly-button', '#container'].map(s => { \
+                "['#poly-nav', '#poly-link', '#poly-button', '#container', '#sidebar'].map(s => { \
                    const el = document.querySelector(s); \
                    return [el.tagName, el.getAttribute('aria-label'), el.getAttribute('href'), \
                      el.getAttribute('type'), el.getAttribute('aria-pressed')].join('|'); })",
@@ -41,6 +41,7 @@ fn box_renders_the_asked_tag_with_the_callers_attributes() {
                 "A||#container||",
                 "BUTTON|||button|false",
                 "SECTION|Container|||",
+                "ASIDE|Filters|||",
             ]
         );
 

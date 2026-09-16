@@ -5,7 +5,22 @@ use libero::components::{Button, Flex, Header, Text};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/header", || rsx! { HeaderPage {} })];
+pub const ROUTES: Routes = &[
+    ("/header", || rsx! { HeaderPage {} }),
+    ("/header-static", || rsx! { StaticPage {} }),
+];
+
+/// A sticky `lg` banner mounted before a static `xs` header, which must not
+/// publish its height over the banner's.
+#[component]
+fn StaticPage() -> Element {
+    rsx! {
+        Header { id: "banner", size: "lg", "Banner" }
+        main {
+            Header { id: "nested", size: "xs", position: "static", "Nested" }
+        }
+    }
+}
 
 #[component]
 fn HeaderPage() -> Element {

@@ -1098,7 +1098,7 @@ mod tests {
             ("--lsx-flex-row-align", "center"),
             ("--lsx-flex-row-justify", "flex-start"),
             ("--lsx-flex-row-spacing", "var(--lsx-spacing-md)"),
-            ("--lsx-flex-row-wrap", "nowrap"),
+            ("--lsx-flex-row-wrap", "wrap"),
         ]);
     }
 

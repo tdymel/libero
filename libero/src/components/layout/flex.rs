@@ -33,7 +33,6 @@ str_enum! {
         Wrap = "wrap",
         #[default]
         NoWrap = "nowrap",
-        WrapReverse = "wrap-reverse",
     }
 }
 
@@ -65,7 +64,8 @@ mod tests {
     fn flex_wrap_parses_bools_and_strings() {
         assert_eq!(FlexWrap::from(true).as_str(), "wrap");
         assert_eq!(FlexWrap::from(false).as_str(), "nowrap");
-        assert_eq!(FlexWrap::from("wrap-reverse"), FlexWrap::WrapReverse);
+        assert_eq!(FlexWrap::from("wrap"), FlexWrap::Wrap);
+        assert_eq!(FlexWrap::from("wrap-reverse"), FlexWrap::NoWrap);
         assert_eq!(FlexWrap::from("nonsense"), FlexWrap::NoWrap);
     }
 }

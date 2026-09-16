@@ -54,6 +54,9 @@ base_props! {
         side: Input<SidebarSide>,
         #[props(default, into)]
         size: Input<Size>,
+        /// Element to render as; `aside` (the `complementary` landmark) by default.
+        #[props(default, into)]
+        component: Input<HtmlTag>,
         children: Element,
     }
 }
@@ -66,6 +69,7 @@ pub fn Sidebar(props: SidebarProps) -> Element {
     let side = props.side.copied_or_default();
     let theme = use_theme();
     let size = props.size.copied_or(theme.sidebar.size);
+    let component = props.component.copied_or(HtmlTag::Aside);
 
     let states: Input<States> = props
         .states
@@ -89,7 +93,7 @@ pub fn Sidebar(props: SidebarProps) -> Element {
         .states(&states)
         .prepare()
         .render(
-            HtmlTag::Div,
+            component,
             props.attributes,
             rsx! {
                 ScrollArea { sx: &SIDEBAR_SCROLL_SX, attributes: name, {props.children} }

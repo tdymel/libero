@@ -248,6 +248,9 @@ fn link_base() -> Sx {
 }
 
 static IMAGE_LIST_MEDIA_SX: StaticSx = StaticSx::new(media_base);
+/// A captioned cell's `figure`, boxless: picture and bar stay the `<li>`'s grid
+/// items, so the one-grid layout above is untouched.
+static IMAGE_LIST_FIGURE_SX: StaticSx = StaticSx::new(|| sx().display("contents").margin("0"));
 static IMAGE_LIST_MEDIA_LINK_SX: StaticSx = StaticSx::new(|| media_base().and(link_base()));
 
 /// The scrim's `data-state` token, per position: the gradient fades *away*
@@ -343,7 +346,7 @@ base_props! {
 /// reading order and visual order agree.
 ///
 /// Each picture's accessible name is its own `alt`; `ImageList` never invents
-/// one, and a bar is sibling content rather than a label for the image.
+/// one. A cell with a bar is a `figure` and the bar its `figcaption`.
 ///
 /// Not a composite widget: no roving focus and no arrow keys. A cell with a
 /// `to` or an action contributes native tab stops in document order.
@@ -417,6 +420,10 @@ pub fn ImageList(props: ImageListProps) -> Element {
         .framework_sx(&IMAGE_LIST_BAR_SX)
         .focus_ring(false)
         .prepare();
+    let figure_style = use_box()
+        .framework_sx(&IMAGE_LIST_FIGURE_SX)
+        .focus_ring(false)
+        .prepare();
 
     let cells = props.items.iter().enumerate().map(|(index, item)| {
         // One link path, always on the picture: the bar's content is the
@@ -449,8 +456,20 @@ pub fn ImageList(props: ImageListProps) -> Element {
                         .with(scrim, bar.scrim && !scrim.is_empty())
                         .data_state(),
                 )
-                .render(HtmlTag::Div, Vec::new(), bar.content.clone())
+                .render(HtmlTag::Figcaption, Vec::new(), bar.content.clone())
         });
+        // A bar captions its picture: `figure` + `figcaption`, else the bare picture.
+        let content = match bar {
+            Some(bar) => figure_style.clone().render(
+                HtmlTag::Figure,
+                Vec::new(),
+                rsx! {
+                    {media}
+                    {bar}
+                },
+            ),
+            None => media,
+        };
 
         let span = item.span.unwrap_or(default_span);
         let cell_spans = item.span.map_or(spans, Responsive::new);
@@ -503,8 +522,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
                 rows,
                 sx: cell_sx,
                 states: cell_states.clone(),
-                {media}
-                {bar}
+                {content}
             }
         }
     });

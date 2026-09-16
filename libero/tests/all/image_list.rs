@@ -51,6 +51,21 @@ fn a_list_announces_itself_as_one() {
     assert_eq!(body(&html).matches("<li").count(), 3);
 }
 
+/// Only the captioned cell is a `figure`, its bar the `figcaption` after the picture.
+#[test]
+fn a_captioned_cell_is_a_figure() {
+    let html = body(&render(standard_app));
+
+    assert_eq!(html.matches("<figure").count(), 1, "{html}");
+    assert_eq!(html.matches("<figcaption").count(), 1, "{html}");
+    let figure = &html[html.find("<figure").unwrap()..html.find("</figure>").unwrap()];
+    assert!(
+        figure.find("alt=\"A\"").unwrap() < figure.find("<figcaption").unwrap(),
+        "{figure}"
+    );
+    assert!(figure.contains("Breakfast"), "{figure}");
+}
+
 /// The failure the review caught at the root: a span only means what it says
 /// on a twelve-track grid, so the cells are on one. The theme's `cols` is 2,
 /// which is `span 6`.

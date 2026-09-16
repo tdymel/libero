@@ -15,9 +15,9 @@ generic
   region "Container"
     StaticText "A container keeps its gutters and never runs past a narrow screen."
   generic
-    StaticText "First"
-    StaticText "Second"
-    StaticText "Third"
+    StaticText "The first row item"
+    StaticText "The second row item"
+    StaticText "The third row item"
   generic
     StaticText "Centred"
     generic
@@ -25,3 +25,6 @@ generic
   generic
     link "Play the video"
       StaticText "Play the video"
+complementary "Filters"
+  generic "Filters"
+    StaticText "Filters"

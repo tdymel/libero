@@ -46,7 +46,7 @@ pub fn MarqueePage() -> Element {
             properties: vec![props("Marquee", vec![
                 prop("children", "Element")
                     .default("required")
-                    .doc("What scrolls. Rendered once per copy."),
+                    .doc("What scrolls. Rendered once per copy; interactive children work only in the first copy."),
                 prop("orientation", "Orientation")
                     .default("horizontal")
                     .doc("The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies."),
@@ -86,7 +86,8 @@ pub fn MarqueePage() -> Element {
                     Code { source: "aria-hidden" }
                     " and "
                     Code { source: "inert" }
-                    ", so it is read and tabbed through once. "
+                    ", so it is read and tabbed through once - and interactive children "
+                    "work only in the first copy. "
                     Code { source: "duration" }
                     " is one full cycle, so adding an item makes the whole strip move faster."
                 }

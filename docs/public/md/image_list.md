@@ -14,7 +14,8 @@ own track count.
 
 `masonry` is that zone's measuring engine, not a CSS multi-column - so the
 reading order and the visual order agree. Each picture's accessible name is its
-own `alt`; the bar is sibling content and never becomes one.
+own `alt`; the bar never becomes one. A cell with a bar is a `figure` and the
+bar its `figcaption`.
 
 ## Usage
 
@@ -180,8 +181,9 @@ compound `ImageList { ImageListItem {} }` children API.
 ## Accessibility
 
 - Each picture's accessible name is its own `alt`. `ImageList` never invents
-  one, and the bar is not a label for the image: its text may repeat the `alt`,
-  and that is the caller's call.
+  one. A cell with a bar is a `figure`, the bar its `figcaption`: the caption
+  describes the figure, not the image, so its text may repeat the `alt` - the
+  caller's call.
 - **A cell with `to` puts the anchor on the picture**, so a decorative image
   there leaves the link with no accessible name, with a bar or without one.
 

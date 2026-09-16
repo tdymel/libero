@@ -66,3 +66,28 @@ fn a_zoomable_image_is_a_dialog_opener() {
     assert_eq!(img["alt"], "");
     assert!(!img["class"].contains("mine"), "{img:?}");
 }
+
+/// Todo 603: `loading` reaches the `<img>` on both paths; unset renders none (eager).
+#[test]
+fn loading_lands_on_the_img() {
+    fn lazy() -> Element {
+        rsx! { LiberoProvider { Image { src: "/logo.png", alt: "The logo", loading: "lazy" } } }
+    }
+    fn lazy_zoomable() -> Element {
+        rsx! {
+            LiberoProvider {
+                Image { src: "/logo.png", alt: "The logo", loading: "lazy", zoomable: true }
+            }
+        }
+    }
+    fn unset() -> Element {
+        rsx! { LiberoProvider { Image { src: "/logo.png", alt: "The logo" } } }
+    }
+
+    assert_eq!(attributes_of(&render(lazy), "img")["loading"], "lazy");
+    assert_eq!(
+        attributes_of(&render(lazy_zoomable), "img")["loading"],
+        "lazy"
+    );
+    assert!(!attributes_of(&render(unset), "img").contains_key("loading"));
+}

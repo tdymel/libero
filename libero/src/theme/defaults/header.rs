@@ -1,7 +1,9 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
-use crate::theme::{SizeCss, Sizes};
+use crate::theme::{CssVar, SizeCss, Sizes};
 
 pub const HEADER_HEIGHT: SizeCss = SizeCss::new("--lsx-header-height-");
+/// The page banner's height, published on `:root` for whatever sits below it.
+pub const HEADER_HEIGHT_VAR: CssVar = CssVar::new("--lsx-header-height");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HeaderDefaults {

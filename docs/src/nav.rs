@@ -9,7 +9,7 @@ use libero::{
     hooks::ElementHandle,
     platform::ElementApi,
     sx::{Sx, sx},
-    theme::{ColorCss, ColorShade, HEADER_HEIGHT, SIDEBAR_SIZE, Size},
+    theme::{ColorCss, ColorShade, HEADER_HEIGHT_VAR, SIDEBAR_SIZE, Size},
 };
 
 use crate::Route;
@@ -23,7 +23,8 @@ use crate::Route;
 // hardcodes `transform`/`visibility` regardless of its value, so nothing
 // odd happens if the viewport crosses `Sm` while it happens to be open.
 fn nav_responsive_sx(open: bool) -> Sx {
-    let header_height = HEADER_HEIGHT.value(Size::Md);
+    // The banner's published height, whatever size it renders at.
+    let header_height = HEADER_HEIGHT_VAR.value();
     // `visibility` shouldn't flip to hidden until the slide-out finishes,
     // or the panel would vanish mid-animation instead of sliding away;
     // opening has no such concern, so only closing gets the delay.
@@ -322,7 +323,7 @@ pub fn DocsNav(open: Signal<bool>, burger: ElementHandle) -> Element {
             // What the header's `Burger` names in its `aria-controls`.
             id: "docs-nav",
             side: "left",
-            role: "navigation",
+            component: "nav",
             sx: nav_responsive_sx(open()),
             Flex {
                 direction: "column",

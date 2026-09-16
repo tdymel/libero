@@ -36,7 +36,7 @@ fn ImagePage() -> Element {
                     src: PICTURE,
                     alt: "A blue square",
                     zoomable: true,
-                    "loading": "lazy",
+                    loading: "lazy",
                 }
             }
         }

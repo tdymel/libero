@@ -44,7 +44,8 @@ impl FlexDefaults {
             align: "center",
             justify: "flex-start",
             spacing: Size::Md,
-            wrap: false,
+            // A nowrap row overflows narrow screens (1.4.10 Reflow).
+            wrap: true,
         },
     };
 

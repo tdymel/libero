@@ -42,6 +42,9 @@ pub fn ImagePage() -> Element {
                     prop("zoomable", "bool")
                         .default("false")
                         .doc("Opens the picture in a single-picture Lightbox on click. Ignored inside a linked `ImageItem`, with a warning: the link wins."),
+                    prop("loading", "ImageLoading")
+                        .default("eager")
+                        .doc("The `<img>`'s `loading`: `lazy` defers a picture until it nears the viewport."),
                 ]),
             ],
             lead: rsx! {

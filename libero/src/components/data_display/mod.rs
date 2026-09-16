@@ -15,7 +15,7 @@ pub use badge::{Badge, BadgeProps};
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
 pub use icon::{Icon, IconProps};
 // Shared with `ActionIcon` so it renders identically to a plain `Icon`.
-pub use image::{Image, ImageFit, ImageProps};
+pub use image::{Image, ImageFit, ImageLoading, ImageProps};
 pub use indicator::{Indicator, IndicatorProps};
 pub use list::{List, ListItem, ListItemProps, ListProps};
 pub use marquee::{Marquee, MarqueeProps};

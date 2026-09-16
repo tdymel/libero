@@ -27,7 +27,7 @@ pub fn HeaderPage() -> Element {
             properties: vec![props("Header", vec![
                 prop("position", "HeaderPosition")
                     .default("sticky")
-                    .doc("Sticky needs no offset; fixed is viewport-relative and you offset your own content, as with Drawer's anchor."),
+                    .doc("Sticky needs no offset; fixed is viewport-relative: offset your content by var(--lsx-header-height)."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
                     .doc("Header height."),
@@ -53,8 +53,9 @@ pub fn HeaderPage() -> Element {
                     Code { source: "position" }
                     " also accepts "
                     Code { source: "fixed" }
-                    ", which is viewport-relative - you offset your own content for it, so "
-                    "it is left out of the demo below."
+                    ", which is viewport-relative - offset your content by "
+                    Code { source: "var(--lsx-header-height)" }
+                    ", so it is left out of the demo below."
                 }
             },
             Demo {

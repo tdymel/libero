@@ -88,8 +88,10 @@ or the dialog's **Close** button close the overlay again.
 | `alt` | `Option<String>` | - | What the picture shows. Unset without `decorative`, a debug build warns. |
 | `decorative` | `bool` | `false` | Marks the picture as decoration: `alt=""` and `role="presentation"`. Wins over `alt`, with a warning in a debug build. |
 | `zoomable` | `bool` | `false` | Wraps the image in a click-to-zoom overlay. Ignored inside a linked `ImageItem`. |
+| `loading` | `ImageLoading` | `eager` | The `<img>`'s `loading`: `lazy` defers a picture until it nears the viewport. |
 
-`ImageFit` takes `fill`, `contain`, `cover`, `none` or `scale-down`.
+`ImageFit` takes `fill`, `contain`, `cover`, `none` or `scale-down`. `ImageLoading` takes
+`eager` or `lazy`.
 
 Like every component, `Image` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

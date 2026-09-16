@@ -100,12 +100,12 @@ fn Demo() -> Element {
 | `align` | `ThemeAwareValue` | follows `direction` - `stretch` for column, `center` for row | Cross-axis alignment. |
 | `justify` | `ThemeAwareValue` | `flex-start` | Main-axis alignment. |
 | `gap` | `Size` | `md` | Space between children. |
-| `wrap` | `FlexWrap` | `nowrap` | Whether children wrap onto new lines. Also accepts a `bool`. |
+| `wrap` | `FlexWrap` | follows `direction` - `nowrap` for column, `wrap` for row | Whether children wrap onto new lines. Also accepts a `bool`. |
 | `divider` | `Element` | - | Rendered between each child, not before the first or after the last. Needs the `dioxus-fork` feature - upstream main cannot split children apart. |
 | `children` | `Element` | required | The flex's children. |
 
-`FlexDirection` is `row` or `column`; `FlexWrap` is `nowrap`, `wrap` or
-`wrap-reverse`.
+`FlexDirection` is `row` or `column`; `FlexWrap` is `wrap` or `nowrap`. A row
+wraps by default so it reflows on a narrow screen; `wrap: false` opts out.
 
 Like every component, `Flex` also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
@@ -118,7 +118,7 @@ directions can differ without a prop.
 | Field | Type | Description |
 |---|---|---|
 | `column` | `FlexAxisDefaults` | Defaults for `direction: "column"` - `align: "stretch"`, `justify: "flex-start"`, `spacing: Size::Md`, `wrap: false`. |
-| `row` | `FlexAxisDefaults` | Defaults for `direction: "row"` - `align: "center"`, `justify: "flex-start"`, `spacing: Size::Md`, `wrap: false`. |
+| `row` | `FlexAxisDefaults` | Defaults for `direction: "row"` - `align: "center"`, `justify: "flex-start"`, `spacing: Size::Md`, `wrap: true`. |
 
 ## CSS variables
 

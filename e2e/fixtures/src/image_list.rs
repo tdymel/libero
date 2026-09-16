@@ -1,7 +1,7 @@
 //! `ImageList`, the gap arithmetic of its `quilted` variant, and `masonry` order.
 
 use dioxus::prelude::*;
-use libero::components::{GridSpan, ImageBar, ImageItem, ImageList};
+use libero::components::{GridSpan, Image, ImageBar, ImageItem, ImageList};
 use libero::theme::responsive;
 
 use crate::Routes;
@@ -14,7 +14,29 @@ pub const ROUTES: Routes = &[
     ),
     ("/image-list-links", || rsx! { ImageListLinksPage {} }),
     ("/image-list-masonry", || rsx! { ImageListMasonryPage {} }),
+    ("/image-list-captions", || rsx! { ImageListCaptionsPage {} }),
 ];
+
+const PICTURE: &str = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 3'%3E%3Crect width='4' height='3' fill='%23369'/%3E%3C/svg%3E";
+
+/// Todo 609: a captioned cell is a `figure` with a `figcaption`, a bare one is not.
+#[component]
+fn ImageListCaptionsPage() -> Element {
+    let picture = |alt: &str| rsx! { Image { src: PICTURE, alt: alt.to_string() } };
+
+    rsx! {
+        div { style: "width: 600px",
+            ImageList {
+                cols: 2u8,
+                items: vec![
+                    ImageItem::new(picture("A blue field"))
+                        .bar(ImageBar::new(rsx! { span { "Morning" } })),
+                    ImageItem::new(picture("Another blue field")),
+                ],
+            }
+        }
+    }
+}
 
 /// Todo 618: link cells fill their clipped `<li>`, and a bar holds a button.
 #[component]

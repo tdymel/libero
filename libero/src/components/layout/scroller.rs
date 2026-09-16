@@ -353,7 +353,7 @@ base_props! {
 /// # const TAGS: [&str; 2] = ["rust", "ui"];
 /// # rsx! {
 /// Scroller { aria_label: "Tags",
-///     Flex { direction: "row", gap: "sm",
+///     Flex { direction: "row", gap: "sm", wrap: false,
 ///         for tag in TAGS { Chip { "{tag}" } }
 ///     }
 /// }

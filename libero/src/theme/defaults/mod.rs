@@ -198,7 +198,7 @@ pub use grid::{
     GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, GRID_ITEM_ROW_SPAN_VAR, GRID_ITEM_ROWS_VAR,
     GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR, GRID_ZONE_GAP, GridDefaults,
 };
-pub use header::{HEADER_HEIGHT, HeaderDefaults};
+pub use header::{HEADER_HEIGHT, HEADER_HEIGHT_VAR, HeaderDefaults};
 pub use hover_card::HoverCardDefaults;
 pub use icon::{ICON_SIZE, IconDefaults};
 pub use image::{IMAGE_RADIUS, ImageDefaults, ImageFit};

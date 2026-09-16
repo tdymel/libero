@@ -8,6 +8,7 @@ use crate::{
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox, use_localization, use_theme},
     localization::{ImageLabels, fill},
+    str_enum::str_enum,
     sx::{StaticSx, Sx, sx},
     theme::{IMAGE_RADIUS, ImageDefaults, Size, SizeCss},
     utils::warn,
@@ -16,6 +17,17 @@ use crate::{
 pub use crate::theme::ImageFit;
 
 input_from_str!(ImageFit);
+
+str_enum! {
+    /// The `<img>`'s `loading`: `Lazy` defers an off-screen picture.
+    pub enum ImageLoading {
+        Lazy = "lazy",
+        #[default]
+        Eager = "eager",
+    }
+}
+
+input_from_str!(ImageLoading);
 
 fn image_variables(radius: Option<Size>) -> Variables {
     variables().with(
@@ -71,6 +83,9 @@ base_props! {
         decorative: bool,
         #[props(default)]
         zoomable: bool,
+        /// `Eager` (default) or `Lazy`, the `<img>`'s `loading` attribute.
+        #[props(default, into)]
+        loading: Input<ImageLoading>,
     }
 }
 
@@ -181,9 +196,14 @@ pub fn Image(props: ImageProps) -> Element {
         .states(&img_states)
         .variables(&variables)
         .prepare();
-    let image = image.event("onerror", move |_: Event<ImageData>| {
-        errored_src.set(Some(on_error_src.clone()))
-    });
+    let image = image
+        .event("onerror", move |_: Event<ImageData>| {
+            errored_src.set(Some(on_error_src.clone()))
+        })
+        .attr(
+            "loading",
+            props.loading.as_ref().map(|loading| loading.as_str()),
+        );
 
     if !zoomable {
         return image

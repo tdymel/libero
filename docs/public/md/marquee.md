@@ -88,12 +88,14 @@ fn Demo() -> Element {
   on the content it turns transparent rather than cover a focused link.
 - **`paused` is strictly controlled when set.** The toggle then only reports
   through `onpausechange`; without the handler it does nothing.
+- **Interactive children work only in the first copy.** The other copies are
+  `inert`, so a link or button in them does not react to the pointer either.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `children` | `Element` | required | What scrolls. Rendered once per copy. |
+| `children` | `Element` | required | What scrolls. Rendered once per copy; interactive children work only in the first copy. |
 | `orientation` | `Orientation` | `horizontal` | The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies. |
 | `reverse` | `bool` | `false` | Scrolls towards the end instead of the start. |
 | `duration` | `u32` | `40000` | Milliseconds per full cycle. A duration, not a speed: the same number moves a longer strip faster. |
