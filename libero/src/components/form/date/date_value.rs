@@ -8,9 +8,8 @@ use dioxus::prelude::*;
 use super::{
     DateRange,
     calendar::{Calendar, DateLevel, Selection, first_of_month},
-    fields::{day_allowed, moment_allowed},
     flows::{DateTimeFlow, DateTimeRangeFlow},
-    picker_field::FieldValue,
+    picker_field::{FieldValue, Formats},
     time_picker::Clock,
 };
 use crate::{
@@ -85,6 +84,34 @@ pub trait DateValue: Sealed {
     type Bound: Copy + PartialOrd + 'static;
 }
 
+/// Which rule a typed value broke, so the field can say which.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Refusal {
+    /// Before `min` or after `max`.
+    OutOfRange,
+    /// On a day `exclude_date` refuses.
+    Excluded,
+}
+
+/// `Err(OutOfRange)` for a value outside `min` and `max`.
+fn within<T: PartialOrd>(value: T, min: Option<T>, max: Option<T>) -> Result<(), Refusal> {
+    match min.is_some_and(|min| value < min) || max.is_some_and(|max| value > max) {
+        true => Err(Refusal::OutOfRange),
+        false => Ok(()),
+    }
+}
+
+/// `Err(Excluded)` for a day `exclude_date` refuses.
+fn available(
+    day: NaiveDate,
+    exclude_date: Option<Callback<NaiveDate, bool>>,
+) -> Result<(), Refusal> {
+    match exclude_date.is_some_and(|exclude| exclude.call(day)) {
+        true => Err(Refusal::Excluded),
+        false => Ok(()),
+    }
+}
+
 /// The part of [`DateValue`] only libero calls.
 pub(super) trait Sealed: FieldValue {
     /// The type-dependent props this value type reads; debug builds warn about
@@ -92,7 +119,12 @@ pub(super) trait Sealed: FieldValue {
     const USES: &'static [&'static str];
 
     /// Whether a typed or picked value passes `min`, `max` and `exclude_date`.
-    fn accepts(self, options: &PickerOptions<<Self as DateValue>::Bound>) -> bool
+    fn accepts(self, options: &PickerOptions<<Self as DateValue>::Bound>) -> Result<(), Refusal>
+    where
+        Self: DateValue;
+
+    /// A bound as the field shows it, for an error that names it.
+    fn show_bound(bound: <Self as DateValue>::Bound, formats: &Formats) -> String
     where
         Self: DateValue;
 
@@ -153,21 +185,24 @@ impl Sealed for NaiveDate {
         "allow_deselect",
     ];
 
-    fn accepts(self, options: &PickerOptions<NaiveDate>) -> bool {
+    fn accepts(self, options: &PickerOptions<NaiveDate>) -> Result<(), Refusal> {
         let (min, max) = (options.min, options.max);
         // As the picker's grid: a month or year that `min` and `max` reach.
         match options.level {
-            DateLevel::Day => day_allowed(min, max, options.exclude_date)(self),
-            DateLevel::Month => {
-                let month = first_of_month(self);
-                !(min.is_some_and(|min| month < first_of_month(min))
-                    || max.is_some_and(|max| month > max))
+            DateLevel::Day => {
+                within(self, min, max).and_then(|()| available(self, options.exclude_date))
             }
-            DateLevel::Year => {
-                !(min.is_some_and(|min| self.year() < min.year())
-                    || max.is_some_and(|max| self.year() > max.year()))
-            }
+            DateLevel::Month => within(first_of_month(self), min.map(first_of_month), max),
+            DateLevel::Year => within(
+                self.year(),
+                min.map(|min| min.year()),
+                max.map(|max| max.year()),
+            ),
         }
+    }
+
+    fn show_bound(bound: NaiveDate, formats: &Formats) -> String {
+        bound.show(formats)
     }
 
     fn closes(_: Option<Self>) -> bool {
@@ -251,8 +286,12 @@ impl Sealed for NaiveTime {
         "twelve_hour",
     ];
 
-    fn accepts(self, options: &PickerOptions<NaiveTime>) -> bool {
-        !(options.min.is_some_and(|min| self < min) || options.max.is_some_and(|max| self > max))
+    fn accepts(self, options: &PickerOptions<NaiveTime>) -> Result<(), Refusal> {
+        within(self, options.min, options.max)
+    }
+
+    fn show_bound(bound: NaiveTime, formats: &Formats) -> String {
+        bound.show(formats)
     }
 
     fn closes(_: Option<Self>) -> bool {
@@ -301,8 +340,13 @@ impl Sealed for NaiveDateTime {
         "twelve_hour",
     ];
 
-    fn accepts(self, options: &PickerOptions<NaiveDateTime>) -> bool {
-        moment_allowed(options.min, options.max, options.exclude_date)(self)
+    fn accepts(self, options: &PickerOptions<NaiveDateTime>) -> Result<(), Refusal> {
+        within(self, options.min, options.max)
+            .and_then(|()| available(self.date(), options.exclude_date))
+    }
+
+    fn show_bound(bound: NaiveDateTime, formats: &Formats) -> String {
+        bound.show(formats)
     }
 
     fn closes(_: Option<Self>) -> bool {
@@ -354,8 +398,13 @@ impl Sealed for DateRange<NaiveDate> {
         "close_on_change",
     ];
 
-    fn accepts(self, options: &PickerOptions<NaiveDate>) -> bool {
-        self.start.accepts(options) && self.end.is_none_or(|end| end.accepts(options))
+    fn accepts(self, options: &PickerOptions<NaiveDate>) -> Result<(), Refusal> {
+        self.start.accepts(options)?;
+        self.end.map_or(Ok(()), |end| end.accepts(options))
+    }
+
+    fn show_bound(bound: NaiveDate, formats: &Formats) -> String {
+        bound.show(formats)
     }
 
     fn closes(value: Option<Self>) -> bool {
@@ -409,8 +458,13 @@ impl Sealed for DateRange<NaiveDateTime> {
         "twelve_hour",
     ];
 
-    fn accepts(self, options: &PickerOptions<NaiveDateTime>) -> bool {
-        self.start.accepts(options) && self.end.is_none_or(|end| end.accepts(options))
+    fn accepts(self, options: &PickerOptions<NaiveDateTime>) -> Result<(), Refusal> {
+        self.start.accepts(options)?;
+        self.end.map_or(Ok(()), |end| end.accepts(options))
+    }
+
+    fn show_bound(bound: NaiveDateTime, formats: &Formats) -> String {
+        bound.show(formats)
     }
 
     fn closes(_: Option<Self>) -> bool {

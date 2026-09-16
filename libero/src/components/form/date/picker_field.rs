@@ -268,12 +268,12 @@ pub(super) use picker_field;
 
 /// Controlled: renders `value` and asks for a new one through `onchange`.
 /// Typed text stays as typed until the field blurs or Enter is pressed; text
-/// that `V` cannot read, or that `accepts` refuses, stays and shows
-/// `DateLocale::invalid_date`.
+/// that `V` cannot read stays and shows `DateLocale::invalid_date`, a value
+/// `accepts` refuses the error it returns.
 pub(super) fn use_picker_field<V: FieldValue>(
     field: PickerField<'_, V>,
     formats: Formats,
-    accepts: impl Fn(V) -> bool + Clone + 'static,
+    accepts: impl Fn(V) -> Result<(), String> + Clone + 'static,
     dropdown: impl FnOnce(DropdownArgs<V>) -> Element,
 ) -> Element {
     let theme = use_theme();
@@ -294,8 +294,9 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let mut opened = use_signal(|| false);
     // The text as typed, until it is committed. `None` shows `value`.
     let mut draft = use_signal(|| Option::<String>::None);
-    // The last commit found nothing it accepts; cleared by the next keystroke.
-    let mut rejected = use_signal(|| false);
+    // Why the last commit found nothing it accepts; cleared by the next
+    // keystroke.
+    let mut rejected = use_signal(|| Option::<String>::None);
     // Focus is coming back to the text input from the dropdown, which closed:
     // that focus must not open it again.
     let mut returning = use_signal(|| false);
@@ -322,12 +323,14 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 emit(None);
                 return;
             }
-            match V::read(&text, &formats, value, today) {
-                Ok(next) if accepts(next) => {
+            let read =
+                V::read(&text, &formats, value, today).map_err(|_| names.invalid_date.to_string());
+            match read.and_then(|next| accepts(next).map(|()| next)) {
+                Ok(next) => {
                     draft.set(None);
                     emit(Some(next));
                 }
-                _ => rejected.set(true),
+                Err(error) => rejected.set(Some(error)),
             }
         }
     };
@@ -337,8 +340,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
     // Unaccepted text outranks the caller's status: the field cannot hold what
     // it shows.
     let status: Input<FieldStatus> = match rejected() {
-        true => Input::Value(FieldStatus::Error(names.invalid_date.to_string())),
-        false => field.status.clone(),
+        Some(error) => Input::Value(FieldStatus::Error(error)),
+        None => field.status.clone(),
     };
     let field_box = use_field()
         .label(field.label)
@@ -458,7 +461,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .attr("aria-expanded", showing.to_string())
         .attr("aria-controls", showing.then(|| dialog_id.clone()))
         .event("oninput", move |event: FormEvent| {
-            rejected.set(false);
+            rejected.set(None);
             draft.set(Some(event.value()));
         })
         .event("onfocus", move |_: FocusEvent| focused())
@@ -506,7 +509,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     popover.show(showing.then(|| {
         let pick = Callback::new(move |(next, close): (Option<V>, bool)| {
             draft.set(None);
-            rejected.set(false);
+            rejected.set(None);
             emit(next);
             if close {
                 // The focused cell is about to go; focus goes back first.

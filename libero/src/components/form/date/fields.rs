@@ -28,19 +28,6 @@ pub(super) fn day_allowed(
     }
 }
 
-/// Whether a moment passes `min`, `max`, and `exclude_date` on its day.
-pub(super) fn moment_allowed(
-    min: Option<NaiveDateTime>,
-    max: Option<NaiveDateTime>,
-    exclude_date: Option<Callback<NaiveDate, bool>>,
-) -> impl Fn(NaiveDateTime) -> bool + Copy + 'static {
-    move |moment| {
-        !(min.is_some_and(|min| moment < min)
-            || max.is_some_and(|max| moment > max)
-            || exclude_date.is_some_and(|exclude| exclude.call(moment.date())))
-    }
-}
-
 /// The time format a field shows when the caller names none: the theme's,
 /// adjusted for `with_seconds` and `twelve_hour`; separators, padding and text stay.
 pub(super) fn time_format(

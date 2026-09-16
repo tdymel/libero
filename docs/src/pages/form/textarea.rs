@@ -26,6 +26,9 @@ pub fn TextareaPage() -> Element {
                         .doc("Fires per keystroke with the text the field should hold next."),
                     prop("placeholder", "String")
                         .doc("Shown while the field is empty."),
+                    prop("counter", "bool")
+                        .default("false")
+                        .doc("Shows `12/200` under the control while a `maxlength` attribute is set, and politely announces the characters left (`TextareaLabels::characters_left`) once a tenth of the limit remains."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the control. Names the field through a `for`/`id` pair."),
                     prop("description", "Caption")
@@ -108,6 +111,12 @@ pub fn TextareaPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::switch("counter").code(|_, values| {
+                        match values.str("counter").as_str() {
+                            "true" => vec!["counter: true".to_string(), "maxlength: 200".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
                 ],
@@ -130,6 +139,8 @@ pub fn TextareaPage() -> Element {
                             .then(|| "Start typing".to_string()),
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
+                        counter: values.str("counter") == "true",
+                        maxlength: (values.str("counter") == "true").then_some(200),
                         value: value(),
                         oninput: move |next| value.set(next),
                     }

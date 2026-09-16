@@ -100,6 +100,7 @@ mod table;
 mod tabs;
 mod tags_field;
 mod text_field;
+mod textarea;
 mod time_picker;
 mod timeline;
 mod tooltip;
@@ -191,6 +192,7 @@ const FIXTURES: &[Routes] = &[
     tabs::ROUTES,
     tags_field::ROUTES,
     text_field::ROUTES,
+    textarea::ROUTES,
     time_picker::ROUTES,
     timeline::ROUTES,
     tooltip::ROUTES,

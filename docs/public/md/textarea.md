@@ -47,6 +47,33 @@ The field's height is its padding plus whatever the control needs, so the frame
 follows the textarea as it grows. That is what the size scale's `padding_y` is
 for - see [TextField](text_field.md) for the shared scale.
 
+## Counter
+
+`counter: true` with a `maxlength` attribute shows `12/200` under the
+control. It counts as `maxlength` does, in UTF-16 units, so an emoji counts
+two. Without `maxlength` there is nothing to count against, and nothing is
+drawn.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::Textarea;
+
+#[component]
+fn Bio() -> Element {
+    let mut bio = use_signal(String::new);
+
+    rsx! {
+        Textarea {
+            label: "Bio",
+            counter: true,
+            maxlength: 200,
+            value: bio(),
+            oninput: move |next| bio.set(next),
+        }
+    }
+}
+```
+
 ## Server-rendered values
 
 A server-rendered `<textarea>` carries its text as a `value` attribute, which
@@ -58,6 +85,12 @@ server-side rendering only.
 ## Accessibility
 
 Leave `label` unset only when something else already names the field.
+
+The visible counter is hidden from screen readers. A polite status says
+"12 characters left" instead, and only once a tenth of the limit remains, so
+typing is not interrupted on every key. The words are
+`Localization::textarea.characters_left`, a `fn(usize) -> String` so a
+language can pick its plural forms.
 
 ## Props
 
@@ -71,6 +104,7 @@ Leave `label` unset only when something else already names the field.
 | `value` | `Option<String>` | - | The text in the field. `None` leaves the `<textarea>` uncontrolled. |
 | `oninput` | `EventHandler<String>` | - | Fires per keystroke with the text the field should hold next. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
+| `counter` | `bool` | `false` | Shows `12/200` under the control while a `maxlength` attribute is set, and politely announces the characters left once a tenth of the limit remains. |
 | `label` | `Caption` | - | The field's caption, above the control. Names the field through a `for`/`id` pair. |
 | `description` | `Caption` | - | Between the label and the control: what to enter. |
 | `helper` | `Caption` | - | Under the control: formatting rules, constraints, counters. |

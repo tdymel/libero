@@ -176,6 +176,46 @@ fn tab_past_the_clock_face_moves_on_from_the_field() {
     });
 }
 
+/// Todo 536: the error says why text was refused, and describes the input.
+/// `/date-field/day` has `min` March 5, 2026 and weekends excluded.
+#[test]
+fn a_refused_date_says_which_rule_it_broke() {
+    block_on(async {
+        let fixture = Fixture::open("/date-field/day", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        for (text, error) in [
+            ("March 1, 2026", "Must be on or after March 5, 2026"),
+            ("March 21, 2026", "That date is not available"),
+            ("Marchember", "Not a valid date"),
+        ] {
+            page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+                .await
+                .unwrap();
+            keyboard::type_text(page, text).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            expect(
+                page,
+                &format!(
+                    "(() => {{ const input = document.querySelector({INPUT:?}); \
+                     const ids = (input.getAttribute('aria-describedby') || '').split(' '); \
+                     return input.getAttribute('aria-invalid') === 'true' && ids.some(id => \
+                       document.getElementById(id)?.textContent.trim() === {error:?}); }})()"
+                ),
+                &format!("{text:?} to describe the input with {error:?}"),
+            )
+            .await;
+        }
+        expect(page, &readout_is("2026-03-18"), "the held day kept").await;
+
+        fixture.console.assert_clean("refused dates").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A digital column is a named group, so its buttons are heard with "Hours".
 #[test]
 fn a_digital_column_is_a_named_group() {

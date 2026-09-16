@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 use super::{
     DatePicker,
     calendar::DateLevel,
-    date_value::{DateValue, PickerOptions, use_ignored_props_warning, used},
+    date_value::{DateValue, PickerOptions, Refusal, use_ignored_props_warning, used},
     fields::time_format,
     format::uses_twelve_hours,
     picker_field::{DropdownArgs, Formats, PickerField, picker_field, use_picker_field},
@@ -13,6 +13,7 @@ use super::{
 use crate::{
     components::Input,
     hooks::{use_localization, use_theme},
+    localization::fill,
     theme::{CalendarVariant, TimePickerVariant},
 };
 
@@ -190,10 +191,15 @@ pub(super) fn date_field<V: DateValue>(
     };
     // Only a day level passes the props a month or year dropdown drops.
     let day = level == DateLevel::Day;
+    let bounds = formats.clone();
     use_picker_field(
         field,
         formats,
-        move |value: V| value.accepts(&picker),
+        move |value: V| {
+            value
+                .accepts(&picker)
+                .map_err(|refusal| refusal_message::<V>(refusal, picker.min, picker.max, &bounds))
+        },
         // Only the props `V` reads, so the picker has nothing to warn about.
         move |args: DropdownArgs<V>| {
             rsx! {
@@ -221,17 +227,39 @@ pub(super) fn date_field<V: DateValue>(
     )
 }
 
+/// The error for a value the field refuses, naming the bounds it set in the
+/// field's own format.
+fn refusal_message<V: DateValue>(
+    refusal: Refusal,
+    min: Option<V::Bound>,
+    max: Option<V::Bound>,
+    formats: &Formats,
+) -> String {
+    let names = formats.names;
+    let show = |bound| V::show_bound(bound, formats);
+    let (min, max) = (min.map(show), max.map(show));
+    match (refusal, min, max) {
+        (Refusal::Excluded, ..) => names.unavailable.to_string(),
+        (_, Some(min), Some(max)) => fill(names.between, &[("min", &min), ("max", &max)]),
+        (_, Some(min), None) => fill(names.on_or_after, &[("min", &min)]),
+        (_, None, Some(max)) => fill(names.on_or_before, &[("max", &max)]),
+        (_, None, None) => names.invalid_date.to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use chrono::{NaiveDate, NaiveTime};
+    use chrono::{Datelike, NaiveDate, NaiveTime};
     use dioxus::prelude::*;
 
+    use super::{Formats, PickerOptions, refusal_message};
     use crate::{
         LiberoProvider,
         components::{
             Input,
-            form::date::{DateField, DateLevel, DatePicker},
+            form::date::{DateField, DateLevel, DatePicker, date_value::Sealed},
         },
+        localization::DateLocale,
         theme::CalendarVariant,
         utils::take_warnings,
     };
@@ -298,6 +326,63 @@ mod tests {
             }
         });
         assert!(html.contains(r#"value="2026""#), "{html}");
+    }
+
+    /// Todo 536: each refusal names its rule, the bounds in the field's format.
+    #[test]
+    fn a_refusal_names_the_bound_it_missed() {
+        let names = &DateLocale::ENGLISH;
+        let day = |day| NaiveDate::from_ymd_opt(2026, 3, day).unwrap();
+        let at = |level| Formats {
+            date: (names.format)(level).to_string(),
+            time: names.time_format.to_string(),
+            names,
+            level,
+        };
+        let refused = |value: NaiveDate, min, max, level| {
+            let options = PickerOptions {
+                min,
+                max,
+                exclude_date: Some(Callback::new(|day: NaiveDate| day.day() == 7)),
+                level,
+                ..PickerOptions::default()
+            };
+            value
+                .accepts(&options)
+                .map_err(|refusal| refusal_message::<NaiveDate>(refusal, min, max, &at(level)))
+        };
+        let mut dom = VirtualDom::new(|| rsx! {});
+        dom.rebuild_in_place();
+        // `Callback::new` needs a scope.
+        dom.in_scope(ScopeId::ROOT, || {
+            assert_eq!(
+                refused(day(1), Some(day(5)), None, DateLevel::Day),
+                Err("Must be on or after March 5, 2026".into())
+            );
+            assert_eq!(
+                refused(day(20), None, Some(day(9)), DateLevel::Day),
+                Err("Must be on or before March 9, 2026".into())
+            );
+            assert_eq!(
+                refused(day(1), Some(day(5)), Some(day(9)), DateLevel::Day),
+                Err("Must be between March 5, 2026 and March 9, 2026".into())
+            );
+            assert_eq!(
+                refused(day(7), Some(day(5)), Some(day(9)), DateLevel::Day),
+                Err("That date is not available".into())
+            );
+            assert_eq!(refused(day(6), Some(day(5)), None, DateLevel::Day), Ok(()));
+            // A month field names its bound as a month.
+            assert_eq!(
+                refused(
+                    NaiveDate::from_ymd_opt(2026, 2, 1).unwrap(),
+                    Some(day(5)),
+                    None,
+                    DateLevel::Month
+                ),
+                Err("Must be on or after March 2026".into())
+            );
+        });
     }
 
     #[test]

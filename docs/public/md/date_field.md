@@ -112,9 +112,19 @@ is not `février`.
 Times read `13:05`, `1305`, `1:05 pm` and `9`. A date-time is a day, then a
 time. A range splits on `–`, `—`, ` - ` or ` to `.
 
-Emptied text commits `None`. Text that is not a value the field accepts -
-including one outside `min`/`max` or excluded - stays, and the field shows
-`DateLocale::invalid_date` as its error.
+Emptied text commits `None`. Text that is not a value the field accepts
+stays, and the field says why, from the `DateLocale`:
+
+| Text | Error (English) |
+|---|---|
+| unreadable | `invalid_date`: Not a valid date |
+| before `min`, no `max` | `on_or_after`: Must be on or after March 5, 2026 |
+| after `max`, no `min` | `on_or_before`: Must be on or before March 9, 2026 |
+| outside `min` and `max` | `between`: Must be between March 5, 2026 and March 9, 2026 |
+| a day `exclude_date` refuses | `unavailable`: That date is not available |
+
+The bounds are shown in the field's own format: a month field says
+"March 2026".
 
 ## Accessibility
 

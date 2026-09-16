@@ -122,7 +122,7 @@ pub fn DateFieldPage() -> Element {
                     prop("helper", "Caption").doc("Under the control."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state. Text the field cannot accept shows `DateLocale::invalid_date` instead."),
+                        .doc("Validation state. Text the field cannot accept shows why instead: `DateLocale::invalid_date`, or the `min`/`max` or `exclude_date` it missed."),
                     prop("required", "bool").default("false").doc("Adds `required` to the input and an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
@@ -159,7 +159,12 @@ pub fn DateFieldPage() -> Element {
                     "any separator, one-digit days and months, month names in any case or as a unique prefix, "
                     "and a missing year taken from today. Only the order of day, month and year follows "
                     Code { source: "format" }
-                    ". Two-digit years are rejected. Text that is not an accepted value stays, and the field shows an error. "
+                    ". Two-digit years are rejected. Text that is not an accepted value stays, and the field's error says why: "
+                    "unreadable, or before, after or outside "
+                    Code { source: "min" }
+                    " and "
+                    Code { source: "max" }
+                    " in the field's own format, or an excluded day. "
                     "The form gets ISO 8601, whatever the text shows."
                 }
                 Text {

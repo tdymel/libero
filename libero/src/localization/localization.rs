@@ -50,6 +50,7 @@ pub struct Localization {
     pub password_field: PasswordFieldLabels,
     pub number_field: NumberFieldLabels,
     pub file_field: FileFieldLabels,
+    pub textarea: TextareaLabels,
 }
 
 impl Localization {
@@ -78,6 +79,7 @@ impl Localization {
         password_field: PasswordFieldLabels::ENGLISH,
         number_field: NumberFieldLabels::ENGLISH,
         file_field: FileFieldLabels::ENGLISH,
+        textarea: TextareaLabels::ENGLISH,
     };
 }
 
@@ -106,6 +108,8 @@ mod tests {
             ("dial", &49),
             ("key", &"F8"),
             ("language", &"Rust"),
+            ("min", &"March 5, 2026"),
+            ("max", &"March 9, 2026"),
         ];
         for template in [
             english.common.remove,
@@ -128,6 +132,9 @@ mod tests {
             english.notifications.region,
             english.pin_field.cell,
             english.code_block.code_named,
+            english.date.on_or_after,
+            english.date.on_or_before,
+            english.date.between,
         ] {
             let filled = fill(template, holes);
             assert!(!filled.contains('{'), "{template} -> {filled}");

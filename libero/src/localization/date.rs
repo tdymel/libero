@@ -26,7 +26,8 @@ fn english_format(level: DateLevel) -> &'static str {
 /// - **Conventions** a region picks: `first_weekday`, `format`,
 ///   `month_format`, `time_format`, `range_separator`.
 /// - **Labels** a screen reader or a sighted reader gets: the paging buttons
-///   (`previous_month` to `next_days`), `invalid_date`, the switch segments
+///   (`previous_month` to `next_days`), the errors (`invalid_date` to
+///   `unavailable`), the switch segments
 ///   (`date_label` to `end_label`), the switches themselves and the
 ///   `TimePicker` columns.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -99,8 +100,17 @@ pub struct DateLocale {
     /// Names the button that pages a mini calendar's days back.
     pub previous_days: &'static str,
     pub next_days: &'static str,
-    /// The error a date field shows for text that is not a date it accepts.
+    /// The error a date field shows for text it cannot read.
     pub invalid_date: &'static str,
+    /// The error for a value before `min`, with no `max`: `{min}` in the
+    /// field's own format.
+    pub on_or_after: &'static str,
+    /// The error for a value after `max`, with no `min`: `{max}`.
+    pub on_or_before: &'static str,
+    /// The error for a value outside both bounds: `{min}` and `{max}`.
+    pub between: &'static str,
+    /// The error for a day `exclude_date` refuses.
+    pub unavailable: &'static str,
     /// The segments that switch a dropdown between its calendar and its clock.
     pub date_label: &'static str,
     pub time_label: &'static str,
@@ -163,6 +173,10 @@ impl DateLocale {
         previous_days: "Previous days",
         next_days: "Next days",
         invalid_date: "Not a valid date",
+        on_or_after: "Must be on or after {min}",
+        on_or_before: "Must be on or before {max}",
+        between: "Must be between {min} and {max}",
+        unavailable: "That date is not available",
         date_label: "Date",
         time_label: "Time",
         start_label: "Start",

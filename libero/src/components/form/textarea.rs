@@ -1,14 +1,16 @@
+use dioxus::dioxus_core::AttributeValue;
 use dioxus::prelude::*;
 
 use crate::{
+    CssLayer,
     components::{
-        HtmlTag, Input,
+        HtmlTag, Input, VisuallyHidden,
         common::field_props,
         form::{field_control_sx, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
-    hooks::use_theme,
-    sx::StaticSx,
+    hooks::{use_css, use_localization, use_theme},
+    sx::{StaticSx, sx},
 };
 
 /// The control's own additions to [`field_control_sx`]: a `<textarea>` is not
@@ -48,7 +50,38 @@ field_props! {
         /// still drag it taller.
         #[props(default = 3)]
         rows: u32,
+        /// Shows `12/200` under the control while a `maxlength` attribute is
+        /// set, and politely announces the characters left once a tenth of
+        /// the limit remains. Without `maxlength` it draws nothing.
+        #[props(default)]
+        counter: bool,
     }
+}
+
+/// The counter under the control, at its end.
+static COUNTER_SX: StaticSx = StaticSx::new(|| sx().text_align("end"));
+
+/// The `maxlength` a caller passed among the extra attributes.
+fn max_length(attributes: &[Attribute]) -> Option<usize> {
+    let attribute = attributes
+        .iter()
+        .find(|attribute| attribute.name == "maxlength")?;
+    match &attribute.value {
+        AttributeValue::Text(text) => text.trim().parse().ok(),
+        AttributeValue::Int(max) => usize::try_from(*max).ok(),
+        _ => None,
+    }
+}
+
+/// Length as `maxlength` counts it: UTF-16 code units.
+fn length(text: &str) -> usize {
+    text.encode_utf16().count()
+}
+
+/// Whether `left` of `max` is near enough the limit to announce: the last
+/// tenth, rounded up.
+fn near_limit(left: usize, max: usize) -> bool {
+    left <= max.div_ceil(10)
 }
 
 /// A multi-line text field, with a label, a description, helper text and a
@@ -95,7 +128,37 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .focus_ring(false)
         .prepare();
 
-    let oninput = bound.emit(props.oninput);
+    // Only a caller's text is known without the input events: an
+    // uncontrolled textarea's length is tracked from them.
+    let limit = max_length(&props.attributes).filter(|_| props.counter);
+    let mut typed = use_signal(|| 0);
+    let counter_class = use_css(Some(&COUNTER_SX), CssLayer::Framework);
+    let words = use_localization().textarea;
+    let counter = limit.map(|max| {
+        let used = value.as_deref().map_or(typed(), length);
+        let left = max.saturating_sub(used);
+        let spoken = near_limit(left, max).then(|| (words.characters_left)(left));
+        rsx! {
+            div {
+                class: counter_class,
+                "data-slot": "counter",
+                // The live region below says it in words.
+                "aria-hidden": "true",
+                "{used}/{max}"
+            }
+            VisuallyHidden { role: "status", {spoken} }
+        }
+    });
+
+    let emit = bound.emit(props.oninput);
+    let track = emit.is_some() || limit.is_some();
+    let oninput = track.then_some(move |event: FormEvent| {
+        let text = event.value();
+        typed.set(length(&text));
+        if let Some(emit) = &emit {
+            emit(text);
+        }
+    });
     let textarea = field
         .aria(control)
         .attr("name", bound.name().map(str::to_string))
@@ -107,11 +170,49 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .attr("disabled", disabled)
         .attr("readonly", readonly)
         .attr("required", required)
-        .event(
-            "oninput",
-            oninput.map(|emit| move |event: FormEvent| emit(event.value())),
-        )
+        .event("oninput", oninput)
         .render(HtmlTag::Textarea, props.attributes, ());
 
-    field.render(frame.render(textarea))
+    field.render(rsx! {
+        {frame.render(textarea)}
+        {counter}
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::LiberoProvider;
+
+    #[test]
+    fn the_last_tenth_is_near_the_limit() {
+        assert!(!near_limit(21, 200));
+        assert!(near_limit(20, 200));
+        // Rounded up: 3 of 25 is near.
+        assert!(near_limit(3, 25));
+        assert!(!near_limit(4, 25));
+    }
+
+    #[test]
+    fn length_counts_as_maxlength_does() {
+        // One UTF-16 unit for an accent, two for an emoji.
+        assert_eq!(length("é"), 1);
+        assert_eq!(length("🙂"), 2);
+    }
+
+    #[test]
+    fn a_counter_needs_a_maxlength() {
+        let with = dioxus_ssr::render_element(rsx! {
+            LiberoProvider {
+                Textarea { counter: true, maxlength: 20, value: "hello" }
+            }
+        });
+        assert!(with.contains(">5/20<"), "{with}");
+        let without = dioxus_ssr::render_element(rsx! {
+            LiberoProvider {
+                Textarea { counter: true, value: "hello" }
+            }
+        });
+        assert!(!without.contains("data-slot=\"counter\""), "{without}");
+    }
 }
