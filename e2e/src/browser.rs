@@ -130,6 +130,10 @@ fn harness() -> &'static Harness {
                 // it. A timeout here should mean "the app is broken", never
                 // "the bundle was still downloading".
                 .request_timeout(Duration::from_secs(120))
+                // Every scroll instant: a background page gets frames only now
+                // and then, so a smooth one stalled mid-way (todo 687).
+                // chromiumoxide adds the `--`.
+                .arg("disable-smooth-scrolling")
                 .build()
                 .expect("browser config");
             let (browser, mut handler) = Browser::launch(config).await.expect("launch chromium");

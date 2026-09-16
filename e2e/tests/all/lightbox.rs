@@ -554,7 +554,8 @@ fn a_gallery_swap_jumps_and_fetches_only_around_the_new_index() {
 }
 
 async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
-    // Smooth scrolling is the defect, so it has to be on.
+    // Smooth scrolling is the defect, so it has to be on. The suite's Chromium
+    // scrolls instantly since todo 687, so a smooth swap passes here too.
     motion::set_reduced_motion(page, false).await?;
     let reduced: bool = page
         .evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches")

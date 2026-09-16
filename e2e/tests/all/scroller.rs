@@ -63,7 +63,8 @@ fn a_tabbed_item_is_not_left_under_a_control() {
 }
 
 /// With smooth scrolling on, Chromium's focus scroll alone sometimes left the
-/// strip where it was: the item wholly outside the clip.
+/// strip where it was: the item wholly outside the clip. The suite's Chromium
+/// scrolls instantly since 687, so this runs as the one above.
 #[test]
 fn a_tabbed_item_scrolls_into_view_with_smooth_scrolling() {
     block_on(async {

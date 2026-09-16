@@ -2,9 +2,9 @@
 //! scroll (todo 425). The pane is resized by script, as a `Splitter` or a
 //! `FloatingWindow` would, with the window left alone.
 
-use e2e::browser::{self, block_on};
+use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard};
-use e2e::{Fixture, Scheme, Viewport, wait};
+use e2e::{Fixture, Viewport, wait};
 
 /// The highest row index a `Virtualize` has in the document.
 const LAST_ROW: &str = "Math.max(...[...document.querySelectorAll('#list-pane [data-row]')].map(r => Number(r.dataset.row)))";
@@ -109,11 +109,6 @@ fn a_focusable_area_takes_tab_and_scrolls_with_the_arrows() {
             .await
             .unwrap();
         let page = &fixture.page;
-        // A smooth keyboard scroll never lands in a background page.
-        browser::emulate_media(page, Scheme::Light, Some(true))
-            .await
-            .unwrap();
-
         let ring = focus::assert_focus_ring(page, REGION, 5).await.unwrap();
         focus::assert_ring_contrast(&ring).unwrap();
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();

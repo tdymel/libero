@@ -457,9 +457,9 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         });
     };
 
-    // Blitz sends the strip no `resize` or `scroll` (todo 659): measure once
-    // laid out, and on every scroll the platform reports until a `resize`
-    // shows the element events arrive.
+    // Blitz sends the strip no `resize` or `scroll` (todos 659, 677): measure
+    // once laid out, on new content and on every scroll the platform reports,
+    // until a `resize` shows the element events arrive.
     let reported = use_signal(|| 0u64);
     let mut platform_scroll = use_hook(|| {
         CopyValue::new(scroll().map(|api| {
@@ -470,12 +470,13 @@ pub fn Scroller(props: ScrollerProps) -> Element {
             }))
         }))
     });
-    use_effect(move || {
-        reported();
-        if viewport.is_mounted() {
+    let children = props.children.clone();
+    use_effect(use_reactive!(|children| {
+        let _ = (&children, reported());
+        if viewport.is_mounted() && platform_scroll.peek().is_some() {
             measure_laid_out(viewport, update, UNLAID_TRIES);
         }
-    });
+    }));
 
     // `ResizeObserver` delivers an initial observation, so this is also the
     // mount-time measurement - before any scroll, nothing else says whether

@@ -163,6 +163,32 @@ fn a_scrolled_box_keeps_its_hidden_content_out_of_hits_above_it() {
     );
 }
 
+fn tall_page() -> Element {
+    let mut clicks = use_signal(|| 0u32);
+    rsx! {
+        div { id: "spacer", style: "height: 1500px;" }
+        button { id: "go", onclick: move |_| clicks += 1, "{clicks}" }
+        div { style: "height: 1000px;" }
+    }
+}
+
+/// Pointer events carry page coordinates, so a press still lands once the
+/// window itself has scrolled (todo 655).
+#[test]
+fn a_click_lands_on_a_scrolled_page() {
+    let mut page = mount(tall_page);
+    page.hover("#spacer");
+    page.wheel("#spacer", 1200.0);
+    assert!(
+        page.rect("#go").1 < 768.0,
+        "the page did not scroll: {:?}",
+        page.rect("#go")
+    );
+    assert!(page.hits("#go"));
+    page.click("#go");
+    assert_eq!(page.text("#go"), "1", "the click landed elsewhere");
+}
+
 fn sidebar() -> Element {
     rsx! {
         div { id: "box", style: "height: 400px; overflow-y: auto;",

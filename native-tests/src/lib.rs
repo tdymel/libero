@@ -193,16 +193,16 @@ impl Page {
 
     /// Pointer down and up at a viewport point, e.g. on a backdrop.
     pub fn click_at(&mut self, x: f32, y: f32) {
-        self.dispatch(UiEvent::PointerDown(pointer(x, y, true)));
-        self.dispatch(UiEvent::PointerUp(pointer(x, y, false)));
+        self.dispatch(UiEvent::PointerDown(self.pointer(x, y, true)));
+        self.dispatch(UiEvent::PointerUp(self.pointer(x, y, false)));
     }
 
     /// [`click`](Self::click), but the vdom runs dry before the next layout, as
     /// a window's shell may poll several times between two frames.
     pub fn click_before_layout(&mut self, selector: &str) {
         let (x, y) = self.centre(selector);
-        self.dispatch(UiEvent::PointerDown(pointer(x, y, true)));
-        self.dispatch_before_layout(UiEvent::PointerUp(pointer(x, y, false)));
+        self.dispatch(UiEvent::PointerDown(self.pointer(x, y, true)));
+        self.dispatch_before_layout(UiEvent::PointerUp(self.pointer(x, y, false)));
     }
 
     /// [`press`](Self::press), polled dry before the next layout.
@@ -236,32 +236,36 @@ impl Page {
     pub fn drag(&mut self, selector: &str, dx: f32, dy: f32) {
         const STEPS: u8 = 8;
         let (x, y) = self.centre(selector);
-        self.dispatch(UiEvent::PointerDown(pointer(x, y, true)));
+        self.dispatch(UiEvent::PointerDown(self.pointer(x, y, true)));
         for step in 1..=STEPS {
             let t = f32::from(step) / f32::from(STEPS);
-            self.dispatch(UiEvent::PointerMove(pointer(x + dx * t, y + dy * t, true)));
+            self.dispatch(UiEvent::PointerMove(self.pointer(
+                x + dx * t,
+                y + dy * t,
+                true,
+            )));
         }
-        self.dispatch(UiEvent::PointerUp(pointer(x + dx, y + dy, false)));
+        self.dispatch(UiEvent::PointerUp(self.pointer(x + dx, y + dy, false)));
     }
 
     /// The steps of a hand-driven drag, each settled: press, move with the
     /// button held, release.
     pub fn press_at(&mut self, x: f32, y: f32) {
-        self.dispatch(UiEvent::PointerDown(pointer(x, y, true)));
+        self.dispatch(UiEvent::PointerDown(self.pointer(x, y, true)));
     }
 
     pub fn move_to(&mut self, x: f32, y: f32) {
-        self.dispatch(UiEvent::PointerMove(pointer(x, y, true)));
+        self.dispatch(UiEvent::PointerMove(self.pointer(x, y, true)));
     }
 
     pub fn release_at(&mut self, x: f32, y: f32) {
-        self.dispatch(UiEvent::PointerUp(pointer(x, y, false)));
+        self.dispatch(UiEvent::PointerUp(self.pointer(x, y, false)));
     }
 
     /// Moves the pointer, no button held, to the first match's centre.
     pub fn hover(&mut self, selector: &str) {
         let (x, y) = self.centre(selector);
-        self.dispatch(UiEvent::PointerMove(pointer(x, y, false)));
+        self.dispatch(UiEvent::PointerMove(self.pointer(x, y, false)));
     }
 
     /// Turns the wheel over the first match's centre: a positive `dy` scrolls
@@ -269,7 +273,7 @@ impl Page {
     /// `hover` it first, once: a second move there dropped the next wheel.
     pub fn wheel(&mut self, selector: &str, dy: f64) {
         let (x, y) = self.centre(selector);
-        let coords = pointer(x, y, false).coords;
+        let coords = self.pointer(x, y, false).coords;
         self.dispatch(UiEvent::Wheel(BlitzWheelEvent {
             // Blitz's sign is a finger's: a negative delta scrolls down.
             delta: BlitzWheelDelta::Pixels(0.0, -dy),
@@ -524,8 +528,9 @@ impl Page {
     /// Whether a pointer at `(x, y)` hits the first match or a descendant.
     pub fn hits_at(&self, selector: &str, x: f32, y: f32) -> bool {
         let target = self.node(selector);
+        let (left, top) = self.viewport_scroll();
         let doc = self.doc.inner.borrow();
-        let mut hit = doc.hit(x, y).map(|hit| hit.node_id);
+        let mut hit = doc.hit(x + left, y + top).map(|hit| hit.node_id);
         while let Some(id) = hit {
             if id == target {
                 return true;
@@ -538,6 +543,22 @@ impl Page {
     fn centre(&self, selector: &str) -> (f32, f32) {
         let (x, y, width, height) = self.rect(selector);
         ((x + width / 2.0) as f32, (y + height / 2.0) as f32)
+    }
+
+    /// How far the window itself has scrolled.
+    fn viewport_scroll(&self) -> (f32, f32) {
+        let scroll = self.doc.inner.borrow().viewport_scroll();
+        (scroll.x as f32, scroll.y as f32)
+    }
+
+    /// A pointer at a viewport point. Blitz hit-tests the page point, so the
+    /// window's scroll is added, as the shell does (todo 655).
+    fn pointer(&self, x: f32, y: f32, down: bool) -> BlitzPointerEvent {
+        let (left, top) = self.viewport_scroll();
+        let mut event = pointer(x, y, down);
+        event.coords.page_x += left;
+        event.coords.page_y += top;
+        event
     }
 }
 

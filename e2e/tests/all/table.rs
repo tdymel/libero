@@ -112,8 +112,8 @@ fn only_the_sorted_header_carries_aria_sort_and_the_others_still_hint() {
 }
 
 /// A wide table scrolls inside its region, not the page; the region is a
-/// named tab stop with the library ring (todo 588). Arrow-key scrolling is
-/// not asserted: headless Chromium drops it in most runs, `ScrollArea` too.
+/// named tab stop with the library ring (todo 588), which ArrowRight scrolls
+/// once it holds focus (654).
 #[test]
 fn a_wide_table_scrolls_in_a_named_focusable_region() {
     const REGION: &str = "[role=region]";
@@ -145,6 +145,15 @@ fn a_wide_table_scrolls_in_a_named_focusable_region() {
                 .await
                 .unwrap_or_else(|e| panic!("at {at}: {e}"));
             focus::assert_ring_contrast(&ring).unwrap_or_else(|e| panic!("at {at}: {e}"));
+
+            keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!("document.querySelector({REGION:?}).scrollLeft > 0"),
+                &format!("ArrowRight to scroll the focused region at {at}"),
+            )
+            .await
+            .unwrap();
 
             fixture
                 .console
