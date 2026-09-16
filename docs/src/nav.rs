@@ -62,7 +62,8 @@ fn nav_responsive_sx(open: bool) -> Sx {
             sx().position("sticky")
                 .top("0")
                 .height("100%")
-                .width(SIDEBAR_SIZE.value(Size::Sm))
+                // "ColorSchemeButton", the longest label, needs 4px past `Sm` to stay on one row.
+                .width(format!("calc({} + 8px)", SIDEBAR_SIZE.value(Size::Sm)))
                 .transform("none")
                 .visibility("visible"),
         )
