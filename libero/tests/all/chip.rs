@@ -118,10 +118,10 @@ fn a_chip_posts_its_value_under_the_shared_name_or_falls_back_to_on() {
     assert!(!input.contains_key("value"), "{input:?}");
 }
 
-/// Todo 636: `icon` comes before the label's own span, which draws the
-/// ellipsis; every kind of chip gets both.
+/// Todo 636: `icon` comes right before the children, and todo 674: the
+/// children are never wrapped, so a caller's icon among them keeps the gap.
 #[test]
-fn the_icon_sits_before_the_ellipsizing_text_span() {
+fn the_icon_sits_right_before_the_unwrapped_children() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -138,21 +138,15 @@ fn the_icon_sits_before_the_ellipsizing_text_span() {
     }
 
     let html = body(&render(app));
-    for (icon, text) in [
-        ("tag-icon", ">tag<"),
-        ("filter-icon", ">filter<"),
-        ("action-icon", ">action<"),
-    ] {
-        let rest = &html[html.find(icon).unwrap_or_else(|| panic!("{icon}: {html}"))..];
-        let span = rest
-            .find(r#"data-slot="text""#)
-            .unwrap_or_else(|| panic!("{icon}: {html}"));
-        assert!(rest[span..].contains(text), "{icon}: {html}");
+    for icon in ["tag", "filter", "action"] {
+        let pair =
+            format!(r#"<span data-slot="chip-icon"><svg id="{icon}-icon"></svg></span>{icon}<"#);
+        assert!(html.contains(&pair), "{pair}: {html}");
     }
-    assert_eq!(html.matches(r#"data-slot="text""#).count(), 3, "{html}");
+    assert!(!html.contains(r#"data-slot="text""#), "{html}");
 }
 
-/// `trailing` follows the text span; on a checkbox chip it sits beside the
+/// `trailing` follows the children; on a checkbox chip it sits beside the
 /// `<label>`, which would otherwise take a button's click for the checkbox.
 #[test]
 fn trailing_follows_the_label_and_stays_out_of_a_checkbox_label() {
@@ -175,7 +169,7 @@ fn trailing_follows_the_label_and_stays_out_of_a_checkbox_label() {
     assert!(html.find("tag-x").unwrap() > tag, "{html}");
     let label_end = html.find("</label>").unwrap();
     let filter_x = html.find("filter-x").unwrap();
-    assert!(html[..label_end].contains(">filter<"), "{html}");
+    assert!(html[..=label_end].contains(">filter<"), "{html}");
     assert!(filter_x > label_end, "the x landed in the label: {html}");
     assert_eq!(
         html.matches(r#"data-slot="chip-trailing""#).count(),

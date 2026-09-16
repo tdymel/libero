@@ -291,18 +291,12 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .text_decoration("none")
         .outline("none")
         // One line that never outgrows its container (WCAG 1.4.10): a long
-        // label ends in an ellipsis. `min-width: 0` lets a flex row shrink it.
+        // label is cut at the edge. No ellipsis: that would wrap the children.
         .max_width("100%")
         .min_width("0")
-        // `text-overflow` never applies on a flex root, so the label is a span.
-        .selector(
-            "& > [data-slot='label']",
-            sx().min_width("0")
-                .overflow("hidden")
-                .text_overflow("ellipsis"),
-        )
-        // An icon among the text is inline there, not a flex item.
-        .selector("& > [data-slot='label'] > *", sx().vertical_align("middle"));
+        .selector("& > [data-slot='button-icon']", button_icon_sx())
+        // Inside the loading wrapper.
+        .selector("& > span > [data-slot='button-icon']", button_icon_sx());
 
     Variant::ALL
         .iter()
@@ -337,19 +331,34 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(focus_ring_sx())
 });
 
-/// While `loading`, the button holds exactly two children: the label and the
-/// loader.
+/// Before the children, never shrinking, one spacing step from them - as on `Chip`.
+fn button_icon_sx() -> Sx {
+    sx().display("inline-flex")
+        .align_items("center")
+        .flex("0 0 auto")
+        .margin_right(SizeCss::SPACING.value(Size::Xs))
+}
+
+/// While `loading`, the button holds exactly two children: the caller's own,
+/// wrapped, and the loader.
 ///
-/// The label stays in the tree at `opacity: 0` rather than being swapped for
-/// the loader: it is the button's accessible name, and it holds its width, so
-/// the button neither goes nameless nor jumps when the wait starts. The
+/// The children stay in the tree at `opacity: 0` rather than being swapped for
+/// the loader: they are the button's accessible name, and they hold its width,
+/// so the button neither goes nameless nor jumps when the wait starts. The
 /// loader sits on top, centred, at half the active size's height - each step
 /// gets its own rule, since the button republishes no unsuffixed height to
 /// read.
 fn loading_sx() -> Sx {
     let base = sx()
         .cursor("progress")
-        .selector("& > [data-slot='label']", sx().opacity("0"))
+        .selector(
+            "& > span:first-child",
+            sx().display("inline-flex")
+                .align_items("center")
+                .justify_content("center")
+                .gap("inherit")
+                .opacity("0"),
+        )
         .selector(
             "& > span:last-child",
             sx().position("absolute").inset("0").margin("auto"),
@@ -433,8 +442,11 @@ base_props! {
         to: Input<NavigationTarget>,
         #[props(default)]
         target: Option<String>,
-        /// The label, on one line: a long one ends in an ellipsis. It stays
-        /// the full accessible name; pass `title` to show it on hover too.
+        /// Drawn before the label, with a gap; it never shrinks.
+        #[props(default)]
+        icon: Option<Element>,
+        /// The label, on one line, laid out as the button's own flex items. A
+        /// long one is cut at the edge; pass `title` to show it on hover.
         children: Element,
     }
 }
@@ -531,8 +543,13 @@ pub fn Button(props: ButtonProps) -> Element {
         .style(style)
         .prepare();
 
+    // Children unwrapped: they are the button's flex items, whatever they are.
     let label = rsx! {
-        span { "data-slot": "label", {props.children} }
+        if let Some(icon) = props.icon {
+            // Not `icon`: an `Alert`'s own slot is, and a button sits in one.
+            span { "data-slot": "button-icon", {icon} }
+        }
+        {props.children}
     };
 
     // `InternalAnchor` has no `onclick`: a link-mode Button navigates for
@@ -566,7 +583,7 @@ pub fn Button(props: ButtonProps) -> Element {
     // `aria-busy` on it is what says it is waiting.
     let children = if loading {
         rsx! {
-            {label}
+            span { {label} }
             Loader { size, color: "currentColor" }
         }
     } else {

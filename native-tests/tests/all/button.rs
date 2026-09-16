@@ -1,5 +1,5 @@
-//! `Button`: a caller's unwrapped label keeps its flex layout (todo 663), and
-//! a pressed button paints the house on-state line (todo 646).
+//! `Button`: element children keep the caller's flex layout (todos 662, 663),
+//! and a pressed button paints the house on-state line (todo 646).
 
 use dioxus::prelude::*;
 use libero::{
@@ -9,18 +9,14 @@ use libero::{
 use native_tests::mount;
 
 /// The docs search field and colour swatch, cut down as in the e2e fixture:
-/// the label span unwrapped with `display: contents` (f3064f24).
-fn unwrapped() -> Element {
+/// the children are the button's own flex items, with no caller sx (todo 662).
+fn element_children() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", sx: sx().padding("16px"),
             Button {
                 id: "search-like",
                 variant: "outlined",
-                sx: sx()
-                    .width("240px")
-                    .gap("sm")
-                    .justify_content("flex-start")
-                    .selector("& > [data-slot='label']", sx().display("contents")),
+                sx: sx().width("240px").gap("sm").justify_content("flex-start"),
                 span { id: "search-icon", display: "inline-flex", width: "16px", height: "16px" }
                 "Search"
                 span { id: "search-kbd", display: "inline-block", width: "24px", height: "12px", margin_left: "auto" }
@@ -29,10 +25,7 @@ fn unwrapped() -> Element {
                 id: "swatch",
                 variant: "standard",
                 aria_label: "Blue",
-                sx: sx()
-                    .width("48px")
-                    .padding("0")
-                    .selector("& > [data-slot='label']", sx().display("contents")),
+                sx: sx().width("48px").padding("0"),
                 Box { id: "swatch-fill", sx: sx().width("100%").height("100%").background("blue") }
             }
         }
@@ -40,12 +33,8 @@ fn unwrapped() -> Element {
 }
 
 #[test]
-fn an_unwrapped_label_keeps_the_callers_flex_layout() {
-    let page = mount(unwrapped);
-    assert_eq!(
-        page.computed("#search-like > [data-slot='label']", "display"),
-        "contents"
-    );
+fn element_children_keep_the_callers_flex_layout() {
+    let page = mount(element_children);
     let (sx, _, sw, _) = page.rect("#search-like");
     let pad: f64 = page
         .computed("#search-like", "padding-right")

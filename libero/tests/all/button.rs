@@ -28,16 +28,13 @@ fn loading_keeps_the_label_and_marks_the_button_busy() {
         attributes["data-state"].contains("loading"),
         "{attributes:?}"
     );
-    assert!(
-        html.contains(r#"<span data-slot="label">Save changes</span>"#),
-        "{html}"
-    );
+    assert!(html.contains("<span>Save changes</span>"), "{html}");
     assert!(html.contains(r#"aria-hidden="true""#), "{html}");
 }
 
-/// Off, no loader and no ARIA: only the label span, which the ellipsis needs.
+/// Off, the button is exactly what it was: no wrapper, no loader, no ARIA.
 #[test]
-fn not_loading_renders_only_the_label() {
+fn not_loading_renders_the_children_bare() {
     fn app() -> Element {
         rsx! {
             LiberoProvider { Button { "Save changes" } }
@@ -49,33 +46,66 @@ fn not_loading_renders_only_the_label() {
 
     assert!(!attributes.contains_key("aria-busy"), "{attributes:?}");
     assert!(!attributes.contains_key("aria-disabled"), "{attributes:?}");
-    assert_eq!(html.matches("<span").count(), 1, "{html}");
-    assert!(
-        html.contains(r#"<span data-slot="label">Save changes</span></button>"#),
-        "{html}"
-    );
+    assert!(!html.contains("<span"), "{html}");
 }
 
-/// One line that never outgrows its box: a long label is cut with an
-/// ellipsis, where the fixed height used to clip it (todo 481).
+/// Todo 662: the children are the button's own flex items, never wrapped, so
+/// a caller's icon, gap and `margin-left: auto` keep working. Never wider than
+/// its container; a long label is cut, with no ellipsis.
 #[test]
-fn a_long_label_ends_in_an_ellipsis() {
+fn the_children_stay_the_buttons_flex_items() {
     fn app() -> Element {
         rsx! {
-            LiberoProvider { Button { "Save changes" } }
+            LiberoProvider { Button { svg { id: "glyph" } "Save changes" } }
         }
     }
 
     let html = render(app);
+    assert!(
+        body(&html).contains(r#"<svg id="glyph"></svg>Save changes</button>"#),
+        "{html}"
+    );
+    assert!(!html.contains("text-overflow"), "{html}");
+    assert!(html.contains("max-width:100%;min-width:0;"), "{html}");
+}
+
+/// Todo 662: `icon` gets a slot of its own before the children, kept whole and
+/// a spacing step from them; while loading it hides with the children.
+#[test]
+fn the_icon_sits_in_its_own_slot_before_the_children() {
+    fn idle() -> Element {
+        rsx! {
+            LiberoProvider { Button { icon: rsx! { svg { id: "glyph" } }, "Save" } }
+        }
+    }
+    fn busy() -> Element {
+        rsx! {
+            LiberoProvider { Button { loading: true, icon: rsx! { svg { id: "glyph" } }, "Save" } }
+        }
+    }
+
+    let html = render(idle);
+    assert!(
+        body(&html).contains(
+            r#"<span data-slot="button-icon"><svg id="glyph"></svg></span>Save</button>"#
+        ),
+        "{html}"
+    );
     let class = classes_of(&body(&html), "button");
     let class = class.first().expect("a framework class");
     assert!(
         html.contains(&format!(
-            ".{class} > [data-slot='label']{{min-width:0;overflow:hidden;text-overflow:ellipsis;}}"
+            ".{class} > [data-slot='button-icon']{{display:inline-flex;"
         )),
         "{html}"
     );
-    assert!(html.contains("max-width:100%;min-width:0;"), "{html}");
+    let html = body(&render(busy));
+    assert!(
+        html.contains(
+            r#"<span><span data-slot="button-icon"><svg id="glyph"></svg></span>Save</span>"#
+        ),
+        "{html}"
+    );
 }
 
 /// The tint is the lightest shade and its label the *contrast* of that shade,

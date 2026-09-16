@@ -103,15 +103,23 @@ const ELEMENT_CHILDREN: &str = "(() => {
     const [swatch, fill] = [box('swatch'), box('swatch-fill')];
     if (fill.width < swatch.width - 2 || fill.height < swatch.height - 2)
         out.push(['swatch fill collapsed', fill.width, fill.height, swatch.width, swatch.height]);
+    const [withIcon, glyph] = [document.getElementById('with-icon'), box('with-icon-glyph')];
+    const text = document.createRange();
+    text.selectNodeContents([...withIcon.childNodes].find(n => n.nodeType === 3 && n.textContent.trim()));
+    const label = text.getBoundingClientRect();
+    const gap = label.left - glyph.right;
+    if (glyph.width < 15 || gap < 2) out.push(['icon squeezed or touching', glyph.width, gap]);
+    const [mid, textMid] = [(glyph.top + glyph.bottom) / 2, (label.top + label.bottom) / 2];
+    if (Math.abs(mid - textMid) > 2) out.push(['icon off the text centre', mid, textMid]);
     return out;
 })()";
 
-/// A caller that unwraps the label span gets its element children back as
-/// the button's flex items: its gap, auto margin and percentage sizes reach
-/// them. 481's span broke the docs search field and every docs colour swatch
-/// (d1dc0f03); the docs callers use this same rule.
+/// Todo 662: element children are the button's own flex items, so a caller's
+/// gap, auto margin and percentage sizes reach them with no sx of its own.
+/// 481's label span broke the docs search field and every docs colour swatch
+/// (d1dc0f03). The `icon` prop keeps a gap and centres on the text.
 #[test]
-fn an_unwrapped_label_keeps_the_callers_flex_layout() {
+fn element_children_keep_the_callers_flex_layout() {
     block_on(async {
         let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
         let failures: Vec<serde_json::Value> = fixture

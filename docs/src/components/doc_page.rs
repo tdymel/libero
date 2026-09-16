@@ -64,7 +64,7 @@ pub fn DocPage(
                                 // default would outrank the page's own title.
                                 variant: "outlined",
                                 color: "neutral",
-                                Icon { variant: "standard", size: "sm", color: "inherit", GitHubIcon {} }
+                                icon: rsx! { Icon { variant: "standard", size: "sm", color: "inherit", GitHubIcon {} } },
                                 "Source"
                             }
                         }
@@ -94,7 +94,7 @@ pub fn DocPage(
                                 size: "sm",
                                 variant: "outlined",
                                 color: "neutral",
-                                Icon { variant: "standard", size: "sm", color: "inherit", MarkdownIcon {} }
+                                icon: rsx! { Icon { variant: "standard", size: "sm", color: "inherit", MarkdownIcon {} } },
                                 "View as markdown"
                             }
                         }

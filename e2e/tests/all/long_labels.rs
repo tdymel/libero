@@ -30,28 +30,32 @@ const OVERFLOWS: &str = "(() => {
     return out;
 })()";
 
-/// Per todo 481 control: `[id, one line, ellipsis drawn, full text in its title or text]`.
+/// Per todo 481 control: `[id, one line, cut, full text in its title or text]`.
+/// Button and Chip cut at their edge with no ellipsis: their children stay
+/// unwrapped (todos 662, 674).
 const SINGLE_LINE: &str = "(() => {
     const long = 'Versandkostenberechnungsgrundlagenverordnungsentwurfsbearbeitungsstelle';
     const oneLine = e => !!e && getComputedStyle(e).whiteSpace === 'nowrap';
     const cut = e => !!e && getComputedStyle(e).textOverflow === 'ellipsis' && e.scrollWidth > e.clientWidth;
+    const clipped = e => !!e && getComputedStyle(e).overflow === 'hidden' && e.scrollWidth > e.clientWidth;
+    const r = e => e.getBoundingClientRect();
     const rows = [];
-    for (const id of ['button', 'button-full', 'button-row']) {
+    for (const id of ['button', 'button-full', 'button-row', 'chip', 'chip-row', 'chip-icon']) {
         const root = document.getElementById(id);
-        const label = root.querySelector('[data-slot=label]');
-        rows.push([id, oneLine(label), cut(label), root.textContent === long]);
-    }
-    // Todo 636: the chip's text block draws the ellipsis, and the icon keeps its room.
-    for (const id of ['chip', 'chip-filter', 'chip-row', 'chip-icon', 'chip-trailing']) {
-        const root = document.getElementById(id);
-        const text = root.querySelector('[data-slot=text]');
+        // Todo 636: the icon keeps its room before the text.
         const icon = root.querySelector('svg');
-        const x = root.querySelector('[data-slot=chip-trailing]');
-        const r = e => e.getBoundingClientRect();
-        const whole = (!icon || (r(icon).width > 0 && r(text).left - r(icon).right >= 2))
-            && (!x || (r(x).left - r(text).right >= 2 && r(x).right <= r(root).right));
-        rows.push([id, oneLine(text), cut(text), text.textContent === long && whole]);
+        const whole = !icon || (r(icon).width > 0 && r(icon).left >= r(root).left);
+        rows.push([id, oneLine(root), clipped(root), root.textContent === long && whole]);
     }
+    // A checkbox chip's own `<label>` clips.
+    const filter = document.querySelector('#chip-filter label');
+    rows.push(['chip-filter', oneLine(filter), clipped(filter), filter.textContent === long]);
+    // A caller's own text span ellipsizes, and the x stays whole beside it.
+    const root = document.getElementById('chip-trailing');
+    const text = root.querySelector('[data-text]');
+    const x = root.querySelector('[data-slot=chip-trailing]');
+    rows.push(['chip-trailing', oneLine(text), cut(text), text.textContent === long
+        && r(x).left - r(text).right >= 2 && r(x).right <= r(root).right]);
     for (const id of ['segmented', 'segmented-full']) {
         const label = [...document.querySelectorAll(`#${id} label`)].find(l => l.title === long);
         const span = label && label.querySelector('span');

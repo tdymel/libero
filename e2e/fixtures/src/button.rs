@@ -42,16 +42,15 @@ fn ButtonPage() -> Element {
                 Button { id: "busy-submit", r#type: "submit", loading: true, "Send" }
             }
             Button { id: "long", "Save every change made to this rather long document title" }
-            // The docs search field and colour swatches, cut down: a caller
-            // unwraps the label span to lay its element children out itself.
+            // The docs search field and colour swatches, cut down: element
+            // children are the button's own flex items (todo 662).
             Button {
                 id: "search-like",
                 variant: "outlined",
                 sx: sx()
                     .width("240px")
                     .gap("sm")
-                    .justify_content("flex-start")
-                    .selector("& > [data-slot='label']", sx().display("contents")),
+                    .justify_content("flex-start"),
                 span { id: "search-icon", display: "inline-flex", width: "16px", height: "16px" }
                 "Search"
                 span { id: "search-kbd", display: "inline-block", width: "24px", height: "12px", margin_left: "auto" }
@@ -60,11 +59,14 @@ fn ButtonPage() -> Element {
                 id: "swatch",
                 variant: "standard",
                 aria_label: "Blue",
-                sx: sx()
-                    .width("48px")
-                    .padding("0")
-                    .selector("& > [data-slot='label']", sx().display("contents")),
+                sx: sx().width("48px").padding("0"),
                 Box { id: "swatch-fill", sx: sx().width("100%").height("100%").background("blue") }
+            }
+            Button { id: "with-icon",
+                icon: rsx! { svg { id: "with-icon-glyph", width: "16", height: "16", view_box: "0 0 24 24",
+                    circle { cx: "12", cy: "12", r: "8" }
+                } },
+                "Save"
             }
             for variant in ["filled", "tonal", "elevated", "outlined", "standard"] {
                 Flex { gap: "sm",

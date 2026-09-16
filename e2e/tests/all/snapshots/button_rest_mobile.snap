@@ -35,6 +35,9 @@ button "Search"
   generic
 button "Blue"
   generic
+button "Save"
+  image
+  StaticText "Save"
 button "Bold" [pressed=false]
   StaticText "Bold"
 button "Bold" [pressed]

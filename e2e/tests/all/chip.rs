@@ -225,3 +225,37 @@ fn a_disabled_chip_shows_not_allowed_and_ignores_a_click() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 674: 636's text span wrapped every child, so an icon among them lost
+/// the chip's gap and centring. Both icon shapes keep them now.
+#[test]
+fn an_icon_keeps_the_gap_and_the_text_centre() {
+    block_on(async {
+        let fixture = Fixture::open("/chip/icons", Viewport::Desktop)
+            .await
+            .unwrap();
+        let failures: Vec<serde_json::Value> = fixture
+            .page
+            .evaluate(
+                "['in-children', 'in-prop'].flatMap(id => { \
+                 const chip = document.getElementById(id); \
+                 const icon = chip.querySelector('svg').getBoundingClientRect(); \
+                 const range = document.createRange(); \
+                 range.selectNodeContents([...chip.childNodes].find(n => n.nodeType === 3 && n.textContent.trim())); \
+                 const text = range.getBoundingClientRect(); \
+                 const box = chip.getBoundingClientRect(); \
+                 const out = []; \
+                 if (text.left - icon.right < 2) out.push([id, 'no gap', text.left - icon.right]); \
+                 const mid = r => (r.top + r.bottom) / 2; \
+                 if (Math.abs(mid(icon) - mid(box)) > 1.5) out.push([id, 'icon off centre', mid(icon), mid(box)]); \
+                 if (Math.abs(mid(text) - mid(box)) > 1.5) out.push([id, 'text off centre', mid(text), mid(box)]); \
+                 return out; })",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(failures.is_empty(), "{failures:?}");
+        fixture.close().await.unwrap();
+    });
+}

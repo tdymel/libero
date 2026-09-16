@@ -2,8 +2,8 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    ActionIcon, Button, Chip, ColorCode, ColorSwatch, Fieldset, Flex, Image, PhoneField, Tree,
-    TreeItem, TreeNode, TreeNodeRenderArgs,
+    ActionIcon, Button, Chip, ColorCode, ColorSwatch, Fieldset, Flex, Icon, Image, PhoneField,
+    Tree, TreeItem, TreeNode, TreeNodeRenderArgs,
 };
 
 use crate::Routes;
@@ -12,6 +12,7 @@ pub const ROUTES: Routes = &[
     ("/chip", || rsx! { ChipPage {} }),
     ("/chip/fieldset", || rsx! { ChipFieldsetPage {} }),
     ("/chip/removable", || rsx! { ChipRemovablePage {} }),
+    ("/chip/icons", || rsx! { ChipIconsPage {} }),
 ];
 
 /// A selected chip with a remove x, which has to follow its label in forced
@@ -33,6 +34,31 @@ fn ChipRemovablePage() -> Element {
             }
             Chip { id: "plain", checked: false, onchange: move |_| {}, "js" }
         }
+    }
+}
+
+/// Todo 674: an icon among the children and one in `icon` both keep the gap
+/// and sit on the text's centre line, as the docs header chips need.
+#[component]
+fn ChipIconsPage() -> Element {
+    rsx! {
+        Flex { direction: "row", gap: "md",
+            Chip { id: "in-children", size: "sm", variant: "outlined",
+                Icon { variant: "standard", size: "sm", color: "inherit", Glyph {} }
+                "Source"
+            }
+            Chip { id: "in-prop", size: "sm", variant: "outlined",
+                icon: rsx! { Icon { variant: "standard", size: "sm", color: "inherit", Glyph {} } },
+                "Source"
+            }
+        }
+    }
+}
+
+#[component]
+fn Glyph() -> Element {
+    rsx! {
+        svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
     }
 }
 

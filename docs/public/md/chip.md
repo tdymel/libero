@@ -105,10 +105,10 @@ fn Demo() -> Element {
 ```
 
 An icon goes in `icon`: it sits before the label with a gap, and never
-shrinks. The label is a span of its own, so a long one ends in "…" at the
-chip's edge while its full text stays the accessible name. An icon passed in
-`children` still renders, inside that span and without the gap. A remove x
-goes in `trailing`, after the label, so a long label never clips it.
+shrinks. The children are the chip's own flex items, never wrapped, so an
+icon among them keeps the gap too. A long label is cut at the chip's edge; for
+an ellipsis, give the text a span of its own, as below. A remove x goes in
+`trailing`, after the label; a label that ellipsizes never clips it.
 
 ```rust
 use dioxus::prelude::*;
@@ -124,7 +124,10 @@ fn Demo() -> Element {
                 }
             },
             style: "max-width: 160px",
-            "Versandkostenberechnungsgrundlage"
+            span {
+                style: "min-width: 0; overflow: hidden; text-overflow: ellipsis",
+                "Versandkostenberechnungsgrundlage"
+            }
         }
     }
 }
@@ -153,7 +156,7 @@ Space toggles a selectable chip. Keep `children` to text and `Icon` - a
 | `target` | `String` | - | Link target, e.g. `_blank`. Only with `to`. |
 | `icon` | `Element` | - | Drawn before the label, with a gap; it never shrinks. |
 | `trailing` | `Element` | - | Drawn after the label, with a gap; it never shrinks - a remove x. Outside a checkbox chip's `<label>`, so it may be a button, but not on an `onclick` or `to` chip. |
-| `children` | `Element` | required | The label, cut with "…" when the chip runs out of room. Text and `Icon` only - a `<label>` hijacks clicks on nested controls. |
+| `children` | `Element` | required | The label, laid out as the chip's own flex items and cut at its edge. Text and `Icon` only - a `<label>` hijacks clicks on nested controls. |
 
 Like every component, `Chip` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

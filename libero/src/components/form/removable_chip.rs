@@ -11,9 +11,16 @@ use crate::{
 };
 
 /// Capped at its slot by `Chip`'s own `max-width`, and allowed below its
-/// content: a flex item's floor is otherwise its min-content size. `Chip`
-/// ellipsizes the label and keeps its `trailing` x whole.
-static REMOVABLE_CHIP_SX: StaticSx = StaticSx::new(|| sx().min_width("0"));
+/// content: a flex item's floor is otherwise its min-content size. The label
+/// is known text here, so its own span ellipsizes and the `trailing` x stays whole.
+static REMOVABLE_CHIP_SX: StaticSx = StaticSx::new(|| {
+    sx().min_width("0").selector(
+        "& > [data-slot='label']",
+        sx().min_width("0")
+            .overflow("hidden")
+            .text_overflow("ellipsis"),
+    )
+});
 
 /// The x. A native `<button>` inherits neither `color` nor `font-size` - it
 /// takes the UA's `buttontext` and 13.3px.

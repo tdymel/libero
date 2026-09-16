@@ -51,13 +51,11 @@ fn fill() -> libero::sx::Sx {
         .selector("& svg", sx().width("18px").height("18px"))
 }
 
-/// The swatch button: the fill is its flex item, not text in its one-line
-/// label span, so `fill`'s 100% is the button's box. The variant's hover tint
-/// would show as a halo around the fill.
+/// The swatch button. The variant's hover tint would show as a halo around
+/// the fill.
 fn swatch_button() -> libero::sx::Sx {
     sx().flex("1 1 0")
         .padding("0")
-        .selector("& > [data-slot='label']", sx().display("contents"))
         .hover(sx().background("transparent"))
 }
 

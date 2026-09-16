@@ -43,7 +43,7 @@ pub fn ChipPage() -> Element {
                 prop("trailing", "Element")
                     .doc("Drawn after the label, with a gap; it never shrinks - a remove x. Outside a checkbox chip's `label`, so it may be a button, but not on an `onclick` or `to` chip."),
                 prop("children", "Element")
-                    .doc("The label, cut with \"…\" when the chip runs out of room. Text and `Icon` only - a `<label>` hijacks clicks on nested controls."),
+                    .doc("The label, laid out as the chip's own flex items and cut at its edge. Text and `Icon` only - a `<label>` hijacks clicks on nested controls."),
             ])],
             lead: rsx! {
                 Text {

@@ -60,7 +60,7 @@ fn LongLabelsPage() -> Element {
                 option_label: move |pick: Pick| OptionLabel::from(pick.name()),
                 panel: |_| rsx! { "Panel" },
             }
-            // Todo 481: one line, cut with an ellipsis.
+            // Todo 481: one line, cut at the edge (662, 674).
             div { id: "single-line",
                 Button { id: "button", "{LONG}" }
                 Button { id: "button-full", full_width: true, "{LONG}" }
@@ -74,9 +74,14 @@ fn LongLabelsPage() -> Element {
                     },
                     "{LONG}"
                 }
+                // The chip's documented ellipsis: a text span of the caller's own.
                 Chip { id: "chip-trailing",
                     trailing: rsx! { button { r#type: "button", aria_label: "Remove", "x" } },
-                    "{LONG}"
+                    span {
+                        "data-text": "",
+                        style: "min-width: 0; overflow: hidden; text-overflow: ellipsis",
+                        "{LONG}"
+                    }
                 }
                 Flex { direction: "row", gap: "sm",
                     Button { id: "button-row", "{LONG}" }

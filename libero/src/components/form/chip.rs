@@ -59,7 +59,10 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         // A `<button>` root inherits neither, and a chip has to look the same
         // whichever tag it lands on.
         .font_family("inherit")
-        .text_decoration("none");
+        .text_decoration("none")
+        // The `icon` slot never shrinks, on the root or in a checkbox chip's label.
+        .selector("& > [data-slot='chip-icon']", chip_icon_sx())
+        .selector("& > label > [data-slot='chip-icon']", chip_icon_sx());
 
     Variant::ALL
         .iter()
@@ -106,6 +109,12 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(focus_ring_sx())
 });
 
+fn chip_icon_sx() -> Sx {
+    sx().display("inline-flex")
+        .align_items("center")
+        .flex("0 0 auto")
+}
+
 // No `pointer-events: none`, so `not-allowed` shows (todo 596): the variant's
 // `:hover` skips a disabled chip, and no click path is left to block.
 fn disabled_sx() -> Sx {
@@ -117,8 +126,8 @@ static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .gap(SizeCss::SPACING.value(Size::Xs))
         .cursor("pointer")
-        // No `text-overflow`: on a flex root it never applies (todo 94); the
-        // text span inside it draws the ellipsis.
+        // No `text-overflow`: on a flex root it never applies (todo 94), and
+        // the children stay unwrapped (todo 674).
         .overflow("hidden")
         // The whole pill is the hit area, not only the text: stretched over
         // the positioned root, and not clipped by the label's own overflow.
@@ -126,15 +135,6 @@ static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
             "&::after",
             sx().content("\"\"").position("absolute").inset("0"),
         )
-});
-
-/// The children's own block, so a long label ends in "…" (todo 636). The
-/// full text stays in the DOM, so the accessible name is never cut.
-static CHIP_TEXT_SX: StaticSx = StaticSx::new(|| {
-    sx().min_width("0")
-        .overflow("hidden")
-        .text_overflow("ellipsis")
-        .white_space("nowrap")
 });
 
 /// After the label, never shrinking, so a long label cannot clip a remove x.
@@ -227,17 +227,18 @@ base_props! {
         /// on an `onclick` or `to` chip, whose root is one already.
         #[props(default)]
         trailing: Option<Element>,
-        /// The label. Text and `Icon` only: a `<label>` hijacks clicks on
-        /// nested controls. Cut with "…" when the chip runs out of room.
+        /// The label, laid out as the chip's own flex items. Text and `Icon`
+        /// only: a `<label>` hijacks clicks on nested controls.
         children: Element,
     }
 }
 
 /// A compact token; `onchange` makes it a real checkbox.
 ///
-/// A long label ends in "…" at the chip's edge. An icon goes in `icon` and a
-/// remove x in `trailing`; both keep their gap and never shrink:
-/// `Chip { icon: rsx! { MyIcon {} }, "rust" }`.
+/// An icon goes in `icon` and a remove x in `trailing`; both keep their gap
+/// and never shrink: `Chip { icon: rsx! { MyIcon {} }, "rust" }`. A long label
+/// is cut at the edge; for an ellipsis, give the text a span of its own:
+/// `span { style: "min-width: 0; overflow: hidden; text-overflow: ellipsis", "{label}" }`.
 #[component]
 pub fn Chip(props: ChipProps) -> Element {
     let theme = use_theme();
@@ -308,13 +309,14 @@ pub fn Chip(props: ChipProps) -> Element {
         .prepare();
     let input = use_box().framework_sx(&VISUALLY_HIDDEN_SX).prepare();
     let label = use_box().framework_sx(&CHIP_LABEL_SX).prepare();
-    let text_class = use_css(Some(&CHIP_TEXT_SX), CssLayer::Framework);
     let trailing_class = use_css(Some(&CHIP_TRAILING_SX), CssLayer::Framework);
 
-    // `data-slot`, so a chip's own sx can reach the text block.
+    // Children unwrapped, so an icon among them keeps the gap and centring.
     let labelled = rsx! {
-        {props.icon}
-        span { class: text_class, "data-slot": "text", {props.children} }
+        if let Some(icon) = props.icon {
+            span { "data-slot": "chip-icon", {icon} }
+        }
+        {props.children}
     };
     let trailing = rsx! {
         if let Some(trailing) = props.trailing {

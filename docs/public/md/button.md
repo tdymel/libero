@@ -60,9 +60,29 @@ fn Demo() -> Element {
 }
 ```
 
-The label stays on one line and never widens its container: a long one ends
-in an ellipsis. The button wraps its children in a `span` for that, so an
-`Icon` beside the text sits inline, centred on it.
+The children are the button's own flex items, never wrapped, so an `sx` gap,
+an auto margin or a 100% size reaches them. An icon goes in `icon`: it sits
+before the label with a gap, centred on it, and never shrinks. The label stays
+on one line and never widens its container; a long one is cut at the edge.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::Button;
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Button {
+            icon: rsx! {
+                svg { width: "16", height: "16", view_box: "0 0 24 24", fill: "currentColor",
+                    circle { cx: "12", cy: "12", r: "6" }
+                }
+            },
+            "Record"
+        }
+    }
+}
+```
 
 ## Accessibility
 
@@ -101,7 +121,8 @@ same. On a link `selected` keeps only the look.
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler; not called when the button renders as a link. |
 | `to` | `NavigationTarget` | - | Renders as a router-aware link instead of a `<button>`. A path/URL or a typed route (`Route::Foo {}`). |
 | `target` | `String` | - | The link's `target` attribute, when `to` is set. |
-| `children` | `Element` | required | The button's label, on one line: a long one ends in an ellipsis and stays the full accessible name. |
+| `icon` | `Element` | - | Drawn before the label, with a gap; it never shrinks. |
+| `children` | `Element` | required | The button's label, laid out as its own flex items, on one line: a long one is cut at the edge and stays the full accessible name. |
 
 `Button` also takes the `<button>` HTML attributes (`type`, `form`, `name`,
 `value`, ...) and, like every component, the shared props `sx`, `class`,

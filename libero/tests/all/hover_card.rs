@@ -40,7 +40,7 @@ fn rendered(open: Option<bool>, disabled: bool) -> String {
 #[test]
 fn closed_renders_only_the_trigger() {
     let html = body(&rendered(None, false));
-    assert!(html.contains(">Ada</span></button>"), "{html}");
+    assert!(html.contains(">Ada</button>"), "{html}");
     assert!(!html.contains("role=\"dialog\""), "{html}");
     assert!(!html.contains("Profile"), "{html}");
 }
@@ -98,8 +98,7 @@ fn forced_closed_renders_no_card() {
 #[test]
 fn disabled_renders_the_trigger_bare() {
     let html = body(&rendered(Some(true), true));
-    // The one span is the Button's own label, not a wrapper.
     assert!(html.starts_with("<button"), "{html}");
     assert!(!html.contains("role=\"dialog\""), "{html}");
-    assert!(html.contains(">Ada</span></button>"), "{html}");
+    assert!(html.contains(">Ada</button>"), "{html}");
 }
