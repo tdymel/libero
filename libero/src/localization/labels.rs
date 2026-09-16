@@ -408,6 +408,12 @@ pub struct LightboxLabels {
     pub thumbnails: &'static str,
     /// Names a thumbnail: `{n}` is the slide number.
     pub thumbnail: &'static str,
+    /// The zoomable picture's description: its keys.
+    pub keys: &'static str,
+    /// Announced after a zoom: `{n}` is the scale in percent of the fitted size.
+    pub zoomed: &'static str,
+    /// Announced once a zoom is back to the fitted size.
+    pub fitted: &'static str,
 }
 
 impl LightboxLabels {
@@ -415,19 +421,41 @@ impl LightboxLabels {
         label: "Gallery",
         thumbnails: "Thumbnails",
         thumbnail: "Go to slide {n}",
+        keys: "Z, plus or minus to zoom. Arrow keys pan a zoomed picture, or change the picture.",
+        zoomed: "Zoomed to {n}%",
+        fitted: "Zoom reset",
     };
 }
 
-/// A `FloatingWindow`'s handles. Its close button reads
+/// A `FloatingWindow`'s handles and its title-bar menu. Its close button reads
 /// [`CommonLabels::close`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FloatingWindowLabels {
-    /// Names the title bar, which is the keyboard move handle.
+    /// Names the title bar, which is the keyboard move handle, and the group
+    /// of move buttons.
     pub move_handle: &'static str,
     /// The move handle's description: how to move it.
     pub move_hint: &'static str,
-    /// Names the corner resize handle.
+    /// Names the corner resize handle, and the group of resize buttons.
     pub resize_handle: &'static str,
+    /// Names the title bar's menu button.
+    pub menu: &'static str,
+    /// The menu item that shows the move buttons.
+    pub move_item: &'static str,
+    /// The menu item that shows the resize buttons.
+    pub resize_item: &'static str,
+    /// The menu item that puts the window back where and how it opened.
+    pub reset_item: &'static str,
+    pub move_up: &'static str,
+    pub move_down: &'static str,
+    pub move_left: &'static str,
+    pub move_right: &'static str,
+    pub narrower: &'static str,
+    pub wider: &'static str,
+    pub shorter: &'static str,
+    pub taller: &'static str,
+    /// Hides the move or resize buttons again.
+    pub done: &'static str,
 }
 
 impl FloatingWindowLabels {
@@ -435,6 +463,19 @@ impl FloatingWindowLabels {
         move_handle: "Move window",
         move_hint: "Use arrow keys to move the window",
         resize_handle: "Resize window",
+        menu: "Window menu",
+        move_item: "Move",
+        resize_item: "Resize",
+        reset_item: "Reset position and size",
+        move_up: "Move up",
+        move_down: "Move down",
+        move_left: "Move left",
+        move_right: "Move right",
+        narrower: "Narrower",
+        wider: "Wider",
+        shorter: "Shorter",
+        taller: "Taller",
+        done: "Done",
     };
 }
 

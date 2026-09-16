@@ -17,7 +17,10 @@ use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverridePar
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, passes::focus, passes::keyboard, passes::motion, wait};
+use e2e::{
+    Fixture, Suite, Viewport, passes::focus, passes::keyboard, passes::motion, passes::pointer,
+    wait,
+};
 
 const TRIGGER: &str = "#open-lightbox";
 const TRIGGER_LAST: &str = "#open-lightbox-last";
@@ -457,6 +460,102 @@ async fn zoomed_resize(page: &Page) -> Result<()> {
             "the old pan ({dx}, {dy}) still fits the new bounds ({bx}, {by}); the resize tested nothing"
         );
     }
+    Ok(())
+}
+
+/// Todo 565: a click on a zoomed picture centres the spot clicked, while a
+/// drag stays a pan; the zoom is announced and the keys are described.
+#[test]
+fn a_click_pans_a_zoomed_picture_and_the_zoom_is_announced() {
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
+        click_pan(&fixture.page).await.unwrap();
+        fixture
+            .console
+            .assert_clean("the lightbox click pan")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn click_pan(page: &Page) -> Result<()> {
+    const Z: keyboard::Key = keyboard::Key {
+        key: "z",
+        code: "KeyZ",
+        vk: 90,
+        text: Some("z"),
+    };
+    const STATUS: &str = "[...document.querySelectorAll('[role=dialog] [role=status]')].map(s => s.textContent).join('|')";
+    motion::set_reduced_motion(page, true).await?;
+    // As in `zoomed_resize`: the picture at 2x overhangs the stage vertically.
+    page.execute(SetDeviceMetricsOverrideParams::new(900, 500, 1.0, false))
+        .await?;
+    keyboard::tab_to(page, TRIGGER, 5).await?;
+    keyboard::press(page, keyboard::ENTER).await?;
+    wait::for_visible(page, DIALOG).await?;
+    wait_showing(page, 0).await?;
+    wait::for_js_true(
+        page,
+        "document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img')?.naturalWidth > 0",
+        "the first picture to decode",
+    )
+    .await?;
+    keyboard::tab_to(page, PICTURE, 12).await?;
+    let described: bool = page
+        .evaluate(format!(
+            "(() => {{ const ids = document.querySelector({PICTURE:?}).getAttribute('aria-describedby') || ''; \
+             return ids.split(' ').some(id => document.getElementById(id)?.textContent.startsWith('Z, plus or minus to zoom')); }})()"
+        ))
+        .await?
+        .into_value()?;
+    if !described {
+        bail!("the picture's aria-describedby does not reach the keys hint");
+    }
+    keyboard::press(page, Z).await?;
+    wait::for_js_true(
+        page,
+        &format!("{STATUS}.includes('Zoomed to 200%')"),
+        "the zoom to be announced",
+    )
+    .await?;
+
+    let frame = pointer::centre_of(page, "[role=dialog] [data-lightbox-frame=\"0\"]").await?;
+    let below = pointer::Point {
+        x: frame.x,
+        y: frame.y + 60.0,
+    };
+    pointer::drag(page, below, below, 1).await?;
+    let dy_is = |target: f64| {
+        format!("(() => {{ const [, dy] = {PAN_JS}; return Math.abs(dy - ({target})) <= 1; }})()")
+    };
+    if wait::for_js_true(page, &dy_is(-60.0), "a click to centre the spot clicked")
+        .await
+        .is_err()
+    {
+        let seen: [f64; 4] = page.evaluate(PAN_JS).await?.into_value()?;
+        bail!("a click 60px below the centre left the picture at {seen:?}, not dy -60");
+    }
+    // A drag's release is no click: the pan stays where the drag put it.
+    let up = pointer::Point {
+        x: frame.x,
+        y: frame.y + 30.0,
+    };
+    pointer::drag(page, frame, up, 5).await?;
+    if wait::for_js_true(page, &dy_is(-30.0), "a drag to pan by its own distance")
+        .await
+        .is_err()
+    {
+        let seen: [f64; 4] = page.evaluate(PAN_JS).await?.into_value()?;
+        bail!("a 30px drag down from dy -60 left the picture at {seen:?}, not dy -30");
+    }
+
+    keyboard::press(page, Z).await?;
+    wait::for_js_true(
+        page,
+        &format!("{STATUS}.includes('Zoom reset')"),
+        "the zoom reset to be announced",
+    )
+    .await?;
     Ok(())
 }
 

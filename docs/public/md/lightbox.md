@@ -11,8 +11,8 @@ around it: each opening carries its pictures and where to start, and focus goes
 back to the thumbnail that opened it. `Image { zoomable }` ([Image](image.md))
 is this viewer with one picture.
 
-Double-click or press `z` to zoom, `+` and `-` to step it, scroll to zoom about the cursor, drag or use
-the arrows to pan. At the edge of a pan the arrows move to the next picture, so
+Double-click or press `z` to zoom, `+` and `-` to step it, scroll to zoom about the cursor, drag,
+click or use the arrows to pan. At the edge of a pan the arrows move to the next picture, so
 a zoomed picture never traps the keyboard.
 
 ## Usage
@@ -72,6 +72,7 @@ last picture.
 | Wheel | Zoom about the cursor, between fitted and `max_zoom` |
 | `+` / `-` | Zoom in / out a wheel step about the centre, between fitted and `max_zoom` |
 | Drag | Pan while zoomed |
+| Click | While zoomed, pan the spot clicked to the centre: a pan without a drag |
 | `ArrowLeft` / `ArrowRight` | Pan while zoomed; at the pan edge, or when fitted, the previous / next picture |
 | `ArrowUp` / `ArrowDown` | Pan while zoomed |
 | `Home` / `End` | First / last picture |
@@ -102,7 +103,8 @@ Name the dialog with `aria_label`; it falls back to the theme's `"Gallery"`.
 Give every picture its own `alt`.
 
 The picture showing is a tab stop (with `zoom` on) and takes the zoom and pan
-keys. In the thumbnail strip the arrows, `Home` and `End` move along the strip
+keys. Its description names them, after the caption, and a polite status
+announces each new zoom level. In the thumbnail strip the arrows, `Home` and `End` move along the strip
 and change the picture with it.
 
 ## API
@@ -123,7 +125,7 @@ Returns the same `ModalHandle` as `use_modal`; every method on it and on
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `zoom` | `bool` | `true` | Wheel, double-click, `z`, `+` and `-` zoom; drag and arrow pan. |
+| `zoom` | `bool` | `true` | Wheel, double-click, `z`, `+` and `-` zoom; drag, click and arrow pan. |
 | `max_zoom` | `Option<f64>` | theme (`3.0`) | Upper scale bound. |
 | `thumbnails` | `bool` | `true` | The strip under the stage. Never shown for one picture. |
 | `captions` | `bool` | `true` | Shows each item's caption, linked to its picture. |
@@ -164,9 +166,11 @@ Returns the same `ModalHandle` as `use_modal`; every method on it and on
 | `max_zoom` | `f64` | Default upper scale bound, `1.0` being the picture as first shown. |
 
 The words are `LightboxLabels` in the [localization](theming.md#localization):
-`label` (the dialog's default name), `thumbnails` (the strip's region name) and
-`thumbnail` (a thumbnail's name; `{n}` is the slide number). The close button's
-name is `common.close`.
+`label` (the dialog's default name), `thumbnails` (the strip's region name),
+`thumbnail` (a thumbnail's name; `{n}` is the slide number), `keys` (the
+zoomable picture's description), `zoomed` (announced after a zoom; `{n}` is the
+scale in percent) and `fitted` (announced once back to fitted). The close
+button's name is `common.close`.
 
 ## CSS variables
 

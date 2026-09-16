@@ -32,7 +32,7 @@ mod use_field;
 mod use_field_frame;
 mod validation;
 
-pub(crate) use announcer::use_announcer;
+pub(crate) use announcer::{Announcer, use_announcer};
 pub use autocomplete::{
     Autocomplete, AutocompleteFilterArgs, AutocompleteOptionArgs, AutocompleteProps,
 };

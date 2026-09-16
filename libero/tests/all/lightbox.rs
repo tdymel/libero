@@ -172,20 +172,44 @@ fn the_caption_describes_the_picture_showing() {
         !html.contains("Morning"),
         "only the current caption renders"
     );
-    assert_eq!(images[3]["aria-describedby"], caption["id"]);
+    // The caption first, then the keys hint (todo 565).
+    let ids: Vec<&str> = images[3]["aria-describedby"].split(' ').collect();
+    assert_eq!(ids.len(), 2, "{ids:?}");
+    assert_eq!(ids[0], caption["id"]);
+    assert!(
+        html.contains(&format!("id=\"{}\" hidden=true", ids[1])),
+        "no keys hint:\n{html}"
+    );
     assert!(!images[0].contains_key("aria-describedby"));
 }
 
+/// Todo 565: with no caption the zoomable picture is described by its keys
+/// alone, and with `zoom` off, which takes the keys away, by nothing.
 #[test]
-fn a_picture_without_a_caption_is_described_by_nothing() {
+fn a_picture_without_a_caption_is_described_by_its_keys_alone() {
     let html = open(LightboxOptions::default(), 2);
 
     assert!(!html.contains("<p "));
     // `.all()` over nothing is true, so first prove the pictures are there.
     let images = stage_images(&html);
     assert_eq!(images.len(), 4, "{html}");
+    let hint = &images[2]["aria-describedby"];
     assert!(
-        images
+        html.contains(&format!(
+            "id=\"{hint}\" hidden=true>Z, plus or minus to zoom"
+        )),
+        "{html}"
+    );
+
+    let html = open(
+        LightboxOptions {
+            zoom: false,
+            ..LightboxOptions::default()
+        },
+        2,
+    );
+    assert!(
+        stage_images(&html)
             .iter()
             .all(|img| !img.contains_key("aria-describedby"))
     );

@@ -79,7 +79,9 @@ field_props! {
         clearable: Option<bool>,
         /// Shown in place of the list when nothing matches. Without it, typed
         /// text matching no option shows the localization's
-        /// `combobox.nothing_found`; either way that string is announced.
+        /// `combobox.nothing_found`; either way that string is announced. An
+        /// `Element` has no text to read, so match your `empty` by overriding
+        /// that string in the `Localization`.
         #[props(default)]
         empty: Option<Element>,
         /// Inside the frame, before the control - a search icon.

@@ -13,6 +13,10 @@ generic
       group "Move window"
         heading "Inspector" [level=2]
           StaticText "Inspector"
+      generic
+        button "Window menu" [expanded=false] [haspopup=menu]
+          generic
+          generic
       button "Close"
       paragraph
         StaticText "Drag the title bar, or focus it and use the arrow keys."

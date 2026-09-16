@@ -8,13 +8,14 @@ use crate::{
         common::{
             inset_focus_ring_sx, ring_overlay, ring_overlay_sx, states, use_name_warning, variables,
         },
+        form::{Announcer, use_announcer},
     },
     hooks::{
         Drag, DragMove, DragOptions, DragPoint, DragStart, ElementHandle, LightboxItem,
         LightboxOpening, LightboxOptions, drag_handle_sx, id_selector, use_drag, use_element,
         use_id, use_localization, use_modal_close, use_theme,
     },
-    localization::fill,
+    localization::{LightboxLabels, fill},
     platform::{Dimensions, ElementApi},
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
@@ -31,6 +32,8 @@ const WHEEL_FACTOR: f64 = 1.25;
 const TOGGLE_ZOOM: f64 = 2.0;
 /// How far down a swipe has to travel to close.
 const SWIPE_CLOSE_DISTANCE: f64 = 96.0;
+/// How far a press on a zoomed picture may travel and still be a click.
+const CLICK_SLOP: f64 = 4.0;
 
 /// The current picture's transform, written per instance. Private: nothing
 /// themes a zoom.
@@ -276,6 +279,12 @@ impl Zoom {
         .clamped(fit)
     }
 
+    /// Brings the spot at `point`, measured from the frame's centre, to the
+    /// centre: the single-pointer pan (2.5.7).
+    fn centred_on(self, point: DragPoint, fit: Fit) -> Self {
+        self.panned(-point.x, -point.y, fit)
+    }
+
     /// Scale about the centre, then shift: the translation is divided by the
     /// scale because it is applied inside it.
     fn transform(self) -> String {
@@ -351,28 +360,33 @@ async fn measure_fit(
     Some((Fit::new(dimensions, natural.await.ok()), left, top))
 }
 
+/// A viewport point as an offset from the centre of a frame at `left`/`top`.
+fn from_frame_centre(client: DragPoint, bounds: Fit, left: f64, top: f64) -> DragPoint {
+    DragPoint {
+        x: client.x - left - bounds.frame.width / 2.0,
+        y: client.y - top - bounds.frame.height / 2.0,
+    }
+}
+
 /// Rescales picture `index` to `next(current scale)`, about `client` or the
 /// centre. The frame and the picture's natural size are read first - for the
 /// pan bounds and for where the cursor sits - so the zoom lands once they do.
 fn zoom_about(
     stage: ElementHandle,
     picture: ElementHandle,
-    mut zoom: Signal<Zoom>,
-    mut fit: Signal<Option<Fit>>,
+    zooming: Zooming,
     index: usize,
     client: Option<DragPoint>,
     next: impl Fn(f64) -> f64 + 'static,
 ) {
+    let (mut zoom, mut fit) = (zooming.zoom, zooming.fit);
     spawn(async move {
         let Some((bounds, left, top)) = measure_fit(stage, picture, index).await else {
             return;
         };
         fit.set(Some(bounds));
         let point = match client {
-            Some(client) => DragPoint {
-                x: client.x - left - bounds.frame.width / 2.0,
-                y: client.y - top - bounds.frame.height / 2.0,
-            },
+            Some(client) => from_frame_centre(client, bounds, left, top),
             None => DragPoint { x: 0.0, y: 0.0 },
         };
         let from = match *zoom.peek() {
@@ -380,10 +394,35 @@ fn zoom_about(
             _ => Zoom::fitted(index),
         };
         let scale = next(from.scale);
-        zoom.set(match scale > 1.0 {
+        let to = match scale > 1.0 {
             true => from.scaled(scale, point, bounds),
             false => Zoom::fitted(index),
-        });
+        };
+        zoom.set(to);
+        if to.scale != from.scale {
+            zooming.announce(to.scale);
+        }
+    });
+}
+
+/// A click on zoomed picture `index` brings the spot clicked to the centre.
+fn centre_on(
+    stage: ElementHandle,
+    picture: ElementHandle,
+    zooming: Zooming,
+    index: usize,
+    client: DragPoint,
+) {
+    let (mut zoom, mut fit) = (zooming.zoom, zooming.fit);
+    spawn(async move {
+        let Some((bounds, left, top)) = measure_fit(stage, picture, index).await else {
+            return;
+        };
+        fit.set(Some(bounds));
+        let from = *zoom.peek();
+        if from.index == index && from.is_zoomed() {
+            zoom.set(from.centred_on(from_frame_centre(client, bounds, left, top), bounds));
+        }
     });
 }
 
@@ -421,10 +460,23 @@ struct Zooming {
     /// to pan within - and a key can decide synchronously whether it pans.
     fit: Signal<Option<Fit>>,
     gesture: Signal<Option<Gesture>>,
+    /// The press on the picture travelled past [`CLICK_SLOP`]: its click is
+    /// the end of a pan, not a click.
+    dragged: Signal<bool>,
     max_zoom: f64,
+    announcer: Announcer,
+    labels: LightboxLabels,
 }
 
 impl Zooming {
+    /// Says the new scale: a zoom is otherwise silent to a screen reader.
+    fn announce(self, scale: f64) {
+        self.announcer.say(match scale > 1.0 {
+            true => fill(self.labels.zoomed, &[("n", &(scale * 100.0).round())]),
+            false => self.labels.fitted.to_string(),
+        });
+    }
+
     /// The zoom held for the picture showing, or a fresh fit when the held one
     /// belongs to another index.
     fn held(self) -> Zoom {
@@ -488,6 +540,7 @@ fn use_lightbox_drag(zooming: Zooming, capture: ElementHandle, close: Callback<(
         mut zoom,
         fit,
         mut gesture,
+        mut dragged,
         ..
     } = zooming;
 
@@ -499,6 +552,9 @@ fn use_lightbox_drag(zooming: Zooming, capture: ElementHandle, close: Callback<(
             let held_gesture = *gesture.peek();
             match held_gesture {
                 Some(Gesture::Pan { origin }) => {
+                    if !*dragged.peek() && delta.x.abs().max(delta.y.abs()) > CLICK_SLOP {
+                        dragged.set(true);
+                    }
                     let Some(bounds) = *fit.peek() else {
                         return;
                     };
@@ -555,7 +611,9 @@ fn lightbox_slide(
         mut zoom,
         fit,
         mut gesture,
+        mut dragged,
         max_zoom,
+        ..
     } = zooming;
 
     let is_current = i == current;
@@ -635,14 +693,14 @@ fn lightbox_slide(
                         Key::Home => stage.go(0, true),
                         Key::End => stage.go(last, true),
                         Key::Character(ref c) if plain && c.eq_ignore_ascii_case("z") => {
-                            zoom_about(root, image, zoom, fit, i, None, move |scale| {
+                            zoom_about(root, image, zooming, i, None, move |scale| {
                                 zooming.toggle_scale(scale)
                             });
                         }
                         // The wheel's steps, so the keyboard reaches `max_zoom` too.
                         Key::Character(ref c) if plain && matches!(c.as_str(), "+" | "=" | "-") => {
                             let closer = c == "-";
-                            zoom_about(root, image, zoom, fit, i, None, move |scale| {
+                            zoom_about(root, image, zooming, i, None, move |scale| {
                                 wheel_step(scale, closer, max_zoom)
                             });
                         }
@@ -660,8 +718,7 @@ fn lightbox_slide(
                     zoom_about(
                         root,
                         image,
-                        zoom,
-                        fit,
+                        zooming,
                         i,
                         Some(DragPoint { x: client.x, y: client.y }),
                         move |scale| wheel_step(scale, closer, max_zoom),
@@ -675,12 +732,19 @@ fn lightbox_slide(
                     zoom_about(
                         root,
                         image,
-                        zoom,
-                        fit,
+                        zooming,
                         i,
                         Some(DragPoint { x: client.x, y: client.y }),
                         move |scale| zooming.toggle_scale(scale),
                     );
+                },
+                // Panning without a drag: a click centres the spot clicked.
+                onclick: move |event: Event<MouseData>| {
+                    if !zoomable || i != *index.peek() || *dragged.peek() || !zooming.held().is_zoomed() {
+                        return;
+                    }
+                    let client = event.client_coordinates();
+                    centre_on(root, image, zooming, i, DragPoint { x: client.x, y: client.y });
                 },
                 onmounted: image.mount(),
                 onpointermove: drag.onpointermove,
@@ -689,6 +753,9 @@ fn lightbox_slide(
                 onpointerdown: move |event: Event<PointerData>| {
                     if i != *index.peek() {
                         return;
+                    }
+                    if *dragged.peek() {
+                        dragged.set(false);
                     }
                     let from = zooming.held();
                     let next = match (from.is_zoomed(), event.data().pointer_type() == "mouse") {
@@ -841,8 +908,12 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         zoom,
         fit: use_signal(|| None::<Fit>),
         gesture: use_signal(|| None::<Gesture>),
+        dragged: use_signal(|| false),
         max_zoom: options.max_zoom.unwrap_or(theme.lightbox.max_zoom).max(1.0),
+        announcer: use_announcer(),
+        labels: localization.lightbox,
     };
+    let keys_id = use_id();
 
     // Read either way, so this render stays subscribed to the reset.
     let current = match index() {
@@ -911,7 +982,16 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         .get(current)
         .and_then(|item| item.caption.clone())
         .filter(|_| options.captions);
-    let described = caption.as_ref().map(|_| caption_id());
+    // The caption, then the keys: a picture that takes keys says which.
+    let described = [
+        caption.as_ref().map(|_| caption_id()),
+        options.zoom.then(&*keys_id),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>()
+    .join(" ");
+    let described = (!described.is_empty()).then_some(described);
 
     let slides: Vec<Element> = (0..count)
         .map(|i| lightbox_slide(stage_parts, i, &items[i], picture(i), described.clone()))
@@ -977,6 +1057,10 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                 if let Some(caption) = caption {
                     Box { component: "p", id: caption_id(), framework_sx: &LIGHTBOX_CAPTION_SX, "{caption}" }
                 }
+                if options.zoom {
+                    span { id: keys_id(), hidden: true, "{localization.lightbox.keys}" }
+                }
+                {zooming.announcer.render()}
                 if show_thumbnails {
                     Box { framework_sx: &LIGHTBOX_THUMBNAILS_SX, variables: thumbnails_variables,
                         Carousel {
@@ -1150,6 +1234,23 @@ mod tests {
             zoomed.y + zoomed.scale * local.1,
         );
         assert_eq!(screen, (point.x, point.y));
+    }
+
+    /// Todo 565: a click 100px right of and 50px above the centre moves that
+    /// spot to the centre, within the pan bounds.
+    #[test]
+    fn a_click_centres_the_spot_clicked() {
+        let zoomed = Zoom {
+            scale: 2.0,
+            x: 20.0,
+            ..Zoom::fitted(0)
+        };
+
+        let centred = zoomed.centred_on(DragPoint { x: 100.0, y: -50.0 }, FILLS);
+        assert_eq!((centred.x, centred.y), (-80.0, 50.0));
+
+        let far = zoomed.centred_on(DragPoint { x: -1000.0, y: 0.0 }, FILLS);
+        assert_eq!(far.x, 400.0);
     }
 
     #[test]

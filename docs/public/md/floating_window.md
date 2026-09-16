@@ -7,7 +7,8 @@ Index: [index.md](index.md) - every other component's markdown page
 Description: A non-modal window over the page that drags, moves by keyboard and resizes from a corner; a hook owns whether it exists.
 
 A non-modal window over the page: a title bar that drags, an optional corner
-resize handle, and a close button. `use_floating_window` owns whether it exists
+resize handle, a menu that moves, resizes and resets it without a drag, and a
+close button. `use_floating_window` owns whether it exists
 and returns a `Copy` handle; the window owns where it is and how big. No overlay,
 no focus trap - the page stays usable underneath.
 
@@ -85,11 +86,11 @@ handle, so the body can close its own window.
 | `aria_label` | `Option<String>` | none | Overrides `title` as the name |
 | `placement` | `Input<Placement>` | `theme.floating_window.placement` (`center-center`) | Where it first appears |
 | `resizable` | `bool` | `false` | Draws the corner resize handle |
-| `pinned` | `bool` | `false` | No drag, no keyboard move |
+| `pinned` | `bool` | `false` | No drag, no keyboard move, no Move in the menu |
 | `z_index` | `Input<ThemeAwareValue>` | stacked from `theme.z_index.window` | Overrides the stacking |
 | `sx` | `Input<Sx>` | - | On the window; put `min_width`/`max_width`/`min_height`/`max_height` here |
-| `onmove` | `Option<Callback<WindowRect>>` | - | After a drag or keyboard move |
-| `onresize` | `Option<Callback<WindowRect>>` | - | After a resize |
+| `onmove` | `Option<Callback<WindowRect>>` | - | After a drag, keyboard or button move, or a Reset |
+| `onresize` | `Option<Callback<WindowRect>>` | - | After a resize, or a Reset |
 
 `WindowRect { x, y, width, height }` is in viewport pixels.
 
@@ -102,6 +103,11 @@ handle, so the body can close its own window.
 - The resize handle asks for a size; your `sx` constraints clamp it. The
   viewport caps it on top of them, always: a `max_width` of `40rem` is still
   no wider than a phone.
+- The title bar's menu button ("Window menu") offers Move, Resize (with
+  `resizable`) and Reset. Move and Resize show a row of step buttons under the
+  title bar, each a click by `move_step` or `resize_step`, until Done or
+  Escape; Reset puts the window back at `placement` and its content's own size.
+  Without `resizable` and with `pinned` there is no menu.
 - A drag re-renders the whole window, `children` included. Keep the body shallow.
 
 ## Stacking
@@ -121,6 +127,9 @@ run from 250, capped below the overlay layer however many windows are open.
   (`floating_window.move_hint`).
 - On the resize handle Arrow resizes by `resize_step`, Shift+Arrow by 1px, and
   Home/End ask for the smallest/largest size the constraints allow.
+- Moving and resizing need no drag (WCAG 2.5.7): the title-bar menu's step
+  buttons do both with single clicks. Choosing Move or Resize focuses the first
+  button; Done or Escape hands focus back to the menu button.
 - F6 moves focus between the page and the topmost window: into the window,
   and back to where it left the page (at first the trigger). Not while a modal
   or a popover is open. The window is portaled after the page, so Tab alone
@@ -133,5 +142,5 @@ run from 250, capped below the overlay layer however many windows are open.
 
 `theme.floating_window`: `placement`, `radius`, `shadow`, `move_step`,
 `resize_step`. Plain values read from Rust; the chrome is `Paper`'s. The
-handles' names are `FloatingWindowLabels` in the
-[localization](theming.md#localization), the close button's `common.close`.
+handles', the menu's and the step buttons' names are `FloatingWindowLabels` in
+the [localization](theming.md#localization), the close button's `common.close`.

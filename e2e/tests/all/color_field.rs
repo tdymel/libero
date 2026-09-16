@@ -1,6 +1,7 @@
 //! `ColorField`'s dropdown between two buttons (todo 449). `/color-field/alpha`
 //! holds `#1c7ed6` with the alpha slider and three swatches;
-//! `/color-field/swatches` holds only the swatches.
+//! `/color-field/swatches` holds only the swatches; `/color-field/keep-text`
+//! has `fix_on_blur: false` and no dropdown.
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
@@ -142,6 +143,45 @@ fn unparsable_text_shows_and_says_an_error() {
         )
         .await;
         fixture.console.assert_clean("an unparsable color").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 699: with `fix_on_blur: false`, Tab away from text that is no color
+/// keeps the text and the value, and marks the field invalid with the error.
+/// Focus has left, so nothing is announced: the input describes it on return.
+#[test]
+fn blur_on_unparsable_text_keeps_it_with_an_error() {
+    block_on(async {
+        let fixture = Fixture::open("/color-field/keep-text", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+            .await
+            .unwrap();
+        keyboard::type_text(page, "nope").await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        let error = "Not a valid color";
+        expect(
+            page,
+            &format!(
+                "(() => {{ const input = document.querySelector({INPUT:?}); \
+                 const ids = (input.getAttribute('aria-describedby') || '').split(' '); \
+                 return document.activeElement.id === 'after' \
+                   && input.value === 'nope' \
+                   && input.getAttribute('aria-invalid') === 'true' \
+                   && ids.some(id => document.getElementById(id)?.textContent.trim() === {error:?}) \
+                   && document.getElementById('readout').textContent === '#40c057'; }})()"
+            ),
+            "Tab from unparsable text to keep it and show the error",
+        )
+        .await;
+        fixture
+            .console
+            .assert_clean("a blurred unparsable color")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }

@@ -124,7 +124,7 @@ suggestion still submits the form.
 | `prefiltered` | `bool` | `false` | `options` is already narrowed. Skips filtering, so `filter` never runs. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
 | `clearable` | `bool` | `false` | An x that empties the field, at the end of the frame. |
-| `empty` | `Element` | - | Shown in place of the list when nothing matches. |
+| `empty` | `Element` | - | Shown in place of the list when nothing matches. The status still announces the localization's `combobox.nothing_found`: an `Element` has no text to read, so override that string to match. |
 | `leading` | `Element` | - | Inside the frame, before the control - a search icon. |
 | `trailing` | `Element` | - | Inside the frame, after the control, before the clear x. |
 | `describe_leading` | `bool` | `false` | `leading` is text that describes the input, so it joins the input's `aria-describedby`. |

@@ -138,6 +138,7 @@ mod tests {
             english.carousel.slide,
             english.carousel.status,
             english.lightbox.thumbnail,
+            english.lightbox.zoomed,
             english.notifications.region,
             english.pin_field.cell,
             english.code_block.code_named,

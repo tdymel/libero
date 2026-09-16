@@ -213,6 +213,61 @@ fn the_separator_resizes_it_and_clamps_to_the_callers_bounds() {
     );
 }
 
+/// Todo 570: the title-bar menu's Resize shows step buttons that resize by
+/// the theme's step, Escape hides them, and Reset restores the opened size.
+/// By keyboard: a press inside the translated window lands beside its target.
+#[test]
+fn the_title_bar_menu_resizes_and_resets() {
+    let menu = "[role=dialog] [data-window-menu]";
+    let mut page = mount(app);
+    open(&mut page);
+    let opened = page.rect(DIALOG);
+    page.focus(menu);
+    page.press(Key::Enter);
+    settle(&mut page);
+    page.press(Key::ArrowDown);
+    page.press(Key::Enter);
+    settle(&mut page);
+    assert!(
+        page.is_focused("[aria-label=Shorter]"),
+        "Resize left focus on {}",
+        page.focus_owner()
+    );
+    let showing = page.rect(DIALOG);
+    page.focus("[aria-label=Wider]");
+    page.press(Key::Enter);
+    settle(&mut page);
+    let wider = page.rect(DIALOG);
+    assert!(
+        close_to(wider.2, showing.2 + STEP),
+        "{showing:?} became {wider:?}"
+    );
+    assert_reported(&page, RESIZE_REPORT, "the Wider button");
+
+    page.press(Key::Escape);
+    settle(&mut page);
+    assert!(
+        page.exists(DIALOG),
+        "Escape on the step buttons closed the window"
+    );
+    assert!(
+        !page.exists("[data-window-steps]"),
+        "Escape left the step buttons"
+    );
+    assert!(page.is_focused(menu), "focus is on {}", page.focus_owner());
+
+    page.press(Key::Enter);
+    settle(&mut page);
+    page.press(Key::End);
+    page.press(Key::Enter);
+    settle(&mut page);
+    let reset = page.rect(DIALOG);
+    assert!(
+        close_to(reset.2, opened.2) && close_to(reset.3, opened.3),
+        "Reset left {reset:?}, opened at {opened:?}"
+    );
+}
+
 /// The press lands where the untranslated rect says, beside the handle.
 #[test]
 #[ignore = "needs Blitz: getBoundingClientRect leaves out a transform"]

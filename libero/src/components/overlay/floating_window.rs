@@ -8,17 +8,21 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, HtmlTag, Input, Placement, Title, Variables,
-        common::{CloseIcon, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx},
+        ActionIcon, Button, HtmlTag, Input, Menu, MenuEntry, MenuItem, Placement, Title, Variables,
+        common::{
+            ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CloseIcon,
+            focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx,
+        },
         layout::{Float, use_box},
         surface::paper_sx,
-        variables,
+        use_menu, variables,
     },
     context::{ModalContext, WindowHost},
     hooks::{
         Drag, DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, escape_closes,
         use_dismiss_layer, use_drag, use_element, use_id, use_silent_focus_within,
     },
+    localization::FloatingWindowLabels,
     platform::{ElementApi, KeyChord, KeySubscription, PlatformError, keyboard},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, PAPER_BORDER_COLOR, Size, SizeCss},
@@ -44,7 +48,8 @@ pub struct FloatingWindowOptions {
     pub placement: Input<Placement>,
     /// Draws the corner resize handle.
     pub resizable: bool,
-    /// Pins it where `placement` put it: no drag, no keyboard move.
+    /// Pins it where `placement` put it: no drag, no keyboard move, no Move
+    /// in the title-bar menu.
     pub pinned: bool,
     pub z_index: Input<ThemeAwareValue>,
     /// On the window itself - this is where `min_width`/`max_width` and
@@ -52,9 +57,9 @@ pub struct FloatingWindowOptions {
     /// The viewport cap always applies on top: a `max_width("40rem")` is
     /// still no wider than the screen.
     pub sx: Input<Sx>,
-    /// After a drag or a keyboard move.
+    /// After a drag, a keyboard or button move, or a Reset.
     pub onmove: Option<Callback<WindowRect>>,
-    /// After a resize, by pointer or keyboard.
+    /// After a resize, by pointer, keyboard or button, or a Reset.
     pub onresize: Option<Callback<WindowRect>>,
 }
 
@@ -107,6 +112,19 @@ static WINDOW_SX: StaticSx = StaticSx::new(|| {
             drag_handle_sx().cursor("move").user_select("none"),
         )
         .selector(
+            "& > [data-window-steps]",
+            sx().display("flex")
+                .flex_wrap("wrap")
+                .align_items("center")
+                .gap("xs")
+                .padding(format!(
+                    "{} {}",
+                    SizeCss::SPACING.value(Size::Xs),
+                    SizeCss::SPACING.value(Size::Sm)
+                ))
+                .border_bottom(format!("1px solid {}", PAPER_BORDER_COLOR.value())),
+        )
+        .selector(
             "& > [data-window-body]",
             sx().flex("1 1 auto")
                 .min_height("0")
@@ -139,6 +157,15 @@ static FLOAT_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .flex_direction("column")
 });
+
+/// What the title-bar menu asked for: the single-pointer way to move and
+/// resize (2.5.7), where the handles need a drag.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Adjust {
+    Move,
+    Resize,
+    Reset,
+}
 
 /// Arrow keys to a pixel delta, `None` for any other key.
 fn arrow_delta(key: &Key, step: f64) -> Option<(f64, f64)> {
@@ -394,6 +421,34 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     } = geometry;
     let move_key = use_callback(move |event| geometry.handle_key(event));
 
+    // Move or Resize from the menu shows step buttons until Done or Escape.
+    let mut adjusting = use_signal(|| None::<Adjust>);
+    let onadjust = use_callback(move |adjust: Adjust| match adjust {
+        Adjust::Reset => {
+            adjusting.set(None);
+            geometry.reset();
+        }
+        adjust => adjusting.set(Some(adjust)),
+    });
+    let onstep = use_callback(move |(dx, dy): (f64, f64)| match *adjusting.peek() {
+        Some(Adjust::Move) => geometry.move_by(dx * geometry.move_step, dy * geometry.move_step),
+        Some(Adjust::Resize) => {
+            geometry.resize_to(Ok((dx * geometry.resize_step, dy * geometry.resize_step)))
+        }
+        _ => {}
+    });
+    let ondone = use_callback(move |()| {
+        adjusting.set(None);
+        if let Ok(trigger) = root.query_selector("[data-window-menu]") {
+            let _ = trigger.focus();
+        }
+    });
+    let steps = adjusting().map(|adjust| {
+        rsx! {
+            WindowSteps { adjust, labels, onstep, ondone }
+        }
+    });
+
     // Not a dismiss layer: a window is non-modal and hears only presses from
     // inside it. It still skips one that something inside already took - an
     // open `Select` closing its list, or on the web a `HoverCard` answering at
@@ -500,13 +555,15 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                     title,
                     title_id,
                     pinned,
-                    move_label: labels.move_handle,
-                    move_hint: labels.move_hint,
+                    resizable,
+                    labels,
                     close_label: localization.common.close,
                     onclose,
+                    onadjust,
                     onpointerdown: move_drag.onpointerdown,
                     onkeydown: move_key,
                 }
+                {steps}
                 div { "data-window-body": "", {props.children} }
                 if resizable {
                     div {
@@ -553,14 +610,32 @@ fn WindowTitleBar(
     title: Option<String>,
     title_id: Signal<String>,
     pinned: bool,
-    move_label: &'static str,
-    move_hint: &'static str,
+    resizable: bool,
+    labels: FloatingWindowLabels,
     close_label: &'static str,
     onclose: Callback<()>,
+    onadjust: Callback<Adjust>,
     onpointerdown: Callback<Event<PointerData>>,
     onkeydown: Callback<Event<KeyboardData>>,
 ) -> Element {
     let hint_id = use_id();
+    let menu = use_menu();
+    let item = |label: &'static str, adjust: Adjust| -> MenuEntry {
+        MenuItem::new(label)
+            .onselect(move |_| onadjust.call(adjust))
+            .into()
+    };
+    let items: Vec<MenuEntry> = [
+        (!pinned).then(|| item(labels.move_item, Adjust::Move)),
+        resizable.then(|| item(labels.resize_item, Adjust::Resize)),
+        (!pinned || resizable).then(|| item(labels.reset_item, Adjust::Reset)),
+    ]
+    .into_iter()
+    .flatten()
+    .collect();
+    let mut trigger = menu.a11y_attributes();
+    trigger.push(Attribute::new("data-window-menu", "", None, false));
+    let (move_label, move_hint) = (labels.move_handle, labels.move_hint);
     rsx! {
         div { "data-window-title-bar": "",
             div {
@@ -588,6 +663,18 @@ fn WindowTitleBar(
             if !pinned {
                 span { id: hint_id(), hidden: true, "{move_hint}" }
             }
+            if !items.is_empty() {
+                Menu { state: menu, items,
+                    ActionIcon {
+                        variant: "standard",
+                        color: "muted",
+                        size: "sm",
+                        aria_label: labels.menu,
+                        attributes: trigger,
+                        ChevronDownIcon {}
+                    }
+                }
+            }
             ActionIcon {
                 variant: "standard",
                 color: "muted",
@@ -599,6 +686,76 @@ fn WindowTitleBar(
         }
     }
 }
+
+/// The step buttons Move or Resize in the title-bar menu shows: a click moves
+/// or resizes by the theme's step, with no drag. Focus starts on the first;
+/// Done or Escape hides them.
+#[component]
+fn WindowSteps(
+    adjust: Adjust,
+    labels: FloatingWindowLabels,
+    onstep: Callback<(f64, f64)>,
+    ondone: Callback<()>,
+) -> Element {
+    let group = use_element();
+    // Again when the menu switches Move to Resize: focus is on its trigger.
+    use_effect(use_reactive!(|adjust| {
+        let _ = adjust;
+        if group.is_mounted()
+            && let Ok(first) = group.query_selector("button")
+        {
+            let _ = first.focus();
+        }
+    }));
+    let (name, [up, down, left, right]) = match adjust {
+        Adjust::Resize => (
+            labels.resize_handle,
+            [labels.shorter, labels.taller, labels.narrower, labels.wider],
+        ),
+        _ => (
+            labels.move_handle,
+            [
+                labels.move_up,
+                labels.move_down,
+                labels.move_left,
+                labels.move_right,
+            ],
+        ),
+    };
+    let step = |label: &'static str, delta: (f64, f64), icon: Element| {
+        rsx! {
+            ActionIcon {
+                variant: "standard",
+                size: "sm",
+                aria_label: label,
+                onclick: move |_| onstep.call(delta),
+                {icon}
+            }
+        }
+    };
+    rsx! {
+        div {
+            "data-window-steps": "",
+            role: "group",
+            "aria-label": name,
+            onmounted: group.mount(),
+            // Escape leaves the buttons, not the window.
+            onkeydown: move |event: Event<KeyboardData>| {
+                if escape_closes(&event) {
+                    event.stop_propagation();
+                    event.prevent_default();
+                    ondone.call(());
+                }
+            },
+            {step(up, (0.0, -1.0), rsx! { ChevronUpIcon {} })}
+            {step(down, (0.0, 1.0), rsx! { ChevronDownIcon {} })}
+            {step(left, (-1.0, 0.0), rsx! { ChevronLeftIcon {} })}
+            {step(right, (1.0, 0.0), rsx! { ChevronRightIcon {} })}
+            Button { variant: "outlined", size: "xs", onclick: move |_| ondone.call(()), "{labels.done}" }
+        }
+    }
+}
+
 /// A floating window's geometry: where it is, how big it is, and the two
 /// drags that move and resize it. One `Copy` argument, so the title bar, the
 /// corner handle and the window itself all read the same state.
@@ -615,8 +772,9 @@ struct WindowGeometry {
     /// The caller's size bounds in pixels; `None` until read, and where there
     /// is no computed style.
     bounds: Signal<Option<WindowBounds>>,
-    /// A keyboard move or resize reports once the new geometry has rendered.
-    owed: Signal<Option<Option<Callback<WindowRect>>>>,
+    /// A keyboard or button move or resize reports once the new geometry has
+    /// rendered.
+    owed: Signal<Vec<Callback<WindowRect>>>,
     move_drag: Drag,
     resize_drag: Drag,
     onmove: Option<Callback<WindowRect>>,
@@ -650,11 +808,14 @@ fn use_window_geometry(
     // A keyboard move or resize reports once the new geometry has rendered:
     // reading the rect in the same task as the write would report the old one.
     // An effect runs after the render commits, and the read forces layout.
-    let mut owed = use_signal(|| None::<Option<Callback<WindowRect>>>);
+    let mut owed = use_signal(Vec::<Callback<WindowRect>>::new);
     use_effect(move || {
-        if let Some(callback) = owed() {
-            owed.set(None);
-            report(root, callback);
+        let callbacks = owed();
+        if !callbacks.is_empty() {
+            owed.set(Vec::new());
+            for callback in callbacks {
+                report(root, Some(callback));
+            }
         }
     });
 
@@ -771,15 +932,28 @@ impl WindowGeometry {
         };
         event.prevent_default();
         event.stop_propagation();
-        let (root, mut position, mut owed, onmove) =
-            (self.root, self.position, self.owed, self.onmove);
-        let offset = root.client_offset();
+        self.move_by(dx, dy);
+    }
+
+    /// Moves by a pixel delta from where the window is drawn, and reports it.
+    fn move_by(self, dx: f64, dy: f64) {
+        let (mut position, mut owed, onmove) = (self.position, self.owed, self.onmove);
+        let offset = self.root.client_offset();
         spawn(async move {
             if let Ok((x, y)) = offset.await {
                 position.set(Some((x + dx, y + dy)));
-                owed.set(Some(onmove));
+                owed.write().extend(onmove);
             }
         });
+    }
+
+    /// Back to `placement` and the content's own size, reporting both.
+    fn reset(self) {
+        let (mut position, mut size, mut owed) = (self.position, self.size, self.owed);
+        position.set(None);
+        size.set(None);
+        owed.write()
+            .extend(self.onmove.into_iter().chain(self.onresize));
     }
 
     /// The corner handle: Arrow resizes by a step, Shift+Arrow by a pixel, and
@@ -805,6 +979,12 @@ impl WindowGeometry {
         let Some(request) = request else { return };
         event.prevent_default();
         event.stop_propagation();
+        self.resize_to(request);
+    }
+
+    /// `Ok` grows the drawn size by a delta, `Err` asks for an absolute size;
+    /// the window's min/max constraints clamp either. Reports it.
+    fn resize_to(self, request: Result<(f64, f64), (f64, f64)>) {
         let (mut size, mut owed, onresize) = (self.size, self.owed, self.onresize);
         let dimensions = self.root.dimensions();
         spawn(async move {
@@ -819,7 +999,7 @@ impl WindowGeometry {
                 },
             };
             size.set(Some(next));
-            owed.set(Some(onresize));
+            owed.write().extend(onresize);
         });
     }
 }

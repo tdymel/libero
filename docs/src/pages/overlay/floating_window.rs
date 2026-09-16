@@ -267,11 +267,11 @@ pub fn FloatingWindowPage() -> Element {
                     prop("aria_label", "Option<String>").doc("Names the window instead of `title`."),
                     prop("placement", "Input<Placement>").default("center-center").doc("Where it first appears, from `theme.floating_window.placement`. Once dragged it stays where it was put, clamped into the viewport."),
                     prop("resizable", "bool").default("false").doc("Draws the corner resize handle."),
-                    prop("pinned", "bool").default("false").doc("No drag and no keyboard move."),
+                    prop("pinned", "bool").default("false").doc("No drag, no keyboard move and no Move in the title-bar menu."),
                     prop("z_index", "Input<ThemeAwareValue>").doc("Overrides the stacking. Unset, windows stack from `theme.z_index.window`, below overlays and modals."),
                     prop("sx", "Input<Sx>").doc("On the window. `min_width`/`max_width`/`min_height`/`max_height` here clamp a resize. The viewport cap always applies on top, so a `max_width` of `40rem` is still no wider than a phone."),
-                    prop("onmove", "Option<Callback<WindowRect>>").doc("After a drag or a keyboard move, in viewport pixels."),
-                    prop("onresize", "Option<Callback<WindowRect>>").doc("After a resize, by pointer or keyboard."),
+                    prop("onmove", "Option<Callback<WindowRect>>").doc("After a drag, a keyboard or button move, or a Reset, in viewport pixels."),
+                    prop("onresize", "Option<Callback<WindowRect>>").doc("After a resize, by pointer, keyboard or button, or a Reset."),
                 ]),
                 props("FloatingWindowHandle", vec![
                     prop("open()", "()").doc("Shows it and remembers where focus was. Does nothing when open."),
@@ -283,7 +283,8 @@ pub fn FloatingWindowPage() -> Element {
             lead: rsx! {
                 Text {
                     "A non-modal window over the page: a title bar that drags, an optional corner "
-                    "resize handle, and a close button. "
+                    "resize handle, a menu that moves, resizes and resets it without a drag, and "
+                    "a close button. "
                     Code { source: "use_floating_window" }
                     " owns whether it exists and hands back a "
                     Code { source: "Copy" }
@@ -322,7 +323,10 @@ pub fn FloatingWindowPage() -> Element {
                     Kbd { "→" } " " Kbd { "↓" } " move it 10px and "
                     Kbd { "Shift" } " + arrow 1px. On the resize handle the arrows resize, and "
                     Kbd { "Home" } " " Kbd { "End" }
-                    " ask for the smallest and largest size allowed. " Kbd { "Esc" }
+                    " ask for the smallest and largest size allowed. The title bar's menu offers "
+                    "Move, Resize and Reset: Move and Resize show step buttons, one click per "
+                    "step, so neither needs a drag; Done or " Kbd { "Esc" }
+                    " hides them. " Kbd { "Esc" }
                     " closes the window and returns focus to its trigger. " Kbd { "F6" }
                     " moves focus between the page and the topmost window. The page behind "
                     "a window still takes Tab, so pick a "

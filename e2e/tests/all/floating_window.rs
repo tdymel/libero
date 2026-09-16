@@ -63,7 +63,9 @@ pub const HANDLE: &str = "[role=dialog] [data-window-handle]";
 /// The corner grip, which is the resize handle.
 pub const SEPARATOR: &str = "[role=dialog] [role=separator]";
 /// The close button in the title bar.
-pub const CLOSE: &str = "[role=dialog] [data-window-title-bar] button";
+pub const CLOSE: &str = "[role=dialog] [data-window-title-bar] > button";
+/// The title bar's menu button: Move, Resize, Reset (todo 570).
+pub const MENU: &str = "[role=dialog] [data-window-menu]";
 pub const MOVE_REPORT: &str = "#move-report";
 pub const RESIZE_REPORT: &str = "#resize-report";
 
@@ -90,6 +92,7 @@ fn it_meets_the_baseline() {
         // Drawn 20x20 (an `ActionIcon` at `size: "sm"`), it takes presses in
         // an invisible 24x24 box (todos 505, 566), so it meets 2.5.8 outright.
         .targets(CLOSE)
+        .targets(MENU)
         .targets_spaced(SEPARATOR)
         .state(
             "open",
@@ -271,6 +274,111 @@ fn a_drag_leaves_its_handle_focused() {
         fixture.console.assert_clean("a pointer drag").unwrap();
         fixture.close().await.unwrap();
     });
+}
+
+/// Todo 570: the title-bar menu moves, resizes and resets the window with
+/// clicks alone (2.5.7), each reported like a keyboard move.
+#[test]
+fn the_title_bar_menu_moves_resizes_and_resets_without_a_drag() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window", Viewport::Desktop)
+            .await
+            .unwrap();
+        menu_adjust(&fixture.page).await.unwrap();
+        fixture.console.assert_clean("the title-bar menu").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn menu_adjust(page: &Page) -> Result<()> {
+    open(page).await?;
+    let opened = rect(page, DIALOG).await?;
+
+    choose(page, "Move").await?;
+    expect_focus(
+        page,
+        "[aria-label='Move up']",
+        "Move to focus the first step button",
+    )
+    .await?;
+    // The buttons' row makes the window taller, and a placed window recentres.
+    let showing = rect(page, DIALOG).await?;
+    pointer::click(page, "[data-window-steps] [aria-label='Move right']").await?;
+    let moved = wait_for_move(page, showing, (STEP, 0.0)).await?;
+    assert_report(page, MOVE_REPORT, moved, "the Move right button").await?;
+    // Escape leaves the buttons, not the window.
+    keyboard::press(page, keyboard::ESCAPE).await?;
+    expect_focus(page, MENU, "Escape to hand focus back to the menu button").await?;
+    if page
+        .evaluate("!!document.querySelector('[data-window-steps]')")
+        .await?
+        .into_value::<bool>()?
+        || rect(page, DIALOG).await.is_err()
+    {
+        bail!("Escape on the step buttons should hide them and keep the window open");
+    }
+
+    choose(page, "Resize").await?;
+    expect_focus(
+        page,
+        "[aria-label='Shorter']",
+        "Resize to focus the first step button",
+    )
+    .await?;
+    pointer::click(page, "[data-window-steps] [aria-label='Wider']").await?;
+    let wider = wait_for_size(page, (moved.2 + STEP, moved.3), "the Wider button").await?;
+    assert_report(page, RESIZE_REPORT, wider, "the Wider button").await?;
+    pointer::click(page, "[data-window-steps] button:last-child").await?;
+    expect_focus(page, MENU, "Done to hand focus back to the menu button").await?;
+
+    choose(page, "Reset position and size").await?;
+    let reset = format!(
+        "(r => Math.abs(r.x - {}) <= 1 && Math.abs(r.y - {}) <= 1 && Math.abs(r.width - {}) <= 1)\
+         (document.querySelector('[role=dialog]').getBoundingClientRect())",
+        opened.0, opened.1, opened.2
+    );
+    if wait::for_js_true(page, &reset, "Reset to put the window back")
+        .await
+        .is_err()
+    {
+        bail!(
+            "after Reset the window is at {:?}, not where it opened, {opened:?}",
+            rect(page, DIALOG).await?
+        );
+    }
+    let back = rect(page, DIALOG).await?;
+    assert_report(page, MOVE_REPORT, back, "Reset").await?;
+    assert_report(page, RESIZE_REPORT, back, "Reset").await
+}
+
+/// Open the title-bar menu and click the item named `label`.
+async fn choose(page: &Page, label: &str) -> Result<()> {
+    pointer::click(page, MENU).await?;
+    wait::for_visible(page, "[role=menu]").await?;
+    let at: Option<(f64, f64)> = page
+        .evaluate(format!(
+            "(() => {{ const el = [...document.querySelectorAll('[role=menuitem]')].find(e => e.textContent.trim() === {label:?}); \
+             if (!el) return null; const r = el.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }})()"
+        ))
+        .await?
+        .into_value()?;
+    let Some((x, y)) = at else {
+        bail!("no menu item {label:?} in the open menu");
+    };
+    let at = pointer::Point { x, y };
+    pointer::drag(page, at, at, 1).await
+}
+
+async fn expect_focus(page: &Page, selector: &str, what: &str) -> Result<()> {
+    let check = format!(
+        "document.activeElement === document.querySelector({})",
+        serde_json::to_string(selector)?
+    );
+    if wait::for_js_true(page, &check, what).await.is_err() {
+        let actual = focus::active_element(page).await?;
+        bail!("{what}: focus is on {actual:?}");
+    }
+    Ok(())
 }
 
 /// Open the window from the keyboard and wait for focus to land in it.

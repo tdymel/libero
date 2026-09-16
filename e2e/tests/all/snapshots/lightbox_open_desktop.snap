@@ -28,6 +28,7 @@ generic
               button "Next slide"
         paragraph
           StaticText "Picture 1 of the first gallery"
+        status [atomic] [live=polite]
         region "Thumbnails"
           generic
             group "Thumbnails"
