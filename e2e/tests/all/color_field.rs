@@ -105,6 +105,47 @@ fn the_picker_thumbs_are_named_with_their_units() {
     });
 }
 
+/// Todo 552: Enter on text that is no color marks the field invalid, shows the
+/// error and says it, while focus stays; the next keystroke clears it.
+#[test]
+fn unparsable_text_shows_and_says_an_error() {
+    block_on(async {
+        let fixture = Fixture::open("/color-field/alpha", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+            .await
+            .unwrap();
+        keyboard::type_text(page, "nope").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        let error = "Not a valid color";
+        expect(
+            page,
+            &format!(
+                "(() => {{ const input = document.querySelector({INPUT:?}); \
+                 const ids = (input.getAttribute('aria-describedby') || '').split(' '); \
+                 return input.getAttribute('aria-invalid') === 'true' \
+                   && ids.some(id => document.getElementById(id)?.textContent.trim() === {error:?}) \
+                   && document.activeElement === input \
+                   && [...document.querySelectorAll('[role=status]')].some(s => s.textContent === {error:?}); }})()"
+            ),
+            "Enter on unparsable text to show and announce the error",
+        )
+        .await;
+        keyboard::type_text(page, "x").await.unwrap();
+        expect(
+            page,
+            &format!("document.querySelector({INPUT:?}).getAttribute('aria-invalid') !== 'true'"),
+            "the next keystroke to clear the error",
+        )
+        .await;
+        fixture.console.assert_clean("an unparsable color").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn expect(page: &chromiumoxide::Page, check: &str, what: &str) {
     if let Err(error) = wait::for_js_true(page, check, what).await {
         let focus: String = page

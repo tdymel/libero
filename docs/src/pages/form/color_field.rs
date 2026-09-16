@@ -47,7 +47,7 @@ pub fn ColorFieldPage() -> Element {
                         .doc("Makes the text read-only: a color comes from the dropdown alone."),
                     prop("fix_on_blur", "bool")
                         .default("true")
-                        .doc("Text that does not parse goes back to the last valid color on blur."),
+                        .doc("Text that does not parse goes back to the last valid color on blur. Off, it stays and shows `color.invalid` as an error."),
                     prop("close_on_swatch_click", "bool").default("false").doc("Picking a swatch closes the dropdown."),
                     prop("placeholder", "String").doc("Shown while the text is empty."),
                     prop("size", "Size").default("md").doc("Control height, font size and the dropdown picker."),

@@ -203,9 +203,12 @@ fn a_refused_date_says_which_rule_it_broke() {
                     "(() => {{ const input = document.querySelector({INPUT:?}); \
                      const ids = (input.getAttribute('aria-describedby') || '').split(' '); \
                      return input.getAttribute('aria-invalid') === 'true' && ids.some(id => \
-                       document.getElementById(id)?.textContent.trim() === {error:?}); }})()"
+                       document.getElementById(id)?.textContent.trim() === {error:?}) \
+                       && document.activeElement === input \
+                       && [...document.querySelectorAll('[role=status]')].some(s => s.textContent === {error:?}); }})()"
                 ),
-                &format!("{text:?} to describe the input with {error:?}"),
+                // Todo 535: said by a live region too, while focus stays.
+                &format!("{text:?} to describe the input with {error:?} and announce it"),
             )
             .await;
         }

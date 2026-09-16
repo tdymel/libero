@@ -52,6 +52,10 @@ pub(crate) static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
                 .overflow("hidden")
                 .text_overflow("ellipsis"),
         )
+        .selector(
+            "& [data-slot='nothing-found']",
+            sx().padding("4px 8px").color("text-dimmed"),
+        )
 });
 
 base_props! {
@@ -87,6 +91,10 @@ base_props! {
         /// region says `label`.
         #[props(default)]
         loading: Option<String>,
+        /// `Some(text)` while a typed query filters the rows. A query that
+        /// leaves none shows `empty`, else `text`, and the status region says it.
+        #[props(default)]
+        nothing_found: Option<String>,
         /// Above the rows, inside the dropdown and outside its scroll - a
         /// search box. It survives an empty list, which is the whole point:
         /// a query that matches nothing is exactly when the box has to still
@@ -164,10 +172,21 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     // busy subtree's changes back until it is done - by which time the loader
     // is gone. And a region has to be in the tree before its text changes to
     // be announced, so it stays mounted, empty, while there is nothing to say.
-    let status = props.loading.clone().filter(|_| opened);
     // The rows belong to the previous query while a fetch runs, so they are
     // neither drawn nor reachable by the arrows.
     let count = if loading { 0 } else { props.rows.len() };
+    let nothing_found = props
+        .nothing_found
+        .clone()
+        .filter(|_| opened && !loading && count == 0);
+    let status = props
+        .loading
+        .clone()
+        .filter(|_| opened)
+        .or_else(|| nothing_found.clone());
+    let empty = props
+        .empty
+        .or_else(|| nothing_found.map(|text| nothing_found_row(&text)));
     // Only the open list's count is read, and a skin may draw no rows while closed.
     if opened {
         props.state.set_rows(count);
@@ -247,8 +266,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     // otherwise force callers to derive `opened` from the option count.
     // A `header` keeps the box open through a list of nothing: a search that
     // matches no row must not close the thing holding the search.
-    let showing =
-        opened && (loading || count > 0 || props.empty.is_some() || props.header.is_some());
+    let showing = opened && (loading || count > 0 || empty.is_some() || props.header.is_some());
     // Mounted only while showing, so a closed list pays for no popover.
     let popup = showing.then(|| {
         rsx! {
@@ -267,7 +285,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 row_disabled: props.row_disabled,
                 active: active_row,
                 scroll_y,
-                empty: props.empty,
+                empty,
                 loading,
                 header: props.header,
                 multiselectable: props.multiselectable,
@@ -297,6 +315,13 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 {popup}
             },
         )
+}
+
+/// The dropdown's text for a query that matched nothing. `Cascader` draws it too.
+pub(crate) fn nothing_found_row(text: &str) -> Element {
+    rsx! {
+        div { "data-slot": "nothing-found", "{text}" }
+    }
 }
 
 #[derive(Props, Clone, PartialEq)]

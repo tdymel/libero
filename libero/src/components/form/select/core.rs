@@ -16,7 +16,7 @@ use crate::{
     },
     hooks::{
         ElementHandle, PopoverWidth, TYPEAHEAD_RESET, Typeahead, typeahead_match, use_element,
-        use_theme, use_typeahead,
+        use_localization, use_theme, use_typeahead,
     },
     platform::{ElementApi, press_kept_focus},
     sx::{StaticSx, sx},
@@ -283,6 +283,7 @@ field_props! {
 #[component]
 pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let theme = use_theme();
+    let nothing_found = use_localization().combobox.nothing_found;
     let size = props.size.copied_or(theme.select.size);
     let radius = props.radius.copied_or(theme.select.radius);
     let disabled = props.disabled.unwrap_or(false);
@@ -522,6 +523,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         size,
         radius,
         loading: props.loading,
+        nothing_found: (searchable && !query.read().is_empty()).then(|| nothing_found.to_string()),
         multiple,
         // A pick on a multi-select adds or drops a chip, which resizes the
         // trigger under an open list.
@@ -563,6 +565,8 @@ struct Listbox {
     size: Size,
     radius: Size,
     loading: Option<String>,
+    /// Said when the query leaves no rows.
+    nothing_found: Option<String>,
     multiple: bool,
     remeasure: u64,
     /// The search box to focus once the list is measured, when there is one.
@@ -582,6 +586,7 @@ fn select_listbox(list: Listbox) -> Element {
         size,
         radius,
         loading,
+        nothing_found,
         multiple,
         remeasure,
         autofocus,
@@ -595,6 +600,7 @@ fn select_listbox(list: Listbox) -> Element {
             groups,
             row_disabled,
             loading,
+            nothing_found,
             active: state.active(),
             onactive: move |row| state.set_active(Some(row)),
             opened,

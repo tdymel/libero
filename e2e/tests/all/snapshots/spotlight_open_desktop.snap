@@ -12,7 +12,7 @@ generic
     generic
     generic
       dialog "Command palette" [modal]
-        combobox "Command palette" [expanded] [haspopup=listbox]
+        combobox "Search commands" [expanded] [haspopup=listbox]
           generic
         listbox "Command palette"
           group "Pages"

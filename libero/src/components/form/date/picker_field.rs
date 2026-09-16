@@ -19,7 +19,9 @@ use crate::{
     components::{
         Caption, ClassList, FOCUSABLE_SELECTOR, FieldName, HtmlTag, Input, States, Validators,
         common::{NavigationChord, navigation_chord},
-        form::{FIELD_CONTROL_SX, FieldStatus, use_bound, use_field, use_field_frame},
+        form::{
+            FIELD_CONTROL_SX, FieldStatus, use_announcer, use_bound, use_field, use_field_frame,
+        },
         layout::use_box,
         surface::paper_sx,
     },
@@ -312,16 +314,17 @@ pub(super) fn use_picker_field<V: FieldValue>(
     };
     let text =
         draft().unwrap_or_else(|| value.map(|value| value.show(&formats)).unwrap_or_default());
+    // Says a refusal on Enter, where focus stays and the error line is not live.
+    let announcer = use_announcer();
+    // Returns the error when the text was refused.
     let commit = {
         let emit = emit.clone();
         move || {
-            let Some(text) = draft.peek().clone() else {
-                return;
-            };
+            let text = draft.peek().clone()?;
             if text.trim().is_empty() {
                 draft.set(None);
                 emit(None);
-                return;
+                return None;
             }
             let read =
                 V::read(&text, &formats, value, today).map_err(|_| names.invalid_date.to_string());
@@ -329,8 +332,12 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 Ok(next) => {
                     draft.set(None);
                     emit(Some(next));
+                    None
                 }
-                Err(error) => rejected.set(Some(error)),
+                Err(error) => {
+                    rejected.set(Some(error.clone()));
+                    Some(error)
+                }
             }
         }
     };
@@ -435,7 +442,9 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 let mut focused = focused;
                 focused();
             }
-            (true, false) => commit_on_silent_blur.clone()(),
+            (true, false) => {
+                commit_on_silent_blur.clone()();
+            }
             _ => {}
         }
         if (input.0 || dropdown.0) && !input.1 && !dropdown.1 {
@@ -462,6 +471,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .attr("aria-controls", showing.then(|| dialog_id.clone()))
         .event("oninput", move |event: FormEvent| {
             rejected.set(None);
+            announcer.clear();
             draft.set(Some(event.value()));
         })
         .event("onfocus", move |_: FocusEvent| focused())
@@ -476,7 +486,11 @@ pub(super) fn use_picker_field<V: FieldValue>(
         })
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
             _ if readonly => {}
-            Key::Enter => commit_on_enter(),
+            Key::Enter => {
+                if let Some(error) = commit_on_enter() {
+                    announcer.say(error);
+                }
+            }
             // APG: Alt+ArrowDown enters like ArrowDown; Ctrl/Meta is the caret's.
             Key::ArrowDown if navigation_chord(&event) != Some(NavigationChord::Browser) => {
                 event.prevent_default();
@@ -571,6 +585,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         div { onmounted: anchor.mount(),
             {frame.render(input)}
             {hidden}
+            {announcer.render()}
         }
     };
     field_box.render(control)

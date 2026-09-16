@@ -28,6 +28,41 @@ impl CommonLabels {
     };
 }
 
+/// Every list with a search or typed filter: `Select`, `MultiSelect`,
+/// `Cascader`, `Autocomplete`, `TagsField`. Its loader reads
+/// [`CommonLabels::loading`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ComboboxLabels {
+    /// Shown, and announced, when typed text matches no option.
+    pub nothing_found: &'static str,
+}
+
+impl ComboboxLabels {
+    pub const ENGLISH: Self = Self {
+        nothing_found: "No results",
+    };
+}
+
+/// What a `TagsField` announces when it refuses a tag. `{labels}` are the
+/// refused tags joined by `, `; the draft keeps the text.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TagsFieldLabels {
+    /// The tag is already in the list.
+    pub duplicate: &'static str,
+    /// The list holds `max_tags` already.
+    pub full: &'static str,
+    /// `tag_rules` turned it down.
+    pub not_allowed: &'static str,
+}
+
+impl TagsFieldLabels {
+    pub const ENGLISH: Self = Self {
+        duplicate: "Already added: {labels}",
+        full: "Tag limit reached, not added: {labels}",
+        not_allowed: "Not allowed: {labels}",
+    };
+}
+
 /// What a field holding chips announces when its list changes. `{labels}`,
 /// `{added}` and `{removed}` are labels joined by `, `.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -111,6 +146,8 @@ pub struct ColorLabels {
     pub choose: &'static str,
     /// Names `ColorField`'s eye dropper button.
     pub eye_dropper: &'static str,
+    /// `ColorField`'s error while its typed text is no color.
+    pub invalid: &'static str,
 }
 
 impl ColorLabels {
@@ -123,6 +160,7 @@ impl ColorLabels {
         alpha_value: "{value}%",
         choose: "Choose color",
         eye_dropper: "Pick a color from the screen",
+        invalid: "Not a valid color",
     };
 }
 
@@ -292,6 +330,8 @@ impl ColorSchemeButtonLabels {
 pub struct SpotlightLabels {
     /// Names the dialog, unless `SpotlightOptions::aria_label` does.
     pub label: &'static str,
+    /// Names the search box.
+    pub search: &'static str,
     pub placeholder: &'static str,
     /// Shown, and announced, when a query matches nothing.
     pub nothing_found: &'static str,
@@ -302,6 +342,7 @@ pub struct SpotlightLabels {
 impl SpotlightLabels {
     pub const ENGLISH: Self = Self {
         label: "Command palette",
+        search: "Search commands",
         placeholder: "Search...",
         nothing_found: "Nothing found",
         loading: "Searching",
@@ -488,6 +529,8 @@ pub struct FileFieldLabels {
     pub any_of: fn(&str) -> String,
     /// A card's file size units, bytes to terabytes, in powers of 1000.
     pub size_units: [&'static str; 5],
+    /// Between a size's whole and its tenth: `5.4 MB`, `5,4 MB`.
+    pub decimal_separator: &'static str,
 }
 
 /// `FileFieldLabels::ENGLISH.any_of`. A named fn, so every copy compares equal.
@@ -543,5 +586,6 @@ impl FileFieldLabels {
         drop_files: "Drop files here, or click to pick",
         any_of: english_any_of,
         size_units: ["B", "kB", "MB", "GB", "TB"],
+        decimal_separator: ".",
     };
 }

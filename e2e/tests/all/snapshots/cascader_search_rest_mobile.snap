@@ -9,6 +9,7 @@ generic
   StaticText "Where the parcel goes."
 generic
   combobox "Place" [expanded=false] [haspopup=listbox] [invalid] [required]
+status [atomic] [live=polite]
 generic
   StaticText "Cities only."
 generic

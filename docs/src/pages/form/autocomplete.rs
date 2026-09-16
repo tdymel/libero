@@ -145,7 +145,7 @@ pub fn AutocompletePage() -> Element {
                         .default("false")
                         .doc("Shows an x that empties the field, at the end of the frame."),
                     prop("empty", "Element")
-                        .doc("Shown in place of the list when nothing matches. Without it a list with no rows draws nothing."),
+                        .doc("Shown in place of the list when nothing matches. Without it, typed text matching no option shows the localization's `combobox.nothing_found`; either way that string is announced."),
                     prop("leading", "Element").doc("Inside the frame, before the control - a search icon."),
                     prop("trailing", "Element").doc("Inside the frame, after the control, before the clear x."),
                     prop("describe_leading", "bool")

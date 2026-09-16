@@ -130,7 +130,8 @@ pub struct SpotlightOptions {
     pub close_on_action: bool,
     /// Start every opening with an empty query.
     pub clear_on_close: bool,
-    /// Names the dialog. Unset, the theme's "Command palette".
+    /// Names the dialog and its list. Unset, the localization's "Command
+    /// palette". The search box reads `spotlight.search`.
     pub aria_label: Option<String>,
     /// Ctrl (Cmd on a Mac) plus this key toggles the palette from anywhere on
     /// the page - `'k'` by default, `None` for no hotkey. Web only: no other
@@ -355,7 +356,8 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                         spellcheck: "false",
                         "data-autofocus": "true",
                         "aria-autocomplete": "list",
-                        "aria-label": "{aria_label}",
+                        // Its own name: the dialog and the listbox carry `aria_label`.
+                        "aria-label": "{labels.search}",
                         placeholder: "{placeholder}",
                         value: "{query}",
                         oninput: move |event: FormEvent| {

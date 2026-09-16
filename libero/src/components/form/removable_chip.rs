@@ -13,8 +13,9 @@ use crate::{
 /// Capped at its slot by `Chip`'s own `max-width`, and allowed below its
 /// content: a flex item's floor is otherwise its min-content size. The label
 /// is known text here, so its own span ellipsizes and the `trailing` x stays whole.
+/// Unclipped, so the x's 24x24 hit area reaches past the pill (todo 645).
 static REMOVABLE_CHIP_SX: StaticSx = StaticSx::new(|| {
-    sx().min_width("0").selector(
+    sx().min_width("0").overflow("visible").selector(
         "& > [data-slot='label']",
         sx().min_width("0")
             .overflow("hidden")

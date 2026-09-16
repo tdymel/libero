@@ -4,21 +4,22 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, ComboboxOption, HtmlTag, Input, States,
+        Box, ComboboxOption, HtmlTag, Input, States, VisuallyHidden,
         common::{
             ChevronDownIcon, NavigationChord, attr, field_props, has_shortcut_modifier,
             input_from_str, navigation_chord,
         },
         form::{
-            ComboboxState, PreparedField, clear_button, combobox::COMBOBOX_DROPDOWN_SX,
+            ComboboxState, PreparedField, clear_button,
+            combobox::{COMBOBOX_DROPDOWN_SX, nothing_found_row},
             field_control_sx, use_combobox, use_field, use_field_frame, use_refocus_on_close,
         },
         layout::{BoxStyle, ScrollArea, use_box},
     },
     hooks::{
         ElementHandle, PopoverHandle, PopoverOptions, PopoverWidth, TYPEAHEAD_RESET, Typeahead,
-        typeahead_match, use_element, use_field_list_layer, use_popover_on, use_theme,
-        use_typeahead,
+        typeahead_match, use_element, use_field_list_layer, use_localization, use_popover_on,
+        use_theme, use_typeahead,
     },
     platform::{ElementApi, press_kept_focus},
     str_enum::str_enum,
@@ -277,6 +278,7 @@ field_props! {
 #[component]
 pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let theme = use_theme();
+    let nothing_found = use_localization().combobox.nothing_found;
     let size = props.size.copied_or(theme.cascader.size);
     let radius = props.radius.copied_or(theme.cascader.radius);
     let disabled = props.disabled.unwrap_or(false);
@@ -438,6 +440,13 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         padding: theme.popover.padding,
     });
 
+    // Drawn in the list's place and said by the status region below.
+    let nothing_found = (searching && visible.is_empty()).then_some(nothing_found);
+    let body = match nothing_found {
+        Some(text) => nothing_found_row(text),
+        None => body,
+    };
+
     let descendant = active_descendant(&id, layout, &cursor_now, path_row);
     let header = searchable.then(|| {
         search_header(
@@ -507,6 +516,12 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
                 .render(HtmlTag::Div, Vec::new(), frame.render(trigger))
         }
         {hidden}
+        // Always mounted: a region inserted with its text is not announced.
+        VisuallyHidden { role: "status",
+            if let Some(text) = nothing_found {
+                "{text}"
+            }
+        }
     })
 }
 

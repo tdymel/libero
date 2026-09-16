@@ -2,6 +2,8 @@
 
 use dioxus::html::FileData;
 
+use crate::localization::FileFieldLabels;
+
 /// A `FileField`'s value, in either arity.
 ///
 /// One type for both, because `multiple` is a runtime prop: a single-file
@@ -56,8 +58,10 @@ impl Files {
 }
 
 /// A file's size for a human, in the units a file manager shows: powers of
-/// 1000, one decimal once past a kilobyte. `units` runs from bytes up.
-pub(super) fn format_size(bytes: u64, units: &[&str; 5]) -> String {
+/// 1000, one decimal once past a kilobyte, in the localization's units and
+/// decimal separator.
+pub(super) fn format_size(bytes: u64, words: &FileFieldLabels) -> String {
+    let units = &words.size_units;
     let mut size = bytes as f64;
     let mut unit = 0;
     while size >= 1000.0 && unit + 1 < units.len() {
@@ -66,7 +70,10 @@ pub(super) fn format_size(bytes: u64, units: &[&str; 5]) -> String {
     }
     match unit {
         0 => format!("{bytes} {}", units[0]),
-        _ => format!("{size:.1} {}", units[unit]),
+        _ => {
+            let number = format!("{size:.1}").replacen('.', words.decimal_separator, 1);
+            format!("{number} {}", units[unit])
+        }
     }
 }
 
@@ -105,11 +112,10 @@ impl FromIterator<FileData> for Files {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::localization::FileFieldLabels;
 
     #[test]
     fn a_size_reads_the_way_a_file_manager_shows_it() {
-        let size = |bytes| format_size(bytes, &FileFieldLabels::ENGLISH.size_units);
+        let size = |bytes| format_size(bytes, &FileFieldLabels::ENGLISH);
         assert_eq!(size(0), "0 B");
         assert_eq!(size(999), "999 B");
         assert_eq!(size(1_000), "1.0 kB");
@@ -118,11 +124,15 @@ mod tests {
         assert_eq!(size(2_000_000_000), "2.0 GB");
     }
 
-    /// Todo 656: the units are the localization's.
+    /// Todos 656 and 689: the units and the separator are the localization's.
     #[test]
     fn a_size_reads_in_the_localized_units() {
-        let french = ["o", "ko", "Mo", "Go", "To"];
+        let french = FileFieldLabels {
+            size_units: ["o", "ko", "Mo", "Go", "To"],
+            decimal_separator: ",",
+            ..FileFieldLabels::ENGLISH
+        };
         assert_eq!(format_size(12, &french), "12 o");
-        assert_eq!(format_size(5_400_000, &french), "5.4 Mo");
+        assert_eq!(format_size(5_400_000, &french), "5,4 Mo");
     }
 }

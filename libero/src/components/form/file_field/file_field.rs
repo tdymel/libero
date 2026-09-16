@@ -1259,7 +1259,7 @@ fn default_card(
 ) -> Element {
     let name = file.name();
     let words = current_localization();
-    let size = format_size(file.size(), &words.file_field.size_units);
+    let size = format_size(file.size(), &words.file_field);
     let remove_label = fill(words.common.remove, &[("label", &name)]);
     rsx! {
         span { "data-slot": "name", "{name}" }

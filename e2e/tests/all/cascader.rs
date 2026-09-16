@@ -56,6 +56,12 @@ fn a_searchable_field_meets_the_baseline() {
         .run();
 }
 
+/// Todo 482: a search matching nothing shows "No results" and says it.
+#[test]
+fn a_search_matching_nothing_is_shown_and_said() {
+    crate::select::search_matching_nothing("/cascader/search", TRIGGER);
+}
+
 /// The open search box carries the field's label, captions and states.
 #[test]
 fn the_open_search_box_is_announced_as_the_field() {

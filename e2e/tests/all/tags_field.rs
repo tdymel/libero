@@ -100,6 +100,54 @@ async fn tags(page: &chromiumoxide::Page) -> Vec<String> {
     .unwrap()
 }
 
+/// Todo 545: Enter on a refused tag keeps the draft and says why.
+#[test]
+fn a_refused_tag_stays_in_the_draft_and_is_announced() {
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/cursor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, CURSOR, 10).await.unwrap();
+        keyboard::type_text(page, "WASM").await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "[...document.querySelectorAll('[role=status]')].some(e => e.textContent === 'Already added: WASM')",
+            "the refusal to be announced",
+        )
+        .await
+        .unwrap();
+        let draft: String = page
+            .evaluate(format!("document.querySelector({CURSOR:?}).value"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(draft, "WASM", "the refused text stays in the draft");
+        assert_eq!(tags(page).await, ["rust", "dioxus", "wasm", "css"]);
+
+        fixture.console.assert_clean("a refused tag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 482: a draft matching no suggestion shows "No results" and says it.
+#[test]
+fn a_draft_matching_no_suggestion_is_shown_and_said() {
+    block_on(async {
+        let fixture = Fixture::open("/tags-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::type_text(page, "zzz").await.unwrap();
+        crate::autocomplete::wait_for_nothing_found(page, "/tags-field").await;
+        fixture.console.assert_clean("nothing found").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// ArrowLeft from the empty input walks the chips, Delete/Backspace remove the
 /// focused one and the focus moves on before it goes (todo 546).
 #[test]

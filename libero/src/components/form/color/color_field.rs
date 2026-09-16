@@ -6,8 +6,8 @@ use crate::{
         ActionIcon, FOCUSABLE_SELECTOR, HtmlTag, Input, States,
         common::{EyeDropperIcon, NavigationChord, field_props, navigation_chord},
         form::{
-            FIELD_CONTROL_SX, SliderChangeEvent, slot_icon_size, use_bound, use_field,
-            use_field_frame,
+            FIELD_CONTROL_SX, FieldStatus, SliderChangeEvent, slot_icon_size, use_announcer,
+            use_bound, use_field, use_field_frame,
         },
         layout::use_box,
         surface::paper_sx,
@@ -171,11 +171,21 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     };
     let dropper_emit = emit.clone();
 
+    let labels = use_localization().color;
+    // Typed text that is no color, found on Enter or on a blur that keeps it;
+    // cleared by the next keystroke, as `DateField` does.
+    let mut rejected = use_signal(|| false);
+    let announcer = use_announcer();
+    // A color from the dropdown or the eyedropper drops the draft, and the error with it.
+    let status: Input<FieldStatus> = match rejected() && draft.read().is_some() {
+        true => Input::Value(FieldStatus::Error(labels.invalid.to_string())),
+        false => props.status.clone(),
+    };
     let field = use_field()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
-        .status(&props.status)
+        .status(&status)
         .rules(props.validate.check(&value))
         .bound(&bound)
         .required(required)
@@ -199,7 +209,6 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     });
 
     let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(slot_icon_size(size)).into();
-    let labels = use_localization().color;
     let trailing = (with_eye_dropper && has_eye_dropper() && !disabled && !readonly).then(|| {
         rsx! {
             ActionIcon {
@@ -300,13 +309,17 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     };
     // Text that parsed was already emitted, so it goes back to the value's own
     // spelling; text that did not stays only if asked.
-    let mut blurred = move || {
-        let parses = draft
+    let unparsable = move || {
+        draft
             .peek()
             .as_ref()
-            .is_some_and(|text| text.parse::<ColorCode>().is_ok());
-        if fix_on_blur || parses {
+            .is_some_and(|text| text.parse::<ColorCode>().is_err())
+    };
+    let mut blurred = move || {
+        if fix_on_blur || !unparsable() {
             draft.set(None);
+        } else {
+            rejected.set(true);
         }
     };
     // Blitz's Tab and libero's own `focus()` fire no focus event: the silent
@@ -355,11 +368,20 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                 emit(color);
             }
             draft.set(Some(text));
+            if *rejected.peek() {
+                rejected.set(false);
+            }
+            announcer.clear();
         })
         .event("onfocus", move |_: FocusEvent| focused())
         .event("onclick", move |_: MouseEvent| opened.set(true))
         .event("onblur", move |_: FocusEvent| blurred())
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
+            // Focus stays, and the error line is no live region.
+            Key::Enter if unparsable() => {
+                rejected.set(true);
+                announcer.say(labels.invalid.to_string());
+            }
             // APG: Alt+ArrowDown enters like ArrowDown; Ctrl/Meta is the caret's.
             Key::ArrowDown
                 if has_dropdown
@@ -460,7 +482,10 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
 
     let control = rsx! {
         // On the wrapper, not the input: focus can also leave from the eyedropper.
-        div { onmounted: anchor.mount(), onfocusout: move |_| settle(), {frame.render(input)} }
+        div { onmounted: anchor.mount(), onfocusout: move |_| settle(),
+            {frame.render(input)}
+            {announcer.render()}
+        }
     };
     field.render(control)
 }

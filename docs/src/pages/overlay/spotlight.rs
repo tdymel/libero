@@ -347,7 +347,7 @@ pub fn SpotlightPage() -> Element {
                     prop("limit", "Option<usize>").doc("A cap on the rows drawn, counted through the groups."),
                     prop("close_on_action", "bool").default("true").doc("Close after running an action."),
                     prop("clear_on_close", "bool").default("true").doc("Start every opening with an empty query."),
-                    prop("aria_label", "Option<String>").default("\"Command palette\"").doc("Names the dialog."),
+                    prop("aria_label", "Option<String>").default("\"Command palette\"").doc("Names the dialog and its list. The search box reads the localization's `spotlight.search`, \"Search commands\"."),
                     prop("shortcut", "Option<char>").default("Some('k')").doc("Ctrl (Cmd on a Mac) plus this key toggles the palette from anywhere on the page. `None` for no hotkey. Web only. A key the browser already uses (L, T, W, R, F, ...) warns in a debug build."),
                     prop("highlight_first_on_query", "bool").default("true").doc("Highlight the first row after every keystroke, so `Enter` runs it without an `ArrowDown` first. Off, a fresh query arms nothing."),
                     prop("loading", "bool").default("false").doc("The results are still coming. A loader replaces the rows and \"nothing found\", and the status region says \"Searching\" (the localization's label)."),

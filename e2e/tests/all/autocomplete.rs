@@ -140,15 +140,27 @@ fn its_status_region_is_mounted_and_silent_at_rest() {
 }
 
 /// While typing, nothing is highlighted, so Home and End move the caret (APG
-/// editable combobox), and a query matching nothing is not `[expanded]` over a
-/// popup that draws nothing (todo 449).
+/// editable combobox). A query matching nothing shows "No results" and says it
+/// politely (todo 482); the popup then draws that text, so it stays expanded.
 #[test]
 fn typing_keeps_home_end_and_expanded_honest() {
     editable_combobox_typing("/autocomplete", "e");
 }
 
+/// Waits until a status region says "No results" and the dropdown shows it.
+pub async fn wait_for_nothing_found(page: &chromiumoxide::Page, what: &str) {
+    wait::for_js_true(
+        page,
+        "[...document.querySelectorAll('[role=status]')].some(e => e.textContent.includes('No results')) \
+         && [...document.querySelectorAll(\"[data-slot='nothing-found']\")].some(e => e.offsetParent !== null)",
+        what,
+    )
+    .await
+    .unwrap_or_else(|e| panic!("{e}"));
+}
+
 /// Types `query` (it must match a row), checks Home/End edit the text, then
-/// types a query matching nothing and checks the trigger collapses.
+/// types a query matching nothing and checks it is shown and announced.
 pub fn editable_combobox_typing(route: &str, query: &str) {
     block_on(async {
         let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
@@ -177,15 +189,21 @@ pub fn editable_combobox_typing(route: &str, query: &str) {
         );
 
         keyboard::type_text(page, "zzz").await.unwrap();
-        wait::for_js_true(
-            page,
-            &format!(
-                "document.querySelector({TRIGGER:?}).getAttribute('aria-expanded') === 'false'"
-            ),
-            "a query matching nothing to collapse the combobox",
-        )
-        .await
-        .unwrap_or_else(|e| panic!("{route}: {e}"));
+        wait_for_nothing_found(page, &format!("{route}: a query matching nothing")).await;
+        // The popup draws the text, and no listbox is left to point at.
+        let wiring: (Option<String>, Option<String>) = page
+            .evaluate(format!(
+                "(t => [t.getAttribute('aria-expanded'), t.getAttribute('aria-controls')])(document.querySelector({TRIGGER:?}))"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            wiring,
+            (Some("true".into()), None),
+            "{route}: nothing found"
+        );
 
         fixture.console.assert_clean(route).unwrap();
         fixture.close().await.unwrap();

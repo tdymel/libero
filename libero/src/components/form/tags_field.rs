@@ -7,13 +7,14 @@ use crate::{
         CaretKeys, ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input, SelectionArgs,
         common::{field_props, ring_overlay},
         form::{
-            clear_button, field_control_sx, removable_chip, row_label, use_bound,
+            clear_button, field_control_sx, removable_chip, row_label, use_announcer, use_bound,
             use_chip_announcer, use_field, use_field_frame,
         },
         layout::{BoxStyle, use_box},
         use_combobox,
     },
-    hooks::{ElementHandle, PopoverWidth, use_element, use_theme},
+    hooks::{ElementHandle, PopoverWidth, use_element, use_localization, use_theme},
+    localization::{TagsFieldLabels, fill},
     platform::ElementApi,
     sx::{StaticSx, sx},
     theme::Size,
@@ -214,12 +215,21 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     // An `Rc` rather than a `use_callback`: blur is one of the paths that calls
     // it, and nothing focus or blur can re-enter goes through `use_callback`
     // ([[codebase/reentrant-handlers]]).
-    let add: Rc<dyn Fn(Vec<String>)> = Rc::new(move |pieces: Vec<String>| {
-        if let Some(next) = merge(&merging, pieces, &rules, &onrefuse)
+    // Returns the first refused tag, which the draft keeps.
+    let refusals = use_announcer();
+    let localization = use_localization();
+    let words = localization.tags_field;
+    let add: Add = Rc::new(move |pieces: Vec<String>| {
+        let merged = merge(&merging, pieces, &rules, &onrefuse);
+        if let Some(next) = merged.next
             && let Some(emit) = &emit
         {
             emit(next);
         }
+        if let Some(message) = refusal_message(&merged.refused, &words) {
+            refusals.say(message);
+        }
+        merged.refused.into_iter().next().map(|(tag, _)| tag)
     });
 
     let tags = tags_field_chips(
@@ -233,6 +243,12 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
 
     let rows = tags_field_rows(suggestions, &held, &text(), &add, text, state);
     let row_count = rows.len();
+    let nothing_found = (!text().trim().is_empty()
+        && props
+            .suggestions
+            .as_ref()
+            .is_some_and(|all| !all.is_empty()))
+    .then(|| localization.combobox.nothing_found.to_string());
 
     let clear_change = onchange.clone();
     let clearable = props.clearable.unwrap_or(false);
@@ -308,9 +324,13 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 onactive: move |row| state.set_active(Some(row)),
                 // No row left to offer is not open: `aria-expanded` must not
                 // claim a popup that draws nothing.
-                opened: state.is_open() && !disabled && !readonly && row_count > 0,
+                opened: state.is_open()
+                    && !disabled
+                    && !readonly
+                    && (row_count > 0 || nothing_found.is_some()),
                 onopened: move |opened| state.set_open(opened),
                 state,
+                nothing_found,
                 caret_keys: CaretKeys::Unhighlighted,
                 labelled_by: field.label_id(),
                 size,
@@ -335,8 +355,12 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         {body}
         {hidden}
         {announcer}
+        {refusals.render()}
     })
 }
+
+/// The one path that adds tags. Returns the first refused tag, if any.
+type Add = Rc<dyn Fn(Vec<String>) -> Option<String>>;
 
 /// What one tag has to satisfy before it joins the list.
 struct TagRules {
@@ -345,37 +369,85 @@ struct TagRules {
     rule: Option<Callback<String, bool>>,
 }
 
+/// Why a tag was turned away.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Refusal {
+    Duplicate,
+    Full,
+    NotAllowed,
+}
+
+/// What one edit did: the list to emit, and the tags it turned away.
+#[derive(Debug, PartialEq)]
+struct Merged {
+    /// `None` when nothing was added, which keeps a refused edit from
+    /// emitting a change.
+    next: Option<Vec<String>>,
+    refused: Vec<(String, Refusal)>,
+}
+
 /// Folds every candidate into the list one at a time, so a batch behaves
-/// exactly like the same tags typed one after another. `None` when nothing was
-/// added, which is what keeps a refused edit from emitting a change.
+/// exactly like the same tags typed one after another.
 fn merge(
     held: &[String],
     pieces: Vec<String>,
     rules: &TagRules,
     onrefuse: &Option<EventHandler<String>>,
-) -> Option<Vec<String>> {
+) -> Merged {
     let mut next = held.to_vec();
     let mut added = false;
+    let mut refused = Vec::new();
     for piece in pieces {
         let tag = piece.trim().to_string();
         if tag.is_empty() {
             continue;
         }
         let folded = tag.to_lowercase();
-        let refused = (!rules.allow_duplicates
-            && next.iter().any(|held| held.trim().to_lowercase() == folded))
-            || rules.max_tags.is_some_and(|max| next.len() >= max)
-            || rules.rule.is_some_and(|rule| !rule.call(tag.clone()));
-        if refused {
+        let refusal = if !rules.allow_duplicates
+            && next.iter().any(|held| held.trim().to_lowercase() == folded)
+        {
+            Some(Refusal::Duplicate)
+        } else if rules.max_tags.is_some_and(|max| next.len() >= max) {
+            Some(Refusal::Full)
+        } else if rules.rule.is_some_and(|rule| !rule.call(tag.clone())) {
+            Some(Refusal::NotAllowed)
+        } else {
+            None
+        };
+        if let Some(refusal) = refusal {
             if let Some(onrefuse) = onrefuse {
-                onrefuse.call(tag);
+                onrefuse.call(tag.clone());
             }
+            refused.push((tag, refusal));
             continue;
         }
         next.push(tag);
         added = true;
     }
-    added.then_some(next)
+    Merged {
+        next: added.then_some(next),
+        refused,
+    }
+}
+
+/// One sentence per reason, in a fixed order; `None` when nothing was refused.
+fn refusal_message(refused: &[(String, Refusal)], words: &TagsFieldLabels) -> Option<String> {
+    let sentences: Vec<String> = [
+        (Refusal::Duplicate, words.duplicate),
+        (Refusal::Full, words.full),
+        (Refusal::NotAllowed, words.not_allowed),
+    ]
+    .into_iter()
+    .filter_map(|(reason, template)| {
+        let labels: Vec<&str> = refused
+            .iter()
+            .filter(|(_, why)| *why == reason)
+            .map(|(tag, _)| tag.as_str())
+            .collect();
+        (!labels.is_empty()).then(|| fill(template, &[("labels", &labels.join(", "))]))
+    })
+    .collect();
+    (!sentences.is_empty()).then(|| sentences.join(". "))
 }
 
 /// The pieces a string breaks into, or nothing at all when it holds no splitter
@@ -522,7 +594,7 @@ fn tags_field_rows(
     suggestions: Option<Vec<String>>,
     held: &[String],
     draft: &str,
-    add: &Rc<dyn Fn(Vec<String>)>,
+    add: &Add,
     mut text: Signal<String>,
     state: ComboboxState,
 ) -> Vec<Element> {
@@ -542,7 +614,8 @@ fn tags_field_rows(
             rsx! {
                 ComboboxOption {
                     onpick: move |_| {
-                        pick(vec![suggestion.clone()]);
+                        // The draft was only a filter here, so it goes either way.
+                        let _ = pick(vec![suggestion.clone()]);
                         text.set(String::new());
                         state.set_active(None);
                     },
@@ -579,7 +652,7 @@ struct Draft {
     text: Signal<String>,
     state: ComboboxState,
     held: Vec<String>,
-    add: Rc<dyn Fn(Vec<String>)>,
+    add: Add,
     split_chars: Vec<String>,
     has_suggestions: bool,
     disabled: bool,
@@ -647,10 +720,8 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                 // normalising `","` to `""` would leave the comma on screen.
                 true if raw != text() => text.set(raw),
                 true => {}
-                false => {
-                    typing(pieces);
-                    text.set(String::new());
-                }
+                // A refused tag stays in the draft, to fix or drop.
+                false => text.set(typing(pieces).unwrap_or_default()),
             }
             // The list changes under the highlight, so typing disarms it: the
             // next Enter belongs to what was typed, not to a row that happens
@@ -673,8 +744,9 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                         && !text().trim().is_empty() =>
                 {
                     event.prevent_default();
-                    entering(vec![text()]);
-                    text.set(String::new());
+                    if entering(vec![text()]).is_none() {
+                        text.set(String::new());
+                    }
                     state.set_active(None);
                 }
                 // The input is the value's own editor here, not a filter over a
@@ -706,8 +778,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         // it off, and one for "discard my typing" is not worth the line.
         .event("onblur", move |_: FocusEvent| {
             let draft = text();
-            if !readonly && !draft.trim().is_empty() {
-                blurring(vec![draft]);
+            if !readonly && !draft.trim().is_empty() && blurring(vec![draft]).is_none() {
                 text.set(String::new());
             }
             state.close();
@@ -747,13 +818,38 @@ mod tests {
     /// way, which is what folding one at a time buys.
     #[test]
     fn max_tags_fills_the_room_that_is_left_rather_than_refusing_the_batch() {
-        let next = merge(
+        let merged = merge(
             &tags(&["rust"]),
             tags(&["dioxus", "wasm", "css"]),
             &rules(false, Some(3)),
             &None,
         );
-        assert_eq!(next, Some(tags(&["rust", "dioxus", "wasm"])));
+        assert_eq!(merged.next, Some(tags(&["rust", "dioxus", "wasm"])));
+        assert_eq!(merged.refused, [("css".to_string(), Refusal::Full)]);
+    }
+
+    /// Todo 545: a refusal says why, one sentence per reason.
+    #[test]
+    fn a_refusal_names_the_tags_and_the_reason() {
+        let merged = merge(
+            &tags(&["rust", "css"]),
+            tags(&["Rust", "wasm", "CSS"]),
+            &rules(false, Some(3)),
+            &None,
+        );
+        assert_eq!(
+            refusal_message(&merged.refused, &TagsFieldLabels::ENGLISH),
+            Some("Already added: Rust, CSS".to_string())
+        );
+        let full = [
+            ("a".to_string(), Refusal::Full),
+            ("b".to_string(), Refusal::Duplicate),
+        ];
+        assert_eq!(
+            refusal_message(&full, &TagsFieldLabels::ENGLISH),
+            Some("Already added: b. Tag limit reached, not added: a".to_string())
+        );
+        assert_eq!(refusal_message(&[], &TagsFieldLabels::ENGLISH), None);
     }
 
     /// Trimmed and lowercased on both sides - and a batch is compared against
@@ -766,15 +862,16 @@ mod tests {
                 tags(&[" rust "]),
                 &rules(false, None),
                 &None
-            ),
+            )
+            .next,
             None
         );
         assert_eq!(
-            merge(&tags(&[]), tags(&["a", "A"]), &rules(false, None), &None),
+            merge(&tags(&[]), tags(&["a", "A"]), &rules(false, None), &None).next,
             Some(tags(&["a"]))
         );
         assert_eq!(
-            merge(&tags(&["Rust"]), tags(&["rust"]), &rules(true, None), &None),
+            merge(&tags(&["Rust"]), tags(&["rust"]), &rules(true, None), &None).next,
             Some(tags(&["Rust", "rust"]))
         );
     }
@@ -794,11 +891,11 @@ mod tests {
     #[test]
     fn an_edit_that_adds_nothing_reports_no_change() {
         assert_eq!(
-            merge(&tags(&["a"]), tags(&["  "]), &rules(false, None), &None),
+            merge(&tags(&["a"]), tags(&["  "]), &rules(false, None), &None).next,
             None
         );
         assert_eq!(
-            merge(&tags(&["a"]), tags(&["b"]), &rules(false, Some(1)), &None),
+            merge(&tags(&["a"]), tags(&["b"]), &rules(false, Some(1)), &None).next,
             None
         );
     }

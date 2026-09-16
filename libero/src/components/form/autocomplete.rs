@@ -8,7 +8,7 @@ use crate::{
         layout::use_box,
         use_combobox,
     },
-    hooks::{PopoverWidth, use_element, use_theme},
+    hooks::{PopoverWidth, use_element, use_localization, use_theme},
     utils::warn,
 };
 
@@ -77,8 +77,9 @@ field_props! {
         /// Shows an x that empties the field while it holds text.
         #[props(default)]
         clearable: Option<bool>,
-        /// Shown in place of the list when nothing matches. Without it a list
-        /// with no rows draws nothing at all.
+        /// Shown in place of the list when nothing matches. Without it, typed
+        /// text matching no option shows the localization's
+        /// `combobox.nothing_found`; either way that string is announced.
         #[props(default)]
         empty: Option<Element>,
         /// Inside the frame, before the control - a search icon.
@@ -111,6 +112,7 @@ field_props! {
 #[component]
 pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let theme = use_theme();
+    let nothing_found = use_localization().combobox.nothing_found;
     let size = props.size.copied_or(theme.autocomplete.size);
     let radius = props.radius.copied_or(theme.autocomplete.radius);
     let required = props.required.unwrap_or(false);
@@ -209,6 +211,9 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         })
         .collect();
     let has_rows = !rows.is_empty();
+    // Typed text against a list that has options to match, or a fetched one.
+    let nothing_found = (!text.is_empty() && (prefiltered || !props.options.is_empty()))
+        .then(|| nothing_found.to_string());
 
     let clear_input = oninput.clone();
     let clear = clear_button(
@@ -287,11 +292,15 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             onactive: move |row| state.set_active(Some(row)),
             // Nothing to show is not open: `aria-expanded` must not claim a
             // popup that draws nothing.
-            opened: state.is_open() && !disabled && !readonly && (has_rows || props.empty.is_some()),
+            opened: state.is_open()
+                && !disabled
+                && !readonly
+                && (has_rows || props.empty.is_some() || nothing_found.is_some()),
             onopened: move |opened| state.set_open(opened),
             state,
             caret_keys: CaretKeys::Unhighlighted,
             empty: props.empty,
+            nothing_found,
             size,
             radius,
             disabled: disabled || readonly,

@@ -10,6 +10,7 @@ generic
     generic
       StaticText "#1c7ed6"
   button "Pick a color from the screen"
+status [atomic] [live=polite]
 generic
   dialog "Choose color"
     generic

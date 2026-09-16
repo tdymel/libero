@@ -9,6 +9,7 @@ generic
   combobox "Arrival" = September 25, 2026 [expanded] [haspopup=dialog]
     generic
       StaticText "September 25, 2026"
+status [atomic] [live=polite]
 generic
   dialog "Date"
     button "Previous month"

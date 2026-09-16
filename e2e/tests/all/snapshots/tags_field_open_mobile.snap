@@ -12,6 +12,7 @@ generic
     generic
 status [atomic] [live=polite]
 status [atomic] [live=polite]
+status [atomic] [live=polite]
 generic
   generic
     listbox "Topics"

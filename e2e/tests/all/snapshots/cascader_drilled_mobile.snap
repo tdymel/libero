@@ -7,6 +7,7 @@ LabelText
   StaticText "Place"
 generic
   combobox "Place" [expanded] [haspopup=listbox]
+status [atomic] [live=polite]
 paragraph
 generic
   generic

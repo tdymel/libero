@@ -50,6 +50,12 @@ fn home_and_end_edit_the_search_query() {
     crate::select::search_home_end_edit_the_query("/multi-select/search", TRIGGER, "an");
 }
 
+/// Todo 482: a search matching nothing shows "No results" and says it.
+#[test]
+fn a_search_matching_nothing_is_shown_and_said() {
+    crate::select::search_matching_nothing("/multi-select/search", TRIGGER);
+}
+
 /// Todo 519: Tab and Alt+ArrowUp only close; a pick toggles, so leaving must
 /// not add the highlight. Cherry is held, the list opens on it, then Damson.
 #[test]

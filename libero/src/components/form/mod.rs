@@ -1,3 +1,4 @@
+mod announcer;
 mod autocomplete;
 mod caption;
 mod cascader;
@@ -31,6 +32,7 @@ mod use_field;
 mod use_field_frame;
 mod validation;
 
+pub(crate) use announcer::use_announcer;
 pub use autocomplete::{
     Autocomplete, AutocompleteFilterArgs, AutocompleteOptionArgs, AutocompleteProps,
 };

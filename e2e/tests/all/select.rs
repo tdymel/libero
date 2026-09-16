@@ -505,3 +505,31 @@ pub fn search_home_end_edit_the_query(route: &str, trigger: &str, query: &str) {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 482: a search matching nothing shows "No results" and says it.
+#[test]
+fn a_search_matching_nothing_is_shown_and_said() {
+    search_matching_nothing("/select/field", TRIGGER);
+}
+
+/// Opens the list from `trigger`, types a query matching nothing into the
+/// search box, and waits for "No results" on screen and in a status region.
+pub fn search_matching_nothing(route: &str, trigger: &str) {
+    block_on(async {
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, trigger, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement === document.querySelector({SEARCH:?})"),
+            "the search box to take focus",
+        )
+        .await
+        .unwrap_or_else(|e| panic!("{route}: {e}"));
+        keyboard::type_text(page, "zzz").await.unwrap();
+        crate::autocomplete::wait_for_nothing_found(page, route).await;
+        fixture.console.assert_clean(route).unwrap();
+        fixture.close().await.unwrap();
+    });
+}

@@ -34,8 +34,8 @@ const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
 const SUGGESTIONS: &str =
     r#"suggestions: vec!["rust".into(), "dioxus".into(), "wasm".into(), "css".into()]"#;
 
-/// One tag at a time, before it joins the list. The refusal itself is silent,
-/// so the helper is how the caller says something anyway.
+/// One tag at a time, before it joins the list. The field only announces a
+/// refusal, so the helper is how the caller shows why.
 // snippet: let mut topics = use_signal(Vec::<String>::new);
 // snippet: let mut refused = use_signal(|| None::<String>);
 // snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
@@ -100,7 +100,7 @@ pub fn TagsFieldPage() -> Element {
                     prop("max_tags", "usize")
                         .doc("The most tags the field accepts. Everything past it is refused one tag at a time, so a paste fills the remaining room instead of being rejected whole."),
                     prop("tag_rules", "Callback<String, bool>")
-                        .doc("Accepts or refuses one tag before it is added. Never shows a message - a refusal is silent."),
+                        .doc("Accepts or refuses one tag before it is added. A refused tag stays in the draft, and the field announces why."),
                     prop("onrefuse", "EventHandler<String>")
                         .doc("A tag was refused: a duplicate, one past `max_tags`, or one `tag_rules` turned down. The only thing `onchange` cannot report."),
                     prop("validate", "Validators<Vec<String>>")
