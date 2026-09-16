@@ -13,6 +13,7 @@ mod tree;
 
 pub use accordion::{Accordion, AccordionOpen, AccordionProps};
 pub use anchor::{Anchor, AnchorProps, AnchorUnderline};
+pub(crate) use anchor::{NewTabHint, wants_new_tab_hint};
 pub use burger::{Burger, BurgerProps};
 pub use carousel::{Carousel, CarouselAlign, CarouselProps};
 pub(crate) use carousel::{CarouselJump, CarouselQuietWhenFits};

@@ -138,6 +138,9 @@ fn Demo() -> Element {
 Space toggles a selectable chip. Keep `children` to text and `Icon` - a
 `<label>` hijacks clicks on any nested control.
 
+A `to` chip with `target: "_blank"` draws the same external icon and hidden
+"(opens in a new tab)" as `Anchor`; `new_tab_hint: false` drops both.
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -153,7 +156,8 @@ Space toggles a selectable chip. Keep `children` to text and `Icon` - a
 | `value` | `String` | `on` | What the chip posts under its `name` when it is checked, so a row of filter chips can share one name. Left out, it posts the browser's `on`, as `Checkbox` does. |
 | `onclick` | `EventHandler<MouseEvent>` | - | A plain action; its presence makes the chip a `<button>`. |
 | `to` | `NavigationTarget` | - | Renders a router-aware link instead. Takes precedence over `onclick`. |
-| `target` | `String` | - | Link target, e.g. `_blank`. Only with `to`. |
+| `target` | `String` | - | Link target, e.g. `_blank`. Only with `to`. `"_blank"` adds a small external icon and a hidden "(opens in a new tab)" from the localization, as on `Anchor`. |
+| `new_tab_hint` | `bool` | `true` | `false` drops the icon and the hidden text a `"_blank"` target adds. |
 | `icon` | `Element` | - | Drawn before the label, with a gap; it never shrinks. |
 | `trailing` | `Element` | - | Drawn after the label, with a gap; it never shrinks - a remove x. Outside a checkbox chip's `<label>`, so it may be a button, but not on an `onclick` or `to` chip. |
 | `children` | `Element` | required | The label, laid out as the chip's own flex items and cut at its edge. Text and `Icon` only - a `<label>` hijacks clicks on nested controls. |

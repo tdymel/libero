@@ -177,3 +177,44 @@ fn trailing_follows_the_label_and_stays_out_of_a_checkbox_label() {
         "{html}"
     );
 }
+
+/// Todo 672: a `_blank` link chip gets Anchor's new-tab cue after its
+/// children, and the caller can opt out.
+#[test]
+fn a_blank_link_chip_adds_the_new_tab_hint_unless_opted_out() {
+    fn blank() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { to: "https://example.com", target: "_blank", "Example" }
+            }
+        }
+    }
+    fn opted_out() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { to: "https://example.com", target: "_blank", new_tab_hint: false, "Example" }
+            }
+        }
+    }
+    fn same_tab() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { to: "https://example.com", "Example" }
+            }
+        }
+    }
+
+    let html = body(&render(blank));
+    assert!(html.contains("(opens in a new tab)"), "{html}");
+    let text_end = html.find("Example").unwrap();
+    assert!(
+        html.find("data-anchor-new-tab").unwrap() > text_end,
+        "{html}"
+    );
+    assert!(html.contains("<svg"), "{html}");
+    for app in [opted_out as fn() -> Element, same_tab] {
+        let html = body(&render(app));
+        assert!(!html.contains("new tab"), "{html}");
+        assert!(!html.contains("<svg"), "{html}");
+    }
+}

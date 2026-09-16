@@ -28,6 +28,10 @@ fn element_children() -> Element {
                 sx: sx().width("48px").padding("0"),
                 Box { id: "swatch-fill", sx: sx().width("100%").height("100%").background("blue") }
             }
+            Button { id: "with-icon",
+                icon: rsx! { span { id: "glyph", display: "inline-block", width: "16px", height: "16px" } },
+                span { id: "with-icon-text", "Save" }
+            }
         }
     }
 }
@@ -58,6 +62,16 @@ fn element_children_keep_the_callers_flex_layout() {
         fw >= w - 2.0 && fh >= h - 2.0,
         "swatch fill collapsed: {fw}x{fh} in {w}x{h}\n{}",
         page.tree()
+    );
+
+    // The `icon` slot: whole, a gap before the text, on its centre line.
+    let (gx, gy, gw, gh) = page.rect("#glyph");
+    let (tx, ty, _, th) = page.rect("#with-icon-text");
+    assert!(gw >= 15.0, "icon squeezed: {gw}\n{}", page.tree());
+    assert!(tx - (gx + gw) >= 2.0, "no gap: {} to {tx}", gx + gw);
+    assert!(
+        ((gy + gh / 2.0) - (ty + th / 2.0)).abs() <= 1.5,
+        "icon off the text centre: {gy}+{gh} vs {ty}+{th}"
     );
 }
 

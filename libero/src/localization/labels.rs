@@ -218,10 +218,8 @@ impl AvatarLabels {
 /// The words a burger announces itself with.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BurgerLabels {
-    /// Names the button while the panel is closed and `open` is unset.
+    /// Names the button while `open` is unset: it opens something.
     pub open: &'static str,
-    /// Names the button while the panel is open and `open` is unset.
-    pub close: &'static str,
     /// Names the button in both states once `open` is set: `aria-expanded`
     /// carries the state.
     pub toggle: &'static str,
@@ -230,12 +228,11 @@ pub struct BurgerLabels {
 impl BurgerLabels {
     pub const ENGLISH: Self = Self {
         open: "Open navigation",
-        close: "Close navigation",
         toggle: "Toggle navigation",
     };
 }
 
-/// An `Anchor`'s cue for a link that opens a new tab.
+/// An `Anchor`'s or link `Chip`'s cue for a link that opens a new tab.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AnchorLabels {
     /// Read after the link text, hidden from sight: the icon shows it.

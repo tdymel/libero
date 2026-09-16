@@ -323,7 +323,6 @@ mod tests {
     #[test]
     fn the_labels_are_a_locale_struct_of_their_own() {
         assert_eq!(BurgerLabels::ENGLISH.open, "Open navigation");
-        assert_eq!(BurgerLabels::ENGLISH.close, "Close navigation");
         assert_eq!(BurgerLabels::ENGLISH.toggle, "Toggle navigation");
     }
 

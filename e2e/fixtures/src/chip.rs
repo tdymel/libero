@@ -13,6 +13,7 @@ pub const ROUTES: Routes = &[
     ("/chip/fieldset", || rsx! { ChipFieldsetPage {} }),
     ("/chip/removable", || rsx! { ChipRemovablePage {} }),
     ("/chip/icons", || rsx! { ChipIconsPage {} }),
+    ("/chip/new-tab", || rsx! { ChipNewTabPage {} }),
 ];
 
 /// A selected chip with a remove x, which has to follow its label in forced
@@ -59,6 +60,25 @@ fn ChipIconsPage() -> Element {
 fn Glyph() -> Element {
     rsx! {
         svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
+    }
+}
+
+/// Todo 672: the new-tab icon stays whole when the label is cut.
+#[component]
+fn ChipNewTabPage() -> Element {
+    rsx! {
+        Flex { direction: "row", gap: "md",
+            Chip { id: "new-tab", to: "https://example.com", target: "_blank", "External" }
+            Chip {
+                id: "new-tab-long",
+                to: "https://example.com",
+                target: "_blank",
+                style: "max-width: 120px",
+                span { style: "min-width: 0; overflow: hidden; text-overflow: ellipsis",
+                    "Versandkostenberechnungsgrundlage"
+                }
+            }
+        }
     }
 }
 

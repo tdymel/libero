@@ -13,7 +13,7 @@ use crate::{
         form::{Activation, use_bound},
         inputs::{VariantColors, VariantVars, interactive_variant_sx, variant_colors},
         layout::use_box,
-        navigation::InternalAnchor,
+        navigation::{InternalAnchor, NewTabHint, wants_new_tab_hint},
     },
     hooks::{use_cache, use_css, use_element, use_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -219,6 +219,10 @@ base_props! {
         to: Input<NavigationTarget>,
         #[props(default)]
         target: Option<String>,
+        /// As on `Anchor`: with `to` and `target: "_blank"`, an external icon
+        /// plus a hidden "(opens in a new tab)". `false` drops both.
+        #[props(default = true)]
+        new_tab_hint: bool,
         /// Drawn before the label, with a gap; it never shrinks.
         #[props(default)]
         icon: Option<Element>,
@@ -342,6 +346,8 @@ pub fn Chip(props: ChipProps) -> Element {
                     .render(HtmlTag::A, props.attributes, content);
             }
 
+            // After the children, so a caller's ellipsis span never cuts it.
+            let hint = wants_new_tab_hint(props.target.as_deref(), props.new_tab_hint);
             return rsx! {
                 InternalAnchor {
                     to,
@@ -352,7 +358,11 @@ pub fn Chip(props: ChipProps) -> Element {
                     states,
                     style,
                     attributes: props.attributes,
-                    {content}
+                    {labelled}
+                    if hint {
+                        NewTabHint {}
+                    }
+                    {trailing}
                 }
             };
         }

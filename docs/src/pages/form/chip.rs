@@ -37,7 +37,10 @@ pub fn ChipPage() -> Element {
                 prop("to", "NavigationTarget")
                     .doc("Renders a router-aware link instead. Takes precedence over `onclick`."),
                 prop("target", "String")
-                    .doc("Link target, e.g. `_blank`. Only with `to`."),
+                    .doc("Link target, e.g. `_blank`. Only with `to`. `\"_blank\"` adds a small external icon and a hidden \"(opens in a new tab)\" from the localization, as on `Anchor`."),
+                prop("new_tab_hint", "bool")
+                    .default("true")
+                    .doc("`false` drops the icon and the hidden text a `\"_blank\"` target adds."),
                 prop("icon", "Element")
                     .doc("Drawn before the label, with a gap; it never shrinks."),
                 prop("trailing", "Element")

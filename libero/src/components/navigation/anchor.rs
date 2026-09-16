@@ -1,12 +1,13 @@
 use dioxus::prelude::*;
 
 use crate::{
+    CssLayer,
     components::{
         Input, States,
         a11y::VisuallyHidden,
         common::{ExternalLinkIcon, base_props, input_from_str, use_style_attributes},
     },
-    hooks::{use_localization, use_theme},
+    hooks::{use_css, use_localization, use_theme},
     sx::{StaticSx, Sx, sx},
     theme::{AnchorDefaults, Size},
 };
@@ -30,20 +31,39 @@ fn underline_sx(underline: AnchorUnderline) -> Sx {
 // Text's theme-level sizing, not `Text` itself - it has no href/target/rel
 // escape hatch to render a real anchor with.
 static ANCHOR_BASE_SX: StaticSx = StaticSx::new(|| {
-    let base = AnchorDefaults::theme_vars().margin("0").selector(
-        "& > [data-anchor-new-tab]",
-        sx().white_space("nowrap").selector(
-            "& > svg",
-            sx().width("0.8em")
-                .height("0.8em")
-                .vertical_align("-0.05em"),
-        ),
-    );
+    let base = AnchorDefaults::theme_vars().margin("0");
 
     AnchorUnderline::ALL.iter().fold(base, |base, &underline| {
         base.when(underline.state_name(), underline_sx(underline))
     })
 });
+
+static NEW_TAB_HINT_SX: StaticSx = StaticSx::new(|| {
+    // Never shrunk in a flex root such as `Chip`'s.
+    sx().white_space("nowrap").flex_shrink("0").selector(
+        "& > svg",
+        sx().width("0.8em")
+            .height("0.8em")
+            .vertical_align("-0.05em"),
+    )
+});
+
+pub(crate) fn wants_new_tab_hint(target: Option<&str>, new_tab_hint: bool) -> bool {
+    target == Some("_blank") && new_tab_hint
+}
+
+/// Todo 579: the icon plus a hidden "(opens in a new tab)", after a link's text.
+#[component]
+pub(crate) fn NewTabHint() -> Element {
+    let class = use_css(Some(&NEW_TAB_HINT_SX), CssLayer::Framework);
+    let new_tab = use_localization().anchor.new_tab;
+
+    // The no-break space keeps the icon on the last word's line.
+    rsx! {
+        span { class, "data-anchor-new-tab": "", "aria-hidden": "true", "\u{a0}", ExternalLinkIcon {} }
+        VisuallyHidden { " {new_tab}" }
+    }
+}
 
 base_props! {
     pub struct AnchorProps {
@@ -91,14 +111,10 @@ pub fn Anchor(props: AnchorProps) -> Element {
         true,
     );
 
-    let new_tab = use_localization().anchor.new_tab;
-    let hint = props.target.as_deref() == Some("_blank") && props.new_tab_hint;
-    let children = match hint {
-        // The no-break space keeps the icon on the last word's line.
+    let children = match wants_new_tab_hint(props.target.as_deref(), props.new_tab_hint) {
         true => rsx! {
             {props.children}
-            span { "data-anchor-new-tab": "", "aria-hidden": "true", "\u{a0}", ExternalLinkIcon {} }
-            VisuallyHidden { " {new_tab}" }
+            NewTabHint {}
         },
         false => props.children,
     };

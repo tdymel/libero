@@ -259,3 +259,34 @@ fn an_icon_keeps_the_gap_and_the_text_centre() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 672: a `_blank` link chip draws Anchor's icon inside the pill and says
+/// so in its name, even when its label is cut.
+#[test]
+fn a_new_tab_chip_shows_an_icon_and_says_so() {
+    block_on(async {
+        let fixture = Fixture::open("/chip/new-tab", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        let tree = e2e::ax::snapshot(page, "#new-tab").await.unwrap();
+        assert!(tree.contains("External (opens in a new tab)"), "{tree}");
+        let drawn: bool = page
+            .evaluate(
+                "['#new-tab', '#new-tab-long'].every(id => { \
+                 const svg = document.querySelector(id + ' svg').getBoundingClientRect(); \
+                 const chip = document.querySelector(id).getBoundingClientRect(); \
+                 return svg.width > 8 && svg.width < 16 && svg.right <= chip.right + 1 \
+                     && svg.left >= chip.left && svg.top >= chip.top - 1 \
+                     && svg.bottom <= chip.bottom + 1; })",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(drawn, "the icon sits whole inside the chip, at text size");
+
+        fixture.close().await.unwrap();
+    });
+}

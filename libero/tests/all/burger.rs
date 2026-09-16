@@ -15,7 +15,6 @@ use libero::{
 static GERMAN: Localization = Localization {
     burger: BurgerLabels {
         open: "Menü öffnen",
-        close: "Menü schließen",
         toggle: "Menü umschalten",
     },
     ..Localization::ENGLISH
