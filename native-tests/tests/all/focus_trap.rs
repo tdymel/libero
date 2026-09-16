@@ -1,12 +1,12 @@
 //! `FocusTrap`: a native radio group is one Tab stop, its checked radio or,
-//! with none checked, its first (todo 615).
+//! with none checked, its first (todo 615); a trap mounted with the document
+//! focuses its first stop (todo 664).
 
 use dioxus::prelude::*;
 use libero::components::FocusTrap;
 use native_tests::mount;
 
-// Opened by a click, as a dialog's trap is: one mounted with the document
-// panicked in dioxus-native's mounted-event flush, now and then.
+// Opened by a click, as a dialog's trap is.
 fn app() -> Element {
     let mut open = use_signal(|| false);
     rsx! {
@@ -22,6 +22,23 @@ fn app() -> Element {
             }
         }
     }
+}
+
+// Mounted with the document, its `focus()` and a `when_laid_out` timer both
+// re-keyed `Outlet` in one poll, and dioxus-native panicked 3 runs in 15 (664).
+fn mounted_open() -> Element {
+    rsx! {
+        FocusTrap {
+            button { id: "first", "First" }
+            button { id: "last", "Last" }
+        }
+    }
+}
+
+#[test]
+fn a_trap_mounted_with_the_document_focuses_its_first() {
+    let page = mount(mounted_open);
+    assert!(page.is_focused("#first"), "{}", page.focus_owner());
 }
 
 #[test]

@@ -61,6 +61,8 @@ thread_local! {
 
     /// Bumped to remount [`Outlet`]'s flush element. `None` until it renders.
     static FLUSHES: RefCell<Option<Signal<u64>>> = const { RefCell::new(None) };
+    /// The flush element that last mounted. `None` until the first one has.
+    static MOUNTED_FLUSH: Cell<Option<u64>> = const { Cell::new(None) };
 
     /// A press whose focus move Blitz has not made yet: the focus owner at the
     /// press, and the focusable it hit. See [`Listener`].
@@ -864,6 +866,7 @@ pub(super) fn Outlet() -> Element {
     let flushes = use_hook(|| {
         let flushes = Signal::new(0u64);
         FLUSHES.with(|slot| *slot.borrow_mut() = Some(flushes));
+        MOUNTED_FLUSH.set(None);
         flushes
     });
     use_drop(|| FLUSHES.with(|slot| *slot.borrow_mut() = None));
@@ -874,6 +877,7 @@ pub(super) fn Outlet() -> Element {
                 key: "{flush}",
                 display: "none",
                 onmounted: move |event| {
+                    MOUNTED_FLUSH.set(Some(flush));
                     if let Some(handle) = event.data().downcast::<NodeHandle>() {
                         remember_document(handle);
                     }
@@ -936,18 +940,14 @@ pub(super) fn when_laid_out(run: Box<dyn FnOnce()>) {
 }
 
 fn later(run: impl FnOnce() + 'static) {
-    let pending = DEFERRED.with(|queue| {
-        let mut queue = queue.borrow_mut();
-        queue.push(Box::new(run));
-        queue.len() > 1
-    });
+    DEFERRED.with(|queue| queue.borrow_mut().push(Box::new(run)));
     // One remount per flush: a flush element replaced before its mount event
-    // ran panics in dioxus-native (a backdrop click closing a `Modal`).
-    if pending {
-        return;
-    }
+    // ran panics in dioxus-native (a `Modal` backdrop click; todo 664: a timer
+    // task re-keying it again in the poll that rendered it).
     FLUSHES.with(|slot| {
-        if let Some(mut flushes) = *slot.borrow() {
+        if let Some(mut flushes) = *slot.borrow()
+            && MOUNTED_FLUSH.get() == Some(*flushes.peek())
+        {
             let next = flushes.peek().wrapping_add(1);
             flushes.set(next);
         }
