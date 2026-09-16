@@ -47,6 +47,8 @@ fn ColorFieldPage() -> Element {
     }
 }
 
+/// `today` pinned outside the held month, so the baseline snapshot never
+/// depends on the clock (todo 658).
 #[component]
 fn DateFieldPage() -> Element {
     let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 9, 25));
@@ -56,6 +58,7 @@ fn DateFieldPage() -> Element {
             DateField {
                 id: "date-field",
                 label: "Arrival",
+                today: NaiveDate::from_ymd_opt(2026, 3, 18),
                 value: day(),
                 onchange: move |next| day.set(next),
             }

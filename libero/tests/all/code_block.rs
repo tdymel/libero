@@ -80,3 +80,37 @@ fn unset_chrome_props_follow_the_theme() {
 
     assert!(body(&render(overridden)).contains("<button"));
 }
+
+/// Todo 668. No grammar still draws the diff's marker and spoken word, on the
+/// first render: there is no highlighting to wait for.
+#[test]
+fn a_diff_without_a_language_still_marks_its_lines() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                CodeBlock { diff: true, source: "keep\n-old\n+new" }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    assert!(html.contains("Removed "), "{html}");
+    assert!(html.contains("Added "), "{html}");
+    assert!(!html.contains("-old") && !html.contains("+new"), "{html}");
+}
+
+/// Todo 668. An unknown language renders plain rows rather than one plain
+/// `pre` once a line is to be highlighted.
+#[test]
+fn highlight_lines_without_a_known_language_still_marks_the_row() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                CodeBlock { language: "no-such-language", highlight_lines: "2", source: "a\nb" }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    assert!(html.contains("highlighted"), "{html}");
+}

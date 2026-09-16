@@ -13,10 +13,10 @@ use crate::{
         },
     },
     hooks::{
-        DragMove, DragOptions, DragStart, use_drag, use_element, use_id, use_localization,
-        use_theme,
+        DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id,
+        use_localization, use_theme,
     },
-    platform::{ElementApi, next_task},
+    platform::{ElementApi, next_task, scroll, when_laid_out},
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size},
 };
@@ -59,6 +59,36 @@ impl ScrollerEdges {
             at_end: offset >= max - EDGE_TOLERANCE,
         }
     }
+}
+
+/// Measurements of no width asked again: Blitz may not have laid out a box
+/// mounted this frame.
+const UNLAID_TRIES: u8 = 3;
+
+/// Natively an effect runs before layout, with the document borrowed.
+fn measure_laid_out(
+    viewport: ElementHandle,
+    mut update: impl FnMut(ScrollerEdges) + Copy + 'static,
+    tries: u8,
+) {
+    when_laid_out(move || {
+        let (offset, content, size) = (
+            viewport.scroll_offset(),
+            viewport.scroll_size(),
+            viewport.dimensions(),
+        );
+        spawn(async move {
+            match (offset.await, content.await, size.await) {
+                (_, _, Ok(size)) if size.width <= 0.0 && tries > 0 => {
+                    measure_laid_out(viewport, update, tries - 1);
+                }
+                (Ok((x, _)), Ok(content), Ok(size)) => {
+                    update(ScrollerEdges::measure(x, content.width, size.width));
+                }
+                _ => {}
+            }
+        });
+    });
 }
 
 /// Where one control press lands, clamped to the scrollable range.
@@ -427,10 +457,35 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         });
     };
 
+    // Blitz sends the strip no `resize` or `scroll` (todo 659): measure once
+    // laid out, and on every scroll the platform reports until a `resize`
+    // shows the element events arrive.
+    let reported = use_signal(|| 0u64);
+    let mut platform_scroll = use_hook(|| {
+        CopyValue::new(scroll().map(|api| {
+            api.on_scroll(Box::new(move || {
+                let mut reported = reported;
+                let next = reported.peek().wrapping_add(1);
+                reported.set(next);
+            }))
+        }))
+    });
+    use_effect(move || {
+        reported();
+        if viewport.is_mounted() {
+            measure_laid_out(viewport, update, UNLAID_TRIES);
+        }
+    });
+
     // `ResizeObserver` delivers an initial observation, so this is also the
     // mount-time measurement - before any scroll, nothing else says whether
     // the strip overflows at all.
-    let resized = move |_: Event<ResizeData>| measure();
+    let resized = move |_: Event<ResizeData>| {
+        if platform_scroll.peek().is_some() {
+            platform_scroll.set(None);
+        }
+        measure();
+    };
 
     // Mouse drag-to-pan. Deliberately **not** given `drag_handle_sx()`: that
     // is `touch-action: none`, and it would take away the native touch scroll

@@ -17,7 +17,7 @@ use crate::{
         Clipboard, use_clipboard, use_css, use_element, use_localization, use_silent_focus_out,
         use_theme,
     },
-    localization::CodeBlockLabels,
+    localization::{CodeBlockLabels, fill},
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
     theme::{
@@ -219,6 +219,7 @@ base_props! {
         /// Reads `source` as a unified diff: a leading `+`/`-` colors the row,
         /// moves into a marker column read as "added"/"removed", and is kept
         /// out of what's highlighted and copied. Wins over `highlight_lines`.
+        /// Both mark plain lines too when there is no `language`.
         #[props(default)]
         diff: bool,
     }
@@ -252,6 +253,17 @@ fn strip_diff_markers(source: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+/// One classless span per line, split like `highlight` splits.
+fn plain_lines(source: &str) -> Vec<HighlightedLine> {
+    source
+        .lines()
+        .map(|line| match line.is_empty() {
+            true => Vec::new(),
+            false => vec![(line.to_string(), None)],
+        })
+        .collect()
 }
 
 /// `"3,5-7,10"` into the 1-indexed lines it names, plus the first range that
@@ -477,7 +489,14 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     // renders as one `pre` below rather than a full row tree that is thrown
     // away the moment it resolves - ~330 ns/line of wasted build on every
     // block.
-    let lines = highlighted.read().clone().flatten();
+    // No grammar but marking asked for: unstyled rows, so the tint, marker and
+    // spoken word still land (todo 668).
+    let marked = props.diff || props.highlight_lines.is_some();
+    let lines = highlighted
+        .read()
+        .clone()
+        .flatten()
+        .or_else(|| (language.is_none() && marked).then(|| plain_lines(&display_source)));
     let label = language
         .map(Language::label)
         .unwrap_or(labels.unrecognized_language);
@@ -530,8 +549,11 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     });
     let scrolls = overflows();
     let scroll_label = match language {
-        Some(language) => format!("{} code", Language::label(language)),
-        None => "Code".to_string(),
+        Some(language) => fill(
+            labels.code_named,
+            &[("language", &Language::label(language))],
+        ),
+        None => labels.code.to_string(),
     };
     let scroll_box = use_box()
         .framework_sx(&CODE_BLOCK_SCROLL_SX)

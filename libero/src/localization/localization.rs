@@ -105,6 +105,7 @@ mod tests {
             ("iso", &"DE"),
             ("dial", &49),
             ("key", &"F8"),
+            ("language", &"Rust"),
         ];
         for template in [
             english.common.remove,
@@ -126,6 +127,7 @@ mod tests {
             english.lightbox.thumbnail,
             english.notifications.region,
             english.pin_field.cell,
+            english.code_block.code_named,
         ] {
             let filled = fill(template, holes);
             assert!(!filled.contains('{'), "{template} -> {filled}");

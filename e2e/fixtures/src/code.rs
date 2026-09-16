@@ -32,6 +32,11 @@ fn CodePage() -> Element {
             CodeBlock { id: "diff-block", language: "rust", header: true, copyable: true, diff: true,
                 source: "fn greet() {{\n-    old();\n+    new();\n}}"
             }
+            // Todo 668: no grammar, still marked.
+            CodeBlock { id: "plain-diff-block", diff: true, highlight_lines: "1",
+                header: false, copyable: false, line_numbers: false,
+                source: "keep\n-old\n+new"
+            }
             CodeBlock { id: "wide-block", language: "rust", copyable: true, highlight_lines: "2",
                 // One token that starts in view: axe skips a token scrolled out whole.
                 source: "fn main() {{\n    let s = \"a string long enough to scroll the block sideways\";\n}}"

@@ -213,6 +213,34 @@ fn a_diff_line_says_added_or_removed() {
     });
 }
 
+/// Todo 668. With no language the rows, markers and bars still come, and the
+/// scroll region takes its name from the localization.
+#[test]
+fn a_diff_without_a_language_is_still_marked() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        const ROWS: &str = r#"[...document.querySelectorAll('#plain-diff-block pre > code > span')]
+            .map(r => (r.querySelector('[aria-hidden=true]')?.textContent ?? '') + ':' + getComputedStyle(r).boxShadow.includes('inset')).join()"#;
+        wait::for_js_true(
+            page,
+            &format!("{ROWS} === ' :true,-:true,+:true'"),
+            "a marker and a bar per marked row",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector(\"#wide-block [role=region]\")?.getAttribute('aria-label') === 'Rust code'",
+            "the region named from the localization",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the code fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 594. A marked line keeps its left bar in forced colours, which drop
 /// the wash and the inset shadow that draw it otherwise.
 #[test]

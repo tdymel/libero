@@ -75,6 +75,10 @@ pub struct CodeBlockLabels {
     pub added: &'static str,
     /// Read before a `diff` line that starts with `-`.
     pub removed: &'static str,
+    /// The scroll region's name when the code overflows and has no known language.
+    pub code: &'static str,
+    /// The scroll region's name with a known language; `{language}` is its name.
+    pub code_named: &'static str,
 }
 
 impl CodeBlockLabels {
@@ -85,6 +89,8 @@ impl CodeBlockLabels {
         unrecognized_language: "Unrecognized language",
         added: "Added",
         removed: "Removed",
+        code: "Code",
+        code_named: "{language} code",
     };
 }
 

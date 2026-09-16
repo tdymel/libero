@@ -107,6 +107,8 @@ In `diff` mode a changed line is read with the localization's
 `code_block.added` or `code_block.removed` before it; the visible `+`/`-` is
 hidden from readers. A line named by `highlight_lines` is marked by colour and
 a left bar only - say in prose why it matters when a reader needs to know.
+A block that scrolls is a named region: the localization's
+`code_block.code_named` ("Rust code") or `code_block.code` with no language.
 
 ## Props
 
@@ -119,7 +121,7 @@ a left bar only - say in prose why it matters when a reader needs to know.
 | `max_lines` | `Option<u32>` | - | Caps the visible height to roughly this many lines and scrolls past it; unset grows to fit. Long lines always scroll horizontally regardless. |
 | `line_numbers` | `bool` | `theme.code_block.line_numbers` (`true`) | Toggles the line-number gutter. |
 | `highlight_lines` | `Option<String>` | - | 1-indexed lines to emphasize, e.g. `"1,5-7,10"`. Malformed segments are skipped, not rejected. A range past the last line stops at it. |
-| `diff` | `bool` | `false` | Reads `source` as a unified diff: a leading `+`/`-` colors the row, moves into a marker column, and is kept out of what's highlighted and copied. Wins over `highlight_lines`. |
+| `diff` | `bool` | `false` | Reads `source` as a unified diff: a leading `+`/`-` colors the row, moves into a marker column, and is kept out of what's highlighted and copied. Wins over `highlight_lines`. Both mark plain lines too when there is no `language`. |
 
 Like every component, `CodeBlock` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.

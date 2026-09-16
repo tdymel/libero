@@ -45,6 +45,13 @@ generic
     StaticText "();"
     StaticText "}"
 generic
+  code
+    StaticText "keep"
+    StaticText "Removed"
+    StaticText "old"
+    StaticText "Added"
+    StaticText "new"
+generic
   StaticText "Rust"
   button "Copy code"
   status [atomic] [live=polite]
