@@ -1,8 +1,11 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::{
     components::{FloatingWindow, FloatingWindowOptions},
     hooks::{FocusReturn, use_focus_return, use_portal},
+    platform::{ElementApi, document},
 };
 
 /// Opens and closes one window. `Copy`, so a trigger anywhere can hold it.
@@ -12,6 +15,8 @@ pub struct FloatingWindowHandle {
     focus_return: FocusReturn,
     /// The open window's "has focus left me?", asked in its own scope.
     focus_left: Signal<Option<Callback<(), bool>>>,
+    /// Where the page had focus, for F6 to go back to.
+    page: CopyValue<Option<Rc<dyn ElementApi>>>,
 }
 
 impl FloatingWindowHandle {
@@ -22,6 +27,12 @@ impl FloatingWindowHandle {
             return;
         }
         self.focus_return.remember_active();
+        let mut page = self.page;
+        page.set(
+            document()
+                .and_then(|document| document.active_element())
+                .map(Rc::from),
+        );
         let mut focus_left = self.focus_left;
         focus_left.set(None);
         let mut open = self.open;
@@ -87,19 +98,22 @@ pub fn use_floating_window(
     let open = use_signal(|| false);
     let focus_return = use_focus_return();
     let mut focus_left = use_signal(|| None);
+    let page = use_hook(|| CopyValue::new(None));
     let handle = FloatingWindowHandle {
         open,
         focus_return,
         focus_left,
+        page,
     };
     // `use_callback`, so a closure rebuilt each render keeps its captures live.
     let render = use_callback(render);
     let onclose = use_callback(move |()| handle.close());
     let onmount = use_callback(move |left| focus_left.set(Some(left)));
+    let opener = use_callback(move |()| page.peek().clone());
 
     let content = open().then(|| {
         rsx! {
-            FloatingWindow { options, onclose, onmount, {render.call(handle)} }
+            FloatingWindow { options, onclose, onmount, opener, {render.call(handle)} }
         }
     });
     use_portal(content);

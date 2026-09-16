@@ -120,6 +120,31 @@ fn enter_opens_it_with_focus_inside_and_escape_hands_it_back() {
     );
 }
 
+/// F6 from inside the window returns to the page, and back to the window
+/// (todo 671): the window's `:focus` check has to see focus inside it.
+#[test]
+fn f6_moves_focus_between_the_window_and_the_page() {
+    let mut page = mount(app);
+    open(&mut page);
+    for inside in [DIALOG, "#window-done", HANDLE] {
+        page.focus(inside);
+        page.press(Key::F6);
+        settle(&mut page);
+        assert!(
+            page.is_focused(TRIGGER),
+            "F6 from {inside} left focus on {}",
+            page.focus_owner()
+        );
+        page.press(Key::F6);
+        settle(&mut page);
+        assert!(
+            page.is_focused(DIALOG),
+            "F6 from the page left focus on {}",
+            page.focus_owner()
+        );
+    }
+}
+
 /// `Float` places the window by a translate, which Blitz's client rect leaves
 /// out: the move starts from the untranslated box, so a centred window jumps.
 #[test]

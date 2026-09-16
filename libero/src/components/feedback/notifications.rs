@@ -37,6 +37,12 @@ use crate::{
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
+thread_local! {
+    /// Every mounted host's hotkey, by host, so one press moves focus once:
+    /// into the newest notification across all hosts (todo 670).
+    static HOTKEYS: RefCell<Vec<(u64, NotificationStore, Key)>> = const { RefCell::new(Vec::new()) };
+}
+
 /// One stack, anchored to a corner or edge of the viewport, or of a
 /// contained host. It lets the pointer
 /// through: only the notifications in it take clicks.
@@ -839,10 +845,12 @@ fn use_hotkey(store: NotificationStore, hotkey: Key) {
     let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
     let slot: Rc<RefCell<Option<std::boxed::Box<dyn KeySubscription>>>> =
         use_hook(|| Rc::new(RefCell::new(None)));
+    let host = use_hook(|| NEXT_ID.fetch_add(1, Ordering::Relaxed));
     use_drop({
         let slot = slot.clone();
         move || {
             slot.borrow_mut().take();
+            HOTKEYS.with_borrow_mut(|hosts| hosts.retain(|(other, ..)| *other != host));
             tick.manually_drop();
         }
     });
@@ -850,6 +858,10 @@ fn use_hotkey(store: NotificationStore, hotkey: Key) {
     let listening = slot.clone();
     use_effect(use_reactive!(|hotkey| {
         listening.borrow_mut().take();
+        HOTKEYS.with_borrow_mut(|hosts| {
+            hosts.retain(|(other, ..)| *other != host);
+            hosts.push((host, store, hotkey.clone()));
+        });
         let Some(api) = keyboard() else {
             return;
         };
@@ -857,17 +869,12 @@ fn use_hotkey(store: NotificationStore, hotkey: Key) {
         let key = hotkey.clone();
         let callback = std::boxed::Box::new(move |chord: KeyChord| {
             let modifiers = chord.modifiers;
-            let pressed = match (&chord.key, &key) {
-                (Key::Character(pressed), Key::Character(key)) => pressed.eq_ignore_ascii_case(key),
-                (pressed, key) => pressed == key,
-            };
-            // Nothing on screen: the key stays the page's.
-            if !pressed
+            // Nothing on screen, or another host holds a newer one: not ours.
+            if !is_hotkey(&chord.key, &key)
                 || modifiers.ctrl()
                 || modifiers.alt()
                 || modifiers.meta()
-                || !store.alive()
-                || store.newest().is_none()
+                || hotkey_owner(&chord.key) != Some(host)
             {
                 return false;
             }
@@ -893,6 +900,31 @@ fn use_hotkey(store: NotificationStore, hotkey: Key) {
         seen.set(pressed);
         store.focus_newest();
     });
+}
+
+fn is_hotkey(pressed: &Key, key: &Key) -> bool {
+    match (pressed, key) {
+        (Key::Character(pressed), Key::Character(key)) => pressed.eq_ignore_ascii_case(key),
+        (pressed, key) => pressed == key,
+    }
+}
+
+/// The host that answers `pressed`: the one drawing the newest notification
+/// among those listening for it. The first registered wins a shared store.
+fn hotkey_owner(pressed: &Key) -> Option<u64> {
+    let hosts = HOTKEYS.with_borrow(|hosts| hosts.clone());
+    hosts
+        .into_iter()
+        .filter(|(_, store, key)| is_hotkey(pressed, key) && store.alive())
+        .filter_map(|(host, store, _)| Some((store.newest()?, host)))
+        .fold(
+            None,
+            |owner: Option<(NotificationId, u64)>, (id, host)| match owner {
+                Some((newest, _)) if newest.0 >= id.0 => owner,
+                _ => Some((id, host)),
+            },
+        )
+        .map(|(_, host)| host)
 }
 
 #[derive(Props, Clone, PartialEq)]

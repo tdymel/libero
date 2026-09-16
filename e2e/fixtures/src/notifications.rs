@@ -22,6 +22,10 @@ pub const ROUTES: Routes = &[
         "/notifications-host-inside",
         || rsx! { NotificationsHostInsidePage {} },
     ),
+    (
+        "/notifications-two-hosts",
+        || rsx! { NotificationsTwoHostsPage {} },
+    ),
 ];
 
 /// The component the framework was **not** built for.
@@ -219,6 +223,53 @@ fn InsideFeeder() -> Element {
                     );
             },
             "Notify"
+        }
+    }
+}
+
+/// The app's host and a contained one, each with a button that shows a
+/// notification there, so F8 has to pick the newest across both (todo 670).
+#[component]
+fn NotificationsTwoHostsPage() -> Element {
+    rsx! {
+        Notifications {}
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TwoHostsFeeder { name: "app" }
+            Notifications { contained: true,
+                TwoHostsFeeder { name: "contained" }
+                // Room, so the host's stack does not cover its button.
+                div { height: "400px" }
+            }
+        }
+    }
+}
+
+#[component]
+fn TwoHostsFeeder(name: &'static str) -> Element {
+    let notify = use_notifications_with(|s: NotificationScope<String>| {
+        rsx! {
+            Paper {
+                Text { "{s.args()}" }
+                Button { class: "inside", "Act" }
+            }
+        }
+    });
+    let mut count = use_signal(|| 0u32);
+    rsx! {
+        Button {
+            id: "notify-{name}",
+            onclick: move |_| {
+                count += 1;
+                notify
+                    .show_with(
+                        format!("{name} {count}"),
+                        NotificationOptions {
+                            auto_close: Some(AutoClose::Never),
+                            ..Default::default()
+                        },
+                    );
+            },
+            "Notify {name}"
         }
     }
 }

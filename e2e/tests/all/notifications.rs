@@ -749,3 +749,68 @@ fn f8_focuses_the_newest_notification() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 670: with the app's host and a contained one both showing, F8 goes to
+/// the newest notification across both, and only one host moves focus.
+#[test]
+fn f8_focuses_the_newest_notification_across_hosts() {
+    block_on(async {
+        let fixture = Fixture::open("/notifications-two-hosts", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let _: bool = js(
+            page,
+            "(document.addEventListener('focusin', e => { \
+               if (e.target.closest('li')) window.__moves = (window.__moves ?? 0) + 1; \
+             }, true), true)"
+                .into(),
+        )
+        .await;
+
+        for (clicks, newest) in [
+            (&["#notify-contained", "#notify-app"][..], "app 1"),
+            (&["#notify-contained"][..], "contained 2"),
+        ] {
+            for trigger in clicks {
+                pointer::click(page, trigger).await.unwrap();
+            }
+            wait::for_js_true(
+                page,
+                &format!(
+                    "[...document.querySelectorAll('li')].some(li => li.textContent.includes({newest:?}))"
+                ),
+                newest,
+            )
+            .await
+            .unwrap();
+            let _: bool = js(page, "(window.__moves = 0, true)".into()).await;
+
+            keyboard::press(page, F8).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.activeElement?.matches('li .inside') && \
+                     document.activeElement.closest('li').textContent.includes({newest:?})"
+                ),
+                &format!("F8 to focus {newest}"),
+            )
+            .await
+            .unwrap();
+            // Settled: a second host acting would have moved focus again by now.
+            tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+            let (moves, still): (u32, bool) = js(
+                page,
+                format!(
+                    "[window.__moves, document.activeElement.closest('li')?.textContent.includes({newest:?}) ?? false]"
+                ),
+            )
+            .await;
+            assert_eq!(moves, 1, "F8 moved focus {moves} times for {newest}");
+            assert!(still, "focus left {newest} after F8");
+        }
+
+        fixture.console.assert_clean("F8 across hosts").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

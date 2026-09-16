@@ -237,10 +237,15 @@ fn active_element() -> Option<Rc<dyn ElementApi>> {
 /// window is portaled past the page's end, so Tab reaches it last.
 ///
 /// Not while a dismissible layer is open: a modal or a popover keeps it.
-fn use_page_switch(root: ElementHandle, host: WindowHost, id: u64) {
+fn use_page_switch(
+    root: ElementHandle,
+    host: WindowHost,
+    id: u64,
+    opener: Callback<(), Option<Rc<dyn ElementApi>>>,
+) {
     let layer = use_dismiss_layer();
     // Where the page had focus: the opener at first, then wherever F6 left.
-    let mut page = use_hook(|| CopyValue::new(active_element()));
+    let mut page = use_hook(|| CopyValue::new(opener.call(())));
     // Bumped from the key callback, which runs outside every scope; the
     // effect below moves focus (the `Spotlight` hotkey's shape).
     let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
@@ -316,6 +321,9 @@ pub(crate) struct FloatingWindowProps {
     onclose: Callback<()>,
     /// Hands the handle's `close` a way to ask whether focus left the window.
     onmount: Callback<Callback<(), bool>>,
+    /// Where the page had focus, read by `open` in its handler: Blitz cannot
+    /// answer the window's first render (todo 671).
+    opener: Callback<(), Option<Rc<dyn ElementApi>>>,
     children: Element,
 }
 
@@ -362,7 +370,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
             host.raise(id);
         }
     });
-    use_page_switch(root, host, id);
+    use_page_switch(root, host, id, props.opener);
     let z_index = match z_index {
         Input::None => Input::from(host.z_index(id).to_string()),
         caller => caller,
@@ -842,6 +850,7 @@ mod tests {
                             },
                             onclose,
                             onmount: |_| {},
+                            opener: |()| None,
                             Dialog { title: "Inner", "inner content" }
                         }
                     }
