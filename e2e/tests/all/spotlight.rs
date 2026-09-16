@@ -195,6 +195,51 @@ fn the_arrows_move_the_highlight_and_enter_runs_it() {
     });
 }
 
+/// Todo 627: a narrowing query remounts the rows. Focus stays in the search
+/// box, and the highlight and `aria-activedescendant` land on the new row.
+#[test]
+fn a_narrowing_query_keeps_the_highlight_on_a_live_row() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+        let count = |n: usize| format!("document.querySelectorAll({OPTIONS:?}).length === {n}");
+
+        keyboard::type_text(page, "n").await.unwrap();
+        wait::for_js_true(page, &count(2), "\"n\" to narrow to two rows")
+            .await
+            .unwrap();
+        let ids: Vec<String> = js(
+            page,
+            &format!("[...document.querySelectorAll({OPTIONS:?})].map(o => o.id)"),
+        )
+        .await;
+        expect_active(page, &ids[0], "a narrowing query").await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        expect_active(page, &ids[1], "ArrowDown after the rekey").await;
+
+        let _: bool = js(
+            page,
+            &format!("!!(window.__row = document.getElementById({:?}))", ids[0]),
+        )
+        .await;
+        keyboard::type_text(page, "e").await.unwrap();
+        wait::for_js_true(page, &count(1), "\"ne\" to narrow to one row")
+            .await
+            .unwrap();
+        expect_active(page, &ids[0], "narrowing again").await;
+        let remounted: bool = js(page, "!window.__row.isConnected").await;
+        assert!(remounted, "the narrowed list kept its old row");
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        ran(page, "New file", "Enter on the remounted row").await;
+
+        fixture.console.assert_clean("a narrowing query").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 509: Ctrl/Alt/Meta with an arrow is the search box's caret or the
 /// browser's, never a highlight move.
 #[test]

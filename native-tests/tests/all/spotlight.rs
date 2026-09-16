@@ -59,7 +59,6 @@ fn narrowing() -> Element {
 
 // Todo 627: the painted text, not the box, wrapped; so this counts the label's laid-out lines.
 #[test]
-#[ignore = "needs Blitz: a row that keeps its box after the list shrinks keeps a min-content text layout"]
 fn a_narrowed_list_keeps_each_label_on_one_line() {
     let mut page = mount(narrowing);
     page.focus("#page");

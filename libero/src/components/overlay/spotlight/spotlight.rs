@@ -253,6 +253,8 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
     let highlight_first = options.highlight_first_on_query;
     let onquery = options.onquery;
     let options_for_render = options.clone();
+    // The last render's row count, and the key generation it drew with.
+    let layout_generation = use_hook(|| CopyValue::new((0usize, 0u64)));
     let modal = use_modal(move |scope: ModalScope<()>| {
         let options = &options_for_render;
         let id = state.id();
@@ -274,6 +276,14 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             .map(|(_, members)| members.len())
             .sum::<usize>();
         state.set_rows(count);
+        // A narrowed list gets fresh rows: Blitz keeps a surviving row's
+        // min-content text layout and wraps its label (todo 627).
+        let mut layout_generation = layout_generation;
+        let (last_count, mut generation) = *layout_generation.peek();
+        if count < last_count {
+            generation = generation.wrapping_add(1);
+        }
+        layout_generation.set((count, generation));
         let active = state
             .active()
             .filter(|_| count > 0)
@@ -305,7 +315,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             spotlight_key(event, state, active, count, move |row| run(callbacks[row]));
         };
 
-        let rows = spotlight_rows(groups, &id, active, run);
+        let rows = spotlight_rows(groups, &id, generation, active, run);
 
         let empty = !loading && count == 0 && !query().trim().is_empty();
         let nothing_found = empty.then(|| {
@@ -485,9 +495,11 @@ fn use_hotkey(handle: SpotlightHandle, shortcut: Option<char>) {
 
 /// The action rows, grouped. A `listbox` may hold only options and groups, so
 /// a group's own label is a presentational div named by `aria-labelledby`.
+/// `generation` is in every key, so a new one remounts the rows; ids stay.
 fn spotlight_rows(
     groups: Vec<(Option<String>, Vec<SpotlightAction>)>,
     id: &str,
+    generation: u64,
     active: Option<usize>,
     run: impl Fn(Option<Callback<()>>) + Copy + 'static,
 ) -> Vec<Element> {
@@ -512,7 +524,7 @@ fn spotlight_rows(
                 .join(" ");
                 rsx! {
                     div {
-                        key: "{row}",
+                        key: "{generation}-{row}",
                         id: "{option_id}",
                         "role": "option",
                         "aria-labelledby": "{option_id}-label",
@@ -553,7 +565,7 @@ fn spotlight_rows(
                 let label_id = format!("{id}-group-{group_index}");
                 rsx! {
                     div {
-                        key: "group-{group_index}",
+                        key: "group-{generation}-{group_index}",
                         "role": "group",
                         "aria-labelledby": "{label_id}",
                         div {
@@ -568,7 +580,7 @@ fn spotlight_rows(
             }
             // Bare rows, as in `Combobox`: an unnamed group adds nothing.
             None => rsx! {
-                Fragment { key: "group-{group_index}", {options_rows.into_iter()} }
+                Fragment { key: "group-{generation}-{group_index}", {options_rows.into_iter()} }
             },
         });
     }
