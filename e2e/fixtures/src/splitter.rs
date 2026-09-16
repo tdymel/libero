@@ -8,7 +8,28 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/splitter", || rsx! { SplitterPage {} }),
     ("/splitter/min-size", || rsx! { MinSizePage {} }),
+    ("/splitter/rtl", || rsx! { RtlPage {} }),
 ];
+
+/// Under `dir="rtl"` the row puts pane A on the right.
+#[component]
+fn RtlPage() -> Element {
+    rsx! {
+        div { dir: "rtl",
+            Flex { direction: "column", gap: "md", max_width: "320px",
+                Button { id: "before", "Before" }
+                div { style: "height: 160px",
+                    Splitter {
+                        initial_size: 50.0,
+                        aria_label: "Resize panes",
+                        panel_a: rsx! { Text { "Pane A" } },
+                        panel_b: rsx! { Text { "Pane B" } },
+                    }
+                }
+            }
+        }
+    }
+}
 
 /// A `Splitter` between two buttons, so focus has somewhere to be before a
 /// drag and a Shift+Tab never sits at the document edge.

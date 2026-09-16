@@ -39,6 +39,24 @@ pub(super) fn element(mounted: &Rc<MountedData>) -> Option<Box<dyn ElementApi>> 
     }))
 }
 
+/// Taffy lays a row out right to left under `direction: rtl`, as the web does.
+pub(super) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
+    let Some(handle) = mounted.downcast::<NodeHandle>() else {
+        return false;
+    };
+    handle
+        .try_doc()
+        .is_some_and(|doc| node_is_rtl(&doc, handle.node_id()))
+}
+
+/// Stylo's computed `direction`, named by its `Debug`: libero has no `stylo`
+/// dependency to name the enum by.
+pub(super) fn node_is_rtl(doc: &BaseDocument, node_id: NodeId) -> bool {
+    doc.get_node(node_id)
+        .and_then(|node| node.primary_styles())
+        .is_some_and(|styles| format!("{:?}", styles.clone_direction()) == "Rtl")
+}
+
 thread_local! {
     /// Each live `VirtualDom`'s [`Doc`], by its runtime: dioxus-native runs one
     /// per document, and several on one thread (todo 702).

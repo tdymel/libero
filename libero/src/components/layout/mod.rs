@@ -33,7 +33,7 @@ pub use image_list::{ImageBar, ImageItem, ImageList, ImageListProps};
 pub use scroll_area::{
     ScrollArea, ScrollAreaHandle, ScrollAreaProps, ScrollPositionEvent, Virtualize, use_scroll_area,
 };
-pub(crate) use scroll_area::{ScrollAreaBase, scroll_area_base};
+pub(crate) use scroll_area::{ScrollAreaBase, inline_x, physical_x, scroll_area_base};
 pub use scroller::{
     Scroller, ScrollerControls, ScrollerEdges, ScrollerHandle, ScrollerProps, use_scroller,
 };

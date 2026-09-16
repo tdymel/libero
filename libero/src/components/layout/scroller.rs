@@ -8,8 +8,8 @@ use crate::{
             states, variables,
         },
         layout::{
-            ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, scroll_area_base,
-            use_box, use_scroll_area,
+            ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, inline_x,
+            physical_x, scroll_area_base, use_box, use_scroll_area,
         },
     },
     hooks::{
@@ -17,7 +17,7 @@ use crate::{
         use_localization, use_theme,
     },
     platform::{ElementApi, next_task, scroll, when_laid_out},
-    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
+    sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size},
 };
 
@@ -83,7 +83,11 @@ fn measure_laid_out(
                     measure_laid_out(viewport, update, tries - 1);
                 }
                 (Ok((x, _)), Ok(content), Ok(size)) => {
-                    update(ScrollerEdges::measure(x, content.width, size.width));
+                    update(ScrollerEdges::measure(
+                        inline_x(x),
+                        content.width,
+                        size.width,
+                    ));
                 }
                 _ => {}
             }
@@ -113,6 +117,16 @@ fn clear_of_controls(offset: f64, start: f64, end: f64, view: f64, inset: f64, m
         target = start - inset;
     }
     target.clamp(0.0, max.max(0.0))
+}
+
+/// An item's `start..end` along a viewport, from the viewport's inline start:
+/// its right edge under RTL. Client x and width of each.
+fn inline_span(x: f64, width: f64, view_x: f64, view_width: f64, rtl: bool) -> (f64, f64) {
+    let start = match rtl {
+        true => view_x + view_width - (x + width),
+        false => x - view_x,
+    };
+    (start, start + width)
 }
 
 /// Steps a [`Scroller`] from an event handler, the way its own controls do.
@@ -178,7 +192,7 @@ impl ScrollerHandle {
         spawn(async move {
             if let (Ok((x, _)), Ok(content), Ok(size)) = (offset.await, content.await, size.await) {
                 area.scroll_to(
-                    step_target(x, amount, forward, content.width - size.width),
+                    step_target(inline_x(x), amount, forward, content.width - size.width),
                     0.0,
                 );
             }
@@ -236,8 +250,22 @@ static SCROLLER_VIEWPORT_SX: StaticSx = StaticSx::new(|| {
 static SCROLLER_CONTENT_SX: StaticSx =
     StaticSx::new(|| sx().width("max-content").min_width("100%"));
 
+/// A control pinned to the `side` edge, fading towards `away`. The glyph points
+/// down; a quarter `turn` points it outwards along the strip.
+fn control_side_sx(fade: &str, side: &str, away: &str, turn: &str) -> Sx {
+    let pinned = match side {
+        "left" => sx().left("0").right("auto"),
+        _ => sx().right("0").left("auto"),
+    };
+    pinned
+        .background(format!(
+            "linear-gradient(to {away}, {fade} 40%, transparent)"
+        ))
+        .selector("& svg", sx().transform(format!("rotate({turn})")))
+}
+
 static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
-    let fade = SCROLLER_FADE.overridable();
+    let fade = SCROLLER_FADE.overridable().to_string();
 
     sx().position("absolute")
         .top("0")
@@ -254,30 +282,31 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .media(REDUCED_MOTION, sx().transition("none"))
         // The gradient is the button's own background: one box is both the
         // fade and the hit target.
-        .when(
-            "start",
-            sx().left("0")
-                .justify_content("flex-start")
-                .background(format!(
-                    "linear-gradient(to right, {fade} 40%, transparent)"
-                )),
-        )
-        .when(
-            "end",
-            sx().right("0")
-                .justify_content("flex-end")
-                .background(format!("linear-gradient(to left, {fade} 40%, transparent)")),
-        )
-        // The glyph points down; a quarter turn either way points it along
-        // the strip.
         .selector("& svg", sx().width("60%").height("60%").flex("none"))
+        // Under RTL the start is the right edge: the sides, fades and glyphs
+        // swap.
+        // `flex-start` follows the direction: the glyph sits at the outer edge.
         .when(
             "start",
-            sx().selector("& svg", sx().transform("rotate(90deg)")),
+            control_side_sx(&fade, "left", "right", "90deg").justify_content("flex-start"),
         )
         .when(
             "end",
-            sx().selector("& svg", sx().transform("rotate(-90deg)")),
+            control_side_sx(&fade, "right", "left", "-90deg").justify_content("flex-end"),
+        )
+        .when(
+            "start",
+            sx().selector(
+                "&:dir(rtl)",
+                control_side_sx(&fade, "right", "left", "-90deg"),
+            ),
+        )
+        .when(
+            "end",
+            sx().selector(
+                "&:dir(rtl)",
+                control_side_sx(&fade, "left", "right", "90deg"),
+            ),
         )
         // The glyph dims, not the button: the button's opacity would dim its
         // focus ring with it.
@@ -396,7 +425,11 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         );
         spawn(async move {
             if let (Ok((x, _)), Ok(content), Ok(size)) = (offset.await, content.await, size.await) {
-                update(ScrollerEdges::measure(x, content.width, size.width));
+                update(ScrollerEdges::measure(
+                    inline_x(x),
+                    content.width,
+                    size.width,
+                ));
             }
         });
     };
@@ -409,6 +442,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     // Chromium's focus scroll stops a tabbed item just inside the clip, under
     // a control's fade (2.4.11). Once it has started, this scroll replaces it.
     let clear_focus = move || {
+        let rtl = viewport.is_rtl();
         spawn(async move {
             next_task().await;
             // A pointer focus leaves the strip where the pointer put it.
@@ -441,11 +475,11 @@ pub fn Scroller(props: ScrollerProps) -> Element {
             ) else {
                 return;
             };
-            let start = x - left;
+            let (start, end) = inline_span(x, size.width, left, view.width, rtl);
             let target = clear_of_controls(
-                offset,
+                inline_x(offset),
                 start,
-                start + size.width,
+                end,
                 view.width,
                 inset,
                 content.width - view.width,
@@ -500,11 +534,14 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     // is exactly what stops the item under the pointer from activating.
     let mut press = use_signal(|| None::<Event<PointerData>>);
     let mut origin = use_signal(|| 0.0_f64);
+    // Under RTL a drag to the right heads for the end.
+    let mut rtl = use_hook(|| CopyValue::new(false));
     let drag = use_drag(DragOptions {
         capture: viewport,
         onstart: Callback::new(|_: DragStart| {}),
         onmove: Callback::new(move |moved: DragMove| {
-            area.scroll_to((origin() - moved.delta().x).max(0.0), 0.0);
+            let delta = physical_x(moved.delta().x, rtl());
+            area.scroll_to((origin() - delta).max(0.0), 0.0);
         }),
         onend: Callback::new(|()| {}),
     });
@@ -522,9 +559,10 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         // Read now, not when the drag starts: the read resolves in a task, and
         // the first move would otherwise run against the last drag's origin.
         let offset = viewport.scroll_offset();
+        rtl.set(viewport.is_rtl());
         spawn(async move {
             if let Ok((x, _)) = offset.await {
-                origin.set(x);
+                origin.set(inline_x(x));
             }
         });
         press.set(Some(event));
@@ -733,6 +771,14 @@ mod tests {
         // The first and last items rest at the ends, where no control shows.
         assert_eq!(clear(50.0, -40.0, 0.0), 0.0);
         assert_eq!(clear(550.0, 300.0, 350.0), 600.0);
+    }
+
+    /// A 300px viewport at x 100: a 50px item at x 150 is 50px in from the
+    /// left, and 200px in from the right, where RTL starts.
+    #[test]
+    fn an_rtl_item_is_measured_from_the_right_edge() {
+        assert_eq!(inline_span(150.0, 50.0, 100.0, 300.0, false), (50.0, 100.0));
+        assert_eq!(inline_span(150.0, 50.0, 100.0, 300.0, true), (200.0, 250.0));
     }
 
     /// Chrome and Safari keep smooth scrolling under reduced motion, and a

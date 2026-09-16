@@ -1,7 +1,7 @@
 //! `Scroller`: a strip of buttons with a step control overlaid at each end.
 
 use e2e::browser::block_on;
-use e2e::passes::{focus, keyboard, motion};
+use e2e::passes::{focus, keyboard, motion, pointer};
 use e2e::{Fixture, Viewport, wait};
 
 /// The strip's scrolling viewport.
@@ -67,6 +67,125 @@ fn a_tabbed_item_is_not_left_under_a_control() {
             !scrolls.is_empty() && scrolls.iter().all(|scroll| !scroll.smooth),
             "the strip's scrolls under reduced motion: {scrolls:?}"
         );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The backward control, then the forward one.
+const BACK: &str = "#strip > button:first-of-type";
+const FORWARD: &str = "#strip > button:last-of-type";
+
+/// Where a control sits against the strip's middle (negative: left of it),
+/// and which way its glyph points (`b` of its turn: 1 left, -1 right).
+fn side_and_glyph(control: &str) -> String {
+    format!(
+        "(() => {{ const c = document.querySelector('{control}').getBoundingClientRect(); \
+         const v = document.querySelector('[role=region]').getBoundingClientRect(); \
+         const glyph = document.querySelector('{control} svg'); \
+         return [c.left + c.width / 2 - (v.left + v.width / 2), \
+         Math.round(new DOMMatrix(getComputedStyle(glyph).transform).b)]; }})()"
+    )
+}
+
+/// Under RTL the strip starts at its right edge: the forward control sits on
+/// the left and points left, and a step moves `scrollLeft` below 0.
+#[test]
+fn under_rtl_the_controls_mirror_and_step_to_the_end() {
+    block_on(async {
+        let fixture = Fixture::open("/scroller/rtl", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('{FORWARD}').getAttribute('aria-disabled') === 'false'"
+            ),
+            "the forward control to offer the end",
+        )
+        .await
+        .unwrap();
+
+        for (control, side, glyph) in [(FORWARD, -1.0, 1.0), (BACK, 1.0, -1.0)] {
+            let [at, turn]: [f64; 2] = page
+                .evaluate(side_and_glyph(control))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert!(at * side > 0.0, "{control} sits {at}px off the middle");
+            assert_eq!(turn, glyph, "{control}'s glyph points the wrong way");
+        }
+
+        pointer::click(page, FORWARD).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=region]').scrollLeft < -1",
+            "a forward step to scroll towards the end",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('{BACK}').getAttribute('aria-disabled') === 'false'"),
+            "the backward control to offer the start",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("an RTL step").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Under RTL the end is to the left, so dragging the content right reveals it.
+#[test]
+fn under_rtl_a_drag_to_the_right_heads_for_the_end() {
+    block_on(async {
+        let fixture = Fixture::open("/scroller/rtl", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('{FORWARD}').getAttribute('aria-disabled') === 'false'"
+            ),
+            "the strip to measure",
+        )
+        .await
+        .unwrap();
+
+        let from = pointer::centre_of(page, STRIP).await.unwrap();
+        let to = pointer::Point {
+            x: from.x + 120.0,
+            y: from.y,
+        };
+        pointer::drag(page, from, to, 12).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelector('[role=region]').scrollLeft < -60",
+            "the drag to follow the pointer",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("an RTL drag").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// 2.4.11 under RTL: an item is measured from the right edge, where the
+/// strip starts.
+#[test]
+fn under_rtl_a_tabbed_item_is_not_left_under_a_control() {
+    block_on(async {
+        let fixture = Fixture::open("/scroller/rtl", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, true).await.unwrap();
+        tab_along(page).await;
         fixture.close().await.unwrap();
     });
 }

@@ -28,6 +28,12 @@ pub(crate) fn on_form_reset(
     backend::on_form_reset(mounted, on_reset)
 }
 
+/// Whether `mounted` lays out right to left: its computed `direction`, which
+/// `dir="rtl"` on it or an ancestor sets. `false` where the renderer cannot say.
+pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
+    backend::is_rtl(mounted)
+}
+
 /// An element's rendered pixel size.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Dimensions {

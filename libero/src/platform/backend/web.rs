@@ -26,6 +26,20 @@ pub(super) fn element(mounted: &Rc<MountedData>) -> Option<Box<dyn ElementApi>> 
     Some(Box::new(WebElement { element }))
 }
 
+pub(super) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
+    mounted
+        .downcast::<web_sys::Element>()
+        .is_some_and(element_is_rtl)
+}
+
+/// The computed `direction`, for any node: an event's target as well.
+pub(super) fn element_is_rtl(element: &web_sys::Element) -> bool {
+    web_sys::window()
+        .and_then(|window| window.get_computed_style(element).ok()?)
+        .and_then(|style| style.get_property_value("direction").ok())
+        .is_some_and(|direction| direction == "rtl")
+}
+
 /// What a component-driven control held before a form reset.
 enum Controlled {
     Input(String, bool),

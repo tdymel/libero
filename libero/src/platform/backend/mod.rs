@@ -82,6 +82,18 @@ pub(crate) fn on_form_reset(
     return None;
 }
 
+/// The web and Blitz compute `direction`; the WebView floor answers LTR.
+pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
+    #[cfg(not(any(target_arch = "wasm32", feature = "native")))]
+    let _ = mounted;
+    #[cfg(target_arch = "wasm32")]
+    return web::is_rtl(mounted);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::is_rtl(mounted);
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return false;
+}
+
 /// Whatever the renderer needs mounted at the root, rendered once by
 /// `LiberoProvider`. Only Blitz needs anything: an element to reach its
 /// document through from the first frame, and one to run the commands it had

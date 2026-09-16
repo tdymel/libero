@@ -42,9 +42,12 @@ pub fn use_scroll_area() -> ScrollAreaHandle {
 }
 
 impl ScrollAreaHandle {
-    /// Scrolls to an offset in px, clamped by the browser to the range.
+    /// Scrolls to an offset in px, clamped by the browser to the range. `x`
+    /// counts from the inline start, the right edge under `dir="rtl"`.
     pub fn scroll_to(&self, x: f64, y: f64) {
-        let _ = self.element.scroll_to(x, y);
+        let _ = self
+            .element
+            .scroll_to(physical_x(x, self.element.is_rtl()), y);
     }
 
     /// Scrolls to a percent (0-100) of each axis's range. `None` leaves that
@@ -52,6 +55,17 @@ impl ScrollAreaHandle {
     pub fn scroll_to_percent(&self, x: Option<f64>, y: Option<f64>) {
         scroll_to_percent(self.element, x, y);
     }
+}
+
+/// `scrollLeft` counts down from 0 under RTL, so its size is the distance from
+/// the inline start in either direction.
+pub(crate) fn inline_x(scroll_left: f64) -> f64 {
+    scroll_left.abs()
+}
+
+/// [`inline_x`] back to the `scrollLeft` the platform takes.
+pub(crate) fn physical_x(x: f64, rtl: bool) -> f64 {
+    if rtl { -x } else { x }
 }
 
 /// Where `pct` percent of a `max` px range lands, or `current` for `None`.
@@ -68,16 +82,21 @@ pub(super) fn scroll_to_percent(root: ElementHandle, x: Option<f64>, y: Option<f
     if (x.is_none() && y.is_none()) || !root.is_mounted() {
         return;
     }
-    let (content, viewport_size, offset) =
-        (root.scroll_size(), root.dimensions(), root.scroll_offset());
+    let (content, viewport_size, offset, rtl) = (
+        root.scroll_size(),
+        root.dimensions(),
+        root.scroll_offset(),
+        root.is_rtl(),
+    );
     spawn(async move {
         let (Ok(scroll_size), Ok(viewport), Ok((current_x, current_y))) =
             (content.await, viewport_size.await, offset.await)
         else {
             return;
         };
+        let x = percent_offset(x, scroll_size.width - viewport.width, inline_x(current_x));
         let _ = root.scroll_to(
-            percent_offset(x, scroll_size.width - viewport.width, current_x),
+            physical_x(x, rtl),
             percent_offset(y, scroll_size.height - viewport.height, current_y),
         );
     });
@@ -99,5 +118,14 @@ mod tests {
     fn none_keeps_the_current_offset() {
         assert_eq!(percent_offset(None, 500.0, 70.0), 70.0);
         assert_eq!(percent_offset(Some(50.0), -10.0, 0.0), 0.0);
+    }
+
+    /// Under RTL `scrollLeft` runs 0 down to minus the range.
+    #[test]
+    fn an_rtl_offset_counts_from_the_inline_start() {
+        assert_eq!(inline_x(-120.0), 120.0);
+        assert_eq!(inline_x(120.0), 120.0);
+        assert_eq!(physical_x(120.0, true), -120.0);
+        assert_eq!(physical_x(120.0, false), 120.0);
     }
 }

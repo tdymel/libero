@@ -1,7 +1,9 @@
 //! `ScrollArea` around a `Virtualize` list.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, ScrollArea, Text, Virtualize};
+use libero::components::{
+    Flex, ScrollArea, ScrollPositionEvent, Text, Virtualize, use_scroll_area,
+};
 
 use crate::Routes;
 
@@ -9,7 +11,46 @@ pub const ROUTES: Routes = &[
     ("/scroll-area", || rsx! { ScrollAreaPage {} }),
     ("/scroll-area/edges", || rsx! { EdgesPage {} }),
     ("/scroll-area/keyboard", || rsx! { KeyboardPage {} }),
+    ("/scroll-area/rtl", || rsx! { RtlPage {} }),
 ];
+
+/// A horizontal area under `dir="rtl"`, which starts at its right edge: the
+/// last `onscroll` percent, both `on*reached` counts, and `#to-end`, which
+/// asks the handle for 100%.
+#[component]
+fn RtlPage() -> Element {
+    let area = use_scroll_area();
+    let mut x = use_signal(|| 0.0);
+    let mut left = use_signal(|| 0);
+    let mut right = use_signal(|| 0);
+    rsx! {
+        div { dir: "rtl",
+            Flex { direction: "column", gap: "md",
+                Text { id: "x", "{x}" }
+                Text { id: "left-reached", "{left}" }
+                Text { id: "right-reached", "{right}" }
+                button { id: "to-end", onclick: move |_| area.scroll_to_percent(Some(100.0), None), "End" }
+                div { style: "width: 200px; height: 80px",
+                    ScrollArea {
+                        id: "wide",
+                        handle: area,
+                        scrollbars: "horizontal",
+                        "aria-label": "Wide",
+                        onscroll: move |event: ScrollPositionEvent| {
+                            let (ScrollPositionEvent::Start(at, _)
+                            | ScrollPositionEvent::Change(at, _)
+                            | ScrollPositionEvent::End(at, _)) = event;
+                            x.set(at.round());
+                        },
+                        onleftreached: move |()| left += 1,
+                        onrightreached: move |()| right += 1,
+                        div { style: "width: 1000px", "Wide content" }
+                    }
+                }
+            }
+        }
+    }
+}
 
 /// Two areas of plain text, nothing focusable inside: one left at its
 /// defaults, one `focusable` and named as APG's scrollable region asks. After

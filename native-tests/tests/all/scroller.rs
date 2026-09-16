@@ -45,6 +45,19 @@ fn a_step_enables_the_back_control() {
     assert_eq!(disabled(&page, BACK), "false", "{}", page.tree());
 }
 
+/// Under RTL the strip starts at its right edge (todo 115). Blitz measures an
+/// overflow, but the step's negative `scrollLeft` leaves the strip at rest.
+#[test]
+#[ignore = "needs Blitz: RTL scroll origin"]
+fn under_rtl_a_step_enables_the_back_control() {
+    let mut page = mount(|| rsx! { div { dir: "rtl", {strip()} } });
+    page.wait(Duration::from_millis(50));
+    assert_eq!(disabled(&page, FORWARD), "false", "{}", page.tree());
+    page.click(FORWARD);
+    page.wait(Duration::from_millis(50));
+    assert_eq!(disabled(&page, BACK), "false", "{}", page.tree());
+}
+
 fn fitting() -> Element {
     rsx! {
         div { style: "width: 300px;",

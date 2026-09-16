@@ -3,7 +3,7 @@
 //! `FloatingWindow` would, with the window left alone.
 
 use e2e::browser::block_on;
-use e2e::passes::{focus, keyboard};
+use e2e::passes::{focus, keyboard, pointer};
 use e2e::{Fixture, Viewport, wait};
 
 /// The highest row index a `Virtualize` has in the document.
@@ -272,6 +272,50 @@ fn a_change_inside_a_child_component_re_checks_the_tab_stop() {
             .console
             .assert_clean("a change inside a child")
             .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Under RTL the area starts at its right edge and `scrollLeft` runs negative:
+/// the percent counts from the start, 100% lands on the left edge, and left
+/// and right stay the physical edges.
+#[test]
+fn under_rtl_the_percent_counts_from_the_right_edge() {
+    const AREA: &str = "document.querySelector('#wide')";
+    let text = |id: &str| format!("document.querySelector('#{id}').textContent");
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/rtl", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        pointer::click(page, "#to-end").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{AREA}.scrollLeft <= -({AREA}.scrollWidth - {AREA}.clientWidth) + 1 \
+                 && {} === '100' && {} === '1' && {} === '0'",
+                text("x"),
+                text("left-reached"),
+                text("right-reached")
+            ),
+            "100% to reach the left edge, and onleftreached alone",
+        )
+        .await
+        .unwrap();
+
+        page.evaluate(format!("{AREA}.scrollLeft = 0"))
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{} === '0' && {} === '1'", text("x"), text("right-reached")),
+            "onrightreached back at the start",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("an RTL area").unwrap();
         fixture.close().await.unwrap();
     });
 }

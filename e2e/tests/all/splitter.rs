@@ -61,6 +61,78 @@ fn a_drag_leaves_the_divider_focused_for_the_arrow_keys() {
     });
 }
 
+/// Under RTL pane A is on the right: the arrow keys and a drag move the
+/// divider the way they point, so rightwards shrinks pane A.
+#[test]
+fn under_rtl_the_divider_moves_the_way_the_arrow_and_pointer_go() {
+    block_on(async {
+        let fixture = Fixture::open("/splitter/rtl", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        let pane_a_right: bool = page
+            .evaluate(
+                "(() => { const s = document.querySelector('[role=separator]'); \
+                 const a = document.getElementById(s.getAttribute('aria-controls')); \
+                 return a.getBoundingClientRect().left > s.getBoundingClientRect().left; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(pane_a_right, "pane A is not on the right under RTL");
+
+        keyboard::tab_to(page, DIVIDER, 5).await.unwrap();
+        let start = value_now(page).await;
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("Number({VALUE_NOW}) < {start}"),
+            "ArrowRight to shrink pane A",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("Number({VALUE_NOW}) > {start}"),
+            "ArrowLeft to grow pane A",
+        )
+        .await
+        .unwrap();
+
+        let before = value_now(page).await;
+        let from = pointer::centre_of(page, DIVIDER).await.unwrap();
+        let to = pointer::Point {
+            x: from.x + 40.0,
+            y: from.y,
+        };
+        pointer::drag(page, from, to, 10).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("Number({VALUE_NOW}) < {before}"),
+            "a drag to the right to shrink pane A",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("an RTL splitter").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn value_now(page: &chromiumoxide::Page) -> f64 {
+    let now: String = page
+        .evaluate(VALUE_NOW)
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    now.parse().unwrap()
+}
+
 /// Alt+ArrowLeft is Back: the divider must not swallow a browser chord.
 #[test]
 fn modifier_chords_are_left_to_the_browser() {

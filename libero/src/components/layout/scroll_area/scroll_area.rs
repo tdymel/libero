@@ -1,7 +1,7 @@
 use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use super::{
-    handle::{ScrollAreaHandle, scroll_to_percent},
+    handle::{ScrollAreaHandle, inline_x, scroll_to_percent},
     viewport::{ContentOffsets, ScrollGeometry, ScrollViewport},
 };
 use crate::{
@@ -129,25 +129,36 @@ fn scroll_area_content_variables(offsets: ContentOffsets) -> Variables {
 }
 
 /// Which edges the last scroll position rested against, so `on*reached`
-/// fires on the rising edge rather than every event.
+/// fires on the rising edge rather than every event. Inline start and end,
+/// so the origin is the same under RTL.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct EdgeState {
     top: bool,
     bottom: bool,
-    left: bool,
-    right: bool,
+    start: bool,
+    end: bool,
 }
 
 impl EdgeState {
     /// Where a scroll container starts. All-`false` would make the first
-    /// scroll event report leaving-and-reaching the top and left edges it was
-    /// already resting against.
+    /// scroll event report leaving-and-reaching the top and start edges it
+    /// was already resting against.
     const AT_ORIGIN: Self = Self {
         top: true,
         bottom: false,
-        left: true,
-        right: false,
+        start: true,
+        end: false,
     };
+
+    /// From one scroll position, the x offset counted from the inline start.
+    fn at(x: f64, y: f64, max_x: f64, max_y: f64) -> Self {
+        Self {
+            top: y <= 0.0,
+            bottom: max_y <= 0.0 || y >= max_y - 1.0,
+            start: x <= 0.0,
+            end: max_x <= 0.0 || x >= max_x - 1.0,
+        }
+    }
 }
 
 base_props! {
@@ -223,7 +234,7 @@ fn scroll_metrics(data: &ScrollData) -> (f64, f64, f64, f64) {
     let percent = |offset: f64, max: f64| if max > 0.0 { offset / max * 100.0 } else { 0.0 };
 
     (
-        percent(data.scroll_left(), max_x),
+        percent(inline_x(data.scroll_left()), max_x),
         percent(data.scroll_top(), max_y),
         max_x,
         max_y,
@@ -412,12 +423,12 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             scrolled(ScrollPositionEvent::Start(x_pct, y_pct));
         }
 
-        let new_edges = EdgeState {
-            top: data.scroll_top() <= 0.0,
-            bottom: max_y <= 0.0 || data.scroll_top() >= max_y - 1.0,
-            left: data.scroll_left() <= 0.0,
-            right: max_x <= 0.0 || data.scroll_left() >= max_x - 1.0,
-        };
+        let new_edges = EdgeState::at(
+            inline_x(data.scroll_left()),
+            data.scroll_top(),
+            max_x,
+            max_y,
+        );
         let previous = edges();
         if new_edges.top && !previous.top {
             reached(ontopreached);
@@ -425,11 +436,22 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         if new_edges.bottom && !previous.bottom {
             reached(onbottomreached);
         }
-        if new_edges.left && !previous.left {
-            reached(onleftreached);
-        }
-        if new_edges.right && !previous.right {
-            reached(onrightreached);
+        let (start, end) = (
+            new_edges.start && !previous.start,
+            new_edges.end && !previous.end,
+        );
+        if start || end {
+            // Left and right stay physical: the start is the right under RTL.
+            let (onstart, onend) = match root.is_rtl() {
+                true => (onrightreached, onleftreached),
+                false => (onleftreached, onrightreached),
+            };
+            if start {
+                reached(onstart);
+            }
+            if end {
+                reached(onend);
+            }
         }
         edges.set(new_edges);
     };
@@ -630,6 +652,29 @@ mod tests {
         });
 
         assert_eq!(scroll_metrics(&data), (25.0, 50.0, 200.0, 200.0));
+    }
+
+    /// Under RTL `scrollLeft` runs negative; the percent still counts from the
+    /// start.
+    #[test]
+    fn an_rtl_offset_is_a_percent_from_the_start() {
+        let data = ScrollData::new(FakeScroll {
+            top: 0.0,
+            left: -50.0,
+            scroll: (300, 100),
+            client: (100, 100),
+        });
+
+        assert_eq!(scroll_metrics(&data).0, 25.0);
+    }
+
+    #[test]
+    fn edges_count_from_the_inline_start() {
+        let at = |x| EdgeState::at(x, 0.0, 200.0, 0.0);
+
+        assert!(at(0.0).start && !at(0.0).end);
+        assert!(at(199.5).end);
+        assert!(!at(100.0).start && !at(100.0).end);
     }
 
     /// Content that fits scrolls nowhere - the percent would divide by zero.

@@ -61,6 +61,27 @@ fn a_double_click_collapses_pane_a_and_restores_it() {
     assert_eq!(value(&page), 50.0, "not restored");
 }
 
+/// Under RTL pane A is on the right, so rightwards shrinks it (todo 115).
+#[test]
+fn under_rtl_rightwards_shrinks_pane_a() {
+    let mut page = mount(|| {
+        rsx! {
+            div { dir: "rtl", {app()} }
+        }
+    });
+    page.focus(DIVIDER);
+    let start = value(&page);
+    page.press(Key::ArrowRight);
+    let pressed = value(&page);
+    assert!(pressed < start, "ArrowRight moved it {start} -> {pressed}");
+    page.drag(DIVIDER, 40.0, 0.0);
+    let dragged = value(&page);
+    assert!(
+        dragged < pressed - 5.0,
+        "the drag moved it {pressed} -> {dragged}"
+    );
+}
+
 #[test]
 fn the_arrows_and_home_end_move_a_focused_divider() {
     let mut page = mount(app);

@@ -3,8 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::prelude::*;
 
 use crate::platform::{
-    ContentSubscription, Dimensions, ElementApi, PlatformError, Read, backend, on_content_change,
-    on_form_reset,
+    ContentSubscription, Dimensions, ElementApi, PlatformError, Read, backend, is_rtl,
+    on_content_change, on_form_reset,
 };
 
 /// A handle to one of this component's own elements, and the only way to reach
@@ -70,6 +70,12 @@ impl ElementHandle {
     /// The mounted element, for a platform call that needs the node itself.
     pub(crate) fn mounted(&self) -> Option<Rc<MountedData>> {
         self.mounted.peek().clone()
+    }
+
+    /// Whether the element lays out right to left; `false` until it mounts.
+    /// Not reactive, so a key handler can ask before it returns.
+    pub(crate) fn is_rtl(&self) -> bool {
+        self.mounted.peek().as_ref().is_some_and(is_rtl)
     }
 
     fn get(&self) -> Result<Box<dyn ElementApi>, PlatformError> {

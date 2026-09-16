@@ -15,7 +15,7 @@ use crate::{
     utils::warn,
 };
 
-/// Both panes' resulting sizes as percentages, `A` (left/top) first.
+/// Both panes' resulting sizes as percentages, `A` (start/top) first.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SplitterResizeEvent {
     Start(f64, f64),
@@ -34,6 +34,12 @@ fn finite_or(value: f64, fallback: f64, message: &str) -> f64 {
     }
     warn(message);
     fallback
+}
+
+/// How pane A grows per pixel rightwards: `-1` when a right-to-left row puts
+/// it on the right.
+fn inline_sign(rtl: bool) -> f64 {
+    if rtl { -1.0 } else { 1.0 }
 }
 
 static SPLITTER_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -120,7 +126,7 @@ base_props! {
         /// `attributes` would land on the root instead. Unset is a `warn()`.
         #[props(default, into)]
         aria_label: Option<String>,
-        /// Pane A (left/top). Required against upstream main, which cannot
+        /// Pane A (start/top: the right under RTL). Required against upstream main, which cannot
         /// split `children` apart; on the fork it falls back to the first
         /// child.
         #[cfg(feature = "dioxus-fork")]
@@ -128,7 +134,7 @@ base_props! {
         panel_a: Option<Element>,
         #[cfg(not(feature = "dioxus-fork"))]
         panel_a: Element,
-        /// Pane B (right/bottom). Same rules as `panel_a`, second child.
+        /// Pane B (end/bottom). Same rules as `panel_a`, second child.
         #[cfg(feature = "dioxus-fork")]
         #[props(default)]
         panel_b: Option<Element>,
@@ -188,6 +194,8 @@ pub fn Splitter(props: SplitterProps) -> Element {
     // pointerdown to turn the drag's pixel delta into a percentage.
     let mut container_size = use_signal(|| 0.0_f64);
     let mut start_a = use_signal(|| 0.0_f64);
+    // Under RTL a row puts pane A on the right, so moving right shrinks it.
+    let mut toward_b = use_hook(|| CopyValue::new(1.0_f64));
 
     // Where a double-click restores pane A to after it collapsed it.
     let mut restore_to = use_signal(|| initial_size.clamp(min_size, 100.0 - min_size));
@@ -217,6 +225,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
             let cancel = start.cancel;
             // Unmeasured until the task below lands: `onmove` skips moves till then.
             container_size.set(0.0);
+            toward_b.set(inline_sign(vertical && root.is_rtl()));
             // Started here, awaited in the task: see `ElementApi::dimensions`.
             let size = root.dimensions();
             spawn(async move {
@@ -249,7 +258,11 @@ pub fn Splitter(props: SplitterProps) -> Element {
                 return;
             }
             let delta = event.delta();
-            let pixels = if vertical { delta.x } else { delta.y };
+            let pixels = if vertical {
+                delta.x * toward_b()
+            } else {
+                delta.y
+            };
             let delta_pct = pixels / container_size() * 100.0;
             let new_a = (start_a() + delta_pct).clamp(min_size, 100.0 - min_size);
             a.set(new_a);
@@ -279,9 +292,11 @@ pub fn Splitter(props: SplitterProps) -> Element {
             settle(new_a);
         };
 
+        // The arrow moves the divider the way it points.
+        let right = step * inline_sign(vertical && root.is_rtl());
         match event.key() {
-            Key::ArrowRight if vertical => go_to(current + step),
-            Key::ArrowLeft if vertical => go_to(current - step),
+            Key::ArrowRight if vertical => go_to(current + right),
+            Key::ArrowLeft if vertical => go_to(current - right),
             Key::ArrowDown if !vertical => go_to(current + step),
             Key::ArrowUp if !vertical => go_to(current - step),
             Key::Home => go_to(min_size),
