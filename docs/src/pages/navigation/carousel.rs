@@ -104,10 +104,10 @@ pub fn CarouselPage() -> Element {
                         .doc("Mouse drag-to-scroll. Touch already swipes natively."),
                     prop("autoplay", "bool")
                         .default("false")
-                        .doc("Advances on a timer, with a pause control and pause on hover and focus."),
+                        .doc("Advances on a timer, with a pause control first in Tab order. Hover pauses it; focus entering stops it until Play is pressed."),
                     prop("r#loop", "bool")
                         .default("false")
-                        .doc("Wraps at both ends by cloning slides onto each end and jumping back across the seam once the scroll settles. The clones are aria-hidden."),
+                        .doc("Wraps at both ends by cloning slides onto each end and jumping back across the seam once the scroll settles. Each slide has one live copy, a clone when that is the one showing; the other copies are aria-hidden and inert."),
                     prop("autoplay_delay", "u32")
                         .default(theme.carousel.autoplay_delay.to_string())
                         .doc("Milliseconds between advances."),
@@ -234,6 +234,12 @@ pub fn CarouselPage() -> Element {
                     ListItem {
                         "The indicators are one tab stop with the same keys, and focus follows "
                         "the slide."
+                    }
+                    ListItem {
+                        "With "
+                        Code { source: "autoplay" }
+                        ", the pause toggle is the first tab stop. Focus entering the carousel "
+                        "stops rotation until the toggle is pressed; hovering only pauses it."
                     }
                 }
             }

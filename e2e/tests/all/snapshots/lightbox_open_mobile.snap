@@ -29,8 +29,6 @@ generic
         paragraph
           StaticText "Picture 1 of the first gallery"
         region "Thumbnails"
-          status [atomic] [live=polite]
-            StaticText "Slide 1 of 1"
           generic
             group "Thumbnails"
               group "1 of 6"

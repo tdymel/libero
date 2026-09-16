@@ -271,8 +271,8 @@ fn carousel_app() -> Element {
     }
 }
 
-/// WCAG 2.2.2: focus inside stops the rotation, which the status region
-/// says by turning `polite`.
+/// WCAG 2.2.2: focus entering stops the rotation, which the status region
+/// says by turning `polite`; leaving does not resume it (todo 548).
 #[test]
 fn focus_tabbed_into_a_carousel_pauses_it() {
     const STATUS: &str = "[role=status]";
@@ -293,7 +293,11 @@ fn focus_tabbed_into_a_carousel_pauses_it() {
         "focus is on {}",
         page.focus_owner()
     );
-    assert_eq!(page.attr(STATUS, "aria-live").as_deref(), Some("off"));
+    assert_eq!(page.attr(STATUS, "aria-live").as_deref(), Some("polite"));
+    assert_eq!(
+        page.attr("[aria-pressed]", "aria-pressed").as_deref(),
+        Some("true")
+    );
 }
 
 fn windows_app() -> Element {

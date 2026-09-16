@@ -57,10 +57,11 @@ can compare equal.
 
 `per_view` above `1` shows several slides at once, and the strip then runs out
 of scroll before it runs out of slides - six slides three-up stop at index 3,
-not 5. The indicator strip and the live region follow that: four dots rather
-than six, and a status that runs "Slide 1 of 4" to "Slide 4 of 4". They count
-where the strip can rest, as Mantine does, so a strip whose slides all fit is
-one position - one dot, "Slide 1 of 1", and both controls inactive.
+not 5. The indicator strip follows that: four dots rather than six, one per
+place the strip can rest, as Mantine does, each named by the first slide it
+shows. The live region names the slides showing instead - "Slides 1–3 of 6" -
+counting a slide at least half in view. A strip whose slides all fit is one
+position: one dot, "Slides 1–6 of 6", and both controls inactive.
 
 With no slides at all there is no position, so nothing counts one: no status,
 no dots, no controls and no pause button. The root still renders, so the
@@ -82,6 +83,11 @@ a start-aligned one - three-up, every alignment rests on whole-slide steps, and
 only the reported index differs. At the very start of the strip, too, every
 alignment rests the same way. The demo above is `1.5` up and opens on slide 3,
 so switching `align` moves that slide to the left, the middle or the right.
+
+Each slide pads its content by the focus ring's reach (offset plus width, 4px
+by default), so a focusable flush with a slide's edge keeps its whole ring
+inside the slide's clip. The slide takes no caller `sx`; the padding moves with
+the theme's `focus_ring` numbers.
 
 ## Vertical
 
@@ -145,9 +151,12 @@ fn Demo(photos: Vec<Photo>) -> Element {
 ## Autoplay
 
 `autoplay` advances on a timer and brings its whole WCAG 2.2.2 contract with
-it: a real pause control, pause on hover, and pause on focus landing anywhere
-inside. The pause control is a button rather than a hover affordance, because
-hovering helps neither a keyboard nor a touch user. While it rotates unattended
+it: a real pause control, first in the carousel's Tab order, and a pause on
+hover. Focus entering the carousel stops rotation for good, as in the APG
+carousel pattern: it resumes only when the pause control is pressed, not when
+focus leaves. Hover only pauses, and the pointer leaving resumes it. The pause
+control is a button rather than a hover affordance, because hovering helps
+neither a keyboard nor a touch user. While it rotates unattended
 the live region is `aria-live="off"`, and it becomes polite again the moment it
 stops. Under `prefers-reduced-motion: reduce` it opens paused; the pause control
 starts it.
@@ -170,6 +179,7 @@ unaffected.
 - Set `aria_label`: it names the region.
 - The track is a tab stop. `ArrowLeft` / `ArrowRight`, or `ArrowUp` / `ArrowDown` when vertical: previous and next. `Home` / `End`: first and last.
 - The indicators are one tab stop with the same keys, and focus follows the slide.
+- With `autoplay`, the pause toggle is the first tab stop. Focus entering the carousel stops rotation until the toggle is pressed; hovering only pauses it.
 
 ## Props
 
@@ -188,9 +198,9 @@ unaffected.
 | `indicators` | `bool` | `false` | The dot strip - one per scroll position, which is fewer than the slides when `per_view` is above 1. |
 | `aria_label` | `String` | theme `label` | Names the region. Leaving it unset falls back to the theme's generic name and warns. |
 | `draggable` | `bool` | `false` | Mouse drag-to-scroll. Touch already swipes natively. |
-| `autoplay` | `bool` | `false` | Advances on a timer, with a pause control and pause on hover and focus. |
+| `autoplay` | `bool` | `false` | Advances on a timer, with a pause control first in Tab order. Hover pauses it; focus entering stops it until Play is pressed. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
-| `r#loop` | `bool` | `false` | Wraps at both ends, by cloning slides onto each end. The clones are `aria-hidden`. |
+| `r#loop` | `bool` | `false` | Wraps at both ends, by cloning slides onto each end. Each slide has one live copy, a clone when that is the one showing; the other copies are `aria-hidden` and `inert`. |
 
 Like every component, `Carousel` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
@@ -226,9 +236,11 @@ The words are `CarouselLabels` in the [localization](theming.md#localization):
 |---|---|---|
 | `label` | `Carousel` | Stands in when a caller omits `aria_label` - which also warns. |
 | `previous` / `next` | `Previous slide` / `Next slide` | The controls' names. |
-| `indicator` | `Go to slide {n}` | An indicator's name. |
+| `indicator` | `Go to slide {n}` | An indicator's name: `{n}` is the first slide it shows. |
+| `indicators` | `Choose slide` | Names the dot strip's group. |
 | `slide` | `{n} of {m}` | A slide group's name. |
-| `status` | `Slide {n} of {m}` | What the live region reads. `{m}` counts resting positions, not slides. |
+| `status` | `Slide {n} of {m}` | What the live region reads one-up. `{m}` counts resting positions, not slides. |
+| `status_range` | `Slides {from}–{to} of {n}` | What it reads above one slide per view: the slides showing, of all `{n}`. |
 | `pause` | `Pause slideshow` | The autoplay control's name. It does not change when paused: `aria-pressed` carries the state. |
 
 ## CSS variables

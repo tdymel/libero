@@ -53,10 +53,10 @@ fn six() -> Vec<Element> {
     (1..=6).map(|n| rsx! { "{n}" }).collect()
 }
 
-/// Mantine counts where the strip can rest, not slides: six three-up rest at
-/// four places, so there are four dots and the status is out of four.
+/// Six three-up rest at four places, so there are four dots, each named by the
+/// first slide it shows; the status names the slides showing (todo 550).
 #[test]
-fn the_status_and_the_dots_count_resting_positions() {
+fn the_dots_count_resting_positions_and_the_status_names_the_range() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -66,7 +66,7 @@ fn the_status_and_the_dots_count_resting_positions() {
     }
 
     let html = body(&render(app));
-    assert!(html.contains("Slide 1 of 4"), "{html}");
+    assert!(html.contains("Slides 1–3 of 6"), "{html}");
     assert!(html.contains(r#"aria-label="Go to slide 4""#), "{html}");
     assert!(!html.contains(r#"aria-label="Go to slide 5""#), "{html}");
 }
@@ -92,7 +92,7 @@ fn a_strip_whose_slides_all_fit_is_one_position() {
     }
 
     let html = body(&render(app));
-    assert!(html.contains("Slide 1 of 1"), "{html}");
+    assert!(html.contains("Slides 1–6 of 6"), "{html}");
     assert!(html.contains(r#"aria-label="Go to slide 1""#), "{html}");
     assert!(!html.contains(r#"aria-label="Go to slide 2""#), "{html}");
 }
@@ -167,18 +167,21 @@ fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
     // The track and the current dot, and nothing else.
     assert_eq!(html.matches(r#"tabindex="0""#).count(), 2, "{html}");
 
-    // Six slides three-up stop at index 3, so four dots, not six.
+    // Six slides three-up stop at index 3, so four dots, not six, in a named
+    // group (todo 549).
     assert_eq!(html.matches(r#"aria-label="Go to slide"#).count(), 4);
+    let dots = attributes_of(open_tag(&html, r#"aria-label="Choose slide""#), "div");
+    assert_eq!(dots["role"], "group");
     // At the first slide the previous control is disabled but keeps its place
     // in the tab order.
     assert!(html.contains(r#"aria-disabled="true""#), "{html}");
     assert!(!html.contains("disabled=true"), "{html}");
 
     // The live region reads the settled position, politely, as one
-    // utterance - out of the four places the strip can rest, as Mantine counts.
+    // utterance - the slides showing, three-up (todo 550).
     assert!(html.contains(r#"role="status""#), "{html}");
     assert!(html.contains(r#"aria-live="polite""#), "{html}");
-    assert!(html.contains("Slide 1 of 4"), "{html}");
+    assert!(html.contains("Slides 1–3 of 6"), "{html}");
 }
 
 /// Centred three-up over six slides reaches indices 1-4, not 0-3, so an index
@@ -379,6 +382,66 @@ fn a_looping_carousel_clones_its_ends_and_hides_the_copies() {
     // real slide.
     assert!(!html.contains(r#"aria-disabled="true""#), "{html}");
     assert_eq!(html.matches(r#"aria-label="Go to slide"#).count(), 0);
+}
+
+/// Todo 544: three-up and centred, the strip at rest shows the clone of the
+/// last slide. That clone is the live slide group; its offscreen twin is
+/// `aria-hidden` and `inert`.
+#[test]
+fn a_showing_clone_is_live_and_its_twin_hidden() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel {
+                    aria_label: "Photos",
+                    r#loop: true,
+                    per_view: 3.0,
+                    slides: (0..5).map(|i| rsx! { div { "slide {i}" } }).collect(),
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    // Three clones at each end: eleven positions, one live copy per slide.
+    assert_eq!(html.matches("<div>slide").count(), 11);
+    assert_eq!(html.matches(r#"aria-roledescription="slide""#).count(), 5);
+    assert_eq!(
+        html.matches(r#"aria-hidden="true""#).count(),
+        6 + html.matches("<svg").count()
+    );
+    // The live "5 of 5" is the leading clone, drawn left of slide 1.
+    let live = open_tag(&html, r#"aria-label="5 of 5""#);
+    assert!(
+        !live.contains("inert") && !live.contains("aria-hidden"),
+        "{live}"
+    );
+    assert!(
+        html.find(r#"aria-label="5 of 5""#) < html.find(r#"aria-label="1 of 5""#),
+        "{html}"
+    );
+}
+
+/// Todo 548: the rotation control comes first in Tab order, before the track.
+#[test]
+fn the_autoplay_toggle_precedes_the_track() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel {
+                    aria_label: "Offers",
+                    autoplay: true,
+                    slides: vec![rsx! { "a" }, rsx! { "b" }],
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let pause = html.find("aria-pressed").expect("the autoplay toggle");
+    let track = html.find("aria-describedby").expect("the track");
+    assert!(pause < track, "{html}");
 }
 
 /// A generic name beats none at all, so the theme's stands in - the warning is

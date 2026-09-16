@@ -30,8 +30,8 @@ use crate::{
         CAROUSEL_CONTROL_SIZE, CAROUSEL_CONTROLS_OFFSET, CAROUSEL_GAP, CAROUSEL_INDICATOR_COLOR,
         CAROUSEL_INDICATOR_CURRENT_COLOR, CAROUSEL_INDICATOR_CURRENT_LENGTH,
         CAROUSEL_INDICATOR_LENGTH, CAROUSEL_INDICATOR_THICKNESS, CAROUSEL_INDICATORS_GAP,
-        CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, CssVar, FOCUS_RING_HALO, FOCUS_RING_WIDTH,
-        NamedColorCss, Size, SizeCss,
+        CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, CssVar, FOCUS_RING_HALO, FOCUS_RING_OFFSET,
+        FOCUS_RING_WIDTH, NamedColorCss, Size, SizeCss,
     },
 };
 
@@ -110,13 +110,13 @@ static CAROUSEL_SLIDE_SX: StaticSx = StaticSx::new(|| {
         .min_height("0")
         .border_radius(CAROUSEL_RADIUS.value())
         .overflow("hidden")
-        // The slide and the track clip flush at its edges, so a focusable slide
-        // content loses an outset ring (todo 618), as in `AspectRatio`. Doubled
-        // to outrank a `Button`'s own ring, which ties it otherwise.
-        .selector(
-            "& > :focus-visible:focus-visible",
-            inset_focus_ring_sx(&format!("calc(-1 * {})", FOCUS_RING_WIDTH.value())),
-        )
+        // The slide and the track clip flush at its edges: room for an outset
+        // ring on focusable content at any depth (todos 618, 619).
+        .padding(format!(
+            "calc({} + {})",
+            FOCUS_RING_OFFSET.value(),
+            FOCUS_RING_WIDTH.value()
+        ))
         .flex(format!(
             "0 0 calc((100% - ({} - 1) * {}) / {})",
             CAROUSEL_PER_VIEW.overridable(),
@@ -267,6 +267,8 @@ static CAROUSEL_INDICATOR_SX: StaticSx = StaticSx::new(|| {
 
 static CAROUSEL_PAUSE_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
+        // First in the DOM for Tab order, so the viewport would paint over it.
+        .z_index("1")
         .bottom(CAROUSEL_CONTROLS_OFFSET.value())
         .right(CAROUSEL_CONTROLS_OFFSET.value())
         .display("inline-flex")
@@ -356,6 +358,32 @@ fn outside_viewport(
     let slide = position as f64;
 
     slide + 1.0 <= start + EPSILON || slide >= start + per_view - EPSILON
+}
+
+/// The first and last strip positions at least half in the viewport while the
+/// strip rests on `rest`: what the status range and a dot's number count.
+fn showing(rest: usize, strip: usize, per_view: f64, align: CarouselAlign) -> (usize, usize) {
+    const EPSILON: f64 = 1e-6;
+    let range = (strip as f64 - per_view).max(0.0);
+    let start = (rest as f64 - align_shift(per_view, align)).clamp(0.0, range);
+    let end = start + per_view;
+    let half = |k: &usize| end.min(*k as f64 + 1.0) - start.max(*k as f64) >= 0.5 - EPSILON;
+    let first = (0..strip).find(half).unwrap_or(rest);
+    let last = (0..strip).rev().find(half).unwrap_or(rest);
+    (first, last)
+}
+
+/// The strip position that is slide `index`'s one live copy: the real slide if
+/// it `shows`, else a clone that shows, else the real one (todo 544).
+fn live_copy(index: usize, count: usize, clones: usize, shows: impl Fn(usize) -> bool) -> usize {
+    let real = index + clones;
+    let leading = (index + clones >= count).then(|| index + clones - count);
+    let trailing = (index < clones).then(|| clones + count + index);
+    [Some(real), leading, trailing]
+        .into_iter()
+        .flatten()
+        .find(|&position| shows(position))
+        .unwrap_or(real)
 }
 
 /// A dot's own id, derived from the track's so two carousels on one page do
@@ -483,6 +511,12 @@ impl CarouselJump {
         self.0.get()
     }
 }
+
+/// Provided around a strip that drops its status and its track's tab stop when
+/// every slide fits: nothing scrolls, so both are noise (`Lightbox`'s
+/// thumbnails, todo 564). A context, as [`CarouselJump`]: no public prop.
+#[derive(Clone, Copy)]
+pub(crate) struct CarouselQuietWhenFits;
 
 /// Whether a swap has arrived since the last time this was asked, and mark it
 /// as read. Reading it is what consumes it: a count that stayed unread would
@@ -637,6 +671,18 @@ impl Nav {
         self.seam.set(true);
     }
 
+    /// The first and last real slide at least half showing while the strip
+    /// rests on `index`. A looping strip can wrap: `from` after `to`.
+    fn showing(self, index: usize) -> (usize, usize) {
+        let (first, last) = showing(
+            self.raw_for(index),
+            self.strip_count(),
+            self.per_view,
+            self.align,
+        );
+        (self.real_for(first), self.real_for(last))
+    }
+
     /// The strip position a scroll report names: `index_at` only needs the
     /// offset as a share of the range, which is exactly the percent.
     fn raw_at(self, x: f64, y: f64) -> usize {
@@ -700,9 +746,9 @@ base_props! {
         /// `touch-action: none`, which would take it away.
         #[props(default)]
         draggable: bool,
-        /// Advances on a timer. Ships with a pause control, and pauses itself
-        /// on hover and on focus within, per WCAG 2.2.2. Starts paused under
-        /// reduced motion.
+        /// Advances on a timer. Ships with a pause control, first in Tab
+        /// order, and pauses while hovered. Focus entering stops it until the
+        /// control is pressed (WCAG 2.2.2). Starts paused under reduced motion.
         #[props(default)]
         autoplay: bool,
         /// Milliseconds between advances. Defaults to the theme's.
@@ -710,8 +756,8 @@ base_props! {
         autoplay_delay: Option<u32>,
         /// Wraps at both ends, by cloning enough slides onto each end for the
         /// strip to scroll past the edge and jumping back across the seam once
-        /// it settles. The clones are `aria-hidden`, so the content is not
-        /// duplicated for a screen reader.
+        /// it settles. Each slide has one live copy, a clone when that is the
+        /// one showing; the other copies are `aria-hidden` and `inert`.
         #[props(default)]
         r#loop: bool,
     }
@@ -751,9 +797,11 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let status_id = use_id();
 
     let jump = try_use_context::<CarouselJump>();
+    let quiet_when_fits = try_use_context::<CarouselQuietWhenFits>().is_some();
 
     let count = props.slides.len();
     let per_view = props.per_view.copied_or(theme.carousel.per_view).max(0.1);
+    let quiet = quiet_when_fits && count as f64 <= per_view;
     // `Orientation` defaults to vertical; a carousel does not.
     let orientation = props.orientation.copied_or(Orientation::Horizontal);
     let align = props.align.copied_or(theme.carousel.align);
@@ -789,6 +837,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
             .autoplay_delay
             .unwrap_or(theme.carousel.autoplay_delay),
         named: props.aria_label.is_some(),
+        quiet,
     };
     let state = use_carousel_state(setup);
     let drag = use_carousel_drag(setup, state, props.draggable);
@@ -859,17 +908,18 @@ pub fn Carousel(props: CarouselProps) -> Element {
         HtmlTag::Section,
         props.attributes,
         rsx! {
-            if !empty {
+            if !empty && !quiet {
                 CarouselStatus { view }
+            }
+            // First in Tab order, as APG's rotation control (todo 548).
+            if props.autoplay && !empty {
+                {carousel_pause_button(view, controls)}
             }
             Box { framework_sx: &CAROUSEL_VIEWPORT_SX,
                 {carousel_track(view, aria_label, props.draggable, drag, body)}
                 if controls {
                     CarouselControls { view }
                 }
-            }
-            if props.autoplay && !empty {
-                {carousel_pause_button(view, controls)}
             }
             if indicators {
                 CarouselIndicators { view }
@@ -900,10 +950,12 @@ struct CarouselSetup {
     autoplay_delay: u32,
     /// Whether the caller named the region, for the name warning.
     named: bool,
+    /// Every slide fits under [`CarouselQuietWhenFits`]: no status, no track tab stop.
+    quiet: bool,
 }
 
-/// `Carousel`'s live state: the strip mover and the two indices in `nav`, the
-/// three reasons autoplay pauses, and the drag. Every effect that moves the
+/// `Carousel`'s live state: the strip mover and the two indices in `nav`, what
+/// pauses autoplay, and the drag. Every effect that moves the
 /// strip lives in [`use_carousel_state`], so the component body is left with
 /// rendering.
 #[derive(Clone, Copy, PartialEq)]
@@ -912,6 +964,8 @@ struct CarouselState {
     paused: Signal<bool>,
     hovered: Signal<bool>,
     focused: Signal<bool>,
+    /// A pointer is down on the pause control, so the focus it brings is no entry.
+    pressing: Signal<bool>,
     dragging: Signal<bool>,
     drag_origin: Signal<f64>,
     /// The controlled index the effect last applied. Until it runs, a new one
@@ -1085,7 +1139,27 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         }
     }));
 
-    let running = autoplay && !paused() && !hovered() && !focused() && count > 1;
+    // Focus entering stops rotation until Play, as APG's carousel (todo 548).
+    // An effect, so a move within - `focusout` then `focusin` - is no entry. A
+    // press on the pause control is its own choice and does not count.
+    let mut was_focused = use_signal(|| false);
+    let mut pressing = use_signal(|| false);
+    use_effect(use_reactive!(|autoplay| {
+        let within = focused();
+        let entered = within && !*was_focused.peek();
+        was_focused.set(within);
+        if !entered {
+            return;
+        }
+        let pressed = std::mem::replace(&mut *pressing.write(), false);
+        if autoplay && !pressed && !*paused.peek() {
+            let mut paused = paused;
+            paused.set(true);
+        }
+    }));
+
+    // Hover only pauses: leaving resumes.
+    let running = autoplay && !paused() && !hovered() && count > 1;
     // The timer's callback runs outside every scope (`TimerApi`), and a move
     // needs one: `scroll_to_index` spawns. So a tick only counts, and the
     // effect below it, which has a scope, does the moving. A `go_to` from the
@@ -1146,6 +1220,7 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         paused,
         hovered,
         focused,
+        pressing,
         dragging,
         drag_origin,
         applied,
@@ -1239,7 +1314,7 @@ fn carousel_slides(
         .into_iter()
         .enumerate()
         .map(|(position, (index, slide, is_clone))| {
-            let label = (!is_clone).then(|| label_for(index));
+            let label = label_for(index);
             rsx! {
                 CarouselSlide {
                     key: "{position}",
@@ -1268,7 +1343,7 @@ fn CarouselSlide(
     position: usize,
     index: usize,
     is_clone: bool,
-    label: Option<String>,
+    label: String,
 ) -> Element {
     let flags =
         use_memo(use_reactive!(|nav,
@@ -1285,18 +1360,24 @@ fn CarouselSlide(
                 Some(held) if Some(held) != *applied.peek() => nav.clamp_index(held),
                 _ => (nav.settled)(),
             };
-            // Wholly offscreen at rest: out of the Tab order and the reading
-            // order. A press on it still reaches the track (measured).
-            let hidden = outside_viewport(
-                position,
-                nav.raw_for(rest),
-                nav.strip_count(),
-                nav.per_view,
-                nav.align,
-            );
-            (hidden, !is_clone && index == (nav.current)())
+            let shows = |position| {
+                !outside_viewport(
+                    position,
+                    nav.raw_for(rest),
+                    nav.strip_count(),
+                    nav.per_view,
+                    nav.align,
+                )
+            };
+            // One copy per slide is live: a clone showing in the viewport
+            // stands in for its offscreen twin.
+            let live = live_copy(index, nav.count, nav.clones, shows) == position;
+            // Wholly offscreen at rest, or a copy: out of the Tab order and the
+            // reading order. A press on it still reaches the track (measured).
+            let hidden = !live || !shows(position);
+            (live, hidden, !is_clone && index == (nav.current)())
         }));
-    let (hidden, current) = flags();
+    let (live, hidden, current) = flags();
     let track = nav.track;
     // No `current` token: nothing in `CAROUSEL_SLIDE_SX` styles one, and
     // `data-current` below is what a caller actually reads.
@@ -1306,12 +1387,12 @@ fn CarouselSlide(
         Box {
             framework_sx: &CAROUSEL_SLIDE_SX,
             states: slide_states,
-            role: if is_clone { None } else { Some("group") },
-            aria_roledescription: if is_clone { None } else { Some("slide") },
-            aria_label: label,
-            // A clone is the same content twice over, so it is hidden
+            role: live.then_some("group"),
+            aria_roledescription: live.then_some("slide"),
+            aria_label: live.then_some(label),
+            // A copy is the same content twice over, so it is hidden
             // rather than announced a second time.
-            aria_hidden: is_clone.then(|| "true".to_string()),
+            aria_hidden: (!live).then(|| "true".to_string()),
             inert: hidden.then_some(true),
             // Focus inside a slide that has just gone `inert` - the
             // wheel, a drag, a native arrow on a button, a caller's
@@ -1452,7 +1533,7 @@ fn carousel_track(
             // The track is the scrollable region, so it is the tab stop - the
             // opposite of `ScrollArea`'s default, and on purpose. Empty, there
             // is nothing to scroll to.
-            focusable: !empty,
+            focusable: !empty && !setup.quiet,
             framework_sx: ScrollAreaBase(&CAROUSEL_TRACK_SX),
             states: track_states,
             id: track_id(),
@@ -1460,7 +1541,7 @@ fn carousel_track(
             // reliably re-announce the region, and the status says where.
             role: (!empty).then_some("group"),
             aria_label: (!empty).then(|| aria_label.clone()),
-            aria_describedby: (!empty).then_some(status_id()),
+            aria_describedby: (!empty && !setup.quiet).then_some(status_id()),
             onscroll: move |event: ScrollPositionEvent| match event {
                 ScrollPositionEvent::Start(x, y) | ScrollPositionEvent::Change(x, y) => {
                     onscroll(x, y)
@@ -1601,14 +1682,33 @@ fn CarouselStatus(view: CarouselView) -> Element {
     } = view;
     let nav = state.nav;
     let settled = nav.settled;
-    let (position, positions) = snap_position(
-        settled(),
-        setup.count,
-        setup.first,
-        setup.last,
-        nav.clones > 0,
-    );
-    let status = numbered(labels.status, position, positions);
+    let status = match nav.per_view > 1.0 {
+        // Several up, the slides showing are named, not the resting position (todo 550).
+        true => {
+            let (from, to) = nav.showing(settled());
+            match from == to {
+                true => numbered(labels.status, from, setup.count),
+                false => fill(
+                    labels.status_range,
+                    &[
+                        ("from", &(from + 1)),
+                        ("to", &(to + 1)),
+                        ("n", &setup.count),
+                    ],
+                ),
+            }
+        }
+        false => {
+            let (position, positions) = snap_position(
+                settled(),
+                setup.count,
+                setup.first,
+                setup.last,
+                nav.clones > 0,
+            );
+            numbered(labels.status, position, positions)
+        }
+    };
 
     rsx! {
         VisuallyHidden {
@@ -1629,6 +1729,7 @@ fn CarouselStatus(view: CarouselView) -> Element {
 fn carousel_pause_button(view: CarouselView, controls: bool) -> Element {
     let mut paused = view.state.paused;
     let labels = view.labels;
+    let (focused, mut pressing) = (view.state.focused, view.state.pressing);
     let beside_next = controls && view.setup.orientation == Orientation::Horizontal;
     let pause_states: Input<States> = states().with("beside-next", beside_next).into();
 
@@ -1640,6 +1741,13 @@ fn carousel_pause_button(view: CarouselView, controls: bool) -> Element {
             states: pause_states,
             aria_label: labels.pause,
             aria_pressed: paused().to_string(),
+            // The focus this press brings in would stop rotation before the
+            // click toggles it back on.
+            onpointerdown: move |_| {
+                if !*focused.peek() {
+                    pressing.set(true);
+                }
+            },
             onclick: move |_| paused.toggle(),
             if paused() {
                 PlayIcon {}
@@ -1675,7 +1783,12 @@ fn CarouselIndicators(view: CarouselView) -> Element {
     let strip_states: Input<States> = states().with(orientation.state_name(), true).into();
 
     rsx! {
-        Box { framework_sx: &CAROUSEL_INDICATORS_SX, states: strip_states,
+        // A named group, so the dots read as one set (todo 549).
+        Box {
+            framework_sx: &CAROUSEL_INDICATORS_SX,
+            states: strip_states,
+            role: "group",
+            aria_label: labels.indicators,
             for index in low..=high {
                 Box {
                     key: "{index}",
@@ -1685,7 +1798,12 @@ fn CarouselIndicators(view: CarouselView) -> Element {
                     states: states()
                         .with(orientation.state_name(), true)
                         .with("current", index == current()),
-                    aria_label: numbered(labels.indicator, index - low, high - low + 1),
+                    // By the first slide it shows; a looping dot by its own (todo 550).
+                    aria_label: numbered(
+                        labels.indicator,
+                        if looping { index } else { nav.showing(index).0 },
+                        count,
+                    ),
                     aria_current: (index == current()).then(|| "true".to_string()),
                     // Roving: one tab stop for the whole strip. The
                     // arrows move the slide and the focus with it -
@@ -2123,6 +2241,49 @@ mod tests {
         assert_eq!(outside(2, 5, 1.5, center), vec![0, 4]);
         // Everything fits: nothing to hide.
         assert!(outside(0, 3, 3.0, start).is_empty());
+    }
+
+    /// Todo 544: five slides three-up, centred on slide 0, show the clone of
+    /// slide 4 on the left. That clone is the live copy; elsewhere the real one.
+    #[test]
+    fn a_showing_clone_is_its_slides_live_copy() {
+        let shows = |position| !outside_viewport(position, 3, 11, 3.0, CarouselAlign::Center);
+        assert_eq!(live_copy(4, 5, 3, shows), 2);
+        assert_eq!(live_copy(0, 5, 3, shows), 3);
+        assert_eq!(live_copy(1, 5, 3, shows), 4);
+        // Nothing of slide 2 shows: the real one stays the live copy, offscreen.
+        assert_eq!(live_copy(2, 5, 3, shows), 5);
+        // Without clones a slide is its own copy.
+        assert_eq!(live_copy(2, 5, 0, |_| false), 2);
+    }
+
+    /// Todo 550: the slides at least half showing, which a peek is not.
+    #[test]
+    fn the_range_counts_slides_at_least_half_showing() {
+        let (start, center) = (CarouselAlign::Start, CarouselAlign::Center);
+        assert_eq!(showing(0, 6, 3.0, start), (0, 2));
+        assert_eq!(showing(2, 6, 3.0, center), (1, 3));
+        // Clamped at the end: slides 3 to 5.
+        assert_eq!(showing(5, 6, 3.0, start), (3, 5));
+        // 1.5 up: the half-slide peek counts, a quarter does not.
+        assert_eq!(showing(0, 6, 1.5, start), (0, 1));
+        assert_eq!(showing(2, 6, 1.5, center), (2, 2));
+        assert_eq!(showing(0, 1, 1.0, start), (0, 0));
+    }
+
+    /// Todo 619: a slide leaves room for the whole ring stripe of content flush
+    /// with its edge; the global reset's `border-box` keeps it inside the basis.
+    #[test]
+    fn a_slide_pads_by_the_focus_ring() {
+        let css = Stylesheet::from(&CAROUSEL_SLIDE_SX);
+        let css = css.as_str();
+
+        assert!(
+            css.contains(
+                "padding:calc(var(--lsx-focus-ring-offset) + var(--lsx-focus-ring-width))"
+            ),
+            "{css}"
+        );
     }
 
     /// Not looping is the same code with no clones, and has to stay a plain

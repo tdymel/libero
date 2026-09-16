@@ -39,9 +39,13 @@ use e2e::passes::target_size::MINIMUM;
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
-/// Todo 618: the slide and the track clip flush at a slide's edge, which cut
-/// away the outset ring of a slide's focusable content. Every visible slide's
-/// button, the first one flush with the track's left edge.
+/// The slide pads by exactly the ring's reach, so a fractional slide width can
+/// round the clip a layout unit (1/64px) inside it.
+const SUBPIXEL: f64 = 0.5;
+
+/// Todos 618, 619: the slide and the track clip flush at a slide's edge, which
+/// cut away the outset ring of a slide's focusable content. Every visible
+/// slide's button, the first one flush with the track's left edge.
 #[test]
 fn a_focused_slide_keeps_its_ring() {
     block_on(async {
@@ -65,10 +69,28 @@ fn a_focused_slide_keeps_its_ring() {
                 .into_value()
                 .unwrap();
             assert!(
-                clipped <= 0.0,
+                clipped < SUBPIXEL,
                 "slide button {stop}: the ring runs {clipped}px past the clip"
             );
         }
+        fixture.close().await.unwrap();
+
+        // Todo 619: nested, not a slide's direct child, and flush with its edge.
+        let fixture = Fixture::open("/carousel", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        reach(page, BUTTON).await.unwrap();
+        let clipped: f64 = page
+            .evaluate(crate::image_list::ring_clipped(
+                "[aria-roledescription=carousel]",
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            clipped < SUBPIXEL,
+            "the nested slide button's ring runs {clipped}px past the clip"
+        );
         fixture.close().await.unwrap();
     });
 }
@@ -481,7 +503,6 @@ async fn dot_centre(page: &Page, n: usize) -> Result<pointer::Point> {
 /// cannot be `aria-hidden`: its button took Tab while hidden from a screen
 /// reader (axe `aria-hidden-focus`), and its slide was missing from the tree.
 #[test]
-#[ignore = "todo 544"]
 fn a_visible_clone_is_not_hidden_from_assistive_tech() {
     block_on(async {
         let fixture = Fixture::open("/carousel/loop", Viewport::Desktop)
@@ -533,10 +554,14 @@ fn a_visible_clone_is_not_hidden_from_assistive_tech() {
     });
 }
 
-/// WCAG 2.2.2: autoplay advances, stops while focus is inside, and the pause
-/// control stops it for good. The status is silent while it rotates.
+/// The autoplay toggle.
+const PAUSE: &str = "[aria-roledescription=carousel] button[aria-pressed]";
+
+/// WCAG 2.2.2 and APG (todo 548): autoplay advances; focus entering stops it
+/// for good, leaving does not resume it, and only Play does. The toggle is the
+/// carousel's first tab stop. The status is silent while it rotates.
 #[test]
-fn autoplay_pauses_on_focus_and_on_its_control() {
+fn autoplay_stops_once_focus_enters_until_play() {
     block_on(async {
         let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
             .await
@@ -563,36 +588,117 @@ fn autoplay_pauses_on_focus_and_on_its_control() {
         )
         .await
         .unwrap();
-        let held = index(page).await.unwrap();
-        sleep(1200).await;
-        assert_eq!(
-            index(page).await.unwrap(),
-            held,
-            "rotated with focus inside"
-        );
+        assert_pressed(page, "true", "focus entering").await;
 
-        let pause = "[aria-roledescription=carousel] button[aria-pressed]";
-        keyboard::tab_to(page, pause, TAB_BUDGET).await.unwrap();
-        keyboard::press(page, keyboard::ENTER).await.unwrap();
-        wait::for_js_true(
-            page,
-            &format!("document.querySelector({pause:?}).getAttribute('aria-pressed') === 'true'"),
-            "the pause control to press",
-        )
-        .await
-        .unwrap();
         reach(page, "#before").await.unwrap();
         let held = index(page).await.unwrap();
         sleep(1200).await;
         assert_eq!(
             index(page).await.unwrap(),
             held,
-            "rotated after the pause control"
+            "rotation resumed once focus left"
         );
+
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        let first: bool = page
+            .evaluate(format!("document.activeElement.matches({PAUSE:?})"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(first, "the toggle is not the carousel's first tab stop");
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        assert_pressed(page, "false", "Play").await;
+        wait::until("autoplay to advance once Play is pressed", || async move {
+            Ok(index(page).await? != held)
+        })
+        .await
+        .unwrap();
 
         fixture.console.assert_clean("autoplay").unwrap();
         fixture.close().await.unwrap();
     });
+}
+
+/// A mouse press on Pause while it rotates pauses it: the focus the press
+/// brings in is not an entry that stops it first, which the click would undo.
+#[test]
+fn a_pointer_press_on_pause_pauses() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        instant_scroll(page).await;
+        assert_pressed(page, "false", "load").await;
+        let (x, y): (f64, f64) = page
+            .evaluate(format!(
+                "(() => {{ const r = document.querySelector({PAUSE:?}).getBoundingClientRect(); \
+                 return [r.x + r.width * 0.15, r.y + r.height / 2]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let at = pointer::Point { x, y };
+        // On the rim, not the glyph: a glyph swapped under a held press takes
+        // its click with it. The moves in place let the render after `focusin`
+        // run before the release, as a person's click does.
+        pointer::drag(page, at, at, 5).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.activeElement.matches({PAUSE:?})"),
+            "the press to focus the toggle",
+        )
+        .await
+        .unwrap();
+        sleep(300).await;
+        assert_pressed(page, "true", "a pointer press on Pause").await;
+        fixture
+            .console
+            .assert_clean("a pointer press on Pause")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Hover only pauses (todo 548): the pointer leaving resumes rotation, and
+/// the toggle never presses.
+#[test]
+fn hover_only_pauses() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel/autoplay", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        instant_scroll(page).await;
+        let live = "document.querySelector('[aria-roledescription=carousel] [role=status]')\
+                    .getAttribute('aria-live')";
+        pointer::hover(page, TRACK).await.unwrap();
+        wait::for_js_true(page, &format!("{live} === 'polite'"), "hover to pause")
+            .await
+            .unwrap();
+        pointer::hover(page, "#before").await.unwrap();
+        let held = index(page).await.unwrap();
+        wait::until("autoplay to resume once the pointer left", || async move {
+            Ok(index(page).await? != held)
+        })
+        .await
+        .unwrap();
+        assert_pressed(page, "false", "hover").await;
+        fixture.console.assert_clean("hover").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn assert_pressed(page: &Page, expected: &str, after: &str) {
+    wait::for_js_true(
+        page,
+        &format!("document.querySelector({PAUSE:?}).getAttribute('aria-pressed') === {expected:?}"),
+        &format!("the toggle's aria-pressed to be {expected} after {after}"),
+    )
+    .await
+    .unwrap();
 }
 
 /// Todo 551: under reduced motion autoplay starts paused, and the control

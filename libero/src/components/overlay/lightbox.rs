@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Carousel, CarouselJump, Dialog, Input, States, Variables,
+        Box, Carousel, CarouselJump, CarouselQuietWhenFits, Dialog, Input, States, Variables,
         common::{
             inset_focus_ring_sx, ring_overlay, ring_overlay_sx, states, use_name_warning, variables,
         },
@@ -801,6 +801,9 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     // same gallery would still be unread when the user's next move arrives,
     // and that move would jump as well.
     let jump = use_context_provider(CarouselJump::default);
+    // Thumbnails that all fit drop the strip's status and track tab stop (todo
+    // 564). The one-up stage never fits: one picture renders no carousel.
+    use_context_provider(|| CarouselQuietWhenFits);
     let counted = use_hook(|| Rc::new(RefCell::new(opening.clone())));
     if pending && *counted.borrow() != opening {
         *counted.borrow_mut() = opening.clone();

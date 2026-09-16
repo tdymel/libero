@@ -28,7 +28,8 @@ region "Slide content"
     generic
       button "Previous slide" [disabled]
       button "Next slide"
-  button "Go to slide 1" [current=true]
-  button "Go to slide 2"
-  button "Go to slide 3"
+  group "Choose slide"
+    button "Go to slide 1" [current=true]
+    button "Go to slide 2"
+    button "Go to slide 3"
 --> aria-controls [id="lsx-N"] (rendered above)

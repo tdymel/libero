@@ -63,6 +63,40 @@ fn it_honours_the_overlay_contract() {
     });
 }
 
+/// Todo 564: six thumbnails all fit, so their strip has no status and its
+/// track is no tab stop; the thumbnails themselves still are.
+#[test]
+fn a_strip_whose_thumbnails_all_fit_is_quiet() {
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, DIALOG).await.unwrap();
+        let [status, stops, thumbnails]: [usize; 3] = page
+            .evaluate(
+                "(() => { const strip = [...document.querySelectorAll('[role=dialog] [aria-roledescription=carousel]')].at(-1); \
+                 return [strip.querySelectorAll('[role=status]').length, \
+                 strip.querySelectorAll('[tabindex=\"0\"]:not(button)').length, \
+                 strip.querySelectorAll('button[tabindex=\"0\"]').length]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            (status, stops, thumbnails),
+            (0, 0, 1),
+            "status, track stops, thumbnail stops"
+        );
+        fixture
+            .console
+            .assert_clean("the quiet thumbnail strip")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The arrows on the picture move to the next picture and take focus with
 /// it; Tab from anywhere in the dialog never reaches a slide that is `inert`;
 /// and Escape after moving still returns focus to the trigger.
