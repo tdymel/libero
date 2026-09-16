@@ -11,9 +11,9 @@ use crate::{
     },
     hooks::{
         Align, ElementHandle, PopoverOptions, escape_closes, use_element, use_escape_dismiss,
-        use_popover_on, use_silent_focus_within, use_theme,
+        use_focus_within, use_popover_on, use_theme,
     },
-    platform::{focus_visible, keyboard},
+    platform::keyboard,
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CssVar, POPOVER_PADDING, Size, SizeCss, TOOLTIP_DURATION, TOOLTIP_IN, TooltipDefaults,
@@ -143,13 +143,19 @@ pub fn Tooltip(props: TooltipProps) -> Element {
         hover.set(false);
         focused.set(false);
     });
-    // Blitz's Tab fires neither `focusin` nor `focusout`: the silent move does.
-    use_silent_focus_within(anchor, {
-        let (pressed, marked) = (pressed.clone(), marked.clone());
-        move |within| {
+    let focus = use_focus_within(move || vec![anchor.mounted()], {
+        let pressed = pressed.clone();
+        move |change| {
             let mut focused = focused;
-            if !within || !(pressed.replace(false) | marked()) {
-                focused.set(within);
+            if !change.within {
+                focused.set(false);
+                return;
+            }
+            // The web answers itself, except for a focus from code after a
+            // press outside this wrapper, which its caller marks (todo 476).
+            let pointer = pressed.replace(false);
+            if !marked() && change.focus_visible().unwrap_or(!pointer) {
+                focused.set(true);
             }
         }
     });
@@ -186,7 +192,6 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     };
 
     let leave = pressed.clone();
-    let focus = pressed.clone();
     let mut wrapper = wrapper
         .element(&anchor)
         .event("onmouseenter", move |_: MouseEvent| {
@@ -197,15 +202,8 @@ pub fn Tooltip(props: TooltipProps) -> Element {
             hover.hover(false, close_delay);
         })
         .event("onpointerdown", move |_: PointerEvent| pressed.set(true))
-        .event("onfocusin", move |event: FocusEvent| {
-            // The web answers itself, except for a focus from code after a
-            // press outside this wrapper, which its caller marks (todo 476).
-            let pointer = focus.replace(false);
-            if !marked() && focus_visible(&event).unwrap_or(!pointer) {
-                focused.set(true);
-            }
-        })
-        .event("onfocusout", move |_: FocusEvent| focused.set(false));
+        .event("onfocusin", focus.focusin(0))
+        .event("onfocusout", focus.focusout(0));
     // Off the web only the focused element hears Escape. Absent while closed,
     // so it never swallows Escape for an enclosing `Modal`.
     if open && dismissible && !global_escape {

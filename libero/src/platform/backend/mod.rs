@@ -132,8 +132,9 @@ pub(crate) fn PortalEntry(children: Element, idle: bool) -> Element {
     }
 }
 
-/// Blitz opens no picker for a `<select>`; see [`select_picker`](crate::platform::select_picker).
-pub(crate) const SELECT_PICKER: bool = !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+/// Blitz opens no picker for a `<select>`; see [`opens_select_picker`](crate::platform::opens_select_picker).
+pub(crate) const OPENS_SELECT_PICKER: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
 pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     #[cfg(target_arch = "wasm32")]
@@ -213,7 +214,7 @@ pub(crate) fn silent_focus() -> Option<&'static dyn SilentFocusApi> {
 }
 
 /// Only Blitz blurs for a press that cancelled its `mousedown` - see
-/// [`press_kept_focus`](crate::platform::press_kept_focus).
+/// [`blur_counts`](crate::platform::blur_counts).
 pub(crate) fn press_kept_focus() -> bool {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::press_kept_focus();

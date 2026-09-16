@@ -38,11 +38,12 @@ pub(crate) fn silent_focus() -> Option<&'static dyn SilentFocusApi> {
     backend::silent_focus()
 }
 
-/// Whether the blur being handled comes from a press that cancelled its
-/// `mousedown`, where the web keeps focus put. Blitz moves it anyway and
-/// libero moves it back, so a field closing on blur ignores this one.
-pub(crate) fn press_kept_focus() -> bool {
-    backend::press_kept_focus()
+/// Whether `event` is a blur a field closing on blur should act on. Not the one
+/// Blitz makes for a press that cancelled its `mousedown`: the web keeps focus
+/// put there, and libero moves it back.
+pub(crate) fn blur_counts(event: &Event<FocusData>) -> bool {
+    let _ = event;
+    !backend::press_kept_focus()
 }
 
 /// Whether the element this `focusin` landed on matches `:focus-visible`: the

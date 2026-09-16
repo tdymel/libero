@@ -42,8 +42,8 @@ pub use error::PlatformError;
 pub(crate) use eye_dropper::eye_dropper;
 pub(crate) use file_dialog::pick_files;
 pub(crate) use focus::{
-    FocusMove, SilentFocusApi, SilentFocusSubscription, focus_entered_from, focus_pressed,
-    focus_visible, press_kept_focus, silent_focus,
+    FocusMove, SilentFocusApi, SilentFocusSubscription, blur_counts, focus_entered_from,
+    focus_pressed, focus_visible, silent_focus,
 };
 pub(crate) use form::{submit_event, submit_listeners};
 pub(crate) use keyboard::arrow_target;
@@ -54,7 +54,7 @@ pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};
 pub(crate) use motion::prefers_reduced_motion;
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
-pub(crate) use select::select_picker;
+pub(crate) use select::opens_select_picker;
 pub(crate) use task::{next_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};
 pub(crate) use transition::transition_property;

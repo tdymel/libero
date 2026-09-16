@@ -5,6 +5,7 @@ mod dismiss;
 mod drag;
 mod element;
 mod focus_return;
+mod focus_within;
 mod id;
 mod local_state;
 mod localization;
@@ -28,6 +29,7 @@ pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx
 pub use element::{ElementHandle, use_element};
 pub(crate) use element::{use_content_changes, use_form_owner};
 pub use focus_return::{FocusReturn, use_focus_return};
+pub(crate) use focus_within::{FocusChange, FocusWithin, use_focus_within};
 pub(crate) use id::id_selector;
 pub use id::{use_id, use_root_id};
 pub(crate) use local_state::{LocalState, use_local_state};
@@ -41,9 +43,7 @@ pub use portal::use_portal;
 pub(crate) use portal::use_portal_slot;
 pub use presence::{Presence, use_presence};
 pub(crate) use ripple::{clipped_ripple_sx, ripple_sx, use_ripple};
-pub(crate) use silent_focus::{
-    moved_within, use_silent_focus, use_silent_focus_out, use_silent_focus_within,
-};
+pub(crate) use silent_focus::use_silent_focus_out;
 pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
 pub use theme::{ThemeSetHandle, use_theme, use_theme_set};

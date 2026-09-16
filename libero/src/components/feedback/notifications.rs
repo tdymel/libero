@@ -20,11 +20,10 @@ use crate::{
         feedback::Alert,
         layout::{Box, Float, use_box},
     },
-    hooks::{use_localization, use_portal_slot, use_silent_focus, use_theme},
+    hooks::{use_focus_within, use_localization, use_portal_slot, use_theme},
     localization::fill,
     platform::{
-        ElementApi, KeyChord, KeySubscription, TimerSubscription, backend, focus_entered_from,
-        keyboard, timer,
+        ElementApi, KeyChord, KeySubscription, TimerSubscription, backend, keyboard, timer,
     },
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -1156,28 +1155,38 @@ fn NotificationItem(props: ItemProps) -> Element {
         let mut elements = store.elements;
         elements.write().remove(&id);
     });
-    // Blitz's Tab fires neither `focusin` nor `focusout`: the silent move does.
-    use_silent_focus(move |moved| {
-        let Some(mounted) = store.elements.peek().get(&id).cloned() else {
-            return;
-        };
-        let mut focused = store.focused;
-        match (moved.was_in(&mounted), moved.is_in(&mounted)) {
-            (false, true) => {
-                if let Some(host) = store.host_selector() {
-                    *before_host.borrow_mut() = focusable_before(&mounted, &host).ok().flatten();
+    let item = move || store.elements.peek().get(&id).cloned();
+    let focus = use_focus_within(
+        move || vec![item()],
+        move |change| {
+            let mut focused = store.focused;
+            if !change.within {
+                if *focused.peek() == Some(id) {
+                    focused.set(None);
                 }
-                focused.set(Some(id))
+                return;
             }
-            (true, false) if *focused.peek() == Some(id) => focused.set(None),
-            _ => {}
-        }
-    });
+            if let (Some(host), Some(mounted)) = (store.host_selector(), item()) {
+                *before_host.borrow_mut() = focusable_before(&mounted, &host).ok().flatten();
+            }
+            if !*store.handing_off.peek()
+                && let Some(from) = change.entered_from("[data-notification]")
+            {
+                // The host as the boundary answers `None` for a `from` inside it.
+                let in_host = store
+                    .host_selector()
+                    .is_some_and(|host| from.is_some() && change.entered_from(&host).is_none());
+                let (mut return_in_host, mut return_to) = (store.return_in_host, store.return_to);
+                return_in_host.set(in_host);
+                return_to.set(from.map(Rc::from));
+            }
+            focused.set(Some(id))
+        },
+    );
 
     let states: Input<States> = States::default().with("leaving", leaving).into();
-    let (mut hovered, mut focused) = (store.hovered, store.focused);
-    let (mut elements, mut return_to) = (store.elements, store.return_to);
-    let mut return_in_host = store.return_in_host;
+    let mut hovered = store.hovered;
+    let mut elements = store.elements;
 
     use_box()
         .framework_sx(&ITEM_SX)
@@ -1198,23 +1207,7 @@ fn NotificationItem(props: ItemProps) -> Element {
                 hovered.set(None);
             }
         })
-        .event("onfocusin", move |event: Event<FocusData>| {
-            if !*store.handing_off.peek()
-                && let Some(from) = focus_entered_from(&event, "[data-notification]")
-            {
-                // The host as the boundary answers `None` for a `from` inside it.
-                let in_host = store.host_selector().is_some_and(|host| {
-                    from.is_some() && focus_entered_from(&event, &host).is_none()
-                });
-                return_in_host.set(in_host);
-                return_to.set(from.map(Rc::from));
-            }
-            focused.set(Some(id))
-        })
-        .event("onfocusout", move |_: Event<FocusData>| {
-            if *focused.peek() == Some(id) {
-                focused.set(None);
-            }
-        })
+        .event("onfocusin", focus.focusin(0))
+        .event("onfocusout", focus.focusout(0))
         .render(HtmlTag::Li, Vec::new(), (props.draw.0)())
 }

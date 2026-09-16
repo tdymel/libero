@@ -20,7 +20,7 @@ use crate::{
     context::{ModalContext, WindowHost},
     hooks::{
         Drag, DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, escape_closes,
-        use_dismiss_layer, use_drag, use_element, use_id, use_silent_focus_within,
+        use_dismiss_layer, use_drag, use_element, use_focus_within, use_id,
     },
     localization::FloatingWindowLabels,
     platform::{ElementApi, KeyChord, KeySubscription, PlatformError, keyboard},
@@ -391,12 +391,14 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     let id = use_hook(|| NEXT_WINDOW_ID.fetch_add(1, Ordering::Relaxed));
     use_effect(move || host.raise(id));
     use_drop(move || host.remove(id));
-    // Blitz's Tab fires no `focusin`: the silent move raises it instead.
-    use_silent_focus_within(root, move |within| {
-        if within {
-            host.raise(id);
-        }
-    });
+    let focus = use_focus_within(
+        move || vec![root.mounted()],
+        move |change| {
+            if change.within {
+                host.raise(id);
+            }
+        },
+    );
     use_page_switch(root, host, id, props.opener);
     let z_index = match z_index {
         Input::None => Input::from(host.z_index(id).to_string()),
@@ -528,7 +530,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         )
         .attr("aria-label", aria_label.clone())
         .event("onkeydown", onkeydown)
-        .event("onfocusin", move |_: Event<FocusData>| host.raise(id))
+        .event("onfocusin", focus.focusin(0))
         // Pointer too: a drag's pointerdown prevents the focus a click
         // would otherwise bring.
         .event("onpointerdown", move |_: Event<PointerData>| host.raise(id))

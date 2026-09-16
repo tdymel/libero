@@ -10,9 +10,9 @@ use crate::{
     },
     hooks::{
         Align, DismissOptions, ElementHandle, PopoverOptions, Side, use_dismiss, use_element,
-        use_popover_on, use_silent_focus, use_theme,
+        use_focus_within, use_popover_on, use_theme,
     },
-    platform::{ElementApi, focus_visible, next_task},
+    platform::{ElementApi, next_task},
     sx::StaticSx,
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -151,8 +151,8 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     // on the trigger or the card in between bumps this, and a bumped count
     // means focus only moved between them. Nothing is asked of the platform,
     // so it holds on every backend that orders the task after the `focusin`.
-    let mut moves = use_signal(|| 0u64);
-    let focus_left = move |_: FocusEvent| {
+    let moves = use_signal(|| 0u64);
+    let focus_left = move || {
         let seen = *moves.peek();
         spawn(async move {
             next_task().await;
@@ -161,31 +161,38 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
             }
         });
     };
-    // Blitz's Tab and libero's own `focus()` fire neither event: the silent
-    // move stands in for both, with the trigger and the card as one.
-    use_silent_focus({
+    // Element 0 is the trigger, 1 the card.
+    let focus = use_focus_within(move || vec![anchor.mounted(), floating.mounted()], {
         let (pressed, returning) = (pressed.clone(), returning.clone());
-        move |moved| {
-            let holds = |element: &ElementHandle, now: bool| {
-                element.mounted().is_some_and(|mounted| match now {
-                    true => moved.is_in(&mounted),
-                    false => moved.was_in(&mounted),
-                })
-            };
-            let within = |now| holds(&anchor, now) || holds(&floating, now);
-            let mut focused = focused;
-            match (within(false), within(true)) {
-                (false, true) => {
-                    if !returning.replace(false) && !pressed.replace(false) {
+        move |change| {
+            let (mut focused, mut moves) = (focused, moves);
+            match (change.element, change.within) {
+                (0, true) => {
+                    moves += 1;
+                    // The web answers itself (todo 477: no stale press).
+                    let pointer = pressed.replace(false);
+                    let keyboard = change.focus_visible().unwrap_or(!pointer);
+                    if !returning.replace(false) && keyboard {
+                        // The trigger holds focus now, so this is what
+                        // Escape hands it back to.
                         dismiss.focus_return().remember_active();
                         focused.set(true);
                     }
                 }
-                (true, false) => {
-                    returning.set(false);
-                    focused.set(false);
+                (_, true) => {
+                    moves += 1;
+                    focused.set(true);
                 }
-                _ => {}
+                (element, false) => {
+                    if element == 0 || change.in_group == Some(false) {
+                        returning.set(false);
+                    }
+                    match change.in_group {
+                        Some(true) => {}
+                        Some(false) => focused.set(false),
+                        None => focus_left(),
+                    }
+                }
             }
         }
     });
@@ -253,11 +260,8 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                 rsx! {
                     div {
                         style: CONTENTS,
-                        onfocusin: move |_| {
-                            moves += 1;
-                            focused.set(true);
-                        },
-                        onfocusout: focus_left,
+                        onfocusin: focus.focusin(1),
+                        onfocusout: focus.focusout(1),
                         onkeydown: move |event| card_tab(&event, anchor, floating),
                         {props.content}
                     }
@@ -289,25 +293,8 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
                         let pressed = pressed.clone();
                         move |_| pressed.set(true)
                     },
-                    onfocusin: {
-                        let returning = returning.clone();
-                        move |event: FocusEvent| {
-                            moves += 1;
-                            // The web answers itself (todo 477: no stale press).
-                            let pointer = pressed.replace(false);
-                            let keyboard = focus_visible(&event).unwrap_or(!pointer);
-                            if !returning.replace(false) && keyboard {
-                                // The trigger holds focus now, so this is what
-                                // Escape hands it back to.
-                                dismiss.focus_return().remember_active();
-                                focused.set(true);
-                            }
-                        }
-                    },
-                    onfocusout: move |event| {
-                        returning.set(false);
-                        focus_left(event);
-                    },
+                    onfocusin: focus.focusin(0),
+                    onfocusout: focus.focusout(0),
                     onkeydown: move |event| trigger_tab(&event, open && placed, floating),
                     {props.children}
                 }

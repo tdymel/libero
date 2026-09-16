@@ -13,8 +13,8 @@ use crate::{
         surface::paper_sx,
     },
     hooks::{
-        PopoverOptions, moved_within, use_element, use_field_list_layer, use_localization,
-        use_popover_on, use_silent_focus, use_theme,
+        PopoverOptions, use_element, use_field_list_layer, use_focus_within, use_localization,
+        use_popover_on, use_theme,
     },
     platform::{ElementApi, eye_dropper, next_task},
     sx::{StaticSx, ThemeAwareValue, sx},
@@ -303,7 +303,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             returning.set(false);
         }
     };
-    let mut focused = move || match returning() {
+    let focused = move || match returning() {
         true => returning.set(false),
         false => opened.set(true),
     };
@@ -315,7 +315,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             .as_ref()
             .is_some_and(|text| text.parse::<ColorCode>().is_err())
     };
-    let mut blurred = move || {
+    let blurred = move || {
         if fix_on_blur || !unparsable() {
             draft.set(None);
         } else if !*rejected.peek() {
@@ -324,26 +324,30 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             announcer.say(labels.invalid.to_string());
         }
     };
-    // Blitz's Tab and libero's own `focus()` fire no focus event: the silent
-    // move stands in for the input's `focus`/`blur` and the box's `focusout`.
-    use_silent_focus(move |moved| {
-        let (input, dropdown) = (moved_within(moved, &anchor), moved_within(moved, &floating));
-        match input {
-            (false, true) => {
-                let mut focused = focused;
-                focused();
-            }
-            (true, false) => {
-                let mut blurred = blurred;
-                blurred();
-            }
-            _ => {}
-        }
-        if (input.0 || dropdown.0) && !input.1 && !dropdown.1 {
+    // Element 0 is the text input, 1 the dropdown; the box closes once focus
+    // is in neither. Only the dropdown's `focusout` waits to see where it went.
+    let focus = use_focus_within(
+        move || vec![anchor.mounted(), floating.mounted()],
+        move |change| {
             let mut opened = opened;
-            opened.set(false);
-        }
-    });
+            match (change.element, change.within) {
+                (0, true) => {
+                    let mut focused = focused;
+                    focused();
+                }
+                (0, false) => {
+                    let mut blurred = blurred;
+                    blurred();
+                }
+                _ => {}
+            }
+            match change.in_group {
+                Some(false) => opened.set(false),
+                None if change.element == 1 => settle(),
+                _ => {}
+            }
+        },
+    );
 
     let text = draft().unwrap_or_else(|| value.to_format(format));
     let dialog_id = format!("{}-dialog", field.id());
@@ -375,9 +379,9 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             }
             announcer.clear();
         })
-        .event("onfocus", move |_: FocusEvent| focused())
+        .event("onfocus", focus.focusin(0))
         .event("onclick", move |_: MouseEvent| opened.set(true))
-        .event("onblur", move |_: FocusEvent| blurred())
+        .event("onblur", focus.focusout(0))
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
             // Focus stays, and the error line is no live region.
             Key::Enter if unparsable() => {
@@ -416,7 +420,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             .event("onmousedown", move |event: MouseEvent| {
                 event.prevent_default()
             })
-            .event("onfocusout", move |_: FocusEvent| settle())
+            .event("onfocusout", focus.focusout(1))
             .event("onkeydown", move |event: KeyboardEvent| match event.key() {
                 Key::Escape => {
                     event.prevent_default();

@@ -10,7 +10,7 @@ type OnMove = Rc<RefCell<Box<dyn Fn(&dyn FocusMove)>>>;
 /// Calls `onmove` after each focus move that fired no `focusin`/`focusout`,
 /// for as long as the component lives. Never where every move fires its
 /// events (the web). The latest render's `onmove` is the one called.
-pub(crate) fn use_silent_focus(onmove: impl Fn(&dyn FocusMove) + 'static) {
+fn use_silent_focus(onmove: impl Fn(&dyn FocusMove) + 'static) {
     // Fixed per build, so the hook order holds; the web pays no hook slot.
     if silent_focus().is_none() {
         return;
@@ -29,20 +29,6 @@ pub(crate) fn use_silent_focus(onmove: impl Fn(&dyn FocusMove) + 'static) {
     }
 }
 
-/// [`use_silent_focus`] as `element`'s own `focusin` (`true`) and `focusout`
-/// (`false`): `onchange` hears only a move into or out of it.
-pub(crate) fn use_silent_focus_within(element: ElementHandle, onchange: impl Fn(bool) + 'static) {
-    use_silent_focus(move |moved| {
-        let Some(mounted) = element.mounted() else {
-            return;
-        };
-        let (was, is) = (moved.was_in(&mounted), moved.is_in(&mounted));
-        if was != is {
-            onchange(is);
-        }
-    });
-}
-
 /// An element whose silent `focusout` calls `onout`, for the caller to mount.
 /// `None` where every move fires its events, so the web mounts nothing.
 pub(crate) fn use_silent_focus_out(onout: impl Fn() + 'static) -> Option<ElementHandle> {
@@ -56,13 +42,8 @@ pub(crate) fn use_silent_focus_out(onout: impl Fn() + 'static) -> Option<Element
 }
 
 /// Whether `element` held focus before `moved` and does not after: its `focusout`.
-pub(crate) fn moved_out(moved: &dyn FocusMove, element: &ElementHandle) -> bool {
-    moved_within(moved, element) == (true, false)
-}
-
-/// Whether `element` held focus before `moved`, and after it.
-pub(crate) fn moved_within(moved: &dyn FocusMove, element: &ElementHandle) -> (bool, bool) {
-    element.mounted().map_or((false, false), |mounted| {
-        (moved.was_in(&mounted), moved.is_in(&mounted))
-    })
+fn moved_out(moved: &dyn FocusMove, element: &ElementHandle) -> bool {
+    element
+        .mounted()
+        .is_some_and(|mounted| moved.was_in(&mounted) && !moved.is_in(&mounted))
 }

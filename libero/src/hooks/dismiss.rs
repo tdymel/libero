@@ -27,11 +27,11 @@ use dioxus::html::{EventHandlerValue, PlatformEventData};
 use dioxus::prelude::*;
 
 use crate::{
-    hooks::{ElementHandle, FocusReturn, focus_return::use_focus_return},
-    platform::{
-        ElementApi, KeySubscription, PlatformError, SilentFocusSubscription, key_taken, keyboard,
-        next_task, silent_focus,
+    hooks::{
+        ElementHandle, FocusChange, FocusReturn, FocusWithin, focus_return::use_focus_return,
+        use_focus_within,
     },
+    platform::{ElementApi, KeySubscription, PlatformError, key_taken, keyboard, next_task},
 };
 
 /// One open dismissible layer, identified only by when it opened.
@@ -286,7 +286,7 @@ pub(crate) struct DismissOptions {
     /// **Inert on the mounted floor.** A focusout closes the box only where the
     /// platform can say focus is outside: the web and Blitz can, the mounted
     /// floor answers `query_selector` `Unsupported` (todo 46). Blitz fires no
-    /// focus event for Tab; [`silent_focus`] reports that move instead. Escape and
+    /// focus event for Tab; [`use_focus_within`] reports that move instead. Escape and
     /// [`DismissHandle::dismiss`] close everywhere.
     pub outside: bool,
     /// A deliberate close hands focus back to whatever opened the box.
@@ -353,6 +353,9 @@ pub(crate) struct DismissHandle {
     inside: Signal<Vec<(u64, ElementHandle)>>,
     inside_next: Signal<u64>,
     onfocusmoved: Option<Callback<()>>,
+    focus: FocusWithin,
+    /// Bumped when a silent focus move left the box; root-owned.
+    left_tick: Signal<u64>,
 }
 
 impl DismissHandle {
@@ -486,19 +489,35 @@ impl DismissHandle {
     /// Closes once focus has left the anchor, the box and every registered
     /// element. `use_popover` also puts it on the anchor.
     pub(crate) fn focusout_listener(&self) -> Attribute {
-        let handle = *self;
-        listener("onfocusout", move |_: Event<FocusData>| {
-            // On the web focus lands after `focusout`, so the answer is
-            // taken after the next task. Blitz moves focus first and cannot
-            // answer from a task, so its answer is the one taken here.
-            let early = handle.focus_inside();
-            spawn(async move {
-                next_task().await;
-                if handle.focus_inside().or(early) == Some(false) {
-                    handle.close(Dismissal::FocusMoved);
-                }
-            });
-        })
+        listener("onfocusout", self.focus.focusout(0))
+    }
+
+    /// Focus left an element counted inside: closes if it left them all.
+    fn focus_changed(&self, change: FocusChange) {
+        match change.in_group {
+            _ if change.within => {}
+            Some(true) => {}
+            // Landed already, and heard outside every scope: recorded for the
+            // effect in `use_dismiss`, as Escape is.
+            Some(false) => {
+                let mut tick = self.left_tick;
+                let next = tick.peek().wrapping_add(1);
+                tick.set(next);
+            }
+            None => {
+                // On the web focus lands after `focusout`, so the answer is
+                // taken after the next task. Blitz moves focus first and cannot
+                // answer from a task, so its answer is the one taken here.
+                let early = self.focus_inside();
+                let handle = *self;
+                spawn(async move {
+                    next_task().await;
+                    if handle.focus_inside().or(early) == Some(false) {
+                        handle.close(Dismissal::FocusMoved);
+                    }
+                });
+            }
+        }
     }
 
     /// The Escape listener both surfaces share.
@@ -643,6 +662,9 @@ pub(crate) fn use_dismiss(
     let inside = use_signal(Vec::<(u64, ElementHandle)>::new);
     let inside_next = use_signal(|| 0u64);
     let global = use_global_escape();
+    let focus = use_focus_within(Vec::new, |_| {});
+    let left_tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
+    use_drop(move || left_tick.manually_drop());
 
     let handle = DismissHandle {
         anchor,
@@ -657,41 +679,27 @@ pub(crate) fn use_dismiss(
         inside,
         inside_next,
         onfocusmoved: options.onfocusmoved,
+        focus,
+        left_tick,
     };
 
     use_document_escape(open && options.escape, global, move || {
         handle.close(Dismissal::FromDocument)
     });
 
-    // Blitz's Tab fires no `focusout`: a silent move is judged where the
-    // document answers, and recorded here for the effect below, as Escape is.
-    let silent: Rc<RefCell<Option<Box<dyn SilentFocusSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    let left_tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
-    use_drop({
-        let silent = silent.clone();
-        move || {
-            silent.borrow_mut().take();
-            left_tick.manually_drop();
-        }
-    });
-
-    use_effect(use_reactive!(|(open,)| {
-        let Some(api) = silent_focus().filter(|_| open && options.outside) else {
-            silent.borrow_mut().take();
-            return;
-        };
-        if silent.borrow().is_some() {
-            return;
-        }
-        *silent.borrow_mut() = Some(api.on_move(Box::new(move |_| {
-            if handle.focus_inside() == Some(false) {
-                let mut tick = left_tick;
-                let next = tick.peek().wrapping_add(1);
-                tick.set(next);
-            }
-        })));
-    }));
+    // Empty while closed, so a move then reports nothing.
+    let watched = open && options.outside;
+    focus.watch(
+        move || match watched {
+            true => [anchor, floating]
+                .into_iter()
+                .chain(inside.peek().iter().map(|(_, element)| *element))
+                .map(|element| element.mounted())
+                .collect(),
+            false => Vec::new(),
+        },
+        move |change| handle.focus_changed(change),
+    );
     let mut left_seen = use_signal(|| 0u64);
     use_effect(move || {
         let tick = left_tick();

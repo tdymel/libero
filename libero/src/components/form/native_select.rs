@@ -10,7 +10,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    platform::select_picker,
+    platform::opens_select_picker,
     sx::{StaticSx, sx},
     tokens::NamedColorCss,
     utils::warn,
@@ -133,7 +133,7 @@ fn runs(groups: &[Option<String>]) -> Vec<(usize, usize)> {
 #[component]
 pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
     // Fixed per build, so the hooks below always run in the same order.
-    if !select_picker() {
+    if !opens_select_picker() {
         return listbox(props);
     }
     let mut props = props;

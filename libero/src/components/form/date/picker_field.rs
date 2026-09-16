@@ -26,8 +26,8 @@ use crate::{
         surface::paper_sx,
     },
     hooks::{
-        PopoverOptions, moved_within, use_element, use_field_list_layer, use_localization,
-        use_popover_on, use_silent_focus, use_theme,
+        PopoverOptions, use_element, use_field_list_layer, use_focus_within, use_localization,
+        use_popover_on, use_theme,
     },
     localization::DateLocale,
     platform::{ElementApi, next_task},
@@ -341,8 +341,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
             }
         }
     };
-    let commit_on_silent_blur = commit.clone();
-    let (mut commit_on_blur, mut commit_on_enter) = (commit.clone(), commit);
+    let (commit_on_blur, mut commit_on_enter) = (commit.clone(), commit);
 
     // Unaccepted text outranks the caller's status: the field cannot hold what
     // it shows.
@@ -429,29 +428,33 @@ pub(super) fn use_picker_field<V: FieldValue>(
             returning.set(false);
         }
     };
-    let mut focused = move || match (returning(), readonly) {
+    let focused = move || match (returning(), readonly) {
         (true, _) | (_, true) => returning.set(false),
         (false, false) => opened.set(true),
     };
-    // Blitz's Tab and libero's own `focus()` fire no focus event: the silent
-    // move stands in for the input's `focus`/`blur` and the box's `focusout`.
-    use_silent_focus(move |moved| {
-        let (input, dropdown) = (moved_within(moved, &anchor), moved_within(moved, &floating));
-        match input {
-            (false, true) => {
-                let mut focused = focused;
-                focused();
-            }
-            (true, false) => {
-                commit_on_silent_blur.clone()();
-            }
-            _ => {}
-        }
-        if (input.0 || dropdown.0) && !input.1 && !dropdown.1 {
+    // Element 0 is the text input, 1 the dropdown; the box closes once focus
+    // is in neither.
+    let focus = use_focus_within(
+        move || vec![anchor.mounted(), floating.mounted()],
+        move |change| {
             let mut opened = opened;
-            opened.set(false);
-        }
-    });
+            match (change.element, change.within) {
+                (0, true) => {
+                    let mut focused = focused;
+                    focused();
+                }
+                (0, false) => {
+                    commit_on_blur.clone()();
+                }
+                _ => {}
+            }
+            match change.in_group {
+                Some(true) => {}
+                Some(false) => opened.set(false),
+                None => settle(),
+            }
+        },
+    );
 
     let dialog_id = format!("{}-dialog", field_box.id());
     let input = field_box
@@ -474,16 +477,13 @@ pub(super) fn use_picker_field<V: FieldValue>(
             announcer.clear();
             draft.set(Some(event.value()));
         })
-        .event("onfocus", move |_: FocusEvent| focused())
+        .event("onfocus", focus.focusin(0))
         .event("onclick", move |_: MouseEvent| {
             if !readonly {
                 opened.set(true);
             }
         })
-        .event("onblur", move |_: FocusEvent| {
-            commit_on_blur();
-            settle();
-        })
+        .event("onblur", focus.focusout(0))
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
             _ if readonly => {}
             Key::Enter => {
@@ -541,7 +541,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
             .event("onmousedown", move |event: MouseEvent| {
                 event.prevent_default()
             })
-            .event("onfocusout", move |_: FocusEvent| settle())
+            .event("onfocusout", focus.focusout(1))
             .event("onkeydown", move |event: KeyboardEvent| match event.key() {
                 Key::Escape => {
                     event.prevent_default();

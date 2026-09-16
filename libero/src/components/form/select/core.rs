@@ -18,7 +18,7 @@ use crate::{
         ElementHandle, PopoverWidth, TYPEAHEAD_RESET, Typeahead, typeahead_match, use_element,
         use_localization, use_theme, use_typeahead,
     },
-    platform::{ElementApi, press_kept_focus},
+    platform::{ElementApi, blur_counts},
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -815,8 +815,8 @@ fn select_trigger(
         })
         // While searchable the focus moves into the search box, so closing on
         // the trigger's blur would shut the list before a key could land.
-        .event("onblur", move |_: FocusEvent| {
-            if !searchable && !press_kept_focus() {
+        .event("onblur", move |event: FocusEvent| {
+            if !searchable && blur_counts(&event) {
                 state.close();
             }
         })
@@ -1063,8 +1063,8 @@ fn select_search_box(
         // The trigger's blur no longer closes while searchable - this does,
         // and the rows and the list cancel `mousedown`, so a click inside
         // never reaches it.
-        .event("onblur", move |_: FocusEvent| {
-            if !press_kept_focus() {
+        .event("onblur", move |event: FocusEvent| {
+            if blur_counts(&event) {
                 state.close();
             }
         })

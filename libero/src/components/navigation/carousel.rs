@@ -16,8 +16,8 @@ use crate::{
         },
     },
     hooks::{
-        Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id,
-        use_localization, use_silent_focus_within, use_theme,
+        Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element,
+        use_focus_within, use_id, use_localization, use_theme,
     },
     localization::{CarouselLabels, fill},
     platform::{
@@ -868,11 +868,13 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let variables: Input<Variables> =
         carousel_variables(per_view, props.gap.as_ref().copied(), props.height.as_ref()).into();
 
-    // Blitz's Tab fires neither `focusin` nor `focusout`: the silent move does.
-    use_silent_focus_within(root_handle, move |within| {
-        let mut focused = state.focused;
-        focused.set(within)
-    });
+    let focus = use_focus_within(
+        move || vec![root_handle.mounted()],
+        move |change| {
+            let mut focused = state.focused;
+            focused.set(change.within)
+        },
+    );
 
     let root = use_box()
         .framework_sx(&CAROUSEL_ROOT_SX)
@@ -893,14 +895,8 @@ pub fn Carousel(props: CarouselProps) -> Element {
             let mut hovered = state.hovered;
             hovered.set(false)
         })
-        .event("onfocusin", move |_: Event<FocusData>| {
-            let mut focused = state.focused;
-            focused.set(true)
-        })
-        .event("onfocusout", move |_: Event<FocusData>| {
-            let mut focused = state.focused;
-            focused.set(false)
-        });
+        .event("onfocusin", focus.focusin(0))
+        .event("onfocusout", focus.focusout(0));
 
     let body = carousel_slides(view, &props.slides, props.slide_label);
 
