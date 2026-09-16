@@ -227,7 +227,7 @@ pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, o
 
     // Unforced, or Chromium backs the label with a `Canvas` plate (todo 646);
     // then every descendant has to follow the label colour by hand.
-    let [adjust, stray, line]: [String; 3] = page
+    let [adjust, stray, line, label]: [String; 4] = page
         .evaluate(format!(
             "(() => {{ const probe = document.createElement('div'); \
              probe.style.color = 'HighlightText'; document.body.append(probe); \
@@ -235,7 +235,7 @@ pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, o
              const el = document.querySelector('{on}'); const s = getComputedStyle(el); \
              const stray = [el, ...el.querySelectorAll('*')] \
                  .filter(e => getComputedStyle(e).color !== text).map(e => e.tagName).join(','); \
-             return [s.forcedColorAdjust, stray, s.backgroundImage]; }})()"
+             return [s.forcedColorAdjust, stray, s.backgroundImage, s.color]; }})()"
         ))
         .await
         .unwrap()
@@ -245,6 +245,7 @@ pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, o
         adjust, "none",
         "{on} is forced, so its label sits on a plate"
     );
+    assert_ne!(label, on_bg, "{on}: the label is its own background");
     assert_eq!(stray, "", "{on}: these do not paint HighlightText");
     assert!(
         line.contains("gradient"),

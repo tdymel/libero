@@ -72,6 +72,21 @@ fn a_selected_chip_shows_the_on_state_line() {
     });
 }
 
+/// Todo 646: the remove x inside a selected chip follows the label under forced colours.
+#[test]
+fn a_selected_chips_remove_x_follows_it_in_forced_colours() {
+    e2e::browser::block_on(async {
+        let fixture = Fixture::open("/chip/removable", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        crate::button::assert_on_marker(page, "#removable", "#plain").await;
+        crate::calendar::force_colours(page).await;
+        crate::button::assert_on_in_forced_colours(page, "#removable", "#plain").await;
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn space_toggles_a_filter_chip_and_enter_does_not() {
     block_on(async {

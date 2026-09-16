@@ -11,7 +11,30 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/chip", || rsx! { ChipPage {} }),
     ("/chip/fieldset", || rsx! { ChipFieldsetPage {} }),
+    ("/chip/removable", || rsx! { ChipRemovablePage {} }),
 ];
+
+/// A selected chip with a remove x, which has to follow its label in forced
+/// colours (todo 646), beside an unselected one.
+#[component]
+fn ChipRemovablePage() -> Element {
+    rsx! {
+        Flex { direction: "row", gap: "md",
+            Chip {
+                id: "removable",
+                checked: true,
+                onchange: move |_| {},
+                trailing: rsx! {
+                    ActionIcon { id: "remove", aria_label: "Remove wasm", size: "xs", onclick: move |_| {},
+                        svg { view_box: "0 0 24 24", path { d: "M6 6l12 12M18 6L6 18", stroke: "currentColor" } }
+                    }
+                },
+                "wasm"
+            }
+            Chip { id: "plain", checked: false, onchange: move |_| {}, "js" }
+        }
+    }
+}
 
 /// Button-rooted controls in a disabled `Fieldset`: the browser disables the
 /// `<button>`, so each has to look disabled too (todo 499).
