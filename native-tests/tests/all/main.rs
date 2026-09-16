@@ -2,6 +2,7 @@
 //! one component; run one with `cargo test -p native-tests --test all switch::`.
 
 mod accordion;
+mod button;
 mod carousel;
 mod chip;
 mod choice;

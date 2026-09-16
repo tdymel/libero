@@ -42,15 +42,20 @@ fn a_searchable_field_meets_the_baseline() {
         .run();
 }
 
-/// `[active row is the selected one, selected row's box-shadow, its colour,
-/// an unselected idle row's box-shadow]`.
+/// `[active row is the selected one, selected row's bar (image, size and
+/// position, `currentColor` spelt out), an unselected idle row's image]`.
 const ROWS: &str = "(() => { const t = document.querySelector('[aria-activedescendant]'); \
      const act = t && document.getElementById(t.getAttribute('aria-activedescendant')); \
      const rows = [...document.querySelectorAll('[role=option]')]; \
      const sel = rows.find(r => r.getAttribute('aria-selected') === 'true'); \
      const off = rows.find(r => r !== act && r !== sel); \
-     const s = e => getComputedStyle(e); \
-     return [String(act === sel), s(sel).boxShadow, s(sel).color, s(off).boxShadow]; })()";
+     const s = getComputedStyle(sel); \
+     const bar = `${s.backgroundImage.replaceAll(s.color, 'currentcolor').toLowerCase()} \
+         ${s.backgroundSize} ${s.backgroundPosition}`; \
+     return [String(act === sel), bar, getComputedStyle(off).backgroundImage]; })()";
+
+/// The bar's image and size, its length resolved to the row's font.
+const BAR: &str = "linear-gradient(currentcolor, currentcolor) 2px min(50%, ";
 
 /// Todo 631: the selected row carries the house line at its start edge, beside
 /// the tint, and keeps it inside the active row's ring. `Combobox`'s rows are
@@ -63,31 +68,26 @@ pub fn selected_row_is_marked(route: &str) {
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         wait::for_visible(page, "[role=option]").await.unwrap();
         let rows =
-            async || -> [String; 4] { page.evaluate(ROWS).await.unwrap().into_value().unwrap() };
+            async || -> [String; 3] { page.evaluate(ROWS).await.unwrap().into_value().unwrap() };
 
-        let [on_it, shadow, color, _] = rows().await;
+        let [on_it, bar, _] = rows().await;
         assert_eq!(on_it, "true", "{route}: the list opens on the selected row");
         assert!(
-            shadow.contains(&format!("{color} 4px 0px 0px 0px inset"))
-                && shadow.matches("inset").count() > 4,
-            "{route}: the active selected row keeps its bar inside the ring: {shadow}"
+            bar.starts_with(BAR) && bar.ends_with(") 2px 50%"),
+            "{route}: the active selected row keeps its bar clear of the ring: {bar}"
         );
 
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-        let [on_it, shadow, color, off] = rows().await;
+        let [on_it, bar, off] = rows().await;
         assert_eq!(
             on_it, "false",
             "{route}: ArrowDown moves off the selected row"
         );
-        assert_eq!(
-            shadow,
-            format!("{color} 2px 0px 0px 0px inset"),
-            "{route}: the selected row's start bar"
-        );
         assert!(
-            !off.contains("inset"),
-            "{route}: an idle row is marked: {off}"
+            bar.starts_with(BAR) && bar.ends_with(") 0px 50%"),
+            "{route}: the selected row's start bar: {bar}"
         );
+        assert_eq!(off, "none", "{route}: an idle row is marked");
 
         crate::calendar::force_colours(page).await;
         crate::button::assert_on_in_forced_colours(

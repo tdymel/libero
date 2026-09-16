@@ -5,7 +5,7 @@ use crate::{
         HtmlTag, Input, States, Variables,
         common::{
             ChevronDownIcon, StyleAttributes, attr, base_props, disabled_look_sx, forced_on_sx,
-            inset_focus_ring_sx, shadow_sx, use_style_attributes,
+            inset_focus_ring_sx, on_start_bar_sx, use_style_attributes,
         },
         layout::{Collapse, box_style, use_box},
         variables,
@@ -50,9 +50,6 @@ fn nav_link_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> 
     variables().with(NAV_LINK_ACTIVE_BACKGROUND_VAR, background.resolve(None))
 }
 
-/// The width of the house on-state line (see `on_ring_sx`).
-const ON_BAR: &str = "2px";
-
 static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
@@ -78,16 +75,17 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().background("muted.2"),
         )
         // The house on-state line at the start edge only: a full ring would
-        // read as this link's inset focus ring.
+        // read as this link's inset focus ring. After each `background`, which resets it.
         .when(
             "active",
-            shadow_sx(format!("inset {ON_BAR} 0 0 currentColor"))
-                .background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())
-                .hover(sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value()))
-                .selector(
-                    "&:dir(rtl)",
-                    shadow_sx(format!("inset -{ON_BAR} 0 0 currentColor")),
+            sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())
+                .and(on_start_bar_sx("0px"))
+                .hover(
+                    sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())
+                        .and(on_start_bar_sx("0px")),
                 )
+                // Clear of the focus ring's 2px stripe.
+                .focus_visible(on_start_bar_sx("2px"))
                 .and(forced_on_sx()),
         )
         // Without `href` it has nothing to follow.

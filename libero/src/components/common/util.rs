@@ -153,16 +153,42 @@ pub(crate) fn shadow_sx(shadow: String) -> crate::sx::Sx {
         .var(crate::theme::OWN_SHADOW, shadow)
 }
 
-/// The house on-state line: 2px of `currentColor` inside the edge.
-const ON_RING: &str = "inset 0 0 0 2px currentColor";
+/// The house on-state line: a short bar of `currentColor`, the label's own colour,
+/// so it reads on whatever fill the label does (1.4.11).
+const ON_LINE: &str = "linear-gradient(currentColor, currentColor)";
+const ON_LINE_WIDTH: &str = "2px";
+const ON_LINE_LENGTH: &str = "min(50%, 1.5em)";
+
+fn on_line_sx(size: String, position: &str) -> crate::sx::Sx {
+    crate::sx::sx()
+        .with("background-image", ON_LINE)
+        .with("background-size", size)
+        .with("background-position", position.to_string())
+        .with("background-repeat", "no-repeat")
+}
 
 /// The house marker for an on state (pressed, selected, current), so it never rests
-/// on a fill alone (1.4.1). `resting` is a shadow the element keeps under the ring.
+/// on a fill alone (1.4.1): the line centred under the content. `resting` is a
+/// shadow the element keeps. Folded after any `background` shorthand, which resets it.
 pub(crate) fn on_ring_sx(resting: Option<&str>) -> crate::sx::Sx {
-    shadow_sx(match resting {
-        Some(resting) => format!("{ON_RING},{resting}"),
-        None => ON_RING.to_string(),
-    })
+    let line = on_line_sx(
+        format!("{ON_LINE_LENGTH} {ON_LINE_WIDTH}"),
+        "50% calc(100% - 3px)",
+    );
+    match resting {
+        Some(resting) => line.and(shadow_sx(resting.to_string())),
+        None => line,
+    }
+}
+
+/// The house line upright at the start edge, `inset` in from it, for a row
+/// whose full-width ring would read as its focus ring.
+pub(crate) fn on_start_bar_sx(inset: &str) -> crate::sx::Sx {
+    let size = format!("{ON_LINE_WIDTH} {ON_LINE_LENGTH}");
+    on_line_sx(size, &format!("left {inset} center")).selector(
+        "&:dir(rtl)",
+        crate::sx::sx().with("background-position", format!("right {inset} center")),
+    )
 }
 
 /// [`on_ring_sx`] for a control, plus [`forced_on_sx`].
@@ -170,18 +196,20 @@ pub(crate) fn on_state_sx(resting: Option<&str>) -> crate::sx::Sx {
     on_ring_sx(resting).and(forced_on_sx())
 }
 
-/// The system's `Highlight` pair for an on state under forced colours, where
-/// the ring is gone. Outranks [`disabled_look_sx`]: `GrayText` does not read on `Highlight`.
+/// The system's `Highlight` pair for an on state under forced colours, the line
+/// drawn in it. Outranks [`disabled_look_sx`]: `GrayText` does not read on `Highlight`.
+///
+/// Opted out of forcing, or Chromium backs the label with a `Canvas` plate it
+/// cannot be read on; `!important`, as the author hover colours are not forced either.
 pub(crate) fn forced_on_sx() -> crate::sx::Sx {
-    let text = || crate::sx::sx().color("HighlightText");
     crate::sx::sx().media(
         crate::sx::FORCED_COLORS,
         crate::sx::sx()
-            .background("Highlight")
-            .border_color("Highlight")
-            .color("HighlightText")
-            .when("disabled", text())
-            .selector("&:disabled", text()),
+            .with("forced-color-adjust", "none")
+            .with("background-color", "Highlight !important")
+            .border_color("Highlight !important")
+            .color("HighlightText !important")
+            .selector("& *", crate::sx::sx().color("inherit !important")),
     )
 }
 

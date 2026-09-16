@@ -105,7 +105,7 @@ static PAGINATION_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .font_family("inherit")
         .line_height("1")
         // The house on-state line, so the current page is not a fill alone
-        // (todo 631); the ring composes it back in while focused.
+        // (todo 631).
         .when(
             "current",
             sx().background(PAGINATION_ACTIVE_BACKGROUND.value())

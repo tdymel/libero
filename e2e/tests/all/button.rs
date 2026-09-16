@@ -179,33 +179,36 @@ fn a_hovered_button_s_label_reads_on_its_hover_fill() {
     });
 }
 
-/// Whether `on` carries the house on-state line (an inset `box-shadow` in its
-/// own text colour) and `off` does not.
+/// Whether `on` carries the house on-state line (a 2px `currentColor` gradient
+/// bar, todo 646) and `off` does not.
 fn marked(on: &str, off: &str) -> String {
     format!(
         "(() => {{ const s = q => getComputedStyle(document.querySelector(q)); \
          const [on, off] = [s('{on}'), s('{off}')]; \
-         return on.boxShadow.startsWith(on.color) && on.boxShadow.includes('inset') \
-             && !off.boxShadow.includes('inset'); }})()"
+         const img = on.backgroundImage.replaceAll(on.color, 'currentcolor').toLowerCase(); \
+         return img === 'linear-gradient(currentcolor, currentcolor)' \
+             && on.backgroundSize.includes('2px') \
+             && !off.backgroundImage.includes('gradient'); }})()"
     )
 }
 
 /// Todo 491: the on state must not rest on a fill change alone (1.4.1).
 pub async fn assert_on_marker(page: &chromiumoxide::Page, on: &str, off: &str) {
     if let Err(e) = wait::for_js_true(page, &marked(on, off), "the on-state line").await {
-        let shadows: Vec<String> = page
+        let lines: Vec<String> = page
             .evaluate(format!(
-                "['{on}', '{off}'].map(q => getComputedStyle(document.querySelector(q)).boxShadow)"
+                "['{on}', '{off}'].map(q => {{ const s = getComputedStyle(document.querySelector(q)); \
+                 return `${{s.color}} | ${{s.backgroundImage}} | ${{s.backgroundSize}}`; }})"
             ))
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        panic!("{on} vs {off}: {e}; box-shadows {shadows:?}");
+        panic!("{on} vs {off}: {e}; color | background-image | size {lines:?}");
     }
 }
 
-/// Forced colours drop the line: the on state has to paint `Highlight` instead.
+/// Forced colours drop author fills: the on state paints `Highlight` under its line.
 pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, off: &str) {
     let [on_bg, off_bg, highlight]: [String; 3] = page
         .evaluate(format!(
@@ -221,6 +224,32 @@ pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, o
         .unwrap();
     assert_eq!(on_bg, highlight, "{on} is not Highlight in forced colours");
     assert_ne!(off_bg, highlight, "{off} is Highlight too");
+
+    // Unforced, or Chromium backs the label with a `Canvas` plate (todo 646);
+    // then every descendant has to follow the label colour by hand.
+    let [adjust, stray, line]: [String; 3] = page
+        .evaluate(format!(
+            "(() => {{ const probe = document.createElement('div'); \
+             probe.style.color = 'HighlightText'; document.body.append(probe); \
+             const text = getComputedStyle(probe).color; probe.remove(); \
+             const el = document.querySelector('{on}'); const s = getComputedStyle(el); \
+             const stray = [el, ...el.querySelectorAll('*')] \
+                 .filter(e => getComputedStyle(e).color !== text).map(e => e.tagName).join(','); \
+             return [s.forcedColorAdjust, stray, s.backgroundImage]; }})()"
+        ))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert_eq!(
+        adjust, "none",
+        "{on} is forced, so its label sits on a plate"
+    );
+    assert_eq!(stray, "", "{on}: these do not paint HighlightText");
+    assert!(
+        line.contains("gradient"),
+        "{on} lost its on-state line: {line}"
+    );
 }
 
 /// Todo 517: under forced colours a disabled control's text is `GrayText`,

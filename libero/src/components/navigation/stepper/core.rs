@@ -222,8 +222,8 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                 .border_color(STEPPER_ERROR.value())
                 .color(STEPPER_ERROR_CONTRAST.value()),
         )
-        // The house on-state ring thickens the current marker, so current and
-        // pending differ in shape too; an errored current step keeps it.
+        // The house on-state line under the current marker's number, so current
+        // and pending differ in shape too; an errored current step keeps it.
         .selector(
             "& > ol > li > [aria-current=\"step\"] [data-step-marker]",
             on_ring_sx(None),
