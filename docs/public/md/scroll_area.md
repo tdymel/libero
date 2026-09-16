@@ -143,7 +143,9 @@ a caller's `tabindex` or a `role` other than `region` turns the automatic stop
 off.
 
 Name it as well. APG's scrollable-region pattern wants an accessible name on a
-focusable region, and a debug build warns once about a stop without one:
+focusable region, and a debug build warns once about a stop without one. The
+name is only set while the area has a role (its own `region`, or yours): ARIA
+does not allow naming a plain `div`.
 
 ```rust,ignore
 ScrollArea {

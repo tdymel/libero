@@ -72,9 +72,13 @@ mod tests {
 
 // Column is the unconditional base and `row` overrides it. `gap` folds in
 // afterwards, so an explicit `gap` beats either axis's default spacing.
+// The per-instance vars reset to `initial` so a nested Flex does not inherit them.
 static FLEX_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = sx()
         .display("flex")
+        .var(FLEX_ALIGN_VAR, "initial")
+        .var(FLEX_JUSTIFY_VAR, "initial")
+        .var(FLEX_WRAP_VAR, "initial")
         .and(FlexDefaults::default_sx(false))
         .and(sx().focus_visible(focus_ring_sx()))
         .when("row", FlexDefaults::default_sx(true));

@@ -36,8 +36,13 @@ fn LayoutPage() -> Element {
             AspectRatio { id: "ratio", ratio: 16.0 / 9.0,
                 LBox { id: "ratio-link", component: "a", href: "#ratio", "Play the video" }
             }
+            Sidebar { id: "sidebar", aria_label: "Filters", size: "xs", "Filters" }
+            // An outer `wrap`, `align` and `justify` must not reach the inner Flex.
+            Flex { id: "outer", direction: "row", wrap: false, align: "flex-end", justify: "center",
+                Flex { id: "inner", direction: "row",
+                    LBox { component: "span", "Inner" }
+                }
+            }
         }
-        // Outside the 320px column: only its landmark is under test here.
-        Sidebar { id: "sidebar", aria_label: "Filters", size: "xs", "Filters" }
     }
 }

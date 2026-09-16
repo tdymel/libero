@@ -316,6 +316,9 @@ pub fn Demo(
                         // panel stops growing a row per boolean.
                         direction: "row",
                         wrap: "wrap",
+                        // Stretched, a wrapped line's spare height goes below
+                        // its controls instead of centring them in it.
+                        align: "stretch",
                         gap: "lg",
                         // Wrapped, the controls sit below the preview, so the
                         // divider has to move with them.

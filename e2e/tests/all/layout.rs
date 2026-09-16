@@ -50,7 +50,8 @@ fn box_renders_the_asked_tag_with_the_callers_attributes() {
     });
 }
 
-/// Nothing pokes out of the 320px column (WCAG 1.4.10).
+/// Nothing pokes out of the 320px column (WCAG 1.4.10). A `display: contents`
+/// box (ScrollArea's content) has an empty rect at the origin, so it is skipped.
 #[test]
 fn every_wrapper_reflows_inside_320px() {
     block_on(async {
@@ -62,6 +63,7 @@ fn every_wrapper_reflows_inside_320px() {
             .evaluate(
                 "(() => { const column = document.querySelector('#column').getBoundingClientRect(); \
                    return [...document.querySelectorAll('#column *')] \
+                     .filter(el => getComputedStyle(el).display !== 'contents') \
                      .filter(el => el.getBoundingClientRect().right > column.right + 1 \
                        || el.getBoundingClientRect().left < column.left - 1) \
                      .map(el => el.tagName + '#' + el.id); })()",
@@ -71,6 +73,29 @@ fn every_wrapper_reflows_inside_320px() {
             .into_value()
             .unwrap();
         assert!(past.is_empty(), "past the 320px column: {past:?}");
+
+        fixture.close().await.unwrap();
+    });
+}
+
+/// A nested Flex takes its own direction's defaults, not its ancestor's props.
+#[test]
+fn a_nested_flex_does_not_inherit_its_ancestors_props() {
+    block_on(async {
+        let fixture = Fixture::open("/layout", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#inner").await.unwrap();
+
+        let seen: Vec<String> = page
+            .evaluate(
+                "['#outer', '#inner'].map(s => { const c = getComputedStyle(document.querySelector(s)); \
+                   return [c.flexWrap, c.alignItems, c.justifyContent].join('|'); })",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(seen, ["nowrap|flex-end|center", "wrap|center|flex-start"]);
 
         fixture.close().await.unwrap();
     });

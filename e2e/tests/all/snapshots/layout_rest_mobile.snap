@@ -25,6 +25,9 @@ generic
   generic
     link "Play the video"
       StaticText "Play the video"
-complementary "Filters"
-  generic "Filters"
-    StaticText "Filters"
+  complementary "Filters"
+    generic
+      StaticText "Filters"
+  generic
+    generic
+      StaticText "Inner"

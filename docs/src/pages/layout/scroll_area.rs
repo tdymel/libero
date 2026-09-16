@@ -308,7 +308,9 @@ pub fn ScrollAreaPage() -> Element {
                     Code { source: "aria_label" }
                     " or "
                     Code { source: "aria_labelledby" }
-                    ". A debug build warns once about a stop without one."
+                    ". A debug build warns once about a stop without one. The name is only "
+                    "set while the area has a role, its own region or yours: ARIA does not "
+                    "allow naming a plain div."
                 }
             }
 

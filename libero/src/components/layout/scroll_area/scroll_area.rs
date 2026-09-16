@@ -301,7 +301,8 @@ fn check_tab_stop(root: ElementHandle, axis: ScrollAxis, mut stop: Signal<bool>,
 /// Scrolls its content, filling the parent by default. Read the scroll
 /// position via `onscroll`/`on*reached`; set it imperatively via
 /// `scroll_position_x`/`scroll_position_y` (reactive if bound to a signal,
-/// initial-only if a literal).
+/// initial-only if a literal). A caller's `aria-label`/`aria-labelledby`
+/// applies only while the area has a role: its own region stop, or yours.
 #[component]
 pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let theme = use_theme();
@@ -458,6 +459,17 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
 
     let variables: Input<Variables> = scroll_area_variables(props.scrollbar_color.as_ref()).into();
 
+    // ARIA prohibits naming a generic: the name waits for a role.
+    let has_role = tab_stop
+        || props
+            .attributes
+            .iter()
+            .any(|attribute| attribute.name == "role");
+    let mut attributes = props.attributes;
+    if !has_role {
+        attributes.retain(|attribute| !matches!(attribute.name, "aria-label" | "aria-labelledby"));
+    }
+
     // Unvirtualized content is `display: contents` and reserves nothing.
     let virtualized = virtualized();
     let (content_states, content_variables): (Input<States>, Input<Variables>) = if virtualized {
@@ -512,7 +524,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
                 onresize.call(event);
             }
         })
-        .render(HtmlTag::Div, props.attributes, body)
+        .render(HtmlTag::Div, attributes, body)
 }
 
 #[cfg(test)]

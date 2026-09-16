@@ -182,6 +182,63 @@ fn an_overflowing_area_of_plain_content_is_a_tab_stop() {
     });
 }
 
+/// A caller's name reaches the area only while it has a role: ARIA prohibits
+/// naming a generic (693). It follows the stop both ways on a resize.
+#[test]
+fn the_name_waits_for_a_role() {
+    const NAME: &str = "(id => document.getElementById(id).getAttribute('aria-label') ?? '')";
+    let name = |id: &str| format!("{NAME}('{id}')");
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/keyboard", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        wait::for_js_true(
+            page,
+            &format!("{} === 'Changelog'", name("plain")),
+            "the region's name",
+        )
+        .await
+        .unwrap();
+        for (id, expected) in [
+            ("short", ""),
+            ("listed", "Items"),
+            ("region", "Release notes"),
+        ] {
+            let seen: String = page.evaluate(name(id)).await.unwrap().into_value().unwrap();
+            assert_eq!(seen, expected, "#{id}'s name");
+        }
+
+        page.evaluate("document.querySelector('#short-pane').style.height = '8px'")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{} === 'Note'", name("short")),
+            "the squeezed area's name",
+        )
+        .await
+        .unwrap();
+        page.evaluate("document.querySelector('#short-pane').style.height = '120px'")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("{} === ''", name("short")),
+            "the name to go with the stop",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("the name waits for a role")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Content changing inside a child component re-renders nothing in the area:
 /// the stop is re-checked all the same, both ways (681).
 #[test]

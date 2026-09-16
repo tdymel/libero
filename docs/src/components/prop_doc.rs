@@ -153,6 +153,9 @@ fn PropRows(properties: Vec<PropDoc>, base: bool, extends: String) -> Element {
                             wrap: "wrap",
                             gap: "xs",
                             align: "baseline",
+                            // Breaking anywhere let a phone squeeze the column to
+                            // a few characters a line; a type now breaks only past this.
+                            sx: sx().min_width("10rem"),
                             Code { source: "{p.name}: {p.ty}", language: "rust" }
                             if !p.default.is_empty() {
                                 Text { size: "xs", color: "muted.6", "default: {p.default}" }
@@ -166,7 +169,13 @@ fn PropRows(properties: Vec<PropDoc>, base: bool, extends: String) -> Element {
                             if code {
                                 Code { source: run }
                             } else {
-                                "{run}"
+                                for (em, text) in emphasis_spans(&run) {
+                                    if em {
+                                        em { "{text}" }
+                                    } else {
+                                        "{text}"
+                                    }
+                                }
                             }
                         }
                     }),
@@ -199,9 +208,65 @@ fn code_spans(text: &str) -> Vec<(bool, String)> {
     runs
 }
 
+/// Splits prose on `*one*` into `(is_emphasis, text)` runs. A `*` opens only
+/// before a non-space and closes only after one, so `2 * 3` stays literal.
+fn emphasis_spans(text: &str) -> Vec<(bool, String)> {
+    let mut runs = Vec::new();
+    let mut plain = String::new();
+    let mut rest = text;
+    while let Some(open) = rest.find('*') {
+        plain.push_str(&rest[..open]);
+        let after = &rest[open + 1..];
+        let close = after
+            .char_indices()
+            .find(|&(i, c)| c == '*' && i > 0 && !after[..i].ends_with(char::is_whitespace))
+            .map(|(i, _)| i)
+            .filter(|_| !after.starts_with(char::is_whitespace));
+        match close {
+            Some(close) => {
+                if !plain.is_empty() {
+                    runs.push((false, std::mem::take(&mut plain)));
+                }
+                runs.push((true, after[..close].to_string()));
+                rest = &after[close + 1..];
+            }
+            None => {
+                plain.push('*');
+                rest = after;
+            }
+        }
+    }
+    plain.push_str(rest);
+    if !plain.is_empty() {
+        runs.push((false, plain));
+    }
+    runs
+}
+
 #[cfg(test)]
 mod tests {
-    use super::code_spans;
+    use super::{code_spans, emphasis_spans};
+
+    #[test]
+    fn stars_round_a_word_become_emphasis() {
+        assert_eq!(
+            emphasis_spans("the ratio of *one* cell"),
+            vec![
+                (false, "the ratio of ".into()),
+                (true, "one".into()),
+                (false, " cell".into()),
+            ]
+        );
+        assert_eq!(
+            emphasis_spans("2 * 3 * 4"),
+            vec![(false, "2 * 3 * 4".into())]
+        );
+        assert_eq!(emphasis_spans("a *b"), vec![(false, "a *b".into())]);
+        assert_eq!(
+            emphasis_spans("2 * 3 and *four*"),
+            vec![(false, "2 * 3 and ".into()), (true, "four".into())]
+        );
+    }
 
     #[test]
     fn backticks_become_code_runs() {

@@ -39,6 +39,12 @@ fn KeyboardPage() -> Element {
             div { id: "short-pane", style: "height: 120px",
                 ScrollArea { id: "short", "aria-label": "Note", p { "One line" } }
             }
+            // Fits, but the caller's role takes the name all the same.
+            div { style: "height: 120px",
+                ScrollArea { id: "listed", role: "list", "aria-label": "Items",
+                    div { role: "listitem", "One item" }
+                }
+            }
             div { style: "height: 120px",
                 ScrollArea { id: "links",
                     for i in 0..40 {

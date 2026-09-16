@@ -23,7 +23,7 @@ fn wrap_layout(values: &DemoValues, code: &str) -> String {
         _ => format!("{panel}{rest}"),
     };
     format!(
-        "Flex {{\n    direction: \"row\",\n    sx: sx().height(\"120px\").width(\"100%\").border(\"1px solid\").border_color(\"muted.3\"),\n{body}}}"
+        "Flex {{\n    direction: \"row\",\n    align: \"stretch\",\n    sx: sx().height(\"120px\").width(\"100%\").border(\"1px solid\").border_color(\"muted.3\"),\n{body}}}"
     )
 }
 
@@ -80,6 +80,8 @@ pub fn SidebarPage() -> Element {
                     rsx! {
                         Flex {
                             direction: "row",
+                            // A row centres its items; the panel spans the row's height.
+                            align: "stretch",
                             sx: sx().height("120px").width("100%").border("1px solid").border_color("muted.3"),
                             {first}
                             {second}

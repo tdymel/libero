@@ -33,6 +33,7 @@ fn Demo() -> Element {
     rsx! {
         Flex {
             direction: "row",
+            align: "stretch",
             wrap: false,
             sx: sx().height("120px").width("100%").border("1px solid").border_color("muted.3"),
             Sidebar {
@@ -62,6 +63,7 @@ fn Demo() -> Element {
     rsx! {
         Flex {
             direction: "row",
+            align: "stretch",
             wrap: false,
             sx: sx().height("120px").width("100%").border("1px solid").border_color("muted.3"),
             Flex {
