@@ -196,6 +196,11 @@ base_props! {
         checked: Option<bool>,
         #[props(default)]
         disabled: Option<bool>,
+        /// A checkbox chip stays focusable and posted with the form, but
+        /// clicks and Space no longer toggle it, as on `Checkbox`. `None` is
+        /// "not stated".
+        #[props(default)]
+        readonly: Option<bool>,
         /// Called with the value `checked` should take next.
         #[props(default)]
         onchange: Option<EventHandler<bool>>,
@@ -279,6 +284,9 @@ pub fn Chip(props: ChipProps) -> Element {
     }
     if props.value.is_some() && props.name.is_empty() {
         warn("Chip: `value` without `name` is posted by nothing.");
+    }
+    if props.readonly.is_some() && !selectable {
+        warn("Chip: `readonly` without `onchange` or `name` has nothing to lock.");
     }
 
     let style = use_cache((variant, checked, color), |(variant, checked, color)| {
@@ -397,11 +405,15 @@ pub fn Chip(props: ChipProps) -> Element {
     }
 
     let onchange = bound.emit(props.onchange);
+    // Refused here and said with `aria-readonly`, as on `Checkbox`: HTML's
+    // `readonly` does not apply to a checkbox.
+    let readonly = props.readonly.unwrap_or(false);
     // The label is the chip's own, so it wires the label's half of the
     // activation too - the same fix `use_field` gives `Checkbox`.
     let activation = Activation::new(element, move || {
         if let Some(onchange) = &onchange
             && !disabled
+            && !readonly
         {
             onchange(!checked);
         }
@@ -416,6 +428,7 @@ pub fn Chip(props: ChipProps) -> Element {
         .attr("value", props.value)
         .attr("checked", checked)
         .attr("disabled", disabled)
+        .attr("aria-readonly", readonly.then_some("true"))
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, Vec::new(), ());
 

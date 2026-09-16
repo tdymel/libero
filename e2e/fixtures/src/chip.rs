@@ -11,6 +11,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/chip", || rsx! { ChipPage {} }),
     ("/chip/fieldset", || rsx! { ChipFieldsetPage {} }),
+    ("/chip/readonly", || rsx! { ChipReadonlyPage {} }),
     ("/chip/removable", || rsx! { ChipRemovablePage {} }),
     ("/chip/icons", || rsx! { ChipIconsPage {} }),
     ("/chip/new-tab", || rsx! { ChipNewTabPage {} }),
@@ -23,6 +24,35 @@ pub const ROUTES: Routes = &[
         || rsx! { ChipTrailingPage { control: true } },
     ),
 ];
+
+/// Todo 629: a readonly filter chip and a readonly form chip in a `<form>`;
+/// neither toggles, and the form one still posts.
+#[component]
+fn ChipReadonlyPage() -> Element {
+    let mut emitted = use_signal(String::new);
+    rsx! {
+        form { id: "chip-form", "data-emitted": emitted(),
+            Flex { direction: "row", gap: "md",
+                Chip {
+                    id: "locked",
+                    readonly: true,
+                    checked: true,
+                    onchange: move |next| emitted.set(format!("locked:{next}")),
+                    "Locked"
+                }
+                Chip {
+                    id: "locked-form",
+                    name: "tags",
+                    value: "rust",
+                    readonly: true,
+                    checked: true,
+                    onchange: move |next| emitted.set(format!("locked-form:{next}")),
+                    "rust"
+                }
+            }
+        }
+    }
+}
 
 /// Todo 661: an `onclick` chip and a `to` chip with `trailing` - a count
 /// (fine) or a button (nested interactive, warned in debug).

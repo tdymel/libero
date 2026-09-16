@@ -218,3 +218,30 @@ fn a_blank_link_chip_adds_the_new_tab_hint_unless_opted_out() {
         assert!(!html.contains("<svg"), "{html}");
     }
 }
+
+/// Todo 629: said with `aria-readonly`, as on `Checkbox`, and never with
+/// `disabled`, which would drop it from the tab order and the post.
+#[test]
+fn a_readonly_chip_says_so_and_stays_enabled() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { name: "tags", value: "rust", readonly: true, checked: true, onchange: move |_| {}, "rust" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let input = attributes_of(&html, "input");
+    assert_eq!(
+        input.get("aria-readonly").map(String::as_str),
+        Some("true"),
+        "{html}"
+    );
+    assert!(!input.contains_key("disabled"), "{html}");
+    assert_eq!(
+        input.get("name").map(String::as_str),
+        Some("tags"),
+        "{html}"
+    );
+}

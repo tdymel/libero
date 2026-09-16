@@ -135,7 +135,8 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Space toggles a selectable chip. Keep `children` to text and `Icon` - a
+Space toggles a selectable chip; a `readonly` one keeps its tab stop and
+refuses the toggle. Keep `children` to text and `Icon` - a
 `<label>` hijacks clicks on any nested control.
 
 A `to` chip with `target: "_blank"` draws the same external icon and hidden
@@ -151,6 +152,7 @@ A `to` chip with `target: "_blank"` draws the same external icon and hidden
 | `radius` | `Size` | `xl` | Corner radius, independent of `size`. |
 | `checked` | `bool` | - | Selection state - pair it with `onchange`. Left out, a chip with a `name` keeps its own state unless that name binds it to the form around it. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the chip. |
+| `readonly` | `bool` | `false` | A checkbox chip stays focusable and posted with the form, but clicks and Space no longer toggle it, as on `Checkbox`. Said with `aria-readonly`. |
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. Its presence makes the chip a real checkbox. |
 | `name` | `FieldName<bool>` | - | Makes the chip a checkbox that posts under this name. A path - `Filters::FIELDS.open()` - also binds it to the surrounding `Form`'s value when the chip has no `onchange`, as on `Checkbox`. |
 | `value` | `String` | `on` | What the chip posts under its `name` when it is checked, so a row of filter chips can share one name. Left out, it posts the browser's `on`, as `Checkbox` does. |

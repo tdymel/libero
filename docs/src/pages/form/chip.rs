@@ -25,6 +25,9 @@ pub fn ChipPage() -> Element {
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables interaction and dims the chip."),
+                prop("readonly", "bool")
+                    .default("false")
+                    .doc("A checkbox chip stays focusable and posted with the form, but clicks and Space no longer toggle it, as on `Checkbox`."),
                 prop("onchange", "EventHandler<bool>")
                     .doc("Called with the value `checked` should take next. Its presence makes the chip a real checkbox."),
                 prop("name", "FieldName<bool>")
@@ -98,6 +101,8 @@ pub fn ChipPage() -> Element {
                         .hidden_when(|values| values.str("kind") != "filter")
                         .code(|_, _| vec![]),
                     Control::switch("disabled"),
+                    Control::switch("readonly")
+                        .hidden_when(|values| values.str("kind") != "filter"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Chip {
@@ -121,6 +126,7 @@ pub fn ChipPage() -> Element {
                         },
                         target: (values.str("kind") == "link").then(|| "_blank".to_string()),
                         disabled: values.str("disabled") == "true",
+                        readonly: values.str("kind") == "filter" && values.str("readonly") == "true",
                         "rust"
                     }
                 },

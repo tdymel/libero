@@ -323,3 +323,44 @@ fn a_control_in_a_clickable_chips_trailing_warns() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 629: a readonly chip keeps its tab stop and says it is read only, but
+/// Space and clicks leave it as it is, and in a form it still posts.
+#[test]
+fn a_readonly_chip_is_focusable_but_does_not_toggle_and_still_posts() {
+    block_on(async {
+        let fixture = Fixture::open("/chip/readonly", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        for id in ["locked", "locked-form"] {
+            let input = format!("#{id} > input");
+            keyboard::tab_to(page, &input, 10).await.unwrap();
+            assert_eq!(focused(&fixture).await, id, "#{id} is not a tab stop");
+            keyboard::press(page, SPACE).await.unwrap();
+            pointer::click(page, &format!("#{id} label")).await.unwrap();
+            settle(&fixture).await;
+            assert_eq!(emitted(&fixture).await, "", "#{id} toggled");
+        }
+
+        let state: String = page
+            .evaluate(
+                "(() => { const form = document.getElementById('chip-form'); \
+                 const inputs = [...form.querySelectorAll('input')]; \
+                 return inputs.map(i => `${i.checked} ${i.getAttribute('aria-readonly')}`).join(',') \
+                 + '|' + new FormData(form).getAll('tags').join(','); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            state, "true true,true true|rust",
+            "[checked aria-readonly],..|posted"
+        );
+
+        fixture.console.assert_clean("readonly chips").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
