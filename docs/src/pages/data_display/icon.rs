@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, Input, Text};
 
@@ -77,6 +77,15 @@ pub fn IconPage() -> Element {
                         CheckmarkIcon {}
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "An icon that means something needs "
+                    Code { source: "aria_label" }
+                    ". A "
+                    Code { source: "<title>" }
+                    " inside the svg does not name it: an unnamed Icon hides it with the rest."
+                }
             }
         }
     }

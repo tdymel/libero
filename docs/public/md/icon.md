@@ -68,6 +68,10 @@ fn Demo() -> Element {
 `Icon` is decorative by default: `aria-hidden="true"`, so it adds nothing next
 to the text it repeats. When the icon carries meaning on its own, give it an
 `aria_label` (or `aria_labelledby`): it becomes `role="img"` under that name.
+
+**A `<title>` inside the svg does not name the icon.** It is hidden together
+with the rest of the unnamed `Icon`; move its text into `aria_label`.
+
 For a clickable icon use [`ActionIcon`](action_icon.md), which requires an
 `aria_label`.
 

@@ -201,6 +201,8 @@ pub(crate) fn on_state_sx(resting: Option<&str>) -> crate::sx::Sx {
 ///
 /// Opted out of forcing, or Chromium backs the label with a `Canvas` plate it
 /// cannot be read on; `!important`, as the author hover colours are not forced either.
+/// The opt-out is inherited, so descendants get what forcing would give them: no
+/// fill, borders in the text colour (a Badge, a filled x; todo 686).
 pub(crate) fn forced_on_sx() -> crate::sx::Sx {
     crate::sx::sx().media(
         crate::sx::FORCED_COLORS,
@@ -209,7 +211,13 @@ pub(crate) fn forced_on_sx() -> crate::sx::Sx {
             .with("background-color", "Highlight !important")
             .border_color("Highlight !important")
             .color("HighlightText !important")
-            .selector("& *", crate::sx::sx().color("inherit !important")),
+            .selector(
+                "& *",
+                crate::sx::sx()
+                    .color("inherit !important")
+                    .with("background-color", "transparent !important")
+                    .border_color("currentColor !important"),
+            ),
     )
 }
 

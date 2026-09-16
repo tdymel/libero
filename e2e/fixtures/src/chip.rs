@@ -57,6 +57,18 @@ fn ChipRemovablePage() -> Element {
                 },
                 "wasm"
             }
+            // Todo 686: an x with its own fill.
+            Chip {
+                id: "removable-filled",
+                checked: true,
+                onchange: move |_| {},
+                trailing: rsx! {
+                    ActionIcon { aria_label: "Remove rust", size: "xs", variant: "filled", color: "error", onclick: move |_| {},
+                        svg { view_box: "0 0 24 24", path { d: "M6 6l12 12M18 6L6 18", stroke: "currentColor" } }
+                    }
+                },
+                "rust"
+            }
             Chip { id: "plain", checked: false, onchange: move |_| {}, "js" }
         }
     }

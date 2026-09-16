@@ -259,6 +259,28 @@ pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, o
         line.contains("gradient"),
         "{on} lost its on-state line: {line}"
     );
+
+    // Todo 686: `forced-color-adjust: none` is inherited, so a descendant's own
+    // fill or border (a Badge, a filled x) kept its author colour under HighlightText.
+    let painted: String = page
+        .evaluate(format!(
+            "(() => {{ const probe = document.createElement('div'); \
+             probe.style.color = 'HighlightText'; document.body.append(probe); \
+             const text = getComputedStyle(probe).color; probe.remove(); \
+             const clear = 'rgba(0, 0, 0, 0)'; \
+             const edge = s => ['Top', 'Right', 'Bottom', 'Left'].some(side => \
+                 parseFloat(s[`border${{side}}Width`]) > 0 \
+                 && ![clear, text].includes(s[`border${{side}}Color`])); \
+             return [...document.querySelector('{on}').querySelectorAll('*')] \
+                 .map(e => [e, getComputedStyle(e)]) \
+                 .filter(([, s]) => s.backgroundColor !== clear || edge(s)) \
+                 .map(([e, s]) => `${{e.tagName}} ${{s.backgroundColor}} ${{s.borderTopColor}}`).join(', '); }})()"
+        ))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap();
+    assert_eq!(painted, "", "{on}: these keep an author fill or border");
 }
 
 /// Todo 517: under forced colours a disabled control's text is `GrayText`,
@@ -308,6 +330,7 @@ fn a_pressed_button_shows_the_on_state_line_in_every_variant() {
             )
             .await;
         }
+        assert_on_in_forced_colours(page, "#on-badge", "#off-badge").await;
         assert_gray_in_forced_colours(page, "#disabled-link").await;
         fixture.close().await.unwrap();
     });

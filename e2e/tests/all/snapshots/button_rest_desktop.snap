@@ -58,3 +58,10 @@ button "Bold" [pressed=false]
   StaticText "Bold"
 button "Bold" [pressed]
   StaticText "Bold"
+button "Inbox 3" [pressed=false]
+  StaticText "Inbox"
+  StaticText "3"
+button "Inbox 3 NEW" [pressed]
+  StaticText "Inbox"
+  StaticText "3"
+  StaticText "NEW"

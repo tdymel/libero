@@ -86,6 +86,9 @@ base_props! {
 /// Decorative (`aria-hidden`) unless named: pass `aria_label` or
 /// `aria_labelledby` and it becomes `role="img"` under that name.
 ///
+/// **The svg's own `<title>` does not name it** - it is hidden with the rest.
+/// An icon that means something needs `aria_label` (children cannot be inspected).
+///
 /// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::components::Icon;

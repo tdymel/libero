@@ -83,6 +83,7 @@ fn a_selected_chips_remove_x_follows_it_in_forced_colours() {
         crate::button::assert_on_marker(page, "#removable", "#plain").await;
         crate::calendar::force_colours(page).await;
         crate::button::assert_on_in_forced_colours(page, "#removable", "#plain").await;
+        crate::button::assert_on_in_forced_colours(page, "#removable-filled", "#plain").await;
         fixture.close().await.unwrap();
     });
 }

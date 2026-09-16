@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Button, Flex, Text},
+    components::{Badge, Box, Button, Flex, Text},
     sx::sx,
 };
 
@@ -72,6 +72,14 @@ fn ButtonPage() -> Element {
                 Flex { gap: "sm",
                     Button { id: "off-{variant}", variant, selected: false, "Bold" }
                     Button { id: "on-{variant}", variant, selected: true, "Bold" }
+                }
+            }
+            // Todo 686: a badge with its own fill and border inside a pressed button.
+            Flex { gap: "sm",
+                Button { id: "off-badge", selected: false, "Inbox" Badge { "3" } }
+                Button { id: "on-badge", selected: true, "Inbox"
+                    Badge { "3" }
+                    Badge { variant: "outlined", color: "error", "New" }
                 }
             }
         }
