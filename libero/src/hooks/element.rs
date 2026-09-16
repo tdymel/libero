@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 
 use crate::platform::{
     ContentSubscription, Dimensions, ElementApi, PlatformError, Read, backend, on_content_change,
+    on_form_reset,
 };
 
 /// A handle to one of this component's own elements, and the only way to reach
@@ -126,6 +127,45 @@ pub(crate) fn use_content_changes(element: ElementHandle, enabled: bool) -> Read
         *slot.borrow_mut() = watching;
     }));
     changes.into()
+}
+
+/// The DOM `<form>` that owns `element`, while `enabled`: `Some` with the
+/// `reset`s it has fired since, `None` without one. For a control inside a raw
+/// `<form>`, which no libero `Form` context reaches. Stays `None` off the web.
+pub(crate) fn use_form_owner(element: ElementHandle, enabled: bool) -> ReadSignal<Option<u32>> {
+    // Bumped from the listener, which runs outside every scope.
+    let owner = use_signal(|| None::<u32>);
+    let slot: Rc<RefCell<Option<Box<dyn ContentSubscription>>>> =
+        use_hook(|| Rc::new(RefCell::new(None)));
+    use_drop({
+        let slot = slot.clone();
+        move || drop(slot.borrow_mut().take())
+    });
+    use_effect(use_reactive!(|enabled| {
+        let _ = element.mount_token();
+        slot.borrow_mut().take();
+        let watching = enabled
+            .then(|| element.mounted())
+            .flatten()
+            .and_then(|mounted| {
+                on_form_reset(
+                    &mounted,
+                    Box::new(move || {
+                        let mut owner = owner;
+                        let next = owner.peek().unwrap_or(0).wrapping_add(1);
+                        owner.set(Some(next));
+                    }),
+                )
+            });
+        // Kept across a remount, so a count read before it never repeats.
+        let found = watching.is_some().then(|| owner.peek().unwrap_or(0));
+        if *owner.peek() != found {
+            let mut owner = owner;
+            owner.set(found);
+        }
+        *slot.borrow_mut() = watching;
+    }));
+    owner.into()
 }
 
 impl ElementApi for ElementHandle {

@@ -61,26 +61,26 @@ fn matches(entry: &str, name: &str, content_type: Option<&str>) -> bool {
 /// What the dropzone says it takes, read off the same attribute the picker
 /// uses - so the prompt cannot drift from what is actually accepted.
 ///
-/// `.pdf` reads as `PDF`, `image/png` as `PNG`, and a `type/*` wildcard as the
-/// group's plural. `None` when the attribute takes everything.
-pub(super) fn accept_hint(accept: &str) -> Option<String> {
+/// `.pdf` reads as `PDF`, `image/png` as `PNG`, and a `type/*` wildcard as
+/// `any_of` names its group. `None` when the attribute takes everything.
+pub(super) fn accept_hint(accept: &str, any_of: fn(&str) -> String) -> Option<String> {
     let names: Vec<String> = accept
         .split(',')
         .map(str::trim)
         .filter(|entry| !entry.is_empty() && *entry != "*/*")
-        .map(entry_name)
+        .map(|entry| entry_name(entry, any_of))
         .collect();
     (!names.is_empty()).then(|| names.join(", "))
 }
 
-fn entry_name(entry: &str) -> String {
+fn entry_name(entry: &str, any_of: fn(&str) -> String) -> String {
     if let Some(extension) = entry.strip_prefix('.') {
         return extension.to_ascii_uppercase();
     }
     match entry.split_once('/') {
         // `image/*` is "images", and an unknown group still reads as a plural
         // rather than as a media type nobody outside the console knows.
-        Some((group, "*")) => format!("{group}s"),
+        Some((group, "*")) => any_of(group),
         Some((_, subtype)) => subtype.to_ascii_uppercase(),
         None => entry.to_ascii_uppercase(),
     }
@@ -89,6 +89,7 @@ fn entry_name(entry: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::localization::FileFieldLabels;
 
     #[test]
     fn an_empty_accept_takes_everything() {
@@ -133,23 +134,40 @@ mod tests {
         assert!(!accepts(accept, "a.zip", Some("application/zip")));
     }
 
+    fn english(accept: &str) -> Option<String> {
+        accept_hint(accept, FileFieldLabels::ENGLISH.any_of)
+    }
+
     #[test]
     fn a_hint_names_what_the_attribute_takes() {
-        assert_eq!(accept_hint("image/*"), Some("images".to_string()));
-        assert_eq!(accept_hint(".pdf"), Some("PDF".to_string()));
-        assert_eq!(accept_hint("image/png"), Some("PNG".to_string()));
+        assert_eq!(english("image/*"), Some("images".to_string()));
+        assert_eq!(english(".pdf"), Some("PDF".to_string()));
+        assert_eq!(english("image/png"), Some("PNG".to_string()));
         assert_eq!(
-            accept_hint("image/png, .pdf, video/*"),
+            english("image/png, .pdf, video/*"),
             Some("PNG, PDF, videos".to_string())
+        );
+    }
+
+    /// Todo 656: a wildcard's name is the localization's, not an English `s`.
+    #[test]
+    fn a_wildcard_reads_as_the_localization_names_it() {
+        let german: fn(&str) -> String = |group| match group {
+            "image" => "Bilder".to_string(),
+            group => format!("{group}-Dateien"),
+        };
+        assert_eq!(
+            accept_hint("image/*, .pdf, audio/*", german),
+            Some("Bilder, PDF, audio-Dateien".to_string())
         );
     }
 
     /// An attribute that excludes nothing has nothing to announce.
     #[test]
     fn an_open_accept_has_no_hint() {
-        assert_eq!(accept_hint(""), None);
-        assert_eq!(accept_hint("*/*"), None);
-        assert_eq!(accept_hint(" , "), None);
+        assert_eq!(english(""), None);
+        assert_eq!(english("*/*"), None);
+        assert_eq!(english(" , "), None);
     }
 
     /// A drop can carry a file the platform gave no type for, and only an

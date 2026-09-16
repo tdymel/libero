@@ -12,7 +12,7 @@ use crate::{
         form::{use_bound, use_field, use_form_context},
         layout::use_box,
     },
-    hooks::{use_cache, use_css, use_element, use_theme},
+    hooks::{use_cache, use_css, use_element, use_form_owner, use_theme},
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -149,7 +149,7 @@ field_props! {
 /// description, helper text and validation message under both.
 ///
 /// The browser never toggles the input itself - a label click and Space are
-/// taken in Rust, and Enter too outside a `Form`; inside one Enter submits it -
+/// taken in Rust, and Enter too outside a form; inside one Enter submits it -
 /// so the track, the DOM property, assistive tech and form submission never
 /// drift apart. Pass `checked` and handle `onchange`
 /// to own the state; with neither, and outside a form binding, the switch
@@ -193,10 +193,13 @@ pub fn Switch(props: SwitchProps) -> Element {
         }
     };
 
-    // Space toggles. Enter toggles too outside a `Form` (APG); inside one it is
-    // left to the browser, which submits as for a native checkbox.
+    // Space toggles. Enter toggles too outside a form (APG); inside one it is
+    // left to the browser, which submits as for a native checkbox. A raw
+    // `<form>` counts, read off the DOM (todo 660).
     let in_form = use_form_context().is_some();
     let element = use_element();
+    let owner = use_form_owner(element, !in_form);
+    let in_form = in_form || owner().is_some();
     let field = use_field()
         .inline()
         .card(card)

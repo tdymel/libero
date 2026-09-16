@@ -8,7 +8,7 @@ use crate::{
         form::{use_bound, use_field, use_form_context},
         inputs::button_variables,
     },
-    hooks::{use_cache, use_element, use_theme},
+    hooks::{use_cache, use_element, use_form_owner, use_theme},
     sx::ThemeAwareValue,
     theme::Size,
     utils::warn,
@@ -102,6 +102,9 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
     let disabled = bound.disabled(props.disabled);
     let current = bound.value().or_else(|| props.value.clone());
     let in_form = use_form_context().is_some();
+    // A raw `<form>` around the strip counts too (todo 660).
+    let owner = use_form_owner(element, !in_form);
+    let in_form = in_form || owner().is_some();
 
     if props.onchange.is_none() && !bound.is_bound() && !disabled {
         warn("SegmentedControl: without `onchange` the selection can never change.");

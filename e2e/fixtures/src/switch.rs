@@ -8,7 +8,34 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/switch", || rsx! { SwitchPage {} }),
     ("/switch/form", || rsx! { SwitchFormPage {} }),
+    ("/switch/raw-form", || rsx! { SwitchRawFormPage {} }),
 ];
+
+/// Todo 660: a switch in a raw `<form>`, no libero `Form`, counting submits.
+#[component]
+fn SwitchRawFormPage() -> Element {
+    let mut on = use_signal(|| false);
+    let mut submits = use_signal(|| 0u32);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { id: "submits", "data-submits": "{submits}", "Submits {submits}" }
+            form {
+                onsubmit: move |event: FormEvent| {
+                    event.prevent_default();
+                    submits += 1;
+                },
+                Switch {
+                    id: "alerts",
+                    label: "Alerts",
+                    checked: on(),
+                    onchange: move |next| on.set(next),
+                }
+                button { r#type: "submit", "Save" }
+            }
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Prefs {

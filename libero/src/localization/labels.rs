@@ -454,7 +454,26 @@ impl MarqueeLabels {
 }
 
 /// A `FileField`'s own words. A chip's x reads [`CommonLabels::remove`].
+///
+/// ```
+/// use libero::localization::FileFieldLabels;
+///
+/// const GERMAN: FileFieldLabels = FileFieldLabels {
+///     any_of: |group| match group {
+///         "image" => "Bilder".to_string(),
+///         "video" => "Videos".to_string(),
+///         group => format!("{group}-Dateien"),
+///     },
+///     ..FileFieldLabels::ENGLISH
+/// };
+/// assert_eq!((GERMAN.any_of)("image"), "Bilder");
+/// assert_eq!((FileFieldLabels::ENGLISH.any_of)("audio"), "audios");
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(
+    unpredictable_function_pointer_comparisons,
+    reason = "compares by address; a miss on a copied closure only re-renders"
+)]
 pub struct FileFieldLabels {
     /// The `Input` variant's Browse button, heard after the field's label.
     pub browse: &'static str,
@@ -464,6 +483,16 @@ pub struct FileFieldLabels {
     pub drop_file: &'static str,
     /// The same, for a `multiple` field.
     pub drop_files: &'static str,
+    /// Names a `type/*` entry of `accept` in the dropzone's hint: `image`
+    /// reads as "images". A fn rather than a template, for plural forms.
+    pub any_of: fn(&str) -> String,
+    /// A card's file size units, bytes to terabytes, in powers of 1000.
+    pub size_units: [&'static str; 5],
+}
+
+/// `FileFieldLabels::ENGLISH.any_of`. A named fn, so every copy compares equal.
+fn english_any_of(group: &str) -> String {
+    format!("{group}s")
 }
 
 /// `TextareaLabels::ENGLISH.characters_left`. A named fn, so every copy holds
@@ -512,5 +541,7 @@ impl FileFieldLabels {
         required: "Required",
         drop_file: "Drop a file here, or click to pick",
         drop_files: "Drop files here, or click to pick",
+        any_of: english_any_of,
+        size_units: ["B", "kB", "MB", "GB", "TB"],
     };
 }

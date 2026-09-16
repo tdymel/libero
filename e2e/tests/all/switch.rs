@@ -163,6 +163,39 @@ fn enter_submits_the_form_and_space_toggles() {
     });
 }
 
+/// Todo 660: a raw `<form>` is a form too - read off the DOM, not libero's
+/// `Form` context - so Enter submits it there as well.
+#[test]
+fn enter_submits_a_raw_form() {
+    block_on(async {
+        let fixture = Fixture::open("/switch/raw-form", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let submits = "document.querySelector('#submits').dataset.submits";
+
+        keyboard::tab_to(page, "#alerts", 10).await.unwrap();
+        keyboard::press(page, keyboard::SPACE).await.unwrap();
+        wait::for_js_true(page, &checked("alerts"), "Space to turn it on")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(page, &format!("{submits} === '1'"), "Enter to submit")
+            .await
+            .unwrap();
+        let on: bool = page
+            .evaluate(checked("alerts"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(on, "Enter toggled the switch");
+
+        fixture.console.assert_clean("Enter in a raw form").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Readonly stays focusable but refuses every activation. The plain switch's
 /// Space afterwards is the control: once it lands, the readonly presses have.
 #[test]

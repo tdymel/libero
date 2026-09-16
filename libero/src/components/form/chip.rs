@@ -15,7 +15,7 @@ use crate::{
         layout::use_box,
         navigation::{InternalAnchor, NewTabHint, wants_new_tab_hint},
     },
-    hooks::{use_cache, use_css, use_element, use_id, use_theme},
+    hooks::{ElementHandle, use_cache, use_css, use_element, use_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ChipDefaults, ColorShade, CssVar, Size, SizeCss},
     utils::warn,
@@ -322,10 +322,20 @@ pub fn Chip(props: ChipProps) -> Element {
         }
         {props.children}
     };
+    let trailing_slot = use_element();
+    use_nested_control_warning(
+        trailing_slot,
+        clickable && !selectable && props.trailing.is_some(),
+    );
     let trailing = rsx! {
         if let Some(trailing) = props.trailing {
             // Not `trailing`: a field frame's own slot is, and a chip sits in one.
-            span { class: trailing_class, "data-slot": "chip-trailing", {trailing} }
+            span {
+                class: trailing_class,
+                "data-slot": "chip-trailing",
+                onmounted: trailing_slot.mount(),
+                {trailing}
+            }
         }
     };
     let content = rsx! {
@@ -421,6 +431,29 @@ pub fn Chip(props: ChipProps) -> Element {
         props.attributes,
         vec![input, label, trailing, ring_overlay()],
     )
+}
+
+/// What an `onclick`/`to` chip's `trailing` may not hold: a control of its own.
+#[cfg(debug_assertions)]
+const NESTED_CONTROL: &str = "a[href], button, input, select, textarea, [tabindex]";
+
+/// Debug builds: an `onclick`/`to` chip's `trailing` lands inside its
+/// `<button>`/`<a>`, so a control there is nested interactive content (todo
+/// 661). Read off the DOM: a badge there is fine, a button is not.
+fn use_nested_control_warning(slot: ElementHandle, nested: bool) {
+    #[cfg(debug_assertions)]
+    use_effect(use_reactive!(|nested| {
+        let _ = slot.mount_token();
+        if nested && crate::platform::ElementApi::query_selector(&slot, NESTED_CONTROL).is_ok() {
+            warn(
+                "Chip: `trailing` holds a control inside an `onclick`/`to` chip's \
+                 button or link - nested interactive content. Drop `onclick`/`to`, or \
+                 the control.",
+            );
+        }
+    }));
+    #[cfg(not(debug_assertions))]
+    let _ = (slot, nested);
 }
 
 #[cfg(test)]

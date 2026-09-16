@@ -4,7 +4,7 @@ use dioxus::prelude::MountedData;
 
 use super::{PlatformError, backend};
 
-/// Dropping it stops the callbacks.
+/// Dropping it stops the callbacks: a content watch, a form's `reset`.
 pub(crate) trait ContentSubscription {}
 
 /// Calls `callback` after `mounted`'s subtree changed: a node added or
@@ -16,6 +16,16 @@ pub(crate) fn on_content_change(
     callback: Box<dyn Fn()>,
 ) -> Option<Box<dyn ContentSubscription>> {
     backend::on_content_change(mounted, callback)
+}
+
+/// Calls `on_reset` on each `reset` of the `<form>` that owns `mounted`: a
+/// control's own form owner, else the nearest `<form>` around it. `None` when
+/// no form owns it, and **off the web**, where nothing reads the DOM's owner.
+pub(crate) fn on_form_reset(
+    mounted: &Rc<MountedData>,
+    on_reset: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    backend::on_form_reset(mounted, on_reset)
 }
 
 /// An element's rendered pixel size.

@@ -855,7 +855,8 @@ impl Activation {
     }
 
     /// Enter activates as well as Space: a switch or segmented control
-    /// outside a `Form`, where Enter has no form to submit (todo 648).
+    /// outside a `Form` or raw `<form>`, where Enter has nothing to submit
+    /// (todos 648, 660).
     pub(crate) fn enter_activates(mut self, enter: bool) -> Self {
         self.enter = enter;
         self

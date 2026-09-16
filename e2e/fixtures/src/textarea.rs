@@ -9,7 +9,26 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/textarea/counter", || rsx! { CounterPage {} }),
     ("/textarea/reset", || rsx! { ResetPage {} }),
+    ("/textarea/raw-reset", || rsx! { RawResetPage {} }),
 ];
+
+/// Todo 685: a raw `<form>`, no libero `Form`, reset by its own button.
+#[component]
+fn RawResetPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            form {
+                Textarea {
+                    label: "Remark",
+                    counter: true,
+                    maxlength: "20",
+                    initial_value: "hi",
+                }
+                button { r#type: "reset", "Clear" }
+            }
+        }
+    }
+}
 
 #[component]
 fn CounterPage() -> Element {

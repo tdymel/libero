@@ -399,6 +399,45 @@ struct WebContentSubscription {
     _closure: Closure<dyn FnMut()>,
 }
 
+pub(super) fn on_form_reset(
+    mounted: &Rc<MountedData>,
+    on_reset: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    let form = form_owner(mounted.downcast::<web_sys::Element>()?)?;
+    let closure = Closure::<dyn FnMut()>::new(on_reset);
+    form.add_event_listener_with_callback("reset", closure.as_ref().unchecked_ref())
+        .ok()?;
+    Some(Box::new(WebResetSubscription { form, closure }))
+}
+
+/// A control's `form`, which honours its `form` attribute; for anything else
+/// the nearest `<form>` around it.
+fn form_owner(element: &web_sys::Element) -> Option<web_sys::HtmlFormElement> {
+    if let Some(input) = element.dyn_ref::<web_sys::HtmlInputElement>() {
+        return input.form();
+    }
+    if let Some(textarea) = element.dyn_ref::<web_sys::HtmlTextAreaElement>() {
+        return textarea.form();
+    }
+    element.closest("form").ok()??.dyn_into().ok()
+}
+
+struct WebResetSubscription {
+    form: web_sys::HtmlFormElement,
+    /// Kept alive for as long as the listener is registered.
+    closure: Closure<dyn FnMut()>,
+}
+
+impl ContentSubscription for WebResetSubscription {}
+
+impl Drop for WebResetSubscription {
+    fn drop(&mut self) {
+        let _ = self
+            .form
+            .remove_event_listener_with_callback("reset", self.closure.as_ref().unchecked_ref());
+    }
+}
+
 impl ContentSubscription for WebContentSubscription {}
 
 impl Drop for WebContentSubscription {

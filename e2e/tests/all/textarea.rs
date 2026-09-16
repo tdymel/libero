@@ -75,6 +75,48 @@ fn the_counter_speaks_only_near_the_limit() {
     });
 }
 
+/// Todo 685: a raw `<form>`'s own reset reaches the count too, with no libero
+/// `Form` to say so.
+#[test]
+fn an_uncontrolled_count_follows_a_raw_form_reset() {
+    block_on(async {
+        let fixture = Fixture::open("/textarea/raw-reset", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let reads = |count: &str| counter_reads(0, count, "");
+
+        wait::for_js_true(page, &reads("2/20"), "the initial text")
+            .await
+            .unwrap();
+        for round in 0..2 {
+            page.evaluate("document.querySelector('textarea').focus()")
+                .await
+                .unwrap();
+            keyboard::type_text(page, "hello").await.unwrap();
+            wait::for_js_true(page, &reads("7/20"), &format!("typed, round {round}"))
+                .await
+                .unwrap();
+            page.evaluate("document.querySelector('button[type=reset]').click()")
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.querySelector('textarea').value === 'hi' && {}",
+                    reads("2/20")
+                ),
+                &format!("the initial count, round {round}"),
+            )
+            .await
+            .unwrap();
+        }
+
+        fixture.console.assert_clean("a raw reset").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 679: a reset brings an uncontrolled textarea back to its initial text
 /// without an input event, and the count follows, from the native reset button
 /// and from `FormHandle`.

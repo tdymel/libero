@@ -290,3 +290,35 @@ fn a_new_tab_chip_shows_an_icon_and_says_so() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 661: a control in an `onclick`/`to` chip's `trailing` is nested
+/// interactive content, and a debug build says so for each chip. A count there
+/// is fine and stays quiet.
+#[test]
+fn a_control_in_a_clickable_chips_trailing_warns() {
+    block_on(async {
+        let fixture = Fixture::open("/chip/trailing-badge", Viewport::Desktop)
+            .await
+            .unwrap();
+        settle(&fixture).await;
+        fixture.console.assert_clean("a count in trailing").unwrap();
+        fixture.close().await.unwrap();
+
+        let fixture = Fixture::open("/chip/trailing-control", Viewport::Desktop)
+            .await
+            .unwrap();
+        let warned = || {
+            fixture
+                .console
+                .peek()
+                .iter()
+                .filter(|message| message.contains("Chip: `trailing` holds a control"))
+                .count()
+        };
+        e2e::wait::until("both chips to warn", || async { Ok(warned() == 2) })
+            .await
+            .unwrap();
+        fixture.console.drain();
+        fixture.close().await.unwrap();
+    });
+}

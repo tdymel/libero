@@ -20,7 +20,33 @@ pub const ROUTES: Routes = &[
     ("/segmented-control/field", || rsx! { FieldPage {} }),
     ("/segmented-control/long", || rsx! { LongPage {} }),
     ("/segmented-control/form", || rsx! { FormPage {} }),
+    ("/segmented-control/raw-form", || rsx! { RawFormPage {} }),
 ];
+
+/// Todo 660: a strip in a raw `<form>`, no libero `Form`, counting submits.
+#[component]
+fn RawFormPage() -> Element {
+    let mut alignment = use_signal(|| Alignment::Center);
+    let mut submits = use_signal(|| 0u32);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            span { id: "submits", "data-submits": "{submits}", "Submits {submits}" }
+            form {
+                onsubmit: move |event: FormEvent| {
+                    event.prevent_default();
+                    submits += 1;
+                },
+                SegmentedControl {
+                    label: "Alignment",
+                    value: alignment(),
+                    onchange: move |next| alignment.set(next),
+                }
+                button { r#type: "submit", "Save" }
+            }
+        }
+    }
+}
 
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Layout {

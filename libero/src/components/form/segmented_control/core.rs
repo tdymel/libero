@@ -215,8 +215,8 @@ pub(crate) struct SegmentedControlView {
     pub focusable: bool,
     /// Focusable and posted, but no click, key or arrow picks a segment.
     pub readonly: bool,
-    /// Enter picks, as Space does: outside a `Form`, where it has nothing to
-    /// submit.
+    /// Enter picks, as Space does: outside a `Form` or raw `<form>`, where it
+    /// has nothing to submit.
     pub enter: bool,
     /// What the radios post as, and what makes them one exclusive set.
     pub name: String,

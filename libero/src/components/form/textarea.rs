@@ -9,7 +9,7 @@ use crate::{
         form::{FormScope, field_control_sx, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
-    hooks::{use_css, use_localization, use_theme},
+    hooks::{use_css, use_element, use_form_owner, use_localization, use_theme},
     sx::{StaticSx, sx},
 };
 
@@ -143,8 +143,15 @@ pub fn Textarea(props: TextareaProps) -> Element {
     // Only a caller's text is known without the input events: an
     // uncontrolled textarea's length is tracked from them, stamped with the
     // form's reset count: a reset brings back the initial text, no input event.
+    // A raw `<form>`'s own `reset` is heard off the DOM (todo 685).
     let limit = max_length(&props.attributes).filter(|_| props.counter);
-    let resets = try_use_context::<FormScope>().map_or(0, |form| form.resets());
+    let scope = try_use_context::<FormScope>();
+    let element = use_element();
+    let owner = use_form_owner(
+        element,
+        scope.is_none() && limit.is_some() && value.is_none(),
+    );
+    let resets = scope.map_or(0, |form| form.resets()) + owner().unwrap_or(0);
     let mut typed = use_signal(|| (0u32, None::<usize>));
     let counter_class = use_css(Some(&COUNTER_SX), CssLayer::Framework);
     let words = use_localization().textarea;
@@ -180,6 +187,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
     });
     let textarea = field
         .aria(control)
+        .element(&element)
         .attr("name", bound.name().map(str::to_string))
         // A form reset leaves the text alone when this component sets it.
         .attr("data-controlled", value.is_some())

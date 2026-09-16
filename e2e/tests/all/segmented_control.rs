@@ -186,10 +186,18 @@ fn the_group_carries_the_field_wiring() {
 /// native radio, and keeps the pick.
 #[test]
 fn enter_submits_the_form() {
+    enter_submits("/segmented-control/form");
+}
+
+/// Todo 660: a raw `<form>` counts too, read off the DOM.
+#[test]
+fn enter_submits_a_raw_form() {
+    enter_submits("/segmented-control/raw-form");
+}
+
+fn enter_submits(route: &str) {
     block_on(async {
-        let fixture = Fixture::open("/segmented-control/form", Viewport::Desktop)
-            .await
-            .unwrap();
+        let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
 
         assert_eq!(

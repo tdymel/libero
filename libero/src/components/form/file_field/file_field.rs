@@ -898,11 +898,11 @@ fn dropzone_prompt(props: &FileFieldProps, loader: Option<Size>) -> Element {
         .children
         .as_ref()
         .is_ok_and(|children| *children != VNode::default());
+    let labels = current_localization().file_field;
     let prompt = match (written, props.placeholder.clone()) {
         (true, _) => props.children.clone(),
         (false, Some(placeholder)) => rsx! { span { "{placeholder}" } },
         (false, None) => {
-            let labels = current_localization().file_field;
             let text = match props.multiple {
                 true => labels.drop_files,
                 false => labels.drop_file,
@@ -910,7 +910,8 @@ fn dropzone_prompt(props: &FileFieldProps, loader: Option<Size>) -> Element {
             rsx! { span { "{text}" } }
         }
     };
-    let hint = accept_hint(props.accept.as_deref().unwrap_or_default()).map(|hint| {
+    let accept = props.accept.as_deref().unwrap_or_default();
+    let hint = accept_hint(accept, labels.any_of).map(|hint| {
         rsx! {
             span { "data-slot": "hint", "{hint}" }
         }
@@ -1257,8 +1258,9 @@ fn default_card(
     id: String,
 ) -> Element {
     let name = file.name();
-    let size = format_size(file.size());
-    let remove_label = fill(current_localization().common.remove, &[("label", &name)]);
+    let words = current_localization();
+    let size = format_size(file.size(), &words.file_field.size_units);
+    let remove_label = fill(words.common.remove, &[("label", &name)]);
     rsx! {
         span { "data-slot": "name", "{name}" }
         span { "data-slot": "size", "{size}" }

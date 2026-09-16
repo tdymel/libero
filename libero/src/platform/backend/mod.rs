@@ -68,6 +68,20 @@ pub(crate) fn on_content_change(
     return None;
 }
 
+/// Only the web: Blitz fires no native `submit` or `reset` for a raw `<form>`,
+/// so an owner found there would promise what nothing delivers.
+pub(crate) fn on_form_reset(
+    mounted: &Rc<MountedData>,
+    on_reset: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = (mounted, on_reset);
+    #[cfg(target_arch = "wasm32")]
+    return web::on_form_reset(mounted, on_reset);
+    #[cfg(not(target_arch = "wasm32"))]
+    return None;
+}
+
 /// Whatever the renderer needs mounted at the root, rendered once by
 /// `LiberoProvider`. Only Blitz needs anything: an element to reach its
 /// document through from the first frame, and one to run the commands it had

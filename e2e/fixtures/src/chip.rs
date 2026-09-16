@@ -14,7 +14,31 @@ pub const ROUTES: Routes = &[
     ("/chip/removable", || rsx! { ChipRemovablePage {} }),
     ("/chip/icons", || rsx! { ChipIconsPage {} }),
     ("/chip/new-tab", || rsx! { ChipNewTabPage {} }),
+    (
+        "/chip/trailing-badge",
+        || rsx! { ChipTrailingPage { control: false } },
+    ),
+    (
+        "/chip/trailing-control",
+        || rsx! { ChipTrailingPage { control: true } },
+    ),
 ];
+
+/// Todo 661: an `onclick` chip and a `to` chip with `trailing` - a count
+/// (fine) or a button (nested interactive, warned in debug).
+#[component]
+fn ChipTrailingPage(control: bool) -> Element {
+    let trailing = move || match control {
+        true => rsx! { button { r#type: "button", "x" } },
+        false => rsx! { span { "3" } },
+    };
+    rsx! {
+        Flex { direction: "row", gap: "md",
+            Chip { id: "action-trailing", onclick: move |_| {}, trailing: trailing(), "Action" }
+            Chip { id: "link-trailing", to: "/chip", trailing: trailing(), "Link" }
+        }
+    }
+}
 
 /// A selected chip with a remove x, which has to follow its label in forced
 /// colours (todo 646), beside an unselected one.
