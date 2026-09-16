@@ -315,6 +315,26 @@ impl Page {
             .to_vec()
     }
 
+    /// The text of every laid-out run inside the matches that broke onto more
+    /// than one line: the painted text, not the box (todo 627).
+    pub fn wrapped_text(&self, selector: &str) -> Vec<String> {
+        let doc = self.doc.inner.borrow();
+        let mut stack = self.query_all(selector);
+        let mut wrapped = Vec::new();
+        while let Some(id) = stack.pop() {
+            let node = doc.get_node(id).expect("a matched node");
+            let lines = node
+                .element_data()
+                .and_then(|data| data.inline_layout_data.as_ref())
+                .map_or(0, |text| text.layout.len());
+            if lines > 1 {
+                wrapped.push(format!("{:?} in {lines} lines", node.text_content()));
+            }
+            stack.extend(node.children.iter().copied());
+        }
+        wrapped
+    }
+
     /// The first match. Panics with the tree when there is none.
     pub fn node(&self, selector: &str) -> NodeId {
         self.query(selector)

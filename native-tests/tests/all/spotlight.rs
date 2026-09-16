@@ -64,22 +64,8 @@ fn a_narrowed_list_keeps_each_label_on_one_line() {
     page.focus("#page");
     page.press_with(Key::Character("k".into()), Modifiers::CONTROL);
     page.press_before_layout(Key::Character("G".into()));
-    let labels = page.query_all("[role=option] [id$=-label]");
-    assert!(!labels.is_empty(), "no rows:\n{}", page.tree());
-    let doc = page.doc.inner.borrow();
-    for id in labels {
-        let node = doc.get_node(id).expect("a label");
-        let lines = node
-            .element_data()
-            .and_then(|data| data.inline_layout_data.as_ref())
-            .map(|text| text.layout.len());
-        assert_eq!(
-            lines,
-            Some(1),
-            "{:?} broke into {lines:?} lines",
-            node.text_content()
-        );
-    }
+    assert!(page.exists("[role=option]"), "no rows:\n{}", page.tree());
+    assert_eq!(page.wrapped_text("[role=option]"), Vec::<String>::new());
 }
 
 #[test]

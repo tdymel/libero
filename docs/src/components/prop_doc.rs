@@ -159,8 +159,78 @@ fn PropRows(properties: Vec<PropDoc>, base: bool, extends: String) -> Element {
                             }
                         }
                     }),
-                column("Description").value(|p: &PropDoc| p.description.clone()),
+                column("Description")
+                    .value(|p: &PropDoc| p.description.clone())
+                    .render(|p: &PropDoc| rsx! {
+                        for (code, run) in code_spans(&p.description) {
+                            if code {
+                                Code { source: run }
+                            } else {
+                                "{run}"
+                            }
+                        }
+                    }),
             ],
         }
+    }
+}
+
+/// Splits a description on backticks into `(is_code, text)` runs; an unmatched
+/// backtick stays literal.
+fn code_spans(text: &str) -> Vec<(bool, String)> {
+    let parts: Vec<&str> = text.split('`').collect();
+    let closed = match parts.len() % 2 {
+        1 => parts.len(),
+        _ => parts.len() - 1,
+    };
+    let mut runs: Vec<(bool, String)> = parts[..closed]
+        .iter()
+        .enumerate()
+        .filter(|(_, part)| !part.is_empty())
+        .map(|(i, part)| (i % 2 == 1, part.to_string()))
+        .collect();
+    if closed < parts.len() {
+        let tail = format!("`{}", parts[closed]);
+        match runs.last_mut() {
+            Some((false, last)) => last.push_str(&tail),
+            _ => runs.push((false, tail)),
+        }
+    }
+    runs
+}
+
+#[cfg(test)]
+mod tests {
+    use super::code_spans;
+
+    #[test]
+    fn backticks_become_code_runs() {
+        assert_eq!(
+            code_spans("Set `dismiss` to `false` here."),
+            vec![
+                (false, "Set ".into()),
+                (true, "dismiss".into()),
+                (false, " to ".into()),
+                (true, "false".into()),
+                (false, " here.".into()),
+            ]
+        );
+        assert_eq!(
+            code_spans("`data-state` flags"),
+            vec![(true, "data-state".into()), (false, " flags".into())]
+        );
+    }
+
+    #[test]
+    fn an_unmatched_backtick_stays_literal() {
+        assert_eq!(
+            code_spans("a `b` c `d"),
+            vec![
+                (false, "a ".into()),
+                (true, "b".into()),
+                (false, " c `d".into())
+            ]
+        );
+        assert_eq!(code_spans("plain"), vec![(false, "plain".into())]);
     }
 }

@@ -47,6 +47,42 @@ fn native_labelled() -> Element {
     }
 }
 
+// As Spotlight's (627): a long list, and "g" keeps the first two rows in place.
+fn narrowing() -> Element {
+    let mut value = use_signal(|| None::<String>);
+    let options = use_hook(|| {
+        let mut all: Vec<String> = ["Getting Started", "Theming", "Select", "MultiSelect"]
+            .iter()
+            .map(|s| s.to_string())
+            .collect();
+        all.extend((0..60).map(|n| format!("Item {n}")));
+        all
+    });
+    rsx! {
+        Select {
+            label: "Page",
+            options,
+            searchable: true,
+            value: value(),
+            onchange: move |next| value.set(next),
+        }
+    }
+}
+
+#[test]
+fn a_narrowed_select_keeps_each_label_on_one_line() {
+    let mut page = mount(narrowing);
+    page.click("[role=combobox]");
+    assert!(
+        page.query_all("[role=option]").len() > 60,
+        "{}",
+        page.tree()
+    );
+    page.press_before_layout(Key::Character("g".into()));
+    assert_eq!(page.query_all("[role=option]").len(), 2, "{}", page.tree());
+    assert_eq!(page.wrapped_text("[role=option]"), Vec::<String>::new());
+}
+
 #[test]
 fn a_native_select_draws_a_listbox_natively() {
     let mut page = mount(native);
