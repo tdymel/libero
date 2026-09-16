@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use super::{
     handle::{ScrollAreaHandle, scroll_to_percent},
@@ -7,13 +7,15 @@ use super::{
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
-        common::{base_props, input_from_str, variables},
+        a11y::FOCUSABLE_SELECTOR,
+        common::{base_props, input_from_str, names_itself, variables},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
-    platform::{ElementApi, when_laid_out},
+    platform::{Dimensions, ElementApi, PlatformError, when_laid_out},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
+    utils::warn,
 };
 
 input_from_str!(ScrollAxis);
@@ -168,15 +170,12 @@ base_props! {
         scroll_position_x: Option<f64>,
         /// Percent (0-100) along the vertical axis - see `scroll_position_x`.
         scroll_position_y: Option<f64>,
-        /// Makes the viewport itself a tab stop, so content that carries no
-        /// focusable elements of its own can still be reached and scrolled
-        /// with the arrow keys. Off by default, and only correct when the
-        /// content is genuinely not reachable otherwise - a tab stop that
-        /// does nothing is worse than none.
+        /// Makes the viewport a tab stop always. Without it the area is one
+        /// only while it overflows and holds nothing focusable, so plain
+        /// content can still be scrolled with the arrow keys.
         ///
-        /// APG's scrollable-region pattern also wants a `role="region"` (or
-        /// `"group"`) and an accessible name. `ScrollArea` sets no `role` of
-        /// its own, so both go through `attributes` as usual.
+        /// A tab stop gets `role="region"` and needs a name: pass
+        /// `aria-label` or `aria-labelledby` (a debug build warns without).
         #[props(default)]
         focusable: bool,
         /// From [`use_scroll_area`](super::use_scroll_area), to scroll the
@@ -257,6 +256,48 @@ fn measure_area(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometry>
     });
 }
 
+/// Whether the area has to be a tab stop itself: it overflows on an axis it
+/// scrolls, and nothing inside can take focus and scroll it instead.
+fn needs_tab_stop(axis: ScrollAxis, view: Dimensions, content: Dimensions, inner: bool) -> bool {
+    // A pixel of slack: the view is a rounded border box, the content integer.
+    let over = |content: f64, view: f64| content > view + 1.0;
+    let (x, y) = (
+        over(content.width, view.width),
+        over(content.height, view.height),
+    );
+    !inner
+        && match axis {
+            ScrollAxis::Vertical => y,
+            ScrollAxis::Horizontal => x,
+            ScrollAxis::Both => x || y,
+            ScrollAxis::None => false,
+        }
+}
+
+/// Re-reads [`needs_tab_stop`] once laid out. A renderer that cannot query the
+/// subtree leaves the area as it was.
+fn check_tab_stop(root: ElementHandle, axis: ScrollAxis, mut stop: Signal<bool>, tries: u8) {
+    when_laid_out(move || {
+        let inner = match root.query_selector(FOCUSABLE_SELECTOR) {
+            Ok(_) => true,
+            Err(PlatformError::NotFound) => false,
+            Err(_) => return,
+        };
+        let (view, content) = (root.dimensions(), root.scroll_size());
+        spawn(async move {
+            if let (Ok(view), Ok(content)) = (view.await, content.await) {
+                if view.height <= 0.0 && tries > 0 {
+                    return check_tab_stop(root, axis, stop, tries - 1);
+                }
+                let next = needs_tab_stop(axis, view, content, inner);
+                if *stop.peek() != next {
+                    stop.set(next);
+                }
+            }
+        });
+    });
+}
+
 /// Scrolls its content, filling the parent by default. Read the scroll
 /// position via `onscroll`/`on*reached`; set it imperatively via
 /// `scroll_position_x`/`scroll_position_y` (reactive if bound to a signal,
@@ -275,6 +316,42 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .scrollbar_visibility
         .copied_or(theme.scroll_area.visibility);
     let size = props.scrollbar_size.copied_or(theme.scroll_area.size);
+
+    // A caller's own `tabindex`, or a role like `listbox`, brings its own
+    // keyboard model: no automatic stop then.
+    let owned = props
+        .attributes
+        .iter()
+        .any(|attribute| match attribute.name {
+            "tabindex" => true,
+            "role" => !matches!(&attribute.value, AttributeValue::Text(role) if role == "region"),
+            _ => false,
+        });
+    let auto_stop = use_signal(|| false);
+    let automatic = !props.focusable && !owned;
+    let check_stop = move || {
+        if automatic {
+            check_tab_stop(root, scrollbars, auto_stop, UNLAID_TRIES);
+        }
+    };
+    // After the DOM has the content: on mount (the effect reads the mount), on
+    // new content, and on resize (`onresize`).
+    let children = props.children.clone();
+    use_effect(use_reactive!(|children| {
+        let _ = &children;
+        if root.is_mounted() {
+            check_stop();
+        }
+    }));
+    let tab_stop = props.focusable || (automatic && auto_stop());
+    let mut warned = use_hook(|| CopyValue::new(false));
+    if tab_stop && !warned() && !names_itself(&props.attributes) {
+        warned.set(true);
+        warn(
+            "ScrollArea: a tab stop with no `aria-label` or `aria-labelledby`, so the \
+             region has no name.",
+        );
+    }
 
     let mut is_scrolling = use_signal(|| false);
     let mut edges = use_signal(|| EdgeState::AT_ORIGIN);
@@ -416,23 +493,22 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .variables(&variables)
         .prepare()
         .element(&root)
-        // Chromium makes an overflowing `overflow: auto` region an implicit
-        // tab stop unless opted out, and the usual case is content that
-        // carries its own focusable elements. `focusable` is the other case:
-        // a strip of plain images or text, where the viewport is the only
-        // thing there is to focus.
-        .attr("tabindex", if props.focusable { "0" } else { "-1" })
+        // `-1` opts out of Chromium's implicit stop, so every browser gets the
+        // same one: this, named as a region (APG scrollable region).
+        .attr_default("tabindex", if tab_stop { "0" } else { "-1" })
+        .attr_default("role", tab_stop.then_some("region"))
         .event("onscroll", tracks_scroll.then_some(onscroll))
         .event("onscrollend", onscroll_prop.then_some(onscrollend))
-        .event(
-            "onresize",
-            (virtualized || onresize.is_some()).then_some(move |event: Event<ResizeData>| {
+        // `ResizeObserver` reports once on observe: the mount-time check.
+        .event("onresize", move |event: Event<ResizeData>| {
+            check_stop();
+            if virtualized || onresize.is_some() {
                 measure();
-                if let Some(onresize) = &onresize {
-                    onresize.call(event);
-                }
-            }),
-        )
+            }
+            if let Some(onresize) = &onresize {
+                onresize.call(event);
+            }
+        })
         .render(HtmlTag::Div, props.attributes, body)
 }
 
@@ -467,6 +543,35 @@ mod tests {
         let size = ThemeAwareValue::Size(Size::Md);
 
         assert_eq!(scroll_area_variables(Some(&size)).to_string(), "");
+    }
+
+    fn dims(width: f64, height: f64) -> Dimensions {
+        Dimensions { width, height }
+    }
+
+    #[test]
+    fn only_overflow_on_a_scrolled_axis_with_nothing_focusable_is_a_tab_stop() {
+        let (view, tall, wide) = (dims(100.0, 100.0), dims(100.0, 300.0), dims(300.0, 100.0));
+
+        assert!(needs_tab_stop(ScrollAxis::Vertical, view, tall, false));
+        assert!(!needs_tab_stop(ScrollAxis::Vertical, view, tall, true));
+        assert!(!needs_tab_stop(ScrollAxis::Vertical, view, wide, false));
+        assert!(needs_tab_stop(ScrollAxis::Horizontal, view, wide, false));
+        assert!(needs_tab_stop(ScrollAxis::Both, view, wide, false));
+        assert!(!needs_tab_stop(ScrollAxis::None, view, tall, false));
+    }
+
+    /// A fractional border box against integer content is not overflow.
+    #[test]
+    fn a_pixel_of_rounding_is_not_overflow() {
+        let view = dims(100.0, 100.4);
+
+        assert!(!needs_tab_stop(
+            ScrollAxis::Vertical,
+            view,
+            dims(100.0, 101.0),
+            false
+        ));
     }
 
     struct FakeScroll {

@@ -12,15 +12,18 @@ pub const ROUTES: Routes = &[
 ];
 
 /// Two areas of plain text, nothing focusable inside: one left at its
-/// defaults, one `focusable` and named as APG's scrollable region asks.
+/// defaults, one `focusable` and named as APG's scrollable region asks. After
+/// them, the automatic tab stop's other cases (585): content that fits, links
+/// inside, and content that grows past the area.
 #[component]
 fn KeyboardPage() -> Element {
     let lines = || (0..40).map(|i| rsx! { p { key: "{i}", "Line {i}" } });
+    let mut grown = use_signal(|| 2);
     rsx! {
         Flex { direction: "column", gap: "md",
             button { id: "before", "Before" }
             div { style: "height: 120px",
-                ScrollArea { id: "plain", {lines()} }
+                ScrollArea { id: "plain", "aria-label": "Changelog", {lines()} }
             }
             div { style: "height: 120px",
                 ScrollArea {
@@ -32,6 +35,24 @@ fn KeyboardPage() -> Element {
                 }
             }
             button { id: "after", "After" }
+            div { id: "short-pane", style: "height: 120px",
+                ScrollArea { id: "short", "aria-label": "Note", p { "One line" } }
+            }
+            div { style: "height: 120px",
+                ScrollArea { id: "links",
+                    for i in 0..40 {
+                        p { key: "{i}", a { href: "#l{i}", "Link {i}" } }
+                    }
+                }
+            }
+            button { id: "grow-more", onclick: move |_| grown.set(40), "More" }
+            div { style: "height: 120px",
+                ScrollArea { id: "grow", "aria-label": "Growing",
+                    for i in 0..grown() {
+                        p { key: "{i}", "Line {i}" }
+                    }
+                }
+            }
         }
     }
 }
@@ -49,6 +70,7 @@ fn EdgesPage() -> Element {
             div { style: "height: 120px",
                 ScrollArea {
                     id: "edges",
+                    "aria-label": "Edges",
                     ontopreached: move |()| top += 1,
                     onbottomreached: move |()| bottom += 1,
                     div { style: "height: 1000px", "Tall content" }
@@ -69,6 +91,7 @@ fn ScrollAreaPage() -> Element {
             Text { id: "list-resizes", "{resizes}" }
             div { id: "list-pane", style: "height: 120px",
                 ScrollArea {
+                    "aria-label": "Rows",
                     onresize: move |_: Event<ResizeData>| resizes += 1,
                     Virtualize {
                         count: 1000,

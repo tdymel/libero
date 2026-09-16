@@ -89,6 +89,8 @@ fn it_meets_the_baseline() {
     Suite::new("nav_link", "/nav-link/states")
         .focusable("#active")
         .focusable("#idle")
+        .focusable("#docs")
+        .targets("#docs + button")
         .focusable("#inline")
         .focusable("#external")
         .focusable("#burger")
@@ -200,6 +202,62 @@ fn a_new_tab_anchor_shows_an_icon_and_says_so() {
             .unwrap();
         assert!(drawn, "the icon sits inside the link, at text size");
 
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 580: the toggle beside a parent link is an APG disclosure button,
+/// named after the link; Enter shows the nested links and focus stays put.
+#[test]
+fn a_parent_link_discloses_its_nested_links() {
+    const TOGGLE: &str = "document.querySelector('#docs').nextElementSibling";
+    block_on(async {
+        let fixture = Fixture::open("/nav-link/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#docs").await.unwrap();
+
+        let tree = e2e::ax::snapshot(page, "nav").await.unwrap();
+        for line in ["link \"Docs\"", "button \"Show links Docs\""] {
+            assert!(tree.contains(line), "no {line:?} in\n{tree}");
+        }
+        assert!(
+            !tree.contains("link \"Install\""),
+            "a closed panel is read:\n{tree}"
+        );
+        assert_eq!(
+            e2e::ax::description(page, "#docs").await.unwrap(),
+            "Guides and API"
+        );
+
+        keyboard::tab_to(page, "#docs", 20).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "{TOGGLE}.getAttribute('aria-expanded') === 'true' \
+                 && document.activeElement === {TOGGLE} \
+                 && document.getElementById({TOGGLE}.getAttribute('aria-controls')).contains(document.querySelector('#install'))"
+            ),
+            "Enter to show the nested links",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement.id === 'install'",
+            "Tab into the shown links",
+        )
+        .await
+        .unwrap();
+
+        fixture
+            .console
+            .assert_clean("opening a parent link")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }

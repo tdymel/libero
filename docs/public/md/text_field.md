@@ -106,6 +106,11 @@ input with no accessible name is a defect. A caller-supplied
 `aria-describedby` joins the one built from the caption slots - the caller's
 ids first - so the validation message is never lost.
 
+A `leading` or `trailing` slot is not read with the input by default: an icon
+or a button would only add noise. When the slot is text that qualifies the
+value - a unit, a `3/20` counter - set `describe_leading` or
+`describe_trailing` and it joins `aria-describedby` after the description.
+
 ## What it does not do yet
 
 Multi-line input, numbers and passwords are separate components rather than
@@ -124,6 +129,8 @@ modes of this one.
 | `placeholder` | `String` | - | Shown while the field is empty. |
 | `leading` | `Element` | - | Inside the frame, before the control. |
 | `trailing` | `Element` | - | Inside the frame, after the control. |
+| `describe_leading` | `bool` | `false` | `leading` is text that describes the input - a unit, a counter - so it joins the input's `aria-describedby`. |
+| `describe_trailing` | `bool` | `false` | The same for `trailing`. |
 | `label` | `Caption` | - | The field's caption, above the control. Names the field through a `for`/`id` pair. |
 | `description` | `Caption` | - | Between the label and the control: what to enter. |
 | `helper` | `Caption` | - | Under the control: formatting rules, constraints, counters. |

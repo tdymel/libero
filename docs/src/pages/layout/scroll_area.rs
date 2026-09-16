@@ -12,8 +12,6 @@ use libero::{
 };
 
 const FOCUSABLE_EXAMPLE: &str = r#"ScrollArea {
-    focusable: true,
-    role: "region",
     aria_label: "Release notes",
     Text { "..." }
 }"#;
@@ -42,8 +40,10 @@ const CONTENT: &str = r#"Box {
 
 /// The scroll position is read *and* written from the page, so all four wiring
 /// props are the demo's fixture rather than anything a control varies. `area`,
-/// `position` and `edge` are declared in `PREAMBLE`.
-const FIXED: [&str; 4] = [
+/// `position` and `edge` are declared in `PREAMBLE`. The plain content makes
+/// the area a tab stop, so it needs a name.
+const FIXED: [&str; 5] = [
+    r#"aria_label: "Items""#,
     "handle: area",
     "onscroll: move |event: ScrollPositionEvent| position.set(event)",
     r#"ontopreached: move |_| edge.set("top")"#,
@@ -121,7 +121,7 @@ pub fn ScrollAreaPage() -> Element {
                     .doc("From use_scroll_area(). Its scroll_to_percent(x, y) and px scroll_to(x, y) scroll the area from any handler, and every call scrolls - unlike the two props above, which only re-apply when their value changes."),
                 prop("focusable", "bool")
                     .default("false")
-                    .doc("Makes the viewport itself a tab stop, so content with no focusable elements of its own can still be reached and arrow-keyed."),
+                    .doc("Makes the viewport a `region` tab stop always. Unset, it is one only while it overflows and holds nothing focusable. A caller's `tabindex` or non-region `role` turns the automatic stop off."),
                 prop("onscroll", "EventHandler<ScrollPositionEvent>")
                     .doc("Fires on every scroll tick with the position as a percent of each axis's scrollable range."),
                 prop("onresize", "EventHandler<Event<ResizeData>>")
@@ -214,6 +214,7 @@ pub fn ScrollAreaPage() -> Element {
                                     UNSET => Input::None,
                                     color => Input::from(color),
                                 },
+                                aria_label: "Items",
                                 handle: area,
                                 onscroll: move |event: ScrollPositionEvent| {
                                     position.set(event)
@@ -269,16 +270,19 @@ pub fn ScrollAreaPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "A scroll area is not a tab stop: its content usually carries its own "
-                    "focusable elements, and tabbing to those scrolls them into view."
+                    "A scroll area whose content has focusable elements is not a tab stop: "
+                    "tabbing to those scrolls them into view."
                 }
                 Text {
                     "Content that has nothing to focus is the other case: a strip of images, "
                     "or a block of text. There the viewport is the only thing to focus, and "
-                    "without it the content cannot be read with a keyboard at all. "
+                    "without it the content cannot be read with a keyboard at all. So while "
+                    "such content overflows, the area makes itself a tab stop with "
+                    Code { source: "role=\"region\"" }
+                    ", re-checked on every resize and re-render, and the browser's own "
+                    "arrow-key scrolling comes with it. "
                     Code { source: "focusable: true" }
-                    " gives it the tab stop, and the browser's own arrow-key scrolling comes "
-                    "with it."
+                    " keeps the stop whatever the content."
                 }
                 CodeBlock { source: FOCUSABLE_EXAMPLE, language: "rust" }
                 Box {
@@ -288,8 +292,6 @@ pub fn ScrollAreaPage() -> Element {
                         .border("1px solid var(--lsx-muted-3)"),
                     ScrollArea {
                         id: "focusable-demo",
-                        focusable: true,
-                        role: "region",
                         aria_label: "Release notes",
                         Box {
                             sx: sx().padding("md"),
@@ -300,12 +302,13 @@ pub fn ScrollAreaPage() -> Element {
                     }
                 }
                 Text {
-                    "Name it as well as focus it. A tab stop that reads as nothing is worse "
-                    "than none, so APG's scrollable-region pattern wants a "
-                    Code { source: "role" }
-                    " and an accessible name alongside the stop. "
-                    Code { source: "ScrollArea" }
-                    " sets no role of its own, so both go through the usual attribute spread."
+                    "Name it as well. A tab stop that reads as nothing is worse than none, so "
+                    "APG's scrollable-region pattern wants an accessible name alongside the "
+                    "stop: pass "
+                    Code { source: "aria_label" }
+                    " or "
+                    Code { source: "aria_labelledby" }
+                    ". A debug build warns once about a stop without one."
                 }
             }
 

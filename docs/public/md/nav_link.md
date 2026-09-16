@@ -61,9 +61,45 @@ fn Demo() -> Element {
 }
 ```
 
+`description` adds a dimmed line under the label, and `nested` puts child links
+behind a toggle beside the parent. `default_opened` sets where it starts;
+`opened` with `onchange` controls it:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::NavLink;
+
+#[component]
+fn Demo() -> Element {
+    let mut opened = use_signal(|| true);
+    rsx! {
+        NavLink {
+            to: "/docs",
+            description: "Guides and API",
+            opened: opened(),
+            onchange: move |next| opened.set(next),
+            nested: rsx! {
+                NavLink { to: "/docs/install", "Install" }
+                NavLink { to: "/docs/theming", "Theming" }
+            },
+            "Docs"
+        }
+    }
+}
+```
+
 ## Accessibility
 
 Wrap a list of them in a `<nav>` and they are a navigation landmark.
+
+`description` is the link's accessible description, not part of its name, so
+"Docs" stays "Docs" in a links list.
+
+With `nested`, the link keeps its own tab stop and a disclosure button follows
+it: `aria-expanded` for the state, `aria-controls` for the panel, and a name
+built from the localized "Show links" plus the link's own name ("Show links
+Docs"). Enter or Space on the button toggles the panel; the link still
+navigates.
 
 ## Props
 
@@ -75,6 +111,11 @@ Wrap a list of them in a `<nav>` and they are a navigation landmark.
 | `active` | `bool` | follows the route | Unset, it compares `to` against the current route, so it is only ever true for an internal target with a router mounted. Set it explicitly for a section-level parent item, or anywhere auto-detection has nothing to compare against. |
 | `disabled` | `bool` | `false` | Dims the link and disables navigation. |
 | `scroll_into_view` | `bool` | `false` | Scrolls this link into view when it becomes active, if it isn't already visible. Acts on whatever scrollable ancestor happens to exist, which only suits a sidebar. |
+| `description` | `String` | - | A dimmed line under the label, read as the link's description. |
+| `nested` | `Element` | - | Child `NavLink`s, shown under this one by a toggle button beside it. The link itself still goes to `to`. |
+| `opened` | `bool` | - | Whether `nested` shows. Set, it is controlled: pair it with `onchange`. |
+| `default_opened` | `bool` | `false` | Whether `nested` shows at first, when `opened` is unset. |
+| `onchange` | `EventHandler<bool>` | - | The toggle asks for this `opened`. |
 | `children` | `Element` | required | The link's content. |
 
 Like every component, `NavLink` also takes the shared props `sx`, `class`,

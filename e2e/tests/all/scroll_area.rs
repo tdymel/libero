@@ -133,6 +133,60 @@ fn a_focusable_area_takes_tab_and_scrolls_with_the_arrows() {
     });
 }
 
+/// The area is its own tab stop only while it overflows with nothing focusable
+/// inside, re-checked when its content grows or its pane resizes (585).
+#[test]
+fn an_overflowing_area_of_plain_content_is_a_tab_stop() {
+    const STOP: &str = "(id => { const a = document.getElementById(id); \
+        return a.getAttribute('tabindex') === '0' && a.getAttribute('role') === 'region'; })";
+    let stop = |id: &str| format!("{STOP}('{id}')");
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/keyboard", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        wait::for_js_true(
+            page,
+            &stop("plain"),
+            "the overflowing plain area to take Tab",
+        )
+        .await
+        .unwrap();
+        for (id, why) in [
+            ("short", "content that fits"),
+            ("links", "links inside"),
+            ("grow", "two lines"),
+        ] {
+            let tab_stop: bool = page.evaluate(stop(id)).await.unwrap().into_value().unwrap();
+            assert!(!tab_stop, "#{id} is a tab stop with {why}");
+        }
+
+        page.evaluate("document.querySelector('#grow-more').click()")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &stop("grow"), "the grown area to take Tab")
+            .await
+            .unwrap();
+
+        page.evaluate("document.querySelector('#short-pane').style.height = '8px'")
+            .await
+            .unwrap();
+        wait::for_js_true(page, &stop("short"), "the squeezed area to take Tab")
+            .await
+            .unwrap();
+
+        let ring = focus::assert_focus_ring(page, "#plain", 3).await.unwrap();
+        focus::assert_ring_contrast(&ring).unwrap();
+
+        fixture
+            .console
+            .assert_clean("the automatic tab stop")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// An area with only `on*reached` handlers still listens for scrolls (todo 29
 /// attaches `onscroll` only when something reads it).
 #[test]

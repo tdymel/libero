@@ -96,6 +96,54 @@ fn a_warning_is_described_but_not_invalid() {
     assert!(body.contains("Unusual."));
 }
 
+/// A text slot describes the input only when the caller flags it: an icon's
+/// or a button's name must not (todo 496).
+#[test]
+fn a_flagged_slot_describes_the_input_in_reading_order() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TextField {
+                    label: "Website",
+                    helper: "Your own domain.",
+                    leading: rsx! { "https://" },
+                    describe_leading: true,
+                    trailing: rsx! { "kg" },
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let input = attributes_of(&body, "input");
+    let id = &input["id"];
+
+    assert_eq!(
+        input["aria-describedby"],
+        format!("{id}-leading {id}-helper")
+    );
+    assert!(
+        body.contains(&format!(r#"id="{id}-leading">https://"#)),
+        "{body}"
+    );
+    assert!(!body.contains(&format!("{id}-trailing")), "{body}");
+}
+
+#[test]
+fn an_empty_flagged_slot_describes_nothing() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TextField { label: "Weight", describe_trailing: true }
+            }
+        }
+    }
+
+    let input = attributes_of(&body(&render(app)), "input");
+
+    assert!(!input.contains_key("aria-describedby"), "{input:?}");
+}
+
 /// `aria-describedby` is a list, so the caller's ids join the field's rather
 /// than replacing them - dropping ours took the validation message away from
 /// AT on a field that is `aria-invalid`.

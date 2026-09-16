@@ -148,6 +148,12 @@ pub fn AutocompletePage() -> Element {
                         .doc("Shown in place of the list when nothing matches. Without it a list with no rows draws nothing."),
                     prop("leading", "Element").doc("Inside the frame, before the control - a search icon."),
                     prop("trailing", "Element").doc("Inside the frame, after the control, before the clear x."),
+                    prop("describe_leading", "bool")
+                        .default("false")
+                        .doc("`leading` is text that describes the input - a unit - so it joins the input's `aria-describedby`."),
+                    prop("describe_trailing", "bool")
+                        .default("false")
+                        .doc("The same for `trailing`. The clear x stays out of the description."),
                     prop("label", "Caption").doc("The field's caption, above the control."),
                     prop("description", "Caption").doc("Between the label and the control: what to enter."),
                     prop("helper", "Caption").doc("Under the control: formatting rules, or what the entry affects."),

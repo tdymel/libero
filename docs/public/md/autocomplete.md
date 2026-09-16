@@ -127,6 +127,8 @@ suggestion still submits the form.
 | `empty` | `Element` | - | Shown in place of the list when nothing matches. |
 | `leading` | `Element` | - | Inside the frame, before the control - a search icon. |
 | `trailing` | `Element` | - | Inside the frame, after the control, before the clear x. |
+| `describe_leading` | `bool` | `false` | `leading` is text that describes the input, so it joins the input's `aria-describedby`. |
+| `describe_trailing` | `bool` | `false` | The same for `trailing`. The clear x stays out of the description. |
 | `label` | `Caption` | - | The field's caption, above the control. |
 | `description` | `Caption` | - | Between the label and the control. |
 | `helper` | `Caption` | - | Under the control. |

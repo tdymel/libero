@@ -44,6 +44,13 @@ field_props! {
         /// Inside the frame, after the control - a clear button, a unit.
         #[props(default, into)]
         trailing: Option<Element>,
+        /// `leading` is text that belongs to the value - `"https://"`, `"@"` -
+        /// so the input's `aria-describedby` reads it. Not for an icon or a button.
+        #[props(default)]
+        describe_leading: bool,
+        /// `trailing` is text that belongs to the value - `"kg"`, `"12/20"`.
+        #[props(default)]
+        describe_trailing: bool,
     }
 }
 
@@ -113,12 +120,17 @@ fn TextFieldShell(
         .sx(&props.sx)
         .states(&props.states)
         .attributes(&props.attributes)
+        .text_slots(
+            props.describe_leading && leading.is_some(),
+            props.describe_trailing && trailing.is_some(),
+        )
         .prepare();
 
     let frame = use_field_frame()
         .leading(&leading)
         .trailing(&trailing)
         .states(field.states())
+        .ids(field.slot_ids())
         .prepare();
 
     // The frame draws the ring, so the control must not draw a second one.

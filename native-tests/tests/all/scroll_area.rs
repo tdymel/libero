@@ -87,6 +87,55 @@ fn a_probed_row_height_windows_the_list() {
     assert!(last < 29, "rows to {last} for a 120px pane");
 }
 
+fn plain(lines: usize, link: bool) -> Element {
+    rsx! {
+        div { height: "120px",
+            ScrollArea { id: "area", "aria-label": "Notes",
+                for i in 0..lines {
+                    p { key: "{i}", height: "20px", "Line {i}" }
+                }
+                if link {
+                    a { href: "#top", "Top" }
+                }
+            }
+        }
+    }
+}
+
+/// Todo 585: an overflowing area of plain text is a region tab stop; one that
+/// fits, or holds a link, is none. Checked without a `resize` from Blitz.
+#[test]
+fn only_an_overflowing_area_of_plain_content_is_a_tab_stop() {
+    for (app, stop) in [
+        (|| plain(40, false)) as fn() -> Element,
+        || plain(2, false),
+        || plain(40, true),
+    ]
+    .into_iter()
+    .zip([true, false, false])
+    {
+        let mut page = mount(app);
+        // A loaded machine lays out late: wait for the stop, or long enough to rule it out.
+        for _ in 0..25 {
+            page.wait(Duration::from_millis(20));
+            if stop && page.attr("#area", "tabindex").as_deref() == Some("0") {
+                break;
+            }
+        }
+        let tabindex = page.attr("#area", "tabindex");
+        let role = page.attr("#area", "role");
+        assert_eq!(
+            (
+                tabindex.as_deref() == Some("0"),
+                role.as_deref() == Some("region")
+            ),
+            (stop, stop),
+            "{tabindex:?} {role:?}:\n{}",
+            page.tree()
+        );
+    }
+}
+
 /// Blitz sends no `resize` (measured, [[codebase/platform/blitz-platform-gaps]]).
 #[test]
 #[ignore = "needs Blitz: no resize event reaches ScrollArea's onresize"]

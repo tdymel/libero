@@ -131,6 +131,7 @@ pub(crate) struct FieldBuilder<'a> {
     labelled_by: bool,
     group: bool,
     label_with_id: bool,
+    text_slots: [bool; 2],
     activation: Option<Activation>,
     size: Size,
     radius: Size,
@@ -158,6 +159,7 @@ impl Default for FieldBuilder<'_> {
             labelled_by: false,
             group: false,
             label_with_id: false,
+            text_slots: [false; 2],
             activation: None,
             size: Size::Md,
             radius: Size::Sm,
@@ -274,6 +276,14 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn label_with_id(mut self) -> Self {
         self.label_with_id = true;
+        self
+    }
+
+    /// Which frame slots describe the control too - a prefix, a counter. The
+    /// caller says so (`describe_leading`/`_trailing`): an icon's name must not.
+    #[inline]
+    pub fn text_slots(mut self, leading: bool, trailing: bool) -> Self {
+        self.text_slots = [leading, trailing];
         self
     }
 
@@ -418,9 +428,12 @@ impl<'a> FieldBuilder<'a> {
         let helper = self.helper.unwrap_or(&Caption::None);
 
         // Only a `Text` caption is named: markup the caller built is theirs to
-        // describe, and the status message is always text.
+        // describe, and the status message is always text. In reading order.
+        let [leading, trailing] = self.text_slots;
         let described = [
             ("description", description.text().is_some()),
+            ("leading", leading),
+            ("trailing", trailing),
             ("helper", helper.text().is_some()),
             ("status", status.and_then(FieldStatus::message).is_some()),
         ];
@@ -492,6 +505,7 @@ impl<'a> FieldBuilder<'a> {
             helper: slot_node("helper", &id_value, helper),
             status: status_node(&id_value, status),
             id: id_value,
+            text_slots: self.text_slots,
             describedby,
             invalid: matches!(status, Some(FieldStatus::Error(_))),
             required: self.required,
@@ -696,6 +710,7 @@ impl Drop for FieldHook {
 pub(crate) struct PreparedField {
     id: String,
     states: Input<States>,
+    text_slots: [bool; 2],
     describedby: Option<String>,
     invalid: bool,
     required: bool,
@@ -734,6 +749,16 @@ impl PreparedField {
     /// The filled caption slots, joined. What `aria-describedby` should hold.
     pub fn describedby(&self) -> Option<String> {
         self.describedby.clone()
+    }
+
+    /// The ids the frame gives its leading and trailing slot, for the slots
+    /// [`FieldBuilder::text_slots`] named; `aria-describedby` points at them.
+    pub fn slot_ids(&self) -> [Option<String>; 2] {
+        let [leading, trailing] = self.text_slots;
+        [
+            leading.then(|| format!("{}-leading", self.id)),
+            trailing.then(|| format!("{}-trailing", self.id)),
+        ]
     }
 
     /// Whether the status is an error, for a control that applies its own
@@ -974,7 +999,10 @@ fn attribute_text(attributes: &[Attribute], name: &str) -> Option<String> {
         })
 }
 
-pub(super) fn join_ids(id: &str, slots: [(&'static str, bool); 3]) -> Option<String> {
+pub(super) fn join_ids<const N: usize>(
+    id: &str,
+    slots: [(&'static str, bool); N],
+) -> Option<String> {
     let present = || slots.iter().filter(|(_, present)| *present);
     let capacity: usize = present()
         .map(|(slot, _)| id.len() + slot.len() + 2)

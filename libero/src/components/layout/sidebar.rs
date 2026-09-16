@@ -74,6 +74,14 @@ pub fn Sidebar(props: SidebarProps) -> Element {
         .active(size.state_name())
         .into();
 
+    // An overflowing sidebar's scroll area is a tab stop: it carries the panel's name.
+    let name: Vec<Attribute> = props
+        .attributes
+        .iter()
+        .filter(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"))
+        .cloned()
+        .collect();
+
     use_box()
         .framework_sx(&SIDEBAR_BASE_SX)
         .class(&props.class)
@@ -84,7 +92,7 @@ pub fn Sidebar(props: SidebarProps) -> Element {
             HtmlTag::Div,
             props.attributes,
             rsx! {
-                ScrollArea { sx: &SIDEBAR_SCROLL_SX, {props.children} }
+                ScrollArea { sx: &SIDEBAR_SCROLL_SX, attributes: name, {props.children} }
             },
         )
 }

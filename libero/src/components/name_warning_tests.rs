@@ -7,7 +7,7 @@ use dioxus::prelude::*;
 use crate::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, Checkbox, Dialog, Drawer, ProgressBar, Radio, RadioGroup,
+        ActionIcon, Anchor, Checkbox, Dialog, Drawer, ProgressBar, Radio, RadioGroup, ScrollArea,
         SegmentedControl, Slider, Splitter, SpotlightOptions, Switch, use_spotlight,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
@@ -62,6 +62,23 @@ fn the_name_warning_does_not_repeat_on_a_re_render() {
         .filter(|warning| warning.starts_with("ProgressBar:"))
         .count();
     assert_eq!(count, 1);
+}
+
+/// Only a tab stop needs a name; an area that is none stays quiet.
+#[test]
+fn an_unnamed_scroll_area_tab_stop_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { ScrollArea { focusable: true, "x" } } },
+        "ScrollArea:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { ScrollArea { focusable: true, aria_label: "Terms", "x" } } },
+        "ScrollArea:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { ScrollArea { "x" } } },
+        "ScrollArea:"
+    ));
 }
 
 #[test]

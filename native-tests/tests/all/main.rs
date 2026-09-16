@@ -28,6 +28,7 @@ mod lightbox;
 mod menu;
 mod menubar;
 mod modal;
+mod nav_link;
 mod notifications;
 mod overlays;
 mod pagination;

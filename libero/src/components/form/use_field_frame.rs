@@ -130,6 +130,7 @@ pub(crate) struct FieldFrameBuilder<'a> {
     trailing: Option<&'a Element>,
     states: Option<&'a Input<States>>,
     ondrop: Option<Rc<dyn Fn(DragEvent)>>,
+    ids: [Option<String>; 2],
 }
 
 impl<'a> FieldFrameBuilder<'a> {
@@ -161,6 +162,14 @@ impl<'a> FieldFrameBuilder<'a> {
     #[inline]
     pub fn states(mut self, states: &'a Input<States>) -> Self {
         self.states = Some(states);
+        self
+    }
+
+    /// The slots' ids - [`PreparedField::slot_ids`](super::PreparedField::slot_ids) -
+    /// so the control's `aria-describedby` finds a text slot.
+    #[inline]
+    pub fn ids(mut self, ids: [Option<String>; 2]) -> Self {
+        self.ids = ids;
         self
     }
 
@@ -218,10 +227,15 @@ impl<'a> FieldFrameBuilder<'a> {
                 });
         }
 
+        let [leading_id, trailing_id] = self.ids;
         PreparedFrame {
             frame,
-            leading: self.leading.map(|leading| slot("leading", leading)),
-            trailing: self.trailing.map(|trailing| slot("trailing", trailing)),
+            leading: self
+                .leading
+                .map(|leading| slot("leading", leading_id, leading)),
+            trailing: self
+                .trailing
+                .map(|trailing| slot("trailing", trailing_id, trailing)),
         }
     }
 }
@@ -285,9 +299,9 @@ pub(crate) fn LiveSlot(content: Signal<Option<Element>>) -> Element {
 
 /// No ring overlay in a slot: a button there draws its own ring, around
 /// itself rather than the whole frame.
-fn slot(slot: &'static str, content: &Element) -> Element {
+fn slot(slot: &'static str, id: Option<String>, content: &Element) -> Element {
     let content = content.clone();
     rsx! {
-        span { "data-slot": slot, {content} }
+        span { "data-slot": slot, id, {content} }
     }
 }

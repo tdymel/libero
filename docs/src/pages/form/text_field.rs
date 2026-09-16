@@ -27,6 +27,12 @@ pub fn TextFieldPage() -> Element {
                         .doc("Inside the frame, before the control - a search icon, a currency prefix."),
                     prop("trailing", "Element")
                         .doc("Inside the frame, after the control - a clear button, a unit."),
+                    prop("describe_leading", "bool")
+                        .default("false")
+                        .doc("`leading` is text that describes the input - a unit, a counter - so it joins the input's `aria-describedby`."),
+                    prop("describe_trailing", "bool")
+                        .default("false")
+                        .doc("The same for `trailing`."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the control. Names the field through a `for`/`id` pair. Takes a string or an `Element`."),
                     prop("description", "Caption")
@@ -128,6 +134,8 @@ pub fn TextFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    // The counter is text a screen reader should hear with the input.
+                    Control::switch("describe_trailing"),
                     Control::switch("required"),
                     Control::switch("disabled"),
                 ],
@@ -154,6 +162,7 @@ pub fn TextFieldPage() -> Element {
                         leading: (values.str("leading") == "true").then(|| rsx! { "@" }),
                         trailing: (values.str("trailing") == "true")
                             .then(|| rsx! { "{value().len()}/20" }),
+                        describe_trailing: values.str("describe_trailing") == "true",
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
                         value: value(),

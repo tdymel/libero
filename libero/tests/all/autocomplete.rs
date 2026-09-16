@@ -105,6 +105,35 @@ mod autocomplete_suggestions {
 
     /// The caller's own trailing content keeps its place when the x joins it.
     #[test]
+    fn a_described_trailing_slot_leaves_the_clear_button_out() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Autocomplete {
+                        value: "Ber",
+                        clearable: true,
+                        options: cities(),
+                        oninput: move |_| {},
+                        trailing: rsx! { "km" },
+                        describe_trailing: true,
+                    }
+                }
+            }
+        }
+        let html = body(&render(app));
+        let input = crate::common::attributes_of(&html, "input");
+        let id = &input["id"];
+
+        assert_eq!(input["aria-describedby"], format!("{id}-trailing"));
+        // The id sits on the caller's text alone, not on the x beside it.
+        assert!(
+            html.contains(&format!(r#"<span id="{id}-trailing">km</span>"#)),
+            "{html}"
+        );
+        assert!(html.contains(r#"aria-label="Clear""#), "{html}");
+    }
+
+    #[test]
     fn a_disabled_field_offers_no_clear_button() {
         fn app() -> Element {
             rsx! {

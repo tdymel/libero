@@ -6,6 +6,13 @@ use libero::{
     use_theme,
 };
 
+const DESCRIPTION: &str = "Where to start";
+
+const NESTED_CODE: &str = "nested: rsx! {
+    NavLink { to: Route::NavLinkPage {}, active: false, \"Install\" }
+    NavLink { to: Route::NavLinkPage {}, active: false, \"Theming\" }
+}";
+
 /// Two links, so `active: auto` can be seen deciding *between* them - one is
 /// this very page, the other is not. Only `to` and the label differ, so each
 /// is spliced into its own copy of the generated rsx.
@@ -49,6 +56,11 @@ pub fn NavLinkPage() -> Element {
                 prop("scroll_into_view", "bool")
                     .default("false")
                     .doc("Scrolls this link into view when it becomes active, if it isn't already visible. Acts on whatever scrollable ancestor happens to exist, which only suits a sidebar."),
+                prop("description", "String").doc("A dimmed line under the label, read as the link's description."),
+                prop("nested", "Element").doc("Child `NavLink`s, shown under this one by a toggle button beside it. The link itself still goes to `to`."),
+                prop("opened", "bool").doc("Whether `nested` shows. Set, it is controlled: pair it with `onchange`."),
+                prop("default_opened", "bool").default("false").doc("Whether `nested` shows at first, when `opened` is unset."),
+                prop("onchange", "EventHandler<bool>").doc("The toggle asks for this `opened`."),
                 prop("children", "Element").doc("The link's content."),
             ])],
             lead: rsx! {
@@ -80,6 +92,14 @@ pub fn NavLinkPage() -> Element {
                     Control::color("color")
                     .default(theme.nav_link.color.as_str()),
                     Control::switch("disabled"),
+                    Control::switch("description").code(|_, values| match values.str("description").as_str() {
+                        "true" => vec![format!("description: {DESCRIPTION:?}")],
+                        _ => vec![],
+                    }),
+                    Control::switch("nested").code(|_, values| match values.str("nested").as_str() {
+                        "true" => vec![NESTED_CODE.to_string()],
+                        _ => vec![],
+                    }),
                 ],
                 render: move |values: DemoValues| {
                     let active = match values.str("active").as_str() {
@@ -88,6 +108,13 @@ pub fn NavLinkPage() -> Element {
                     };
                     let color = values.str("color");
                     let disabled = (values.str("disabled") == "true").then_some(true);
+                    let description = (values.str("description") == "true").then(|| DESCRIPTION.to_string());
+                    let nested = || {
+                        (values.str("nested") == "true").then(|| rsx! {
+                            NavLink { to: crate::Route::NavLinkPage {}, active: false, "Install" }
+                            NavLink { to: crate::Route::NavLinkPage {}, active: false, "Theming" }
+                        })
+                    };
                     rsx! {
                         Flex {
                             direction: "column",
@@ -98,6 +125,8 @@ pub fn NavLinkPage() -> Element {
                                 active,
                                 color: color.clone(),
                                 disabled,
+                                description: description.clone(),
+                                nested: nested(),
                                 "Getting Started"
                             }
                             NavLink {
@@ -105,6 +134,8 @@ pub fn NavLinkPage() -> Element {
                                 active,
                                 color,
                                 disabled,
+                                description,
+                                nested: nested(),
                                 "NavLink"
                             }
                         }

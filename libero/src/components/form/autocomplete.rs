@@ -87,6 +87,13 @@ field_props! {
         /// Inside the frame, after the control, before the clear x.
         #[props(default, into)]
         trailing: Option<Element>,
+        /// `leading` is text that belongs to the value, so the input's
+        /// `aria-describedby` reads it. Not for an icon or a button.
+        #[props(default)]
+        describe_leading: bool,
+        /// `trailing` is text that belongs to the value - a unit.
+        #[props(default)]
+        describe_trailing: bool,
     }
 }
 
@@ -160,6 +167,10 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .sx(&props.sx)
         .states(&props.states)
         .attributes(&props.attributes)
+        .text_slots(
+            props.describe_leading && props.leading.is_some(),
+            props.describe_trailing && props.trailing.is_some(),
+        )
         .prepare();
 
     let oninput = bound.emit(props.oninput);
@@ -212,9 +223,14 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         },
     );
     // The caller's own trailing content keeps its place; the x sits at the end,
-    // nearest the frame's edge.
+    // nearest the frame's edge. The id goes on the caller's part alone, so the
+    // x's name does not describe the input.
+    let [leading_id, trailing_id] = field.slot_ids();
     let trailing = (props.trailing.is_some() || clear.is_some()).then(|| {
-        let caller = props.trailing.clone();
+        let caller = match (props.trailing.clone(), trailing_id) {
+            (Some(caller), Some(id)) => rsx! { span { id, {caller} } },
+            (caller, _) => caller.unwrap_or_else(|| rsx! {}),
+        };
         rsx! {
             {caller}
             {clear.clone()}
@@ -225,6 +241,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .leading(&props.leading)
         .trailing(&trailing)
         .states(field.states())
+        .ids([leading_id, None])
         .prepare();
 
     // The frame draws the ring, so the control must not draw a second one.

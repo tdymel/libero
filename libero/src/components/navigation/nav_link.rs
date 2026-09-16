@@ -1,19 +1,21 @@
-use dioxus::prelude::*;
+use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
         common::{
-            attr, base_props, disabled_look_sx, forced_on_sx, inset_focus_ring_sx, shadow_sx,
-            use_style_attributes,
+            ChevronDownIcon, StyleAttributes, attr, base_props, disabled_look_sx, forced_on_sx,
+            inset_focus_ring_sx, shadow_sx, use_style_attributes,
         },
-        layout::box_style,
+        layout::{Collapse, box_style, use_box},
         variables,
     },
-    hooks::{use_cache, use_element, use_theme},
+    hooks::{
+        ElementHandle, use_cache, use_element, use_id, use_localization, use_root_id, use_theme,
+    },
     platform::{ElementApi, prefers_reduced_motion},
-    sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss},
+    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
+    theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss, TEXT_FONT_SIZE},
 };
 
 use super::render_anchor;
@@ -90,6 +92,59 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         // Without `href` it has nothing to follow.
         .when("disabled", disabled_look_sx("not-allowed"))
+        .selector(
+            "& > [data-nav-body]",
+            sx().display("flex").flex_direction("column").min_width("0"),
+        )
+        .selector(
+            "& [data-nav-description]",
+            sx().font_size(TEXT_FONT_SIZE.value(Size::Xs))
+                .color("text-dimmed"),
+        )
+});
+
+/// The link and its toggle in one row, the nested links indented under it.
+static NAV_GROUP_SX: StaticSx = StaticSx::new(|| {
+    sx().display("block")
+        .width("100%")
+        .selector(
+            "& > [data-nav-row]",
+            sx().display("flex").align_items("stretch"),
+        )
+        .selector(
+            "& > [data-nav-row] > button",
+            sx().display("inline-flex")
+                .align_items("center")
+                .justify_content("center")
+                .flex_shrink("0")
+                .min_width("32px")
+                .min_height("32px")
+                .padding("0")
+                .border("0")
+                .border_radius(SizeCss::RADIUS.value(Size::Sm))
+                .background("transparent")
+                .color("inherit")
+                .cursor("pointer")
+                .focus_visible(inset_focus_ring_sx("-2px"))
+                .hover(sx().background("muted.2"))
+                .selector("&:disabled", disabled_look_sx("not-allowed"))
+                .selector(
+                    "& > svg",
+                    sx().width("16px")
+                        .height("16px")
+                        .transition("transform 150ms ease")
+                        .media(REDUCED_MOTION, sx().transition("none")),
+                ),
+        )
+        .selector(
+            "& > [data-nav-row] > button[aria-expanded=\"true\"] > svg",
+            sx().transform("rotate(180deg)"),
+        )
+        .selector(
+            "& [data-nav-children]",
+            sx().padding_left("lg")
+                .selector("&:dir(rtl)", sx().padding_left("0").padding_right("lg")),
+        )
 });
 
 base_props! {
@@ -114,15 +169,54 @@ base_props! {
         /// ancestor happens to exist, which only suits a sidebar.
         #[props(default)]
         scroll_into_view: Option<bool>,
+        /// A dimmed line under the label, read as the link's description.
+        #[props(default, into)]
+        description: Option<String>,
+        /// Child `NavLink`s, shown under this one by a toggle button beside
+        /// it. The link itself still goes to `to`.
+        #[props(default)]
+        nested: Option<Element>,
+        /// Whether `nested` shows. Set, it is controlled: pair it with
+        /// `onchange`.
+        #[props(default)]
+        opened: Option<bool>,
+        /// Whether `nested` shows at first, when `opened` is unset.
+        #[props(default)]
+        default_opened: bool,
+        /// The toggle asks for this `opened`.
+        #[props(default)]
+        onchange: Option<EventHandler<bool>>,
         children: Element,
     }
 }
 
 /// A navigation list item - `Anchor` plus a themed active/hover background
-/// and `aria-current`, for a sidebar or nav bar link.
+/// and `aria-current`, for a sidebar or nav bar link. With `nested` it is a
+/// disclosure too: a toggle beside the link shows the child links.
+///
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::NavLink;
+/// # fn app() -> Element {
+/// rsx! {
+///     NavLink { to: "/docs", description: "Guides and API",
+///         nested: rsx! {
+///             NavLink { to: "/docs/install", "Install" }
+///             NavLink { to: "/docs/theming", "Theming" }
+///         },
+///         "Docs"
+///     }
+/// }
+/// # }
+/// ```
 #[component]
 pub fn NavLink(props: NavLinkProps) -> Element {
     let theme = use_theme();
+    let labels = use_localization().nav_link;
+    let link_id = use_root_id(&props.attributes);
+    let (toggle_id, panel_id, description_id) = (use_id(), use_id(), use_id());
+    let mut own_opened = use_signal(|| props.default_opened);
+    let opened = props.opened.unwrap_or(own_opened());
     let disabled = props.disabled.unwrap_or(false);
     let is_active = props.active.unwrap_or_else(|| match &props.to {
         NavigationTarget::Internal(path) => try_router()
@@ -171,6 +265,102 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         true,
     );
 
+    let mut attributes = props.attributes;
+    // Hidden from the link's name, which the label alone gives; the
+    // description reaches it through `aria-describedby`.
+    let body = match &props.description {
+        Some(description) => {
+            join_described_by(&mut attributes, &description_id());
+            rsx! {
+                span { "data-nav-body": true,
+                    span { {props.children} }
+                    span {
+                        id: description_id(),
+                        "data-nav-description": true,
+                        "aria-hidden": "true",
+                        "{description}"
+                    }
+                }
+            }
+        }
+        None => props.children,
+    };
+    // A hook, so above the branch.
+    let group_style = use_box().framework_sx(&NAV_GROUP_SX).prepare();
+    let Some(nested) = props.nested else {
+        return nav_link(
+            style_attributes,
+            props.to,
+            props.target,
+            disabled,
+            aria_current,
+            element,
+            attributes,
+            body,
+        );
+    };
+    if !attributes.iter().any(|attribute| attribute.name == "id") {
+        attributes.push(attr("id", link_id()));
+    }
+    let link = nav_link(
+        style_attributes,
+        props.to,
+        props.target,
+        disabled,
+        aria_current,
+        element,
+        attributes,
+        body,
+    );
+
+    let controlled = props.opened.is_some();
+    let onchange = props.onchange;
+    let toggle = move |_: MouseEvent| {
+        if !controlled {
+            own_opened.set(!opened);
+        }
+        if let Some(onchange) = &onchange {
+            onchange.call(!opened);
+        }
+    };
+    group_style.render(
+        HtmlTag::Div,
+        Vec::new(),
+        rsx! {
+            div { "data-nav-row": true,
+                {link}
+                // APG disclosure. Named "Show links" plus the link's own name.
+                button {
+                    r#type: "button",
+                    id: toggle_id(),
+                    "aria-label": labels.show_links,
+                    "aria-labelledby": "{toggle_id} {link_id}",
+                    "aria-expanded": opened.to_string(),
+                    "aria-controls": panel_id(),
+                    disabled,
+                    onclick: toggle,
+                    ChevronDownIcon {}
+                }
+            }
+            Collapse { id: panel_id(), open: opened,
+                div { "data-nav-children": true, {nested} }
+            }
+        },
+    )
+}
+
+/// The link itself: an `<a>` to `to`, or with `disabled` one that goes nowhere.
+#[allow(clippy::too_many_arguments)]
+fn nav_link(
+    style_attributes: StyleAttributes,
+    to: NavigationTarget,
+    target: Option<String>,
+    disabled: bool,
+    aria_current: Option<&'static str>,
+    element: ElementHandle,
+    mut attributes: Vec<Attribute>,
+    body: Element,
+) -> Element {
     // An `<a>` without `href` is `generic`, so the role comes back by hand.
     if disabled {
         return box_style(style_attributes)
@@ -178,22 +368,36 @@ pub fn NavLink(props: NavLinkProps) -> Element {
             .attr("aria-disabled", "true")
             .attr("tabindex", "-1")
             .attr("aria-current", aria_current)
-            .render(HtmlTag::A, props.attributes, props.children);
+            .render(HtmlTag::A, attributes, body);
     }
 
-    let mut attributes = props.attributes;
     if let Some(aria_current) = aria_current {
         attributes.push(attr("aria-current", aria_current));
     }
 
     render_anchor(
         style_attributes,
-        props.to,
-        props.target,
+        to,
+        target,
         Some(element.mount()),
         attributes,
-        props.children,
+        body,
     )
+}
+
+/// `aria-describedby` is a list: `id` joins a caller's rather than replacing it.
+fn join_described_by(attributes: &mut Vec<Attribute>, id: &str) {
+    let caller = attributes.iter_mut().find(|attribute| {
+        attribute.name == "aria-describedby" && matches!(attribute.value, AttributeValue::Text(_))
+    });
+    match caller {
+        Some(attribute) => {
+            if let AttributeValue::Text(ids) = &attribute.value {
+                attribute.value = AttributeValue::Text(format!("{ids} {id}"));
+            }
+        }
+        None => attributes.push(attr("aria-describedby", id.to_string())),
+    }
 }
 
 #[cfg(test)]

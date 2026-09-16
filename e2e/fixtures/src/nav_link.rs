@@ -39,6 +39,16 @@ fn NavStatesPage() -> Element {
                 NavLink { id: "idle", to: "/nav-link", "Idle" }
                 NavLink { id: "disabled", to: "/nav-link", disabled: true, "Disabled" }
                 NavLink { id: "disabled-active", to: "/nav-link", active: true, disabled: true, "Disabled active" }
+                NavLink {
+                    id: "docs",
+                    to: "/nav-link",
+                    description: "Guides and API",
+                    nested: rsx! {
+                        NavLink { id: "install", to: "/nav-link", "Install" }
+                        NavLink { id: "theming", to: "/nav-link", "Theming" }
+                    },
+                    "Docs"
+                }
             }
             Text { id: "prose",
                 "Read "

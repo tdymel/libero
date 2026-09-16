@@ -50,6 +50,7 @@ fn Demo() -> Element {
             Box {
                 sx: sx().height("160px").width("100%").border("1px solid var(--lsx-muted-3)"),
                 ScrollArea {
+                    aria_label: "Items",
                     handle: area,
                     onscroll: move |event: ScrollPositionEvent| position.set(event),
                     ontopreached: move |_| edge.set("top"),
@@ -132,19 +133,20 @@ row too.
 
 ## Accessibility
 
-A scroll area is not a tab stop: its content usually carries its own focusable
-elements. `focusable: true` is for content that has nothing to focus - a strip
-of images, a block of plain text. It makes the viewport a tab stop, and the
-browser's own arrow-key scrolling comes with it.
+A scroll area whose content has focusable elements is not a tab stop: tabbing
+to those scrolls them into view. Content that has nothing to focus - a strip of
+images, a block of plain text - cannot be read with a keyboard otherwise, so
+while it overflows the area makes itself a tab stop with `role="region"`,
+re-checked on every resize and re-render, and the browser's own arrow-key
+scrolling comes with it. `focusable: true` keeps the stop whatever the content;
+a caller's `tabindex` or a `role` other than `region` turns the automatic stop
+off.
 
-Name it as well as focusing it. APG's scrollable-region pattern wants a `role`
-and an accessible name on a focusable region, and `ScrollArea` sets no `role` of
-its own, so both go through the attribute spread:
+Name it as well. APG's scrollable-region pattern wants an accessible name on a
+focusable region, and a debug build warns once about a stop without one:
 
 ```rust,ignore
 ScrollArea {
-    focusable: true,
-    role: "region",
     aria_label: "Release notes",
     Text { "..." }
 }
@@ -164,7 +166,7 @@ unreachable, so use it only when something else provides the scrolling.
 | `scroll_position_x` | `f64` | - | Percent (0-100) to scroll to horizontally. Bound to a signal it re-applies on every change; a literal applies once, at mount. |
 | `scroll_position_y` | `f64` | - | Percent (0-100) along the vertical axis - see `scroll_position_x`. |
 | `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Scrolls the area from a handler, in percent or px, on every call. |
-| `focusable` | `bool` | `false` | Makes the viewport itself a tab stop, so content with no focusable elements of its own can still be reached and arrow-keyed. |
+| `focusable` | `bool` | `false` | Makes the viewport a `region` tab stop always. Unset, it is one only while it overflows and holds nothing focusable. |
 | `onscroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll tick with the position as a percent of each axis's scrollable range. |
 | `onresize` | `EventHandler<Event<ResizeData>>` | - | Fires after the area resized, once it has re-measured itself for a `Virtualize` child. |
 | `ontopreached` | `EventHandler<()>` | - | Fires once when the top edge is reached. |
