@@ -54,6 +54,18 @@ fn a_hotkey_is_heard_from_a_focused_button() {
     assert_eq!(HEARD_UNFILTERED.get(), 1);
 }
 
+/// Todo 702: with a second document live on the thread, a press reaches only
+/// its own document's subscribers.
+#[test]
+fn a_press_reaches_only_its_own_documents_hotkeys() {
+    let mut older = mount(hotkeys);
+    let _newer = mount(hotkeys);
+    older.focus("#page");
+    ctrl_k(&mut older);
+    assert_eq!(HEARD.get(), 1);
+    assert_eq!(HEARD_UNFILTERED.get(), 1);
+}
+
 #[test]
 fn a_text_field_hides_a_press_from_the_filtered_path_only() {
     let mut page = mount(hotkeys);

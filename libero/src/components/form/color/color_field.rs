@@ -318,8 +318,10 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let mut blurred = move || {
         if fix_on_blur || !unparsable() {
             draft.set(None);
-        } else {
+        } else if !*rejected.peek() {
+            // Said once, so a blur after Enter does not repeat it.
             rejected.set(true);
+            announcer.say(labels.invalid.to_string());
         }
     };
     // Blitz's Tab and libero's own `focus()` fire no focus event: the silent

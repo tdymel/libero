@@ -149,7 +149,7 @@ fn unparsable_text_shows_and_says_an_error() {
 
 /// Todo 699: with `fix_on_blur: false`, Tab away from text that is no color
 /// keeps the text and the value, and marks the field invalid with the error.
-/// Focus has left, so nothing is announced: the input describes it on return.
+/// Todo 701: the error is said politely, as on Enter.
 #[test]
 fn blur_on_unparsable_text_keeps_it_with_an_error() {
     block_on(async {
@@ -173,7 +173,8 @@ fn blur_on_unparsable_text_keeps_it_with_an_error() {
                    && input.value === 'nope' \
                    && input.getAttribute('aria-invalid') === 'true' \
                    && ids.some(id => document.getElementById(id)?.textContent.trim() === {error:?}) \
-                   && document.getElementById('readout').textContent === '#40c057'; }})()"
+                   && document.getElementById('readout').textContent === '#40c057' \
+                   && [...document.querySelectorAll('[role=status]')].some(s => s.textContent === {error:?}); }})()"
             ),
             "Tab from unparsable text to keep it and show the error",
         )

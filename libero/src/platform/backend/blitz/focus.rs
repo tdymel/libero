@@ -6,22 +6,27 @@
 
 use std::{
     cell::{Cell, RefCell},
-    rc::Rc,
+    rc::{Rc, Weak},
 };
 
 use blitz_dom::BaseDocument;
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
-use super::{NEXT_CALLBACK, WRAPPER, ancestors, anchor, defer, flush_soon};
+use super::{Doc, NEXT_CALLBACK, ancestors, anchor, defer, doc, flush_soon};
 use crate::platform::{FocusMove, SilentFocusApi, SilentFocusSubscription, focus::OnMove};
 
 type Callback = (u64, Rc<dyn Fn(&dyn FocusMove)>);
 
-thread_local! {
+/// One document's silent-move watch.
+#[derive(Default)]
+pub(super) struct Watch {
     /// The focus owner when a silent move may have begun, while a check is armed.
-    static BEFORE: Cell<Option<Option<NodeId>>> = const { Cell::new(None) };
-    static CALLBACKS: RefCell<Vec<Callback>> = const { RefCell::new(Vec::new()) };
+    before: Cell<Option<Option<NodeId>>>,
+    callbacks: RefCell<Vec<Callback>>,
+}
+
+thread_local! {
     /// Where libero's last `focus()` went, until the flush. See [`clicked`].
     static REQUESTED: Cell<Option<NodeId>> = const { Cell::new(None) };
     /// The focus owner at a press that cancelled its `mousedown`, until the
@@ -36,9 +41,12 @@ pub(super) fn mouse_pressed(event: &Event<MouseData>) {
     if event.default_action_enabled() {
         return;
     }
-    let wrapper = WRAPPER.with(|wrapper| wrapper.borrow().as_ref().map(NodeHandle::node_id));
+    let Some(doc) = doc() else {
+        return;
+    };
+    let wrapper = doc.wrapper_id();
     // `<html>` or the wrapper: nothing of the app's held focus to keep.
-    let owner = anchor().as_ref().and_then(|anchor| {
+    let owner = doc.anchor().as_ref().and_then(|anchor| {
         let doc = anchor.try_doc()?;
         let owner = doc.get_focussed_node_id()?;
         (owner != doc.root_element().id && Some(owner) != wrapper).then_some((owner, true))
@@ -99,9 +107,12 @@ pub(super) fn clicked() {
 
 /// Arms a check against where focus is now. The first arm since the last check
 /// keeps its owner, so two moves in one poll compare against the start.
-pub(super) fn watch(doc: &BaseDocument) {
-    if BEFORE.get().is_none() {
-        BEFORE.set(Some(doc.get_focussed_node_id()));
+pub(super) fn watch(document: &BaseDocument) {
+    let Some(doc) = doc() else {
+        return;
+    };
+    if doc.focus.before.get().is_none() {
+        doc.focus.before.set(Some(document.get_focussed_node_id()));
     }
     flush_soon();
 }
@@ -118,12 +129,13 @@ pub(super) fn keyed(event: &Event<KeyboardData>) {
 }
 
 /// Tells every subscriber when focus is no longer where it was armed.
-pub(super) fn check() {
+pub(super) fn check(doc: &Doc) {
     REQUESTED.set(None);
-    let Some(before) = BEFORE.take() else {
+    let Some(before) = doc.focus.before.take() else {
         return;
     };
-    let Some(now) = anchor()
+    let Some(now) = doc
+        .anchor()
         .as_ref()
         .and_then(|anchor| Some(anchor.try_doc()?.get_focussed_node_id()))
     else {
@@ -132,13 +144,13 @@ pub(super) fn check() {
     if now == before {
         return;
     }
-    let callbacks: Vec<_> = CALLBACKS.with(|callbacks| {
-        callbacks
-            .borrow()
-            .iter()
-            .map(|(_, callback)| callback.clone())
-            .collect()
-    });
+    let callbacks: Vec<_> = doc
+        .focus
+        .callbacks
+        .borrow()
+        .iter()
+        .map(|(_, callback)| callback.clone())
+        .collect();
     let moved = Moved { before, now };
     for callback in callbacks {
         callback(&moved);
@@ -182,17 +194,28 @@ static SILENT_FOCUS: BlitzSilentFocus = BlitzSilentFocus;
 impl SilentFocusApi for BlitzSilentFocus {
     fn on_move(&self, callback: OnMove) -> Box<dyn SilentFocusSubscription> {
         let id = NEXT_CALLBACK.replace(NEXT_CALLBACK.get() + 1);
-        CALLBACKS.with(|callbacks| callbacks.borrow_mut().push((id, Rc::from(callback))));
-        Box::new(Subscription(id))
+        let doc = doc();
+        if let Some(doc) = &doc {
+            doc.focus
+                .callbacks
+                .borrow_mut()
+                .push((id, Rc::from(callback)));
+        }
+        Box::new(Subscription(id, doc.as_ref().map(Rc::downgrade)))
     }
 }
 
-struct Subscription(u64);
+struct Subscription(u64, Option<Weak<Doc>>);
 
 impl SilentFocusSubscription for Subscription {}
 
 impl Drop for Subscription {
     fn drop(&mut self) {
-        CALLBACKS.with(|callbacks| callbacks.borrow_mut().retain(|(id, _)| *id != self.0));
+        if let Some(doc) = self.1.as_ref().and_then(Weak::upgrade) {
+            doc.focus
+                .callbacks
+                .borrow_mut()
+                .retain(|(id, _)| *id != self.0);
+        }
     }
 }

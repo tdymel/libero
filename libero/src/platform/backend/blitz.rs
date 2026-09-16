@@ -1,11 +1,12 @@
 use std::{
     cell::{Cell, RefCell},
-    rc::Rc,
+    rc::{Rc, Weak},
     time::Duration,
 };
 
 use blitz_dom::{BaseDocument, QualName, local_name, ns};
 use blitz_traits::{events::UiEvent, shell};
+use dioxus::core::Runtime;
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
@@ -39,35 +40,10 @@ pub(super) fn element(mounted: &Rc<MountedData>) -> Option<Box<dyn ElementApi>> 
 }
 
 thread_local! {
-    /// A `NodeHandle` is the only way to reach the Blitz document, and
-    /// `use_modal` has to ask where focus is without owning an element. So the
-    /// first handle we ever see is kept as an anchor: its node may since have
-    /// unmounted, but the document it points into outlives it, and only
-    /// document-wide calls are made through it.
-    ///
-    /// [`Outlet`] fills it when `LiberoProvider` mounts. Waiting for the first
-    /// element handle to be *called* left it empty until then, so the first
-    /// popover was never placed and the first modal returned focus nowhere
-    /// (todo 191, seen in a native window).
-    static ANCHOR: RefCell<Option<NodeHandle>> = const { RefCell::new(None) };
-
-    /// Each mounted [`Outlet`]'s document: the newest wins over [`ANCHOR`], and
-    /// the one before it gets it back when it drops (todo 635).
-    static PROVIDERS: RefCell<Vec<(u64, NodeHandle)>> = const { RefCell::new(Vec::new()) };
-    static NEXT_PROVIDER: Cell<u64> = const { Cell::new(0) };
-
-    /// Commands that found the document borrowed, oldest first. See
-    /// [`BlitzElement::command`].
-    static DEFERRED: RefCell<Vec<Deferred>> = const { RefCell::new(Vec::new()) };
-
-    /// Reads waiting for the next poll's layout. See [`when_laid_out`].
-    static LAID_OUT: RefCell<Vec<Deferred>> = const { RefCell::new(Vec::new()) };
-    static LAID_OUT_WAIT: RefCell<Option<Box<dyn TimerSubscription>>> = const { RefCell::new(None) };
-
-    /// Bumped to remount [`Outlet`]'s flush element. `None` until it renders.
-    static FLUSHES: RefCell<Option<Signal<u64>>> = const { RefCell::new(None) };
-    /// The flush element that last mounted. `None` until the first one has.
-    static MOUNTED_FLUSH: Cell<Option<u64>> = const { Cell::new(None) };
+    /// Each live `VirtualDom`'s [`Doc`], by its runtime: dioxus-native runs one
+    /// per document, and several on one thread (todo 702).
+    static DOCS: RefCell<Vec<(Weak<Runtime>, Rc<Doc>)>> = const { RefCell::new(Vec::new()) };
+    static NEXT_OUTLET: Cell<u64> = const { Cell::new(0) };
 
     /// A press whose focus move Blitz has not made yet: the focus owner at the
     /// press, and the focusable it hit. See [`Listener`].
@@ -79,9 +55,6 @@ thread_local! {
     /// What the last press on nothing focusable hit, until a Tab. See [`tab_from_start`].
     static START: Cell<Option<NodeId>> = const { Cell::new(None) };
 
-    /// [`Listener`]'s own element.
-    static WRAPPER: RefCell<Option<NodeHandle>> = const { RefCell::new(None) };
-
     /// The node the last press hit, until its click has bubbled. See
     /// [`nested_interactive`].
     static HIT: Cell<Option<NodeId>> = const { Cell::new(None) };
@@ -89,27 +62,116 @@ thread_local! {
     /// The drag [`follow_pointer`] stands in pointer capture for.
     static FOLLOW: Cell<Option<Follow>> = const { Cell::new(None) };
 
+    static NEXT_CALLBACK: Cell<u64> = const { Cell::new(0) };
+}
+
+/// One document's backend state, shared by every `LiberoProvider` in it.
+struct Doc {
+    /// Each mounted [`Outlet`], newest last: the newest's handle is the
+    /// document's, the one before takes over when it drops (todo 635).
+    outlets: RefCell<Vec<OutletSlot>>,
+    /// A `NodeHandle` is the only way to reach the Blitz document, and
+    /// `use_modal` has to ask where focus is without owning an element. So the
+    /// first handle seen stands in until an [`Outlet`] mounts (todo 191).
+    seen: RefCell<Option<NodeHandle>>,
+    /// Commands that found the document borrowed, oldest first. See
+    /// [`BlitzElement::command`].
+    deferred: RefCell<Vec<Deferred>>,
+    /// Reads waiting for the next poll's layout. See [`when_laid_out`].
+    laid_out: RefCell<Vec<Deferred>>,
+    laid_out_wait: RefCell<Option<Box<dyn TimerSubscription>>>,
+    /// [`Listener`]'s own element.
+    wrapper: RefCell<Option<NodeHandle>>,
     /// The scheme Rust was last told, and who to tell when the viewport's
     /// differs. See [`BlitzColorScheme`].
-    static SCHEME: Cell<ColorScheme> = const { Cell::new(ColorScheme::Light) };
-    static SCHEME_CALLBACKS: Callbacks<dyn Fn(ColorScheme)> = const { Callbacks::new() };
-    static NEXT_CALLBACK: Cell<u64> = const { Cell::new(0) };
+    scheme: Cell<ColorScheme>,
+    scheme_callbacks: Callbacks<dyn Fn(ColorScheme)>,
     /// Re-reads the viewport while anyone listens to the scheme.
-    static SCHEME_POLL: RefCell<Option<Box<dyn TimerSubscription>>> = const { RefCell::new(None) };
-
+    scheme_poll: RefCell<Option<Box<dyn TimerSubscription>>>,
     /// Who to tell that something scrolled. See [`BlitzScroll`].
-    static SCROLL_CALLBACKS: Callbacks<dyn Fn()> = const { Callbacks::new() };
-    /// Puts [`PortalRoot`] back on the viewport's corner.
-    static REALIGN: Cell<Option<Callback<()>>> = const { Cell::new(None) };
+    scroll_callbacks: Callbacks<dyn Fn()>,
+    /// Puts each [`PortalRoot`] back on the viewport's corner.
+    realign: Callbacks<dyn Fn()>,
     /// Mounted [`PortalEntry`]s drawing something: with none, a scroll has
     /// nothing to realign.
-    static PORTAL_ENTRIES: Cell<usize> = const { Cell::new(0) };
+    portal_entries: Cell<usize>,
     /// A `scroll_into_view` waiting for its target's first layout. See [`show`].
-    static SHOW_RETRY: RefCell<Option<Box<dyn TimerSubscription>>> = const { RefCell::new(None) };
-
+    show_retry: RefCell<Option<Box<dyn TimerSubscription>>>,
     /// Every [`BlitzKeyboard`] subscription: id, whether it skips text entry,
     /// callback. Called by [`Listener`]'s `onkeydown`.
-    static KEY_CALLBACKS: RefCell<Vec<KeyCallback>> = const { RefCell::new(Vec::new()) };
+    key_callbacks: RefCell<Vec<KeyCallback>>,
+    focus: focus::Watch,
+}
+
+/// A mounted [`Outlet`]: `flushes` is bumped to remount its flush element,
+/// `mounted` is the flush element that last mounted.
+struct OutletSlot {
+    id: u64,
+    flushes: Signal<u64>,
+    mounted: Option<u64>,
+    handle: Option<NodeHandle>,
+}
+
+impl Doc {
+    fn new() -> Self {
+        Self {
+            outlets: RefCell::new(Vec::new()),
+            seen: RefCell::new(None),
+            deferred: RefCell::new(Vec::new()),
+            laid_out: RefCell::new(Vec::new()),
+            laid_out_wait: RefCell::new(None),
+            wrapper: RefCell::new(None),
+            scheme: Cell::new(ColorScheme::Light),
+            scheme_callbacks: Callbacks::new(),
+            scheme_poll: RefCell::new(None),
+            scroll_callbacks: Callbacks::new(),
+            realign: Callbacks::new(),
+            portal_entries: Cell::new(0),
+            show_retry: RefCell::new(None),
+            key_callbacks: RefCell::new(Vec::new()),
+            focus: focus::Watch::default(),
+        }
+    }
+
+    fn anchor(&self) -> Option<NodeHandle> {
+        let outlets = self.outlets.borrow();
+        outlets
+            .iter()
+            .rev()
+            .find_map(|outlet| outlet.handle.clone())
+            .or_else(|| self.seen.borrow().clone())
+    }
+
+    fn wrapper_id(&self) -> Option<NodeId> {
+        self.wrapper.borrow().as_ref().map(NodeHandle::node_id)
+    }
+}
+
+/// The running `VirtualDom`'s [`Doc`], made on first ask. Timers run in their
+/// runtime's root scope, so every caller finds its own.
+fn doc() -> Option<Rc<Doc>> {
+    let runtime = Runtime::try_current()?;
+    let (doc, gone) = DOCS.with_borrow_mut(|docs| {
+        let (live, gone): (Vec<_>, Vec<_>) = std::mem::take(docs)
+            .into_iter()
+            .partition(|(owner, _)| owner.strong_count() > 0);
+        *docs = live;
+        let doc = match docs
+            .iter()
+            .find(|(owner, _)| std::ptr::eq(owner.as_ptr(), Rc::as_ptr(&runtime)))
+        {
+            Some((_, doc)) => doc.clone(),
+            None => {
+                let doc = Rc::new(Doc::new());
+                docs.push((Rc::downgrade(&runtime), doc.clone()));
+                doc
+            }
+        };
+        (doc, gone)
+    });
+    // Outside the borrow: a dropped doc's callbacks may reach for it.
+    drop(gone);
+    Some(doc)
 }
 
 type KeyCallback = (u64, bool, Rc<dyn Fn(KeyChord) -> bool>);
@@ -157,13 +219,28 @@ impl<F: ?Sized> Callbacks<F> {
 /// would name the element focused before.
 #[component]
 pub(super) fn Listener(children: Element) -> Element {
+    let doc = use_hook(doc);
+    let own = use_hook(|| Rc::new(Cell::new(None::<NodeId>)));
+    use_drop({
+        let (doc, own) = (doc.clone(), own.clone());
+        // A nested provider's wrapper may have been replaced by the outer one.
+        move || {
+            if let Some(doc) = doc
+                && own.get().is_some()
+                && doc.wrapper_id() == own.get()
+            {
+                doc.wrapper.take();
+            }
+        }
+    });
     rsx! {
         div {
             display: "contents",
             tabindex: "-1",
-            onmounted: |event| {
-                if let Some(handle) = event.data().downcast::<NodeHandle>() {
-                    WRAPPER.with(|wrapper| *wrapper.borrow_mut() = Some(handle.clone()));
+            onmounted: move |event| {
+                if let (Some(doc), Some(handle)) = (&doc, event.data().downcast::<NodeHandle>()) {
+                    own.set(Some(handle.node_id()));
+                    *doc.wrapper.borrow_mut() = Some(handle.clone());
                 }
             },
             // Bubble phase: this dioxus has no capture listeners.
@@ -200,7 +277,7 @@ pub(super) fn Listener(children: Element) -> Element {
 /// wrapper, where no key press would reach [`BlitzKeyboard`]. Taken back once
 /// that move is made, at the end of the poll; the web's equivalent is `<body>`.
 fn refocus_wrapper() {
-    let Some(wrapper) = WRAPPER.with(|wrapper| wrapper.borrow().clone()) else {
+    let Some(wrapper) = doc().and_then(|doc| doc.wrapper.borrow().clone()) else {
         return;
     };
     let node_id = wrapper.node_id();
@@ -221,15 +298,17 @@ fn keyed(event: &Event<KeyboardData>) {
     if !event.default_action_enabled() || event.is_composing() {
         return;
     }
+    let Some(doc) = doc() else {
+        return;
+    };
     let typing = typing_target();
-    let callbacks: Vec<_> = KEY_CALLBACKS.with(|callbacks| {
-        callbacks
-            .borrow()
-            .iter()
-            .filter(|(_, skip_text_entry, _)| !(typing && *skip_text_entry))
-            .map(|(_, skip_text_entry, callback)| (*skip_text_entry, callback.clone()))
-            .collect()
-    });
+    let callbacks: Vec<_> = doc
+        .key_callbacks
+        .borrow()
+        .iter()
+        .filter(|(_, skip_text_entry, _)| !(typing && *skip_text_entry))
+        .map(|(_, skip_text_entry, callback)| (*skip_text_entry, callback.clone()))
+        .collect();
     let (key, modifiers) = (event.key(), event.modifiers());
     let mut taken = false;
     for (skip_text_entry, callback) in callbacks {
@@ -563,12 +642,13 @@ impl BlitzKeyboard {
         callback: Box<dyn Fn(KeyChord) -> bool>,
     ) -> Box<dyn KeySubscription> {
         let id = NEXT_CALLBACK.replace(NEXT_CALLBACK.get() + 1);
-        KEY_CALLBACKS.with(|callbacks| {
-            callbacks
+        let doc = doc();
+        if let Some(doc) = &doc {
+            doc.key_callbacks
                 .borrow_mut()
-                .push((id, skip_text_entry, Rc::from(callback)))
-        });
-        Box::new(BlitzKeySubscription(id))
+                .push((id, skip_text_entry, Rc::from(callback)));
+        }
+        Box::new(BlitzKeySubscription(id, doc.as_ref().map(Rc::downgrade)))
     }
 }
 
@@ -585,13 +665,17 @@ impl KeyboardApi for BlitzKeyboard {
     }
 }
 
-struct BlitzKeySubscription(u64);
+struct BlitzKeySubscription(u64, Option<Weak<Doc>>);
 
 impl KeySubscription for BlitzKeySubscription {}
 
 impl Drop for BlitzKeySubscription {
     fn drop(&mut self) {
-        KEY_CALLBACKS.with(|callbacks| callbacks.borrow_mut().retain(|(id, _, _)| *id != self.0));
+        if let Some(doc) = self.1.as_ref().and_then(Weak::upgrade) {
+            doc.key_callbacks
+                .borrow_mut()
+                .retain(|(id, _, _)| *id != self.0);
+        }
     }
 }
 
@@ -610,11 +694,14 @@ pub(super) fn PortalRoot(children: Element) -> Element {
     let mut shift = use_signal(|| (0.0, 0.0));
     let scrolled = use_signal(|| 0u64);
     let root = use_hook(|| Rc::new(RefCell::new(None::<NodeHandle>)));
+    let doc = use_hook(doc);
     use_hook(|| {
+        let doc = doc.as_ref().map(Rc::downgrade);
         Rc::new(SCROLL.on_scroll(Box::new(move || {
             // An entry realigns as it mounts or starts to draw; until then a
             // wheel costs no render.
-            if PORTAL_ENTRIES.get() == 0 {
+            let drawing = doc.as_ref().and_then(Weak::upgrade);
+            if drawing.is_none_or(|doc| doc.portal_entries.get() == 0) {
                 return;
             }
             let mut scrolled = scrolled;
@@ -641,8 +728,16 @@ pub(super) fn PortalRoot(children: Element) -> Element {
             }
         }
     });
-    use_hook(|| REALIGN.set(Some(realign)));
-    use_drop(|| REALIGN.set(None));
+    let realigning = use_hook(|| {
+        let doc = doc.clone()?;
+        let id = doc.realign.add(Rc::new(move || realign.call(())));
+        Some((doc, id))
+    });
+    use_drop(move || {
+        if let Some((doc, id)) = realigning {
+            doc.realign.remove(id);
+        }
+    });
     use_effect(move || {
         scrolled();
         realign.call(());
@@ -668,16 +763,22 @@ pub(super) fn PortalRoot(children: Element) -> Element {
 #[component]
 pub(super) fn PortalEntry(children: Element, idle: bool) -> Element {
     let counted = use_hook(|| Rc::new(Cell::new(false)));
-    if counted.get() == idle {
+    let doc = use_hook(doc);
+    if let Some(doc) = &doc
+        && counted.get() == idle
+    {
         counted.set(!idle);
-        let entries = PORTAL_ENTRIES.get();
-        PORTAL_ENTRIES.set(if idle { entries - 1 } else { entries + 1 });
+        let entries = doc.portal_entries.get();
+        doc.portal_entries
+            .set(if idle { entries - 1 } else { entries + 1 });
     }
     use_drop({
         let counted = counted.clone();
         move || {
-            if counted.get() {
-                PORTAL_ENTRIES.set(PORTAL_ENTRIES.get() - 1);
+            if let Some(doc) = doc
+                && counted.get()
+            {
+                doc.portal_entries.set(doc.portal_entries.get() - 1);
             }
         }
     });
@@ -700,14 +801,17 @@ pub(super) fn PortalEntry(children: Element, idle: bool) -> Element {
 }
 
 fn realign_portals() {
-    if let Some(realign) = REALIGN.get() {
-        realign.call(());
+    let Some(doc) = doc() else {
+        return;
+    };
+    for realign in doc.realign.snapshot() {
+        realign();
     }
 }
 
 fn pressed(event: &Event<PointerData>) {
     let point = event.client_coordinates();
-    let wrapper = WRAPPER.with(|wrapper| wrapper.borrow().as_ref().map(NodeHandle::node_id));
+    let wrapper = doc().and_then(|doc| doc.wrapper_id());
     HIT.set(None);
     let press = anchor().and_then(|anchor| {
         let doc = anchor.try_doc()?;
@@ -736,10 +840,10 @@ fn tab_from_start(event: &Event<KeyboardData>) {
     if !event.default_action_enabled() {
         return;
     }
-    let (Some(anchor), Some(wrapper)) = (
-        anchor(),
-        WRAPPER.with(|wrapper| wrapper.borrow().as_ref().map(NodeHandle::node_id)),
-    ) else {
+    let Some(doc) = doc() else {
+        return;
+    };
+    let (Some(anchor), Some(wrapper)) = (doc.anchor(), doc.wrapper_id()) else {
         return;
     };
     let Some(doc) = anchor.try_doc() else {
@@ -868,16 +972,37 @@ type Deferred = Box<dyn FnOnce()>;
 /// then run, before the next event).
 #[component]
 pub(super) fn Outlet() -> Element {
+    let doc = use_hook(doc);
+    let id = use_hook(|| NEXT_OUTLET.replace(NEXT_OUTLET.get() + 1));
     let flushes = use_hook(|| {
         let flushes = Signal::new(0u64);
-        FLUSHES.with(|slot| *slot.borrow_mut() = Some(flushes));
-        MOUNTED_FLUSH.set(None);
+        if let Some(doc) = &doc {
+            doc.outlets.borrow_mut().push(OutletSlot {
+                id,
+                flushes,
+                mounted: None,
+                handle: None,
+            });
+        }
         flushes
     });
-    use_drop(|| FLUSHES.with(|slot| *slot.borrow_mut() = None));
-    let id = use_hook(|| NEXT_PROVIDER.replace(NEXT_PROVIDER.get() + 1));
-    use_drop(move || {
-        PROVIDERS.with_borrow_mut(|providers| providers.retain(|(other, _)| *other != id))
+    use_drop({
+        let doc = doc.clone();
+        move || {
+            let Some(doc) = doc else {
+                return;
+            };
+            let slot = {
+                let mut outlets = doc.outlets.borrow_mut();
+                let at = outlets.iter().position(|outlet| outlet.id == id);
+                at.map(|at| outlets.remove(at))
+            };
+            drop(slot);
+            // The last one gone: no handle is kept past the document.
+            if doc.outlets.borrow().is_empty() {
+                doc.seen.take();
+            }
+        }
     });
 
     rsx! {
@@ -885,21 +1010,26 @@ pub(super) fn Outlet() -> Element {
             div {
                 key: "{flush}",
                 display: "none",
-                onmounted: move |event| {
-                    MOUNTED_FLUSH.set(Some(flush));
-                    if let Some(handle) = event.data().downcast::<NodeHandle>() {
-                        remember_document(handle);
-                        if flush == 0 {
-                            PROVIDERS.with_borrow_mut(|providers| providers.push((id, handle.clone())));
+                onmounted: {
+                    let doc = doc.clone();
+                    move |event: MountedEvent| {
+                    let Some(doc) = &doc else {
+                        return;
+                    };
+                    let handle = event.data().downcast::<NodeHandle>().cloned();
+                    if let Some(outlet) = doc.outlets.borrow_mut().iter_mut().find(|outlet| outlet.id == id) {
+                        outlet.mounted = Some(flush);
+                        if outlet.handle.is_none() {
+                            outlet.handle = handle;
                         }
                     }
-                    run_deferred();
-                    focus::check();
+                    run_deferred(doc);
+                    focus::check(doc);
                     // Once, at the provider's mount: see `BlitzColorScheme`.
                     if flush == 0 {
-                        check_scheme();
+                        check_scheme(doc);
                     }
-                },
+                }},
             }
         }
     }
@@ -929,70 +1059,80 @@ pub(super) fn when_free(run: Box<dyn FnOnce()>) {
 /// Runs `run` where the document is free and laid out: effects run before the
 /// shell lays out what this poll mounted, so a timer waits for the next poll.
 pub(super) fn when_laid_out(run: Box<dyn FnOnce()>) {
-    let first = LAID_OUT.with(|waiting| {
-        let mut waiting = waiting.borrow_mut();
+    let Some(doc) = doc() else {
+        run();
+        return;
+    };
+    let first = {
+        let mut waiting = doc.laid_out.borrow_mut();
         waiting.push(run);
         waiting.len() == 1
-    });
+    };
     if !first {
         return;
     }
+    let weak = Rc::downgrade(&doc);
     let wait = super::thread::timer().map(|timer| {
         timer.after(
             Duration::ZERO,
-            Box::new(|| {
-                let waiting = LAID_OUT.with(|waiting| std::mem::take(&mut *waiting.borrow_mut()));
+            Box::new(move || {
+                let Some(doc) = weak.upgrade() else {
+                    return;
+                };
+                let waiting = std::mem::take(&mut *doc.laid_out.borrow_mut());
                 for run in waiting {
                     when_free(run);
                 }
             }),
         )
     });
-    LAID_OUT_WAIT.with(|slot| drop(slot.replace(wait)));
+    drop(doc.laid_out_wait.replace(wait));
 }
 
 fn later(run: impl FnOnce() + 'static) {
-    DEFERRED.with(|queue| queue.borrow_mut().push(Box::new(run)));
+    let Some(doc) = doc() else {
+        return;
+    };
+    doc.deferred.borrow_mut().push(Box::new(run));
     // One remount per flush: a flush element replaced before its mount event
     // ran panics in dioxus-native (a `Modal` backdrop click; todo 664: a timer
     // task re-keying it again in the poll that rendered it).
-    FLUSHES.with(|slot| {
-        if let Some(mut flushes) = *slot.borrow()
-            && MOUNTED_FLUSH.get() == Some(*flushes.peek())
-        {
-            let next = flushes.peek().wrapping_add(1);
-            flushes.set(next);
-        }
-    });
+    let newest = doc
+        .outlets
+        .borrow()
+        .last()
+        .map(|outlet| (outlet.flushes, outlet.mounted));
+    if let Some((mut flushes, mounted)) = newest
+        && mounted == Some(*flushes.peek())
+    {
+        let next = flushes.peek().wrapping_add(1);
+        flushes.set(next);
+    }
 }
 
-fn run_deferred() {
-    let deferred = DEFERRED.with(|queue| std::mem::take(&mut *queue.borrow_mut()));
+fn run_deferred(doc: &Doc) {
+    let deferred = std::mem::take(&mut *doc.deferred.borrow_mut());
     for run in deferred {
         run();
     }
 }
 
 fn remember_document(handle: &NodeHandle) {
-    ANCHOR.with(|anchor| {
-        let mut anchor = anchor.borrow_mut();
-        if anchor.is_none() {
-            *anchor = Some(handle.clone());
-        }
-    });
+    if let Some(doc) = doc() {
+        doc.seen.borrow_mut().get_or_insert_with(|| handle.clone());
+    }
 }
 
 pub(super) fn document() -> Option<&'static dyn DocumentApi> {
     anchor().map(|_| &DOCUMENT as &'static dyn DocumentApi)
 }
 
-/// The anchor as of right now. Held in a `thread_local` rather than in
-/// [`BlitzDocument`], so the document can be a `&'static` like every other
-/// capability - and so a handle taken before the first frame is not stale.
+/// The running document's anchor as of right now. Looked up per call rather
+/// than held in [`BlitzDocument`], so the document can be a `&'static` like
+/// every other capability - and so a handle taken before the first frame is
+/// not stale.
 fn anchor() -> Option<NodeHandle> {
-    PROVIDERS
-        .with_borrow(|providers| providers.last().map(|(_, handle)| handle.clone()))
-        .or_else(|| ANCHOR.with(|anchor| anchor.borrow().clone()))
+    doc()?.anchor()
 }
 
 pub(super) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
@@ -1010,8 +1150,8 @@ static COLOR_SCHEME: BlitzColorScheme = BlitzColorScheme;
 /// How late a live theme switch reaches Rust at most; the CSS follows at once.
 const SCHEME_INTERVAL: Duration = Duration::from_millis(500);
 
-fn viewport_scheme() -> Option<ColorScheme> {
-    let anchor = anchor()?;
+fn viewport_scheme(doc: &Doc) -> Option<ColorScheme> {
+    let anchor = doc.anchor()?;
     let doc = anchor.try_doc()?;
     Some(match doc.viewport().color_scheme {
         shell::ColorScheme::Dark => ColorScheme::Dark,
@@ -1019,14 +1159,14 @@ fn viewport_scheme() -> Option<ColorScheme> {
     })
 }
 
-fn check_scheme() {
-    let Some(scheme) = viewport_scheme() else {
+fn check_scheme(doc: &Doc) {
+    let Some(scheme) = viewport_scheme(doc) else {
         return;
     };
-    if SCHEME.replace(scheme) == scheme {
+    if doc.scheme.replace(scheme) == scheme {
         return;
     }
-    for callback in SCHEME_CALLBACKS.with(Callbacks::snapshot) {
+    for callback in doc.scheme_callbacks.snapshot() {
         callback(scheme);
     }
 }
@@ -1035,22 +1175,35 @@ impl ColorSchemeApi for BlitzColorScheme {
     /// Before the first frame there is no document to ask, so this answers the
     /// last scheme known, and the first [`Outlet`] mount corrects it.
     fn system(&self) -> ColorScheme {
-        if let Some(scheme) = viewport_scheme() {
-            SCHEME.set(scheme);
+        let Some(doc) = doc() else {
+            return ColorScheme::Light;
+        };
+        if let Some(scheme) = viewport_scheme(&doc) {
+            doc.scheme.set(scheme);
         }
-        SCHEME.get()
+        doc.scheme.get()
     }
 
     fn on_change(&self, callback: Box<dyn Fn(ColorScheme)>) -> Box<dyn ColorSchemeSubscription> {
-        let id = SCHEME_CALLBACKS.with(|callbacks| callbacks.add(Rc::from(callback)));
-        SCHEME_POLL.with(|poll| {
-            let mut poll = poll.borrow_mut();
-            if poll.is_none() {
-                *poll = super::thread::timer()
-                    .map(|timer| timer.every(SCHEME_INTERVAL, Box::new(check_scheme)));
-            }
-        });
-        Box::new(BlitzColorSchemeSubscription(id))
+        let Some(doc) = doc() else {
+            return Box::new(BlitzColorSchemeSubscription(0, Weak::new()));
+        };
+        let id = doc.scheme_callbacks.add(Rc::from(callback));
+        let mut poll = doc.scheme_poll.borrow_mut();
+        if poll.is_none() {
+            let weak = Rc::downgrade(&doc);
+            *poll = super::thread::timer().map(|timer| {
+                timer.every(
+                    SCHEME_INTERVAL,
+                    Box::new(move || {
+                        if let Some(doc) = weak.upgrade() {
+                            check_scheme(&doc);
+                        }
+                    }),
+                )
+            });
+        }
+        Box::new(BlitzColorSchemeSubscription(id, Rc::downgrade(&doc)))
     }
 
     /// Blitz has no storage, so an override lives for the session.
@@ -1061,15 +1214,18 @@ impl ColorSchemeApi for BlitzColorScheme {
     fn store(&self, _setting: ColorSchemeSetting) {}
 }
 
-struct BlitzColorSchemeSubscription(u64);
+struct BlitzColorSchemeSubscription(u64, Weak<Doc>);
 
 impl ColorSchemeSubscription for BlitzColorSchemeSubscription {}
 
 impl Drop for BlitzColorSchemeSubscription {
     fn drop(&mut self) {
-        if !SCHEME_CALLBACKS.with(|callbacks| callbacks.remove(self.0)) {
+        let Some(doc) = self.1.upgrade() else {
+            return;
+        };
+        if !doc.scheme_callbacks.remove(self.0) {
             // Taken out before it drops, so no borrow is held across its drop.
-            let poll = SCHEME_POLL.with(|poll| poll.borrow_mut().take());
+            let poll = doc.scheme_poll.borrow_mut().take();
             drop(poll);
         }
     }
@@ -1088,25 +1244,33 @@ struct BlitzScroll;
 static SCROLL: BlitzScroll = BlitzScroll;
 
 fn notify_scroll() {
-    for callback in SCROLL_CALLBACKS.with(Callbacks::snapshot) {
+    let Some(doc) = doc() else {
+        return;
+    };
+    for callback in doc.scroll_callbacks.snapshot() {
         callback();
     }
 }
 
 impl ScrollApi for BlitzScroll {
     fn on_scroll(&self, callback: Box<dyn Fn()>) -> Box<dyn ScrollSubscription> {
-        let id = SCROLL_CALLBACKS.with(|callbacks| callbacks.add(Rc::from(callback)));
-        Box::new(BlitzScrollSubscription(id))
+        let Some(doc) = doc() else {
+            return Box::new(BlitzScrollSubscription(0, Weak::new()));
+        };
+        let id = doc.scroll_callbacks.add(Rc::from(callback));
+        Box::new(BlitzScrollSubscription(id, Rc::downgrade(&doc)))
     }
 }
 
-struct BlitzScrollSubscription(u64);
+struct BlitzScrollSubscription(u64, Weak<Doc>);
 
 impl ScrollSubscription for BlitzScrollSubscription {}
 
 impl Drop for BlitzScrollSubscription {
     fn drop(&mut self) {
-        SCROLL_CALLBACKS.with(|callbacks| callbacks.remove(self.0));
+        if let Some(doc) = self.1.upgrade() {
+            doc.scroll_callbacks.remove(self.0);
+        }
     }
 }
 
@@ -1580,7 +1744,9 @@ fn show(anchor: NodeHandle, node_id: NodeId, tries: u8) {
                 )
             });
             // The latest call wins, as a second scroll would override the first.
-            SHOW_RETRY.with(|slot| drop(slot.replace(retry)));
+            if let Some(state) = self::doc() {
+                drop(state.show_retry.replace(retry));
+            }
         } else if let Some((scroller, delta)) = into_view(doc, node_id) {
             doc.scroll_node_by(scroller, 0.0, -delta, |_| {});
             notify_scroll();

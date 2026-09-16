@@ -44,6 +44,29 @@ fn a_second_mount_on_the_thread_flips_its_own_root() {
     assert_eq!(page.attr("html", "data-lsx-theme").as_deref(), Some("dark"));
 }
 
+/// Todo 702: two live documents on one thread each keep their own state, so
+/// the older one's toggle and theme switch reach its own root and app.
+#[test]
+fn two_live_mounts_on_the_thread_keep_their_own_scheme() {
+    let mut older = mount(app);
+    let mut newer = mount(app);
+    older.click(SCHEME);
+    assert_eq!(
+        older.attr("html", "data-lsx-theme").as_deref(),
+        Some("dark")
+    );
+    assert_eq!(newer.attr("html", "data-lsx-theme"), None);
+
+    older.click(SCHEME);
+    assert_eq!(older.attr("html", "data-lsx-theme"), None);
+
+    older.set_color_scheme(ColorScheme::Dark);
+    older.wait(TICK);
+    assert_eq!(older.text(SCHEME), "dark");
+    newer.wait(TICK);
+    assert_eq!(newer.text(SCHEME), "light");
+}
+
 #[test]
 fn a_dark_window_resolves_dark_from_the_first_settled_frame() {
     let page = mount_in(app, ColorScheme::Dark);
