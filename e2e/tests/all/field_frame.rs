@@ -99,7 +99,6 @@ fn a_press_on_the_padding_is_a_press_on_the_control() {
         // The multi-select's chevron is no button, and opens the list once.
         let multi = "[data-case=multi] [role=combobox]";
         blur(page).await.unwrap();
-        // The frame's own slot: each chip has a trailing slot too.
         press(
             page,
             &centre("[data-case=multi] [data-frame] > [data-slot=trailing] > *"),

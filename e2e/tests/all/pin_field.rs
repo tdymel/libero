@@ -6,9 +6,50 @@ use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::input::InsertTextParams;
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
-use e2e::{Fixture, Viewport, ax, wait};
+use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const CELL: &str = "[role=group] input";
+
+/// Todo 507: every cell is named, so axe `label` holds.
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("pin_field", "/pin-field/error")
+        .focusable("[role=group] input[data-pin-index='0']")
+        .focusable("[role=group] input[data-pin-index='3']")
+        // The frame is the press target: a press on its padding focuses the cell.
+        .targets("[role=group] > div")
+        .run();
+}
+
+/// Todos 507 and 591: a focused cell names its place and carries the error
+/// and helper, not only the group.
+#[test]
+fn every_cell_is_named_and_described() {
+    block_on(async {
+        let fixture = Fixture::open("/pin-field/error", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let checks: String = page
+            .evaluate(
+                "[...document.querySelectorAll('[role=group] input')].map((cell, i) => { \
+                    const ids = (cell.getAttribute('aria-describedby') || '').split(' '); \
+                    const text = ids.map(id => document.getElementById(id)?.textContent).join(' '); \
+                    return cell.getAttribute('aria-label') === `Character ${i + 1} of 4` \
+                        && text.includes('That code is wrong.') \
+                        && text.includes('It expires in ten minutes.'); \
+                }).join()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(checks, "true,true,true,true");
+
+        fixture.console.assert_clean("pin field names").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
 /// The cells' text joined by `|`, and the focused cell's index.
 const CELLS: &str = "(() => { const c = [...document.querySelectorAll('[role=group] input')]; \
     return c.map(i => i.value).join('|') + ' @' + c.indexOf(document.activeElement); })()";
@@ -207,7 +248,9 @@ fn every_cell_reports_required_and_invalid() {
 
         let tree = ax::snapshot(page, "[role=group]").await.unwrap();
         assert_eq!(
-            tree.matches("textbox [invalid] [required]").count(),
+            tree.lines()
+                .filter(|line| line.contains("textbox") && line.ends_with("[invalid] [required]"))
+                .count(),
             4,
             "every cell required and invalid:\n{tree}"
         );

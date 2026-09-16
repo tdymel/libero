@@ -1,0 +1,24 @@
+---
+source: e2e/src/suite.rs
+description: pin_field at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Code"
+group "Code" [invalid]
+  generic
+    textbox "Character 1 of 4" [invalid] [required]
+      generic
+  generic
+    textbox "Character 2 of 4" [invalid] [required]
+      generic
+  generic
+    textbox "Character 3 of 4" [invalid] [required]
+      generic
+  generic
+    textbox "Character 4 of 4" [invalid] [required]
+      generic
+generic
+  StaticText "It expires in ten minutes."
+generic
+  StaticText "That code is wrong."

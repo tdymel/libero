@@ -3,9 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Input, States,
-        common::{base_props, input_from_str, use_style_attributes},
+        a11y::VisuallyHidden,
+        common::{ExternalLinkIcon, base_props, input_from_str, use_style_attributes},
     },
-    hooks::use_theme,
+    hooks::{use_localization, use_theme},
     sx::{StaticSx, Sx, sx},
     theme::{AnchorDefaults, Size},
 };
@@ -29,7 +30,15 @@ fn underline_sx(underline: AnchorUnderline) -> Sx {
 // Text's theme-level sizing, not `Text` itself - it has no href/target/rel
 // escape hatch to render a real anchor with.
 static ANCHOR_BASE_SX: StaticSx = StaticSx::new(|| {
-    let base = AnchorDefaults::theme_vars().margin("0");
+    let base = AnchorDefaults::theme_vars().margin("0").selector(
+        "& > [data-anchor-new-tab]",
+        sx().white_space("nowrap").selector(
+            "& > svg",
+            sx().width("0.8em")
+                .height("0.8em")
+                .vertical_align("-0.05em"),
+        ),
+    );
 
     AnchorUnderline::ALL.iter().fold(base, |base, &underline| {
         base.when(underline.state_name(), underline_sx(underline))
@@ -49,6 +58,10 @@ base_props! {
         target: Option<String>,
         #[props(default, into)]
         underline: Input<AnchorUnderline>,
+        /// With `target: "_blank"`, an external icon plus a hidden
+        /// "(opens in a new tab)" from the localization. `false` drops both.
+        #[props(default = true)]
+        new_tab_hint: bool,
         children: Element,
     }
 }
@@ -78,12 +91,24 @@ pub fn Anchor(props: AnchorProps) -> Element {
         true,
     );
 
+    let new_tab = use_localization().anchor.new_tab;
+    let hint = props.target.as_deref() == Some("_blank") && props.new_tab_hint;
+    let children = match hint {
+        // The no-break space keeps the icon on the last word's line.
+        true => rsx! {
+            {props.children}
+            span { "data-anchor-new-tab": "", "aria-hidden": "true", "\u{a0}", ExternalLinkIcon {} }
+            VisuallyHidden { " {new_tab}" }
+        },
+        false => props.children,
+    };
+
     render_anchor(
         style_attributes,
         props.to,
         props.target,
         None::<fn(MountedEvent)>,
         props.attributes,
-        props.children,
+        children,
     )
 }

@@ -9,8 +9,8 @@ Description: Three bars that morph into an X - an `ActionIcon` carrying the glyp
 Three bars that morph into an X. It renders an [`ActionIcon`](action-icon.md) -
 a real `<button type="button">` with the ripple and the disabled handling
 already right - and adds the glyph plus the three ARIA facts a burger is
-usually missing: `aria-expanded`, an accessible name that changes with the
-state, and the `aria-controls` you spread to name the panel. The morph animates
+usually missing: `aria-expanded`, a name that stays the same while that
+attribute carries the state, and the `aria-controls` you spread to name the panel. The morph animates
 `background-color` and `transform` only, and is dropped entirely under
 `prefers-reduced-motion: reduce` - the two states differ in shape, not just in
 position, so snapping between them stays legible.
@@ -21,7 +21,7 @@ position, so snapping between them stays legible.
 |---|---|---|---|
 | `open` | `bool` | unset | `true` draws the X, and either value emits `aria-expanded`, which makes the button a disclosure. Omit it for a burger that opens something that is not one |
 | `onclick` | `EventHandler<MouseEvent>` | | `Burger` never owns the open state |
-| `label` | `Callback<bool, String>` | theme | Replaces the theme's two labels, keyed by `open` |
+| `label` | `Callback<bool, String>` | localization | Replaces the localization's labels, called with the open state |
 | `size` | `ThemeAwareValue` | `md` | The glyph's width and height; the bars are a twelfth of it thick, and the button is one `spacing.xs` larger. Below 24px (`xs`, `sm`) it takes presses in an invisible 24x24 box, as every `ActionIcon` does |
 | `color` | `ThemeAwareValue` | `currentColor` | The bars. Unset they inherit |
 | `disabled` | `bool` | `false` | Passed through to the button |
@@ -74,20 +74,26 @@ Burger { onclick: move |_| modal.open() }
 **Spread `aria-controls` whenever `open` is set**, naming the element that
 opens, or `Burger` warns. Nothing sets it internally.
 
-**The accessible name is the localization's**, and it changes with `open`.
-Translate it once in the [localization](theming.md#localization)'s
-`BurgerLabels`, or per burger with `label`:
+**The accessible name is the localization's.** With `open` set it is
+`toggle` ("Toggle navigation") in both states, since `aria-expanded` already
+announces the state; unset, it is `open` ("Open navigation"). Translate it
+once in the [localization](theming.md#localization)'s `BurgerLabels`, or per
+burger with `label`:
 
 ```rust,ignore
 Localization {
-    burger: BurgerLabels { open: "Menü öffnen", close: "Menü schließen" },
+    burger: BurgerLabels {
+        open: "Menü öffnen",
+        close: "Menü schließen",
+        toggle: "Menü umschalten",
+    },
     ..Localization::ENGLISH
 }
 
 // Or, when the locale is only known at runtime:
 Burger {
     open: open(),
-    label: move |open| t(if open { "nav.close" } else { "nav.open" }),
+    label: move |_| t("nav.toggle"),
 }
 ```
 
@@ -114,5 +120,5 @@ every size, and a `line_size` override is one more thing to get wrong.
 
 An `ActionIcon` with an icon child is the right answer for any icon-only
 button. `Burger` is the one where the glyph has two states that morph, the name
-changes with the state, and `aria-expanded` has to follow - three things a
+stays put, and `aria-expanded` has to follow - three things a
 caller has to get right at once, bundled so they are right by default.

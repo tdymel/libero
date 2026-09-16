@@ -31,6 +31,8 @@ pub struct Localization {
     pub pagination: PaginationLabels,
     pub avatar: AvatarLabels,
     pub burger: BurgerLabels,
+    pub anchor: AnchorLabels,
+    pub pin_field: PinFieldLabels,
     pub color_scheme_button: ColorSchemeButtonLabels,
     pub spotlight: SpotlightLabels,
     pub carousel: CarouselLabels,
@@ -57,6 +59,8 @@ impl Localization {
         pagination: PaginationLabels::ENGLISH,
         avatar: AvatarLabels::ENGLISH,
         burger: BurgerLabels::ENGLISH,
+        anchor: AnchorLabels::ENGLISH,
+        pin_field: PinFieldLabels::ENGLISH,
         color_scheme_button: ColorSchemeButtonLabels::ENGLISH,
         spotlight: SpotlightLabels::ENGLISH,
         carousel: CarouselLabels::ENGLISH,
@@ -121,6 +125,7 @@ mod tests {
             english.carousel.status,
             english.lightbox.thumbnail,
             english.notifications.region,
+            english.pin_field.cell,
         ] {
             let filled = fill(template, holes);
             assert!(!filled.contains('{'), "{template} -> {filled}");

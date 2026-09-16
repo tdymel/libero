@@ -9,6 +9,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_localization,
+    localization::BurgerLabels,
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         BURGER_COLOR, BURGER_LINE_SIZE, BURGER_SIZE, BURGER_SIZES, BURGER_TRANSITION_DURATION,
@@ -97,6 +98,15 @@ fn is_orphan_disclosure(open: Option<bool>, attributes: &[Attribute]) -> bool {
             .any(|attribute| attribute.name == "aria-controls")
 }
 
+/// Static while `aria-expanded` carries the state, so it is not announced
+/// twice (APG disclosure). Unset `open` names the action instead.
+fn default_label(labels: &BurgerLabels, open: Option<bool>) -> &'static str {
+    match open {
+        Some(_) => labels.toggle,
+        None => labels.open,
+    }
+}
+
 /// Removes a spread text `aria-label` and returns it.
 fn take_spread_label(attributes: &mut Vec<Attribute>) -> Option<String> {
     let index = attributes.iter().position(|attribute| {
@@ -118,9 +128,9 @@ base_props! {
         /// `Option`, not a bare `EventHandler` - see `Button`.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
-        /// Replaces the localization's two labels,
+        /// Replaces the localization's labels,
         /// [`BurgerLabels`](crate::localization::BurgerLabels). Runs during
-        /// render. A spread `"aria-label"` wins over both.
+        /// render, with the open state. A spread `"aria-label"` wins over both.
         #[props(default)]
         label: Option<Callback<bool, String>>,
         /// The glyph's width and height. The button around it is one spacing
@@ -170,10 +180,7 @@ pub fn Burger(props: BurgerProps) -> Element {
     let aria_label = match (spread_label, props.label) {
         (Some(label), _) => label,
         (None, Some(label)) => label.call(open),
-        (None, None) => match open {
-            true => labels.close.to_string(),
-            false => labels.open.to_string(),
-        },
+        (None, None) => default_label(&labels, props.open).to_string(),
     };
 
     if is_orphan_disclosure(props.open, &attributes) {
@@ -226,7 +233,6 @@ pub fn Burger(props: BurgerProps) -> Element {
 mod tests {
     use super::*;
     use crate::css::Stylesheet;
-    use crate::localization::BurgerLabels;
 
     #[test]
     fn an_unsized_burger_grows_the_button_around_the_themed_glyph() {
@@ -318,5 +324,14 @@ mod tests {
     fn the_labels_are_a_locale_struct_of_their_own() {
         assert_eq!(BurgerLabels::ENGLISH.open, "Open navigation");
         assert_eq!(BurgerLabels::ENGLISH.close, "Close navigation");
+        assert_eq!(BurgerLabels::ENGLISH.toggle, "Toggle navigation");
+    }
+
+    #[test]
+    fn a_set_open_names_the_toggle_and_an_unset_one_the_action() {
+        let labels = BurgerLabels::ENGLISH;
+        assert_eq!(default_label(&labels, Some(true)), "Toggle navigation");
+        assert_eq!(default_label(&labels, Some(false)), "Toggle navigation");
+        assert_eq!(default_label(&labels, None), "Open navigation");
     }
 }

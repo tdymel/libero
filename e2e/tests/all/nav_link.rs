@@ -105,8 +105,8 @@ fn burger(expression: &str) -> String {
     format!("document.querySelector('#burger').{expression}")
 }
 
-/// Enter and Space toggle the disclosure; the name and `aria-expanded` follow,
-/// and focus stays on the burger.
+/// Enter and Space toggle the disclosure; `aria-expanded` follows under a
+/// static name (todo 578), and focus stays on the burger.
 #[test]
 fn the_burger_toggles_its_panel_from_the_keyboard() {
     block_on(async {
@@ -120,7 +120,7 @@ fn the_burger_toggles_its_panel_from_the_keyboard() {
         wait::for_js_true(
             page,
             &format!(
-                "{} === 'true' && {} === 'Close navigation' \
+                "{} === 'true' && {} === 'Toggle navigation' \
                  && !document.querySelector('#burger-panel').hidden \
                  && document.activeElement.id === 'burger'",
                 burger("getAttribute('aria-expanded')"),
@@ -135,8 +135,10 @@ fn the_burger_toggles_its_panel_from_the_keyboard() {
         wait::for_js_true(
             page,
             &format!(
-                "{} === 'false' && document.querySelector('#burger-panel').hidden",
+                "{} === 'false' && {} === 'Toggle navigation' \
+                 && document.querySelector('#burger-panel').hidden",
                 burger("getAttribute('aria-expanded')"),
+                burger("getAttribute('aria-label')"),
             ),
             "Space to close the panel",
         )
@@ -165,6 +167,38 @@ fn a_spread_aria_label_names_the_burger() {
         )
         .await
         .unwrap();
+
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 579: a `_blank` Anchor draws its icon beside the text and says so in
+/// its name.
+#[test]
+fn a_new_tab_anchor_shows_an_icon_and_says_so() {
+    block_on(async {
+        let fixture = Fixture::open("/nav-link/states", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        let tree = e2e::ax::snapshot(page, "#prose").await.unwrap();
+        assert!(
+            tree.contains("the external one (opens in a new tab)"),
+            "{tree}"
+        );
+        let drawn: bool = page
+            .evaluate(
+                "(() => { const svg = document.querySelector('#external svg').getBoundingClientRect(); \
+                 const link = document.querySelector('#external').getBoundingClientRect(); \
+                 return svg.width > 8 && svg.width < 16 && svg.right <= link.right + 1 \
+                     && svg.top >= link.top - 1 && svg.bottom <= link.bottom + 1; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(drawn, "the icon sits inside the link, at text size");
 
         fixture.close().await.unwrap();
     });

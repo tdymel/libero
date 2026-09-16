@@ -16,6 +16,7 @@ static GERMAN: Localization = Localization {
     burger: BurgerLabels {
         open: "Menü öffnen",
         close: "Menü schließen",
+        toggle: "Menü umschalten",
     },
     ..Localization::ENGLISH
 };
@@ -78,9 +79,13 @@ fn aria_expanded_appears_only_when_opened_is_some() {
 }
 
 /// The name is the localization's, not the caller's, so every burger in a
-/// project announces itself the same way - and a translation replaces two strings.
+/// project announces itself the same way. A set `open` keeps it static:
+/// `aria-expanded` carries the state (todo 578).
 #[test]
-fn the_accessible_name_comes_from_the_localization_and_follows_opened() {
+fn the_accessible_name_comes_from_the_localization_and_stays_static_when_opened_is_set() {
+    fn english_unset() -> Element {
+        rsx! { LiberoProvider { Burger {} } }
+    }
     fn english_closed() -> Element {
         rsx! { LiberoProvider { Burger { open: false, "aria-controls": "nav" } } }
     }
@@ -102,9 +107,10 @@ fn the_accessible_name_comes_from_the_localization_and_follows_opened() {
             .expect("an aria-label")
     };
 
-    assert_eq!(name(english_closed), "Open navigation");
-    assert_eq!(name(english_open), "Close navigation");
-    assert_eq!(name(german_open), "Menü schließen");
+    assert_eq!(name(english_unset), "Open navigation");
+    assert_eq!(name(english_closed), "Toggle navigation");
+    assert_eq!(name(english_open), "Toggle navigation");
+    assert_eq!(name(german_open), "Menü umschalten");
 }
 
 /// The escape hatch from `&'static str`: it runs during render, so it can read

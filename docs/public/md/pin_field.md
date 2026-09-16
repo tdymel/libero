@@ -106,7 +106,9 @@ one place a field should look like every other field.
 
 Each cell is a tab stop; the arrows move within the field, and Tab leaves it
 the way it leaves any group of inputs. Give it a `label`: it names the whole
-group, and the cells carry no names of their own.
+group. Each cell is named for its place, "Character 1 of 6", from the
+localization's `PinFieldLabels`, and every cell points `aria-describedby` at
+the helper and the error, so a focused cell hears them too.
 
 ## Props
 

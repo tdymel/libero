@@ -318,7 +318,8 @@ pub fn Chip(props: ChipProps) -> Element {
     };
     let trailing = rsx! {
         if let Some(trailing) = props.trailing {
-            span { class: trailing_class, "data-slot": "trailing", {trailing} }
+            // Not `trailing`: a field frame's own slot is, and a chip sits in one.
+            span { class: trailing_class, "data-slot": "chip-trailing", {trailing} }
         }
     };
     let content = rsx! {

@@ -209,19 +209,49 @@ impl AvatarLabels {
     };
 }
 
-/// The two words a burger announces itself with.
+/// The words a burger announces itself with.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BurgerLabels {
-    /// Names the button while the panel is closed.
+    /// Names the button while the panel is closed and `open` is unset.
     pub open: &'static str,
-    /// Names the button while the panel is open.
+    /// Names the button while the panel is open and `open` is unset.
     pub close: &'static str,
+    /// Names the button in both states once `open` is set: `aria-expanded`
+    /// carries the state.
+    pub toggle: &'static str,
 }
 
 impl BurgerLabels {
     pub const ENGLISH: Self = Self {
         open: "Open navigation",
         close: "Close navigation",
+        toggle: "Toggle navigation",
+    };
+}
+
+/// An `Anchor`'s cue for a link that opens a new tab.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AnchorLabels {
+    /// Read after the link text, hidden from sight: the icon shows it.
+    pub new_tab: &'static str,
+}
+
+impl AnchorLabels {
+    pub const ENGLISH: Self = Self {
+        new_tab: "(opens in a new tab)",
+    };
+}
+
+/// A `PinField`'s cells.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PinFieldLabels {
+    /// Names a cell: `{n}` is its one-based position, `{m}` the count.
+    pub cell: &'static str,
+}
+
+impl PinFieldLabels {
+    pub const ENGLISH: Self = Self {
+        cell: "Character {n} of {m}",
     };
 }
 

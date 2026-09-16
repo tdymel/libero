@@ -177,5 +177,9 @@ fn trailing_follows_the_label_and_stays_out_of_a_checkbox_label() {
     let filter_x = html.find("filter-x").unwrap();
     assert!(html[..label_end].contains(">filter<"), "{html}");
     assert!(filter_x > label_end, "the x landed in the label: {html}");
-    assert_eq!(html.matches(r#"data-slot="trailing""#).count(), 2, "{html}");
+    assert_eq!(
+        html.matches(r#"data-slot="chip-trailing""#).count(),
+        2,
+        "{html}"
+    );
 }

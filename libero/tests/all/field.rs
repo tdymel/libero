@@ -1149,6 +1149,35 @@ fn a_pin_field_is_one_group_of_cells_that_share_the_frame() {
     assert_eq!(body.matches(r#"type="tel""#).count(), 6);
 }
 
+/// Todos 507 and 591: each cell names its place, and the helper reaches the
+/// focused cell as well as the group.
+#[test]
+fn every_pin_cell_is_named_and_described() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                PinField { label: "Code", length: 4usize, helper: "Sent by SMS" }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    for n in 1..=4 {
+        assert!(
+            body.contains(&format!(r#"aria-label="Character {n} of 4""#)),
+            "{body}"
+        );
+    }
+    let describedby = attributes_of(&body, "input")["aria-describedby"].clone();
+    assert!(!describedby.is_empty(), "{body}");
+    assert_eq!(
+        body.matches(&format!(r#"aria-describedby="{describedby}""#))
+            .count(),
+        5,
+        "the group and four cells: {body}"
+    );
+}
+
 #[derive(Clone, PartialEq, Options)]
 enum Fruit {
     #[option(label = "Sweet apple")]

@@ -81,8 +81,10 @@ fn Demo() -> Element {
 ## Accessibility
 
 The link text is the accessible name - keep it descriptive rather than "here".
-A `target: "_blank"` link opens a new context, which is worth saying in the
-label or a `Tooltip` for anyone who cannot see it happen.
+A `target: "_blank"` link draws a small external icon after the text and reads
+a hidden "(opens in a new tab)" from the localization's `AnchorLabels`, so the
+new context is announced as well as shown. `new_tab_hint: false` drops both,
+for a link whose text already says it.
 
 ## Props
 
@@ -90,7 +92,8 @@ label or a `Tooltip` for anyone who cannot see it happen.
 |---|---|---|---|
 | `size` | `Size` | `md` | Text size. |
 | `to` | `NavigationTarget` | required | A path/URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `"_blank"`, an internal target gets SPA navigation; otherwise a plain `href`. A `javascript:` URL runs script on click and warns in a debug build, so check the scheme of any URL that comes from user data. |
-| `target` | `String` | - | The anchor's `target` attribute. |
+| `target` | `String` | - | The anchor's `target` attribute. `"_blank"` adds a small external icon and a hidden "(opens in a new tab)" from the localization. |
+| `new_tab_hint` | `bool` | `true` | `false` drops the icon and the hidden text a `"_blank"` target adds. |
 | `underline` | `AnchorUnderline` | `hover` | When the underline draws: `always`, `hover`, or `never`. |
 | `children` | `Element` | required | The link's content. |
 

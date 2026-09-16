@@ -283,7 +283,8 @@ rsx! {
 ```
 
 The groups live in `libero::localization`: `CommonLabels`, `DateLocale`,
-`PaginationLabels`, `AvatarLabels`, `BurgerLabels`, `ColorSchemeButtonLabels`,
+`PaginationLabels`, `AvatarLabels`, `BurgerLabels`, `AnchorLabels`,
+`PinFieldLabels`, `ColorSchemeButtonLabels`,
 `SpotlightLabels`, `CarouselLabels`, `LightboxLabels`, `FloatingWindowLabels`,
 `NotificationsLabels`, `ScrollerLabels`, `StepperLabels`, `MarqueeLabels`, `ChipsLabels`,
 `ImageLabels`, `CodeBlockLabels`, `ColorLabels`, `PhoneFieldLabels`,

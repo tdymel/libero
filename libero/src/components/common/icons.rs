@@ -424,6 +424,25 @@ pub(crate) fn CopyFailedIcon() -> Element {
     }
 }
 
+/// An `Anchor` that opens a new tab: a box with an arrow leaving it.
+#[component]
+pub(crate) fn ExternalLinkIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M15 3h6v6" }
+            path { d: "M10 14L21 3" }
+            path { d: "M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" }
+        }
+    }
+}
+
 /// The last link in `Avatar`'s fallback chain: a head and shoulders.
 #[component]
 pub(crate) fn PersonIcon() -> Element {

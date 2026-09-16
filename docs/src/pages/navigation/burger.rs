@@ -81,7 +81,7 @@ pub fn BurgerPage() -> Element {
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("`Burger` never owns the open state; the panel does, and the caller already holds that signal to drive the panel itself."),
                 prop("label", "Callback<bool, String>")
-                    .doc("Replaces the localization's two labels, keyed by `open`. It runs during render, so it can read a live locale."),
+                    .doc("Replaces the localization's labels, called with the open state. It runs during render, so it can read a live locale."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
                     .doc("The glyph's width and height. The bars are a twelfth of it thick, and the button around it is one `spacing.xs` larger. Below 24px it still takes presses in an invisible 24x24 box."),
@@ -101,7 +101,7 @@ pub fn BurgerPage() -> Element {
                     " with the ripple and the disabled handling already right - and adds the "
                     "glyph plus the three ARIA facts a burger is usually missing: "
                     Code { source: "aria-expanded" }
-                    ", an accessible name that changes with the state, and the "
+                    ", a name that stays the same while that attribute carries the state, and the "
                     Code { source: "aria-controls" }
                     " you spread to name the panel. The morph animates "
                     Code { source: "background-color" }

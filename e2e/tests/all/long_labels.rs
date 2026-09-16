@@ -46,7 +46,7 @@ const SINGLE_LINE: &str = "(() => {
         const root = document.getElementById(id);
         const text = root.querySelector('[data-slot=text]');
         const icon = root.querySelector('svg');
-        const x = root.querySelector('[data-slot=trailing]');
+        const x = root.querySelector('[data-slot=chip-trailing]');
         const r = e => e.getBoundingClientRect();
         const whole = (!icon || (r(icon).width > 0 && r(text).left - r(icon).right >= 2))
             && (!x || (r(x).left - r(text).right >= 2 && r(x).right <= r(root).right));

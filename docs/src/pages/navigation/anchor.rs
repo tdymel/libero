@@ -25,7 +25,10 @@ pub fn AnchorPage() -> Element {
                 prop("size", "Size").default("md").doc("Text size."),
                 prop("to", "NavigationTarget")
                     .doc("A path/URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `\"_blank\"`, an internal target gets SPA navigation; otherwise a plain `href`. A `javascript:` URL runs script on click and warns in a debug build, so check the scheme of any URL that comes from user data."),
-                prop("target", "String").doc("The anchor's `target` attribute."),
+                prop("target", "String").doc("The anchor's `target` attribute. `\"_blank\"` adds a small external icon and a hidden \"(opens in a new tab)\" from the localization."),
+                prop("new_tab_hint", "bool")
+                    .default("true")
+                    .doc("`false` drops the icon and the hidden text a `\"_blank\"` target adds."),
                 prop("underline", "AnchorUnderline")
                     .default("hover")
                     .doc("When the underline draws: always, hover, or never."),
@@ -56,6 +59,12 @@ pub fn AnchorPage() -> Element {
                             ],
                         }
                     }),
+                    Control::switch("new_tab_hint").default("true").code(|_, values| {
+                        match (values.str("internal_route").as_str(), values.str("new_tab_hint").as_str()) {
+                            ("true", _) | (_, "true") => vec![],
+                            _ => vec!["new_tab_hint: false".to_string()],
+                        }
+                    }),
                     Control::toggle("underline", ["hover", "always", "never"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
@@ -63,6 +72,7 @@ pub fn AnchorPage() -> Element {
                 render: move |values: DemoValues| {
                     let underline = values.str("underline");
                     let size = values.str("size");
+                    let new_tab_hint = values.str("new_tab_hint") == "true";
                     match values.str("internal_route").as_str() {
                         "true" => rsx! {
                             Anchor {
@@ -76,6 +86,7 @@ pub fn AnchorPage() -> Element {
                             Anchor {
                                 to: HREF,
                                 target: "_blank",
+                                new_tab_hint,
                                 underline,
                                 size,
                                 {EXTERNAL_LABEL}

@@ -9,7 +9,8 @@ use crate::{
         form::{FIELD_CONTROL_SX, PreparedFrame, use_bound, use_field, use_field_frame},
         layout::{BoxStyle, use_box},
     },
-    hooks::{ElementHandle, use_element, use_theme},
+    hooks::{ElementHandle, use_element, use_localization, use_theme},
+    localization::fill,
     platform::ElementApi,
     sx::{StaticSx, sx},
     theme::{FIELD_HEIGHT, PinFieldDefaults},
@@ -103,6 +104,7 @@ field_props! {
 #[component]
 pub fn PinField(props: PinFieldProps) -> Element {
     let theme = use_theme();
+    let cell_label = use_localization().pin_field.cell;
     let root = use_element();
     let buffer = use_signal(String::new);
 
@@ -225,6 +227,8 @@ pub fn PinField(props: PinFieldProps) -> Element {
             control,
             frame: CellFrame { frame, states },
             id: field.id().to_string(),
+            cell_label,
+            describedby: field.describedby(),
             length,
             kind,
             input_type,
@@ -505,6 +509,8 @@ struct Cells {
     control: BoxStyle,
     frame: CellFrame,
     id: String,
+    cell_label: &'static str,
+    describedby: Option<String>,
     length: usize,
     kind: PinKind,
     input_type: &'static str,
@@ -524,6 +530,8 @@ fn pin_cells(parts: Cells, separator: Option<&Element>) -> Vec<Element> {
         control,
         frame,
         id,
+        cell_label,
+        describedby,
         length,
         kind,
         input_type,
@@ -551,6 +559,8 @@ fn pin_cells(parts: Cells, separator: Option<&Element>) -> Vec<Element> {
                 control: control.clone(),
                 frame: frame.clone(),
                 id: id.clone(),
+                label: fill(cell_label, &[("n", &(index + 1)), ("m", &length)]),
+                describedby: describedby.clone(),
                 kind,
                 input_type,
                 disabled,
@@ -578,6 +588,8 @@ fn PinCell(
     control: BoxStyle,
     frame: CellFrame,
     id: String,
+    label: String,
+    describedby: Option<String>,
     kind: PinKind,
     input_type: &'static str,
     disabled: bool,
@@ -597,6 +609,10 @@ fn PinCell(
         .attr("value", cell.map(String::from).unwrap_or_default())
         .attr("data-controlled", true)
         .attr("data-pin-index", index.to_string())
+        // The group names the pin; each cell names its place in it, and the
+        // error or helper reaches the focused cell too (todos 507, 591).
+        .attr("aria-label", label)
+        .attr("aria-describedby", describedby)
         .attr("disabled", disabled)
         .attr("readonly", readonly)
         // `aria-required` is not allowed on the group, so each cell says it.

@@ -28,8 +28,8 @@ pub(crate) use field_props::field_props;
 pub(crate) use icons::{
     ArrowDownIcon, CheckIcon, CheckboxMarkIcon, ChevronDownIcon, ChevronFirstIcon, ChevronLastIcon,
     ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CloseIcon, CopiedIcon, CopyFailedIcon,
-    CopyIcon, EyeDropperIcon, EyeIcon, EyeOffIcon, MinusIcon, MoonIcon, PauseIcon, PersonIcon,
-    PlayIcon, PlusIcon, SunIcon, SystemSchemeIcon, UploadIcon,
+    CopyIcon, ExternalLinkIcon, EyeDropperIcon, EyeIcon, EyeOffIcon, MinusIcon, MoonIcon,
+    PauseIcon, PersonIcon, PlayIcon, PlusIcon, SunIcon, SystemSchemeIcon, UploadIcon,
 };
 pub(crate) use neighbour::neighbour;
 pub use number_value::NumberValue;
