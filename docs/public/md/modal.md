@@ -69,19 +69,23 @@ fn use_save_prompt(discard_label: &'static str) -> ModalHandle<String, SaveChoic
 #[component]
 fn Demo() -> Element {
     let prompt = use_save_prompt("Discard");
+    let mut answer = use_signal(|| "none yet");
 
     rsx! {
         Button {
             variant: "outlined",
             onclick: move |_| {
-                prompt.open_with("notes.md").onresult(move |answer| match answer {
-                    Some(SaveChoice::Save) => { /* save it */ }
-                    Some(SaveChoice::Discard) => { /* throw it away */ }
-                    None => {}   // dismissed - keep editing
+                prompt.open_with("notes.md").onresult(move |result| {
+                    answer.set(match result {
+                        Some(SaveChoice::Save) => "saved",
+                        Some(SaveChoice::Discard) => "discarded",
+                        None => "dismissed",
+                    });
                 });
             },
             "Close editor"
         }
+        Text { "Last answer: {answer}" }
     }
 }
 ```

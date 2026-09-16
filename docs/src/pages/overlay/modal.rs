@@ -1,94 +1,122 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, CodeBlock, Dialog, Flex, Text},
-    hooks::{ModalScope, Opening, use_modal},
+    components::{Button, Code, Dialog, Flex, Text},
+    hooks::{ModalScope, use_modal},
 };
 
-const DIALOG_EXAMPLE: &str = r#"/// What the dialog can answer. A dismissal answers nothing, so the caller
-/// matches on `Option<SaveChoice>` and "went back" is a case like any other.
+const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
+
+const CHOICE: &str = "#[derive(Clone, Copy, PartialEq)]
+enum SaveChoice {
+    Save,
+    Discard,
+}";
+
+const ANSWER: &str = "answer.set(match result {
+    Some(SaveChoice::Save) => \"saved\",
+    Some(SaveChoice::Discard) => \"discarded\",
+    None => \"dismissed\",
+});";
+
+/// `generate_code` prints one component's props, and what this page has to
+/// show is a hook call and its trigger - so the snippet is built by hand, and
+/// preview-equals-code is kept here rather than by the generator.
+fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
+    let onclick = if values.str("await") == "true" {
+        format!(
+            "onclick: move |_| async move {{\n    \
+                 let result = prompt.open_with(\"notes.md\").await;\n{}}},",
+            indent(ANSWER)
+        )
+    } else {
+        format!(
+            "onclick: move |_| {{\n    \
+                 prompt.open_with(\"notes.md\").onresult(move |result| {{\n{}    }});\n\
+             }},",
+            indent(&indent(ANSWER))
+        )
+    };
+    let button = format!(
+        "Button {{\n    variant: \"outlined\",\n{}    \"Close editor\"\n}}",
+        indent(&onclick)
+    );
+    format!(
+        "{CHOICE}\n\n\
+         let prompt = use_modal(move |s: ModalScope<String, SaveChoice>| {{\n    \
+             let document = s.args();\n\n    \
+             rsx! {{\n        \
+                 Dialog {{\n            \
+                     title: \"Unsaved changes\",\n            \
+                     size: \"{}\",\n            \
+                     Flex {{\n                \
+                         direction: \"column\",\n                \
+                         gap: \"md\",\n                \
+                         Text {{ \"{{document}} has changes you have not saved.\" }}\n                \
+                         Flex {{\n                    \
+                             direction: \"row\",\n                    \
+                             gap: \"sm\",\n                    \
+                             wrap: \"wrap\",\n                    \
+                             Button {{ variant: \"text\", onclick: move |_| s.close(), \"Keep editing\" }}\n                    \
+                             Button {{\n                        \
+                                 variant: \"filled\",\n                        \
+                                 color: \"error\",\n                        \
+                                 onclick: move |_| s.resolve(SaveChoice::Discard),\n                        \
+                                 \"Discard\"\n                    \
+                             }}\n                    \
+                             Button {{\n                        \
+                                 variant: \"filled\",\n                        \
+                                 color: \"primary\",\n                        \
+                                 onclick: move |_| s.resolve(SaveChoice::Save),\n                        \
+                                 \"Save\"\n                    \
+                             }}\n                \
+                         }}\n            \
+                     }}\n        \
+                 }}\n    \
+             }}\n\
+         }});\n\
+         let mut answer = use_signal(|| \"none yet\");\n\n\
+         rsx! {{\n    \
+             Flex {{\n        \
+                 direction: \"row\",\n        \
+                 align: \"center\",\n        \
+                 gap: \"md\",\n\
+         {}        \
+                 Text {{ \"Last answer: {{answer}}\" }}\n    \
+             }}\n\
+         }}",
+        values.str("size"),
+        indent(&indent(&button)),
+    )
+}
+
 #[derive(Clone, Copy, PartialEq)]
 enum SaveChoice {
     Save,
     Discard,
 }
 
-/// `discard_label` is shared by every opening - the closure just captures it.
-fn use_save_prompt(discard_label: &'static str) -> ModalHandle<String, SaveChoice> {
-    use_modal(move |s: ModalScope<String, SaveChoice>| {
-        let document = s.args();
-
-        rsx! {
-            Dialog {
-                title: "Unsaved changes",
-                size: "sm",
-                Text { "{document} has changes you have not saved." }
-                Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
-                Button {
-                    variant: "filled",
-                    color: "error",
-                    onclick: move |_| s.resolve(SaveChoice::Discard),
-                    "{discard_label}"
-                }
-                Button {
-                    variant: "filled",
-                    color: "primary",
-                    onclick: move |_| s.resolve(SaveChoice::Save),
-                    "Save"
-                }
-            }
-        }
-    })
-}"#;
-
-// snippet: after DIALOG_EXAMPLE
-// snippet: item fn save() {}
-// snippet: item fn discard() {}
-const OPEN_EXAMPLE: &str = r#"let prompt = use_save_prompt("Discard");
-
-Button {
-    onclick: move |_| {
-        prompt.open_with("notes.md").onresult(move |answer| match answer {
-            Some(SaveChoice::Save) => save(),
-            Some(SaveChoice::Discard) => discard(),
-            None => {}   // dismissed - keep editing
-        });
-    },
-    "Close editor"
-}"#;
-
-// snippet: after DIALOG_EXAMPLE
-// snippet: item async fn save() {}
-// snippet: item async fn discard() {}
-// snippet: item async fn close_editor() {}
-// snippet: let prompt = use_save_prompt("Discard");
-// snippet: in Button { .., "Close editor" }
-const AWAIT_EXAMPLE: &str = r#"onclick: move |_| async move {
-    match prompt.open_with("notes.md").await {
-        Some(SaveChoice::Save) => save().await,
-        Some(SaveChoice::Discard) => discard().await,
-        None => return,
+fn describe(result: Option<SaveChoice>) -> &'static str {
+    match result {
+        Some(SaveChoice::Save) => "saved",
+        Some(SaveChoice::Discard) => "discarded",
+        None => "dismissed",
     }
-    close_editor().await;
-}"#;
-
-/// What the page's own dialog answers.
-#[derive(Clone, Copy, PartialEq)]
-enum SaveChoice {
-    Save,
-    Discard,
 }
 
-/// The page's own working dialog - the code beside it is what built this, so
-/// the demo cannot drift from the example.
-fn use_save_prompt(discard_label: &'static str) -> impl Fn(&str) -> Opening<SaveChoice> + Copy {
-    let modal = use_modal(move |s: ModalScope<String, SaveChoice>| {
+/// The hook call lives here rather than in `Demo`'s render closure: a hook
+/// there would land in `Demo`'s own hook slots.
+#[component]
+fn ModalDemo(size: String, awaited: bool) -> Element {
+    let prompt = use_modal(move |s: ModalScope<String, SaveChoice>| {
         let document = s.args();
 
         rsx! {
             Dialog {
                 title: "Unsaved changes",
-                size: "sm",
+                size: size.clone(),
                 Flex {
                     direction: "column",
                     gap: "md",
@@ -96,12 +124,14 @@ fn use_save_prompt(discard_label: &'static str) -> impl Fn(&str) -> Opening<Save
                     Flex {
                         direction: "row",
                         gap: "sm",
+                        // Wraps rather than truncating the labels on an xs/sm dialog.
+                        wrap: "wrap",
                         Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
                         Button {
                             variant: "filled",
                             color: "error",
                             onclick: move |_| s.resolve(SaveChoice::Discard),
-                            "{discard_label}"
+                            "Discard"
                         }
                         Button {
                             variant: "filled",
@@ -114,128 +144,123 @@ fn use_save_prompt(discard_label: &'static str) -> impl Fn(&str) -> Opening<Save
             }
         }
     });
+    let mut answer = use_signal(|| "none yet");
 
-    move |document: &str| modal.open_with(document.to_string())
+    rsx! {
+        Flex {
+            direction: "row",
+            align: "center",
+            gap: "md",
+            if awaited {
+                Button {
+                    variant: "outlined",
+                    onclick: move |_| async move {
+                        let result = prompt.open_with("notes.md").await;
+                        answer.set(describe(result));
+                    },
+                    "Close editor"
+                }
+            } else {
+                Button {
+                    variant: "outlined",
+                    onclick: move |_| {
+                        prompt
+                            .open_with("notes.md")
+                            .onresult(move |result| answer.set(describe(result)));
+                    },
+                    "Close editor"
+                }
+            }
+            Text { "Last answer: {answer}" }
+        }
+    }
 }
 
 #[component]
 pub fn ModalPage() -> Element {
-    let prompt = use_save_prompt("Discard");
-    let mut answer = use_signal(|| "-".to_string());
-
     rsx! {
         DocPage {
             title: "Modal",
             source: "libero/src/components/overlay/use_modal.rs",
             markdown: "/md/modal.md",
+            properties: vec![
+                props("use_modal", vec![
+                    prop("render", "impl FnMut(ModalScope<S, R>) -> Element")
+                        .doc("Builds the content, usually a Dialog, only while it is open; a Dialog in it closes the modal from its own header button. Returns a ModalHandle<S, R>; R defaults to (), for a modal that answers nothing. Call it under LiberoProvider, in a component that outlives every trigger."),
+                ]).without_base_props(),
+                props("ModalHandle<S, R>", vec![
+                    prop("open_with", "fn(impl Into<S>) -> Opening<R>")
+                        .doc("Opens with these arguments, superseding whatever was showing."),
+                    prop("open", "fn() -> Opening<R>")
+                        .doc("Opens with S::default(); needs S: Default."),
+                    prop("close", "fn()").doc("Dismisses whatever this modal is showing."),
+                    prop("is_open", "fn() -> bool").doc("Whether this modal is showing."),
+                ]).without_base_props(),
+                props("ModalScope<S, R>", vec![
+                    prop("args", "fn() -> S").doc("The arguments this opening was given."),
+                    prop("close", "fn()").doc("Ends it as a dismissal - the same outcome as Escape."),
+                    prop("resolve", "fn(R)").doc("Ends it with an answer for the caller."),
+                ]).without_base_props(),
+                props("Opening<R>", vec![
+                    prop("onresult", "fn(impl FnMut(Option<R>)) -> Self")
+                        .doc("Runs when this opening settles; None if it was dismissed. A superseded opening never runs it."),
+                    prop("close", "fn()").doc("Closes this opening, if it is still the one showing."),
+                    prop(".await", "Option<R>").doc("The same outcome, as a future: for an answer that gates work which is already async, or dialogs in sequence."),
+                ]).without_base_props(),
+                props("ModalContext", vec![
+                    prop("is_modal", "fn() -> bool")
+                        .doc("Whether the content is in a modal. Every modal provides the context to what it renders."),
+                    prop("close", "fn()")
+                        .doc("Dismisses the modal around the content. use_modal_close() is its shorthand, for a component factored out of the render closure."),
+                ]).without_base_props(),
+            ],
             lead: rsx! {
                 Text {
                     "A modal is a hook, not a component. "
                     Code { source: "use_modal" }
                     " registers a render closure and returns a handle that opens it "
                     "wherever you need one - no open flag to thread, and the content is built "
-                    "only while it is showing."
+                    "only while it is showing. Wrap it in a hook of your own, whose parameters "
+                    "every opening shares. Each opening passes its arguments to the closure's "
+                    Code { source: "ModalScope" }
+                    ", and settles with what "
+                    Code { source: "resolve" }
+                    " answered, or "
+                    Code { source: "None" }
+                    " when dismissed. Make the answer the dialog's own enum, not a "
+                    Code { source: "bool" }
+                    ". The handle is "
+                    Code { source: "Copy" }
+                    ", so a trigger elsewhere in the tree takes it as a prop or as context."
                 }
             },
-            DocSection {
-                title: "Try it",
-                Flex {
-                    direction: "row",
-                    align: "center",
-                    gap: "md",
-                    wrap: "wrap",
-                    Button {
-                        variant: "outlined",
-                        onclick: move |_| {
-                            prompt("notes.md").onresult(move |result| {
-                                answer.set(
-                                    match result {
-                                        Some(SaveChoice::Save) => "saved",
-                                        Some(SaveChoice::Discard) => "discarded",
-                                        None => "dismissed - kept editing",
-                                    }
-                                    .to_string(),
-                                );
-                            });
-                        },
-                        "Close editor"
+            Demo {
+                component: "ModalDemo",
+                children_text: "",
+                controls: vec![
+                    Control::slider("size", SIZES).default("md"),
+                    // An `Opening` is also a future, for an answer that gates
+                    // work which is already async.
+                    Control::switch("await"),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    ModalDemo {
+                        size: values.str("size"),
+                        awaited: values.str("await") == "true",
                     }
-                    Text { "Last answer: " Code { source: answer() } }
-                }
+                },
+                wrap: Wrap(wrap_hook_call),
             }
 
             DocSection {
-                title: "Building a dialog",
+                title: "Accessibility",
                 Text {
-                    "Wrap "
-                    Code { source: "use_modal" }
-                    " in a hook of your own: its parameters are shared by every opening, the "
-                    Code { source: "ModalScope" }
-                    " carries the arguments of the one being shown, and "
-                    Code { source: "close()" }
-                    " / "
-                    Code { source: "resolve(value)" }
-                    " end it. Make the result the dialog's own enum, not a "
-                    Code { source: "bool" }
-                    " - the caller then matches over what it can say, with a dismissal as "
-                    Code { source: "None" }
-                    " beside it."
-                }
-                CodeBlock { source: DIALOG_EXAMPLE, language: "rust" }
-            }
-
-            DocSection {
-                title: "Opening it",
-                Text {
-                    Code { source: "open_with" }
-                    " takes anything that converts into the argument type and returns an "
-                    Code { source: "Opening" }
-                    " - that one showing. Attach the consequence to it and a later opening "
-                    "cannot fire it."
-                }
-                CodeBlock { source: OPEN_EXAMPLE, language: "rust" }
-                Text {
-                    "It is also a future. Await it when the answer gates work that is already "
-                    "async, or when several dialogs have to run in sequence."
-                }
-                CodeBlock { source: AWAIT_EXAMPLE, language: "rust" }
-                Text {
-                    Code { source: "open()" }
-                    " skips the arguments when they are "
-                    Code { source: "Default" }
-                    ", and "
-                    Code { source: "handle.close()" }
-                    " closes whatever is showing. The handle is "
-                    Code { source: "Copy" }
-                    ", so a trigger elsewhere in the tree takes it as a prop - or as context, "
-                    "if your hook provides it."
-                }
-            }
-
-            DocSection {
-                title: "Closing and accessibility",
-                Text {
-                    "Content in the render closure captures the "
-                    Code { source: "ModalScope" }
-                    "; a "
-                    Code { source: "Dialog" }
-                    " also closes itself from its own header button. Only a component factored "
-                    "out of the closure needs "
-                    Code { source: "use_modal_close()" }
-                    ". It is a shorthand for the context every modal provides to its content, "
-                    Code { source: "ModalContext" }
-                    ", whose "
-                    Code { source: "close()" }
-                    " does the same; reach for the context when a component has to ask "
-                    Code { source: "is_modal()" }
-                    " whether it is inside a modal at all."
-                }
-                Text {
-                    "Escape and a backdrop click dismiss it, settling the "
+                    "Escape and a backdrop click dismiss the modal, settling the "
                     Code { source: "Opening" }
                     " with "
                     Code { source: "None" }
-                    ", so a handler written for an answer never runs on a dismissal. Name the "
+                    ", so a handler written for an answer never runs on a dismissal. Focus "
+                    "moves into the modal and back to the trigger once it closes. Name the "
                     Code { source: "Dialog" }
                     " with its "
                     Code { source: "title" }
