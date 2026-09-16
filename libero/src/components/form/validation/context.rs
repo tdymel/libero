@@ -25,6 +25,8 @@ pub(crate) struct FormScope {
     generation: Signal<u32>,
     /// Bumped by every submit and every reset, not only the first submit.
     settled: Signal<u32>,
+    /// Bumped by every reset, native reset button included.
+    resets: Signal<u32>,
     next_key: Signal<usize>,
     /// The scope that created the signals above. Cleanup runs inside it: a
     /// field or fieldset drops while dioxus diffs whatever unmounts the page,
@@ -71,6 +73,7 @@ impl FormScope {
             submitted: Signal::new(false),
             generation: Signal::new(0),
             settled: Signal::new(0),
+            resets: Signal::new(0),
             next_key: Signal::new(0),
             owner: current_scope_id(),
         }
@@ -114,10 +117,22 @@ impl FormScope {
         self.settled += 1;
     }
 
+    /// How many resets the form has seen, native ones included. Reactive, so
+    /// what a field tracks from input events alone - a count - can start over.
+    pub fn resets(&self) -> u32 {
+        (self.resets)()
+    }
+
+    /// Counts a reset of the form's controls, and settles.
+    pub fn count_reset(&mut self) {
+        self.settle();
+        self.resets += 1;
+    }
+
     /// Back to pristine: nothing touched, not submitted, and every registered
     /// field re-rendered so it drops its own touched flag.
     pub fn reset(&mut self) {
-        self.settle();
+        self.count_reset();
         if !self.touched.peek().is_empty() {
             self.touched.write().clear();
         }

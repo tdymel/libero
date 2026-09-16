@@ -6,7 +6,7 @@ use crate::{
     components::{
         HtmlTag, Input, VisuallyHidden,
         common::field_props,
-        form::{field_control_sx, use_bound, use_field, use_field_frame},
+        form::{FormScope, field_control_sx, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::{use_css, use_localization, use_theme},
@@ -73,6 +73,18 @@ fn max_length(attributes: &[Attribute]) -> Option<usize> {
     }
 }
 
+/// The length of the text an uncontrolled textarea starts with, and a reset
+/// brings back.
+fn initial_length(attributes: &[Attribute]) -> usize {
+    attributes
+        .iter()
+        .find(|attribute| attribute.name == "initial_value")
+        .map_or(0, |attribute| match &attribute.value {
+            AttributeValue::Text(text) => length(text),
+            _ => 0,
+        })
+}
+
 /// Length as `maxlength` counts it: UTF-16 code units.
 fn length(text: &str) -> usize {
     text.encode_utf16().count()
@@ -129,13 +141,20 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .prepare();
 
     // Only a caller's text is known without the input events: an
-    // uncontrolled textarea's length is tracked from them.
+    // uncontrolled textarea's length is tracked from them, stamped with the
+    // form's reset count: a reset brings back the initial text, no input event.
     let limit = max_length(&props.attributes).filter(|_| props.counter);
-    let mut typed = use_signal(|| 0);
+    let resets = try_use_context::<FormScope>().map_or(0, |form| form.resets());
+    let mut typed = use_signal(|| (0u32, None::<usize>));
     let counter_class = use_css(Some(&COUNTER_SX), CssLayer::Framework);
     let words = use_localization().textarea;
     let counter = limit.map(|max| {
-        let used = value.as_deref().map_or(typed(), length);
+        let (at, count) = typed();
+        let typed_now = match (at == resets, count) {
+            (true, Some(count)) => count,
+            _ => initial_length(&props.attributes),
+        };
+        let used = value.as_deref().map_or(typed_now, length);
         let left = max.saturating_sub(used);
         let spoken = near_limit(left, max).then(|| (words.characters_left)(left));
         rsx! {
@@ -154,7 +173,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
     let track = emit.is_some() || limit.is_some();
     let oninput = track.then_some(move |event: FormEvent| {
         let text = event.value();
-        typed.set(length(&text));
+        typed.set((resets, Some(length(&text))));
         if let Some(emit) = &emit {
             emit(text);
         }
@@ -198,6 +217,16 @@ mod tests {
         // One UTF-16 unit for an accent, two for an emoji.
         assert_eq!(length("é"), 1);
         assert_eq!(length("🙂"), 2);
+    }
+
+    #[test]
+    fn an_uncontrolled_count_starts_at_the_initial_text() {
+        let html = dioxus_ssr::render_element(rsx! {
+            LiberoProvider {
+                Textarea { counter: true, maxlength: 20, initial_value: "hi" }
+            }
+        });
+        assert!(html.contains(">2/20<"), "{html}");
     }
 
     #[test]
