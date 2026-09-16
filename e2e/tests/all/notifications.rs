@@ -683,3 +683,69 @@ fn clearing_with_focus_inside_hands_focus_back_out() {
         }
     });
 }
+
+const F8: keyboard::Key = keyboard::Key {
+    key: "F8",
+    code: "F8",
+    vk: 119,
+    text: None,
+};
+
+/// Todo 575: F8 focuses the newest notification's first focusable from the
+/// page, and closing it hands focus back to where F8 was pressed. The region
+/// names the key.
+#[test]
+fn f8_focuses_the_newest_notification() {
+    const CLEAR: &str = ".clear-all";
+
+    block_on(async {
+        let fixture = Fixture::open("/notifications-clear", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        let region: String = page
+            .evaluate("document.querySelector('[role=region]')?.getAttribute('aria-label') ?? ''")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(region, "Notifications (F8)");
+
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelectorAll({CLEAR:?}).length === 2"),
+            "two notifications",
+        )
+        .await
+        .unwrap();
+
+        keyboard::press(page, F8).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.activeElement?.matches('li .clear-all') && \
+             document.activeElement.closest('li').textContent.includes('Second') && \
+             document.activeElement.matches(':focus-visible')",
+            "F8 to focus the newest notification's button, visibly",
+        )
+        .await
+        .unwrap();
+
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelectorAll({CLEAR:?}).length === 0 && \
+                 document.activeElement === document.querySelector({TRIGGER:?})"
+            ),
+            "closing to hand focus back where F8 was pressed",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("F8").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

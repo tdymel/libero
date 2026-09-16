@@ -336,6 +336,8 @@ impl LightboxLabels {
 pub struct FloatingWindowLabels {
     /// Names the title bar, which is the keyboard move handle.
     pub move_handle: &'static str,
+    /// The move handle's description: how to move it.
+    pub move_hint: &'static str,
     /// Names the corner resize handle.
     pub resize_handle: &'static str,
 }
@@ -343,7 +345,22 @@ pub struct FloatingWindowLabels {
 impl FloatingWindowLabels {
     pub const ENGLISH: Self = Self {
         move_handle: "Move window",
+        move_hint: "Use arrow keys to move the window",
         resize_handle: "Resize window",
+    };
+}
+
+/// The `Notifications` host's words.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NotificationsLabels {
+    /// Names the region around the stacks: `{key}` is the key that focuses
+    /// the newest notification.
+    pub region: &'static str,
+}
+
+impl NotificationsLabels {
+    pub const ENGLISH: Self = Self {
+        region: "Notifications ({key})",
     };
 }
 

@@ -16,11 +16,16 @@ use dioxus::{
 use crate::{
     components::{
         FOCUSABLE_SELECTOR, HtmlTag, Input, States, Variant,
+        common::focus_ring_sx,
         feedback::Alert,
         layout::{Box, Float, use_box},
     },
-    hooks::{use_portal_slot, use_silent_focus, use_theme},
-    platform::{ElementApi, TimerSubscription, backend, focus_entered_from, timer},
+    hooks::{use_localization, use_portal_slot, use_silent_focus, use_theme},
+    localization::fill,
+    platform::{
+        ElementApi, KeyChord, KeySubscription, TimerSubscription, backend, focus_entered_from,
+        keyboard, timer,
+    },
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         AutoClose, NOTIFICATION_GAP, NOTIFICATION_IN, NOTIFICATION_OFFSET, NOTIFICATION_OUT,
@@ -74,6 +79,7 @@ static ITEM_SX: StaticSx = StaticSx::new(|| {
         |name: &str, easing: &str| format!("{name} {} {easing}", NOTIFICATION_TRANSITION.value());
 
     sx().pointer_events("auto")
+        .selector("&:focus-visible", focus_ring_sx())
         .animation(animation(NOTIFICATION_IN, "ease-out"))
         .media(REDUCED_MOTION, sx().animation("none"))
         // The end state is declared, not only animated to, so it holds for the
@@ -364,6 +370,38 @@ impl NotificationStore {
         }
         let mut entries = self.entries;
         entries.write().retain(|entry| entry.id != id);
+    }
+
+    /// The newest notification on screen and not closing. Ids only grow.
+    fn newest(&self) -> Option<NotificationId> {
+        let entries = self.entries.try_peek().ok()?;
+        let drawn = self.drawn.peek();
+        drawn
+            .iter()
+            .flatten()
+            .filter(|id| {
+                entries
+                    .iter()
+                    .any(|entry| entry.id == **id && !entry.leaving)
+            })
+            .max_by_key(|id| id.0)
+            .copied()
+    }
+
+    /// The hotkey's move: into the newest notification's first focusable,
+    /// else onto the notification itself.
+    fn focus_newest(&self) {
+        let Some(id) = self.newest() else {
+            return;
+        };
+        let Some(item) = self.elements.peek().get(&id).cloned() else {
+            return;
+        };
+        let item = backend::element(&item);
+        let _ = match item.query_selector(FOCUSABLE_SELECTOR) {
+            Ok(inner) => inner.focus(),
+            Err(_) => item.focus(),
+        };
     }
 }
 
@@ -658,8 +696,10 @@ fn NotificationMessage(props: MessageProps) -> Element {
 /// # #[component] fn SaveButton() -> Element { rsx! {} }
 /// ```
 ///
-/// No keyboard behaviour of its own and no `Escape`. A close button is reached
-/// by `Tab` in document order. Closing the focused notification hands focus to
+/// `hotkey` (F8) focuses the newest notification from anywhere: its first
+/// focusable, else the notification itself. The stacks sit in one region named
+/// after it, "Notifications (F8)". No `Escape`. Otherwise a close button is
+/// reached by `Tab` in document order. Closing the focused notification hands focus to
 /// the next one in its stack (its `data-slot="close"`, else its first
 /// focusable), the previous one after the last, else back where it came from.
 /// A `clear()` with focus inside sends it back where it came from. So does a
@@ -685,11 +725,16 @@ pub fn Notifications(
     /// own. Read once, when the host mounts.
     #[props(default)]
     contained: bool,
+    /// Focuses the newest notification from anywhere on the page, pressed
+    /// without Ctrl, Alt or Meta. A letter is not heard while the user types.
+    #[props(default = Key::F8)]
+    hotkey: Key,
     /// Rendered inside a contained host, before its stacks.
     #[props(default)]
     children: Option<Element>,
 ) -> Element {
     let theme = use_theme();
+    let localization = use_localization();
     let store = use_hook(|| {
         if contained {
             provide_context(NotificationStore::new(current_scope_id()))
@@ -699,6 +744,12 @@ pub fn Notifications(
             })
         }
     });
+    use_hotkey(store, hotkey.clone());
+    let key_name = match &hotkey {
+        Key::Character(text) => text.to_uppercase(),
+        key => key.to_string(),
+    };
+    let region_label = fill(localization.notifications.region, &[("key", &key_name)]);
 
     let host_placement = placement.copied_or(theme.notifications.placement);
     let limit = limit.unwrap_or(theme.notifications.limit);
@@ -757,8 +808,9 @@ pub fn Notifications(
     let idle = drawn.iter().all(Vec::is_empty);
     let mut stored = store.drawn;
     stored.set(drawn);
+    // One landmark for every stack: nine would crowd the landmark list.
     let content = rsx! {
-        {stacks.into_iter()}
+        div { role: "region", "aria-label": region_label, {stacks.into_iter()} }
     };
     drop(entries);
 
@@ -776,6 +828,71 @@ pub fn Notifications(
     // The empty regions stay mounted; the outlet need not follow a scroll for them.
     slot.show_idle(content, idle);
     rsx! {}
+}
+
+/// `hotkey` focuses the newest notification (todo 575). A letter listens on
+/// the filtered stream, so it is not taken from a text field; any other key,
+/// F8 above all, is heard from anywhere.
+fn use_hotkey(store: NotificationStore, hotkey: Key) {
+    // Bumped from the key callback, which runs outside every scope; the
+    // effect below moves focus (the `Spotlight` hotkey's shape).
+    let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
+    let slot: Rc<RefCell<Option<std::boxed::Box<dyn KeySubscription>>>> =
+        use_hook(|| Rc::new(RefCell::new(None)));
+    use_drop({
+        let slot = slot.clone();
+        move || {
+            slot.borrow_mut().take();
+            tick.manually_drop();
+        }
+    });
+
+    let listening = slot.clone();
+    use_effect(use_reactive!(|hotkey| {
+        listening.borrow_mut().take();
+        let Some(api) = keyboard() else {
+            return;
+        };
+        let typed = matches!(hotkey, Key::Character(_));
+        let key = hotkey.clone();
+        let callback = std::boxed::Box::new(move |chord: KeyChord| {
+            let modifiers = chord.modifiers;
+            let pressed = match (&chord.key, &key) {
+                (Key::Character(pressed), Key::Character(key)) => pressed.eq_ignore_ascii_case(key),
+                (pressed, key) => pressed == key,
+            };
+            // Nothing on screen: the key stays the page's.
+            if !pressed
+                || modifiers.ctrl()
+                || modifiers.alt()
+                || modifiers.meta()
+                || !store.alive()
+                || store.newest().is_none()
+            {
+                return false;
+            }
+            if !chord.repeat {
+                let mut tick = tick;
+                let next = tick.peek().wrapping_add(1);
+                tick.set(next);
+            }
+            true
+        });
+        *listening.borrow_mut() = Some(match typed {
+            true => api.on_key(callback),
+            false => api.on_key_unfiltered(callback),
+        });
+    }));
+
+    let mut seen = use_signal(|| 0u64);
+    use_effect(move || {
+        let pressed = tick();
+        if pressed == *seen.peek() {
+            return;
+        }
+        seen.set(pressed);
+        store.focus_newest();
+    });
 }
 
 #[derive(Props, Clone, PartialEq)]
@@ -1025,6 +1142,8 @@ fn NotificationItem(props: ItemProps) -> Element {
         .states(&states)
         .prepare()
         .attr("data-notification", true)
+        // The hotkey's target when nothing inside takes focus.
+        .attr("tabindex", "-1")
         .event("onmounted", move |event: Event<MountedData>| {
             own.replace(Some(event.data()));
             elements.write().insert(id, event.data());

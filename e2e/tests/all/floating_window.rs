@@ -512,6 +512,63 @@ fn modifier_chords_are_left_to_the_browser() {
     });
 }
 
+const F6: keyboard::Key = keyboard::Key {
+    key: "F6",
+    code: "F6",
+    vk: 117,
+    text: None,
+};
+
+/// Todo 572: F6 moves focus from the window back to the page, where it came
+/// from, and from the page into the topmost window.
+#[test]
+fn f6_moves_focus_between_the_page_and_the_top_window() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window-pair", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        activate(page, "#open-first").await;
+        wait_for(
+            page,
+            "document.querySelector('[role=dialog]')?.contains(document.activeElement)",
+            "the first window to take focus",
+        )
+        .await;
+        activate(page, "#open-second").await;
+        wait_for(page, "document.querySelectorAll('[role=dialog]').length === 2 && document.querySelectorAll('[role=dialog]')[1].contains(document.activeElement)", "the second window to take focus").await;
+
+        keyboard::press(page, F6).await.unwrap();
+        wait_for(
+            page,
+            "document.activeElement?.id === 'open-second'",
+            "F6 to return focus to the second window's opener",
+        )
+        .await;
+
+        page.evaluate("document.querySelector('#close-first').focus()")
+            .await
+            .unwrap();
+        keyboard::press(page, F6).await.unwrap();
+        wait_for(
+            page,
+            "document.querySelectorAll('[role=dialog]')[1].contains(document.activeElement)",
+            "F6 to move focus into the top window",
+        )
+        .await;
+
+        keyboard::press(page, F6).await.unwrap();
+        wait_for(
+            page,
+            "document.activeElement?.id === 'close-first'",
+            "F6 to return focus where it left the page",
+        )
+        .await;
+        fixture.console.assert_clean("F6").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Focus `selector` and press Enter on it.
 async fn activate(page: &Page, selector: &str) {
     page.evaluate(format!(

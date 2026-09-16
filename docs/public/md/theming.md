@@ -285,7 +285,7 @@ rsx! {
 The groups live in `libero::localization`: `CommonLabels`, `DateLocale`,
 `PaginationLabels`, `AvatarLabels`, `BurgerLabels`, `ColorSchemeButtonLabels`,
 `SpotlightLabels`, `CarouselLabels`, `LightboxLabels`, `FloatingWindowLabels`,
-`ScrollerLabels`, `StepperLabels`, `MarqueeLabels`, `ChipsLabels`,
+`NotificationsLabels`, `ScrollerLabels`, `StepperLabels`, `MarqueeLabels`, `ChipsLabels`,
 `ImageLabels`, `CodeBlockLabels`, `ColorLabels`, `PhoneFieldLabels`,
 `PasswordFieldLabels`, `NumberFieldLabels` and `FileFieldLabels`, each with an `ENGLISH`
 const. `fill(template, &[("n", &3)])` fills a template's holes.

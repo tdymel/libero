@@ -149,6 +149,19 @@ fn the_title_bar_is_the_keyboard_move_handle() {
     assert_eq!(close["type"], "button", "{close:?}");
 }
 
+/// Todo 571: the handle says the arrows move it, from the localization.
+#[test]
+fn the_move_handle_is_described_by_its_arrow_key_hint() {
+    let html = render(plain_app);
+    let handle = tag_with(&html, "data-window-handle");
+    let hint = tag_with(&html, ">Use arrow keys to move the window<");
+    assert_eq!(handle["aria-describedby"], hint["id"], "{html}");
+    assert!(hint.contains_key("hidden"), "{hint:?}");
+
+    let html = render(pinned_app);
+    assert!(!html.contains("Use arrow keys"), "{html}");
+}
+
 /// The title bar is its own memoized scope: a new title must still reach it.
 #[test]
 fn a_changed_title_redraws_the_title_bar() {

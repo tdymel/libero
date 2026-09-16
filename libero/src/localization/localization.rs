@@ -36,6 +36,7 @@ pub struct Localization {
     pub carousel: CarouselLabels,
     pub lightbox: LightboxLabels,
     pub floating_window: FloatingWindowLabels,
+    pub notifications: NotificationsLabels,
     pub scroller: ScrollerLabels,
     pub stepper: StepperLabels,
     pub marquee: MarqueeLabels,
@@ -61,6 +62,7 @@ impl Localization {
         carousel: CarouselLabels::ENGLISH,
         lightbox: LightboxLabels::ENGLISH,
         floating_window: FloatingWindowLabels::ENGLISH,
+        notifications: NotificationsLabels::ENGLISH,
         scroller: ScrollerLabels::ENGLISH,
         stepper: StepperLabels::ENGLISH,
         marquee: MarqueeLabels::ENGLISH,
@@ -98,6 +100,7 @@ mod tests {
             ("name", &"Germany"),
             ("iso", &"DE"),
             ("dial", &49),
+            ("key", &"F8"),
         ];
         for template in [
             english.common.remove,
@@ -117,6 +120,7 @@ mod tests {
             english.carousel.slide,
             english.carousel.status,
             english.lightbox.thumbnail,
+            english.notifications.region,
         ] {
             let filled = fill(template, holes);
             assert!(!filled.contains('{'), "{template} -> {filled}");

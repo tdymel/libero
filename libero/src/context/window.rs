@@ -36,6 +36,11 @@ impl WindowHost {
         stack.push(id);
     }
 
+    /// Whether `id` is on top. Unsubscribed: a key callback asks it.
+    pub(crate) fn is_top(&self, id: u64) -> bool {
+        self.stack.peek().last() == Some(&id)
+    }
+
     pub(crate) fn remove(&self, id: u64) {
         let mut stack = self.stack;
         stack.write().retain(|other| *other != id);

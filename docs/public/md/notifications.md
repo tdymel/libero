@@ -137,12 +137,12 @@ timers and the host compile once.
 - **`show` queues. It does not promise that the notification is visible.** Each
   stack shows at most `limit` notifications (5 by default). The rest wait in
   order, and a waiting notification's timer starts only once it is shown.
-- A notification closes after `auto_close`: 4 seconds by default,
+- A notification closes after `auto_close`: 6 seconds by default,
   `AutoClose::Never` to stay, or `AutoClose::After(ms)`.
 - **Hovering or focusing any notification pauses every timer.** When the
   pointer or the focus leaves, each timer starts over with its full time. This
   is the WCAG 2.2.1 (Timing Adjustable) mechanism. It pauses on focus too, so a
-  close button you tabbed to does not disappear.
+  focused notification never closes on its own.
 - Closing runs a short fade (`transition_duration`, 200 ms). The notification
   leaves the accessibility tree when the fade ends, then it is removed. Under
   `prefers-reduced-motion` there is no animation.
@@ -152,13 +152,18 @@ timers and the host compile once.
 - `NotificationOptions::live` picks how a notification is announced. It is
   `Polite` unless you say otherwise, and it is never derived from a colour -
   pass `Assertive` for what cannot wait.
-- **Showing one never moves focus.** A close button is reached by Tab in
-  document order, after the rest of the page, and Escape does nothing.
+- **Showing one never moves focus.** F8 (the host's `hotkey`) focuses the
+  newest notification from anywhere: its first focusable, else the
+  notification itself. Otherwise a close button is reached by Tab in document
+  order, after the rest of the page. Escape does nothing.
+- The stacks sit in one region named after the hotkey, "Notifications (F8)",
+  from the localization's `notifications.region`.
 - Closing the focused one moves focus to the next close button in its stack,
-  the previous one after the last, and back where it came from once the stack
-  is empty. `clear()` with focus inside sends it back where it came from.
-- A notification with an action of its own, such as Undo, needs
-  `AutoClose::Never`: a keyboard user would not reach it in time.
+  the previous one after the last, and back where it came from (where F8 was
+  pressed) once the stack is empty. `clear()` with focus inside sends it back
+  where it came from.
+- A notification with an action of its own, such as Undo, is still safer with
+  `AutoClose::Never`: not every user knows the hotkey.
 
 ## API
 
@@ -223,7 +228,8 @@ pub fn use_notifications_with<T: 'static>(
 |---|---|---|---|
 | `placement` | `Placement` | `bottom-end` | The stack a notification joins unless it names its own. |
 | `limit` | `Option<usize>` | `5` | Shown at once per stack. |
-| `auto_close` | `Option<AutoClose>` | `After(4000)` | Unless a notification says otherwise. |
+| `auto_close` | `Option<AutoClose>` | `After(6000)` | Unless a notification says otherwise. |
+| `hotkey` | `Key` | `Key::F8` | Focuses the newest notification from anywhere, without Ctrl, Alt or Meta. A letter is not heard while the user types. |
 | `contained` | `bool` | `false` | Draw the stacks in this host's own box, and give the handles below it a queue of their own. Read once, at mount. |
 | `children` | `Option<Element>` | - | Rendered inside a contained host, before its stacks. |
 
@@ -234,7 +240,7 @@ pub fn use_notifications_with<T: 'static>(
 | Field | Type | Description |
 |---|---|---|
 | `placement` | `Placement` | `BottomEnd`. |
-| `auto_close` | `AutoClose` | `After(4000)`. |
+| `auto_close` | `AutoClose` | `After(6000)`. |
 | `limit` | `usize` | `5`. |
 | `width` | `&'static str` | `360px`, capped at the viewport's (or the contained host's) width minus both offsets. |
 | `gap` | `Size` | `Sm`, between two notifications. |
@@ -242,7 +248,8 @@ pub fn use_notifications_with<T: 'static>(
 | `transition_duration` | `u32` | `200` ms, the entry and the exit. |
 
 The default template's close button is named by the localization's
-`common.close`.
+`common.close`, and the region by `notifications.region` (`{key}` is the
+hotkey).
 
 The stacks sit on `z_index.notification` (2100), above modals and the
 dropdowns opened inside them.

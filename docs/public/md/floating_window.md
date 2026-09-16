@@ -117,8 +117,17 @@ run from 250, capped below the overlay layer however many windows are open.
 - It takes focus on open; Escape, the close button or `close()` hands focus
   back to the trigger. A `close()` from elsewhere on the page leaves focus there.
 - The title bar is a tab stop: Arrow moves 10px (`move_step`), Shift+Arrow 1px.
+  Its description says so: "Use arrow keys to move the window"
+  (`floating_window.move_hint`).
 - On the resize handle Arrow resizes by `resize_step`, Shift+Arrow by 1px, and
   Home/End ask for the smallest/largest size the constraints allow.
+- F6 moves focus between the page and the topmost window: into the window,
+  and back to where it left the page (at first the trigger). Not while a modal
+  or a popover is open. The window is portaled after the page, so Tab alone
+  reaches it last.
+- A window is non-modal, so the page behind it still takes Tab. Pick a
+  `placement` that does not cover the page's controls, such as a corner away
+  from the header and the primary actions (WCAG 2.4.11).
 
 ## Theme
 

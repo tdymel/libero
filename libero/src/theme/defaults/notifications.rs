@@ -62,7 +62,8 @@ impl NotificationsDefaults {
         // Mantine's default corner, and the one least likely to cover a
         // page's own header and primary actions.
         placement: Placement::BottomEnd,
-        auto_close: AutoClose::After(4000),
+        // Above the 5 s floor common guidance gives a short message (todo 576).
+        auto_close: AutoClose::After(6000),
         limit: 5,
         width: "360px",
         gap: Size::Sm,

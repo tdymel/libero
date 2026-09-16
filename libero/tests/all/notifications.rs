@@ -90,6 +90,59 @@ fn only_a_region_with_a_notification_holds_a_list() {
     assert_eq!(html.matches(r#"aria-live="polite""#).count(), 9, "{html}");
 }
 
+/// Todo 575: one region around every stack, named after the hotkey.
+#[test]
+fn the_stacks_sit_in_one_region_named_after_the_hotkey() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Notifications {} }
+        }
+    }
+    fn f9() -> Element {
+        rsx! {
+            LiberoProvider { Notifications { hotkey: Key::F9 } }
+        }
+    }
+
+    let html = body(&render(app));
+    assert_eq!(html.matches(r#"role="region""#).count(), 1, "{html}");
+    assert!(
+        html.contains(r#"aria-label="Notifications (F8)""#),
+        "{html}"
+    );
+    let html = body(&render(f9));
+    assert!(
+        html.contains(r#"aria-label="Notifications (F9)""#),
+        "{html}"
+    );
+}
+
+/// Todo 575: the hotkey's target when a template draws nothing focusable.
+#[test]
+fn a_notification_takes_focus_but_no_tab_stop() {
+    fn app() -> Element {
+        let notify = use_notifications();
+        use_hook(|| notify.show("Saved."));
+        rsx! {
+            LiberoProvider { Notifications {} }
+        }
+    }
+
+    let html = body(&render(app));
+    let shown = items(&html);
+    let open_tag = &shown[0][..shown[0].find('>').unwrap()];
+    assert!(open_tag.contains(r#"tabindex="-1""#), "{open_tag}");
+}
+
+/// Todo 576: long enough to read a short message.
+#[test]
+fn the_default_auto_close_is_six_seconds() {
+    assert_eq!(
+        NotificationsDefaults::DEFAULT.auto_close,
+        AutoClose::After(6000)
+    );
+}
+
 #[test]
 fn a_shown_message_renders_as_an_alert_in_the_default_corner() {
     fn app() -> Element {

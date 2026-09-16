@@ -1,4 +1,8 @@
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    sync::atomic::{AtomicU64, Ordering},
+};
 
 use dioxus::prelude::*;
 
@@ -13,9 +17,9 @@ use crate::{
     context::{ModalContext, WindowHost},
     hooks::{
         Drag, DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, escape_closes,
-        use_drag, use_element, use_id, use_silent_focus_within,
+        use_dismiss_layer, use_drag, use_element, use_id, use_silent_focus_within,
     },
-    platform::{ElementApi, PlatformError},
+    platform::{ElementApi, KeyChord, KeySubscription, PlatformError, keyboard},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, PAPER_BORDER_COLOR, Size, SizeCss},
 };
@@ -218,6 +222,76 @@ fn focus_elsewhere(root: &ElementHandle) -> bool {
     }
 }
 
+/// Whether focus is known to be on `root` or inside it.
+fn focus_within(root: &ElementHandle) -> bool {
+    root.is_focused() || root.query_selector(":focus").is_ok()
+}
+
+fn active_element() -> Option<Rc<dyn ElementApi>> {
+    crate::platform::document()
+        .and_then(|document| document.active_element())
+        .map(Rc::from)
+}
+
+/// F6 moves focus between the page and the topmost window (todo 572): the
+/// window is portaled past the page's end, so Tab reaches it last.
+///
+/// Not while a dismissible layer is open: a modal or a popover keeps it.
+fn use_page_switch(root: ElementHandle, host: WindowHost, id: u64) {
+    let layer = use_dismiss_layer();
+    // Where the page had focus: the opener at first, then wherever F6 left.
+    let mut page = use_hook(|| CopyValue::new(active_element()));
+    // Bumped from the key callback, which runs outside every scope; the
+    // effect below moves focus (the `Spotlight` hotkey's shape).
+    let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
+    let slot: Rc<RefCell<Option<Box<dyn KeySubscription>>>> = use_hook(|| {
+        let callback = Box::new(move |chord: KeyChord| {
+            let modifiers = chord.modifiers;
+            // Shift+F6 too: with two stops, backward is forward.
+            if chord.key != Key::F6
+                || modifiers.ctrl()
+                || modifiers.alt()
+                || modifiers.meta()
+                || !host.is_top(id)
+                || layer.any_open()
+            {
+                return false;
+            }
+            if !chord.repeat {
+                let mut tick = tick;
+                let next = tick.peek().wrapping_add(1);
+                tick.set(next);
+            }
+            true
+        });
+        Rc::new(RefCell::new(
+            keyboard().map(|api| api.on_key_unfiltered(callback)),
+        ))
+    });
+    use_drop(move || {
+        slot.borrow_mut().take();
+        tick.manually_drop();
+    });
+
+    let mut seen = use_signal(|| 0u64);
+    use_effect(move || {
+        let pressed = tick();
+        if pressed == *seen.peek() {
+            return;
+        }
+        seen.set(pressed);
+        if focus_within(&root) {
+            let target = page.peek().clone().filter(|target| target.is_connected());
+            if let Some(target) = target {
+                let _ = target.focus();
+            }
+        } else {
+            page.set(active_element());
+            let _ = root.focus();
+        }
+    });
+}
+
 /// Reads the window's current rect and hands it to `callback`. The reads
 /// start here, in the handler, and are awaited in the task - see
 /// `platform::Read`.
@@ -288,6 +362,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
             host.raise(id);
         }
     });
+    use_page_switch(root, host, id);
     let z_index = match z_index {
         Input::None => Input::from(host.z_index(id).to_string()),
         caller => caller,
@@ -418,6 +493,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                     title_id,
                     pinned,
                     move_label: labels.move_handle,
+                    move_hint: labels.move_hint,
                     close_label: localization.common.close,
                     onclose,
                     onpointerdown: move_drag.onpointerdown,
@@ -470,11 +546,13 @@ fn WindowTitleBar(
     title_id: Signal<String>,
     pinned: bool,
     move_label: &'static str,
+    move_hint: &'static str,
     close_label: &'static str,
     onclose: Callback<()>,
     onpointerdown: Callback<Event<PointerData>>,
     onkeydown: Callback<Event<KeyboardData>>,
 ) -> Element {
+    let hint_id = use_id();
     rsx! {
         div { "data-window-title-bar": "",
             div {
@@ -484,6 +562,7 @@ fn WindowTitleBar(
                 role: if !pinned { "group" },
                 tabindex: if !pinned { "0" },
                 "aria-label": if !pinned { move_label },
+                "aria-describedby": if !pinned { hint_id() },
                 onpointerdown: move |event| {
                     if !pinned {
                         onpointerdown.call(event);
@@ -497,6 +576,9 @@ fn WindowTitleBar(
                 if let Some(title) = title {
                     Title { id: title_id(), component: "h2", size: "sm", "{title}" }
                 }
+            }
+            if !pinned {
+                span { id: hint_id(), hidden: true, "{move_hint}" }
             }
             ActionIcon {
                 variant: "standard",

@@ -180,7 +180,7 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
         if limit != "5" {
             fields.push(format!("limit: {limit}"));
         }
-        if auto_close != "4000" {
+        if auto_close != "6000" {
             fields.push(format!("auto_close: {}", auto_close_code(&auto_close)));
         }
         let fields: String = fields
@@ -249,7 +249,7 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
     if upload {
         options.push("// A progress notification waits for its own end.".to_string());
         options.push("auto_close: Some(AutoClose::Never)".to_string());
-    } else if !contained && auto_close != "4000" {
+    } else if !contained && auto_close != "6000" {
         options.push(format!(
             "auto_close: Some({})",
             auto_close_code(&auto_close)
@@ -452,11 +452,14 @@ pub fn NotificationsPage() -> Element {
                         .default("theme: 5")
                         .doc("Shown at once per stack; the rest wait their turn."),
                     prop("auto_close", "Option<AutoClose>")
-                        .default("theme: After(4000)")
+                        .default("theme: After(6000)")
                         .doc("Unless a notification says otherwise."),
                     prop("contained", "bool")
                         .default("false")
                         .doc("Draw the stacks in this host's own box, and give the handles below it a queue of their own. Read once, at mount."),
+                    prop("hotkey", "Key")
+                        .default("F8")
+                        .doc("Focuses the newest notification from anywhere, without Ctrl, Alt or Meta. Named in the region's label."),
                     prop("children", "Option<Element>")
                         .doc("Rendered inside a contained host, before its stacks."),
                 ]),
@@ -515,9 +518,9 @@ pub fn NotificationsPage() -> Element {
                     Control::slider("limit", ["1", "2", "3", "4", "5"])
                         .default("5")
                         .hidden_when(|values| values.str("contained") != "true"),
-                    Control::toggle("auto_close", ["2000", "4000", "never"])
-                        .labels(["2s", "4s", "Never"])
-                        .default("4000")
+                    Control::toggle("auto_close", ["2000", "6000", "never"])
+                        .labels(["2s", "6s", "Never"])
+                        .default("6000")
                         .hidden_when(|values| values.str("template") == "upload"),
                     // The default template is an `Alert`; your own draws none,
                     // so both of its controls go with it.
@@ -584,14 +587,23 @@ pub fn NotificationsPage() -> Element {
                     "Showing one takes no focus. Each stack holds a polite and an assertive live "
                     "region, both mounted before anything is announced into them, and "
                     Code { source: "live" }
-                    " picks which one. A close button is reached with "
+                    " picks which one. "
+                    Kbd { "F8" }
+                    " (the host's "
+                    Code { source: "hotkey" }
+                    ") focuses the newest notification from anywhere, and the stacks sit in "
+                    "one region named after it, \"Notifications (F8)\". Otherwise a close "
+                    "button is reached with "
                     Kbd { "Tab" }
-                    " in document order, after the rest of the page, and focusing one pauses "
-                    "every timer. One with an action of its own, such as Undo, needs "
+                    " after the rest of the page. Focusing one pauses every timer, so a "
+                    "focused notification never closes on its own. One with an action of its "
+                    "own, such as Undo, is still safer with "
                     Code { source: "AutoClose::Never" }
-                    ": a keyboard user would not reach it in time. Closing the "
+                    ". Closing the "
                     "focused one moves focus to the next close button in its stack, the "
-                    "previous one after the last, and back where it came from once the "
+                    "previous one after the last, and back where it came from (where "
+                    Kbd { "F8" }
+                    " was pressed) once the "
                     "stack is empty. Your own "
                     "template draws that button itself: read "
                     Code { source: "s.closable()" }

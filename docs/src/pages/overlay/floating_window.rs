@@ -323,7 +323,11 @@ pub fn FloatingWindowPage() -> Element {
                     Kbd { "Shift" } " + arrow 1px. On the resize handle the arrows resize, and "
                     Kbd { "Home" } " " Kbd { "End" }
                     " ask for the smallest and largest size allowed. " Kbd { "Esc" }
-                    " closes the window and returns focus to its trigger."
+                    " closes the window and returns focus to its trigger. " Kbd { "F6" }
+                    " moves focus between the page and the topmost window. The page behind "
+                    "a window still takes Tab, so pick a "
+                    Code { source: "placement" }
+                    " that does not cover its controls."
                 }
             }
         }
