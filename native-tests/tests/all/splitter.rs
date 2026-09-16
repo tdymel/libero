@@ -48,6 +48,19 @@ fn a_drag_moves_the_divider_and_leaves_it_focused() {
     assert!(value(&page) > dragged, "ArrowRight did not move it");
 }
 
+/// WCAG 2.5.7's drag-free path: a double-click collapses pane A to the floor,
+/// a second one restores it (todo 643).
+#[test]
+fn a_double_click_collapses_pane_a_and_restores_it() {
+    let mut page = mount(app);
+    page.click(DIVIDER);
+    page.click(DIVIDER);
+    assert_eq!(value(&page), 10.0, "not collapsed\n{}", page.tree());
+    page.click(DIVIDER);
+    page.click(DIVIDER);
+    assert_eq!(value(&page), 50.0, "not restored");
+}
+
 #[test]
 fn the_arrows_and_home_end_move_a_focused_divider() {
     let mut page = mount(app);

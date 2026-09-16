@@ -9,7 +9,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{DragMove, DragOptions, DragStart, use_css, use_drag, use_element, use_id, use_theme},
-    platform::ElementApi,
+    platform::{DoublePress, ElementApi},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, Size},
     utils::warn,
@@ -292,11 +292,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
 
     // WCAG 2.5.7's drag-free path: collapse pane A to the floor, or restore it.
     // A double-click, so the click that focuses the divider moves nothing.
-    let ondoubleclick = use_callback(move |_: Event<MouseData>| {
-        // A double-click in a pane, a nested splitter's included, is not ours.
-        if !pressed_divider() {
-            return;
-        }
+    let mut toggle = move || {
         let mut settle = settle;
         let current = bounded();
         if current > min_size {
@@ -307,10 +303,21 @@ pub fn Splitter(props: SplitterProps) -> Element {
             let to = restore_to();
             settle(if to > min_size { to } else { 50.0 });
         }
+    };
+    let ondoubleclick = use_callback(move |_: Event<MouseData>| {
+        // A double-click in a pane, a nested splitter's included, is not ours.
+        if pressed_divider() {
+            toggle();
+        }
     });
+    let mut double_press = use_signal(DoublePress::default);
     let ondividerdown = use_callback(move |event: Event<PointerData>| {
         divider_pressing.set(true);
+        let at = event.client_coordinates();
         drag.onpointerdown.call(event);
+        if double_press.write().press(at.x, at.y) {
+            toggle();
+        }
     });
     let onrootdown = use_callback(move |_: Event<PointerData>| {
         pressed_divider.set(divider_pressing());

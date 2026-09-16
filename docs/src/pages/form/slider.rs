@@ -341,8 +341,9 @@ pub fn SliderPage() -> Element {
                     Control::switch("marks").code(marks_code),
                     Control::switch("format").code(format_code),
                     Control::switch("label").default("true").code(|_, values| {
-                        match values.str("label").as_str() {
-                            "true" => vec![r#"label: "Quality""#.to_string()],
+                        match (values.str("label").as_str(), discrete(values)) {
+                            ("true", true) => vec![r#"label: "Quality""#.to_string()],
+                            ("true", false) => vec![r#"label: "Volume""#.to_string()],
                             _ => vec![],
                         }
                     }),

@@ -209,7 +209,7 @@ pub fn NumberFieldPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Quantity\"".to_string()],
-                            _ => vec![],
+                            _ => vec!["aria_label: \"Quantity\"".to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -229,6 +229,7 @@ pub fn NumberFieldPage() -> Element {
                 ],
                 render: move |values: DemoValues| {
                     let label = (values.str("label") == "true").then(|| "Quantity".to_string());
+                    let aria_label = label.is_none().then_some("Quantity");
                     let description = (values.str("description") == "true")
                         .then(|| "How many to add to the order.".to_string());
                     let helper =
@@ -248,8 +249,8 @@ pub fn NumberFieldPage() -> Element {
                     match values.str("type").as_str() {
                         "f64" => rsx! {
                             NumberField {
-                                size, radius, label, description, helper, status, required,
-                                disabled, steppers,
+                                size, radius, label, aria_label, description, helper, status,
+                                required, disabled, steppers,
                                 step: 0.5f64,
                                 min: ranged.then_some(0.0f64),
                                 max: ranged.then_some(10.0f64),
@@ -259,8 +260,8 @@ pub fn NumberFieldPage() -> Element {
                         },
                         "cents" => rsx! {
                             NumberField {
-                                size, radius, label, description, helper, status, required,
-                                disabled, steppers,
+                                size, radius, label, aria_label, description, helper, status,
+                                required, disabled, steppers,
                                 min: ranged.then_some(Cents(0)),
                                 max: ranged.then_some(Cents(10_000)),
                                 value: price(),
@@ -269,8 +270,8 @@ pub fn NumberFieldPage() -> Element {
                         },
                         _ => rsx! {
                             NumberField {
-                                size, radius, label, description, helper, status, required,
-                                disabled, steppers,
+                                size, radius, label, aria_label, description, helper, status,
+                                required, disabled, steppers,
                                 min: ranged.then_some(1i32),
                                 max: ranged.then_some(99i32),
                                 value: quantity(),

@@ -171,7 +171,7 @@ pub fn TagsFieldPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Topics\"".to_string()],
-                            _ => vec![],
+                            _ => vec!["aria_label: \"Topics\"".to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -218,6 +218,7 @@ pub fn TagsFieldPage() -> Element {
                             size: values.str("size"),
                             radius: values.str("radius"),
                             label: (values.str("label") == "true").then(|| "Topics".to_string()),
+                            aria_label: (values.str("label") != "true").then_some("Topics"),
                             description: (values.str("description") == "true")
                                 .then(|| "Comma or Enter adds one.".to_string()),
                             placeholder: (values.str("placeholder") == "true")

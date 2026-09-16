@@ -137,7 +137,7 @@ pub fn ColorFieldPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match is_on(values, "label") {
                             true => vec![r#"label: "Brand color""#.to_string()],
-                            false => vec![],
+                            false => vec![r#"aria_label: "Brand color""#.to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -196,6 +196,7 @@ fn ColorFieldDemo(values: DemoValues) -> Element {
                 disallow_input: is_on(&values, "disallow_input"),
                 close_on_swatch_click: is_on(&values, "close_on_swatch_click"),
                 label: is_on(&values, "label").then(|| "Brand color".to_string()),
+                aria_label: (!is_on(&values, "label")).then_some("Brand color"),
                 description: is_on(&values, "description")
                     .then(|| "Used for buttons and links.".to_string()),
                 status: match values.str("status").as_str() {

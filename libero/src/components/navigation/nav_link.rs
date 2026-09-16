@@ -335,7 +335,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
                     "aria-labelledby": "{toggle_id} {link_id}",
                     "aria-expanded": opened.to_string(),
                     "aria-controls": panel_id(),
-                    disabled,
+                    disabled: disabled.then_some(true),
                     onclick: toggle,
                     ChevronDownIcon {}
                 }

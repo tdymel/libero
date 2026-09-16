@@ -336,6 +336,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
     let exclude_date = is_on(&values, "exclude_weekends").then(|| Callback::new(is_weekend));
     let close_on_change = is_on(&values, "close_on_change");
     let label = text_of(&values, "label", "When");
+    let aria_label = label.is_none().then_some("When");
     let description = text_of(&values, "description", "Your local time.");
     let helper = text_of(&values, "helper", "Typing works too.");
     let placeholder = text_of(&values, "placeholder", "Pick one");
@@ -365,7 +366,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
                     value: month(), onchange: move |next| month.set(next), level: DateLevel::Month,
                     min: min_day, max: max_day, today, close_on_change,
                     validate: rules(validate),
-                    size, radius, label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }
             },
             shown(month()),
@@ -376,7 +377,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
                     value: year(), onchange: move |next| year.set(next), level: DateLevel::Year,
                     min: min_day, max: max_day, today, close_on_change,
                     validate: rules(validate),
-                    size, radius, label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }
             },
             shown(year()),
@@ -387,7 +388,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
                     value: time(), onchange: move |next| time.set(next),
                     min: min_time, max: max_time, time_format, variant, with_seconds, step, twelve_hour,
                     validate: rules(validate),
-                    size, radius, label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }
             },
             shown(time()),
@@ -399,7 +400,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
                     min: min_moment, max: max_moment, format, time_format, variant, exclude_date, today,
                     with_seconds, step, twelve_hour, close_on_change, calendar, days,
                     validate: rules(validate),
-                    size, radius, label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }
             },
             shown(date_time()),
@@ -410,7 +411,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
                     value: date_range(), onchange: move |next| date_range.set(next),
                     min: min_day, max: max_day, format, exclude_date, columns, today, close_on_change,
                     validate: rules(validate),
-                    size, radius, label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }
             },
             shown(date_range()),
@@ -422,7 +423,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
                     min: min_moment, max: max_moment, format, time_format, variant, exclude_date, today,
                     with_seconds, step, twelve_hour, close_on_change,
                     validate: rules(validate),
-                    size, radius, label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }
             },
             shown(date_time_range()),
@@ -433,7 +434,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
                     value: date(), onchange: move |next| date.set(next),
                     min: min_day, max: max_day, format, exclude_date, today, close_on_change, calendar, days,
                     validate: rules(validate),
-                    size, radius, label, description, helper, placeholder, status, required, disabled,
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
                 }
             },
             shown(date()),

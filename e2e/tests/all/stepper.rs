@@ -144,6 +144,38 @@ fn ordinary_labels_fit_320px_whole() {
     });
 }
 
+/// Side labels in a box under 360px stack under the marker, even on a wide
+/// page, and keep every word whole; the full-width `#side` keeps them beside
+/// it (todo 542).
+#[test]
+fn side_labels_stack_in_a_narrow_box() {
+    block_on(async {
+        let fixture = Fixture::open("/stepper-long", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#boxed-step-1").await.unwrap();
+        let directions: Vec<String> = page
+            .evaluate(
+                "['#boxed-step-0', '#side-step-0'].map(s => \
+                 getComputedStyle(document.querySelector(s)).flexDirection)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(directions, ["column", "row"]);
+        let split: Vec<String> = page
+            .evaluate(SPLIT_WORDS.replace("#plain", "#boxed"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(split.is_empty(), "words broken across lines: {split:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 540: the current marker differed from a pending one by colour only.
 #[test]
 fn the_current_marker_carries_the_on_state_line() {

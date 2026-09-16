@@ -19,8 +19,9 @@ use crate::{
     platform::{ElementApi, TimerSubscription, timer},
     sx::{StaticSx, sx},
     theme::{
-        MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT, MENU_ITEM_PAD_X, MENU_ITEM_RADIUS, MENU_LABEL_FONT,
-        MENU_MAX_HEIGHT, MENU_PADDING, MenuDefaults, Size, SizeCss, Z_INDEX_POPOVER,
+        ColorCss, ColorShade, KBD_BORDER, KBD_COLOR, MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT,
+        MENU_ITEM_PAD_X, MENU_ITEM_RADIUS, MENU_LABEL_FONT, MENU_MAX_HEIGHT, MENU_PADDING,
+        MenuDefaults, Size, SizeCss, Z_INDEX_POPOVER,
     },
 };
 
@@ -101,6 +102,12 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& [data-menu-index][aria-disabled=\"true\"]",
             sx().color("muted.5").cursor("not-allowed"),
+        )
+        // The shortcut's key cap draws its own colours, so it dims apart.
+        .selector(
+            "& [data-menu-index][aria-disabled=\"true\"] [data-menu-section=\"shortcut\"]",
+            sx().with(KBD_COLOR.name(), ColorCss::MUTED.value(ColorShade::S5))
+                .with(KBD_BORDER.name(), ColorCss::MUTED.value(ColorShade::S3)),
         )
         // Wraps rather than truncates once the box meets the viewport's edge:
         // an ellipsis hides the label from sighted users (1.4.10). Inside a
@@ -812,6 +819,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
             tabbable: active().unwrap_or(first),
             expanded,
             level_id: level_id.clone(),
+            checks: flat.iter().any(|item| item.check.is_some()),
         };
         let (mut index, mut group) = (0usize, 0usize);
         draw_rows(
@@ -960,6 +968,8 @@ struct ItemDraw {
     tabbable: usize,
     expanded: Option<usize>,
     level_id: String,
+    /// Some item on the level is checkable: every row keeps a check column.
+    checks: bool,
 }
 
 /// One `menuitem` row - or `menuitemradio` / `menuitemcheckbox`, when the
@@ -980,6 +990,7 @@ fn menu_item(
         tabbable,
         expanded,
         level_id,
+        checks,
     } = draw;
     let (level, tabbable) = (*level, *tabbable);
     let has_submenu = item.submenu_items().is_some();
@@ -1034,11 +1045,11 @@ fn menu_item(
             onclick,
             onkeydown,
             onmouseenter,
-            // Drawn on every checkable row, checked or not, so the labels of
-            // one group line up.
-            if let Some(check) = check {
+            // Drawn on every row of a level with a checkable item, checked or
+            // not, so all its labels line up.
+            if check.is_some() || *checks {
                 span { "data-menu-check": "",
-                    if check.is_checked() {
+                    if check.is_some_and(Check::is_checked) {
                         CheckIcon {}
                     }
                 }

@@ -142,7 +142,7 @@ pub fn PhoneFieldPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Mobile\"".to_string()],
-                            _ => vec![],
+                            _ => vec!["aria_label: \"Mobile\"".to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -184,6 +184,7 @@ pub fn PhoneFieldPage() -> Element {
                                 radius: values.str("radius"),
                                 country: values.str("country").to_uppercase(),
                                 label: (values.str("label") == "true").then(|| "Mobile".to_string()),
+                                aria_label: (values.str("label") != "true").then_some("Mobile"),
                                 description: (values.str("description") == "true")
                                     .then(|| "We only text you about deliveries.".to_string()),
                                 placeholder: (values.str("placeholder") == "true")

@@ -90,7 +90,7 @@ pub fn TextareaPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Notes\"".to_string()],
-                            _ => vec![],
+                            _ => vec!["aria_label: \"Notes\"".to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -126,6 +126,7 @@ pub fn TextareaPage() -> Element {
                         radius: values.str("radius"),
                         rows: values.str("rows").parse::<u32>().unwrap_or(3),
                         label: (values.str("label") == "true").then(|| "Notes".to_string()),
+                        aria_label: (values.str("label") != "true").then_some("Notes"),
                         description: (values.str("description") == "true")
                             .then(|| "Anything the team should know.".to_string()),
                         helper: (values.str("helper") == "true")

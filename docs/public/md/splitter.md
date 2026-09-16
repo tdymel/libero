@@ -85,6 +85,12 @@ Without a drag (WCAG 2.5.7), double-click the divider: it collapses pane A to
 the `min_size` floor, and the next double-click restores the size it had. A
 single click only focuses the divider. Its hit area is 24px thick (WCAG 2.5.8).
 
+The hit area reaches past the visible line into both panes: at the default `sm`
+(a 1px line) it takes presses ~11.5px into each. A pane's scrollbar or a button
+flush against the divider sits under it and gets no press there. Keep that
+gutter clear, for example with `padding: 12px` on the pane's side next to the
+divider.
+
 ## Props
 
 | Prop | Type | Default | Description |

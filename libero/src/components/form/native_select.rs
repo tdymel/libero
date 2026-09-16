@@ -267,8 +267,8 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
                 option {
                     key: "{index}",
                     value: "{posted[index]}",
-                    selected: selected == Some(index),
-                    disabled: refused[index],
+                    selected: (selected == Some(index)).then_some(true),
+                    disabled: refused[index].then_some(true),
                     "{labels[index]}"
                 }
             }

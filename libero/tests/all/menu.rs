@@ -221,7 +221,8 @@ fn a_checked_item_is_a_radio_that_says_so() {
     // The checked item, not the first, is where the menu is entered.
     assert!(radios[0].contains(r#"tabindex="-1""#), "{}", radios[0]);
     assert!(radios[1].contains(r#"tabindex="0""#), "{}", radios[1]);
-    assert_eq!(html.matches("data-menu-check").count(), 2, "{html}");
+    // Settings keeps an empty slot too, so its label lines up (todo 641).
+    assert_eq!(html.matches("data-menu-check").count(), 3, "{html}");
     assert_eq!(
         html.matches("<svg").count(),
         1,

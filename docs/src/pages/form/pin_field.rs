@@ -88,7 +88,7 @@ pub fn PinFieldPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Verification code\"".to_string()],
-                            _ => vec![],
+                            _ => vec!["aria_label: \"Verification code\"".to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -141,6 +141,7 @@ fn PinFieldDemo(values: DemoValues) -> Element {
                 length,
                 kind: values.str("kind"),
                 label: (values.str("label") == "true").then(|| "Verification code".to_string()),
+                aria_label: (values.str("label") != "true").then_some("Verification code"),
                 description: (values.str("description") == "true")
                     .then(|| "Sent to your phone.".to_string()),
                 helper: (values.str("helper") == "true")

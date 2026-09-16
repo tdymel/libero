@@ -403,3 +403,45 @@ fn a_toggle_is_a_checkbox_whose_shortcut_stays_out_of_its_name() {
         console.unwrap();
     });
 }
+
+/// Todo 641: a lone toggle's label lines up with the plain rows', and a
+/// disabled row's shortcut key dims with its label.
+#[test]
+fn a_lone_toggle_lines_up_and_a_disabled_shortcut_dims() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-choices", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        let outcome = async {
+            pointer::click(page, TRIGGER).await?;
+            wait::for_visible(page, MENU).await?;
+            // The rows outside the group: Show grid, Export, Print.
+            let [lefts, colours]: [Vec<String>; 2] = page
+                .evaluate(
+                    "(() => { \
+                       const rows = [...document.querySelectorAll('[role=menu] > [data-menu-index]')]; \
+                       const kbd = r => getComputedStyle(r.querySelector('kbd')).color; \
+                       return [ \
+                         rows.map(r => String(r.querySelector('[data-menu-label]').getBoundingClientRect().left)), \
+                         [kbd(rows[0]), kbd(rows[2])], \
+                       ]; })()",
+                )
+                .await?
+                .into_value()?;
+            anyhow::ensure!(
+                lefts.len() == 3 && lefts.iter().all(|left| *left == lefts[0]),
+                "labels start apart: {lefts:?}"
+            );
+            anyhow::ensure!(
+                colours[0] != colours[1],
+                "the disabled shortcut keeps the enabled colour: {colours:?}"
+            );
+            Ok(())
+        }
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
+    });
+}

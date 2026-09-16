@@ -117,7 +117,7 @@ pub fn NativeSelectPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Size\"".to_string()],
-                            _ => vec![],
+                            _ => vec!["aria_label: \"Size\"".to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -148,6 +148,7 @@ pub fn NativeSelectPage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: (values.str("label") == "true").then(|| "Size".to_string()),
+                        aria_label: (values.str("label") != "true").then_some("Size"),
                         description: (values.str("description") == "true")
                             .then(|| "Applies to body text.".to_string()),
                         helper: (values.str("helper") == "true")

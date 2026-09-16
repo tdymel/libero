@@ -92,7 +92,7 @@ pub fn PasswordFieldPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Password\"".to_string()],
-                            _ => vec![],
+                            _ => vec!["aria_label: \"Password\"".to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -122,6 +122,7 @@ pub fn PasswordFieldPage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: (values.str("label") == "true").then(|| "Password".to_string()),
+                        aria_label: (values.str("label") != "true").then_some("Password"),
                         description: (values.str("description") == "true")
                             .then(|| "Used to sign you in.".to_string()),
                         helper: (values.str("helper") == "true")

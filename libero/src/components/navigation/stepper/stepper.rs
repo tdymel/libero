@@ -56,7 +56,8 @@ pub struct StepperProps<T: Options> {
     /// content under the step itself, collapsing the rest.
     #[props(default, into)]
     orientation: Input<Orientation>,
-    /// `side` or `below` the marker. Ignored when vertical.
+    /// `side` or `below` the marker. Ignored when vertical. `side` draws as
+    /// `below` in a stepper under 360px wide (natively: a window under 360px).
     #[props(default, into)]
     label_position: Input<StepLabelPosition>,
     #[props(default, into)]

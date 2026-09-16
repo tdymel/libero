@@ -208,7 +208,7 @@ pub fn AutocompletePage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"City\"".to_string()],
-                            _ => vec![],
+                            _ => vec!["aria_label: \"City\"".to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -252,6 +252,7 @@ pub fn AutocompletePage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: (values.str("label") == "true").then(|| "City".to_string()),
+                        aria_label: (values.str("label") != "true").then_some("City"),
                         description: (values.str("description") == "true")
                             .then(|| "Where the parcel goes.".to_string()),
                         helper: match (values.str("helper").as_str(), picked()) {

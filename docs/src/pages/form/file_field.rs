@@ -142,7 +142,7 @@ pub fn FileFieldPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match is_on(values, "label") {
                             true => vec![r#"label: "Attachment""#.to_string()],
-                            false => vec![],
+                            false => vec![r#"aria_label: "Attachment""#.to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -191,6 +191,7 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                 placeholder: "No file picked",
                 value: files(),
                 label: is_on(&values, "label").then(|| "Attachment".to_string()),
+                aria_label: (!is_on(&values, "label")).then_some("Attachment"),
                 description: is_on(&values, "description")
                     .then(|| "Anything under 5 MB.".to_string()),
                 helper: is_on(&values, "helper").then(|| "We keep it for 30 days.".to_string()),

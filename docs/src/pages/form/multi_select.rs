@@ -355,7 +355,7 @@ pub fn MultiSelectPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Toppings\"".to_string()],
-                            _ => vec![],
+                            _ => vec!["aria_label: \"Toppings\"".to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -418,6 +418,7 @@ pub fn MultiSelectPage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: (values.str("label") == "true").then(|| "Toppings".to_string()),
+                        aria_label: (values.str("label") != "true").then_some("Toppings"),
                         description: (values.str("description") == "true")
                             .then(|| "Up to five, at no extra cost.".to_string()),
                         helper: (values.str("helper") == "true")

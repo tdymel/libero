@@ -183,7 +183,7 @@ pub fn CascaderPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Category\"".to_string()],
-                            _ => vec![],
+                            _ => vec!["aria_label: \"Category\"".to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -214,6 +214,7 @@ pub fn CascaderPage() -> Element {
                             radius: values.str("radius"),
                             layout: values.str("layout"),
                             label: (values.str("label") == "true").then(|| "Category".to_string()),
+                            aria_label: (values.str("label") != "true").then_some("Category"),
                             description: (values.str("description") == "true")
                                 .then(|| "Down to a leaf.".to_string()),
                             placeholder: (values.str("placeholder") == "true")

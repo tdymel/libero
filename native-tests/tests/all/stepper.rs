@@ -99,6 +99,38 @@ fn a_clicked_continue_returns_focus_too() {
     }
 }
 
+fn side_at(width: &'static str) -> Element {
+    rsx! {
+        div { style: "width: {width}",
+            Stepper { id: "stepper", value: Some(Stage::Account), label_position: "side",
+                panel: |_| rsx! {} }
+        }
+    }
+}
+
+/// Side labels at 320px broke words mid-word; they stack under the marker
+/// there (todo 542). Blitz has no container queries, so only a narrow window
+/// does it natively, not a narrow box.
+#[test]
+fn side_labels_stack_below_the_marker_in_a_window_under_360px() {
+    let mut page = mount(|| side_at("100%"));
+    assert_eq!(page.computed(&header(0), "flex-direction"), "row");
+
+    page.resize(320, 640);
+    assert_eq!(page.computed(&header(0), "flex-direction"), "column");
+    assert_eq!(
+        page.wrapped_text("#stepper [data-step-label]"),
+        Vec::<String>::new()
+    );
+}
+
+#[test]
+fn a_narrow_box_keeps_side_labels_natively() {
+    let page = mount(|| side_at("320px"));
+    assert_eq!(page.computed("#stepper", "container-type"), "");
+    assert_eq!(page.computed(&header(0), "flex-direction"), "row");
+}
+
 #[test]
 fn a_click_on_a_done_step_header_moves_back_there() {
     let mut page = mount(horizontal);

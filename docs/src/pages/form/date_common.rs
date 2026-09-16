@@ -43,7 +43,7 @@ pub fn field_controls() -> Vec<Control> {
             .default("true")
             .code(|_, values| match is_on(values, "label") {
                 true => vec![r#"label: "When""#.to_string()],
-                false => vec![],
+                false => vec![r#"aria_label: "When""#.to_string()],
             }),
         Control::switch("description").code(|_, values| match is_on(values, "description") {
             true => vec![r#"description: "Your local time.""#.to_string()],

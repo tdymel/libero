@@ -46,6 +46,12 @@ str_enum! {
 /// serves every step and the accent flips on a `data-state` token.
 const STEPPER_CONNECTOR: CssVar = CssVar::new("--lsx-stepper-connector");
 
+/// The root's container name, which the side-label fallback queries.
+const STEPPER_CONTAINER: &str = "lsx-stepper";
+
+/// Under the width three side-labelled steps need.
+const NARROW: &str = "(max-width: 359.98px)";
+
 fn rail() -> Rail {
     Rail {
         marker: STEPPER_MARKER.value(),
@@ -151,6 +157,12 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
             .align_items("center")
             .text_align("center"),
     );
+    // Three side-labelled steps need ~360px; narrower, they broke words
+    // mid-word, so they stack as `below` does (1.4.10). Blitz has no
+    // container queries: natively only a narrow window stacks them.
+    let side = sx()
+        .container_query(STEPPER_CONTAINER, NARROW, below.clone())
+        .media(NARROW, below.clone());
 
     // Everything hangs off the item's own inline-start edge, the origin
     // `Rail` measures from: the marker sits at it, the rail runs from under
@@ -177,6 +189,7 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         // Fills its column: the horizontal connectors share whatever width
         // there is, and in a flex parent there would otherwise be none.
         .width("100%")
+        .container(STEPPER_CONTAINER)
         .selector(
             "& > ol",
             sx().list_style("none")
@@ -251,6 +264,14 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                 StepLabelPosition::Below.state_name()
             ),
             below,
+        )
+        .when(
+            format!(
+                "{} && {}",
+                Orientation::Horizontal.state_name(),
+                StepLabelPosition::Side.state_name()
+            ),
+            side,
         )
         .when(Orientation::Vertical.state_name(), vertical)
 });

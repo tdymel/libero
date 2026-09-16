@@ -50,6 +50,12 @@ pub const VIEWPORT: (u32, u32) = (1024, 768);
 // Bounds `settle`, so a render loop fails the test instead of hanging it.
 const MAX_POLLS: usize = 200;
 
+// HTML bool attributes, set by presence whatever their value. Not `checked`:
+// Blitz reads `checked="false"` as unticked, and `reset` writes it.
+const FALSE_FLAGS: &str = "[disabled=false], [hidden=false], [readonly=false], \
+    [required=false], [selected=false], [multiple=false], [open=false], \
+    [autofocus=false], [inert=false]";
+
 /// Mounts `app` inside a [`LiberoProvider`] and settles the first render.
 pub fn mount(app: fn() -> Element) -> Page {
     mount_in(app, ColorScheme::Light)
@@ -129,10 +135,23 @@ impl Page {
                 self.doc.handle_ui_event(event);
             }
             if !busy && !dispatched {
+                self.assert_no_false_flags();
                 return;
             }
         }
         panic!("the vdom was still busy after {MAX_POLLS} polls");
+    }
+
+    /// dioxus-native writes a `false` bool attribute as `disabled="false"`,
+    /// which Blitz reads as set: raw `rsx!` must write `flag.then_some(true)`.
+    fn assert_no_false_flags(&self) {
+        if let Some(id) = self.query(FALSE_FLAGS) {
+            panic!(
+                "a bool attribute written as \"false\" on {} in\n{}",
+                self.describe(id),
+                self.tree()
+            );
+        }
     }
 
     /// Advances the animation clock, so a CSS transition reaches its end.
@@ -156,6 +175,18 @@ impl Page {
     /// Switches the window theme, as the shell does on a theme-change event.
     pub fn set_color_scheme(&mut self, scheme: ColorScheme) {
         self.doc.inner.borrow_mut().set_viewport(viewport(scheme));
+        self.settle();
+    }
+
+    /// Resizes the window, as the shell does on a resize event. `painted_*`
+    /// still rasterise [`VIEWPORT`].
+    pub fn resize(&mut self, width: u32, height: u32) {
+        {
+            let mut doc = self.doc.inner.borrow_mut();
+            let mut viewport = doc.viewport().clone();
+            viewport.window_size = (width, height);
+            doc.set_viewport(viewport);
+        }
         self.settle();
     }
 

@@ -181,6 +181,11 @@ pub fn SplitterPage() -> Element {
                         Code { source: "min_size" }
                         ", and again to restore it."
                     }
+                    ListItem {
+                        "The divider's 24px target takes presses ~11.5px into each pane. Keep a pane's scrollbar or edge buttons out of that gutter, e.g. with "
+                        Code { source: "padding: 12px" }
+                        " on the side next to the divider."
+                    }
                 }
             }
         }

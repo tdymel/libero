@@ -13,8 +13,8 @@ pub const ROUTES: Routes = &[
     ("/menu-row", || rsx! { MenuRowPage {} }),
 ];
 
-/// Radio items with one checked, a toggle with a shortcut, and a label longer
-/// than a phone is wide.
+/// Radio items with one checked, a toggle with a shortcut, a label longer than
+/// a phone is wide, and a disabled item with a shortcut.
 #[component]
 fn MenuChoicesPage() -> Element {
     let menu = use_menu();
@@ -38,6 +38,11 @@ fn MenuChoicesPage() -> Element {
             .onselect(move |_| grid.toggle())
             .into(),
         MenuItem::new("Export every selected row as a comma separated values file")
+            .onselect(|_| {})
+            .into(),
+        MenuItem::new("Print")
+            .shortcut("Control+P")
+            .disabled(true)
             .onselect(|_| {})
             .into(),
     ];

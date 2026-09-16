@@ -746,7 +746,7 @@ impl ClockView {
                     r#type: "button",
                     "data-active": (value.is_some() && !pm).then_some("true"),
                     "aria-pressed": if value.is_some() && !pm { "true" } else { "false" },
-                    disabled: am_at.is_none(),
+                    disabled: am_at.is_none().then_some(true),
                     tabindex,
                     onclick: move |_| {
                         if let Some(next) = am_at {
@@ -759,7 +759,7 @@ impl ClockView {
                     r#type: "button",
                     "data-active": (value.is_some() && pm).then_some("true"),
                     "aria-pressed": if value.is_some() && pm { "true" } else { "false" },
-                    disabled: pm_at.is_none(),
+                    disabled: pm_at.is_none().then_some(true),
                     tabindex,
                     onclick: move |_| {
                         if let Some(next) = pm_at {
@@ -1101,7 +1101,7 @@ fn ClockColumn(props: ClockColumnProps) -> Element {
                     "data-index": index as i64,
                     "data-selected": choice.selected.then_some("true"),
                     "aria-pressed": if choice.selected { "true" } else { "false" },
-                    disabled: choice.disabled,
+                    disabled: choice.disabled.then_some(true),
                     tabindex: if focusable && stop == Some(index) { "0" } else { "-1" },
                     onfocus: move |_| active.set(Some((column, index))),
                     onclick: move |_| onpick.call((column, index)),
