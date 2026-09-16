@@ -349,17 +349,22 @@ fn focus_tabbed_into_a_lower_window_raises_it() {
     page.click("#open");
     assert!(stacking(&page, "Second") > stacking(&page, "First"));
 
-    for _ in 0..8 {
+    // Through Second's four stops (handle, Window menu, Close, its button),
+    // `#open`, then First's handle, Window menu and Close (todo 704).
+    let mut menus = 0;
+    for _ in 0..10 {
         if page.is_focused("#in-first") {
             break;
         }
         page.tab();
+        menus += usize::from(page.is_focused("[data-window-menu]"));
     }
     assert!(
         page.is_focused("#in-first"),
         "Tab never reached it:\n{}",
         page.tree()
     );
+    assert_eq!(menus, 2, "Tab skipped a window's menu button");
     assert!(
         stacking(&page, "First") > stacking(&page, "Second"),
         "focus inside did not raise it"
