@@ -51,6 +51,11 @@ thread_local! {
     /// (todo 191, seen in a native window).
     static ANCHOR: RefCell<Option<NodeHandle>> = const { RefCell::new(None) };
 
+    /// Each mounted [`Outlet`]'s document: the newest wins over [`ANCHOR`], and
+    /// the one before it gets it back when it drops (todo 635).
+    static PROVIDERS: RefCell<Vec<(u64, NodeHandle)>> = const { RefCell::new(Vec::new()) };
+    static NEXT_PROVIDER: Cell<u64> = const { Cell::new(0) };
+
     /// Commands that found the document borrowed, oldest first. See
     /// [`BlitzElement::command`].
     static DEFERRED: RefCell<Vec<Deferred>> = const { RefCell::new(Vec::new()) };
@@ -870,6 +875,10 @@ pub(super) fn Outlet() -> Element {
         flushes
     });
     use_drop(|| FLUSHES.with(|slot| *slot.borrow_mut() = None));
+    let id = use_hook(|| NEXT_PROVIDER.replace(NEXT_PROVIDER.get() + 1));
+    use_drop(move || {
+        PROVIDERS.with_borrow_mut(|providers| providers.retain(|(other, _)| *other != id))
+    });
 
     rsx! {
         for flush in [flushes()] {
@@ -880,6 +889,9 @@ pub(super) fn Outlet() -> Element {
                     MOUNTED_FLUSH.set(Some(flush));
                     if let Some(handle) = event.data().downcast::<NodeHandle>() {
                         remember_document(handle);
+                        if flush == 0 {
+                            PROVIDERS.with_borrow_mut(|providers| providers.push((id, handle.clone())));
+                        }
                     }
                     run_deferred();
                     focus::check();
@@ -978,7 +990,9 @@ pub(super) fn document() -> Option<&'static dyn DocumentApi> {
 /// [`BlitzDocument`], so the document can be a `&'static` like every other
 /// capability - and so a handle taken before the first frame is not stale.
 fn anchor() -> Option<NodeHandle> {
-    ANCHOR.with(|anchor| anchor.borrow().clone())
+    PROVIDERS
+        .with_borrow(|providers| providers.last().map(|(_, handle)| handle.clone()))
+        .or_else(|| ANCHOR.with(|anchor| anchor.borrow().clone()))
 }
 
 pub(super) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {

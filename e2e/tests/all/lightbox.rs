@@ -27,6 +27,8 @@ const TRIGGER_LAST: &str = "#open-lightbox-last";
 const DIALOG: &str = "[role=dialog]";
 /// The picture that holds the tab stop: the one showing.
 const PICTURE: &str = "[role=dialog] [data-lightbox-frame] img[tabindex='0']";
+/// The stage's track and the boxes round it, for the scroll spy.
+const STAGE: &str = "[role=dialog] :has([data-lightbox-frame])";
 
 #[test]
 fn it_meets_the_baseline() {
@@ -624,10 +626,9 @@ async fn assert_centred(page: &Page, index: usize) -> Result<()> {
 }
 
 /// Todo 323. Open on the last picture (index 5), then swap in a second
-/// gallery at index 2 while the viewer is open. The strip has to jump: every
-/// scroll the stage reports after the swap is already at the new offset. A
-/// smooth scroll back from 5 passes 4 and 3, and lazy loading fetches what
-/// it passes.
+/// gallery at index 2 while the viewer is open. The strip has to jump: no
+/// scroll asked of the stage's track after the swap is smooth. A smooth
+/// scroll back from 5 passes 4 and 3, and lazy loading fetches what it passes.
 ///
 /// What was fetched is asserted at desktop only. There a frame is 1136px
 /// wide, and only the new picture and its `preload: 1` neighbours, indices
@@ -652,9 +653,26 @@ fn a_gallery_swap_jumps_and_fetches_only_around_the_new_index() {
     });
 }
 
+/// Waits for the stage's track to scroll smoothly again, for 2s at most.
+async fn wait_stage_smooth(page: &Page) -> Result<()> {
+    // The open's jump keeps `seam` up until its scroll settles: 0-470ms after
+    // the picture takes focus (measured).
+    const SMOOTH: &str = "(() => { const track = [...document.querySelectorAll('[role=dialog] *')] \
+        .filter(el => el.querySelector(':scope [data-lightbox-frame]') && el.scrollWidth > el.clientWidth) \
+        .pop(); return !!track && getComputedStyle(track).scrollBehavior === 'smooth'; })()";
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+    while !page.evaluate(SMOOTH).await?.into_value::<bool>()? {
+        if std::time::Instant::now() > deadline {
+            bail!("the stage's track still jumps 2s after the open: `seam` never came down");
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+    }
+    Ok(())
+}
+
 async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     // Smooth scrolling is the defect, so it has to be on. The suite's Chromium
-    // scrolls instantly since todo 687, so a smooth swap passes here too.
+    // scrolls instantly (todo 687): the spy below reads what was asked for.
     motion::set_reduced_motion(page, false).await?;
     let reduced: bool = page
         .evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches")
@@ -671,17 +689,9 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     keyboard::tab_to(page, PICTURE, 12).await?;
     assert_picture_focused(page, 5).await?;
 
-    // Every offset the stage's track reports from here on.
-    page.evaluate(
-        r#"(() => {
-            window.__stageScrolls = [];
-            addEventListener('scroll', e => {
-                if (e.target.querySelector?.(':scope [data-lightbox-frame]'))
-                    window.__stageScrolls.push(Math.round(e.target.scrollLeft));
-            }, true);
-        })()"#,
-    )
-    .await?;
+    // A smooth swap is caught only on a track that animates at rest.
+    wait_stage_smooth(page).await?;
+    motion::spy_scrolls(page, STAGE, false).await?;
     // The trigger is under the modal, so a script presses it.
     page.evaluate("document.querySelector('#swap-gallery').click()")
         .await?;
@@ -699,20 +709,10 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
     // would start.
     tokio::time::sleep(std::time::Duration::from_millis(1000)).await;
 
-    let (scrolls, rest): (Vec<i64>, i64) = page
-        .evaluate(
-            r#"(() => {
-                // The innermost overflowing box round the frames.
-                const track = [...document.querySelectorAll('[role=dialog] *')]
-                    .filter(el => el.querySelector(':scope [data-lightbox-frame]') && el.scrollWidth > el.clientWidth)
-                    .pop();
-                return [window.__stageScrolls, Math.round(track.scrollLeft)];
-            })()"#,
-        )
-        .await?
-        .into_value()?;
-    if scrolls.iter().any(|&offset| offset != rest) {
-        bail!("the swap scrolled through {scrolls:?} to rest at {rest}; it should jump");
+    // None at all when the picture's focus scroll got the track there first.
+    let scrolls = motion::scrolls(page).await?;
+    if scrolls.iter().any(|scroll| scroll.smooth) {
+        bail!("the swap scrolled the track with {scrolls:?}; it should jump");
     }
 
     let fetched: Vec<usize> = page

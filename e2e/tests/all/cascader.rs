@@ -620,6 +620,39 @@ fn a_disabled_branch_does_not_open() {
     });
 }
 
+/// Todo 642: drilled to Lyon, the marked rows read as a path: one row per
+/// column carries the selected bar, and only the rows on the path.
+#[test]
+fn the_drilled_rows_read_as_a_path() {
+    block_on(async {
+        let fixture = Fixture::open("/cascader", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        expect(page, "Lyon|3|true", "ArrowDown to Lyon", "desktop").await;
+
+        // Per column: each selected row's label and whether it draws the bar.
+        let marked: Vec<Vec<(String, bool)>> = page
+            .evaluate(
+                "[...document.querySelectorAll('[role=listbox]')].map(list => \
+                 [...list.querySelectorAll('[role=option][aria-selected=true]')].map(row => \
+                 [row.querySelector('[data-slot=label]').textContent, \
+                  getComputedStyle(row).backgroundImage.startsWith('linear-gradient')]))",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let path = ["Europe", "France", "Lyon"].map(|label| vec![(label.to_string(), true)]);
+        assert_eq!(marked, path, "one barred row per column, on the path");
+        fixture.console.assert_clean("a drilled cascader").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A letter key with its keydown, which typeahead listens to.
 const fn letter(key: &'static str, code: &'static str, vk: i64) -> keyboard::Key {
     keyboard::Key {

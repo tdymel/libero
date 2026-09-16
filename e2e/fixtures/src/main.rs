@@ -41,6 +41,7 @@ mod collapse;
 mod color_field;
 mod color_picker;
 mod color_scheme_button;
+mod combobox;
 mod common;
 mod data_list;
 mod date_field;
@@ -134,6 +135,7 @@ const FIXTURES: &[Routes] = &[
     color_field::ROUTES,
     color_picker::ROUTES,
     color_scheme_button::ROUTES,
+    combobox::ROUTES,
     data_list::ROUTES,
     date_field::ROUTES,
     dialog::ROUTES,

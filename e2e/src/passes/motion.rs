@@ -7,6 +7,7 @@
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
+use serde::Deserialize;
 
 /// Emulate `prefers-reduced-motion: reduce` (or clear it).
 ///
@@ -37,6 +38,66 @@ pub async fn assert_reduced_motion_matches(page: &Page) -> Result<()> {
         );
     }
     Ok(())
+}
+
+/// One script scroll [`spy_scrolls`] saw.
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub struct Scroll {
+    /// What the browser would have animated: a `smooth` option, or none and a
+    /// computed `scroll-behavior: smooth`.
+    pub smooth: bool,
+    /// Landed half-way, as a smooth scroll replaced mid-way does.
+    pub cut: bool,
+}
+
+/// Records every `scrollTo`, `scroll` and `scrollBy` on an element matching
+/// `selector`, and whether it would have been smooth. Read with [`scrolls`].
+///
+/// The suite's Chromium scrolls instantly (todo 687), so a test about smooth
+/// scrolling asks what was asked for instead of watching it move. With
+/// `cut_short`, every other smooth `scrollTo` lands half-way, for a test of
+/// what the component does when its smooth scroll is cut short.
+pub async fn spy_scrolls(page: &Page, selector: &str, cut_short: bool) -> Result<()> {
+    page.evaluate(format!(
+        r#"(() => {{
+            if (window.__scrollSpy) throw new Error('spy_scrolls runs once per page');
+            window.__scrollSpy = [];
+            const selector = {};
+            let cut = false;
+            for (const name of ['scrollTo', 'scroll', 'scrollBy']) {{
+                const original = Element.prototype[name];
+                Element.prototype[name] = function (...args) {{
+                    if (!this.matches(selector)) return original.apply(this, args);
+                    const numbers = typeof args[0] === 'number';
+                    const options = numbers ? {{ left: args[0], top: args[1] }} : (args[0] ?? {{}});
+                    const behavior = options.behavior ?? 'auto';
+                    const smooth = behavior === 'smooth'
+                        || (behavior === 'auto' && getComputedStyle(this).scrollBehavior === 'smooth');
+                    const shortened = {cut_short} && smooth && name !== 'scrollBy' && (cut = !cut);
+                    window.__scrollSpy.push({{ smooth, cut: shortened }});
+                    if (!shortened) return original.apply(this, args);
+                    const half = (from, to) => to === undefined ? from : from + (to - from) / 2;
+                    original.call(this, {{
+                        left: half(this.scrollLeft, options.left),
+                        top: half(this.scrollTop, options.top),
+                        behavior: 'instant',
+                    }});
+                }};
+            }}
+        }})()"#,
+        serde_json::to_string(selector)?
+    ))
+    .await?;
+    Ok(())
+}
+
+/// Every scroll [`spy_scrolls`] saw since it was installed, oldest first.
+pub async fn scrolls(page: &Page) -> Result<Vec<Scroll>> {
+    let seen: Option<Vec<Scroll>> = page
+        .evaluate("window.__scrollSpy ?? null")
+        .await?
+        .into_value()?;
+    seen.ok_or_else(|| anyhow::anyhow!("no scroll spy on the page; call spy_scrolls first"))
 }
 
 /// Nothing under `selector`, itself included, may run a transition or an

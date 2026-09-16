@@ -4,6 +4,9 @@ use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard, motion};
 use e2e::{Fixture, Viewport, wait};
 
+/// The strip's scrolling viewport.
+const STRIP: &str = "[role=region]";
+
 /// How much of the focused item is hidden, in px: under a control that is
 /// showing, or outside the strip's clip.
 const HIDDEN: &str = "(() => { const a = document.activeElement.getBoundingClientRect(); \
@@ -49,30 +52,42 @@ async fn focused_index(page: &chromiumoxide::Page) -> usize {
 }
 
 /// 2.4.11: Chromium's focus scroll alone left an item 34px under the forward
-/// control's fade; it ignores `scroll-padding` and `scroll-margin`.
+/// control's fade; it ignores `scroll-padding` and `scroll-margin`. Reduced,
+/// no scroll of the strip is smooth.
 #[test]
 fn a_tabbed_item_is_not_left_under_a_control() {
     block_on(async {
         let fixture = Fixture::open("/scroller", Viewport::Desktop).await.unwrap();
-        motion::set_reduced_motion(&fixture.page, true)
-            .await
-            .unwrap();
-        tab_along(&fixture.page).await;
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, true).await.unwrap();
+        motion::spy_scrolls(page, STRIP, false).await.unwrap();
+        tab_along(page).await;
+        let scrolls = motion::scrolls(page).await.unwrap();
+        assert!(
+            !scrolls.is_empty() && scrolls.iter().all(|scroll| !scroll.smooth),
+            "the strip's scrolls under reduced motion: {scrolls:?}"
+        );
         fixture.close().await.unwrap();
     });
 }
 
-/// With smooth scrolling on, Chromium's focus scroll alone sometimes left the
-/// strip where it was: the item wholly outside the clip. The suite's Chromium
-/// scrolls instantly since 687, so this runs as the one above.
+/// With smooth scrolling on, something can cut the strip's scroll short, and
+/// the item stayed hidden: the scroll's end checks again. The suite's
+/// Chromium scrolls instantly (687), so every other smooth scroll lands
+/// half-way.
 #[test]
 fn a_tabbed_item_scrolls_into_view_with_smooth_scrolling() {
     block_on(async {
         let fixture = Fixture::open("/scroller", Viewport::Desktop).await.unwrap();
-        motion::set_reduced_motion(&fixture.page, false)
-            .await
-            .unwrap();
-        tab_along(&fixture.page).await;
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, false).await.unwrap();
+        motion::spy_scrolls(page, STRIP, true).await.unwrap();
+        tab_along(page).await;
+        let scrolls = motion::scrolls(page).await.unwrap();
+        assert!(
+            scrolls.iter().any(|scroll| scroll.cut),
+            "no smooth scroll of the strip was cut short: {scrolls:?}"
+        );
         fixture.close().await.unwrap();
     });
 }

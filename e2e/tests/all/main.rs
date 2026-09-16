@@ -22,6 +22,7 @@ mod collapse;
 mod color_field;
 mod color_picker;
 mod color_scheme_button;
+mod combobox;
 mod data_list;
 mod date_field;
 mod dialog;

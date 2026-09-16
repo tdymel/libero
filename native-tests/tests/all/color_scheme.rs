@@ -33,6 +33,17 @@ fn a_pinned_scheme_flips_the_root_attribute() {
     assert_eq!(page.computed("#scheme", "--lsx-ink"), light);
 }
 
+/// Todo 635: libero kept the first document it saw in a `thread_local`, so a
+/// second mount on the thread flipped the attribute on the first one's root.
+#[test]
+fn a_second_mount_on_the_thread_flips_its_own_root() {
+    drop(mount(app));
+    let mut page = mount(app);
+    page.click(SCHEME);
+    assert_eq!(page.text(SCHEME), "dark");
+    assert_eq!(page.attr("html", "data-lsx-theme").as_deref(), Some("dark"));
+}
+
 #[test]
 fn a_dark_window_resolves_dark_from_the_first_settled_frame() {
     let page = mount_in(app, ColorScheme::Dark);
