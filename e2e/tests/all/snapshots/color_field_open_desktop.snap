@@ -17,7 +17,7 @@ generic
     generic
       generic
         slider "Hue" = 208 [valuemax=360] [valuemin=0]
-    button "#fa5252"
-    button "#40c057"
-    button "#228be6"
+    button "#fa5252" [pressed=false]
+    button "#40c057" [pressed=false]
+    button "#228be6" [pressed=false]
 --> aria-controls [id="color-field-dialog"] (rendered above)
