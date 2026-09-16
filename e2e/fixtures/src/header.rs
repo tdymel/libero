@@ -10,14 +10,15 @@ pub const ROUTES: Routes = &[
     ("/header-static", || rsx! { StaticPage {} }),
 ];
 
-/// A sticky `lg` banner mounted before a static `xs` header, which must not
-/// publish its height over the banner's.
+/// A publishing sticky `lg` banner mounted before a static `xs` header and a
+/// sticky `sm` one that did not opt in; neither may publish over the banner.
 #[component]
 fn StaticPage() -> Element {
     rsx! {
-        Header { id: "banner", size: "lg", "Banner" }
+        Header { id: "banner", size: "lg", publish_height: true, "Banner" }
         main {
             Header { id: "nested", size: "xs", position: "static", "Nested" }
+            Header { id: "demo", size: "sm", "Demo" }
         }
     }
 }
@@ -25,7 +26,7 @@ fn StaticPage() -> Element {
 #[component]
 fn HeaderPage() -> Element {
     rsx! {
-        Header { id: "banner",
+        Header { id: "banner", publish_height: true,
             nav { aria_label: "Main",
                 Button { id: "home", variant: "standard", "Home" }
             }

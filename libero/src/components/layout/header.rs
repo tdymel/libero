@@ -152,7 +152,7 @@ fn header_variables(props: &HeaderProps) -> Variables {
 base_props! {
     pub struct HeaderProps {
         /// `Sticky` (default) needs no offset; `Fixed` is viewport-relative:
-        /// offset your content by `var(--lsx-header-height)`.
+        /// offset your content by `var(--lsx-header-height)` (see `publish_height`).
         #[props(default, into)]
         position: Input<HeaderPosition>,
         #[props(default, into)]
@@ -161,12 +161,28 @@ base_props! {
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
+        /// Publishes this sticky/fixed Header's height as `--lsx-header-height`
+        /// and `scroll-padding-top` on `:root`, so focus scrolls clear of it.
+        /// Set it on the page's own banner only; the last one mounted wins.
+        #[props(default)]
+        publish_height: bool,
         children: Element,
     }
 }
 
 /// The page's `banner` landmark, always a `<header>`. Hosts nav and actions
 /// as children rather than being scoped to either.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Header;
+/// # fn app() -> Element {
+/// rsx! {
+///     // The page's banner: focus moved under it is scrolled clear.
+///     Header { publish_height: true, "Libero" }
+/// }
+/// # }
+/// ```
 #[component]
 pub fn Header(props: HeaderProps) -> Element {
     let position = props.position.copied_or_default();
@@ -179,11 +195,11 @@ pub fn Header(props: HeaderProps) -> Element {
         .with("fixed", position == HeaderPosition::Fixed)
         .into();
 
-    // A sticky or fixed Header publishes its height on `:root`, the last one
-    // mounted winning. The size's own CSS, so nothing is measured.
+    // An opted-in sticky or fixed Header publishes its height on `:root`, the
+    // last one mounted winning. The size's own CSS, so nothing is measured.
     let id = use_id();
     let published = use_hook(|| Rc::new((id.peek().clone(), Cell::new(false))));
-    let publishes = position != HeaderPosition::Static;
+    let publishes = props.publish_height && position != HeaderPosition::Static;
     let height = props
         .size
         .resolve(Some(HEADER_HEIGHT))
@@ -231,6 +247,7 @@ mod tests {
             size: Input::None,
             color,
             z_index: Input::None,
+            publish_height: false,
             children: rsx! {},
         }
     }

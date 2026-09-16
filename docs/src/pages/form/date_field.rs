@@ -30,17 +30,15 @@ const KINDS: [&str; 7] = [
     "date-time-range",
 ];
 
-const LOCALES: [&str; 4] = ["en", "de", "fr", "ja"];
+const LOCALES: [&str; 2] = ["en", "en-US"];
 
-/// The copyable constants, printed as they are written.
+/// The copyable constant, printed as it is written.
 const LOCALES_SOURCE: &str = include_str!("date_locales.rs");
 
 /// The picked locale's constant: its name and its values.
 fn locale_of(values: &DemoValues) -> Option<(&'static str, &'static Localization)> {
     match values.str("locale").as_str() {
-        "de" => Some(("GERMAN", &locales::GERMAN)),
-        "fr" => Some(("FRENCH", &locales::FRENCH)),
-        "ja" => Some(("JAPANESE", &locales::JAPANESE)),
+        "en-US" => Some(("AMERICAN", &locales::AMERICAN)),
         _ => None,
     }
 }
@@ -178,7 +176,7 @@ pub fn DateFieldPage() -> Element {
                     Code { source: "LiberoProvider" }
                     ". The "
                     Code { source: "locale" }
-                    " control swaps in a German, French or Japanese one and prints it to copy."
+                    " control swaps in a custom one - Sunday first, a 12-hour clock - and prints it to copy."
                 }
                 Text {
                     "A typed "

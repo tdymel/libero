@@ -180,4 +180,5 @@ Props that only some value types use are ignored by the rest.
 `close_on_change`. Names and formats come from `Localization::date`, a
 `DateLocale` (see [localization](theming.md#localization)). Its weekday arrays
 are Sunday first, as dayjs' locale files have them. The docs' `locale` control
-swaps in German, French and Japanese localizations and prints them to copy.
+swaps in a custom English one - Sunday first, a 12-hour clock - and prints
+it to copy.

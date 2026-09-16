@@ -36,3 +36,27 @@ fn an_uncoloured_header_falls_back_to_the_surface() {
         "{html}"
     );
 }
+
+/// Only an opted-in banner puts its height and scroll padding on `:root`, so a
+/// Header shown elsewhere (a demo, a card) leaves the page alone.
+#[test]
+fn only_publish_height_puts_the_height_on_the_root() {
+    fn quiet() -> Element {
+        rsx! {
+            LiberoProvider { Header { "demo" } }
+        }
+    }
+    fn banner() -> Element {
+        rsx! {
+            LiberoProvider { Header { publish_height: true, "site header" } }
+        }
+    }
+
+    assert!(!render(quiet).contains(":root[data-lsx-header="));
+    let html = render(banner);
+    assert!(html.contains(":root[data-lsx-header="), "{html}");
+    assert!(
+        html.contains("scroll-padding-top:var(--lsx-header-height)"),
+        "{html}"
+    );
+}

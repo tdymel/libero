@@ -27,7 +27,10 @@ pub fn HeaderPage() -> Element {
             properties: vec![props("Header", vec![
                 prop("position", "HeaderPosition")
                     .default("sticky")
-                    .doc("Sticky needs no offset; fixed is viewport-relative: offset your content by var(--lsx-header-height)."),
+                    .doc("Sticky needs no offset; fixed is viewport-relative: offset your content by var(--lsx-header-height) (see publish_height)."),
+                prop("publish_height", "bool")
+                    .default("false")
+                    .doc("Publishes the height as --lsx-header-height and scroll-padding-top on :root, so focus scrolls clear of a sticky or fixed banner. Set it on the page's own banner only."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
                     .doc("Header height."),

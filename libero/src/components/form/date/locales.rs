@@ -1,4 +1,4 @@
-//! The docs' copyable locales, written and read back: every day of three
+//! The docs' copyable locale and English, written and read back: every day of three
 //! years and every minute of a day.
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Weekday};
@@ -15,12 +15,7 @@ include!(concat!(
     "/../docs/src/pages/form/date_locales.rs"
 ));
 
-const LOCALES: [(&str, DateLocale); 4] = [
-    ("en", DateLocale::ENGLISH),
-    ("de", GERMAN.date),
-    ("fr", FRENCH.date),
-    ("ja", JAPANESE.date),
-];
+const LOCALES: [(&str, DateLocale); 2] = [("en", DateLocale::ENGLISH), ("en-US", AMERICAN.date)];
 
 fn days() -> impl Iterator<Item = NaiveDate> {
     let first = NaiveDate::from_ymd_opt(2024, 1, 1).expect("a real day");
@@ -105,10 +100,11 @@ fn a_moment_reads_back() {
 }
 
 #[test]
-fn the_weekday_names_follow_dayjs_sunday_first() {
+fn the_custom_locale_keeps_englishs_names_and_overrides_the_rest() {
     let sunday = NaiveDate::from_ymd_opt(2026, 3, 1).expect("a Sunday");
-    assert_eq!(format_date(sunday, "dddd", &GERMAN.date), "Sonntag");
-    assert_eq!(format_date(sunday, "dddd", &FRENCH.date), "dimanche");
-    assert_eq!(format_date(sunday, "dddd", &JAPANESE.date), "日曜日");
-    assert_eq!(JAPANESE.date.first_weekday, Weekday::Sun);
+    assert_eq!(format_date(sunday, "dddd", &AMERICAN.date), "Sunday");
+    assert_eq!(AMERICAN.date.first_weekday, Weekday::Sun);
+    let afternoon = NaiveTime::from_hms_opt(13, 5, 0).expect("a time");
+    let time = format_time(afternoon, AMERICAN.date.time_format, &AMERICAN.date);
+    assert_eq!(time, "1:05 PM");
 }

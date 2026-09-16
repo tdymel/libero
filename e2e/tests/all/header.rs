@@ -61,9 +61,10 @@ async fn clearance_after_shift_tab(padded: bool) -> f64 {
     clearance
 }
 
-/// The sticky banner's size is what `:root` gets; a static header never publishes.
+/// The opted-in banner's size is what `:root` gets; a static header and a
+/// sticky one without `publish_height` never publish.
 #[test]
-fn a_static_header_never_publishes_its_height() {
+fn only_an_opted_in_header_publishes_its_height() {
     block_on(async {
         let fixture = Fixture::open("/header-static", Viewport::Desktop)
             .await

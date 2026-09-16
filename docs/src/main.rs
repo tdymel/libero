@@ -340,6 +340,7 @@ fn AppShell() -> Element {
                 // palette. Translucent plus a blur, so content scrolling
                 // under it is suggested rather than hidden - the bar is
                 // sticky, and an opaque one reads as a lid.
+                publish_height: true,
                 sx: sx()
                     .gap("md")
                     .background("color-mix(in srgb, var(--lsx-paper-background) 80%, transparent)")
