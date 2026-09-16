@@ -20,7 +20,8 @@ use dioxus::prelude::{
 };
 
 use super::{
-    ColorSchemeApi, DocumentApi, ElementApi, KeyboardApi, ScrollApi, SilentFocusApi, TimerApi,
+    ColorSchemeApi, ContentSubscription, DocumentApi, ElementApi, KeyboardApi, ScrollApi,
+    SilentFocusApi, TimerApi,
 };
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
@@ -50,6 +51,21 @@ pub(crate) fn element(mounted: &Rc<MountedData>) -> Box<dyn ElementApi> {
     }
 
     Box::new(mounted::MountedElement(mounted.clone()))
+}
+
+/// Only the web has a `MutationObserver`. Blitz reports no mutation to user
+/// code, and a per-frame subtree walk would cost more than the re-checks it
+/// saves - see [`on_content_change`](crate::platform::on_content_change).
+pub(crate) fn on_content_change(
+    mounted: &Rc<MountedData>,
+    callback: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = (mounted, callback);
+    #[cfg(target_arch = "wasm32")]
+    return web::on_content_change(mounted, callback);
+    #[cfg(not(target_arch = "wasm32"))]
+    return None;
 }
 
 /// Whatever the renderer needs mounted at the root, rendered once by

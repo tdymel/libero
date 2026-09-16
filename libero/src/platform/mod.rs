@@ -36,6 +36,7 @@ pub(crate) use clipboard::clipboard;
 pub use clock::{ClockApi, clock};
 pub use color_scheme::{ColorSchemeApi, ColorSchemeSubscription, color_scheme};
 pub use document::{DocumentApi, document};
+pub(crate) use element::{ContentSubscription, on_content_change};
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;
 pub(crate) use eye_dropper::eye_dropper;

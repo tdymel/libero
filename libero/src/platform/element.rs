@@ -1,6 +1,22 @@
-use std::{future::Future, pin::Pin};
+use std::{future::Future, pin::Pin, rc::Rc};
 
-use super::PlatformError;
+use dioxus::prelude::MountedData;
+
+use super::{PlatformError, backend};
+
+/// Dropping it stops the callbacks.
+pub(crate) trait ContentSubscription {}
+
+/// Calls `callback` after `mounted`'s subtree changed: a node added or
+/// removed, text edited, or an attribute that makes a node focusable or not.
+/// **Only the web can watch** (a `MutationObserver`); elsewhere `None`, and the
+/// caller keeps its own re-checks.
+pub(crate) fn on_content_change(
+    mounted: &Rc<MountedData>,
+    callback: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    backend::on_content_change(mounted, callback)
+}
 
 /// An element's rendered pixel size.
 #[derive(Clone, Copy, Debug, PartialEq)]

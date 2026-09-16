@@ -136,6 +136,45 @@ fn only_an_overflowing_area_of_plain_content_is_a_tab_stop() {
     }
 }
 
+fn nested() -> Element {
+    let mut grown = use_context_provider(|| Signal::new(false));
+    rsx! {
+        Button { id: "grow", onclick: move |_| grown.set(true), "Grow" }
+        div { height: "120px",
+            ScrollArea { id: "area", "aria-label": "Notes", Lines {} }
+        }
+    }
+}
+
+#[component]
+fn Lines() -> Element {
+    let grown = use_context::<Signal<bool>>();
+    rsx! {
+        for i in 0..if grown() { 40 } else { 2 } {
+            p { key: "{i}", height: "20px", "Line {i}" }
+        }
+    }
+}
+
+/// Todo 681: the web re-checks on a `MutationObserver`; Blitz reports no
+/// mutation to user code, so a change inside a child component goes unseen.
+#[test]
+#[ignore = "needs Blitz: no mutation callback, so a change inside a child is not re-checked"]
+fn a_change_inside_a_child_component_re_checks_the_tab_stop() {
+    let mut page = mount(nested);
+    page.wait(Duration::from_millis(50));
+    page.click("#grow");
+    for _ in 0..25 {
+        page.wait(Duration::from_millis(20));
+    }
+    assert_eq!(
+        page.attr("#area", "tabindex").as_deref(),
+        Some("0"),
+        "{}",
+        page.tree()
+    );
+}
+
 /// Blitz sends no `resize` (measured, [[codebase/platform/blitz-platform-gaps]]).
 #[test]
 #[ignore = "needs Blitz: no resize event reaches ScrollArea's onresize"]

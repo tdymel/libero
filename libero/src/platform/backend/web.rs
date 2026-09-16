@@ -12,9 +12,9 @@ use wasm_bindgen::prelude::Closure;
 
 use super::INTERACTIVE;
 use crate::platform::{
-    ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi, KeyChord,
-    KeySubscription, KeyboardApi, PlatformError, Read, ScrollApi, ScrollSubscription, TimerApi,
-    TimerSubscription,
+    ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions, DocumentApi,
+    ElementApi, KeyChord, KeySubscription, KeyboardApi, PlatformError, Read, ScrollApi,
+    ScrollSubscription, TimerApi, TimerSubscription,
     keyboard::{takes_arrows, takes_typing, warn_reserved_chord},
 };
 use crate::tokens::{COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting};
@@ -354,6 +354,57 @@ struct WebScrollSubscription {
     /// Kept alive for exactly as long as the listener is registered: dropping a
     /// `Closure` frees the JS function the listener still points at.
     closure: Closure<dyn FnMut()>,
+}
+
+/// Attributes that make a node focusable or not, or reshape it through a
+/// class. Not `style`: a `Virtualize` rewrites the observed wrapper's on scroll.
+const CONTENT_ATTRIBUTES: [&str; 7] = [
+    "tabindex",
+    "disabled",
+    "href",
+    "contenteditable",
+    "hidden",
+    "open",
+    "class",
+];
+
+/// The observer batches a render's records into one callback.
+pub(super) fn on_content_change(
+    mounted: &Rc<MountedData>,
+    callback: Box<dyn Fn()>,
+) -> Option<Box<dyn ContentSubscription>> {
+    let element = mounted.downcast::<web_sys::Element>()?;
+    let closure = Closure::<dyn FnMut()>::new(callback);
+    let observer = web_sys::MutationObserver::new(closure.as_ref().unchecked_ref()).ok()?;
+    let options = web_sys::MutationObserverInit::new();
+    options.set_child_list(true);
+    options.set_subtree(true);
+    options.set_character_data(true);
+    let filter: js_sys::Array = CONTENT_ATTRIBUTES
+        .iter()
+        .copied()
+        .map(JsValue::from)
+        .collect();
+    options.set_attribute_filter(&filter);
+    observer.observe_with_options(element, &options).ok()?;
+    Some(Box::new(WebContentSubscription {
+        observer,
+        _closure: closure,
+    }))
+}
+
+struct WebContentSubscription {
+    observer: web_sys::MutationObserver,
+    /// Kept alive for as long as the observer can call it.
+    _closure: Closure<dyn FnMut()>,
+}
+
+impl ContentSubscription for WebContentSubscription {}
+
+impl Drop for WebContentSubscription {
+    fn drop(&mut self) {
+        self.observer.disconnect();
+    }
 }
 
 impl ScrollSubscription for WebScrollSubscription {}

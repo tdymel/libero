@@ -1,8 +1,10 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use dioxus::prelude::*;
 
-use crate::platform::{Dimensions, ElementApi, PlatformError, Read, backend};
+use crate::platform::{
+    ContentSubscription, Dimensions, ElementApi, PlatformError, Read, backend, on_content_change,
+};
 
 /// A handle to one of this component's own elements, and the only way to reach
 /// an element at all.
@@ -90,6 +92,40 @@ pub fn use_element() -> ElementHandle {
     ElementHandle {
         mounted: use_signal(|| None),
     }
+}
+
+/// Counts the changes to `element`'s subtree while `enabled`, from each mount
+/// until this component unmounts: an effect that reads it re-runs after one.
+/// One observer per call, and it stays `0` where the renderer cannot watch.
+pub(crate) fn use_content_changes(element: ElementHandle, enabled: bool) -> ReadSignal<u64> {
+    // Bumped from the observer, which runs outside every scope.
+    let changes = use_signal(|| 0u64);
+    let slot: Rc<RefCell<Option<Box<dyn ContentSubscription>>>> =
+        use_hook(|| Rc::new(RefCell::new(None)));
+    use_drop({
+        let slot = slot.clone();
+        move || drop(slot.borrow_mut().take())
+    });
+    use_effect(use_reactive!(|enabled| {
+        let _ = element.mount_token();
+        // Dropped first, so a remount never runs two observers.
+        slot.borrow_mut().take();
+        if !enabled {
+            return;
+        }
+        let watching = element.mounted().and_then(|mounted| {
+            on_content_change(
+                &mounted,
+                Box::new(move || {
+                    let mut changes = changes;
+                    let next = changes.peek().wrapping_add(1);
+                    changes.set(next);
+                }),
+            )
+        });
+        *slot.borrow_mut() = watching;
+    }));
+    changes.into()
 }
 
 impl ElementApi for ElementHandle {

@@ -9,37 +9,38 @@ button "Notify assertively"
   StaticText "Notify assertively"
 button "Notify for a while"
   StaticText "Notify for a while"
-region "Notifications (F8)"
-  generic
-    generic [live=assertive]
-    generic [live=polite]
-  generic
-    generic [live=assertive]
-    generic [live=polite]
-  generic
-    generic [live=assertive]
-    generic [live=polite]
-  generic
-    generic [live=assertive]
-    generic [live=polite]
-  generic
-    generic [live=assertive]
-    generic [live=polite]
-  generic
-    generic [live=assertive]
-    generic [live=polite]
-  generic
-    generic [live=assertive]
-    generic [live=polite]
-  generic
-    generic [live=assertive]
-    generic [live=polite]
-  generic
-    generic [live=assertive]
-    generic [live=polite]
-      list
-        listitem [level=1]
-          group
-            generic
-              StaticText "Saved to your library"
-            button "Close"
+generic
+  region "Notifications (F8)"
+    generic
+      generic [live=assertive]
+      generic [live=polite]
+    generic
+      generic [live=assertive]
+      generic [live=polite]
+    generic
+      generic [live=assertive]
+      generic [live=polite]
+    generic
+      generic [live=assertive]
+      generic [live=polite]
+    generic
+      generic [live=assertive]
+      generic [live=polite]
+    generic
+      generic [live=assertive]
+      generic [live=polite]
+    generic
+      generic [live=assertive]
+      generic [live=polite]
+    generic
+      generic [live=assertive]
+      generic [live=polite]
+    generic
+      generic [live=assertive]
+      generic [live=polite]
+        list
+          listitem [level=1]
+            group
+              generic
+                StaticText "Saved to your library"
+              button "Close"

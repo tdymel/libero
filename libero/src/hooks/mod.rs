@@ -25,6 +25,7 @@ pub(crate) use dismiss::{
     use_escape_dismiss, use_field_list_layer,
 };
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
+pub(crate) use element::use_content_changes;
 pub use element::{ElementHandle, use_element};
 pub use focus_return::{FocusReturn, use_focus_return};
 pub(crate) use id::id_selector;

@@ -187,6 +187,43 @@ fn an_overflowing_area_of_plain_content_is_a_tab_stop() {
     });
 }
 
+/// Content changing inside a child component re-renders nothing in the area:
+/// the stop is re-checked all the same, both ways (681).
+#[test]
+fn a_change_inside_a_child_component_re_checks_the_tab_stop() {
+    const STOP: &str = "document.getElementById('nested').getAttribute('tabindex') === '0'";
+    const STEP: &str = "document.querySelector('#nested-step').click()";
+    block_on(async {
+        let fixture = Fixture::open("/scroll-area/keyboard", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        // The mount-time check has run once the plain area took its stop.
+        wait::for_js_true(page, &STOP.replace("nested", "plain"), "the mount check")
+            .await
+            .unwrap();
+        let tab_stop: bool = page.evaluate(STOP).await.unwrap().into_value().unwrap();
+        assert!(!tab_stop, "two lines made a tab stop");
+
+        page.evaluate(STEP).await.unwrap();
+        wait::for_js_true(page, STOP, "forty lines to make a tab stop")
+            .await
+            .unwrap();
+
+        page.evaluate(STEP).await.unwrap();
+        wait::for_js_true(page, &format!("!({STOP})"), "a link to take the stop away")
+            .await
+            .unwrap();
+
+        fixture
+            .console
+            .assert_clean("a change inside a child")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// An area with only `on*reached` handlers still listens for scrolls (todo 29
 /// attaches `onscroll` only when something reads it).
 #[test]

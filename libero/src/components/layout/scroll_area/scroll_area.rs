@@ -11,7 +11,7 @@ use crate::{
         common::{base_props, input_from_str, names_itself, variables},
         layout::use_box,
     },
-    hooks::{ElementHandle, use_element, use_theme},
+    hooks::{ElementHandle, use_content_changes, use_element, use_theme},
     platform::{Dimensions, ElementApi, PlatformError, when_laid_out},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
@@ -334,11 +334,15 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             check_tab_stop(root, scrollbars, auto_stop, UNLAID_TRIES);
         }
     };
+    let content = use_element();
+    // Only while the area picks its own stop: a change inside a child component
+    // re-renders nothing here (todo 681).
+    let changes = use_content_changes(content, automatic);
     // After the DOM has the content: on mount (the effect reads the mount), on
-    // new content, and on resize (`onresize`).
+    // new content, on a change deeper down, and on resize (`onresize`).
     let children = props.children.clone();
     use_effect(use_reactive!(|children| {
-        let _ = &children;
+        let _ = (&children, changes());
         if root.is_mounted() {
             check_stop();
         }
@@ -356,7 +360,6 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let mut is_scrolling = use_signal(|| false);
     let mut edges = use_signal(|| EdgeState::AT_ORIGIN);
 
-    let content = use_element();
     let mut geometry = use_signal(|| None::<ScrollGeometry>);
     let offsets = use_signal(ContentOffsets::default);
     let virtualized = use_signal(|| false);

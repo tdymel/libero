@@ -19,6 +19,7 @@ pub const ROUTES: Routes = &[
 fn KeyboardPage() -> Element {
     let lines = || (0..40).map(|i| rsx! { p { key: "{i}", "Line {i}" } });
     let mut grown = use_signal(|| 2);
+    let mut nested = use_context_provider(|| Signal::new(0u8));
     rsx! {
         Flex { direction: "column", gap: "md",
             button { id: "before", "Before" }
@@ -53,6 +54,26 @@ fn KeyboardPage() -> Element {
                     }
                 }
             }
+            button { id: "nested-step", onclick: move |_| nested += 1, "Step" }
+            div { style: "height: 120px",
+                ScrollArea { id: "nested", "aria-label": "Nested", NestedLines {} }
+            }
+        }
+    }
+}
+
+/// Reads the step itself, so a step re-renders it and not the `ScrollArea`
+/// (681): two lines, then forty, then forty and a link.
+#[component]
+fn NestedLines() -> Element {
+    let step = use_context::<Signal<u8>>();
+    let count = if step() == 0 { 2 } else { 40 };
+    rsx! {
+        for i in 0..count {
+            p { key: "{i}", "Line {i}" }
+        }
+        if step() > 1 {
+            a { href: "#nested-link", "Link" }
         }
     }
 }

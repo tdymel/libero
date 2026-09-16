@@ -60,6 +60,11 @@ static STACK_SX: StaticSx = StaticSx::new(|| {
 /// A contained host's box: the stacks' positioned ancestor.
 static CONTAINED_SX: StaticSx = StaticSx::new(|| sx().position("relative"));
 
+/// The landmark around every stack. It covers the host, so a stack anchors to
+/// the host even where `position` resolves against the parent (Blitz, todo 682).
+static LANDMARK_SX: StaticSx =
+    StaticSx::new(|| sx().position("absolute").inset("0").pointer_events("none"));
+
 /// One live region. Both are always rendered, even empty, and the space
 /// between the two comes from here rather than from a `gap` on the stack, so
 /// an empty region takes none.
@@ -816,7 +821,12 @@ pub fn Notifications(
     stored.set(drawn);
     // One landmark for every stack: nine would crowd the landmark list.
     let content = rsx! {
-        div { role: "region", "aria-label": region_label, {stacks.into_iter()} }
+        Box {
+            framework_sx: &LANDMARK_SX,
+            role: "region",
+            "aria-label": region_label,
+            {stacks.into_iter()}
+        }
     };
     drop(entries);
 
