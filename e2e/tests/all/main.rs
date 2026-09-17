@@ -27,6 +27,7 @@ mod data_list;
 mod date_field;
 mod dialog;
 mod divider;
+mod docs_shell;
 mod drawer;
 mod field_frame;
 mod field_value;

@@ -319,18 +319,23 @@ fn ancestor_group(data: &[TreeNode<NavEntry>], target: &str) -> Option<String> {
 #[component]
 pub fn DocsNav(open: Signal<bool>, burger: ElementHandle) -> Element {
     let data = nav_tree();
+    let current_path = use_route::<Route>().to_string();
+    let group = ancestor_group(&data, &current_path);
 
-    let current_path = try_router()
-        .map(|router| router.full_route_string())
-        .unwrap_or_default();
-
-    // Only seeds which section starts open (deep-linking to a page opens
-    // its section) - after that, expand/collapse is `Tree`'s own business,
-    // including collapsing the section the active page is in.
-    let mut default_expanded = HashSet::new();
-    if let Some(group_id) = ancestor_group(&data, &current_path) {
-        default_expanded.insert(group_id);
-    }
+    // Mirrors `Tree`'s open sections. Deep-linking to a page opens its section;
+    // after that, expand/collapse is `Tree`'s own business.
+    let mut expanded = use_signal(|| group.iter().cloned().collect::<HashSet<_>>());
+    // `Tree` has no controlled `expanded`: a page in a closed section (the
+    // search reaches any) remounts it with that section open too.
+    let mut reveals = use_signal(|| 0_u32);
+    use_effect(use_reactive!(|group| {
+        if let Some(group) = group
+            && !expanded.peek().contains(&group)
+        {
+            expanded.write().insert(group);
+            reveals += 1;
+        }
+    }));
 
     rsx! {
         Sidebar {
@@ -343,6 +348,7 @@ pub fn DocsNav(open: Signal<bool>, burger: ElementHandle) -> Element {
                 direction: "column",
                 gap: "sm",
                 Tree {
+                    key: "{reveals}",
                     aria_label: "Documentation pages",
                     size: "xs",
                     // Both zeroed off-scale, so they go through `sx` rather
@@ -364,7 +370,8 @@ pub fn DocsNav(open: Signal<bool>, burger: ElementHandle) -> Element {
                         .gap("0")
                         .selector("& ul", sx().gap("0").padding_left("0")),
                     data,
-                    default_expanded,
+                    default_expanded: expanded.peek().clone(),
+                    onexpandedchange: move |open: HashSet<String>| expanded.set(open),
                     // The tab stop starts on the current page, not "Guides".
                     current: current_path,
                     render_node: move |args: TreeNodeRenderArgs<NavEntry>| {

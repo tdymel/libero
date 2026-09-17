@@ -1,5 +1,8 @@
 use dioxus::prelude::*;
-use libero::components::{Chip, Flex, Icon, OptionLabel, Options, Tabs, Title};
+use libero::{
+    components::{Chip, Flex, Icon, OptionLabel, Options, Tabs, Title},
+    sx::sx,
+};
 
 use super::{PropGroup, PropertyTable};
 use crate::icons::{CodeIcon, FileIcon, GitHubIcon, MarkdownIcon};
@@ -49,7 +52,13 @@ pub fn DocPage(
                     align: "center",
                     gap: "lg",
                     wrap: "wrap",
-                    Title { size: "xxl", "{title}" }
+                    // Focused after a navigation (`AppShell`), without a ring round the heading.
+                    Title {
+                        size: "xxl",
+                        tabindex: "-1",
+                        sx: sx().selector("&:focus", sx().outline("none")),
+                        "{title}"
+                    }
                     Flex {
                         direction: "row",
                         align: "center",

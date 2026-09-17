@@ -2406,6 +2406,7 @@ dependencies = [
  "dioxus",
  "dioxus-native",
  "libero",
+ "web-sys",
 ]
 
 [[package]]

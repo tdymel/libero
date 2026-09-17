@@ -47,6 +47,7 @@ mod data_list;
 mod date_field;
 mod dialog;
 mod divider;
+mod docs_shell;
 mod drawer;
 mod field_frame;
 mod field_value;
@@ -141,6 +142,7 @@ const FIXTURES: &[Routes] = &[
     date_field::ROUTES,
     dialog::ROUTES,
     divider::ROUTES,
+    docs_shell::ROUTES,
     drawer::ROUTES,
     field_frame::ROUTES,
     field_value::ROUTES,

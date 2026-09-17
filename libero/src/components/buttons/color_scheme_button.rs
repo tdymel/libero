@@ -22,7 +22,7 @@ static GLYPH_SX: StaticSx =
 /// The pair drawn as one control: the two halves share the seam, and the
 /// focused one is lifted so its ring is not painted under its neighbour.
 /// The toggle is a direct child; the chevron sits inside the `div` `Menu`
-/// wraps its trigger in.
+/// wraps its trigger in. Logical sides, so the seam follows `dir="rtl"`.
 static SPLIT_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")
         .align_items("stretch")
@@ -30,15 +30,14 @@ static SPLIT_SX: StaticSx = StaticSx::new(|| {
         .selector("& button:focus-visible", sx().z_index("1"))
         .selector(
             "& > button",
-            sx().border_top_right_radius("0")
-                .border_bottom_right_radius("0"),
+            sx().border_start_end_radius("0").border_end_end_radius("0"),
         )
         // One seam, not two borders side by side.
-        .selector("& > div", sx().display("flex").margin_left("-1px"))
+        .selector("& > div", sx().display("flex").margin_inline_start("-1px"))
         .selector(
             "& > div > button",
-            sx().border_top_left_radius("0")
-                .border_bottom_left_radius("0")
+            sx().border_start_start_radius("0")
+                .border_end_start_radius("0")
                 // Narrower than the toggle, as a split button's arrow is,
                 // but never under WCAG 2.5.8's 24px.
                 .width(format!(

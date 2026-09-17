@@ -9,7 +9,7 @@ use libero::{
         ActionIcon, Box, Burger, Button, ColorSchemeButton, Container, Flex, Header, Image, Kbd,
         Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_spotlight,
     },
-    hooks::{use_element, use_localization},
+    hooks::use_element,
     localization::Formats,
     platform::ElementApi,
     sx::sx,
@@ -17,6 +17,8 @@ use libero::{
 };
 
 mod components;
+mod github_stars;
+mod heading_focus;
 mod icons;
 #[cfg(test)]
 mod index_html;
@@ -283,12 +285,15 @@ struct Rtl(Signal<bool>);
 /// has no storage, so there it lives for the session.
 const DIR_STORAGE_KEY: &str = "libero-docs-dir";
 const HAS_STORAGE: bool = !cfg!(any(feature = "native", feature = "native-cpu"));
+/// Plain web reads it before the first render. A WebView has no `web-sys`, and
+/// hydration must first match the server's LTR.
+const SYNC_STORAGE: bool = cfg!(all(target_arch = "wasm32", not(feature = "fullstack")));
 
 #[component]
 fn App() -> Element {
-    let rtl = use_context_provider(|| Rtl(Signal::new(false))).0;
+    let rtl = use_context_provider(|| Rtl(Signal::new(SYNC_STORAGE && stored_rtl()))).0;
     use_hook(move || {
-        if HAS_STORAGE {
+        if HAS_STORAGE && !SYNC_STORAGE {
             spawn(async move {
                 let js = format!("return localStorage.getItem('{DIR_STORAGE_KEY}');");
                 if let Ok(Some(dir)) = document::eval(&js).join::<Option<String>>().await {
@@ -312,6 +317,17 @@ fn App() -> Element {
     }
 }
 
+/// Whether `localStorage` says right to left, read synchronously.
+fn stored_rtl() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    return web_sys::window()
+        .and_then(|window| window.local_storage().ok().flatten())
+        .and_then(|storage| storage.get_item(DIR_STORAGE_KEY).ok().flatten())
+        .is_some_and(|dir| dir == "rtl");
+    #[cfg(not(target_arch = "wasm32"))]
+    false
+}
+
 /// Flips the app's direction and keeps it where the platform can.
 fn toggle_direction(mut rtl: Signal<bool>) {
     rtl.toggle();
@@ -329,16 +345,17 @@ fn AppShell() -> Element {
     let burger = use_element();
     let content = use_element();
     let rtl = use_context::<Rtl>().0;
-    let localization = use_localization();
     // The docs search: every page, Ctrl/Cmd+K from anywhere.
     let pages = use_hook(nav::page_actions);
     let search = use_spotlight(SpotlightOptions {
         placeholder: Some("Search the docs...".into()),
+        aria_label: Some("Search the docs".into()),
         actions: Some(Callback::new(move |query: String| {
             spotlight_filter(&query, &pages)
         })),
         ..Default::default()
     });
+    heading_focus::use_heading_focus(use_route::<Route>(), content);
 
     rsx! {
         Flex {
@@ -500,15 +517,7 @@ fn AppShell() -> Element {
                         "Ctrl K"
                     }
                 }
-                // The icon alone shows it is external, so the new-tab cue
-                // the page's GitHub chip reads rides the name.
-                ActionIcon {
-                    aria_label: format!("GitHub {}", localization.anchor.new_tab),
-                    to: GITHUB,
-                    target: "_blank",
-                    variant: "outlined",
-                    color: "muted",
-                    size: "lg",
+                github_stars::GitHubLink { to: GITHUB,
                     span { display: "inline-flex", width: "18px", height: "18px", GitHubIcon {} }
                 }
                 // Lets a reviewer check any component right to left. A fixed
