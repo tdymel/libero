@@ -125,9 +125,9 @@ field_props! {
         /// `+49` in its place, which is also one tab stop fewer.
         #[props(default)]
         country_select: Option<bool>,
-        /// Overrides the English name a country is offered under, during
-        /// render - so it can read a locale out of context. The library ships
-        /// no translations.
+        /// Overrides the name a country is offered under, during render. Unset,
+        /// the localization's `phone_field.country_names` names it, else the
+        /// built-in English name.
         #[props(default)]
         country_label: Option<Callback<String, String>>,
         /// Narrows the list to these ISO codes, in the order given. Anything
@@ -236,10 +236,15 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
 
     let emit = bound.emit(props.oninput);
 
+    let localization = use_localization();
     let label_of = props.country_label;
+    let names = localization.phone_field;
     let name_of = move |country: &'static Country| match &label_of {
         Some(label) => label.call(country.iso.to_string()),
-        None => country.name.to_string(),
+        None => names
+            .country_name(country.iso)
+            .unwrap_or(country.name)
+            .to_string(),
     };
 
     let oncountrychange = props.oncountrychange;
@@ -318,7 +323,6 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .prepare();
     let prefix_box = use_box().framework_sx(&PREFIX_SX).prepare();
     let search_box = use_box().framework_sx(&SEARCH_SX).prepare();
-    let localization = use_localization();
 
     // Built only while the list is open - it is the only time `ComboboxCore`
     // renders it, and it carries three event closures.
@@ -922,6 +926,17 @@ mod tests {
             );
             assert!(!seen.contains(&entry.iso), "{} twice", entry.iso);
             seen.push(entry.iso);
+        }
+    }
+
+    /// The German names cover exactly the table's codes, each once.
+    #[test]
+    fn the_german_names_cover_the_table() {
+        let names = crate::localization::PhoneFieldLabels::GERMAN.country_names;
+        assert_eq!(names.len(), COUNTRIES.len());
+        for entry in COUNTRIES {
+            let hits = names.iter().filter(|(iso, _)| *iso == entry.iso).count();
+            assert_eq!(hits, 1, "{} named {hits} times", entry.iso);
         }
     }
 }

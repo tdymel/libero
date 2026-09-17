@@ -25,11 +25,22 @@ static STEPPERS_SX: StaticSx =
     StaticSx::new(|| sx().display("flex").align_items("center").gap("2px"));
 
 /// Each stepper's 24px hit area stops at the middle of the 2px gap, so the two
-/// meet instead of overlapping; the spare width goes outwards.
-static DECREMENT_SX: StaticSx =
-    StaticSx::new(|| sx().selector("::before", sx().left("calc(100% - 23px)").right("-1px")));
-static INCREMENT_SX: StaticSx =
-    StaticSx::new(|| sx().selector("::before", sx().left("-1px").right("calc(100% - 23px)")));
+/// meet instead of overlapping; the spare width goes outwards, which `rtl`
+/// mirrors.
+static DECREMENT_SX: StaticSx = StaticSx::new(|| {
+    sx().selector("::before", sx().left("calc(100% - 23px)").right("-1px"))
+        .selector(
+            "&:dir(rtl)::before",
+            sx().left("-1px").right("calc(100% - 23px)"),
+        )
+});
+static INCREMENT_SX: StaticSx = StaticSx::new(|| {
+    sx().selector("::before", sx().left("-1px").right("calc(100% - 23px)"))
+        .selector(
+            "&:dir(rtl)::before",
+            sx().left("calc(100% - 23px)").right("-1px"),
+        )
+});
 
 field_props! {
     extends(input);

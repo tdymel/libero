@@ -37,12 +37,21 @@ static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().top("50%").var(FLOAT_TRANSLATE_Y_VAR, "-50%"),
         )
         .when("vertical-bottom", sx().bottom("0"))
-        .when("horizontal-start", sx().left("0"))
+        // Start and end follow the direction; the offsets stay physical.
+        .when(
+            "horizontal-start",
+            sx().left("0")
+                .selector("&:dir(rtl)", sx().left("auto").right("0")),
+        )
         .when(
             "horizontal-center",
             sx().left("50%").var(FLOAT_TRANSLATE_X_VAR, "-50%"),
         )
-        .when("horizontal-end", sx().right("0"))
+        .when(
+            "horizontal-end",
+            sx().right("0")
+                .selector("&:dir(rtl)", sx().right("auto").left("0")),
+        )
         // Against the viewport rather than the nearest positioned ancestor.
         // A state rather than a second static sheet, so `fixed` changes one
         // declaration and the placement rules above serve both arms.

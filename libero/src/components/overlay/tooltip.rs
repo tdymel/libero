@@ -35,13 +35,25 @@ const MAX_WIDTH: &str = "20rem";
 /// side the bubble actually landed on, after any flip.
 fn bridge_sx(side: Side) -> Sx {
     let gap = TOOLTIP_GAP_VAR.value();
-    let bridge = match side {
-        Side::Top => sx().top("100%").left("0").right("0").height(gap),
-        Side::Bottom => sx().bottom("100%").left("0").right("0").height(gap),
-        Side::Left => sx().left("100%").top("0").bottom("0").width(gap),
-        Side::Right => sx().right("100%").top("0").bottom("0").width(gap),
+    // A start bubble sits left of the trigger under LTR, so its bridge leaves
+    // its right edge; `:dir(rtl)` mirrors that.
+    let (bridge, rtl) = match side {
+        Side::Top => (sx().top("100%").left("0").right("0").height(gap), None),
+        Side::Bottom => (sx().bottom("100%").left("0").right("0").height(gap), None),
+        Side::Start => (
+            sx().left("100%").top("0").bottom("0").width(gap.clone()),
+            Some(sx().left("auto").right("100%")),
+        ),
+        Side::End => (
+            sx().right("100%").top("0").bottom("0").width(gap.clone()),
+            Some(sx().right("auto").left("100%")),
+        ),
     };
-    sx().selector("&::before", bridge)
+    let base = sx().selector("&::before", bridge);
+    match rtl {
+        Some(rtl) => base.selector("&:dir(rtl)::before", rtl),
+        None => base,
+    }
 }
 
 static TOOLTIP_BUBBLE_SX: StaticSx = StaticSx::new(|| {

@@ -8,8 +8,8 @@ use crate::theme::Size;
 /// `country` is a real theme knob and not a per-field prop with a constant:
 /// a German app sets its starting country once instead of on every field. The
 /// country *names* deliberately stay out - 240 of them would dwarf the whole
-/// theme, so they come from the component's table with `country_label` as the
-/// live override.
+/// theme, so they come from `PhoneFieldLabels::country_names` over the
+/// component's English table, with `country_label` as the live override.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PhoneFieldDefaults {
     pub size: Size,

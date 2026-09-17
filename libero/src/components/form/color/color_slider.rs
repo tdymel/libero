@@ -1,8 +1,10 @@
 //! What `HueSlider` and `AlphaSlider` share: both are a plain `SliderCore`
 //! whose track is a gradient as tall as its thumb.
 
+use dioxus::prelude::Attribute;
+
 use crate::{
-    components::{Input, form::slider::SLIDER_HIT},
+    components::{Input, common::attr, form::slider::SLIDER_HIT},
     sx::{StaticSx, Sx},
     theme::{
         COLOR_PICKER_SPACING, COLOR_PICKER_THUMB, ColorPickerDefaults, SLIDER_THUMB, SLIDER_TRACK,
@@ -16,6 +18,13 @@ pub(super) const HUE_GRADIENT: &str = "linear-gradient(to right, #ff0000 0%, #ff
 /// last in a comma-separated `background`.
 pub(super) const CHECKERBOARD: &str =
     "repeating-conic-gradient(#e9ecef 0% 25%, #ffffff 0% 50%) 50% / 8px 8px";
+
+/// A colour scale runs left to right on an RTL page too, as its gradient
+/// does; the caller's own `dir` still wins, coming later.
+pub(super) fn ltr_scale(mut attributes: Vec<Attribute>) -> Vec<Attribute> {
+    attributes.insert(0, attr("dir", "ltr"));
+    attributes
+}
 
 /// The picker's scale on the slider's own root, and the slider's track and
 /// thumb pointed at it. The caller's `sx` goes after, so it still wins.

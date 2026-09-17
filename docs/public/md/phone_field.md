@@ -88,9 +88,10 @@ carrying the same digits under the new dial code.
 picker was, which is also one tab stop fewer - the same kind of escape hatch
 `reveal_button: false` is on [PasswordField](password_field.md).
 
-`countries` narrows the list, in the order given. `country_label` overrides the
-English name of one country during render, so it can read a locale out of
-context; the library bundles no translations.
+`countries` narrows the list, in the order given. The names come from the
+localization's `phone_field.country_names`, keyed by ISO code (German ships; a
+code it lacks keeps its English name). `country_label` overrides both during
+render.
 
 No flags ship with it. Emoji flags render as two regional-indicator letters on
 Windows, and an inline SVG sprite of every flag costs about 44 KB gzipped, so
@@ -139,7 +140,7 @@ native.
 | `country` | `String` | `US` | The country the field starts on, ISO 3166-1 alpha-2. Themed. |
 | `oncountrychange` | `EventHandler<String>` | - | The user picked another country. |
 | `country_select` | `bool` | `theme.phone_field.country_select` (`true`) | Offers the picker at all. Off pins the country and draws a static dial code. |
-| `country_label` | `Callback<String, String>` | - | Overrides a country's English name, during render. |
+| `country_label` | `Callback<String, String>` | - | Overrides a country's name, during render. Unset, the localization's `phone_field.country_names`, else English. |
 | `countries` | `Vec<String>` | - | Narrows the list to these ISO codes, in the order given. |
 | `flag` | `Callback<String, Element>` | - | Draws a flag beside a country. The library ships none. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
@@ -166,8 +167,9 @@ lines up with a [TextField](text_field.md) above it and with a
 
 `country` is a real theme knob: a German app sets its starting country once
 instead of on every field. The country *names* deliberately stay out of the
-theme - 240 of them would dwarf it - and come from the component's own table,
-with `country_label` as the live override.
+theme - 240 of them would dwarf it - and come from the localization's
+`phone_field.country_names` over the component's English table, with
+`country_label` as the live override.
 
 ## Data attributes
 

@@ -103,7 +103,7 @@ pub fn TimelinePage() -> Element {
                         .doc("The current event, strictly controlled: bind it to whatever already knows how far along the process is. Bullets `0..=active` and the connectors `0..active` draw active; out of range clamps to the last event, so \"step 7 of 4\" means finished."),
                     prop("align", "TimelineAlign")
                         .default("theme.timeline.align")
-                        .doc("`\"left\"`, `\"right\"`, or `\"alternate\"` - content either side of a centred rail. `\"alternate\"` alternates at every width and fills its parent, so a narrower parent is how you make it narrower."),
+                        .doc("`\"start\"`, `\"end\"`, or `\"alternate\"` - content either side of a centred rail. Logical: mirrored under `dir=\"rtl\"`. `\"alternate\"` alternates at every width and fills its parent, so a narrower parent is how you make it narrower."),
                     prop("color", "ThemeAwareValue")
                         .default("theme.timeline.color")
                         .doc("The active accent. A per-event `.color(..)` overrides it."),
@@ -168,8 +168,8 @@ pub fn TimelinePage() -> Element {
                             "none" => vec![],
                             value => vec![format!("active: {value}")],
                         }),
-                    Control::toggle("align", ["left", "right", "alternate"])
-                        .labels(["Left", "Right", "Alternate"]),
+                    Control::toggle("align", ["start", "end", "alternate"])
+                        .labels(["Start", "End", "Alternate"]),
                     // No `UNSET` swatch: unset resolves to `primary`, and a
                     // white swatch beside five colours reads as a sixth
                     // colour choice rather than as "no prop". `primary` is

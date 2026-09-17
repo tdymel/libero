@@ -102,16 +102,35 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
             "collapsed",
             sx().when(
                 Orientation::Horizontal.state_name(),
+                // Each direction gets its own pair: under RTL the previous
+                // segment is on the right.
                 sx().selector(
-                    collapse_start,
-                    sx().margin_left("-1px")
-                        .border_top_left_radius("0")
-                        .border_bottom_left_radius("0"),
+                    "&:dir(ltr)",
+                    sx().selector(
+                        collapse_start,
+                        sx().margin_left("-1px")
+                            .border_top_left_radius("0")
+                            .border_bottom_left_radius("0"),
+                    )
+                    .selector(
+                        collapse_end,
+                        sx().border_top_right_radius("0")
+                            .border_bottom_right_radius("0"),
+                    ),
                 )
                 .selector(
-                    collapse_end,
-                    sx().border_top_right_radius("0")
-                        .border_bottom_right_radius("0"),
+                    "&:dir(rtl)",
+                    sx().selector(
+                        collapse_start,
+                        sx().margin_right("-1px")
+                            .border_top_right_radius("0")
+                            .border_bottom_right_radius("0"),
+                    )
+                    .selector(
+                        collapse_end,
+                        sx().border_top_left_radius("0")
+                            .border_bottom_left_radius("0"),
+                    ),
                 ),
             )
             .when(

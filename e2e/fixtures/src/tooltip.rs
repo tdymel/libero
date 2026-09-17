@@ -9,6 +9,7 @@ pub const ROUTES: Routes = &[
     ("/tooltip", || rsx! { TooltipPage {} }),
     ("/tooltip-wrapped", || rsx! { TooltipWrappedPage {} }),
     ("/tooltip-edge", || rsx! { TooltipEdgePage {} }),
+    ("/tooltip-start", || rsx! { TooltipStartPage {} }),
 ];
 
 /// A `Tooltip` on a direct-child trigger, between two buttons so Tab has
@@ -50,6 +51,19 @@ fn TooltipEdgePage() -> Element {
     rsx! {
         div { id: "clip", style: "overflow: hidden; height: 40px; width: 120px;",
             Tooltip { label: rsx! { "Saves the draft" }, label_id: "save-tip", side: "top",
+                Button { id: "save", "aria-describedby": "save-tip", "Save" }
+            }
+        }
+    }
+}
+
+/// A `start` tooltip in the middle of the page, room on both sides: the test
+/// sets `dir` and reads which side it lands on (todo 711).
+#[component]
+fn TooltipStartPage() -> Element {
+    rsx! {
+        div { style: "display: flex; justify-content: center; padding-top: 120px;",
+            Tooltip { label: rsx! { "Saves the draft" }, label_id: "save-tip", side: "start",
                 Button { id: "save", "aria-describedby": "save-tip", "Save" }
             }
         }

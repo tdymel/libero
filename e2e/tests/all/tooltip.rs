@@ -243,3 +243,49 @@ fn it_flips_at_the_edge_and_escapes_a_clipping_ancestor() {
         fixture.close().await.unwrap();
     });
 }
+
+#[derive(serde::Deserialize)]
+struct Beside {
+    on_start: bool,
+    token: bool,
+    hit_bubble: bool,
+}
+
+/// Todo 711: `side: "start"` is the left under LTR and the right under RTL,
+/// and the bridge crosses the gap on whichever side it landed.
+#[test]
+fn a_start_bubble_follows_the_direction() {
+    block_on(async {
+        for dir in ["ltr", "rtl"] {
+            let fixture = crate::rtl_keys::open_in("/tooltip-start", dir).await;
+            let page = &fixture.page;
+
+            keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+            wait::for_visible(page, BUBBLE).await.unwrap();
+            let beside: Beside = js(
+                page,
+                &format!(
+                    "(() => {{ const rtl = {rtl}; \
+                     const t = document.querySelector('#save').getBoundingClientRect(); \
+                     const bubble = document.querySelector('#save-tip'); \
+                     const b = bubble.getBoundingClientRect(); \
+                     const x = rtl ? (t.right + b.left) / 2 : (b.right + t.left) / 2; \
+                     return {{ on_start: rtl ? b.left >= t.right : b.right <= t.left, \
+                       token: bubble.matches('[data-state~=\"side-start\"]'), \
+                       hit_bubble: document.elementFromPoint(x, t.y + t.height / 2) === bubble }}; }})()",
+                    rtl = dir == "rtl"
+                ),
+            )
+            .await;
+            assert!(
+                beside.on_start,
+                "{dir}: the bubble is not on the start side"
+            );
+            assert!(beside.token, "{dir}: no side-start token");
+            assert!(beside.hit_bubble, "{dir}: the gap misses the bridge");
+
+            fixture.console.assert_clean(dir).unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}

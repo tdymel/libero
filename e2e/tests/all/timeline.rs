@@ -120,3 +120,52 @@ fn done_and_pending_bullets_stay_apart_in_forced_colours() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Per list: the rail's worst offset from its bullets' centres (px), and which
+/// side of the first bullet the first event's content sits on (1 right, -1 left).
+const SIDES: &str = "['#left', '#right', '#alternate'].map(id => { \
+     const items = [...document.querySelectorAll(id + ' > li')]; \
+     const bullet = li => li.querySelector(':scope > span').getBoundingClientRect(); \
+     const off = Math.max(...items.slice(0, -1).map(li => { \
+       const box = li.getBoundingClientRect(); const b = bullet(li); \
+       const rail = getComputedStyle(li, '::before'); \
+       const x = box.left + parseFloat(rail.left) + parseFloat(rail.borderLeftWidth) / 2; \
+       return Math.abs(x - (b.left + b.width / 2)); })); \
+     const li = items[0]; const box = li.getBoundingClientRect(); const s = getComputedStyle(li); \
+     const content = (box.left + parseFloat(s.paddingLeft) + box.right - parseFloat(s.paddingRight)) / 2; \
+     const b = bullet(li); \
+     return [off, Math.sign(content - (b.left + b.width / 2))]; })";
+
+/// Todo 747: `Start`, `End` and `Alternate` are logical, so `dir="rtl"`
+/// mirrors each with its rail still under the bullets.
+#[test]
+fn the_sides_mirror_under_rtl() {
+    block_on(async {
+        // `#left` is `Start`, `#right` is `End`.
+        for (dir, sides) in [("ltr", [1.0, -1.0, 1.0]), ("rtl", [-1.0, 1.0, -1.0])] {
+            let fixture = Fixture::open("/timeline", Viewport::Desktop).await.unwrap();
+            let page = &fixture.page;
+            page.evaluate(format!("document.documentElement.dir = '{dir}'"))
+                .await
+                .unwrap();
+            wait::for_js_true(
+                page,
+                &format!("getComputedStyle(document.body).direction === '{dir}'"),
+                "the page to take its direction",
+            )
+            .await
+            .unwrap();
+            let measured: Vec<[f64; 2]> = page.evaluate(SIDES).await.unwrap().into_value().unwrap();
+            for (([off, side], want), id) in
+                measured
+                    .iter()
+                    .zip(sides)
+                    .zip(["start", "end", "alternate"])
+            {
+                assert!(*off < 2.0, "{dir} {id}: rail {off}px off its bullets");
+                assert_eq!(*side, want, "{dir} {id}: content on the wrong side");
+            }
+            fixture.close().await.unwrap();
+        }
+    });
+}

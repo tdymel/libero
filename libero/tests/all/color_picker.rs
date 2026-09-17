@@ -6,6 +6,26 @@ use libero::{
     components::{ColorCode, ColorField, ColorPicker, Swatches},
 };
 
+/// Todo 710: a slider mirrors under RTL, but a colour scale's gradient runs
+/// left to right, so the hue and alpha sliders stay LTR.
+#[test]
+fn the_colour_sliders_stay_left_to_right() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ColorPicker {
+                    value: ColorCode::hsva(200.0, 0.4, 0.7, 0.5),
+                    oninput: move |_| {},
+                    with_alpha: true,
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert_eq!(html.matches(r#"dir="ltr""#).count(), 2, "{html}");
+}
+
 /// The panel's one `role="slider"` holds the saturation, but Up and Down move
 /// the brightness - so its text names both, or those keys announce nothing.
 #[test]

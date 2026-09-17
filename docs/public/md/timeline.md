@@ -130,14 +130,13 @@ Timeline { align: "alternate", items: vec![/* .. */] }
 falls back to one side: a timeline that narrow will be cramped, but asking for
 one is a decision you have made and the component does not overrule it.
 
-`"alternate"` also makes the list fill its parent's width, where `"left"` and
-`"right"` shrink to their content - a rail centred in the list needs a width
+`"alternate"` also makes the list fill its parent's width, where `"start"` and
+`"end"` shrink to their content - a rail centred in the list needs a width
 to be centred in. Give it a parent with the width you want the rail centred
 in, and that is also how you make it narrower.
 
-`align: "right"` mirrors with physical properties. `Sx` has no logical ones and
-nothing in the crate uses any, so right-to-left text is a library-wide gap
-rather than something this component can answer.
+The sides are logical: under `dir="rtl"` `"start"` puts the rail on the right,
+`"end"` on the left, and `"alternate"` starts its first event left of the rail.
 
 ## Accessibility
 
@@ -150,7 +149,7 @@ with no accessible name - see "Events".
 |---|---|---|---|
 | `items` | `Vec<TimelineEvent>` | `vec![]` | The events, in render order. |
 | `active` | `usize` | - | The current event. Bullets `0..=active` and connectors `0..active` draw active; out of range clamps to the last event. |
-| `align` | `TimelineAlign` | `theme.timeline.align` | `"left"`, `"right"` or `"alternate"`. |
+| `align` | `TimelineAlign` | `theme.timeline.align` | `"start"`, `"end"` or `"alternate"`; mirrored under `dir="rtl"`. |
 | `color` | `ThemeAwareValue` | `theme.timeline.color` | The active accent. A per-event `.color(..)` overrides it. |
 | `bullet_size` | `Size` | `theme.timeline.bullet_size` | Bullet diameter. |
 | `radius` | `Size` | `theme.timeline.radius` | Bullet corner radius; `xl` is the dot. |
@@ -175,7 +174,7 @@ Like every component, `Timeline` also takes the shared props `sx`, `class`,
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `align` | `TimelineAlign` | `Left` | Which side content sits on. |
+| `align` | `TimelineAlign` | `Start` | Which side content sits on. |
 | `color` | `&'static str` | `"primary.6"` | The active accent. |
 | `line_color` | `&'static str` | `"muted.6"` | Inactive bullets and connectors, 3:1 on the page (WCAG 1.4.11). |
 | `bullet_background` | `&'static str` | `PAPER_BACKGROUND` | The bullet's fill, and the glyph colour once it inverts. Reads the surface token, so dark mode is a change to `PaperDefaults`. |
@@ -210,7 +209,7 @@ On the root:
 
 | Token | When |
 |---|---|
-| `align-left` / `align-right` / `align-alternate` | The resolved `align`. |
+| `align-start` / `align-end` / `align-alternate` | The resolved `align`. |
 | `xs`..`xxl` | The resolved `bullet_size`. |
 | `radius-xs`..`radius-xxl` | The resolved `radius`. |
 | `gap-xs`..`gap-xxl` | The resolved `gap`. |

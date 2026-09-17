@@ -9,7 +9,26 @@ pub const ROUTES: Routes = &[
     ("/carousel", || rsx! { CarouselPage {} }),
     ("/carousel/loop", || rsx! { LoopPage {} }),
     ("/carousel/autoplay", || rsx! { AutoplayPage {} }),
+    ("/carousel/text", || rsx! { TextPage {} }),
 ];
+
+/// Plain text slides, so a drag lands on nothing that takes the pointer.
+#[component]
+fn TextPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "420px",
+            Carousel {
+                aria_label: "Text slides",
+                draggable: true,
+                slides: (1..=4)
+                    .map(|n| rsx! {
+                        Text { "Slide {n}" }
+                    })
+                    .collect(),
+            }
+        }
+    }
+}
 
 /// Five slides with a button each, three up and looping: at rest on slide 1
 /// the centred strip shows the clone of slide 5 on its left.

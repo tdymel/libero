@@ -189,7 +189,12 @@ static CASCADER_COLUMNS_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& > [data-slot='column'] + [data-slot='column']",
-            sx().border_left("1px solid").border_color("muted.2"),
+            sx().border_left("1px solid")
+                .border_color("muted.2")
+                .selector(
+                    "&:dir(rtl)",
+                    sx().border_left("none").border_right("1px solid"),
+                ),
         )
 });
 

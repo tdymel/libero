@@ -173,8 +173,8 @@ only Escape and your own handlers close the box.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `side` | `Side` | `Bottom` | The preferred side of the anchor. Flipping may override it. |
-| `align` | `Align` | `Start` | Where the box lines up along that side. |
+| `side` | `Side` | `Bottom` | The preferred side of the anchor. Flipping may override it. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
+| `align` | `Align` | `Start` | Where the box lines up along that side. Across `Top`/`Bottom` it follows the direction too. |
 | `gap` | `f64` | `theme.popover.gap` | Pixels between the anchor and the box. |
 | `padding` | `f64` | `theme.popover.padding` | How close to a viewport edge the box may come before it flips or shifts. The box is never wider than the viewport less this on both sides. |
 | `flip` | `bool` | `true` | Moves to the opposite side when the preferred one has no room. |

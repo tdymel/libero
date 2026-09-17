@@ -73,6 +73,7 @@ mod qr_code;
 mod radio_group;
 mod range_slider;
 mod rtl_keys;
+mod rtl_layout;
 mod scroll_area;
 mod scroller;
 mod segmented_control;

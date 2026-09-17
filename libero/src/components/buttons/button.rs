@@ -337,6 +337,11 @@ fn button_icon_sx() -> Sx {
         .align_items("center")
         .flex("0 0 auto")
         .margin_right(SizeCss::SPACING.value(Size::Xs))
+        .selector(
+            "&:dir(rtl)",
+            sx().margin_right("0")
+                .margin_left(SizeCss::SPACING.value(Size::Xs)),
+        )
 }
 
 /// While `loading`, the button holds exactly two children: the caller's own,

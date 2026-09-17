@@ -14,7 +14,8 @@
 pub(crate) struct Country {
     /// ISO 3166-1 alpha-2, upper case.
     pub iso: &'static str,
-    /// The English name, which `country_label` overrides per render.
+    /// The English name, which the localization's `country_names` and
+    /// `country_label` override per render.
     pub name: &'static str,
     /// The E.164 country calling code, digits only and no `+`.
     pub dial: &'static str,

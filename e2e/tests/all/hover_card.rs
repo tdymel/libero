@@ -333,3 +333,44 @@ fn a_trigger_with_nothing_focusable_warns() {
         fixture.close().await.unwrap();
     });
 }
+
+#[derive(serde::Deserialize)]
+struct Sides {
+    on_start: bool,
+    start_aligned: bool,
+}
+
+/// Todo 711: `Side::Start` puts the card left of its trigger under LTR and
+/// right of it under RTL, and a start-aligned card below lines up the start
+/// edges - left edges, then right edges.
+#[test]
+fn the_start_side_and_align_follow_the_direction() {
+    block_on(async {
+        for dir in ["ltr", "rtl"] {
+            let fixture = crate::rtl_keys::open_in("/hover-card-sides", dir).await;
+            let page = &fixture.page;
+            pointer::click(page, "#open").await.unwrap();
+            wait::for_visible(page, "#start-card").await.unwrap();
+            wait::for_visible(page, "#below-card").await.unwrap();
+
+            let expression = format!(
+                "(() => {{ const rtl = {rtl}; \
+                 const rect = id => document.getElementById(id).getBoundingClientRect(); \
+                 const t = rect('start-trigger'), c = rect('start-card'); \
+                 const bt = rect('below-trigger'), bc = rect('below-card'); \
+                 return {{ on_start: rtl ? c.left >= t.right : c.right <= t.left, \
+                   start_aligned: Math.abs(rtl ? bc.right - bt.right : bc.left - bt.left) < 1.5 }}; }})()",
+                rtl = dir == "rtl"
+            );
+            wait::until(&format!("{dir}: the cards placed"), || async {
+                let sides: Sides = page.evaluate(expression.as_str()).await?.into_value()?;
+                Ok(sides.on_start && sides.start_aligned)
+            })
+            .await
+            .unwrap();
+
+            fixture.console.assert_clean(dir).unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}

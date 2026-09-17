@@ -19,7 +19,7 @@ static TREE_ITEM_SX: StaticSx = StaticSx::new(|| {
         .background("none")
         .color("inherit")
         .font("inherit")
-        .text_align("left")
+        .text_align("start")
         .cursor("pointer")
         // Disabled by its row or by a `Fieldset` (todo 514). A disabled row
         // already dims itself, so only the Fieldset's case dims here.

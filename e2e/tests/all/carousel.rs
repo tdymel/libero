@@ -948,3 +948,50 @@ fn the_dots_show_in_forced_colours() {
         fixture.close().await.unwrap();
     });
 }
+
+/// [`open_in`](crate::rtl_keys::open_in), with smooth scrolling off.
+async fn open_in(route: &str, dir: &str) -> Fixture {
+    let fixture = crate::rtl_keys::open_in(route, dir).await;
+    instant_scroll(&fixture.page).await;
+    fixture
+}
+
+/// Todo 708: a drag towards the start reveals the next slide, leftwards in
+/// LTR and rightwards in RTL, and Next scrolls towards the end.
+#[test]
+fn a_drag_and_a_step_head_for_the_end_in_either_direction() {
+    block_on(async {
+        for (dir, sign) in [("ltr", -1.0), ("rtl", 1.0)] {
+            let fixture = open_in("/carousel/text", dir).await;
+            let page = &fixture.page;
+            let from = pointer::centre_of(page, TRACK).await.unwrap();
+            let to = pointer::Point {
+                x: from.x + sign * 300.0,
+                y: from.y,
+            };
+            pointer::drag(page, from, to, 12).await.unwrap();
+            wait::until(
+                &format!("{dir}: the drag to reach slide 2"),
+                || async move { Ok(index(page).await? == 1) },
+            )
+            .await
+            .unwrap();
+
+            pointer::click(page, NEXT).await.unwrap();
+            let moved = match dir {
+                "rtl" => format!("document.querySelector({TRACK:?}).scrollLeft < -500"),
+                _ => format!("document.querySelector({TRACK:?}).scrollLeft > 500"),
+            };
+            wait::for_js_true(page, &moved, &format!("{dir}: Next to scroll to slide 3"))
+                .await
+                .unwrap();
+            wait::until(&format!("{dir}: Next to reach slide 3"), || async move {
+                Ok(index(page).await? == 2)
+            })
+            .await
+            .unwrap();
+            fixture.console.assert_clean(dir).unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}

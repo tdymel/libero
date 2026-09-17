@@ -65,7 +65,7 @@ pub fn PhoneFieldPage() -> Element {
                         .default("theme.phone_field.country_select")
                         .doc("Offers the picker at all. Off pins the country, draws a static `+49` in its place, and is one tab stop fewer."),
                     prop("country_label", "Callback<String, String>")
-                        .doc("Overrides the English name a country is offered under, during render - so it can read a locale out of context."),
+                        .doc("Overrides the name a country is offered under, during render. Unset, the localization's `phone_field.country_names` names it (German ships), else the English name."),
                     prop("countries", "Vec<String>")
                         .doc("Narrows the list to these ISO codes, in the order given."),
                     prop("flag", "Callback<String, Element>")

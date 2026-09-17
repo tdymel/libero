@@ -82,8 +82,8 @@ fn wrap(_: &DemoValues, source: &str) -> String {
 fn side_of(value: &str) -> Side {
     match value {
         "top" => Side::Top,
-        "left" => Side::Left,
-        "right" => Side::Right,
+        "start" => Side::Start,
+        "end" => Side::End,
         _ => Side::Bottom,
     }
 }
@@ -258,7 +258,7 @@ pub fn MenuPage() -> Element {
                     prop("trailing", "Element")
                         .doc("At the far end, such as a badge. It joins the accessible name. Nothing interactive."),
                     prop("shortcut", "&str")
-                        .doc("The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`\"Control+X\"`). Drawn as a hint (\"Ctrl+X\") and kept out of the name. You bind the key yourself."),
+                        .doc("The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`\"Control+X\"`). Drawn as a hint (\"Ctrl+X\") and kept out of the name. `Control`, `Shift`, `Alt` and `Meta` are drawn in the localization's `menu` words (\"Strg+Umschalt+S\" in German). You bind the key yourself."),
                     prop("radio", "bool")
                         .doc("Makes the item one choice of several, with a check while `true`. Put the choices in one `Group` and keep one checked. A menu opens on its checked item."),
                     prop("checkbox", "bool")
@@ -296,7 +296,7 @@ pub fn MenuPage() -> Element {
                 code_child: Child(|_| TRIGGER.to_string()),
                 wrap: Wrap(wrap),
                 controls: vec![
-                    Control::toggle("side", ["bottom", "top", "right", "left"])
+                    Control::toggle("side", ["bottom", "top", "end", "start"])
                         .default("bottom")
                         .code(enum_code),
                     Control::toggle("align", ["start", "center", "end"])

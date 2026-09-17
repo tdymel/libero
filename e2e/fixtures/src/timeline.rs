@@ -26,7 +26,7 @@ fn TimelinePage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "xl", max_width: "480px",
             Timeline { id: "left", items: events(), active: 1 }
-            Timeline { id: "right", align: "right", items: coloured, active: 2 }
+            Timeline { id: "right", align: "end", items: coloured, active: 2 }
             Timeline { id: "alternate", align: "alternate", items: with_bullets, active: 1 }
             Timeline { id: "none", items: events() }
         }

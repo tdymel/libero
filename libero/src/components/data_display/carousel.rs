@@ -11,8 +11,8 @@ use crate::{
             shadow_sx, states, use_name_warning, variables,
         },
         layout::{
-            ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, scroll_area_base,
-            use_box, use_scroll_area,
+            ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, inline_x,
+            physical_x, scroll_area_base, use_box, use_scroll_area,
         },
     },
     hooks::{
@@ -182,6 +182,11 @@ static CAROUSEL_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .and(shadow_sx(SizeCss::SHADOW.value(Size::Sm)))
         .cursor("pointer")
         .selector("& > svg", sx().width("60%").height("60%"))
+        // The row runs right to left, so the arrows point the other way.
+        .when(
+            "horizontal",
+            sx().selector("&:dir(rtl) > svg", sx().transform("scaleX(-1)")),
+        )
         .hover(sx().background(CAROUSEL_CONTROL_HOVER_BACKGROUND.value()))
         // Disabled by `aria-disabled`, not `disabled`: the button keeps its
         // tab stop so focus is never dropped at either end.
@@ -1234,6 +1239,8 @@ fn use_carousel_drag(setup: CarouselSetup, state: CarouselState, draggable: bool
     let orientation = setup.orientation;
     let mut dragging = state.dragging;
     let mut drag_origin = state.drag_origin;
+    // Under RTL a drag to the right heads for the end, as in `Scroller`.
+    let mut rtl = use_hook(|| CopyValue::new(false));
 
     use_drag(DragOptions {
         capture: track.element,
@@ -1244,10 +1251,11 @@ fn use_carousel_drag(setup: CarouselSetup, state: CarouselState, draggable: bool
             }
             dragging.set(true);
             let offset = track.element.scroll_offset();
+            rtl.set(track.element.is_rtl());
             spawn(async move {
                 if let Ok((x, y)) = offset.await {
                     drag_origin.set(match orientation {
-                        Orientation::Horizontal => x,
+                        Orientation::Horizontal => inline_x(x),
                         Orientation::Vertical => y,
                     });
                 }
@@ -1256,7 +1264,7 @@ fn use_carousel_drag(setup: CarouselSetup, state: CarouselState, draggable: bool
         onmove: Callback::new(move |moved: DragMove| {
             let delta = moved.delta();
             let target = match orientation {
-                Orientation::Horizontal => drag_origin() - delta.x,
+                Orientation::Horizontal => drag_origin() - physical_x(delta.x, rtl()),
                 Orientation::Vertical => drag_origin() - delta.y,
             }
             .max(0.0);

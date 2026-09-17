@@ -40,7 +40,7 @@ static TIMELINE_BASE_SX: StaticSx = StaticSx::new(|| {
         .flex_direction("column")
         .gap(TIMELINE_SPACE.value())
         // `Alternate` centres the rail in the list, so the list needs a width
-        // to centre it in. `Left` and `Right` are happy shrink-to-fitting
+        // to centre it in. `Start` and `End` are happy shrink-to-fitting
         // around their content; an alternating timeline that did the same
         // would put two columns either side of a rail centred in its own
         // max-content width, which is not what anyone means by "alternate".
@@ -74,17 +74,32 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
             sx().var(TIMELINE_CONNECTOR, TIMELINE_COLOR.value()),
         );
 
+    // `Rail` is physical, so each logical side takes a `:dir(rtl)` arm that
+    // swaps it, as `Stepper`'s vertical rail does.
+    let rail_on = |edge: RailInset, padding: &str| {
+        // The rail's edge, and the other one, which the LTR arm had set.
+        let (near, far) = match edge {
+            RailInset::End => ("right", "left"),
+            _ => ("left", "right"),
+        };
+        rail.connector_sx(edge)
+            .selector("&:not(:last-of-type)::before", sx().with(far, "auto"))
+            .with(format!("padding-{near}"), padding.to_string())
+            .with(format!("padding-{far}"), "0")
+    };
     let one_sided = base
         .when(
-            TimelineAlign::Left.state_name(),
+            TimelineAlign::Start.state_name(),
             sx().padding_left(inset.clone())
-                .and(rail.connector_sx(RailInset::Start)),
+                .and(rail.connector_sx(RailInset::Start))
+                .selector("&:dir(rtl)", rail_on(RailInset::End, &inset)),
         )
         .when(
-            TimelineAlign::Right.state_name(),
+            TimelineAlign::End.state_name(),
             sx().padding_right(inset.clone())
-                .text_align("right")
-                .and(rail.connector_sx(RailInset::End)),
+                .text_align("end")
+                .and(rail.connector_sx(RailInset::End))
+                .selector("&:dir(rtl)", rail_on(RailInset::Start, &inset)),
         );
 
     // The alternating layout, unconditionally. There is no width below which
@@ -100,7 +115,16 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
                 "&:nth-of-type(even)",
                 sx().padding_left("0")
                     .padding_right(centred.clone())
-                    .text_align("right"),
+                    .text_align("end"),
+            )
+            // Mirrored: the first event's content sits left of the rail.
+            .selector(
+                "&:dir(rtl)",
+                sx().padding_left("0").padding_right(centred.clone()),
+            )
+            .selector(
+                "&:nth-of-type(even):dir(rtl)",
+                sx().padding_right("0").padding_left(centred.clone()),
             ),
     )
 });
@@ -144,12 +168,16 @@ static TIMELINE_BULLET_SX: StaticSx = StaticSx::new(|| {
             .when("with-child && active", sx().color("HighlightText")),
         )
         .when(
-            TimelineAlign::Left.state_name(),
-            sx().left("0").right("auto"),
+            TimelineAlign::Start.state_name(),
+            sx().left("0")
+                .right("auto")
+                .selector("&:dir(rtl)", sx().right("0").left("auto")),
         )
         .when(
-            TimelineAlign::Right.state_name(),
-            sx().right("0").left("auto"),
+            TimelineAlign::End.state_name(),
+            sx().right("0")
+                .left("auto")
+                .selector("&:dir(rtl)", sx().left("0").right("auto")),
         )
         .when(
             TimelineAlign::Alternate.state_name(),
@@ -171,8 +199,8 @@ base_props! {
         /// `0..active` draw active; out of range clamps to the last event.
         #[props(default)]
         active: Option<usize>,
-        /// Which side of the rail content sits on - `"left"` (default),
-        /// `"right"`, or `"alternate"`. `"alternate"` alternates at every
+        /// Which side of the rail content sits on - `"start"` (default),
+        /// `"end"`, or `"alternate"`, mirrored under `dir="rtl"`. `"alternate"` alternates at every
         /// width and fills its parent, since a centred rail needs a width to
         /// be centred in.
         #[props(default, into)]

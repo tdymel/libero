@@ -76,7 +76,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `label` | `Element` | required | The bubble's content. |
-| `side` | `Side` | `top` | The preferred side of the trigger. The bubble flips when that side has no room. |
+| `side` | `Side` | `top` | The preferred side of the trigger. The bubble flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
 | `gap` | `Size` | `xs` | Distance to the trigger. The pointer can cross it without closing the bubble. |
 | `size` | `Size` | `sm` | Font size of the bubble. |
 | `z_index` | `ThemeAwareValue` | the popover layer | Overrides the stacking level, for a bubble hidden by another overlay. |
@@ -127,5 +127,5 @@ On the bubble:
 
 | Token | Condition |
 |---|---|
-| `side-top` / `side-right` / `side-bottom` / `side-left` | The side it landed on, after any flip. |
+| `side-top` / `side-end` / `side-bottom` / `side-start` | The side it landed on, after any flip. |
 | `size-<size>` | The `size` in effect. |

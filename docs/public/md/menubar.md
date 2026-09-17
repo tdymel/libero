@@ -69,7 +69,7 @@ including `MenuItem`'s `shortcut` and `checkbox`.
 | `menus` | `Vec<MenubarMenu>` | required | The top-level menus, in order. |
 | `aria_label` | `String` | required | The bar's accessible name. |
 | `loop_focus` | `bool` | `true` | Whether the arrow keys wrap at the ends, along the bar and down each menu. |
-| `side` | `Side` | `Bottom` | Which side of its trigger every menu opens on. It flips when that side has no room. |
+| `side` | `Side` | `Bottom` | Which side of its trigger every menu opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
 | `align` | `Align` | `Start` | Where each menu lines up along that side. |
 | `size` | `Size` | `md` | The triggers' font and padding, and each menu's item size. |
 | `radius` | `Size` | `sm` | The triggers' and the menus' corner radius. |

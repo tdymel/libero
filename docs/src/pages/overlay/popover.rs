@@ -45,8 +45,8 @@ use_drop(move || tick.manually_drop());"#;
 fn side_of(value: &str) -> Side {
     match value {
         "top" => Side::Top,
-        "left" => Side::Left,
-        "right" => Side::Right,
+        "start" => Side::Start,
+        "end" => Side::End,
         _ => Side::Bottom,
     }
 }
@@ -75,8 +75,8 @@ fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
         values.str("gap"),
         match values.str("side").as_str() {
             "top" => "Top",
-            "left" => "Left",
-            "right" => "Right",
+            "start" => "Start",
+            "end" => "End",
             _ => "Bottom",
         },
         match values.str("align").as_str() {
@@ -307,7 +307,7 @@ pub fn PopoverPage() -> Element {
                 component: "PopoverDemo",
                 children_text: "",
                 controls: vec![
-                    Control::toggle("side", ["top", "right", "bottom", "left"]).default("bottom"),
+                    Control::toggle("side", ["top", "end", "bottom", "start"]).default("bottom"),
                     Control::toggle("align", ["start", "center", "end"]).default("start"),
                     Control::toggle("width", ["auto", "match", "min"]).default("auto"),
                     Control::slider("gap", GAPS).default("4"),

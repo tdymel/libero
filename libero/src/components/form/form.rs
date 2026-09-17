@@ -39,6 +39,7 @@ static FORM_SX: StaticSx = StaticSx::new(|| {
 static SUMMARY_LIST_SX: StaticSx = StaticSx::new(|| {
     sx().margin("0")
         .padding_left("20px")
+        .selector("&:dir(rtl)", sx().padding_left("0").padding_right("20px"))
         // The line itself is the link: readable on the tint, no underline.
         .selector(
             "& a",

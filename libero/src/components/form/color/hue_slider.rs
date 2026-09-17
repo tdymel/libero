@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use super::{
     ColorCode,
-    color_slider::{HUE_GRADIENT, color_slider_sx},
+    color_slider::{HUE_GRADIENT, color_slider_sx, ltr_scale},
 };
 use crate::{
     components::{
@@ -61,7 +61,7 @@ pub fn HueSlider(props: HueSliderProps) -> Element {
             min: 0.0,
             max: 360.0,
             step: 1.0,
-            attributes: props.attributes,
+            attributes: ltr_scale(props.attributes),
             class: props.class,
             sx,
             states: props.states,

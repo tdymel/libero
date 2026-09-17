@@ -246,3 +246,50 @@ fn an_unset_country_select_follows_the_theme() {
     assert!(!html.contains("<button"), "{html}");
     assert!(html.contains("+49"), "{html}");
 }
+
+/// Todo 724: the country's name comes from the localization, a code it lacks
+/// keeps the English name, and `country_label` wins over both.
+#[test]
+fn the_country_name_follows_the_localization() {
+    use libero::localization::{Localization, PhoneFieldLabels};
+    static SPARSE: Localization = Localization {
+        phone_field: PhoneFieldLabels {
+            country_names: &[("AT", "Österreich")],
+            ..PhoneFieldLabels::GERMAN
+        },
+        ..Localization::GERMAN
+    };
+    fn field(localization: &'static Localization, country: &'static str) -> Element {
+        rsx! {
+            LiberoProvider { localization,
+                PhoneField { label: "Mobil", country, oninput: move |_: String| {} }
+            }
+        }
+    }
+    let label = |app: fn() -> Element| {
+        let html = body(&render(app));
+        attributes_of(&html, "button")
+            .get("aria-label")
+            .cloned()
+            .unwrap_or_else(|| panic!("no picker name:\n{html}"))
+    };
+
+    assert_eq!(
+        label(|| field(&Localization::GERMAN, "DE")),
+        "Land: Deutschland, DE +49"
+    );
+    assert_eq!(label(|| field(&SPARSE, "US")), "Land: United States, US +1");
+    assert_eq!(
+        label(|| rsx! {
+            LiberoProvider { localization: &Localization::GERMAN,
+                PhoneField {
+                    label: "Mobil",
+                    country: "DE",
+                    country_label: move |iso: String| format!("[{iso}]"),
+                    oninput: move |_: String| {},
+                }
+            }
+        }),
+        "Land: [DE], DE +49"
+    );
+}

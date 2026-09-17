@@ -343,3 +343,36 @@ fn a_disabled_trigger_grays_out_in_forced_colours() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 711: a menu starts at its trigger's start edge, the left under LTR and
+/// the right under RTL. `rtl_keys` covers the submenu opening towards the end.
+#[test]
+fn a_menu_starts_at_its_trigger_s_start_edge() {
+    block_on(async {
+        for dir in ["ltr", "rtl"] {
+            let fixture = crate::rtl_keys::open_in("/menubar", dir).await;
+            let page = &fixture.page;
+
+            keyboard::tab_to(page, FIRST, 10).await.unwrap();
+            keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+            wait::for_visible(page, MENU).await.unwrap();
+            let edge = match dir {
+                "rtl" => "right",
+                _ => "left",
+            };
+            wait::for_js_true(
+                page,
+                &format!(
+                    "Math.abs(document.querySelector({MENU:?}).getBoundingClientRect().{edge} \
+                     - document.querySelector({FIRST:?}).getBoundingClientRect().{edge}) < 1.5"
+                ),
+                &format!("{dir}: the menu to line up on the {edge}"),
+            )
+            .await
+            .unwrap();
+
+            fixture.console.assert_clean(dir).unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}

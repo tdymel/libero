@@ -302,6 +302,7 @@ pub(crate) fn use_popover_on(
         let anchor_offset = anchor.client_offset();
         let floating_size = floating.dimensions();
         let viewport = document.viewport();
+        let rtl = anchor.is_rtl();
         let waited = waited.clone();
 
         spawn(async move {
@@ -331,7 +332,7 @@ pub(crate) fn use_popover_on(
                 height: anchor_size.height,
             };
             anchor_width.set(Some(anchor_size.width));
-            placed.set(Some(place(rect, floating_size, viewport, &options)));
+            placed.set(Some(place(rect, floating_size, viewport, &options, rtl)));
         });
     }));
 

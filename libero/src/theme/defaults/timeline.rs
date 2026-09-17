@@ -34,12 +34,16 @@ pub const TIMELINE_MARKER: CssVar = CssVar::new("--lsx-timeline-marker");
 pub const TIMELINE_BULLET_BACKGROUND_DEFAULT: &str = "var(--lsx-paper-background)";
 
 str_enum! {
-    /// Which side of the rail an event's content sits on.
+    /// Which side of the rail an event's content sits on. Logical: `Start` is
+    /// the right under `dir="rtl"`.
     #[state_prefix = "align"]
     pub enum TimelineAlign {
+        /// The rail on the inline-start edge, content after it.
         #[default]
-        Left = "left",
-        Right = "right",
+        Start = "start",
+        /// The rail on the inline-end edge, content before it, text aligned
+        /// to the end.
+        End = "end",
         /// Content alternates either side of a centred rail, at every width.
         /// There is no size below which it falls back to one side: asking for
         /// an alternating timeline in a narrow box is a decision the caller
@@ -48,7 +52,7 @@ str_enum! {
         /// centred in.
         ///
         /// A variant rather than a second `alternate` prop: beside `align` it
-        /// would make `align: "right", alternate: true` expressible and
+        /// would make `align: "end", alternate: true` expressible and
         /// meaningless.
         Alternate = "alternate",
     }
@@ -93,7 +97,7 @@ pub struct TimelineDefaults {
 
 impl TimelineDefaults {
     pub const DEFAULT: Self = Self {
-        align: TimelineAlign::Left,
+        align: TimelineAlign::Start,
         color: ColorValue::Shade(Color::Primary, ColorShade::S6),
         // The pending ring and rail: 3:1 on the page and the dark `Paper`
         // (WCAG 1.4.11, todo 599).

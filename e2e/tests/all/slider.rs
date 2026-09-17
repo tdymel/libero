@@ -608,3 +608,94 @@ fn a_disabled_slider_shows_not_allowed_and_ignores_the_pointer() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Where each thumb sits along its track (0 left edge, 1 right edge), and the
+/// track's rect `[left, top, width, height]`.
+const ALONG: &str = "(() => { const thumbs = [...document.querySelectorAll('[role=slider]')]; \
+     let track = thumbs[0]; while (track.getBoundingClientRect().width < 200) track = track.parentElement; \
+     const t = track.getBoundingClientRect(); \
+     return [thumbs.map(th => { const r = th.getBoundingClientRect(); \
+       return (r.left + r.width / 2 - t.left) / t.width; }), [t.left, t.top, t.width, t.height]]; })()";
+
+/// Todo 710: under RTL the minimum is at the right, as on a native range. The
+/// thumb is drawn there, a press near the left edge lands near the maximum,
+/// and ArrowLeft raises the value.
+#[test]
+fn under_rtl_the_track_runs_right_to_left() {
+    use e2e::passes::keyboard;
+    block_on(async {
+        for dir in ["ltr", "rtl"] {
+            let rtl = dir == "rtl";
+            let fixture = crate::rtl_keys::open_in("/slider", dir).await;
+            let page = &fixture.page;
+            let (along, [left, top, width, height]): (Vec<f64>, [f64; 4]) =
+                page.evaluate(ALONG).await.unwrap().into_value().unwrap();
+            // The value is 40.
+            let drawn = if rtl { 1.0 - along[0] } else { along[0] };
+            assert!(
+                (drawn - 0.4).abs() < 0.05,
+                "{dir}: thumb drawn at {along:?}"
+            );
+
+            let near_left = pointer::Point {
+                x: left + width * 0.05,
+                y: top + height / 2.0,
+            };
+            let beside = pointer::Point {
+                x: near_left.x + 1.0,
+                y: near_left.y,
+            };
+            pointer::drag(page, near_left, beside, 2).await.unwrap();
+            let pressed = if rtl { "> 85" } else { "< 15" };
+            wait::for_js_true(
+                page,
+                &format!("Number({VALUE_NOW}) {pressed}"),
+                &format!("{dir}: a press near the left edge"),
+            )
+            .await
+            .unwrap();
+
+            let before: String = page
+                .evaluate(VALUE_NOW)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            let before: f64 = before.parse().unwrap();
+            keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+            let moved = if rtl { ">" } else { "<" };
+            wait::for_js_true(
+                page,
+                &format!("Number({VALUE_NOW}) {moved} {before}"),
+                &format!("{dir}: ArrowLeft"),
+            )
+            .await
+            .unwrap();
+            fixture.console.assert_clean(dir).unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// Todo 710, `RangeSlider`: the minimum thumb sits on the right under RTL.
+#[test]
+fn under_rtl_a_range_puts_its_minimum_on_the_right() {
+    block_on(async {
+        for dir in ["ltr", "rtl"] {
+            let fixture = crate::rtl_keys::open_in("/range-slider", dir).await;
+            let (along, _): (Vec<f64>, [f64; 4]) = fixture
+                .page
+                .evaluate(ALONG)
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            // 20 and 80.
+            let want = if dir == "rtl" { [0.8, 0.2] } else { [0.2, 0.8] };
+            for (got, want) in along.iter().zip(want) {
+                assert!((got - want).abs() < 0.05, "{dir}: thumbs at {along:?}");
+            }
+            fixture.close().await.unwrap();
+        }
+    });
+}

@@ -878,12 +878,8 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         Parents(parents)
     };
     let onclose_child = use_callback(move |()| open_child.set(None));
-    // Read while a submenu opens: this box is mounted, and it reads the
-    // direction the portal inherited.
-    let submenu_side = match expanded.is_some() && floating.is_rtl() {
-        true => Side::Left,
-        false => Side::Right,
-    };
+    // Logical, so `use_popover` puts it on the left under `dir="rtl"`.
+    let submenu_side = Side::End;
 
     rsx! {
         for (index, items, (anchor, floating)) in submenus {
@@ -1070,7 +1066,7 @@ fn menu_item(
             // Out of the name: `aria-keyshortcuts` announces it instead.
             if let Some(keys) = item.shortcut.as_deref() {
                 span { "data-menu-section": "shortcut", "aria-hidden": "true",
-                    Kbd { {shortcut_hint(keys, current_localization().menu.control)} }
+                    Kbd { {shortcut_hint(keys, &current_localization().menu)} }
                 }
             }
             if has_submenu {

@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use super::{
     ColorCode,
     color_code::round_alpha,
-    color_slider::{CHECKERBOARD, color_slider_sx},
+    color_slider::{CHECKERBOARD, color_slider_sx, ltr_scale},
 };
 use crate::{
     components::{
@@ -112,7 +112,7 @@ fn alpha_slider(props: AlphaSliderProps, track: String, thumb_fill: String) -> E
             min: 0.0,
             max: 1.0,
             step: 0.01,
-            attributes: props.attributes,
+            attributes: ltr_scale(props.attributes),
             class: props.class,
             sx,
             states: props.states,

@@ -70,6 +70,7 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().position("absolute")
                 .z_index("2")
                 .right(offset.clone())
+                .selector("&:dir(rtl)", sx().right("auto").left(offset.clone()))
                 .media(REDUCED_MOTION, sx().display("none")),
         );
 

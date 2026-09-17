@@ -2,6 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{Button, ColorCode, ColorField, Flex, HoverCard, Text};
+use libero::hooks::Side;
 
 use crate::Routes;
 
@@ -13,6 +14,7 @@ pub const ROUTES: Routes = &[
     ),
     ("/hover-card-disable", || rsx! { DisableWhileOpenPage {} }),
     ("/hover-card-text", || rsx! { TextTriggerPage {} }),
+    ("/hover-card-sides", || rsx! { SidesPage {} }),
 ];
 
 /// A plain-text trigger, which no keyboard can focus (todo 523).
@@ -94,6 +96,26 @@ fn ColorFieldInCardPage() -> Element {
                 Button { id: "trigger", "Theme" }
             }
             Button { id: "after", "After" }
+        }
+    }
+}
+
+/// Two cards `#open` forces open mid-page: `#start-card` on the start side,
+/// and `#below-card` under its trigger, start-aligned (todo 711). Opened by a
+/// press, so the test can set `dir` first.
+#[component]
+fn SidesPage() -> Element {
+    let card = || rsx! { Text { "Wrote the first algorithm meant for a machine." } };
+    let mut open = use_signal(|| false);
+    rsx! {
+        div { style: "display: flex; flex-direction: column; align-items: center; gap: 240px; padding-top: 80px;",
+            Button { id: "open", onclick: move |_| open.set(true), "Open" }
+            HoverCard { aria_label: "Start", id: "start-card", open: open(), side: Side::Start, content: card(),
+                Button { id: "start-trigger", "Start" }
+            }
+            HoverCard { aria_label: "Below", id: "below-card", open: open(), content: card(),
+                Button { id: "below-trigger", "Below" }
+            }
         }
     }
 }

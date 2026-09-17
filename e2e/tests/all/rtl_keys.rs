@@ -9,16 +9,21 @@ use e2e::passes::keyboard::{self, Key};
 use e2e::{Fixture, Viewport, wait};
 
 async fn open_rtl(route: &str) -> Fixture {
+    open_in(route, "rtl").await
+}
+
+/// Opens `route` with `dir` set on `<html>`, as an app sets it.
+pub(crate) async fn open_in(route: &str, dir: &str) -> Fixture {
     let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
     fixture
         .page
-        .evaluate("document.documentElement.dir = 'rtl'")
+        .evaluate(format!("document.documentElement.dir = '{dir}'"))
         .await
         .unwrap();
     wait::for_js_true(
         &fixture.page,
-        "getComputedStyle(document.body).direction === 'rtl'",
-        "the page to turn RTL",
+        &format!("getComputedStyle(document.body).direction === '{dir}'"),
+        "the page to take its direction",
     )
     .await
     .unwrap();
@@ -311,7 +316,19 @@ fn directional_chevrons_mirror() {
     block_on(async {
         let mut wrong = Vec::new();
         // Route, glyph, the vector it draws, and +1 for forward, -1 for back.
-        let cases: [(&str, &str, (f64, f64), f64); 5] = [
+        let cases: [(&str, &str, (f64, f64), f64); 7] = [
+            (
+                "/carousel",
+                "[aria-label='Next slide'] svg",
+                (1.0, 0.0),
+                1.0,
+            ),
+            (
+                "/carousel",
+                "[aria-label='Previous slide'] svg",
+                (-1.0, 0.0),
+                -1.0,
+            ),
             (
                 "/pagination",
                 "[aria-label='Go to previous page'] svg",

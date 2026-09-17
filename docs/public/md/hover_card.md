@@ -69,7 +69,7 @@ tap opens it and a tap elsewhere closes it. The card has no arrow.
 |---|---|---|---|
 | `content` | `Element` | required | What the card shows. Links and buttons are fine. |
 | `children` | `Element` | required | The trigger. It must hold a link or a button, since focus is the keyboard's only way to open the card. |
-| `side` | `Side` | `Bottom` | Which side of the trigger the card opens on. It flips when that side has no room. |
+| `side` | `Side` | `Bottom` | Which side of the trigger the card opens on. It flips when that side has no room. `Start`/`End` are logical: `Start` is the left under `dir="ltr"`, the right under `rtl`. |
 | `align` | `Align` | `Start` | Where the card lines up along that side. |
 | `open_delay` | `u32` | `0` | Milliseconds the pointer must rest on the trigger before the card opens. |
 | `close_delay` | `u32` | `150` | Milliseconds the card waits after the pointer leaves. The pointer needs this time to reach the card, so `0` makes it unreachable. |

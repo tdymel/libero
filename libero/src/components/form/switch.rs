@@ -66,6 +66,13 @@ static SWITCH_TRACK_SX: StaticSx = StaticSx::new(|| {
 });
 
 static SWITCH_THUMB_SX: StaticSx = StaticSx::new(|| {
+    // The travel is the track minus the thumb and both insets.
+    let travel = format!(
+        "({} - {} - 2 * {})",
+        SWITCH_TRACK_W.value(),
+        SWITCH_THUMB.value(),
+        INSET,
+    );
     sx().position("absolute")
         .top("50%")
         .left(INSET)
@@ -74,14 +81,18 @@ static SWITCH_THUMB_SX: StaticSx = StaticSx::new(|| {
         .border_radius("50%")
         .background(SWITCH_THUMB_COLOR.value())
         .outline("1px solid transparent")
-        // The travel is the track minus the thumb and both insets.
         .transform(format!(
-            "translate(calc({} * (({} - {} - 2 * {}))), -50%)",
+            "translate(calc({} * ({travel})), -50%)",
             SWITCH_ON.value(),
-            SWITCH_TRACK_W.value(),
-            SWITCH_THUMB.value(),
-            INSET,
         ))
+        // Off sits at the start, so under RTL it starts on the right.
+        .selector(
+            "&:dir(rtl)",
+            sx().left("auto").right(INSET).transform(format!(
+                "translate(calc(-1 * {} * ({travel})), -50%)",
+                SWITCH_ON.value(),
+            )),
+        )
         .transition("transform 150ms ease")
 });
 

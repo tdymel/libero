@@ -14,7 +14,7 @@ use crate::{
         DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, use_css, use_drag,
         use_element, use_formats, use_id, use_local_state, use_theme,
     },
-    platform::{ElementApi, next_task},
+    platform::{ElementApi, logical_key, next_task},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::NamedColorCss,
     theme::{
@@ -126,6 +126,8 @@ static SLIDER_BAR_SX: StaticSx = StaticSx::new(|| {
         .background(SLIDER_COLOR.value())
         .border_radius("inherit")
         .media(FORCED_COLORS, sx().background("Highlight"))
+        // Under RTL the track runs right to left, as a native range does.
+        .selector("&:dir(rtl)", sx().left("auto").right("0"))
 });
 
 /// A range fills *between* its thumbs, so the bar starts at the lower one's
@@ -143,6 +145,10 @@ static SLIDER_RANGE_BAR_SX: StaticSx = StaticSx::new(|| {
         .background(SLIDER_COLOR.value())
         .border_radius("inherit")
         .media(FORCED_COLORS, sx().background("Highlight"))
+        .selector(
+            "&:dir(rtl)",
+            sx().left("auto").right(along_track(SLIDER_FILLED_FROM)),
+        )
 });
 
 /// Carries the thumb's position, because the `Tooltip` between them styles
@@ -157,6 +163,10 @@ static SLIDER_THUMB_ANCHOR_SX: StaticSx = StaticSx::new(|| {
         // Not inline: the tooltip's inline-block wrapper would sit on a
         // baseline and pull the thumb off the track's centre.
         .display("flex")
+        .selector(
+            "&:dir(rtl)",
+            sx().left("auto").right(along_track(SLIDER_THUMB_AT)),
+        )
 });
 
 static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
@@ -218,6 +228,12 @@ static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
             "filled",
             sx().background("surface").border_color("transparent"),
         )
+        .selector(
+            "&:dir(rtl)",
+            sx().left("auto")
+                .right(along_track(SLIDER_MARK_AT))
+                .transform("translate(50%, -50%)"),
+        )
 });
 
 static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
@@ -244,6 +260,15 @@ static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
         ))
         .color("muted.7")
         .white_space("nowrap")
+        .selector(
+            "&:dir(rtl)",
+            sx().left("auto")
+                .right(along_track(SLIDER_MARK_AT))
+                .transform(format!(
+                    "translateX(calc({} * 100%))",
+                    SLIDER_MARK_AT.value_or("0")
+                )),
+        )
 });
 
 /// On the bar, not the root: the root's scope skips a value move.
@@ -396,6 +421,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let track_left = use_local_state(|| 0.0_f64);
     let track_width = use_local_state(|| 0.0_f64);
     let thumb_width = use_local_state(|| 0.0_f64);
+    // Under RTL the minimum is at the right edge.
+    let track_rtl = use_local_state(|| false);
     // What `End` reports, and what a range's moves are measured against: the
     // drag's own last value, which a controlled parent may not have echoed
     // back yet. Never rendered, so a write redraws nothing.
@@ -416,8 +443,12 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     // handlers need this. Unsnapped - the grid is applied where the thumb is
     // also clamped against its neighbour.
     let position_at = {
-        let (track_left, track_width, thumb_width) =
-            (track_left.clone(), track_width.clone(), thumb_width.clone());
+        let (track_left, track_width, thumb_width, track_rtl) = (
+            track_left.clone(),
+            track_width.clone(),
+            thumb_width.clone(),
+            track_rtl.clone(),
+        );
         use_callback(move |client_x: f64| {
             let thumb = thumb_width.get();
             // The thumb's centre only travels between the two half-thumb
@@ -426,7 +457,9 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
             if travel <= 0.0 {
                 return None;
             }
-            Some(min + (client_x - track_left.get() - thumb / 2.0) / travel * (max - min))
+            let along = (client_x - track_left.get() - thumb / 2.0) / travel;
+            let along = if track_rtl.get() { 1.0 - along } else { along };
+            Some(min + along * (max - min))
         })
     };
 
@@ -459,6 +492,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
 
             let (track_left, track_width, thumb_width) =
                 (track_left.clone(), track_width.clone(), thumb_width.clone());
+            track_rtl.set(root_element.is_rtl());
             let press_focus = press_focus.clone();
             // Started here, awaited in the task: a read resolves where it is
             // called, and under Blitz that has to be inside the handler - the
@@ -547,7 +581,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         };
 
         let thumb = value.thumb(index);
-        match event.key() {
+        // Under RTL ArrowLeft raises the value, as on a native range.
+        match logical_key(&event) {
             Key::ArrowRight | Key::ArrowUp => go_to(thumb + distance),
             Key::ArrowLeft | Key::ArrowDown => go_to(thumb - distance),
             Key::PageUp => go_to(thumb + theme.slider.big_step * unit),

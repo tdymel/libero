@@ -228,18 +228,35 @@ pub struct PhoneFieldLabels {
     pub search: &'static str,
     /// Names the country button: `{name}`, `{iso}` and `{dial}`.
     pub country: &'static str,
+    /// Country names by upper-case ISO code; a code missing here keeps its
+    /// English name. `country_label` on the field wins over both.
+    ///
+    /// ```ignore
+    /// country_names: &[("DE", "Deutschland"), ("AT", "Österreich")],
+    /// ```
+    pub country_names: &'static [(&'static str, &'static str)],
 }
 
 impl PhoneFieldLabels {
     pub const ENGLISH: Self = Self {
         search: "Search countries",
         country: "Country: {name}, {iso} +{dial}",
+        country_names: &[],
     };
 
     pub const GERMAN: Self = Self {
         search: "Länder durchsuchen",
         country: "Land: {name}, {iso} +{dial}",
+        country_names: super::country_names::GERMAN,
     };
+
+    /// The name `country_names` gives `iso`, if any.
+    pub(crate) fn country_name(&self, iso: &str) -> Option<&'static str> {
+        self.country_names
+            .iter()
+            .find(|(code, _)| code.eq_ignore_ascii_case(iso))
+            .map(|(_, name)| *name)
+    }
 }
 
 /// `PasswordField`'s reveal button, when its props are unset.
@@ -303,11 +320,25 @@ impl SliderLabels {
 pub struct MenuLabels {
     /// Stands in for `Control`: "Control+S" draws "Ctrl+S".
     pub control: &'static str,
+    /// Stands in for `Shift`: "Control+Shift+S" draws "Strg+Umschalt+S".
+    pub shift: &'static str,
+    pub alt: &'static str,
+    pub meta: &'static str,
 }
 
 impl MenuLabels {
-    pub const ENGLISH: Self = Self { control: "Ctrl" };
-    pub const GERMAN: Self = Self { control: "Strg" };
+    pub const ENGLISH: Self = Self {
+        control: "Ctrl",
+        shift: "Shift",
+        alt: "Alt",
+        meta: "Meta",
+    };
+    pub const GERMAN: Self = Self {
+        control: "Strg",
+        shift: "Umschalt",
+        alt: "Alt",
+        meta: "Meta",
+    };
 }
 
 /// Every string `Pagination` puts in front of a reader.

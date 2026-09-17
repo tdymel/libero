@@ -6,14 +6,20 @@ pub const POPOVER_GAP: CssVar = CssVar::new("--lsx-popover-gap");
 pub const POPOVER_PADDING: CssVar = CssVar::new("--lsx-popover-padding");
 
 str_enum! {
-    /// Which side of the anchor the floating box sits on.
+    /// Which side of the anchor the floating box sits on. `Start`/`End` are
+    /// logical: `Start` is the left under `dir="ltr"`, the right under `rtl`.
+    ///
+    /// ```rust
+    /// use libero::theme::Side;
+    /// assert_eq!(Side::Start.as_str(), "start");
+    /// ```
     #[state_prefix = "side"]
     pub enum Side {
         Top = "top",
         #[default]
         Bottom = "bottom",
-        Left = "left",
-        Right = "right",
+        Start = "start",
+        End = "end",
     }
 }
 
@@ -22,8 +28,8 @@ impl Side {
         match self {
             Side::Top => Side::Bottom,
             Side::Bottom => Side::Top,
-            Side::Left => Side::Right,
-            Side::Right => Side::Left,
+            Side::Start => Side::End,
+            Side::End => Side::Start,
         }
     }
 
@@ -34,7 +40,8 @@ impl Side {
 }
 
 str_enum! {
-    /// Where the floating box lines up along the side's cross axis.
+    /// Where the floating box lines up along the side's cross axis. Across a
+    /// `Top`/`Bottom` side `Start` follows the direction, as `Side::Start` does.
     #[state_prefix = "align"]
     pub enum Align {
         #[default]

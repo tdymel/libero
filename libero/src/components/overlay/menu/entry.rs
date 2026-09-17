@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::utils::warn;
+use crate::{localization::MenuLabels, utils::warn};
 
 /// One line of a [`Menu`](super::Menu), in order.
 #[derive(Clone, PartialEq)]
@@ -223,12 +223,19 @@ impl MenuItem {
 }
 
 /// The visible hint for an `aria-keyshortcuts` value: its first alternative,
-/// with `Control` drawn as `control` - "Control+X Meta+X" draws "Ctrl+X".
-pub(super) fn shortcut_hint(keys: &str, control: &str) -> String {
+/// with each modifier drawn in `labels`' words - "Control+X Meta+X" draws
+/// "Ctrl+X".
+pub(super) fn shortcut_hint(keys: &str, labels: &MenuLabels) -> String {
     let first = keys.split_whitespace().next().unwrap_or_default();
     first
         .split('+')
-        .map(|key| if key == "Control" { control } else { key })
+        .map(|key| match key {
+            "Control" => labels.control,
+            "Shift" => labels.shift,
+            "Alt" => labels.alt,
+            "Meta" => labels.meta,
+            key => key,
+        })
         .collect::<Vec<_>>()
         .join("+")
 }
@@ -252,7 +259,7 @@ pub(super) fn flatten(entries: &[MenuEntry]) -> Vec<&MenuItem> {
 
 #[cfg(test)]
 mod tests {
-    use super::{MenuItem, shortcut_hint};
+    use super::{MenuItem, MenuLabels, shortcut_hint};
 
     #[test]
     fn radio_and_checkbox_on_one_item_warn() {
@@ -267,9 +274,24 @@ mod tests {
 
     #[test]
     fn the_hint_shortens_control_and_keeps_the_first_alternative() {
-        assert_eq!(shortcut_hint("Control+Shift+S", "Ctrl"), "Ctrl+Shift+S");
-        assert_eq!(shortcut_hint("Control+X Meta+X", "Ctrl"), "Ctrl+X");
-        assert_eq!(shortcut_hint("Control+C", "Strg"), "Strg+C");
-        assert_eq!(shortcut_hint("F2", "Ctrl"), "F2");
+        let en = &MenuLabels::ENGLISH;
+        assert_eq!(shortcut_hint("Control+Shift+S", en), "Ctrl+Shift+S");
+        assert_eq!(shortcut_hint("Control+X Meta+X", en), "Ctrl+X");
+        assert_eq!(shortcut_hint("Control+C", &MenuLabels::GERMAN), "Strg+C");
+        assert_eq!(shortcut_hint("F2", en), "F2");
+    }
+
+    /// Todo 725: every modifier takes the localization's word.
+    #[test]
+    fn the_hint_names_every_modifier_in_the_language() {
+        let de = &MenuLabels::GERMAN;
+        assert_eq!(shortcut_hint("Control+Shift+S", de), "Strg+Umschalt+S");
+        assert_eq!(shortcut_hint("Alt+Meta+F4", de), "Alt+Meta+F4");
+        let custom = MenuLabels {
+            alt: "Option",
+            meta: "Cmd",
+            ..MenuLabels::ENGLISH
+        };
+        assert_eq!(shortcut_hint("Alt+Meta+K", &custom), "Option+Cmd+K");
     }
 }

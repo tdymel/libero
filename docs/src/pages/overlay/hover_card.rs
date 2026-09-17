@@ -32,8 +32,8 @@ fn wrap(_: &DemoValues, source: &str) -> String {
 fn side_of(value: &str) -> Side {
     match value {
         "top" => Side::Top,
-        "left" => Side::Left,
-        "right" => Side::Right,
+        "start" => Side::Start,
+        "end" => Side::End,
         _ => Side::Bottom,
     }
 }
@@ -134,7 +134,7 @@ pub fn HoverCardPage() -> Element {
                 code_child: Child(|_| TRIGGER.to_string()),
                 wrap: Wrap(wrap),
                 controls: vec![
-                    Control::toggle("side", ["bottom", "top", "right", "left"])
+                    Control::toggle("side", ["bottom", "top", "end", "start"])
                         .default("bottom")
                         .code(enum_code),
                     Control::toggle("align", ["start", "center", "end"])

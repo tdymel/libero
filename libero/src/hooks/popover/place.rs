@@ -20,15 +20,36 @@ pub struct Placed {
     pub placement: Placement,
 }
 
+/// A physical edge of the anchor: `Side::Start`/`End` resolved against the
+/// direction, so the arithmetic below never asks which way the text runs.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Edge {
+    Top,
+    Bottom,
+    Left,
+    Right,
+}
+
+impl Edge {
+    fn of(side: Side, rtl: bool) -> Self {
+        match (side, rtl) {
+            (Side::Top, _) => Edge::Top,
+            (Side::Bottom, _) => Edge::Bottom,
+            (Side::Start, false) | (Side::End, true) => Edge::Left,
+            (Side::End, false) | (Side::Start, true) => Edge::Right,
+        }
+    }
+}
+
 /// The free space between the anchor and the viewport edge on one side, with
 /// the collision padding already taken off. Negative means the anchor's own
 /// edge is already past it.
-fn room(side: Side, anchor: Rect, viewport: Dimensions, padding: f64) -> f64 {
-    match side {
-        Side::Top => anchor.y - padding,
-        Side::Bottom => viewport.height - (anchor.y + anchor.height) - padding,
-        Side::Left => anchor.x - padding,
-        Side::Right => viewport.width - (anchor.x + anchor.width) - padding,
+fn room(edge: Edge, anchor: Rect, viewport: Dimensions, padding: f64) -> f64 {
+    match edge {
+        Edge::Top => anchor.y - padding,
+        Edge::Bottom => viewport.height - (anchor.y + anchor.height) - padding,
+        Edge::Left => anchor.x - padding,
+        Edge::Right => viewport.width - (anchor.x + anchor.width) - padding,
     }
 }
 
@@ -49,7 +70,8 @@ fn shift_into(start: f64, size: f64, viewport_size: f64, padding: f64) -> f64 {
     (start.min(viewport_size - padding - size)).max(padding)
 }
 
-/// Places a floating box against its anchor.
+/// Places a floating box against its anchor. `rtl` is the anchor's direction:
+/// it turns `Side::Start`/`End` and a horizontal `Align` into physical edges.
 ///
 /// Pure: no DOM, no signals, no theme. Everything that decides the answer is an
 /// argument, which is what makes flipping and shifting testable without a
@@ -59,14 +81,25 @@ pub fn place(
     floating: Dimensions,
     viewport: Dimensions,
     options: &PopoverOptions,
+    rtl: bool,
 ) -> Placed {
     let needed = |side: Side| match side.is_vertical() {
         true => floating.height + options.gap,
         false => floating.width + options.gap,
     };
 
-    let preferred = room(options.side, anchor, viewport, options.padding);
-    let opposite = room(options.side.opposite(), anchor, viewport, options.padding);
+    let preferred = room(
+        Edge::of(options.side, rtl),
+        anchor,
+        viewport,
+        options.padding,
+    );
+    let opposite = room(
+        Edge::of(options.side.opposite(), rtl),
+        anchor,
+        viewport,
+        options.padding,
+    );
     // Flip only when the preferred side cannot hold the box *and* the opposite
     // one holds more. A box too big for either side stays where it was asked
     // to go, and `shift` decides what the user sees instead.
@@ -76,20 +109,26 @@ pub fn place(
     };
 
     let align = options.align;
-    let (mut x, mut y) = match side {
-        Side::Top => (
-            cross_axis(align, anchor.x, anchor.width, floating.width),
+    // Along `x` an RTL start is the right edge; along `y` there is no direction.
+    let across = match (align, rtl) {
+        (Align::Start, true) => Align::End,
+        (Align::End, true) => Align::Start,
+        _ => align,
+    };
+    let (mut x, mut y) = match Edge::of(side, rtl) {
+        Edge::Top => (
+            cross_axis(across, anchor.x, anchor.width, floating.width),
             anchor.y - floating.height - options.gap,
         ),
-        Side::Bottom => (
-            cross_axis(align, anchor.x, anchor.width, floating.width),
+        Edge::Bottom => (
+            cross_axis(across, anchor.x, anchor.width, floating.width),
             anchor.y + anchor.height + options.gap,
         ),
-        Side::Left => (
+        Edge::Left => (
             anchor.x - floating.width - options.gap,
             cross_axis(align, anchor.y, anchor.height, floating.height),
         ),
-        Side::Right => (
+        Edge::Right => (
             anchor.x + anchor.width + options.gap,
             cross_axis(align, anchor.y, anchor.height, floating.height),
         ),
@@ -145,7 +184,13 @@ mod tests {
 
     #[test]
     fn sits_under_the_anchor_with_the_gap() {
-        let placed = place(anchor_at(100.0, 100.0), dropdown(), viewport(), &options());
+        let placed = place(
+            anchor_at(100.0, 100.0),
+            dropdown(),
+            viewport(),
+            &options(),
+            false,
+        );
 
         assert_eq!(placed.x, 100.0, "start-aligned, so the left edges meet");
         assert_eq!(placed.y, 144.0, "anchor bottom plus the 4px gap");
@@ -155,7 +200,13 @@ mod tests {
     #[test]
     fn flips_above_when_the_bottom_cannot_hold_it() {
         // 260 tall under an anchor ending at 640 needs 800; only 152 is left.
-        let placed = place(anchor_at(100.0, 600.0), dropdown(), viewport(), &options());
+        let placed = place(
+            anchor_at(100.0, 600.0),
+            dropdown(),
+            viewport(),
+            &options(),
+            false,
+        );
 
         assert_eq!(placed.placement.side, Side::Top);
         assert_eq!(placed.y, 336.0, "anchor top, minus the box, minus the gap");
@@ -167,7 +218,7 @@ mod tests {
             width: 200.0,
             height: 700.0,
         };
-        let placed = place(anchor_at(100.0, 300.0), tall, viewport(), &options());
+        let placed = place(anchor_at(100.0, 300.0), tall, viewport(), &options(), false);
 
         assert_eq!(
             placed.placement.side,
@@ -183,6 +234,7 @@ mod tests {
             dropdown(),
             viewport(),
             &options().flip(false),
+            false,
         );
 
         assert_eq!(placed.placement.side, Side::Bottom);
@@ -192,7 +244,13 @@ mod tests {
     #[test]
     fn shifts_a_box_back_off_the_right_edge() {
         // Start-aligned at x 900 would put the right edge at 1100.
-        let placed = place(anchor_at(900.0, 100.0), dropdown(), viewport(), &options());
+        let placed = place(
+            anchor_at(900.0, 100.0),
+            dropdown(),
+            viewport(),
+            &options(),
+            false,
+        );
 
         assert_eq!(placed.x, 792.0, "1000 minus the 8px padding minus the box");
     }
@@ -203,7 +261,7 @@ mod tests {
             width: 1200.0,
             height: 100.0,
         };
-        let placed = place(anchor_at(100.0, 100.0), wide, viewport(), &options());
+        let placed = place(anchor_at(100.0, 100.0), wide, viewport(), &options(), false);
 
         assert_eq!(
             placed.x, 8.0,
@@ -218,6 +276,7 @@ mod tests {
             dropdown(),
             viewport(),
             &options().shift(false),
+            false,
         );
 
         assert_eq!(placed.x, 900.0);
@@ -234,12 +293,14 @@ mod tests {
             narrow,
             viewport(),
             &options().align(Align::Center),
+            false,
         );
         let ended = place(
             anchor_at(400.0, 100.0),
             narrow,
             viewport(),
             &options().align(Align::End),
+            false,
         );
 
         assert_eq!(centred.x, 450.0, "50px of the anchor's 200 on either side");
@@ -256,28 +317,89 @@ mod tests {
             anchor_at(100.0, 100.0),
             panel,
             viewport(),
-            &options().side(Side::Left),
+            &options().side(Side::Start),
+            false,
         );
 
         assert_eq!(
             placed.placement.side,
-            Side::Right,
+            Side::End,
             "only 92 to the left, 700 to the right"
         );
         assert_eq!(placed.x, 304.0, "anchor right plus the gap");
         assert_eq!(placed.y, 100.0, "start-aligned on the vertical axis now");
     }
 
+    /// Todo 711: under RTL `Start` is the right side, and a start-aligned
+    /// dropdown lines up right edges.
+    #[test]
+    fn start_is_the_right_under_rtl() {
+        let panel = Dimensions {
+            width: 300.0,
+            height: 100.0,
+        };
+        let start = options().side(Side::Start);
+        let ltr = place(anchor_at(400.0, 100.0), panel, viewport(), &start, false);
+        let rtl = place(anchor_at(400.0, 100.0), panel, viewport(), &start, true);
+
+        assert_eq!(ltr.x, 96.0, "anchor left minus the box and the gap");
+        assert_eq!(rtl.x, 604.0, "anchor right plus the gap");
+        assert_eq!(rtl.placement.side, Side::Start, "reported logically");
+
+        let narrow = Dimensions {
+            width: 100.0,
+            height: 60.0,
+        };
+        let below = place(
+            anchor_at(400.0, 100.0),
+            narrow,
+            viewport(),
+            &options(),
+            true,
+        );
+        assert_eq!(below.x, 500.0, "right edges meet");
+        assert_eq!(below.placement.align, Align::Start);
+    }
+
+    #[test]
+    fn an_rtl_start_flips_to_the_end_on_the_left() {
+        let panel = Dimensions {
+            width: 300.0,
+            height: 100.0,
+        };
+        let placed = place(
+            anchor_at(600.0, 100.0),
+            panel,
+            viewport(),
+            &options().side(Side::Start),
+            true,
+        );
+
+        assert_eq!(
+            placed.placement.side,
+            Side::End,
+            "192 to the right, 592 to the left"
+        );
+        assert_eq!(placed.x, 296.0, "anchor left minus the box and the gap");
+    }
+
     #[test]
     fn width_is_not_the_placer_s_business() {
         // Placement never reads it, so the same options with a different width
         // land in the same spot; the hook is what turns it into CSS.
-        let base = place(anchor_at(100.0, 100.0), dropdown(), viewport(), &options());
+        let base = place(
+            anchor_at(100.0, 100.0),
+            dropdown(),
+            viewport(),
+            &options(),
+            false,
+        );
         let matched = place(
             anchor_at(100.0, 100.0),
             dropdown(),
             viewport(),
             &options().width(PopoverWidth::Match),
+            false,
         );
 
         assert_eq!(base, matched);

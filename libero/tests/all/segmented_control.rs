@@ -87,10 +87,13 @@ fn a_segmented_control_checks_only_the_selected_radio() {
     );
 
     // The inner corners have to beat the segment's own radius rule, which is
-    // one `when` shallower - so the attribute selectors are load-bearing.
-    assert!(html.contains(&format!(
-        ".{root_class}[data-state~=\"collapsed\"][data-state~=\"horizontal\"] > label:not(:first-of-type)"
-    )));
+    // one `when` shallower - so the attribute selectors are load-bearing. One
+    // rule per direction (todo 747).
+    for dir in ["ltr", "rtl"] {
+        assert!(html.contains(&format!(
+            ".{root_class}[data-state~=\"collapsed\"][data-state~=\"horizontal\"]:dir({dir}) > label:not(:first-of-type)"
+        )));
+    }
 }
 
 #[test]
