@@ -146,9 +146,8 @@ fn f6_moves_focus_between_the_window_and_the_page() {
 }
 
 /// `Float` places the window by a translate, which Blitz's client rect leaves
-/// out: the move starts from the untranslated box, so a centred window jumps.
+/// out; libero's `client_offset` maps it back in (todo 734).
 #[test]
-#[ignore = "needs Blitz: getBoundingClientRect leaves out a transform"]
 fn an_arrow_on_the_title_bar_moves_it_by_a_step() {
     let mut page = mount(app);
     open(&mut page);
@@ -268,9 +267,24 @@ fn the_title_bar_menu_resizes_and_resets() {
     );
 }
 
-/// The press lands where the untranslated rect says, beside the handle.
+/// Todo 700: the centred window's title bar lies outside its untranslated
+/// box, where Blitz's hit test did not look (`HIT_AREA_STYLE`).
 #[test]
-#[ignore = "needs Blitz: getBoundingClientRect leaves out a transform"]
+fn a_title_bar_drag_moves_it_with_the_pointer() {
+    let mut page = mount(app);
+    open(&mut page);
+    let before = page.rect(DIALOG);
+    page.drag(HANDLE, 30.0, 20.0);
+    settle(&mut page);
+    let after = page.rect(DIALOG);
+    assert!(
+        close_to(after.0, before.0 + 30.0) && close_to(after.1, before.1 + 20.0),
+        "moved from {before:?} to {after:?}"
+    );
+    assert_reported(&page, MOVE_REPORT, "the drag");
+}
+
+#[test]
 fn a_drag_leaves_its_handle_focused() {
     let mut page = mount(app);
     open(&mut page);

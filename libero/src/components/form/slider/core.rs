@@ -817,8 +817,9 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
                     open,
                     label_id: bubble_id,
                     // The thumb's hit area already spans the gap, and the
-                    // portaled bridge over it would take the press from it.
-                    sx: sx().selector("&::before", sx().pointer_events("none")),
+                    // portaled bridge over it would take the press from it. No
+                    // box at all: Blitz hits the bubble's text over its overflow.
+                    sx: sx().selector("&::before", sx().display("none")),
                     {thumb}
                 }
             }

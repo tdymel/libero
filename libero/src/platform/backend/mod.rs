@@ -378,11 +378,13 @@ pub(crate) fn focus_entered_from(
     return None;
 }
 
-/// Only the web can see a press's target - see
+/// The web reads a press's target, Blitz hit-tests it - see
 /// [`focus_pressed`](crate::platform::focus_pressed).
 pub(crate) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>) {
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     let _ = (event, within);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    blitz::focus_pressed(event, within);
     #[cfg(target_arch = "wasm32")]
     web::focus_pressed(event, within);
 }

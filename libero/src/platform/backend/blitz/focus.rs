@@ -32,9 +32,9 @@ pub(super) struct Watch {
 thread_local! {
     /// Where libero's last `focus()` went, until the flush. See [`clicked`].
     static REQUESTED: Cell<Option<NodeId>> = const { Cell::new(None) };
-    /// The focus owner at a press that cancelled its `mousedown`, until the
-    /// press has ended, and whether it gets focus back. See [`mouse_pressed`].
-    static KEPT: Cell<Option<(NodeId, bool)>> = const { Cell::new(None) };
+    /// Where focus goes back to after a press that cancelled its `mousedown`,
+    /// until the press has ended. See [`mouse_pressed`].
+    static KEPT: Cell<Option<NodeId>> = const { Cell::new(None) };
 }
 
 /// A `mousedown` reaching [`Listener`](super::Listener). Cancelled, the web
@@ -52,15 +52,15 @@ pub(super) fn mouse_pressed(event: &Event<MouseData>) {
     let owner = doc.anchor().as_ref().and_then(|anchor| {
         let doc = anchor.try_doc()?;
         let owner = doc.get_focussed_node_id()?;
-        (owner != doc.root_element().id && Some(owner) != wrapper).then_some((owner, true))
+        (owner != doc.root_element().id && Some(owner) != wrapper).then_some(owner)
     });
     KEPT.set(owner);
 }
 
-/// The press is released and Blitz moves focus next: back it goes, unless
-/// libero moved it itself during the press.
+/// The press is released and Blitz moves focus next: back it goes, or to where
+/// libero moved it during the press.
 pub(super) fn released() {
-    let (Some((owner, restore)), Some(anchor)) = (KEPT.get(), anchor()) else {
+    let (Some(owner), Some(anchor)) = (KEPT.get(), anchor()) else {
         return;
     };
     defer(&anchor, move |doc| {
@@ -68,7 +68,7 @@ pub(super) fn released() {
         let present = doc
             .get_node(owner)
             .is_some_and(|node| node.flags.is_in_document());
-        if restore && present && doc.get_focussed_node_id() != Some(owner) {
+        if present && doc.get_focussed_node_id() != Some(owner) {
             doc.set_focus_to(owner);
         }
     });
@@ -85,10 +85,12 @@ pub(super) fn forget_kept() {
     KEPT.set(None);
 }
 
+/// During a kept press, the release now puts focus back on `node_id`: a drag
+/// sends no click for [`clicked`] to follow.
 pub(super) fn requested(node_id: NodeId) {
     REQUESTED.set(Some(node_id));
-    if let Some((owner, _)) = KEPT.get() {
-        KEPT.set(Some((owner, false)));
+    if KEPT.get().is_some() {
+        KEPT.set(Some(node_id));
     }
 }
 

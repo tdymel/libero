@@ -94,6 +94,50 @@ fn css_color(color: peniko::Color) -> String {
     }
 }
 
+/// Blitz's client rect leaves out `transform`; the web's does not. libero's
+/// `client_rect` in `platform/backend/blitz.rs` does the same walk.
+fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f64)> {
+    let node = doc.get_node(node_id)?;
+    let size = node.unrounded_layout().size;
+    let (width, height) = (f64::from(size.width), f64::from(size.height));
+    let mut corners = [(0.0, 0.0), (width, 0.0), (0.0, height), (width, height)];
+    let scale = doc.viewport().scale_f64();
+    let mut transformed = false;
+    let mut current = Some(node);
+    while let Some(node) = current {
+        let boxed = matches!(
+            node.data,
+            blitz_dom::NodeData::Element(_) | blitz_dom::NodeData::AnonymousBlock(_)
+        );
+        if let Some(transform) = boxed.then(|| *node.transform()).flatten() {
+            let [a, b, c, d, e, f] = transform.as_coeffs();
+            for (x, y) in &mut corners {
+                (*x, *y) = (a * *x + c * *y + e / scale, b * *x + d * *y + f / scale);
+            }
+            transformed = true;
+        }
+        let location = node.final_layout().location;
+        let parent = node.layout_parent.get().and_then(|id| doc.get_node(id));
+        let scroll = parent.map(|parent| *parent.scroll_offset());
+        for (x, y) in &mut corners {
+            *x += f64::from(location.x) - scroll.map_or(0.0, |s| s.x);
+            *y += f64::from(location.y) - scroll.map_or(0.0, |s| s.y);
+        }
+        current = parent;
+    }
+    if !transformed {
+        return None;
+    }
+    let scroll = doc.viewport_scroll();
+    let xs = corners.map(|(x, _)| x - scroll.x);
+    let ys = corners.map(|(_, y)| y - scroll.y);
+    let min_x = xs.iter().copied().fold(f64::INFINITY, f64::min);
+    let min_y = ys.iter().copied().fold(f64::INFINITY, f64::min);
+    let max_x = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let max_y = ys.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    Some((min_x, min_y, max_x - min_x, max_y - min_y))
+}
+
 fn viewport(scheme: ColorScheme) -> Viewport {
     Viewport::new(VIEWPORT.0, VIEWPORT.1, 1.0, scheme)
 }
@@ -589,10 +633,11 @@ impl Page {
     /// The first match's `getBoundingClientRect()`: `(x, y, width, height)`.
     pub fn rect(&self, selector: &str) -> (f64, f64, f64, f64) {
         let id = self.node(selector);
-        let rect = self
-            .doc
-            .inner
-            .borrow()
+        let doc = self.doc.inner.borrow();
+        if let Some(rect) = transformed_rect(&doc, id) {
+            return rect;
+        }
+        let rect = doc
             .get_client_bounding_rect(id)
             .unwrap_or_else(|| panic!("{selector:?} has no layout box"));
         (rect.x, rect.y, rect.width, rect.height)

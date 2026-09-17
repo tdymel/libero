@@ -82,9 +82,8 @@ fn escape_closes_it_under_the_pointer() {
     );
 }
 
-/// Blitz fires no `focusin` for Tab, and the bubble opens on it (N6).
+/// Blitz fires no `focusin` for Tab; the silent-focus check opens it (N6).
 #[test]
-#[ignore = "Tab fires no focus event natively: todo 468 N6 (Olaf-26)"]
 fn tab_focus_opens_it() {
     let mut page = mount(app);
     page.focus("#before");

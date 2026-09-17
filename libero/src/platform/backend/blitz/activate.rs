@@ -291,6 +291,8 @@ pub(super) fn focus_pressed(before: Option<NodeId>, target: NodeId) {
         if present && (focused == before || cleared(doc)) && focused != Some(target) {
             focus::watch(doc);
             doc.set_focus_to(target);
+            // The press cancelled its `mousedown`: the release keeps this focus.
+            focus::requested(target);
         }
     });
 }

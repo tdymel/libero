@@ -118,6 +118,8 @@ struct Doc {
     laid_out_wait: RefCell<Option<Box<dyn TimerSubscription>>>,
     /// [`Listener`]'s own element.
     wrapper: RefCell<Option<NodeHandle>>,
+    /// [`PortalRoot`]'s viewport-wide box. See [`HIT_AREA_STYLE`].
+    hit_area: RefCell<Option<NodeHandle>>,
     /// The scheme Rust was last told, and who to tell when the viewport's
     /// differs. See [`BlitzColorScheme`].
     scheme: Cell<ColorScheme>,
@@ -157,6 +159,7 @@ impl Doc {
             laid_out: RefCell::new(Vec::new()),
             laid_out_wait: RefCell::new(None),
             wrapper: RefCell::new(None),
+            hit_area: RefCell::new(None),
             scheme: Cell::new(ColorScheme::Light),
             scheme_callbacks: Callbacks::new(),
             scheme_poll: RefCell::new(None),
@@ -757,6 +760,13 @@ impl Drop for BlitzKeySubscription {
 /// hits; [`PortalEntry`] gives them back to what it holds.
 const PORTAL_ROOT_STYLE: &str = "position:absolute;width:100vw;height:100vh;pointer-events:none;";
 
+/// Blitz's hit test enters a stacking context's z-indexed boxes only inside
+/// their untransformed union, so a centred `Float` missed presses wherever its
+/// translate moved it: a hoisted, hitless box over the whole viewport widens it.
+/// During a followed drag it takes the hits, so a move off the app's content
+/// still bubbles through [`Listener`] (see [`follow_pointer`]).
+const HIT_AREA_STYLE: &str = "position:absolute;inset:0;z-index:1;pointer-events:none;";
+
 /// The portal outlet, shifted back onto the viewport's corner whenever
 /// something scrolls: an `absolute` box moves with a scrolled root, an offset
 /// parent and a top margin collapsing through `<main>`.
@@ -824,6 +834,14 @@ pub(super) fn PortalRoot(children: Element) -> Element {
                 // Laid out only after this poll's effects.
                 when_laid_out(Box::new(move || realign.call(())));
             },
+            div {
+                style: HIT_AREA_STYLE,
+                onmounted: move |event| {
+                    if let (Some(doc), Some(handle)) = (&doc, event.data().downcast::<NodeHandle>()) {
+                        *doc.hit_area.borrow_mut() = Some(handle.clone());
+                    }
+                },
+            }
             {children}
         }
     }
@@ -981,6 +999,30 @@ pub(super) fn follow_pointer(
         onmove,
         onup,
     }));
+    let cursor = handle
+        .try_doc()
+        .map(|doc| resolved_style_value(&doc, handle.node_id(), "cursor"))
+        .unwrap_or_default();
+    catch_pointer(Some(cursor));
+}
+
+/// Turns [`HIT_AREA_STYLE`]'s box into the drag's catcher, with the capture
+/// element's cursor, or back into a hitless one.
+fn catch_pointer(cursor: Option<String>) {
+    let (Some(anchor), Some(area)) = (
+        anchor(),
+        doc().and_then(|doc| doc.hit_area.borrow().as_ref().map(NodeHandle::node_id)),
+    ) else {
+        return;
+    };
+    let style = match cursor {
+        Some(cursor) => format!("{HIT_AREA_STYLE}pointer-events:auto;cursor:{cursor};"),
+        None => HIT_AREA_STYLE.to_string(),
+    };
+    defer(&anchor, move |doc| {
+        let name = QualName::new(None, ns!(), local_name!("style"));
+        doc.mutate().set_attribute(area, name, &style);
+    });
 }
 
 /// Hands the followed drag what bubbled here from outside its element; what
@@ -993,6 +1035,7 @@ fn followed(event: &Event<PointerData>, up: bool) {
     };
     if up {
         FOLLOW.set(None);
+        catch_pointer(None);
     }
     let point = event.client_coordinates();
     let outside = anchor().and_then(|anchor| {
@@ -1013,7 +1056,10 @@ fn followed(event: &Event<PointerData>, up: bool) {
         Some(true) if up => follow.onup.call(event.clone()),
         Some(true) => follow.onmove.call(event.clone()),
         Some(false) => {}
-        None => FOLLOW.set(None),
+        None => {
+            FOLLOW.set(None);
+            catch_pointer(None);
+        }
     }
 }
 
@@ -1025,6 +1071,51 @@ fn focusable_ancestor(doc: &BaseDocument, mut node_id: NodeId) -> Option<NodeId>
         }
         node_id = node.parent?;
     }
+}
+
+/// The web arm's walk: the outermost tab stop from the press's hit up to
+/// `within`, focused unless focus is already inside it. The release then keeps
+/// it, though the press cancelled its `mousedown`.
+pub(super) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>) {
+    let Some(handle) = within.downcast::<NodeHandle>() else {
+        return;
+    };
+    let point = event.client_coordinates();
+    let Some(doc) = handle.try_doc() else {
+        return;
+    };
+    let Some(hit) = doc.hit(point.x as f32, point.y as f32) else {
+        return;
+    };
+    let tab_stop = |id: NodeId| {
+        doc.get_node(id).is_some_and(|node| {
+            node.is_focussable()
+                && node
+                    .element_data()
+                    .and_then(|element| element.attr(local_name!("tabindex")))
+                    .is_none_or(|index| index.trim().parse::<i32>().is_ok_and(|i| i >= 0))
+        })
+    };
+    let mut target = None;
+    let mut inside = false;
+    for id in ancestors(&doc, hit.node_id) {
+        if tab_stop(id) {
+            target = Some(id);
+        }
+        if id == handle.node_id() {
+            inside = true;
+            break;
+        }
+    }
+    let (Some(target), true) = (target, inside) else {
+        return;
+    };
+    let focused = doc.get_focussed_node_id();
+    if focused.is_some_and(|focused| ancestors(&doc, focused).any(|id| id == target)) {
+        return;
+    }
+    drop(doc);
+    activate::focus_pressed(focused, target);
 }
 
 type Deferred = Box<dyn FnOnce()>;
@@ -1606,11 +1697,8 @@ impl ElementApi for BlitzElement {
 
     fn dimensions(&self) -> Read<Dimensions> {
         self.read(|doc, node_id| {
-            let rect = doc.get_client_bounding_rect(node_id)?;
-            Some(Dimensions {
-                width: rect.width,
-                height: rect.height,
-            })
+            let (_, _, width, height) = client_rect(doc, node_id)?;
+            Some(Dimensions { width, height })
         })
     }
 
@@ -1869,9 +1957,58 @@ fn show(anchor: NodeHandle, node_id: NodeId, tries: u8) {
 /// `get_client_bounding_rect` also subtracts the node's own scroll offset,
 /// which moves its contents, not its box: added back here.
 fn client_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f64)> {
+    if let Some(rect) = transformed_rect(doc, node_id) {
+        return Some(rect);
+    }
     let rect = doc.get_client_bounding_rect(node_id)?;
     let own = doc.get_node(node_id)?.scroll_offset();
     Some((rect.x + own.x, rect.y + own.y, rect.width, rect.height))
+}
+
+/// Blitz's client rect leaves out `transform`, which paint and hit testing
+/// apply: the bounding box of the four corners, mapped up the layout parents
+/// through each one's transform. `None` when no box on the way has one.
+fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f64)> {
+    let node = doc.get_node(node_id)?;
+    let size = node.unrounded_layout().size;
+    let (width, height) = (f64::from(size.width), f64::from(size.height));
+    let mut corners = [(0.0, 0.0), (width, 0.0), (0.0, height), (width, height)];
+    // The cached transform is in device pixels: only its translation scales.
+    let scale = doc.viewport().scale_f64();
+    let mut transformed = false;
+    let mut current = Some(node);
+    while let Some(node) = current {
+        let boxed = matches!(
+            node.data,
+            blitz_dom::NodeData::Element(_) | blitz_dom::NodeData::AnonymousBlock(_)
+        );
+        if let Some(transform) = boxed.then(|| *node.transform()).flatten() {
+            let [a, b, c, d, e, f] = transform.as_coeffs();
+            for (x, y) in &mut corners {
+                (*x, *y) = (a * *x + c * *y + e / scale, b * *x + d * *y + f / scale);
+            }
+            transformed = true;
+        }
+        let location = node.final_layout().location;
+        let parent = node.layout_parent.get().and_then(|id| doc.get_node(id));
+        let scroll = parent.map(|parent| *parent.scroll_offset());
+        for (x, y) in &mut corners {
+            *x += f64::from(location.x) - scroll.map_or(0.0, |s| s.x);
+            *y += f64::from(location.y) - scroll.map_or(0.0, |s| s.y);
+        }
+        current = parent;
+    }
+    if !transformed {
+        return None;
+    }
+    let scroll = doc.viewport_scroll();
+    let xs = corners.map(|(x, _)| x - scroll.x);
+    let ys = corners.map(|(_, y)| y - scroll.y);
+    let min_x = xs.iter().copied().fold(f64::INFINITY, f64::min);
+    let min_y = ys.iter().copied().fold(f64::INFINITY, f64::min);
+    let max_x = xs.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    let max_y = ys.iter().copied().fold(f64::NEG_INFINITY, f64::max);
+    Some((min_x, min_y, max_x - min_x, max_y - min_y))
 }
 
 /// `WebElement::scroll_into_view`'s walk: the nearest ancestor that overflows

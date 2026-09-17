@@ -109,7 +109,6 @@ fn enter_on_its_close_button_closes_it() {
 
 /// See `hit::a_translated_box_reports_where_it_is_drawn`.
 #[test]
-#[ignore = "needs Blitz: getBoundingClientRect leaves out the stack's translate, so the click misses"]
 fn a_click_on_its_close_button_closes_it() {
     let mut page = mount(app);
     page.click(TRIGGER);
@@ -119,10 +118,12 @@ fn a_click_on_its_close_button_closes_it() {
     assert!(!page.exists(ITEM), "{}", page.tree());
 }
 
-/// The store learns focus is inside from `focusin`, which neither a direct
-/// focus nor Tab fires on Blitz.
+/// The store learns focus is inside from `focusin`, which Tab does not fire
+/// on Blitz; the silent-focus check reports it (N6). A harness `focus` is
+/// heard by neither, so the test tabs in. Handing on works; the way back out
+/// needs where focus came from, which a silent move does not carry (todo 734).
 #[test]
-#[ignore = "no focusin on a direct focus or Tab natively: todo 468 N6 (Olaf-26)"]
+#[ignore = "silent focus moves carry no entered_from, so the trigger is not remembered"]
 fn closing_a_focused_one_hands_focus_on_and_back_out() {
     let mut page = mount(app);
     page.focus(TRIGGER);
@@ -133,9 +134,17 @@ fn closing_a_focused_one_hands_focus_on_and_back_out() {
     let closes = page.query_all(CLOSE);
     assert_eq!(closes.len(), 3, "{}", page.tree());
 
-    // Entered from the trigger, as a Tab would.
-    page.focus(CLOSE);
+    for _ in 0..10 {
+        if page.focused().is_some_and(|id| closes.contains(&id)) {
+            break;
+        }
+        page.tab();
+    }
     let first = page.focused();
+    assert!(
+        first.is_some_and(|id| closes.contains(&id)),
+        "Tab never reached a close button"
+    );
     page.press(Key::Enter);
     finish(&mut page);
     assert_eq!(page.query_all(CLOSE).len(), 2);

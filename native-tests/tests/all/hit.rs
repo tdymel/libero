@@ -18,10 +18,9 @@ fn app() -> Element {
     }
 }
 
-/// Hit testing follows the translate; the client rect does not, so a click at
-/// the reported centre misses (a `Notifications` stack's close button).
+/// Hit testing follows the translate; Blitz's client rect does not, so the
+/// harness and libero map the box through it (todo 734).
 #[test]
-#[ignore = "needs Blitz: getBoundingClientRect leaves out a transform"]
 fn a_translated_box_reports_where_it_is_drawn() {
     let page = mount(app);
     let (x, _, _, _) = page.rect("#moved");

@@ -54,10 +54,9 @@ fn a_release_outside_the_slider_ends_the_drag() {
     assert_eq!(value(&page), before);
 }
 
-/// The wrapper sees only what bubbles through it; below the app's content the
-/// pointer is over `<html>`, which only a document listener would hear.
+/// Below the app's content the pointer is over `<html>`, outside the wrapper:
+/// during the drag the portal root's viewport-wide box takes it instead.
 #[test]
-#[ignore = "needs Blitz: no document pointer listener reaches Rust"]
 fn a_drag_leaving_the_app_keeps_moving_the_slider() {
     fn app() -> Element {
         let mut value = use_signal(|| 0.0);
