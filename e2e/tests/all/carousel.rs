@@ -4,7 +4,7 @@
 //! Its slides hold a caller's own content, which this component cannot ask to
 //! stop propagating, so every press made inside a slide arrives at the track's
 //! handler as well. Three guard arms separate the two cases
-//! (`libero/src/components/navigation/carousel.rs`):
+//! (`libero/src/components/data_display/carousel.rs`):
 //!
 //! | arm | what it covers | the control in the fixture |
 //! |---|---|---|

@@ -85,6 +85,6 @@ pub(crate) fn use_portal_slot() -> PortalSlot {
 ///
 /// Takes an already-rendered `Option<Element>`, not a closure - see
 /// [`PortalSlot::show`] for why.
-pub fn use_portal(content: Option<Element>) {
+pub(crate) fn use_portal(content: Option<Element>) {
     use_portal_slot().show(content);
 }

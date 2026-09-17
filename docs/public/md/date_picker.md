@@ -6,9 +6,7 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/d
 Index: [index.md](index.md) - every other component's markdown page
 Description: One picker for every date and time value - days, months, years, times, date-times and ranges of them.
 
-Modelled on Mantine's `DatePicker`, `MonthPicker`, `YearPicker` and
-`TimePicker`, in one component. [DateField](date_field.md) shows it in a
-dropdown.
+[DateField](date_field.md) shows it in a dropdown.
 
 There is also the same picker for one value type each, with only the props that type uses
 and no turbofish.
@@ -32,7 +30,7 @@ and no turbofish.
 | `DateRange<NaiveDateTime>` | start then end, each a day and a time | `NaiveDateTime` |
 
 With `calendar: "mini"` a day or a date-time is picked from one row of
-`days` days instead of a month - Mantine's `MiniCalendar`. Each day shows its
+`days` days instead of a month. Each day shows its
 month over its number. The row starts at the value, else today.
 
 At `DateLevel::Month` the value is the month's first day; at `DateLevel::Year`

@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::ActionIcon;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/inputs/action_icon.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/action_icon.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: An icon-only button - `Icon`'s sizing, color and variant system rendered as a real `button` (or a link), with a required `aria_label`.
 

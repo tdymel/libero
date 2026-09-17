@@ -4,8 +4,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
+        buttons::ActionIcon,
         common::{base_props, variables},
-        inputs::ActionIcon,
         layout::use_box,
     },
     hooks::use_localization,

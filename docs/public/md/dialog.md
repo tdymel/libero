@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Dialog;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/surface/dialog.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/dialog.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: The dialog surface - padding, radius, shadow and the `role="dialog"` wiring - which inside a modal also names and closes itself.
 

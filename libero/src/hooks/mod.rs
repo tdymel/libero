@@ -12,7 +12,11 @@ mod local_state;
 mod localization;
 mod popover;
 mod portal;
+#[cfg(test)]
+mod portal_tests;
 mod presence;
+#[cfg(test)]
+mod presence_tests;
 mod ripple;
 mod silent_focus;
 mod stylesheet;
@@ -33,8 +37,8 @@ pub use focus_return::{FocusReturn, use_focus_return};
 pub(crate) use focus_within::{FocusChange, FocusWithin, use_focus_within};
 pub(crate) use formats::current_formats;
 pub use formats::{FormatsHandle, use_formats, use_formats_handle};
-pub(crate) use id::id_selector;
-pub use id::{use_id, use_root_id};
+pub use id::use_id;
+pub(crate) use id::{id_selector, use_root_id};
 pub(crate) use local_state::{LocalState, use_local_state};
 pub(crate) use localization::current_localization;
 pub use localization::{LocalizationHandle, use_localization, use_localization_handle};
@@ -42,9 +46,8 @@ pub(crate) use popover::use_popover_on;
 pub use popover::{
     Align, Placed, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Rect, Side, use_popover,
 };
-pub use portal::use_portal;
-pub(crate) use portal::use_portal_slot;
-pub use presence::{Presence, use_presence};
+pub(crate) use portal::{use_portal, use_portal_slot};
+pub(crate) use presence::use_presence;
 pub(crate) use ripple::{clipped_ripple_sx, ripple_sx, use_ripple};
 pub(crate) use silent_focus::use_silent_focus_out;
 pub use stylesheet::use_stylesheet;

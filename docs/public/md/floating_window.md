@@ -1,4 +1,4 @@
-# Floating window
+# FloatingWindow
 
 Crate: `libero`
 Import: `use libero::{components::{FloatingWindowOptions, WindowRect}, hooks::{use_floating_window, FloatingWindowHandle}};`

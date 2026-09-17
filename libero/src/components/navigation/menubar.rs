@@ -23,7 +23,7 @@ use crate::{
     },
 };
 
-use super::menu::{Menu, MenuEdge, MenuEntry, MenuFocus, MenuState};
+use crate::components::overlay::{Menu, MenuEdge, MenuEntry, MenuFocus, MenuState};
 
 const TRIGGER: &str = "& [data-menubar-index]";
 

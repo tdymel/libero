@@ -1,8 +1,8 @@
-# Visually Hidden
+# VisuallyHidden
 
 Crate: `libero`
 Import: `use libero::components::VisuallyHidden;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/a11y/visually_hidden.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/accessibility/visually_hidden.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A `span` whose content is read by screen readers but removed from sighted layout - extra context for something ambiguous on its own.
 

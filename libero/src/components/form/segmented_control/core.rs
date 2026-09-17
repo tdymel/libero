@@ -3,12 +3,12 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, States, Variant,
-        common::{Orientation, disabled_look_sx, focus_ring_sx, has_shortcut_modifier, neighbour},
-        form::Activation,
-        inputs::{
+        buttons::{
             BUTTON_HOVER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS,
             interactive_variant_sx, variant_selected_sx,
         },
+        common::{Orientation, disabled_look_sx, focus_ring_sx, has_shortcut_modifier, neighbour},
+        form::Activation,
         layout::use_box,
     },
     hooks::ElementHandle,

@@ -258,7 +258,7 @@ fn WindowDemo(resizable: bool, pinned: bool, report: bool, values: DemoValues) -
 pub fn FloatingWindowPage() -> Element {
     rsx! {
         DocPage {
-            title: "Floating window",
+            title: "FloatingWindow",
             source: "libero/src/components/overlay/use_floating_window.rs",
             markdown: "/md/floating_window.md",
             properties: vec![

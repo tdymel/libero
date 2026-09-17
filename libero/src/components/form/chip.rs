@@ -4,14 +4,14 @@ use crate::{
     CssLayer,
     components::{
         HtmlTag, Input, States, Variant,
-        a11y::VISUALLY_HIDDEN_SX,
+        accessibility::VISUALLY_HIDDEN_SX,
+        buttons::{VariantColors, VariantVars, interactive_variant_sx, variant_colors},
         common::{
             base_color, base_props, contrast_color, contrast_shade_color, disabled_look_sx,
             fill_color, focus_ring_sx, on_ring_sx, on_state_sx, ring_overlay, ring_overlay_sx,
             shade_color, text_color, variables,
         },
         form::{Activation, use_bound},
-        inputs::{VariantColors, VariantVars, interactive_variant_sx, variant_colors},
         layout::use_box,
         navigation::{InternalAnchor, NewTabHint, wants_new_tab_hint},
     },

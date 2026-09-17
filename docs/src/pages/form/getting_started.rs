@@ -195,7 +195,7 @@ pub struct Order {
 pub fn FormGettingStartedPage() -> Element {
     rsx! {
         DocPage {
-            title: "Getting Started",
+            title: "Getting started",
             markdown: "/md/form_getting_started.md",
             lead: rsx! {
                 Text {

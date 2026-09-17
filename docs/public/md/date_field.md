@@ -6,9 +6,7 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/d
 Index: [index.md](index.md) - every other component's markdown page
 Description: One text field for every date and time value, typed leniently, with the matching `DatePicker` in a dropdown.
 
-Modelled on Mantine's `DateInput`, `TimeInput`, `DateTimePicker` and
-`DatePickerInput`, in one component. The dropdown is a
-[DatePicker](date_picker.md) of the same value type.
+The dropdown is a [DatePicker](date_picker.md) of the same value type.
 
 There is also the same field for one value type each, with only the props that type uses.
 They need no turbofish, and a value of the wrong type is a plain type mismatch.

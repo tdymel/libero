@@ -54,23 +54,6 @@ What changes is who holds the state:
 `checked` without `onchange` can never change, and `onchange` without `checked`
 can never appear on; the library warns about either alone.
 
-## Migrating from the pre-field Switch
-
-The label used to be `children`. It is now `label`, the same `Caption` every
-field takes:
-
-```rust,ignore
-// before
-Switch { checked: on(), onchange: move |next| on.set(next), "Notifications" }
-// after
-Switch { label: "Notifications", checked: on(), onchange: move |next| on.set(next) }
-```
-
-Two other things moved with it. The page is now at `/form/switch`, and
-`SwitchSizeLevel` lost its `font_size` - the label scales from `FieldDefaults`
-like every other field's, so a switch and a text field in one form read at the
-same size.
-
 ## Card
 
 `variant: "card"` draws the whole field as a bordered surface, as on

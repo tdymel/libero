@@ -104,7 +104,7 @@ button reaches the bars through the fallback, and neither silently wins over
 the other.
 
 `BurgerDefaults` carries `size` (`md`), the six-step `sizes` scale
-(12/18/24/34/42/52px - Mantine's five plus an `xxl` of ours),
+(12/18/24/34/42/52px),
 `transition_duration` (`300ms`) and `transition_timing` (`ease`).
 Motion is a theme decision, not a per-call-site one; an off-scale one-off goes
 through `sx` like any other off-scale value.

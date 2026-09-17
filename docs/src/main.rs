@@ -51,26 +51,40 @@ pub(crate) enum Route {
     #[route("/")]
     GettingStarted {},
 
-    #[route("/about/philosophy")]
+    #[route("/guides/philosophy")]
     PhilosophyPage {},
-    #[route("/about/styling")]
+    #[route("/guides/styling")]
     StylingPage {},
-    #[route("/about/theming")]
+    #[route("/guides/theming")]
     ThemingPage {},
-    #[route("/about/performance")]
+    #[route("/guides/performance")]
     PerformancePage {},
-    #[route("/about/hooks")]
-    HooksPage {},
-    #[route("/about/platform")]
+    #[route("/guides/platform")]
     PlatformPage {},
-    #[route("/about/accessibility")]
-    AccessibilityPage {},
 
-    #[route("/a11y/focus-trap")]
+    #[route("/accessibility")]
+    AccessibilityPage {},
+    #[route("/accessibility/focus-trap")]
     FocusTrapPage {},
-    #[route("/a11y/visually-hidden")]
+    #[route("/accessibility/visually-hidden")]
     VisuallyHiddenPage {},
 
+    #[route("/hooks")]
+    HooksPage {},
+
+    #[route("/buttons/action-icon")]
+    ActionIconPage {},
+    #[route("/buttons/button")]
+    ButtonPage {},
+    #[route("/buttons/color-scheme-button")]
+    ColorSchemeButtonPage {},
+
+    #[route("/data-display/accordion")]
+    AccordionPage {},
+    #[route("/data-display/carousel")]
+    CarouselPage {},
+    #[route("/data-display/image-list")]
+    ImageListPage {},
     #[route("/data-display/avatar")]
     AvatarPage {},
     #[route("/data-display/badge")]
@@ -162,12 +176,6 @@ pub(crate) enum Route {
     #[route("/form/textarea")]
     TextareaPage {},
 
-    #[route("/inputs/action-icon")]
-    ActionIconPage {},
-    #[route("/inputs/button")]
-    ButtonPage {},
-    #[route("/inputs/color-scheme-button")]
-    ColorSchemeButtonPage {},
     #[route("/layout/aspect-ratio")]
     AspectRatioPage {},
     #[route("/layout/box")]
@@ -188,8 +196,8 @@ pub(crate) enum Route {
     GridPage {},
     #[route("/layout/header")]
     HeaderPage {},
-    #[route("/layout/image-list")]
-    ImageListPage {},
+    #[route("/layout/paper")]
+    PaperPage {},
     #[route("/layout/scroll-area")]
     ScrollAreaPage {},
     #[route("/layout/scroller")]
@@ -201,27 +209,23 @@ pub(crate) enum Route {
 
     #[route("/navigation/burger")]
     BurgerPage {},
-    #[route("/navigation/carousel")]
-    CarouselPage {},
     #[route("/navigation/anchor")]
     AnchorPage {},
     #[route("/navigation/nav-link")]
     NavLinkPage {},
     #[route("/navigation/pagination")]
     PaginationPage {},
-    #[route("/navigation/accordion")]
-    AccordionPage {},
     #[route("/navigation/stepper")]
     StepperPage {},
     #[route("/navigation/tabs")]
     TabsPage {},
-    #[route("/navigation/menu")]
-    MenuPage {},
     #[route("/navigation/menubar")]
     MenubarPage {},
     #[route("/navigation/tree")]
     TreePage {},
 
+    #[route("/overlay/dialog")]
+    DialogPage {},
     #[route("/overlay/drawer")]
     DrawerPage {},
     #[route("/overlay/floating-window")]
@@ -230,6 +234,8 @@ pub(crate) enum Route {
     HoverCardPage {},
     #[route("/overlay/lightbox")]
     LightboxPage {},
+    #[route("/overlay/menu")]
+    MenuPage {},
     #[route("/overlay/modal")]
     ModalPage {},
     #[route("/overlay/overlay")]
@@ -240,11 +246,6 @@ pub(crate) enum Route {
     SpotlightPage {},
     #[route("/overlay/tooltip")]
     TooltipPage {},
-
-    #[route("/surface/paper")]
-    PaperPage {},
-    #[route("/surface/dialog")]
-    DialogPage {},
 
     #[route("/typography/blockquote")]
     BlockquotePage {},

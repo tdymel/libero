@@ -1,4 +1,4 @@
-# Forms: Getting Started
+# Forms: Getting started
 
 Crate: `libero`
 Import: `use libero::components::{Form, Fieldset, Fields, FieldName, Rule, Validator, Validators};`

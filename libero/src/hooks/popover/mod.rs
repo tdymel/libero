@@ -121,8 +121,8 @@ impl PopoverHandle {
     /// Portals the box. `None` takes it away, which is how a closed popover
     /// stops rendering.
     ///
-    /// Already-rendered, like [`use_portal`](super::use_portal): the reads
-    /// inside it have to happen in the caller's scope, not the outlet's.
+    /// Already-rendered: the reads inside it have to happen in the caller's
+    /// scope, not the outlet's.
     pub fn show(&self, content: Option<Element>) {
         self.slot.show(content);
     }

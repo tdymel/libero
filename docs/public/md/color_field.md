@@ -6,9 +6,8 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/c
 Index: [index.md](index.md) - every other component's markdown page
 Description: A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
 
-Modelled on Mantine's `ColorInput`. The value and the dropdown are
-[ColorPicker](color_picker.md)'s, so read that page for `ColorCode`, swatches
-and the event phases.
+The value and the dropdown are [ColorPicker](color_picker.md)'s, so read that
+page for `ColorCode`, swatches and the event phases.
 
 ## Usage
 
@@ -93,17 +92,6 @@ where that API exists - Chromium-based browsers today - and never under Blitz.
 It is looked up after mount, so a server render and the hydrating client agree.
 With `with_alpha` a picked color keeps the field's current alpha, without it the
 color is opaque; a dismissed pick changes nothing.
-
-## Not like Mantine
-
-| Mantine | libero | Why |
-|---|---|---|
-| `value: string` | `value: ColorCode` | typed; convert afterwards |
-| `format` decides whether alpha shows | `with_alpha` | the value has no format |
-| `defaultValue` | controlled only | the `Slider` convention |
-| `onChange` + `onChangeEnd` | one `oninput` with `Start`/`Change`/`End` | the `Slider` convention |
-| `leftSection` / `rightSection` | `with_preview` / `with_eye_dropper` only | add on demand |
-| `popoverProps`, `eyeDropperButtonProps` | none | add on demand |
 
 ## Props
 

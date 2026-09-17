@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Button;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/inputs/button.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/button.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A clickable action, a toggle, or a router-aware link.
 

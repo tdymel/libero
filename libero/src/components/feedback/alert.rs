@@ -3,12 +3,11 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, HtmlTag, Input, States, Variables, Variant,
+        buttons::{VariantVars, variant_chrome_sx, variant_colors},
         common::{
             CloseIcon, base_color, base_props, contrast_color, fill_color, text_color, variables,
         },
-        inputs::{VariantVars, variant_chrome_sx, variant_colors},
-        layout::use_box,
-        surface::paper_sx,
+        layout::{paper_sx, use_box},
     },
     hooks::{use_localization, use_root_id, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},

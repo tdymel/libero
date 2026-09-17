@@ -14,7 +14,7 @@ itself, joins the labels on it in the trigger, and opens the columns on it.
 What it adds over a `Select` is the walk: the options are a tree, reached one
 level at a time. [Tree](tree.md) holds expansion state and *activates* a node
 rather than selecting one, and the two share no data types - a cascader's tree
-is built from its own `CascaderOption<T>`, Mantine's shape.
+is built from its own `CascaderOption<T>`.
 
 ## Usage
 
@@ -155,6 +155,5 @@ with a `TextField` above it and with a `Select`'s list below it by construction.
 
 ## Not in scope
 
-Multi-select with tri-state parents, and lazily loaded children. Mantine's
-cascader ships without either, and both are their own component's semantics on
-top of the most expensive control in the library.
+Multi-select with tri-state parents, and lazily loaded children. Both are their
+own component's semantics on top of the most expensive control in the library.

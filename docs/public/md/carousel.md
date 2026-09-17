@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Carousel;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/carousel.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/carousel.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A scroll-snap strip of slides that knows which one it is on, with controls, indicators, optional autoplay and no JavaScript carousel library underneath.
 
@@ -58,7 +58,7 @@ can compare equal.
 `per_view` above `1` shows several slides at once, and the strip then runs out
 of scroll before it runs out of slides - six slides three-up stop at index 3,
 not 5. The indicator strip follows that: four dots rather than six, one per
-place the strip can rest, as Mantine does, each named by the first slide it
+place the strip can rest, each named by the first slide it
 shows. The live region names the slides showing instead - "Slides 1–3 of 6" -
 counting a slide at least half in view. A strip whose slides all fit is one
 position: one dot, "Slides 1–6 of 6", and both controls inactive.

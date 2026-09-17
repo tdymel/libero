@@ -4,7 +4,7 @@ use crate::{
     CssLayer,
     components::{
         HtmlTag, Input, States,
-        a11y::VISUALLY_HIDDEN_SX,
+        accessibility::VISUALLY_HIDDEN_SX,
         common::{
             base_color, contrast_color, field_props, fill_color, focus_ring_sx, names_itself,
             ring_overlay, ring_overlay_sx, use_name_warning, variables,

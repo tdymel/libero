@@ -79,8 +79,6 @@ mod pagination;
 mod paper;
 mod phone_field;
 mod polymorphic_tiers;
-mod portals;
-mod presence;
 mod progress_bar;
 mod qr_code;
 mod rsx_wrapping;

@@ -13,7 +13,7 @@ const EXIT_SLACK: Duration = Duration::from_millis(150);
 
 /// Tracks the mount/visible lifecycle of an animated-open/close element.
 #[derive(Clone, Copy)]
-pub struct Presence {
+pub(crate) struct Presence {
     mounted: Signal<bool>,
     visible: Signal<bool>,
     /// A snapshot, not a signal: rebuilt every render, so never cache a
@@ -97,7 +97,7 @@ impl Presence {
 /// unmounts at whichever comes first: the event, or `exit` plus 150ms of
 /// slack. A zero `exit` unmounts at once. `None` waits for the event
 /// alone.
-pub fn use_presence(open: bool, property: &'static str, exit: Option<Duration>) -> Presence {
+pub(crate) fn use_presence(open: bool, property: &'static str, exit: Option<Duration>) -> Presence {
     let mut mounted = use_signal(|| open);
     // Not `false`: the first render is the one a server sends, and
     // mounted-without-visible is the closed markup.

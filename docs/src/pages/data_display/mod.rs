@@ -1,8 +1,11 @@
+mod accordion;
 mod avatar;
 mod badge;
+mod carousel;
 mod data_list;
 mod icon;
 mod image;
+mod image_list;
 mod indicator;
 mod list;
 mod marquee;
@@ -10,11 +13,14 @@ mod qr_code;
 mod table;
 mod timeline;
 
+pub use accordion::AccordionPage;
 pub use avatar::AvatarPage;
 pub use badge::BadgePage;
+pub use carousel::CarouselPage;
 pub use data_list::DataListPage;
 pub use icon::IconPage;
 pub use image::ImagePage;
+pub use image_list::ImageListPage;
 pub use indicator::IndicatorPage;
 pub use list::ListPage;
 pub use marquee::MarqueePage;

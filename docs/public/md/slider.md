@@ -124,23 +124,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Migrating from the pre-field Slider
-
-Three renames, all mechanical:
-
-```rust,ignore
-// before
-Slider { value: v(), label: Callback::new(..), on_change: move |e| .. }
-// after
-Slider { value: v(), format: Callback::new(..), oninput: move |e| .. }
-```
-
-`label` is now the field's caption, the `Caption` every field takes, so the
-value formatter had to move aside - it is `format`. `on_change` is `oninput`,
-because a drag is the DOM's `input` event and the library's commit-timing
-handler is already called `onchange` on `NativeSelect` and `Combobox`. The page moved
-to `/form/slider` with the component.
-
 ## Accessibility
 
 Arrow keys move one `step`, Shift+arrow, PageUp and PageDown move `big_step` of

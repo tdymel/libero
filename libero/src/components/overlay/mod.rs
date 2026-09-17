@@ -1,8 +1,10 @@
+mod dialog;
 mod drawer;
 mod floating_window;
 mod hover_card;
 mod hover_intent;
 mod lightbox;
+mod menu;
 mod modal;
 mod overlay;
 mod spotlight;
@@ -15,12 +17,15 @@ pub(crate) mod use_floating_window;
 pub(crate) mod use_lightbox;
 pub(crate) mod use_modal;
 
+pub use dialog::{Dialog, DialogProps};
 pub(crate) use drawer::Drawer;
 pub use drawer::DrawerAnchor;
 pub(crate) use floating_window::FloatingWindow;
 pub use floating_window::{FloatingWindowOptions, WindowRect};
 pub use hover_card::{HoverCard, HoverCardProps};
 pub(crate) use lightbox::Lightbox;
+pub(crate) use menu::MenuFocus;
+pub use menu::{Menu, MenuEdge, MenuEntry, MenuItem, MenuProps, MenuState, use_menu};
 pub(crate) use modal::Modal;
 pub use overlay::{Overlay, OverlayProps};
 pub use spotlight::{

@@ -125,53 +125,46 @@ pub fn page_actions() -> Vec<SpotlightAction> {
 fn nav_tree() -> Vec<TreeNode<NavEntry>> {
     vec![
         group(
-            "about",
-            "About",
+            "guides",
+            "Guides",
             vec![
+                page(Route::GettingStarted {}, "Getting started"),
                 page(Route::PhilosophyPage {}, "Philosophy"),
-                page(Route::GettingStarted {}, "Getting Started"),
                 page(Route::StylingPage {}, "Styling"),
                 page(Route::ThemingPage {}, "Theming"),
                 page(Route::PerformancePage {}, "Performance"),
-                page(Route::HooksPage {}, "Hooks"),
                 page(Route::PlatformPage {}, "Platform"),
-                page(Route::AccessibilityPage {}, "Accessibility"),
+            ],
+        ),
+        // The two building blocks first, then arranging, sizing, and the app shell.
+        group(
+            "layout",
+            "Layout",
+            vec![
+                page(Route::BoxPage {}, "Box"),
+                page(Route::PaperPage {}, "Paper"),
+                page(Route::FlexPage {}, "Flex"),
+                page(Route::GridPage {}, "Grid"),
+                page(Route::CenterPage {}, "Center"),
+                page(Route::ContainerPage {}, "Container"),
+                page(Route::AspectRatioPage {}, "AspectRatio"),
+                page(Route::DividerPage {}, "Divider"),
+                page(Route::CollapsePage {}, "Collapse"),
+                page(Route::FloatPage {}, "Float"),
+                page(Route::HeaderPage {}, "Header"),
+                page(Route::SidebarPage {}, "Sidebar"),
+                page(Route::SplitterPage {}, "Splitter"),
+                page(Route::ScrollAreaPage {}, "ScrollArea"),
+                page(Route::ScrollerPage {}, "Scroller"),
             ],
         ),
         group(
-            "a11y",
-            "A11y",
+            "buttons",
+            "Buttons",
             vec![
-                page(Route::FocusTrapPage {}, "Focus Trap"),
-                page(Route::VisuallyHiddenPage {}, "Visually Hidden"),
-            ],
-        ),
-        group(
-            "data-display",
-            "Data Display",
-            vec![
-                page(Route::AvatarPage {}, "Avatar"),
-                page(Route::BadgePage {}, "Badge"),
-                page(Route::DataListPage {}, "DataList"),
-                page(Route::IconPage {}, "Icon"),
-                page(Route::ImagePage {}, "Image"),
-                page(Route::IndicatorPage {}, "Indicator"),
-                page(Route::ListPage {}, "List"),
-                page(Route::MarqueePage {}, "Marquee"),
-                page(Route::QrCodePage {}, "QrCode"),
-                page(Route::TablePage {}, "Table"),
-                page(Route::TimelinePage {}, "Timeline"),
-            ],
-        ),
-        group(
-            "feedback",
-            "Feedback",
-            vec![
-                page(Route::AlertPage {}, "Alert"),
-                page(Route::LoaderPage {}, "Loader"),
-                page(Route::NotificationsPage {}, "Notifications"),
-                page(Route::ProgressBarPage {}, "ProgressBar"),
-                page(Route::SkeletonPage {}, "Skeleton"),
+                page(Route::ButtonPage {}, "Button"),
+                page(Route::ActionIconPage {}, "ActionIcon"),
+                page(Route::ColorSchemeButtonPage {}, "ColorSchemeButton"),
             ],
         ),
         // Fields built on `use_field`. A component moves here when it is
@@ -182,7 +175,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             "form",
             "Form",
             vec![
-                page(Route::FormGettingStartedPage {}, "Getting Started"),
+                page(Route::FormGettingStartedPage {}, "Getting started"),
                 page(Route::FormPage {}, "Form"),
                 page(Route::FieldsetPage {}, "Fieldset"),
                 page(Route::TextFieldPage {}, "TextField"),
@@ -212,88 +205,98 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::FileFieldPage {}, "FileField"),
             ],
         ),
-        group(
-            "inputs",
-            "Inputs",
-            vec![
-                page(Route::ActionIconPage {}, "ActionIcon"),
-                page(Route::ButtonPage {}, "Button"),
-                page(Route::ColorSchemeButtonPage {}, "ColorSchemeButton"),
-            ],
-        ),
-        group(
-            "layout",
-            "Layout",
-            vec![
-                page(Route::AspectRatioPage {}, "AspectRatio"),
-                page(Route::BoxPage {}, "Box"),
-                page(Route::CenterPage {}, "Center"),
-                page(Route::CollapsePage {}, "Collapse"),
-                page(Route::ContainerPage {}, "Container"),
-                page(Route::DividerPage {}, "Divider"),
-                page(Route::FlexPage {}, "Flex"),
-                page(Route::FloatPage {}, "Float"),
-                page(Route::GridPage {}, "Grid"),
-                page(Route::HeaderPage {}, "Header"),
-                page(Route::ImageListPage {}, "ImageList"),
-                page(Route::ScrollAreaPage {}, "ScrollArea"),
-                page(Route::ScrollerPage {}, "Scroller"),
-                page(Route::SidebarPage {}, "Sidebar"),
-                page(Route::SplitterPage {}, "Splitter"),
-            ],
-        ),
+        // Links, then section switchers, then step and tree navigation.
         group(
             "navigation",
             "Navigation",
             vec![
-                page(Route::BurgerPage {}, "Burger"),
                 page(Route::AnchorPage {}, "Anchor"),
-                page(Route::CarouselPage {}, "Carousel"),
                 page(Route::NavLinkPage {}, "NavLink"),
-                page(Route::PaginationPage {}, "Pagination"),
+                page(Route::BurgerPage {}, "Burger"),
                 page(Route::TabsPage {}, "Tabs"),
-                page(Route::MenuPage {}, "Menu"),
                 page(Route::MenubarPage {}, "Menubar"),
-                page(Route::AccordionPage {}, "Accordion"),
+                page(Route::PaginationPage {}, "Pagination"),
                 page(Route::StepperPage {}, "Stepper"),
                 page(Route::TreePage {}, "Tree"),
             ],
         ),
+        // The backdrop, the modal family, the popups anchored to a trigger,
+        // then the specialised windows.
         group(
             "overlay",
             "Overlay",
             vec![
-                page(Route::DrawerPage {}, "Drawer"),
-                page(Route::FloatingWindowPage {}, "Floating window"),
-                page(Route::HoverCardPage {}, "HoverCard"),
-                page(Route::LightboxPage {}, "Lightbox"),
-                page(Route::ModalPage {}, "Modal"),
                 page(Route::OverlayPage {}, "Overlay"),
+                page(Route::ModalPage {}, "Modal"),
+                page(Route::DialogPage {}, "Dialog"),
+                page(Route::DrawerPage {}, "Drawer"),
                 page(Route::PopoverPage {}, "Popover"),
-                page(Route::SpotlightPage {}, "Spotlight"),
                 page(Route::TooltipPage {}, "Tooltip"),
+                page(Route::HoverCardPage {}, "HoverCard"),
+                page(Route::MenuPage {}, "Menu"),
+                page(Route::SpotlightPage {}, "Spotlight"),
+                page(Route::LightboxPage {}, "Lightbox"),
+                page(Route::FloatingWindowPage {}, "FloatingWindow"),
             ],
         ),
         group(
-            "surface",
-            "Surface",
+            "feedback",
+            "Feedback",
             vec![
-                page(Route::PaperPage {}, "Paper"),
-                page(Route::DialogPage {}, "Dialog"),
+                page(Route::AlertPage {}, "Alert"),
+                page(Route::NotificationsPage {}, "Notifications"),
+                page(Route::LoaderPage {}, "Loader"),
+                page(Route::ProgressBarPage {}, "ProgressBar"),
+                page(Route::SkeletonPage {}, "Skeleton"),
+            ],
+        ),
+        // Small markers, pictures, collections, then structured data.
+        group(
+            "data-display",
+            "Data display",
+            vec![
+                page(Route::IconPage {}, "Icon"),
+                page(Route::BadgePage {}, "Badge"),
+                page(Route::IndicatorPage {}, "Indicator"),
+                page(Route::AvatarPage {}, "Avatar"),
+                page(Route::ImagePage {}, "Image"),
+                page(Route::ImageListPage {}, "ImageList"),
+                page(Route::CarouselPage {}, "Carousel"),
+                page(Route::ListPage {}, "List"),
+                page(Route::DataListPage {}, "DataList"),
+                page(Route::TablePage {}, "Table"),
+                page(Route::TimelinePage {}, "Timeline"),
+                page(Route::AccordionPage {}, "Accordion"),
+                page(Route::MarqueePage {}, "Marquee"),
+                page(Route::QrCodePage {}, "QrCode"),
             ],
         ),
         group(
             "typography",
             "Typography",
             vec![
-                page(Route::BlockquotePage {}, "Blockquote"),
-                page(Route::CodePage {}, "Code"),
-                page(Route::CodeBlockPage {}, "CodeBlock"),
-                page(Route::KbdPage {}, "Kbd"),
-                page(Route::MarkPage {}, "Mark"),
-                page(Route::TextPage {}, "Text"),
                 page(Route::TitlePage {}, "Title"),
+                page(Route::TextPage {}, "Text"),
+                page(Route::MarkPage {}, "Mark"),
+                page(Route::CodePage {}, "Code"),
+                page(Route::KbdPage {}, "Kbd"),
+                page(Route::CodeBlockPage {}, "CodeBlock"),
+                page(Route::BlockquotePage {}, "Blockquote"),
             ],
+        ),
+        group(
+            "accessibility",
+            "Accessibility",
+            vec![
+                page(Route::AccessibilityPage {}, "Overview"),
+                page(Route::FocusTrapPage {}, "FocusTrap"),
+                page(Route::VisuallyHiddenPage {}, "VisuallyHidden"),
+            ],
+        ),
+        group(
+            "hooks",
+            "Hooks",
+            vec![page(Route::HooksPage {}, "Overview")],
         ),
     ]
 }
@@ -353,7 +356,7 @@ pub fn DocsNav(open: Signal<bool>, burger: ElementHandle) -> Element {
                         .selector("& ul", sx().gap("0").padding_left("0")),
                     data,
                     default_expanded,
-                    // The tab stop starts on the current page, not "About".
+                    // The tab stop starts on the current page, not "Guides".
                     current: current_path,
                     render_node: move |args: TreeNodeRenderArgs<NavEntry>| {
                         if args.expanded.is_some() {
@@ -393,7 +396,7 @@ pub fn DocsNav(open: Signal<bool>, burger: ElementHandle) -> Element {
                                     scroll_into_view: true,
                                     // Only a *nested* leaf (inside a group) gets
                                     // the connecting border - a top-level page
-                                    // like "Getting Started" has no parent
+                                    // like "Getting started" has no parent
                                     // chevron to line up with.
                                     states: States::new().with("leaf", args.depth > 0),
                                     // `NavLink` already knows whether it's

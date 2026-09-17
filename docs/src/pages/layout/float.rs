@@ -38,7 +38,7 @@ pub fn FloatPage() -> Element {
                     .doc("Shift along the vertical axis."),
                 prop("fixed", "bool")
                     .default("false")
-                    .doc("Places against the viewport (`position: fixed`) instead of the positioned parent - an action bar, a toast. A transformed, filtered or container-query ancestor becomes a fixed element's containing block; render through `use_portal` where you do not control the ancestors."),
+                    .doc("Places against the viewport (`position: fixed`) instead of the positioned parent - an action bar, a toast. A transformed, filtered or container-query ancestor becomes a fixed element's containing block."),
                 prop("z_index", "ThemeAwareValue")
                     .default("200")
                     .doc("Stacking order."),

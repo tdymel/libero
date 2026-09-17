@@ -9,47 +9,42 @@ The docs site is a Dioxus app, so its HTML carries no content until the wasm
 runs - these files are the readable source of the same pages. Start here, then
 fetch only the file you need.
 
-## About
+## Guides
 
+- [Getting started](getting_started.md): Installing libero, wrapping an app in LiberoProvider, and the feature flags a web build wants.
 - [Philosophy](philosophy.md): The four principles behind libero, in order of priority - developer experience, accessibility, batteries included, simple yet modern - and where each shows in the code.
-- [Getting Started](getting_started.md): Installing libero, wrapping an app in LiberoProvider, and the feature flags a web build wants.
 - [Styling](styling.md): The `sx` styling builder every component takes - theme values, states, selectors, responsive, media and container queries, cascade layers and `StaticSx`.
 - [Theming](theming.md): How a Libero theme is defined - one plain struct of colors, scales and per-component defaults, emitted once as CSS custom properties.
 - [Performance](performance.md): What a libero component actually costs per render, measured by ablation - scope and dynamic-node counts, memoization boundaries, and how to measure it yourself.
-- [Hooks](hooks.md): The public hooks libero's components are built from - `use_drag` for pointer drags, `use_clipboard` for copying, and `use_root_id` for ids that respect a caller's own.
 - [Platform](platform.md): The platform traits and their accessors - timers, document-level keys, scroll, focus and viewport, the clock - each an `Option` that is `None` where the renderer cannot do it.
-- [Accessibility](accessibility.md): What libero's accessibility support covers across the whole library, and what it does not - starting with forced colors, which is out of scope.
 
-## A11y
+## Layout
 
-- [Focus Trap](focus_trap.md): Confines Tab and Shift+Tab cycling to its children, for keeping keyboard focus inside an open overlay.
-- [Visually Hidden](visually_hidden.md): A `span` whose content is read by screen readers but removed from sighted layout - extra context for something ambiguous on its own.
+- [Box](box.md): The polymorphic primitive every other component is built on - renders as any tag via `component`, styled entirely through `sx`.
+- [Paper](paper.md): The library's surface - a background, a corner radius, an elevation and an optional hairline border, with no semantics of its own.
+- [Flex](flex.md): A flexbox container - direction, gap, align, justify and wrap, all theme-aware.
+- [Grid](grid.md): A named-area layout matrix - `Grid` holds the shape, a `GridZone` is a twelve-column packing container with optional masonry, and a `GridItem` takes a fraction of it.
+- [Center](center.md): Centers its child horizontally and vertically.
+- [Container](container.md): Centers content and caps its width at a breakpoint.
+- [AspectRatio](aspect_ratio.md): Enforces a width-to-height ratio on its child, cropping it to fill the box.
+- [Divider](divider.md): A horizontal or vertical rule, with an optional label sitting in the line.
+- [Collapse](collapse.md): Animates its children's height open and closed, over a grid row rather than a measured pixel height.
+- [Float](float.md): Anchors its child to a corner or edge of the nearest positioned ancestor - a badge on an avatar, say.
+- [Header](header.md): The page's banner landmark - a sticky, static or fixed `header` bar hosting nav and actions.
+- [Sidebar](sidebar.md): An in-flow panel bordering one edge of its parent and scrolling its own content - a nav rail or inspector.
+- [Splitter](splitter.md): Two panes divided by a draggable, keyboard-resizable divider; nest another `Splitter` in a pane for more than two.
+- [ScrollArea](scroll_area.md): A scrollable region that fills its parent, with themed scrollbars, percent-based scroll positions, per-edge events, and row virtualization through `Virtualize`.
+- [Scroller](scroller.md): A horizontal strip with a hidden scrollbar and a step control over each end that shows while there is more content that way.
 
-## Data Display
+## Buttons
 
-- [Avatar](avatar.md): A person as a fixed square, with a fallback chain from a picture down to a person glyph, and a group that collapses its overflow into a +N chip.
-- [Badge](badge.md): A short status label - one uppercase pill, sized under a control, with no role and no interaction.
-- [DataList](data_list.md): A `<dl>` of term/description pairs, where one term can carry several descriptions.
-- [Icon](icon.md): A sized, colored badge around an svg child, whose `currentColor` fill inherits the badge's color.
-- [Image](image.md): An img with a fallback source on load error, rounded corners, and an optional click-to-zoom overlay.
-- [Indicator](indicator.md): A dot or a small capped count pinned to something else with a Float - presentational only, and never announced itself.
-- [List](list.md): An unstyled `<ul>`/`<li>` pair with themed gaps and nested indent.
-- [Marquee](marquee.md): Content that scrolls on its own in an endless loop, measured by nothing, with a pause toggle and a reduced-motion fallback.
-- [QrCode](qr_code.md): Encodes a string as a scalable QR code, rendered as an inline SVG.
-- [Table](table.md): A sortable data table built from a row type and a list of column definitions.
-- [Timeline](timeline.md): An ordered list of events drawn against a rail, with an `active` index colouring the bullets and connectors up to the current one.
-
-## Feedback
-
-- [Alert](alert.md): A tinted surface for something the reader has to know - a title that names it, an optional icon and close button, and `role="alert"` as a default you can replace.
-- [Loader](loader.md): An indeterminate busy indicator - oval, bars or dots - always silent; an always-mounted status region outside the busy element says the wait. The `loading` state behind `Button`, `Combobox` and `FileField`.
-- [Notifications](notifications.md): A hook plus a host. Render `Notifications {}` once, and `use_notifications()` shows messages from anywhere, as an `Alert` or as your own template over your own data.
-- [ProgressBar](progress_bar.md): A determinate or indeterminate progress bar over any `min..=max` range, with `role="progressbar"` and the raw `aria-value*` set on its root.
-- [Skeleton](skeleton.md): A placeholder for loading content - a standalone grey shape, or a wrapper that hides the real content until it is ready.
+- [Button](button.md): A clickable action, a toggle, or a router-aware link.
+- [ActionIcon](action_icon.md): An icon-only button - `Icon`'s sizing, color and variant system rendered as a real `button` (or a link), with a required `aria_label`.
+- [ColorSchemeButton](color_scheme_button.md): An icon button that steps the colour scheme through system, dark and light, with an opt-in theme-set picker beside it.
 
 ## Form
 
-- [Getting Started](form_getting_started.md): How libero forms are meant to be built - specialized fields, composed parts, validators at each layer, typed paths from `#[derive(Fields)]` and binding.
+- [Getting started](form_getting_started.md): How libero forms are meant to be built - specialized fields, composed parts, validators at each layer, typed paths from `#[derive(Fields)]` and binding.
 - [Form](form.md): A `<form>` that validates on submit - plain `Fn(&V) -> bool` rules, typed field paths from `#[derive(Fields)]`, and a focused error summary.
 - [Fieldset](fieldset.md): Several fields that form one value under a `<legend>`, with composite rules over that value that land on the fields they name.
 - [TextField](text_field.md): A single-line text field with the five field slots - label, description, control, helper text and validation message.
@@ -78,70 +73,75 @@ fetch only the file you need.
 - [DatePicker](date_picker.md): One picker for every date and time value - days, months, years, times, date-times and ranges of them. Also lists `DayPicker`, `MonthPicker`, `YearPicker`, `TimePicker` and `DateRangePicker`.
 - [FileField](file_field.md): Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.
 
-## Inputs
-
-- [ActionIcon](action_icon.md): An icon-only button - `Icon`'s sizing, color and variant system rendered as a real `button` (or a link), with a required `aria_label`.
-- [Button](button.md): A clickable action, a toggle, or a router-aware link.
-- [ColorSchemeButton](color_scheme_button.md): An icon button that steps the colour scheme through system, dark and light, with an opt-in theme-set picker beside it.
-
-## Layout
-
-- [AspectRatio](aspect_ratio.md): Enforces a width-to-height ratio on its child, cropping it to fill the box.
-- [Box](box.md): The polymorphic primitive every other component is built on - renders as any tag via `component`, styled entirely through `sx`.
-- [Center](center.md): Centers its child horizontally and vertically.
-- [Collapse](collapse.md): Animates its children's height open and closed, over a grid row rather than a measured pixel height.
-- [Container](container.md): Centers content and caps its width at a breakpoint.
-- [Divider](divider.md): A horizontal or vertical rule, with an optional label sitting in the line.
-- [Flex](flex.md): A flexbox container - direction, gap, align, justify and wrap, all theme-aware.
-- [Float](float.md): Anchors its child to a corner or edge of the nearest positioned ancestor - a badge on an avatar, say.
-- [Grid](grid.md): A named-area layout matrix - `Grid` holds the shape, a `GridZone` is a twelve-column packing container with optional masonry, and a `GridItem` takes a fraction of it.
-- [Header](header.md): The page's banner landmark - a sticky, static or fixed `header` bar hosting nav and actions.
-- [ImageList](image_list.md): A gallery of pictures with optional caption bars, rendered as a ul/li list over a GridZone - so cols is a span of the library's own twelve tracks and masonry is that zone's measuring engine.
-- [ScrollArea](scroll_area.md): A scrollable region that fills its parent, with themed scrollbars, percent-based scroll positions, per-edge events, and row virtualization through `Virtualize`.
-- [Scroller](scroller.md): A horizontal strip with a hidden scrollbar and a step control over each end that shows while there is more content that way.
-- [Sidebar](sidebar.md): An in-flow panel bordering one edge of its parent and scrolling its own content - a nav rail or inspector.
-- [Splitter](splitter.md): Two panes divided by a draggable, keyboard-resizable divider; nest another `Splitter` in a pane for more than two.
-
 ## Navigation
 
-- [Burger](burger.md): Three bars that morph into an X - an `ActionIcon` carrying the glyph and the three ARIA facts a nav toggle needs.
-- [Accordion](accordion.md): Sections over an enum, each a heading whose button expands its panel; one or many open.
 - [Anchor](anchor.md): A real link styled and sized like `Text`, router-aware through `to`.
-- [Carousel](carousel.md): A scroll-snap strip of slides that knows which one it is on, with controls, indicators, optional autoplay and no JavaScript carousel library underneath.
 - [NavLink](nav_link.md): A navigation list item - a link with a themed active/hover background and `aria-current`, for a sidebar or nav bar.
+- [Burger](burger.md): Three bars that morph into an X - an `ActionIcon` carrying the glyph and the three ARIA facts a nav toggle needs.
+- [Tabs](tabs.md): One strip of tabs over an enum, with only the selected tab's panel built.
+- [Menubar](menubar.md): A row of menus - the WAI-ARIA menubar; each menu is a `Menu`, the bar owns the open one and the tab stop.
 - [Pagination](pagination.md): A row of page controls in a named nav landmark, with an ellipsis range that never reflows as you click through it.
 - [Stepper](stepper.md): The stages of a process over an enum, horizontal or vertical, with the current step's content.
-- [Tabs](tabs.md): One strip of tabs over an enum, with only the selected tab's panel built.
-- [Menu](menu.md): A list of commands that drops from a caller-supplied trigger - the WAI-ARIA menu button, with groups, separators and submenus.
-- [Menubar](menubar.md): A row of menus - the WAI-ARIA menubar; each menu is a `Menu`, the bar owns the open one and the tab stop.
 - [Tree](tree.md): A data-driven, keyboard-navigable tree view over your own node type.
 
 ## Overlay
 
-- [Drawer](drawer.md): A dimmed, focus-trapped panel docked to one edge - `use_modal` with the docking around it, so it has the same handle, arguments and results.
-- [Floating window](floating_window.md): A non-modal window over the page that drags, moves by keyboard and resizes from a corner; a hook owns whether it exists.
-- [HoverCard](hover_card.md): An interactive card that opens while its trigger is hovered or focused - a named, dismissible dialog on a paper surface.
-- [Lightbox](lightbox.md): A modal image viewer - `use_modal` with a gallery around it: zoom, pan, captions and a thumbnail strip.
-- [Modal](modal.md): A modal is a hook, not a component - `use_modal` registers a render closure and returns a handle that opens it, with per-opening arguments, results and handlers.
 - [Overlay](overlay.md): A full-viewport dim and blur layer with centred content - the backdrop behind a modal, or a loading screen.
-- [Popover](popover.md): A popover is a hook, not a component - `use_popover` portals a box to the document root and anchors it, flipping and shifting to stay on screen.
-- [Spotlight](spotlight.md): A command palette - `use_spotlight` opens a modal search box over caller-supplied actions, with grouped rows, arrow-key highlight and a Ctrl/Cmd+K hotkey.
-- [Tooltip](tooltip.md): A label that appears while its child is hovered or focused by keyboard, portaled so nothing clips it.
-
-## Surface
-
-- [Paper](paper.md): The library's surface - a background, a corner radius, an elevation and an optional hairline border, with no semantics of its own.
+- [Modal](modal.md): A modal is a hook, not a component - `use_modal` registers a render closure and returns a handle that opens it, with per-opening arguments, results and handlers.
 - [Dialog](dialog.md): The dialog surface - padding, radius, shadow and the `role="dialog"` wiring - which inside a modal also names and closes itself.
+- [Drawer](drawer.md): A dimmed, focus-trapped panel docked to one edge - `use_modal` with the docking around it, so it has the same handle, arguments and results.
+- [Popover](popover.md): A popover is a hook, not a component - `use_popover` portals a box to the document root and anchors it, flipping and shifting to stay on screen.
+- [Tooltip](tooltip.md): A label that appears while its child is hovered or focused by keyboard, portaled so nothing clips it.
+- [HoverCard](hover_card.md): An interactive card that opens while its trigger is hovered or focused - a named, dismissible dialog on a paper surface.
+- [Menu](menu.md): A list of commands that drops from a caller-supplied trigger - the WAI-ARIA menu button, with groups, separators and submenus.
+- [Spotlight](spotlight.md): A command palette - `use_spotlight` opens a modal search box over caller-supplied actions, with grouped rows, arrow-key highlight and a Ctrl/Cmd+K hotkey.
+- [Lightbox](lightbox.md): A modal image viewer - `use_modal` with a gallery around it: zoom, pan, captions and a thumbnail strip.
+- [FloatingWindow](floating_window.md): A non-modal window over the page that drags, moves by keyboard and resizes from a corner; a hook owns whether it exists.
+
+## Feedback
+
+- [Alert](alert.md): A tinted surface for something the reader has to know - a title that names it, an optional icon and close button, and `role="alert"` as a default you can replace.
+- [Notifications](notifications.md): A hook plus a host. Render `Notifications {}` once, and `use_notifications()` shows messages from anywhere, as an `Alert` or as your own template over your own data.
+- [Loader](loader.md): An indeterminate busy indicator - oval, bars or dots - always silent; an always-mounted status region outside the busy element says the wait. The `loading` state behind `Button`, `Combobox` and `FileField`.
+- [ProgressBar](progress_bar.md): A determinate or indeterminate progress bar over any `min..=max` range, with `role="progressbar"` and the raw `aria-value*` set on its root.
+- [Skeleton](skeleton.md): A placeholder for loading content - a standalone grey shape, or a wrapper that hides the real content until it is ready.
+
+## Data display
+
+- [Icon](icon.md): A sized, colored badge around an svg child, whose `currentColor` fill inherits the badge's color.
+- [Badge](badge.md): A short status label - one uppercase pill, sized under a control, with no role and no interaction.
+- [Indicator](indicator.md): A dot or a small capped count pinned to something else with a Float - presentational only, and never announced itself.
+- [Avatar](avatar.md): A person as a fixed square, with a fallback chain from a picture down to a person glyph, and a group that collapses its overflow into a +N chip.
+- [Image](image.md): An img with a fallback source on load error, rounded corners, and an optional click-to-zoom overlay.
+- [ImageList](image_list.md): A gallery of pictures with optional caption bars, rendered as a ul/li list over a GridZone - so cols is a span of the library's own twelve tracks and masonry is that zone's measuring engine.
+- [Carousel](carousel.md): A scroll-snap strip of slides that knows which one it is on, with controls, indicators, optional autoplay and no JavaScript carousel library underneath.
+- [List](list.md): An unstyled `<ul>`/`<li>` pair with themed gaps and nested indent.
+- [DataList](data_list.md): A `<dl>` of term/description pairs, where one term can carry several descriptions.
+- [Table](table.md): A sortable data table built from a row type and a list of column definitions.
+- [Timeline](timeline.md): An ordered list of events drawn against a rail, with an `active` index colouring the bullets and connectors up to the current one.
+- [Accordion](accordion.md): Sections over an enum, each a heading whose button expands its panel; one or many open.
+- [Marquee](marquee.md): Content that scrolls on its own in an endless loop, measured by nothing, with a pause toggle and a reduced-motion fallback.
+- [QrCode](qr_code.md): Encodes a string as a scalable QR code, rendered as an inline SVG.
 
 ## Typography
 
-- [Blockquote](blockquote.md): A quotation in a tinted frame with an accent bar, rendered as `figure` + `blockquote` + `figcaption` so the attribution sits outside the quote.
-- [Code](code.md): An inline `<code>` snippet, optionally syntax highlighted.
-- [CodeBlock](code_block.md): A `pre`-wrapped, multi-line code block with a line-number gutter, a copy button, a language header, optional diff rendering and line highlighting.
-- [Kbd](kbd.md): A single keyboard key, rendered as a real `<kbd>` and styled entirely from the theme.
-- [Mark](mark.md): A real `mark` element that highlights a chunk of text with a light tint of a theme color.
-- [Text](text.md): Body copy, sized from the theme's text scale.
 - [Title](title.md): A heading, `h1` through `h6`, whose visual size and semantic tag can be set apart.
+- [Text](text.md): Body copy, sized from the theme's text scale.
+- [Mark](mark.md): A real `mark` element that highlights a chunk of text with a light tint of a theme color.
+- [Code](code.md): An inline `<code>` snippet, optionally syntax highlighted.
+- [Kbd](kbd.md): A single keyboard key, rendered as a real `<kbd>` and styled entirely from the theme.
+- [CodeBlock](code_block.md): A `pre`-wrapped, multi-line code block with a line-number gutter, a copy button, a language header, optional diff rendering and line highlighting.
+- [Blockquote](blockquote.md): A quotation in a tinted frame with an accent bar, rendered as `figure` + `blockquote` + `figcaption` so the attribution sits outside the quote.
+
+## Accessibility
+
+- [Overview](accessibility.md): What libero's accessibility support covers across the whole library, and what it does not - starting with forced colors, which is out of scope.
+- [FocusTrap](focus_trap.md): Confines Tab and Shift+Tab cycling to its children, for keeping keyboard focus inside an open overlay.
+- [VisuallyHidden](visually_hidden.md): A `span` whose content is read by screen readers but removed from sighted layout - extra context for something ambiguous on its own.
+
+## Hooks
+
+- [Overview](hooks.md): The public hooks libero's components are built from - `use_drag` for pointer drags and `use_clipboard` for copying.
 
 ---
 

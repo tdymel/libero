@@ -1,9 +1,9 @@
 # Hooks
 
 Crate: `libero`
-Import: `use libero::hooks::{Drag, DragMove, DragOptions, DragStart, drag_handle_sx, use_clipboard, use_drag, use_element, use_focus_return, use_id, use_portal, use_presence, use_root_id};`
+Import: `use libero::hooks::{Drag, DragMove, DragOptions, DragStart, drag_handle_sx, use_clipboard, use_drag, use_element, use_focus_return, use_id};`
 Index: [index.md](index.md) - every other component's markdown page
-Description: The public hooks libero's components are built from - `use_drag` for pointer drags, `use_clipboard` for copying, and `use_root_id` for ids that respect a caller's own.
+Description: The public hooks libero's components are built from - `use_drag` for pointer drags and `use_clipboard` for copying.
 
 The hooks below are what libero's own components are built from, and they are
 public for yours. Like every dioxus hook they are positional: call them
@@ -118,49 +118,12 @@ fn CopyLink() -> Element {
 }
 ```
 
-## use_root_id
-
-An id for a component that also spreads the caller's `attributes`: the caller's
-own `id` when it passed one, a generated one otherwise. Build the ids of the
-inner parts on it, so the aria wiring still holds when the caller names the
-root. `use_id()` alone would render a second, different `id`, and the browser
-keeps the caller's.
-
-```rust
-use dioxus::prelude::*;
-use libero::hooks::use_root_id;
-
-#[component]
-fn Disclosure(
-    #[props(extends = GlobalAttributes)] attributes: Vec<Attribute>,
-    children: Element,
-) -> Element {
-    // The caller's `id` if it gave one, a generated one otherwise.
-    let id = use_root_id(&attributes);
-    let mut open = use_signal(|| false);
-
-    rsx! {
-        div { id: "{id}", ..attributes,
-            button {
-                aria_controls: "{id}-panel",
-                aria_expanded: "{open}",
-                onclick: move |_| open.toggle(),
-                "Details"
-            }
-            div { id: "{id}-panel", hidden: !open(), {children} }
-        }
-    }
-}
-```
-
 ## Other hooks
 
 | Hook | What it is for | Used on |
 |---|---|---|
 | `use_element() -> ElementHandle` | A handle to one of the component's own elements, mounted with `onmounted: handle.mount()`. It implements `ElementApi`. | [Platform](platform.md) |
 | `use_id() -> Signal<String>` | A process-unique id, stable for the component's lifetime, for the aria wiring between one instance's parts. | [Popover](popover.md) |
-| `use_portal(content: Option<Element>)` | Renders the content at the document root, out of any clipping or stacking ancestor. `None` takes it away. | [Float](float.md) |
-| `use_presence(open, property) -> Presence` | Keeps closing content mounted until its exit transition on `property` ends: `mounted()` and `visible()` drive the markup, `on_mounted()` and `on_transition_end(event)` go on the element. | [Collapse](collapse.md) |
 | `use_focus_return() -> FocusReturn` | Remembers where focus came from, with `remember(event)` on a trigger's `onmounted` or `remember_active()` as it opens, and `restore()` puts it back - onto `fallback(handle)` if the trigger is gone. | [Collapse](collapse.md) |
 
 ## API
@@ -201,15 +164,6 @@ pub fn use_clipboard() -> Clipboard
 `Clipboard` is `Copy`. Where the target has no clipboard, `copy` logs a warning
 and does nothing.
 
-### `use_root_id`
-
-```rust,ignore
-pub fn use_root_id(attributes: &[Attribute]) -> Signal<String>
-```
-
-The first `id` in `attributes`, or a process-unique `lsx-N`. Follows the caller's
-`id` if it changes.
-
 ### `use_element`
 
 ```rust,ignore
@@ -231,32 +185,6 @@ pub fn use_id() -> Signal<String>
 ```
 
 A process-unique `lsx-N`, stable for the component's lifetime.
-
-### `use_portal`
-
-```rust,ignore
-pub fn use_portal(content: Option<Element>)
-```
-
-Takes already-rendered content, not a closure. Deregisters on drop. The portaled
-content inherits no context from the call site; provide what it needs inside it.
-
-### `use_presence`
-
-```rust,ignore
-pub fn use_presence(open: bool, property: &'static str) -> Presence
-```
-
-| Method | Returns | Description |
-|---|---|---|
-| `mounted()` | `bool` | Whether to render the content at all - true until the exit ends. |
-| `visible()` | `bool` | Whether to render it in its open state. |
-| `on_mounted()` | `()` | Call from the content's `onmounted`, so the entry transition runs. |
-| `on_transition_end(event: &Event<TransitionData>)` | `()` | Call from its `ontransitionend`; unmounts once `property`'s exit ends. |
-
-`property` is the CSS property carrying the exit transition. The closed state
-must also hide the content from the accessibility tree (`visibility: hidden` or
-`inert`): until the exit ends it is still mounted.
 
 ### `use_focus_return`
 

@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Paper;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/surface/paper.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/paper.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: The library's surface - a background, a corner radius, an elevation and an optional hairline border, with no semantics of its own.
 

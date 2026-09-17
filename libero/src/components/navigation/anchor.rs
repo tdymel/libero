@@ -4,7 +4,7 @@ use crate::{
     CssLayer,
     components::{
         Input, States,
-        a11y::VisuallyHidden,
+        accessibility::VisuallyHidden,
         common::{ExternalLinkIcon, base_props, input_from_str, use_style_attributes},
     },
     hooks::{use_css, use_localization, use_theme},

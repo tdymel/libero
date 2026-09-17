@@ -7,7 +7,7 @@ use super::{
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
-        a11y::FOCUSABLE_SELECTOR,
+        accessibility::FOCUSABLE_SELECTOR,
         common::{base_props, input_from_str, names_itself, variables},
         layout::use_box,
     },

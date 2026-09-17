@@ -3,10 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables, Variant,
+        buttons::{VariantVars, variant_chrome_sx, variant_colors},
         common::{
             PersonIcon, base_color, base_props, contrast_color, fill_color, text_color, variables,
         },
-        inputs::{VariantVars, variant_chrome_sx, variant_colors},
         layout::use_box,
     },
     hooks::use_theme,

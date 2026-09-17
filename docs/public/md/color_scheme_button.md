@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::ColorSchemeButton;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/inputs/color_scheme_button.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/color_scheme_button.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: An icon button that steps the colour scheme through system, dark and light, with an opt-in theme-set picker beside it.
 

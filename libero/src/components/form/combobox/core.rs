@@ -3,10 +3,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        a11y::VISUALLY_HIDDEN_FIXED_SX,
+        accessibility::VISUALLY_HIDDEN_FIXED_SX,
         common::{NavigationChord, base_props, navigation_chord},
-        layout::use_box,
-        surface::paper_sx,
+        layout::{paper_sx, use_box},
     },
     hooks::{
         ElementHandle, PopoverOptions, PopoverWidth, use_element, use_field_list_layer,

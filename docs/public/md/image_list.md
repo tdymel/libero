@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{ImageBar, ImageItem, ImageList};`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/image_list/image_list.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/image_list/image_list.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A gallery of pictures with optional caption bars, rendered as a `ul`/`li` list over a `GridZone` - so `cols` is a span of the library's own twelve tracks and `masonry` is that zone's measuring engine.
 
@@ -172,10 +172,10 @@ grid: unpacked, but correct.
 `quilted` is not a second layout engine. It is `grid-row: span n` per item plus
 an aspect ratio scaled by that cell's own width and height (`ratio * columns /
 rows`), so a 2x2 cell is exactly twice the size of a 1x1 one without anyone
-naming a pixel height. MUI's `rowHeight` exists to do that arithmetic and is not
-implemented here; `ratio` and [AspectRatio](aspect-ratio.md) do it instead.
+naming a pixel height; `ratio` and [AspectRatio](aspect-ratio.md) do that
+arithmetic.
 
-Not implemented: MUI's `rowHeight`, `actionPosition`, a raw pixel `gap`, and the
+Not implemented: a row height, an action position, a raw pixel `gap`, and the
 compound `ImageList { ImageListItem {} }` children API.
 
 ## Accessibility

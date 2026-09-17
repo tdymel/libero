@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Accordion, AccordionOpen, OptionLabel, Options};`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/accordion>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/accordion>
 Index: [index.md](index.md) - every other component's markdown page
 Description: Sections over an enum, each a heading whose button expands its panel; one or many open.
 

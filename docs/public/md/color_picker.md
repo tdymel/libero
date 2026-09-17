@@ -6,8 +6,7 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/c
 Index: [index.md](index.md) - every other component's markdown page
 Description: A saturation panel and a hue slider, with an optional alpha slider and preset swatches, holding one `ColorCode` that converts to any CSS form. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
 
-Modelled on Mantine's `ColorPicker`, prop for prop, except where Rust does
-better: the value is a typed `ColorCode`, not a string.
+The value is a typed `ColorCode`, not a string.
 
 ## Usage
 
@@ -170,16 +169,6 @@ Both sliders render the same engine as `Slider`, with a gradient track as tall
 as the thumb and no filled bar or value bubble. `ColorSwatch` shows a
 checkerboard through a translucent color, becomes a `<button>` with `onclick`,
 and draws `children` in black or white, whichever reads on the color.
-
-## Not like Mantine
-
-| Mantine | libero | Why |
-|---|---|---|
-| `value: string` | `value: ColorCode` | typed; convert afterwards |
-| `format` decides whether alpha shows | `with_alpha` | the value has no format; `format` is only the posted text |
-| `defaultValue` | controlled only | the `Slider` convention |
-| `onChange` + `onChangeEnd` | one `oninput` with `Start`/`Change`/`End` | the `Slider` convention |
-| `hiddenInputProps` | none | add on demand |
 
 ## Props
 

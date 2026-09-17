@@ -72,7 +72,7 @@ same `float` z-index layer, which sits below overlays and modals.
 
 A `transform`, `filter`, `contain` or `container-type` on an ancestor makes that
 ancestor the containing block of a fixed element, and it then scrolls and clips
-with it. Render through `use_portal` when the ancestors are not yours.
+with it.
 
 ## Props
 

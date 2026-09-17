@@ -17,7 +17,7 @@ pub fn use_id() -> Signal<String> {
 /// [`use_id`], except a caller's own `id` attribute takes over. Components that
 /// both need an id and spread `attributes` must use this - emitting both would
 /// render two `id`s, and the browser keeps the caller's.
-pub fn use_root_id(attributes: &[Attribute]) -> Signal<String> {
+pub(crate) fn use_root_id(attributes: &[Attribute]) -> Signal<String> {
     let caller = caller_id(attributes);
     let mut id = use_signal(|| caller.clone().unwrap_or_else(next_id));
 

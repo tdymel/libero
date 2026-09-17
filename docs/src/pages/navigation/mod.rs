@@ -1,8 +1,5 @@
-mod accordion;
 mod anchor;
 mod burger;
-mod carousel;
-mod menu;
 mod menubar;
 mod nav_link;
 mod pagination;
@@ -10,11 +7,8 @@ mod stepper;
 mod tabs;
 mod tree;
 
-pub use accordion::AccordionPage;
 pub use anchor::AnchorPage;
 pub use burger::BurgerPage;
-pub use carousel::CarouselPage;
-pub use menu::MenuPage;
 pub use menubar::MenubarPage;
 pub use nav_link::NavLinkPage;
 pub use pagination::PaginationPage;

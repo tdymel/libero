@@ -1,4 +1,4 @@
-# Getting Started
+# Getting started
 
 Crate: `libero`
 Import: `use libero::LiberoProvider;`
@@ -16,7 +16,7 @@ Add Libero to your project with cargo:
 cargo add libero
 ```
 
-## Quick Start
+## Quick start
 
 Wrap your app in `LiberoProvider` once, at the root - it registers the theme and
 every style your components use.
@@ -37,7 +37,7 @@ fn App() -> Element {
 Without it, components render but carry no theme and no stylesheet, so nothing
 is styled.
 
-## Building for the Web
+## Building for the web
 
 Dioxus's `wasm-split` feature puts every route in its own chunk, fetched when it
 is first visited instead of bloating every page's initial bundle. On this docs

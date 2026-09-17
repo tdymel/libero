@@ -71,7 +71,7 @@ pub fn DatePickerPage() -> Element {
                     Code { source: "level" }
                     " turns a day picker into a month or a year picker, and "
                     Code { source: "calendar: \"mini\"" }
-                    " into one row of days - Mantine's MiniCalendar."
+                    " into one row of days."
                 }
                 Text {
                     "Controlled through "

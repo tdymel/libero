@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::FocusTrap;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/a11y/focus_trap.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/accessibility/focus_trap.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: Confines Tab and Shift+Tab cycling to its children, for keeping keyboard focus inside an open overlay.
 
