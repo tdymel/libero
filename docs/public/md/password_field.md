@@ -4,11 +4,11 @@ Crate: `libero`
 Import: `use libero::components::PasswordField;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/password_field.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A password field - a `TextField` whose `type` flips between `password` and `text`, with the reveal toggle in its trailing slot.
+Description: A `TextField` for secrets, with a button in its trailing slot that shows the text.
 
-A password field. It is a [TextField](text_field.md) with a narrower contract:
-the same five slots, the same `value`/`oninput` pair, `type="password"`, and a
-reveal button in the trailing slot that flips the type to `text`.
+A [TextField](text_field.md) for secrets, with a button that shows the text.
+The field keeps the reveal state itself, so a password never starts visible.
+Every submit and reset of the surrounding `Form` hides the secret again.
 
 ## Usage
 
@@ -19,66 +19,33 @@ use libero::components::PasswordField;
 #[component]
 fn Demo() -> Element {
     let mut secret = use_signal(String::new);
+    let mut repeat = use_signal(String::new);
 
     rsx! {
         PasswordField {
             label: "Password",
             helper: "At least 8 characters.",
+            autocomplete: "new-password",
             value: secret(),
             oninput: move |next| secret.set(next),
+        }
+        PasswordField {
+            label: "Repeat password",
+            reveal_button: false,
+            autocomplete: "new-password",
+            value: repeat(),
+            oninput: move |next| repeat.set(next),
         }
     }
 }
 ```
 
-`value` and `oninput` behave exactly as they do on a `TextField`: `value: None`
-leaves the `<input>` uncontrolled, and `oninput` fires per keystroke.
-
-## Why it is a `TextField`, not its own field
-
-A domain field is normally a text field with a narrower contract, so
-`PasswordField` renders a `TextField` rather than rebuilding the field
-chrome. It costs one component scope and pays for it by inheriting
-everything the text field grows.
-
-That is the composition path to copy for an `EmailField`, a `SearchField` or any
-other field the library does not ship.
-
-## Revealing
-
-The reveal state belongs to the component. There is no `revealed` prop and no
-`onreveal`: a password field that starts visible is not a state a caller should
-be able to ask for, and a caller that wants plain text wants a `TextField`.
-
-`reveal_button` decides whether the button renders at all. It is on by default -
-a password nobody can read back is this field's worst papercut - and worth
-turning off for a confirmation field, which adds nothing beside a revealed twin:
-
-```rust,ignore
-PasswordField {
-    label: "Repeat password",
-    reveal_button: false,
-    value: repeat(),
-    oninput: move |next| repeat.set(next),
-}
-```
-
-The button carries the two icons the library ships - libero has no icon set
-otherwise, and a reveal button with no glyph is a blank button. It is a toggle
-button: one static name, `reveal_label`, and `aria-pressed` for the state, so a
-screen reader hears "pressed" rather than a second button. Unset, the name comes
-from the localization's `password_field.show` ("Show password" in English); set
-it when the secret is not a password, e.g. "Show PIN".
-
-The button is disabled with the field, so a disabled password cannot be read.
-
-Every submit and every reset of the surrounding `Form` hides the secret again -
-a native reset button included - so a revealed password does not stay on screen
-after the form is sent. A plain `form {}` element does not reach the field.
-
 ## Accessibility
 
-Leave `label` unset only when something else already names the field.
+Leave `label` unset only when something else names the field. The reveal
+button is a toggle with one name, so a screen reader hears it as pressed or
+not. Set `autocomplete` so password managers can fill the field:
+`"new-password"` on a sign-up form, `"current-password"` on a sign-in form.
 
 ## Props
 
@@ -86,35 +53,34 @@ Leave `label` unset only when something else already names the field.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Controls height, padding, and font size. |
+| `size` | `Size` | `md` | Height, padding and font size. |
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
-| `value` | `Option<String>` | - | The secret. `None` leaves the `<input>` uncontrolled. |
-| `oninput` | `EventHandler<String>` | - | Fires per keystroke with the text the field should hold next. |
+| `value` | `Option<String>` | - | The secret. Leave it out and the input keeps its own text. |
+| `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the text the field should hold next. |
+| `validate` | `Validators<String>` | - | Rules over the secret, shown once the field loses focus or its form is submitted. |
+| `name` | `FieldName<String>` | - | What the field posts as. A path such as `Signup::FIELDS.password()` also binds the secret to the surrounding `Form`'s value when the field has no `oninput`. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
-| `reveal_button` | `bool` | `theme.password_field.reveal_button` (`true`) | Offers the reveal button at all. |
-| `reveal_label` | `String` | `password_field.show` | The reveal button's name in both states; `aria-pressed` tells whether the secret is shown. Unset, the localization's `password_field.show` - "Show password" in English. |
-| `label` | `Caption` | - | The field's caption, above the control. Names the field through a `for`/`id` pair. |
-| `description` | `Caption` | - | Between the label and the control: what to enter. |
-| `helper` | `Caption` | - | Under the control: the password rules. |
+| `reveal_button` | `bool` | `theme.password_field.reveal_button` | Shows the reveal button. Turn it off for a confirmation field, which adds nothing beside a revealed twin. |
+| `reveal_label` | `String` | `password_field.show` | The reveal button's name, such as "Show PIN". Unset, the localization's `password_field.show`, "Show password" in English. |
+| `label` | `Caption` | - | The field's caption, above the control. It names the field. |
+| `description` | `Caption` | - | Between the label and the control. What to enter. |
+| `helper` | `Caption` | - | Under the control. The password rules. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
+| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
+| `disabled` | `bool` | `false` | Disables and dims the field, reveal button included. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
 
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes - `name` and `autocomplete` among them,
-since the props extend `input`'s own. `autocomplete: "new-password"` on a
-sign-up form and `"current-password"` on a sign-in form is worth setting.
+`PasswordField` also takes the `<input>` HTML attributes (`autocomplete`,
+`maxlength`, ...) and, like every component, the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 
-`PasswordFieldDefaults { reveal_button }`: `reveal_button` (`true`) is the
-default of the prop. Everything else comes from the `TextField` it renders, so
-it reads `FieldDefaults` and `TextFieldDefaults` - see
-[TextField](text_field.md).
+`PasswordFieldDefaults` holds `reveal_button`, the prop's default (`true`).
+Everything else comes from the `TextField` it renders, so it reads
+`FieldDefaults` and `TextFieldDefaults`, see [TextField](text_field.md).
 
 ## Data attributes
 
-The same as [TextField](text_field.md): state tokens on the wrapper's and the
-frame's `data-state`, and `data-slot="trailing"` on the reveal button's slot
-when `reveal_button` renders it.
+The same as [TextField](text_field.md). The reveal button's slot carries
+`data-slot="trailing"`.

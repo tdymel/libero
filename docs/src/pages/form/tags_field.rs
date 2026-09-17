@@ -5,8 +5,7 @@ use libero::{
     sx::sx,
 };
 
-/// The whole chip is the caller's, remove control included - so a custom tag
-/// owns its own x, and with it whether that x is in the tab order.
+/// A custom tag draws the whole chip, so it owns its x and that x's tab order.
 // snippet: let mut topics = use_signal(Vec::<String>::new);
 // snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
 const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
@@ -80,62 +79,62 @@ pub fn TagsFieldPage() -> Element {
             markdown: "/md/tags_field.md",
             properties: vec![
                 props("TagsField", vec![
-                    prop("size", "Size").default("md").doc("Controls height, padding, font size and the chips' size - a chip sits one step down the field's scale."),
+                    prop("size", "Size").default("md").doc("Height, padding, font size and the chips' size. A chip is one step smaller than the field."),
                     prop("radius", "Size")
                         .default("sm")
-                        .doc("Corner radius of the frame and the list, independent of size."),
+                        .doc("Corner radius of the frame and the list, independent of `size`."),
                     prop("value", "Vec<String>")
                         .default("[]")
-                        .doc("The tags, in order; strictly controlled. Pair it with `onchange`."),
+                        .doc("The tags, in order, strictly controlled. Pair it with `onchange`."),
                     prop("onchange", "EventHandler<Vec<String>>")
                         .doc("Called with the whole list the caller should hold next."),
                     prop("suggestions", "Vec<String>")
-                        .doc("Adds a dropdown of tags to pick. Absent means no dropdown at all - no listbox and no portal. Tags already held are never offered."),
+                        .doc("Adds a dropdown of tags to pick. Tags already held are not offered."),
                     prop("split_chars", "Vec<String>")
                         .default("[\",\"]")
-                        .doc("Each one commits the text before it, on typing and on paste alike - nothing reads the clipboard."),
+                        .doc("Each one commits the text before it, typed or pasted."),
                     prop("allow_duplicates", "bool")
                         .default("false")
-                        .doc("Lets the same tag be added twice. Off, the comparison is trimmed and case-insensitive."),
+                        .doc("Lets the same tag be added twice. Off, tags are compared trimmed and case-insensitive."),
                     prop("max_tags", "usize")
-                        .doc("The most tags the field accepts. Everything past it is refused one tag at a time, so a paste fills the remaining room instead of being rejected whole."),
+                        .doc("The most tags the field accepts. A paste fills the room that is left and refuses the rest."),
                     prop("tag_rules", "Callback<String, bool>")
-                        .doc("Accepts or refuses one tag before it is added. A refused tag stays in the draft, and the field announces why."),
+                        .doc("Accepts or refuses one tag before it is added. A refused tag stays in the input, and no message shows."),
                     prop("onrefuse", "EventHandler<String>")
-                        .doc("A tag was refused: a duplicate, one past `max_tags`, or one `tag_rules` turned down. The only thing `onchange` cannot report."),
+                        .doc("A tag was refused, as a duplicate, past `max_tags`, or by `tag_rules`. Use it to say why, such as through `helper`."),
                     prop("validate", "Validators<Vec<String>>")
                         .doc("Rules over the whole list, shown once the field loses focus or its form is submitted."),
                     prop("name", "FieldName<Vec<String>>")
-                        .doc("Emits one hidden input of that name per tag. A path also binds the list to the surrounding `Form`'s value."),
+                        .doc("Posts each tag under this name. A path such as `Article::FIELDS.topics()` also binds the list to the surrounding `Form`'s value when the field has no `onchange`."),
                     prop("placeholder", "String").doc("Shown while there are no tags."),
                     prop("clearable", "bool")
                         .default("false")
-                        .doc("Shows an x that empties the field, at the end of the frame."),
+                        .doc("Shows an x at the end of the frame that empties the field."),
                     prop("tag", "Callback<SelectionArgs<String>, Element>")
                         .default("Chip")
-                        .doc("Draws one tag. A caller who overrides it draws the whole chip, remove control included - `args.remove` is the wiring. Make that control a `<button>` with `tabindex: \"-1\"`: the chip cursor focuses it. The field already keeps a click on it from taking the focus."),
+                        .doc("Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: \"-1\"`."),
                     prop("label", "Caption").doc("The field's caption, above the control."),
-                    prop("description", "Caption").doc("Between the label and the control: what to enter."),
-                    prop("helper", "Caption").doc("Under the control: formatting rules, or what the entry affects."),
+                    prop("description", "Caption").doc("Between the label and the control. What to enter."),
+                    prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry affects."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
-                    prop("required", "bool").default("false").doc("Adds `aria-required` and an asterisk to the label."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Takes the input out of the tab order and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
-                ]),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                ]).extends("input"),
             ],
             lead: rsx! {
                 Text {
-                    "A field whose value is a list of free-typed strings, drawn as chips with the "
-                    "editor between them. A comma - or any "
+                    "A field whose value is a list of typed strings, drawn as chips around the "
+                    "input. A comma, any other "
                     Code { source: "split_chars" }
-                    " entry - and Enter both commit what was typed; Backspace on an empty input "
-                    "takes the last tag back. To choose out of a fixed set instead, reach for "
+                    " entry, or Enter adds what was typed, and so does leaving the field. A tag "
+                    "is trimmed first. To pick from a fixed set instead, use "
                     Code { source: "MultiSelect" }
-                    ": its value is a "
+                    ", whose value is a "
                     Code { source: "Vec<T>" }
-                    " over a real domain type, and it cannot be typed into."
+                    " of your own type."
                 }
             },
             // snippet: let mut topics = use_signal(Vec::<String>::new);
@@ -258,17 +257,22 @@ pub fn TagsFieldPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "The whole field is one tab stop, plus the Clear button when "
+                    "The whole field is one tab stop, plus the clear button when "
                     Code { source: "clearable" }
-                    " shows it. Backspace on an empty input removes the last tag. ArrowLeft on "
-                    "an empty input, or with the caret before the typed text, moves onto the "
-                    "tags and keeps the text: the arrows walk them, Delete or Backspace "
-                    "removes the focused one, and ArrowRight past the last returns to the "
-                    "input. A custom "
+                    " shows it. Backspace on an empty input removes the last tag. Arrow Left on "
+                    "an empty input, or with the caret before the typed text, moves onto the tags "
+                    "and keeps the text. The arrows walk them, Delete, Backspace or Enter removes "
+                    "the focused one, and Arrow Right past the last returns to the input."
+                }
+                Text {
+                    "With "
+                    Code { source: "suggestions" }
+                    ", Arrow Down and Arrow Up open the list and move the highlight, Enter picks "
+                    "the highlighted row and Escape closes the list. A custom "
                     Code { source: "tag" }
                     " must make its remove control a button with "
                     Code { source: "tabindex: \"-1\"" }
-                    ": the cursor focuses it, and without the tabindex each tag adds a tab stop."
+                    ". The arrow keys focus it, and without the tabindex each tag adds a tab stop."
                 }
             }
         }

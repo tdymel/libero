@@ -44,20 +44,20 @@ fetch only the file you need.
 
 ## Form
 
-- [Getting started](form_getting_started.md): How libero forms are meant to be built - specialized fields, composed parts, validators at each layer, typed paths from `#[derive(Fields)]` and binding.
-- [Form](form.md): A `<form>` that validates on submit - plain `Fn(&V) -> bool` rules, typed field paths from `#[derive(Fields)]`, and a focused error summary.
-- [Fieldset](fieldset.md): Several fields that form one value under a `<legend>`, with composite rules over that value that land on the fields they name.
-- [TextField](text_field.md): A single-line text field with the five field slots - label, description, control, helper text and validation message.
-- [Textarea](textarea.md): A multi-line text field with the five field slots, sized by `rows` and resizable by the user.
-- [PasswordField](password_field.md): A password field - a `TextField` whose `type` flips between `password` and `text`, with the reveal toggle in its trailing slot.
-- [PhoneField](phone_field.md): A phone field - a country picker in front of a `tel` input, whose value is an E.164 string.
-- [NumberField](number_field.md): A numeric field over the caller's own number type, with steppers in its trailing slot.
+- [Getting started](form_getting_started.md): How to build libero forms, with specialized fields, composed parts, validators at each layer, typed paths from `#[derive(Fields)]` and binding.
+- [Form](form.md): A `<form>` that validates on submit, with plain `Fn(&V) -> bool` rules, typed field paths from `#[derive(Fields)]` and a focused error summary.
+- [Fieldset](fieldset.md): Several fields that form one value under a `<legend>`, with rules over that value that land on the fields they name.
+- [TextField](text_field.md): A single-line text field with a label, a description, helper text and a validation message.
+- [Textarea](textarea.md): A multi-line text field, sized by `rows` and resizable by the user.
+- [PasswordField](password_field.md): A `TextField` for secrets, with a button in its trailing slot that shows the text.
+- [PhoneField](phone_field.md): A country picker in front of a `tel` input, whose value is an E.164 string.
+- [NumberField](number_field.md): A numeric field over your own number type, with optional steppers in its trailing slot.
 - [PinField](pin_field.md): A pin, one character per cell, with auto-advance, paste spreading and an `oncomplete` that fires the moment the last cell fills.
 - [Autocomplete](autocomplete.md): A text field that offers completions - the value stays a `String`, and the suggestions are drawn from any `Options` type.
 - [Cascader](cascader.md): A field for choosing one option of a tree, column by column; its value is that option's `T`, and it finds the path itself.
 - [Select](select.md): A listbox over an enum with libero's own rows, in the same field frame as every other input.
 - [MultiSelect](multi_select.md): A listbox over an enum that holds any number of its options, drawn as chips in the trigger.
-- [TagsField](tags_field.md): A field whose value is a `Vec<String>` of free-typed tags, drawn as chips with the editor between them.
+- [TagsField](tags_field.md): A field whose value is a `Vec<String>` of typed tags, drawn as chips around the input.
 - [NativeSelect](native_select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
 - [Combobox](combobox.md): A virtualized listbox that hangs off a caller-supplied trigger, holding no state of its own.
 - [Checkbox](checkbox.md): A checkbox with its label beside the box, the field slots under both, and an indeterminate state that lives in Rust rather than in the DOM.

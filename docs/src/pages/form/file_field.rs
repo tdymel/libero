@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, FileField, Files, Flex, Text};
 
@@ -12,8 +12,8 @@ fn dropzone(values: &DemoValues) -> bool {
     values.str("variant") == "dropzone"
 }
 
-/// The prompt is `children`, so it prints inside the braces rather than as a
-/// prop - and only the `Dropzone` variant has one.
+/// The prompt is `children`, so it prints inside the braces. Only the
+/// `Dropzone` variant has one.
 fn children_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     match dropzone(values) {
         true => vec![r#"variant: "dropzone""#.to_string()],
@@ -31,75 +31,76 @@ pub fn FileFieldPage() -> Element {
             properties: vec![
                 props("FileField", vec![
                     prop("value", "Files")
-                        .doc("Strictly controlled - pair it with `onchange`. Takes a `FileData`, an `Option<FileData>` or a `Vec<FileData>`."),
+                        .default("empty")
+                        .doc("Strictly controlled. Pair it with `onchange`. Takes a `FileData`, an `Option<FileData>` or a `Vec<FileData>`."),
                     prop("multiple", "bool")
                         .default("false")
-                        .doc("Lets the user pick and drop several files. A single-file field keeps the first of whatever it is given."),
+                        .doc("Lets the user pick and drop several files, each drawn as a chip. A single-file field shows the file name, and a new pick replaces it."),
                     prop("variant", "FileFieldVariant")
                         .default("input")
-                        .doc("`input` is one line in the field frame; `dropzone` is a tall surface to drop onto or click."),
+                        .doc("`input` is one line in the field frame. `dropzone` is a tall surface to drop onto or click, with the files as cards below it. A single-file dropzone hides its surface while it holds a file."),
                     prop("accept", "String")
-                        .doc("The `accept` attribute: `.pdf`, `image/png`, `image/*`, or a comma-separated list. The picker applies it, and so does a drop."),
+                        .doc("The file types to take, such as `.pdf`, `image/png`, `image/*` or a comma-separated list. It applies to the picker and to a drop."),
                     prop("capture", "String")
-                        .doc("Asks a phone for a fresh capture - `user` or `environment`."),
+                        .doc("Asks a phone for a fresh capture, `user` or `environment`."),
                     prop("placeholder", "String")
-                        .doc("Shown while nothing is picked. In the `Dropzone` variant it is the prompt, when `children` is empty; with neither, the localization's `file_field.drop_file` or `drop_files`."),
+                        .doc("Shown while nothing is picked. It is the dropzone's prompt when `children` is empty. With neither, the localization's `file_field.drop_file` or `drop_files`."),
                     prop("clearable", "bool")
                         .default("true")
                         .doc("Shows an x that empties the field."),
                     prop("loading", "bool")
                         .default("false")
-                        .doc("An upload is in flight: a `Loader` beside the selection, or in place of the dropzone's icon, and `aria-busy` on the field's group. It blocks nothing - `disabled` does that."),
+                        .doc("Shows a `Loader` while an upload runs and marks the field busy. It blocks nothing, `disabled` does that."),
                     prop("selection", "Callback<SelectionArgs<FileData>, Element>")
-                        .default("a Chip, or the filename")
-                        .doc("Draws one picked file. A caller who overrides it draws the whole thing, remove control included - `args.remove` is the wiring."),
-                    prop("name", "String")
-                        .doc("The hidden `input[type=\"file\"]`'s name, so the files post with a form. Its list is kept equal to `value`, removals included."),
+                        .default("Chip, or the file name")
+                        .doc("Draws one picked file, remove control included. `args.remove` removes it."),
+                    prop("name", "FieldName<Files>")
+                        .doc("What the files post as. A removed file stops posting. A path such as `Claim::FIELDS.receipts()` also binds the files to the surrounding `Form`'s value when the field has no `onchange`."),
                     prop("onchange", "EventHandler<Files>")
-                        .doc("Fires with the files the field should hold next - a pick, a drop, a removal or a clear. It carries what just arrived, not the union: a `multiple` field that accumulates merges in its handler."),
+                        .doc("Fires with the files the field should hold next, after a pick, a drop, a removal or a clear. A pick carries only the new files, so a `multiple` field that collects files merges them in its handler."),
+                    prop("validate", "Validators<Files>")
+                        .doc("Rules over the files, shown once the field loses focus or its form is submitted."),
                     prop("children", "Element")
-                        .doc("The `Dropzone` variant's prompt, between the upload glyph and the line naming what `accept` takes. Falls back to `placeholder`, then to an English default."),
-                    prop("size", "Size").default("md").doc("Control height, font size and the chips' own size."),
+                        .doc("The dropzone's prompt. The `input` variant shows `placeholder` instead."),
+                    prop("size", "Size").default("md").doc("Control height, font size and the chips' size."),
                     prop("radius", "Size").default("sm").doc("Corner radius of the frame."),
                     prop("label", "Caption")
-                        .doc("The field's caption. Names the field's group, and the Browse button inside it, through `aria-labelledby`."),
-                    prop("description", "Caption").doc("Between the label and the control: which files are wanted."),
-                    prop("helper", "Caption").doc("Under the control: size limits, formats."),
+                        .doc("The field's caption. It names the field and its Browse button."),
+                    prop("description", "Caption").doc("Between the label and the control. Which files are wanted."),
+                    prop("helper", "Caption").doc("Under the control. Size limits, formats."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
-                    prop("required", "bool").default("false").doc("Adds `required` to the hidden input, a hidden `file_field.required` (\"Required\") to the Browse button's description, and an asterisk to the label."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables picking and dropping, and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
                 ]),
                 props("SelectionArgs", vec![
                     prop("value", "FileData").doc("The file this call draws."),
                     prop("remove", "Callback<()>").doc("Drops this file from the value."),
                 ])
                 .without_base_props(),
+                props("Files", vec![
+                    prop("one()", "Option<FileData>").doc("The first file, a single-file field's whole value."),
+                    prop("into_vec()", "Vec<FileData>").doc("Every file."),
+                    prop("deref", "&[FileData]").doc("So `len`, `iter` and `is_empty` work directly."),
+                ])
+                .without_base_props(),
             ],
             lead: rsx! {
                 Text {
-                    "Files picked from the system dialog or dropped on the control. "
-                    "Controlled: it renders "
+                    "Files picked from the system dialog or dropped on the control. It shows "
                     Code { source: "value" }
-                    " and asks for the next set through "
+                    " and asks for the next files through "
                     Code { source: "onchange" }
-                    ", which carries a "
+                    ". Both carry a "
                     Code { source: "Files" }
-                    " - one type for both arities, so a single-file field and a "
+                    ", so a single-file field and a "
                     Code { source: "multiple" }
-                    " one read the same."
-                }
-                Text {
-                    "Both variants drive one hidden "
-                    Code { source: "input[type=\"file\"]" }
-                    ", which is also what a "
-                    Code { source: "name" }
-                    " posts: the component writes the caller's own list back into it, so a "
-                    "removed file stops posting. A drop is filtered by "
-                    Code { source: "accept" }
-                    ", which the picker applies by itself and a drop does not."
+                    " one read the same. Checks such as a size limit go in "
+                    Code { source: "onchange" }
+                    ", where the files are already in hand. Under Blitz the field opens the "
+                    "system file dialog."
                 }
             },
             Demo {
@@ -163,12 +164,32 @@ pub fn FileFieldPage() -> Element {
                     FileFieldDemo { values }
                 },
             }
+            DocSection { title: "Accessibility",
+                Text {
+                    "The field is a group named by its label, holding the picked files and a "
+                    "Browse button. Enter or Space on the button opens the picker, and so does a "
+                    "click anywhere on the field. Without a "
+                    Code { source: "label" }
+                    ", pass "
+                    Code { source: "aria_label" }
+                    ", which names the Browse button."
+                }
+                Text {
+                    "In the "
+                    Code { source: "input" }
+                    " variant the files are one tab stop. Arrow Left and Arrow Right move along "
+                    "them, Home and End jump to the first and last, and Backspace or Delete "
+                    "removes the focused file. On the Browse button, Arrow Left moves to the last "
+                    "file and Backspace removes it. In the "
+                    Code { source: "dropzone" }
+                    " variant each card's remove button is its own tab stop."
+                }
+            }
         }
     }
 }
 
-/// Its own component so the picked files survive a control change - which is
-/// what shows a removal, a clear and the single-file replacement.
+/// Its own component, so the picked files survive a control change.
 #[component]
 fn FileFieldDemo(values: DemoValues) -> Element {
     let mut files = use_signal(Files::default);

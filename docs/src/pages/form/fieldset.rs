@@ -97,22 +97,30 @@ pub fn FieldsetPage() -> Element {
                     .default("Valid")
                     .doc("The group's own status, under the fields. A bare `&str` is an error."),
                 prop("value", "Store<V>")
-                    .doc("The group's own value, for a fieldset outside a `Form`. Inside one, the value is the form's at `path`."),
+                    .doc("The group's own value, for a fieldset outside a `Form`. A fieldset with no `value`, `path` or rules needs `Fieldset::<()>` so Rust can infer its type."),
                 prop("validate", "Validators<V>")
-                    .doc("Composite rules over `value` - one rule, or an array. With `.on(..)` a status lands on the named fields; without, under the fields, once any field in the group was touched."),
+                    .doc("Rules over the group's value, one or an array. A rule with `.on(..)` shows on the fields it names. One without shows under the fields once any field in the group was touched."),
                 prop("path", "FieldName<V>")
-                    .doc("Where the group sits inside a `Form`'s value, e.g. `Order::FIELDS.address()`. The names of the fields inside and the paths of `validate` are relative to it."),
+                    .doc("Where the group sits inside a `Form`'s value, such as `Order::FIELDS.address()`. The names of the fields inside and the paths in `validate` are relative to it."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Disables every field inside, nested fieldsets included - their look and their own controls, not only native ones. A field's own `disabled: false` cannot re-enable it."),
-                prop("children", "Element").doc("The fields."),
-            ])],
+                    .doc("Disables every field inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it."),
+                prop("children", "Element").default("required").doc("The fields."),
+            ]).extends("fieldset")],
             lead: rsx! {
                 Text {
-                    "Several fields that form one value - an address, a date range - under one "
+                    "Several fields that form one value, such as an address or a date range, under "
+                    "one "
                     Code { source: "<legend>" }
-                    ", with a description, helper and status of its own, and rules over the group's "
-                    "value. Building reusable parts around it is explained in Forms: Getting Started."
+                    ". The group has its own description, helper and status, and rules over its "
+                    "value. Inside a "
+                    Code { source: "Form" }
+                    ", give it a "
+                    Code { source: "path" }
+                    ". On its own, give it a "
+                    Code { source: "value" }
+                    " store. The Form getting started page shows how to build reusable parts "
+                    "around it."
                 }
             },
             Demo {

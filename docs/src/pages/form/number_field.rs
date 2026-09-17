@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, NumberField, NumberValue, Text};
 
@@ -76,71 +76,102 @@ pub fn NumberFieldPage() -> Element {
             markdown: "/md/number_field.md",
             properties: vec![
                 props("NumberField", vec![
-                    prop("size", "Size").default("md").doc("Controls height, padding, and font size."),
+                    prop("size", "Size").default("md").doc("Height, padding and font size."),
                     prop("radius", "Size")
                         .default("sm")
-                        .doc("Corner radius, independent of size."),
+                        .doc("Corner radius, independent of `size`."),
                     prop("value", "Option<T>")
-                        .doc("The number in the field; strictly controlled. `None` is the empty field."),
+                        .doc("The number in the field, strictly controlled. `None` is the empty field. A signal that starts at `None` needs its type, such as `None::<i32>`."),
                     prop("onchange", "EventHandler<Option<T>>")
-                        .doc("Called with the number the caller should hold next; `None` once the field is emptied. Silent while the text is not yet a number, so `-` and `1.` never reach it. Leaving the field puts back the value's own text: out of range clamps, text that never parsed reverts."),
+                        .doc("Called with the number the caller should hold next, `None` once the field is emptied. Half-typed text such as `-` or `1.` never reaches it. Leaving the field clamps a number out of range and reverts text that never parsed."),
+                    prop("validate", "Validators<Option<T>>")
+                        .doc("Rules over the number, shown once the field loses focus or its form is submitted."),
                     prop("min", "Option<T>")
-                        .doc("Floor. Steps clamp to it; typed text below it clamps once the field is left or Enter is pressed."),
+                        .doc("Floor. Steps clamp to it. Typed text below it clamps once the field is left or Enter is pressed."),
                     prop("max", "Option<T>")
-                        .doc("Ceiling, same."),
+                        .doc("Ceiling, the same way."),
                     prop("step", "Option<T>")
                         .default("T::default_step()")
-                        .doc("What one press of a stepper moves by; `1` for an integer, `1.0` for a float."),
+                        .doc("What one step moves by, `1` for an integer, `1.0` for a float."),
+                    prop("name", "FieldName<Option<T>>")
+                        .doc("What the field posts as. A path such as `Signup::FIELDS.age()` also binds the number to the surrounding `Form`'s value when the field has no `onchange`."),
                     prop("placeholder", "String")
                         .doc("Shown while the field is empty."),
                     prop("steppers", "bool")
                         .default("false")
-                        .doc("Shows the minus/plus buttons in the trailing slot. Off by default: a number is usually typed, and the arrow keys step it either way."),
+                        .doc("Shows minus and plus buttons in the trailing slot. The arrow keys step the value either way."),
                     prop("increment_label", "String")
                         .default("number_field.increase")
-                        .doc("Announced on the stepper that raises the value, e.g. \"Add a guest\". Unset, the localization's `number_field.increase` - \"Increase\" in English."),
+                        .doc("Names the plus button, such as \"Add a guest\". Unset, the localization's `number_field.increase`, \"Increase\" in English."),
                     prop("decrement_label", "String")
                         .default("number_field.decrease")
-                        .doc("Announced on the stepper that lowers it. Unset, the localization's `number_field.decrease` - \"Decrease\" in English."),
+                        .doc("Names the minus button. Unset, the localization's `number_field.decrease`, \"Decrease\" in English."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the control. Names the field through a `for`/`id` pair."),
+                        .doc("The field's caption, above the control. It names the field."),
                     prop("description", "Caption")
-                        .doc("Between the label and the control: what to enter."),
+                        .doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption")
-                        .doc("Under the control: units, ranges, what the number means."),
+                        .doc("Under the control. Units, ranges, what the number means."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Marks the field required, adds `aria-required` and shows an asterisk in the label."),
+                        .doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Disables interaction and dims the field."),
+                        .doc("Disables and dims the field."),
                     prop("readonly", "bool")
                         .default("false")
-                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
-                ]),
+                        .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                ]).extends("input"),
+                props("NumberValue", vec![
+                    prop("default_step", "fn() -> Self")
+                        .default("required")
+                        .doc("What one step moves by when `step` is unset."),
+                    prop("parse", "fn(&str) -> Option<Self>")
+                        .default("FromStr")
+                        .doc("`None` while the text is not a number yet."),
+                    prop("format", "fn(&self) -> String")
+                        .default("Display")
+                        .doc("The text the field shows for a value."),
+                    prop("zero", "fn() -> Option<Self>")
+                        .default("parse(\"0\")")
+                        .doc("Where a step starts in an empty field. `None` makes the step do nothing."),
+                    prop("step_up", "fn(self, Self) -> Self")
+                        .default("Add")
+                        .doc("One step up. Override it for a wrapping angle or a logarithmic step."),
+                    prop("step_down", "fn(self, Self) -> Self")
+                        .default("Sub")
+                        .doc("One step down."),
+                    prop("clamp_between", "fn(self, Option<Self>, Option<Self>) -> Self")
+                        .default("PartialOrd")
+                        .doc("The value pulled into the field's range."),
+                ]).without_base_props(),
             ],
             lead: rsx! {
                 Text {
-                    "A numeric field over the caller's own number type, with optional steppers in its "
-                    "trailing slot. Every primitive number implements "
+                    "A numeric field over your own number type, with optional steppers. Every "
+                    "primitive number implements "
                     Code { source: "NumberValue" }
                     ", so "
                     Code { source: "T" }
                     " is inferred from "
                     Code { source: "value" }
-                    " and there is nothing to write. The control keeps the raw text in an edit "
-                    "buffer, so "
-                    Code { source: "-" }
+                    ". A type of your own implements "
+                    Code { source: "default_step" }
+                    " and gets the rest from "
+                    Code { source: "FromStr" }
                     " and "
-                    Code { source: "1." }
-                    " survive being typed and only a value your type could parse reaches "
-                    Code { source: "onchange" }
-                    ". Arrow Up and Arrow Down always step it, Page Up and Page Down ten steps; "
-                    Code { source: "steppers" }
-                    " adds the buttons."
+                    Code { source: "Display" }
+                    ", as the Cents case shows. A float field writes and reads the decimal "
+                    "separator of the provider's "
+                    Code { source: "Formats" }
+                    ", so "
+                    Code { source: "1,5" }
+                    " under "
+                    Code { source: "Formats::GERMAN" }
+                    "."
                 }
             },
             // snippet: let mut quantity = use_signal(|| Some(4i32));
@@ -280,6 +311,17 @@ pub fn NumberFieldPage() -> Element {
                         },
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Arrow Up and Arrow Down step the value, Page Up and Page Down ten steps, "
+                    "with or without "
+                    Code { source: "steppers" }
+                    ". The stepper buttons are not tab stops, since the arrow keys do the same "
+                    "from the field. Leave "
+                    Code { source: "label" }
+                    " unset only when something else names the field."
+                }
             }
         }
     }

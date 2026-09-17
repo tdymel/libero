@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, Flex, PinField, Text};
 
@@ -11,48 +11,50 @@ pub fn PinFieldPage() -> Element {
             markdown: "/md/pin_field.md",
             properties: vec![
                 props("PinField", vec![
-                    prop("size", "Size").default("md").doc("Controls the cell's square, its font size and the gap. A cell is as tall as a `TextField` at the same size."),
-                    prop("radius", "Size").default("sm").doc("Corner radius of each cell, independent of size."),
+                    prop("size", "Size").default("md").doc("The cell's square, its font size and the gap. A cell is as tall as a `TextField` of the same size."),
+                    prop("radius", "Size").default("sm").doc("Corner radius of each cell, independent of `size`."),
                     prop("length", "usize").default("4").doc("How many cells."),
-                    prop("kind", "PinKind").default("numeric").doc("`numeric` or `alphanumeric`. Anything else is dropped at the key, so a rejected character never appears."),
+                    prop("kind", "PinKind").default("numeric").doc("`numeric` or `alphanumeric`. Any other character is ignored as it is typed."),
                     prop("value", "Option<String>")
-                        .doc("The pin so far, one character per filled cell. `None` leaves the cells to the field's own buffer."),
+                        .doc("The pin so far, one character per filled cell. Leave it out and the field keeps its own pin."),
                     prop("oninput", "EventHandler<String>")
-                        .doc("Fires per accepted character with the pin the field should hold next."),
+                        .doc("Fires for every accepted character with the pin the field should hold next."),
+                    prop("validate", "Validators<String>")
+                        .doc("Rules over the pin, shown once the field loses focus or its form is submitted."),
                     prop("oncomplete", "EventHandler<String>")
                         .doc("Fires once when the last empty cell fills. Clearing a cell arms it again."),
-                    prop("mask", "bool").default("false").doc("Renders the cells as password inputs. The value is unaffected."),
+                    prop("mask", "bool").default("false").doc("Hides the characters as in a password field. The value is unaffected."),
                     prop("one_time_code", "bool")
                         .default("true")
-                        .doc("Puts `autocomplete=\"one-time-code\"` on the first cell, so a phone offers the code it just received."),
-                    prop("separator", "Element").doc("Rendered between the cells - a dash, a wider gap."),
-                    prop("name", "String").doc("Emits a hidden input of that name, so the pin posts with a form. The cells cannot carry it - there are several of them."),
+                        .doc("Lets a phone offer the code it just received."),
+                    prop("separator", "Element").doc("Rendered between the cells, such as a dash."),
+                    prop("name", "FieldName<String>").doc("What the pin posts as. A path such as `Login::FIELDS.code()` also binds the pin to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("autofocus", "bool").default("false").doc("Focuses the first cell on mount."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the cells. Names the group through `aria-labelledby` - a `div` is not labelable."),
-                    prop("description", "Caption").doc("Between the label and the cells: where the code came from."),
-                    prop("helper", "Caption").doc("Under the cells: how long it lasts, how to get another."),
+                        .doc("The field's caption, above the cells. It names the group of cells."),
+                    prop("description", "Caption").doc("Between the label and the cells. Where the code came from."),
+                    prop("helper", "Caption").doc("Under the cells. How long the code lasts, how to get another."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
-                    prop("required", "bool").default("false").doc("Adds `aria-required` to every cell and an asterisk to the label."),
-                    prop("disabled", "bool").default("false").doc("Disables every cell and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
+                    prop("disabled", "bool").default("false").doc("Disables and dims every cell."),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
                 ]),
             ],
             lead: rsx! {
                 Text {
                     "A pin, one character per cell. Typing fills a cell and moves to the next, "
                     "Backspace clears and steps back, and the arrows move without changing "
-                    "anything. Pasting a whole code into any cell spreads it across the rest - "
-                    "separators and spaces included, so "
+                    "anything. A code pasted into any cell spreads across the rest, and "
+                    "characters the field does not take are dropped, so "
                     Code { source: "\"4 2-1 3\"" }
                     " lands as "
                     Code { source: "4213" }
                     ". "
                     Code { source: "oncomplete" }
-                    " fires the moment the last cell fills, which is usually where the code "
-                    "gets submitted."
+                    " fires the moment the last cell fills, which is usually where you submit "
+                    "the code. Extra HTML attributes land on the group, not on a cell."
                 }
             },
             Demo {
@@ -119,13 +121,23 @@ pub fn PinFieldPage() -> Element {
                     PinFieldDemo { values }
                 },
             }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Each cell is a tab stop. The arrows, Home and End move within the field, "
+                    "and Tab leaves it as it leaves any group of inputs. Give it a "
+                    Code { source: "label" }
+                    ", which names the whole group. Each cell is named for its place, such as "
+                    "\"Character 1 of 6\", from the localization's "
+                    Code { source: "PinFieldLabels" }
+                    ", and reads the helper and the error too."
+                }
+            }
         }
     }
 }
 
-/// Its own component so the pin and the completion count are state the demo
-/// keeps across a control change - which is what shows `oncomplete` firing
-/// once per fill rather than once per keystroke.
+/// Its own component, so the pin survives a control change and shows
+/// `oncomplete` firing once per fill.
 #[component]
 fn PinFieldDemo(values: DemoValues) -> Element {
     let mut value = use_signal(String::new);
@@ -165,7 +177,7 @@ fn PinFieldDemo(values: DemoValues) -> Element {
             Text {
                 size: "sm",
                 match verified() {
-                    true => "Complete - oncomplete fired once.".to_string(),
+                    true => "Complete, oncomplete fired once.".to_string(),
                     false => format!("{} of {length} entered.", value().chars().count()),
                 }
             }

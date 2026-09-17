@@ -4,11 +4,13 @@ Crate: `libero`
 Import: `use libero::components::PhoneField;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/phone_field/field.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A phone field - a country picker in front of a `tel` input, whose value is an E.164 string.
+Description: A country picker in front of a `tel` input, whose value is an E.164 string.
 
-A phone number field. The picker in the leading slot carries the country and its
-dial code, the `<input type="tel">` beside it holds the national number, and the
-value is one E.164 string - `"+12133734253"`.
+A country picker in front of a `tel` input. The picker holds the dial code, the
+input the national number, and the value is one E.164 string such as
+`"+12133734253"`. The field regroups the digits when it loses focus, for
+countries with a fixed number format. It ships the country list but no number
+validation, so add a rule through `validate`.
 
 ## Usage
 
@@ -24,6 +26,10 @@ fn Demo() -> Element {
         PhoneField {
             label: "Mobile",
             country: "DE",
+            countries: vec!["DE".to_string(), "FR".to_string(), "IT".to_string()],
+            flag: move |iso: String| rsx! {
+                span { "aria-hidden": "true", "{iso}" }
+            },
             value: phone(),
             oninput: move |next| phone.set(next),
         }
@@ -31,101 +37,11 @@ fn Demo() -> Element {
 }
 ```
 
-`value` is always E.164 and never the text on screen. `oninput` fires per
-keystroke with the E.164 the field should hold next, and with an empty string
-once nothing is typed - an empty field is worth no value at all, not a bare dial
-code. `value: None` leaves the field uncontrolled.
-
-## Two values, which is why this is a component
-
-The text being edited and the value are different strings: the user types
-`213 373 4253` and the caller holds `+12133734253`. That is
-[NumberField](number_field.md)'s edit buffer in another shape, and it is why
-"a `TextField` with a `leading` the caller fills" is not the answer.
-
-The text on screen is a rendering of the value for as long as the two still
-agree; the moment they do not, the caller's value wins. So a `value` that
-arrives under another country's dial code moves the picker to that country and
-re-renders the text as its national part.
-
-## It ships no validation
-
-The library ships the country list and the dial codes and nothing else. Nothing
-here knows that `+1 555` is too short, and there is no numbering-plan data in
-the bundle - `phonenumber` would drag a regex engine and about a megabyte of
-metadata into wasm, and a length check does not catch a wrong number of the
-right length anyway.
-
-A rule over the number is an ordinary `validate` line over the E.164:
-
-```rust,ignore
-PhoneField {
-    label: "Mobile",
-    validate: Rule::required().error("Enter a phone number."),
-    value: phone(),
-    oninput: move |next| phone.set(next),
-}
-```
-
-Formatting is the one thing the field does with the digits, and it happens on
-blur rather than as the number is typed: regrouping on every keystroke moves the
-caret, and the platform layer has no way to put it back. The grouping itself is
-deliberately sparse - it applies where a numbering plan has one fixed shape
-(the NANP, Russia and Kazakhstan, France) and leaves the text alone everywhere
-else, spacing included: a plan with no fixed shape has nothing to regroup the
-number into, so what was typed is what stays.
-
-## The country
-
-`country` is the country the field *starts* on, ISO 3166-1 alpha-2, and defaults
-to `PhoneFieldDefaults::country`. The picker wins over it from then on - until
-the prop itself changes, which moves the field and re-emits the number under the
-new dial code, exactly as a pick does. `oncountrychange` reports a *pick* only,
-since a caller changing the prop already knows; `oninput` fires either way,
-carrying the same digits under the new dial code.
-
-`country_select: false` pins the country and draws a static `+49` where the
-picker was, which is also one tab stop fewer - the same kind of escape hatch
-`reveal_button: false` is on [PasswordField](password_field.md).
-
-`countries` narrows the list, in the order given. The names come from the
-localization's `phone_field.country_names`, keyed by ISO code (German ships; a
-code it lacks keeps its English name). `country_label` overrides both during
-render.
-
-No flags ship with it. Emoji flags render as two regional-indicator letters on
-Windows, and an inline SVG sprite of every flag costs about 44 KB gzipped, so
-`flag` is a closure a caller fills:
-
-```rust,ignore
-PhoneField {
-    label: "Mobile",
-    countries: vec!["DE".into(), "FR".into()],
-    flag: move |iso: String| rsx! { MyFlag { iso } },
-}
-```
-
-## Inside a `Form`
-
-The visible input holds the text being edited, so it carries no `name` - it
-would post what is on screen. A hidden input of that name posts the E.164
-instead, the shape [Slider](slider.md) and [PinField](pin_field.md) already use.
-A `FieldName` built from a path also binds the number to the form's own value,
-so a bound field needs no `oninput`:
-
-```rust,ignore
-Form {
-    value: signup,
-    PhoneField { label: "Mobile", country: "DE", name: Signup::FIELDS.phone() }
-}
-```
-
 ## Accessibility
 
-The country picker is a second tab stop. Enter, Space and ArrowDown open the
+The country picker is a second tab stop. Enter, Space and Arrow Down open the
 list, typing filters it, the arrows move the highlight, Enter picks and Escape
-closes; both hand focus back to the picker. Everything in the text input is
-native.
+closes. Both return focus to the picker.
 
 ## Props
 
@@ -133,45 +49,40 @@ native.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Controls height, padding, and font size. |
+| `size` | `Size` | `md` | Height, padding and font size. |
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
-| `value` | `Option<String>` | - | The number, in E.164. `None` leaves the field uncontrolled. |
-| `oninput` | `EventHandler<String>` | - | Fires per keystroke with the E.164 the field should hold next. |
-| `country` | `String` | `US` | The country the field starts on, ISO 3166-1 alpha-2. Themed. |
-| `oncountrychange` | `EventHandler<String>` | - | The user picked another country. |
-| `country_select` | `bool` | `theme.phone_field.country_select` (`true`) | Offers the picker at all. Off pins the country and draws a static dial code. |
-| `country_label` | `Callback<String, String>` | - | Overrides a country's name, during render. Unset, the localization's `phone_field.country_names`, else English. |
+| `value` | `Option<String>` | - | The number in E.164, such as `"+12133734253"`. Leave it out and the field keeps its own text. |
+| `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the E.164 the field should hold next, or an empty string once nothing is typed. |
+| `country` | `String` | `theme.phone_field.country` | The country the field starts on, ISO 3166-1 alpha-2, `US` by default. A pick wins over it until the prop changes. A `value` with another country's dial code wins over both. |
+| `oncountrychange` | `EventHandler<String>` | - | The user picked another country. `oninput` fires at the same time with the number under the new dial code. |
+| `country_select` | `bool` | `theme.phone_field.country_select` | Shows the country picker. Off pins the country and shows its dial code as plain text. |
+| `country_label` | `Callback<String, String>` | - | Overrides the name of a country. Unset, the name comes from the localization's `phone_field.country_names`, which ships in German, else English. It runs during render, so it can read a locale from context. |
 | `countries` | `Vec<String>` | - | Narrows the list to these ISO codes, in the order given. |
-| `flag` | `Callback<String, Element>` | - | Draws a flag beside a country. The library ships none. |
+| `flag` | `Callback<String, Element>` | - | Draws a flag beside a country, in the picker and in the list. The library ships none. Hide it from screen readers, since the country's name is already read. |
+| `validate` | `Validators<String>` | - | Rules over the E.164, shown once the field loses focus or its form is submitted. The field checks nothing on its own. |
+| `name` | `FieldName<String>` | - | What the field posts as, the E.164. A path such as `Signup::FIELDS.phone()` also binds the number to the surrounding `Form`'s value when the field has no `oninput`. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
-| `name` | `FieldName<String>` | - | What the field posts as, through a hidden input. |
-| `validate` | `Validators<String>` | - | Rules over the E.164, shown after a blur or a submit. |
-| `label` | `Caption` | - | The field's caption, above the control. Names the field through a `for`/`id` pair. |
-| `description` | `Caption` | - | Between the label and the control: what to enter. |
-| `helper` | `Caption` | - | Under the control: the format, or an example. |
+| `label` | `Caption` | - | The field's caption, above the control. It names the input. |
+| `description` | `Caption` | - | Between the label and the control. What to enter. |
+| `helper` | `Caption` | - | Under the control. The format, or an example. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. The country button stays a tab stop, marked `aria-disabled`, and opens nothing. |
+| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
+| `disabled` | `bool` | `false` | Disables and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. The country button stays focusable and opens nothing. |
 
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes, since the props extend `input`'s own.
+`PhoneField` also takes the `<input>` HTML attributes and, like every
+component, the shared props `sx`, `class`, `style`, `states`, and any extra
+HTML attributes.
 
 ## Theme defaults
 
-`PhoneFieldDefaults { size, radius, country, country_select }`;
-`country_select` (`true`) is the default of the prop. The frame's numbers live on
-`FieldDefaults` and the picker's list on `ComboboxDefaults`, so a phone field
-lines up with a [TextField](text_field.md) above it and with a
-[Select](select.md)'s list below it by construction.
-
-`country` is a real theme knob: a German app sets its starting country once
-instead of on every field. The country *names* deliberately stay out of the
-theme - 240 of them would dwarf it - and come from the localization's
-`phone_field.country_names` over the component's English table, with
-`country_label` as the live override.
+`PhoneFieldDefaults` holds `size`, `radius`, `country` (`US`) and
+`country_select` (`true`). Set `country` once in the theme instead of on every
+field. The frame reads `FieldDefaults` and the list `ComboboxDefaults`, so a
+phone field lines up with a [TextField](text_field.md) and its list with a
+[Select](select.md)'s.
 
 ## Data attributes
 
-The same as [TextField](text_field.md): state tokens on the wrapper's and the
-frame's `data-state`, plus `data-slot="leading"` on the picker's slot.
+The same as [TextField](text_field.md). The picker's slot carries
+`data-slot="leading"`.

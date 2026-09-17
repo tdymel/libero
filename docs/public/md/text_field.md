@@ -4,12 +4,12 @@ Crate: `libero`
 Import: `use libero::components::TextField;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/text_field.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A single-line text field with the five field slots - label, description, control, helper text and validation message.
+Description: A single-line text field with a label, a description, helper text and a validation message.
 
-A single-line text field. It stacks the five slots every field in the library
-shares: the label, a description, the control itself, helper text, and a
-validation message. Pass `value` to control it and `oninput` to hear about
-keystrokes; omit `value` and the `<input>` keeps its own text.
+A single-line text field. Like every field, it stacks a label, a description,
+the control, helper text and a validation message. Pass `value` and `oninput`
+to control it, or leave `value` out and the input keeps its own text. `leading`
+and `trailing` put content inside the border, beside the control.
 
 ## Usage
 
@@ -19,102 +19,40 @@ use libero::components::{FieldStatus, TextField};
 
 #[component]
 fn Demo() -> Element {
-    let mut email = use_signal(String::new);
+    let mut handle = use_signal(String::new);
 
     rsx! {
         TextField {
-            label: "Email",
-            description: "The address we send the invoice to.",
-            helper: "Work addresses only.",
-            status: if email().contains('@') {
-                FieldStatus::Valid
+            label: "Username",
+            description: "How other people see you.",
+            helper: "Letters, numbers and underscores.",
+            status: if handle().contains(' ') {
+                FieldStatus::Error("No spaces.".to_string())
             } else {
-                FieldStatus::Error("Not a valid address.".to_string())
+                FieldStatus::Valid
             },
             required: true,
-            placeholder: "ada@example.com",
-            value: email(),
-            oninput: move |next| email.set(next),
+            placeholder: "ada",
+            leading: rsx! { "@" },
+            trailing: rsx! { "{handle().len()}/20" },
+            describe_trailing: true,
+            value: handle(),
+            oninput: move |next| handle.set(next),
         }
     }
 }
 ```
 
-`size` and `radius` step independently - the captions scale with `size` too -
-and `disabled` dims the whole control.
-
-## Inside the frame
-
-The border, background, radius and padding belong to a frame around the
-`<input>`, not to the input itself, so `leading` and `trailing` can put content
-inside it:
-
-```rust,ignore
-TextField {
-    label: "Username",
-    placeholder: "ada",
-    leading: rsx! { "@" },
-    trailing: rsx! { "{handle().len()}/20" },
-}
-```
-
-Both take any `Element` - text, an `Icon`, an `ActionIcon` for something
-clickable. They sit either side of the control, vertically centred, and do not
-shrink, so the control takes the space that is left.
-
-Keep the two out of the placeholder's way: a `trailing` of `".com"` above a
-placeholder of `ada@example.com` says the same thing twice.
-
-## Controlled and uncontrolled
-
-`value: Some(text)` is controlled: the field renders exactly that text and can
-only change through `oninput`, so the caller can rewrite or reject input instead
-of racing the DOM for it. Omitting `value` renders no `value` attribute at all,
-which leaves the `<input>` to hold its own text - a field that only needs to be
-read on submit needs no signal.
-
-`oninput` is the DOM's `input` event: it fires as the user types, not on blur.
-A field that should only commit on blur adds `onchange` or `onblur` through the
-shared attribute tail, which reach the `<input>` unchanged.
-
-## Captions
-
-`label`, `description` and `helper` are `Caption`s, so each takes either a
-string or an `Element`:
-
-```rust,ignore
-TextField {
-    label: "Password",
-    helper: rsx! { "At least 8 characters, one " strong { "symbol" } },
-}
-```
-
-A string caption is given an id and named by the input's `aria-describedby`.
-Markup is rendered and styled the same way but names nothing - a caller who
-passes markup owns its accessibility.
-
-`status` is separate because a validator produces it. `FieldStatus::Error`
-and `FieldStatus::Warning` each carry their message; `&str` and `String` convert
-into `Error`, which is the common case, so `status: "Not a valid address."`
-works. An error also sets `aria-invalid`; a warning does not, since it would
-announce a working field as broken.
-
 ## Accessibility
 
-Leave `label` unset only when something else already names the field; a bare
-input with no accessible name is a defect. A caller-supplied
-`aria-describedby` joins the one built from the caption slots - the caller's
-ids first - so the validation message is never lost.
+Leave `label` unset only when something else names the field, such as an
+`aria_label`. A string `description` or `helper` is read with the input. Markup
+in either is shown but not read, so its accessibility is yours.
 
-A `leading` or `trailing` slot is not read with the input by default: an icon
-or a button would only add noise. When the slot is text that qualifies the
-value - a unit, a `3/20` counter - set `describe_leading` or
-`describe_trailing` and it joins `aria-describedby` after the description.
-
-## What it does not do yet
-
-Multi-line input, numbers and passwords are separate components rather than
-modes of this one.
+A `leading` or `trailing` slot is not read with the input. When it is text that
+belongs to the value, such as a unit or a counter, set `describe_leading` or
+`describe_trailing`. An error status marks the input invalid, a warning does
+not.
 
 ## Props
 
@@ -122,41 +60,41 @@ modes of this one.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Controls height, padding, and font size. |
+| `size` | `Size` | `md` | Height, padding and font size. |
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
-| `value` | `Option<String>` | - | The text in the field. `None` leaves the `<input>` uncontrolled. |
-| `oninput` | `EventHandler<String>` | - | Fires per keystroke with the text the field should hold next. |
+| `value` | `Option<String>` | - | The text in the field. Leave it out and the input keeps its own text. |
+| `oninput` | `EventHandler<String>` | - | Fires on every keystroke with the text the field should hold next. |
+| `validate` | `Validators<String>` | - | Rules over the text, shown once the field loses focus or its form is submitted. |
+| `name` | `FieldName<String>` | - | What the field posts as. A path such as `Signup::FIELDS.email()` also binds the text to the surrounding `Form`'s value when the field has no `oninput`. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
-| `leading` | `Element` | - | Inside the frame, before the control. |
-| `trailing` | `Element` | - | Inside the frame, after the control. |
-| `describe_leading` | `bool` | `false` | `leading` is text that describes the input - a unit, a counter - so it joins the input's `aria-describedby`. |
-| `describe_trailing` | `bool` | `false` | The same for `trailing`. |
-| `label` | `Caption` | - | The field's caption, above the control. Names the field through a `for`/`id` pair. |
-| `description` | `Caption` | - | Between the label and the control: what to enter. |
-| `helper` | `Caption` | - | Under the control: formatting rules, constraints, counters. |
+| `leading` | `Element` | - | Inside the frame, before the control, such as a search icon or a currency sign. |
+| `trailing` | `Element` | - | Inside the frame, after the control, such as a clear button or a unit. |
+| `describe_leading` | `bool` | `false` | Set it when `leading` is text that belongs to the value, such as `@`, so a screen reader reads it with the input. Not for an icon or a button. |
+| `describe_trailing` | `bool` | `false` | The same for `trailing`, such as `kg` or a `12/20` counter. |
+| `label` | `Caption` | - | The field's caption, above the control. It names the field. Takes a string or an `Element`. |
+| `description` | `Caption` | - | Between the label and the control. What to enter. |
+| `helper` | `Caption` | - | Under the control. Formatting rules, limits or a counter. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
+| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
+| `disabled` | `bool` | `false` | Disables and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
 
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes - `name`, `maxlength`, `autocomplete`
-and `type` among them, since the props extend `input`'s own. `readonly` is a
-prop of its own, not one of those.
+`TextField` also takes the `<input>` HTML attributes (`maxlength`,
+`autocomplete`, `type`, ...) and, like every component, the shared props `sx`,
+`class`, `style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 
-Almost everything is `FieldDefaults`, shared by every field. `TextFieldDefaults`
-keeps only what is genuinely this component's: which `size` and `radius` it
-starts at.
+Most of it is `FieldDefaults`, shared by every field. `TextFieldDefaults` holds
+only the `size` and `radius` it starts at.
 
 | Field | Type | Description |
 |---|---|---|
 | `field.gap` | `&'static str` | Vertical gap between the slots. |
 | `field.frame_gap` | `&'static str` | Horizontal gap between leading, control and trailing. |
 | `field.sizes` | `Sizes<FieldSizeLevel>` | `label_font_size`, `caption_font_size`, `font_size`, `height`, `padding_y`, `padding_x` per size. |
-| `text_field.size` | `Size` | Default `size` when the prop is omitted; `md`. |
-| `text_field.radius` | `Size` | Default `radius` when the prop is omitted; `sm`. |
+| `text_field.size` | `Size` | Default `size` when the prop is omitted, `md`. |
+| `text_field.radius` | `Size` | Default `radius` when the prop is omitted, `sm`. |
 
 ## CSS variables
 
@@ -167,16 +105,16 @@ starts at.
 | `--lsx-field-caption-font-size-<size>` | `font-size` of the description, helper and status text. |
 | `--lsx-field-frame-gap` | Horizontal gap inside the frame. |
 | `--lsx-field-font-size-<size>` | `font-size` of the control for that size step. |
-| `--lsx-field-height-<size>` | The frame's `min-height` for that size step - the floor a single-line field sits at. |
+| `--lsx-field-height-<size>` | The frame's `min-height` for that size step. |
 | `--lsx-field-padding-y-<size>` | The frame's vertical padding, which sets the height once the control wraps. |
 | `--lsx-field-padding-x-<size>` | The frame's horizontal padding for that size step. |
 
-`radius` reads the shared `--lsx-radius-<size>` scale rather than one of its own.
+`radius` reads the shared `--lsx-radius-<size>` scale.
 
 ## Data attributes
 
-State tokens on the wrapper's and the frame's `data-state`, space separated. The
-`<input>` itself carries none - the frame styles it.
+State tokens on the wrapper's and the frame's `data-state`, space separated.
+The `<input>` itself carries none.
 
 | Token | Condition |
 |---|---|
@@ -188,5 +126,4 @@ State tokens on the wrapper's and the frame's `data-state`, space separated. The
 | `error` | `status` is an `Error`. |
 
 The caption slots carry `data-slot="description"`, `"helper"`, `"status"` and
-`"required"`, which is how the wrapper styles them; `leading` and `trailing`
-carry theirs inside the frame.
+`"required"`. `leading` and `trailing` carry theirs inside the frame.

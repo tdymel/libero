@@ -4,11 +4,13 @@ Crate: `libero`
 Import: `use libero::components::NumberField;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/number_field.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A numeric field over the caller's own number type, with steppers in its trailing slot.
+Description: A numeric field over your own number type, with optional steppers in its trailing slot.
 
-A numeric field with the five slots every field shares. It is generic over the
-value's type: every primitive number implements `NumberValue`, so `T` is
-inferred from `value` and there is nothing to write.
+A numeric field over your own number type, with optional steppers. Every
+primitive number implements `NumberValue`, so `T` is inferred from `value`. A
+type of your own implements `default_step` and gets the rest from `FromStr` and
+`Display`. A float field writes and reads the decimal separator of the
+provider's `Formats`, so `1,5` under `Formats::GERMAN`.
 
 ## Usage
 
@@ -24,6 +26,7 @@ fn Demo() -> Element {
         NumberField {
             label: "Quantity",
             helper: "Up to 99 per order.",
+            steppers: true,
             min: 1,
             max: 99,
             value: quantity(),
@@ -33,114 +36,70 @@ fn Demo() -> Element {
 }
 ```
 
-`value: None` is the empty field - a state the type holds rather than an empty
-string every caller special-cases. With `None` there is nothing for `T` to be
-inferred from, so that call site needs `None::<i32>`:
+A custom type, here whole cents shown with a decimal point:
 
-```rust,ignore
-let mut quantity = use_signal(|| None::<i32>);
+```rust
+use dioxus::prelude::*;
+use libero::components::{NumberField, NumberValue};
+use std::fmt;
 
-NumberField {
-    label: "Quantity",
-    placeholder: "How many?",
-    value: quantity(),
-    onchange: move |next| quantity.set(next),
-}
-```
-
-## The edit buffer
-
-The control is a text input with `inputmode="decimal"`, not `type="number"`. A
-number input reports an empty string for anything the browser cannot parse, so
-`-` and `1.` vanish as they are typed. This field keeps the raw text in a buffer
-instead and publishes only what `T::parse` accepted, so `onchange` never sees a
-half-typed number. Emptying the field publishes `None`.
-
-The buffer is what the control shows for as long as it still parses to the value
-the caller holds. The moment the caller's value says something else, the caller
-wins - which is what makes the field controlled. Leaving the field, or Enter,
-drops the buffer and shows the value's own text: out of range clamps, text that
-never parsed (`-`) reverts to the value. So the text, the value and
-`aria-valuenow` never drift apart.
-
-An `f32` or `f64` field writes the decimal separator of the provider's
-`Formats` (`1,5` under `Formats::GERMAN`) and reads it as well as `.`. A custom
-`NumberValue` writes and reads its own separator.
-
-## Your own number type
-
-`NumberValue` is implemented for `f32`, `f64` and every integer width. A custom
-type implements `default_step` and inherits the rest from its `FromStr` and
-`Display`, overriding `format` only when the display differs from the parse:
-
-```rust,ignore
-use libero::components::NumberValue;
-
-/// Money is not an f64: whole cents, shown with a decimal point.
 #[derive(Clone, Copy, PartialEq, PartialOrd)]
 struct Cents(i64);
 
-// Add, Sub, FromStr and Display as usual.
+impl std::ops::Add for Cents {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        Cents(self.0 + other.0)
+    }
+}
+
+impl std::ops::Sub for Cents {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self {
+        Cents(self.0 - other.0)
+    }
+}
+
+impl std::str::FromStr for Cents {
+    type Err = std::num::ParseFloatError;
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        Ok(Cents((text.parse::<f64>()? * 100.0).round() as i64))
+    }
+}
+
+impl fmt::Display for Cents {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}.{:02}", self.0 / 100, self.0 % 100)
+    }
+}
 
 impl NumberValue for Cents {
     fn default_step() -> Self {
         Cents(50)
     }
 }
-```
 
-`NumberField { value: price(), onchange: .. }` then works with no further
-plumbing, and `onchange` hands back an `Option<Cents>`.
+#[component]
+fn Demo() -> Element {
+    let mut price = use_signal(|| None::<Cents>);
 
-The trait's other methods have default bodies: `parse` (`FromStr`), `format`
-(`Display`), `zero` (parsing `"0"`, the stepper's starting point for an empty
-field), `step_up`/`step_down` (`Add`/`Sub`) and `clamp_between` (`PartialOrd`).
-Override one when the type needs it - a wrapping angle, a logarithmic step.
-
-## Steppers and keys
-
-`steppers` puts two `ActionIcon`s in the trailing slot - minus then plus, side
-by side - which lower and raise the value by `step`, defaulting to
-`T::default_step()`. It is **off by default**: a number is usually typed, and
-two buttons are the most expensive thing a field can carry.
-
-```rust,ignore
-NumberField {
-    label: "Quantity",
-    steppers: true,
-    min: 1,
-    max: 99,
-    value: quantity(),
-    onchange: move |next| quantity.set(next),
+    rsx! {
+        NumberField {
+            label: "Price",
+            placeholder: "0.00",
+            value: price(),
+            onchange: move |next| price.set(next),
+        }
+    }
 }
 ```
 
-Arrow Up and Arrow Down do the same from the keyboard, Page Up and Page Down
-ten steps, with the default prevented so the caret does not jump. Every step
-clamps to `min`/`max`, and an empty field steps from `T::zero()`. Typed text
-out of range is kept while typing and clamps once the field is left or Enter
-is pressed, so `25` stays typable over a floor of `10`. A press on a stepper
-leaves the focus where it was.
-
-`increment_label` and `decrement_label` name the buttons; the glyphs are
-`aria-hidden`. Neither button is a tab stop - the field is, and the arrow keys
-do the same job from there.
-
-The steppers take their size from the field's, one icon step per two field
-steps. `ActionIcon`'s scale (16, 20, 24, 32, 40, 48px) climbs faster than a
-field's content box (18, 20, 22, 24, 26, 28px), so matching the steps directly
-would put a 24px button in a 22px box at `md` and let the steppers decide the
-field's height. The reveal, clear and eye-dropper buttons of the other fields
-take the same step, so fields of one size line up in a row.
-
-Each stepper takes presses in an invisible box 24px wide and tall (WCAG 2.5.8),
-though it is drawn at 16 or 20px. The two boxes meet in the middle of the 2px
-gap, so neither takes the other's presses.
-
 ## Accessibility
 
-Arrow Up and Arrow Down step the value, Page Up and Page Down ten steps. Leave `label` unset only
-when something else already names the field.
+Arrow Up and Arrow Down step the value, Page Up and Page Down ten steps, with
+or without `steppers`. The stepper buttons are not tab stops, since the arrow
+keys do the same from the field. Leave `label` unset only when something else
+names the field.
 
 ## Props
 
@@ -148,53 +107,56 @@ when something else already names the field.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Controls height, padding, and font size. |
+| `size` | `Size` | `md` | Height, padding and font size. |
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
-| `value` | `Option<T>` | - | The number in the field; strictly controlled. `None` is the empty field. |
-| `onchange` | `EventHandler<Option<T>>` | - | Called with the number the caller should hold next; `None` once the field is emptied. |
-| `min` | `Option<T>` | - | Floor. Steps clamp to it; typed text below it clamps once the field is left or Enter is pressed. |
-| `max` | `Option<T>` | - | Ceiling, same. |
-| `step` | `Option<T>` | `T::default_step()` | What one press of a stepper moves by. |
-| `steppers` | `bool` | `false` | Shows the minus/plus buttons in the trailing slot. |
+| `value` | `Option<T>` | - | The number in the field, strictly controlled. `None` is the empty field. A signal that starts at `None` needs its type, such as `None::<i32>`. |
+| `onchange` | `EventHandler<Option<T>>` | - | Called with the number the caller should hold next, `None` once the field is emptied. Half-typed text such as `-` or `1.` never reaches it. Leaving the field clamps a number out of range and reverts text that never parsed. |
+| `validate` | `Validators<Option<T>>` | - | Rules over the number, shown once the field loses focus or its form is submitted. |
+| `min` | `Option<T>` | - | Floor. Steps clamp to it. Typed text below it clamps once the field is left or Enter is pressed. |
+| `max` | `Option<T>` | - | Ceiling, the same way. |
+| `step` | `Option<T>` | `T::default_step()` | What one step moves by, `1` for an integer, `1.0` for a float. |
+| `name` | `FieldName<Option<T>>` | - | What the field posts as. A path such as `Signup::FIELDS.age()` also binds the number to the surrounding `Form`'s value when the field has no `onchange`. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
-| `increment_label` | `String` | `number_field.increase` | Announced on the stepper that raises the value. Unset, the localization's `number_field.increase` - "Increase" in English. |
-| `decrement_label` | `String` | `number_field.decrease` | Announced on the stepper that lowers it. Unset, the localization's `number_field.decrease` - "Decrease" in English. |
-| `label` | `Caption` | - | The field's caption, above the control. |
-| `description` | `Caption` | - | Between the label and the control: what to enter. |
-| `helper` | `Caption` | - | Under the control: units, ranges, what the number means. |
+| `steppers` | `bool` | `false` | Shows minus and plus buttons in the trailing slot. The arrow keys step the value either way. |
+| `increment_label` | `String` | `number_field.increase` | Names the plus button, such as "Add a guest". Unset, the localization's `number_field.increase`, "Increase" in English. |
+| `decrement_label` | `String` | `number_field.decrease` | Names the minus button. Unset, the localization's `number_field.decrease`, "Decrease" in English. |
+| `label` | `Caption` | - | The field's caption, above the control. It names the field. |
+| `description` | `Caption` | - | Between the label and the control. What to enter. |
+| `helper` | `Caption` | - | Under the control. Units, ranges, what the number means. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
+| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
+| `disabled` | `bool` | `false` | Disables and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
 
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes, since the props extend `input`'s own.
+`NumberField` also takes the `<input>` HTML attributes and, like every
+component, the shared props `sx`, `class`, `style`, `states`, and any extra
+HTML attributes.
 
 ### `NumberValue`
 
-| Method | Default | Description |
-|---|---|---|
-| `default_step()` | required | The step a press moves by when `step` is unset. |
-| `parse(&str)` | `FromStr` | `None` while the buffer is not yet a number. |
-| `format(&self)` | `Display` | What the control shows for a value from outside. |
-| `zero()` | `parse("0")` | Where a stepper starts from in an empty field. |
-| `step_up`/`step_down` | `Add`/`Sub` | One step in each direction. |
-| `clamp_between(min, max)` | `PartialOrd` | The value pulled into the field's range. |
+| Method | Type | Default | Description |
+|---|---|---|---|
+| `default_step` | `fn() -> Self` | required | What one step moves by when `step` is unset. |
+| `parse` | `fn(&str) -> Option<Self>` | `FromStr` | `None` while the text is not a number yet. |
+| `format` | `fn(&self) -> String` | `Display` | The text the field shows for a value. |
+| `zero` | `fn() -> Option<Self>` | `parse("0")` | Where a step starts in an empty field. `None` makes the step do nothing. |
+| `step_up` | `fn(self, Self) -> Self` | `Add` | One step up. Override it for a wrapping angle or a logarithmic step. |
+| `step_down` | `fn(self, Self) -> Self` | `Sub` | One step down. |
+| `clamp_between` | `fn(self, Option<Self>, Option<Self>) -> Self` | `PartialOrd` | The value pulled into the field's range. |
 
 ## Theme defaults
 
-Almost everything is `FieldDefaults`, shared by every field. `NumberFieldDefaults`
-keeps only which `size` and `radius` it starts at.
+Most of it is `FieldDefaults`, shared by every field. `NumberFieldDefaults`
+holds only the `size` and `radius` it starts at.
 
 | Field | Type | Description |
 |---|---|---|
-| `number_field.size` | `Size` | Default `size` when the prop is omitted; `md`. |
-| `number_field.radius` | `Size` | Default `radius` when the prop is omitted; `sm`. |
+| `number_field.size` | `Size` | Default `size` when the prop is omitted, `md`. |
+| `number_field.radius` | `Size` | Default `radius` when the prop is omitted, `sm`. |
 
 The `--lsx-field-*` variables are [TextField](text_field.md)'s, shared unchanged.
 
 ## Data attributes
 
-The same as [TextField](text_field.md): state tokens on the wrapper's and the
-frame's `data-state`, and `data-slot="trailing"` on the steppers' slot when
-`steppers` renders them.
+The same as [TextField](text_field.md). The steppers' slot carries
+`data-slot="trailing"`.

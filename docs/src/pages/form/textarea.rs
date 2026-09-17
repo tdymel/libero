@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, Text, Textarea};
 
@@ -13,49 +13,54 @@ pub fn TextareaPage() -> Element {
             markdown: "/md/textarea.md",
             properties: vec![
                 props("Textarea", vec![
-                    prop("size", "Size").default("md").doc("Controls padding and font size."),
+                    prop("size", "Size").default("md").doc("Padding and font size."),
                     prop("radius", "Size")
                         .default("sm")
-                        .doc("Corner radius, independent of size."),
+                        .doc("Corner radius, independent of `size`."),
                     prop("rows", "u32")
                         .default("3")
-                        .doc("Visible lines, which is what sets the starting height. The user can still drag it taller."),
+                        .doc("Visible lines, which set the starting height. The user can still drag it taller."),
                     prop("value", "Option<String>")
-                        .doc("The text in the field. `None` leaves the `<textarea>` uncontrolled - it keeps its own text and needs no handler."),
+                        .doc("The text in the field. Leave it out and the textarea keeps its own text."),
                     prop("oninput", "EventHandler<String>")
-                        .doc("Fires per keystroke with the text the field should hold next."),
+                        .doc("Fires on every keystroke with the text the field should hold next."),
+                    prop("validate", "Validators<String>")
+                        .doc("Rules over the text, shown once the field loses focus or its form is submitted."),
+                    prop("name", "FieldName<String>")
+                        .doc("What the field posts as. A path such as `Signup::FIELDS.bio()` also binds the text to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("placeholder", "String")
                         .doc("Shown while the field is empty."),
                     prop("counter", "bool")
                         .default("false")
-                        .doc("Shows `12/200` under the control while a `maxlength` attribute is set, and politely announces the characters left (`TextareaLabels::characters_left`) once a tenth of the limit remains."),
+                        .doc("Shows `12/200` under the control while a `maxlength` attribute is set. It counts as `maxlength` does, so an emoji counts two."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the control. Names the field through a `for`/`id` pair."),
+                        .doc("The field's caption, above the control. It names the field."),
                     prop("description", "Caption")
-                        .doc("Between the label and the control: what to enter."),
+                        .doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption")
-                        .doc("Under the control: formatting rules, constraints, counters."),
+                        .doc("Under the control. Formatting rules or limits."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Marks the field required, adds `aria-required` and shows an asterisk in the label."),
+                        .doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Disables interaction and dims the field."),
+                        .doc("Disables and dims the field."),
                     prop("readonly", "bool")
                         .default("false")
-                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
-                ]),
+                        .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                ]).extends("textarea"),
             ],
             lead: rsx! {
                 Text {
-                    "A multi-line text field, with the same slots every field has. "
+                    "A multi-line text field with the same slots as "
+                    Code { source: "TextField" }
+                    ". "
                     Code { source: "rows" }
-                    " sets the starting height and the browser's own drag handle takes it "
-                    "from there - the frame grows with the control, because a field's height "
-                    "is its padding plus whatever the control needs."
+                    " sets the starting height, and the user can drag it taller. With server "
+                    "rendering, the box stays empty until the app hydrates."
                 }
             },
             // snippet: let mut value = use_signal(String::new);
@@ -146,6 +151,18 @@ pub fn TextareaPage() -> Element {
                         oninput: move |next| value.set(next),
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Leave "
+                    Code { source: "label" }
+                    " unset only when something else names the field. The visible counter is "
+                    "hidden from screen readers. Instead, a polite status says how many characters "
+                    "are left once a tenth of the limit remains. Its words come from the "
+                    "localization's "
+                    Code { source: "textarea.characters_left" }
+                    "."
+                }
             }
         }
     }

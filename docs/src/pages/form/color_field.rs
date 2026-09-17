@@ -24,60 +24,67 @@ pub fn ColorFieldPage() -> Element {
             properties: vec![
                 props("ColorField", vec![
                     prop("value", "ColorCode")
-                        .doc("Strictly controlled - pair it with `oninput`."),
+                        .doc("Strictly controlled. Pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<ColorCode>>")
-                        .doc("A drag in the dropdown brackets its moves with `Start`/`End`, and everything else - a key press or a swatch in the dropdown, typed text that parses, the eyedropper - emits `Change` then `End`."),
+                        .doc("Every new color. A drag in the dropdown sends `Start` and `End` around its moves. A key press, a swatch, typed text that parses and the eyedropper send `Change` then `End`."),
+                    prop("validate", "Validators<ColorCode>")
+                        .doc("Rules over the color, shown once the field loses focus or its form is submitted."),
                     prop("format", "ColorFormat")
                         .default("hex, or hexa with alpha")
-                        .doc("How the text shows the color, and so what `name` posts. Typing accepts every form either way."),
+                        .doc("How the text shows the color, and so what the field posts. Typing accepts every form either way."),
                     prop("with_alpha", "bool")
                         .default("false")
                         .doc("Shows the alpha slider in the dropdown. Without it a translucent color arrives opaque."),
                     prop("swatches", "Swatches").doc("Preset colors in the dropdown. Takes `ColorCode`s or CSS strings."),
-                    prop("swatches_per_row", "usize").doc("Caps how many swatches share a row. Unset, they wrap to fill the width - seven per row at a size step's own width."),
+                    prop("swatches_per_row", "usize").doc("Caps how many swatches share a row. Unset, they wrap to fill the width."),
                     prop("with_picker", "bool")
                         .default("true")
                         .doc("`false` leaves only the swatches in the dropdown, and no dropdown without them."),
-                    prop("with_preview", "bool").default("true").doc("The swatch in the leading slot."),
+                    prop("with_preview", "bool").default("true").doc("Shows the color as a swatch in the leading slot."),
                     prop("with_eye_dropper", "bool")
                         .default("true")
-                        .doc("The eyedropper button in the trailing slot. Shown only where the platform has one - Chromium today."),
+                        .doc("Adds a button in the trailing slot that picks a color off the screen. Shown only where the browser supports it, Chromium today."),
                     prop("disallow_input", "bool")
                         .default("false")
-                        .doc("Makes the text read-only: a color comes from the dropdown alone."),
+                        .doc("Makes the text read-only, so a color comes from the dropdown alone."),
                     prop("fix_on_blur", "bool")
                         .default("true")
                         .doc("Text that does not parse goes back to the last valid color on blur. Off, it stays and shows `color.invalid` as an error."),
                     prop("close_on_swatch_click", "bool").default("false").doc("Picking a swatch closes the dropdown."),
+                    prop("name", "FieldName<ColorCode>")
+                        .doc("What the field posts as, the text in `format`. A path such as `Theme::FIELDS.accent()` also binds the color to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("placeholder", "String").doc("Shown while the text is empty."),
-                    prop("size", "Size").default("md").doc("Control height, font size and the dropdown picker."),
+                    prop("size", "Size").default("md").doc("Control height, font size and the dropdown's picker."),
                     prop("radius", "Size").default("sm").doc("Corner radius of the frame."),
                     prop("label", "Caption").doc("The field's caption."),
                     prop("description", "Caption").doc("Between the label and the control."),
                     prop("helper", "Caption").doc("Under the control."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
-                    prop("required", "bool").default("false").doc("Adds `required` to the input and an asterisk to the label."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                    prop("required", "bool").default("false").doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
-                ]),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                ]).extends("input"),
             ],
             lead: rsx! {
                 Text {
-                    "A text field holding a color, with a preview swatch, an eyedropper and a "
-                    Code { source: "ColorPicker" }
-                    " in a dropdown. Controlled through "
-                    Code { source: "value" }
-                    " and "
-                    Code { source: "oninput" }
-                    ", and the value is a "
+                    "A text field holding a "
                     Code { source: "ColorCode" }
-                    " - the same one the picker holds."
-                }
-                Text {
-                    "Typed text is kept as typed until the field blurs, and every time it parses the color is "
-                    "emitted."
+                    ", with a preview swatch, an eyedropper and a "
+                    Code { source: "ColorPicker" }
+                    " in a dropdown. The text accepts every form a "
+                    Code { source: "ColorCode" }
+                    " parses, such as hex, "
+                    Code { source: "rgb()" }
+                    " or "
+                    Code { source: "hsl()" }
+                    ". It stays as typed while the field has focus, each parse sends the color, "
+                    "and on blur it shows "
+                    Code { source: "value" }
+                    " in "
+                    Code { source: "format" }
+                    "."
                 }
             },
             // snippet: item const SWATCHES: [&str; 7] = [""; 7];
@@ -161,7 +168,7 @@ pub fn ColorFieldPage() -> Element {
                     Code { source: "ColorPicker" }
                     " keys apply. "
                     Kbd { "Escape" } " goes back to the text, and so does a swatch that closes the dropdown. "
-                    Kbd { "Tab" } " past either end of the dropdown leaves it as from the text. "
+                    Kbd { "Tab" } " past either end of the dropdown leaves the field. "
                     "Focus leaving both the text and the dropdown closes it. A mouse click in the dropdown leaves focus in the text."
                 }
             }

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, Text, TextField};
 
@@ -13,59 +13,60 @@ pub fn TextFieldPage() -> Element {
             markdown: "/md/text_field.md",
             properties: vec![
                 props("TextField", vec![
-                    prop("size", "Size").default("md").doc("Controls height, padding, and font size."),
+                    prop("size", "Size").default("md").doc("Height, padding and font size."),
                     prop("radius", "Size")
                         .default("sm")
-                        .doc("Corner radius, independent of size."),
+                        .doc("Corner radius, independent of `size`."),
                     prop("value", "Option<String>")
-                        .doc("The text in the field. `None` leaves the `<input>` uncontrolled - it keeps its own text and needs no handler."),
+                        .doc("The text in the field. Leave it out and the input keeps its own text."),
                     prop("oninput", "EventHandler<String>")
-                        .doc("Fires per keystroke with the text the field should hold next. Native name, native timing."),
+                        .doc("Fires on every keystroke with the text the field should hold next."),
+                    prop("validate", "Validators<String>")
+                        .doc("Rules over the text, shown once the field loses focus or its form is submitted."),
+                    prop("name", "FieldName<String>")
+                        .doc("What the field posts as. A path such as `Signup::FIELDS.email()` also binds the text to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("placeholder", "String")
                         .doc("Shown while the field is empty."),
                     prop("leading", "Element")
-                        .doc("Inside the frame, before the control - a search icon, a currency prefix."),
+                        .doc("Inside the frame, before the control, such as a search icon or a currency sign."),
                     prop("trailing", "Element")
-                        .doc("Inside the frame, after the control - a clear button, a unit."),
+                        .doc("Inside the frame, after the control, such as a clear button or a unit."),
                     prop("describe_leading", "bool")
                         .default("false")
-                        .doc("`leading` is text that describes the input - a unit, a counter - so it joins the input's `aria-describedby`."),
+                        .doc("Set it when `leading` is text that belongs to the value, such as `@`, so a screen reader reads it with the input. Not for an icon or a button."),
                     prop("describe_trailing", "bool")
                         .default("false")
-                        .doc("The same for `trailing`."),
+                        .doc("The same for `trailing`, such as `kg` or a `12/20` counter."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the control. Names the field through a `for`/`id` pair. Takes a string or an `Element`."),
+                        .doc("The field's caption, above the control. It names the field. Takes a string or an `Element`."),
                     prop("description", "Caption")
-                        .doc("Between the label and the control: what to enter."),
+                        .doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption")
-                        .doc("Under the control: formatting rules, constraints, counters."),
+                        .doc("Under the control. Formatting rules, limits or a counter."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Marks the field required, adds `aria-required` and shows an asterisk in the label."),
+                        .doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Disables interaction and dims the field."),
+                        .doc("Disables and dims the field."),
                     prop("readonly", "bool")
                         .default("false")
-                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
-                ]),
+                        .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                ]).extends("input"),
             ],
             lead: rsx! {
                 Text {
-                    "A single-line text field with the five slots every field shares: label, "
-                    "description, the control, helper text, and a validation message. Pass "
+                    "A single-line text field. Like every field, it stacks a label, a description, "
+                    "the control, helper text and a validation message. Pass "
                     Code { source: "value" }
-                    " to control it and "
+                    " and "
                     Code { source: "oninput" }
-                    " to hear about keystrokes; omit "
+                    " to control it, or leave "
                     Code { source: "value" }
-                    " and the input keeps its own text. Whichever caption slots are filled "
-                    "are named by "
-                    Code { source: "aria-describedby" }
-                    " automatically. "
+                    " out and the input keeps its own text. "
                     Code { source: "leading" }
                     " and "
                     Code { source: "trailing" }
@@ -158,8 +159,7 @@ pub fn TextFieldPage() -> Element {
                         },
                         placeholder: (values.str("placeholder") == "true")
                             .then(|| "ada".to_string()),
-                        // Plain text, not an `Icon` - `Icon` colours and sizes an
-                        // svg, which is not what a prefix is.
+                        // Plain text: `Icon` colours and sizes an svg, not a prefix.
                         leading: (values.str("leading") == "true").then(|| rsx! { "@" }),
                         trailing: (values.str("trailing") == "true")
                             .then(|| rsx! { "{value().len()}/20" }),
@@ -170,6 +170,32 @@ pub fn TextFieldPage() -> Element {
                         oninput: move |next| value.set(next),
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Leave "
+                    Code { source: "label" }
+                    " unset only when something else names the field, such as an "
+                    Code { source: "aria_label" }
+                    ". A string "
+                    Code { source: "description" }
+                    " or "
+                    Code { source: "helper" }
+                    " is read with the input. Markup in either is shown but not read, so its "
+                    "accessibility is yours."
+                }
+                Text {
+                    "A "
+                    Code { source: "leading" }
+                    " or "
+                    Code { source: "trailing" }
+                    " slot is not read with the input. When it is text that belongs to the value, "
+                    "such as a unit or a counter, set "
+                    Code { source: "describe_leading" }
+                    " or "
+                    Code { source: "describe_trailing" }
+                    ". An error status marks the input invalid, a warning does not."
+                }
             }
         }
     }

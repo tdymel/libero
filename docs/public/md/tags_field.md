@@ -4,16 +4,13 @@ Crate: `libero`
 Import: `use libero::components::TagsField;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/tags_field.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A field whose value is a `Vec<String>` of free-typed tags, drawn as chips with the editor between them.
+Description: A field whose value is a `Vec<String>` of typed tags, drawn as chips around the input.
 
-A field whose value is a list of free-typed strings, with the five slots every
-field shares. A comma - or any `split_chars` entry - and Enter both commit what
-was typed; Backspace on an empty input takes the last tag back.
-
-To *choose* out of a fixed set instead, reach for
-[MultiSelect](multi_select.md): its value is a `Vec<T>` over a real domain type,
-and it cannot be typed into. This one holds `String`s, for the same reason
-[Autocomplete](autocomplete.md) does - a free-typed tag is not a domain enum.
+A field whose value is a list of typed strings, drawn as chips around the
+input. A comma, any other `split_chars` entry, or Enter adds what was typed,
+and so does leaving the field. A tag is trimmed first. To pick from a fixed set
+instead, use [MultiSelect](multi_select.md), whose value is a `Vec<T>` of your
+own type.
 
 ## Usage
 
@@ -43,105 +40,72 @@ fn Demo() -> Element {
 }
 ```
 
-Strictly controlled: `value` is the list, `onchange` hands back the whole list
-the caller should hold next.
+## Accessibility
 
-Without `suggestions` the field renders no listbox and no portal at all - it is
-a frame with chips and an input. With them it is a combobox: the arrows move a
-highlight, Enter picks the highlighted row, and anything already held drops out
-of the list. A picked suggestion becomes exactly the tag a typed one does. The
-list stays open after a pick - the row it just took has left it, and the next
-one is one key away.
+The whole field is one tab stop, plus the clear button when `clearable` shows
+it. Backspace on an empty input removes the last tag. Arrow Left on an empty
+input, or with the caret before the typed text, moves onto the tags and keeps
+the text. The arrows walk them, Delete, Backspace or Enter removes the focused
+one, and Arrow Right past the last returns to the input.
 
-`tag_rules` runs over a single tag before it joins the list and answers a plain
-`bool`. A refusal shows no message: "you already added that" is heavier as an
-error under the field than the mistake it describes. `onrefuse` is there for a
-caller who wants to say something anyway - here through `helper` - and it is the
-only thing `onchange` cannot report. `validate` is the ordinary field line and
-rules over the whole list.
-
-## Committing a tag
-
-Every path that can add a tag folds through one merge, so `max_tags` and the
-duplicate rule cannot disagree between them:
-
-| Input | Effect |
-|---|---|
-| any `split_chars` entry | Commits every piece the text splits into, and clears the input |
-| a paste | The same path - a paste arrives as one `oninput` with the whole resulting string, so nothing reads the clipboard |
-| `Enter` | Commits the typed text, unless a suggestion row is highlighted, then picks it |
-| blur | Commits what was typed rather than throwing it away |
-| `Backspace`, empty input | Removes the last tag |
-| `Backspace`, non-empty | Edits the text. Never removes a tag |
-| `ArrowLeft`, empty input | Moves the focus onto the last tag's x - the chip cursor |
-| `ArrowLeft` / `ArrowRight` on a tag | Walks the tags; `ArrowRight` past the last returns to the input |
-| `Delete` / `Backspace` / `Enter` on a tag | Removes it; the focus moves to the next tag, else the previous, else the input |
-| `ArrowDown` / `ArrowUp` | Moves the suggestion highlight, and opens the list. Dead without `suggestions` |
-| `Escape` | Closes the list, keeps the text |
-
-A tag is trimmed before it is added. Duplicates are compared trimmed and
-lowercased unless `allow_duplicates` is on. Everything past `max_tags` is
-refused **one tag at a time**, so a paste of five into a field with room for two
-adds those two rather than being rejected whole.
+With `suggestions`, Arrow Down and Arrow Up open the list and move the
+highlight, Enter picks the highlighted row and Escape closes the list. A custom
+`tag` must make its remove control a button with `tabindex: "-1"`. The arrow
+keys focus it, and without the tabindex each tag adds a tab stop.
 
 ## Props
 
+### `TagsField`
+
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `Vec<String>` | `[]` | The tags, in order. Strictly controlled |
-| `onchange` | `EventHandler<Vec<String>>` | - | The whole list the caller should hold next |
-| `suggestions` | `Vec<String>` | - | Adds a dropdown. Absent means no dropdown at all |
-| `split_chars` | `Vec<String>` | `[","]` | Each one commits the text before it |
-| `allow_duplicates` | `bool` | `false` | Off, the compare is trimmed and case-insensitive |
-| `max_tags` | `usize` | - | Refuses everything past it, one tag at a time |
-| `tag_rules` | `Callback<String, bool>` | - | Accepts or refuses one tag. Silent |
-| `onrefuse` | `EventHandler<String>` | - | A tag was refused - duplicate, past `max_tags`, or `tag_rules` |
-| `validate` | `Validators<Vec<String>>` | - | Rules over the whole list |
-| `name` | `FieldName<Vec<String>>` | - | One hidden input per tag; a path also binds |
-| `placeholder` | `String` | - | Shown while there are no tags |
-| `clearable` | `bool` | `false` | An x that empties the field |
-| `tag` | `Callback<SelectionArgs<String>, Element>` | a `Chip` | Draws one tag, remove control included. Make that control a `<button>` with `tabindex: "-1"` |
-| `label` | `Caption` | - | The field's caption, above the control |
-| `description` | `Caption` | - | Between the label and the control |
-| `helper` | `Caption` | - | Under the control |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error |
-| `required` | `bool` | `false` | Adds `aria-required` and marks the label |
-| `disabled` | `bool` | `false` | Takes the input out of the tab order and dims the field |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
+| `size` | `Size` | `md` | Height, padding, font size and the chips' size. A chip is one step smaller than the field. |
+| `radius` | `Size` | `sm` | Corner radius of the frame and the list, independent of `size`. |
+| `value` | `Vec<String>` | `[]` | The tags, in order, strictly controlled. Pair it with `onchange`. |
+| `onchange` | `EventHandler<Vec<String>>` | - | Called with the whole list the caller should hold next. |
+| `suggestions` | `Vec<String>` | - | Adds a dropdown of tags to pick. Tags already held are not offered. |
+| `split_chars` | `Vec<String>` | `[","]` | Each one commits the text before it, typed or pasted. |
+| `allow_duplicates` | `bool` | `false` | Lets the same tag be added twice. Off, tags are compared trimmed and case-insensitive. |
+| `max_tags` | `usize` | - | The most tags the field accepts. A paste fills the room that is left and refuses the rest. |
+| `tag_rules` | `Callback<String, bool>` | - | Accepts or refuses one tag before it is added. A refused tag stays in the input, and no message shows. |
+| `onrefuse` | `EventHandler<String>` | - | A tag was refused, as a duplicate, past `max_tags`, or by `tag_rules`. Use it to say why, such as through `helper`. |
+| `validate` | `Validators<Vec<String>>` | - | Rules over the whole list, shown once the field loses focus or its form is submitted. |
+| `name` | `FieldName<Vec<String>>` | - | Posts each tag under this name. A path such as `Article::FIELDS.topics()` also binds the list to the surrounding `Form`'s value when the field has no `onchange`. |
+| `placeholder` | `String` | - | Shown while there are no tags. |
+| `clearable` | `bool` | `false` | Shows an x at the end of the frame that empties the field. |
+| `tag` | `Callback<SelectionArgs<String>, Element>` | `Chip` | Draws one tag, remove control included. `args.remove` removes it. Make that control a `<button>` with `tabindex: "-1"`. |
+| `label` | `Caption` | - | The field's caption, above the control. |
+| `description` | `Caption` | - | Between the label and the control. What to enter. |
+| `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry affects. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Marks the field required and adds an asterisk to the label. |
+| `disabled` | `bool` | `false` | Takes the input out of the tab order and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. |
 
-`SelectionArgs<String>` carries `value` and `remove`; it is the same struct
-`MultiSelect` and `FileField` hand their selection renderers.
+`SelectionArgs<String>` carries `value` and `remove`, as it does for
+`MultiSelect` and `FileField`.
 
-Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes; the attributes land on the input.
+`TagsField` also takes the `<input>` HTML attributes and, like every component,
+the shared props `sx`, `class`, `style`, `states`, and any extra HTML
+attributes. They land on the input.
 
 ## Theme defaults
 
-Almost everything is `FieldDefaults`, shared by every field, and the list is
-`ComboboxDefaults`. `TagsFieldDefaults` keeps only which `size` and `radius` the
-component starts at. A chip sits one step down the field's scale, which is the
-component's own arithmetic rather than a theme key.
+Most of it is `FieldDefaults`, shared by every field, and the list is
+`ComboboxDefaults`. `TagsFieldDefaults` holds only the `size` and `radius` it
+starts at.
 
 | Field | Type | Description |
 |---|---|---|
-| `field.sizes` | `Sizes<FieldSizeLevel>` | The frame's font size, height and padding per size |
-| `combobox.max_dropdown_height` | `String` | How tall the list grows before it scrolls |
-| `tags_field.size` | `Size` | Default `size` when the prop is omitted; `md` |
-| `tags_field.radius` | `Size` | Default `radius` when the prop is omitted; `sm` |
-
-## Accessibility
-
-The whole field is one tab stop, plus the Clear button when `clearable` shows
-it. Backspace on an empty input removes the last tag. ArrowLeft on an empty
-input starts the chip cursor on the last tag's x; the arrows walk the tags and
-Delete or Backspace removes the focused one. A custom `tag` must make its
-remove control a `<button>` with `tabindex: "-1"`: the cursor focuses that
-button, and without the `tabindex` each tag adds a tab stop. The field cancels
-`mousedown` on every tag itself, so a click never moves the focus there.
+| `field.sizes` | `Sizes<FieldSizeLevel>` | The frame's font size, height and padding per size. |
+| `combobox.max_dropdown_height` | `String` | How tall the list grows before it scrolls. |
+| `tags_field.size` | `Size` | Default `size` when the prop is omitted, `md`. |
+| `tags_field.radius` | `Size` | Default `radius` when the prop is omitted, `sm`. |
 
 ## Data attributes
 
-The wrapper and the frame carry the field's `data-state` tokens: `size-<size>`,
-`radius-<size>`, `disabled`, `required`, `warning`, `error`. Each tag sits in a
-`[data-slot='tag']` wrapper, and its x in `[data-slot='remove']`. The rows are
-`ComboboxOption`s, with `active` - never `selected`.
+The wrapper and the frame carry the field's `data-state` tokens:
+`size-<size>`, `radius-<size>`, `disabled`, `required`, `warning`, `error`.
+Each tag sits in a `[data-slot='tag']` wrapper, and its x in
+`[data-slot='remove']`. The rows are `ComboboxOption`s, marked `active`, never
+`selected`.

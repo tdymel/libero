@@ -1,12 +1,11 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, FieldStatus, Flex, PhoneField, Text},
     sx::sx,
 };
 
-/// Three bands, which is every flag this example needs and no more - the
-/// library ships none, so a caller draws their own.
+/// Three bands, every flag this example needs. The library ships none.
 #[component]
 fn Tricolour(iso: String) -> Element {
     let (bands, vertical) = match iso.as_str() {
@@ -48,66 +47,66 @@ pub fn PhoneFieldPage() -> Element {
             markdown: "/md/phone_field.md",
             properties: vec![
                 props("PhoneField", vec![
-                    prop("size", "Size").default("md").doc("Controls height, padding, and font size."),
+                    prop("size", "Size").default("md").doc("Height, padding and font size."),
                     prop("radius", "Size")
                         .default("sm")
-                        .doc("Corner radius, independent of size."),
+                        .doc("Corner radius, independent of `size`."),
                     prop("value", "Option<String>")
-                        .doc("The number, in E.164 - `\"+12133734253\"`. The text on screen is a rendering of it. `None` leaves the field uncontrolled."),
+                        .doc("The number in E.164, such as `\"+12133734253\"`. Leave it out and the field keeps its own text."),
                     prop("oninput", "EventHandler<String>")
-                        .doc("Fires per keystroke with the E.164 the field should hold next, or an empty string once nothing is typed."),
+                        .doc("Fires on every keystroke with the E.164 the field should hold next, or an empty string once nothing is typed."),
                     prop("country", "String")
-                        .default("us")
-                        .doc("The country the field starts on, ISO 3166-1 alpha-2. The picker wins over it until the prop changes, which moves the field and the number with it. A `value` whose dial code belongs to another country wins over both. Themed."),
+                        .default("theme.phone_field.country")
+                        .doc("The country the field starts on, ISO 3166-1 alpha-2, `US` by default. A pick wins over it until the prop changes. A `value` with another country's dial code wins over both."),
                     prop("oncountrychange", "EventHandler<String>")
-                        .doc("The user picked another country. `oninput` fires at the same time, with the value under the new dial code."),
+                        .doc("The user picked another country. `oninput` fires at the same time with the number under the new dial code."),
                     prop("country_select", "bool")
                         .default("theme.phone_field.country_select")
-                        .doc("Offers the picker at all. Off pins the country, draws a static `+49` in its place, and is one tab stop fewer."),
+                        .doc("Shows the country picker. Off pins the country and shows its dial code as plain text."),
                     prop("country_label", "Callback<String, String>")
-                        .doc("Overrides the name a country is offered under, during render. Unset, the localization's `phone_field.country_names` names it (German ships), else the English name."),
+                        .doc("Overrides the name of a country. Unset, the name comes from the localization's `phone_field.country_names`, which ships in German, else English. It runs during render, so it can read a locale from context."),
                     prop("countries", "Vec<String>")
                         .doc("Narrows the list to these ISO codes, in the order given."),
                     prop("flag", "Callback<String, Element>")
-                        .doc("Draws a flag beside a country, in the picker and in the list. The library ships none."),
+                        .doc("Draws a flag beside a country, in the picker and in the list. The library ships none. Hide it from screen readers, since the country's name is already read."),
+                    prop("validate", "Validators<String>")
+                        .doc("Rules over the E.164, shown once the field loses focus or its form is submitted. The field checks nothing on its own."),
+                    prop("name", "FieldName<String>")
+                        .doc("What the field posts as, the E.164. A path such as `Signup::FIELDS.phone()` also binds the number to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("placeholder", "String")
                         .doc("Shown while the field is empty."),
-                    prop("name", "FieldName<String>")
-                        .doc("What the field posts as - the E.164, through a hidden input. A path also binds it to the surrounding form's value."),
-                    prop("validate", "Validators<String>")
-                        .doc("Rules over the E.164, shown once the field loses focus or its form is submitted. Nothing here validates a number on its own."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the control. Names the `<input>` through a `for`/`id` pair."),
+                        .doc("The field's caption, above the control. It names the input."),
                     prop("description", "Caption")
-                        .doc("Between the label and the control: what to enter."),
+                        .doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption")
-                        .doc("Under the control: the format, or an example."),
+                        .doc("Under the control. The format, or an example."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Marks the field required, adds `aria-required` and shows an asterisk in the label."),
+                        .doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Disables interaction and dims the field."),
+                        .doc("Disables and dims the field."),
                     prop("readonly", "bool")
                         .default("false")
-                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. The country button stays a tab stop, marked `aria-disabled`, and opens nothing."),
-                ]),
+                        .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. The country button stays focusable and opens nothing."),
+                ]).extends("input"),
             ],
             lead: rsx! {
                 Text {
                     "A country picker in front of a "
                     Code { source: "tel" }
-                    " input. The value is E.164 and only E.164 - "
+                    " input. The picker holds the dial code, the input the national number, and "
+                    "the value is one E.164 string such as "
                     Code { source: "\"+12133734253\"" }
-                    " - and the text on screen is a rendering of it, so the picker carries the "
-                    "dial code and what is typed is the national number. The library ships the "
-                    "country list and no validation at all: a rule over the number is an "
-                    "ordinary "
+                    ". The field regroups the digits when it loses focus, for countries with a "
+                    "fixed number format. It ships the country list but no number validation, so "
+                    "add a rule through "
                     Code { source: "validate" }
-                    " line."
+                    "."
                 }
             },
             // snippet: let mut phone = use_signal(String::new);
@@ -206,6 +205,13 @@ pub fn PhoneFieldPage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "The country picker is a second tab stop. Enter, Space and Arrow Down open "
+                    "the list, typing filters it, the arrows move the highlight, Enter picks and "
+                    "Escape closes. Both return focus to the picker."
+                }
             }
         }
     }

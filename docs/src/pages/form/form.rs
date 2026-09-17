@@ -44,7 +44,7 @@ fn SignupForm() -> Element {
                 .warn("Your password contains your email address.")
                 .on([Signup::FIELDS.password().value()]),__SUMMARY__
             onsubmit: move |_| sent.set(true),
-            // A specialized field and a composed part - built in Getting Started.
+            // A specialized field and a composed part, built in Getting started.
             EmailField { label: "Email", name: Signup::FIELDS.email(), validate: not_empty.error("Enter your email.") }
             NewPasswordFieldset { path: Signup::FIELDS.password() }
             Checkbox {
@@ -134,38 +134,51 @@ pub fn FormPage() -> Element {
             properties: vec![
                 props("Form", vec![
                     prop("value", "Store<V>")
-                        .doc("The whole form's value, which `validate` checks and fields named by a path read and write. `V` is inferred from it."),
+                        .doc("The whole form's value. `validate` checks it, and fields named by a path read and write it. `V` is inferred from it. A form with no `value` and no rules needs `Form::<()>`."),
                     prop("validate", "Validators<V>")
-                        .doc("Composite rules over `value` - one rule, or an array. A rule naming fields with `.on(..)` shows its status on each of them."),
+                        .doc("Rules over `value`, one or an array. A rule with `.on(..)` shows its status on each field it names."),
                     prop("onsubmit", "EventHandler<FormEvent>")
-                        .doc("Fires on a submit nothing blocks. Without an `action` the browser's own submit is cancelled."),
+                        .doc("Fires on a submit with no errors. Without an `action`, the browser's own submit is cancelled."),
                     prop("summary_title", "String")
                         .doc("A heading over the error summary."),
                     prop("form", "FormHandle")
-                        .doc("Controls the form from outside, made with `use_form()`. Without it the form makes its own, which `use_form_context()` reaches from inside. `validate()` checks like a submit without calling `onsubmit` and returns whether nothing is an error; `submit()` submits as the submit button would; `reset()` puts the value back to its default and clears touched fields, the submit and the summary (a field with its own `value` and handler keeps what it shows); `is_valid()` checks without showing anything and follows changes; `clear_summary()` only hides the summary. Where the renderer fires no submit, `submit()` runs the form's own handler. On the desktop WebView `reset()` cannot clear a control that is not bound to the value; under Blitz it clears unbound text fields, not checkboxes or selects."),
+                        .doc("Controls the form from outside, made with `use_form()`. Without it the form makes its own, which `use_form_context()` returns inside the form."),
                     prop("children", "Element")
+                        .default("required")
                         .doc("The fields, fieldsets and buttons."),
-                ]),
+                ]).extends("form"),
+                props("FormHandle", vec![
+                    prop("validate()", "bool")
+                        .doc("Checks like a submit without calling `onsubmit`. Every status shows, and with an error the summary appears and takes focus. `true` when nothing is an error."),
+                    prop("submit()", "Result<(), PlatformError>")
+                        .doc("Submits as the submit button would. `Unsupported` once the form is gone."),
+                    prop("reset()", "()")
+                        .doc("Puts the value back to `V::default()` and clears touched fields, the submit and the summary. A field with its own `value` and handler keeps what it shows. On the desktop WebView it cannot clear a control that is not bound to the value. Under Blitz it clears unbound text fields, not checkboxes or selects."),
+                    prop("is_valid()", "bool")
+                        .doc("Whether nothing is an error, shown or not. It follows changes, so it can drive other UI."),
+                    prop("clear_summary()", "()")
+                        .doc("Hides the summary and resets nothing."),
+                ]).without_base_props(),
                 props("Every field", vec![
-                    prop("validate", "Validators<V>")
-                        .doc("Rules over the field's own value - one rule, or an array. Shown once the field loses focus or its form is submitted."),
+                    prop("validate", "Validators<T>")
+                        .doc("Rules over the field's own value, one or an array. Shown once the field loses focus or its form is submitted."),
                     prop("name", "FieldName<T>")
-                        .doc("What the field posts as, and what composite rules address it by. A path from `#[derive(Fields)]` also binds the field to the form's value unless it has a handler of its own. `T` is the field's value type."),
-                ]),
+                        .doc("What the field posts as, and how rules address it. A path from `#[derive(Fields)]` also binds the field to the form's value, unless the field has a handler of its own. `T` is the field's value type."),
+                ]).without_base_props(),
             ],
             lead: rsx! {
                 Text {
                     "A "
                     Code { source: "<form novalidate>" }
-                    " that holds the whole value in one store, runs rules across its fields, and "
-                    "validates on submit. How fields, fieldsets, rules and paths fit together is "
-                    "explained in Forms: Getting Started."
+                    " that holds the whole value in one store, runs rules across its fields and "
+                    "validates on submit. The Form getting started page shows how fields, "
+                    "fieldsets, rules and paths fit together."
                 }
                 Text {
-                    "A submit reveals every status. With any error it is cancelled, and a summary of "
+                    "A submit shows every status. With an error, it is cancelled, and a summary of "
                     "every problem appears above the fields and takes focus. Warnings never block. "
-                    "The summary keeps the problems of that submit: a line leaves once it is fixed, "
-                    "and none is added until the next submit."
+                    "The summary keeps the problems of that submit. A line leaves once it is fixed, "
+                    "and new ones wait for the next submit."
                 }
             },
             // snippet: ignore - builds on Getting Started's `EmailField` and `NewPasswordFieldset`
@@ -191,7 +204,7 @@ pub fn FormPage() -> Element {
                     "A form becomes a "
                     Code { source: "form" }
                     " landmark only once it has a name. Name it when the page holds more than one "
-                    "form, or when the form is the page's main task, like a checkout: pass "
+                    "form, or when the form is the page's main task, such as a checkout. Pass "
                     Code { source: "aria-labelledby" }
                     " pointing at a visible heading, or "
                     Code { source: "aria-label" }
@@ -262,7 +275,7 @@ fn CheckButton() -> Element {
     }
 }
 
-/// The specialized field the example uses - the same one Getting Started builds.
+/// The specialized field the example uses, the one Getting started builds.
 #[component]
 fn EmailField(
     #[props(into)] label: String,

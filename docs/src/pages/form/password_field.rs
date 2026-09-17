@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, PasswordField, Text};
 
@@ -13,56 +13,53 @@ pub fn PasswordFieldPage() -> Element {
             markdown: "/md/password_field.md",
             properties: vec![
                 props("PasswordField", vec![
-                    prop("size", "Size").default("md").doc("Controls height, padding, and font size."),
+                    prop("size", "Size").default("md").doc("Height, padding and font size."),
                     prop("radius", "Size")
                         .default("sm")
-                        .doc("Corner radius, independent of size."),
+                        .doc("Corner radius, independent of `size`."),
                     prop("value", "Option<String>")
-                        .doc("The secret. `None` leaves the `<input>` uncontrolled - it keeps its own text and needs no handler."),
+                        .doc("The secret. Leave it out and the input keeps its own text."),
                     prop("oninput", "EventHandler<String>")
-                        .doc("Fires per keystroke with the text the field should hold next."),
+                        .doc("Fires on every keystroke with the text the field should hold next."),
+                    prop("validate", "Validators<String>")
+                        .doc("Rules over the secret, shown once the field loses focus or its form is submitted."),
+                    prop("name", "FieldName<String>")
+                        .doc("What the field posts as. A path such as `Signup::FIELDS.password()` also binds the secret to the surrounding `Form`'s value when the field has no `oninput`."),
                     prop("placeholder", "String")
                         .doc("Shown while the field is empty."),
                     prop("reveal_button", "bool")
                         .default("theme.password_field.reveal_button")
-                        .doc("Offers the reveal button at all. A confirmation field, or one beside a revealed twin, has nothing to add."),
+                        .doc("Shows the reveal button. Turn it off for a confirmation field, which adds nothing beside a revealed twin."),
                     prop("reveal_label", "String")
                         .default("password_field.show")
-                        .doc("The reveal button's name in both states, e.g. \"Show PIN\"; `aria-pressed` tells whether the secret is shown. Unset, the localization's `password_field.show` - \"Show password\" in English."),
+                        .doc("The reveal button's name, such as \"Show PIN\". Unset, the localization's `password_field.show`, \"Show password\" in English."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the control. Names the field through a `for`/`id` pair."),
+                        .doc("The field's caption, above the control. It names the field."),
                     prop("description", "Caption")
-                        .doc("Between the label and the control: what to enter."),
+                        .doc("Between the label and the control. What to enter."),
                     prop("helper", "Caption")
-                        .doc("Under the control: the password rules."),
+                        .doc("Under the control. The password rules."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Marks the field required, adds `aria-required` and shows an asterisk in the label."),
+                        .doc("Marks the field required and adds an asterisk to the label."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Disables interaction and dims the field."),
+                        .doc("Disables and dims the field, reveal button included."),
                     prop("readonly", "bool")
                         .default("false")
-                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
-                ]),
+                        .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
+                ]).extends("input"),
             ],
             lead: rsx! {
                 Text {
                     "A "
                     Code { source: "TextField" }
-                    " whose "
-                    Code { source: "type" }
-                    " flips between "
-                    Code { source: "password" }
-                    " and "
-                    Code { source: "text" }
-                    ", with the reveal toggle in its trailing slot. It takes the same slots "
-                    "every field has, and the reveal state is its own - a password that starts "
-                    "visible is not a state a caller should be able to ask for. Every submit "
-                    "and every reset of the surrounding "
+                    " for secrets, with a button that shows the text. The field keeps the "
+                    "reveal state itself, so a password never starts visible. Every submit and "
+                    "reset of the surrounding "
                     Code { source: "Form" }
                     " hides the secret again."
                 }
@@ -143,6 +140,20 @@ pub fn PasswordFieldPage() -> Element {
                         oninput: move |next| value.set(next),
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Leave "
+                    Code { source: "label" }
+                    " unset only when something else names the field. The reveal button is a "
+                    "toggle with one name, so a screen reader hears it as pressed or not. Set "
+                    Code { source: "autocomplete" }
+                    " so password managers can fill the field: "
+                    Code { source: "\"new-password\"" }
+                    " on a sign-up form, "
+                    Code { source: "\"current-password\"" }
+                    " on a sign-in form."
+                }
             }
         }
     }

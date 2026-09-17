@@ -6,11 +6,11 @@ use libero::components::{
 };
 
 // snippet: ignore - a diagram
-const SHAPE_CODE: &str = r#"TextField                      // a field: one value, its label, its own rules
-  └ PasswordField, EmailField  // specialized: a field with a narrower contract
-AddressFieldset                // composed: specialized fields grouped into one value
+const SHAPE_CODE: &str = r#"TextField                      // a field, one value with its label and rules
+  └ PasswordField, EmailField  // specialized fields, each with a narrower contract
+AddressFieldset                // a composed part, fields grouped into one value
   └ Fieldset { path: .. }
-OrderForm                      // the whole value: composed parts, submitted together
+OrderForm                      // the whole value, its parts submitted together
   └ Form { value: order }"#;
 
 const SPECIALIZE_CODE: &str = r#"use libero::components::{FieldName, Rule, TextField, Validators, is_email};
@@ -22,8 +22,8 @@ fn EmailField(
     #[props(default, into)] name: FieldName<String>,
     #[props(default, into)] validate: Validators<String>,
 ) -> Element {
-    // The caller's rules first - a required field says so before it says the
-    // format is wrong - then the rule that makes this an email field.
+    // The caller's rules go first, so a missing email shows before a malformed
+    // one. Then the rule that makes this an email field.
     let rules: Vec<_> = validate
         .iter()
         .cloned()
@@ -53,7 +53,7 @@ fn AddressFieldset(#[props(into)] label: String, #[props(into)] path: FieldName<
             validate: (|a: &Address| a.city.is_empty() || !a.zip.is_empty())
                 .error("A city needs its zip code.")
                 .on([Address::FIELDS.zip()]),
-            // Paths relative to the group: they work wherever the group sits.
+            // Paths relative to the group work wherever the group sits.
             TextField { label: "Street", name: Address::FIELDS.street(), validate: not_empty.error("Enter a street.") }
             TextField { label: "Zip code", name: Address::FIELDS.zip() }
             TextField { label: "City", name: Address::FIELDS.city() }
@@ -103,12 +103,12 @@ fn OrderForm() -> Element {
 
 const RULES_CODE: &str = r#"use libero::components::{Rule, Validator, max_length, not_empty};
 
-// A rule is any `Fn(&V) -> bool`. A plain function is one:
+// A rule is any `Fn(&V) -> bool`, so a plain function is one.
 fn no_spaces(value: &String) -> bool {
     !value.contains(' ')
 }
 
-// A rule with a parameter is a function returning one - the catalog's `min_length(8)` shape:
+// A rule with a parameter is a function that returns one, like `min_length(8)`.
 fn starts_with(prefix: &'static str) -> impl Fn(&String) -> bool {
     move |value| value.starts_with(prefix)
 }
@@ -120,7 +120,7 @@ let coupon = starts_with("LIB-").and(max_length(12)).warn("That does not look li
 // A closure works too, and composite rules are closures over the whole value.
 let adult = (|age: &Option<u8>| age.is_some_and(|age| age >= 18)).error("You must be 18.");
 
-// A reusable rule for your own domain is just a function returning a `Validator`:
+// A reusable rule for your own domain is a function that returns a `Validator`.
 fn required(field: &str) -> Validator<String> {
     not_empty.error(format!("Enter your {field}."))
 }"#;
@@ -131,7 +131,7 @@ const CATALOG_CODE: &str = r#"use libero::components::{Rule, is_email, max, max_
 not_empty                        // String (whitespace is empty), Option<T>, Vec<T>, bool
 min_length(3) / max_length(12)   // characters, not bytes
 min(18) / max(99)                // any PartialOrd value, bounds included
-is_email                         // a shape check: one @, a dotted domain
+is_email                         // a shape check, one @ and a dotted domain
 
 rule.error("..")                 // an error blocks a submit
 rule.warn("..")                  // a warning never does
@@ -152,7 +152,7 @@ Order::FIELDS.shiping().zip()       // does not compile
 path!(Order => shipping.zip)        // the same path, for a type that cannot derive
 
 TextField { name: Order::FIELDS.email() }         // binds and posts
-TextField { name: Order::FIELDS.same_billing() }  // does not compile: a TextField holds a String
+TextField { name: Order::FIELDS.same_billing() }  // does not compile, a TextField holds a String
 rule.on([Order::FIELDS.email()])                  // a composite rule over `Order` names a field"#;
 
 // snippet: item #[derive(Clone, PartialEq, Default, Fields)] struct Address { zip: String }
@@ -214,17 +214,17 @@ pub fn FormGettingStartedPage() -> Element {
             DocSection { title: "The layers",
                 CodeBlock { source: SHAPE_CODE }
                 Text {
-                    "The example below is built from all four layers - an "
+                    "The example below uses all four layers. An "
                     Code { source: "EmailField" }
-                    ", an "
+                    " and an "
                     Code { source: "AddressFieldset" }
-                    " part used twice, and an order form around them. Submit it empty, then fill it in."
+                    ", used twice, sit in an order form. Submit it empty, then fill it in."
                 }
                 div { style: "max-width: 360px;", OrderForm {} }
             }
             DocSection { title: "Specialization",
                 Text {
-                    "Every field is a plain component with the same slots - "
+                    "Every field is a plain component with the same props, "
                     Code { source: "label" }
                     ", "
                     Code { source: "description" }
@@ -234,15 +234,14 @@ pub fn FormGettingStartedPage() -> Element {
                     Code { source: "status" }
                     ", "
                     Code { source: "validate" }
-                    ", "
+                    " and "
                     Code { source: "name" }
-                    ". A specialized field wraps one and fixes part of its contract. libero does this "
-                    "itself: "
+                    ". A specialized field wraps one and fixes part of its contract. "
                     Code { source: "PasswordField" }
-                    " is a "
+                    " is one, a "
                     Code { source: "TextField" }
-                    " with a reveal button. Your domain fields are built the same way - an email, an "
-                    "IBAN, a phone number - with their rules built in, so no form repeats them."
+                    " with a reveal button. Build your own domain fields the same way, such as an "
+                    "email, an IBAN or a phone number. Their rules are built in, so no form repeats them."
                 }
                 CodeBlock { source: SPECIALIZE_CODE, language: "rust" }
                 Text {
@@ -257,60 +256,58 @@ pub fn FormGettingStartedPage() -> Element {
             }
             DocSection { title: "Composition",
                 Text {
-                    "A part of a form that recurs - an address, a date range, a contact - becomes a "
-                    "component around a "
+                    "A part of a form that recurs, such as an address, a date range or a contact, "
+                    "becomes a component around a "
                     Code { source: "Fieldset" }
                     ". It takes a "
                     Code { source: "path" }
                     " saying where its value sits, names its fields relative to its own type, and "
-                    "carries the rules that concern only its own fields. It knows nothing about the "
-                    "form it ends up in, so the same part serves the shipping and the billing address."
+                    "carries the rules over its own fields. It knows nothing about the form around "
+                    "it, so the same part serves the shipping and the billing address."
                 }
                 CodeBlock { source: COMPOSE_CODE, language: "rust" }
-                Text {
-                    "The form then only arranges parts, and adds what only the whole value can "
-                    "decide:"
-                }
+                Text { "The form then arranges the parts and adds the rules only the whole value can decide." }
                 CodeBlock { source: FORM_CODE, language: "rust" }
             }
             DocSection { title: "Validators",
                 Text {
                     "A rule is any function from a value to a "
                     Code { source: "bool" }
-                    " - "
+                    ", "
                     Code { source: "true" }
-                    " when the value is fine. Nothing else to implement. "
+                    " when the value is fine. "
                     Code { source: ".error(\"..\")" }
                     " or "
                     Code { source: ".warn(\"..\")" }
                     " gives it a message and turns it into a "
                     Code { source: "Validator<V>" }
-                    "; "
+                    ". "
                     Code { source: ".and(..)" }
                     " and "
                     Code { source: ".or(..)" }
-                    " combine rules before the message. Your own rules are peers of the catalog ("
+                    " combine rules before the message. Your own rules work like the built-in ones, "
+                    "such as "
                     Code { source: "not_empty" }
                     ", "
                     Code { source: "min_length" }
-                    ", "
+                    " and "
                     Code { source: "is_email" }
-                    ", ..). The "
+                    ". The "
                     Code { source: "Rule" }
                     " trait has to be in scope."
                 }
                 CodeBlock { source: RULES_CODE, language: "rust" }
-                Text { "The catalog - rules for the common cases, over whichever value types they make sense for:" }
+                Text { "The built-in rules cover the common cases, over the value types they make sense for." }
                 CodeBlock { source: CATALOG_CODE, language: "rust" }
                 Text {
                     "Every layer takes "
                     Code { source: "validate" }
-                    " - one validator, or an array - typed over the value that layer can see:"
+                    ", one validator or an array, typed over the value that layer can see."
                 }
                 ul {
                     li {
                         Text {
-                            "A field checks its own value: "
+                            "A field checks its own value, as in "
                             Code { source: "TextField {{ validate: not_empty.error(\"..\") }}" }
                             ". Rules that need nothing but that value belong here."
                         }
@@ -323,16 +320,17 @@ pub fn FormGettingStartedPage() -> Element {
                     }
                     li {
                         Text {
-                            "A fieldset checks its fields against each other - a city needs a zip. "
+                            "A fieldset checks its fields against each other, such as a city that "
+                            "needs a zip. "
                             Code { source: ".on([..])" }
-                            " names the fields the problem shows on; without it, the problem shows "
+                            " names the fields the problem shows on. Without it, the problem shows "
                             "under the group."
                         }
                     }
                     li {
                         Text {
-                            "A form checks what spans parts - a billing address unless billing goes "
-                            "to the shipping address. A form rule without "
+                            "A form checks what spans parts, such as a billing address unless the "
+                            "bill goes to the shipping address. A form rule without "
                             Code { source: ".on([..])" }
                             " shows only in the error summary."
                         }
@@ -340,8 +338,8 @@ pub fn FormGettingStartedPage() -> Element {
                 }
                 Text {
                     "Put a rule on the lowest layer that sees every value it reads. A field's rules "
-                    "show once it loses focus, a composite problem once every field it names was "
-                    "touched, and a submit reveals everything: an error cancels it and focuses a "
+                    "show once it loses focus. A composite problem shows once every field it names "
+                    "was touched. A submit shows everything, and an error cancels it and focuses a "
                     "summary of every problem. An explicit "
                     Code { source: "status" }
                     ", such as a server's answer, shows at once, and the worse of it and the rules wins."
@@ -354,11 +352,11 @@ pub fn FormGettingStartedPage() -> Element {
                     Code { source: "FIELDS" }
                     " constant with one method per field. Each returns a "
                     Code { source: "FieldPath<Root, T>" }
-                    ": where a "
+                    ", which knows where a "
                     Code { source: "T" }
                     " sits inside a "
                     Code { source: "Root" }
-                    ", how to reach it, and its spelling. "
+                    " and how it is spelled. "
                     Code { source: "#[fields(nested)]" }
                     " continues into a field whose type derives "
                     Code { source: "Fields" }
@@ -368,10 +366,10 @@ pub fn FormGettingStartedPage() -> Element {
                 }
                 CodeBlock { source: PATHS_CODE, language: "rust" }
                 Text {
-                    "One path does three jobs, so they cannot drift apart: it is the name the "
-                    "field posts under, the name a composite rule addresses, and the place the field "
-                    "reads and writes. A misspelled field is a compile error, not a rule that "
-                    "silently never shows. A path to a "
+                    "One path is the name the field posts under, the name a composite rule "
+                    "addresses and the place the field reads and writes, so the three cannot drift "
+                    "apart. A misspelled field is a compile error, not a rule that never shows. "
+                    "A path to a "
                     Code { source: "bool" }
                     " on a "
                     Code { source: "TextField" }
@@ -391,11 +389,11 @@ pub fn FormGettingStartedPage() -> Element {
                     ", made with "
                     Code { source: "use_store" }
                     ". A field inside it named by a path reads its value from that store and writes "
-                    "every change back - no "
+                    "every change back, so no field needs a "
                     Code { source: "value" }
                     " and "
                     Code { source: "oninput" }
-                    " pair per field. Typing re-renders only the field that changed, plus whatever "
+                    " pair. Typing re-renders only the field that changed, plus whatever "
                     "reads the whole value, such as the form's own rules. A "
                     Code { source: "Fieldset" }
                     " with a "
@@ -408,9 +406,8 @@ pub fn FormGettingStartedPage() -> Element {
                     "A field with a handler of its own is controlled by that handler, as outside a "
                     "form. A plain string "
                     Code { source: "name" }
-                    " only posts. The path's root is checked when the field renders: one rooted at a "
-                    "different type than the form's value warns in debug builds and leaves the field "
-                    "unbound."
+                    " only posts. A path rooted at a different type than the form's value warns in "
+                    "debug builds and leaves the field unbound."
                 }
             }
         }

@@ -4,10 +4,13 @@ Crate: `libero`
 Import: `use libero::components::{Fieldset, Fields, Rule};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/fieldset.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: Several fields that form one value - an address, a date range - under one
-`<legend>`, with a description, helper and status of its own, and rules over
-the group's value. Building reusable parts around it is explained in
-[Forms: Getting Started](form_getting_started.md).
+Description: Several fields that form one value under a `<legend>`, with rules over that value that land on the fields they name.
+
+Several fields that form one value, such as an address or a date range, under
+one `<legend>`. The group has its own description, helper and status, and
+rules over its value. Inside a `Form`, give it a `path`. On its own, give it a
+`value` store. The Form [getting started](form_getting_started.md) page shows
+how to build reusable parts around it.
 
 ## Usage
 
@@ -54,8 +57,8 @@ fn AddressFieldset() -> Element {
 }
 ```
 
-Give the group a `path`. Field names and rule paths inside are relative to it.
-On its own a fieldset takes a `value` store instead.
+Inside a `Form`, the group takes a `path`. Field names and rule paths inside
+are relative to it.
 
 ```rust,ignore
 Form {
@@ -71,11 +74,6 @@ Form {
 }
 ```
 
-## Known limits
-
-- A fieldset with no `value`, `path` or rules writes
-  `Fieldset::<()> { .. }` so Rust can infer its type.
-
 ## Props
 
 ### `Fieldset`
@@ -86,20 +84,21 @@ Form {
 | `description` | `Caption` | - | Under the label. |
 | `helper` | `Caption` | - | Under the fields. |
 | `status` | `FieldStatus` | `Valid` | The group's own status, under the fields. A bare `&str` is an error. |
-| `value` | `Store<V>` | - | The group's own value, for a fieldset outside a `Form`. Inside one the value is the form's, at `path`. |
-| `validate` | `Validators<V>` | - | Composite rules over `value` - one rule, or an array. Without `.on(..)` a status shows under the fields once any field in the group was touched. |
-| `path` | `FieldName<V>` | - | Where the group sits in a `Form`'s value, e.g. `Order::FIELDS.address()`. Field names and rule paths inside are relative to it. |
-| `disabled` | `bool` | `false` | Disables every field inside, nested fieldsets included - their look, their own controls such as a `Select` trigger, and every native control. A field's own `disabled: false` cannot re-enable it. |
-| `children` | `Element` | - | The fields. |
+| `value` | `Store<V>` | - | The group's own value, for a fieldset outside a `Form`. A fieldset with no `value`, `path` or rules needs `Fieldset::<()>` so Rust can infer its type. |
+| `validate` | `Validators<V>` | - | Rules over the group's value, one or an array. A rule with `.on(..)` shows on the fields it names. One without shows under the fields once any field in the group was touched. |
+| `path` | `FieldName<V>` | - | Where the group sits inside a `Form`'s value, such as `Order::FIELDS.address()`. The names of the fields inside and the paths in `validate` are relative to it. |
+| `disabled` | `bool` | `false` | Disables every field inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it. |
+| `children` | `Element` | required | The fields. |
 
-It also takes the shared props `sx`, `class`, `states`, and any `fieldset`
-attribute.
+`Fieldset` also takes the `<fieldset>` HTML attributes and, like every
+component, the shared props `sx`, `class`, `style`, `states`, and any extra
+HTML attributes.
 
 ## Theme defaults
 
 | Field | Type | Description |
 |---|---|---|
-| `fieldset.gap` | `&'static str` | Gap between the fields inside a group (`12px`). The legend and caption typography comes from `FieldDefaults`. |
+| `fieldset.gap` | `&'static str` | Gap between the fields inside a group, `12px`. The legend and caption type comes from `FieldDefaults`. |
 
 ## CSS variables
 
@@ -109,5 +108,5 @@ attribute.
 
 ## Data attributes
 
-`data-state` carries the status token when there is one. The captions are
-`data-slot="description" | "helper" | "status"`.
+`data-state` carries the status token when there is one. The captions carry
+`data-slot="description"`, `"helper"` or `"status"`.
