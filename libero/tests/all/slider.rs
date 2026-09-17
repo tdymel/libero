@@ -216,6 +216,28 @@ fn each_thumb_is_described_by_its_own_value_bubble() {
     assert_eq!(text_of(&html, &described[1][0]), "80");
 }
 
+/// The bare value's bubble writes the formats' decimal separator.
+#[test]
+fn the_value_bubble_writes_the_formats_decimal_separator() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { formats: &libero::localization::Formats::GERMAN,
+                Slider {
+                    value: 0.5,
+                    max: 1.0,
+                    step: 0.1,
+                    aria_label: "Mix",
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(html.contains(">0,5<"), "{html}");
+    assert!(html.contains("aria-valuenow=0.5"), "{html}");
+}
+
 /// A single thumb's `aria_label` stands in for a missing `label`, so with both
 /// the label names it alone - only a range appends each thumb's own name.
 #[test]

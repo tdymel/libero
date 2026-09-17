@@ -63,6 +63,10 @@ drops the buffer and shows the value's own text: out of range clamps, text that
 never parsed (`-`) reverts to the value. So the text, the value and
 `aria-valuenow` never drift apart.
 
+An `f32` or `f64` field writes the decimal separator of the provider's
+`Formats` (`1,5` under `Formats::GERMAN`) and reads it as well as `.`. A custom
+`NumberValue` writes and reads its own separator.
+
 ## Your own number type
 
 `NumberValue` is implemented for `f32`, `f64` and every integer width. A custom

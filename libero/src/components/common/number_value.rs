@@ -14,6 +14,9 @@ use std::str::FromStr;
 /// `Display`, overriding [`NumberValue::format`] only when what it shows
 /// differs from what it parses.
 ///
+/// `f32` and `f64` follow `Formats::decimal_separator` in the field; a custom
+/// type writes and reads its own separator in `format` and `parse`.
+///
 /// The bounds are what the field actually does with a value: compare it to
 /// `min`/`max`, add and subtract a step, read it out of the edit buffer, and
 /// write it back in.

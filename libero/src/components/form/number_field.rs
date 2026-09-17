@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{any::TypeId, rc::Rc};
 
 use dioxus::prelude::*;
 
@@ -11,7 +11,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{current_localization, use_theme},
+    hooks::{current_localization, use_formats, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::Size,
     utils::warn,
@@ -159,6 +159,7 @@ fn NumberFieldShell<T: NumberValue>(
     let step = props.step.unwrap_or_else(T::default_step);
     let onchange = props.onchange;
     let setter = bound.setter();
+    let separator = float_separator::<T>(use_formats().decimal_separator);
 
     let publish = move |next: Option<T>| {
         let next = next.map(|next| next.clamp_between(min, max));
@@ -175,8 +176,14 @@ fn NumberFieldShell<T: NumberValue>(
         if readonly {
             return;
         }
-        // An empty field steps from zero, unless the type has none.
-        let Some(mut next) = current().or_else(T::zero) else {
+        // Typed text steps from itself, out of range too, as a native spinner
+        // does. An empty field steps from zero, unless the type has none.
+        let typed = buffer
+            .peek()
+            .as_ref()
+            .filter(|edit| edit.shows(current(), separator))
+            .and_then(|edit| parse::<T>(&edit.text, separator));
+        let Some(mut next) = typed.or_else(current).or_else(T::zero) else {
             return;
         };
         for _ in 0..steps.unsigned_abs() {
@@ -262,7 +269,7 @@ fn NumberFieldShell<T: NumberValue>(
             if text.trim().is_empty() {
                 held = None;
                 publish(None);
-            } else if let Some(parsed) = T::parse(&text)
+            } else if let Some(parsed) = parse::<T>(&text, separator)
                 && parsed.clamp_between(min, max) == parsed
             {
                 held = Some(parsed);
@@ -273,7 +280,7 @@ fn NumberFieldShell<T: NumberValue>(
         // Fires when the field is left or Enter commits an edit. Dropping the
         // buffer redraws the canonical text, which also rewrites the DOM.
         .event("onchange", move |event: FormEvent| {
-            if let Some(parsed) = T::parse(&event.value())
+            if let Some(parsed) = parse::<T>(&event.value(), separator)
                 && parsed.clamp_between(min, max) != parsed
             {
                 commit(Some(parsed));
@@ -300,8 +307,13 @@ fn NumberFieldShell<T: NumberValue>(
     let draw = Rc::new(move || {
         let current = bound_value.unwrap_or_else(|| live.cloned());
         let display = match &*buffer.read() {
-            Some(edit) if edit.shows(current) => edit.text.clone(),
-            _ => current.map(|value| value.format()).unwrap_or_default(),
+            Some(edit) if edit.shows(current, separator) => edit.text.clone(),
+            _ => current
+                .map(|value| match separator {
+                    Some(separator) => value.format().replacen('.', separator, 1),
+                    None => value.format(),
+                })
+                .unwrap_or_default(),
         };
         input
             .clone()
@@ -325,8 +337,25 @@ struct Edit<T> {
 }
 
 impl<T: NumberValue> Edit<T> {
-    fn shows(&self, current: Option<T>) -> bool {
-        self.held == current || T::parse(&self.text) == current
+    fn shows(&self, current: Option<T>, separator: Option<&str>) -> bool {
+        self.held == current || parse::<T>(&self.text, separator) == current
+    }
+}
+
+/// The formats' decimal separator where it is not `.`, for the built-in floats
+/// only: a custom `NumberValue` owns its text, which may already be localized.
+fn float_separator<T: 'static>(separator: &'static str) -> Option<&'static str> {
+    let float =
+        TypeId::of::<T>() == TypeId::of::<f64>() || TypeId::of::<T>() == TypeId::of::<f32>();
+    (float && separator != ".").then_some(separator)
+}
+
+/// `T::parse`, taking the separator as well as `.`: a German user on a US
+/// layout or a numpad types `1.5`.
+fn parse<T: NumberValue>(text: &str, separator: Option<&str>) -> Option<T> {
+    match separator {
+        Some(separator) => T::parse(&text.replacen(separator, ".", 1)),
+        None => T::parse(text),
     }
 }
 

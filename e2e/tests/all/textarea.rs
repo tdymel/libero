@@ -6,7 +6,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The counter and the status text of the field around textarea `index`.
 fn counter_reads(index: usize, count: &str, spoken: &str) -> String {
@@ -73,6 +73,15 @@ fn the_counter_speaks_only_near_the_limit() {
         fixture.console.assert_clean("typing to the limit").unwrap();
         fixture.close().await.unwrap();
     });
+}
+
+/// Axe, contrast and focus rings, light and dark, desktop and mobile. Axe
+/// skips the `aria-hidden` counter.
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("textarea", "/textarea/counter")
+        .focusable("textarea")
+        .run();
 }
 
 /// Todo 685: a raw `<form>`'s own reset reaches the count too, with no libero

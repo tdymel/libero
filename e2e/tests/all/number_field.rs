@@ -142,6 +142,32 @@ fn page_up_and_page_down_take_ten_steps() {
 
 const RANGED: &str = "#ranged";
 
+/// A step from typed text still out of range starts at that text, as a native
+/// spinner's does, not at the last number the caller took ("15" of "150").
+#[test]
+fn a_step_starts_from_the_typed_text() {
+    block_on(async {
+        let fixture = Fixture::open("/number-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, RANGED, 6).await.unwrap();
+        retype(page, "150").await.unwrap();
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        held(page, RANGED, "99").await.unwrap();
+
+        retype(page, "5").await.unwrap();
+        click(page, &format!("[data-frame]:has({RANGED}) {PLUS}"))
+            .await
+            .unwrap();
+        held(page, RANGED, "10").await.unwrap();
+
+        fixture.console.assert_clean("stepping typed text").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 504: an emptied field hands its caller `None`, and text that never
 /// parsed reverts on commit, so text, value and `aria-valuenow` stay together.
 #[test]

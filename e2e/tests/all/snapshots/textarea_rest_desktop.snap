@@ -1,0 +1,17 @@
+---
+source: e2e/src/suite.rs
+description: textarea at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Note"
+generic
+  textbox "Note"
+    generic
+status [atomic] [live=polite]
+LabelText
+  StaticText "Remark"
+generic
+  textbox "Remark"
+    generic
+status [atomic] [live=polite]

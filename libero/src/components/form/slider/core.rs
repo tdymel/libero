@@ -12,7 +12,7 @@ use crate::{
     },
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, use_css, use_drag,
-        use_element, use_id, use_local_state, use_theme,
+        use_element, use_formats, use_id, use_local_state, use_theme,
     },
     platform::{ElementApi, next_task},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
@@ -696,6 +696,8 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
     // One prepared style, cloned per thumb: the two are identical, and a
     // second `use_box` would be a second hook for nothing.
     let thumb_style = use_box().framework_sx(&SLIDER_THUMB_SX).prepare();
+    // The bare value's bubble, `0,5` under `Formats::GERMAN`.
+    let decimal_separator = use_formats().decimal_separator;
 
     let captions_hidden = props.captions_hidden.then_some("true");
     let marks = props.marks.iter().map(|mark| {
@@ -729,7 +731,9 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
         // Only a custom label is worth an `aria-valuetext` - the bare value
         // is already in `aria-valuenow`.
         let text = props.label.map(|label| label.call(thumb_value));
-        let bubble_text = text.clone().unwrap_or_else(|| thumb_value.to_string());
+        let bubble_text = text
+            .clone()
+            .unwrap_or_else(|| thumb_value.to_string().replacen('.', decimal_separator, 1));
         // `aria-labelledby` beats `aria-label`, so a range thumb that has both
         // lists itself after the field's label: its own `aria-label` then
         // follows the caption ("Price Minimum") instead of being dropped. A

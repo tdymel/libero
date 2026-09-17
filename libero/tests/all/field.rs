@@ -604,6 +604,24 @@ fn a_custom_number_value_formats_itself() {
     assert_eq!(attributes_of(&body, "input")["value"], "12.34");
 }
 
+/// `Formats::GERMAN` writes `1,5`; `aria-valuenow` stays a machine number.
+#[test]
+fn a_number_field_writes_the_formats_decimal_separator() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { formats: &libero::localization::Formats::GERMAN,
+                NumberField { label: "Weight", value: 1.5, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let input = attributes_of(&body, "input");
+
+    assert_eq!(input["value"], "1,5");
+    assert_eq!(input["aria-valuenow"], "1.5");
+}
+
 /// A step at either end of an integer type stays there. Unchecked, `0u32 - 1`
 /// panics in a debug build and wraps to `u32::MAX` in release.
 #[test]

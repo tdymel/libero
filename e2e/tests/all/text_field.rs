@@ -5,7 +5,7 @@ use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::passes::{contrast, focus, keyboard};
-use e2e::{Fixture, Viewport, ax, wait};
+use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 /// The caller's description first, then the captions in order; a rule's
 /// message shows on blur and goes once the text passes it.
@@ -125,6 +125,19 @@ fn a_submit_or_a_reset_hides_the_secret_again() {
             .unwrap();
         fixture.close().await.unwrap();
     });
+}
+
+/// Axe, contrast, focus rings and the reveal button's target, light and dark,
+/// desktop and mobile.
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("text_field", "/text-field")
+        .focusable("[data-case=wired] input")
+        .focusable("[data-case=password] [data-slot=trailing] button")
+        .focusable("[data-case=textarea] textarea")
+        .targets("[data-case=password] [data-slot=trailing] button")
+        .tab_budget(20)
+        .run();
 }
 
 async fn secret_type(page: &Page, input: &str, kind: &str) -> Result<()> {

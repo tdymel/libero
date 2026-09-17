@@ -1938,6 +1938,49 @@ fn a_stepper_steps_from_the_value_after_the_last_press() {
     );
 }
 
+/// A float field reads the formats' separator and `.` alike; under English
+/// `1,5` is not a number.
+#[test]
+fn a_float_field_parses_the_formats_decimal_separator() {
+    use libero::localization::Formats;
+    thread_local! {
+        static FORMATS: std::cell::Cell<&'static Formats> = const { std::cell::Cell::new(&Formats::AMERICAN) };
+    }
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { formats: FORMATS.get(),
+                NumberField {
+                    value: None::<f64>,
+                    onchange: move |next: Option<f64>| heard(next),
+                }
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    for (formats, typed, expected) in [
+        (
+            &Formats::GERMAN,
+            ["1,5", "2.5"],
+            vec!["Some(1.5)", "Some(2.5)"],
+        ),
+        (&Formats::AMERICAN, ["1,5", "2.5"], vec!["Some(2.5)"]),
+    ] {
+        FORMATS.set(formats);
+        HEARD.with_borrow_mut(Vec::clear);
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let field = find.input.expect("registered no input listener");
+        for text in typed {
+            dom.runtime()
+                .handle_event("input", Event::new(input_event(text), true), field);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        assert_eq!(HEARD.with_borrow(Clone::clone), expected);
+    }
+}
+
 fn readonly_color() -> Element {
     rsx! {
         LiberoProvider {
