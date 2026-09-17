@@ -60,6 +60,7 @@ mod form;
 mod grid_zone;
 mod header;
 mod hit_area;
+mod home;
 mod hover_card;
 mod icon;
 mod image;
@@ -155,6 +156,7 @@ const FIXTURES: &[Routes] = &[
     grid_zone::ROUTES,
     header::ROUTES,
     hit_area::ROUTES,
+    home::ROUTES,
     hover_card::ROUTES,
     icon::ROUTES,
     image::ROUTES,

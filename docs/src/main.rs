@@ -6,8 +6,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Box, Burger, Button, ColorSchemeButton, Container, Flex, Header, Image, Kbd,
-        Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_spotlight,
+        ActionIcon, Anchor, Box, Burger, Button, ColorSchemeButton, Container, Flex, Header, Image,
+        Kbd, Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_spotlight,
     },
     hooks::use_element,
     localization::Formats,
@@ -51,8 +51,10 @@ fn main() {
 pub(crate) enum Route {
     #[layout(AppShell)]
     #[route("/")]
-    GettingStarted {},
+    Home {},
 
+    #[route("/guides/getting-started")]
+    GettingStarted {},
     #[route("/guides/philosophy")]
     PhilosophyPage {},
     #[route("/guides/styling")]
@@ -345,6 +347,8 @@ fn AppShell() -> Element {
     let burger = use_element();
     let content = use_element();
     let rtl = use_context::<Rtl>().0;
+    // The home page is full width: the nav is a drawer at every width there.
+    let home = use_route::<Route>() == Route::Home {};
     // The docs search: every page, Ctrl/Cmd+K from anywhere.
     let pages = use_hook(nav::page_actions);
     let search = use_spotlight(SpotlightOptions {
@@ -427,19 +431,24 @@ fn AppShell() -> Element {
                         // is the only thing controlling its look. The bars fall
                         // back to `currentColor`, so inheriting the header's
                         // text colour is one declaration fewer.
-                        sx: sx()
-                            .hover(sx().background("muted.1"))
-                            // Only relevant below `Sm` - the burger is the only
-                            // way to set `open`, so hiding it here means the
-                            // mobile drawer can never actually be open at
-                            // desktop widths.
-                            .breakpoint(Size::Sm, sx().display("none")),
+                        // Only relevant below `Sm` - the burger is the only
+                        // way to set `open`, so hiding it here means the
+                        // mobile drawer can never actually be open at
+                        // desktop widths. The home page has no sidebar, so
+                        // its burger stays.
+                        sx: if home {
+                            sx().hover(sx().background("muted.1"))
+                        } else {
+                            sx().hover(sx().background("muted.1"))
+                                .breakpoint(Size::Sm, sx().display("none"))
+                        },
                     }
                 }
-                Flex {
-                    direction: "row",
-                    align: "center",
-                    sx: sx().gap("md"),
+                // The way home: the nav has no entry for it. Named by the title.
+                Anchor {
+                    to: Route::Home {},
+                    underline: "never",
+                    sx: sx().display("flex").align_items("center").gap("md").color("inherit"),
                     Image { src: LOGO, decorative: true, sx: sx().width("auto").height("28px") }
                     Title { size: "lg", component: "span", "Libero" }
                 }
@@ -549,7 +558,7 @@ fn AppShell() -> Element {
                 // Nav and page side by side at every width.
                 wrap: false,
                 sx: sx().height(format!("calc(100vh - {})", HEADER_HEIGHT_VAR.value())),
-                DocsNav { open, burger }
+                DocsNav { open, burger, drawer: home }
                 ScrollArea {
                     sx: sx()
                         .flex("1")
@@ -570,7 +579,7 @@ fn AppShell() -> Element {
                             id: "docs-main",
                             // Focusable by the skip link only, with no ring round the page.
                             tabindex: "-1",
-                            size: "lg",
+                            size: if home { "xl" } else { "lg" },
                             // Unreachable behind the open mobile drawer
                             // otherwise - still in the DOM, just visually
                             // covered. No-op at desktop widths, since `open`

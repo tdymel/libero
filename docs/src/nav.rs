@@ -22,7 +22,9 @@ use crate::Route;
 // sidebar from before, with `open` irrelevant - the breakpoint override
 // hardcodes `transform`/`visibility` regardless of its value, so nothing
 // odd happens if the viewport crosses `Sm` while it happens to be open.
-fn nav_responsive_sx(open: bool) -> Sx {
+// With `drawer` (the full-width home page) it stays off-canvas at every width,
+// only narrower from `Sm` up.
+fn nav_responsive_sx(open: bool, drawer: bool) -> Sx {
     // The banner's published height, whatever size it renders at.
     let header_height = HEADER_HEIGHT_VAR.value();
     // `visibility` shouldn't flip to hidden until the slide-out finishes,
@@ -34,7 +36,10 @@ fn nav_responsive_sx(open: bool) -> Sx {
         "transform 200ms ease, visibility 0s 200ms"
     };
 
-    sx().position("fixed")
+    // "ColorSchemeButton", the longest label, needs 4px past `Sm` to stay on one row.
+    let width = format!("calc({} + 8px)", SIDEBAR_SIZE.value(Size::Sm));
+    let base = sx()
+        .position("fixed")
         .top(header_height.clone())
         .height(format!("calc(100vh - {header_height})"))
         .width("100%")
@@ -56,17 +61,19 @@ fn nav_responsive_sx(open: bool) -> Sx {
         })
         .visibility(if open { "visible" } else { "hidden" })
         .transition(transition)
-        .media("(prefers-reduced-motion: reduce)", sx().transition("none"))
-        .breakpoint(
-            Size::Sm,
-            sx().position("sticky")
-                .top("0")
-                .height("100%")
-                // "ColorSchemeButton", the longest label, needs 4px past `Sm` to stay on one row.
-                .width(format!("calc({} + 8px)", SIDEBAR_SIZE.value(Size::Sm)))
-                .transform("none")
-                .visibility("visible"),
-        )
+        .media("(prefers-reduced-motion: reduce)", sx().transition("none"));
+    if drawer {
+        return base.breakpoint(Size::Sm, sx().width(width));
+    }
+    base.breakpoint(
+        Size::Sm,
+        sx().position("sticky")
+            .top("0")
+            .height("100%")
+            .width(width)
+            .transform("none")
+            .visibility("visible"),
+    )
 }
 
 #[derive(Clone, PartialEq)]
@@ -120,6 +127,25 @@ pub fn page_actions() -> Vec<SpotlightAction> {
     let mut out = Vec::new();
     walk(nav_tree(), None, &mut out);
     out
+}
+
+/// The nav's component and hook pages, for the home page's counts. A group's
+/// guide ("Getting started") and "Overview" are not counted.
+pub fn page_counts() -> (usize, usize) {
+    let (mut components, mut hooks) = (0, 0);
+    for group in nav_tree() {
+        let pages = group
+            .children
+            .iter()
+            .filter(|page| !page.data.label.contains(' ') && page.data.label != "Overview")
+            .count();
+        match group.id.as_str() {
+            "group:guides" => {}
+            "group:hooks" => hooks += pages,
+            _ => components += pages,
+        }
+    }
+    (components, hooks)
 }
 
 fn nav_tree() -> Vec<TreeNode<NavEntry>> {
@@ -317,7 +343,13 @@ fn ancestor_group(data: &[TreeNode<NavEntry>], target: &str) -> Option<String> {
 }
 
 #[component]
-pub fn DocsNav(open: Signal<bool>, burger: ElementHandle) -> Element {
+pub fn DocsNav(
+    open: Signal<bool>,
+    burger: ElementHandle,
+    /// An off-canvas drawer at every width, not a sidebar from `Sm` up.
+    #[props(default)]
+    drawer: bool,
+) -> Element {
     let data = nav_tree();
     let current_path = use_route::<Route>().to_string();
     let group = ancestor_group(&data, &current_path);
@@ -343,7 +375,7 @@ pub fn DocsNav(open: Signal<bool>, burger: ElementHandle) -> Element {
             id: "docs-nav",
             side: "left",
             component: "nav",
-            sx: nav_responsive_sx(open()),
+            sx: nav_responsive_sx(open(), drawer),
             Flex {
                 direction: "column",
                 gap: "sm",
