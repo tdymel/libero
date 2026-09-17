@@ -192,8 +192,11 @@ fn takes_one_color(property: Property) -> bool {
             | Property::Background
             | Property::BackgroundColor
             | Property::BorderColor
+            | Property::BorderTopColor
             | Property::BorderRightColor
             | Property::BorderBottomColor
+            | Property::BorderLeftColor
+            | Property::TextDecorationColor
     )
 }
 
