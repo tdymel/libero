@@ -1,5 +1,5 @@
 # Android recipes - the docs app in the emulator's WebView. Imported by
-# `justfile`; `root`, `dx`, `fork` and `_dx` come from there.
+# `justfile`; `root`, `dx` and `_dx` come from there.
 #
 # Unlike native/Blitz there is no renderer to choose: `dioxus/mobile` is
 # wry, so the pages are laid out by Android's own WebView and behave like the
@@ -18,7 +18,7 @@ image := "system-images;android-34;google_apis;x86_64"
 # Exported for `dx`, gradle and the emulator alike.
 aenv := "ANDROID_HOME=" + sdk + " ANDROID_SDK_ROOT=" + sdk + " ANDROID_NDK_HOME=" + ndk
 
-mfeat := "--features " + if fork == "1" { "mobile,dioxus-fork" } else { "mobile" }
+mfeat := "--features mobile"
 
 # What's installed, what's missing, and whether an emulator is up.
 android-doctor:

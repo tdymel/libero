@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{borrow::Cow, rc::Rc};
 
 use dioxus::prelude::{Event, FocusData, MountedData, PointerData};
 
@@ -36,6 +36,12 @@ pub(crate) trait SilentFocusSubscription {}
 /// for Tab, Shift+Tab and libero's own `focus()`/`blur()`, and reports those.
 pub(crate) fn silent_focus() -> Option<&'static dyn SilentFocusApi> {
     backend::silent_focus()
+}
+
+/// `css` as the renderer matches it. Blitz's `:focus-visible` and
+/// `:focus-within` never match, so it names attributes libero keeps instead.
+pub(crate) fn focus_selectors(css: &str) -> Cow<'_, str> {
+    backend::focus_selectors(css)
 }
 
 /// Whether `event` is a blur a field closing on blur should act on. Not the one

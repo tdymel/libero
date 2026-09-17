@@ -68,41 +68,6 @@ fn splitter_variables(a: f64, divider_color: Option<&ThemeAwareValue>) -> Variab
         )
 }
 
-/// Fork only: `panel_a`/`panel_b` win, otherwise exactly 2 children fill what
-/// they leave. A missing pane renders empty, extras are dropped; both warn.
-#[cfg(feature = "dioxus-fork")]
-fn resolve_panels(
-    panel_a: Option<Element>,
-    panel_b: Option<Element>,
-    children: Vec<Element>,
-) -> (Element, Element) {
-    use crate::components::Box;
-
-    if let (Some(a), Some(b)) = (panel_a, panel_b) {
-        return (a, b);
-    }
-
-    let count = children.len();
-    let mut children = children.into_iter();
-    let panel_a = children.next();
-    let panel_b = children.next();
-
-    if children.next().is_some() {
-        warn(&format!(
-            "Splitter expects exactly 2 children, got {count} - extra children are ignored"
-        ));
-    } else if panel_a.is_none() || panel_b.is_none() {
-        warn(&format!(
-            "Splitter expects exactly 2 children, got {count} - missing pane(s) render empty"
-        ));
-    }
-
-    (
-        panel_a.unwrap_or_else(|| rsx! { Box {} }),
-        panel_b.unwrap_or_else(|| rsx! { Box {} }),
-    )
-}
-
 base_props! {
     pub struct SplitterProps {
         /// Divider line axis - `"vertical"` (default, side-by-side panes) or
@@ -126,23 +91,10 @@ base_props! {
         /// `attributes` would land on the root instead. Unset is a `warn()`.
         #[props(default, into)]
         aria_label: Option<String>,
-        /// Pane A (start/top: the right under RTL). Required against upstream main, which cannot
-        /// split `children` apart; on the fork it falls back to the first
-        /// child.
-        #[cfg(feature = "dioxus-fork")]
-        #[props(default)]
-        panel_a: Option<Element>,
-        #[cfg(not(feature = "dioxus-fork"))]
+        /// Pane A (start/top: the right under RTL).
         panel_a: Element,
-        /// Pane B (end/bottom). Same rules as `panel_a`, second child.
-        #[cfg(feature = "dioxus-fork")]
-        #[props(default)]
-        panel_b: Option<Element>,
-        #[cfg(not(feature = "dioxus-fork"))]
+        /// Pane B (end/bottom).
         panel_b: Element,
-        /// Fork only: exactly 2, `A` then `B`. `panel_a`/`panel_b` win.
-        #[cfg(feature = "dioxus-fork")]
-        children: Vec<Element>,
     }
 }
 
@@ -160,9 +112,6 @@ pub fn Splitter(props: SplitterProps) -> Element {
         "Splitter: no `aria_label`, so the divider is announced as just \"separator\" \
          and a number.",
     );
-    #[cfg(feature = "dioxus-fork")]
-    let (panel_a, panel_b) = { resolve_panels(props.panel_a, props.panel_b, props.children) };
-    #[cfg(not(feature = "dioxus-fork"))]
     let (panel_a, panel_b) = (props.panel_a, props.panel_b);
 
     let orientation = props.orientation.copied_or(Orientation::Vertical);

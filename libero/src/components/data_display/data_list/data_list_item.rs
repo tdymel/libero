@@ -10,12 +10,8 @@ base_props! {
         /// The term (`<dt>`). `sx`/`class`/`states` decorate this element
         /// only - nothing wraps a term together with its descriptions.
         label: Element,
-        /// Descriptions for `label`. A `<dt>` may have any number of
-        /// `<dd>`s, so each child gets its own - except against upstream main,
-        /// where they all collapse into a single `<dd>`.
-        #[cfg(feature = "dioxus-fork")]
-        children: Vec<Element>,
-        #[cfg(not(feature = "dioxus-fork"))]
+        /// Descriptions for `label`, in a single `<dd>`: dioxus merges the
+        /// children into one node.
         children: Element,
     }
 }
@@ -55,16 +51,7 @@ pub fn DataListItem(props: DataListItemProps) -> Element {
         props.attributes,
     );
 
-    #[cfg(feature = "dioxus-fork")]
-    return rsx! {
-        dt { ..attributes, {props.label} }
-        for value in props.children {
-            dd { {value} }
-        }
-    };
-
     // One `Element` here, so one `<dd>` and no list to diff.
-    #[cfg(not(feature = "dioxus-fork"))]
     rsx! {
         dt { ..attributes, {props.label} }
         dd { {props.children} }

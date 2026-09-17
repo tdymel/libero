@@ -58,3 +58,18 @@ fn the_arrow_turns_when_the_sort_flips() {
     let descending = page.computed(ARROW, "transform");
     assert_ne!(ascending, descending, "the arrow stayed at {ascending}");
 }
+
+#[test]
+fn the_painted_arrow_turns_too() {
+    let mut page = mount(app);
+    page.click(BUTTON);
+    page.advance(1.0);
+    let ascending = page.painted_transform(ARROW);
+    page.click(BUTTON);
+    page.advance(1.0);
+    let descending = page.painted_transform(ARROW);
+    assert_ne!(
+        ascending, descending,
+        "the painted arrow stayed at {ascending:?}"
+    );
+}

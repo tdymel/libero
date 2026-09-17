@@ -1,11 +1,6 @@
 // Matches libero: a `demo/demo.rs` beside its siblings reads better than a
 // flattened `mod.rs`.
 #![allow(clippy::module_inception)]
-// `--wasm-split` makes the router derive one lazy loader fn per route, named
-// after the variant (`routeTreePage<hash>`) - 96 `non_snake_case` warnings in
-// the release build, on names we never write. An `allow` on the enum does not
-// reach them (tried), so it goes here, and only in the split build.
-#![cfg_attr(feature = "wasm-split", allow(non_snake_case))]
 
 use dioxus::prelude::*;
 use libero::{

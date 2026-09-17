@@ -5,11 +5,7 @@ edition = "2024"
 publish = false
 
 [dependencies]
-# Same `.dioxus-active` path dep as `libero` and `docs`, so the fixture app is
-# built from the identical dioxus the library is.
-dioxus = { path = "../../.dioxus-active/packages/dioxus", default-features = true, features = ["router"] }
+# Same git dioxus as `libero` and `docs`, so the fixture app is built from the
+# identical dioxus the library is.
+dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = true, features = ["router"] }
 libero = { path = "../../libero" }
-
-[features]
-# Must match whichever tree `.dioxus-active` points at, same as `docs`.
-dioxus-fork = ["libero/dioxus-fork"]

@@ -4,16 +4,10 @@ Crate: `libero`
 Import: `use libero::components::{DataList, DataListItem};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/data_list>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A `<dl>` of term/description pairs, where one term can carry several descriptions.
+Description: A `<dl>` of term/description pairs.
 
-Renders a `<dl>` of term/description pairs. Unlike [list.md](list.md), a term
-can have more than one description - `DataListItem`'s `children` is a
-`Vec<Element>`, not a single `Element`, so writing more than one child gives
-each one its own `<dd>` with no extra ceremony over a single description -
-including from a `for` loop, which flattens the same way.
-
-The split needs the `dioxus-fork` build: against upstream dioxus main,
-`children` is a single `Element` and the descriptions collapse into one `<dd>`.
+Renders a `<dl>` of term/description pairs. A term's descriptions share one
+`<dd>`: dioxus merges `DataListItem`'s children into one node.
 
 ## Usage
 
@@ -67,7 +61,7 @@ element breaks the term/description pairing.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `label` | `Element` | required | The term (`<dt>`). `sx`/`class`/`states` decorate this element only - nothing wraps a term together with its descriptions. |
-| `children` | `Vec<Element>` | required | Descriptions for `label`. Under the `dioxus-fork` build this is `Vec<Element>`, so each child gets its own `<dd>`; against upstream main they collapse into one. |
+| `children` | `Element` | required | Descriptions for `label`, in a single `<dd>`: dioxus merges the children into one node. |
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.

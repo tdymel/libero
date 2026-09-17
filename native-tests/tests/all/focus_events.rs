@@ -331,12 +331,13 @@ fn windows_app() -> Element {
 fn stacking(page: &Page, label: &str) -> i64 {
     let mut id = page.node(&format!("[aria-label={label}]"));
     loop {
-        let doc = page.doc.inner.borrow();
-        let value = doc.resolved_style_value(id, "z-index");
-        if let Ok(z) = value.parse() {
+        if let Ok(z) = page.computed_of(id, "z-index").parse() {
             return z;
         }
-        id = doc
+        id = page
+            .doc
+            .inner
+            .borrow()
             .get_node(id)
             .and_then(|node| node.parent)
             .expect("no z-index above");

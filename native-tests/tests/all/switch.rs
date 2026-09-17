@@ -47,6 +47,19 @@ fn the_thumb_moves_once_its_transition_ends() {
     assert_ne!(off, on, "the thumb stayed at {off}");
 }
 
+/// What Blitz paints, not only what stylo computed: the thumb's transform
+/// comes from a custom property its track declares.
+#[test]
+fn the_painted_thumb_moves_too() {
+    const THUMB: &str = "[role=switch] + [aria-hidden=true] > span";
+    let mut page = mount(app);
+    let off = page.painted_transform(THUMB);
+    page.click(TRACK);
+    page.advance(1.0);
+    let on = page.painted_transform(THUMB);
+    assert_ne!(off, on, "the painted thumb stayed at {off:?}");
+}
+
 /// Outside a `Form`, Enter toggles as Space does (todo 648).
 #[test]
 fn space_and_enter_toggle_the_focused_switch() {

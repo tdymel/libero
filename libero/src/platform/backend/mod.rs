@@ -234,6 +234,14 @@ pub(crate) fn press_kept_focus() -> bool {
     return false;
 }
 
+/// Only Blitz rewrites them - see [`focus_selectors`](crate::platform::focus_selectors).
+pub(crate) fn focus_selectors(css: &str) -> std::borrow::Cow<'_, str> {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::focus_selectors(css);
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return std::borrow::Cow::Borrowed(css);
+}
+
 /// The web reads the `web_sys` event; every other renderer is asked for the
 /// payload the desktop and Android WebView deliver, which carries the property
 /// across the IPC. Blitz and a server hand over something else and answer

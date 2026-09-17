@@ -59,13 +59,7 @@ fn main() -> Result<()> {
     let port = free_port()?;
     let base_url = format!("http://127.0.0.1:{port}");
 
-    let dx = root.join(".dioxus-active/target/release/dx");
-    if !dx.exists() {
-        bail!(
-            "no dx at {}. Build it, or point `.dioxus-active` at a tree that has one.",
-            dx.display()
-        );
-    }
+    let dx = dx(&root)?;
 
     // Every build the runner starts goes where the runner itself was built.
     // Neither `dx run` nor the nested `cargo test` sees `--target-dir` on the
@@ -849,6 +843,41 @@ fn prune_old_runs(parent: &Path) {
             let _ = std::fs::remove_dir_all(path);
         }
     }
+}
+
+/// `$DX`, else `dx` on `PATH`, when it is the lockfile's dioxus version: an
+/// older CLI speaks another protocol to the app it builds.
+fn dx(root: &Path) -> Result<std::ffi::OsString> {
+    let dx = std::env::var_os("DX").unwrap_or_else(|| "dx".into());
+    let lock = std::fs::read_to_string(root.join("Cargo.lock")).context("read Cargo.lock")?;
+    let wanted = lock
+        .split("\n\n")
+        .find(|entry| entry.contains("\nname = \"dioxus\"\n"))
+        .and_then(|entry| {
+            entry
+                .lines()
+                .find_map(|line| line.strip_prefix("version = "))
+        })
+        .map(|version| version.trim_matches('"').to_string())
+        .context("no dioxus in Cargo.lock")?;
+    let output = Command::new(&dx)
+        .arg("--version")
+        .output()
+        .with_context(|| {
+            format!(
+                "no {} on PATH: install dx {wanted} (see ci.yml's e2e job)",
+                dx.display()
+            )
+        })?;
+    let version = String::from_utf8_lossy(&output.stdout);
+    if !version.contains(&wanted) {
+        bail!(
+            "{} is `{}`, not dioxus {wanted}: set DX or reinstall it",
+            dx.display(),
+            version.trim()
+        );
+    }
+    Ok(dx)
 }
 
 fn workspace_root() -> Result<std::path::PathBuf> {

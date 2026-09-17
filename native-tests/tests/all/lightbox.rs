@@ -33,9 +33,10 @@ fn zoomed(page: &mut Page) -> String {
     page.press(Key::Character("z".into()));
     page.advance(1.0);
     let zoomed = page.computed(PICTURE, "transform");
+    // Stylo's computed value: the web's `getComputedStyle` would say `matrix(...)`.
     assert_eq!(
         zoomed,
-        "matrix(2, 0, 0, 2, 0, 0)",
+        "scale(2) translate(0px)",
         "z did not zoom:\n{}",
         page.tree()
     );

@@ -5,11 +5,6 @@ use libero::{
     sx::sx,
 };
 
-// `divider` splits children apart, which only the fork can do - so on main the
-// control, the prop and the section it documents are all absent.
-#[cfg(feature = "dioxus-fork")]
-use libero::components::Divider;
-
 /// The three children the demo lays out - a subtree, so the code block prints
 /// them verbatim rather than as a quoted child.
 const CHILDREN: &str = r#"Box { sx: sx().padding("8px 16px").background("primary.1"), "One" }
@@ -23,32 +18,8 @@ Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }"#;
 const BOX_SX: &str =
     r#"sx: sx().width("400px").height("200px").padding("8px").background("muted.1")"#;
 
-/// The divider a row needs is vertical; a column's is the default rule.
-#[cfg(feature = "dioxus-fork")]
-fn divider_rsx(values: &DemoValues) -> &'static str {
-    match values.str("direction").as_str() {
-        "row" => "Divider { orientation: \"vertical\" }",
-        _ => "Divider {}",
-    }
-}
-
-#[cfg(feature = "dioxus-fork")]
-fn divider_element(values: &DemoValues) -> Option<Element> {
-    (values.str("divider") == "true").then(|| match values.str("direction").as_str() {
-        "row" => rsx! { Divider { orientation: "vertical" } },
-        _ => rsx! { Divider {} },
-    })
-}
-
-#[cfg(not(feature = "dioxus-fork"))]
-fn divider_element(_values: &DemoValues) -> Option<Element> {
-    None
-}
-
 fn controls() -> Vec<Control> {
-    // Only the `dioxus-fork` build pushes the divider control below.
-    #[allow(unused_mut)]
-    let mut controls = vec![
+    vec![
         Control::toggle("direction", ["column", "row"]),
         Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
         Control::select(
@@ -67,19 +38,7 @@ fn controls() -> Vec<Control> {
             ],
         ),
         Control::select("wrap", ["auto", "wrap", "nowrap"]),
-    ];
-
-    // A rule between row children has to be the other way round, so the
-    // divider follows `direction`.
-    #[cfg(feature = "dioxus-fork")]
-    controls.push(Control::switch("divider").code(
-        |_, values| match values.str("divider").as_str() {
-            "true" => vec![format!("divider: rsx! {{ {} }}", divider_rsx(values))],
-            _ => vec![],
-        },
-    ));
-
-    controls
+    ]
 }
 
 #[component]
@@ -106,7 +65,7 @@ pub fn FlexPage() -> Element {
                     .default("follows direction - nowrap for column, wrap for row")
                     .doc("Whether children wrap onto new lines. Also accepts a `bool`."),
                 prop("divider", "Element")
-                    .doc("Rendered between each child, not before the first or after the last. Needs the dioxus-fork feature - upstream main cannot split children apart."),
+                    .doc("Rendered between each child, not before the first or after the last. Not rendered: dioxus merges the children into one node."),
                 prop("children", "Element").doc("The flex's children."),
             ])],
             lead: rsx! {
@@ -130,7 +89,6 @@ pub fn FlexPage() -> Element {
                         align: or_unset(values.str("align")),
                         justify: or_unset(values.str("justify")),
                         wrap: or_unset(values.str("wrap")),
-                        divider: divider_element(&values),
                         Box {
                             sx: sx().padding("8px 16px").background("primary.1"),
                             "One"

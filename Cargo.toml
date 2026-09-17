@@ -3,20 +3,6 @@ members = ["libero", "libero-macros", "docs", "e2e", "e2e/fixtures", "native-tes
 exclude = [".dioxus-fork", ".dioxus-main", ".dioxus-active", ".blitz-fork"]
 resolver = "3"
 
-# Blitz's `resolve_transforms` never refreshes the cached transform a node is
-# painted with unless that node also has RECALCULATE_OVERFLOW damage, so a
-# transform that changes without moving anything (Switch's thumb, Slider's
-# thumb, Tree's chevron, Table's sort arrow) keeps painting its old value. Not
-# yet fixed upstream - see writeups/blitz-stale-painted-transform.md.
-[patch.crates-io]
-blitz-dom = { path = ".blitz-fork/packages/blitz-dom" }
-blitz-html = { path = ".blitz-fork/packages/blitz-html" }
-blitz-net = { path = ".blitz-fork/packages/blitz-net" }
-blitz-paint = { path = ".blitz-fork/packages/blitz-paint" }
-blitz-shell = { path = ".blitz-fork/packages/blitz-shell" }
-blitz-traits = { path = ".blitz-fork/packages/blitz-traits" }
-stylo_taffy = { path = ".blitz-fork/packages/stylo_taffy" }
-
 # Full debug info is most of what a dev build writes, and on this encrypted
 # disk that write load is what stalls parallel builds. Line tables keep
 # backtraces readable. Set here, not per command, so the editor, `dx serve`

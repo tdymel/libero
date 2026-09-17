@@ -1,10 +1,5 @@
 # Blitz (dioxus-native) recipes - the docs app in a winit window instead of a
-# browser tab. Imported by `justfile`; `root`, `dx`, `fork` and `_dx` come
-# from there.
-#
-# The renderer picks the `native` feature (which turns on `dioxus/native`);
-# fork mode still needs its own flag, so the two are concatenated rather than
-# either replacing the other - unlike `split`, which is web-only.
+# browser tab. Imported by `justfile`; `root`, `dx` and `_dx` come from there.
 #
 # Default is `native-vello`, not bare `native`: dioxus-native's own default
 # renderer panics with `AtlasLimitReached` after enough pages - see
@@ -21,8 +16,8 @@ x11 := "WINIT_X11_SCALE_FACTOR=1"
 # platform has to be named. `--platform linux` keeps `--renderer native`;
 # it only supplies the host triple and the bundle format.
 
-nfeat := "--features " + if fork == "1" { "native-vello,dioxus-fork" } else { "native-vello" }
-nhybrid := "--features " + if fork == "1" { "native,dioxus-fork" } else { "native" }
+nfeat := "--features native-vello"
+nhybrid := "--features native"
 
 # Compile-only check of the native build - faster than a full serve.
 check-native:
@@ -57,7 +52,7 @@ build_release-native: _dx
 # `native-cpu` replaces `native` rather than adding to it (see docs/Cargo.toml),
 # so these pass their own feature set.
 
-ncpu := "--features " + if fork == "1" { "native-cpu,dioxus-fork" } else { "native-cpu" }
+ncpu := "--features native-cpu"
 
 check-native-cpu:
     cd {{root}} && cargo check -p docs {{ncpu}}

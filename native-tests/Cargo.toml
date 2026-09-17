@@ -11,17 +11,18 @@ edition = "2024"
 publish = false
 
 [dependencies]
-dioxus = { path = "../.dioxus-active/packages/dioxus", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "mounted", "router", "logger"] }
+dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "mounted", "router", "logger"] }
 libero = { path = "../libero", default-features = false, features = ["native"] }
-# The windowless half of dioxus-native: no winit, no renderer. The workspace
-# `[patch.crates-io]` points the `blitz-*` crates at `.blitz-fork`, so this is
-# the same Blitz the native docs run.
-dioxus-native-dom = { path = "../.dioxus-active/packages/native-dom" }
+# The windowless half of dioxus-native: no winit, no renderer. The `blitz-*`
+# versions match dioxus-native's, so this is the same Blitz the native docs run.
+dioxus-native-dom = { git = "https://github.com/DioxusLabs/dioxus" }
 blitz-dom = { version = "0.3.0-beta.2", default-features = false }
 # Only for `HtmlProvider`: without it every `<style dangerous_inner_html>`
 # arrives empty and libero renders unstyled.
 blitz-html = { version = "0.3.0-beta.2", default-features = false }
 blitz-traits = "0.3.0-beta.2"
+# `Page::computed`: stylo's resolved values. The version blitz-dom uses.
+style = { package = "stylo", version = "0.20" }
 # What Blitz paints, not what stylo computed: `Page::painted_*` records the
 # scene the shell would draw.
 blitz-paint = { version = "0.3.0-beta.2", default-features = false }

@@ -111,12 +111,9 @@ base_props! {
         #[props(default, into)]
         wrap: Input<FlexWrap>,
         /// Between each child, not before the first or after the last.
-        /// Ignored against upstream main, which cannot split children apart.
+        /// Ignored: dioxus merges the children into one node.
         #[props(default)]
         divider: Option<Element>,
-        #[cfg(feature = "dioxus-fork")]
-        children: Vec<Element>,
-        #[cfg(not(feature = "dioxus-fork"))]
         children: Element,
     }
 }
@@ -140,10 +137,8 @@ pub fn Flex(props: FlexProps) -> Element {
     let children = match props.divider {
         None => rsx! { {own_children.into_iter()} },
         Some(divider) => {
-            #[cfg(not(feature = "dioxus-fork"))]
             crate::utils::warn(
-                "Flex `divider` needs the \"dioxus-fork\" feature - upstream main merges \
-                 children into one node, so no divider is rendered.",
+                "Flex `divider` is not rendered: dioxus merges the children into one node.",
             );
             rsx! {
                 for (index, child) in own_children.into_iter().enumerate() {
@@ -182,9 +177,6 @@ mod variables_tests {
             direction: Input::None,
             wrap,
             divider: None,
-            #[cfg(feature = "dioxus-fork")]
-            children: Vec::new(),
-            #[cfg(not(feature = "dioxus-fork"))]
             children: rsx! {},
         }
     }

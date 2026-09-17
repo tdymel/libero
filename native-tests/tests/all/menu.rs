@@ -35,6 +35,8 @@ fn enter_opens_it_and_escape_closes_it_with_focus_back_on_the_trigger() {
     assert!(!expanded(&page));
 
     page.press(Key::Enter);
+    // The item takes focus once the box is placed, a timer later.
+    page.wait(std::time::Duration::from_millis(50));
     assert!(expanded(&page), "Enter did not open it:\n{}", page.tree());
     assert!(page.exists(MENU));
     assert!(

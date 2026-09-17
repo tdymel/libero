@@ -1,0 +1,151 @@
+# The `ted_gate.py` tiers as parallel jobs. Zero warnings via clippy `-D warnings` per
+# configuration, not `RUSTFLAGS`, which also fails on warnings in the git-pinned dioxus and Blitz.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  # All 30 grammars.
+  CODE_LANGS: code-lang-bash,code-lang-c,code-lang-cpp,code-lang-csharp,code-lang-css,code-lang-dart,code-lang-go,code-lang-graphql,code-lang-haskell,code-lang-html,code-lang-java,code-lang-javascript,code-lang-json,code-lang-kotlin,code-lang-lua,code-lang-markdown,code-lang-objective-c,code-lang-perl,code-lang-php,code-lang-powershell,code-lang-python,code-lang-r,code-lang-ruby,code-lang-rust,code-lang-scala,code-lang-sql,code-lang-swift,code-lang-toml,code-lang-typescript,code-lang-yaml
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all --check
+
+  clippy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          components: clippy
+          cache-key: clippy
+      - run: cargo clippy --workspace --all-targets --exclude e2e --exclude native-tests -- -D warnings
+      - run: cargo clippy -p e2e --all-targets -- -D warnings
+
+  # The libero configurations the gate does not build.
+  features:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          components: clippy
+          cache-key: features
+      - run: cargo clippy -p libero --all-targets --no-default-features -- -D warnings
+      - run: cargo clippy -p libero --all-targets --features full-polymorphism -- -D warnings
+      - run: cargo clippy -p libero --all-targets --features native -- -D warnings
+      - run: cargo clippy -p libero --all-targets --features "$CODE_LANGS" -- -D warnings
+
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          targets: wasm32-unknown-unknown
+          components: clippy
+          cache-key: wasm
+      - run: cargo clippy -p libero --target wasm32-unknown-unknown -- -D warnings
+      - run: cargo clippy -p docs --target wasm32-unknown-unknown -- -D warnings
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: test
+      - run: cargo test -p libero --lib --tests
+      - run: cargo test -p libero --lib --features "$CODE_LANGS" highlight
+
+  doc-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          cache-key: doc-tests
+      # Writes the gitignored `libero/tests/page_snippets.md` the doc-tests compile.
+      - run: cargo test -p docs
+      - run: cargo test -p libero --doc
+      - run: cargo test -p libero --no-default-features
+
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Blitz's font stack links fontconfig.
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev fonts-dejavu-core
+      - uses: ./.github/actions/setup
+        with:
+          components: clippy
+          cache-key: native
+      - run: cargo clippy -p native-tests --all-targets -- -D warnings
+      - run: cargo test -p native-tests
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          targets: wasm32-unknown-unknown
+          cache-key: e2e
+      # `dx` from the same dioxus source as the lockfile's, so CLI and app speak one protocol.
+      - id: dx
+        run: |
+          src=$(awk '/^name = "dioxus"$/ { f = 1 } f && /^$/ { exit } f && /^source = / { gsub(/"/, "", $3); print $3; exit }' Cargo.lock)
+          case "$src" in
+            git+*)
+              url=${src#git+}
+              echo "args=--git ${url%%[?#]*} --rev ${src##*#}" >> "$GITHUB_OUTPUT"
+              echo "key=${src##*#}" >> "$GITHUB_OUTPUT" ;;
+            registry+*)
+              ver=$(awk '/^name = "dioxus"$/ { getline; gsub(/"/, "", $3); print $3; exit }' Cargo.lock)
+              echo "args=--version $ver" >> "$GITHUB_OUTPUT"
+              echo "key=$ver" >> "$GITHUB_OUTPUT" ;;
+            *) echo "no dioxus source in Cargo.lock: '$src'" >&2; exit 1 ;;
+          esac
+      - id: dx-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/dx
+          key: dx-${{ runner.os }}-${{ steps.dx.outputs.key }}
+      - if: steps.dx-cache.outputs.cache-hit != 'true'
+        run: cargo install dioxus-cli ${{ steps.dx.outputs.args }} --locked --bin dx
+      - id: chrome
+        uses: browser-actions/setup-chrome@v1
+        with:
+          chrome-version: stable
+      # Ubuntu 24.04 blocks the unprivileged user namespaces Chrome's sandbox needs.
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - run: cargo run -p e2e
+        env:
+          CHROME: ${{ steps.chrome.outputs.chrome-path }}
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-artifacts
+          path: /tmp/e2e-artifacts
+          if-no-files-found: ignore

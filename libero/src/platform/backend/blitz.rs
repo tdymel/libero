@@ -5,13 +5,16 @@ use std::{
 };
 
 use blitz_dom::{BaseDocument, QualName, local_name, ns};
-use blitz_traits::{events::UiEvent, shell};
+use blitz_traits::shell;
 use dioxus::core::Runtime;
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
+use style::properties::PropertyId;
 
+mod activate;
 mod focus;
 
+pub(super) use activate::focus_selectors;
 pub(super) use focus::{press_kept_focus, silent_focus};
 
 use super::INTERACTIVE;
@@ -25,6 +28,21 @@ use crate::{
     },
     tokens::{ColorScheme, ColorSchemeSetting},
 };
+
+/// Stylo's resolved value of a longhand, `""` for an unknown property or an
+/// unstyled node.
+fn resolved_style_value(doc: &BaseDocument, node_id: NodeId, property: &str) -> String {
+    let Ok(property) = PropertyId::parse_enabled_for_all_content(property) else {
+        return String::new();
+    };
+    let (Err(id), Some(style)) = (
+        property.as_shorthand(),
+        doc.get_node(node_id).and_then(|node| node.primary_styles()),
+    ) else {
+        return String::new();
+    };
+    style.computed_value_to_string(id)
+}
 
 /// Blitz backs a mounted element with a `NodeHandle`, which carries the whole
 /// document - so an element can answer for its subtree, and (via [`document`])
@@ -262,9 +280,22 @@ pub(super) fn Listener(children: Element) -> Element {
                 }
             },
             // Bubble phase: this dioxus has no capture listeners.
-            onpointerdown: move |event| pressed(&event),
+            onpointerdown: move |event| {
+                activate::pointer_down(&event);
+                pressed(&event);
+            },
             onmousedown: |event| focus::mouse_pressed(&event),
-            onclick: |_| {
+            onclick: |event| {
+                // A kept press on nothing focusable keeps focus too, as on the web.
+                let (kept, press) = (focus::press_kept_focus(), PRESS.get());
+                let moving = press.filter(|_| !kept);
+                if (press.is_some() || kept) && activate::takes_over(&event, HIT.get()) {
+                    if let Some((before, target)) = moving {
+                        activate::focus_pressed(before, target);
+                    }
+                } else if let Some((_, target)) = moving {
+                    activate::clicked(target);
+                }
                 forget_press();
                 focus::clicked();
                 if BLANK_PRESS.take() {
@@ -278,8 +309,14 @@ pub(super) fn Listener(children: Element) -> Element {
                 focus::keyed(&event);
                 keyed(&event);
                 tab_from_start(&event);
+                activate::key_down(&event);
             },
-            onpointermove: move |event| followed(&event, false),
+            onkeyup: |event| activate::key_up(&event),
+            onpointermove: move |event| {
+                // Before the hover restyle this move asked for: see `heal_dirty_bits`.
+                heal_now();
+                followed(&event, false);
+            },
             onpointerup: move |event| {
                 followed(&event, true);
                 focus::released();
@@ -840,7 +877,7 @@ fn realign_portals() {
 
 fn pressed(event: &Event<PointerData>) {
     let point = event.client_coordinates();
-    let wrapper = doc().and_then(|doc| doc.wrapper_id());
+    let wrapper = self::doc().and_then(|doc| doc.wrapper_id());
     HIT.set(None);
     let press = anchor().and_then(|anchor| {
         let doc = anchor.try_doc()?;
@@ -1054,9 +1091,15 @@ pub(super) fn Outlet() -> Element {
                     }
                     run_deferred(doc);
                     focus::check(doc);
-                    // Once, at the provider's mount: see `BlitzColorScheme`.
+                    if let Some(anchor) = doc.anchor() {
+                        activate::sync_marks(&mut anchor.doc_mut());
+                        heal_dirty_bits(&anchor.doc_mut());
+                    }
+                    // Once, at the provider's mount: see `BlitzColorScheme`. A
+                    // first key then reaches the wrapper, as it does after a click.
                     if flush == 0 {
                         check_scheme(doc);
+                        refocus_wrapper();
                     }
                 }},
             }
@@ -1116,6 +1159,32 @@ pub(super) fn when_laid_out(run: Box<dyn FnOnce()>) {
         )
     });
     drop(doc.laid_out_wait.replace(wait));
+}
+
+fn heal_now() {
+    if let Some(anchor) = anchor()
+        && let Some(doc) = anchor.try_doc()
+    {
+        heal_dirty_bits(&doc);
+    }
+}
+
+/// crates.io Blitz leaves stale dirty bits under a clean ancestor, where a
+/// later change stops marking: its restyle is skipped (upstream #789).
+fn heal_dirty_bits(doc: &BaseDocument) {
+    let mut dirty = Vec::new();
+    doc.visit(|id, node| {
+        if node.has_dirty_descendants() {
+            dirty.push(id);
+        }
+    });
+    for id in dirty {
+        for id in ancestors(doc, id).skip(1) {
+            if let Some(node) = doc.get_node(id) {
+                node.set_dirty_descendants();
+            }
+        }
+    }
 }
 
 fn later(run: impl FnOnce() + 'static) {
@@ -1337,8 +1406,11 @@ impl DocumentApi for BlitzDocument {
                     .get_node(target)
                     .is_some_and(|node| node.flags.is_in_document())
         });
+        // The wrapper holds focus for nothing: `<html>`, as Blitz answers then.
+        let wrapper = self::doc().and_then(|doc| doc.wrapper_id());
         let node_id = match pressed {
             Some((_, target)) => target,
+            None if focused == wrapper => doc.root_element().id,
             None => focused?,
         };
         drop(doc);
@@ -1434,6 +1506,8 @@ impl BlitzElement {
         let Some(doc) = self.anchor.try_doc() else {
             return Box::pin(std::future::ready(Err(PlatformError::Unsupported)));
         };
+        // A read is often followed by a write that has to restyle.
+        heal_dirty_bits(&doc);
         let answer = from(&doc, self.node_id).ok_or(PlatformError::NotFound);
         Box::pin(std::future::ready(answer))
     }
@@ -1484,14 +1558,9 @@ impl ElementApi for BlitzElement {
         Ok(())
     }
 
-    /// Queued rather than dispatched: everything that reaches a dioxus
-    /// `onclick` belongs to the `Document` wrapping this one, which only the
-    /// shell holds - and we are usually inside a handler with the document
-    /// mid-dispatch anyway. The shell runs it on its next turn, through the
-    /// whole pipeline. Like every command here, "queued" is the answer.
+    /// At the end of this poll, like every command here.
     fn click(&self) -> Result<(), PlatformError> {
-        let node_id = self.node_id;
-        self.command(move |doc| doc.queue_ui_event(UiEvent::Activate(node_id)));
+        activate::click(&self.anchor, self.node_id);
         Ok(())
     }
 
@@ -1574,7 +1643,7 @@ impl ElementApi for BlitzElement {
     fn computed_px(&self, property: &str) -> Read<Option<f64>> {
         self.read(|doc, node_id| {
             doc.get_node(node_id)?;
-            let value = doc.resolved_style_value(node_id, property);
+            let value = resolved_style_value(doc, node_id, property);
             Some(
                 value
                     .strip_suffix("px")
@@ -1806,7 +1875,7 @@ fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(NodeId, f64)> {
         if node.is_element()
             && node.final_layout().scroll_height() > 0.0
             && matches!(
-                doc.resolved_style_value(node.id, "overflow-y").as_str(),
+                resolved_style_value(doc, node.id, "overflow-y").as_str(),
                 "auto" | "scroll"
             )
         {

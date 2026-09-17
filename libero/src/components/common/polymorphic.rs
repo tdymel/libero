@@ -119,11 +119,6 @@ macro_rules! html_tags {
 
 /// What a component hands to `render` as its children.
 ///
-/// Also normalizes a `children` prop: only the fork's `rsx!` can split a
-/// caller's children into a `Vec<Element>`, so a component that wants one
-/// entry per child declares the field twice under `cfg` and reads it through
-/// here. Against upstream main it sees a single merged node.
-///
 /// Anything but a single `Element` splices its nodes straight into the
 /// element's template. Wrapping them in one more `Element` - which is what an
 /// `rsx! {}` block at the call site does - costs a dynamic node every render,

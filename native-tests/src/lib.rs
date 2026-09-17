@@ -1,9 +1,6 @@
 //! A headless Blitz harness: one libero component in a windowless
 //! `DioxusDocument`, driven through Blitz's own event pipeline.
 //!
-//! Shaped after `.blitz-fork`'s `blitz-test-harness`, which cannot be a
-//! dependency: it builds against its own dioxus, not `.dioxus-active`.
-//!
 //! ```no_run
 //! use dioxus::prelude::*;
 //! use native_tests::mount;
@@ -40,6 +37,7 @@ use blitz_traits::{
 use dioxus::prelude::*;
 use dioxus_native_dom::DioxusDocument;
 use libero::LiberoProvider;
+use style::properties::PropertyId;
 
 pub use blitz_traits::shell::ColorScheme;
 pub use dioxus::prelude::{Code, Key, Location, Modifiers};
@@ -123,18 +121,11 @@ pub struct Page {
 
 impl Page {
     /// Polls the vdom until it has no work left, then restyles and lays out.
-    /// Dispatches what the document queued for its shell (`UiEvent::Activate`
-    /// from `ElementApi::click`), as the shell's next turn would.
     pub fn settle(&mut self) {
         for _ in 0..MAX_POLLS {
             let busy = self.doc.poll(None);
             self.doc.inner.borrow_mut().resolve(self.time);
-            let queued = self.doc.inner.borrow_mut().take_queued_ui_events();
-            let dispatched = !queued.is_empty();
-            for event in queued {
-                self.doc.handle_ui_event(event);
-            }
-            if !busy && !dispatched {
+            if !busy {
                 self.assert_no_false_flags();
                 return;
             }
@@ -428,7 +419,17 @@ impl Page {
     }
 
     pub fn computed_of(&self, id: NodeId, property: &str) -> String {
-        self.doc.inner.borrow().resolved_style_value(id, property)
+        let doc = self.doc.inner.borrow();
+        let Ok(property) = PropertyId::parse_enabled_for_all_content(property) else {
+            return String::new();
+        };
+        let (Err(id), Some(style)) = (
+            property.as_shorthand(),
+            doc.get_node(id).and_then(|node| node.primary_styles()),
+        ) else {
+            return String::new();
+        };
+        style.computed_value_to_string(id)
     }
 
     /// The stroke Blitz will paint the first match's (an `svg`) first stroked
@@ -459,6 +460,16 @@ impl Page {
             .map(|channel| channel.rsplit(": ").next().unwrap())
             .collect();
         format!("rgb({})", channels.join(", "))
+    }
+
+    /// The transform Blitz paints the first match with, as affine coefficients.
+    /// Not `computed`: Blitz caches it at layout.
+    pub fn painted_transform(&self, selector: &str) -> Option<[f64; 6]> {
+        let id = self.node(selector);
+        let doc = self.doc.inner.borrow();
+        doc.get_node(id)?
+            .transform()
+            .map(|affine| affine.as_coeffs())
     }
 
     /// The scene Blitz would draw now, recorded rather than rasterised.

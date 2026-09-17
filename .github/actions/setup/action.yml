@@ -1,0 +1,27 @@
+name: Setup
+description: The Rust toolchain and the cargo cache.
+
+inputs:
+  targets:
+    description: Extra rustup targets.
+    default: ""
+  components:
+    description: Extra rustup components.
+    default: ""
+  cache-key:
+    description: One cargo cache per job, so jobs building different configurations do not evict each other.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ inputs.targets }}
+        components: ${{ inputs.components }}
+
+    # Also caches `~/.cargo/git`, where the git-pinned dioxus and Blitz land.
+    - uses: Swatinem/rust-cache@v2
+      with:
+        shared-key: ${{ inputs.cache-key }}
+        save-if: ${{ github.ref == 'refs/heads/main' }}

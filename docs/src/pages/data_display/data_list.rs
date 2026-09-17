@@ -40,37 +40,18 @@ pub fn DataListPage() -> Element {
                 ]),
                 props("DataListItem", vec![
                     prop("label", "Element").doc("The term (`<dt>`). `sx`/`class`/`states` decorate this element only - nothing wraps a term together with its descriptions."),
-                    prop("children", "Element").doc("Descriptions for `label`. Under the dioxus-fork build this is `Vec<Element>`, so each child gets its own `<dd>`; against upstream main they collapse into one."),
+                    prop("children", "Element").doc("Descriptions for `label`, in a single `<dd>`: dioxus merges the children into one node."),
                 ]),
             ],
             lead: rsx! {
                 Text {
                     "Renders a "
                     Code { source: "dl" }
-                    " of term/description pairs. Unlike "
-                    Code { source: "List" }
-                    ", a term can have more than one description - "
-                    Code { source: "DataListItem" }
-                    "'s "
-                    Code { source: "children" }
-                    " is a "
-                    Code { source: "Vec<Element>" }
-                    ", not a single "
-                    Code { source: "Element" }
-                    ", so writing more than one child gives each one its own "
+                    " of term/description pairs. A term's descriptions share one "
                     Code { source: "dd" }
-                    " with no extra ceremony over a single description - including from a "
-                    Code { source: "for" }
-                    " loop, which flattens the same way."
-                    // The split is a fork-only capability, so on main the page
-                    // says what this build actually does instead.
-                    if !cfg!(feature = "dioxus-fork") {
-                        " Needs the "
-                        Code { source: "dioxus-fork" }
-                        " build - against upstream dioxus main the descriptions collapse into a single "
-                        Code { source: "dd" }
-                        "."
-                    }
+                    ": dioxus merges "
+                    Code { source: "DataListItem" }
+                    "'s children into one node."
                 }
             },
             // snippet: let phones = ["+49 30 1234567"];

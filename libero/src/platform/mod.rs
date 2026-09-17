@@ -43,7 +43,7 @@ pub(crate) use eye_dropper::eye_dropper;
 pub(crate) use file_dialog::pick_files;
 pub(crate) use focus::{
     FocusMove, SilentFocusApi, SilentFocusSubscription, blur_counts, focus_entered_from,
-    focus_pressed, focus_visible, silent_focus,
+    focus_pressed, focus_selectors, focus_visible, silent_focus,
 };
 pub(crate) use form::{submit_event, submit_listeners};
 pub(crate) use keyboard::arrow_target;

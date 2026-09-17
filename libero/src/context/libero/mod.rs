@@ -10,7 +10,7 @@ use super::{ModalHost, PortalHost, PortalOutlet, WindowHost};
 use crate::{
     css::Stylesheet,
     localization::{Formats, Localization},
-    platform::{backend, color_scheme, document},
+    platform::{backend, color_scheme, document, focus_selectors},
     theme::{THEME_ATTRIBUTE, Theme, ThemeSet},
     tokens::{ColorScheme, ColorSchemeSetting},
     utils::warn,
@@ -224,6 +224,7 @@ impl LiberoContext {
 fn ThemeStyle() -> Element {
     let context = use_context::<LiberoContext>();
     let css = context.theme_css.read().clone();
+    let css = focus_selectors(&css);
 
     // Every rebuilt sheet after the first, once it is in the document.
     let theme_css = context.theme_css;
@@ -261,7 +262,7 @@ fn StyleOutlet() -> Element {
         for (node_key, stylesheet) in context.stylesheet_registry.stylesheets() {
             style {
                 key: "{node_key}",
-                dangerous_inner_html: "{stylesheet}"
+                dangerous_inner_html: "{focus_selectors(&stylesheet)}"
             }
         }
     }

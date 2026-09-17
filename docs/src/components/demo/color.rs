@@ -83,8 +83,6 @@ pub fn ColorControl(
     let trigger = use_element();
 
     let is_custom = !control.options.contains(&value);
-    // In fork mode every `rsx!` child is its own closure, so a child that
-    // borrows `control` and a later one that reads it again cannot coexist.
     // Take everything the tree needs off `control` up front: one
     // (option, fill, tick) triple per theme swatch, and the custom flag.
     let swatches: Vec<(String, String, String)> = control
