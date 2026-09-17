@@ -17,6 +17,7 @@ use libero::{
 };
 
 mod components;
+mod exports;
 mod github_stars;
 mod heading_focus;
 mod icons;

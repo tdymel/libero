@@ -5,7 +5,7 @@ use libero::{
     theme::Size,
 };
 
-use crate::{Route, nav};
+use crate::{Route, exports::COMPONENTS};
 
 const TYPED_SELECT: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
 enum Roast {
@@ -68,7 +68,7 @@ fn Principle(title: &'static str, children: Element) -> Element {
 #[component]
 pub fn Principles() -> Element {
     let mut roast = use_signal(|| Some(Roast::Medium));
-    let (components, hooks) = nav::page_counts();
+    let components = COMPONENTS.len();
 
     rsx! {
         section { "aria-labelledby": "principles-title",
@@ -118,12 +118,7 @@ pub fn Principles() -> Element {
                     }
                     Principle { title: "Batteries included",
                         Text {
-                            if hooks > 0 {
-                                "{components} components and {hooks} hooks, each with its own page."
-                            } else {
-                                "{components} components, each with its own page."
-                            }
-                            " Among them:"
+                            "Libero exports {components} components. Among them:"
                         }
                         Flex { direction: "row", gap: "sm", wrap: "wrap",
                             for (name, route) in HEAVY {

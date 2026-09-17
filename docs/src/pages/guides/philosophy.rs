@@ -17,6 +17,8 @@ const RANKING: [&str; 4] = [
 
 #[component]
 pub fn PhilosophyPage() -> Element {
+    let components = crate::exports::COMPONENTS.len();
+
     rsx! {
         DocPage {
             title: "Philosophy",
@@ -72,7 +74,7 @@ pub fn PhilosophyPage() -> Element {
                     icon: rsx! { BatteryIcon {} },
                     why: "Starting an app should not mean hunting for a date picker. Your time goes \
                           into your app, not into stitching libraries together.",
-                    Point { "Cover the everyday needs, forms and overlays included: more than 100 components." }
+                    Point { "Cover the everyday needs, forms and overlays included: {components} components." }
                     Point { "Work the same on the web and natively." }
                     Point { "Be honest where a platform falls short: a missing feature is absent, not broken." }
                 }

@@ -152,25 +152,6 @@ fn pages() -> Vec<(String, &'static str, Option<&'static str>)> {
     out
 }
 
-/// The nav's component and hook pages, for the home page's counts. A group's
-/// guide ("Getting started") and "Overview" are not counted.
-pub fn page_counts() -> (usize, usize) {
-    let (mut components, mut hooks) = (0, 0);
-    for group in nav_tree() {
-        let pages = group
-            .children
-            .iter()
-            .filter(|page| !page.data.label.contains(' ') && page.data.label != "Overview")
-            .count();
-        match group.id.as_str() {
-            "group:guides" => {}
-            "group:hooks" => hooks += pages,
-            _ => components += pages,
-        }
-    }
-    (components, hooks)
-}
-
 fn nav_tree() -> Vec<TreeNode<NavEntry>> {
     vec![
         group(

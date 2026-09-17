@@ -53,8 +53,7 @@ What a typical app needs, in one place.
 
 What we do:
 
-- Cover the everyday needs, forms and overlays included: more than 100
-  components.
+- Cover the everyday needs, forms and overlays included.
 - Work the same on the web and natively.
 - Be honest where a platform falls short: a missing feature is absent, not
   broken.
