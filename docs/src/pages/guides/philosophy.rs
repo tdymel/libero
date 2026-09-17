@@ -33,23 +33,24 @@ pub fn PhilosophyPage() -> Element {
                 Principle {
                     number: 1,
                     title: "Developer experience first",
-                    summary: "A small API that is hard to misuse.",
+                    summary: "An API that is small, clear and hard to misuse.",
                     icon: rsx! { CodeIcon {} },
-                    why: "AI writes a lot of code now. Someone still reviews it and changes it next \
-                          month, and an API that is hard to misuse is easy for a person to check and \
-                          for a model to get right.",
-                    Point { "Let the compiler catch the mistakes a convention would leave to code review." }
-                    Point { "Offer one way to style and one way to set up, the same on every component." }
-                    Point { "Give every docs page a plain markdown copy whose examples the tests compile." }
+                    why: "AI writes a lot of code now, and someone still has to read it, review it \
+                          and change it next month. Code that is hard to get wrong is easier for a \
+                          person to check and for a model to get right.",
+                    Point { "Let the compiler catch mistakes before a reviewer has to." }
+                    Point { "Keep one way of doing things, the same across every component." }
+                    Point { "Write docs that you and your AI assistant can copy from, with examples that build." }
                 }
                 Principle {
                     number: 2,
                     title: "Accessibility second",
-                    summary: "Not only for screen reader users.",
+                    summary: "Everyone should be able to use what you build.",
                     icon: rsx! { AccessibilityIcon {} },
-                    why: "Keyboard support helps anyone who would rather not reach for the mouse. A \
-                          state that does not rely on colour still reads on a dim screen in the sun. \
-                          Motion that stops on request helps anyone it makes dizzy.",
+                    why: "It helps more people than screen reader users. Keyboard support helps \
+                          anyone who would rather not reach for the mouse. A state that does not rely \
+                          on colour still reads on a dim screen in the sun. Motion that stops on \
+                          request helps anyone it makes dizzy.",
                     limit: rsx! {
                         Alert { title: "A known limit", icon: rsx! { InfoIcon {} },
                             Text {
@@ -60,31 +61,32 @@ pub fn PhilosophyPage() -> Element {
                         }
                     },
                     Point { "Follow WAI-ARIA, the APG patterns and WCAG. A deviation needs a reason." }
-                    Point { "Aim for WCAG 2.2 AA, contrast included." }
+                    Point { "Aim for WCAG 2.2 AA." }
                     Point { "Never show a state by colour alone." }
-                    Point { "Make every string a component says on its own translatable, with English and German built in." }
+                    Point { "Speak the user's language: the words components say on their own translate, with English and German built in." }
                 }
                 Principle {
                     number: 3,
                     title: "Batteries included",
-                    summary: "An app should not start with a hunt for a date picker.",
+                    summary: "What a typical app needs, in one place.",
                     icon: rsx! { BatteryIcon {} },
-                    why: "You spend your time on your app, not on stitching libraries together.",
-                    Point { "Ship more than 100 components, forms and overlays included." }
-                    Point { "Run the same components on the web and natively." }
-                    Point { "Treat a feature the platform lacks as absent, not broken." }
+                    why: "Starting an app should not mean hunting for a date picker. Your time goes \
+                          into your app, not into stitching libraries together.",
+                    Point { "Cover the everyday needs, forms and overlays included: more than 100 components." }
+                    Point { "Work the same on the web and natively." }
+                    Point { "Be honest where a platform falls short: a missing feature is absent, not broken." }
                 }
                 Principle {
                     number: 4,
                     title: "Simple yet modern",
-                    summary: "A clean default look that stays out of the way.",
+                    summary: "A clean look that stays out of the way.",
                     icon: rsx! { SparkleIcon {} },
-                    why: "The default fits most apps as it is. When it does not, changing it is \
-                          ordinary Rust, not a fight with the library.",
-                    Point { "Keep theming plain Rust: one struct, and you change only what you need." }
-                    Point { "Build in light and dark, correct from the first paint." }
-                    Point { "Use current CSS, with no CSS framework underneath." }
-                    Point { "Let your own CSS win over libero's." }
+                    why: "Your app should look like your app. A quiet default gets you started, and \
+                          when you want your own look, nothing stands in the way.",
+                    Point { "Aim for a default that fits most apps as it is." }
+                    Point { "Make changing the look ordinary Rust, not a fight with the library." }
+                    Point { "Offer light and dark from the start." }
+                    Point { "Let your own styles win over ours." }
                 }
             }
         }

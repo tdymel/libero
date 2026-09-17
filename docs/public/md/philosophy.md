@@ -14,60 +14,64 @@ ranked: when two pull in different directions, the higher one wins.
 
 ## 1. Developer experience first
 
-A small API that is hard to misuse.
+An API that is small, clear and hard to misuse.
 
 What we do:
 
-- Let the compiler catch the mistakes a convention would leave to code review.
-- Offer one way to style and one way to set up, the same on every component.
-- Give every docs page a plain markdown copy whose examples the tests compile.
+- Let the compiler catch mistakes before a reviewer has to.
+- Keep one way of doing things, the same across every component.
+- Write docs that you and your AI assistant can copy from, with examples that
+  build.
 
-Why it matters: AI writes a lot of code now. Someone still reviews it and
-changes it next month, and an API that is hard to misuse is easy for a person
-to check and for a model to get right.
+Why it matters: AI writes a lot of code now, and someone still has to read it,
+review it and change it next month. Code that is hard to get wrong is easier
+for a person to check and for a model to get right.
 
 ## 2. Accessibility second
 
-Not only for screen reader users.
+Everyone should be able to use what you build.
 
 What we do:
 
 - Follow WAI-ARIA, the APG patterns and WCAG. A deviation needs a reason.
-- Aim for WCAG 2.2 AA, contrast included.
+- Aim for WCAG 2.2 AA.
 - Never show a state by colour alone.
-- Make every string a component says on its own translatable, with English and
-  German built in.
+- Speak the user's language: the words components say on their own translate,
+  with English and German built in.
 
 A known limit: Windows High Contrast mode is supported only in part. The
 [Accessibility](accessibility.md) page says what holds.
 
-Why it matters: Keyboard support helps anyone who would rather not reach for
-the mouse. A state that does not rely on colour still reads on a dim screen in
-the sun. Motion that stops on request helps anyone it makes dizzy.
+Why it matters: It helps more people than screen reader users. Keyboard support
+helps anyone who would rather not reach for the mouse. A state that does not
+rely on colour still reads on a dim screen in the sun. Motion that stops on
+request helps anyone it makes dizzy.
 
 ## 3. Batteries included
 
-An app should not start with a hunt for a date picker.
+What a typical app needs, in one place.
 
 What we do:
 
-- Ship more than 100 components, forms and overlays included.
-- Run the same components on the web and natively.
-- Treat a feature the platform lacks as absent, not broken.
+- Cover the everyday needs, forms and overlays included: more than 100
+  components.
+- Work the same on the web and natively.
+- Be honest where a platform falls short: a missing feature is absent, not
+  broken.
 
-Why it matters: You spend your time on your app, not on stitching libraries
-together.
+Why it matters: Starting an app should not mean hunting for a date picker. Your
+time goes into your app, not into stitching libraries together.
 
 ## 4. Simple yet modern
 
-A clean default look that stays out of the way.
+A clean look that stays out of the way.
 
 What we do:
 
-- Keep theming plain Rust: one struct, and you change only what you need.
-- Build in light and dark, correct from the first paint.
-- Use current CSS, with no CSS framework underneath.
-- Let your own CSS win over libero's.
+- Aim for a default that fits most apps as it is.
+- Make changing the look ordinary Rust, not a fight with the library.
+- Offer light and dark from the start.
+- Let your own styles win over ours.
 
-Why it matters: The default fits most apps as it is. When it does not, changing
-it is ordinary Rust, not a fight with the library.
+Why it matters: Your app should look like your app. A quiet default gets you
+started, and when you want your own look, nothing stands in the way.
