@@ -178,7 +178,7 @@ fn side_labels_stack_in_a_narrow_box() {
 
 /// Todo 540: the current marker differed from a pending one by colour only.
 #[test]
-fn the_current_marker_carries_the_on_state_line() {
+fn the_current_marker_carries_the_on_state_ring() {
     block_on(async {
         let fixture = Fixture::open("/stepper-long", Viewport::Desktop)
             .await
@@ -237,6 +237,20 @@ fn completed_and_current_steps_show_in_forced_colours() {
         assert_ne!(
             current, pending,
             "the current ring looks like a pending one"
+        );
+        // Todo 715: forcing drops the on-state `box-shadow`; an outline stands in.
+        let outlines: [String; 2] = page
+            .evaluate(
+                "[1, 2].map(i => getComputedStyle(document.querySelector(`#plain-step-${i} [data-step-marker]`)).outlineStyle)",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            outlines,
+            ["solid", "none"],
+            "the current marker's shape cue under forced colours"
         );
         fixture.close().await.unwrap();
     });

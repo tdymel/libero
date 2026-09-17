@@ -5,8 +5,8 @@ use crate::{
         HtmlTag, Input, States, Variables, Variant,
         common::base_props,
         common::{
-            base_color, contrast_color, disabled_look_sx, fill_color, focus_ring_sx, names_itself,
-            on_state_sx, text_color, use_name_warning,
+            base_color, borderless_on_state_sx, contrast_color, disabled_look_sx, fill_color,
+            focus_ring_sx, names_itself, text_color, use_name_warning,
         },
         feedback::Loader,
         inputs::{VariantVars, interactive_variant_sx, variant_colors, variant_selected_sx},
@@ -75,7 +75,10 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         // A chromeless toggle's only pressed look; a variant's own block below
         // repeats it over its fill.
-        .when("checked", on_state_sx(None).focus_visible(focus_ring_sx()));
+        .when(
+            "checked",
+            borderless_on_state_sx().focus_visible(focus_ring_sx()),
+        );
 
     let base = Variant::ALL.iter().fold(base, |base, &variant| {
         base.when(

@@ -13,11 +13,11 @@ what to do about it.
 ## On and disabled states
 
 A pressed, selected or current control never differs by colour alone. It
-carries a short 2px line in its own text colour: `Button`, `ActionIcon`,
-`Chip`, `SegmentedControl`, the current `Pagination` page and the current
-`Stepper` marker draw it centred under the content, an active `NavLink` and a
-selected row in a `Select`, `MultiSelect` or `Combobox` list upright at the
-start edge. A disabled control fades to half.
+carries a line in its own text colour: `Button`, `ActionIcon`, `Chip`,
+`SegmentedControl`, the current `Pagination` page and the current `Stepper`
+marker draw it as a thin ring just inside their edge, an active `NavLink` and a
+selected row in a `Select`, `MultiSelect` or `Combobox` list as a short 2px bar
+upright at its start edge. A disabled control fades to half.
 
 ## Forced colors and Windows High Contrast
 

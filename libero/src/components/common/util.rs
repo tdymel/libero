@@ -153,42 +153,54 @@ pub(crate) fn shadow_sx(shadow: String) -> crate::sx::Sx {
         .var(crate::theme::OWN_SHADOW, shadow)
 }
 
-/// The house on-state line: a short bar of `currentColor`, the label's own colour,
-/// so it reads on whatever fill the label does (1.4.11).
+/// The house on-state ring, `depth` of `currentColor` (the label's own colour, so
+/// it reads on whatever fill the label does, 1.4.11) inside the edge. Four offset
+/// shadows, not a spread: Blitz ignores inset spread.
+fn on_ring(depth: &str) -> String {
+    inset_band(&format!("({depth})"), "currentColor")
+}
+
+/// A bordered control's ring depth. Blitz offsets inset shadows from the border
+/// box, so 1px shows there under a 1px border; the web shows 2px (Maintainer, 715).
+const ON_RING_BORDERED: &str = "2px";
+const ON_RING_BORDERLESS: &str = "1px";
+
+/// The house on-state line upright at the start edge (NavLink, a selected row).
 const ON_LINE: &str = "linear-gradient(currentColor, currentColor)";
 const ON_LINE_WIDTH: &str = "2px";
 const ON_LINE_LENGTH: &str = "min(50%, 1.5em)";
 
-fn on_line_sx(size: String, position: &str) -> crate::sx::Sx {
-    crate::sx::sx()
-        .with("background-image", ON_LINE)
-        .with("background-size", size)
-        .with("background-position", position.to_string())
-        .with("background-repeat", "no-repeat")
+/// The house marker for an on state (pressed, selected, current) on a bordered
+/// control, so it never rests on a fill alone (1.4.1). `resting` is a shadow the
+/// element keeps under the ring; the focus ring composes both back in.
+pub(crate) fn on_ring_sx(resting: Option<&str>) -> crate::sx::Sx {
+    let ring = on_ring(ON_RING_BORDERED);
+    shadow_sx(match resting {
+        Some(resting) => format!("{ring},{resting}"),
+        None => ring,
+    })
 }
 
-/// The house marker for an on state (pressed, selected, current), so it never rests
-/// on a fill alone (1.4.1): the line centred under the content. `resting` is a
-/// shadow the element keeps. Folded after any `background` shorthand, which resets it.
-pub(crate) fn on_ring_sx(resting: Option<&str>) -> crate::sx::Sx {
-    let line = on_line_sx(
-        format!("{ON_LINE_LENGTH} {ON_LINE_WIDTH}"),
-        "50% calc(100% - 3px)",
-    );
-    match resting {
-        Some(resting) => line.and(shadow_sx(resting.to_string())),
-        None => line,
-    }
+/// [`on_state_sx`] for a control without a border: a chromeless toggle.
+pub(crate) fn borderless_on_state_sx() -> crate::sx::Sx {
+    shadow_sx(on_ring(ON_RING_BORDERLESS)).and(forced_on_sx())
 }
 
 /// The house line upright at the start edge, `inset` in from it, for a row
 /// whose full-width ring would read as its focus ring.
 pub(crate) fn on_start_bar_sx(inset: &str) -> crate::sx::Sx {
-    let size = format!("{ON_LINE_WIDTH} {ON_LINE_LENGTH}");
-    on_line_sx(size, &format!("left {inset} center")).selector(
-        "&:dir(rtl)",
-        crate::sx::sx().with("background-position", format!("right {inset} center")),
-    )
+    crate::sx::sx()
+        .with("background-image", ON_LINE)
+        .with(
+            "background-size",
+            format!("{ON_LINE_WIDTH} {ON_LINE_LENGTH}"),
+        )
+        .with("background-position", format!("left {inset} center"))
+        .with("background-repeat", "no-repeat")
+        .selector(
+            "&:dir(rtl)",
+            crate::sx::sx().with("background-position", format!("right {inset} center")),
+        )
 }
 
 /// [`on_ring_sx`] for a control, plus [`forced_on_sx`].
@@ -196,7 +208,7 @@ pub(crate) fn on_state_sx(resting: Option<&str>) -> crate::sx::Sx {
     on_ring_sx(resting).and(forced_on_sx())
 }
 
-/// The system's `Highlight` pair for an on state under forced colours, the line
+/// The system's `Highlight` pair for an on state under forced colours, the ring
 /// drawn in it. Outranks [`disabled_look_sx`]: `GrayText` does not read on `Highlight`.
 ///
 /// Opted out of forcing, or Chromium backs the label with a `Canvas` plate it

@@ -114,7 +114,7 @@ fn a_plain_icon_takes_the_surrounding_text_colour() {
 
 /// Todo 491: without `variant` a pressed toggle painted nothing at all.
 #[test]
-fn a_pressed_toggle_shows_the_on_state_line_with_and_without_a_variant() {
+fn a_pressed_toggle_shows_the_on_state_ring_with_and_without_a_variant() {
     use crate::button::{
         assert_gray_in_forced_colours, assert_on_in_forced_colours, assert_on_marker,
     };

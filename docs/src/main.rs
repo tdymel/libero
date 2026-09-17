@@ -9,7 +9,7 @@ use libero::{
         ActionIcon, Box, Burger, Button, ColorSchemeButton, Container, Flex, Header, Image, Kbd,
         Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_spotlight,
     },
-    hooks::use_element,
+    hooks::{use_element, use_localization},
     localization::Formats,
     platform::ElementApi,
     sx::sx,
@@ -25,12 +25,13 @@ mod pages;
 #[cfg(test)]
 mod snippets;
 
-use icons::SearchIcon;
+use icons::{GitHubIcon, SearchIcon, TextDirectionIcon};
 use nav::DocsNav;
 // A glob, so a new page never edits this file's import list.
 use pages::*;
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
+const GITHUB: &str = "https://github.com/tdymel/libero";
 /// A 16:9 landscape, for docs examples where the logo's square shape hides
 /// what the example is about.
 pub(crate) static SAMPLE_IMAGE: Asset = asset!("/assets/sample.svg");
@@ -261,15 +262,51 @@ pub(crate) enum Route {
     TitlePage {},
 }
 
+/// The docs' reading direction, `true` for right to left (the header's toggle).
+#[derive(Clone, Copy)]
+struct Rtl(Signal<bool>);
+
+/// Where the direction is kept, as `ColorSchemeButton` keeps the scheme. Blitz
+/// has no storage, so there it lives for the session.
+const DIR_STORAGE_KEY: &str = "libero-docs-dir";
+const HAS_STORAGE: bool = !cfg!(any(feature = "native", feature = "native-cpu"));
+
 #[component]
 fn App() -> Element {
+    let rtl = use_context_provider(|| Rtl(Signal::new(false))).0;
+    use_hook(move || {
+        if HAS_STORAGE {
+            spawn(async move {
+                let js = format!("return localStorage.getItem('{DIR_STORAGE_KEY}');");
+                if let Ok(Some(dir)) = document::eval(&js).join::<Option<String>>().await {
+                    let mut rtl = rtl;
+                    rtl.set(dir == "rtl");
+                }
+            });
+        }
+    });
+
     rsx! {
         document::Title { "Libero" }
         document::Link { rel: "icon", href: LOGO }
-        LiberoProvider { formats: &Formats::GERMAN,
-            Router::<Route> {}
-            Notifications {}
+        // Round the provider, so its portal outlet (menus, Spotlight) flips too.
+        div { display: "contents", dir: if rtl() { "rtl" } else { "ltr" },
+            LiberoProvider { formats: &Formats::GERMAN,
+                Router::<Route> {}
+                Notifications {}
+            }
         }
+    }
+}
+
+/// Flips the app's direction and keeps it where the platform can.
+fn toggle_direction(mut rtl: Signal<bool>) {
+    rtl.toggle();
+    if HAS_STORAGE {
+        let dir = if rtl() { "rtl" } else { "ltr" };
+        document::eval(&format!(
+            "localStorage.setItem('{DIR_STORAGE_KEY}', '{dir}');"
+        ));
     }
 }
 
@@ -278,6 +315,8 @@ fn AppShell() -> Element {
     let mut open = use_signal(|| false);
     let burger = use_element();
     let content = use_element();
+    let rtl = use_context::<Rtl>().0;
+    let localization = use_localization();
     // The docs search: every page, Ctrl/Cmd+K from anywhere.
     let pages = use_hook(nav::page_actions);
     let search = use_spotlight(SpotlightOptions {
@@ -393,8 +432,9 @@ fn AppShell() -> Element {
                     variant: "outlined",
                     color: "muted",
                     size: "lg",
+                    // Logical, so the controls stay at the end under RTL.
                     sx: sx()
-                        .margin_left("auto")
+                        .margin_inline_start("auto")
                         .breakpoint(Size::Sm, sx().display("none")),
                     span {
                         display: "inline-flex",
@@ -429,7 +469,7 @@ fn AppShell() -> Element {
                             Size::Sm,
                             sx()
                                 .display("inline-flex")
-                                .margin_left("auto")
+                                .margin_inline_start("auto")
                                 .width("240px")
                                 .justify_content("flex-start")
                                 .background(PAPER_BACKGROUND.value()),
@@ -446,6 +486,28 @@ fn AppShell() -> Element {
                         sx: sx().margin_left("auto"),
                         "Ctrl K"
                     }
+                }
+                // The icon alone shows it is external, so the new-tab cue
+                // the page's GitHub chip reads rides the name.
+                ActionIcon {
+                    aria_label: format!("GitHub {}", localization.anchor.new_tab),
+                    to: GITHUB,
+                    target: "_blank",
+                    variant: "outlined",
+                    color: "muted",
+                    size: "lg",
+                    span { display: "inline-flex", width: "18px", height: "18px", GitHubIcon {} }
+                }
+                // Lets a reviewer check any component right to left. A fixed
+                // name; the state is `aria-pressed`.
+                ActionIcon {
+                    aria_label: "Right to left",
+                    selected: rtl(),
+                    onclick: move |_| toggle_direction(rtl),
+                    variant: "outlined",
+                    color: "muted",
+                    size: "lg",
+                    span { display: "inline-flex", width: "18px", height: "18px", TextDirectionIcon {} }
                 }
                 // In the header rather than on a page: its job is to let a
                 // reviewer check any component in every scheme and palette,

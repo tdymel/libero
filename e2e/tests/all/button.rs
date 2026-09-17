@@ -187,36 +187,51 @@ fn a_hovered_button_s_label_reads_on_its_hover_fill() {
     });
 }
 
-/// Whether `on` carries the house on-state line (a 2px `currentColor` gradient
-/// bar, todo 646) and `off` does not.
-fn marked(on: &str, off: &str) -> String {
-    format!(
-        "(() => {{ const s = q => getComputedStyle(document.querySelector(q)); \
-         const [on, off] = [s('{on}'), s('{off}')]; \
-         const img = on.backgroundImage.replaceAll(on.color, 'currentcolor').toLowerCase(); \
-         return img === 'linear-gradient(currentcolor, currentcolor)' \
-             && on.backgroundSize.includes('2px') \
-             && !off.backgroundImage.includes('gradient'); }})()"
-    )
-}
+/// JS `ring(style)`: whether the style carries the house on-state ring, a
+/// `currentColor` inset ring drawn as four offset shadows (todo 715): 1px deep,
+/// 2px on a bordered control.
+const RING: &str = "const ring = s => ['1px', '2px'].some(d => \
+     [`${d} 0px`, `-${d} 0px`, `0px ${d}`, `0px -${d}`] \
+     .every(o => s.boxShadow.includes(`${s.color} ${o} 0px 0px inset`)));";
+
+/// JS `bar(style)`: whether the style carries the house start bar, a 2px
+/// `currentColor` gradient (NavLink, a selected listbox row; todo 646).
+const BAR: &str = "const bar = s => s.backgroundImage.replaceAll(s.color, 'currentcolor') \
+     .toLowerCase() === 'linear-gradient(currentcolor, currentcolor)' \
+     && s.backgroundSize.startsWith('2px');";
 
 /// Todo 491: the on state must not rest on a fill change alone (1.4.1).
 pub async fn assert_on_marker(page: &chromiumoxide::Page, on: &str, off: &str) {
-    if let Err(e) = wait::for_js_true(page, &marked(on, off), "the on-state line").await {
-        let lines: Vec<String> = page
+    assert_marked(page, on, off, "ring").await;
+}
+
+/// [`assert_on_marker`] for the upright start bar.
+pub async fn assert_on_bar(page: &chromiumoxide::Page, on: &str, off: &str) {
+    assert_marked(page, on, off, "bar").await;
+}
+
+/// Whether `on` passes the JS predicate `mark` (`ring` or `bar`) and `off` does not.
+async fn assert_marked(page: &chromiumoxide::Page, on: &str, off: &str, mark: &str) {
+    let marked = format!(
+        "(() => {{ {RING} {BAR} const s = q => getComputedStyle(document.querySelector(q)); \
+         return {mark}(s('{on}')) && !{mark}(s('{off}')); }})()"
+    );
+    if let Err(e) = wait::for_js_true(page, &marked, "the on-state marker").await {
+        let styles: Vec<String> = page
             .evaluate(format!(
                 "['{on}', '{off}'].map(q => {{ const s = getComputedStyle(document.querySelector(q)); \
-                 return `${{s.color}} | ${{s.backgroundImage}} | ${{s.backgroundSize}}`; }})"
+                 return `${{s.color}} | ${{s.boxShadow}} | ${{s.backgroundImage}} ${{s.backgroundSize}}`; }})"
             ))
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        panic!("{on} vs {off}: {e}; color | background-image | size {lines:?}");
+        panic!("{on} vs {off}: no {mark}: {e}; color | box-shadow | background {styles:?}");
     }
 }
 
-/// Forced colours drop author fills: the on state paints `Highlight` under its line.
+/// Forced colours drop author fills: the on state paints `Highlight` under its
+/// ring (a start bar for a NavLink or a listbox row).
 pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, off: &str) {
     let [on_bg, off_bg, highlight]: [String; 3] = page
         .evaluate(format!(
@@ -237,13 +252,15 @@ pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, o
     // then every descendant has to follow the label colour by hand.
     let [adjust, stray, line, label]: [String; 4] = page
         .evaluate(format!(
-            "(() => {{ const probe = document.createElement('div'); \
+            "(() => {{ {RING} {BAR} const probe = document.createElement('div'); \
              probe.style.color = 'HighlightText'; document.body.append(probe); \
              const text = getComputedStyle(probe).color; probe.remove(); \
              const el = document.querySelector('{on}'); const s = getComputedStyle(el); \
              const stray = [el, ...el.querySelectorAll('*')] \
                  .filter(e => getComputedStyle(e).color !== text).map(e => e.tagName).join(','); \
-             return [s.forcedColorAdjust, stray, s.backgroundImage, s.color]; }})()"
+             const line = ring(s) || bar(s) \
+                 ? 'yes' : `${{s.boxShadow}} | ${{s.backgroundImage}}`; \
+             return [s.forcedColorAdjust, stray, line, s.color]; }})()"
         ))
         .await
         .unwrap()
@@ -255,10 +272,7 @@ pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, o
     );
     assert_ne!(label, on_bg, "{on}: the label is its own background");
     assert_eq!(stray, "", "{on}: these do not paint HighlightText");
-    assert!(
-        line.contains("gradient"),
-        "{on} lost its on-state line: {line}"
-    );
+    assert_eq!(line, "yes", "{on} lost its on-state marker");
 
     // Todo 686: `forced-color-adjust: none` is inherited, so a descendant's own
     // fill or border (a Badge, a filled x) kept its author colour under HighlightText.
@@ -313,7 +327,7 @@ pub async fn assert_text_in_forced_colours(
 }
 
 #[test]
-fn a_pressed_button_shows_the_on_state_line_in_every_variant() {
+fn a_pressed_button_shows_the_on_state_ring_in_every_variant() {
     const VARIANTS: [&str; 5] = ["filled", "tonal", "elevated", "outlined", "standard"];
     block_on(async {
         let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();

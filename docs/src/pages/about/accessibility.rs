@@ -30,7 +30,7 @@ pub fn AccessibilityPage() -> Element {
                 title: "On and disabled states",
                 Text {
                     "A pressed, selected or current control never differs by colour alone. "
-                    "It carries a short 2px line in its own text colour: "
+                    "It carries a line in its own text colour: "
                     Code { source: "Button" }
                     ", "
                     Code { source: "ActionIcon" }
@@ -42,7 +42,7 @@ pub fn AccessibilityPage() -> Element {
                     Code { source: "Pagination" }
                     " page and the current "
                     Code { source: "Stepper" }
-                    " marker draw it centred under the content, an active "
+                    " marker draw it as a thin ring just inside their edge, an active "
                     Code { source: "NavLink" }
                     " and a selected row in a "
                     Code { source: "Select" }
@@ -50,7 +50,8 @@ pub fn AccessibilityPage() -> Element {
                     Code { source: "MultiSelect" }
                     " or "
                     Code { source: "Combobox" }
-                    " list upright at its start edge. A disabled control fades to half."
+                    " list as a short 2px bar upright at its start edge. "
+                    "A disabled control fades to half."
                 }
             }
 

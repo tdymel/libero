@@ -235,8 +235,8 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                 .border_color(STEPPER_ERROR.value())
                 .color(STEPPER_ERROR_CONTRAST.value()),
         )
-        // The house on-state line under the current marker's number, so current
-        // and pending differ in shape too; an errored current step keeps it.
+        // The house on-state ring inside the current marker, so current and
+        // pending differ in shape too; an errored current step keeps it.
         .selector(
             "& > ol > li > [aria-current=\"step\"] [data-step-marker]",
             on_ring_sx(None),
@@ -254,6 +254,12 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
             .selector(
                 format!("{} [data-step-marker]", step("active")),
                 sx().border_color("Highlight"),
+            )
+            // Forcing drops `box-shadow`; an outline survives it.
+            .selector(
+                "& > ol > li > [aria-current=\"step\"] [data-step-marker]",
+                sx().outline("1px solid currentColor")
+                    .outline_offset("-3px"),
             ),
         )
         .when(Orientation::Horizontal.state_name(), horizontal)

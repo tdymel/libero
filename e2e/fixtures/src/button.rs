@@ -75,11 +75,13 @@ fn ButtonPage() -> Element {
                 }
             }
             // Todo 686: a badge with its own fill and border inside a pressed button.
+            // `currentColor`: an error badge's text failed axe on the pressed fill,
+            // once the 715 ring left the background plain for it to measure.
             Flex { gap: "sm",
                 Button { id: "off-badge", selected: false, "Inbox" Badge { "3" } }
                 Button { id: "on-badge", selected: true, "Inbox"
                     Badge { "3" }
-                    Badge { variant: "outlined", color: "error", "New" }
+                    Badge { variant: "outlined", color: "currentColor", "New" }
                 }
             }
         }

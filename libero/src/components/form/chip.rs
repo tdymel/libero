@@ -86,7 +86,7 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
                 &CHIP_ON_STATE_VAR,
             )
             .and(on_state_sx(None))
-            // The hover's `background` would drop the line otherwise.
+            // An `Elevated` chip's hover lift would drop the ring otherwise.
             .selector(
                 "&:hover:not(:where(:disabled, [data-state~=\"disabled\"]))",
                 on_ring_sx(None),

@@ -57,7 +57,7 @@ async fn focused(fixture: &Fixture) -> String {
 
 /// Todo 491: a selected chip showed only a faint tint.
 #[test]
-fn a_selected_chip_shows_the_on_state_line() {
+fn a_selected_chip_shows_the_on_state_ring() {
     use crate::button::{
         assert_gray_in_forced_colours, assert_on_in_forced_colours, assert_on_marker,
     };

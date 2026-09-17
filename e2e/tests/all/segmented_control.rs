@@ -61,7 +61,7 @@ fn it_honours_the_radio_group_contract() {
 
 /// Todo 491: the picked segment showed only a faint tint.
 #[test]
-fn the_picked_segment_shows_the_on_state_line() {
+fn the_picked_segment_shows_the_on_state_ring() {
     use crate::button::{
         assert_gray_in_forced_colours, assert_on_in_forced_colours, assert_on_marker,
     };

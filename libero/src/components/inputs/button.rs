@@ -242,7 +242,7 @@ pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> Varian
 /// selected fill. A literal `color` has no shade scale and so no selected
 /// tint - falling back to the base colour would paint a full-strength
 /// background under the resting label, so the untinted variants fall back to
-/// the line of [`on_state_sx`] alone, which every variant carries.
+/// the ring of [`on_state_sx`] alone, which every variant carries.
 pub(crate) fn variant_selected_sx(
     variant: Variant,
     vars: &VariantVars,
@@ -250,7 +250,7 @@ pub(crate) fn variant_selected_sx(
     on_state: &CssVar,
 ) -> Sx {
     let color = vars.color;
-    // The house on-state line; `Elevated` keeps its resting lift.
+    // The house on-state ring; `Elevated` keeps its resting lift under it.
     let marker = match variant {
         Variant::Elevated => on_state_sx(Some(&SizeCss::SHADOW.value(ELEVATED_REST))),
         _ => on_state_sx(None),
@@ -272,8 +272,8 @@ pub(crate) fn variant_selected_sx(
             .background(selected_var.value_or("transparent"))
             .color(on_state.value_or(color.value())),
     };
-    // After `background`, which resets the line. Outranks the plain focus
-    // rule, which `Elevated`'s `box-shadow` here would beat.
+    // Outranks the plain focus rule, which would lose to the ring's
+    // `box-shadow` here; the focus ring composes the marker back in.
     selected.and(marker).focus_visible(focus_ring_sx())
 }
 

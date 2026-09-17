@@ -169,8 +169,8 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
                     &BUTTON_ON_STATE_VAR,
                 ),
             )
-            // The selected look can set `box-shadow` more specifically than
-            // the ring above (`Elevated`); this one outranks it.
+            // The selected look sets `box-shadow` more specifically than the
+            // ring above; this one outranks it and composes the marker back.
             .selector(
                 "& > input:focus-visible + label[data-state~=\"checked\"]",
                 focus_ring_sx().z_index("2"),

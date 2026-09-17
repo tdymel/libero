@@ -22,9 +22,9 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// Todo 631: the current page was a fill only; it carries the house line now.
+/// Todo 631: the current page was a fill only; it carries the house ring now.
 #[test]
-fn the_current_page_shows_the_on_state_line() {
+fn the_current_page_shows_the_on_state_ring() {
     block_on(async {
         let fixture = Fixture::open("/pagination", Viewport::Desktop)
             .await

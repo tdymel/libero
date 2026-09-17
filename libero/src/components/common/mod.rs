@@ -45,9 +45,9 @@ pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attribute
 pub(crate) use rail::{Rail, RailInset};
 pub(crate) use style_attributes::{ABSENT, StyleAttributes, use_style_attributes};
 pub(crate) use util::{
-    NavigationChord, attr, css_string, disabled_look_sx, focus_ring_sx, forced_on_sx,
-    has_shortcut_modifier, inset_focus_ring_sx, navigation_chord, on_ring_sx, on_start_bar_sx,
-    on_state_sx, ring_overlay, ring_overlay_sx, shadow_sx,
+    NavigationChord, attr, borderless_on_state_sx, css_string, disabled_look_sx, focus_ring_sx,
+    forced_on_sx, has_shortcut_modifier, inset_focus_ring_sx, navigation_chord, on_ring_sx,
+    on_start_bar_sx, on_state_sx, ring_overlay, ring_overlay_sx, shadow_sx,
 };
 pub use variant::Variant;
 pub(crate) use warnings::{is_javascript_url, names_itself, use_name_warning};

@@ -20,14 +20,15 @@ const SHOWN_NEAREST: &str = "(() => { \
 #[test]
 fn the_active_link_shows_the_on_state_bar() {
     use crate::button::{
-        assert_gray_in_forced_colours, assert_on_in_forced_colours, assert_on_marker,
+        assert_gray_in_forced_colours, assert_on_bar, assert_on_in_forced_colours,
     };
     block_on(async {
         let fixture = Fixture::open("/nav-link/states", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
-        assert_on_marker(page, "#active", "#idle").await;
+        // Todo 715: the start bar, not the ring the other on states draw.
+        assert_on_bar(page, "#active", "#idle").await;
         crate::calendar::force_colours(page).await;
         assert_on_in_forced_colours(page, "#active", "#idle").await;
         assert_gray_in_forced_colours(page, "#disabled").await;
