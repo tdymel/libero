@@ -1,6 +1,8 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
-use libero::components::{Anchor, Text, VisuallyHidden};
+use libero::components::{Anchor, Code, Text, VisuallyHidden};
 
 /// The point is what the hidden text is read *after*, so the link it sits in
 /// is part of the example - and the code block prints it. `focusable` is the
@@ -27,15 +29,17 @@ pub fn VisuallyHiddenPage() -> Element {
                 prop("focusable", "bool")
                     .default("false")
                     .doc("Shows the content while focus is inside it, for a skip link."),
-                prop("children", "Element").doc("The screen-reader-only content."),
+                prop("children", "Element")
+                    .default("required")
+                    .doc("The screen-reader-only content."),
             ])],
             lead: rsx! {
                 Text {
-                    "Content available to screen readers but removed from sighted layout - "
-                    "e.g. extra context for a link that's ambiguous out of context. The preview "
-                    "reads \"Read more\", a screen reader reads \"Read more about focus "
-                    "management\". With focusable on it is a skip link: Tab into the preview "
-                    "and it shows itself."
+                    "Content for screen readers only, such as extra context for a link that "
+                    "is vague on its own. The preview shows \"Read more\", and a screen reader "
+                    "reads \"Read more about focus management\". With "
+                    Code { source: "focusable" }
+                    " on it is a skip link. Tab into the preview and it shows itself."
                 }
             },
             Demo {
@@ -58,6 +62,26 @@ pub fn VisuallyHiddenPage() -> Element {
                     }
                 } },
                 wrap: Wrap(wrap_link),
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Place the text where it should be read, inside the link and not next to "
+                    "it. Use it for text a screen reader user is missing, never to hide "
+                    "something sighted users need. To replace a control's whole name, use "
+                    Code { source: "aria_label" }
+                    " instead."
+                }
+                Text {
+                    "Keep the children to text unless "
+                    Code { source: "focusable" }
+                    " is set, or keyboard focus lands somewhere invisible. A skip link shows "
+                    "at its place in the flow, so put it first on the page. Further down, "
+                    "put it in a positioned parent and set "
+                    Code { source: "position: absolute" }
+                    " through "
+                    Code { source: "sx" }
+                    ", or Tab never scrolls it into view."
+                }
             }
         }
     }

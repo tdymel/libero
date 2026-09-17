@@ -4,16 +4,11 @@ Crate: `libero`
 Import: `use libero::components::CodeBlock;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/code/code_block.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A `pre`-wrapped, multi-line code block with a line-number gutter, a copy button, a language header, optional diff rendering and line highlighting.
+Description: A multi-line code block with line numbers, a copy button, a language header, diffs and highlighted lines.
 
-A `pre`-wrapped, multi-line block with a line-number gutter, a copy button and a
-header naming the language. Content is `source`, a plain string - line numbers
-and the copy button need one to split. Add `language` to syntax-highlight it. For
-a snippet inside a sentence, use [`Code`](code.md).
-
-Background, border, line numbers and the copy button come from
-`Theme.code_block`, the font and token colors from `Theme.code`; the diff and
-highlight tints derive from the theme's success, error and primary colors.
+A multi-line code block with line numbers, a copy button and a header naming
+the language. Pass the text as `source` and set `language` to highlight it.
+For a snippet inside a sentence, use [Code](code.md).
 
 ## Usage
 
@@ -34,9 +29,8 @@ fn Demo() -> Element {
 }
 ```
 
-`header`, `copyable` and `line_numbers` are on by default; `max_lines` caps the
-visible height and scrolls past it, and `highlight_lines` emphasizes 1-indexed
-rows:
+`header`, `copyable` and `line_numbers` are on by default. `max_lines` caps the
+height and `highlight_lines` emphasizes lines:
 
 ```rust
 use dioxus::prelude::*;
@@ -62,10 +56,9 @@ fn Demo() -> Element {
 }
 ```
 
-`diff: true` reads `source` as a unified diff: a leading `+`/`-` colors the row
-and moves into a marker column of its own, left out of a selection and of what
-is highlighted and copied - so the copy button still yields compilable code. It
-wins over `highlight_lines`.
+`diff: true` reads `source` as a unified diff. A leading `+` or `-` colors the
+row and stays out of what is copied, so the copy button still yields
+compilable code.
 
 ```rust
 use dioxus::prelude::*;
@@ -85,43 +78,26 @@ fn Demo() -> Element {
 }
 ```
 
-Libero ships grammars for 30 languages, each behind its own `code-lang-*` feature
-so a build only pays for what it highlights. The default set covers `rust`,
-`bash`, `css` and a few more; enable the rest as you need them. An unrecognized
-name - or a recognized one whose feature is off - falls back to plain,
-unhighlighted text, which is also what leaving `language` off does.
-
-```text
-bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java, javascript,
-json, kotlin, lua, markdown, objective-c, perl, php, powershell, python, r,
-ruby, rust, scala, sql, swift, toml, typescript, yaml
-```
-
-`language` also takes aliases the feature names don't - `rs`, `py`, `c#`. The
-grammars are hand-ported from Prism (<https://prismjs.com>), as is the tokenizer
-that runs them; these 30 are where we started, not a closed set.
-
 ## Accessibility
 
-In `diff` mode a changed line is read with the localization's
-`code_block.added` or `code_block.removed` before it; the visible `+`/`-` is
-hidden from readers. A line named by `highlight_lines` is marked by colour and
-a left bar only - say in prose why it matters when a reader needs to know.
-A block that scrolls is a named region: the localization's
-`code_block.code_named` ("Rust code") or `code_block.code` with no language.
+In `diff` mode a screen reader hears "added" or "removed" before a changed
+line. A line in `highlight_lines` is marked only by color and a bar, so say in
+the text why it matters. A block that scrolls is a region named after its
+language, such as "Rust code". The words come from the
+[localization](localization.md).
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `source` | `String` | required | The text to render, highlighted when `language` names a grammar this build compiles in. Line numbers and the copy button need a real string, so this is the only way to pass content. |
-| `language` | `Language` | - | Unrecognized values fall back to no highlighting rather than a guess. |
-| `header` | `bool` | `theme.code_block.header` (`true`) | A bar above the code naming the language, or the localization's `code_block.unrecognized_language` if it isn't in the catalog or its `code-lang-*` feature is off. |
-| `copyable` | `bool` | `theme.code_block.copyable` (`true`) | Without `header`, floats in the top-right corner. |
-| `max_lines` | `Option<u32>` | - | Caps the visible height to roughly this many lines and scrolls past it; unset grows to fit. Long lines always scroll horizontally regardless. |
-| `line_numbers` | `bool` | `theme.code_block.line_numbers` (`true`) | Toggles the line-number gutter. |
-| `highlight_lines` | `Option<String>` | - | 1-indexed lines to emphasize, e.g. `"1,5-7,10"`. Malformed segments are skipped, not rejected. A range past the last line stops at it. |
-| `diff` | `bool` | `false` | Reads `source` as a unified diff: a leading `+`/`-` colors the row, moves into a marker column, and is kept out of what's highlighted and copied. Wins over `highlight_lines`. Both mark plain lines too when there is no `language`. |
+| `source` | `String` | required | The text. Highlighted when `language` names a grammar this build compiles in. |
+| `language` | `Language` | - | One of 30 grammars, each behind its own `code-lang-*` feature, so a build pays only for what it highlights: bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. Aliases such as `rs`, `py` and `c#` work too. The default features cover `rust`, `bash`, `css` and a few more. An unknown name, or one whose feature is off, renders plain text. |
+| `header` | `bool` | `true` | A bar above the code naming the language, or saying it is unknown. |
+| `copyable` | `bool` | `true` | Shows a copy button. Without `header`, it floats in the top-right corner. |
+| `max_lines` | `u32` | - | Caps the height at about this many lines and scrolls the rest. Unset, the block grows to fit. |
+| `line_numbers` | `bool` | `true` | Shows the line-number gutter. |
+| `highlight_lines` | `String` | - | Lines to emphasize, counted from 1, such as `"1,5-7,10"`. Malformed parts are skipped. |
+| `diff` | `bool` | `false` | Reads `source` as a unified diff. A leading `+` or `-` colors the row and stays out of what is copied. Wins over `highlight_lines`. |
 
 Like every component, `CodeBlock` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
@@ -129,8 +105,8 @@ Like every component, `CodeBlock` also takes the shared props `sx`, `class`,
 ## Theme defaults
 
 `CodeBlockDefaults` on the theme; the font family and token colors come from
-`CodeDefaults`. Highlight and diff row colors are deliberately not fields - they
-derive from the theme's primary, success and error.
+`CodeDefaults`. Highlight and diff row colors derive from the theme's primary,
+success and error.
 
 | Field | Type | Description |
 |---|---|---|
@@ -140,13 +116,13 @@ derive from the theme's primary, success and error.
 | `line_number` | `&'static str` | Gutter digits (`var(--lsx-text-dimmed)`). |
 | `copy_hover_background` | `&'static str` | Copy button background on hover (`var(--lsx-muted-3)`). |
 | `copy_hover_text` | `&'static str` | Copy button text on hover (`var(--lsx-ink)`). |
+| `header` | `bool` | Default `header` when the prop is omitted (`true`). |
+| `copyable` | `bool` | Default `copyable` when the prop is omitted (`true`). |
+| `line_numbers` | `bool` | Default `line_numbers` when the prop is omitted (`true`). |
 
 The defaults are steps of the theme's `muted` ramp, so the block follows the
 palette's page. A token or text color that falls short of 4.5:1 there (3:1
 for line numbers) is darkened, or lightened on a dark page, until it reads.
-| `header` | `bool` | Default `header` when the prop is omitted (`true`). |
-| `copyable` | `bool` | Default `copyable` when the prop is omitted (`true`). |
-| `line_numbers` | `bool` | Default `line_numbers` when the prop is omitted (`true`). |
 
 ## CSS variables
 

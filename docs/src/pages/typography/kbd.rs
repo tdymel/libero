@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Kbd, Text};
 
@@ -12,20 +12,19 @@ pub fn KbdPage() -> Element {
             properties: vec![props("Kbd", vec![
                 prop("size", "Size")
                     .default("sm")
-                    .doc("Font size. Everything else about the look is `Theme::kbd` only."),
-                prop("children", "Element").doc("The key label."),
+                    .doc("Font size. The rest of the look comes from the theme."),
+                prop("children", "Element").default("required").doc("The key label."),
             ])],
             lead: rsx! {
                 Text {
-                    "Save with "
+                    "One keyboard key in a real "
+                    Code { source: "<kbd>" }
+                    ", styled from the theme. A shortcut is several keys with your own "
+                    "separator: save with "
                     Kbd { "Ctrl" }
                     " + "
                     Kbd { "S" }
-                    ". Renders a real "
-                    Code { source: "<kbd>" }
-                    ", styled entirely from the theme ("
-                    Code { source: "Theme::kbd" }
-                    ") - size is the only prop."
+                    "."
                 }
             },
             Demo {
@@ -38,6 +37,15 @@ pub fn KbdPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     Kbd { size: values.str("size"), "Ctrl" }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Put the separator in the text around the keys. A screen reader reads "
+                    Code { source: "Kbd {{ \"Ctrl\" }} \" + \" Kbd {{ \"S\" }}" }
+                    " as \"Ctrl plus S\", but one "
+                    Code { source: "Kbd {{ \"Ctrl+S\" }}" }
+                    " as a single token."
+                }
             }
         }
     }

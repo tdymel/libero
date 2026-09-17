@@ -4,16 +4,12 @@ Crate: `libero`
 Import: `use libero::components::Kbd;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/kbd.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A single keyboard key, rendered as a real `<kbd>` and styled entirely from the theme.
+Description: A single keyboard key, rendered as a real `<kbd>` and styled from the theme.
 
-Renders a real `<kbd>` - a keycap, with a slightly thicker bottom border so it
-reads as having depth rather than as a flat pill. Styled entirely from the theme
-(`Theme::kbd`); `size` is the only prop.
+One keyboard key in a real `<kbd>`, styled from the theme. A shortcut is
+several keys with your own separator.
 
 ## Usage
-
-One `Kbd` is one key. A shortcut is several of them with your own separator, so
-the sentence reads the way you want it to.
 
 ```rust
 use dioxus::prelude::*;
@@ -33,31 +29,17 @@ fn Demo() -> Element {
 }
 ```
 
-`size` steps the font size; every other part of the look is the theme's.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Kbd;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Kbd { size: "lg", "Ctrl" }
-    }
-}
-```
-
 ## Accessibility
 
-Spell the key the way the platform labels it and put the separator in the
-surrounding text - a screen reader reads `Kbd { "Ctrl" } " + " Kbd { "S" }` as
-"Ctrl plus S", where one `Kbd { "Ctrl+S" }` reads as a single opaque token.
+Put the separator in the text around the keys. A screen reader reads
+`Kbd { "Ctrl" } " + " Kbd { "S" }` as "Ctrl plus S", but one
+`Kbd { "Ctrl+S" }` as a single token.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `sm` | Font size. Everything else about the look is `Theme::kbd` only. |
+| `size` | `Size` | `sm` | Font size. The rest of the look comes from the theme. |
 | `children` | `Element` | required | The key label. |
 
 Like every component, `Kbd` also takes the shared props `sx`, `class`, `style`,
@@ -70,7 +52,7 @@ Like every component, `Kbd` also takes the shared props `sx`, `class`, `style`,
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | Default `size` when the prop is omitted; `sm`. |
-| `font_sizes` | `Sizes<u16>` | Font size in px per size step - 10, 12, 14, 16, 20, 24. |
+| `font_sizes` | `Sizes<u16>` | Font size in px per size step: 10, 12, 14, 16, 20, 24. |
 | `font_family` | `&'static str` | The keycap's font; the theme's mono stack. |
 | `background` | `&'static str` | Keycap fill; `var(--lsx-muted-1)`. |
 | `border` | `&'static str` | Border color, used on all four sides; `var(--lsx-muted-4)`. |

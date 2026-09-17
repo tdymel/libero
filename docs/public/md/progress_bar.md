@@ -4,13 +4,10 @@ Crate: `libero`
 Import: `use libero::components::ProgressBar;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/progress_bar.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A determinate or indeterminate progress bar over any `min..=max` range, with `role="progressbar"` and the raw `aria-value*` set on its root.
+Description: A determinate or indeterminate progress bar over any `min..=max` range.
 
-A bar that fills from `min` to `max`. It is output, not a control: it takes no
-focus and no keys. The root carries `role="progressbar"` and the raw
-`aria-valuenow`/`min`/`max`, so it needs a name - pass `aria_label`, which lands
-on the root. The fill eases to each new value; with `value: None` it sweeps
-instead, for the time before the total is known.
+A bar that fills from `min` to `max`. It shows output and takes no focus. With
+`value: None` it sweeps instead, for the time before the total is known.
 
 ## Usage
 
@@ -32,44 +29,34 @@ fn Demo() -> Element {
 }
 ```
 
-`value` is required and is an `Option<f64>`: a bare number works through
-`into`, and `value: None` is the indeterminate bar.
+`value` is required. A bare number works, and `value: None` is the
+indeterminate bar.
 
 ```rust,ignore
 ProgressBar { aria_label: "Connecting", value: None }
 ```
 
-## Announcing progress
-
-The bar is not a live region. One that ticks sixty times a second inside
-`role="status"` floods the screen reader's queue until it is announcing numbers
-from a minute ago. A reader who wants to know checks the bar. If progress has to
-be announced, put a separate status line next to it and update it at milestones
-- a quarter done, half done, finished - not on every tick.
-
 ## Accessibility
 
-- No accessible name is invented. Pass `aria_label`, or `aria_labelledby`
-  pointing at a visible caption.
-- `aria-valuetext` defaults to the rounded percentage (`"42%"`). Pass
-  `aria_valuetext` where the amount reads better in other words.
+Name it with `aria_label`, or `aria_labelledby` pointing at a visible caption.
+A screen reader reads the rounded percentage, or `aria_valuetext` when you set
+it. The bar is not a live region. To announce progress, update a separate
+status line at milestones, not on every tick.
 
 ## Props
 
-### `ProgressBar`
-
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `Option<f64>` | required | Current progress, clamped into `min..=max`. `None` is indeterminate: the bar sweeps and `aria-valuenow` is dropped. |
+| `value` | `Option<f64>` | required | Current progress, clamped into `min..=max`. `None` makes it indeterminate. |
 | `min` | `f64` | `0.0` | Range start. |
-| `max` | `f64` | `100.0` | Range end. At or below `min` it warns and draws empty. |
-| `color` | `ThemeAwareValue` | `primary` | The fill; a theme color name or a literal CSS color. |
+| `max` | `f64` | `100.0` | Range end. At or below `min` the bar draws empty. |
+| `color` | `ThemeAwareValue` | `primary` | The fill. A theme color name or any CSS color. |
 | `size` | `Size` | `md` | Track height, 3px at `xs` to 20px at `xxl`. |
-| `radius` | `Size` | `xl` | Corner of the track and the fill. A track is a full pill once the radius reaches half its height, so on the default `md` track only `xs` looks different. |
-| `aria_valuetext` | `String` | - | What a screen reader announces instead of the rounded percentage. |
+| `radius` | `Size` | `xl` | Corner of the track and the fill. On a thin track most steps draw the same pill. |
+| `aria_valuetext` | `String` | - | Read instead of the rounded percentage, such as "4.2 MB of 12 MB". |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes - `aria_label` among them.
+`states`, and any extra HTML attributes, `aria_label` among them.
 
 ## Theme defaults
 

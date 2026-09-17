@@ -15,44 +15,43 @@ pub fn ColorSchemeButtonPage() -> Element {
             properties: vec![props("ColorSchemeButton", vec![
                 prop("variant", "Variant")
                     .default("outlined")
-                    .doc("`ActionIcon`'s chrome. Unset, the theme's `color_scheme_button.variant`."),
+                    .doc("Visual style, as on `ActionIcon`."),
                 prop("color", "ThemeAwareValue")
                     .default("muted")
-                    .doc("Accent color. Unset, the theme's `color_scheme_button.color`."),
+                    .doc("Accent color. A theme color name or any CSS color."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
-                    .doc("Button size; the glyph takes 55% of it."),
+                    .doc("Button size. The icon takes 55% of it."),
                 prop("radius", "ThemeAwareValue")
                     .default("sm")
-                    .doc("Corner radius, independent of size."),
+                    .doc("Corner radius, independent of `size`."),
                 prop("themes", "&'static [&'static ThemeSet]")
-                    .doc("Opts into the theme picker: a chevron beside the toggle opening a menu of these sets, the active one checked. The pair is then a named `group`, and `class`, `sx` and extra attributes land on it."),
+                    .doc("Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both."),
                 prop("label", "Callback<ColorSchemeSetting, String>")
-                    .doc("Replaces the localization's three toggle names. Given the setting a press moves to, it names what the press does."),
+                    .doc("Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Disables interaction and dims the button."),
+                    .doc("Disables and dims the button."),
             ])],
             lead: rsx! {
                 Text {
-                    "An icon button that steps the app's colour scheme: following the "
-                    "platform, then the scheme the platform is not showing, then the one it "
-                    "is, then back to following it. The glyph and the name both say where a "
-                    "press goes: a sun switches to light, a moon to dark, a half-filled disc "
-                    "back to following the platform. "
-                    "It is an "
-                    Code { source: "ActionIcon" }
-                    " over "
+                    "An icon button that switches the app's colour scheme. Each press steps "
+                    "from following the system, to the scheme the system is not showing, to "
+                    "the one it is, and back. The icon shows where the next press goes: a sun "
+                    "for light, a moon for dark, a half-filled disc for following the system."
+                }
+                Text {
+                    "While it follows the system, a change of the OS setting applies at once. "
+                    "A picked scheme stays until the next press. For your own control, such "
+                    "as a menu of all three choices, build on "
                     Code { source: "use_color_scheme()" }
                     "."
                 }
                 Text {
                     "With "
                     Code { source: "themes" }
-                    " it becomes a split button: a chevron beside the toggle opens a menu of "
-                    "theme sets. Two buttons rather than one with a second gesture, so each "
-                    "has one job, one name and its own tab stop. The one in this site's "
-                    "header is "
+                    " set, a second button beside it opens a menu of theme sets. This site's "
+                    "header uses "
                     Code { source: "ColorSchemeButton {{ themes: ThemeSet::CATALOGUE }}" }
                     "."
                 }

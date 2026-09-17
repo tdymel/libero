@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use crate::icons::CheckmarkIcon;
 use dioxus::prelude::*;
 use libero::{
@@ -26,41 +26,32 @@ pub fn AlertPage() -> Element {
             markdown: "/md/alert.md",
             properties: vec![props("Alert", vec![
                 prop("title", "String")
-                    .doc("The heading, and the alert's accessible name through `aria-labelledby`. Text, not markup - markup in a name is dropped from it."),
+                    .doc("The heading and the alert's accessible name. Text only."),
                 prop("icon", "Element")
-                    .doc("A leading glyph, rendered `aria-hidden`. The library ships no icon set; this is your own."),
+                    .doc("A leading icon of your own, hidden from screen readers."),
                 prop("color", "ThemeAwareValue")
                     .default("info")
-                    .doc("The tint; a theme color name or a literal CSS color. Severity is yours to state - `Form`'s summary passes `error`. Also picks the role: `error` and `warning` are `alert`, the rest `status`."),
+                    .doc("The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`."),
                 prop("variant", "Variant")
                     .default("tonal")
-                    .doc("Chrome, shared with `Button` and `Badge`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. No hover response - an alert is not a target."),
+                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`."),
                 prop("radius", "Size")
                     .default("md")
-                    .doc("A step on the radius scale. Anything else goes through `sx`."),
+                    .doc("Corner radius. A size step or any CSS length."),
                 prop("onclose", "EventHandler<()>")
-                    .doc("Its presence is what shows the close button. Closing is yours: unmount the alert."),
+                    .doc("Shows the close button and fires when it is pressed. Unmount the alert to close it."),
                 prop("close_label", "String")
                     .default("common.close")
-                    .doc("The close button's accessible name. Unset, the localization's `common.close` - \"Close\" in English."),
-                prop("children", "Element").doc("The message, and the alert's description through `aria-describedby`."),
+                    .doc("The close button's accessible name. Unset, the localization's `common.close`, \"Close\" in English."),
+                prop("children", "Element")
+                    .default("required")
+                    .doc("The message, read as the alert's description."),
             ])],
             lead: rsx! {
                 Text {
-                    "A tinted surface for something the reader has to know. An "
-                    Code { source: "error" }
-                    " or "
-                    Code { source: "warning" }
-                    " color renders "
-                    Code { source: "role=\"alert\"" }
-                    ", which interrupts a screen reader; every other color renders the polite "
-                    Code { source: "role=\"status\"" }
-                    ". Your own "
-                    Code { source: "role" }
-                    " replaces either. It takes no focus and does not close on Escape: it is not an overlay. "
-                    "The icon is "
-                    Code { source: "aria-hidden" }
-                    ": it repeats what the title already says. "
+                    "A tinted surface for something the reader has to know, such as an error, "
+                    "a warning or a note. It takes no focus and does not close on Escape, "
+                    "because it is not an overlay. "
                     Code { source: "Form" }
                     "'s error summary is an "
                     Code { source: "Alert" }
@@ -130,6 +121,34 @@ pub fn AlertPage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "An "
+                    Code { source: "error" }
+                    " or "
+                    Code { source: "warning" }
+                    " color renders "
+                    Code { source: "role=\"alert\"" }
+                    ", which interrupts a screen reader. Every other color renders the polite "
+                    Code { source: "role=\"status\"" }
+                    ". Your own "
+                    Code { source: "role" }
+                    " replaces either."
+                }
+                Text {
+                    "The icon is hidden from screen readers, so say the severity in the title "
+                    "or the message too. "
+                    Code { source: "outlined" }
+                    " has no tint, so prefer "
+                    Code { source: "tonal" }
+                    " or "
+                    Code { source: "filled" }
+                    " for an error. Closing removes the focused close button, so move focus "
+                    "somewhere sensible in "
+                    Code { source: "onclose" }
+                    "."
+                }
             }
         }
     }

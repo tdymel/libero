@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Input, ProgressBar, Text};
 
@@ -17,18 +17,19 @@ pub fn ProgressBarPage() -> Element {
             markdown: "/md/progress_bar.md",
             properties: vec![props("ProgressBar", vec![
                 prop("value", "Option<f64>")
-                    .doc("Required. Current progress, clamped into `min..=max`. `None` is indeterminate: the bar sweeps and `aria-valuenow` is dropped."),
+                    .default("required")
+                    .doc("Current progress, clamped into `min..=max`. `None` makes it indeterminate."),
                 prop("min", "f64").default("0.0").doc("Range start."),
-                prop("max", "f64").default("100.0").doc("Range end. At or below `min` it warns and draws empty."),
+                prop("max", "f64").default("100.0").doc("Range end. At or below `min` the bar draws empty."),
                 prop("color", "ThemeAwareValue")
                     .default("primary")
-                    .doc("The fill; a theme color name or a literal CSS color."),
+                    .doc("The fill. A theme color name or any CSS color."),
                 prop("size", "Size").default("md").doc("Track height, 3px at `xs` to 20px at `xxl`."),
                 prop("radius", "Size")
                     .default("xl")
-                    .doc("Corner of the track and the fill. A track is a full pill once the radius reaches half its height, so on the default `md` track only `xs` looks different."),
+                    .doc("Corner of the track and the fill. On a thin track most steps draw the same pill."),
                 prop("aria_valuetext", "String")
-                    .doc("What a screen reader announces instead of the rounded percentage."),
+                    .doc("Read instead of the rounded percentage, such as \"4.2 MB of 12 MB\"."),
             ])],
             lead: rsx! {
                 Text {
@@ -36,24 +37,9 @@ pub fn ProgressBarPage() -> Element {
                     Code { source: "min" }
                     " to "
                     Code { source: "max" }
-                    ". It is output, not a control: it takes no focus and no keys. The root "
-                    "carries "
-                    Code { source: "role=\"progressbar\"" }
-                    " and the raw "
-                    Code { source: "aria-valuenow" }
-                    "/"
-                    Code { source: "min" }
-                    "/"
-                    Code { source: "max" }
-                    ", so it needs a name - pass "
-                    Code { source: "aria_label" }
-                    ", which lands on the root. The fill eases to each new value; with "
+                    ". It shows output and takes no focus. With "
                     Code { source: "value: None" }
-                    " it sweeps instead, for the time before the total is known. The bar is "
-                    "not a live region: one that ticks inside "
-                    Code { source: "role=\"status\"" }
-                    " floods the screen reader's queue. If progress has to be announced, "
-                    "update a separate status line at milestones, not on every tick."
+                    " it sweeps instead, for the time before the total is known."
                 }
             },
             Demo {
@@ -104,6 +90,19 @@ pub fn ProgressBarPage() -> Element {
                         radius: values.str("radius"),
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Name it with "
+                    Code { source: "aria_label" }
+                    ", or "
+                    Code { source: "aria_labelledby" }
+                    " pointing at a visible caption. A screen reader reads the rounded "
+                    "percentage, or "
+                    Code { source: "aria_valuetext" }
+                    " when you set it. The bar is not a live region. To announce progress, "
+                    "update a separate status line at milestones, not on every tick."
+                }
             }
         }
     }

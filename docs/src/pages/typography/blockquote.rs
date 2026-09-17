@@ -23,35 +23,33 @@ pub fn BlockquotePage() -> Element {
             properties: vec![props("Blockquote", vec![
                 prop("size", "Size")
                     .default("md")
-                    .doc("Body font size, line height, padding and the accent bar's width."),
+                    .doc("Text size, line height, padding and the accent bar's width."),
                 prop("color", "ThemeAwareValue")
                     .default("primary, tinted")
-                    .doc("The accent bar, and the background tint derived from it. A bare theme color is tinted to its lightest shade. A theme color paints its fill shade under its contrast twin as text."),
+                    .doc("The accent bar and the tint behind the quote. A theme color name gets its lightest shade. Any CSS color works too."),
                 prop("radius", "Size")
                     .default("sm")
                     .doc("Rounds the two corners away from the accent bar."),
                 prop("attribution", "Element")
-                    .doc("Who said it, rendered in a `<figcaption>` outside the quote. A person's name goes here as plain text - it does not become a `<cite>`."),
+                    .doc("Who said it, shown under the quote. For any join other than a comma, pass the whole line here."),
                 prop("work", "String")
-                    .doc("The title of the work quoted, rendered as a `<cite>` in the `<figcaption>`. Not a person. Follows `attribution` after a comma when both are set."),
+                    .doc("The title of the quoted work, such as a book or a talk. Follows `attribution` after a comma."),
                 prop("cite_url", "String")
-                    .doc("The `cite` attribute on `<blockquote>`: a URL naming the source document. Machine-readable only, no browser renders it."),
-                prop("children", "Element").doc("The quote."),
+                    .doc("A URL naming the source. Only machines read it, browsers do not show it."),
+                prop("children", "Element").default("required").doc("The quote."),
             ])],
             lead: rsx! {
                 Text {
-                    "A quotation with its attribution. Renders a real "
-                    Code { source: "<figure>" }
-                    " holding a "
-                    Code { source: "<blockquote>" }
-                    " and, when there is one, a "
+                    "A quotation in a tinted frame with an accent bar. The attribution sits in a "
                     Code { source: "<figcaption>" }
-                    " - the attribution sits outside the quote, which is where the HTML "
-                    "spec puts it, so assistive technology does not read a speaker's name as "
-                    "quoted words. "
+                    " outside the "
+                    Code { source: "<blockquote>" }
+                    ", so a screen reader does not read the speaker's name as part of the "
+                    "quote. "
                     Code { source: "size" }
-                    " scales the body text along with the frame, on the same scale Text uses. "
-                    "The accent bar is on the left in every writing direction."
+                    " scales the text with the frame, on "
+                    Code { source: "Text" }
+                    "'s scale. The accent bar is on the left in every writing direction."
                 }
             },
             Demo {

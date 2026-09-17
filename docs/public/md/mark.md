@@ -4,10 +4,11 @@ Crate: `libero`
 Import: `use libero::components::Mark;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/mark.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A real `mark` element that highlights a chunk of text with a light tint of a theme color.
+Description: A `mark` element that highlights text with a light tint of a theme color.
 
-Highlight a chunk of the text. Renders a real `<mark>`, tinted with a light shade
-of the theme's `warning` color by default.
+Highlights a chunk of text in a real `<mark>`, tinted with a light shade of the
+theme's `warning` color by default. The text color follows the tint, so it
+stays readable.
 
 ## Usage
 
@@ -27,17 +28,11 @@ fn Demo() -> Element {
 }
 ```
 
-A bare theme color name is tinted to a light shade; an explicit shade
-(`"error.4"`) keeps its shade. A theme color paints its fill shade, the one its
-contrast color is computed on, and sets the text to that contrast color. A hex
-sets black or white text; any other literal CSS color (`"gold"`) passes through
-and the text inherits.
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ThemeAwareValue` | `warning`, tinted | Any theme color or literal value; a bare theme color is tinted to a light shade. A theme color paints its fill shade and sets the text to its contrast twin; a hex sets black or white text. |
+| `color` | `ThemeAwareValue` | `warning`, tinted | A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too. |
 | `children` | `Element` | required | The highlighted content. |
 
 Like every component, `Mark` also takes the shared props `sx`, `class`, `style`,

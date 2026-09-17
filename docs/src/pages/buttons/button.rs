@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Input, Text};
 
@@ -12,47 +12,50 @@ pub fn ButtonPage() -> Element {
             properties: vec![props("Button", vec![
                 prop("color", "ThemeAwareValue")
                     .default("primary")
-                    .doc("Accent color; a theme color name or a literal CSS color."),
+                    .doc("Accent color. A theme color name or any CSS color."),
                 prop("variant", "Variant")
                     .default("filled")
-                    .doc("Visual style, in Material 3's descending emphasis order: `filled`, `tonal`, `elevated`, `outlined`, `standard`."),
+                    .doc("Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`."),
                 prop("radius", "Size")
                     .default("md")
-                    .doc("Corner radius, independent of size."),
+                    .doc("Corner radius, independent of `size`."),
                 prop("size", "Size")
                     .default("md")
-                    .doc("Controls height, padding, and font size."),
+                    .doc("Height, padding and font size."),
                 prop("full_width", "bool")
                     .default("false")
                     .doc("Stretches the button to fill its container."),
                 prop("selected", "bool")
-                    .doc("Turns the button into a toggle, rendering `aria-pressed` and the selected look. Omit to keep it a plain action."),
+                    .doc("Makes it a toggle button with the selected look. Leave it unset for a plain action."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Disables interaction and dims the button."),
+                    .doc("Disables and dims the button."),
                 prop("loading", "bool")
                     .default("false")
-                    .doc("Overlays a `Loader` on the label and swallows clicks, but keeps the button focusable. The label stays in the tree as the accessible name and holds the width; the button renders `aria-busy` and `aria-disabled`. Ignored on a link."),
+                    .doc("Shows a `Loader` over the label and ignores clicks. The button stays focusable and keeps its width. Ignored on a link."),
                 prop("onclick", "EventHandler<MouseEvent>")
-                    .doc("Click handler; not called when the button renders as a link."),
+                    .doc("Click handler. Not called on a link."),
                 prop("to", "NavigationTarget")
-                    .doc("Renders as a router-aware link instead of a `<button>`. A path/URL or a typed route (`Route::Foo {}`)."),
+                    .doc("Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`)."),
                 prop("target", "String")
-                    .doc("The link's `target` attribute, when `to` is set."),
+                    .doc("The link's `target` attribute."),
                 prop("icon", "Element")
-                    .doc("Drawn before the label, with a gap; it never shrinks."),
+                    .doc("Drawn before the label. It never shrinks."),
                 prop("children", "Element")
-                    .doc("The button's label, laid out as its own flex items, on one line: a long one is cut at the edge and stays the full accessible name."),
+                    .default("required")
+                    .doc("The label, on one line. A long one is cut at the edge."),
             ]).extends("button")],
             lead: rsx! {
                 Text {
-                    "A clickable control, or a router-aware link when "
+                    "A clickable action, a toggle, or a link when "
                     Code { source: "to" }
-                    " is set. A plain "
-                    Code { source: "<button>" }
-                    " submits an enclosing form; ours defaults to "
+                    " is set. It defaults to "
                     Code { source: "type=\"button\"" }
-                    " instead, so a submit or reset button says so."
+                    ", so it never submits a form by accident. A submit button sets "
+                    Code { source: "r#type: \"submit\"" }
+                    ". For an icon-only button, use "
+                    Code { source: "ActionIcon" }
+                    "."
                 }
             },
             Demo {
@@ -126,6 +129,17 @@ pub fn ButtonPage() -> Element {
                         "Save changes"
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "A cut label is still the full accessible name. Pass it as "
+                    Code { source: "title" }
+                    " too, so sighted users can read it on hover. "
+                    Code { source: "selected: Some(false)" }
+                    " announces a toggle that is off, while an unset "
+                    Code { source: "selected" }
+                    " announces no state."
+                }
             }
         }
     }

@@ -4,17 +4,15 @@ Crate: `libero`
 Import: `use libero::components::VisuallyHidden;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/accessibility/visually_hidden.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A `span` whose content is read by screen readers but removed from sighted layout - extra context for something ambiguous on its own.
+Description: A `span` read by screen readers but hidden from sighted layout, for extra context on something vague on its own.
 
-Content available to screen readers but removed from sighted layout - e.g. extra
-context for a link that's ambiguous out of context. It renders a `<span>`
-clipped to a 1px box off-flow, so the text stays in the accessibility tree while
-occupying no space.
+Content for screen readers only, such as extra context for a link that is
+vague on its own. With `focusable` on it is a skip link.
 
 ## Usage
 
-The preview reads "Read more"; a screen reader reads "Read more about focus
-management".
+Sighted users see "Read more", and a screen reader reads "Read more about
+focus management".
 
 ```rust
 use dioxus::prelude::*;
@@ -36,23 +34,14 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The content stays in reading order, so place it where it should be *read*:
-inside the link, not next to it.
+Place the text where it should be read, inside the link and not next to it.
+Use it for text a screen reader user is missing, never to hide something
+sighted users need. To replace a control's whole name, use `aria_label`
+instead.
 
-Use it for text that is genuinely missing for a non-sighted reader - a link's
-target, a table column header, a live-region announcement. Do not use it to hide
-something from sighted users that they need, and prefer `aria_label` on the
-control itself when the whole accessible name is being replaced rather than
-extended.
-
-A focusable element inside a visually hidden span is a trap for a keyboard user:
-focus moves somewhere invisible. Keep the children to text, or set `focusable`.
-
-## Skip link
-
-`focusable` shows the content, on a paper background, while focus is inside it
-(2.4.7). It stays `fixed` at its place in the flow, so put a skip link first on
-the page. Further down, host it in a positioned parent and set
+Keep the children to text unless `focusable` is set, or keyboard focus lands
+somewhere invisible. A skip link shows at its place in the flow, so put it
+first on the page. Further down, put it in a positioned parent and set
 `position: absolute` through `sx`, or Tab never scrolls it into view.
 
 ```rust,ignore
@@ -74,7 +63,7 @@ Like every component, `VisuallyHidden` also takes the shared props `sx`, `class`
 
 ## Theme defaults
 
-None - the clipping rules are fixed, not themed.
+None. The hiding rules are fixed.
 
 ## CSS variables
 

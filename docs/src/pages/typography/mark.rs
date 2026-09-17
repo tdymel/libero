@@ -17,18 +17,18 @@ pub fn MarkPage() -> Element {
             properties: vec![props("Mark", vec![
                 prop("color", "ThemeAwareValue")
                     .default("warning, tinted")
-                    .doc("Any theme color or literal value; a bare theme color is tinted to a light shade. A theme color paints its fill shade and sets the text to its contrast twin; a hex sets black or white text."),
-                prop("children", "Element").doc("The highlighted content."),
+                    .doc("A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too."),
+                prop("children", "Element").default("required").doc("The highlighted content."),
             ])],
             lead: rsx! {
                 Text {
-                    "Highlight "
-                    Mark { "this chunk" }
-                    " of the text. Renders a real "
+                    "Highlights "
+                    Mark { "a chunk" }
+                    " of text in a real "
                     Code { source: "<mark>" }
                     ", tinted with a light shade of the theme's "
                     Code { source: "warning" }
-                    " color by default."
+                    " color by default. The text color follows the tint, so it stays readable."
                 }
             },
             Demo {

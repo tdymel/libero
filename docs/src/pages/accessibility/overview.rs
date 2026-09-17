@@ -18,19 +18,18 @@ pub fn AccessibilityPage() -> Element {
             markdown: "/md/accessibility.md",
             lead: rsx! {
                 Text {
-                    "Every component page has its own Accessibility section: the keys that "
-                    "component answers, and the props you have to set because it cannot work "
-                    "them out - a name for something that has no visible label, mostly. This "
-                    "page holds what applies to the library as a whole, starting with what "
-                    "libero does not do, so you can decide what to do about it."
+                    "Each component page has its own Accessibility section with the keys the "
+                    "component answers and the props you must set, mostly a name for "
+                    "something without a visible label. This page covers the library as a "
+                    "whole, including what libero does not do."
                 }
             },
 
             DocSection {
                 title: "On and disabled states",
                 Text {
-                    "A pressed, selected or current control never differs by colour alone. "
-                    "It carries a line in its own text colour: "
+                    "A pressed, selected or current control never differs by colour alone. It "
+                    "also carries a line in its own text colour. "
                     Code { source: "Button" }
                     ", "
                     Code { source: "ActionIcon" }
@@ -42,7 +41,7 @@ pub fn AccessibilityPage() -> Element {
                     Code { source: "Pagination" }
                     " page and the current "
                     Code { source: "Stepper" }
-                    " marker draw it as a thin ring just inside their edge, an active "
+                    " marker draw a thin ring just inside their edge. An active "
                     Code { source: "NavLink" }
                     " and a selected row in a "
                     Code { source: "Select" }
@@ -50,7 +49,7 @@ pub fn AccessibilityPage() -> Element {
                     Code { source: "MultiSelect" }
                     " or "
                     Code { source: "Combobox" }
-                    " list as a short 2px bar upright at its start edge. "
+                    " list draw a short 2px bar at their start edge. "
                     "A disabled control fades to half."
                 }
             }
@@ -58,40 +57,36 @@ pub fn AccessibilityPage() -> Element {
             DocSection {
                 title: "Forced colors and Windows High Contrast",
                 Text {
-                    "Libero supports forced colors only in part. The states above hold: an on "
-                    "state paints the system's "
+                    "Libero supports forced colors only in part. The states above still show. "
+                    "An on state takes the system's "
                     Code { source: "Highlight" }
-                    " pair and a disabled control's text turns "
+                    " colours, and a disabled control's text turns "
                     Code { source: "GrayText" }
-                    ". A few components carry their own "
+                    ". A few components handle "
                     Code { source: "(forced-colors: active)" }
-                    " arm; the rest of the library is not tested in that mode."
+                    " themselves. The rest of the library is untested in that mode."
                 }
                 Text {
-                    "Windows High Contrast is the mode this affects. In it the operating "
-                    "system replaces every colour an author picked and drops "
+                    "In Windows High Contrast the system replaces every colour an author "
+                    "picked and drops "
                     Code { source: "box-shadow" }
-                    " entirely. Anything libero draws with a shadow or a themed colour alone "
-                    "can therefore disappear: a "
+                    ". So anything libero draws with a shadow or a colour alone can disappear. "
+                    "A "
                     Code { source: "Paper" }
-                    " that relies on its shadow for its edge ("
+                    " with "
                     Code { source: "bordered: false" }
-                    ") has no visible boundary at all, and a state carried only by colour is "
-                    "no longer distinguishable. Borders, text, focus rings drawn as outlines "
-                    "and the layout itself survive, because the system repaints them."
+                    " loses its edge, and a state shown only by colour can no longer be told "
+                    "apart. Borders, text, outline focus rings and the layout survive."
                 }
                 Text {
-                    "If your users run High Contrast, prefer a border over a shadow where a "
-                    "boundary matters, and write the arm yourself - "
-                    Code { source: "sx" }
-                    " takes any media query:"
+                    "If your users run High Contrast, prefer a border over a shadow where an "
+                    "edge matters, and add the media query yourself:"
                 }
                 CodeBlock { source: FORCED_COLORS, language: "rust" }
                 Text {
-                    "The reason we stop there: forced colors is a Windows platform mode, not "
-                    "a WCAG success criterion at any conformance level, and covering it "
-                    "properly means an arm on most of the library plus a test tier to keep it "
-                    "honest. If you need more of it, open an issue - a real user asking is "
+                    "Forced colors is a Windows mode, not a WCAG success criterion, and "
+                    "covering it properly means work on most of the library plus tests to "
+                    "keep it. If you need more of it, open an issue. A real user asking is "
                     "what would change this."
                 }
             }

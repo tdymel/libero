@@ -6,12 +6,12 @@ use libero::components::{Code, Text};
 /// the feature flags behind it work the same for both. Each grammar is also a
 /// `language` value, though `language` takes aliases the feature names don't -
 /// `rs`, `py`, `c#`.
-pub(super) const LANGUAGE_DOC: &str = "One of 30 grammars hand-ported from Prism, each behind its own \
-`code-lang-*` feature so a build only pays for what it highlights: bash, c, cpp, csharp, css, dart, \
-go, graphql, haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, \
-powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. The default set covers \
-`rust`, `bash`, `css` and a few more. An unrecognized name, or one whose feature is off, renders \
-plain text, as does leaving it off.";
+pub(super) const LANGUAGE_DOC: &str = "One of 30 grammars, each behind its own `code-lang-*` \
+feature, so a build pays only for what it highlights: bash, c, cpp, csharp, css, dart, go, graphql, \
+haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, \
+python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. Aliases such as `rs`, `py` and `c#` \
+work too. The default features cover `rust`, `bash`, `css` and a few more. An unknown name, or one \
+whose feature is off, renders plain text.";
 
 /// Inline `Code` earns its keep mid-sentence, so the demo shows it there
 /// rather than alone: (before, source, after).
@@ -44,24 +44,23 @@ pub fn CodePage() -> Element {
             source: "libero/src/components/typography/code/code.rs",
             markdown: "/md/code.md",
             properties: vec![props("Code", vec![
-                prop("source", "String").doc("The text to render, highlighted when `language` names a grammar this build compiles in."),
+                prop("source", "String")
+                    .default("required")
+                    .doc("The text. Highlighted when `language` names a grammar this build compiles in."),
                 prop("language", "Language").doc(LANGUAGE_DOC),
             ])],
             lead: rsx! {
                 Text {
                     "A "
-                    Code { source: "code" }
-                    " element for a snippet inside a sentence. Content is "
+                    Code { source: "<code>" }
+                    " element for a snippet inside a sentence. Pass the text as "
                     Code { source: "source" }
-                    ", a plain string; add "
+                    " and set "
                     Code { source: "language" }
-                    " to syntax-highlight it. For a multi-line, "
-                    Code { source: "pre" }
-                    "-wrapped block with line numbers, a copy button and diffs, reach for "
+                    " to highlight it. For a multi-line block with line numbers and a copy "
+                    "button, use "
                     Code { source: "CodeBlock" }
-                    " instead. The font and the syntax token colors come from "
-                    Code { source: "Theme.code" }
-                    " and can be overridden per-app."
+                    ". The font and the token colors come from the theme."
                 }
             },
             Demo {

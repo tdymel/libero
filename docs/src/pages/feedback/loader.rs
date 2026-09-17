@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Box, Code, Flex, Input, Loader, Text, VisuallyHidden};
 
@@ -45,47 +47,21 @@ pub fn LoaderPage() -> Element {
             properties: vec![props("Loader", vec![
                 prop("variant", "LoaderVariant")
                     .default("oval")
-                    .doc("The shape: `oval` (a ring with a gap, rotating), `bars` (three bars rising in turn) or `dots` (three dots pulsing)."),
+                    .doc("The shape: `oval`, `bars` or `dots`."),
                 prop("size", "Size")
                     .default("md")
-                    .doc("The square edge, 18px at `xs` to 72px at `xxl`. Every part of the shape is a fraction of it."),
+                    .doc("The edge of the square, 18px at `xs` to 72px at `xxl`."),
                 prop("color", "ThemeAwareValue")
                     .default("primary")
-                    .doc("The ink; a theme color name or a literal CSS color."),
+                    .doc("A theme color name or any CSS color."),
             ])],
             lead: rsx! {
                 Text {
-                    "An indeterminate busy indicator: it says something is happening, never "
-                    "how much is left. The root is a "
+                    "An indeterminate busy indicator. It says something is happening, not how "
+                    "much is left. The root is a "
                     Code { source: "<span>" }
-                    ", so a loader is legal inside a paragraph or a button. It is always "
-                    "silent - "
-                    Code { source: "aria-hidden=\"true\"" }
-                    " - because something else on screen usually already says what is going "
-                    "on. Under "
-                    Code { source: "prefers-reduced-motion: reduce" }
-                    " all three shapes stop and stay visible: a still ring with its gap, three "
-                    "full-height bars, three dots."
-                }
-                Text {
-                    "Who announces the wait depends on where the loader sits. Beside its own "
-                    "visible text, the text is the message; inside a named control - a "
-                    Code { source: "Button" }
-                    " with "
-                    Code { source: "loading" }
-                    " - the control's name plus "
-                    Code { source: "aria-busy" }
-                    " carries it. As the sole content of a region, mark the region "
-                    Code { source: "aria-busy" }
-                    " and keep the loader silent there too. The text goes into a "
-                    Code { source: "role=\"status\"" }
-                    " region that is always mounted and sits outside the busy element, and "
-                    "is filled only while loading. A region that mounts with its text, or "
-                    "changes inside a busy element, may never be read. Switch "
-                    Code { source: "Beside text" }
-                    " and "
-                    Code { source: "Sole content" }
-                    " to see both."
+                    ", so it fits inside a paragraph or a button. With reduced motion it stops "
+                    "moving but stays visible."
                 }
             },
             Demo {
@@ -137,6 +113,28 @@ pub fn LoaderPage() -> Element {
                         VisuallyHidden { role: "status", if in_region { "{LOADING}" } }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "A loader is hidden from screen readers, so something else says the wait. "
+                    "Beside its own text, the text says it. Inside a control, such as a "
+                    Code { source: "Button" }
+                    " with "
+                    Code { source: "loading" }
+                    ", the control does."
+                }
+                Text {
+                    "As the only content of a region, mark the region "
+                    Code { source: "aria-busy" }
+                    " and put the text in a "
+                    Code { source: "role=\"status\"" }
+                    " region outside it. Mount that region up front and fill it only while "
+                    "loading, or a screen reader may skip it. Switch "
+                    Code { source: "Beside text" }
+                    " and "
+                    Code { source: "Sole content" }
+                    " to see both."
+                }
             }
         }
     }

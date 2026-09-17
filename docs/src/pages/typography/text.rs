@@ -1,6 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
-use libero::components::Text;
+use libero::components::{Code, Text};
 
 #[component]
 pub fn TextPage() -> Element {
@@ -12,14 +12,22 @@ pub fn TextPage() -> Element {
             properties: vec![props("Text", vec![
                 prop("size", "Size")
                     .default("md")
-                    .doc("Visual size, xs through xxl."),
+                    .doc("Visual size, `xs` to `xxl`."),
                 prop("component", "HtmlTag")
                     .default("p")
-                    .doc("Which element to render as."),
-                prop("children", "Element").doc("The text content."),
+                    .doc("The element to render."),
+                prop("children", "Element").default("required").doc("The text."),
             ])],
             lead: rsx! {
-                Text { "Body copy - renders a p by default, sized via the theme's text scale." }
+                Text {
+                    "Body copy in a "
+                    Code { source: "<p>" }
+                    ", sized from the theme's text scale. "
+                    Code { source: "component" }
+                    " changes the element without changing the look. For headings, use "
+                    Code { source: "Title" }
+                    "."
+                }
             },
             Demo {
                 component: "Text",
@@ -36,6 +44,14 @@ pub fn TextPage() -> Element {
                         "The quick brown fox jumps over the lazy dog."
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Use "
+                    Code { source: "component: \"span\"" }
+                    " for text inside a sentence. A large size is only styling, so it never "
+                    "makes a heading."
+                }
             }
         }
     }

@@ -6,17 +6,13 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/access
 Index: [index.md](index.md) - every other component's markdown page
 Description: Confines Tab and Shift+Tab cycling to its children, for keeping keyboard focus inside an open overlay.
 
-Confines Tab/Shift+Tab cycling to its children - the same mechanism
-the [modal](modal.md) layer uses internally to keep keyboard focus inside an open dialog.
-It focuses its first focusable child on mount, so mounting a trap moves focus
-into it; Tab from there cycles the children without ever reaching a control
-outside.
+Keeps Tab and Shift+Tab cycling inside its children, as inside an open dialog.
+It focuses its first focusable child on mount and adds no box of its own.
 
 ## Usage
 
-The trap needs focusable siblings outside it, or "focus cannot leave" has
-nothing to fail against. Tab inside the trap cycles First/Second/Third and never
-reaches Before or After.
+Tab inside the trap cycles First, Second and Third without reaching Before or
+After.
 
 ```rust
 use dioxus::prelude::*;
@@ -45,15 +41,12 @@ fn Demo() -> Element {
 }
 ```
 
-The root is `display: contents`, so the trap adds no box and no layout of its
-own - remove it and the children sit exactly where they sat.
-
 ## Accessibility
 
-On mount the trap focuses the element marked `data-autofocus`, or its first
-focusable descendant otherwise. To land initial focus on nothing visible - so a
-dialog does not open with its first button looking pressed - render
-`FocusTrapInitialFocus` as the first child.
+On mount the trap focuses the element marked `data-autofocus`, or else its
+first focusable child. To focus nothing visible, so a dialog does not open with
+its first button looking pressed, render `FocusTrapInitialFocus` as the first
+child.
 
 ```rust
 use dioxus::prelude::*;
@@ -71,15 +64,15 @@ fn Demo() -> Element {
 }
 ```
 
-A trap is only correct while its content is the only thing on screen that
-matters. Do not leave one mounted around ordinary page content: a keyboard user
-who cannot Tab out of a region has no way back to the rest of the page.
+Keep a trap only around content that is the one thing that matters on screen,
+such as an open overlay. A keyboard user who cannot Tab out of a region has no
+way back to the page.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `children` | `Element` | required | The content Tab/Shift+Tab cycling is confined to. |
+| `children` | `Element` | required | The content that keeps the focus. |
 
 Like every component, `FocusTrap` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. `FocusTrapInitialFocus` takes
@@ -87,7 +80,7 @@ no props at all.
 
 ## Theme defaults
 
-None - `FocusTrap` has no visual surface to theme.
+None. `FocusTrap` draws nothing to theme.
 
 ## CSS variables
 

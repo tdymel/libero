@@ -6,13 +6,9 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/button
 Index: [index.md](index.md) - every other component's markdown page
 Description: A clickable action, a toggle, or a router-aware link.
 
-A clickable control, or a router-aware link when `to` is set. A plain
-`<button>` submits an enclosing form; ours defaults to `type="button"`
-instead, so a submit or reset button says so. `variant` picks the chrome,
-`color` the accent, and `selected` turns it into a toggle. The five variants
-are Material 3's, in descending emphasis: `filled`, `tonal`, `elevated`,
-`outlined`, `standard`. For an icon-only button see
-[action_icon.md](action_icon.md).
+A clickable action, a toggle, or a link when `to` is set. It defaults to
+`type="button"`, so it never submits a form by accident. A submit button sets
+`r#type: "submit"`. For an icon-only button, use [ActionIcon](action_icon.md).
 
 ## Usage
 
@@ -35,59 +31,11 @@ fn Demo() -> Element {
 }
 ```
 
-`type` is not a prop but a `<button>` attribute passed straight through, so it
-is written `r#type: "submit"` in rsx.
-
-With `to` set it renders as a real anchor, or a router `Link` when `to`
-matches an internal route. A link-mode button has no ripple and never calls `onclick`; `disabled`
-drops `to` and falls back to `aria-disabled` plus `tabindex="-1"`, since `<a>`
-has no native disabled state.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Button;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Button {
-            variant: "outlined",
-            to: "https://dioxuslabs.com",
-            target: "_blank",
-            "Open Dioxus docs"
-        }
-    }
-}
-```
-
-The children are the button's own flex items, never wrapped, so an `sx` gap,
-an auto margin or a 100% size reaches them. An icon goes in `icon`: it sits
-before the label with a gap, centred on it, and never shrinks. The label stays
-on one line and never widens its container; a long one is cut at the edge.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Button;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Button {
-            icon: rsx! {
-                svg { width: "16", height: "16", view_box: "0 0 24 24", fill: "currentColor",
-                    circle { cx: "12", cy: "12", r: "6" }
-                }
-            },
-            "Record"
-        }
-    }
-}
-```
-
 ## Accessibility
 
-A cut label is still the full accessible name. Sighted users see the whole
-of it only if you pass it as `title` too:
+A cut label is still the full accessible name. Pass it as `title` too, so
+sighted users can read it on hover. `selected: Some(false)` announces a toggle
+that is off, while an unset `selected` announces no state.
 
 ```rust
 use dioxus::prelude::*;
@@ -102,27 +50,23 @@ fn Demo() -> Element {
 }
 ```
 
-`selected: Some(..)` makes it a toggle button, announced as pressed or not.
-`None` announces no state, so an unset `selected` and `Some(false)` are not the
-same. On a link `selected` keeps only the look.
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
-| `variant` | `Variant` | `filled` | Visual style, in Material 3's descending emphasis order: `filled`, `tonal`, `elevated`, `outlined`, `standard` (also spelled `text`). |
+| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
+| `variant` | `Variant` | `filled` | Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. |
 | `radius` | `Size` | `md` | Corner radius, independent of `size`. |
-| `size` | `Size` | `md` | Controls height, padding, and font size. |
+| `size` | `Size` | `md` | Height, padding and font size. |
 | `full_width` | `bool` | `false` | Stretches the button to fill its container. |
-| `selected` | `bool` | - | Turns the button into a toggle, rendering `aria-pressed` and the selected look. Omit to keep it a plain action. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the button. |
-| `loading` | `bool` | `false` | Overlays a `Loader` on the label and swallows clicks, but keeps the button focusable. Renders `aria-busy` and `aria-disabled`. Ignored on a link. |
-| `onclick` | `EventHandler<MouseEvent>` | - | Click handler; not called when the button renders as a link. |
-| `to` | `NavigationTarget` | - | Renders as a router-aware link instead of a `<button>`. A path/URL or a typed route (`Route::Foo {}`). |
-| `target` | `String` | - | The link's `target` attribute, when `to` is set. |
-| `icon` | `Element` | - | Drawn before the label, with a gap; it never shrinks. |
-| `children` | `Element` | required | The button's label, laid out as its own flex items, on one line: a long one is cut at the edge and stays the full accessible name. |
+| `selected` | `bool` | - | Makes it a toggle button with the selected look. Leave it unset for a plain action. |
+| `disabled` | `bool` | `false` | Disables and dims the button. |
+| `loading` | `bool` | `false` | Shows a `Loader` over the label and ignores clicks. The button stays focusable and keeps its width. Ignored on a link. |
+| `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
+| `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`). |
+| `target` | `String` | - | The link's `target` attribute. |
+| `icon` | `Element` | - | Drawn before the label. It never shrinks. |
+| `children` | `Element` | required | The label, on one line. A long one is cut at the edge. |
 
 `Button` also takes the `<button>` HTML attributes (`type`, `form`, `name`,
 `value`, ...) and, like every component, the shared props `sx`, `class`,
@@ -151,7 +95,7 @@ same. On a link `selected` keeps only the look.
 | `--lsx-button-hover` | Accent color while hovered. |
 | `--lsx-button-selected` | Background of a selected toggle button. |
 | `--lsx-button-container` | Container fill of `tonal`. |
-| `--lsx-button-on-container` | Label color on that container - black or white, whichever reads on it. |
+| `--lsx-button-on-container` | Label color on that container, black or white, whichever reads on it. |
 
 The corner radius comes from the shared radius scale, `--lsx-radius-<size>`,
 and `elevated`'s shadow from the shared elevation scale, `--lsx-shadow-<size>`.

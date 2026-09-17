@@ -6,11 +6,8 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typogr
 Index: [index.md](index.md) - every other component's markdown page
 Description: Body copy, sized from the theme's text scale.
 
-Body copy - renders a `<p>` by default, sized via the theme's text scale.
-`size` picks a step of that scale (font size, weight, letter spacing and line
-height together), and `component` changes the element without changing the
-look. For headings use [title.md](title.md) instead - a `Title`'s size also
-picks its heading level.
+Body copy in a `<p>`, sized from the theme's text scale. `component` changes
+the element without changing the look. For headings, use [Title](title.md).
 
 ## Usage
 
@@ -28,17 +25,16 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-`Text` renders a paragraph by default. Use `component: "span"` for text inside a
-sentence and keep `p` for standalone copy. Size is styling only, so it cannot
-imply a heading.
+Use `component: "span"` for text inside a sentence. A large size is only
+styling, so it never makes a heading.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Visual size, `xs` through `xxl`. |
-| `component` | `HtmlTag` | `p` | Which element to render as. |
-| `children` | `Element` | required | The text content. |
+| `size` | `Size` | `md` | Visual size, `xs` to `xxl`. |
+| `component` | `HtmlTag` | `p` | The element to render. |
+| `children` | `Element` | required | The text. |
 
 Like every component, `Text` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
@@ -69,4 +65,4 @@ State tokens on the root's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `size-<size>` | The `size` in effect - this is what selects the size variables. |
+| `size-<size>` | The `size` in effect. |

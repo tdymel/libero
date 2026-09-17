@@ -4,14 +4,11 @@ Crate: `libero`
 Import: `use libero::components::Loader;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/loader.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: An indeterminate busy indicator - a rotating ring, three bars or three dots - always silent; an always-mounted status region says the wait.
+Description: An indeterminate busy indicator, as a ring, bars or dots. It stays silent, so a status region says the wait. `Button`, `Combobox` and `FileField` show it while loading.
 
-An indeterminate busy indicator: it says something is happening, never how much
-is left. The root is a `<span>`, so a loader is legal inside a paragraph or a
-button. It is always silent - `aria-hidden="true"` - because something else
-on screen usually already says what is going on. Under
-`prefers-reduced-motion: reduce` all three shapes stop and stay visible: a still
-ring with its gap, three full-height bars, three dots.
+An indeterminate busy indicator. It says something is happening, not how much
+is left. The root is a `<span>`, so it fits inside a paragraph or a button.
+With reduced motion it stops moving but stays visible.
 
 ## Usage
 
@@ -27,15 +24,11 @@ fn Demo() -> Element {
 }
 ```
 
-## Announcing it
+## Accessibility
 
-Who announces the wait depends on where the loader sits.
-
-| The loader is… | write | the root renders |
-|---|---|---|
-| beside its own visible text | `Loader {}` | `aria-hidden="true"`, no role - the text is the message |
-| inside an already-named control | `Loader {}` | the same; the control's name plus `aria-busy` carries it |
-| the only content of a region | `Loader {}`, `aria-busy="true"` on the region, and the text in an always-mounted `role="status"` region outside it | `aria-hidden="true"`; the status region carries it |
+A loader is hidden from screen readers, so something else says the wait.
+Beside its own text, the text says it. Inside a control, such as a `Button`
+with `loading`, the control does.
 
 ```rust
 use dioxus::prelude::*;
@@ -52,9 +45,9 @@ fn Demo() -> Element {
 }
 ```
 
-When the loader is the only content of a region, mark the region busy and keep
-the loader silent. Say the wait in a `role="status"` region that is always
-mounted and sits outside the busy element, and fill it only while loading:
+As the only content of a region, mark the region `aria-busy` and put the text
+in a `role="status"` region outside it. Mount that region up front and fill it
+only while loading, or a screen reader may skip it.
 
 ```rust
 use dioxus::prelude::*;
@@ -81,23 +74,13 @@ fn Results() -> Element {
 # #[component] fn ResultList(rows: Vec<String>) -> Element { rsx! {} }
 ```
 
-Both halves matter. Some screen readers skip a live region that mounts with its
-text already in it, and some hold back changes inside an `aria-busy` subtree
-until it is no longer busy - by then the loader is gone. `Combobox` renders
-its loading status this way.
-
-## Accessibility
-
-A loader is always silent and has no `label` prop. Announce what is loading
-with the always-mounted status region above.
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `variant` | `LoaderVariant` | `oval` | The shape: `oval`, `bars` or `dots`. |
-| `size` | `Size` | `md` | The square edge, 18px at `xs` to 72px at `xxl`. Every part of the shape is a fraction of it. |
-| `color` | `ThemeAwareValue` | `primary` | The ink; a theme color name or a literal CSS color. |
+| `size` | `Size` | `md` | The edge of the square, 18px at `xs` to 72px at `xxl`. |
+| `color` | `ThemeAwareValue` | `primary` | A theme color name or any CSS color. |
 
 Like every component, `Loader` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
@@ -113,8 +96,7 @@ Like every component, `Loader` also takes the shared props `sx`, `class`,
 | `color` | `Color` | `Primary`. |
 | `sizes` | `Sizes<&'static str>` | The edge per step: `18px`, `22px`, `36px`, `44px`, `58px`, `72px`. |
 
-Durations are design constants, not theme fields; override `animation-duration`
-through `sx` for the exception.
+Durations are fixed. Override `animation-duration` through `sx` to change one.
 
 ## CSS variables
 

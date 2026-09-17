@@ -4,12 +4,12 @@ Crate: `libero`
 Import: `use libero::components::Alert;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/alert.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A tinted surface for something the reader has to know - a title that names it, an optional icon and close button, and a role picked by its color that you can replace.
+Description: A tinted surface for something the reader has to know, with a title, an optional icon and close button, and a role that follows its color.
 
-A tinted surface for something the reader has to know: an error summary, a
-warning, a note. An `error` or `warning` color renders `role="alert"`, every
-other color the polite `role="status"`; your own `role` replaces either. It takes no focus and does not close on Escape, because it is not an
-overlay.
+A tinted surface for something the reader has to know, such as an error, a
+warning or a note. It takes no focus and does not close on Escape, because it
+is not an overlay. `Form`'s error summary is an `Alert` with `color: "error"`
+(see [Form](form.md)).
 
 ## Usage
 
@@ -27,8 +27,8 @@ fn Demo() -> Element {
 }
 ```
 
-Severity is yours to state. The default color is `info`; pass `error`,
-`warning` or `success` when the message is one.
+With `onclose` set, a close button shows. The alert does not hide itself, so
+unmount it:
 
 ```rust
 use dioxus::prelude::*;
@@ -54,46 +54,29 @@ fn Demo() -> Element {
 # #[component] fn WarningGlyph() -> Element { rsx! {} }
 ```
 
-`onclose` is what shows the close button. There is no separate
-`with_close_button`: a close button that does nothing is not something you can
-ask for. Closing is yours - the alert does not hide itself, you unmount it.
-
-The library ships no icon set, so `icon` takes your own glyph. An empty `icon`
-takes no room.
-
-### In a form
-
-`Form`'s error summary is an `Alert` with `color: "error"`. You do not render it
-yourself - a blocked submit shows it, moves focus to it, and each line focuses
-its field. See [Form](form.md).
-
 ## Accessibility
 
-- **The role follows `color`.** `error` and `warning` render `role="alert"`,
-  which interrupts a screen reader; `info`, `success`, the other palette colors
-  and a literal CSS color render `role="status"`, which waits its turn. Your
-  own `role` wins over either.
-- **The icon is `aria-hidden`**, so the severity has to be in the title or the
-  message too.
-- **An alert never takes focus on its own.** Focus it from outside where that
-  matters, as `Form` does with its summary. `Escape` does not close it.
-- **`outlined` carries no tint**, only a border, which is quiet for an error.
-  Prefer `tonal` or `filled` where the severity must be seen. On `filled` the
-  close button's focus ring takes the text colour on the fill as its halo:
-  white on `info` is about 4.5:1.
+An `error` or `warning` color renders `role="alert"`, which interrupts a screen
+reader. Every other color renders the polite `role="status"`. Your own `role`
+replaces either.
+
+The icon is hidden from screen readers, so say the severity in the title or
+the message too. `outlined` has no tint, so prefer `tonal` or `filled` for an
+error. Closing removes the focused close button, so move focus somewhere
+sensible in `onclose`.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `title` | `String` | - | The heading, and the accessible name through `aria-labelledby`. |
-| `icon` | `Element` | - | A leading glyph, rendered `aria-hidden`. |
-| `color` | `ThemeAwareValue` | `info` | The tint; a theme color name or a literal CSS color. `error` and `warning` make the role `alert`, the rest `status`. |
-| `variant` | `Variant` | `tonal` | Chrome, shared with `Button` and `Badge`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. No hover response - an alert is not a target. |
-| `radius` | `Size` | `md` | A step on the radius scale. Anything else goes through `sx`. |
-| `onclose` | `EventHandler<()>` | - | Shows the close button, and fires when it is pressed. |
-| `close_label` | `String` | `common.close` | The close button's accessible name. Unset, the localization's `common.close` - "Close" in English. |
-| `children` | `Element` | - | The message, and the description through `aria-describedby`. |
+| `title` | `String` | - | The heading and the alert's accessible name. Text only. |
+| `icon` | `Element` | - | A leading icon of your own, hidden from screen readers. |
+| `color` | `ThemeAwareValue` | `info` | The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. |
+| `variant` | `Variant` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. |
+| `radius` | `Size` | `md` | Corner radius. A size step or any CSS length. |
+| `onclose` | `EventHandler<()>` | - | Shows the close button and fires when it is pressed. Unmount the alert to close it. |
+| `close_label` | `String` | `common.close` | The close button's accessible name. Unset, the localization's `common.close`, "Close" in English. |
+| `children` | `Element` | required | The message, read as the alert's description. |
 
 Like every component, `Alert` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
@@ -108,8 +91,8 @@ Like every component, `Alert` also takes the shared props `sx`, `class`,
 | `color` | `&'static str` | `info`. A palette colour name, read to default the `color` prop. |
 | `radius` | `Size` | `Md`, the same step as `paper.radius`. |
 | `padding` | `Size` | `Md`, on the spacing scale. |
-| `gap` | `Size` | `Md` - icon to text to close button. |
-| `body_gap` | `Size` | `Xs` - title to message. |
+| `gap` | `Size` | `Md`, from icon to text to close button. |
+| `body_gap` | `Size` | `Xs`, from title to message. |
 | `icon_size` | `&'static str` | `20px`, the icon slot's width and height. |
 
 ## CSS variables

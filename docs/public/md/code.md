@@ -6,11 +6,10 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typogr
 Index: [index.md](index.md) - every other component's markdown page
 Description: An inline `<code>` snippet, optionally syntax highlighted.
 
-A `<code>` element for a snippet inside a sentence. Content is `source`, a
-plain string; add `language` to syntax-highlight it. For a multi-line,
-`<pre>`-wrapped block with line numbers, a copy button and diffs, reach for
-[code_block.md](code_block.md) instead. The font and the syntax token colors
-come from `Theme.code` and can be overridden per-app.
+A `<code>` element for a snippet inside a sentence. Pass the text as `source`
+and set `language` to highlight it. For a multi-line block with line numbers
+and a copy button, use [CodeBlock](code_block.md). The font and the token
+colors come from the theme.
 
 ## Usage
 
@@ -30,41 +29,19 @@ fn Demo() -> Element {
 }
 ```
 
-Without `language` the source renders as plain, unhighlighted text - that is
-the default.
-
-Libero ships grammars for 30 languages, each behind its own `code-lang-*`
-feature so a build only pays for what it highlights. The default set covers
-`rust`, `bash`, `css` and a few more; enable the rest as you need them. An
-unrecognized name - or a recognized one whose feature is off - falls back to
-plain, unhighlighted text, which is also what leaving `language` off does.
-
-The full set, spelled as the `code-lang-*` feature suffix (`language` also
-takes aliases the feature names do not, such as `rs`, `py`, `c#`):
-
-```text
-bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java,
-javascript, json, kotlin, lua, markdown, objective-c, perl, php,
-powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml
-```
-
-The grammars are hand-ported from [Prism](https://prismjs.com), as is the
-tokenizer that runs them. These 30 are where we started, not a closed set - if
-you need one Prism has and we do not, it can be ported the same way.
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `source` | `String` | required | The text to render, highlighted when `language` names a grammar this build compiles in. |
-| `language` | `Language` | - | Unrecognized values fall back to no highlighting rather than a guess. |
+| `source` | `String` | required | The text. Highlighted when `language` names a grammar this build compiles in. |
+| `language` | `Language` | - | One of 30 grammars, each behind its own `code-lang-*` feature, so a build pays only for what it highlights: bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. Aliases such as `rs`, `py` and `c#` work too. The default features cover `rust`, `bash`, `css` and a few more. An unknown name, or one whose feature is off, renders plain text. |
 
 Like every component, `Code` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 
-`CodeDefaults` on the theme - the monospace stack plus one color per token
+`CodeDefaults` on the theme, the monospace stack plus one color per token
 kind. Shared with [code_block.md](code_block.md).
 
 | Field | Type | Description |

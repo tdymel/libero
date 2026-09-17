@@ -4,19 +4,23 @@ Crate: `libero`
 Import: `use libero::components::Skeleton;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/skeleton.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A placeholder for loading content - a standalone grey shape, or a wrapper that covers the real content until it is ready.
+Description: A placeholder for loading content, as a standalone grey shape or a wrapper that hides the real content until it is ready.
 
-A placeholder for content that is still loading, used two ways. Without
-children it is a grey shape, and a few of them stand in for a layout. Wrapped
-around the real content, it covers that content while `visible` and steps aside
-when `visible` turns `false`: the layout is written once, and the placeholder is
-exactly its size because it *is* the content underneath. The grey pulses; under
-`prefers-reduced-motion: reduce` it stops half-way, which still reads as a
-placeholder rather than a disabled control.
+A placeholder for content that is still loading. Without children it is a grey
+shape, and a few of them stand in for a layout. Wrapped around the real
+content, it hides that content while `visible` is set, so the placeholder has
+exactly its size. Hidden content is not announced and not reachable with Tab.
+
+A descendant that sets `visibility: visible` on itself shows through, so avoid
+one under a visible skeleton.
+
+A fetch that answers in 50 ms should not flash a placeholder. Keep the region
+transparent until a grace period ends, and end it with `timer()`. Use `opacity`
+for that, since `visibility` would not hide the grey.
 
 ## Usage
 
-The wrapper - the layout is written once:
+Wrapped around the real content, so the layout is written once:
 
 ```rust
 use dioxus::prelude::*;
@@ -55,50 +59,9 @@ fn Placeholder() -> Element {
 }
 ```
 
-A standalone shape needs a `height`: with no children and no height it is zero
-pixels tall.
+A standalone shape needs a `height`, or it is zero pixels tall.
 
-A `circle` copies its `height` into its width. Without a `height` it wraps its
-children and is as wide as they are - round around a square child such as an
-`Avatar`, a pill around a wider one.
-
-## Announcing it
-
-A skeleton says nothing to a screen reader, on purpose. While it covers, its
-content is hidden, and `aria-busy` on a hidden element reaches nobody. Mark the
-region you are filling `aria-busy` while it waits - the same rule as `Loader`.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Box, Skeleton};
-
-#[component]
-fn Card() -> Element {
-    let profile = use_resource(load_profile);
-
-    rsx! {
-        Box {
-            "aria-busy": profile.read().is_none(),
-            Skeleton { visible: profile.read().is_none(),
-                ProfileCard { profile: profile.read().clone().unwrap_or_default() }
-            }
-        }
-    }
-}
-#
-# #[derive(Clone, PartialEq, Default)]
-# struct Profile;
-# async fn load_profile() -> Profile { Profile }
-# #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
-```
-
-## Not flashing on a fast fetch
-
-A fetch that answers in 50 ms should not flash a placeholder. `Skeleton` has no
-delay of its own, because how long to wait is the caller's timing. Keep the
-region transparent until a grace period runs out - the layout is held either
-way - and let `libero::platform::timer()` end it. Use `opacity` for that, not
-`visibility`: the skeleton's grey opts back into `visibility: visible`.
+With a grace period before the placeholder shows:
 
 ```rust
 use std::time::Duration;
@@ -124,6 +87,7 @@ fn Card() -> Element {
     rsx! {
         div {
             "aria-busy": loading,
+            // `opacity`, not `visibility`, which would not hide the grey.
             opacity: if loading && !slow() { "0" } else { "1" },
             Skeleton { visible: loading,
                 ProfileCard { profile: profile.read().clone().unwrap_or_default() }
@@ -138,30 +102,48 @@ fn Card() -> Element {
 # #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
 ```
 
-The grace runs once, from mount. A card that fetches again later starts a new
-timer and sets `slow` back to `false` when it does.
+The grace runs once, from mount. A card that fetches again starts a new timer
+and sets `slow` back to `false`.
 
-## How it hides the content
+## Accessibility
 
-While `visible`, the root is `visibility: hidden` and only its `::after` - the
-grey - is `visibility: visible`. Every descendant inherits `hidden`: it keeps its
-layout, so the placeholder is exactly its size, but it is not painted, whatever
-its `z-index`. Nothing covers it, so the grey pulses over whatever is really
-behind the skeleton and looks right on a tinted surface as well as on paper.
+A skeleton says nothing to a screen reader. Mark the region you are filling
+`aria-busy` while it waits, as on [Loader](loader.md).
 
-The one hole: a descendant that sets `visibility: visible` on itself opts back
-in and shows through the skeleton. Do not put one under a visible skeleton.
+```rust
+use dioxus::prelude::*;
+use libero::components::{Box, Skeleton};
+
+#[component]
+fn Card() -> Element {
+    let profile = use_resource(load_profile);
+
+    rsx! {
+        Box {
+            "aria-busy": profile.read().is_none(),
+            Skeleton { visible: profile.read().is_none(),
+                ProfileCard { profile: profile.read().clone().unwrap_or_default() }
+            }
+        }
+    }
+}
+#
+# #[derive(Clone, PartialEq, Default)]
+# struct Profile;
+# async fn load_profile() -> Profile { Profile }
+# #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
+```
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `visible` | `bool` | `true` | Cover the children, or draw the standalone shape. `false` shows the children as they are. |
-| `height` | `ThemeAwareValue` | - | A CSS length. Unset, the height of the children. |
-| `width` | `ThemeAwareValue` | `100%` | A CSS length. Ignored when `circle`. |
-| `circle` | `bool` | `false` | Width equals `height`, corners fully round. Without `height`, as wide as the children. |
-| `radius` | `Size` | `sm` | Corner. Ignored when `circle`. |
-| `animate` | `bool` | `theme.skeleton.animate` (`true`) | Run the pulse. |
+| `visible` | `bool` | `true` | Hides the children behind the placeholder, or draws the standalone shape. `false` shows the children. |
+| `height` | `ThemeAwareValue` | - | A CSS length. Unset, the children's height. |
+| `width` | `ThemeAwareValue` | `100%` | A CSS length. Ignored with `circle`. |
+| `circle` | `bool` | `false` | A circle as wide as `height`. Without `height`, as wide as the children. |
+| `radius` | `Size` | `sm` | Corner radius. Ignored with `circle`. |
+| `animate` | `bool` | `true` | Runs the pulse. With reduced motion it stops half-way. |
 | `children` | `Element` | - | The real content, when the skeleton wraps it. |
 
 Like every component, `Skeleton` also takes the shared props `sx`, `class`,

@@ -4,21 +4,18 @@ Crate: `libero`
 Import: `use libero::components::ActionIcon;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/action_icon.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: An icon-only button - `Icon`'s sizing, color and variant system rendered as a real `button` (or a link), with a required `aria_label`.
+Description: An icon-only button, rendered as a `button` or a link, with a required `aria_label`.
 
-`Icon`'s sizing, color, and variant system, rendered as a real `<button>` with
-click handling and required a11y - for icon-only actions like a copy, close, or
-delete button. `aria_label` is required, not optional: an icon-only button has no
-visible text for a screen reader to announce.
+An icon-only button for actions like copy, close or delete. It renders a
+`<button>`, or a link when `to` is set. `aria_label` is required, because the
+icon gives a screen reader nothing to read.
 
-With neither `variant` nor `color` set, it contributes no background or color of
-its own and inherits the surrounding text color, rather than defaulting to a
-filled badge the way `Icon` does. That is how `Code`'s own copy button is built.
+With neither `variant` nor `color` set, it has no background of its own and
+takes the surrounding text color.
 
 ## Usage
 
-`CheckmarkIcon` below stands for any component of your own that renders an
-`svg` - `ActionIcon` only sizes and colors what it wraps.
+`CheckmarkIcon` stands for any component of yours that renders an `svg`.
 
 ```rust
 use dioxus::prelude::*;
@@ -36,77 +33,28 @@ fn Demo() -> Element {
 # #[component] fn CheckmarkIcon() -> Element { rsx! {} }
 ```
 
-With a variant and a color, it draws a badge of its own:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::ActionIcon;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        ActionIcon {
-            variant: "filled",
-            color: "primary",
-            aria_label: "Confirm",
-            onclick: move |_| {},
-            CheckmarkIcon {}
-        }
-    }
-}
-#
-# #[component] fn CheckmarkIcon() -> Element { rsx! {} }
-```
-
-With `to` set it renders as a real anchor, or a router `Link` when `to`
-matches an internal route.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::ActionIcon;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        ActionIcon {
-            variant: "outlined",
-            color: "primary",
-            to: "https://dioxuslabs.com",
-            target: "_blank",
-            aria_label: "Open Dioxus docs",
-            CheckmarkIcon {}
-        }
-    }
-}
-#
-# #[component] fn CheckmarkIcon() -> Element { rsx! {} }
-```
-
 ## Accessibility
 
-`aria_label` is a required prop, because the button's only content is an `svg`.
-
-Below 24px (`xs` is 16px, `sm` 20px) the button takes presses in an invisible
-24x24 box centred on it (WCAG 2.5.8), while it is drawn at its own size. That
-box reaches 2px (`sm`) or 4px (`xs`) past each edge. Keep other targets at
-least that far away, or the one drawn later takes the overlap.
+Below 24px (`xs` and `sm`) the button still takes presses in a 24x24 box
+centred on it. Keep other targets 2px (`sm`) or 4px (`xs`) away, or the one
+drawn later takes the overlap.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `variant` | `Variant` | - | Chrome, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color. |
-| `color` | `ThemeAwareValue` | - | Accent color; a theme color name or a literal CSS color. Setting it turns on variant styling even if `variant` itself is unset (as `theme.action_icon.variant`, `filled`). |
-| `size` | `ThemeAwareValue` | `md` | Button size, independent of the wrapped icon's own size. Below 24px it still takes presses in an invisible 24x24 box. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of size. |
-| `aria_label` | `String` | required | An icon-only button has no visible text for a screen reader to announce. |
-| `selected` | `bool` | - | Turns the button into a toggle: `aria-pressed`, and the selected look once `variant` or `color` turns the chrome on. Omit to keep it a plain action. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the button. |
-| `loading` | `bool` | `false` | Overlays a `Loader` on the icon and swallows clicks, but keeps the button focusable; renders `aria-busy` and `aria-disabled`. Ignored on a link. |
-| `onclick` | `EventHandler<MouseEvent>` | - | Click handler; not called when the button renders as a link. |
-| `to` | `NavigationTarget` | - | Renders as a router-aware link instead of a `<button>`. |
-| `target` | `String` | - | The link's `target` attribute, when `to` is set. |
-| `children` | `Element` | required | The icon to show. |
+| `variant` | `Variant` | - | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. With `color` also unset, the button takes the surrounding text color. |
+| `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. Set alone, it gives the theme's default variant, `filled`. |
+| `size` | `ThemeAwareValue` | `md` | Button size, independent of the icon's own size. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
+| `aria_label` | `String` | required | The button's accessible name. |
+| `selected` | `bool` | - | Makes it a toggle button. The selected look shows once `variant` or `color` is set. Leave it unset for a plain action. |
+| `disabled` | `bool` | `false` | Disables and dims the button. |
+| `loading` | `bool` | `false` | Shows a `Loader` over the icon and ignores clicks. The button stays focusable. Ignored on a link. |
+| `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
+| `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. |
+| `target` | `String` | - | The link's `target` attribute. |
+| `children` | `Element` | required | The icon. |
 
 Like every component, `ActionIcon` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
@@ -134,7 +82,7 @@ size scale and the radius through the theme's radius scale.
 | `--lsx-action-icon-contrast` | Text color on top of that accent. |
 | `--lsx-action-icon-hover` | Accent color while hovered. |
 | `--lsx-action-icon-container` | Container fill of `tonal`. |
-| `--lsx-action-icon-on-container` | Label color on that container - black or white, whichever reads on it. |
+| `--lsx-action-icon-on-container` | Label color on that container, black or white, whichever reads on it. |
 
 ## Data attributes
 
@@ -142,7 +90,7 @@ State tokens on the root's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `filled` / `tonal` / `elevated` / `outlined` / `standard` | The `variant` in effect - written only when `variant` or `color` is set. |
+| `filled` / `tonal` / `elevated` / `outlined` / `standard` | The `variant` in effect, written only when `variant` or `color` is set. |
 | `checked` | `selected` is `true`. |
 | `disabled` | `disabled` is set. |
 | `loading` | `loading` is set, on a button. |

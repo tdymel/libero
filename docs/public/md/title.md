@@ -6,12 +6,9 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typogr
 Index: [index.md](index.md) - every other component's markdown page
 Description: A heading, `h1` through `h6`, whose visual size and semantic tag can be set apart.
 
-A heading, `h1` through `h6` - `component` decouples the semantic tag from the
-visual size, for a11y heading order.
-
-`size` picks the tag on its own: `xxl` is `h1`, `xl` is `h2`, `lg` is `h3`, `md` is
-`h4`, `sm` is `h5`, `xs` is `h6`. So a page's headings come out in order as long as
-the sizes descend.
+A heading, `h1` to `h6`. `size` sets the look and the tag: `xxl` is `h1`, `xl`
+is `h2`, down to `xs` as `h6`. Set `component` when the look and the level
+disagree.
 
 ## Usage
 
@@ -22,32 +19,16 @@ use libero::components::Title;
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Title { "The quick brown fox" }
+        Title { size: "xl", "The quick brown fox" }
     }
 }
 ```
 
-`size` is both the look and the level:
+## Accessibility
 
-```rust
-use dioxus::prelude::*;
-use libero::components::Title;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Title { size: "lg", "The quick brown fox" }
-    }
-}
-```
-
-## Heading order
-
-`component` overrides the tag while keeping the size's visual weight, which is how
-`h1 -> h2 -> h3` order survives a layout that wants a big heading somewhere deep.
-Set it whenever a `Title` is not at the page's top level: a `lg` heading inside a
-section under the page's `h1` needs `component: "h2"`, or the document skips from
-`h1` straight to `h3`.
+Keep one `h1` per page and skip no levels. A `lg` heading in a section under
+the page's `h1` needs `component: "h2"`, or the document jumps from `h1` to
+`h3`.
 
 ```rust
 use dioxus::prelude::*;
@@ -61,18 +42,12 @@ fn Demo() -> Element {
 }
 ```
 
-## Accessibility
-
-One `h1` per page, and no skipped levels - which is what `component` is for,
-since the level a layout wants and the size a design wants often disagree.
-`Title` will not stop you from emitting a broken order.
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `xxl` | Visual size, `xs` through `xxl`. Also picks the heading tag. |
-| `component` | `HtmlTag` | follows `size` | Overrides the heading tag, keeping a size's weight under a different level so `h1 -> h2 -> h3` order survives. |
+| `size` | `Size` | `xxl` | Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set. |
+| `component` | `HtmlTag` | follows `size` | The heading tag. The size's look stays. |
 | `children` | `Element` | required | The heading text. |
 
 Like every component, `Title` also takes the shared props `sx`, `class`, `style`,
@@ -110,4 +85,4 @@ State tokens on the root's `data-state`.
 
 | Token | Condition |
 |---|---|
-| `size-<size>` | The `size` in effect - independent of which tag `component` chose. |
+| `size-<size>` | The `size` in effect, whatever tag `component` chose. |

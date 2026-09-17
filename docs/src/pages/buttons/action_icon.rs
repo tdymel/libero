@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Code, Input, Text};
 
@@ -16,56 +16,50 @@ pub fn ActionIconPage() -> Element {
             markdown: "/md/action_icon.md",
             properties: vec![props("ActionIcon", vec![
                 prop("variant", "Variant")
-                    .doc("Chrome, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color."),
+                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. With `color` also unset, the button takes the surrounding text color."),
                 prop("color", "ThemeAwareValue")
-                    .doc("Accent color; a theme color name or a literal CSS color. Setting it turns on variant styling even if `variant` itself is unset (as `filled`)."),
+                    .doc("Accent color. A theme color name or any CSS color. Set alone, it gives the theme's default variant, `filled`."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
-                    .doc("Button size, independent of the wrapped icon's own size. Below 24px it still takes presses in an invisible 24x24 box."),
+                    .doc("Button size, independent of the icon's own size."),
                 prop("radius", "ThemeAwareValue")
                     .default("sm")
-                    .doc("Corner radius, independent of size."),
+                    .doc("Corner radius, independent of `size`."),
                 prop("aria_label", "String")
-                    .doc("Required: an icon-only button has no visible text for a screen reader to announce."),
+                    .default("required")
+                    .doc("The button's accessible name."),
                 prop("selected", "bool")
-                    .doc("Turns the button into a toggle, rendering `aria-pressed`, and the selected look once `variant` or `color` turns the chrome on. Omit to keep it a plain action."),
+                    .doc("Makes it a toggle button. The selected look shows once `variant` or `color` is set. Leave it unset for a plain action."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Disables interaction and dims the button."),
+                    .doc("Disables and dims the button."),
                 prop("loading", "bool")
                     .default("false")
-                    .doc("Overlays a `Loader` on the icon and swallows clicks, but keeps the button focusable. The icon stays in the tree and holds the box; the button renders `aria-busy` and `aria-disabled`. Ignored on a link."),
+                    .doc("Shows a `Loader` over the icon and ignores clicks. The button stays focusable. Ignored on a link."),
                 prop("onclick", "EventHandler<MouseEvent>")
-                    .doc("Click handler; not called when the button renders as a link."),
+                    .doc("Click handler. Not called on a link."),
                 prop("to", "NavigationTarget")
-                    .doc("Renders as a router-aware link instead of a `<button>`."),
+                    .doc("Renders a link instead of a `<button>`."),
                 prop("target", "String")
-                    .doc("The link's `target` attribute, when `to` is set."),
-                prop("children", "Element").doc("The icon to show."),
+                    .doc("The link's `target` attribute."),
+                prop("children", "Element").default("required").doc("The icon."),
             ])],
             lead: rsx! {
                 Text {
-                    Code { source: "Icon" }
-                    "'s sizing, color, and variant system, rendered as a real "
+                    "An icon-only button for actions like copy, close or delete. It renders a "
                     Code { source: "<button>" }
-                    " with click handling and required a11y - for icon-only actions like a "
-                    "copy, close, or delete button. "
+                    ", or a link when "
+                    Code { source: "to" }
+                    " is set. "
                     Code { source: "aria_label" }
-                    " is required, not optional: an icon-only button has no visible text for "
-                    "a screen reader to announce."
+                    " is required, because the icon gives a screen reader nothing to read."
                 }
                 Text {
                     "With neither "
                     Code { source: "variant" }
                     " nor "
                     Code { source: "color" }
-                    " set, it contributes no background or color of its own and inherits "
-                    "the surrounding text color, rather than defaulting to a filled badge the "
-                    "way "
-                    Code { source: "Icon" }
-                    " does. That is how "
-                    Code { source: "Code" }
-                    "'s own copy button is built."
+                    " set, it has no background of its own and takes the surrounding text color."
                 }
             },
             Demo {
@@ -121,6 +115,19 @@ pub fn ActionIconPage() -> Element {
                         CheckmarkIcon {}
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Below 24px ("
+                    Code { source: "xs" }
+                    " and "
+                    Code { source: "sm" }
+                    ") the button still takes presses in a 24x24 box centred on it. Keep other targets 2px ("
+                    Code { source: "sm" }
+                    ") or 4px ("
+                    Code { source: "xs" }
+                    ") away, or the one drawn later takes the overlap."
+                }
             }
         }
     }

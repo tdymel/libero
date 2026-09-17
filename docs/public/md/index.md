@@ -40,8 +40,8 @@ fetch only the file you need.
 ## Buttons
 
 - [Button](button.md): A clickable action, a toggle, or a router-aware link.
-- [ActionIcon](action_icon.md): An icon-only button - `Icon`'s sizing, color and variant system rendered as a real `button` (or a link), with a required `aria_label`.
-- [ColorSchemeButton](color_scheme_button.md): An icon button that steps the colour scheme through system, dark and light, with an opt-in theme-set picker beside it.
+- [ActionIcon](action_icon.md): An icon-only button, rendered as a `button` or a link, with a required `aria_label`.
+- [ColorSchemeButton](color_scheme_button.md): An icon button that steps the colour scheme through system, dark and light, with an optional theme picker beside it.
 
 ## Form
 
@@ -101,11 +101,11 @@ fetch only the file you need.
 
 ## Feedback
 
-- [Alert](alert.md): A tinted surface for something the reader has to know - a title that names it, an optional icon and close button, and `role="alert"` as a default you can replace.
+- [Alert](alert.md): A tinted surface for something the reader has to know, with a title, an optional icon and close button, and a role that follows its color.
 - [Notifications](notifications.md): A hook plus a host. Render `Notifications {}` once, and `use_notifications()` shows messages from anywhere, as an `Alert` or as your own template over your own data.
-- [Loader](loader.md): An indeterminate busy indicator - oval, bars or dots - always silent; an always-mounted status region outside the busy element says the wait. The `loading` state behind `Button`, `Combobox` and `FileField`.
-- [ProgressBar](progress_bar.md): A determinate or indeterminate progress bar over any `min..=max` range, with `role="progressbar"` and the raw `aria-value*` set on its root.
-- [Skeleton](skeleton.md): A placeholder for loading content - a standalone grey shape, or a wrapper that hides the real content until it is ready.
+- [Loader](loader.md): An indeterminate busy indicator, as a ring, bars or dots. It stays silent, so a status region says the wait. `Button`, `Combobox` and `FileField` show it while loading.
+- [ProgressBar](progress_bar.md): A determinate or indeterminate progress bar over any `min..=max` range.
+- [Skeleton](skeleton.md): A placeholder for loading content, as a standalone grey shape or a wrapper that hides the real content until it is ready.
 
 ## Data display
 
@@ -128,17 +128,17 @@ fetch only the file you need.
 
 - [Title](title.md): A heading, `h1` through `h6`, whose visual size and semantic tag can be set apart.
 - [Text](text.md): Body copy, sized from the theme's text scale.
-- [Mark](mark.md): A real `mark` element that highlights a chunk of text with a light tint of a theme color.
+- [Mark](mark.md): A `mark` element that highlights text with a light tint of a theme color.
 - [Code](code.md): An inline `<code>` snippet, optionally syntax highlighted.
-- [Kbd](kbd.md): A single keyboard key, rendered as a real `<kbd>` and styled entirely from the theme.
-- [CodeBlock](code_block.md): A `pre`-wrapped, multi-line code block with a line-number gutter, a copy button, a language header, optional diff rendering and line highlighting.
-- [Blockquote](blockquote.md): A quotation in a tinted frame with an accent bar, rendered as `figure` + `blockquote` + `figcaption` so the attribution sits outside the quote.
+- [Kbd](kbd.md): A single keyboard key, rendered as a real `<kbd>` and styled from the theme.
+- [CodeBlock](code_block.md): A multi-line code block with line numbers, a copy button, a language header, diffs and highlighted lines.
+- [Blockquote](blockquote.md): A quotation in a tinted frame with an accent bar, with the attribution outside the quote.
 
 ## Accessibility
 
-- [Overview](accessibility.md): What libero's accessibility support covers across the whole library, and what it does not - starting with forced colors, which is out of scope.
+- [Overview](accessibility.md): What libero's accessibility support covers across the library and what it does not, from on and disabled states to forced colors, which is covered only in part.
 - [FocusTrap](focus_trap.md): Confines Tab and Shift+Tab cycling to its children, for keeping keyboard focus inside an open overlay.
-- [VisuallyHidden](visually_hidden.md): A `span` whose content is read by screen readers but removed from sighted layout - extra context for something ambiguous on its own.
+- [VisuallyHidden](visually_hidden.md): A `span` read by screen readers but hidden from sighted layout, for extra context on something vague on its own.
 
 ## Hooks
 

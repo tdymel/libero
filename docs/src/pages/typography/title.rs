@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, HtmlTag, Input, Text, Title};
 
@@ -12,17 +12,35 @@ pub fn TitlePage() -> Element {
             properties: vec![props("Title", vec![
                 prop("size", "Size")
                     .default("xxl")
-                    .doc("Visual size, xs through xxl. Also picks the heading tag."),
+                    .doc("Visual size, `xs` to `xxl`. Also picks the tag unless `component` is set."),
                 prop("component", "HtmlTag")
                     .default("follows size")
-                    .doc("Overrides the heading tag, keeping a size's weight under a different level so h1 -> h2 -> h3 order survives."),
-                prop("children", "Element").doc("The heading text."),
+                    .doc("The heading tag. The size's look stays."),
+                prop("children", "Element").default("required").doc("The heading text."),
             ])],
             lead: rsx! {
                 Text {
-                    "A heading, h1 through h6 - "
+                    "A heading, "
+                    Code { source: "h1" }
+                    " to "
+                    Code { source: "h6" }
+                    ". "
+                    Code { source: "size" }
+                    " sets the look and the tag: "
+                    Code { source: "xxl" }
+                    " is "
+                    Code { source: "h1" }
+                    ", "
+                    Code { source: "xl" }
+                    " is "
+                    Code { source: "h2" }
+                    ", down to "
+                    Code { source: "xs" }
+                    " as "
+                    Code { source: "h6" }
+                    ". Set "
                     Code { source: "component" }
-                    " decouples the semantic tag from the visual size, for a11y heading order."
+                    " when the look and the level disagree."
                 }
             },
             Demo {
@@ -51,6 +69,23 @@ pub fn TitlePage() -> Element {
                             "The quick brown fox"
                         }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Keep one "
+                    Code { source: "h1" }
+                    " per page and skip no levels. A "
+                    Code { source: "lg" }
+                    " heading in a section under the page's "
+                    Code { source: "h1" }
+                    " needs "
+                    Code { source: "component: \"h2\"" }
+                    ", or the document jumps from "
+                    Code { source: "h1" }
+                    " to "
+                    Code { source: "h3" }
+                    "."
+                }
             }
         }
     }

@@ -4,36 +4,22 @@ Crate: `libero`
 Import: `use libero::components::ColorSchemeButton;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/color_scheme_button.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: An icon button that steps the colour scheme through system, dark and light, with an opt-in theme-set picker beside it.
+Description: An icon button that steps the colour scheme through system, dark and light, with an optional theme picker beside it.
 
-An icon button that steps the app's colour scheme: following the platform,
-then the scheme the platform is not showing, then the one it is, then back to
-following it. The glyph and the accessible name both say where a press goes:
-a sun switches to light, a moon to dark, a half-filled disc back to following
-the platform. It is an
-`ActionIcon` over `use_color_scheme()`.
+An icon button that switches the app's colour scheme. Each press steps from
+following the system, to the scheme the system is not showing, to the one it
+is, and back. The icon shows where the next press goes: a sun for light, a moon
+for dark, a half-filled disc for following the system.
 
-While it follows the platform, an OS switch - or a devtools emulation of
-`prefers-color-scheme` - is followed live. A pinned scheme stays pinned until a
-press hands the choice back.
+While it follows the system, a change of the OS setting applies at once. A
+picked scheme stays until the next press. For your own control, such as a menu
+of all three choices, build on `use_color_scheme()` (see [Theming](theming.md)).
+
+With `themes` set, a second button beside it opens a menu of theme sets. This
+site's header uses `ColorSchemeButton { themes: ThemeSet::CATALOGUE }`. The
+button names come from the [localization](localization.md).
 
 ## Usage
-
-```rust
-use dioxus::prelude::*;
-use libero::components::ColorSchemeButton;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        ColorSchemeButton { size: "lg" }
-    }
-}
-```
-
-With `themes` it becomes a split button: a chevron beside the toggle opens a
-menu of theme sets, the active one checked. Two buttons rather than one with a
-second gesture, so each has one job, one name and its own tab stop.
 
 ```rust
 use dioxus::prelude::*;
@@ -42,53 +28,28 @@ use libero::{components::ColorSchemeButton, theme::ThemeSet};
 #[component]
 fn Demo() -> Element {
     rsx! {
-        ColorSchemeButton { size: "lg", themes: ThemeSet::CATALOGUE }
+        ColorSchemeButton { size: "md", themes: ThemeSet::CATALOGUE }
     }
 }
 ```
 
-The names come from the [localization](localization.md), so other
-wording is one struct:
-
-```rust
-use libero::localization::{ColorSchemeButtonLabels, Localization};
-
-static WORDS: Localization = Localization {
-    color_scheme_button: ColorSchemeButtonLabels {
-        to_light: "Helles Design",
-        to_dark: "Dunkles Design",
-        to_system: "Wie das System",
-        ..ColorSchemeButtonLabels::GERMAN
-    },
-    ..Localization::GERMAN
-};
-```
-
-An app that wants an explicit "follow the system" choice builds it from
-`use_color_scheme()` instead - see [Theming](theming.md).
-
 ## Accessibility
 
-The accessible name says what a press does - "Switch to the dark theme",
-"Follow the system theme" - the same thing the `aria-hidden` glyph shows.
-Opening the picker puts focus on the checked theme set, not the first one.
-
-With `themes`, the pair is a `role="group"` named "Theme". The chevron is its
-own button, "Choose a theme", with `aria-haspopup="menu"` and `aria-expanded`;
-the sets in its menu are `menuitemradio`s with `aria-checked`. It is never
-narrower than 24px (WCAG 2.5.8).
+The accessible name says what a press does, such as "Switch to the dark
+theme". The icon is hidden from screen readers. Opening the picker puts focus
+on the checked theme set.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `variant` | `Variant` | `outlined` | `ActionIcon`'s chrome. Unset, the theme's `color_scheme_button.variant`. |
-| `color` | `ThemeAwareValue` | `muted` | Accent color. Unset, the theme's `color_scheme_button.color`. |
-| `size` | `ThemeAwareValue` | `md` | Button size; the glyph takes 55% of it. |
-| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of size. |
-| `themes` | `&'static [&'static ThemeSet]` | - | Opts into the theme picker: a chevron beside the toggle opening a menu of these sets, the active one checked. The pair is then a named `group`, and `class`, `sx` and extra attributes land on it. |
-| `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the localization's three toggle names. Given the setting a press moves to, it names what the press does. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the button. |
+| `variant` | `Variant` | `outlined` | Visual style, as on `ActionIcon`. |
+| `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. |
+| `size` | `ThemeAwareValue` | `md` | Button size. The icon takes 55% of it. |
+| `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
+| `themes` | `&'static [&'static ThemeSet]` | - | Adds the theme picker, a second button that opens a menu of these sets. `class`, `sx` and extra attributes then land on the group around both. |
+| `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does. |
+| `disabled` | `bool` | `false` | Disables and dims the button. |
 
 Like every component, `ColorSchemeButton` also takes the shared props `sx`,
 `class`, `style`, `states`, and any extra HTML attributes.

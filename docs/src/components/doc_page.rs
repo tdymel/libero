@@ -28,8 +28,8 @@ pub fn DocPage(
     /// Repo-relative path to the component's source, linked beside the title.
     #[props(default)]
     source: Option<String>,
-    /// URL of this page's markdown rendering - a verbatim copy under
-    /// `public/md`, so the link stays a stable, guessable path.
+    /// URL of this page's hand-written markdown mirror under `public/md`, a
+    /// stable, guessable path. It carries the complete examples.
     #[props(default)]
     markdown: Option<String>,
     #[props(default)] properties: Vec<PropGroup>,

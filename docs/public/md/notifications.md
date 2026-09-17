@@ -6,10 +6,17 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedba
 Index: [index.md](index.md) - every other component's markdown page
 Description: A hook plus a host. Render `Notifications {}` once, and `use_notifications()` shows messages from anywhere, as an `Alert` or as your own template over your own data.
 
-Notifications are a hook plus a host. Render `Notifications {}` once near the
-root. `use_notifications()` then returns a `Copy` handle that shows
-notifications from any handler, task or child. A notification lives in a store
-at the app's root, so it outlives the component that raised it.
+A hook and a host. Render `Notifications {}` once near the root.
+`use_notifications()` then returns a handle that shows notifications from
+anywhere, and each one outlives the component that raised it.
+
+`use_notifications_with` takes your own data type and a template to draw it.
+The template is a `fn`, not a capturing closure, so everything it draws travels
+in the data. `update(id, data)` redraws one notification in place.
+
+Each stack shows up to `limit` at once, and the rest wait. Hovering or focusing
+one pauses every timer, and each starts over when you leave. A `contained` host
+draws its stacks in its own box and keeps a queue for the handles below it.
 
 ## Usage
 
@@ -23,7 +30,7 @@ use libero::{
     theme::AutoClose,
 };
 
-// Once, near the root - the one outlet for every handle.
+// Once, near the root. It serves every handle.
 fn App() -> Element {
     rsx! {
         LiberoProvider {
@@ -67,18 +74,10 @@ fn SaveButton() -> Element {
 # #[component] fn Home() -> Element { rsx! {} }
 ```
 
-Render the host **once**. It is the one outlet for every handle, so a second
-host would draw every notification twice. It is portaled, so its place in the
-tree does not matter. Without a host, `show` queues notifications that nobody
-draws.
+Render the host once. A second one would draw every notification twice.
+Without a host, `show` queues notifications that nobody draws.
 
-## A contained host
-
-`Notifications { contained: true, children }` is a host for one region of the
-page instead of the window. It draws its nine stacks inside its own
-`position: relative` box, around its children, and it gives the handles
-created below it a queue of their own: a `use_notifications()` inside it shows
-its notifications there, not in the app's host. The docs preview is one.
+A contained host serves the handles created below it:
 
 ```rust,ignore
 Notifications { contained: true, placement: "top-end",
@@ -86,14 +85,9 @@ Notifications { contained: true, placement: "top-end",
 }
 ```
 
-`contained` is read once, when the host mounts. When the host unmounts, its
-queue goes with it, and a handle that outlives it does nothing.
-
-## Your own template
-
-`use_notifications_with` takes your own data type and a template that draws it.
-The template draws the content, and the host keeps the list item, the live
-region, the timers and the hover pause.
+Your own template draws the content. The host keeps the list item, the live
+region, the timers and the hover pause. The template may call hooks, as long as
+it calls the same ones every time.
 
 ```rust,ignore
 #[derive(Clone, PartialEq)]
@@ -121,49 +115,18 @@ let id = uploads.show_with(
 uploads.update(id, Upload { file: "archive.zip", percent: 40.0 });
 ```
 
-**The template is a `fn`, not a closure that captures.** A notification outlives
-the component that raised it, so a captured signal or handler could be dropped
-while the notification still draws with it. Everything the template needs
-travels in `T`. A closure that captures nothing coerces to the `fn`. The
-template is called in its notification's own scope on every render, so it may
-call hooks, as long as it calls the same ones every time. That scope redraws
-when `update` changes its data, and no other one does.
-
-The store is type-erased. Each `T` adds one small closure, and the queue, the
-timers and the host compile once.
-
-## Queue, limit and timing
-
-- **`show` queues. It does not promise that the notification is visible.** Each
-  stack shows at most `limit` notifications (5 by default). The rest wait in
-  order, and a waiting notification's timer starts only once it is shown.
-- A notification closes after `auto_close`: 6 seconds by default,
-  `AutoClose::Never` to stay, or `AutoClose::After(ms)`.
-- **Hovering or focusing any notification pauses every timer.** When the
-  pointer or the focus leaves, each timer starts over with its full time. This
-  is the WCAG 2.2.1 (Timing Adjustable) mechanism. It pauses on focus too, so a
-  focused notification never closes on its own.
-- Closing runs a short fade (`transition_duration`, 200 ms). The notification
-  leaves the accessibility tree when the fade ends, then it is removed. Under
-  `prefers-reduced-motion` there is no animation.
-
 ## Accessibility
 
-- `NotificationOptions::live` picks how a notification is announced. It is
-  `Polite` unless you say otherwise, and it is never derived from a colour -
-  pass `Assertive` for what cannot wait.
-- **Showing one never moves focus.** F8 (the host's `hotkey`) focuses the
-  newest notification from anywhere: its first focusable, else the
-  notification itself. Otherwise a close button is reached by Tab in document
-  order, after the rest of the page. Escape does nothing.
-- The stacks sit in one region named after the hotkey, "Notifications (F8)",
-  from the localization's `notifications.region`.
-- Closing the focused one moves focus to the next close button in its stack,
-  the previous one after the last, and back where it came from (where F8 was
-  pressed) once the stack is empty. `clear()` with focus inside sends it back
-  where it came from.
-- A notification with an action of its own, such as Undo, is still safer with
-  `AutoClose::Never`: not every user knows the hotkey.
+Showing one takes no focus. `live` picks a polite or an assertive
+announcement. F8 (the host's `hotkey`) focuses the newest notification from
+anywhere. Otherwise its close button comes after the rest of the page in Tab
+order. A focused notification never closes on its own, but one with an action,
+such as Undo, is still safer with `AutoClose::Never`.
+
+Closing the focused one moves focus to the next close button in its stack, and
+back to where F8 was pressed once the stack is empty. Your own template draws
+the close button itself, so read `s.closable()` and give the button an
+`aria_label`, as the Card option does.
 
 ## API
 
@@ -183,7 +146,7 @@ pub fn use_notifications_with<T: 'static>(
 | `show(args: impl Into<T>)` | `NotificationId` | Queues one with the default options. |
 | `show_with(args: impl Into<T>, options: NotificationOptions)` | `NotificationId` | Queues one with its own options. |
 | `update(id, args: impl Into<T>)` | `()` | Replaces its data. It keeps its place and its timer. Does nothing once it is gone. |
-| `hide(id)` | `()` | Closes it with its exit. A queued one is removed at once. |
+| `hide(id)` | `()` | Fades it out, then removes it. A queued one goes at once. |
 | `clear()` | `()` | Removes every notification, from every template, at once. |
 
 `Copy`.
@@ -194,7 +157,7 @@ pub fn use_notifications_with<T: 'static>(
 |---|---|---|
 | `args()` | `T` | The data it was shown with, or last updated to. Needs `T: Clone`. |
 | `close()` | `()` | Starts its exit. |
-| `closable()` | `bool` | `NotificationOptions::closable`: whether to draw a close control. |
+| `closable()` | `bool` | Whether to draw a close button (`NotificationOptions::closable`). |
 | `id()` | `NotificationId` | Its id. |
 
 `Copy`, so several handlers in one template can each hold it.
@@ -205,9 +168,9 @@ pub fn use_notifications_with<T: 'static>(
 |---|---|---|
 | `title` | `Option<String>` | The `Alert`'s title and accessible name. |
 | `message` | `String` | The message. Empty renders no message slot. |
-| `color` | `Input<ThemeAwareValue>` | The `Alert`'s colour; unset is `theme.alert.color`. |
-| `variant` | `Input<Variant>` | The `Alert`'s variant; unset is `theme.alert.variant`. |
-| `icon` | `Option<Element>` | A glyph. It is drawn by the host later, so it must not carry event handlers. |
+| `color` | `Input<ThemeAwareValue>` | The `Alert`'s color. Unset is the theme's. |
+| `variant` | `Input<Variant>` | The `Alert`'s variant. Unset is the theme's. |
+| `icon` | `Option<Element>` | An icon. The host draws it later, so it must not carry event handlers. |
 
 `From<&str>` and `From<String>` fill `message`.
 
@@ -215,10 +178,10 @@ pub fn use_notifications_with<T: 'static>(
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `placement` | `Option<Placement>` | `None` | The stack. `None` is the host's `placement`. |
-| `auto_close` | `Option<AutoClose>` | `None` | `None` is the host's `auto_close`. |
-| `closable` | `bool` | `true` | Whether the template draws a close control. |
-| `live` | `NotificationLive` | `Polite` | `Polite` or `Assertive`: which live region announces it. |
+| `placement` | `Option<Placement>` | `None` | The stack it joins. `None` is the host's. |
+| `auto_close` | `Option<AutoClose>` | `None` | When it closes. `None` is the host's. |
+| `closable` | `bool` | `true` | Whether the template draws a close button. |
+| `live` | `NotificationLive` | `Polite` | `Polite` or `Assertive`, how it is announced. |
 
 ## Props
 
@@ -227,11 +190,11 @@ pub fn use_notifications_with<T: 'static>(
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `placement` | `Placement` | `bottom-end` | The stack a notification joins unless it names its own. |
-| `limit` | `Option<usize>` | `5` | Shown at once per stack. |
-| `auto_close` | `Option<AutoClose>` | `After(6000)` | Unless a notification says otherwise. |
-| `hotkey` | `Key` | `Key::F8` | Focuses the newest notification from anywhere, without Ctrl, Alt or Meta. A letter is not heard while the user types. |
-| `contained` | `bool` | `false` | Draw the stacks in this host's own box, and give the handles below it a queue of their own. Read once, at mount. |
-| `children` | `Option<Element>` | - | Rendered inside a contained host, before its stacks. |
+| `limit` | `usize` | `5` | How many show at once per stack. The rest wait. |
+| `auto_close` | `AutoClose` | `After(6000)` | When a notification closes, unless it says otherwise. |
+| `contained` | `bool` | `false` | Draws the stacks in this host's own box and gives the handles below it their own queue. Read once, at mount. |
+| `hotkey` | `Key` | `F8` | Focuses the newest notification from anywhere, pressed without Ctrl, Alt or Meta. |
+| `children` | `Element` | - | Rendered inside a contained host. |
 
 ## Theme defaults
 

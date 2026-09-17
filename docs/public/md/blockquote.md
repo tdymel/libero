@@ -4,14 +4,13 @@ Crate: `libero`
 Import: `use libero::components::Blockquote;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/blockquote.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A quotation in a tinted frame with an accent bar, rendered as `figure` + `blockquote` + `figcaption` so the attribution sits outside the quote.
+Description: A quotation in a tinted frame with an accent bar, with the attribution outside the quote.
 
-A quotation with its attribution. Renders a real `<figure>` holding a
-`<blockquote>` and, when there is one, a `<figcaption>` - the attribution sits
-outside the quote, which is where the HTML spec puts it, so assistive technology
-does not read a speaker's name as quoted words. `size` scales the body text along
-with the frame, on the same scale [Text](text.md) uses. The accent bar is on the
-left in every writing direction.
+A quotation in a tinted frame with an accent bar. The attribution sits in a
+`<figcaption>` outside the `<blockquote>`, so a screen reader does not read the
+speaker's name as part of the quote. `size` scales the text with the frame, on
+[Text](text.md)'s scale. The accent bar is on the left in every writing
+direction.
 
 ## Usage
 
@@ -30,7 +29,7 @@ fn Demo() -> Element {
 }
 ```
 
-Every prop set:
+With every prop set:
 
 ```rust
 use dioxus::prelude::*;
@@ -52,34 +51,20 @@ fn Demo() -> Element {
 }
 ```
 
-A bare theme color name (`"info"`) gives a shade-1 tint, a shade-6 accent bar and
-the tint's own contrast color for the text. An explicit shade (`"info.2"`) tints
-at that shade, keeps the shade-6 bar and takes that shade's contrast color. The
-tint is the shade's fill color, the one its contrast color is computed on. A
-literal CSS color (`"gold"`) is used as-is for both the background and the bar.
-A hex sets black or white text; any other literal leaves the text to inherit,
-because no contrast color can be derived from it.
-
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Body font size, line height, padding and the accent bar's width. |
-| `color` | `ThemeAwareValue` | `primary`, tinted | The accent bar, and the background tint derived from it. A bare theme color is tinted to its lightest shade. A theme color paints its fill shade under its contrast twin as text. |
+| `size` | `Size` | `md` | Text size, line height, padding and the accent bar's width. |
+| `color` | `ThemeAwareValue` | `primary`, tinted | The accent bar and the tint behind the quote. A theme color name gets its lightest shade. Any CSS color works too. |
 | `radius` | `Size` | `sm` | Rounds the two corners away from the accent bar. |
-| `attribution` | `Element` | - | Who said it, rendered in a `<figcaption>` outside the quote. A person's name goes here as plain text - it does not become a `<cite>`. |
-| `work` | `String` | - | The title of the work quoted, rendered as a `<cite>` in the `<figcaption>`. Not a person. Follows `attribution` after a comma when both are set. |
-| `cite_url` | `String` | - | The `cite` attribute on `<blockquote>`: a URL naming the source document. Machine-readable only, no browser renders it. |
+| `attribution` | `Element` | - | Who said it, shown under the quote. For any join other than a comma, pass the whole line here. |
+| `work` | `String` | - | The title of the quoted work, such as a book or a talk. Follows `attribution` after a comma. |
+| `cite_url` | `String` | - | A URL naming the source. Only machines read it, browsers do not show it. |
 | `children` | `Element` | required | The quote. |
 
 Like every component, `Blockquote` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the `<figure>`.
-
-`attribution`, `work` and `cite_url` are three different things: a person's name
-as plain text, the title of a work as a `<cite>` element, and the `cite`
-attribute on the `<blockquote>`. They are independent. For any join other than
-the comma, pass the whole line as `attribution` - it is an `Element`, so it can
-hold its own `<cite>`.
 
 ## Theme defaults
 
@@ -104,11 +89,8 @@ hold its own `<cite>`.
 | `xl` | `1.5rem` | `2.5rem` | `4px` |
 | `xxl` | `2rem` | `3rem` | `5px` |
 
-The font size and line height are not `Blockquote`'s own: they come from
-`TextDefaults`' scale, so retuning `theme.text` retunes quotes with the prose
-around them. The `<figcaption>` is 0.85 of the same step's font size - spelled
-out per size rather than as an `em`, because it is a sibling of the quote and an
-`em` there would resolve against the `<figure>`.
+The font size and line height come from `TextDefaults`' scale, so retuning
+`theme.text` retunes quotes too. The `<figcaption>` is 0.85 of that font size.
 
 ## CSS variables
 

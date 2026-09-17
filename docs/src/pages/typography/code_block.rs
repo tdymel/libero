@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, CodeBlock, Text};
 
@@ -50,43 +50,36 @@ pub fn CodeBlockPage() -> Element {
             markdown: "/md/code_block.md",
             properties: vec![props("CodeBlock", vec![
                 prop("source", "String")
-                    .doc("The text to render, highlighted when `language` names a grammar this build compiles in. Line numbers and the copy button need a real string, so this is the only way to pass content."),
+                    .default("required")
+                    .doc("The text. Highlighted when `language` names a grammar this build compiles in."),
                 prop("language", "Language").doc(LANGUAGE_DOC),
                 prop("header", "bool")
-                    .default("theme.code_block.header")
-                    .doc("A bar above the code naming the language, or the localization's `code_block.unrecognized_language` if it isn't in the catalog or its `code-lang-*` feature is off."),
+                    .default("true")
+                    .doc("A bar above the code naming the language, or saying it is unknown."),
                 prop("copyable", "bool")
-                    .default("theme.code_block.copyable")
-                    .doc("Without `header`, floats in the top-right corner."),
-                prop("max_lines", "Option<u32>")
-                    .doc("Caps the visible height to roughly this many lines and scrolls past it; unset grows to fit. Long lines always scroll horizontally regardless."),
+                    .default("true")
+                    .doc("Shows a copy button. Without `header`, it floats in the top-right corner."),
+                prop("max_lines", "u32")
+                    .doc("Caps the height at about this many lines and scrolls the rest. Unset, the block grows to fit."),
                 prop("line_numbers", "bool")
-                    .default("theme.code_block.line_numbers")
-                    .doc("Toggles the line-number gutter."),
-                prop("highlight_lines", "Option<String>")
-                    .doc("1-indexed lines to emphasize, e.g. `\"1,5-7,10\"`. Malformed segments are skipped, not rejected. A range past the last line stops at it."),
+                    .default("true")
+                    .doc("Shows the line-number gutter."),
+                prop("highlight_lines", "String")
+                    .doc("Lines to emphasize, counted from 1, such as `\"1,5-7,10\"`. Malformed parts are skipped."),
                 prop("diff", "bool")
                     .default("false")
-                    .doc("Reads `source` as a unified diff: a leading `+`/`-` colors the row, moves into a marker column read as \"added\"/\"removed\", and is kept out of what's highlighted and copied. Wins over `highlight_lines`. Both mark plain lines too when there is no `language`."),
+                    .doc("Reads `source` as a unified diff. A leading `+` or `-` colors the row and stays out of what is copied. Wins over `highlight_lines`."),
             ])],
             lead: rsx! {
                 Text {
-                    "A "
-                    Code { source: "pre" }
-                    "-wrapped, multi-line block with a line-number gutter, a copy button and a "
-                    "header naming the language. Content is "
+                    "A multi-line code block with line numbers, a copy button and a header "
+                    "naming the language. Pass the text as "
                     Code { source: "source" }
-                    ", a plain string - line numbers and the copy button need one to split. "
-                    "Add "
+                    " and set "
                     Code { source: "language" }
-                    " to syntax-highlight it. For a snippet inside a sentence, use "
+                    " to highlight it. For a snippet inside a sentence, use "
                     Code { source: "Code" }
-                    ". Background, border, line numbers and the copy button come from "
-                    Code { source: "Theme.code_block" }
-                    ", the font and token colors from "
-                    Code { source: "Theme.code" }
-                    "; the diff and highlight tints derive from the theme's success, error and "
-                    "primary colors."
+                    "."
                 }
             },
             // snippet: item const RUST_EXAMPLE: &str = "";
@@ -144,6 +137,18 @@ pub fn CodeBlockPage() -> Element {
                             }
                         }
                     },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "In "
+                    Code { source: "diff" }
+                    " mode a screen reader hears \"added\" or \"removed\" before a changed "
+                    "line. A line in "
+                    Code { source: "highlight_lines" }
+                    " is marked only by color and a bar, so say in the text why it matters. "
+                    "A block that scrolls is a region named after its language, such as "
+                    "\"Rust code\"."
+                }
             }
         }
     }

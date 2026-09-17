@@ -22,7 +22,7 @@ fn default_variant() -> &'static str {
 /// The preview's own template for the card option, printed as it is written
 /// below.
 // snippet: item #[component] fn DismissIcon() -> Element { rsx! {} }
-const CARD_EXAMPLE: &str = r#"// A `fn`, not a capturing closure: everything it draws travels in the data.
+const CARD_EXAMPLE: &str = r#"// A `fn`, not a capturing closure. Everything it draws travels in the data.
 fn card_notification(s: NotificationScope<NotificationData>) -> Element {
     let data = s.args();
 
@@ -84,7 +84,7 @@ struct Upload {
     percent: f64,
 }
 
-// A `fn`, not a capturing closure: everything it draws travels in `Upload`.
+// A `fn`, not a capturing closure. Everything it draws travels in `Upload`.
 fn upload_notification(s: NotificationScope<Upload>) -> Element {
     let upload = s.args();
     let done = upload.percent >= 100.0;
@@ -188,17 +188,16 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
             .map(|field| format!("        {field},\n"))
             .collect();
         host.push_str(&format!(
-            "// A contained host draws its stacks in its own box and keeps them to\n\
-             // itself: every handle made below it - in `Examples` here - feeds it.\n\
+            "// A contained host draws its stacks in its own box. Every handle made\n\
+             // below it, in `Examples` here, feeds it.\n\
              Box {{ sx: sx().width(\"100%\"),\n    \
                  Notifications {{\n{fields}        Examples {{}}\n    }}\n\
              }}\n\n"
         ));
     } else {
         host.push_str(
-            "// App-wide, `contained` is left out: one host near the root is the\n\
-             // outlet for every handle below it, and its `placement`, `limit` and\n\
-             // `auto_close` are the defaults for every notification.\n\
+            "// App-wide, one host near the root serves every handle below it. Its\n\
+             // `placement`, `limit` and `auto_close` are every notification's defaults.\n\
              LiberoProvider {\n    \
                  Router::<Route> {}\n    \
                  Notifications {}\n\
@@ -422,14 +421,11 @@ fn Examples(
             }
             Text { size: "sm",
                 if contained {
-                    "This host is contained, so its stacks are drawn in its own box and "
-                    "every handle below it feeds that one. The preview needs that; an app "
-                    "does not."
+                    "This host is contained, so it draws its stacks in its own box. The "
+                    "preview needs that, an app does not."
                 } else {
-                    "No host here: contained is left out, so this went to the one "
-                    "app-wide host this site renders near the root - look at the edge of "
-                    "the window. That host answers placement, limit and auto_close for "
-                    "every handle; this notification names its own."
+                    "Without contained, this goes to the one app-wide host near the root. "
+                    "Look at the edge of the window."
                 }
             }
         }
@@ -445,53 +441,63 @@ pub fn NotificationsPage() -> Element {
             markdown: "/md/notifications.md",
             properties: vec![
                 props("Notifications", vec![
-                    prop("placement", "Input<Placement>")
-                        .default("theme: bottom-end")
+                    prop("placement", "Placement")
+                        .default("bottom-end")
                         .doc("The stack a notification joins unless it names its own."),
-                    prop("limit", "Option<usize>")
-                        .default("theme: 5")
-                        .doc("Shown at once per stack; the rest wait their turn."),
-                    prop("auto_close", "Option<AutoClose>")
-                        .default("theme: After(6000)")
-                        .doc("Unless a notification says otherwise."),
+                    prop("limit", "usize")
+                        .default("5")
+                        .doc("How many show at once per stack. The rest wait."),
+                    prop("auto_close", "AutoClose")
+                        .default("After(6000)")
+                        .doc("When a notification closes, unless it says otherwise."),
                     prop("contained", "bool")
                         .default("false")
-                        .doc("Draw the stacks in this host's own box, and give the handles below it a queue of their own. Read once, at mount."),
+                        .doc("Draws the stacks in this host's own box and gives the handles below it their own queue. Read once, at mount."),
                     prop("hotkey", "Key")
                         .default("F8")
-                        .doc("Focuses the newest notification from anywhere, without Ctrl, Alt or Meta. Named in the region's label."),
-                    prop("children", "Option<Element>")
-                        .doc("Rendered inside a contained host, before its stacks."),
+                        .doc("Focuses the newest notification from anywhere, pressed without Ctrl, Alt or Meta."),
+                    prop("children", "Element")
+                        .doc("Rendered inside a contained host."),
                 ]),
                 props("NotificationOptions", vec![
-                    prop("placement", "Option<Placement>").doc("The stack it joins; `None` is the host's."),
-                    prop("auto_close", "Option<AutoClose>").doc("`None` is the host's."),
-                    prop("closable", "bool").default("true").doc("Whether the template draws a close control."),
-                    prop("live", "NotificationLive").default("Polite").doc("Which live region announces it."),
+                    prop("placement", "Option<Placement>").doc("The stack it joins. `None` is the host's."),
+                    prop("auto_close", "Option<AutoClose>").doc("When it closes. `None` is the host's."),
+                    prop("closable", "bool").default("true").doc("Whether the template draws a close button."),
+                    prop("live", "NotificationLive").default("Polite").doc("`Polite` or `Assertive`, how it is announced."),
                 ]),
                 props("NotificationHandle", vec![
                     prop("show(args)", "NotificationId").doc("Shows one with the host's options."),
                     prop("show_with(args, options)", "NotificationId").doc("Shows one with its own options."),
                     prop("update(id, args)", "()").doc("Redraws that one notification with new data."),
-                    prop("hide(id)", "()").doc("Runs its exit, then removes it."),
+                    prop("hide(id)", "()").doc("Fades it out, then removes it."),
                     prop("clear()", "()").doc("Removes every notification, shown and queued."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "Notifications are a hook and a host. Render "
+                    "A hook and a host. Render "
                     Code { source: "Notifications {{}}" }
-                    " once near the root, and "
+                    " once near the root. "
                     Code { source: "use_notifications()" }
-                    " hands back a handle that shows them from anywhere - a notification "
-                    "outlives the component that raised it. "
+                    " then returns a handle that shows notifications from anywhere, and each "
+                    "one outlives the component that raised it."
+                }
+                Text {
                     Code { source: "use_notifications_with" }
-                    " takes your own data type and a "
+                    " takes your own data type and a template to draw it. The template is a "
                     Code { source: "fn" }
-                    " template instead, which is what "
+                    ", not a capturing closure, so everything it draws travels in the data. "
                     Code { source: "update(id, data)" }
-                    " redraws in place. Hovering or focusing one pauses every timer, and "
-                    "each starts over from its full time when you leave."
+                    " redraws one notification in place."
+                }
+                Text {
+                    "Each stack shows up to "
+                    Code { source: "limit" }
+                    " at once, and the rest wait. Hovering or focusing one pauses every "
+                    "timer, and each starts over when you leave. A "
+                    Code { source: "contained" }
+                    " host draws its stacks in its own box and keeps a queue for the handles "
+                    "below it."
                 }
             },
             // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] Home {} }
@@ -584,32 +590,30 @@ pub fn NotificationsPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Showing one takes no focus. Each stack holds a polite and an assertive live "
-                    "region, both mounted before anything is announced into them, and "
+                    "Showing one takes no focus. "
                     Code { source: "live" }
-                    " picks which one. "
+                    " picks a polite or an assertive announcement. "
                     Kbd { "F8" }
                     " (the host's "
                     Code { source: "hotkey" }
-                    ") focuses the newest notification from anywhere, and the stacks sit in "
-                    "one region named after it, \"Notifications (F8)\". Otherwise a close "
-                    "button is reached with "
+                    ") focuses the newest notification from anywhere. Otherwise its close "
+                    "button comes after the rest of the page in "
                     Kbd { "Tab" }
-                    " after the rest of the page. Focusing one pauses every timer, so a "
-                    "focused notification never closes on its own. One with an action of its "
-                    "own, such as Undo, is still safer with "
+                    " order. A focused notification never closes on its own, but one with an "
+                    "action, such as Undo, is still safer with "
                     Code { source: "AutoClose::Never" }
-                    ". Closing the "
-                    "focused one moves focus to the next close button in its stack, the "
-                    "previous one after the last, and back where it came from (where "
+                    "."
+                }
+                Text {
+                    "Closing the focused one moves focus to the next close button in its "
+                    "stack, and back to where "
                     Kbd { "F8" }
-                    " was pressed) once the "
-                    "stack is empty. Your own "
-                    "template draws that button itself: read "
+                    " was pressed once the stack is empty. Your own template draws the close "
+                    "button itself, so read "
                     Code { source: "s.closable()" }
-                    " and give it an "
+                    " and give the button an "
                     Code { source: "aria_label" }
-                    ", the way the Card option here does."
+                    ", as the Card option does."
                 }
             }
         }

@@ -1,6 +1,8 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, FocusTrap, Text};
+use libero::components::{Button, Code, Flex, FocusTrap, Text};
 
 const TRAPPED: &str = r#"Flex {
     direction: "row",
@@ -31,15 +33,16 @@ pub fn FocusTrapPage() -> Element {
             source: "libero/src/components/accessibility/focus_trap.rs",
             markdown: "/md/focus_trap.md",
             properties: vec![props("FocusTrap", vec![
-                prop("children", "Element").doc("The content Tab/Shift+Tab cycling is confined to."),
+                prop("children", "Element")
+                    .default("required")
+                    .doc("The content that keeps the focus."),
             ])],
             lead: rsx! {
                 Text {
-                    "Confines Tab/Shift+Tab cycling to its children - the same mechanism "
-                    "the modal layer uses internally to keep keyboard focus inside an open dialog. It "
-                    "focuses its first focusable child on mount, so flipping the switch below "
-                    "moves focus into the trap; Tab from there cycles First/Second/Third "
-                    "without ever reaching Before or After."
+                    "Keeps Tab and Shift+Tab cycling inside its children, as inside an open "
+                    "dialog. It focuses its first focusable child on mount and adds no box of "
+                    "its own. Switch it on below, and Tab cycles First, Second and Third "
+                    "without reaching Before or After."
                 }
             },
             Demo {
@@ -78,6 +81,21 @@ pub fn FocusTrapPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_page),
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "On mount the trap focuses the element marked "
+                    Code { source: "data-autofocus" }
+                    ", or else its first focusable child. To focus nothing visible, so a "
+                    "dialog does not open with its first button looking pressed, render "
+                    Code { source: "FocusTrapInitialFocus" }
+                    " as the first child."
+                }
+                Text {
+                    "Keep a trap only around content that is the one thing that matters on "
+                    "screen, such as an open overlay. A keyboard user who cannot Tab out of "
+                    "a region has no way back to the page."
+                }
             }
         }
     }

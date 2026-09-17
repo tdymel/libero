@@ -1,4 +1,6 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Box, Button, Code, CodeBlock, Flex, Input, Skeleton, Text};
 use libero::sx::sx;
@@ -32,7 +34,7 @@ fn Card() -> Element {
     rsx! {
         div {
             "aria-busy": loading,
-            // `opacity`, not `visibility`: the skeleton's grey opts back into view.
+            // `opacity`, not `visibility`, which would not hide the grey.
             opacity: if loading && !slow() { "0" } else { "1" },
             Skeleton { visible: loading,
                 ProfileCard { profile: profile.read().clone().unwrap_or_default() }
@@ -101,63 +103,47 @@ pub fn SkeletonPage() -> Element {
             properties: vec![props("Skeleton", vec![
                 prop("visible", "bool")
                     .default("true")
-                    .doc("Cover the children, or draw the standalone shape. `false` shows the children as they are."),
+                    .doc("Hides the children behind the placeholder, or draws the standalone shape. `false` shows the children."),
                 prop("height", "ThemeAwareValue")
-                    .doc("A CSS length. Unset, the height of the children."),
+                    .doc("A CSS length. Unset, the children's height."),
                 prop("width", "ThemeAwareValue")
                     .default("100%")
-                    .doc("A CSS length. Ignored when `circle`."),
+                    .doc("A CSS length. Ignored with `circle`."),
                 prop("circle", "bool")
                     .default("false")
-                    .doc("Width equals `height`, corners fully round. Without `height`, as wide as the children."),
+                    .doc("A circle as wide as `height`. Without `height`, as wide as the children."),
                 prop("radius", "Size")
                     .default("sm")
-                    .doc("Corner. Ignored when `circle`."),
+                    .doc("Corner radius. Ignored with `circle`."),
                 prop("animate", "bool")
-                    .default("theme.skeleton.animate")
-                    .doc("Run the pulse. Under `prefers-reduced-motion: reduce` it stops half-way."),
+                    .default("true")
+                    .doc("Runs the pulse. With reduced motion it stops half-way."),
                 prop("children", "Element")
                     .doc("The real content, when the skeleton wraps it."),
             ])],
             lead: rsx! {
                 Text {
-                    "A placeholder for content that is still loading, used two ways. Without "
-                    "children it is a grey shape, and a few of them stand in for a layout. "
-                    "Wrapped around the real content, it covers that content while "
+                    "A placeholder for content that is still loading. Without children it is "
+                    "a grey shape, and a few of them stand in for a layout. Wrapped around "
+                    "the real content, it hides that content while "
                     Code { source: "visible" }
-                    " and steps aside when it turns "
-                    Code { source: "false" }
-                    ": the layout is written once, and the placeholder is exactly its size. "
-                    "Switch the children on and off, then flip "
-                    Code { source: "visible" }
-                    ". While it covers, the content is "
-                    Code { source: "aria-hidden" }
-                    " and "
-                    Code { source: "inert" }
-                    " - not announced, and not reachable with Tab. It is hidden with "
-                    Code { source: "visibility: hidden" }
-                    " rather than covered, so the grey is right on any surface; a "
-                    "descendant that sets "
-                    Code { source: "visibility: visible" }
-                    " on itself would show through."
+                    " is set, so the placeholder has exactly its size. Hidden content is not "
+                    "announced and not reachable with Tab."
                 }
                 Text {
-                    "A skeleton says nothing to a screen reader, on purpose: "
-                    Code { source: "aria-busy" }
-                    " on hidden content would reach nobody. Mark the region you are filling "
-                    Code { source: "aria-busy" }
-                    " while it waits - switch on "
-                    Code { source: "Busy region" }
-                    ", the same rule as "
-                    Code { source: "Loader" }
-                    "."
+                    "A descendant that sets "
+                    Code { source: "visibility: visible" }
+                    " on itself shows through, so avoid one under a visible skeleton."
                 }
                 Text {
                     "A fetch that answers in 50 ms should not flash a placeholder. Keep the "
-                    "region transparent until a grace period runs out - the layout is held "
-                    "either way - and let "
+                    "region transparent until a grace period ends, and end it with "
                     Code { source: "timer()" }
-                    " end it:"
+                    ". Use "
+                    Code { source: "opacity" }
+                    " for that, since "
+                    Code { source: "visibility" }
+                    " would not hide the grey."
                 }
                 CodeBlock { source: GRACE_EXAMPLE, language: "rust" }
             },
@@ -228,6 +214,18 @@ pub fn SkeletonPage() -> Element {
                         false => skeleton,
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "A skeleton says nothing to a screen reader. Mark the region you are "
+                    "filling "
+                    Code { source: "aria-busy" }
+                    " while it waits, as on "
+                    Code { source: "Loader" }
+                    ". Switch on "
+                    Code { source: "Busy region" }
+                    " to see it."
+                }
             }
         }
     }
