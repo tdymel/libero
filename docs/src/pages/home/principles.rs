@@ -80,7 +80,7 @@ pub fn Principles() -> Element {
                     " page explains each one."
                 }
                 Flex { direction: "row", gap: "lg", wrap: "wrap", align: "stretch",
-                    Principle { title: "Developer experience first",
+                    Principle { title: "Developer experience",
                         Text {
                             "Props are typed, so the compiler catches what a convention would "
                             "leave to code review. A "
@@ -99,7 +99,7 @@ pub fn Principles() -> Element {
                             "builds."
                         }
                     }
-                    Principle { title: "Accessibility second",
+                    Principle { title: "Accessibility",
                         Text {
                             "Press "
                             Kbd { "Tab" }

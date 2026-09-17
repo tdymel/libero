@@ -34,7 +34,7 @@ pub fn PhilosophyPage() -> Element {
             Flex { direction: "row", align: "stretch", gap: "lg", wrap: "wrap",
                 Principle {
                     number: 1,
-                    title: "Developer experience first",
+                    title: "Developer experience",
                     summary: "An API that is small, clear and hard to misuse.",
                     icon: rsx! { CodeIcon {} },
                     why: "AI writes a lot of code now, and someone still has to read it, review it \
@@ -46,7 +46,7 @@ pub fn PhilosophyPage() -> Element {
                 }
                 Principle {
                     number: 2,
-                    title: "Accessibility second",
+                    title: "Accessibility",
                     summary: "Everyone should be able to use what you build.",
                     icon: rsx! { AccessibilityIcon {} },
                     why: "It helps more people than screen reader users. Keyboard support helps \
@@ -132,7 +132,15 @@ fn Principle(
                 .breakpoint(Size::Md, sx().flex("1 1 calc(50% - 12px)")),
             Flex { direction: "column", gap: "md",
                 Flex { direction: "row", align: "center", gap: "sm", wrap: "nowrap",
-                    Icon { variant: "tonal", color: "primary", size: "xl", radius: "md", {icon} }
+                    Icon {
+                        variant: "tonal",
+                        color: "primary",
+                        size: "xl",
+                        radius: "md",
+                        // The glyph fills the box by default; an inset reads as a badge.
+                        sx: sx().selector("& svg", sx().width("60%").height("60%")),
+                        {icon}
+                    }
                     Title { size: "lg", component: "h2", sx: sx().flex("1").min_width("0"), "{title}" }
                     // The cards' order is the ranking; the number repeats it for the eye.
                     Badge { circle: true, size: "lg", "aria-hidden": "true", "{number}" }

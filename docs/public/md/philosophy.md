@@ -12,7 +12,7 @@ ranked: when two pull in different directions, the higher one wins.
 3. Batteries included
 4. Simple yet modern
 
-## 1. Developer experience first
+## 1. Developer experience
 
 An API that is small, clear and hard to misuse.
 
@@ -27,7 +27,7 @@ Why it matters: AI writes a lot of code now, and someone still has to read it,
 review it and change it next month. Code that is hard to get wrong is easier
 for a person to check and for a model to get right.
 
-## 2. Accessibility second
+## 2. Accessibility
 
 Everyone should be able to use what you build.
 
