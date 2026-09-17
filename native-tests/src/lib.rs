@@ -330,6 +330,19 @@ impl Page {
         }));
     }
 
+    /// [`wheel`](Self::wheel) sideways: a positive `dx` scrolls right.
+    pub fn wheel_x(&mut self, selector: &str, dx: f64) {
+        let (x, y) = self.centre(selector);
+        let coords = self.pointer(x, y, false).coords;
+        self.dispatch(UiEvent::Wheel(BlitzWheelEvent {
+            delta: BlitzWheelDelta::Pixels(-dx, 0.0),
+            coords,
+            buttons: MouseEventButtons::empty(),
+            mods: Modifiers::empty(),
+            element: Point { x: 0.0, y: 0.0 },
+        }));
+    }
+
     /// A node's vertical scroll offset.
     pub fn scroll_top(&self, selector: &str) -> f64 {
         let id = self.node(selector);

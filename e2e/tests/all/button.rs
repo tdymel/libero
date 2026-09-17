@@ -195,10 +195,16 @@ const RING: &str = "const ring = s => ['1px', '2px'].some(d => \
      .every(o => s.boxShadow.includes(`${s.color} ${o} 0px 0px inset`)));";
 
 /// JS `bar(style)`: whether the style carries the house start bar, a 2px
-/// `currentColor` gradient (NavLink, a selected listbox row; todo 646).
-const BAR: &str = "const bar = s => s.backgroundImage.replaceAll(s.color, 'currentcolor') \
-     .toLowerCase() === 'linear-gradient(currentcolor, currentcolor)' \
-     && s.backgroundSize.startsWith('2px');";
+/// one-colour gradient at 3:1 on the row's tint (NavLink, a selected listbox
+/// row; todo 646). Not the label colour: the bar is the one indicator (764).
+pub const BAR: &str = "const bar = s => { \
+     const m = s.backgroundImage.match(/^linear-gradient\\((rgb\\([^)]*\\)), (rgb\\([^)]*\\))\\)$/); \
+     if (!m || m[1] !== m[2] || m[1] === s.color || !s.backgroundSize.startsWith('2px')) return false; \
+     const lum = c => c.match(/[\\d.]+/g).slice(0, 3).map(v => v / 255).map(v => \
+         v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4) \
+         .reduce((l, v, i) => l + v * [0.2126, 0.7152, 0.0722][i], 0); \
+     const [a, b] = [lum(m[1]), lum(s.backgroundColor)]; \
+     return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) >= 3; };";
 
 /// Todo 491: the on state must not rest on a fill change alone (1.4.1).
 pub async fn assert_on_marker(page: &chromiumoxide::Page, on: &str, off: &str) {
@@ -249,7 +255,8 @@ pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, o
     assert_ne!(off_bg, highlight, "{off} is Highlight too");
 
     // Unforced, or Chromium backs the label with a `Canvas` plate (todo 646);
-    // then every descendant has to follow the label colour by hand.
+    // then every descendant has to follow the label colour by hand. The start
+    // bar turns `HighlightText` too (764), as its author colour vanishes on `Highlight`.
     let [adjust, stray, line, label]: [String; 4] = page
         .evaluate(format!(
             "(() => {{ {RING} {BAR} const probe = document.createElement('div'); \
@@ -258,7 +265,8 @@ pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, o
              const el = document.querySelector('{on}'); const s = getComputedStyle(el); \
              const stray = [el, ...el.querySelectorAll('*')] \
                  .filter(e => getComputedStyle(e).color !== text).map(e => e.tagName).join(','); \
-             const line = ring(s) || bar(s) \
+             const inked = s.backgroundImage === `linear-gradient(${{s.color}}, ${{s.color}})`; \
+             const line = ring(s) || inked \
                  ? 'yes' : `${{s.boxShadow}} | ${{s.backgroundImage}}`; \
              return [s.forcedColorAdjust, stray, line, s.color]; }})()"
         ))

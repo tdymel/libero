@@ -6,6 +6,7 @@ mod button;
 mod carousel;
 mod chip;
 mod choice;
+mod code_block;
 mod collapse;
 mod color;
 mod color_scheme;

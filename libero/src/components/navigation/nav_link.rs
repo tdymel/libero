@@ -5,7 +5,7 @@ use crate::{
         HtmlTag, Input, States, Variables,
         common::{
             ChevronDownIcon, StyleAttributes, attr, base_props, disabled_look_sx, forced_on_sx,
-            inset_focus_ring_sx, on_start_bar_sx, use_style_attributes,
+            inset_focus_ring_sx, on_start_bar_sx, on_tint_color, use_style_attributes,
         },
         layout::{Collapse, box_style, use_box},
         variables,
@@ -42,12 +42,20 @@ fn route_matches(route: &str, to: &str) -> bool {
 }
 
 const NAV_LINK_ACTIVE_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-nav-link-active-background");
+const NAV_LINK_ACTIVE_BAR_VAR: CssVar = CssVar::new("--lsx-nav-link-active-bar");
 
 fn nav_link_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Variables {
     let base = nav_link_color(color).unwrap_or(default_color);
     let background = ThemeAwareValue::ColorValue(ColorValue::Shade(base, ColorShade::S1));
+    // The label colour made to read on the tints: 4.5:1, well past 1.4.11's 3:1.
+    let bar = on_tint_color(&ThemeAwareValue::ColorValue(ColorValue::Shade(
+        base,
+        ColorShade::S6,
+    )));
 
-    variables().with(NAV_LINK_ACTIVE_BACKGROUND_VAR, background.resolve(None))
+    variables()
+        .with(NAV_LINK_ACTIVE_BACKGROUND_VAR, background.resolve(None))
+        .with(NAV_LINK_ACTIVE_BAR_VAR, bar)
 }
 
 static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -74,18 +82,18 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
             "&:hover:not(:where([data-state~=\"disabled\"]))",
             sx().background("muted.2"),
         )
-        // The house on-state line at the start edge only: a full ring would
-        // read as this link's inset focus ring. After each `background`, which resets it.
+        // The tint is too faint to mark the state alone, so a coloured start bar
+        // does; a full ring would read as the focus ring. After each `background`, which resets it.
         .when(
             "active",
             sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())
-                .and(on_start_bar_sx("0px"))
+                .and(on_start_bar_sx("0px", &NAV_LINK_ACTIVE_BAR_VAR.value()))
                 .hover(
                     sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())
-                        .and(on_start_bar_sx("0px")),
+                        .and(on_start_bar_sx("0px", &NAV_LINK_ACTIVE_BAR_VAR.value())),
                 )
                 // Clear of the focus ring's 2px stripe.
-                .focus_visible(on_start_bar_sx("2px"))
+                .focus_visible(on_start_bar_sx("2px", &NAV_LINK_ACTIVE_BAR_VAR.value()))
                 .and(forced_on_sx()),
         )
         // Without `href` it has nothing to follow.
@@ -416,19 +424,25 @@ mod tests {
         assert!(!route_matches("/form", "/form#summary"));
     }
 
+    /// The `S1` tint and, as the bar, the colour's label on that tint.
+    fn expected(color: Color) -> String {
+        let on_tint = ColorValue::Shade(color, ColorShade::S6);
+        format!(
+            "{}:{};{}:var({}, {});",
+            NAV_LINK_ACTIVE_BACKGROUND_VAR.name(),
+            ColorValue::Shade(color, ColorShade::S1).value(),
+            NAV_LINK_ACTIVE_BAR_VAR.name(),
+            on_tint.on_tint_name().unwrap(),
+            on_tint.as_text().value()
+        )
+    }
+
     #[test]
     fn the_active_background_is_the_lightest_shade_of_the_color() {
         let color = ThemeAwareValue::Color(Color::Info);
         let variables = nav_link_variables(Some(&color), Color::Primary);
 
-        assert_eq!(
-            variables.to_string(),
-            format!(
-                "{}:{};",
-                NAV_LINK_ACTIVE_BACKGROUND_VAR.name(),
-                ColorValue::Shade(Color::Info, ColorShade::S1).value()
-            )
-        );
+        assert_eq!(variables.to_string(), expected(Color::Info));
     }
 
     /// Only the color family matters; the active background is always `S1`.
@@ -437,14 +451,7 @@ mod tests {
         let color = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Info, ColorShade::S9));
         let variables = nav_link_variables(Some(&color), Color::Primary);
 
-        assert_eq!(
-            variables.to_string(),
-            format!(
-                "{}:{};",
-                NAV_LINK_ACTIVE_BACKGROUND_VAR.name(),
-                ColorValue::Shade(Color::Info, ColorShade::S1).value()
-            )
-        );
+        assert_eq!(variables.to_string(), expected(Color::Info));
     }
 
     #[test]
@@ -452,13 +459,6 @@ mod tests {
         let raw = ThemeAwareValue::String("gold".to_string());
         let variables = nav_link_variables(Some(&raw), Color::Primary);
 
-        assert_eq!(
-            variables.to_string(),
-            format!(
-                "{}:{};",
-                NAV_LINK_ACTIVE_BACKGROUND_VAR.name(),
-                ColorValue::Shade(Color::Primary, ColorShade::S1).value()
-            )
-        );
+        assert_eq!(variables.to_string(), expected(Color::Primary));
     }
 }

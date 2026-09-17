@@ -3,12 +3,12 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States,
-        common::{base_props, forced_on_sx, inset_focus_ring_sx, on_start_bar_sx},
+        common::{base_props, forced_on_sx, inset_focus_ring_sx, on_start_bar_sx, on_tint_color},
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, sx},
-    theme::{ComboboxDefaults, Size},
+    sx::{StaticSx, ThemeAwareValue, sx},
+    theme::{Color, ColorShade, ColorValue, ComboboxDefaults, Size},
 };
 
 /// What the rows share with the `Combobox` around them. Signals, not values: a
@@ -50,6 +50,9 @@ pub struct ComboboxOptionArgs<T> {
 const ACTIVE_RING_OFFSET: &str = "-2px";
 
 static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
+    // The label colour made to read on the tints: 4.5:1 on either, hover included.
+    let primary = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, ColorShade::S6));
+    let bar = on_tint_color(&primary).unwrap_or_default();
     ComboboxDefaults::row_theme_vars()
         .display("flex")
         .align_items("center")
@@ -72,13 +75,13 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         .hover(sx().background("muted.1"))
         .when("active", sx().background("muted.2"))
         // The shade's own contrast twin, not `primary.7`: blue text on a light
-        // blue tint was hard to read. The house on-state line at the start edge
-        // only, as `NavLink`'s: a full ring would read as the active row's.
+        // blue tint was hard to read. A blue start bar marks it, as `NavLink`'s:
+        // a full ring would read as the active row's.
         .when(
             "selected",
             sx().background("primary.1")
                 .color("primary-contrast.1")
-                .and(on_start_bar_sx("0px"))
+                .and(on_start_bar_sx("0px", &bar))
                 .and(forced_on_sx()),
         )
         // Folded *after* the selected tint, or it never lands: equal
@@ -87,7 +90,10 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         // `background`, which resets it.
         .when(
             "selected",
-            sx().hover(sx().background("primary.2").and(on_start_bar_sx("0px"))),
+            sx().hover(
+                sx().background("primary.2")
+                    .and(on_start_bar_sx("0px", &bar)),
+            ),
         )
         // The keyboard's own mark, on top of any background - a tint alone
         // cannot say "highlighted" on a row that is already tinted. Inset, so
@@ -95,7 +101,10 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         .when("active", inset_focus_ring_sx(ACTIVE_RING_OFFSET))
         // Every `active` arm folds into the first, ahead of the bar: this one
         // outranks it, moving the bar clear of the ring's stripe.
-        .when("selected", sx().when("active", on_start_bar_sx("2px")))
+        .when(
+            "selected",
+            sx().when("active", on_start_bar_sx("2px", &bar)),
+        )
         // Folded last, so it wins over the tints above it: a disabled row is
         // drawn and read out, and answers nothing. The hover has to be undone
         // by hand - a row the pointer cannot pick must not light up under it.

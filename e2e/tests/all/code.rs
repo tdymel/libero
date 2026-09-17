@@ -37,6 +37,41 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// `[the code's direction, whether its first token starts at the scroller's
+/// left, whether the header's copy button sits left of its label]`.
+const RTL_LAYOUT: &str = "(() => { \
+    const block = document.querySelector('#diff-block'); \
+    const scroller = block.querySelector('[dir=ltr]'); \
+    const code = scroller.querySelector('code'); \
+    const token = code.querySelector('span'); \
+    const label = block.querySelector('span').getBoundingClientRect(); \
+    const copy = block.querySelector('button').getBoundingClientRect(); \
+    return [getComputedStyle(code).direction, \
+        Math.abs(token.getBoundingClientRect().left - scroller.getBoundingClientRect().left) < 64, \
+        copy.right <= label.left]; })()";
+
+/// Todo 735: code stays LTR on an RTL page; the header around it still mirrors.
+#[test]
+fn code_stays_ltr_on_an_rtl_page() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.evaluate("document.documentElement.dir = 'rtl'")
+            .await
+            .unwrap();
+        let (direction, at_left, mirrored): (String, bool, bool) = page
+            .evaluate(RTL_LAYOUT)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(direction, "ltr", "the code follows the page");
+        assert!(at_left, "the code does not start at the left");
+        assert!(mirrored, "the header's copy button is not at the RTL end");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// A keyboard copy is announced through the always-mounted status, and focus
 /// stays on the button, whose name does not change under it.
 #[test]

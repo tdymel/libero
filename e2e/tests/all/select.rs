@@ -42,20 +42,24 @@ fn a_searchable_field_meets_the_baseline() {
         .run();
 }
 
-/// `[active row is the selected one, selected row's bar (image, size and
-/// position, `currentColor` spelt out), an unselected idle row's image]`.
-const ROWS: &str = "(() => { const t = document.querySelector('[aria-activedescendant]'); \
-     const act = t && document.getElementById(t.getAttribute('aria-activedescendant')); \
-     const rows = [...document.querySelectorAll('[role=option]')]; \
-     const sel = rows.find(r => r.getAttribute('aria-selected') === 'true'); \
-     const off = rows.find(r => r !== act && r !== sel); \
-     const s = getComputedStyle(sel); \
-     const bar = `${s.backgroundImage.replaceAll(s.color, 'currentcolor').toLowerCase()} \
-         ${s.backgroundSize} ${s.backgroundPosition}`; \
-     return [String(act === sel), bar, getComputedStyle(off).backgroundImage]; })()";
+/// `[active row is the selected one, selected row's bar (`bar` if the house
+/// bar, then size and position), an unselected idle row's image]`.
+fn rows_js() -> String {
+    format!(
+        "(() => {{ {} const t = document.querySelector('[aria-activedescendant]'); \
+         const act = t && document.getElementById(t.getAttribute('aria-activedescendant')); \
+         const rows = [...document.querySelectorAll('[role=option]')]; \
+         const sel = rows.find(r => r.getAttribute('aria-selected') === 'true'); \
+         const off = rows.find(r => r !== act && r !== sel); \
+         const s = getComputedStyle(sel); \
+         const b = `${{bar(s) ? 'bar' : s.backgroundImage}} ${{s.backgroundSize}} ${{s.backgroundPosition}}`; \
+         return [String(act === sel), b, getComputedStyle(off).backgroundImage]; }})()",
+        crate::button::BAR
+    )
+}
 
-/// The bar's image and size, its length resolved to the row's font.
-const BAR: &str = "linear-gradient(currentcolor, currentcolor) 2px min(50%, ";
+/// The bar and its size, its length resolved to the row's font.
+const BAR: &str = "bar 2px min(50%, ";
 
 /// Todo 631: the selected row carries the house line at its start edge, beside
 /// the tint, and keeps it inside the active row's ring. `Combobox`'s rows are
@@ -67,8 +71,14 @@ pub fn selected_row_is_marked(route: &str) {
         keyboard::tab_to(page, TRIGGER, 10).await.unwrap();
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         wait::for_visible(page, "[role=option]").await.unwrap();
-        let rows =
-            async || -> [String; 3] { page.evaluate(ROWS).await.unwrap().into_value().unwrap() };
+        let js = rows_js();
+        let rows = async || -> [String; 3] {
+            page.evaluate(js.as_str())
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap()
+        };
 
         let [on_it, bar, _] = rows().await;
         assert_eq!(on_it, "true", "{route}: the list opens on the selected row");

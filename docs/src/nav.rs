@@ -522,12 +522,16 @@ pub fn DocsNav(
                                                 "2px solid {}",
                                                 ColorCss::MUTED.value(ColorShade::S3),
                                             ))
+                                            // The rail is the one active indicator, so
+                                            // `NavLink`'s start bar goes; in the bar's colour, which reads on the tint.
                                             .when(
                                                 "active",
                                                 sx().border_left(format!(
-                                                    "2px solid {}",
-                                                    ColorCss::PRIMARY.value(ColorShade::S6),
-                                                )),
+                                                    "2px solid var({}, {})",
+                                                    ColorCss::PRIMARY.role_name("on-tint-", ColorShade::S6),
+                                                    ColorCss::PRIMARY.role_value("text-", ColorShade::S6),
+                                                ))
+                                                .with("background-image", "none"),
                                             )
                                         ),
                                     "{args.data.label}"

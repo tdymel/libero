@@ -558,6 +558,9 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .prepare()
         .element(&scroll_element)
         .event("onresize", move |_: Event<ResizeData>| measure())
+        // Source code is LTR text: bidi would reorder its operators on an RTL
+        // page (todo 735). The header and copy button still follow the page.
+        .attr("dir", Some("ltr"))
         .attr("tabindex", scrolls.then_some("0"))
         .attr("role", scrolls.then_some("region"))
         .attr("aria-label", scrolls.then_some(scroll_label));

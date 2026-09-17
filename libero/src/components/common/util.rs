@@ -166,7 +166,6 @@ const ON_RING_BORDERED: &str = "2px";
 const ON_RING_BORDERLESS: &str = "1px";
 
 /// The house on-state line upright at the start edge (NavLink, a selected row).
-const ON_LINE: &str = "linear-gradient(currentColor, currentColor)";
 const ON_LINE_WIDTH: &str = "2px";
 const ON_LINE_LENGTH: &str = "min(50%, 1.5em)";
 
@@ -187,19 +186,31 @@ pub(crate) fn borderless_on_state_sx() -> crate::sx::Sx {
 }
 
 /// The house line upright at the start edge, `inset` in from it, for a row
-/// whose full-width ring would read as its focus ring.
-pub(crate) fn on_start_bar_sx(inset: &str) -> crate::sx::Sx {
+/// whose full-width ring would read as its focus ring. `color` is the row's one
+/// on-state indicator beside its tint, so it must reach 3:1 on it (1.4.11).
+pub(crate) fn on_start_bar_sx(inset: &str, color: &str) -> crate::sx::Sx {
+    let end = crate::sx::sx().with("background-position", format!("right {inset} center"));
     crate::sx::sx()
-        .with("background-image", ON_LINE)
+        .with(
+            "background-image",
+            format!("linear-gradient({color}, {color})"),
+        )
         .with(
             "background-size",
             format!("{ON_LINE_WIDTH} {ON_LINE_LENGTH}"),
         )
         .with("background-position", format!("left {inset} center"))
         .with("background-repeat", "no-repeat")
-        .selector(
-            "&:dir(rtl)",
-            crate::sx::sx().with("background-position", format!("right {inset} center")),
+        // Blitz's stylo does not match `:dir()` (todo 735); the attribute covers it there.
+        .selector("&:dir(rtl)", end.clone())
+        .selector(":where([dir=rtl]) &", end)
+        // Unforced by `forced_on_sx`: the author colour would vanish on `Highlight`.
+        .media(
+            crate::sx::FORCED_COLORS,
+            crate::sx::sx().with(
+                "background-image",
+                "linear-gradient(currentColor, currentColor)",
+            ),
         )
 }
 
