@@ -11,7 +11,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
-    platform::ElementApi,
+    platform::{ElementApi, logical_key},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ChoiceVariant, FIELD_GAP, Size},
     utils::warn,
@@ -206,7 +206,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
             if disabled || has_shortcut_modifier(&event) {
                 return;
             }
-            let step = match event.key() {
+            let step = match logical_key(&event) {
                 Key::ArrowDown | Key::ArrowRight => 1,
                 Key::ArrowUp | Key::ArrowLeft => -1,
                 _ => return,

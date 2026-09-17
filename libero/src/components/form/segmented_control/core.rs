@@ -12,7 +12,7 @@ use crate::{
         layout::use_box,
     },
     hooks::ElementHandle,
-    platform::ElementApi,
+    platform::{ElementApi, logical_key},
     sx::{StaticSx, sx},
     theme::{ButtonDefaults, Size, SizeCss},
 };
@@ -340,7 +340,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                 if disabled || activation.keydown(&event) || has_shortcut_modifier(&event) {
                     return;
                 }
-                let step = match event.key() {
+                let step = match logical_key(&event) {
                     Key::ArrowDown | Key::ArrowRight => 1,
                     Key::ArrowUp | Key::ArrowLeft => -1,
                     _ => return,

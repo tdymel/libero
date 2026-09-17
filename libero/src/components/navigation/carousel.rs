@@ -21,8 +21,8 @@ use crate::{
     },
     localization::{CarouselLabels, fill},
     platform::{
-        ElementApi, TimerSubscription, arrow_target, key_taken, prefers_reduced_motion, timer,
-        typing_target,
+        ElementApi, TimerSubscription, arrow_target, key_taken, logical_key,
+        prefers_reduced_motion, timer, typing_target,
     },
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -1501,7 +1501,8 @@ fn carousel_track(
         {
             return;
         }
-        let Some(target) = track_key_target(event.key(), orientation, nav, current()) else {
+        let Some(target) = track_key_target(logical_key(&event), orientation, nav, current())
+        else {
             return;
         };
         // Bubble phase is enough: a default action is preventable from any
@@ -1812,7 +1813,7 @@ fn CarouselIndicators(view: CarouselView) -> Element {
                         if has_shortcut_modifier(&event) {
                             return;
                         }
-                        let Some(target) = indicator_key_target(event.key(), index, low, high, looping)
+                        let Some(target) = indicator_key_target(logical_key(&event), index, low, high, looping)
                         else {
                             return;
                         };

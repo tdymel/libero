@@ -18,7 +18,7 @@ use crate::{
         ElementHandle, PopoverWidth, TYPEAHEAD_RESET, Typeahead, typeahead_match, use_element,
         use_localization, use_theme, use_typeahead,
     },
-    platform::{ElementApi, blur_counts},
+    platform::{ElementApi, blur_counts, logical_key},
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -849,7 +849,7 @@ fn trigger_key(event: &KeyboardEvent, keys: TriggerKeys, typed: &SelectTypeahead
     if open.disabled || open.readonly || navigation_chord(event).is_some() {
         return;
     }
-    match event.key() {
+    match logical_key(event) {
         Key::ArrowLeft if chip_count > 0 => {
             event.prevent_default();
             let index = match chip_cursor {

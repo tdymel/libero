@@ -16,7 +16,7 @@ use crate::{
         Typeahead, typeahead_match, use_dismiss, use_element, use_popover_on, use_theme,
         use_typeahead,
     },
-    platform::{ElementApi, TimerSubscription, timer},
+    platform::{ElementApi, TimerSubscription, logical_key, timer},
     sx::{StaticSx, sx},
     theme::{
         ColorCss, ColorShade, KBD_BORDER, KBD_COLOR, MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT,
@@ -129,11 +129,16 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
             sx().display("inline-flex")
                 .width("1em")
                 .height("1em")
-                .margin_right("-4px"),
+                .with("margin-inline-end", "-4px"),
         )
         .selector(
             "& :is([data-menu-chevron], [data-menu-check]) svg",
             sx().width("100%").height("100%"),
+        )
+        // The submenu opens on the left under RTL, so the chevron points there.
+        .selector(
+            "&:dir(rtl) [data-menu-chevron] svg",
+            sx().transform("scaleX(-1)"),
         )
 });
 
@@ -435,7 +440,8 @@ impl Level {
         if navigation && has_shortcut_modifier(&event) {
             return;
         }
-        match event.key() {
+        let key = logical_key(&event);
+        match key {
             Key::ArrowDown => {
                 event.prevent_default();
                 self.step(index, true);
@@ -468,7 +474,7 @@ impl Level {
             Key::ArrowLeft | Key::ArrowRight if self.onedge.is_some() => {
                 event.prevent_default();
                 if let Some(onedge) = self.onedge {
-                    onedge.call(match event.key() {
+                    onedge.call(match key {
                         Key::ArrowLeft => MenuEdge::Previous,
                         _ => MenuEdge::Next,
                     });
@@ -878,6 +884,12 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         Parents(parents)
     };
     let onclose_child = use_callback(move |()| open_child.set(None));
+    // Read while a submenu opens: this box is mounted, and it reads the
+    // direction the portal inherited.
+    let submenu_side = match expanded.is_some() && floating.is_rtl() {
+        true => Side::Left,
+        false => Side::Right,
+    };
 
     rsx! {
         for (index, items, (anchor, floating)) in submenus {
@@ -901,7 +913,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
                 onedge: props.onedge,
                 parents: parents.clone(),
                 onpointerenter: Some(cancel_callback),
-                side: Side::Right,
+                side: submenu_side,
                 align: Align::Start,
                 size: props.size,
                 radius: props.radius,

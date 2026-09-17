@@ -386,6 +386,17 @@ pub(super) fn arrow_target() -> bool {
     focused_element().is_some_and(|(tag, kind, _)| takes_arrows(&tag, kind.as_deref()))
 }
 
+/// [`node_is_rtl`] on the focused node, where Blitz sends a key press.
+pub(super) fn rtl_target() -> bool {
+    let Some(anchor) = anchor() else {
+        return false;
+    };
+    anchor.try_doc().is_some_and(|doc| {
+        doc.get_focussed_node_id()
+            .is_some_and(|id| node_is_rtl(&doc, id))
+    })
+}
+
 /// The node a click just activated: the press's target, or for a key the
 /// focused node. `None` after a press on nothing focusable.
 fn activated(doc: &BaseDocument) -> Option<NodeId> {

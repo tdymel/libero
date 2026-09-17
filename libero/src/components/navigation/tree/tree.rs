@@ -10,7 +10,7 @@ use crate::{
     hooks::{
         ElementHandle, TYPEAHEAD_RESET, typeahead_match, use_element, use_theme, use_typeahead,
     },
-    platform::ElementApi,
+    platform::{ElementApi, logical_key},
     theme::Size,
     utils::warn,
 };
@@ -474,7 +474,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         if navigation && has_shortcut_modifier(&event) {
             return;
         }
-        match event.key() {
+        match logical_key(&event) {
             Key::ArrowDown => {
                 event.prevent_default();
                 go_to(sibling_id(&order, &current, 1));

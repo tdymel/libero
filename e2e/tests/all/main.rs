@@ -69,6 +69,7 @@ mod progress_bar;
 mod qr_code;
 mod radio_group;
 mod range_slider;
+mod rtl_keys;
 mod scroll_area;
 mod scroller;
 mod segmented_control;

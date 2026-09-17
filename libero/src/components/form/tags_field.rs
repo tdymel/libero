@@ -15,7 +15,7 @@ use crate::{
     },
     hooks::{ElementHandle, PopoverWidth, use_element, use_localization, use_theme},
     localization::{TagsFieldLabels, fill},
-    platform::ElementApi,
+    platform::{ElementApi, logical_key},
     sx::{StaticSx, sx},
     theme::Size,
     utils::warn,
@@ -563,7 +563,7 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
                 // off the input, or the removal strands it on the body.
                 onmousedown: move |event: MouseEvent| event.prevent_default(),
                 onkeydown: move |event: KeyboardEvent| {
-                    let key = event.key();
+                    let key = logical_key(&event);
                     // Tab leaves, Escape closes the list and chords are the
                     // browser's; every other key is the cursor's, not the
                     // combobox's around it.
@@ -735,7 +735,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
             if disabled || readonly {
                 return;
             }
-            match event.key() {
+            match logical_key(&event) {
                 // A highlighted row is the core's Enter, and it must never mean
                 // two things. Nothing highlighted and nothing typed is nobody's,
                 // so it bubbles and a form still submits.

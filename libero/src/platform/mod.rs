@@ -48,6 +48,7 @@ pub(crate) use focus::{
 pub(crate) use form::{submit_event, submit_listeners};
 pub(crate) use keyboard::arrow_target;
 pub(crate) use keyboard::key_taken;
+pub(crate) use keyboard::logical_key;
 pub(crate) use keyboard::typing_target;
 pub(crate) use keyboard::warn_reserved_chord;
 pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};

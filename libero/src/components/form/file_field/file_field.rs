@@ -23,7 +23,7 @@ use crate::{
         use_local_state, use_theme,
     },
     localization::fill,
-    platform::{self, ElementApi, nested_interactive},
+    platform::{self, ElementApi, logical_key, nested_interactive},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         FILE_FIELD_DROPZONE_HEIGHT, FILE_FIELD_PADDING, FILE_FIELD_RADIUS, FileFieldDefaults,
@@ -966,7 +966,7 @@ impl ChipKeys {
             return;
         }
         let last = self.count - 1;
-        let target = match (event.key(), at) {
+        let target = match (logical_key(&event), at) {
             (Key::ArrowLeft, Some(index)) => Some(index.saturating_sub(1)),
             // From the Browse button, the last chip - the one Backspace takes.
             (Key::ArrowLeft, None) => Some(last),

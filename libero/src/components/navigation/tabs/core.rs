@@ -10,7 +10,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{id_selector, use_element},
-    platform::ElementApi,
+    platform::{ElementApi, logical_key},
     sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
         CssVar, Size, SizeCss, TABS_BORDER_COLOR, TABS_GAP, TABS_HOVER, TABS_LINE, TABS_PAD_X,
@@ -163,7 +163,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         if has_shortcut_modifier(&event) {
             return;
         }
-        let next = match event.key() {
+        let next = match logical_key(&event) {
             Key::ArrowRight => neighbour(&disabled, at, 1),
             Key::ArrowLeft => neighbour(&disabled, at, -1),
             Key::Home => disabled.iter().position(|off| !off),

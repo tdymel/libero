@@ -145,6 +145,35 @@ pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     backend::arrow_target(event)
 }
 
+/// Whether this press landed in right-to-left content: the computed
+/// `direction` of the event's target on the web, of the focused node natively
+/// (the read behind `ElementHandle::is_rtl`). `false` elsewhere.
+pub(crate) fn rtl_target(event: &Event<KeyboardData>) -> bool {
+    backend::rtl_target(event)
+}
+
+/// The press's key with ArrowLeft and ArrowRight swapped under RTL, so a
+/// handler matching "ArrowRight = next" reads the logical key. Home, End and
+/// the vertical arrows pass through.
+pub(crate) fn logical_key(event: &Event<KeyboardData>) -> Key {
+    let key = event.key();
+    // Direction is read only for the two keys it changes.
+    if matches!(key, Key::ArrowLeft | Key::ArrowRight) {
+        logical_arrow(key, rtl_target(event))
+    } else {
+        key
+    }
+}
+
+/// ArrowLeft and ArrowRight swapped when `rtl`, every other key unchanged.
+pub(crate) fn logical_arrow(key: Key, rtl: bool) -> Key {
+    match key {
+        Key::ArrowLeft if rtl => Key::ArrowRight,
+        Key::ArrowRight if rtl => Key::ArrowLeft,
+        key => key,
+    }
+}
+
 /// Whether an element takes typing, so a hotkey must not fire from it - the
 /// text-entry filter behind [`KeyboardApi::on_key`], kept apart from any one
 /// renderer so the next backend applies the same list. `tag` is upper case,
@@ -342,6 +371,16 @@ mod tests {
             assert!(takes_typing(tag, kind), "{tag}");
         }
         assert!(!takes_arrows("DIV", None));
+    }
+
+    #[test]
+    fn rtl_swaps_only_the_horizontal_arrows() {
+        assert_eq!(logical_arrow(Key::ArrowLeft, true), Key::ArrowRight);
+        assert_eq!(logical_arrow(Key::ArrowRight, true), Key::ArrowLeft);
+        assert_eq!(logical_arrow(Key::ArrowLeft, false), Key::ArrowLeft);
+        for key in [Key::ArrowUp, Key::ArrowDown, Key::Home, Key::End] {
+            assert_eq!(logical_arrow(key.clone(), true), key);
+        }
     }
 
     #[test]

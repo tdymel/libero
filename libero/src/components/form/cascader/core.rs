@@ -21,7 +21,7 @@ use crate::{
         typeahead_match, use_element, use_field_list_layer, use_localization, use_popover_on,
         use_theme, use_typeahead,
     },
-    platform::{ElementApi, blur_counts},
+    platform::{ElementApi, blur_counts, logical_key},
     str_enum::str_enum,
     sx::{StaticSx, Sx, sx},
     theme::Size,
@@ -719,7 +719,7 @@ impl CascaderKeys {
     fn closed(&self, event: KeyboardEvent) {
         let mut cursor = self.cursor;
         let open = &self.open;
-        let key = event.key();
+        let key = logical_key(&event);
         let forward = match key {
             Key::ArrowDown | Key::ArrowRight | Key::Enter | Key::Home => true,
             Key::ArrowUp | Key::End => false,
@@ -855,7 +855,7 @@ impl CascaderKeys {
         let (mut cursor, nodes) = (self.cursor, &self.nodes);
         let paths_layout = self.layout == CascaderLayout::Paths;
         let here = cursor.read().clone();
-        let key = event.key();
+        let key = logical_key(&event);
         match key {
             Key::ArrowDown | Key::ArrowUp | Key::Home | Key::End => {
                 event.prevent_default();

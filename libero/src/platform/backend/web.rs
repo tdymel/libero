@@ -79,6 +79,13 @@ pub(super) fn arrow_target(event: &Event<KeyboardData>) -> bool {
         .is_some_and(stepping_target)
 }
 
+pub(super) fn rtl_target(event: &Event<KeyboardData>) -> bool {
+    event
+        .downcast::<web_sys::KeyboardEvent>()
+        .and_then(key_target)
+        .is_some_and(|target| element_is_rtl(&target))
+}
+
 /// The click's target, walked up to the nearest interactive element and the
 /// nearest `boundary`: nested when the first sits strictly inside the second.
 /// dioxus-web delegates from the root, so `currentTarget` is not the element

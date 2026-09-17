@@ -297,6 +297,18 @@ pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     return false;
 }
 
+/// As [`typing_target`] - see [`rtl_target`](crate::platform::rtl_target).
+pub(crate) fn rtl_target(event: &Event<KeyboardData>) -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = event;
+    #[cfg(target_arch = "wasm32")]
+    return web::rtl_target(event);
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::rtl_target();
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return false;
+}
+
 /// The web reads the click's target, Blitz the press `blitz::Listener` hit -
 /// see [`nested_interactive`](crate::platform::nested_interactive).
 pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bool {

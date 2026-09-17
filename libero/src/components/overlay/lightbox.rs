@@ -16,7 +16,7 @@ use crate::{
         use_id, use_localization, use_modal_close, use_theme,
     },
     localization::{LightboxLabels, fill},
-    platform::{Dimensions, ElementApi},
+    platform::{Dimensions, ElementApi, logical_key},
     sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
         CssVar, LIGHTBOX_STAGE_HEIGHT, LIGHTBOX_THUMBNAIL_SIZE, LIGHTBOX_THUMBNAILS_GAP,
@@ -687,7 +687,9 @@ fn lightbox_slide(
                     let plain = !event.modifiers().ctrl()
                         && !event.modifiers().meta()
                         && !event.modifiers().alt();
-                    match event.key() {
+                    // The pan above stays physical; the slides follow the
+                    // strip, which mirrors under RTL.
+                    match logical_key(&event) {
                         Key::ArrowLeft => stage.go(i.saturating_sub(1), true),
                         Key::ArrowRight => stage.go(i + 1, true),
                         Key::Home => stage.go(0, true),
@@ -813,7 +815,7 @@ fn lightbox_thumbnails(
                     tabindex: if is_current { "0" } else { "-1" },
                     onclick: move |_| stage.go(i, false),
                     onkeydown: move |event: Event<KeyboardData>| {
-                        let target = match event.key() {
+                        let target = match logical_key(&event) {
                             Key::ArrowLeft => i.saturating_sub(1),
                             Key::ArrowRight => (i + 1).min(last),
                             Key::Home => 0,

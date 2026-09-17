@@ -19,7 +19,7 @@ use crate::{
     },
     hooks::{ElementHandle, use_element, use_localization},
     localization::DateLocale,
-    platform::ElementApi,
+    platform::{ElementApi, logical_key},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CalendarVariant, DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DatePickerDefaults, Size, SizeCss,
@@ -512,7 +512,7 @@ impl View {
         // Disabled days are skipped: `focus()` on one does nothing, and the
         // grid would lose its only tab stop. An arrow with nothing left to
         // land on stays put.
-        let next = match event.key() {
+        let next = match logical_key(&event) {
             Key::ArrowLeft => self.seek(add_days(tab_stop, -1), -1),
             Key::ArrowRight => self.seek(add_days(tab_stop, 1), 1),
             Key::ArrowUp => self.seek(add_days(tab_stop, -7), -7),
@@ -601,7 +601,7 @@ impl View {
                 i64::from((cell_stop.year() - self.decade + 1).rem_euclid(3)),
             ),
         };
-        let cells = match event.key() {
+        let cells = match logical_key(&event) {
             Key::ArrowLeft => -1,
             Key::ArrowRight => 1,
             Key::ArrowUp => -3,
@@ -910,7 +910,7 @@ impl Strip {
         if has_shortcut_modifier(&event) {
             return;
         }
-        let next = match event.key() {
+        let next = match logical_key(&event) {
             Key::ArrowLeft => view.seek(add_days(self.stop, -1), -1),
             Key::ArrowRight => view.seek(add_days(self.stop, 1), 1),
             Key::Home => view.nearest(self.start, 1),

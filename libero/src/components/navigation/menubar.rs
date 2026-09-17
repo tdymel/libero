@@ -15,7 +15,7 @@ use crate::{
         Align, ElementHandle, Side, TYPEAHEAD_RESET, typeahead_match, use_element, use_id,
         use_theme, use_typeahead,
     },
-    platform::ElementApi,
+    platform::{ElementApi, logical_key},
     sx::{StaticSx, sx},
     theme::{
         MENUBAR_GAP, MENUBAR_TRIGGER_FONT, MENUBAR_TRIGGER_PAD_X, MENUBAR_TRIGGER_PAD_Y,
@@ -301,7 +301,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
                 if has_shortcut_modifier(&event) {
                     return;
                 }
-                let target = match event.key() {
+                let target = match logical_key(&event) {
                     Key::ArrowRight => row.step(index, true),
                     Key::ArrowLeft => row.step(index, false),
                     Key::Home => (len > 0).then_some(0),
