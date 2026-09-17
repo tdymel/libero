@@ -168,44 +168,40 @@ pub fn CollapsePage() -> Element {
             markdown: "/md/collapse.md",
             properties: vec![props("Collapse", vec![
                 prop("open", "bool")
-                    .doc("Whether the panel is expanded. Strictly controlled - `Collapse` holds no open state of its own."),
+                    .doc("Whether the panel is expanded. You own this state."),
                 prop("keep_mounted", "bool")
                     .default("true")
-                    .doc("Keep the children in the DOM while closed. `false` unmounts them when the exit transition ends."),
+                    .doc("Keeps the children in the DOM while closed. `false` removes them once the panel has closed."),
                 prop("duration", "u32")
-                    .default("theme.collapse.duration")
-                    .doc("Milliseconds. `0` disables the animation."),
+                    .default("200")
+                    .doc("Animation length in milliseconds. `0` turns the animation off."),
                 prop("children", "Element").doc("The content that grows and shrinks."),
             ])],
             lead: rsx! {
                 Text {
-                    "Animates its children's height open and closed. It renders two "
-                    Code { source: "div" }
-                    "s - a grid whose single row goes from "
-                    Code { source: "0fr" }
-                    " to "
-                    Code { source: "1fr" }
-                    ", and the clipped box holding your content - so the animation "
-                    "re-measures itself for free whenever the content's own height changes. "
+                    "Animates its children's height open and closed, and follows the "
+                    "content when its height changes. You own "
                     Code { source: "open" }
-                    " is strictly controlled, and "
+                    ". "
                     Code { source: "Collapse" }
-                    " renders no role and no ARIA of its own: the disclosure semantics "
-                    "belong to whatever owns the trigger."
+                    " has no role or ARIA, so the trigger carries "
+                    Code { source: "aria_expanded" }
+                    " and an "
+                    Code { source: "aria_controls" }
+                    " pointing at the panel's "
+                    Code { source: "id" }
+                    "."
                 }
                 Text {
-                    "Focus inside a closing panel is not handed back: it never sees the "
-                    "trigger. Whoever owns both returns it with "
+                    "Focus inside a closing panel does not return to the trigger on its "
+                    "own. Use "
                     Code { source: "use_focus_return" }
-                    " - arm it with "
+                    ", with "
                     Code { source: "remember_active()" }
-                    " on every open, since "
+                    " on every open and "
                     Code { source: "restore()" }
-                    " forgets the trigger, and call "
-                    Code { source: "restore()" }
-                    " wherever the panel closes from inside. Switch "
-                    Code { source: "Focus return" }
-                    " on, open the panel with the keyboard and press Done."
+                    " where the panel closes from inside. Switch on Focus return, open "
+                    "the panel with the keyboard and press Done."
                 }
             },
             Demo {

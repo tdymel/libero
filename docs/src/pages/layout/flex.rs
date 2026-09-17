@@ -51,9 +51,9 @@ pub fn FlexPage() -> Element {
             properties: vec![props("Flex", vec![
                 prop("direction", "FlexDirection")
                     .default("column")
-                    .doc("Row or column layout."),
+                    .doc("Lays the children out in a row or a column."),
                 prop("align", "ThemeAwareValue")
-                    .default("follows direction - stretch for column, center for row")
+                    .default("stretch in a column, center in a row")
                     .doc("Cross-axis alignment."),
                 prop("justify", "ThemeAwareValue")
                     .default("flex-start")
@@ -62,12 +62,16 @@ pub fn FlexPage() -> Element {
                     .default("md")
                     .doc("Space between children."),
                 prop("wrap", "FlexWrap")
-                    .default("follows direction - nowrap for column, wrap for row")
-                    .doc("Whether children wrap onto new lines. Also accepts a `bool`."),
+                    .default("nowrap in a column, wrap in a row")
+                    .doc("Whether children wrap onto new lines. Also takes a `bool`."),
                 prop("children", "Element").doc("The flex's children."),
             ])],
             lead: rsx! {
-                Text { "A flexbox container - direction, gap, align, justify and wrap, all theme-aware." }
+                Text {
+                    "A flexbox container with theme-aware direction, gap, alignment and "
+                    "wrapping. A row and a column each have their own theme defaults, so "
+                    "a row wraps and centers its children without naming a value."
+                }
             },
             Demo {
                 component: "Flex",

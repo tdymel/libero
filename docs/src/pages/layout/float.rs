@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Float, Text},
+    components::{Box, Code, Float, Text},
     sx::sx,
     use_theme,
 };
@@ -29,23 +29,34 @@ pub fn FloatPage() -> Element {
             properties: vec![props("Float", vec![
                 prop("placement", "Placement")
                     .default("center-center")
-                    .doc("Anchor corner/edge, e.g. `\"top-start\"`."),
+                    .doc("The corner or edge to anchor to, such as `\"top-start\"`."),
                 prop("offset_x", "ThemeAwareValue")
                     .default("0px")
-                    .doc("Shift along the horizontal axis - a size token from the spacing scale (`\"md\"`, or `\"-md\"` for the other direction), or any CSS length."),
+                    .doc("Shift to the right, a spacing step or a CSS length. A negative step like `\"-md\"` shifts left."),
                 prop("offset_y", "ThemeAwareValue")
                     .default("0px")
-                    .doc("Shift along the vertical axis."),
+                    .doc("Shift down, a spacing step or a CSS length. A negative step shifts up."),
                 prop("fixed", "bool")
                     .default("false")
-                    .doc("Places against the viewport (`position: fixed`) instead of the positioned parent - an action bar, a toast. A transformed, filtered or container-query ancestor becomes a fixed element's containing block."),
+                    .doc("Anchors to the viewport instead of the parent, so it stays put while the page scrolls. An ancestor with a `transform`, `filter`, `contain` or `container-type` still captures it."),
                 prop("z_index", "ThemeAwareValue")
                     .default("200")
                     .doc("Stacking order."),
                 prop("children", "Element").doc("The anchored content."),
             ])],
             lead: rsx! {
-                Text { "Anchors its child to a corner/edge of the nearest `position: relative` ancestor - e.g. a badge on an avatar. The parent must set `position: relative` itself. `offset_x`/`offset_y` take a size token from the spacing scale, or any CSS length, and shift it right/down along the page axes - negate the token (`\"-md\"`) to shift left/up instead." }
+                Text {
+                    "Anchors its child to a corner or edge of the nearest positioned "
+                    "ancestor, like a badge on an avatar. The parent sets "
+                    Code { source: "position: relative" }
+                    " itself. The offsets follow the page, not the placement, so on a "
+                    Code { source: "top-end" }
+                    " badge a positive "
+                    Code { source: "offset_x" }
+                    " and a negative "
+                    Code { source: "offset_y" }
+                    " hang it off the corner."
+                }
             },
             Demo {
                 component: "Float",

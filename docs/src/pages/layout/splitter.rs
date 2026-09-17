@@ -93,21 +93,31 @@ pub fn SplitterPage() -> Element {
             properties: vec![props("Splitter", vec![
                 prop("orientation", "Orientation")
                     .default("vertical")
-                    .doc("Divider line axis - vertical (side-by-side panes) or horizontal (stacked panes)."),
+                    .doc("The divider's axis. `vertical` puts the panes side by side, `horizontal` stacks them."),
                 prop("initial_size", "f64")
-                    .doc("Initial % of pane A, clamped to `min_size` at mount. Uncontrolled afterward - `onresize` only notifies."),
-                prop("min_size", "f64").default("10").doc("% floor applied to both panes, capped at 50."),
-                prop("divider_size", "Size").default("sm").doc("Which size level the divider uses."),
+                    .doc("Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it."),
+                prop("min_size", "f64").default("10").doc("The smallest size of either pane in percent, at most 50."),
+                prop("divider_size", "Size").default("sm").doc("Thickness of the divider line."),
                 prop("divider_color", "ThemeAwareValue").doc("The divider's color."),
                 prop("onresize", "EventHandler<SplitterResizeEvent>")
-                    .doc("Fires as the divider moves, with both panes' resulting sizes as percentages. A key press or double-click emits `Change` then `End`."),
-                prop("aria_label", "Option<String>")
-                    .doc("Names the divider, after the pane it resizes. Unset warns in a debug build."),
-                prop("panel_a", "Element").doc("Pane A (left/top)."),
-                prop("panel_b", "Element").doc("Pane B (right/bottom). Nest another `Splitter` in a pane for more than two."),
+                    .doc("Fires as the divider moves, with both panes' sizes in percent. A key press or double-click sends `Change` then `End`."),
+                prop("aria_label", "String")
+                    .doc("Names the divider after the pane it resizes. A debug build warns without it."),
+                prop("panel_a", "Element").doc("The start or top pane."),
+                prop("panel_b", "Element").doc("The end or bottom pane."),
             ])],
             lead: rsx! {
-                Text { "Splits two panes with a draggable/keyboard-resizable divider. Panes go in `panel_a` and `panel_b`; nest another `Splitter` in a pane for more than two." }
+                Text {
+                    "Two panes, "
+                    Code { source: "panel_a" }
+                    " and "
+                    Code { source: "panel_b" }
+                    ", split by a divider you can drag or move with the keyboard. Nest "
+                    "another "
+                    Code { source: "Splitter" }
+                    " in a pane for more than two. It fills its parent, so give the parent "
+                    "a size."
+                }
             },
             Demo {
                 component: "Splitter",
@@ -168,21 +178,22 @@ pub fn SplitterPage() -> Element {
                     ListItem {
                         "Set "
                         Code { source: "aria_label" }
-                        ": it names the divider. Name it after the pane it resizes."
+                        " to name the divider after the pane it resizes."
                     }
                     ListItem {
                         "The divider is a tab stop. "
                         Kbd { "←" } " " Kbd { "→" } ", or " Kbd { "↑" } " " Kbd { "↓" }
-                        " when horizontal: move it, with " Kbd { "Shift" } " in bigger steps. "
-                        Kbd { "Home" } " " Kbd { "End" } ": to either limit."
+                        " when horizontal, move it, with " Kbd { "Shift" } " in bigger steps. "
+                        Kbd { "Home" } " and " Kbd { "End" } " jump to either limit."
                     }
                     ListItem {
-                        "Without a drag: double-click the divider to collapse pane A to "
+                        "Double-click the divider to collapse pane A to "
                         Code { source: "min_size" }
                         ", and again to restore it."
                     }
                     ListItem {
-                        "The divider's 24px target takes presses ~11.5px into each pane. Keep a pane's scrollbar or edge buttons out of that gutter, e.g. with "
+                        "The divider takes presses about 12px into each pane. Keep a pane's "
+                        "scrollbar or edge buttons out of that gutter, for example with "
                         Code { source: "padding: 12px" }
                         " on the side next to the divider."
                     }

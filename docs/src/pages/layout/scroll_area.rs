@@ -84,7 +84,7 @@ let mut edge = use_signal(|| "none");
 /// so they belong in the preview too. The code block prints all of it.
 fn wrap_frame(_: &DemoValues, code: &str) -> String {
     format!(
-        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-muted-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}} - last edge: {{edge()}}\" }}\n        Flex {{\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
+        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-muted-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}}, last edge: {{edge()}}\" }}\n        Flex {{\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
         indent(&indent(&indent(code)))
     )
 }
@@ -104,28 +104,28 @@ pub fn ScrollAreaPage() -> Element {
             properties: vec![props("ScrollArea", vec![
                 prop("scrollbars", "ScrollAxis")
                     .default("vertical")
-                    .doc("Which axes show a scrollbar and allow overflow: vertical, horizontal, both or none."),
+                    .doc("Which axes scroll and show a scrollbar. `none` clips the overflow."),
                 prop("scrollbar_visibility", "ScrollbarVisibility")
                     .default("always")
-                    .doc("always, hover, hidden, or scroll (currently identical to hover)."),
+                    .doc("When the scrollbar shows, `always`, `hover` or `hidden`. `scroll` acts like `hover` for now."),
                 prop("scrollbar_size", "ScrollbarSize")
                     .default("thin")
-                    .doc("CSS `scrollbar-width`: thin or auto."),
+                    .doc("The CSS `scrollbar-width`, `thin` or `auto`."),
                 prop("scrollbar_color", "ThemeAwareValue")
-                    .doc("Scrollbar thumb color - the track stays transparent."),
+                    .doc("Thumb color. The track stays transparent."),
                 prop("scroll_position_x", "f64")
-                    .doc("Percent (0-100) to scroll to horizontally. Bound to a signal it re-applies on every change; a literal applies once, at mount."),
+                    .doc("Scrolls to this percent (0-100) horizontally. A signal re-applies it on every change, a literal once at mount."),
                 prop("scroll_position_y", "f64")
-                    .doc("Percent (0-100) along the vertical axis - see `scroll_position_x`."),
+                    .doc("The same as `scroll_position_x`, vertically."),
                 prop("handle", "ScrollAreaHandle")
-                    .doc("From use_scroll_area(). Its scroll_to_percent(x, y) and px scroll_to(x, y) scroll the area from any handler, and every call scrolls - unlike the two props above, which only re-apply when their value changes."),
+                    .doc("From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call."),
                 prop("focusable", "bool")
                     .default("false")
-                    .doc("Makes the viewport a `region` tab stop always. Unset, it is one only while it overflows and holds nothing focusable. A caller's `tabindex` or non-region `role` turns the automatic stop off."),
+                    .doc("Makes the area a tab stop always. Without it, the area is one only while it overflows and holds nothing focusable. Your own `tabindex`, or a `role` other than `region`, turns that off."),
                 prop("onscroll", "EventHandler<ScrollPositionEvent>")
-                    .doc("Fires on every scroll tick with the position as a percent of each axis's scrollable range."),
+                    .doc("Fires on every scroll with the position as a percent of each axis."),
                 prop("onresize", "EventHandler<Event<ResizeData>>")
-                    .doc("Fires after the area resized, once it has re-measured itself for a Virtualize child."),
+                    .doc("Fires after the area resized."),
                 prop("ontopreached", "EventHandler<()>").doc("Fires once when the top edge is reached."),
                 prop("onbottomreached", "EventHandler<()>").doc("Fires once when the bottom edge is reached."),
                 prop("onleftreached", "EventHandler<()>").doc("Fires once when the left edge is reached."),
@@ -133,40 +133,25 @@ pub fn ScrollAreaPage() -> Element {
                 prop("children", "Element").doc("The scrollable content."),
             ]), props("Virtualize", vec![
                 prop("count", "usize")
-                    .doc("Rows in the whole list, not just the rendered ones."),
+                    .doc("Rows in the whole list, not only the rendered ones."),
                 prop("item", "Callback<usize, Element>")
                     .doc("Renders one row. Called only for the rows in view."),
                 prop("item_size", "f64")
-                    .doc("Row pitch in px - a row's height plus the gap below it. Rows must be a uniform height: unset, it is measured from the first rows rendered and assumed for the rest."),
+                    .doc("A row's height plus the gap below it, in px. Unset, it is measured from the first rows. Every row must have the same height."),
                 prop("overscan", "usize")
-                    .default("theme.scroll_area.overscan")
-                    .doc("Rows kept beyond each edge, so a scroll has something to reveal before the next render lands."),
+                    .default("4")
+                    .doc("Rows rendered beyond each edge, so a fast scroll has something to show."),
             ]).without_base_props()],
             lead: rsx! {
                 Text {
-                    "Scrolls its content, filling the parent by default. "
+                    "Scrolls its content and fills its parent, so give the parent a size. "
                     Code { source: "onscroll" }
-                    " reports the position as a percent of each axis - "
-                    Code { source: "Start" }
-                    "/"
-                    Code { source: "End" }
-                    " bracket one scroll, "
-                    Code { source: "Change" }
-                    " carries the rest - and "
-                    Code { source: "scroll_position_x" }
-                    "/"
-                    Code { source: "scroll_position_y" }
-                    " scroll it to a percent, re-applied only when the value changes. The buttons use "
-                    Code { source: "let area = use_scroll_area();" }
-                    " instead, a handle whose every call scrolls, in percent or in px. Each edge has its own event; the demo wires "
-                    Code { source: "ontopreached" }
-                    " and "
-                    Code { source: "onbottomreached" }
-                    ", and "
-                    Code { source: "onleftreached" }
-                    "/"
-                    Code { source: "onrightreached" }
-                    " work the same way."
+                    " reports the position as a percent of each axis, and each edge has "
+                    "its own event. The buttons scroll through a handle from "
+                    Code { source: "use_scroll_area()" }
+                    ". With virtualize on, "
+                    Code { source: "Virtualize" }
+                    " renders only the rows in view out of 50,000."
                 }
             },
             Demo {
@@ -240,7 +225,7 @@ pub fn ScrollAreaPage() -> Element {
                                 }
                             }
                         }
-                        Text { size: "sm", "{readout(position())} - last edge: {edge()}" }
+                        Text { size: "sm", "{readout(position())}, last edge: {edge()}" }
                         Flex {
                             gap: "sm",
                             Button {
@@ -270,19 +255,11 @@ pub fn ScrollAreaPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "A scroll area whose content has focusable elements is not a tab stop: "
-                    "tabbing to those scrolls them into view."
-                }
-                Text {
-                    "Content that has nothing to focus is the other case: a strip of images, "
-                    "or a block of text. There the viewport is the only thing to focus, and "
-                    "without it the content cannot be read with a keyboard at all. So while "
-                    "such content overflows, the area makes itself a tab stop with "
-                    Code { source: "role=\"region\"" }
-                    ", re-checked on every resize and re-render, and the browser's own "
-                    "arrow-key scrolling comes with it. "
+                    "Tab reaches focusable content inside the area as usual. When the "
+                    "content has nothing to focus, like a block of text, the area itself "
+                    "becomes a tab stop while it overflows, so the arrow keys can scroll it. "
                     Code { source: "focusable: true" }
-                    " keeps the stop whatever the content."
+                    " keeps the stop always."
                 }
                 CodeBlock { source: FOCUSABLE_EXAMPLE, language: "rust" }
                 Box {
@@ -302,15 +279,11 @@ pub fn ScrollAreaPage() -> Element {
                     }
                 }
                 Text {
-                    "Name it as well. A tab stop that reads as nothing is worse than none, so "
-                    "APG's scrollable-region pattern wants an accessible name alongside the "
-                    "stop: pass "
+                    "Name the area with "
                     Code { source: "aria_label" }
                     " or "
                     Code { source: "aria_labelledby" }
-                    ". A debug build warns once about a stop without one. The name is only "
-                    "set while the area has a role, its own region or yours: ARIA does not "
-                    "allow naming a plain div."
+                    ". A debug build warns about a tab stop without a name."
                 }
             }
 

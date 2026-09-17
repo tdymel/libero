@@ -4,16 +4,14 @@ Crate: `libero`
 Import: `use libero::components::Box;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/box.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: The polymorphic primitive every other component is built on - renders as any tag via `component`, styled entirely through `sx`.
+Description: The primitive every other component is built on, rendered as any tag via `component` and styled through `sx`.
 
-The polymorphic primitive every other component is built on - renders as any tag
-via `component`, plus `sx`/`states` styling and escape-hatch attributes like
-`href`/`src`, which follow whichever tag you picked.
+The primitive every other component is built on. `component` picks the tag, and
+attributes like `href` or `src` pass through to it. `Box` has no look of its
+own. Everything visible comes from `sx` and `states`, see
+[styling.md](styling.md).
 
 ## Usage
-
-`Box` has no look of its own: everything visible comes from `sx`. See
-[styling.md](styling.md) for the builder.
 
 ```rust
 use dioxus::prelude::*;
@@ -31,8 +29,7 @@ fn Demo() -> Element {
 }
 ```
 
-`component` swaps the rendered tag, and the attributes that only exist on that
-tag follow it:
+`component` swaps the tag, and that tag's attributes come with it.
 
 ```rust
 use dioxus::prelude::*;
@@ -53,46 +50,42 @@ fn Demo() -> Element {
 }
 ```
 
-`component` takes any of the 111 HTML5 element names, and 83 of them - every
-sectioning, text-level, list, table and form element - render on default
-features. The other 28 (document metadata, embedded and media content,
-`template`/`slot`, and the bidi and ruby set) need the `full-polymorphism`
-feature; without it they render as a `div`, silently in a release build. See
-[getting_started.md](getting_started.md#feature-flags) for the full list.
+`component` takes any of the 111 HTML5 element names. 83 of them render on
+default features. The other 28 (document metadata, embedded and media content,
+`template`, `slot`, bidi and ruby) need the `full-polymorphism` feature and
+render as a `div` without it. See
+[getting_started.md](getting_started.md#feature-flags).
 
 ## Accessibility
 
 `Box` adds no roles, so the semantics are whatever tag `component` names.
-Picking a `div` for something clickable loses the keyboard behaviour a `button`
-would have given for free.
+A clickable `div` has no keyboard support. Use `button` instead.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `variables` | `Variables` | - | Per-instance CSS custom properties on the `style` attribute, so `sx` can reference a varying value without a class per value. |
-| `component` | `HtmlTag` | `div` | Which element to render as. |
-| `framework_sx` | `&'static StaticSx` | - | Base styles of a component built on `Box`, on their own CSS layer - below `sx`, so a caller's override still wins. |
-| `style` | `String` | - | Raw `style` declarations, merged after `variables` - not overwritten by it. |
-| `alt` | `String` | - | The `img` attribute, a field rather than a passed-through attribute because `a` and `button` share the name. |
-| `r#type` | `String` | - | The `button` attribute, a field for the same reason as `alt`. |
+| `variables` | `Variables` | - | Custom properties set on the element's `style`, so `sx` can use a changing value without a new class per value. |
+| `component` | `HtmlTag` | `div` | The element to render, any of the 111 HTML5 element names. The 28 outside the default set need the `full-polymorphism` feature and render as a `div` without it. |
+| `framework_sx` | `&'static StaticSx` | - | Base styles for a component built on `Box`. They sit on a CSS layer below `sx`, so a caller's `sx` still wins. |
+| `style` | `String` | - | Raw `style` declarations, applied after `variables`. |
+| `alt` | `String` | - | The `img` alt text. |
+| `r#type` | `String` | - | The `button` type, such as `"submit"`. |
 | `children` | `Element` | required | The element's content. |
 
 Like every component, `Box` also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes - here extended with the `img`, `a` and
-`button` attribute sets, so `src`, `href`, `target` and friends pass through.
+`states`, and any extra HTML attributes. It also takes the `img`, `a` and
+`button` attributes, such as `src`, `href` and `target`.
 
 ## Theme defaults
 
-None. `Box` is unstyled by design; the theme only reaches it through the values
-an `sx` resolves.
+None. The theme reaches a `Box` only through the values its `sx` names.
 
 ## CSS variables
 
-None of its own. `variables` puts your own custom properties on the instance,
-and `framework_sx` is how a component built on `Box` declares its base rules.
+None of its own. `variables` sets your own custom properties on the element.
 
 ## Data attributes
 
-Only what you pass: the `states` prop renders as `data-state`, matched by
-`Sx::when`. `Box` adds no state tokens itself.
+Only what you pass. The `states` prop renders as `data-state`, which `Sx::when`
+matches. `Box` adds no state tokens itself.

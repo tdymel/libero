@@ -6,12 +6,11 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout
 Index: [index.md](index.md) - every other component's markdown page
 Description: A horizontal or vertical rule, with an optional label sitting in the line.
 
-A horizontal or vertical rule, with an optional centered/positioned label.
+A horizontal or vertical rule, with an optional label sitting in the line.
 
 ## Usage
 
-`spacing` is a margin and the rule has no size of its own, so both examples give
-it neighbours to be measured against.
+The rule has no size of its own, so both examples give it neighbours.
 
 ```rust
 use dioxus::prelude::*;
@@ -24,14 +23,14 @@ fn Demo() -> Element {
         Box {
             sx: sx().width("240px").text_align("center"),
             Text { "Above" }
-            Divider { size: "xs", spacing: "md", "OR" }
+            Divider { spacing: "md", "OR" }
             Text { "Below" }
         }
     }
 }
 ```
 
-Vertical, between two inline items - it stretches to the row's height:
+A vertical rule stretches to the row's height.
 
 ```rust
 use dioxus::prelude::*;
@@ -53,20 +52,19 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-- The root is a `separator`. A label names it through `aria-labelledby`; your
-  own `aria-label` or `aria-labelledby` takes over.
-- A purely visual rule: pass `role: "none"` and it leaves the accessibility tree.
+The rule is a `separator`, named by its label. Your own `aria-label` or
+`aria-labelledby` wins. Pass `role: "none"` for a purely visual rule.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `orientation` | `Orientation` | `horizontal` | Horizontal or vertical rule. |
+| `orientation` | `Orientation` | `horizontal` | The direction of the rule. |
 | `size` | `Size` | `xs` | Line thickness. |
 | `label_position` | `LabelPosition` | `center` | Where the label sits along the rule: `center`, `start` or `end`. |
-| `spacing` | `ThemeAwareValue` | `none` | Margin on either side of the rule, from the spacing scale. |
-| `color` | `ThemeAwareValue` | `muted.4` | Line color. A bare theme color is tinted to shade 3. |
-| `children` | `Element` | - | The optional centered/positioned label. |
+| `spacing` | `ThemeAwareValue` | `none` | Margin on both sides of the rule, a spacing step or a CSS length. |
+| `color` | `ThemeAwareValue` | `muted.4` | Line color. A bare theme color like `blue` resolves to its shade 3. |
+| `children` | `Element` | - | An optional label in the line. |
 
 Like every component, `Divider` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
@@ -77,8 +75,8 @@ Like every component, `Divider` also takes the shared props `sx`, `class`,
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Size` | Default `size` when the prop is omitted; `xs`. |
-| `spacing` | `Option<Size>` | Default margin either side of the rule; `None` means `0`. |
+| `size` | `Size` | Default `size`, `xs`. |
+| `spacing` | `Option<Size>` | Default margin on both sides of the rule. `None` means `0`. |
 | `thicknesses` | `Sizes<u16>` | Line thickness in pixels per size step. |
 
 ## CSS variables
@@ -87,8 +85,8 @@ Like every component, `Divider` also takes the shared props `sx`, `class`,
 |---|---|
 | `--lsx-divider-thickness-<size>` | Line thickness for that size step. |
 | `--lsx-divider-line` | The thickness in effect, resolved from the `size` state. |
-| `--lsx-divider-spacing` | Margin either side of the rule - declared by the theme, overwritten per instance by the `spacing` prop. |
-| `--lsx-divider-color` | Line color; unset leaves the base `muted.4`. |
+| `--lsx-divider-spacing` | Margin on both sides of the rule. |
+| `--lsx-divider-color` | Line color. Unset leaves `muted.4`. |
 
 ## Data attributes
 

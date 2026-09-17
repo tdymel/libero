@@ -4,18 +4,16 @@ Crate: `libero`
 Import: `use libero::components::Float;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/float.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: Anchors its child to a corner or edge of the nearest positioned ancestor - a badge on an avatar, say.
+Description: Anchors its child to a corner or edge of the nearest positioned ancestor, like a badge on an avatar.
 
-Anchors its child to a corner/edge of the nearest `position: relative` ancestor -
-e.g. a badge on an avatar. The parent must set `position: relative` itself.
-`offset_x`/`offset_y` take a size token from the spacing scale, or any CSS
-length, and shift it right/down along the page axes - negate the token (`"-md"`)
-to shift left/up instead.
+Anchors its child to a corner or edge of the nearest positioned ancestor, like a
+badge on an avatar. The parent sets `position: relative` itself. The offsets
+follow the page, not the placement, so on a `top-end` badge a positive
+`offset_x` and a negative `offset_y` hang it off the corner.
 
 ## Usage
 
-A float positions against the nearest `position: relative` ancestor, so the
-parent in the snippet is part of the usage, not scaffolding.
+The parent `Box` is the positioned ancestor.
 
 ```rust
 use dioxus::prelude::*;
@@ -27,7 +25,6 @@ fn Demo() -> Element {
         Box {
             sx: sx().position("relative").width("160px").height("120px").background("primary.1"),
             Float {
-                placement: "top-end",
                 Box { sx: sx().padding("4px 8px").background("primary"), "Badge" }
             }
         }
@@ -37,13 +34,7 @@ fn Demo() -> Element {
 
 `placement` names the vertical half first: `top-start`, `top-center`, `top-end`,
 `center-start`, `center-center`, `center-end`, `bottom-start`, `bottom-center`,
-`bottom-end`. The centered axes are centered with a `translate(-50%)`, so an
-offset is added on top of it rather than replacing it.
-
-Offsets are page axes, not placement-relative: `"md"` shifts right/down, `"-md"`
-left/up. Which of the two leaves the anchor therefore depends on the placement -
-on a `top-end` badge it is a positive `offset_x` and a negative `offset_y` that
-hang it off the corner:
+`bottom-end`. An offset of `"md"` shifts right or down, `"-md"` left or up.
 
 ```rust
 use dioxus::prelude::*;
@@ -65,24 +56,22 @@ fn Demo() -> Element {
 }
 ```
 
-`fixed: true` swaps `position: absolute` for `position: fixed`, so the float stays
-put while the page scrolls - an action bar, a notification stack, a floating
-window. Everything else is unchanged: the same `placement`, the same offsets, the
-same `float` z-index layer, which sits below overlays and modals.
+With `fixed: true` the float anchors to the viewport and stays put while the
+page scrolls, for an action bar or a notification stack. `placement` and the
+offsets work the same. It stays below overlays and modals.
 
-A `transform`, `filter`, `contain` or `container-type` on an ancestor makes that
-ancestor the containing block of a fixed element, and it then scrolls and clips
-with it.
+An ancestor with a `transform`, `filter`, `contain` or `container-type` still
+captures a fixed float, which then scrolls and clips with it.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `placement` | `Placement` | `center-center` | Anchor corner/edge, e.g. `"top-start"`. |
-| `offset_x` | `ThemeAwareValue` | `0px` | Shift along the horizontal axis - a size token from the spacing scale (`"md"`, or `"-md"` for the other direction), or any CSS length. |
-| `offset_y` | `ThemeAwareValue` | `0px` | Shift along the vertical axis. |
+| `placement` | `Placement` | `center-center` | The corner or edge to anchor to, such as `"top-start"`. |
+| `offset_x` | `ThemeAwareValue` | `0px` | Shift to the right, a spacing step or a CSS length. A negative step like `"-md"` shifts left. |
+| `offset_y` | `ThemeAwareValue` | `0px` | Shift down, a spacing step or a CSS length. A negative step shifts up. |
 | `z_index` | `ThemeAwareValue` | `200` | Stacking order. |
-| `fixed` | `bool` | `false` | Place against the viewport (`position: fixed`) instead of the nearest positioned ancestor. `placement` and the offsets are measured from the viewport's edges. |
+| `fixed` | `bool` | `false` | Anchors to the viewport instead of the parent, so it stays put while the page scrolls. An ancestor with a `transform`, `filter`, `contain` or `container-type` still captures it. |
 | `children` | `Element` | required | The anchored content. |
 
 Like every component, `Float` also takes the shared props `sx`, `class`,
@@ -104,17 +93,16 @@ Like every component, `Float` also takes the shared props `sx`, `class`,
 
 | Variable | Description |
 |---|---|
-| `--lsx-float-offset-x` | Horizontal offset; the theme default, or the resolved `offset_x` prop. |
-| `--lsx-float-offset-y` | Vertical offset; the theme default, or the resolved `offset_y` prop. |
-| `--lsx-float-translate-x` | Set to `-50%` on a horizontally centered placement; the offset is added to it. |
-| `--lsx-float-translate-y` | Set to `-50%` on a vertically centered placement. |
+| `--lsx-float-offset-x` | Horizontal offset, from `offset_x` or the theme. |
+| `--lsx-float-offset-y` | Vertical offset, from `offset_y` or the theme. |
+| `--lsx-float-translate-x` | `-50%` on a horizontally centered placement. |
+| `--lsx-float-translate-y` | `-50%` on a vertically centered placement. |
 | `--lsx-z-index-float` | Theme stacking order for floats. |
-| `--lsx-z-index-float-override` | Set from the `z_index` prop; wins over the theme value. |
 
 ## Data attributes
 
-State tokens on the root's `data-state`, space separated - one per axis, derived
-from `placement`.
+State tokens on the root's `data-state`, space separated, one per axis of
+`placement`.
 
 | Token | Condition |
 |---|---|

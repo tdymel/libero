@@ -4,22 +4,19 @@ Crate: `libero`
 Import: `use libero::components::Sidebar;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/sidebar.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: An in-flow panel bordering one edge of its parent and scrolling its own content - a nav rail or inspector.
+Description: An in-flow panel on one edge of its parent that scrolls its own content, like a nav rail or an inspector.
 
-An in-flow panel bordering one edge of its parent, scrolling its own content -
-a sidebar, nav rail or inspector. `side` picks the border and the size axis; the
-panel's actual position is your layout's, so place it at the matching end of the
-DOM. For the portaled, dimmed, focus-trapped kind, see [`use_drawer`](drawer.md).
+An in-flow panel on one edge of its parent that scrolls its own content. `side`
+picks the border, not the position, so a right sidebar comes after its sibling
+in the DOM. For a panel that slides in over the page, see
+[`use_drawer`](drawer.md).
 
-The content is wrapped in a [`ScrollArea`](scroll_area.md), so the panel scrolls
-independently of the page. The panel itself is `flex-shrink: 0` - a sidebar is
-usually a flex item that must not be squeezed.
+The content sits in a [`ScrollArea`](scroll_area.md), so it scrolls apart from
+the page. The panel does not shrink in a flex row.
 
 ## Usage
 
-A `Sidebar` has no position of its own, so it needs a parent laying it out and a
-sibling to sit beside. `side: "right"` means putting it *after* that sibling in
-the DOM.
+A `Sidebar` needs a parent to lay it out and a sibling to sit beside.
 
 ```rust
 use dioxus::prelude::*;
@@ -49,7 +46,7 @@ fn Demo() -> Element {
 }
 ```
 
-The same panel on the right, at the other end of the DOM, with a wider `size`:
+The same panel on the right, after its sibling, with a wider `size`.
 
 ```rust
 use dioxus::prelude::*;
@@ -81,22 +78,22 @@ fn Demo() -> Element {
 }
 ```
 
-`side: "top"` and `"bottom"` border the horizontal edges instead, and `size` then
-means height - so the parent wants `direction: "column"`.
+With `side: "top"` or `"bottom"`, `size` is a height, so the parent needs
+`direction: "column"`.
 
 ## Accessibility
 
-The root is an `aside`, the `complementary` landmark. A panel that is the site
-navigation passes `component: "nav"` instead; give it an `aria_label` when the
-page has more than one landmark of that kind.
+The root is an `aside`, the `complementary` landmark. For the site navigation
+pass `component: "nav"`. Give it an `aria_label` when the page has more than one
+landmark of that kind.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `side` | `SidebarSide` | `left` | Which edge this panel borders and which axis `size` applies to. It does not place the panel - an in-flow item is positioned by its parent's layout, so put it at the matching end of the DOM yourself. |
-| `size` | `Size` | `md` | The panel's width (or height, on a `top`/`bottom` side). |
-| `component` | `HtmlTag` | `aside` | Element to render as, e.g. `nav` for a navigation panel. |
+| `side` | `SidebarSide` | `left` | The edge that gets the border, and whether `size` is a width or a height. It does not move the panel, so put it at the matching end of the DOM. |
+| `size` | `Size` | `md` | The panel's width, or its height on a `top` or `bottom` side. |
+| `component` | `HtmlTag` | `aside` | The element to render, such as `nav` for a navigation panel. |
 | `children` | `Element` | required | The panel's content, scrolled by an inner `ScrollArea`. |
 
 `SidebarSide` is `left`, `right`, `top` or `bottom`.
@@ -106,28 +103,24 @@ Like every component, `Sidebar` also takes the shared props `sx`, `class`,
 
 ## Theme defaults
 
-`SidebarDefaults` on the theme. The default `side` (`left`) is the enum's own
-default, not a theme field.
+`SidebarDefaults` on the theme.
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Size` | Default `size` when the prop is omitted; `md`. |
-| `sizes` | `Sizes<u16>` | Panel extent in px per size step - 200, 240, 280, 320, 400, 480. |
+| `size` | `Size` | Default `size`, `md`. |
+| `sizes` | `Sizes<u16>` | Panel size in px per step: 200, 240, 280, 320, 400, 480. |
 
 ## CSS variables
 
 | Variable | Description |
 |---|---|
-| `--lsx-sidebar-size-<size>` | Panel width (or height) for that size step. |
-
-The 1px edge border reads the shared grey scale at shade 4.
+| `--lsx-sidebar-size-<size>` | Panel width or height for that size step. |
 
 ## Data attributes
 
-State tokens on the root's `data-state`, space separated. `side` and `size` are
-read together - the pair decides whether the size lands on `width` or `height`.
+State tokens on the root's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `side-left` / `side-right` / `side-top` / `side-bottom` | The `side` in effect; also picks which edge gets the border. |
+| `side-left` / `side-right` / `side-top` / `side-bottom` | The `side` in effect. |
 | `size-<size>` | The `size` in effect. |

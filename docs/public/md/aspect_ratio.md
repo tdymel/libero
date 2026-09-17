@@ -7,9 +7,9 @@ Index: [index.md](index.md) - every other component's markdown page
 Description: Enforces a width-to-height ratio on its child, cropping it to fill the box.
 
 Enforces a width-to-height ratio on its child, cropping it to fill the box.
-`ratio` is a plain `f32` - write it as the division it reads as - and defaults
-to the theme's `1.0`. The box has no size of its own, so a ratio only shows
-once something gives it a width.
+Write `ratio` as a division, like `16.0 / 9.0`. The box has no size of its own,
+so give it a width. The child stretches to fill it and the overflow is clipped,
+which suits an image or a video.
 
 ## Usage
 
@@ -34,15 +34,10 @@ fn Demo() -> Element {
 }
 ```
 
-The child is stretched to `100%` in both axes and anything overflowing is
-clipped (`overflow: hidden`), so an image or a video fills the frame rather than
-setting its own height.
-
 ## Accessibility
 
-Because it crops, make sure nothing meaningful lives at the edges of the child;
-an image whose subject is cut off still needs `alt` text describing what the
-reader can see.
+The edges of the child get cropped, so keep nothing meaningful there. An image
+still needs `alt` text that describes what the reader can see.
 
 ## Props
 
@@ -56,8 +51,7 @@ Like every component, `AspectRatio` also takes the shared props `sx`, `class`,
 
 ## Theme defaults
 
-`AspectRatioDefaults` on the theme - one field, the ratio used when the prop is
-omitted.
+`AspectRatioDefaults` on the theme holds the ratio used when the prop is omitted.
 
 | Field | Type | Description |
 |---|---|---|
@@ -69,10 +63,7 @@ omitted.
 |---|---|
 | `--lsx-aspect-ratio` | The default `aspect-ratio` for every `AspectRatio`. |
 
-The `ratio` prop writes `--lsx-aspect-ratio-override` into the element's `style`
-attribute, so a per-instance ratio never mints a new class.
-
 ## Data attributes
 
-`AspectRatio` sets no state tokens of its own; a `states` prop is passed through
+`AspectRatio` sets no state tokens of its own. A `states` prop passes through
 unchanged.

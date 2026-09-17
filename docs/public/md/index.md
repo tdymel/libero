@@ -20,21 +20,21 @@ fetch only the file you need.
 
 ## Layout
 
-- [Box](box.md): The polymorphic primitive every other component is built on - renders as any tag via `component`, styled entirely through `sx`.
-- [Paper](paper.md): The library's surface - a background, a corner radius, an elevation and an optional hairline border, with no semantics of its own.
-- [Flex](flex.md): A flexbox container - direction, gap, align, justify and wrap, all theme-aware.
-- [Grid](grid.md): A named-area layout matrix - `Grid` holds the shape, a `GridZone` is a twelve-column packing container with optional masonry, and a `GridItem` takes a fraction of it.
+- [Box](box.md): The primitive every other component is built on, rendered as any tag via `component` and styled through `sx`.
+- [Paper](paper.md): The library's surface, with a background, a corner radius, an elevation and an optional hairline border, and no semantics of its own.
+- [Flex](flex.md): A flexbox container with theme-aware direction, gap, alignment and wrapping.
+- [Grid](grid.md): A layout matrix of named areas. `Grid` holds the shape, a `GridZone` is a twelve-column container with optional masonry, and a `GridItem` takes a fraction of it.
 - [Center](center.md): Centers its child horizontally and vertically.
 - [Container](container.md): Centers content and caps its width at a breakpoint.
 - [AspectRatio](aspect_ratio.md): Enforces a width-to-height ratio on its child, cropping it to fill the box.
 - [Divider](divider.md): A horizontal or vertical rule, with an optional label sitting in the line.
-- [Collapse](collapse.md): Animates its children's height open and closed, over a grid row rather than a measured pixel height.
-- [Float](float.md): Anchors its child to a corner or edge of the nearest positioned ancestor - a badge on an avatar, say.
-- [Header](header.md): The page's banner landmark - a sticky, static or fixed `header` bar hosting nav and actions.
-- [Sidebar](sidebar.md): An in-flow panel bordering one edge of its parent and scrolling its own content - a nav rail or inspector.
-- [Splitter](splitter.md): Two panes divided by a draggable, keyboard-resizable divider; nest another `Splitter` in a pane for more than two.
-- [ScrollArea](scroll_area.md): A scrollable region that fills its parent, with themed scrollbars, percent-based scroll positions, per-edge events, and row virtualization through `Virtualize`.
-- [Scroller](scroller.md): A horizontal strip with a hidden scrollbar and a step control over each end that shows while there is more content that way.
+- [Collapse](collapse.md): Animates its children's height open and closed, and follows the content when its height changes.
+- [Float](float.md): Anchors its child to a corner or edge of the nearest positioned ancestor, like a badge on an avatar.
+- [Header](header.md): The page's banner landmark, a sticky, static or fixed `header` bar for nav and actions.
+- [Sidebar](sidebar.md): An in-flow panel on one edge of its parent that scrolls its own content, like a nav rail or an inspector.
+- [Splitter](splitter.md): Two panes split by a divider you can drag or move with the keyboard. Nest another `Splitter` in a pane for more than two.
+- [ScrollArea](scroll_area.md): A scrollable region that fills its parent, with themed scrollbars, scroll positions in percent, edge events and row virtualization through `Virtualize`.
+- [Scroller](scroller.md): A horizontal strip with a hidden scrollbar and a step control over each end, shown while there is more content that way.
 
 ## Buttons
 

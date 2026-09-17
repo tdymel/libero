@@ -4,15 +4,14 @@ Crate: `libero`
 Import: `use libero::components::{Splitter, SplitterResizeEvent};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/splitter>
 Index: [index.md](index.md) - every other component's markdown page
-Description: Two panes divided by a draggable, keyboard-resizable divider; nest another `Splitter` in a pane for more than two.
+Description: Two panes split by a divider you can drag or move with the keyboard. Nest another `Splitter` in a pane for more than two.
 
-Splits two panes with a draggable/keyboard-resizable divider. Panes go in
-`panel_a` and `panel_b`; nest another `Splitter` in a pane for more than two.
+Two panes, `panel_a` and `panel_b`, split by a divider you can drag or move with
+the keyboard. Nest another `Splitter` in a pane for more than two. It fills its
+parent, so give the parent a size.
 
-`initial_size` is the starting percentage of pane A, clamped to `min_size` at
-mount. It is uncontrolled after that - the divider owns its position and
-`onresize` only notifies. A splitter is `height: 100%` and a flex container, so
-it needs a parent with a real size.
+`initial_size` is pane A's starting size in percent. After that the divider owns
+the size, and `onresize` reports it.
 
 ## Usage
 
@@ -36,7 +35,7 @@ fn Demo() -> Element {
 }
 ```
 
-More than two panes is one `Splitter` inside another's pane, split the other way:
+For more than two panes, put a `Splitter` in another's pane, split the other way.
 
 ```rust
 use dioxus::prelude::*;
@@ -66,44 +65,41 @@ fn Demo() -> Element {
 }
 ```
 
-`onresize` reports both panes' resulting percentages, A first -
-`SplitterResizeEvent::Start`/`Change`/`End`, so a drag is bracketed the same way
-a scroll is. A key press or double-click emits `Change` then `End`, because it
-settles on its size at once - so persisting the layout on `End` also catches a
-keyboard or double-click resize.
+`onresize` sends a `SplitterResizeEvent` with both panes' sizes in percent, A
+first. A drag sends `Start`, then `Change`, then `End`. A key press or
+double-click sends `Change` then `End`, so saving the layout on `End` catches
+every resize.
 
 ## Accessibility
 
-Set `aria_label`: the divider is a focusable separator, and it has no name of its
-own. Name it after the pane it resizes, such as `"Resize sidebar"`.
+The divider is a focusable separator with no name of its own. Set `aria_label`
+after the pane it resizes, such as `"Resize sidebar"`.
 
-Once the divider has focus, Arrow keys move by `SplitterDefaults::step` (1%),
-Shift+Arrow by `big_step` (10%), Home and End jump to the `min_size` floor and
-its mirror. Left/Right act on a vertical divider, Up/Down on a horizontal one.
+With the divider focused, the arrow keys move it by 1% and Shift with an arrow
+by 10%. Home and End jump to either limit. Left and Right move a vertical
+divider, Up and Down a horizontal one.
 
-Without a drag (WCAG 2.5.7), double-click the divider: it collapses pane A to
-the `min_size` floor, and the next double-click restores the size it had. A
-single click only focuses the divider. Its hit area is 24px thick (WCAG 2.5.8).
+To resize without dragging (WCAG 2.5.7), double-click the divider. Pane A
+collapses to `min_size`, and the next double-click restores it. A single click
+only focuses the divider.
 
-The hit area reaches past the visible line into both panes: at the default `sm`
-(a 1px line) it takes presses ~11.5px into each. A pane's scrollbar or a button
-flush against the divider sits under it and gets no press there. Keep that
-gutter clear, for example with `padding: 12px` on the pane's side next to the
-divider.
+The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses about
+12px into each pane. A scrollbar or button there gets no press. Keep that gutter
+clear, for example with `padding: 12px` on the pane's side next to the divider.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `orientation` | `Orientation` | `vertical` | Divider line axis - `vertical` (side-by-side panes) or `horizontal` (stacked panes). |
-| `initial_size` | `f64` | required | Initial % of pane A, clamped to `min_size` at mount. Uncontrolled afterward - `onresize` only notifies. |
-| `min_size` | `f64` | `10` | % floor applied to both panes, capped at 50. |
-| `divider_size` | `Size` | `sm` | Which size level the divider uses. |
+| `orientation` | `Orientation` | `vertical` | The divider's axis. `vertical` puts the panes side by side, `horizontal` stacks them. |
+| `initial_size` | `f64` | required | Pane A's starting size in percent, kept within `min_size`. After that the divider owns the size, and `onresize` reports it. |
+| `min_size` | `f64` | `10` | The smallest size of either pane in percent, at most 50. |
+| `divider_size` | `Size` | `sm` | Thickness of the divider line. |
 | `divider_color` | `ThemeAwareValue` | - | The divider's color. Unset it is grey. |
-| `onresize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' resulting sizes as percentages. A key press or double-click emits `Change` then `End`. |
-| `aria_label` | `Option<String>` | - | Names the divider, after the pane it resizes. Unset warns in a debug build. |
-| `panel_a` | `Element` | required | Pane A (left/top). |
-| `panel_b` | `Element` | required | Pane B (right/bottom). Nest another `Splitter` in a pane for more than two. |
+| `onresize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' sizes in percent. A key press or double-click sends `Change` then `End`. |
+| `aria_label` | `String` | - | Names the divider after the pane it resizes. A debug build warns without it. |
+| `panel_a` | `Element` | required | The start or top pane. |
+| `panel_b` | `Element` | required | The end or bottom pane. |
 
 Like every component, `Splitter` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
@@ -114,10 +110,10 @@ Like every component, `Splitter` also takes the shared props `sx`, `class`,
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Size` | Which size level `divider_size` uses when unset (`sm`). |
-| `divider_sizes` | `Sizes<u8>` | Visible line thickness in px per size step - `1, 1, 2, 3, 4, 6`. |
-| `hit_sizes` | `Sizes<u8>` | Invisible hit-target thickness in px per size step - `24` at every step, the WCAG 2.5.8 minimum. |
-| `min_size` | `f64` | Percent floor applied to both panes (`10`). |
+| `size` | `Size` | Default `divider_size`, `sm`. |
+| `divider_sizes` | `Sizes<u8>` | Line thickness in px per size step: `1, 1, 2, 3, 4, 6`. |
+| `hit_sizes` | `Sizes<u8>` | Hit area thickness in px per size step, `24` at every step. |
+| `min_size` | `f64` | Smallest pane size in percent, `10`. |
 | `step` | `f64` | Percent moved per arrow key press (`1`). |
 | `big_step` | `f64` | Percent moved per Shift+arrow press (`10`). |
 
@@ -127,16 +123,15 @@ Like every component, `Splitter` also takes the shared props `sx`, `class`,
 |---|---|
 | `--lsx-splitter-divider-size-<size>` | Visible divider thickness for that size step. |
 | `--lsx-splitter-hit-size-<size>` | Hit-target thickness for that size step. |
-| `--lsx-splitter-divider-color` | Set by `divider_color`; unset falls back to grey. |
-| `--lsx-splitter-a` | Pane A's current size as a percentage - the one value the drag writes. |
+| `--lsx-splitter-divider-color` | Set by `divider_color`. Unset falls back to grey. |
+| `--lsx-splitter-a` | Pane A's current size in percent. |
 
 ## Data attributes
 
-State tokens on the root's `data-state`; the divider and its hit target carry
-their own.
+State tokens on the root's `data-state`. The divider carries its own.
 
 | Token | On | Condition |
 |---|---|---|
 | `vertical` / `horizontal` | root, divider | The `orientation` in effect. |
-| `dragging` | root | A pointer drag is in progress (also disables text selection). |
+| `dragging` | root | A pointer drag is in progress. |
 | `size-<size>` | divider | The `divider_size` in effect. |

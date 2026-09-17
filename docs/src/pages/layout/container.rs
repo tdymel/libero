@@ -20,24 +20,22 @@ pub fn ContainerPage() -> Element {
             properties: vec![props("Container", vec![
                 prop("component", "HtmlTag")
                     .default("div")
-                    .doc("Which element to render as."),
+                    .doc("The element to render."),
                 prop("size", "ThemeAwareValue")
                     .default("lg")
-                    .doc("Max width, as a breakpoint (xs is 36rem, xxl 101rem) - the cap only bites once the surrounding area is wider than it."),
+                    .doc("Max width, a breakpoint (`xs` is 36rem, `xxl` 101rem) or a CSS length."),
                 prop("gutters", "ThemeAwareValue")
                     .default("md")
-                    .doc("Horizontal padding, from the spacing scale."),
+                    .doc("Horizontal padding, a spacing step or a CSS length."),
                 prop("children", "Element").doc("The container's content."),
             ])],
             lead: rsx! {
                 Text {
-                    "Centers content and caps its width at a breakpoint - wraps your main "
-                    "content, not the whole page shell. "
+                    "Centers content and caps its width at a breakpoint. Wrap your main "
+                    "content in it, not the whole page shell. The cap shows only once the "
+                    "space around it is wider than "
                     Code { source: "size" }
-                    " names a breakpoint (xs is 36rem, xxl 101rem), so the cap only bites "
-                    "once the surrounding area is wider than it; "
-                    Code { source: "gutters" }
-                    " is the horizontal padding, from the spacing scale."
+                    "."
                 }
             },
             Demo {

@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, UNSET, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -150,60 +152,48 @@ pub fn ScrollerPage() -> Element {
             properties: vec![
                 props("Scroller", vec![
                     prop("aria_label", "String")
-                        .doc("Required. Names the scrollable region, which is a tab stop."),
+                        .doc("Required. Names the strip, which is a tab stop."),
                     prop("scroll_amount", "u32")
                         .default(theme.scroller.scroll_amount.to_string())
                         .doc("Pixels one control press scrolls."),
                     prop("controls", "ScrollerControls")
                         .default(theme.scroller.controls.as_str())
-                        .doc("auto shows each control while there is content that way; always keeps both, dimmed at their end; never renders neither."),
+                        .doc("`auto` shows each control while there is content that way. `always` keeps both, dimmed at their end. `never` shows neither."),
                     prop("control_size", "Size")
                         .default(theme.scroller.control_size.as_str())
-                        .doc("Width of each control strip and its glyph."),
+                        .doc("Width of each control and its glyph."),
                     prop("fade_color", "ThemeAwareValue")
                         .default("paper background")
-                        .doc("What the gradient under a control fades from. Set it to the surface the strip sits on."),
+                        .doc("The colour the content fades into under a control. Set it to the surface the strip sits on."),
                     prop("draggable", "bool")
                         .default(theme.scroller.draggable.to_string())
-                        .doc("Mouse drag-to-pan. Touch and trackpad scroll natively either way."),
+                        .doc("Lets the mouse drag the strip. Touch and trackpad scroll it either way."),
                     prop("onedgechange", "EventHandler<ScrollerEdges>")
-                        .doc("Fires when either edge state flips, including the first measurement."),
+                        .doc("Fires when the strip reaches or leaves an end, and once when it is first measured."),
                     prop("handle", "ScrollerHandle")
-                        .doc("From use_scroller(). Its step_forward() and step_back() move the strip as the controls do, for buttons of your own."),
+                        .doc("From `use_scroller()`. Its `step_forward()` and `step_back()` move the strip as the controls do, for buttons of your own."),
                     prop("children", "Element").doc("The strip."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A horizontal strip with its scrollbar hidden and a step control over each "
-                    "end, which shows while there is more content that way. A press scrolls by "
+                    "A horizontal strip with a hidden scrollbar and a step control over "
+                    "each end, shown while there is more content that way. A press scrolls "
+                    "by "
                     Code { source: "scroll_amount" }
-                    " pixels. The scrolling itself is the browser's, so touch, trackpad and the "
-                    "arrow keys on the focused strip work untouched. Each control's background "
-                    "is a gradient from the surface colour, so the content fades out beneath it."
-                }
-                Text {
-                    "The strip is a tab stop, so "
-                    Code { source: "aria_label" }
-                    " is required. On the focused strip "
-                    Kbd { "←" } " and " Kbd { "→" }
-                    " scroll it natively. A control at its own end leaves the tab order, but it "
-                    "keeps focus if it had it."
+                    " pixels. Touch, trackpad and the arrow keys scroll it as usual. The "
+                    "content fades out under each control, so set "
+                    Code { source: "fade_color" }
+                    " to the surface the strip sits on."
                 }
                 Text {
                     Code { source: "onedgechange" }
-                    " reports whether the strip rests against either end, once it is first "
-                    "measured and again whenever that changes; the line under the strip "
-                    "prints it. With "
+                    " reports whether the strip rests against an end, printed under the "
+                    "strip. With "
                     Code { source: "controls: \"never\"" }
-                    " it is the whole affordance, for a strip that should say so in its own words. "
-                    "To move it from buttons of your own, pass a "
+                    ", move the strip from your own buttons through a "
                     Code { source: "use_scroller()" }
-                    " handle and call its "
-                    Code { source: "step_forward()" }
-                    " and "
-                    Code { source: "step_back()" }
-                    "; pick never in the preview to see it."
+                    " handle."
                 }
             },
             // snippet: item const TAGS: [&str; 2] = ["rust", "dioxus"];
@@ -247,6 +237,16 @@ pub fn ScrollerPage() -> Element {
                 ],
                 wrap: Wrap(wrap_edges),
                 render: move |values: DemoValues| rsx! { ScrollerDemo { values } },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "The strip is a tab stop, so "
+                    Code { source: "aria_label" }
+                    " is required. On the focused strip "
+                    Kbd { "←" } " and " Kbd { "→" }
+                    " scroll it. A control at its own end leaves the tab order, but keeps "
+                    "focus if it had it."
+                }
             }
         }
     }

@@ -34,19 +34,15 @@ pub fn CenterPage() -> Element {
             properties: vec![props("Center", vec![
                 prop("inline", "bool")
                     .default("false")
-                    .doc("`inline-flex` instead of `flex`, so it doesn't stretch to the parent's width."),
+                    .doc("Shrinks to the child instead of filling the parent's width."),
                 prop("children", "Element").doc("The centered content."),
             ])],
             lead: rsx! {
                 Text {
-                    "Centers its child both horizontally and vertically. "
+                    "Centers its child horizontally and vertically. It fills the parent's "
+                    "width, the outer band here, and has no height of its own. With "
                     Code { source: "inline" }
-                    " switches it from "
-                    Code { source: "flex" }
-                    " to "
-                    Code { source: "inline-flex" }
-                    ", so it shrinks to its child instead of filling the parent's width - "
-                    "the grey band is the parent."
+                    " it shrinks to its child."
                 }
             },
             Demo {

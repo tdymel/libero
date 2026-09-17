@@ -4,18 +4,12 @@ Crate: `libero`
 Import: `use libero::components::Scroller;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/scroller.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A horizontal strip with a hidden scrollbar and a step control over each end that shows while there is more content that way.
+Description: A horizontal strip with a hidden scrollbar and a step control over each end, shown while there is more content that way.
 
-A horizontal strip with its scrollbar hidden and a step control over each end,
-which shows while there is more content that way. A press scrolls by
-`scroll_amount` pixels. The scrolling itself is the browser's, so touch,
-trackpad and the arrow keys on the focused strip work untouched. Each
-control's background is a gradient from the surface colour, so the content
-fades out beneath it.
-
-The strip is a tab stop, so `aria_label` is required. On the focused strip
-`←` and `→` scroll it natively. A control at its own end leaves the tab order,
-but it keeps focus if it had it.
+A horizontal strip with a hidden scrollbar and a step control over each end,
+shown while there is more content that way. A press scrolls by `scroll_amount`
+pixels. Touch, trackpad and the arrow keys scroll it as usual. The content fades
+out under each control, so set `fade_color` to the surface the strip sits on.
 
 ## Usage
 
@@ -40,18 +34,18 @@ fn Demo() -> Element {
 }
 ```
 
-On a surface that is not the page's paper, pass that surface's colour as
-`fade_color`, or the control strip shows as a band:
+On another surface, pass its colour as `fade_color`, or the control shows as a
+band.
 
 ```rust,ignore
 Scroller { aria_label: "Tags", fade_color: "muted.1", /* .. */ }
 ```
 
-## Reacting to the edges
+## Edges
 
-`onedgechange` reports whether the strip rests against either end, once it
-is first measured and again whenever that changes. With `controls: "never"` it
-is the whole affordance, for a strip that should say so in its own words.
+`onedgechange` reports whether the strip rests against an end, once when it is
+first measured and again whenever that changes. With `controls: "never"` a strip
+can say so in its own words.
 
 ```rust
 use dioxus::prelude::*;
@@ -86,10 +80,9 @@ fn Demo() -> Element {
 }
 ```
 
-To drive the strip from buttons of your own, create a handle with
-`use_scroller()` and pass it as `handle`. `step_forward()` and `step_back()`
-move the strip exactly as the built-in controls do: by `scroll_amount`, from
-where the strip is now, and never past either end.
+To move the strip from your own buttons, pass a `use_scroller()` handle as
+`handle`. `step_forward()` and `step_back()` move it as the controls do, by
+`scroll_amount` and never past an end.
 
 ```rust,ignore
 let strip = use_scroller();
@@ -108,24 +101,23 @@ A call before the strip has mounted does nothing.
 
 ## Accessibility
 
-- **`aria_label` is required**: the strip is a named region and a tab stop, the
-  keyboard path for a strip of plain text or images.
-- **`←`/`→` on the focused strip are the browser's own scrolling.** Nothing adds
-  key handling, so `Home`/`End` do not scroll a horizontal strip.
+The strip is a named region and a tab stop, so `aria_label` is required. On the
+focused strip `←` and `→` scroll it. `Home` and `End` do not. A control at its
+own end leaves the tab order, but keeps focus if it had it.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `aria_label` | `String` | required | Names the scrollable region, which is a tab stop. |
+| `aria_label` | `String` | required | Names the strip, which is a tab stop. |
 | `scroll_amount` | `u32` | `200` | Pixels one control press scrolls. |
-| `controls` | `ScrollerControls` | `auto` | `auto` shows each control while there is content that way; `always` keeps both, dimmed at their end; `never` renders neither. |
-| `control_size` | `Size` | `md` | Width of each control strip and its glyph. |
-| `fade_color` | `ThemeAwareValue` | paper background | What the gradient under a control fades from. Set it to the surface the strip sits on. |
-| `draggable` | `bool` | `false` | Mouse drag-to-pan. Touch and trackpad scroll natively either way. |
-| `onedgechange` | `EventHandler<ScrollerEdges>` | - | Fires when either edge state flips, including the first measurement. `ScrollerEdges { at_start, at_end }`; both `true` means nothing overflows. |
-| `handle` | `ScrollerHandle` | - | From `use_scroller()`. `step_forward()`/`step_back()` move the strip as the controls do. |
-| `children` | `Element` | - | The strip. |
+| `controls` | `ScrollerControls` | `auto` | `auto` shows each control while there is content that way. `always` keeps both, dimmed at their end. `never` shows neither. |
+| `control_size` | `Size` | `md` | Width of each control and its glyph. |
+| `fade_color` | `ThemeAwareValue` | paper background | The colour the content fades into under a control. Set it to the surface the strip sits on. |
+| `draggable` | `bool` | `false` | Lets the mouse drag the strip. Touch and trackpad scroll it either way. |
+| `onedgechange` | `EventHandler<ScrollerEdges>` | - | Fires when the strip reaches or leaves an end, and once when it is first measured. `ScrollerEdges { at_start, at_end }`, both `true` when nothing overflows. |
+| `handle` | `ScrollerHandle` | - | From `use_scroller()`. Its `step_forward()` and `step_back()` move the strip as the controls do, for buttons of your own. |
+| `children` | `Element` | required | The strip. |
 
 Like every component, `Scroller` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes, which go on the root.
@@ -139,21 +131,20 @@ Like every component, `Scroller` also takes the shared props `sx`, `class`,
 | `controls` | `ScrollerControls` | `Auto`. |
 | `scroll_amount` | `u32` | `200`. |
 | `control_size` | `Size` | `Md`. |
-| `control_sizes` | `Sizes<u16>` | Control width per step, px: `24`, `32`, `40`, `48`, `56`, `64`. |
-| `fade_color` | `&'static str` | `var(--lsx-paper-background)`, so dark mode is a change to `PaperDefaults`. |
+| `control_sizes` | `Sizes<u16>` | Control width per step in px: `24`, `32`, `40`, `48`, `56`, `64`. |
+| `fade_color` | `&'static str` | `var(--lsx-paper-background)`. |
 | `draggable` | `bool` | `false`. |
 
-The controls' names, `"Scroll backward"` / `"Scroll forward"`, are
-`ScrollerLabels` in the [localization](localization.md).
+The controls' names, "Scroll backward" and "Scroll forward", are
+`ScrollerLabels` in [localization.md](localization.md).
 
 ## CSS variables
 
 | Variable | Description |
 |---|---|
 | `--lsx-scroller-control-size-<size>` | Control width for that step. |
-| `--lsx-scroller-control` | The active step's width, resolved on the root. |
+| `--lsx-scroller-control` | The width of the active step. |
 | `--lsx-scroller-fade` | The theme's fade colour. |
-| `--lsx-scroller-fade-override` | Set by `fade_color`; wins over the theme's. |
 
 ## Data attributes
 

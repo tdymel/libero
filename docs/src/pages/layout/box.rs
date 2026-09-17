@@ -34,34 +34,35 @@ pub fn BoxPage() -> Element {
             markdown: "/md/box.md",
             properties: vec![props("Box", vec![
                 prop("variables", "Variables")
-                    .doc("Per-instance CSS custom properties on the `style` attribute, so `sx` can reference a varying value without a class per value."),
+                    .doc("Custom properties set on the element's `style`, so `sx` can use a changing value without a new class per value."),
                 prop("component", "HtmlTag")
                     .default("div")
-                    .doc("Which element to render as. Any of the 111 HTML5 element names; the 28 outside the default tier (document metadata, embedded and media content, `template`/`slot`, bidi and ruby) need the `full-polymorphism` feature and render as a `div` without it."),
+                    .doc("The element to render, any of the 111 HTML5 element names. The 28 outside the default set (document metadata, embedded and media content, `template`, `slot`, bidi and ruby) need the `full-polymorphism` feature and render as a `div` without it."),
                 prop("framework_sx", "&'static StaticSx")
-                    .doc("Base styles of a component built on `Box`, on their own CSS layer - below `sx`, so a caller's override still wins."),
+                    .doc("Base styles for a component built on `Box`. They sit on a CSS layer below `sx`, so a caller's `sx` still wins."),
                 prop("style", "String")
-                    .doc("Raw `style` declarations, merged after `variables` - not overwritten by it."),
+                    .doc("Raw `style` declarations, applied after `variables`."),
                 prop("alt", "String")
-                    .doc("The `img` attribute, a field rather than a passed-through attribute because `a` and `button` share the name."),
+                    .doc("The `img` alt text."),
                 prop("r#type", "String")
-                    .doc("The `button` attribute, a field for the same reason as `alt`."),
+                    .doc("The `button` type, such as `\"submit\"`."),
                 prop("children", "Element").doc("The element's content."),
             ]).extends("img, a and button")],
             lead: rsx! {
                 Text {
-                    "The polymorphic primitive every other component is built on - renders "
-                    "as any tag via "
+                    "The primitive every other component is built on. "
                     Code { source: "component" }
-                    ", plus "
-                    Code { source: "sx" }
-                    "/"
-                    Code { source: "states" }
-                    " styling and escape-hatch attributes like "
+                    " picks the tag, and attributes like "
                     Code { source: "href" }
-                    "/"
+                    " or "
                     Code { source: "src" }
-                    ", which follow whichever tag you picked."
+                    " pass through to it. "
+                    Code { source: "Box" }
+                    " has no look of its own. Everything visible comes from "
+                    Code { source: "sx" }
+                    " and "
+                    Code { source: "states" }
+                    "."
                 }
             },
             Demo {

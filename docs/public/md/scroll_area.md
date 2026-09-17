@@ -4,21 +4,16 @@ Crate: `libero`
 Import: `use libero::components::{ScrollArea, ScrollPositionEvent, Virtualize};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/scroll_area/scroll_area.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A scrollable region that fills its parent, with themed scrollbars, percent-based scroll positions, per-edge events, and row virtualization through `Virtualize`.
+Description: A scrollable region that fills its parent, with themed scrollbars, scroll positions in percent, edge events and row virtualization through `Virtualize`.
 
-Scrolls its content, filling the parent by default. `onscroll` reports the
-position as a percent of each axis - `Start`/`End` bracket one scroll, `Change`
-carries the rest - and `scroll_position_x`/`scroll_position_y` scroll it to a
-percent. Each edge has its own event: `ontopreached`, `onbottomreached`,
-`onleftreached`, `onrightreached`.
-
-It is `width: 100%; height: 100%`, so it needs a parent with a real size - inside
-a box that shrink-wraps its content there is nothing to scroll.
+Scrolls its content and fills its parent, so give the parent a size. `onscroll`
+reports the position as a percent of each axis, and each edge has its own event.
+`Virtualize` renders only the rows in view.
 
 ## Usage
 
-The frame around it is the example: the area fills its parent, the readout and
-the three jump buttons are the other half of the wiring.
+The `Box` gives the area its size. The readout and the buttons show the events
+and the handle.
 
 ```rust
 use dioxus::prelude::*;
@@ -63,7 +58,7 @@ fn Demo() -> Element {
                     }
                 }
             }
-            Text { size: "sm", "{readout(position())} - last edge: {edge()}" }
+            Text { size: "sm", "{readout(position())}, last edge: {edge()}" }
             Flex {
                 gap: "sm",
                 Button { size: "sm", variant: "outlined", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), "Scroll to top" }
@@ -75,23 +70,24 @@ fn Demo() -> Element {
 }
 ```
 
-`use_scroll_area()` returns a `Copy` handle. Pass it as `handle`, and
+`ScrollPositionEvent` is `Start` when a scroll begins, `Change` while it runs
+and `End` when it stops, each with the x and y percent.
+
+`use_scroll_area()` returns a `Copy` handle. Pass it as `handle`, then call
 `scroll_to_percent(x, y)` (0-100, `None` keeps that axis) or `scroll_to(x, y)`
-in px scrolls the area from any handler. Every call scrolls, including one that
-asks for the position it asked for last time after the reader has scrolled
-away. A call before the area mounts does nothing.
+in px from any handler. Every call scrolls. A call before the area mounts does
+nothing.
 
-`scroll_position_x`/`scroll_position_y` are the declarative form, in percent.
-Bound to a signal they re-apply only when its value *changes*, so asking for
-the same position twice does nothing unless the signal went through `None` in
-between; a literal applies once, at mount. Use the handle for buttons.
+`scroll_position_x` and `scroll_position_y` scroll to a percent too. A signal
+re-applies only when its value changes, so asking for the same position twice
+does nothing. Use the handle for buttons.
 
-`Virtualize` renders only the rows the area can show, so a fifty-thousand-row
-list costs about a dozen elements. It draws no element of its own, so it goes
-wherever the rows go - inside a `List`, a table body, a plain stack - and it
-needs a `ScrollArea` above it. That is the whole contract: the `ScrollArea`
-tells it where the viewport is, and pads itself with the space the skipped rows
-would have taken, so the scrollbar still spans the whole list.
+## Virtualize
+
+`Virtualize` renders only the rows the area can show, so a list of 50,000 rows
+costs about a dozen elements. It draws no element of its own, so it goes
+wherever the rows go, inside a `List`, a table body or a plain stack. It needs a
+`ScrollArea` above it, which keeps the scrollbar the length of the whole list.
 
 ```rust
 use dioxus::prelude::*;
@@ -116,36 +112,26 @@ fn Rows() -> Element {
 }
 ```
 
-`count` and `item` rather than the rows themselves: the closure reads the list
-where it lives, so nothing is cloned into props and only the visible rows are
-ever touched.
+It takes a `count` and an `item` closure rather than the rows, so only the
+visible rows are read.
 
-Rows must be a uniform height. `Virtualize` measures the first rows it renders -
-once one row, then eight, so the difference gives the row's height plus the gap
-below it and whatever else shares the scroll area cancels out - and assumes the
-rest match. Pass `item_size` in px to skip the measurement, which off the web
-saves two round-trips.
+Every row must have the same height. `Virtualize` measures the first rows and
+assumes the rest match. Pass `item_size` in px to skip the measurement.
 
-Without a `ScrollArea` above it, `Virtualize` warns and renders every row -
-correct, just not virtualized. One `Virtualize` per `ScrollArea`: they would
-otherwise fight over the same padding, so a second one warns and renders every
-row too.
+Without a `ScrollArea` above it, `Virtualize` warns and renders every row. A
+`ScrollArea` holds one `Virtualize`. A second one warns and renders every row
+too.
 
 ## Accessibility
 
-A scroll area whose content has focusable elements is not a tab stop: tabbing
-to those scrolls them into view. Content that has nothing to focus - a strip of
-images, a block of plain text - cannot be read with a keyboard otherwise, so
-while it overflows the area makes itself a tab stop with `role="region"`,
-re-checked on every resize and re-render, and the browser's own arrow-key
-scrolling comes with it. `focusable: true` keeps the stop whatever the content;
-a caller's `tabindex` or a `role` other than `region` turns the automatic stop
-off.
+Tab reaches focusable content inside the area as usual. When the content has
+nothing to focus, like a block of text, the area itself becomes a tab stop with
+`role="region"` while it overflows, so the arrow keys can scroll it.
+`focusable: true` keeps the stop always. Your own `tabindex`, or a `role` other
+than `region`, turns it off.
 
-Name it as well. APG's scrollable-region pattern wants an accessible name on a
-focusable region, and a debug build warns once about a stop without one. The
-name is only set while the area has a role (its own `region`, or yours): ARIA
-does not allow naming a plain `div`.
+Name the area with `aria_label` or `aria_labelledby`. A debug build warns about
+a tab stop without a name. The name applies only while the area has a role.
 
 ```rust,ignore
 ScrollArea {
@@ -154,43 +140,43 @@ ScrollArea {
 }
 ```
 
-`scrollbars: "none"` hides overflow on both axes - content outside the box becomes
-unreachable, so use it only when something else provides the scrolling.
+`scrollbars: "none"` clips the overflow on both axes, so the content outside the
+box is out of reach. Use it only when something else scrolls.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `scrollbars` | `ScrollAxis` | `vertical` | Which axes show a scrollbar and allow overflow: `vertical`, `horizontal`, `both` or `none`. |
-| `scrollbar_visibility` | `ScrollbarVisibility` | `always` | `always`, `hover`, `hidden`, or `scroll` (currently identical to `hover`). |
-| `scrollbar_size` | `ScrollbarSize` | `thin` | CSS `scrollbar-width`: `thin` or `auto`. |
-| `scrollbar_color` | `ThemeAwareValue` | - | Scrollbar thumb color - the track stays transparent. Unset it is `muted.5`. |
-| `scroll_position_x` | `f64` | - | Percent (0-100) to scroll to horizontally. Bound to a signal it re-applies on every change; a literal applies once, at mount. |
-| `scroll_position_y` | `f64` | - | Percent (0-100) along the vertical axis - see `scroll_position_x`. |
-| `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Scrolls the area from a handler, in percent or px, on every call. |
-| `focusable` | `bool` | `false` | Makes the viewport a `region` tab stop always. Unset, it is one only while it overflows and holds nothing focusable. |
-| `onscroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll tick with the position as a percent of each axis's scrollable range. |
-| `onresize` | `EventHandler<Event<ResizeData>>` | - | Fires after the area resized, once it has re-measured itself for a `Virtualize` child. |
+| `scrollbars` | `ScrollAxis` | `vertical` | Which axes scroll and show a scrollbar. `none` clips the overflow. |
+| `scrollbar_visibility` | `ScrollbarVisibility` | `always` | When the scrollbar shows, `always`, `hover` or `hidden`. `scroll` acts like `hover` for now. |
+| `scrollbar_size` | `ScrollbarSize` | `thin` | The CSS `scrollbar-width`, `thin` or `auto`. |
+| `scrollbar_color` | `ThemeAwareValue` | - | Thumb color. The track stays transparent. Unset it is `muted.5`. |
+| `scroll_position_x` | `f64` | - | Scrolls to this percent (0-100) horizontally. A signal re-applies it on every change, a literal once at mount. |
+| `scroll_position_y` | `f64` | - | The same as `scroll_position_x`, vertically. |
+| `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call. |
+| `focusable` | `bool` | `false` | Makes the area a tab stop always. Without it, the area is one only while it overflows and holds nothing focusable. Your own `tabindex`, or a `role` other than `region`, turns that off. |
+| `onscroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll with the position as a percent of each axis. |
+| `onresize` | `EventHandler<Event<ResizeData>>` | - | Fires after the area resized. |
 | `ontopreached` | `EventHandler<()>` | - | Fires once when the top edge is reached. |
 | `onbottomreached` | `EventHandler<()>` | - | Fires once when the bottom edge is reached. |
 | `onleftreached` | `EventHandler<()>` | - | Fires once when the left edge is reached. |
 | `onrightreached` | `EventHandler<()>` | - | Fires once when the right edge is reached. |
 | `children` | `Element` | required | The scrollable content. |
 
-`Virtualize` takes no styling props - it renders no element of its own.
+`Virtualize` renders no element, so it takes no styling props.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `count` | `usize` | required | Rows in the whole list, not just the rendered ones. |
+| `count` | `usize` | required | Rows in the whole list, not only the rendered ones. |
 | `item` | `Callback<usize, Element>` | required | Renders one row. Called only for the rows in view. |
-| `item_size` | `f64` | measured | Row pitch in px - a row's height plus the gap below it. |
-| `overscan` | `usize` | `theme.scroll_area.overscan` | Rows kept beyond each edge, so a scroll has something to reveal before the next render lands. |
+| `item_size` | `f64` | measured | A row's height plus the gap below it, in px. Unset, it is measured from the first rows. Every row must have the same height. |
+| `overscan` | `usize` | `4` | Rows rendered beyond each edge, so a fast scroll has something to show. |
 
 Like every component, `ScrollArea` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.
 
-`ScrollPositionEvent` is `Start(x, y)`, `Change(x, y)` or `End(x, y)`, each in
-percent of that axis's scrollable range.
+`ScrollPositionEvent` is `Start(x, y)`, `Change(x, y)` or `End(x, y)`, in
+percent.
 
 ## Theme defaults
 
@@ -207,9 +193,9 @@ percent of that axis's scrollable range.
 
 | Variable | Description |
 |---|---|
-| `--lsx-scroll-area-thumb-color` | Set by `scrollbar_color`; falls back to `muted.5`. The track is always transparent. |
-| `--lsx-scroll-area-leading` | Space standing in for the rows a `Virtualize` skipped above the window, on the content box rather than the container. Unset outside virtualization. |
-| `--lsx-scroll-area-trailing` | The same below the window. |
+| `--lsx-scroll-area-thumb-color` | Thumb color, from `scrollbar_color` or `muted.5`. |
+| `--lsx-scroll-area-leading` | Space for the rows a `Virtualize` skipped above the view. |
+| `--lsx-scroll-area-trailing` | The same below the view. |
 
 ## Data attributes
 
@@ -218,9 +204,8 @@ State tokens on the root's `data-state`, space separated.
 | Token | Condition |
 |---|---|
 | `axis-vertical` / `axis-horizontal` / `axis-both` / `axis-none` | The `scrollbars` axes in effect. |
-| `visible-always` / `visible-hover` / `visible-hidden` | The `scrollbar_visibility` in effect - `scroll` writes `visible-hover`. |
+| `visible-always` / `visible-hover` / `visible-hidden` | The `scrollbar_visibility` in effect. `scroll` writes `visible-hover`. |
 | `size-thin` / `size-auto` | The `scrollbar_size` in effect. |
 
-The content box inside the root carries `virtualized` once a `Virtualize` claims
-it. Until then it is `display: contents`, so it has no box of its own and an
-ordinary scroll area lays out as if it were not there.
+The content box inside the root carries `virtualized` once it holds a
+`Virtualize`.

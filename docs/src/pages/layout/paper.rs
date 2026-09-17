@@ -36,40 +36,29 @@ pub fn PaperPage() -> Element {
                         .doc("Corner radius, a step on the shared radius scale."),
                     prop("shadow", "Size")
                         .default(theme.paper.shadow.as_str())
-                        .doc("Elevation, a step on the shared shadow scale. A flat surface is sx: sx().box_shadow(\"none\")."),
+                        .doc("Elevation, a step on the shared shadow scale. For a flat surface use `sx().box_shadow(\"none\")`."),
                     prop("bordered", "bool")
                         .default("false")
-                        .doc("A hairline border in the themed surface border colour. Legal together with a shadow."),
+                        .doc("A hairline border in the theme's surface border colour. Works together with a shadow."),
                     prop("component", "HtmlTag")
                         .default("div")
-                        .doc("Which element to render as - div, section, article, aside, or a for a clickable card. section and aside are landmarks, and the caller owns the aria-label that names them."),
+                        .doc("The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. A `section` or `aside` is a landmark and needs your `aria-label`."),
                     prop("variables", "Variables")
-                        .doc("Per-instance CSS custom properties, for a component built on Paper."),
-                    prop("framework_sx", "Option<&'static StaticSx>")
-                        .doc("Base styles for a component built on Paper, on the framework layer. It replaces Paper's own base, so build it from paper_sx()."),
+                        .doc("Custom properties set on the element's `style`, for a component built on `Paper`."),
+                    prop("framework_sx", "&'static StaticSx")
+                        .doc("Base styles for a component built on `Paper`. They replace `Paper`'s own, so start from `paper_sx()`."),
                     prop("children", "Element").doc("The surface's contents."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A surface: a background, a corner radius, an elevation and an optional "
-                    "hairline border, on a "
-                    Code { source: "div" }
-                    " by default. It is what every card, panel and popup in the library sits "
-                    "on - "
+                    "A surface with a background, a corner radius, an elevation and an "
+                    "optional hairline border. Every card, panel and popup in the library "
+                    "sits on one, and "
                     Code { source: "Dialog" }
                     " is a "
                     Code { source: "Paper" }
-                    " with a role. It renders no ARIA of its own, because a surface is "
-                    "presentational; a "
-                    Code { source: "Paper" }
-                    " rendered as a "
-                    Code { source: "section" }
-                    " or an "
-                    Code { source: "aside" }
-                    " is a landmark, and the caller owns the "
-                    Code { source: "aria-label" }
-                    " that names it. Padding is yours, through "
+                    " with a role. It has no ARIA of its own. Padding comes from your "
                     Code { source: "sx" }
                     "."
                 }

@@ -1,9 +1,9 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, UNSET, Wrap, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Divider, Input, Text},
+    components::{Box, Code, Divider, Input, Text},
     sx::sx,
 };
 
@@ -40,22 +40,22 @@ pub fn DividerPage() -> Element {
             properties: vec![props("Divider", vec![
                 prop("orientation", "Orientation")
                     .default("horizontal")
-                    .doc("Horizontal or vertical rule."),
+                    .doc("The direction of the rule."),
                 prop("size", "Size").default("xs").doc("Line thickness."),
                 prop("label_position", "LabelPosition")
                     .default("center")
                     .doc("Where the label sits along the rule."),
                 prop("spacing", "ThemeAwareValue")
                     .default("none")
-                    .doc("Margin on either side of the rule, from the spacing scale."),
+                    .doc("Margin on both sides of the rule, a spacing step or a CSS length."),
                 prop("color", "ThemeAwareValue")
                     .default("muted.4")
-                    .doc("Line color. A bare theme color is tinted to shade 3."),
+                    .doc("Line color. A bare theme color like `blue` resolves to its shade 3."),
                 prop("children", "Element")
-                    .doc("The optional centered/positioned label."),
+                    .doc("An optional label in the line."),
             ])],
             lead: rsx! {
-                Text { "A horizontal or vertical rule, with an optional centered/positioned label." }
+                Text { "A horizontal or vertical rule, with an optional label sitting in the line." }
             },
             Demo {
                 component: "Divider",
@@ -137,6 +137,15 @@ pub fn DividerPage() -> Element {
                 },
                 wrap: Wrap(wrap_rule),
                 child: Child(label_child),
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "The rule is a "
+                    Code { source: "separator" }
+                    ", named by its label. Pass "
+                    Code { source: "role: \"none\"" }
+                    " for a purely visual rule."
+                }
             }
         }
     }

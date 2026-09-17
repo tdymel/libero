@@ -2,8 +2,8 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Grid, GridArea, GridItem, GridSpan, GridZone, HtmlTag, SpanValue, StaticGridTemplate,
-        Text, sp,
+        Box, Code, Grid, GridArea, GridItem, GridSpan, GridZone, HtmlTag, SpanValue,
+        StaticGridTemplate, Text, sp,
     },
     sx::sx,
 };
@@ -18,6 +18,10 @@ GridItem { span: GridSpan::Third, Card { lines: 2, "C" } }
 GridItem { span: GridSpan::Third, Card { lines: 3, "D" } }
 GridItem { span: GridSpan::Half, Card { lines: 1, "E" } }
 GridItem { span: GridSpan::Third, Card { lines: 2, "F" } }"#;
+
+/// The preview pane shrink-wraps, and a zone has no width of its own.
+// snippet: in GridZone { .. }
+const WALL_SX: &str = r#"sx: sx().width("100%")"#;
 
 /// Span, height and label per card. The spans are deliberately mixed: `dense`
 /// backfills *holes*, and a wall of equal spans leaves none - a uniform set
@@ -100,7 +104,7 @@ static PAGE: StaticGridTemplate<PageArea> = StaticGridTemplate::new(|template| {
         .row(|row| row.cell(PageArea::Sidebar).cells(PageArea::Content, 3))
 });
 
-// Written content-first, sidebar last - the template decides where each
+// Written content-first, sidebar last. The template decides where each
 // zone lands, so this order only sets the reading and tab order.
 rsx! {
     Grid {
@@ -174,36 +178,43 @@ pub fn GridPage() -> Element {
             markdown: "/md/grid.md",
             properties: vec![
                 props("Grid", vec![
-                    prop("template", "GridTemplate").doc("The named-area matrix. Each row shares its width equally between its cells, and `cells(area, n)` gives one area several; rows of different lengths reconcile to their least common multiple. `build` rejects an area that is not a rectangle, or rows needing more than twelve columns. Build it once outside the render, as a `StaticGridTemplate` static."),
-                    prop("gap", "Size").default("md").doc("Between zones."),
-                    prop("component", "HtmlTag").default("div").doc("Overrides the root element."),
+                    prop("template", "GridTemplate").doc("The named-area matrix. Each row shares its width equally between its cells, and `cells(area, n)` gives one area several. An area must be a rectangle, and the rows need at most twelve columns. Build it once, as a `StaticGridTemplate` static."),
+                    prop("gap", "Size").default("md").doc("Space between zones."),
+                    prop("component", "HtmlTag").default("div").doc("The element to render."),
                     prop("children", "Element").doc("`GridZone`s."),
                 ]),
                 props("GridZone", vec![
-                    prop("area", "AreaName").doc("Which of the parent `Grid`'s areas this fills. Zones land by name, so their order is only the reading and tab order; an unknown area warns and auto-places. A zone in an area is a query container, so it is a stacking context and the containing block of any absolutely positioned descendant. Omit it to use the zone on its own, without a `Grid` - a plain masonry wall needs no template."),
-                    prop("dense", "bool").default("false").doc("Backfill gaps a wider item left behind, moving items sideways only. Pure CSS, no measurement."),
-                    prop("masonry", "bool").default("false").doc("Measure item heights and pack them with no vertical dead space. Costs a `ResizeObserver` per item; without a DOM the zone renders as an ordinary grid. Its height follows its items, so scroll inside a `GridItem`, not around the zone, and never set `align-self` or `margin-bottom` on an item."),
-                    prop("gap", "Size").default("md").doc("Between items."),
-                    prop("component", "HtmlTag").default("div").doc("Overrides the root element."),
+                    prop("area", "AreaName").doc("The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is the containing block of any absolutely positioned descendant. Omit it to use the zone on its own, without a `Grid`."),
+                    prop("dense", "bool").default("false").doc("Fills the gaps a wider item left, moving items sideways only."),
+                    prop("masonry", "bool").default("false").doc("Packs items of different heights with no vertical gaps. The zone's height follows its items, so scroll inside a `GridItem`, not around the zone, and set no `align-self` or `margin-bottom` on an item."),
+                    prop("gap", "Size").default("md").doc("Space between items."),
+                    prop("component", "HtmlTag").default("div").doc("The element to render."),
                     prop("children", "Element").doc("`GridItem`s."),
                 ]),
                 props("GridItem", vec![
-                    prop("span", "SpanValue").default("full").doc("Width, in twelfths of the zone. A `GridSpan`, which is closed, so every value is an exact twelfth; or `sp()` for a span keyed off the zone's own width through a container query, not the window's. `sp()` needs a zone with an `area`."),
-                    prop("component", "HtmlTag").default("div").doc("Overrides the root element."),
+                    prop("span", "SpanValue").default("full").doc("Width in twelfths of the zone. A `GridSpan`, or `sp()` for a span that follows the zone's width, not the window's. `sp()` needs a zone with an `area`."),
+                    prop("rows", "u8").doc("Height in rows of the zone's grid. Ignored in a masonry zone, which sets it from the measured height."),
+                    prop("component", "HtmlTag").default("div").doc("The element to render."),
                     prop("children", "Element").doc("The item's content."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A named-area matrix. `Grid` holds the shape, each `GridZone` is an "
-                    "independent twelve-column packing container, and a `GridItem` takes a "
-                    "fraction of its zone. A zone works on its own too - a masonry wall needs "
-                    "no template."
+                    "A layout matrix of named areas. "
+                    Code { source: "Grid" }
+                    " holds the shape, each "
+                    Code { source: "GridZone" }
+                    " is a twelve-column container of its own, and a "
+                    Code { source: "GridItem" }
+                    " takes a fraction of its zone. A zone also works alone, so a masonry "
+                    "wall needs no template."
                 }
                 Text {
-                    "`dense` makes the visual order diverge from the DOM order, and Tab follows "
-                    "the DOM - don't reach for it where the reading order carries meaning. "
-                    "`masonry` alone keeps them in step: each item starts no higher than the one "
+                    Code { source: "dense" }
+                    " fills gaps by moving items out of DOM order, but Tab still follows "
+                    "the DOM. Skip it where the reading order matters. "
+                    Code { source: "masonry" }
+                    " alone keeps the order, since each item starts no higher than the one "
                     "before it."
                 }
             },
@@ -212,6 +223,7 @@ pub fn GridPage() -> Element {
                 component: "GridZone",
                 children_text: "",
                 children_code: CARDS,
+                fixed: vec![WALL_SX.to_string()],
                 controls: controls(),
                 wrap: Wrap(wrap_layout),
                 // A span breakpoint measures the zone, and `sm` is 48rem: beside
@@ -262,6 +274,7 @@ pub fn GridPage() -> Element {
                     },
                     _ => rsx! {
                         GridZone {
+                            sx: sx().width("100%"),
                             masonry: values.str("masonry") == "true",
                             dense: values.str("dense") == "true",
                             gap: values.str("gap"),

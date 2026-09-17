@@ -8,7 +8,7 @@ use libero::{
 /// The child is the fixture - `ratio` is the only prop - so the code block
 /// prints it verbatim.
 const CHILD: &str = r#"Flex {
-    sx: sx().background("primary").color("surface"),
+    sx: sx().background("primary").color("primary-contrast"),
     align: "center",
     justify: "center",
     "The child fills the box"
@@ -34,13 +34,13 @@ pub fn AspectRatioPage() -> Element {
             lead: rsx! {
                 Text {
                     "Enforces a width-to-height ratio on its child, cropping it to fill the "
-                    "box. "
+                    "box. Write "
                     Code { source: "ratio" }
-                    " is a plain "
-                    Code { source: "f32" }
-                    " - write it as the division it reads as - and defaults to the theme's "
-                    Code { source: "1.0" }
-                    "."
+                    " as a division, like "
+                    Code { source: "16.0 / 9.0" }
+                    ". The box has no size of its own, so give it a width. The child "
+                    "stretches to fill it and the overflow is clipped, which suits an image "
+                    "or a video."
                 }
             },
             Demo {
@@ -76,7 +76,7 @@ pub fn AspectRatioPage() -> Element {
                         },
                         sx: sx().width("240px"),
                         Flex {
-                            sx: sx().background("primary").color("surface"),
+                            sx: sx().background("primary").color("primary-contrast"),
                             align: "center",
                             justify: "center",
                             "The child fills the box"

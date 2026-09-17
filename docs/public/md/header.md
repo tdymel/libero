@@ -4,38 +4,21 @@ Crate: `libero`
 Import: `use libero::components::Header;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/header.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: The page's banner landmark - a sticky, static or fixed `header` bar hosting nav and actions.
+Description: The page's banner landmark, a sticky, static or fixed `header` bar for nav and actions.
 
-The page's banner landmark - always renders `header`. This docs site's own header
-uses one. A set `color` takes shade 6 and picks its own contrast text.
+The page's banner landmark, always a `header` element. This site's own header is
+one. `sticky`, the default, pins to the top of the scrolling ancestor and
+`static` scrolls away. `fixed` pins to the viewport, so offset your content by
+`var(--lsx-header-height)`.
 
-`sticky` (the default) pins to the top of the scrolling ancestor, `static`
-scrolls away with the content, and `fixed` is viewport-relative - with `fixed`
-you offset your own content by `var(--lsx-header-height)`.
-
-The banner is at least its `size` tall and grows when its content wraps. A
-`sticky` or `fixed` header with `publish_height` publishes that height on `:root`
-as `--lsx-header-height`, for whatever is positioned below it. Nothing is
-measured: it is the `size`, not the rendered height. Set it on the page's own
-banner only, so a header shown elsewhere (a demo, a card) leaves the page
-alone. With more than one publishing, the last mounted wins, and unmounting it
-hands the root back to the one before.
+The header is at least `size` tall and grows when its content wraps. With
+`publish_height`, a `sticky` or `fixed` header publishes its `size` on `:root`
+as `--lsx-header-height`, for whatever sits below it. Set it on the page's own
+banner only. With more than one, the last mounted wins.
 
 ## Usage
 
-```rust
-use dioxus::prelude::*;
-use libero::components::Header;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Header { position: "sticky", size: "md", color: "primary", publish_height: true, "Libero" }
-    }
-}
-```
-
-Inside a scrolling frame, so the difference between the positions shows:
+Inside a scrolling frame, so the positions differ:
 
 ```rust
 use dioxus::prelude::*;
@@ -48,11 +31,11 @@ fn Demo() -> Element {
         Box {
             sx: sx().height("200px").width("100%").overflow_y("auto")
                 .border("1px solid var(--lsx-muted-3)"),
-            Header { position: "sticky", "Libero" }
+            Header { color: "primary", "Libero" }
             Box {
                 sx: sx().padding("md"),
                 for i in 0..12 {
-                    Text { key: "{i}", "Scroll me - line {i}" }
+                    Text { key: "{i}", "Scroll me, line {i}" }
                 }
             }
         }
@@ -60,28 +43,42 @@ fn Demo() -> Element {
 }
 ```
 
+The page's own banner:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::Header;
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Header { publish_height: true, "Libero" }
+    }
+}
+```
+
 ## Accessibility
 
-It is always a `<header>`, which is the `banner` landmark only when it is not
-nested inside `article`, `aside`, `main`, `nav` or `section` - so keep it at the
-top level of the page. Put a `nav` inside it for the navigation landmark. One
-banner per page.
+A `header` is the `banner` landmark only outside `article`, `aside`, `main`,
+`nav` and `section`, so keep it at the top level of the page. Put a `nav` inside
+it for the navigation landmark. One banner per page.
 
 A `sticky` or `fixed` header with `publish_height` sets
-`scroll-padding-top: var(--lsx-header-height)` on `:root`, so focus moved under it is scrolled clear (WCAG 2.4.11). That pads
-the page's scroller only: a header stuck inside another scroller needs the same
-padding on that scroller, from you.
+`scroll-padding-top: var(--lsx-header-height)` on `:root`, so focus moved under
+it scrolls clear (WCAG 2.4.11). That pads the page's scroller only. A header
+stuck inside another scroller needs the same padding on that scroller, from
+you.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `position` | `HeaderPosition` | `sticky` | `sticky` needs no offset; `fixed` is viewport-relative: offset your content by `var(--lsx-header-height)` (see `publish_height`). `static` scrolls away. |
-| `size` | `ThemeAwareValue` | `md` | Header minimum height. |
-| `color` | `ThemeAwareValue` | unset - neutral background, inherited text | A set color takes shade 6 and picks its own contrast text. |
+| `position` | `HeaderPosition` | `sticky` | `sticky` pins to the top of the scrolling ancestor, `static` scrolls away. `fixed` pins to the viewport, so offset your content by `var(--lsx-header-height)`. |
+| `size` | `ThemeAwareValue` | `md` | Minimum height. The header grows when its content wraps. |
+| `color` | `ThemeAwareValue` | none, a neutral background | Fills the header with shade 6 and a readable text color. |
 | `z_index` | `ThemeAwareValue` | `100` | Stacking order. |
 | `publish_height` | `bool` | `false` | Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky or fixed banner. Set it on the page's own banner only. |
-| `children` | `Element` | required | Nav and actions, hosted rather than scoped. |
+| `children` | `Element` | required | Nav and actions. |
 
 Like every component, `Header` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
@@ -94,19 +91,16 @@ Like every component, `Header` also takes the shared props `sx`, `class`,
 |---|---|---|
 | `heights` | `Sizes<u16>` | Header height in pixels per size step. |
 
-The stacking order comes from the theme's shared `z_index` scale, not from
-`HeaderDefaults`.
+The stacking order comes from the theme's shared `z_index` scale.
 
 ## CSS variables
 
 | Variable | Description |
 |---|---|
 | `--lsx-header-height-<size>` | Height for that size step. |
-| `--lsx-header-height` | The header's minimum height, from `size`. A `sticky` or `fixed` header with `publish_height` also publishes it on `:root`, as the offset for things below it. |
-| `--lsx-header-height-override` | The `size` prop, set per instance; wins over the size step. |
-| `--lsx-header-background` | Background of a colored banner; unset leaves it white. |
-| `--lsx-header-color` | Contrast text color of a colored banner; unset inherits. |
-| `--lsx-z-index-header-override` | The `z_index` prop, set per instance. |
+| `--lsx-header-height` | The header's minimum height, from `size`. With `publish_height` it is also set on `:root`. |
+| `--lsx-header-background` | Background of a colored header. Unset leaves it neutral. |
+| `--lsx-header-color` | Text color of a colored header. Unset inherits. |
 
 ## Data attributes
 
@@ -117,5 +111,4 @@ State tokens on the root's `data-state`, space separated.
 | `static` | `position` is `static`. |
 | `fixed` | `position` is `fixed`. |
 
-`sticky` is the base rule, so it has no token. The publishing header's id is on
-the root as `data-lsx-header`.
+`sticky` is the default and has no token.

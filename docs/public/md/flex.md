@@ -4,16 +4,16 @@ Crate: `libero`
 Import: `use libero::components::Flex;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/flex.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A flexbox container - direction, gap, align, justify and wrap, all theme-aware.
+Description: A flexbox container with theme-aware direction, gap, alignment and wrapping.
 
-A flexbox container - direction, gap, align, justify and wrap, all theme-aware.
-Each axis has its own theme defaults, so a `row` and a `column` can align
-differently without either naming a value.
+A flexbox container with theme-aware direction, gap, alignment and wrapping. A
+row and a column each have their own theme defaults, so a row wraps and centers
+its children without naming a value.
 
 ## Usage
 
-`align` and `justify` distribute *spare* space, so the container needs a box
-bigger than its children before either does anything visible.
+`align` and `justify` share out spare space, so the box is bigger than its
+children.
 
 ```rust
 use dioxus::prelude::*;
@@ -35,7 +35,7 @@ fn Demo() -> Element {
 }
 ```
 
-`direction` picks the axis, and every other prop reads against it:
+`direction` picks the axis, and the other props follow it.
 
 ```rust
 use dioxus::prelude::*;
@@ -66,33 +66,32 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `direction` | `FlexDirection` | `column` | Row or column layout. |
-| `align` | `ThemeAwareValue` | follows `direction` - `stretch` for column, `center` for row | Cross-axis alignment. |
+| `direction` | `FlexDirection` | `column` | Lays the children out in a row or a column. |
+| `align` | `ThemeAwareValue` | `stretch` in a column, `center` in a row | Cross-axis alignment. |
 | `justify` | `ThemeAwareValue` | `flex-start` | Main-axis alignment. |
 | `gap` | `Size` | `md` | Space between children. |
-| `wrap` | `FlexWrap` | follows `direction` - `nowrap` for column, `wrap` for row | Whether children wrap onto new lines. Also accepts a `bool`. |
+| `wrap` | `FlexWrap` | `nowrap` in a column, `wrap` in a row | Whether children wrap onto new lines. Also takes a `bool`. |
 | `children` | `Element` | required | The flex's children. |
 
-`FlexDirection` is `row` or `column`; `FlexWrap` is `wrap` or `nowrap`. A row
-wraps by default so it reflows on a narrow screen; `wrap: false` opts out.
+`FlexDirection` is `row` or `column`, `FlexWrap` is `wrap` or `nowrap`. A row
+wraps by default so it reflows on a narrow screen. `wrap: false` turns that off.
 
 Like every component, `Flex` also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
 
 ## Theme defaults
 
-`FlexDefaults` on the theme, one `FlexAxisDefaults` per axis - so the two
-directions can differ without a prop.
+`FlexDefaults` on the theme holds one `FlexAxisDefaults` per axis.
 
 | Field | Type | Description |
 |---|---|---|
-| `column` | `FlexAxisDefaults` | Defaults for `direction: "column"` - `align: "stretch"`, `justify: "flex-start"`, `spacing: Size::Md`, `wrap: false`. |
-| `row` | `FlexAxisDefaults` | Defaults for `direction: "row"` - `align: "center"`, `justify: "flex-start"`, `spacing: Size::Md`, `wrap: true`. |
+| `column` | `FlexAxisDefaults` | Defaults for a column. `align: "stretch"`, `justify: "flex-start"`, `spacing: Size::Md`, `wrap: false`. |
+| `row` | `FlexAxisDefaults` | Defaults for a row. `align: "center"`, `justify: "flex-start"`, `spacing: Size::Md`, `wrap: true`. |
 
 ## CSS variables
 
-The per-axis vars carry the theme defaults; the three unprefixed ones are set in
-the element's `style` from the props, so an override mints no new class.
+The per-axis variables carry the theme defaults. The three without an axis come
+from the props.
 
 | Variable | Description |
 |---|---|
@@ -104,9 +103,9 @@ the element's `style` from the props, so an override mints no new class.
 | `--lsx-flex-row-justify` | Default `justify-content` for a row. |
 | `--lsx-flex-row-spacing` | Default `gap` for a row. |
 | `--lsx-flex-row-wrap` | Default `flex-wrap` for a row. |
-| `--lsx-flex-align` | Set from the `align` prop; falls back to the axis default. |
-| `--lsx-flex-justify` | Set from the `justify` prop; falls back to the axis default. |
-| `--lsx-flex-wrap` | Set from the `wrap` prop; falls back to the axis default. |
+| `--lsx-flex-align` | The `align` prop, or the axis default. |
+| `--lsx-flex-justify` | The `justify` prop, or the axis default. |
+| `--lsx-flex-wrap` | The `wrap` prop, or the axis default. |
 
 ## Data attributes
 
@@ -114,5 +113,5 @@ State tokens on the root's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `row` | `direction` is `row`; its absence is a column. |
+| `row` | `direction` is `row`. Without it, a column. |
 | `size-<size>` | The `gap` in effect, when `gap` is set. |

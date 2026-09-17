@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Flex, Sidebar, Text},
+    components::{Code, Flex, Sidebar, Text},
     sx::sx,
 };
 
@@ -23,7 +23,7 @@ fn wrap_layout(values: &DemoValues, code: &str) -> String {
         _ => format!("{panel}{rest}"),
     };
     format!(
-        "Flex {{\n    direction: \"row\",\n    align: \"stretch\",\n    sx: sx().height(\"120px\").width(\"100%\").border(\"1px solid\").border_color(\"muted.3\"),\n{body}}}"
+        "Flex {{\n    direction: \"row\",\n    align: \"stretch\",\n    wrap: false,\n    sx: sx().height(\"120px\").width(\"100%\").border(\"1px solid\").border_color(\"muted.3\"),\n{body}}}"
     )
 }
 
@@ -37,22 +37,28 @@ pub fn SidebarPage() -> Element {
             properties: vec![props("Sidebar", vec![
                 prop("side", "SidebarSide")
                     .default("left")
-                    .doc("Which edge this panel borders and which axis `size` applies to. It does not place the panel - an in-flow item is positioned by its parent's layout, so put it at the matching end of the DOM yourself."),
-                prop("size", "Size").default("md").doc("The panel's width (or height, on a top/bottom side)."),
-                prop("component", "HtmlTag").default("aside").doc("Element to render as, e.g. nav for a navigation panel."),
+                    .doc("The edge that gets the border, and whether `size` is a width or a height. It does not move the panel, so put it at the matching end of the DOM."),
+                prop("size", "Size").default("md").doc("The panel's width, or its height on a `top` or `bottom` side."),
+                prop("component", "HtmlTag").default("aside").doc("The element to render, such as `nav` for a navigation panel."),
                 prop("children", "Element").doc("The panel's content, scrolled by an inner `ScrollArea`."),
             ])],
             lead: rsx! {
                 Text {
-                    "An in-flow panel bordering one edge of its parent, scrolling its own "
-                    "content. side picks the border and the size axis - the panel's actual "
-                    "position is your layout's, so place it at the matching end of the DOM."
+                    "An in-flow panel on one edge of its parent that scrolls its own "
+                    "content. "
+                    Code { source: "side" }
+                    " picks the border, not the position, so a right sidebar comes after "
+                    "its sibling in the DOM. For a panel that slides in over the page, see "
+                    Code { source: "use_drawer" }
+                    "."
                 }
             },
             Demo {
                 component: "Sidebar",
                 children_text: "",
                 children_code: CONTENT.to_string(),
+                // A `md` panel is 240px, wider than the preview beside the controls.
+                wide_preview: true,
                 controls: vec![
                     Control::toggle("side", ["left", "right"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
@@ -82,6 +88,7 @@ pub fn SidebarPage() -> Element {
                             direction: "row",
                             // A row centres its items; the panel spans the row's height.
                             align: "stretch",
+                            wrap: false,
                             sx: sx().height("120px").width("100%").border("1px solid").border_color("muted.3"),
                             {first}
                             {second}
