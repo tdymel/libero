@@ -12,7 +12,7 @@ fetch only the file you need.
 ## Guides
 
 - [Getting started](getting_started.md): Installing libero, wrapping an app in LiberoProvider, and the feature flags a web build wants.
-- [Philosophy](philosophy.md): The four principles behind libero in order of priority (developer experience, accessibility, batteries included, simple yet modern) and where each shows in the code.
+- [Philosophy](philosophy.md): The four principles behind libero in order of priority (developer experience, accessibility, batteries included, simple yet modern) and what we do about each.
 - [Styling](styling.md): The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers and `StaticSx`.
 - [Theming](theming.md): How a Libero theme is defined: one plain struct of colors, scales and per-component defaults, emitted once as CSS custom properties.
 - [Localization](localization.md): The words components say on their own and how dates and numbers are written: `Localization`, `Formats` and the hooks that switch them.

@@ -1,6 +1,19 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::DocPage;
+use crate::icons::{CheckmarkIcon, ChevronIcon, CodeIcon};
 use dioxus::prelude::*;
-use libero::components::{Anchor, Code, Text};
+use libero::{
+    components::{Alert, Anchor, Badge, Divider, Flex, Icon, List, ListItem, Paper, Text, Title},
+    sx::sx,
+    theme::Size,
+};
+
+/// The principles in priority order, as the strip names them.
+const RANKING: [&str; 4] = [
+    "Developer experience",
+    "Accessibility",
+    "Batteries included",
+    "Simple yet modern",
+];
 
 #[component]
 pub fn PhilosophyPage() -> Element {
@@ -10,175 +23,217 @@ pub fn PhilosophyPage() -> Element {
             markdown: "/md/philosophy.md",
             lead: rsx! {
                 Text {
-                    "Libero is a component library for Dioxus. Four principles decide what goes "
-                    "into it and how it is shaped, listed here in order of priority. Each section "
-                    "says what the principle means in libero and where you can see it in the code."
+                    "Four principles decide what goes into libero and how it is shaped. They are "
+                    "ranked: when two pull in different directions, the higher one wins."
                 }
+                Ranking {}
             },
 
-            DocSection {
-                title: "Developer experience first",
-                Text {
-                    "AI writes a lot of code now, and that makes the API matter more, not less. "
-                    "Someone still reads the result, reviews it and changes it next month. A small "
-                    "API that is hard to misuse is easy for a person to review and easy for a model "
-                    "to get right the first time."
+            Flex { direction: "row", align: "stretch", gap: "lg", wrap: "wrap",
+                Principle {
+                    number: 1,
+                    title: "Developer experience first",
+                    summary: "A small API that is hard to misuse.",
+                    icon: rsx! { CodeIcon {} },
+                    why: "AI writes a lot of code now. Someone still reviews it and changes it next \
+                          month, and an API that is hard to misuse is easy for a person to check and \
+                          for a model to get right.",
+                    Point { "Let the compiler catch the mistakes a convention would leave to code review." }
+                    Point { "Offer one way to style and one way to set up, the same on every component." }
+                    Point { "Give every docs page a plain markdown copy whose examples the tests compile." }
                 }
-                Text {
-                    "So libero leans on the type system instead of conventions. "
-                    Code { source: "Tabs" }
-                    " over an enum gets its tab strip from "
-                    Code { source: "#[derive(Options)]" }
-                    ", and its "
-                    Code { source: "panel" }
-                    " is a "
-                    Code { source: "match" }
-                    ", so the compiler rejects a tab without a panel. A "
-                    Code { source: "Table" }
-                    " column is "
-                    Code { source: "column(\"Age\").value(|p| p.age)" }
-                    ", and the cell's type alone makes it sort numerically and align right. Props "
-                    "are typed as well, but the common ones also take a string: "
-                    Code { source: "size: \"sm\"" }
-                    " and "
-                    Code { source: "size: Size::Sm" }
-                    " are the same prop."
+                Principle {
+                    number: 2,
+                    title: "Accessibility second",
+                    summary: "Not only for screen reader users.",
+                    icon: rsx! { AccessibilityIcon {} },
+                    why: "Keyboard support helps anyone who would rather not reach for the mouse. A \
+                          state that does not rely on colour still reads on a dim screen in the sun. \
+                          Motion that stops on request helps anyone it makes dizzy.",
+                    limit: rsx! {
+                        Alert { title: "A known limit", icon: rsx! { InfoIcon {} },
+                            Text {
+                                "Windows High Contrast mode is supported only in part. The "
+                                Anchor { to: crate::Route::AccessibilityPage {}, "Accessibility" }
+                                " page says what holds."
+                            }
+                        }
+                    },
+                    Point { "Follow WAI-ARIA, the APG patterns and WCAG. A deviation needs a reason." }
+                    Point { "Aim for WCAG 2.2 AA, contrast included." }
+                    Point { "Never show a state by colour alone." }
+                    Point { "Make every string a component says on its own translatable, with English and German built in." }
                 }
-                Text {
-                    "Composition works the same way. Every field has the same five slots: label, "
-                    "description, control, helper text and validation message. A "
-                    Code { source: "Fieldset" }
-                    " groups fields into one value, a "
-                    Code { source: "Form" }
-                    " holds the whole value, and typed paths from "
-                    Code { source: "#[derive(Fields)]" }
-                    " tie each layer to your own structs. Styling is one builder, "
-                    Code { source: "sx()" }
-                    ", on every component. Setup is one "
-                    Code { source: "LiberoProvider" }
-                    " at the root."
+                Principle {
+                    number: 3,
+                    title: "Batteries included",
+                    summary: "An app should not start with a hunt for a date picker.",
+                    icon: rsx! { BatteryIcon {} },
+                    why: "You spend your time on your app, not on stitching libraries together.",
+                    Point { "Ship more than 100 components, forms and overlays included." }
+                    Point { "Run the same components on the web and natively." }
+                    Point { "Treat a feature the platform lacks as absent, not broken." }
                 }
-                Text {
-                    "Every docs page also has a plain markdown copy with complete examples, the "
-                    "\"View as markdown\" link at the top. Those examples are compiled by the test "
-                    "suite, so the code you or your assistant copies out of them builds."
+                Principle {
+                    number: 4,
+                    title: "Simple yet modern",
+                    summary: "A clean default look that stays out of the way.",
+                    icon: rsx! { SparkleIcon {} },
+                    why: "The default fits most apps as it is. When it does not, changing it is \
+                          ordinary Rust, not a fight with the library.",
+                    Point { "Keep theming plain Rust: one struct, and you change only what you need." }
+                    Point { "Build in light and dark, correct from the first paint." }
+                    Point { "Use current CSS, with no CSS framework underneath." }
+                    Point { "Let your own CSS win over libero's." }
                 }
             }
+        }
+    }
+}
 
-            DocSection {
-                title: "Accessibility second",
-                Text {
-                    "Accessibility is not only for screen reader users. Keyboard support helps "
-                    "anyone who would rather not reach for the mouse. A state that does not rely "
-                    "on colour still reads on a dim laptop screen in the sun. Motion that stops on "
-                    "request helps anyone it makes dizzy."
-                }
-                Text {
-                    "Where WAI-ARIA, the APG patterns or WCAG have an opinion, libero follows it, "
-                    "and a deviation is what needs a reason. Menus, trees, tabs and listboxes take "
-                    "the keyboard model the APG describes for them, and each component page lists "
-                    "its keys. WCAG 2.2 AA is the target: 4.5:1 contrast for text and 3:1 for "
-                    "borders and icons are the numbers we measure against."
-                }
-                Text {
-                    "A pressed, selected or current control never differs by colour alone. It "
-                    "carries a short 2px line in its own text colour. Under "
-                    Code { source: "prefers-reduced-motion" }
-                    " a "
-                    Code { source: "Carousel" }
-                    " opens paused and an "
-                    Code { source: "Indicator" }
-                    " stops its ping. A component that needs an accessible name and has none warns "
-                    "you in a debug build. Every string a component says on its own, like \"Go to "
-                    "page 3\" on a "
-                    Code { source: "Pagination" }
-                    " button, comes from a "
-                    Code { source: "Localization" }
-                    ", with English and German built in."
-                }
-                Text {
-                    "Forced colours (Windows High Contrast) are supported only in part. The "
-                    Anchor { to: crate::Route::AccessibilityPage {}, "Accessibility" }
-                    " page says what holds and what does not."
+/// The priority order at a glance; the chevrons are named so it reads as a sentence.
+#[component]
+fn Ranking() -> Element {
+    rsx! {
+        Flex { direction: "row", align: "center", gap: "xs", wrap: "wrap",
+            for (index, name) in RANKING.iter().enumerate() {
+                Flex { key: "{name}", direction: "row", align: "center", gap: "xs",
+                    if index > 0 {
+                        Icon { variant: "standard", size: "sm", aria_label: "before", ChevronIcon {} }
+                    }
+                    Badge { variant: "tonal", size: "lg", sx: sx().text_transform("none"), "{index + 1}. {name}" }
                 }
             }
+        }
+    }
+}
 
-            DocSection {
-                title: "Batteries included",
-                Text {
-                    "Building an app should not start with a hunt for a date picker. Libero has "
-                    "more than 100 components: layout, typography, navigation, feedback, data "
-                    "display, and a form stack from "
-                    Code { source: "TextField" }
-                    " to "
-                    Code { source: "PhoneField" }
-                    ", "
-                    Code { source: "DatePicker" }
-                    ", "
-                    Code { source: "ColorPicker" }
-                    " and "
-                    Code { source: "FileField" }
-                    ", with validation and a focused error summary in "
-                    Code { source: "Form" }
-                    "."
+/// One principle as a numbered card: the ideal, what we do about it, and why.
+#[component]
+fn Principle(
+    number: u8,
+    title: &'static str,
+    summary: &'static str,
+    icon: Element,
+    why: &'static str,
+    #[props(default)] limit: Option<Element>,
+    children: Element,
+) -> Element {
+    rsx! {
+        Paper {
+            sx: sx()
+                .padding("lg")
+                .flex("1 1 100%")
+                .min_width("0")
+                .breakpoint(Size::Md, sx().flex("1 1 calc(50% - 12px)")),
+            Flex { direction: "column", gap: "md",
+                Flex { direction: "row", align: "center", gap: "sm", wrap: "nowrap",
+                    Icon { variant: "tonal", color: "primary", size: "xl", radius: "md", {icon} }
+                    Title { size: "lg", component: "h2", sx: sx().flex("1").min_width("0"), "{title}" }
+                    // The cards' order is the ranking; the number repeats it for the eye.
+                    Badge { circle: true, size: "lg", "aria-hidden": "true", "{number}" }
                 }
-                Text {
-                    "The overlays are there too. A modal and a drawer open from a hook ("
-                    Code { source: "use_modal" }
-                    ", "
-                    Code { source: "use_drawer" }
-                    ") and can hand a result back. "
-                    Code { source: "Popover" }
-                    ", "
-                    Code { source: "Tooltip" }
-                    ", "
-                    Code { source: "HoverCard" }
-                    ", "
-                    Code { source: "Menu" }
-                    " and a command palette cover the rest, and "
-                    Code { source: "use_notifications()" }
-                    " shows a message from anywhere. Around them sit the hooks the components are "
-                    "built from ("
-                    Code { source: "use_drag" }
-                    ", "
-                    Code { source: "use_clipboard" }
-                    "), "
-                    Code { source: "Virtualize" }
-                    " for long lists, and "
-                    Code { source: "CodeBlock" }
-                    " with 30 grammars that you pay for only when you turn them on."
+                Text { size: "lg", sx: sx().font_weight("600"), "{summary}" }
+                Label { "What we do" }
+                List { size: "sm", {children} }
+                if let Some(limit) = limit {
+                    {limit}
                 }
-                Text {
-                    "The same components run on the web and natively through Blitz. Anything that "
-                    "reaches the machine goes through one trait in "
-                    Code { source: "libero::platform" }
-                    ", and a capability the renderer lacks is "
-                    Code { source: "None" }
-                    ": absent, not broken. You branch once, and the rest of your code stays the same."
-                }
+                Divider {}
+                Label { "Why it matters" }
+                Text { size: "sm", "{why}" }
             }
+        }
+    }
+}
 
-            DocSection {
-                title: "Simple yet modern",
-                Text {
-                    "The default theme aims to look clean and stay out of the way, so it fits most "
-                    "apps without a fight. When it does not, theming is plain Rust. A theme is one "
-                    "struct of colours, scales and per-component defaults, and you change what you "
-                    "need with struct update syntax over "
-                    Code { source: "Theme::DEFAULT" }
-                    "."
-                }
-                Text {
-                    "The provider emits the theme once as CSS custom properties, light and dark "
-                    "together. Switching the scheme is one attribute on the root, correct on first "
-                    "paint, and "
-                    Code { source: "ColorSchemeButton" }
-                    " does it for you. Styling uses current CSS without a CSS framework: container "
-                    "queries in "
-                    Code { source: "sx" }
-                    ", and cascade layers, so your own unlayered CSS beats every libero rule."
-                }
+#[component]
+fn Label(children: Element) -> Element {
+    rsx! {
+        Text { size: "sm", sx: sx().font_weight("600"), {children} }
+    }
+}
+
+#[component]
+fn Point(children: Element) -> Element {
+    rsx! {
+        ListItem {
+            Flex { direction: "row", align: "flex-start", gap: "xs", wrap: "nowrap",
+                Icon { variant: "standard", color: "primary", size: "sm", sx: sx().margin_top("4px"), CheckmarkIcon {} }
+                Text { component: "span", sx: sx().flex("1").min_width("0"), {children} }
             }
+        }
+    }
+}
+
+#[component]
+fn AccessibilityIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "16", cy: "4", r: "1" }
+            path { d: "m18 19 1-7-6 1" }
+            path { d: "m5 8 3-3 5.5 3-2.36 3.5" }
+            path { d: "M4.24 14.5a5 5 0 0 0 6.88 6" }
+            path { d: "M13.76 17.5a5 5 0 0 0-6.88-6" }
+        }
+    }
+}
+
+#[component]
+fn BatteryIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            rect { x: "2", y: "6", width: "16", height: "12", rx: "2" }
+            path { d: "M22 14v-4" }
+            path { d: "M6 10v4" }
+            path { d: "M10 10v4" }
+            path { d: "M14 10v4" }
+        }
+    }
+}
+
+#[component]
+fn SparkleIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z" }
+            path { d: "M19 3v4" }
+            path { d: "M21 5h-4" }
+        }
+    }
+}
+
+#[component]
+fn InfoIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "12", cy: "12", r: "10" }
+            path { d: "M12 16v-4" }
+            path { d: "M12 8h.01" }
         }
     }
 }
