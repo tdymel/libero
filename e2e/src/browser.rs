@@ -371,9 +371,16 @@ impl Fixture {
     }
 
     /// Close the page and wait for it. A fixture dropped without this closes
-    /// its page in the background instead.
+    /// its page in the background instead. Fails on a `dioxus_signals`
+    /// warning the page logged, the web half of todo 719.
     pub async fn close(mut self) -> Result<()> {
         self.closes_on_drop.0 = None;
-        self.page.close().await.context("close the page")
+        self.page.close().await.context("close the page")?;
+        let messages = self.console.peek();
+        let warned = crate::passes::console::signal_warnings(&messages);
+        if !warned.is_empty() {
+            anyhow::bail!("dioxus_signals warned:\n  {}", warned.join("\n  "));
+        }
+        Ok(())
     }
 }

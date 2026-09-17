@@ -22,6 +22,7 @@ use std::time::Duration;
 use dioxus::core::Runtime;
 use dioxus::prelude::ScopeId;
 
+use super::origin::Origin;
 use crate::platform::{TimerApi, TimerSubscription};
 
 /// `None` outside a dioxus runtime, because delivery goes through a dioxus
@@ -40,11 +41,12 @@ impl TimerApi for ThreadTimer {
     fn after(&self, delay: Duration, callback: Box<dyn FnOnce()>) -> Box<dyn TimerSubscription> {
         let cancelled = Arc::new(AtomicBool::new(false));
         let guard = cancelled.clone();
+        let origin = Origin::here();
 
         spawn_on_root(async move {
             sleep(delay).await;
             if !guard.load(Ordering::Acquire) {
-                callback();
+                origin.run(callback);
             }
         });
 
@@ -54,6 +56,7 @@ impl TimerApi for ThreadTimer {
     fn every(&self, interval: Duration, callback: Box<dyn Fn()>) -> Box<dyn TimerSubscription> {
         let cancelled = Arc::new(AtomicBool::new(false));
         let guard = cancelled.clone();
+        let origin = Origin::here();
 
         spawn_on_root(async move {
             loop {
@@ -61,7 +64,7 @@ impl TimerApi for ThreadTimer {
                 if guard.load(Ordering::Acquire) {
                     break;
                 }
-                callback();
+                origin.run(&callback);
             }
         });
 
@@ -93,7 +96,8 @@ fn spawn_on_root(future: impl Future<Output = ()> + 'static) {
     };
 
     // The root scope, not the calling one: what ties a timer's lifetime is its
-    // subscription, not whichever scope happened to be rendering.
+    // subscription, not whichever scope happened to be rendering. The callback
+    // still runs as the calling scope while that lives (see `Origin`).
     runtime.spawn(ScopeId::ROOT, future);
 }
 

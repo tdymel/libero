@@ -4,7 +4,10 @@
 use std::time::Duration;
 
 use dioxus::prelude::*;
-use libero::components::{Button, ScrollArea, Virtualize};
+use libero::{
+    components::{Box, Button, Container, Flex, ScrollArea, Sidebar, Virtualize},
+    sx::sx,
+};
 use native_tests::{Page, mount};
 
 const PANE: &str = "#list-pane";
@@ -173,6 +176,102 @@ fn a_change_inside_a_child_component_re_checks_the_tab_stop() {
         "{}",
         page.tree()
     );
+}
+
+/// The docs shell round the ScrollArea page's preview: a header, then a row
+/// of the nav and the page area, sized to what is left of the window.
+fn preview_in_page() -> Element {
+    rsx! {
+        div { height: "60px", "Header" }
+        Flex { direction: "row", align: "stretch", wrap: false, sx: sx().height("calc(100vh - 60px)"),
+            Sidebar {
+                for i in 0..60 {
+                    p { key: "nav-{i}", id: "nav-{i}", height: "20px", margin: "0", "Nav {i}" }
+                }
+            }
+            ScrollArea { id: "page-area", "aria-label": "Page", sx: sx().flex("1").min_height("0").min_width("0"),
+                Container { component: "main",
+                    for i in 0..10 {
+                        p { key: "intro-{i}", id: "intro-{i}", height: "20px", margin: "0", "Intro {i}" }
+                    }
+                    Box { sx: sx().height("160px").width("100%"),
+                        ScrollArea { id: "preview", "aria-label": "Preview",
+                            Box { sx: sx().width("150%"),
+                                for i in 0..20 {
+                                    p { key: "{i}", id: "item-{i}", height: "20px", margin: "0", "Item {i}" }
+                                }
+                            }
+                        }
+                    }
+                    for i in 0..60 {
+                        p { key: "outro-{i}", id: "outro-{i}", height: "20px", margin: "0", "Outro {i}" }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// The preview's, the page area's and the window's scroll offsets.
+fn scrolled(page: &Page) -> (f64, f64, f32) {
+    (
+        page.scroll_top("#preview"),
+        page.scroll_top("#page-area"),
+        page.viewport_scroll().1,
+    )
+}
+
+/// Todo 717: a wheel moves the scroller under the pointer only.
+#[test]
+fn a_wheel_outside_a_nested_area_scrolls_the_page_alone() {
+    let mut page = mount(preview_in_page);
+    page.wait(Duration::from_millis(50));
+    page.hover("#intro-1");
+    for _ in 0..3 {
+        page.wheel("#intro-1", 20.0);
+    }
+    let (preview, area, window) = scrolled(&page);
+    assert_eq!((preview, window), (0.0, 0.0), "{}", page.tree());
+    assert!(area > 0.0);
+}
+
+/// Todo 717: the web latches a wheel to the scroller it began over, so the
+/// preview moving under a still pointer does not take the rest of the turn.
+/// Blitz scrolls whatever is hovered at each tick, then chains the rest up.
+#[test]
+#[ignore = "needs Blitz: no wheel latching, each tick scrolls what is hovered now"]
+fn a_wheel_keeps_scrolling_the_page_as_a_nested_area_passes_under_it() {
+    let mut page = mount(preview_in_page);
+    page.wait(Duration::from_millis(50));
+    page.hover("#intro-9");
+    let (x, y, width, height) = page.rect("#intro-9");
+    for _ in 0..10 {
+        page.wheel_at((x + width / 2.0) as f32, (y + height / 2.0) as f32, 20.0);
+    }
+    let (preview, area, window) = scrolled(&page);
+    assert_eq!((preview, window), (0.0, 0.0), "page area at {area}");
+    assert_eq!(area, 200.0);
+}
+
+#[test]
+fn a_wheel_inside_a_nested_area_scrolls_it_alone() {
+    let mut page = mount(preview_in_page);
+    page.wait(Duration::from_millis(50));
+    page.hover("#item-1");
+    page.wheel("#item-1", 60.0);
+    let (preview, area, window) = scrolled(&page);
+    assert!(preview > 0.0);
+    assert_eq!((area, window), (0.0, 0.0), "{}", page.tree());
+}
+
+#[test]
+fn a_wheel_over_the_nav_scrolls_it_alone() {
+    let mut page = mount(preview_in_page);
+    page.wait(Duration::from_millis(50));
+    page.hover("#nav-3");
+    page.wheel("#nav-3", 60.0);
+    let (preview, area, window) = scrolled(&page);
+    assert_eq!((preview, area, window), (0.0, 0.0, 0.0), "{}", page.tree());
 }
 
 /// Blitz sends no `resize` (measured, [[codebase/platform/blitz-platform-gaps]]).

@@ -17,7 +17,7 @@ mod focus;
 pub(super) use activate::focus_selectors;
 pub(super) use focus::{press_kept_focus, silent_focus};
 
-use super::INTERACTIVE;
+use super::{INTERACTIVE, origin::Origin};
 use crate::{
     platform::{
         ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi, KeyChord,
@@ -212,9 +212,10 @@ fn doc() -> Option<Rc<Doc>> {
 
 type KeyCallback = (u64, bool, Rc<dyn Fn(KeyChord) -> bool>);
 
-/// Subscribers, each under the id its subscription drops.
+/// Subscribers, each under the id its subscription drops, run in the scope
+/// that subscribed.
 struct Callbacks<F: ?Sized> {
-    list: RefCell<Vec<(u64, Rc<F>)>>,
+    list: RefCell<Vec<(u64, Origin, Rc<F>)>>,
     next: Cell<u64>,
 }
 
@@ -228,24 +229,28 @@ impl<F: ?Sized> Callbacks<F> {
 
     fn add(&self, callback: Rc<F>) -> u64 {
         let id = self.next.replace(self.next.get() + 1);
-        self.list.borrow_mut().push((id, callback));
+        self.list.borrow_mut().push((id, Origin::here(), callback));
         id
     }
 
     /// Whether any are left.
     fn remove(&self, id: u64) -> bool {
         let mut list = self.list.borrow_mut();
-        list.retain(|(other, _)| *other != id);
+        list.retain(|(other, ..)| *other != id);
         !list.is_empty()
     }
 
-    /// A copy, so a callback may subscribe or unsubscribe.
-    fn snapshot(&self) -> Vec<Rc<F>> {
-        self.list
+    /// Calls each, on a copy, so a callback may subscribe or unsubscribe.
+    fn each(&self, call: impl Fn(&F)) {
+        let list: Vec<_> = self
+            .list
             .borrow()
             .iter()
-            .map(|(_, callback)| callback.clone())
-            .collect()
+            .map(|(_, origin, callback)| (*origin, callback.clone()))
+            .collect();
+        for (origin, callback) in list {
+            origin.run(|| call(&callback));
+        }
     }
 }
 
@@ -870,9 +875,7 @@ fn realign_portals() {
     let Some(doc) = doc() else {
         return;
     };
-    for realign in doc.realign.snapshot() {
-        realign();
-    }
+    doc.realign.each(|realign| realign());
 }
 
 fn pressed(event: &Event<PointerData>) {
@@ -1137,7 +1140,7 @@ pub(super) fn when_laid_out(run: Box<dyn FnOnce()>) {
     };
     let first = {
         let mut waiting = doc.laid_out.borrow_mut();
-        waiting.push(run);
+        waiting.push(in_origin(run));
         waiting.len() == 1
     };
     if !first {
@@ -1187,11 +1190,17 @@ fn heal_dirty_bits(doc: &BaseDocument) {
     }
 }
 
+/// `run`, to run in the scope it is deferred from.
+fn in_origin(run: impl FnOnce() + 'static) -> Deferred {
+    let origin = Origin::here();
+    Box::new(move || origin.run(run))
+}
+
 fn later(run: impl FnOnce() + 'static) {
     let Some(doc) = doc() else {
         return;
     };
-    doc.deferred.borrow_mut().push(Box::new(run));
+    doc.deferred.borrow_mut().push(in_origin(run));
     // One remount per flush: a flush element replaced before its mount event
     // ran panics in dioxus-native (a `Modal` backdrop click; todo 664: a timer
     // task re-keying it again in the poll that rendered it).
@@ -1200,11 +1209,19 @@ fn later(run: impl FnOnce() + 'static) {
         .borrow()
         .last()
         .map(|outlet| (outlet.flushes, outlet.mounted));
-    if let Some((mut flushes, mounted)) = newest
-        && mounted == Some(*flushes.peek())
-    {
-        let next = flushes.peek().wrapping_add(1);
-        flushes.set(next);
+    let Some((mut flushes, mounted)) = newest else {
+        return;
+    };
+    let mut bump = move || {
+        if mounted == Some(*flushes.peek()) {
+            let next = flushes.peek().wrapping_add(1);
+            flushes.set(next);
+        }
+    };
+    // As `Outlet`, which owns the signal: callers sit in any scope.
+    match Runtime::try_current() {
+        Some(runtime) => runtime.in_scope(flushes.origin_scope(), bump),
+        None => bump(),
     }
 }
 
@@ -1264,9 +1281,7 @@ fn check_scheme(doc: &Doc) {
     if doc.scheme.replace(scheme) == scheme {
         return;
     }
-    for callback in doc.scheme_callbacks.snapshot() {
-        callback(scheme);
-    }
+    doc.scheme_callbacks.each(|callback| callback(scheme));
 }
 
 impl ColorSchemeApi for BlitzColorScheme {
@@ -1345,9 +1360,7 @@ fn notify_scroll() {
     let Some(doc) = doc() else {
         return;
     };
-    for callback in doc.scroll_callbacks.snapshot() {
-        callback();
-    }
+    doc.scroll_callbacks.each(|callback| callback());
 }
 
 impl ScrollApi for BlitzScroll {

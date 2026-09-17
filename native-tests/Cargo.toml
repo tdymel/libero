@@ -31,3 +31,5 @@ anyrender = "0.13"
 anyrender_vello_cpu = { version = "0.17", default-features = false }
 kurbo = "0.13"
 peniko = "0.6"
+# `Page` fails a test on a `dioxus_signals` warning.
+tracing = "0.1"

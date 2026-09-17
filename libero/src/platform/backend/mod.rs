@@ -28,6 +28,8 @@ use super::{
 mod blitz;
 mod mounted;
 #[cfg(not(target_arch = "wasm32"))]
+mod origin;
+#[cfg(not(target_arch = "wasm32"))]
 mod thread;
 #[cfg(target_arch = "wasm32")]
 mod web;

@@ -38,6 +38,9 @@ use dioxus::prelude::*;
 use dioxus_native_dom::DioxusDocument;
 use libero::LiberoProvider;
 use style::properties::PropertyId;
+use warnings::SignalWarnings;
+
+mod warnings;
 
 pub use blitz_traits::shell::ColorScheme;
 pub use dioxus::prelude::{Code, Key, Location, Modifiers};
@@ -61,6 +64,7 @@ pub fn mount(app: fn() -> Element) -> Page {
 
 /// [`mount`], with the window theme set to `scheme`.
 pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
+    let warnings = SignalWarnings::watch();
     let vdom = VirtualDom::new_with_props(Root, RootProps { app: App(app) });
     let mut doc = DioxusDocument::new(
         vdom,
@@ -71,7 +75,11 @@ pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
         },
     );
     doc.initial_build();
-    let mut page = Page { doc, time: 0.0 };
+    let mut page = Page {
+        doc,
+        time: 0.0,
+        warnings,
+    };
     page.settle();
     page
 }
@@ -117,6 +125,7 @@ fn Mounted(app: App) -> Element {
 pub struct Page {
     pub doc: DioxusDocument,
     time: f64,
+    warnings: SignalWarnings,
 }
 
 impl Page {
@@ -127,6 +136,7 @@ impl Page {
             self.doc.inner.borrow_mut().resolve(self.time);
             if !busy {
                 self.assert_no_false_flags();
+                self.assert_no_signal_warnings();
                 return;
             }
         }
@@ -142,6 +152,15 @@ impl Page {
                 self.describe(id),
                 self.tree()
             );
+        }
+    }
+
+    /// A `dioxus_signals` warning names a value read outside its owner's
+    /// scope, which may be dropped under the reader.
+    fn assert_no_signal_warnings(&self) {
+        let seen = self.warnings.take();
+        if !seen.is_empty() {
+            panic!("dioxus_signals warned:\n{}", seen.join("\n"));
         }
     }
 
@@ -295,6 +314,11 @@ impl Page {
     /// `hover` it first, once: a second move there dropped the next wheel.
     pub fn wheel(&mut self, selector: &str, dy: f64) {
         let (x, y) = self.centre(selector);
+        self.wheel_at(x, y, dy);
+    }
+
+    /// [`wheel`](Self::wheel) at a viewport point, whatever is there now.
+    pub fn wheel_at(&mut self, x: f32, y: f32, dy: f64) {
         let coords = self.pointer(x, y, false).coords;
         self.dispatch(UiEvent::Wheel(BlitzWheelEvent {
             // Blitz's sign is a finger's: a negative delta scrolls down.
@@ -588,7 +612,7 @@ impl Page {
     }
 
     /// How far the window itself has scrolled.
-    fn viewport_scroll(&self) -> (f32, f32) {
+    pub fn viewport_scroll(&self) -> (f32, f32) {
         let scroll = self.doc.inner.borrow().viewport_scroll();
         (scroll.x as f32, scroll.y as f32)
     }

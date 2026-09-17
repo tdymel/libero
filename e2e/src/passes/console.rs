@@ -104,6 +104,16 @@ pub struct Benign {
 /// (Olaf102). Add an entry only with a reason a reviewer can check.
 pub const BENIGN: &[Benign] = &[];
 
+/// The recorded `dioxus_signals` warnings: a value read outside its owner's
+/// scope, which may be dropped under the reader.
+pub fn signal_warnings(messages: &[String]) -> Vec<&str> {
+    messages
+        .iter()
+        .filter(|message| message.starts_with("tracing.warn") && message.contains("signals/src/"))
+        .map(String::as_str)
+        .collect()
+}
+
 /// The first entry of `list` that allows `message`.
 pub fn benign<'a>(message: &str, list: &'a [Benign]) -> Option<&'a Benign> {
     list.iter().find(|entry| message.contains(entry.pattern))
@@ -165,6 +175,16 @@ mod tests {
         assert!(classify("debug", &[&json!("%cDEBUG%c x%c y")]).is_none());
         assert!(classify("log", &[&json!("WARN is just a word here")]).is_none());
         assert!(classify("log", &[]).is_none());
+    }
+
+    #[test]
+    fn a_signal_warning_is_told_apart() {
+        let messages = [
+            "tracing.warn: WARN signals/src/warnings.rs:26 A Copy Value created".to_owned(),
+            "tracing.warn: WARN libero/src/x.rs:1 something else".to_owned(),
+            "console.warning: signals/src/ in a plain warning".to_owned(),
+        ];
+        assert_eq!(signal_warnings(&messages), [messages[0].as_str()]);
     }
 
     #[test]

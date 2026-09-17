@@ -10,13 +10,16 @@ use std::{
 };
 
 use blitz_dom::BaseDocument;
+use dioxus::core::Runtime;
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
 use super::{Doc, NEXT_CALLBACK, ancestors, anchor, defer, doc, flush_soon};
 use crate::platform::{FocusMove, SilentFocusApi, SilentFocusSubscription, focus::OnMove};
 
-type Callback = (u64, Rc<dyn Fn(&dyn FocusMove)>);
+/// Id, the subscriber's scope, callback. Every subscription sits in a hook, so
+/// the scope outlives it.
+type Callback = (u64, Option<ScopeId>, Rc<dyn Fn(&dyn FocusMove)>);
 
 /// One document's silent-move watch.
 #[derive(Default)]
@@ -149,11 +152,16 @@ pub(super) fn check(doc: &Doc) {
         .callbacks
         .borrow()
         .iter()
-        .map(|(_, callback)| callback.clone())
+        .map(|(_, scope, callback)| (*scope, callback.clone()))
         .collect();
     let moved = Moved { before, now };
-    for callback in callbacks {
-        callback(&moved);
+    let runtime = Runtime::try_current();
+    // In the subscriber's scope, not `Outlet`'s: what it reads is owned there.
+    for (scope, callback) in callbacks {
+        match (&runtime, scope) {
+            (Some(runtime), Some(scope)) => runtime.in_scope(scope, || callback(&moved)),
+            _ => callback(&moved),
+        }
     }
 }
 
@@ -196,10 +204,11 @@ impl SilentFocusApi for BlitzSilentFocus {
         let id = NEXT_CALLBACK.replace(NEXT_CALLBACK.get() + 1);
         let doc = doc();
         if let Some(doc) = &doc {
+            let scope = Runtime::try_current().and_then(|runtime| runtime.try_current_scope_id());
             doc.focus
                 .callbacks
                 .borrow_mut()
-                .push((id, Rc::from(callback)));
+                .push((id, scope, Rc::from(callback)));
         }
         Box::new(Subscription(id, doc.as_ref().map(Rc::downgrade)))
     }
@@ -215,7 +224,7 @@ impl Drop for Subscription {
             doc.focus
                 .callbacks
                 .borrow_mut()
-                .retain(|(id, _)| *id != self.0);
+                .retain(|(id, ..)| *id != self.0);
         }
     }
 }
