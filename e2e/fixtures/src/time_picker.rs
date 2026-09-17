@@ -15,7 +15,7 @@ pub const ROUTES: Routes = &[
 ];
 
 /// An analog face at a one-minute step, with seconds, from 10:00 with `min`
-/// 09:30.
+/// 09:30, and a digital picker with the same `min` (its early hours disabled).
 #[component]
 fn AnalogPage() -> Element {
     let mut fine = use_signal(|| NaiveTime::from_hms_opt(10, 0, 0));
@@ -33,6 +33,13 @@ fn AnalogPage() -> Element {
             onchange: move |next: Option<NaiveTime>| fine.set(next),
         }
         span { id: "fine-value", {shown} }
+        TimePicker {
+            id: "limited",
+            variant: "digital",
+            twelve_hour: false,
+            min: NaiveTime::from_hms_opt(9, 30, 0),
+            value: NaiveTime::from_hms_opt(10, 0, 0),
+        }
     }
 }
 

@@ -206,3 +206,27 @@ fn only_a_resizable_window_has_a_separator() {
     assert_eq!(separator["aria-label"], "Resize window", "{separator:?}");
     assert!(separator.contains_key("aria-valuetext"), "{separator:?}");
 }
+
+/// Todo 739: the separator's value text comes from the localization.
+#[test]
+fn the_separator_reads_its_size_in_the_localized_words() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { localization: &libero::localization::Localization::GERMAN,
+                Opened { options: FloatingWindowOptions { resizable: true, ..options() } }
+            }
+        }
+    }
+
+    let english = tag_with(&render(resizable_app), "role=\"separator\"");
+    assert!(
+        english["aria-valuetext"].ends_with(" pixels"),
+        "{english:?}"
+    );
+    let separator = tag_with(&render(app), "role=\"separator\"");
+    let text = &separator["aria-valuetext"];
+    assert!(
+        text.contains(" mal ") && text.ends_with(" Pixel"),
+        "{separator:?}"
+    );
+}

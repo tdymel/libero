@@ -325,3 +325,21 @@ fn a_menu_dropped_while_open_comes_back_closed() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 745: a disabled trigger is `GrayText` in forced colours, not only dimmed.
+#[test]
+fn a_disabled_trigger_grays_out_in_forced_colours() {
+    block_on(async {
+        let fixture = Fixture::open("/menubar-docs", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        crate::calendar::force_colours(page).await;
+        crate::button::assert_gray_in_forced_colours(
+            page,
+            r#"[role=menubar] [data-menubar-index][aria-disabled="true"]"#,
+        )
+        .await;
+        fixture.close().await.unwrap();
+    });
+}

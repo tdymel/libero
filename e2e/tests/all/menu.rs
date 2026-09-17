@@ -405,7 +405,8 @@ fn a_toggle_is_a_checkbox_whose_shortcut_stays_out_of_its_name() {
 }
 
 /// Todo 641: a lone toggle's label lines up with the plain rows', and a
-/// disabled row's shortcut key dims with its label.
+/// disabled row's shortcut key dims with its label. Todo 745: the row is
+/// `GrayText` in forced colours.
 #[test]
 fn a_lone_toggle_lines_up_and_a_disabled_shortcut_dims() {
     block_on(async {
@@ -421,7 +422,8 @@ fn a_lone_toggle_lines_up_and_a_disabled_shortcut_dims() {
                 .evaluate(
                     "(() => { \
                        const rows = [...document.querySelectorAll('[role=menu] > [data-menu-index]')]; \
-                       const kbd = r => getComputedStyle(r.querySelector('kbd')).color; \
+                       const kbd = r => getComputedStyle(r.querySelector('kbd')).color \
+                         + ' ' + getComputedStyle(r).opacity; \
                        return [ \
                          rows.map(r => String(r.querySelector('[data-menu-label]').getBoundingClientRect().left)), \
                          [kbd(rows[0]), kbd(rows[2])], \
@@ -437,6 +439,12 @@ fn a_lone_toggle_lines_up_and_a_disabled_shortcut_dims() {
                 colours[0] != colours[1],
                 "the disabled shortcut keeps the enabled colour: {colours:?}"
             );
+            crate::calendar::force_colours(page).await;
+            crate::button::assert_gray_in_forced_colours(
+                page,
+                r#"[role=menu] [data-menu-index][aria-disabled="true"]"#,
+            )
+            .await;
             Ok(())
         }
         .await;

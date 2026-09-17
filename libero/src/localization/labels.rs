@@ -609,6 +609,8 @@ pub struct FloatingWindowLabels {
     pub move_hint: &'static str,
     /// Names the corner resize handle, and the group of resize buttons.
     pub resize_handle: &'static str,
+    /// The resize handle's value text: `{width}` and `{height}` in pixels.
+    pub size: &'static str,
     /// Names the title bar's menu button.
     pub menu: &'static str,
     /// The menu item that shows the move buttons.
@@ -634,6 +636,7 @@ impl FloatingWindowLabels {
         move_handle: "Move window",
         move_hint: "Use arrow keys to move the window",
         resize_handle: "Resize window",
+        size: "{width} by {height} pixels",
         menu: "Window menu",
         move_item: "Move",
         resize_item: "Resize",
@@ -653,6 +656,7 @@ impl FloatingWindowLabels {
         move_handle: "Fenster verschieben",
         move_hint: "Mit den Pfeiltasten das Fenster verschieben",
         resize_handle: "Fenstergröße ändern",
+        size: "{width} mal {height} Pixel",
         menu: "Fenstermenü",
         move_item: "Verschieben",
         resize_item: "Größe ändern",

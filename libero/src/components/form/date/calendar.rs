@@ -12,8 +12,8 @@ use crate::{
     components::{
         ActionIcon, ClassList, HtmlTag, Input, States, Variant,
         common::{
-            ChevronLeftIcon, ChevronRightIcon, focus_ring_sx, has_shortcut_modifier,
-            inset_focus_ring_sx,
+            ChevronLeftIcon, ChevronRightIcon, disabled_look_sx, focus_ring_sx,
+            has_shortcut_modifier, inset_focus_ring_sx,
         },
         layout::use_box,
     },
@@ -178,9 +178,7 @@ static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& :is([data-slot='day'], [data-slot='cell']):disabled",
-            sx().opacity("0.4")
-                .cursor("not-allowed")
-                .hover(sx().background("transparent")),
+            disabled_look_sx("not-allowed").hover(sx().background("transparent")),
         )
         .selector("& button:focus-visible", focus_ring_sx())
         // A picked cell's fill sets the ring's contrast colour, which is
@@ -196,6 +194,11 @@ static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             FORCED_COLORS,
             sx().selector(
                 "& :is([data-slot='day'], [data-slot='cell'])",
+                sx().border_color("Canvas"),
+            )
+            // The disabled look's `GrayText` border would box every closed day.
+            .selector(
+                "& :is([data-slot='day'], [data-slot='cell']):disabled:not([data-today], [data-in-range])",
                 sx().border_color("Canvas"),
             )
             .selector("& [data-in-range]", sx().border_color("Highlight"))

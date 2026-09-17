@@ -35,6 +35,8 @@ static PICKER_SX: StaticSx = StaticSx::new(|| {
         .font_family("inherit")
         .font_size("inherit")
         .line_height("1.5")
+        // 2.5.8's 24px, which a line of `xs`-`md` text falls short of (todo 763).
+        .min_height("24px")
         .padding("0")
         .margin("0")
         .cursor("pointer")

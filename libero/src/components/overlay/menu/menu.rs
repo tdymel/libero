@@ -6,7 +6,8 @@ use crate::{
     components::{
         Divider, HtmlTag, Input, Kbd, States,
         common::{
-            CheckIcon, ChevronRightIcon, base_props, has_shortcut_modifier, inset_focus_ring_sx,
+            CheckIcon, ChevronRightIcon, base_props, disabled_look_sx, has_shortcut_modifier,
+            inset_focus_ring_sx,
         },
         layout::{paper_sx, use_box},
     },
@@ -18,9 +19,8 @@ use crate::{
     platform::{ElementApi, TimerSubscription, logical_key, timer},
     sx::{StaticSx, sx},
     theme::{
-        ColorCss, ColorShade, KBD_BORDER, KBD_COLOR, MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT,
-        MENU_ITEM_PAD_X, MENU_ITEM_RADIUS, MENU_LABEL_FONT, MENU_MAX_HEIGHT, MENU_PADDING,
-        MenuDefaults, Size, SizeCss, Z_INDEX_POPOVER,
+        MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT, MENU_ITEM_PAD_X, MENU_ITEM_RADIUS, MENU_LABEL_FONT,
+        MENU_MAX_HEIGHT, MENU_PADDING, MenuDefaults, Size, SizeCss, Z_INDEX_POPOVER,
     },
 };
 
@@ -98,15 +98,10 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
             "& [data-menu-index]:focus-visible",
             inset_focus_ring_sx("-2px"),
         )
+        // The fade dims the shortcut's key cap along with the label.
         .selector(
             "& [data-menu-index][aria-disabled=\"true\"]",
-            sx().color("muted.5").cursor("not-allowed"),
-        )
-        // The shortcut's key cap draws its own colours, so it dims apart.
-        .selector(
-            "& [data-menu-index][aria-disabled=\"true\"] [data-menu-section=\"shortcut\"]",
-            sx().with(KBD_COLOR.name(), ColorCss::MUTED.value(ColorShade::S5))
-                .with(KBD_BORDER.name(), ColorCss::MUTED.value(ColorShade::S3)),
+            disabled_look_sx("not-allowed"),
         )
         // Wraps rather than truncates once the box meets the viewport's edge:
         // an ellipsis hides the label from sighted users (1.4.10). Inside a

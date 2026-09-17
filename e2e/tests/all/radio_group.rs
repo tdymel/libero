@@ -187,6 +187,35 @@ fn a_readonly_group_meets_the_baseline() {
         .run();
 }
 
+/// Todo 746: a click on another option of a read-only group leaves focus on
+/// the checked one, the group's one tab stop, so Tab does not stop twice.
+#[test]
+fn a_readonly_click_keeps_focus_on_the_checked_option() {
+    use e2e::passes::pointer;
+    use e2e::wait;
+    block_on(async {
+        let fixture = Fixture::open("/radio-group/readonly", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        for row in [
+            "[role=radiogroup] > div:first-child",
+            "[role=radiogroup] > div:last-child",
+        ] {
+            pointer::click(page, row).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!("document.activeElement === document.querySelector({CHECKED:?})"),
+                &format!("focus on the checked option after a click on {row}"),
+            )
+            .await
+            .unwrap();
+        }
+        fixture.console.assert_clean("read-only clicks").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The rows really are undersized, so the spacing exception is load-bearing.
 ///
 /// **Not a second implementation of WCAG 2.5.8.** Since todo 377

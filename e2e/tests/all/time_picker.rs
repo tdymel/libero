@@ -426,6 +426,37 @@ fn picks_and_the_hand_show_in_forced_colours() {
     });
 }
 
+/// Todo 744: the hand the readout sets carries the house on-state ring, not a
+/// tint. Todo 745: a disabled mark or option turns `GrayText` in forced colours.
+#[test]
+fn the_readout_hand_is_ringed_and_disabled_parts_gray_out() {
+    use crate::button::{assert_gray_in_forced_colours, assert_on_marker};
+    const ACTIVE: &str = r#"#fine [data-slot="readout"] [data-active]"#;
+    const IDLE: &str = r#"#fine [data-slot="readout"] button:not([data-active])"#;
+    block_on(async {
+        let fixture = Fixture::open("/time-picker/analog", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        assert_on_marker(page, ACTIVE, IDLE).await;
+        let [active, idle]: [String; 2] = page
+            .evaluate(format!(
+                "[{ACTIVE:?}, {IDLE:?}].map(q => getComputedStyle(document.querySelector(q)).backgroundColor)"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(active, idle, "the active hand keeps a tint under its ring");
+
+        crate::calendar::force_colours(page).await;
+        assert_gray_in_forced_colours(page, r#"#fine [data-slot="mark"][data-disabled]"#).await;
+        assert_gray_in_forced_colours(page, r#"#limited [data-column="Hours"] button:disabled"#)
+            .await;
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn expect_unselected(page: &chromiumoxide::Page, selector: &str, at: &str) {
     let check = format!("!document.querySelector({selector:?}).hasAttribute('data-selected')");
     wait::for_js_true(page, &check, &format!("{selector} to lose its pick"))

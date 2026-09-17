@@ -19,6 +19,33 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 745: a day before `min` is `GrayText` in forced colours, and draws no box.
+#[test]
+fn a_disabled_day_grays_out_in_forced_colours() {
+    const CLOSED: &str = r#"[role=grid] [data-date="2026-03-09"]:not([data-outside])"#;
+    block_on(async {
+        let fixture = Fixture::open("/calendar/limited", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        force_colours(page).await;
+        crate::button::assert_gray_in_forced_colours(page, CLOSED).await;
+        let [border, canvas]: [String; 2] = page
+            .evaluate(format!(
+                "(() => {{ const probe = document.createElement('div'); \
+                 probe.style.color = 'Canvas'; document.body.append(probe); \
+                 const canvas = getComputedStyle(probe).color; probe.remove(); \
+                 return [getComputedStyle(document.querySelector({CLOSED:?})).borderTopColor, canvas]; }})()"
+            ))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(border, canvas, "a disabled day draws a box");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Every key the grid owns, each read back from where focus lands. A focus
 /// that stays on the old cell, or lands on the neighbour month's copy of the
 /// day (`data-outside`), fails the step that caused it.

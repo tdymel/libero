@@ -12,7 +12,10 @@ use super::{
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{focus_ring_sx, has_shortcut_modifier, input_from_str, inset_focus_ring_sx},
+        common::{
+            borderless_on_state_sx, disabled_look_sx, focus_ring_sx, has_shortcut_modifier,
+            input_from_str, inset_focus_ring_sx,
+        },
         layout::use_box,
     },
     hooks::{
@@ -81,9 +84,10 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
             "& [data-slot='readout'] button",
             button.clone().height(format!("calc(1.25 * {day})")),
         )
+        // The house on-state ring marks the hand being set (todo 744).
         .selector(
             "& [data-slot='readout'] [data-active]",
-            sx().background("primary.1").color("primary-contrast.1"),
+            borderless_on_state_sx().focus_visible(focus_ring_sx()),
         )
         .selector(
             "& [data-slot='face']",
@@ -109,9 +113,7 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& [data-slot='mark'][data-disabled]",
-            sx().opacity("0.4")
-                .cursor("not-allowed")
-                .hover(sx().background("transparent")),
+            disabled_look_sx("not-allowed").hover(sx().background("transparent")),
         )
         // One tick per step where the marks are coarser than the step.
         .selector(
@@ -142,9 +144,7 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         })
         .selector(
             "& button:disabled",
-            sx().opacity("0.4")
-                .cursor("not-allowed")
-                .hover(sx().background("transparent")),
+            disabled_look_sx("not-allowed").hover(sx().background("transparent")),
         )
         .selector("& button:focus-visible", focus_ring_sx())
         .selector("& [data-slot='face']:focus-visible", focus_ring_sx())
@@ -155,12 +155,12 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
             "& [data-selected]:focus-visible",
             inset_focus_ring_sx("-4px"),
         )
-        // Forced colours paint every fill `Canvas`: the picks, the readout's
-        // hand and the hand itself would vanish, as in `Calendar`.
+        // Forced colours paint every fill `Canvas`: the picks and the hand
+        // itself would vanish, as in `Calendar`.
         .media(
             FORCED_COLORS,
             sx().selector(
-                "& [data-selected], & [data-slot='readout'] [data-active]",
+                "& [data-selected]",
                 sx().background("Highlight")
                     .color("HighlightText")
                     .hover(sx().background("Highlight")),

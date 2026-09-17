@@ -245,6 +245,14 @@ fn a_read_only_strip_keeps_its_pick() {
             .unwrap();
         settle(&fixture).await;
         assert_eq!(checked(&fixture).await, 1);
+        // Todo 746: focus stays on the checked segment, the one tab stop.
+        e2e::wait::for_js_true(
+            page,
+            "document.activeElement?.id.endsWith('-segment-1')",
+            "focus on the checked segment after a read-only click",
+        )
+        .await
+        .unwrap();
 
         fixture
             .console

@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States,
-        common::{base_props, has_shortcut_modifier, inset_focus_ring_sx},
+        common::{base_props, disabled_look_sx, has_shortcut_modifier, inset_focus_ring_sx},
         layout::use_box,
     },
     hooks::{
@@ -79,7 +79,7 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& [data-menubar-index][aria-disabled=\"true\"]",
-            sx().color("muted.5").cursor("not-allowed"),
+            disabled_look_sx("not-allowed"),
         )
 });
 

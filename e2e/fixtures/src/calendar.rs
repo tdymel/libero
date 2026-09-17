@@ -14,7 +14,20 @@ pub const ROUTES: Routes = &[
     ("/calendar/range", || rsx! { RangePage {} }),
     ("/calendar/month", || rsx! { MonthPage {} }),
     ("/calendar/mini", || rsx! { MiniPage {} }),
+    ("/calendar/limited", || rsx! { LimitedPage {} }),
 ];
+
+/// March 2026 with `min` on the 10th, so the days before it are disabled.
+#[component]
+fn LimitedPage() -> Element {
+    rsx! {
+        DatePicker::<NaiveDate> {
+            value: NaiveDate::from_ymd_opt(2026, 3, 18),
+            today: NaiveDate::from_ymd_opt(2026, 3, 18),
+            min: NaiveDate::from_ymd_opt(2026, 3, 10),
+        }
+    }
+}
 
 /// `CalendarPage`'s day as the one-row mini strip.
 #[component]

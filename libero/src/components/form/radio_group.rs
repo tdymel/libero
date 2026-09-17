@@ -11,7 +11,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
-    platform::{ElementApi, logical_key},
+    platform::{ElementApi, logical_key, next_task},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ChoiceVariant, FIELD_GAP, Size},
     utils::warn,
@@ -278,6 +278,17 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .attr("aria-required", required.then_some("true"))
         .element(&root)
         .event("onkeydown", arrows)
+        // Read-only keeps focus on the tab stop, the checked option (APG): a
+        // click elsewhere would leave a second tab stop behind (todo 746). A
+        // task later: the move fires `focusin` again, inside this handler.
+        .event("onfocusin", move |_: FocusEvent| {
+            if readonly && !disabled {
+                spawn(async move {
+                    next_task().await;
+                    focus_option(&root, tab_stop);
+                });
+            }
+        })
         .render(HtmlTag::Div, props.attributes, options.collect::<Vec<_>>());
 
     field.render(group)

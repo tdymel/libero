@@ -40,6 +40,20 @@ async fn wait_closed(page: &Page) {
     .unwrap();
 }
 
+/// Todo 763: the country button was 82x21 px, under WCAG 2.5.8's 24x24.
+#[test]
+fn the_country_button_is_at_least_24px_square() {
+    block_on(async {
+        let fixture = Fixture::open("/phone-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        e2e::passes::target_size::assert_minimum(&fixture.page, PICKER)
+            .await
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// APG: the list opens on the current country, by key or by click, however it
 /// was left the last time.
 #[test]

@@ -21,7 +21,7 @@ use crate::{
         Drag, DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, escape_closes,
         use_dismiss_layer, use_drag, use_element, use_focus_within, use_id,
     },
-    localization::FloatingWindowLabels,
+    localization::{FloatingWindowLabels, fill},
     platform::{ElementApi, KeyChord, KeySubscription, PlatformError, keyboard},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, PAPER_BORDER_COLOR, Size, SizeCss},
@@ -577,7 +577,10 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                         "aria-valuemin": value_min,
                         "aria-valuemax": value_max,
                         "aria-valuenow": "{width.round()}",
-                        "aria-valuetext": "{width.round()} by {height.round()} pixels",
+                        "aria-valuetext": fill(
+                            labels.size,
+                            &[("width", &width.round()), ("height", &height.round())],
+                        ),
                         onpointerdown: move |event| resize_drag.onpointerdown.call(event),
                         onkeydown: move |event| geometry.resize_key(event),
                     }

@@ -12,7 +12,7 @@ use crate::{
         layout::use_box,
     },
     hooks::ElementHandle,
-    platform::{ElementApi, logical_key},
+    platform::{ElementApi, logical_key, next_task},
     sx::{StaticSx, sx},
     theme::{ButtonDefaults, Size, SizeCss},
 };
@@ -315,7 +315,9 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
             Activation::focusing(
                 move || {
                     if focusable && !disabled {
-                        focus_segment(&element, &root, index);
+                        // Read-only keeps focus on the tab stop (todo 746).
+                        let target = if readonly { tab_stop } else { None };
+                        focus_segment(&element, &root, target.unwrap_or(index));
                     }
                 },
                 move || {
@@ -398,12 +400,28 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         }
     });
 
+    // Read-only keeps focus on the tab stop, the checked segment (APG), however
+    // it got into the strip: a second tab stop otherwise (todo 746). A task
+    // later: the move fires `focusin` again, inside this handler.
+    let focusin = {
+        let root = root.clone();
+        move |_: FocusEvent| {
+            if let (true, Some(stop)) = (readonly && focusable, tab_stop) {
+                let root = root.clone();
+                spawn(async move {
+                    next_task().await;
+                    focus_segment(&element, &root, stop);
+                });
+            }
+        }
+    };
     use_box()
         .framework_sx(&SEGMENTED_CONTROL_SX)
         .states(&states)
         .style(Some(style).filter(|style| !style.is_empty()))
         .prepare()
         .element(&element)
+        .event("onfocusin", focusin)
         .attr_default("role", "radiogroup")
         .attr("aria-labelledby", labelledby)
         .attr("aria-describedby", describedby)
