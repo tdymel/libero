@@ -102,6 +102,7 @@ md_pages! {
     Paper => "paper",
     PasswordField => "password_field",
     Performance => "performance",
+    Philosophy => "philosophy",
     PhoneField => "phone_field",
     PinField => "pin_field",
     Platform => "platform",
