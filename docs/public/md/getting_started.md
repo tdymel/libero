@@ -66,29 +66,13 @@ libero = { version = "0.1", default-features = false, features = ["code-lang-rus
 
 ## Feature flags
 
-Every libero feature is additive. The default set is five `code-lang-*`
-grammars: Rust, Bash, Markdown, HTML and CSS. Three features are worth knowing.
+Every feature is additive.
 
-`code-lang-*` compiles one hand-ported grammar each for [Code](code.md) and
-[CodeBlock](code_block.md). There are 30 of them; with
-`default-features = false` you pay only for the ones you name.
-
-`full-polymorphism` widens what [Box](box.md)'s `component` prop can render.
-All 111 HTML5 element names are accepted and type-check either way, but only 83
-of them compile a match arm by default: every sectioning, text-level, list,
-table and form element, such as `footer`, `strong`, `em`, `small`, `time`,
-`details` and `dialog`. The feature adds the remaining 28:
-
-| Family | Tags |
+| Flag | What it does |
 |---|---|
-| Document metadata | `head`, `meta`, `title`, `script`, `style`, `link`, `base`, `body`, `noscript` |
-| Embedded and media content | `iframe`, `canvas`, `audio`, `video`, `picture`, `source`, `track`, `embed`, `object`, `param`, `map`, `area` |
-| Web components | `template`, `slot` |
-| Bidi and ruby annotation | `bdi`, `bdo`, `ruby`, `rp`, `rt` |
-
-Pass one of those 28 without the feature and you get a `div`, with a console
-warning in a debug build and none in a release build. On this docs site the
-feature costs 14.8 KB of wasm, 1.0 KB after brotli.
+| `code-lang-<name>` | One grammar for [Code](code.md) and [CodeBlock](code_block.md), 30 in all. Rust, Bash, Markdown, HTML and CSS are the default. |
+| `full-polymorphism` | [Box](box.md) renders the rarer HTML elements too (metadata, media, web components). Without it they fall back to a `div`. |
+| `native` | Element access through Blitz, for apps on `dioxus-native`. |
 
 ```toml
 libero = { version = "0.1", default-features = false, features = [
@@ -96,12 +80,3 @@ libero = { version = "0.1", default-features = false, features = [
     "full-polymorphism",
 ] }
 ```
-
-`native` reaches elements through Blitz when you run under `dioxus-native`.
-Dioxus's portable mounted handle cannot query a subtree or report focus.
-
-## Where to go next
-
-[Styling](styling.md), [Theming](theming.md), [Localization](localization.md)
-and [Performance](performance.md) cover how the library works.
-[index.md](index.md) lists one page per component.

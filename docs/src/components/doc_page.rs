@@ -1,11 +1,16 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Chip, Flex, Icon, OptionLabel, Options, Tabs, Title},
-    sx::sx,
+    components::{Anchor, Chip, Flex, Icon, OptionLabel, Options, Tabs, Title},
+    sx::{Sx, sx},
+    theme::PAPER_BORDER_COLOR,
 };
 
 use super::{PropGroup, PropertyTable};
-use crate::icons::{CodeIcon, FileIcon, GitHubIcon, MarkdownIcon};
+use crate::{
+    Route,
+    icons::{CodeIcon, FileIcon, GitHubIcon, MarkdownIcon},
+    nav::neighbours,
+};
 
 const REPO: &str = "https://github.com/tdymel/libero/tree/main/";
 
@@ -141,6 +146,58 @@ pub fn DocPage(
                             PropertyTable { properties: properties.clone() }
                         },
                     },
+                }
+            }
+            Pager {}
+        }
+    }
+}
+
+fn pager_link_sx(end: bool) -> Sx {
+    sx().flex("1")
+        .min_width("0")
+        .display("flex")
+        .flex_direction("column")
+        .gap("xs")
+        .padding("md")
+        .border(format!("1px solid {}", PAPER_BORDER_COLOR.value()))
+        .border_radius("md")
+        .text_align(if end { "end" } else { "start" })
+        .overflow_wrap("anywhere")
+        .hover(sx().border_color("primary"))
+        .selector(
+            "& > span:first-child",
+            sx().font_size("0.875em").color("text-dimmed"),
+        )
+        .selector("& > span:last-child", sx().font_weight("600"))
+}
+
+/// Previous and next page in sidebar order, at the foot of every page.
+#[component]
+fn Pager() -> Element {
+    let [previous, next] = neighbours(&use_route::<Route>());
+    if previous.is_none() && next.is_none() {
+        return rsx! {};
+    }
+
+    rsx! {
+        nav { "aria-label": "Previous and next page",
+            Flex { direction: "row", gap: "md",
+                if let Some((route, label)) = previous {
+                    Anchor { to: route, underline: "never", sx: pager_link_sx(false),
+                        span { "Previous" }
+                        span { "{label}" }
+                    }
+                } else {
+                    div { flex: "1" }
+                }
+                if let Some((route, label)) = next {
+                    Anchor { to: route, underline: "never", sx: pager_link_sx(true),
+                        span { "Next" }
+                        span { "{label}" }
+                    }
+                } else {
+                    div { flex: "1" }
                 }
             }
         }

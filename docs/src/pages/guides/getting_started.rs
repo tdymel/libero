@@ -1,6 +1,24 @@
 use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Code, CodeBlock, Divider, Flex, Text};
+use libero::{
+    components::{Code, CodeBlock, Table, Text, column},
+    sx::sx,
+};
+
+const FEATURES: [(&str, &str); 3] = [
+    (
+        "code-lang-<name>",
+        "One grammar for Code and CodeBlock, 30 in all. Rust, Bash, Markdown, HTML and CSS are the default.",
+    ),
+    (
+        "full-polymorphism",
+        "Box renders the rarer HTML elements too (metadata, media, web components). Without it they fall back to a div.",
+    ),
+    (
+        "native",
+        "Element access through Blitz, for apps on dioxus-native.",
+    ),
+];
 
 // snippet: ignore - a Cargo.toml fragment, not Rust
 const FEATURES_EXAMPLE: &str = r#"libero = { version = "0.1", default-features = false, features = [
@@ -87,128 +105,18 @@ pub fn GettingStarted() -> Element {
 
             DocSection {
                 title: "Feature flags",
-                Text {
-                    "Every libero feature is additive. The default set is five "
-                    Code { source: "code-lang-*" }
-                    " grammars: Rust, Bash, Markdown, HTML and CSS. Three features are worth "
-                    "knowing."
+                Text { "Every feature is additive." }
+                Table {
+                    aria_label: "Feature flags",
+                    data: FEATURES.to_vec(),
+                    columns: vec![
+                        column("Flag")
+                            .value(|row: &(&str, &str)| row.0)
+                            .render(|row: &(&str, &str)| rsx! { Code { source: row.0, sx: sx().white_space("nowrap") } }),
+                        column("What it does").value(|row: &(&str, &str)| row.1),
+                    ],
                 }
-                Text {
-                    Code { source: "code-lang-*" }
-                    " compiles one hand-ported grammar each for "
-                    Code { source: "Code" }
-                    " and "
-                    Code { source: "CodeBlock" }
-                    ". There are 30 of them; with "
-                    Code { source: "default-features = false" }
-                    " you pay only for the ones you name."
-                }
-                Text {
-                    Code { source: "full-polymorphism" }
-                    " widens what "
-                    Code { source: "Box" }
-                    "'s "
-                    Code { source: "component" }
-                    " prop can render. All 111 HTML5 element names are accepted and type-check "
-                    "either way, but only 83 of them compile a match arm by default: every "
-                    "sectioning, text-level, list, table and form element, such as "
-                    Code { source: "footer" }
-                    ", "
-                    Code { source: "strong" }
-                    ", "
-                    Code { source: "em" }
-                    ", "
-                    Code { source: "small" }
-                    ", "
-                    Code { source: "time" }
-                    ", "
-                    Code { source: "details" }
-                    ", "
-                    Code { source: "dialog" }
-                    ". The feature adds the remaining 28: document metadata ("
-                    Code { source: "head" }
-                    ", "
-                    Code { source: "meta" }
-                    ", "
-                    Code { source: "title" }
-                    ", "
-                    Code { source: "script" }
-                    ", "
-                    Code { source: "style" }
-                    ", "
-                    Code { source: "link" }
-                    ", "
-                    Code { source: "base" }
-                    ", "
-                    Code { source: "body" }
-                    ", "
-                    Code { source: "noscript" }
-                    "), embedded and media content ("
-                    Code { source: "iframe" }
-                    ", "
-                    Code { source: "canvas" }
-                    ", "
-                    Code { source: "audio" }
-                    ", "
-                    Code { source: "video" }
-                    ", "
-                    Code { source: "picture" }
-                    ", "
-                    Code { source: "source" }
-                    ", "
-                    Code { source: "track" }
-                    ", "
-                    Code { source: "embed" }
-                    ", "
-                    Code { source: "object" }
-                    ", "
-                    Code { source: "param" }
-                    ", "
-                    Code { source: "map" }
-                    ", "
-                    Code { source: "area" }
-                    "), web components ("
-                    Code { source: "template" }
-                    ", "
-                    Code { source: "slot" }
-                    ") and the bidi and ruby set ("
-                    Code { source: "bdi" }
-                    ", "
-                    Code { source: "bdo" }
-                    ", "
-                    Code { source: "ruby" }
-                    ", "
-                    Code { source: "rp" }
-                    ", "
-                    Code { source: "rt" }
-                    ")."
-                }
-                Text {
-                    "Pass one of those 28 without the feature and you get a "
-                    Code { source: "div" }
-                    ", with a console warning in a debug build and none in a release build. "
-                    "On this docs site the feature costs 14.8 KB of wasm, 1.0 KB after brotli."
-                }
-                CodeBlock {
-                    source: FEATURES_EXAMPLE,
-                    language: "toml",
-                }
-                Text {
-                    Code { source: "native" }
-                    " reaches elements through Blitz when you run under "
-                    Code { source: "dioxus-native" }
-                    ". Dioxus's portable mounted handle cannot query a subtree or report focus."
-                }
-            }
-
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Divider {}
-                Text {
-                    "Styling, Theming, Localization and Performance cover how the library "
-                    "works. The rest of the sidebar is one page per component."
-                }
+                CodeBlock { source: FEATURES_EXAMPLE, language: "toml" }
             }
         }
     }

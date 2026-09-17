@@ -104,21 +104,44 @@ fn group(
 /// One palette action per page, grouped under its sidebar section - what the
 /// docs search opens on until a real search index exists.
 pub fn page_actions() -> Vec<SpotlightAction> {
+    pages()
+        .into_iter()
+        .map(|(path, label, group)| {
+            let mut action = SpotlightAction::new(label).onclick(move |_| {
+                if let Ok(route) = path.parse::<Route>() {
+                    navigator().push(route);
+                }
+            });
+            action.group = group.map(str::to_string);
+            action
+        })
+        .collect()
+}
+
+/// The pages before and after `route` in sidebar order, for the docs pager.
+pub fn neighbours(route: &Route) -> [Option<(Route, &'static str)>; 2] {
+    let pages = pages();
+    let path = route.to_string();
+    let Some(at) = pages.iter().position(|(id, ..)| *id == path) else {
+        return [None, None];
+    };
+    let pick = |index: Option<usize>| {
+        let (id, label, _) = pages.get(index?)?;
+        Some((id.parse::<Route>().ok()?, *label))
+    };
+    [pick(at.checked_sub(1)), pick(Some(at + 1))]
+}
+
+// Every page as (path, label, group label), in sidebar order.
+fn pages() -> Vec<(String, &'static str, Option<&'static str>)> {
     fn walk(
         nodes: Vec<TreeNode<NavEntry>>,
         group: Option<&'static str>,
-        out: &mut Vec<SpotlightAction>,
+        out: &mut Vec<(String, &'static str, Option<&'static str>)>,
     ) {
         for node in nodes {
             if node.children.is_empty() {
-                let path = node.id;
-                let mut action = SpotlightAction::new(node.data.label).onclick(move |_| {
-                    if let Ok(route) = path.parse::<Route>() {
-                        navigator().push(route);
-                    }
-                });
-                action.group = group.map(str::to_string);
-                out.push(action);
+                out.push((node.id, node.data.label, group));
             } else {
                 walk(node.children, Some(node.data.label), out);
             }
@@ -159,7 +182,6 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::StylingPage {}, "Styling"),
                 page(Route::ThemingPage {}, "Theming"),
                 page(Route::LocalizationPage {}, "Localization"),
-                page(Route::PerformancePage {}, "Performance"),
                 page(Route::PlatformPage {}, "Platform"),
             ],
         ),

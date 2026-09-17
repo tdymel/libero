@@ -14,10 +14,9 @@ fetch only the file you need.
 - [Getting started](getting_started.md): Installing libero, wrapping an app in LiberoProvider, and the feature flags a web build wants.
 - [Philosophy](philosophy.md): The four principles behind libero in order of priority (developer experience, accessibility, batteries included, simple yet modern) and what we do about each.
 - [Styling](styling.md): The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers and `StaticSx`.
-- [Theming](theming.md): How a Libero theme is defined: one plain struct of colors, scales and per-component defaults, emitted once as CSS custom properties.
+- [Theming](theming.md): How to customize a Libero theme and use it: colors, scales, per-component defaults, light and dark pairs, and reading the active theme.
 - [Localization](localization.md): The words components say on their own and how dates and numbers are written: `Localization`, `Formats` and the hooks that switch them.
-- [Performance](performance.md): What a libero component costs per render, measured by ablation: scope and dynamic-node counts, memoization boundaries, and how to measure it yourself.
-- [Platform](platform.md): The platform traits and their accessors (timers, document-level keys, scroll, focus and viewport, the clock), each an `Option` that is `None` where the renderer cannot do it.
+- [Platform](platform.md): The platform APIs for timers, document-level keys, scroll, focus and viewport, the clock and element handles, and how to use them where a renderer lacks one.
 
 ## Layout
 

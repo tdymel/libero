@@ -102,7 +102,6 @@ md_pages! {
     Pagination => "pagination",
     Paper => "paper",
     PasswordField => "password_field",
-    Performance => "performance",
     Philosophy => "philosophy",
     PhoneField => "phone_field",
     PinField => "pin_field",
