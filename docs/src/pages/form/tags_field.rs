@@ -261,9 +261,10 @@ pub fn TagsFieldPage() -> Element {
                     "The whole field is one tab stop, plus the Clear button when "
                     Code { source: "clearable" }
                     " shows it. Backspace on an empty input removes the last tag. ArrowLeft on "
-                    "an empty input moves onto the tags: the arrows walk them, Delete or "
-                    "Backspace removes the focused one, and ArrowRight past the last returns "
-                    "to the input. A custom "
+                    "an empty input, or with the caret before the typed text, moves onto the "
+                    "tags and keeps the text: the arrows walk them, Delete or Backspace "
+                    "removes the focused one, and ArrowRight past the last returns to the "
+                    "input. A custom "
                     Code { source: "tag" }
                     " must make its remove control a button with "
                     Code { source: "tabindex: \"-1\"" }

@@ -211,6 +211,10 @@ impl ElementApi for ElementHandle {
         self.get()?.attribute(name)
     }
 
+    fn selection_start(&self) -> Option<u32> {
+        self.get().ok()?.selection_start()
+    }
+
     fn previous_focusable(
         &self,
         selector: &str,

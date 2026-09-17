@@ -1,9 +1,9 @@
 //! `ElementApi` on Blitz: the attribute read (todo 615), the value write (todo
-//! 590) and the previous-focusable lookup (todo 589).
+//! 590), the previous-focusable lookup (todo 589) and the caret read (todo 666).
 
 use dioxus::prelude::*;
 use libero::{hooks::use_element, platform::ElementApi};
-use native_tests::mount;
+use native_tests::{Key, mount};
 
 fn app() -> Element {
     let field = use_element();
@@ -55,4 +55,38 @@ fn reads_an_attribute_finds_the_previous_match_and_writes_the_value() {
         page.tree()
     );
     assert_eq!(page.attr("#field", "value").as_deref(), Some("7"));
+}
+
+fn caret_app() -> Element {
+    let field = use_element();
+    let mut out = use_signal(String::new);
+    rsx! {
+        input {
+            id: "caret",
+            r#type: "text",
+            onmounted: field.mount(),
+            onkeydown: move |event: KeyboardEvent| {
+                if event.key() == Key::Enter {
+                    out.set(format!("{:?}", field.selection_start()));
+                }
+            },
+        }
+        span { id: "out", "{out}" }
+    }
+}
+
+/// Todo 666: the caret in UTF-16 units, as the DOM counts, not the editor's
+/// bytes.
+#[test]
+fn reads_the_caret_of_a_text_input() {
+    let mut page = mount(caret_app);
+    page.focus("#caret");
+    page.press(Key::Character("é".into()));
+    page.press(Key::Character("b".into()));
+    page.press(Key::Enter);
+    assert_eq!(page.text("#out"), "Some(2)", "{}", page.tree());
+    page.press(Key::ArrowLeft);
+    page.press(Key::ArrowLeft);
+    page.press(Key::Enter);
+    assert_eq!(page.text("#out"), "Some(0)");
 }

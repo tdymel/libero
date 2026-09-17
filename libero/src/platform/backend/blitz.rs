@@ -1859,6 +1859,19 @@ impl ElementApi for BlitzElement {
             .map(|attr| attr.value.clone()))
     }
 
+    /// The editor counts bytes; the DOM counts UTF-16 units.
+    fn selection_start(&self) -> Option<u32> {
+        let doc = self.anchor.try_doc()?;
+        let editor = &doc
+            .get_node(self.node_id)?
+            .element_data()?
+            .text_input_data()?
+            .editor;
+        let start = editor.raw_selection().text_range().start;
+        let units = editor.raw_text().get(..start)?.encode_utf16().count();
+        u32::try_from(units).ok()
+    }
+
     /// A pre-order walk down to this node: everything it visits first comes
     /// before it, ancestors included, and its own subtree comes after.
     fn previous_focusable(

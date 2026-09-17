@@ -521,11 +521,9 @@ fn tag_selector(index: usize) -> String {
     format!("[data-tag-index='{index}'] button")
 }
 
-/// Whether the input's caret sits before the draft's first character. No
-/// renderer reports the caret yet (todo 666 waits on `selection_start`).
+/// Whether the input's caret sits before the draft's first character.
 fn caret_at_start(input: ElementHandle) -> bool {
-    let _ = input;
-    false
+    input.selection_start() == Some(0)
 }
 
 /// Where the cursor goes once tag `index` of `count` is removed: the next tag,

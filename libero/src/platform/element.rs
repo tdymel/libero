@@ -170,6 +170,18 @@ pub trait ElementApi {
         Err(PlatformError::Unsupported)
     }
 
+    /// Where a text control's selection starts, in UTF-16 units from its
+    /// value's start, as the DOM counts: the caret, when nothing is selected.
+    /// `None` for an element with no text selection, or a renderer that cannot
+    /// tell.
+    ///
+    /// ```ignore
+    /// let at_start = input.selection_start() == Some(0);
+    /// ```
+    fn selection_start(&self) -> Option<u32> {
+        None
+    }
+
     /// The last element matching `selector` before this one in document order,
     /// which counts its ancestors and not its own subtree: where Shift+Tab
     /// would land if this element were gone. `Ok(None)` when nothing matches

@@ -622,6 +622,15 @@ impl ElementApi for WebElement {
         Ok(self.element.get_attribute(name))
     }
 
+    fn selection_start(&self) -> Option<u32> {
+        if let Some(input) = self.element.dyn_ref::<web_sys::HtmlInputElement>() {
+            input.selection_start().ok().flatten()
+        } else {
+            let text = self.element.dyn_ref::<web_sys::HtmlTextAreaElement>()?;
+            text.selection_start().ok().flatten()
+        }
+    }
+
     /// The document's matches, last first, down to one this element follows:
     /// `FOLLOWING` holds for an ancestor too, and not for a descendant.
     fn previous_focusable(

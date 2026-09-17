@@ -148,6 +148,54 @@ fn a_draft_matching_no_suggestion_is_shown_and_said() {
     });
 }
 
+/// Todo 666: ArrowLeft with the caret at the start of a draft enters the chips
+/// and leaves the draft uncommitted; ArrowRight past the last chip returns to it.
+#[test]
+fn the_chip_cursor_enters_from_the_start_of_a_draft() {
+    use e2e::passes::focus::wait_for_focus;
+    block_on(async {
+        let fixture = Fixture::open("/tags-field/cursor", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, CURSOR, 10).await.unwrap();
+        keyboard::type_text(page, "go").await.unwrap();
+        let draft = || async {
+            page.evaluate(format!("document.querySelector({CURSOR:?}).value"))
+                .await
+                .unwrap()
+                .into_value::<String>()
+                .unwrap()
+        };
+
+        // Two presses walk the caret to the start; the third leaves.
+        for _ in 0..2 {
+            keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        }
+        wait_for_focus(page, CURSOR, "ArrowLeft inside the draft")
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        wait_for_focus(page, &chip("css"), "ArrowLeft at the draft's start")
+            .await
+            .unwrap();
+        assert_eq!(draft().await, "go", "the draft was committed or dropped");
+        assert_eq!(tags(page).await, ["rust", "dioxus", "wasm", "css"]);
+
+        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
+        wait_for_focus(page, CURSOR, "ArrowRight past the last")
+            .await
+            .unwrap();
+        assert_eq!(draft().await, "go");
+
+        fixture
+            .console
+            .assert_clean("entering from a draft")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// ArrowLeft from the empty input walks the chips, Delete/Backspace remove the
 /// focused one and the focus moves on before it goes (todo 546).
 #[test]
