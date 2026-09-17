@@ -64,8 +64,6 @@ pub fn FlexPage() -> Element {
                 prop("wrap", "FlexWrap")
                     .default("follows direction - nowrap for column, wrap for row")
                     .doc("Whether children wrap onto new lines. Also accepts a `bool`."),
-                prop("divider", "Element")
-                    .doc("Rendered between each child, not before the first or after the last. Not rendered: dioxus merges the children into one node."),
                 prop("children", "Element").doc("The flex's children."),
             ])],
             lead: rsx! {

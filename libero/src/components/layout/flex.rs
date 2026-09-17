@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
-        common::{IntoChildren, base_props, focus_ring_sx, input_from_str, variables},
+        common::{base_props, focus_ring_sx, input_from_str, variables},
         layout::use_box,
     },
     str_enum::str_enum,
@@ -110,10 +110,6 @@ base_props! {
         direction: Input<FlexDirection>,
         #[props(default, into)]
         wrap: Input<FlexWrap>,
-        /// Between each child, not before the first or after the last.
-        /// Ignored: dioxus merges the children into one node.
-        #[props(default)]
-        divider: Option<Element>,
         children: Element,
     }
 }
@@ -132,25 +128,6 @@ pub fn Flex(props: FlexProps) -> Element {
     }
     let states: Input<States> = states.into();
 
-    let own_children = props.children.into_children();
-    let last_index = own_children.len().saturating_sub(1);
-    let children = match props.divider {
-        None => rsx! { {own_children.into_iter()} },
-        Some(divider) => {
-            crate::utils::warn(
-                "Flex `divider` is not rendered: dioxus merges the children into one node.",
-            );
-            rsx! {
-                for (index, child) in own_children.into_iter().enumerate() {
-                    {child}
-                    if index != last_index {
-                        {divider.clone()}
-                    }
-                }
-            }
-        }
-    };
-
     use_box()
         .framework_sx(&FLEX_BASE_SX)
         .class(&props.class)
@@ -158,7 +135,7 @@ pub fn Flex(props: FlexProps) -> Element {
         .states(&states)
         .variables(&variables)
         .prepare()
-        .render(HtmlTag::Div, props.attributes, children)
+        .render(HtmlTag::Div, props.attributes, props.children)
 }
 
 #[cfg(test)]
@@ -176,7 +153,6 @@ mod variables_tests {
             gap: Input::None,
             direction: Input::None,
             wrap,
-            divider: None,
             children: rsx! {},
         }
     }

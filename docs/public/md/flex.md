@@ -71,7 +71,6 @@ fn Demo() -> Element {
 | `justify` | `ThemeAwareValue` | `flex-start` | Main-axis alignment. |
 | `gap` | `Size` | `md` | Space between children. |
 | `wrap` | `FlexWrap` | follows `direction` - `nowrap` for column, `wrap` for row | Whether children wrap onto new lines. Also accepts a `bool`. |
-| `divider` | `Element` | - | Rendered between each child, not before the first or after the last. Not rendered: dioxus merges the children into one node. |
 | `children` | `Element` | required | The flex's children. |
 
 `FlexDirection` is `row` or `column`; `FlexWrap` is `wrap` or `nowrap`. A row
