@@ -4,14 +4,13 @@ Crate: `libero`
 Import: `use libero::components::HoverCard;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/hover_card.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: An interactive card that opens while its trigger is hovered or focused - a named, dismissible dialog on a paper surface.
+Description: An interactive card that opens while its trigger is hovered or focused, a named, dismissible dialog on a paper surface.
 
-A card that opens while its trigger is hovered or focused, and stays open while
-the pointer or focus is inside it, so its links and buttons can be used. Unlike
-`Tooltip` it is a `role="dialog"` with a name of its own, is portaled so no
-`overflow: hidden` ancestor clips it, flips when its side has no room, and
-closes on Escape. The surface is the theme's `paper`; `sx`, `class` and spread
-attributes land on the card, not the trigger.
+A card that opens while its trigger is hovered or focused. It stays open while
+the pointer or focus is inside, so its links and buttons work. Unlike
+[`Tooltip`](tooltip.md), it is a named dialog. It flips when its side has no
+room, and Escape closes it. `sx`, `class` and extra attributes land on the
+card, not the trigger.
 
 ## Usage
 
@@ -42,47 +41,47 @@ fn Demo() -> Element {
 }
 ```
 
-`side` and `align` take the popover's enums, `libero::hooks::{Side, Align}`:
-`side: Side::Top, align: Align::Center`.
-
-## Props
-
-| prop | type | default | |
-|---|---|---|---|
-| `content` | `Element` | - | What the card shows. Links and buttons are fine. |
-| `children` | `Element` | - | The trigger. It must hold a focusable element, a link or a button: its focus is the keyboard's only way to open the card. |
-| `side` | `Side` | `Bottom` | Which side of the trigger the card opens on. Flips when there is no room. |
-| `align` | `Align` | `Start` | Where the card lines up along that side. |
-| `open_delay` | `u32` | `0` | Milliseconds the pointer must rest on the trigger before the card opens. |
-| `close_delay` | `u32` | `150` | Milliseconds the card waits after the pointer leaves - also the time the pointer has to cross into the card, so `0` makes it unreachable by pointer. |
-| `open` | `Option<bool>` | `None` | Forces the card open or closed. A card forced open cannot be dismissed. |
-| `radius` | `Size` | `sm` | Corner radius. |
-| `shadow` | `Size` | `md` | Elevation. |
-| `disabled` | `bool` | `false` | Renders `children` bare. |
-
-Theme: `theme.hover_card` holds `open_delay`, `close_delay`, `radius` and
-`shadow`.
+`side` and `align` take the popover's enums, `libero::hooks::{Side, Align}`,
+such as `side: Side::Top, align: Align::Center`.
 
 ## Accessibility
 
-- Focusing the trigger from the keyboard opens the card; a click does not keep
-  it open.
-- Tab on the trigger moves into the card, Tab past its last focusable element
-  moves on to whatever follows the trigger, Shift+Tab walks back.
-- Escape closes it wherever focus is - on the web even when the pointer opened
-  it and focus never left a text field - and hands focus back to the trigger
-  when focus was inside.
-- So the trigger must take focus: put a link or a button in `children`, not
-  plain text. A trigger with nothing focusable warns in the console.
+A hover card is a preview for sighted users. A screen reader does not announce
+it, so keep it to extras the trigger's own target already offers. Content a
+user needs goes in a popover ([`use_popover`](popover.md)) that a click opens.
 
-The card is a dialog, so name it: `aria_label`, or `aria-labelledby` pointing
-into the content. An unnamed card warns in the console.
+Focusing the trigger opens the card, so `children` must hold a link or a
+button. A click does not keep it open. Tab on the trigger moves into the card,
+and past its last link to whatever follows the trigger. Shift+Tab walks back.
+Escape closes it and returns focus to the trigger if focus was inside.
 
-## Limits
+Name the card with `aria_label` or `aria-labelledby` pointing into the content.
+A trigger with nothing focusable and an unnamed card both warn in the console.
 
-- Escape from anywhere relies on a document-level key listener, which only the
-  web has. On desktop and mobile the card hears Escape only while focus is on
-  its trigger or inside it, so a pointer-opened card cannot be dismissed from
-  the keyboard there - WCAG 1.4.13 is not met on those targets.
-- Touch is sticky: a tap opens it, a tap elsewhere closes it.
-- No arrow.
+On the web, Escape closes the card wherever focus is. On desktop and mobile it
+works only while focus is on the trigger or in the card, so a card the pointer
+opened cannot be dismissed from the keyboard there (WCAG 1.4.13). On touch, a
+tap opens it and a tap elsewhere closes it. The card has no arrow.
+
+## Props
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `content` | `Element` | required | What the card shows. Links and buttons are fine. |
+| `children` | `Element` | required | The trigger. It must hold a link or a button, since focus is the keyboard's only way to open the card. |
+| `side` | `Side` | `Bottom` | Which side of the trigger the card opens on. It flips when that side has no room. |
+| `align` | `Align` | `Start` | Where the card lines up along that side. |
+| `open_delay` | `u32` | `0` | Milliseconds the pointer must rest on the trigger before the card opens. |
+| `close_delay` | `u32` | `150` | Milliseconds the card waits after the pointer leaves. The pointer needs this time to reach the card, so `0` makes it unreachable. |
+| `open` | `bool` | unset | Forces the card open or closed. Unset, hover and focus decide. A card forced open cannot be dismissed. |
+| `radius` | `Size` | `sm` | The card's corner radius. |
+| `shadow` | `Size` | `md` | The card's elevation. |
+| `disabled` | `bool` | `false` | Renders `children` alone, with no card. |
+
+Like every component, `HoverCard` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. They land on the card.
+
+## Theme defaults
+
+`HoverCardDefaults` on the theme holds `open_delay`, `close_delay`, `radius`
+and `shadow`. The surface is the theme's `paper`.

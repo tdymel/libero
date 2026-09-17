@@ -8,7 +8,7 @@ use libero::{
     sx::sx,
 };
 
-/// The panel's own content - a subtree, so it is printed verbatim rather than
+/// The panel's own content, a subtree, so it is printed verbatim rather than
 /// as `children_text`.
 // snippet: let s: ModalScope<()> = todo!();
 const CONTENT: &str = r#"Flex {
@@ -20,9 +20,8 @@ const CONTENT: &str = r#"Flex {
     Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
 }"#;
 
-/// A drawer is a hook, so the options and the trigger are the example as much
-/// as the panel is - the generated props are rebuilt here as the struct
-/// literal they actually are.
+/// A drawer is a hook, so the options and the trigger belong in the example.
+/// The generated props are rebuilt here as the struct literal they are.
 fn wrap_hook(values: &DemoValues, _: &str) -> String {
     format!(
         "let nav = use_drawer(\n    \
@@ -88,18 +87,21 @@ pub fn DrawerPage() -> Element {
             properties: vec![
                 props("DrawerOptions", vec![
                     prop("anchor", "Input<DrawerAnchor>").default("left").doc("The edge the panel docks to."),
-                    prop("size", "Input<Size>").default("md").doc("Width along the docked edge, height for top/bottom."),
-                    prop("z_index", "Input<ThemeAwareValue>").doc("Stacking order for the docked panel."),
+                    prop("size", "Input<Size>").default("md").doc("Width when docked left or right, height when docked top or bottom."),
+                    prop("z_index", "Input<ThemeAwareValue>").doc("Stacking order of the panel."),
                     prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. Unset warns in a debug build."),
-                ]),
+                ]).without_base_props(),
             ],
             lead: rsx! {
                 Text {
-                    "A dimmed, focus-trapped panel docked to one edge. It is "
+                    "A dimmed, focus-trapped panel docked to one edge. "
+                    Code { source: "use_drawer" }
+                    " is "
                     Code { source: "use_modal" }
-                    " with the docking around it, so it has the same handle, the same "
-                    "per-opening arguments and the same results. For an in-flow panel, see "
-                    "Sidebar."
+                    " with the docking around it, so it has the same handle, arguments and "
+                    "results. For a panel in the page flow, use "
+                    Code { source: "Sidebar" }
+                    "."
                 }
             },
             Demo {
@@ -121,10 +123,8 @@ pub fn DrawerPage() -> Element {
                 Text {
                     "Escape and a backdrop click close it. Set "
                     Code { source: "DrawerOptions::aria_label" }
-                    ": the panel is a dialog and has no name of its own. Unlike a plain "
-                    Code { source: "Dialog" }
-                    ", the panel renders no header close button - a drawer's content usually "
-                    "owns its own dismissal."
+                    ", since the panel is a dialog with no name of its own. It has no header "
+                    "close button, so give its content a way to close it."
                 }
             }
         }

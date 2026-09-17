@@ -15,8 +15,8 @@ let mut stage = use_signal(|| Some(Stage::Account));
 
 "#;
 
-/// Each step's own button moves on, which removes the content it sits in -
-/// the case the component hands focus back for.
+/// Each step's own button moves on and removes the content it sits in, the
+/// case the component hands focus back for.
 // snippet: after STAGE_ENUM
 // snippet: in Stepper { value: stage(), .. }
 const CONTENT: &str = r#"panel: move |s: Stage| match s {
@@ -87,49 +87,42 @@ pub fn StepperPage() -> Element {
             markdown: "/md/stepper.md",
             properties: vec![
                 props("Stepper", vec![
-                    prop("value", "Option<T>").doc("The current step. `None` means every step is finished. Required and strictly controlled."),
-                    prop("panel", "Callback<T, Element>").doc("A step's body. Horizontal shows the current one below the strip; vertical shows it under its own step and collapses the rest. A closed step's content is not mounted."),
+                    prop("value", "Option<T>").default("required").doc("The current step. `None` means every step is finished."),
+                    prop("panel", "Callback<T, Element>").doc("A step's body. Horizontal shows it below the strip, vertical under its own step. A closed step's content is not mounted."),
                     prop("options", "Vec<T>").default("T::options()").doc("The steps to show, in order."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
-                        .doc("Overrides what the derive named a step. `OptionLabel::rich` draws it as rsx and still names it."),
+                        .doc("Overrides a step's label. `OptionLabel::rich` draws it as rsx and keeps a text name."),
                     prop("option_description", "Callback<T, String>").doc("A second line under a step's label. An empty string prints none."),
                     prop("state", "Callback<T, Option<StepState>>")
                         .default("derived")
-                        .doc("Overrides a step's derived state; `None` keeps it. The only way to mark a step `Error`."),
-                    prop("onstepclick", "EventHandler<T>").doc("Called with a picked step. Without it the steps are not interactive: no buttons, no tab stops."),
-                    prop("allow_next_steps", "bool").default("false").doc("With `onstepclick`, whether steps not reached yet can be picked too."),
+                        .doc("Overrides a step's state. `None` keeps the derived one. The only way to mark a step `Error`."),
+                    prop("onstepclick", "EventHandler<T>").doc("Called with the picked step. Without it the steps are plain text with no tab stops."),
+                    prop("allow_next_steps", "bool").default("false").doc("With `onstepclick`, lets steps not reached yet be picked too."),
                     prop("orientation", "Orientation").default("horizontal").doc("`vertical` puts each step's content under the step itself."),
-                    prop("label_position", "StepLabelPosition").default("side").doc("`side` or `below` the marker. Ignored when vertical."),
+                    prop("label_position", "StepLabelPosition").default("side").doc("`side` or `below` the marker. Ignored when vertical. Below 360px wide, `side` draws as `below`."),
                     prop("size", "Size").default("md").doc("Marker, type and spacing."),
                     prop("color", "ThemeAwareValue").default("primary").doc("The current and completed markers, and the connectors behind them."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "The stages of a process over an enum, with the current one's content. The "
-                    "steps are the enum's variants and "
+                    "The stages of a process, one per variant of an enum, with the current "
+                    "step's content. "
                     Code { source: "panel" }
-                    " is a match over the same type, so a step without a body is a compile error. "
+                    " matches on the same enum, so a step without a body does not compile. You "
+                    "own "
                     Code { source: "value" }
-                    " is strictly controlled - moving on is the caller's, usually from a button "
-                    "inside the step - and "
-                    Code { source: "None" }
-                    " means every step is finished."
+                    " and move it on, usually from a button inside the step."
                 }
                 Text {
-                    "A step's state comes from its position: before "
+                    "Steps before "
                     Code { source: "value" }
-                    " is completed, "
-                    Code { source: "value" }
-                    " itself is current, the rest are pending. "
+                    " are completed, the rest pending. "
                     Code { source: "state" }
-                    " only overrides, and returning "
-                    Code { source: "None" }
-                    " keeps what was derived - so a caller names just the step that differs. It "
-                    "is the only way to say "
+                    " overrides single steps and is the only way to mark one "
                     Code { source: "StepState::Error" }
-                    ", which changes the marker and never which step is current."
+                    ". An error changes the marker, not which step is current."
                 }
             },
             Demo {
@@ -247,12 +240,13 @@ pub fn StepperPage() -> Element {
                 Text {
                     "With "
                     Code { source: "onstepclick" }
-                    " each clickable step is a button and a tab stop, in document order; "
-                    "Enter and Space activate. There are no arrow keys. Name the steps with "
+                    ", each clickable step is a button and a tab stop. Enter and Space activate. "
+                    "There are no arrow keys. Name the steps with "
                     Code { source: "aria_label" }
                     " or "
                     Code { source: "aria_labelledby" }
-                    ": both go to the step list, not the root."
+                    ", which land on the step list, not the root. A rich label's name must "
+                    "contain its visible text."
                 }
             }
         }

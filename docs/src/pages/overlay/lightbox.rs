@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Image, Kbd, Text},
@@ -6,8 +6,8 @@ use libero::{
     sx::{StaticSx, sx},
 };
 
-/// The `ImageList` page's six pictures - different intrinsic sizes, so the
-/// stage visibly fits each one rather than showing six identical boxes.
+/// The `ImageList` page's six pictures, in different sizes, so the stage
+/// visibly fits each one.
 static GALLERY: [Asset; 6] = [
     asset!("/assets/gallery/1.svg"),
     asset!("/assets/gallery/2.svg"),
@@ -43,9 +43,8 @@ static THUMB_SX: StaticSx = StaticSx::new(|| {
         .cursor("zoom-in")
 });
 
-/// A hook is the whole example here - the options struct, the items and the
-/// trigger - so the code block is written out rather than generated from
-/// props.
+/// The options, the items and the trigger are the whole example, so the code
+/// block is written out rather than generated from props.
 fn wrap_hook(values: &DemoValues, _: &str) -> String {
     let changed: String = SWITCHES
         .iter()
@@ -77,8 +76,8 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
     )
 }
 
-/// The hook needs a scope of its own, and options are read once when it is
-/// first called - so the page keys this on them and a switch remounts it.
+/// The hook needs its own scope and reads its options once, so the page keys
+/// this on them and a switch remounts it.
 #[component]
 fn LightboxDemo(
     zoom: bool,
@@ -132,21 +131,21 @@ pub fn LightboxPage() -> Element {
             markdown: "/md/lightbox.md",
             properties: vec![
                 props("LightboxOptions", vec![
-                    prop("zoom", "bool").default("true").doc("Wheel, double-click, `z`, `+` and `-` zoom; drag, click and arrow pan."),
-                    prop("max_zoom", "Option<f64>").default("theme (3.0)").doc("Upper scale bound."),
+                    prop("zoom", "bool").default("true").doc("Lets the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan."),
+                    prop("max_zoom", "Option<f64>").default("3.0").doc("Upper scale bound. Unset, the theme's."),
                     prop("thumbnails", "bool").default("true").doc("The strip under the stage. Never shown for one picture."),
-                    prop("captions", "bool").default("true").doc("Shows each item's caption, linked to its picture."),
-                    prop("controls", "bool").default("true").doc("The previous / next arrows."),
-                    prop("preload", "usize").default("1").doc("Neighbours each side loaded eagerly; the rest are lazy."),
+                    prop("captions", "bool").default("true").doc("Shows each item's caption."),
+                    prop("controls", "bool").default("true").doc("The previous and next arrows."),
+                    prop("preload", "usize").default("1").doc("Pictures on each side loaded at once. The rest load lazily."),
                     prop("close_on_swipe_down", "bool").default("true").doc("A downward touch swipe closes. Off while zoomed."),
-                    prop("aria_label", "Option<String>").default("localization (\"Gallery\")").doc("Names the dialog."),
-                ]),
+                    prop("aria_label", "Option<String>").default("\"Gallery\"").doc("Names the dialog. Unset, the localization's label."),
+                ]).without_base_props(),
                 props("LightboxItem", vec![
-                    prop("src", "String").doc("The picture."),
+                    prop("src", "String").default("required").doc("The picture."),
                     prop("thumbnail_src", "Option<String>").default("follows src").doc("A smaller source for the strip."),
-                    prop("alt", "String").doc("The picture's text alternative."),
+                    prop("alt", "String").default("required").doc("The picture's text alternative."),
                     prop("caption", "Option<String>").doc("Shown under the stage."),
-                ]),
+                ]).without_base_props(),
             ],
             lead: rsx! {
                 Text {
@@ -154,21 +153,21 @@ pub fn LightboxPage() -> Element {
                     Code { source: "use_lightbox" }
                     " is "
                     Code { source: "use_modal" }
-                    " with a gallery around it: each opening carries its pictures and where to "
-                    "start, and focus goes back to the thumbnail that opened it. "
+                    " with a gallery around it. Each opening carries its pictures and where to "
+                    "start, and focus returns to the thumbnail that opened it. "
                     Code { source: "Image {{ zoomable }}" }
                     " is this viewer with one picture."
                 }
                 Text {
                     "Double-click or press "
                     Kbd { "z" }
-                    " to zoom, "
+                    " to zoom, and "
                     Kbd { "+" }
-                    " and "
+                    " or "
                     Kbd { "-" }
-                    " to step it, scroll to zoom about the cursor, drag, click or use the arrows to pan. "
-                    "At the edge of a pan the arrows move to the next picture, so a zoomed "
-                    "picture never traps the keyboard."
+                    " to step it. Scroll to zoom at the cursor. Drag, click or use the arrows "
+                    "to pan. At the edge of a pan the arrows move to the next picture, so the "
+                    "keyboard never gets stuck."
                 }
             },
             // snippet: item struct Photo { src: String, alt: String, title: String }
@@ -192,6 +191,23 @@ pub fn LightboxPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_hook),
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Give every picture its own "
+                    Code { source: "alt" }
+                    ". With "
+                    Code { source: "zoom" }
+                    " on, the picture showing is a tab stop that takes the zoom and pan keys. "
+                    "Its description lists them, and a status message reads each new zoom "
+                    "level. In the thumbnail strip, the arrows, "
+                    Kbd { "Home" }
+                    " and "
+                    Kbd { "End" }
+                    " move along the strip and change the picture with it. "
+                    Kbd { "Esc" }
+                    " closes the viewer."
+                }
             }
         }
     }

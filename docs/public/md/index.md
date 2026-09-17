@@ -76,27 +76,27 @@ fetch only the file you need.
 ## Navigation
 
 - [Anchor](anchor.md): A real link styled and sized like `Text`, router-aware through `to`.
-- [NavLink](nav_link.md): A navigation list item - a link with a themed active/hover background and `aria-current`, for a sidebar or nav bar.
-- [Burger](burger.md): Three bars that morph into an X - an `ActionIcon` carrying the glyph and the three ARIA facts a nav toggle needs.
+- [NavLink](nav_link.md): A navigation list item for a sidebar or nav bar, a link that marks the current page with `aria-current`.
+- [Burger](burger.md): Three bars that morph into an X, an `ActionIcon` with the ARIA a nav toggle needs.
 - [Tabs](tabs.md): One strip of tabs over an enum, with only the selected tab's panel built.
-- [Menubar](menubar.md): A row of menus - the WAI-ARIA menubar; each menu is a `Menu`, the bar owns the open one and the tab stop.
-- [Pagination](pagination.md): A row of page controls in a named nav landmark, with an ellipsis range that never reflows as you click through it.
+- [Menubar](menubar.md): A row of menus. Each menu is a `Menu`, and the bar is a single tab stop with one menu open at most.
+- [Pagination](pagination.md): A row of page buttons in a named nav landmark, with an ellipsis that keeps the row the same width.
 - [Stepper](stepper.md): The stages of a process over an enum, horizontal or vertical, with the current step's content.
 - [Tree](tree.md): A data-driven, keyboard-navigable tree view over your own node type.
 
 ## Overlay
 
-- [Overlay](overlay.md): A full-viewport dim and blur layer with centred content - the backdrop behind a modal, or a loading screen.
-- [Modal](modal.md): A modal is a hook, not a component - `use_modal` registers a render closure and returns a handle that opens it, with per-opening arguments, results and handlers.
-- [Dialog](dialog.md): The dialog surface - padding, radius, shadow and the `role="dialog"` wiring - which inside a modal also names and closes itself.
-- [Drawer](drawer.md): A dimmed, focus-trapped panel docked to one edge - `use_modal` with the docking around it, so it has the same handle, arguments and results.
-- [Popover](popover.md): A popover is a hook, not a component - `use_popover` portals a box to the document root and anchors it, flipping and shifting to stay on screen.
+- [Overlay](overlay.md): A layer that dims and blurs the page behind it, with centred content. The backdrop behind a modal, or a loading screen.
+- [Modal](modal.md): A hook that opens a render closure as a modal, with arguments and a result per opening.
+- [Dialog](dialog.md): The dialog surface with a header and `role="dialog"`, which inside a modal also names and closes itself.
+- [Drawer](drawer.md): A dimmed, focus-trapped panel docked to one edge, `use_modal` with the docking around it.
+- [Popover](popover.md): A hook that anchors a portaled box to a trigger, flipping and shifting it to stay on screen.
 - [Tooltip](tooltip.md): A label that appears while its child is hovered or focused by keyboard, portaled so nothing clips it.
-- [HoverCard](hover_card.md): An interactive card that opens while its trigger is hovered or focused - a named, dismissible dialog on a paper surface.
-- [Menu](menu.md): A list of commands that drops from a caller-supplied trigger - the WAI-ARIA menu button, with groups, separators and submenus.
-- [Spotlight](spotlight.md): A command palette - `use_spotlight` opens a modal search box over caller-supplied actions, with grouped rows, arrow-key highlight and a Ctrl/Cmd+K hotkey.
-- [Lightbox](lightbox.md): A modal image viewer - `use_modal` with a gallery around it: zoom, pan, captions and a thumbnail strip.
-- [FloatingWindow](floating_window.md): A non-modal window over the page that drags, moves by keyboard and resizes from a corner; a hook owns whether it exists.
+- [HoverCard](hover_card.md): An interactive card that opens while its trigger is hovered or focused, a named, dismissible dialog on a paper surface.
+- [Menu](menu.md): A list of commands that drops from a trigger, with groups, separators and submenus.
+- [Spotlight](spotlight.md): A command palette. A modal search box over your actions, with groups, arrow-key highlight and a Ctrl/Cmd+K hotkey.
+- [Lightbox](lightbox.md): A modal image viewer, `use_modal` with a gallery around it, with zoom, pan, captions and a thumbnail strip.
+- [FloatingWindow](floating_window.md): A non-modal window over the page that drags, moves by keyboard and resizes from a corner, opened through a hook.
 
 ## Feedback
 

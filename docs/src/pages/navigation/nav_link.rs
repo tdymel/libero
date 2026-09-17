@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, NavLink, Text},
@@ -13,16 +15,15 @@ const NESTED_CODE: &str = "nested: rsx! {
     NavLink { to: Route::NavLinkPage {}, active: false, \"Theming\" }
 }";
 
-/// Two links, so `active: auto` can be seen deciding *between* them - one is
-/// this very page, the other is not. Only `to` and the label differ, so each
-/// is spliced into its own copy of the generated rsx.
+/// Two links, so `active: auto` can be seen deciding between them. Only `to`
+/// and the label differ, so each is spliced into its own copy of the rsx.
 fn wrap_links(_: &DemoValues, code: &str) -> String {
     let body = code
         .strip_prefix("NavLink {")
         .unwrap_or(code)
         .trim_end_matches('}');
-    // No props left at all collapses to `NavLink {}` - the child still needs
-    // its own line.
+    // No props left collapses to `NavLink {}`, and the child still needs its
+    // own line.
     let body = match body.is_empty() {
         true => "\n",
         false => body,
@@ -46,32 +47,34 @@ pub fn NavLinkPage() -> Element {
             source: "libero/src/components/navigation/nav_link.rs",
             markdown: "/md/nav_link.md",
             properties: vec![props("NavLink", vec![
-                prop("to", "NavigationTarget").doc("A plain path/URL or a typed route, same as `Anchor::to`."),
+                prop("to", "NavigationTarget").default("required").doc("A path, a URL or a typed route, as in `Anchor::to`."),
                 prop("target", "String").doc("The link's `target` attribute."),
-                prop("color", "ThemeAwareValue").default("primary").doc("Tints the active/hover background."),
+                prop("color", "ThemeAwareValue").default("primary").doc("Tints the active and hovered link."),
                 prop("active", "bool")
                     .default("follows the route")
-                    .doc("Unset, it compares `to` against the current route, so it is only ever true for an internal target with a router mounted. Set it explicitly for a section-level parent item, or anywhere auto-detection has nothing to compare against."),
-                prop("disabled", "bool").default("false").doc("Dims the link and disables navigation."),
+                    .doc("Unset, it compares `to` with the current route, which needs an internal target and a router. Set it for a section's parent item, or where there is no route to compare."),
+                prop("disabled", "bool").default("false").doc("Dims the link and stops navigation."),
                 prop("scroll_into_view", "bool")
                     .default("false")
-                    .doc("Scrolls this link into view when it becomes active, if it isn't already visible. Acts on whatever scrollable ancestor happens to exist, which only suits a sidebar."),
+                    .doc("Scrolls the link into view when it becomes active. It scrolls the nearest scrollable ancestor, so use it in a sidebar."),
                 prop("description", "String").doc("A dimmed line under the label, read as the link's description."),
                 prop("nested", "Element").doc("Child `NavLink`s, shown under this one by a toggle button beside it. The link itself still goes to `to`."),
-                prop("opened", "bool").doc("Whether `nested` shows. Set, it is controlled: pair it with `onchange`."),
+                prop("opened", "bool").doc("Whether `nested` shows. Setting it makes it controlled, so pair it with `onchange`."),
                 prop("default_opened", "bool").default("false").doc("Whether `nested` shows at first, when `opened` is unset."),
-                prop("onchange", "EventHandler<bool>").doc("The toggle asks for this `opened`."),
-                prop("children", "Element").doc("The link's content."),
+                prop("onchange", "EventHandler<bool>").doc("Called with the new `opened` when the toggle is pressed."),
+                prop("children", "Element").default("required").doc("The link's content."),
             ])],
             lead: rsx! {
                 Text {
-                    "A navigation list item - "
+                    "A navigation list item for a sidebar or nav bar. It is an "
                     Code { source: "Anchor" }
-                    " plus a themed active/hover background and "
+                    " that marks the current page with an active style and "
                     Code { source: "aria-current" }
-                    ", for a sidebar or nav bar link. Colors come from the theme ("
-                    Code { source: "Theme::nav_link" }
-                    ") by default, and only show once a link is active."
+                    ". Left unset, "
+                    Code { source: "active" }
+                    " compares "
+                    Code { source: "to" }
+                    " with the current route."
                 }
             },
             // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] GettingStarted {}, #[route("/nav-link")] NavLinkPage {} }
@@ -142,6 +145,19 @@ pub fn NavLinkPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_links),
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Wrap a list of them in a "
+                    Code { source: "<nav>" }
+                    " to make a navigation landmark. "
+                    Code { source: "description" }
+                    " is read as the link's description, not its name. With "
+                    Code { source: "nested" }
+                    ", a disclosure button follows the link with its own tab stop, named "
+                    "\"Show links\" plus the link's name. It toggles the panel, and the link "
+                    "still navigates."
+                }
             }
         }
     }

@@ -341,52 +341,51 @@ pub fn SpotlightPage() -> Element {
             markdown: "/md/spotlight.md",
             properties: vec![
                 props("SpotlightOptions", vec![
-                    prop("actions", "Option<Callback<String, Vec<SpotlightAction>>>").doc("Called with the live query, returns the rows. Capture a `Signal`, not a `Vec`, if the list changes. `None` warns and shows nothing."),
-                    prop("placeholder", "Option<String>").default("\"Search...\"").doc("The search box's placeholder, from the localization's `spotlight` labels."),
-                    prop("nothing_found", "Option<Element>").doc("Shown, and announced, when a non-empty query matches nothing. Unset, the localization's text."),
-                    prop("limit", "Option<usize>").doc("A cap on the rows drawn, counted through the groups."),
-                    prop("close_on_action", "bool").default("true").doc("Close after running an action."),
-                    prop("clear_on_close", "bool").default("true").doc("Start every opening with an empty query."),
-                    prop("aria_label", "Option<String>").default("\"Command palette\"").doc("Names the dialog and its list. The search box reads the localization's `spotlight.search`, \"Search commands\"."),
-                    prop("shortcut", "Option<char>").default("Some('k')").doc("Ctrl (Cmd on a Mac) plus this key toggles the palette from anywhere on the page. `None` for no hotkey. Web only. A key the browser already uses (L, T, W, R, F, ...) warns in a debug build."),
-                    prop("highlight_first_on_query", "bool").default("true").doc("Highlight the first row after every keystroke, so `Enter` runs it without an `ArrowDown` first. Off, a fresh query arms nothing."),
-                    prop("loading", "bool").default("false").doc("The results are still coming. A loader replaces the rows and \"nothing found\", and the status region says \"Searching\" (the localization's label)."),
-                    prop("onquery", "Option<Callback<String>>").doc("Called with the new query on every keystroke, from the input event. Set `loading` and start the search here."),
-                ]),
+                    prop("actions", "Callback<String, Vec<SpotlightAction>>").doc("Called with the query, returns the rows. Capture a `Signal`, not a `Vec`, if the list changes. Unset warns and shows nothing."),
+                    prop("placeholder", "String").default("\"Search...\"").doc("The search box's placeholder."),
+                    prop("nothing_found", "Element").doc("Shown and announced when a query matches nothing. Unset, the localization's text."),
+                    prop("limit", "usize").doc("The most rows drawn, counted across groups."),
+                    prop("close_on_action", "bool").default("true").doc("Closes after running an action."),
+                    prop("clear_on_close", "bool").default("true").doc("Starts every opening with an empty query."),
+                    prop("aria_label", "String").default("\"Command palette\"").doc("Names the dialog and its list."),
+                    prop("shortcut", "Option<char>").default("Some('k')").doc("Ctrl (Cmd on a Mac) plus this key toggles the palette. `None` for no hotkey. Web only. A key the browser already uses, such as L, T or W, warns in a debug build."),
+                    prop("highlight_first_on_query", "bool").default("true").doc("Highlights the first row after every keystroke, so Enter runs it. Off, Enter does nothing until the arrows pick a row."),
+                    prop("loading", "bool").default("false").doc("The results are still coming. A loader replaces the rows, and a screen reader hears \"Searching\"."),
+                    prop("onquery", "Callback<String>").doc("Called with the query on every keystroke. Set `loading` and start the search here."),
+                ]).without_base_props(),
                 props("SpotlightAction", vec![
-                    prop("label", "String").doc("The row's text, and the first thing `spotlight_filter` matches."),
-                    prop("description", "Option<String>").doc("A second line, matched after the label."),
+                    prop("label", "String").default("required").doc("The row's text, and the first thing `spotlight_filter` matches."),
+                    prop("description", "String").doc("A second line, matched after the label."),
                     prop("keywords", "Vec<String>").doc("Matched, never drawn."),
-                    prop("group", "Option<String>").doc("A section header. Groups keep the order they first appear in."),
-                    prop("icon", "Option<Element>").doc("Drawn before the label."),
-                    prop("shortcut", "Option<String>").doc("A hint, one `Kbd` per key: split on spaces and `+`. Never bound."),
-                    prop("onclick", "Option<Callback<()>>").doc("Run on Enter or a click."),
-                ]),
+                    prop("group", "String").doc("A section header. Groups keep the order they first appear in."),
+                    prop("icon", "Element").doc("Drawn before the label."),
+                    prop("shortcut", "String").doc("A hint, one `Kbd` per key, split on spaces and `+`. Never bound."),
+                    prop("onclick", "Callback<()>").doc("Runs on Enter or a click."),
+                ]).without_base_props(),
                 props("SpotlightHandle", vec![
                     prop("open()", "()").doc("Opens with focus in the search box. Call it from the trigger's handler, so focus returns there."),
                     prop("close()", "()").doc("Closes."),
-                    prop("toggle()", "()").doc("One or the other."),
+                    prop("toggle()", "()").doc("Opens or closes."),
                     prop("is_open()", "bool").doc("Whether it is open."),
-                ]),
+                ]).without_base_props(),
             ],
             lead: rsx! {
                 Text {
-                    "A command palette: a modal search box over a list of actions. "
+                    "A command palette, a modal search box over a list of actions. "
                     Code { source: "use_spotlight" }
                     " returns a "
                     Code { source: "Copy" }
                     " handle, like "
                     Code { source: "use_modal" }
-                    ". What it lists is yours: "
+                    ". "
                     Code { source: "actions" }
-                    " is called with the live query and returns the rows, so a fixed list and "
+                    " is called with the query and returns the rows, so a fixed list and "
                     "search results are the same prop. "
                     Code { source: "spotlight_filter" }
-                    " is the common case, label hits first. The "
-                    Code { source: "example" }
-                    " control picks which palette the button opens, and the code block follows "
-                    "it. The hotkey here is J or P, because this site's own "
-                    "search already owns "
+                    " covers the common case, with label hits first."
+                }
+                Text {
+                    "The hotkey here is J or P, because this site's search owns "
                     Kbd { "Ctrl" }
                     " + "
                     Kbd { "K" }
@@ -425,11 +424,10 @@ pub fn SpotlightPage() -> Element {
                 Text {
                     "Focus stays in the search box. " Kbd { "↓" } " " Kbd { "↑" }
                     " move the highlight, wrapping at both ends. " Kbd { "Enter" }
-                    " runs the highlighted action, which by default is the first row of the "
-                    "last query. Turn "
+                    " runs the highlighted action, by default the first row. Turn "
                     Code { source: "highlight_first_on_query" }
-                    " off for a palette whose actions do something, and typing then arms "
-                    "nothing until you press " Kbd { "↓" } ". " Kbd { "Esc" }
+                    " off for a palette whose actions change things. Then nothing is "
+                    "highlighted until you press " Kbd { "↓" } ". " Kbd { "Esc" }
                     " or a click outside closes, and focus goes back to what opened it. The "
                     "hotkey is ignored while you type in another text field, and while a dialog "
                     "or popover is open."

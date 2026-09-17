@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Dialog, Text};
 
@@ -54,38 +56,37 @@ pub fn DialogPage() -> Element {
             markdown: "/md/dialog.md",
             properties: vec![
                 props("Dialog", vec![
-                    prop("aria_label", "String").doc("Accessible name for the dialog; overrides title as the name."),
-                    prop("title", "String").doc("Heading, and the accessible name unless aria_label overrides it."),
+                    prop("aria_label", "String").doc("The dialog's accessible name. Wins over `title`."),
+                    prop("title", "String").doc("Heading, and the accessible name unless `aria_label` is set."),
                     prop("close_button", "bool")
                         .default("in a modal, or with onclose")
-                        .doc("Header button. Inside a modal it closes the modal, outside one it calls onclose."),
+                        .doc("Header close button. Inside a modal it closes the modal, outside one it calls `onclose`."),
                     prop("onclose", "EventHandler<()>")
-                        .doc("Called by the close button outside a modal. Inside one the button closes the modal instead."),
-                    prop("close_label", "String").default("common.close").doc("Accessible name for the close button, e.g. \"Close cart\". Unset, the localization's `common.close` - \"Close\" in English."),
-                    prop("radius", "Size").default("md").doc("Corner radius, a step on the radius scale. Anything else goes through `sx`."),
+                        .doc("Called by the close button outside a modal."),
+                    prop("close_label", "String").default("\"Close\"").doc("The close button's accessible name, such as \"Close cart\". Unset, the localization's `common.close`."),
+                    prop("radius", "Size").default("md").doc("Corner radius from the radius scale. Other values go through `sx`."),
                     prop("size", "ThemeAwareValue")
                         .default("md")
-                        .doc("Caps the dialog's width from the dialog scale (md is 510px)."),
+                        .doc("Caps the width from the dialog scale. `md` is 510px."),
                     prop("variables", "Variables")
-                        .doc("Layered onto Dialog's own - e.g. Drawer's anchor/size vars."),
-                    prop("children", "Element").doc("The dialog's content."),
+                        .doc("CSS variables layered onto the dialog's own, as `Drawer` does."),
+                    prop("children", "Element").default("required").doc("The dialog's content."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "The dialog surface itself - padding, radius, shadow, and the role/"
-                    "aria-modal wiring. It is a "
+                    "The dialog surface, a "
                     Code { source: "Paper" }
-                    ": the background, its focus contrast and the default radius are the "
-                    "surface's, and only the chrome above is its own. Inside a modal it also names itself from "
-                    Code { source: "title" }
-                    " and closes itself from its own header button; open one with "
+                    " with a header, padding and "
+                    Code { source: "role=\"dialog\"" }
+                    ". It does no positioning. Open it in a modal with "
                     Code { source: "use_modal" }
-                    ". Outside a modal, as here, the button calls "
+                    ", and it names itself from "
+                    Code { source: "title" }
+                    " and closes the modal from its header button. Outside a modal, as here, "
+                    "the button calls "
                     Code { source: "onclose" }
-                    ". "
-                    Code { source: "size" }
-                    " caps its width from the dialog scale (md is 510px)."
+                    "."
                 }
             },
             Demo {
@@ -95,7 +96,7 @@ pub fn DialogPage() -> Element {
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl"]).default("md"),
-                    // Unnamed, a dialog is announced as just "dialog": off
+                    // Unnamed, a dialog is announced as just "dialog", so off
                     // names it through `aria_label` instead.
                     Control::switch("title")
                         .default("true")
@@ -120,9 +121,22 @@ pub fn DialogPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_open),
-                // The size scale runs to 900px: side by side, every step
+                // The size scale runs to 900px, so side by side every step
                 // from md up is the pane's width.
                 wide_preview: true,
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Name it with "
+                    Code { source: "title" }
+                    " or "
+                    Code { source: "aria_label" }
+                    ". The focus trap, Escape and backdrop dismissal come from the modal. A "
+                    Code { source: "Dialog" }
+                    " on its own has none of them. Outside a modal, a close button without "
+                    Code { source: "onclose" }
+                    " closes nothing and warns in debug builds."
+                }
             }
         }
     }

@@ -4,24 +4,21 @@ Crate: `libero`
 Import: `use libero::hooks::{ModalHandle, ModalScope, use_modal};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_modal.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A modal is a hook, not a component - `use_modal` registers a render closure and returns a handle that opens it, with per-opening arguments, results and handlers.
+Description: A hook that opens a render closure as a modal, with arguments and a result per opening.
 
-A modal is a hook, not a component. `use_modal` registers a render closure and
-hands back a `ModalHandle` that opens it - no open flag to thread, no
-conditional branch at the call site, and the content is built only while it is
-showing.
+A modal is a hook, not a component. `use_modal` takes a render closure and
+returns a handle that opens it. The content is built only while it shows. Each
+opening passes its arguments to the closure's `ModalScope`, and settles with
+what `resolve` answered, or `None` when dismissed.
 
-There is no public `Modal` component. Pair the hook with [`Dialog`](dialog.md),
-which supplies the role, the accessible name and its own close button.
+Make the answer the dialog's own enum, not a `bool`. The handle is `Copy`, so a
+trigger elsewhere in the tree can take it as a prop or from context. A
+[`Dialog`](dialog.md) inside closes the modal from its own close button.
 
 ## Usage
 
-Wrap `use_modal` in a hook of your own: its parameters are shared by every
-opening, the `ModalScope` carries the arguments of the one being shown, and
-`close()` / `resolve(value)` end it.
-
-Make the result the dialog's own enum, not a `bool` - the caller then matches
-over what it can say, with a dismissal as `None` beside it.
+Wrap `use_modal` in a hook of your own. Its parameters are shared by every
+opening, and the `ModalScope` carries the arguments of the one showing.
 
 ```rust
 use dioxus::prelude::*;
@@ -30,15 +27,14 @@ use libero::{
     hooks::{ModalHandle, ModalScope, use_modal},
 };
 
-/// What the dialog can answer. A dismissal answers nothing, so the caller
-/// matches on `Option<SaveChoice>` and "went back" is a case like any other.
+/// A dismissal answers nothing, so the caller matches on `Option<SaveChoice>`.
 #[derive(Clone, Copy, PartialEq)]
 enum SaveChoice {
     Save,
     Discard,
 }
 
-/// `discard_label` is shared by every opening - the closure just captures it.
+/// `discard_label` is shared by every opening.
 fn use_save_prompt(discard_label: &'static str) -> ModalHandle<String, SaveChoice> {
     use_modal(move |s: ModalScope<String, SaveChoice>| {
         let document = s.args();
@@ -92,42 +88,39 @@ fn Demo() -> Element {
 
 ## Openings
 
-`open_with` takes anything that converts into the argument type and returns an
-`Opening` - that one showing. A later opening supersedes it, and a superseded
-`Opening` is inert: it can neither fire its handler nor close what is on screen
-now, and it awaits to `None`.
+`open_with` returns an `Opening` for that one showing. A later opening replaces
+it. A replaced `Opening` never runs its handler, cannot close what is on screen
+now, and awaits to `None`.
 
 ```rust,ignore
 // Attach the consequence to this one opening.
 prompt.open_with("notes.md").onresult(move |answer| { /* ... */ });
 
-// Awaited instead - for an answer that gates work which is already async, or
-// several dialogs in sequence.
+// Awaited, when async work waits on the answer or for dialogs in sequence.
 match prompt.open_with("notes.md").await {
     Some(SaveChoice::Save) => save().await,
     Some(SaveChoice::Discard) => discard().await,
     None => return,
 }
 
-// Arguments skipped, when the argument type is `Default`.
+// No arguments, when the argument type is `Default`.
 prompt.open();
 
 // Held and closed later.
 let opening = prompt.open_with("notes.md");
 opening.close();
 
-// Closes whatever this modal is currently showing.
+// Closes whatever this modal is showing.
 prompt.close();
 ```
 
 ## Where to call it
 
-`use_modal` must be called under `LiberoProvider`, in a component that outlives
-every trigger - the modal is portaled from there and unmounts with it. A
-component that needs a dialog simply calls the hook itself.
+Call `use_modal` under `LiberoProvider`, in a component that outlives every
+trigger. The modal unmounts with that component.
 
-The handle is `Copy`, so a trigger elsewhere in the tree can take it as a prop.
-For one shared instance behind several triggers, provide it from your own hook:
+For one shared instance behind several triggers, provide the handle from your
+own hook.
 
 ```rust,ignore
 fn use_save_prompt(discard_label: &'static str) -> ModalHandle<String, SaveChoice> {
@@ -139,9 +132,8 @@ fn use_save_prompt(discard_label: &'static str) -> ModalHandle<String, SaveChoic
 
 ## Closing from inside
 
-Content written in the render closure captures the `ModalScope`. A `Dialog`
-inside a modal also closes itself from its own header button, with no wiring.
-Only a component factored out of the closure needs the escape hatch:
+Content in the render closure captures the `ModalScope`. A component outside
+the closure uses `use_modal_close()` instead.
 
 ```rust
 use dioxus::prelude::*;
@@ -157,9 +149,9 @@ fn CancelButton() -> Element {
 }
 ```
 
-`use_modal_close()` is a shorthand for the context every modal provides to its
-content, `ModalContext`, whose `close()` does the same. Reach for the context
-when a component has to ask whether it is inside a modal at all:
+`use_modal_close()` is the shorthand for `ModalContext`, which every modal
+provides to its content. Use the context when a component has to ask whether it
+is in a modal at all.
 
 ```rust
 use dioxus::prelude::*;
@@ -179,9 +171,10 @@ fn CloseIfModal() -> Element {
 
 ## Accessibility
 
-Escape or a backdrop click dismisses the modal, settling the `Opening` with
-`None`, so a handler written for an answer never runs on a dismissal. Name the
-`Dialog` inside with its `title`, or `aria_label`.
+Escape and a backdrop click dismiss the modal, settling the `Opening` with
+`None`, so a handler written for an answer never runs on a dismissal. Focus
+moves into the modal and back to the trigger once it closes. Name the `Dialog`
+with its `title`, or `aria_label`.
 
 ## API
 
@@ -193,59 +186,44 @@ pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
 ) -> ModalHandle<S, R>
 ```
 
-`R` defaults to `()`, so a modal that answers nothing is `ModalScope<S>`.
+| Argument | Type | Default | Description |
+|---|---|---|---|
+| `render` | `impl FnMut(ModalScope<S, R>) -> Element` | required | Builds the content, usually a `Dialog`, while the modal is open. `R` defaults to `()`, for a modal that answers nothing. |
 
 ### `ModalHandle<S, R = ()>`
 
 | Method | Returns | Description |
 |---|---|---|
-| `open_with(args: impl Into<S>)` | `Opening<R>` | Opens, superseding whatever was showing. |
-| `open()` | `Opening<R>` | Opens with `S::default()`; needs `S: Default`. |
-| `close()` | `()` | Dismisses whatever is currently showing. |
+| `open_with(args: impl Into<S>)` | `Opening<R>` | Opens with these arguments, replacing whatever was showing. |
+| `open()` | `Opening<R>` | Opens with `S::default()`. Needs `S: Default`. |
+| `close()` | `()` | Dismisses whatever this modal is showing. |
 | `is_open()` | `bool` | Whether this modal is showing. |
-
-`Copy`, so it can be passed to a trigger elsewhere in the tree.
 
 ### `ModalScope<S, R = ()>`
 
 | Method | Returns | Description |
 |---|---|---|
 | `args()` | `S` | The arguments this opening was given. |
-| `close()` | `()` | Ends it as a dismissal - the same outcome as Escape. |
+| `close()` | `()` | Ends it as a dismissal, the same as Escape. |
 | `resolve(value: R)` | `()` | Ends it with an answer for the caller. |
-
-`Copy`, so several handlers in one render closure can each hold it.
 
 ### `Opening<R = ()>`
 
 | Method | Returns | Description |
 |---|---|---|
-| `onresult(f: impl FnMut(Option<R>))` | `Self` | Runs `f` when this opening settles; `None` if it was dismissed. |
+| `onresult(f: impl FnMut(Option<R>))` | `Self` | Runs when this opening settles, with `None` if it was dismissed. A replaced opening never runs it. |
 | `close()` | `()` | Closes this opening, if it is still the one showing. |
-| `.await` | `Option<R>` | Same outcome, as a future. |
-
-`Copy`, and inert once superseded.
-
-### `use_modal_close`
-
-```rust,ignore
-pub fn use_modal_close() -> Callback<()>
-```
-
-Closes the modal the calling component is rendered in. For a component factored
-out of the render closure, which cannot capture the `ModalScope`.
+| `.await` | `Option<R>` | The same outcome, as a future. |
 
 ### `ModalContext`
 
-Provided by every `use_modal` to what it renders; `use_context::<ModalContext>()`
-inside, `try_use_context` where a component may or may not be in a modal.
-A floating window provides an empty one, so its content is not modal and
-cannot close a modal around it. `Copy`.
-
 | Method | Returns | Description |
 |---|---|---|
-| `is_modal()` | `bool` | Whether the content is in a modal; `false` for the empty one. |
-| `close()` | `()` | Dismisses the modal - the same outcome as `ModalScope::close`. Deferred a microtask, so it is safe from a click inside the modal. Does nothing outside one. |
+| `is_modal()` | `bool` | Whether the content is in a modal. |
+| `close()` | `()` | Dismisses the modal around the content. Does nothing outside one. |
+
+A floating window provides an empty `ModalContext`, so its content is not
+modal.
 
 ## Theme defaults
 
@@ -253,19 +231,17 @@ cannot close a modal around it. `Copy`.
 |---|---|---|---|
 | `ZIndexDefaults` | `modal` | `i32` | The first modal's z-index (`1000`). |
 | `ZIndexDefaults` | `modal_step` | `i32` | Added per stacked modal (`10`). |
-| `ZIndexDefaults` | `overlay` | `i32` | The backdrop's layer (`300`) - always below a modal. |
+| `ZIndexDefaults` | `overlay` | `i32` | The backdrop's layer (`300`), always below a modal. |
 
 ## CSS variables
 
 | Variable | Description |
 |---|---|
-| `--lsx-modal-z-index` | This modal's computed stacking level, per instance. |
+| `--lsx-modal-z-index` | This modal's stacking level. |
 | `--lsx-z-index-modal` | The first modal's z-index, from the theme. |
 | `--lsx-z-index-overlay` | The backdrop layer, from the theme. |
 
 ## Data attributes
 
-The modal layer writes no state tokens of its own. Its root carries
-`data-lsx-scroll-lock`, marking a layer that locks the page behind it. The lock
-itself is a `body { overflow: hidden }` rule the modal renders while it is
-mounted.
+The modal's root carries `data-lsx-scroll-lock`. The page behind it does not
+scroll while the modal is open.

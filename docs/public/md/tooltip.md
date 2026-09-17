@@ -4,14 +4,10 @@ Crate: `libero`
 Import: `use libero::components::Tooltip;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/tooltip.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A label that appears while its child is hovered or focused by keyboard, portaled so nothing clips it.
-
-A label that appears while its child is hovered or focused by keyboard. It
-wraps the trigger in a `<span>` and portals the bubble to the document root, so
-an `overflow: hidden` ancestor cannot clip it, and it flips when its side has no
-room. `gap` is rendered as transparent padding, not empty space, so the
-pointer can travel from the trigger into the bubble without it closing. `sx`,
-`class`, `states` and spread attributes land on the bubble, not the wrapper.
+Description: A label that appears while its child is hovered or focused by keyboard. The
+bubble is portaled, so no `overflow: hidden` ancestor clips it, and it flips
+when its side has no room. `sx`, `class`, `states` and extra attributes land on
+the bubble, not the trigger.
 
 ## Usage
 
@@ -33,7 +29,7 @@ fn Demo() -> Element {
 }
 ```
 
-Style the bubble - not the wrapper - through `sx`:
+Style the bubble through `sx`.
 
 ```rust
 use dioxus::prelude::*;
@@ -53,12 +49,11 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Keyboard focus anywhere inside `Tooltip` shows the bubble; a click does not.
+Keyboard focus anywhere inside `Tooltip` shows the bubble, a click does not.
 Escape hides it until the pointer or focus comes back.
 
-The wrapper is not focusable, so an `aria-describedby` on it would never be
-announced. Give the bubble an id with `label_id` and point your own trigger at
-it instead.
+Give the bubble an id with `label_id` and point your trigger's
+`aria-describedby` at it, so a screen reader reads the label.
 
 ```rust
 use dioxus::prelude::*;
@@ -81,32 +76,30 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `label` | `Element` | required | The bubble's content. |
-| `side` | `Side` | `top` | The preferred side of the trigger, centred on it. The bubble flips when that side has no room. |
-| `gap` | `Size` | `xs` | Distance to the trigger, rendered as transparent padding so the pointer can cross it. |
+| `side` | `Side` | `top` | The preferred side of the trigger. The bubble flips when that side has no room. |
+| `gap` | `Size` | `xs` | Distance to the trigger. The pointer can cross it without closing the bubble. |
 | `size` | `Size` | `sm` | Font size of the bubble. |
-| `z_index` | `ThemeAwareValue` | the popover layer | Overrides the stacking level, for a bubble that loses to a neighbouring overlay. |
+| `z_index` | `ThemeAwareValue` | the popover layer | Overrides the stacking level, for a bubble hidden by another overlay. |
 | `open_delay` | `u32` | `0` | Milliseconds the pointer must rest before the bubble appears. |
-| `close_delay` | `u32` | `0` | Milliseconds the bubble lingers after the pointer leaves. |
-| `open` | `bool` | - | Forces the bubble open or closed; unset leaves it to hover and focus. A bubble forced open ignores Escape. |
-| `disabled` | `bool` | `false` | Renders `children` bare - no wrapper, no bubble. |
-| `label_id` | `String` | - | The bubble's `id`, so the trigger can carry `aria-describedby`. It resolves while the bubble is closed, too. |
-| `children` | `Element` | required | The trigger. Note that `class`, `sx`, `states` and spread attributes style the *bubble*, not this. |
+| `close_delay` | `u32` | `0` | Milliseconds the bubble stays after the pointer leaves. |
+| `open` | `bool` | unset | Forces the bubble open or closed. Unset, hover and focus decide. A bubble forced open ignores Escape. |
+| `disabled` | `bool` | `false` | Renders `children` alone, with no wrapper and no bubble. |
+| `label_id` | `String` | - | The bubble's `id`, for the trigger's `aria-describedby`. It exists while the bubble is closed, too. |
+| `children` | `Element` | required | The trigger. |
 
-Every default above is the theme's, so changing `TooltipDefaults` changes them.
+The defaults come from `TooltipDefaults` on the theme.
 
 Like every component, `Tooltip` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes - all of which land on the
-bubble.
+`style`, `states`, and any extra HTML attributes. They land on the bubble.
 
 ## Theme defaults
 
-`TooltipDefaults` on the theme; per-size font sizes live in its `font_size`
-scale.
+`TooltipDefaults` on the theme.
 
 | Field | Type | Description |
 |---|---|---|
 | `side` | `Side` | Default `side`. |
-| `gap` | `Size` | Default distance between trigger and bubble, bridged so the pointer can cross. |
+| `gap` | `Size` | Default distance between trigger and bubble. |
 | `size` | `Size` | Default `size`. |
 | `open_delay` | `u32` | Default milliseconds before the bubble appears. |
 | `close_delay` | `u32` | Default milliseconds before it disappears. |
@@ -125,8 +118,8 @@ scale.
 | `--lsx-tooltip-duration` | Fade-in duration. The bubble unmounts on close, with no fade out. |
 | `--lsx-tooltip-gap` | Distance to the trigger, written per instance from `gap`. |
 
-The bubble sits on the popover layer, `--lsx-z-index-popover`, above modals;
-`z_index` writes its `-override` twin.
+The bubble sits on the popover layer, `--lsx-z-index-popover`, above modals.
+`z_index` overrides it.
 
 ## Data attributes
 

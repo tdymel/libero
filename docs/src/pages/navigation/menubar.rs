@@ -7,8 +7,8 @@ use libero::{
     hooks::{Align, Side},
 };
 
-/// Everything above the `rsx!`: what a pick does, and the menus themselves -
-/// `generate_code` only emits props, and the list is a `let`.
+/// Everything above the `rsx!`, the pick handler and the menus. `generate_code`
+/// only emits props, and the list is a `let`.
 const PREAMBLE: &str = r#"let mut last = use_signal(|| String::from("nothing yet"));
 let pick = move |name: &'static str| move |_| last.set(name.to_string());
 let item = move |name: &'static str| -> MenuEntry {
@@ -165,12 +165,14 @@ pub fn MenubarPage() -> Element {
             properties: vec![
                 props("Menubar", vec![
                     prop("menus", "Vec<MenubarMenu>")
-                        .doc("The top-level menus, in order. Required."),
+                        .default("required")
+                        .doc("The top-level menus, in order."),
                     prop("aria_label", "String")
-                        .doc("The bar's accessible name - `role=\"menubar\"` needs one. Required."),
+                        .default("required")
+                        .doc("The bar's accessible name."),
                     prop("loop_focus", "bool")
-                        .default("theme.menubar.loop_focus")
-                        .doc("Whether the arrow keys wrap at the ends - along the bar, and down each menu."),
+                        .default("true")
+                        .doc("Whether the arrow keys wrap at the ends, along the bar and down each menu."),
                     prop("side", "Side")
                         .default("Bottom")
                         .doc("Which side of its trigger every menu opens on. It flips when that side has no room."),
@@ -186,7 +188,7 @@ pub fn MenubarPage() -> Element {
                 ]),
                 props("MenubarMenu", vec![
                     prop("new(label, items)", "String, Vec<MenuEntry>")
-                        .doc("The trigger's text - also what typeahead on the bar matches - and exactly `Menu`'s items."),
+                        .doc("The trigger's text, which typeahead on the bar matches, and `Menu`'s items."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("The trigger stays in view and in the arrow order, and opens nothing."),
@@ -194,17 +196,15 @@ pub fn MenubarPage() -> Element {
             ],
             lead: rsx! {
                 Text {
-                    "A row of menus - the WAI-ARIA menubar, a desktop application's File, Edit "
-                    "and View. Each menu is a "
+                    "A row of menus, like a desktop app's File, Edit and View. Each menu is a "
                     Code { source: "Menu" }
-                    " with the same items; the bar owns which one is open and which trigger "
-                    "is its single tab stop, so you pass data and nothing else. Click a "
-                    "trigger to open its menu; while one is open, the pointer on another "
-                    "trigger switches to it."
+                    " with the same items. The bar keeps one menu open at most and is a single "
+                    "tab stop. Click a trigger to open its menu. While one is open, hovering "
+                    "another trigger switches to it."
                 }
                 Text {
-                    "It belongs in an application - an editor, an IDE. For a page's own "
-                    "navigation use links; for one set of actions, a single "
+                    "Use it in an app such as an editor. For page navigation, use links. For "
+                    "one set of actions, use a single "
                     Code { source: "Menu" }
                     "."
                 }
@@ -241,15 +241,16 @@ pub fn MenubarPage() -> Element {
                 title: "Accessibility",
                 Text {
                     "The bar is one tab stop. " Kbd { "←" } " " Kbd { "→" }
-                    " move along it, a disabled trigger included (it takes focus and opens nothing), and " Kbd { "Home" } " "
+                    " move along it, disabled triggers included, and " Kbd { "Home" } " "
                     Kbd { "End" } " go to the ends. " Kbd { "Enter" } " " Kbd { "Space" }
                     " and " Kbd { "↓" } " open a menu on its first item, " Kbd { "↑" }
                     " on its last. In an open menu, " Kbd { "←" } " and " Kbd { "→" }
-                    " move to the neighbouring menu - unless a submenu answers them first. "
-                    Kbd { "Esc" } " closes the menu and returns to its trigger; " Kbd { "Tab" }
-                    " closes it and leaves the bar. Typing jumps to a trigger by its label. Everything else is "
+                    " move to the next menu, unless a submenu takes them first. "
+                    Kbd { "Esc" } " closes the menu and returns to its trigger. " Kbd { "Tab" }
+                    " closes it and leaves the bar. Typing jumps to a trigger by its label. The "
+                    "rest works as in "
                     Code { source: "Menu" }
-                    "'s."
+                    "."
                 }
             }
         }

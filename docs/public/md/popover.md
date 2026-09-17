@@ -4,20 +4,21 @@ Crate: `libero`
 Import: `use libero::hooks::{use_element, use_popover, Align, PopoverOptions, PopoverWidth, Side};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/popover/mod.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A popover is a hook, not a component - `use_popover` portals a box to the document root and anchors it, flipping and shifting to stay on screen.
+Description: A hook that anchors a portaled box to a trigger, flipping and shifting it to stay on screen.
 
-A popover is a hook, not a component: a dropdown, a menu and a hover card share
-when and where, never what the box looks like. `use_popover` portals the box to
-the document root, so it escapes an `overflow: hidden` ancestor, and places it in
-viewport coordinates, flipping and shifting to stay on screen. It owns no open
-state - `show(None)` is how a closed popover stops rendering. Popovers nest with
-nothing extra: anchor the inner one to a row inside the outer box, and the one
-shown later paints over the earlier.
+A popover is a hook, not a component. A dropdown, a menu and a hover card share
+where the box goes, not how it looks. `use_popover` portals the box, so no
+`overflow: hidden` ancestor clips it, and flips and shifts it to stay on
+screen.
+
+It owns no open state. Pass `show(None)` to take a closed box away. Popovers
+nest. Anchor the inner one to a row in the outer box, and the one shown later
+paints on top.
 
 ## Usage
 
-The trigger's aria, the box's focus and its Escape are the consumer's, so this
-snippet carries them - see [Accessibility](#accessibility).
+The role, the trigger's aria and the box's focus are yours, so the example
+carries them.
 
 ```rust
 use dioxus::prelude::*;
@@ -34,7 +35,6 @@ fn Demo() -> Element {
     let theme = use_theme();
     let mut opened = use_signal(|| false);
     let anchor = use_element();
-    // One id, owned here, pointed at from the trigger.
     let box_id = use_id();
 
     let popover = use_popover(
@@ -42,11 +42,14 @@ fn Demo() -> Element {
         opened(),
         PopoverOptions::new(theme.popover.gap, theme.popover.padding)
             .side(Side::Bottom)
-            .align(Align::Start),
+            .align(Align::Start)
+            .dismiss(true),
     );
+    // Escape and a press outside.
+    popover.on_dismiss(move || opened.set(false));
     let floating = *popover.floating();
 
-    // A dialog takes focus once placed, once per opening.
+    // Focus the box once it is placed, once per opening.
     let mut entered = use_signal(|| false);
     use_effect(move || match (opened(), popover.placed()) {
         (true, true) if !*entered.peek() => {
@@ -56,11 +59,11 @@ fn Demo() -> Element {
         (false, _) => entered.set(false),
         _ => {}
     });
-    // Escape and Tab close it and hand focus back to the trigger.
+    // Tab closes it and returns focus to the trigger.
     let mut close = move |event: &KeyboardEvent| {
         opened.set(false);
         let _ = anchor.focus();
-        if event.key() == Key::Escape || event.modifiers().shift() {
+        if event.modifiers().shift() {
             event.prevent_default();
         }
     };
@@ -68,12 +71,12 @@ fn Demo() -> Element {
     popover.show(opened().then(|| rsx! {
         Box {
             id: "{box_id}",
-            // Plain text, so a dialog: a listbox has to hold options.
             role: "dialog",
             aria_label: "Example popover",
             tabindex: "-1",
+            attributes: popover.floating_events(),
             onkeydown: move |event: KeyboardEvent| {
-                if matches!(event.key(), Key::Escape | Key::Tab) {
+                if event.key() == Key::Tab {
                     close(&event);
                 }
             },
@@ -88,21 +91,15 @@ fn Demo() -> Element {
         Button {
             onmounted: anchor.mount(),
             onclick: move |_| opened.toggle(),
-            // Focus is back here after a click that closed the box, or
-            // before the box is placed.
-            onkeydown: move |event: KeyboardEvent| match event.key() {
-                Key::Escape if opened() => {
-                    event.prevent_default();
+            attributes: popover.anchor_events(),
+            onkeydown: move |event: KeyboardEvent| {
+                if event.key() == Key::Tab && opened() {
                     opened.set(false);
                 }
-                Key::Tab if opened() => opened.set(false),
-                _ => {}
             },
             aria_haspopup: "dialog",
-            // The same signal the hook is given, never a second copy.
             aria_expanded: "{opened()}",
             aria_controls: "{box_id}",
-            // One name; `aria-expanded` says whether it is open.
             "Popover"
         }
     }
@@ -147,73 +144,68 @@ use_drop(move || tick.manually_drop());
 
 ## Accessibility
 
-The hook contributes no role and no keyboard - a popover has no semantics. The
-consumer supplies `role="menu"`, `"listbox"` or `"dialog"` on the box and the
-`aria-haspopup`, `aria-expanded` and `aria-controls` that name the trigger, as
-the Usage snippet does. Drive `aria-expanded` from the same `open` you pass the
-hook: a trigger claiming to be closed over an open box is announced as closed.
+The hook adds no role and no keys. Put a `role` on the box, and
+`aria-haspopup`, `aria-expanded` and `aria-controls` on the trigger, as the
+example does. Drive `aria-expanded` from the same signal the hook gets, or a
+screen reader hears the wrong state.
 
-Escape must close the box (WCAG 2.1 SC 1.4.13), and closing it is the consumer's.
-Off the web only the element that actually holds focus hears the press, and the
-box is portaled, so a surface that leaves focus on its trigger has to listen on
-the trigger as well or it cannot be dismissed from the keyboard at all. Focus is
-deliberately **not** trapped -
-Tab closes the surface and moves on, which is what the ARIA Authoring Practices
-ask for. If you animate the close, give the closing box `visibility: hidden` or
-`inert` for the duration: until it unmounts it is still tabbable and still
-announced.
+Escape must close the box (WCAG 1.4.13). With `dismiss(true)`, Escape closes it
+and returns focus to the trigger. Focus leaving the trigger and the box closes
+it too. Give the box `tabindex="-1"`, or a click on its text moves focus out
+and closes it. Safari does not focus a button on click, so there a press
+outside a box opened by pointer does not close it.
+
+Focus is not trapped. Tab closes the box and moves on. If you animate the
+close, give the closing box `visibility: hidden` or `inert`. Until it
+unmounts, it is still tabbable and still announced.
 
 ## What it cannot do
 
-Scroll tracking needs a document-level scroll notification, which only the web
-answers today - natively an open popover drifts when the page scrolls. Nothing
-tracks a resize on any backend; `remeasure` is the only answer there. Off the
-web, closing when focus leaves is unreliable: every focusout counts as leaving,
-including focus moving from the trigger into the content, so close on a signal of
-your own there.
+Only the web tells the box when the page scrolls. Elsewhere an open popover
+drifts. No backend tracks a resize, so use `remeasure`. A press outside needs
+to know where focus is. The web and Blitz can tell, a WebView cannot, so there
+only Escape and your own handlers close the box.
 
-## Hook API
+## PopoverOptions
 
-| Item | Signature | Description |
-|---|---|---|
-| `use_popover` | `fn(anchor: ElementHandle, open: bool, options: PopoverOptions) -> PopoverHandle` | Anchors a portaled box to `anchor`. Re-measures per open, on an `options` change, and on every scroll. |
-| `PopoverHandle::floating` | `fn(&self) -> &ElementHandle` | The handle to put on the box, so it can be measured. Nothing is placed until it is attached. |
-| `PopoverHandle::placed` | `fn(&self) -> bool` | Whether the box has been measured. `false` on the render that opens it. |
-| `PopoverHandle::placement` | `fn(&self) -> Placement` | The side and align it actually landed on, after flipping. |
-| `PopoverHandle::style` | `fn(&self) -> Option<String>` | The box's `style`: `position: fixed`, its coordinates, its width, a `max-width` of the viewport less `padding` at both edges, and `visibility` until it is measured. |
-| `PopoverHandle::show` | `fn(&self, content: Option<Element>)` | Portals the box. `None` takes it away, which is how a closed popover stops rendering. |
+`PopoverOptions::new(gap, padding)` takes the theme's values, so it is not
+`Default`. Every other field has a builder method of the same name.
 
-## Options
-
-`PopoverOptions::new(gap, padding)` rather than `Default`, because the two
-defaults are the theme's and reading a theme needs the running provider. Every
-other field has a builder method of the same name.
-
-| Field | Type | Default | Description |
+| Prop | Type | Default | Description |
 |---|---|---|---|
 | `side` | `Side` | `Bottom` | The preferred side of the anchor. Flipping may override it. |
-| `align` | `Align` | `Start` | Where the box lines up along that side's cross axis. |
-| `gap` | `f64` | `theme.popover.gap` | Pixels between the anchor's edge and the box. |
-| `padding` | `f64` | `theme.popover.padding` | How close to a viewport edge the box may come before it flips or shifts. The box is also never wider than the viewport less this at both edges. |
-| `flip` | `bool` | `true` | Move to the opposite side when the preferred one has no room. |
-| `shift` | `bool` | `true` | Slide along the side to stay on screen, once flipping cannot help. |
-| `width` | `PopoverWidth` | `Auto` | Whether the box follows its own content (`Auto`), the anchor's width exactly (`Match`), or at least the anchor's width (`Min`). |
-| `remeasure` | `u64` | `0` | Not a placement input: changing it re-measures. For an anchor that resizes while the box is open - nothing else re-measures. |
+| `align` | `Align` | `Start` | Where the box lines up along that side. |
+| `gap` | `f64` | `theme.popover.gap` | Pixels between the anchor and the box. |
+| `padding` | `f64` | `theme.popover.padding` | How close to a viewport edge the box may come before it flips or shifts. The box is never wider than the viewport less this on both sides. |
+| `flip` | `bool` | `true` | Moves to the opposite side when the preferred one has no room. |
+| `shift` | `bool` | `true` | Slides along the side to stay on screen when flipping does not help. |
+| `width` | `PopoverWidth` | `Auto` | `Auto` follows the content, `Match` takes the anchor's width, and `Min` is at least the anchor's width. |
+| `remeasure` | `u64` | `0` | Changing it measures the box again. Use it for an anchor that resizes while the box is open. |
+| `dismiss` | `bool` | `false` | Escape and a press outside close the box, through `on_dismiss`. Spread `anchor_events()` on the trigger and `floating_events()` on the box. |
+
+## PopoverHandle
+
+`use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -> PopoverHandle`
+
+| Method | Type | Description |
+|---|---|---|
+| `floating()` | `&ElementHandle` | Mount it on the box. Nothing is placed until it is attached. |
+| `placed()` | `bool` | Whether the box has been measured. `false` on the render that opens it. |
+| `placement()` | `Placement` | The side and align the box landed on, after flipping. |
+| `style()` | `Option<String>` | The box's `style`, with its position and width. |
+| `show(content)` | `Option<Element>` | Renders the box. `None` removes it. |
+| `on_dismiss(f)` | `impl FnMut()` | What Escape and a press outside call, with `dismiss` on. Call it on every render. |
+| `anchor_events()` | `Vec<Attribute>` | Spread on the trigger, with `dismiss` on. |
+| `floating_events()` | `Vec<Attribute>` | Spread on the box, with `dismiss` on. |
 
 ## Theme defaults
 
-`PopoverDefaults` on the theme. No new knobs here - the hook ships no element
-of its own.
-
-| Field | Type | Description |
-|---|---|---|
-| `gap` | `f64` | Default distance between the anchor and the box, in pixels. |
-| `padding` | `f64` | Default collision padding against the viewport edges, in pixels. |
+`PopoverDefaults` on the theme holds `gap` and `padding`, both in pixels.
 
 ## CSS variables
 
 | Variable | Description |
 |---|---|
-| `--lsx-popover-gap` | `PopoverDefaults::gap`, for a box that wants the theme's spacing in its own CSS. |
-| `--lsx-popover-padding` | `PopoverDefaults::padding`, commonly reused as the box's own inner padding. |
-| `--lsx-z-index-popover` | The stacking level a floating box should sit on. |
+| `--lsx-popover-gap` | The theme's `gap`. |
+| `--lsx-popover-padding` | The theme's `padding`, often reused as the box's inner padding. |
+| `--lsx-z-index-popover` | The stacking level for a floating box. |

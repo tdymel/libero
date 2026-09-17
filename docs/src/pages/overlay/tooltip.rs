@@ -50,51 +50,47 @@ pub fn TooltipPage() -> Element {
             source: "libero/src/components/overlay/tooltip.rs",
             markdown: "/md/tooltip.md",
             properties: vec![props("Tooltip", vec![
-                prop("label", "Element").doc("The bubble's content."),
+                prop("label", "Element").default("required").doc("The bubble's content."),
                 prop("side", "Side")
                     .default("top")
-                    .doc("The preferred side of the trigger, centred on it. The bubble flips when that side has no room."),
+                    .doc("The preferred side of the trigger. The bubble flips when that side has no room."),
                 prop("gap", "Size")
                     .default("xs")
-                    .doc("Distance to the trigger, rendered as transparent padding so the pointer can cross it."),
+                    .doc("Distance to the trigger. The pointer can cross it without closing the bubble."),
                 prop("size", "Size").default("sm").doc("Font size of the bubble."),
                 prop("z_index", "ThemeAwareValue")
                     .default("the popover layer")
-                    .doc("Overrides the stacking level, for a bubble that loses to a neighbouring overlay."),
+                    .doc("Overrides the stacking level, for a bubble hidden by another overlay."),
                 prop("open_delay", "u32")
                     .default("0")
                     .doc("Milliseconds the pointer must rest before the bubble appears."),
                 prop("close_delay", "u32")
                     .default("0")
-                    .doc("Milliseconds the bubble lingers after the pointer leaves."),
+                    .doc("Milliseconds the bubble stays after the pointer leaves."),
                 prop("open", "bool")
                     .default("unset")
-                    .doc("Forces the bubble open or closed; unset leaves it to hover and focus. A bubble forced open ignores Escape."),
+                    .doc("Forces the bubble open or closed. Unset, hover and focus decide. A bubble forced open ignores Escape."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Renders `children` bare - no wrapper, no bubble."),
+                    .doc("Renders `children` alone, with no wrapper and no bubble."),
                 prop("label_id", "String")
-                    .doc("The bubble's `id`, so the trigger can carry `aria-describedby`. It resolves while the bubble is closed, too."),
+                    .doc("The bubble's `id`, for the trigger's `aria-describedby`. It exists while the bubble is closed, too."),
                 prop("children", "Element")
-                    .doc("The trigger. Note that `class`, `sx`, `states` and spread attributes style the *bubble*, not this."),
+                    .default("required")
+                    .doc("The trigger."),
             ])],
             lead: rsx! {
                 Text {
-                    "A label that appears while its child is hovered or focused by keyboard. It "
-                    "wraps the trigger in a "
-                    Code { source: "span" }
-                    " and portals the bubble to the document root, so an "
+                    "A label that appears while its child is hovered or focused by keyboard. "
+                    "The bubble is portaled, so no "
                     Code { source: "overflow: hidden" }
-                    " ancestor cannot clip it, and it flips when its side has no room. "
-                    Code { source: "gap" }
-                    " is rendered as transparent padding, not empty space, so the pointer can "
-                    "travel from the trigger into the bubble without it closing. "
+                    " ancestor clips it, and it flips when its side has no room. "
                     Code { source: "sx" }
                     ", "
                     Code { source: "class" }
                     ", "
                     Code { source: "states" }
-                    " and spread attributes land on the bubble, not the wrapper."
+                    " and extra attributes land on the bubble, not the trigger."
                 }
             },
             Demo {
@@ -111,8 +107,7 @@ pub fn TooltipPage() -> Element {
                         .code(delay_code),
                     Control::slider("close_delay", ["auto", "200", "500", "1000"])
                         .code(delay_code),
-                    // `Some(false)` pins it *shut*, which hover cannot
-                    // override - a different thing from leaving it unset.
+                    // `Some(false)` pins it shut, which hover cannot override.
                     Control::toggle("open", ["auto", "true", "false"]).code(
                         |_, values| match values.str("open").as_str() {
                             "auto" => vec![],
@@ -120,8 +115,7 @@ pub fn TooltipPage() -> Element {
                         },
                     ),
                     Control::switch("disabled"),
-                    // `sx` lands on the bubble, not the wrapper - the
-                    // bubble is the part worth styling.
+                    // `sx` lands on the bubble, the part worth styling.
                     Control::switch("styled").code(|_, values| {
                         match values.str("styled").as_str() {
                             "true" => vec![STYLED.to_string()],
@@ -164,15 +158,15 @@ pub fn TooltipPage() -> Element {
                 Text {
                     "Keyboard focus anywhere inside "
                     Code { source: "Tooltip" }
-                    " shows the bubble; a click does not. Escape hides it until the pointer "
+                    " shows the bubble, a click does not. Escape hides it until the pointer "
                     "or focus comes back."
                 }
                 Text {
-                    "The wrapper is not focusable, so an "
-                    Code { source: "aria-describedby" }
-                    " on it would never be announced. Give the bubble an id with "
+                    "Give the bubble an id with "
                     Code { source: "label_id" }
-                    " and point your own trigger at it instead."
+                    " and point your trigger's "
+                    Code { source: "aria-describedby" }
+                    " at it, so a screen reader reads the label."
                 }
                 Tooltip {
                     label_id: "save-tip",

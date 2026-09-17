@@ -1,7 +1,11 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, or_unset, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, or_unset, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, Icon, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs},
+    components::{
+        Code, Flex, Icon, Kbd, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs,
+    },
     sx::sx,
     use_theme,
 };
@@ -105,9 +109,8 @@ fn file_icon(entry: &FileEntry) -> Element {
     }
 }
 
-/// The data, the seeded expansion and the row renderer are the demo's
-/// fixture, not props a control varies - but the code block has to print them,
-/// so they are `fixed`.
+/// The data, the seeded expansion and the row renderer are the demo's fixture,
+/// not controls, but the code block has to print them.
 const FIXED: [&str; 4] = [
     r#"aria_label: "Project files""#,
     "data: file_tree()",
@@ -147,109 +150,68 @@ pub fn TreePage() -> Element {
                 props("Tree", vec![
                     prop("size", "Size")
                         .default("md")
-                        .doc("Row gap and per-level indent together - `List`'s scale, since `Tree` renders through it. Off-scale, or the two apart, goes through `sx`."),
-                    prop("aria_label", "String").doc("Required by WAI-ARIA's tree pattern."),
-                    prop("data", "Vec<TreeNode<T>>").doc("The tree's data, entirely your own shape."),
+                        .doc("Row gap and per-level indent together, from `List`'s scale. Set them apart through `sx`."),
+                    prop("aria_label", "String").default("required").doc("The tree's accessible name."),
+                    prop("data", "Vec<TreeNode<T>>").default("required").doc("The nodes, over your own data type."),
                     prop("render_node", "Callback<TreeNodeRenderArgs<T>, Element>")
                         .default("default_tree_render")
-                        .doc("Each visible row's content. The default can also be called selectively - say, default branches and `NavLink` leaves."),
-                    prop("default_expanded", "HashSet<String>").doc("Seeds `Tree`'s internal state once. Not a controlled prop."),
-                    prop("current", "Option<String>").doc(
-                        "The id of the node where the user is - a nav's current page. Tab into the tree lands on it rather than on the first row, until the arrow keys move on; when it changes, the tab stop follows it. Inside a collapsed branch, the tab stop goes to the branch.",
+                        .doc("Each visible row's content. A custom one can still call the default for some rows."),
+                    prop("default_expanded", "HashSet<String>").doc("The ids expanded at first. Read once."),
+                    prop("current", "String").doc(
+                        "The id of the node the user is on, such as a nav's current page. Tab into the tree lands on it, or on its collapsed branch. Its row carries `aria-current`.",
                     ),
                     prop("onexpandedchange", "EventHandler<HashSet<String>>")
-                        .doc("Notification only - it doesn't drive rendering."),
+                        .doc("Called with the expanded ids when they change. It does not control them."),
                 ]),
                 props("TreeNode<T>", vec![
-                    prop("id", "String").doc("The node's identity, used for expansion state and keyboard navigation."),
-                    prop("data", "T").doc("The caller's own data for this node."),
-                    prop("children", "Vec<TreeNode<T>>").doc("Nested nodes - an empty vec makes this a leaf."),
-                    prop("disabled", "bool").default("false").doc("Reachable by the arrow keys; nothing activates, expands or collapses it."),
+                    prop("id", "String").default("required").doc("The node's unique id."),
+                    prop("data", "T").default("required").doc("Your data for this node."),
+                    prop("children", "Vec<TreeNode<T>>").doc("Nested nodes. Without any, the node is a leaf."),
+                    prop("disabled", "bool").default("false").doc("The arrow keys still reach it, but it does not activate, expand or collapse. Its descendants are disabled too."),
                 ]).without_base_props(),
                 props("TreeNodeRenderArgs<T>", vec![
                     prop("id", "String").doc("The node's id."),
                     prop("data", "T").doc("The node's data."),
-                    prop("expanded", "bool").doc("`None` for a leaf - no children, no chevron, no `aria-expanded`."),
-                    prop("disabled", "bool").doc("Whether the node is disabled."),
+                    prop("expanded", "Option<bool>").doc("`None` for a leaf."),
+                    prop("disabled", "bool").doc("Whether the node or an ancestor is disabled."),
                     prop("tabindex", "&'static str")
-                        .doc("Apply to any interactive element your content renders - the row is already the roving tab stop, without this a link/button adds a second one arrow keys never move."),
-                    prop("depth", "usize").doc("0 at top level. Lets `render_node` take indentation over entirely."),
+                        .doc("Put it on any link or button in the row, or it adds a tab stop the arrow keys never reach."),
+                    prop("depth", "usize").doc("0 at the top level, for custom indentation."),
                 ]).without_base_props(),
                 props("TreeItem", vec![
-                    prop("onclick", "EventHandler<MouseEvent>").doc("Fires on click."),
-                    prop("children", "Element").doc("The row's content - an icon, the label."),
+                    prop("onclick", "EventHandler<MouseEvent>").doc("Click handler."),
+                    prop("children", "Element").default("required").doc("The row's content, such as an icon and the label."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "Data-driven, not composed via children - pass "
+                    "A tree view over "
                     Code { source: "Vec<TreeNode<T>>" }
-                    " where "
+                    ", where "
                     Code { source: "T" }
-                    " is entirely your own data shape. "
+                    " is your own data type. "
                     Code { source: "T" }
-                    " only needs to implement "
+                    " implements "
                     Code { source: "TreeLabel" }
-                    " (one method, "
-                    Code { source: "fn tree_label(&self) -> String" }
-                    "), which is used for keyboard typeahead and as the default row "
-                    "rendering. A "
+                    ", whose text feeds typeahead and the default row. "
                     Code { source: "String" }
-                    " already implements it, so a plain tree needs nothing further - and "
-                    Code { source: "default_tree_render(args)" }
-                    " gives one row that rendering back."
-                }
-                Text {
-                    "Which nodes are expanded is "
-                    Code { source: "Tree" }
-                    "'s own business, not the caller's - "
+                    " already does. The tree keeps its own expanded state, and "
                     Code { source: "default_expanded" }
-                    " only seeds the initial state. Selection and what happens on click, "
-                    "though, are entirely "
+                    " seeds it."
+                }
+                Text {
+                    Code { source: "Tree" }
+                    " has no selection. "
                     Code { source: "render_node" }
-                    "'s call: "
-                    Code { source: "Tree" }
-                    " doesn't assume clicking a leaf means \"select it\" - a leaf might just "
-                    "as well be a real link (see the sidebar on this page for that case). The "
-                    "closure also gets the row's live "
-                    Code { source: "expanded" }
-                    " state, so content can react to it."
-                }
-                Text {
+                    " decides what a row does. "
                     Code { source: "TreeItem" }
-                    " is the row content a clickable leaf wants: the "
-                    Code { source: "button" }
-                    " Enter/Space activation looks for, with its chrome stripped and the "
-                    "page's type inherited. It takes the row's tab stop and "
+                    " makes a row a button that picks up the tab stop and "
                     Code { source: "disabled" }
-                    " from the row itself, so neither can be forgotten. A row that is a real "
-                    "link is a "
+                    ". A row that links somewhere is a "
                     Code { source: "NavLink" }
-                    " instead - pass it "
+                    " with "
                     Code { source: "args.tabindex" }
-                    " yourself."
-                }
-                Text {
-                    "Fully keyboard-navigable: arrow keys move between visible rows, "
-                    Code { source: "Left" }
-                    "/"
-                    Code { source: "Right" }
-                    " collapse/expand (or jump to the parent/first child), "
-                    Code { source: "Home" }
-                    "/"
-                    Code { source: "End" }
-                    " jump to the first/last row, and typing a letter jumps to the next match."
-                }
-                Text {
-                    Code { source: "Tree" }
-                    " renders through "
-                    Code { source: "List" }
-                    " and has no size scale of its own: "
-                    Code { source: "size" }
-                    " is the row gap and the per-level indent together. Off-scale, or the "
-                    "two apart, goes through "
-                    Code { source: "sx" }
-                    " - rows are yours, so their type scale is too."
+                    ", as in this site's sidebar."
                 }
             },
             // snippet: item #[derive(Clone, PartialEq)] struct FileEntry { name: &'static str }
@@ -269,8 +231,8 @@ pub fn TreePage() -> Element {
                     Flex {
                         direction: "column",
                         gap: "sm",
-                        // Pinned: the selection readout appearing must not
-                        // reflow the preview under the pointer.
+                        // Pinned, so the selection readout does not reflow the
+                        // preview under the pointer.
                         sx: sx().width("100%").max_width("320px"),
                         Tree {
                             aria_label: "Project files",
@@ -296,6 +258,22 @@ pub fn TreePage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_selection),
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "The tree is one tab stop. " Kbd { "↑" } " " Kbd { "↓" }
+                    " move between visible rows. " Kbd { "←" } " " Kbd { "→" }
+                    " collapse and expand, or jump to the parent and first child. "
+                    Kbd { "Home" } " " Kbd { "End" }
+                    " jump to the first and last row, and typing jumps to the next matching "
+                    "label. Any link or button "
+                    Code { source: "render_node" }
+                    " draws must take "
+                    Code { source: "args.tabindex" }
+                    ". "
+                    Code { source: "TreeItem" }
+                    " does this for you."
+                }
             }
         }
     }

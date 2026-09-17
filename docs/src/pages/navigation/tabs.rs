@@ -15,7 +15,7 @@ enum Section {
 "#;
 
 /// Printed verbatim when the `labels` control asks for it, and rendered by the
-/// closure right below - the block is a promise that the two are the same.
+/// closure right below, so the two must match.
 // snippet: after SECTION_ENUM
 // snippet: let mut section = use_signal(|| Section::Account);
 // snippet: in Tabs { value: section(), onchange: move |next| section.set(next), panel: |_: Section| rsx! {}, .. }
@@ -86,43 +86,39 @@ pub fn TabsPage() -> Element {
             markdown: "/md/tabs.md",
             properties: vec![
                 props("Tabs", vec![
-                    prop("value", "T").doc("The selected tab. Strictly controlled - pair it with `onchange`."),
+                    prop("value", "T").default("required").doc("The selected tab. Pair it with `onchange`."),
                     prop("onchange", "EventHandler<T>").doc("Called with the tab that should become selected."),
-                    prop("panel", "Callback<T, Element>").doc("The body of the selected tab. Called for `value` only, so the other panels cost nothing."),
-                    prop("options", "OptionSource<T>").default("T::options()").doc("The tabs to show. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`. Named groups are accepted and drawn flattened - a strip has no room for headings."),
+                    prop("panel", "Callback<T, Element>").doc("The body of the selected tab. Only the selected panel is built."),
+                    prop("options", "OptionSource<T>").default("T::options()").doc("The tabs to show. A `Vec<T>` converts, and an `OptionList<T>` can disable single tabs. Groups draw flattened. A source still loading draws no tabs."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
-                        .doc("Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed."),
+                        .doc("Overrides a tab's label. Runs during render, so it can read a locale."),
                     prop("size", "Size").default("md").doc("Tab strip size."),
                     prop("color", "ThemeAwareValue").default("primary").doc("Indicator and selected-label color."),
                     prop("full_width", "bool").default("false").doc("Tabs share the row evenly instead of sizing to their label."),
-                    prop("activation", "TabsActivation").default("Automatic").doc("`Automatic` selects as the arrows move. `Manual` moves only the focus; Enter or Space selects - for panels that are slow to build."),
+                    prop("activation", "TabsActivation").default("Automatic").doc("`Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels."),
                 ]),
                 props("OptionLabel", vec![
-                    prop("name", "String").doc("The tab's visible text and accessible name."),
+                    prop("name", "String").default("required").doc("The tab's visible text and accessible name."),
                     prop("content", "Element")
-                        .doc("Drawn in place of the name, via `OptionLabel::rich` - an icon or a badge. `name` still names the tab, since the rsx is what a screen reader cannot use."),
+                        .doc("Drawn in place of the name, such as an icon, via `OptionLabel::rich`. `name` still names the tab."),
                 ]).without_base_props(),
             ],
             lead: rsx! {
                 Text {
-                    "One strip of tabs over an enum, with the selected tab's panel below it. The "
-                    "tabs are the enum's variants - "
+                    "A strip of tabs over an enum, with the selected tab's panel below it. "
                     Code { source: "#[derive(Options)]" }
-                    " lists them in declaration order and names each one - and "
+                    " lists and names the tabs. "
                     Code { source: "panel" }
-                    " is a match over the same type, so a forgotten or misspelled tab is a "
-                    "compile error rather than a blank page. Only the selected panel is built at "
-                    "all; the others cost nothing until they are picked."
+                    " matches on the same enum, so a missing tab does not compile. Only the "
+                    "selected panel is built."
                 }
                 Text {
                     Code { source: "option_label" }
-                    " overrides what the derive named a tab, and it runs during render - so it "
-                    "can read a locale from a signal or from context, and the strip repaints when "
-                    "that changes. Return a string to rename a tab, or "
+                    " renames tabs during render, so the strip follows a locale signal. "
                     Code { source: "OptionLabel::rich" }
-                    " to draw it as rsx (an icon, a badge) - that one asks for the name as well, "
-                    "since the rsx is what a screen reader cannot use."
+                    " draws a tab as rsx, such as an icon, and takes a text name for screen "
+                    "readers."
                 }
             },
             // snippet: let mut section = use_signal(|| Section::Account);
@@ -194,16 +190,16 @@ pub fn TabsPage() -> Element {
                 title: "Accessibility",
                 Text {
                     "Only the selected tab is in the tab order. Left and Right move between "
-                    "tabs and select as they go, stepping over disabled ones; Home and End "
-                    "jump to the ends. With "
+                    "tabs and select as they go, skipping disabled ones. Home and End jump to "
+                    "the ends. With "
                     Code { source: "activation: TabsActivation::Manual" }
-                    " the keys move only the focus, and Enter or Space selects. Name the strip with "
+                    ", the keys move only the focus, and Enter or Space selects. Name the strip with "
                     Code { source: "aria_label" }
                     " or "
                     Code { source: "aria_labelledby" }
-                    ": both go to the tablist, not the root. Dropping the focused tab from "
+                    ", which land on the tablist, not the root. If you remove the focused tab from "
                     Code { source: "options" }
-                    " can drop the focus to the page: move it back to the strip yourself."
+                    ", move the focus back to the strip yourself."
                 }
             }
         }

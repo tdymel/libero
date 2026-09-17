@@ -4,18 +4,16 @@ Crate: `libero`
 Import: `use libero::components::{SpotlightAction, SpotlightHandle, SpotlightOptions, spotlight_filter, use_spotlight};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/spotlight>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A command palette - `use_spotlight` opens a modal search box over caller-supplied actions, with grouped rows, arrow-key highlight and a Ctrl/Cmd+K hotkey.
+Description: A command palette. A modal search box over your actions, with groups, arrow-key highlight and a Ctrl/Cmd+K hotkey.
 
-A command palette: a modal search box over a list of actions. `use_spotlight`
-is a hook, like `use_modal` - it returns a `Copy` handle with `open`, `close`,
-`toggle` and `is_open`. What it lists is yours: `actions` is called with the
-live query and returns the rows, so a static list, a filtered one and search
-results are the same prop. `spotlight_filter` is the common case: label hits
-first, then description and keyword hits.
+A command palette, a modal search box over a list of actions. `use_spotlight`
+returns a `Copy` handle, like `use_modal`. `actions` is called with the query
+and returns the rows, so a fixed list and search results are the same prop.
+`spotlight_filter` covers the common case, with label hits first.
 
 Rows with a `group` are drawn under its header, groups in the order they first
-appear, and `limit` counts rows through the groups. A `shortcut` on an action is
-a hint, drawn as one `Kbd` per key (split on spaces and `+`), and never bound.
+appear. A `shortcut` on an action is a hint, drawn as one `Kbd` per key, and
+never bound.
 
 ## Usage
 
@@ -52,18 +50,9 @@ fn Demo() -> Element {
 }
 ```
 
-Call the hook in a component that outlives every trigger: the palette is
-portaled from there, like a `use_modal` dialog.
+Call the hook in a component that outlives every trigger, as with `use_modal`.
 
-The docs page's preview has four palettes: Commands (groups, descriptions,
-keywords and shortcut hints), Files (a flat list with icons, a custom
-`placeholder` and `nothing_found`), 200 issues (a long list, for `limit`) and
-Slow search (a fake 700 ms search per keystroke, for `loading`).
-The controls set `shortcut`, `limit`, `close_on_action` and `clear_on_close`,
-and the code block prints the palette opened last. The page binds J or P, not
-K, because the docs site's own search owns Ctrl+K.
-
-A flat list with icons and custom texts:
+A flat list with icons and custom texts.
 
 ```rust,ignore
 let files: Vec<SpotlightAction> = ["src", "src/main.rs", "Cargo.toml"]
@@ -81,25 +70,18 @@ let spotlight = use_spotlight(SpotlightOptions {
 
 ## Opening it
 
-Ctrl + K (Cmd + K on a Mac) toggles the palette from anywhere on the page. Change
-the key with `shortcut: Some('p')`, or turn it off with `None`. The chord is
-ignored while focus is in a text field (a text-like `input`, a `textarea`, a
-`select` or anything `contenteditable`) and while a dialog or popover is
-already open, and a held chord toggles once. A checkbox, a radio, a switch or a
-button with focus does not block it. A key the browser already uses (A, C, V,
-X, Z, Y, F, G, L, N, T, W, Q, R) warns in a debug build. It needs a document-level key
-listener, which only the web has today; elsewhere, open the palette from a
-button. Two palettes on one page should not share a key.
+Ctrl + K (Cmd + K on a Mac) toggles the palette from anywhere on the page.
+Change the key with `shortcut: Some('p')`, or turn it off with `None`. The
+hotkey is ignored while focus is in a text field and while a dialog or popover
+is open. A key the browser already uses, such as L, T or W, warns in a debug
+build. Only the web has the hotkey. Elsewhere, open the palette from a button.
+Two palettes on one page should not share a key.
 
-Results from a search index are the same prop: return a signal's contents from
-`actions` instead of calling `spotlight_filter`, and the palette redraws when
-the signal fills.
+## Slow search
 
-For a search that takes time, start it from `onquery` and set `loading` until
-it answers. `onquery` runs from the input event, so the next frame is already
-loading and "Nothing found" never flashes before the answer. While `loading`,
-the rows and "Nothing found" give way to a loader, and the status region says
-"Searching" once:
+For results from a server, return a signal's contents from `actions`. Start the
+search from `onquery` and set `loading` until it answers. A loader then
+replaces the rows, and "Nothing found" never flashes before the answer.
 
 ```rust,ignore
 let mut results = use_signal(Vec::<SpotlightAction>::new);
@@ -123,14 +105,11 @@ let spotlight = use_spotlight(SpotlightOptions {
 
 ## Accessibility
 
-- Focus stays in the search box the whole time.
-- ArrowDown / ArrowUp move the highlight, wrapping at both ends. Home and End
-  are left to the caret.
-- Enter runs the highlighted action. By default every keystroke highlights the
-  first row (`highlight_first_on_query`), so Enter runs the obvious hit.
-  Turned off, typing clears the highlight instead, and Enter never runs a row
-  the user did not look at.
-- Escape or a click outside closes; focus returns to what opened it.
+Focus stays in the search box. ArrowDown and ArrowUp move the highlight,
+wrapping at both ends. Enter runs the highlighted action, by default the first
+row. Turn `highlight_first_on_query` off for a palette whose actions change
+things. Then nothing is highlighted until you press ArrowDown. Escape or a
+click outside closes, and focus goes back to what opened it.
 
 ## API
 
@@ -139,45 +118,58 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle;
 pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<SpotlightAction>;
 ```
 
-| `SpotlightOptions` field | Type | Default | Description |
-|---|---|---|---|
-| `actions` | `Option<Callback<String, Vec<SpotlightAction>>>` | `None` (warns) | Called with the live query, returns the rows. Capture a `Signal` if the list changes. |
-| `placeholder` | `Option<String>` | theme (`"Search..."`) | The search box placeholder. |
-| `nothing_found` | `Option<Element>` | theme text | Shown when a non-empty query matches nothing. |
-| `limit` | `Option<usize>` | `None` | Cap on rows, counted through groups. |
-| `close_on_action` | `bool` | `true` | Close after running an action. |
-| `clear_on_close` | `bool` | `true` | Start each opening with an empty query. |
-| `aria_label` | `Option<String>` | theme (`"Command palette"`) | Names the dialog. |
-| `shortcut` | `Option<char>` | `Some('k')` | Ctrl/Cmd + this key toggles the palette. A browser key warns in a debug build. |
-| `highlight_first_on_query` | `bool` | `true` | Highlight the first row after every keystroke, so Enter runs it without an ArrowDown first. Off, a fresh query arms nothing. |
-| `loading` | `bool` | `false` | Results are still coming: a loader replaces the rows and "Nothing found", and the status region says so. |
-| `onquery` | `Option<Callback<String>>` | `None` | Called with the new query on every keystroke, from the input event. Start a search here. |
+### SpotlightOptions
 
-| `SpotlightHandle` method | Returns | Description |
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `actions` | `Callback<String, Vec<SpotlightAction>>` | - | Called with the query, returns the rows. Capture a `Signal`, not a `Vec`, if the list changes. Unset warns and shows nothing. |
+| `placeholder` | `String` | `"Search..."` | The search box's placeholder. |
+| `nothing_found` | `Element` | - | Shown and announced when a query matches nothing. Unset, the localization's text. |
+| `limit` | `usize` | - | The most rows drawn, counted across groups. |
+| `close_on_action` | `bool` | `true` | Closes after running an action. |
+| `clear_on_close` | `bool` | `true` | Starts every opening with an empty query. |
+| `aria_label` | `String` | `"Command palette"` | Names the dialog and its list. |
+| `shortcut` | `Option<char>` | `Some('k')` | Ctrl (Cmd on a Mac) plus this key toggles the palette. `None` for no hotkey. Web only. A key the browser already uses, such as L, T or W, warns in a debug build. |
+| `highlight_first_on_query` | `bool` | `true` | Highlights the first row after every keystroke, so Enter runs it. Off, Enter does nothing until the arrows pick a row. |
+| `loading` | `bool` | `false` | The results are still coming. A loader replaces the rows, and a screen reader hears "Searching". |
+| `onquery` | `Callback<String>` | - | Called with the query on every keystroke. Set `loading` and start the search here. |
+
+### SpotlightAction
+
+Every field has a builder method of the same name.
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `label` | `String` | required | The row's text, and the first thing `spotlight_filter` matches. |
+| `description` | `String` | - | A second line, matched after the label. |
+| `keywords` | `Vec<String>` | - | Matched, never drawn. |
+| `group` | `String` | - | A section header. Groups keep the order they first appear in. |
+| `icon` | `Element` | - | Drawn before the label. |
+| `shortcut` | `String` | - | A hint, one `Kbd` per key, split on spaces and `+`. Never bound. |
+| `onclick` | `Callback<()>` | - | Runs on Enter or a click. |
+
+### SpotlightHandle
+
+| Method | Returns | Description |
 |---|---|---|
-| `open()` | `()` | Opens with focus in the search box. Call it from the trigger's handler so focus returns there. |
+| `open()` | `()` | Opens with focus in the search box. Call it from the trigger's handler, so focus returns there. |
 | `close()` | `()` | Closes. |
 | `toggle()` | `()` | Opens or closes. |
 | `is_open()` | `bool` | Whether it is open. |
 
-`SpotlightAction` fields (all `pub`, with builder methods of the same names):
-`label: String`, `description: Option<String>`, `keywords: Vec<String>`
-(matched, never drawn), `group: Option<String>`, `icon: Option<Element>`,
-`shortcut: Option<String>` (a hint), `onclick: Option<Callback<()>>`.
-
 ## Theme defaults
 
-`theme.spotlight: SpotlightDefaults` - `width` (`"600px"`), `top_offset`
-(`"80px"`), `max_list_height` (`"400px"`), `radius` (`Md`), `padding` (`"4px"`),
-`search_font_size` (`"1.125rem"`), `group_color` and `description_color`
-(`muted.7`). The words are `SpotlightLabels` (`label`, `placeholder`,
-`nothing_found`, `loading`) in the [localization](localization.md).
+`SpotlightDefaults` on the theme holds `width` (`"600px"`), `top_offset`
+(`"80px"`), `max_list_height` (`"400px"`), `radius` (`Md`), `padding`
+(`"4px"`), `search_font_size` (`"1.125rem"`), `group_color` and
+`description_color` (`muted.7`). The words are `SpotlightLabels` in the
+[localization](localization.md).
 
 ## CSS variables
 
 `--lsx-spotlight-width`, `--lsx-spotlight-top-offset`,
 `--lsx-spotlight-max-list-height`, `--lsx-spotlight-padding`,
-`--lsx-spotlight-search-font-size`, `--lsx-spotlight-group-color`,
+`--lsx-spotlight-search-font-size`, `--lsx-spotlight-group-color` and
 `--lsx-spotlight-description-color`.
 
 ## Data attributes

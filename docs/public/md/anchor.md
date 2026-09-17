@@ -6,14 +6,9 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/naviga
 Index: [index.md](index.md) - every other component's markdown page
 Description: A real link styled and sized like `Text`, router-aware through `to`.
 
-Text styled and sized like [`Text`](text.md), rendered as a real link -
-router-aware via `to`, falling back to a plain `href` when no router is mounted. A
-typed route navigates through the app's router, so clicking it is a client-side
-navigation, not a full page reload.
-
-It is deliberately not a `Text` with an `href`: `Text` has no href/target/rel
-escape hatch, so `Anchor` borrows `Text`'s theme-level sizing and renders its own
-`<a>`.
+A link styled and sized like [`Text`](text.md). A typed route in `to` navigates
+through the app's router without a page reload. Without a router it renders a
+plain `href`.
 
 ## Usage
 
@@ -31,9 +26,7 @@ fn Demo() -> Element {
 
 ## Internal routes
 
-Pass a typed route and the link navigates through the router instead of reloading
-the page. With a router mounted and `target` unset or `"_blank"`, an internal
-target gets SPA navigation; otherwise it degrades to a plain `href`.
+Pass a typed route to navigate through the router.
 
 ```rust
 use dioxus::prelude::*;
@@ -54,47 +47,23 @@ fn Demo() -> Element {
 # #[component] fn GettingStarted() -> Element { rsx! {} }
 ```
 
-## Underline
-
-`underline` decides when the rule draws: `hover` (the default) underlines only on
-hover, `always` keeps it, `never` drops it. `never` is worth a second thought - an
-unadorned link inside a paragraph is only distinguishable by color.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Anchor;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Anchor {
-            to: "https://dioxuslabs.com",
-            target: "_blank",
-            underline: "always",
-            size: "lg",
-            "Read the Dioxus docs"
-        }
-    }
-}
-```
-
 ## Accessibility
 
-The link text is the accessible name - keep it descriptive rather than "here".
-A `target: "_blank"` link draws a small external icon after the text and reads
-a hidden "(opens in a new tab)" from the localization's `AnchorLabels`, so the
-new context is announced as well as shown. `new_tab_hint: false` drops both,
-for a link whose text already says it.
+The link text is the accessible name, so make it say where the link goes. A
+`target: "_blank"` link draws a small external icon and reads a hidden "(opens
+in a new tab)" from the localization's `AnchorLabels`. `new_tab_hint: false`
+drops both, for a link whose text already says it. With `underline: "never"`, a
+link inside a paragraph stands out by color alone.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Text size. |
-| `to` | `NavigationTarget` | required | A path/URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `"_blank"`, an internal target gets SPA navigation; otherwise a plain `href`. A `javascript:` URL runs script on click and warns in a debug build, so check the scheme of any URL that comes from user data. |
-| `target` | `String` | - | The anchor's `target` attribute. `"_blank"` adds a small external icon and a hidden "(opens in a new tab)" from the localization. |
+| `to` | `NavigationTarget` | required | A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `"_blank"`, an internal target navigates without a page reload. A `javascript:` URL runs script on click, so check the scheme of any URL from user data. |
+| `target` | `String` | - | The link's `target` attribute. `"_blank"` adds a small external icon and a hidden "(opens in a new tab)". |
 | `new_tab_hint` | `bool` | `true` | `false` drops the icon and the hidden text a `"_blank"` target adds. |
-| `underline` | `AnchorUnderline` | `hover` | When the underline draws: `always`, `hover`, or `never`. |
+| `underline` | `AnchorUnderline` | `hover` | When the underline draws, `always`, `hover` or `never`. |
 | `children` | `Element` | required | The link's content. |
 
 Like every component, `Anchor` also takes the shared props `sx`, `class`,
@@ -107,9 +76,9 @@ Like every component, `Anchor` also takes the shared props `sx`, `class`,
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Size` | Default `size` when the prop is omitted; `md`. |
-| `underline` | `AnchorUnderline` | Default `underline`; `hover`. |
-| `color` | `Color` | The link color; `primary`. |
+| `size` | `Size` | Default `size`, `md`. |
+| `underline` | `AnchorUnderline` | Default `underline`, `hover`. |
+| `color` | `Color` | The link color, `primary`. |
 
 ## CSS variables
 

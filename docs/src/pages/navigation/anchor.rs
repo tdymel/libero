@@ -1,6 +1,6 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Anchor, Text};
+use libero::components::{Anchor, Code, Text};
 
 const HREF: &str = "https://dioxuslabs.com";
 const EXTERNAL_LABEL: &str = "Read the Dioxus docs";
@@ -24,22 +24,27 @@ pub fn AnchorPage() -> Element {
             properties: vec![props("Anchor", vec![
                 prop("size", "Size").default("md").doc("Text size."),
                 prop("to", "NavigationTarget")
-                    .doc("A path/URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `\"_blank\"`, an internal target gets SPA navigation; otherwise a plain `href`. A `javascript:` URL runs script on click and warns in a debug build, so check the scheme of any URL that comes from user data."),
-                prop("target", "String").doc("The anchor's `target` attribute. `\"_blank\"` adds a small external icon and a hidden \"(opens in a new tab)\" from the localization."),
+                    .default("required")
+                    .doc("A path, a URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `\"_blank\"`, an internal target navigates without a page reload. A `javascript:` URL runs script on click, so check the scheme of any URL from user data."),
+                prop("target", "String").doc("The link's `target` attribute. `\"_blank\"` adds a small external icon and a hidden \"(opens in a new tab)\"."),
                 prop("new_tab_hint", "bool")
                     .default("true")
                     .doc("`false` drops the icon and the hidden text a `\"_blank\"` target adds."),
                 prop("underline", "AnchorUnderline")
                     .default("hover")
-                    .doc("When the underline draws: always, hover, or never."),
-                prop("children", "Element").doc("The link's content."),
+                    .doc("When the underline draws, `always`, `hover` or `never`."),
+                prop("children", "Element").default("required").doc("The link's content."),
             ])],
             lead: rsx! {
                 Text {
-                    "Text styled and sized like Text, rendered as a real link - router-aware "
-                    "via to, falling back to a plain href when no router is mounted. A typed "
-                    "route navigates through the app's router, so clicking it is a client-side "
-                    "navigation, not a full page reload."
+                    "A link styled and sized like "
+                    Code { source: "Text" }
+                    ". A typed route in "
+                    Code { source: "to" }
+                    " navigates through the app's router without a page reload. Without a "
+                    "router it renders a plain "
+                    Code { source: "href" }
+                    "."
                 }
             },
             // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] GettingStarted {} }
@@ -48,8 +53,7 @@ pub fn AnchorPage() -> Element {
                 component: "Anchor",
                 children_text: "",
                 controls: vec![
-                    // `to` is required, so it always prints - and it is
-                    // what this switch varies.
+                    // `to` is required, so it always prints. This switch varies it.
                     Control::switch("internal_route").code(|_, values| {
                         match values.str("internal_route").as_str() {
                             "true" => vec!["to: Route::GettingStarted {}".to_string()],
@@ -95,6 +99,15 @@ pub fn AnchorPage() -> Element {
                     }
                 },
                 child: Child(link_label),
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "The link text is the accessible name, so make it say where the link goes. A "
+                    Code { source: "target: \"_blank\"" }
+                    " link also reads \"(opens in a new tab)\". With "
+                    Code { source: "underline: \"never\"" }
+                    ", a link inside a paragraph stands out by color alone."
+                }
             }
         }
     }

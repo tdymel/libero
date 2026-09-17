@@ -4,22 +4,17 @@ Crate: `libero`
 Import: `use libero::hooks::{LightboxItem, LightboxOptions, use_lightbox};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_lightbox.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A modal image viewer - `use_modal` with a gallery around it: zoom, pan, captions and a thumbnail strip.
+Description: A modal image viewer, `use_modal` with a gallery around it, with zoom, pan, captions and a thumbnail strip.
 
 A modal image viewer. `use_lightbox` is [`use_modal`](modal.md) with a gallery
-around it: each opening carries its pictures and where to start, and focus goes
-back to the thumbnail that opened it. `Image { zoomable }` ([Image](image.md))
+around it. Each opening carries its pictures and where to start, and focus
+returns to the thumbnail that opened it. `Image { zoomable }` ([Image](image.md))
 is this viewer with one picture.
-
-Double-click or press `z` to zoom, `+` and `-` to step it, scroll to zoom about the cursor, drag,
-click or use the arrows to pan. At the edge of a pan the arrows move to the next picture, so
-a zoomed picture never traps the keyboard.
 
 ## Usage
 
-The options are what every opening shares and are read once, when the hook is
-first called. The gallery travels with each opening, so it can change between
-openings.
+The options are shared by every opening and read once. The gallery travels with
+each opening, so it can change between openings.
 
 ```rust
 use dioxus::prelude::*;
@@ -60,52 +55,41 @@ fn Demo(photos: Vec<Photo>) -> Element {
 }
 ```
 
-`open_with` takes a `LightboxItem`, a `Vec<LightboxItem>` (starting at the
-first), or a `(Vec<LightboxItem>, usize)` pair. An index past the end shows the
-last picture.
-
 ## Zoom and pan
 
 | Input | Action |
 |---|---|
-| Double-click, `z` | Toggle between fitted and `min(2, max_zoom)`; a double-click zooms about the cursor |
-| Wheel | Zoom about the cursor, between fitted and `max_zoom` |
-| `+` / `-` | Zoom in / out a wheel step about the centre, between fitted and `max_zoom` |
-| Drag | Pan while zoomed |
-| Click | While zoomed, pan the spot clicked to the centre: a pan without a drag |
-| `ArrowLeft` / `ArrowRight` | Pan while zoomed; at the pan edge, or when fitted, the previous / next picture |
-| `ArrowUp` / `ArrowDown` | Pan while zoomed |
-| `Home` / `End` | First / last picture |
-| Swipe down (touch) | Close, when `close_on_swipe_down` and not zoomed |
-| `Escape`, backdrop, **Close** | Close |
+| Double-click, `z` | Toggles between fitted and `min(2, max_zoom)`. A double-click zooms at the cursor. |
+| Wheel | Zooms at the cursor, between fitted and `max_zoom`. |
+| `+`, `-` | Zooms in or out one step at the centre. |
+| Drag | Pans while zoomed. |
+| Click | While zoomed, moves the clicked spot to the centre. |
+| `ArrowLeft`, `ArrowRight` | Pan while zoomed. At the pan edge, or when fitted, go to the previous or next picture. |
+| `ArrowUp`, `ArrowDown` | Pan while zoomed. |
+| `Home`, `End` | Go to the first or last picture. |
+| Swipe down (touch) | Closes, with `close_on_swipe_down` and not zoomed. |
+| `Escape`, backdrop, Close | Closes. |
 
-The keys act while the picture has focus. A pan is clamped so the picture
-always covers its frame; moving to another picture resets the zoom. With focus
-on the carousel's track the arrows page through the pictures as in any
-[Carousel](carousel.md).
+The keys act while the picture has focus. A pan keeps the picture covering its
+frame, and moving to another picture resets the zoom. With focus on the track,
+the arrows page through the pictures as in any [Carousel](carousel.md).
 
-Pan tracking outside the picture needs pointer capture, which Blitz and the
-WebView floor do not offer: there, a drag stops following once the pointer
-leaves the picture, while the wheel, the keys and double-click still work.
-
-## What it is made of
-
-A [Dialog](dialog.md) in the hook's modal, with the theme's `"Close"` button;
-a [Carousel](carousel.md) of fixed-height frames, one per picture, with the
-controls and no indicators; the caption as a `<p>`; and a second `Carousel` of
-thumbnail buttons. One picture renders the frame alone, with no carousel and no
-strip. The lightbox dims through the shared `OverlayDefaults`, like every other
-modal.
+On desktop and mobile, a drag stops following once the pointer leaves the
+picture. The wheel, the keys and double-click still work.
 
 ## Accessibility
 
-Name the dialog with `aria_label`; it falls back to the theme's `"Gallery"`.
-Give every picture its own `alt`.
+Name the dialog with `aria_label`, which falls back to "Gallery". Give every
+picture its own `alt`.
 
-The picture showing is a tab stop (with `zoom` on) and takes the zoom and pan
-keys. Its description names them, after the caption, and a polite status
-announces each new zoom level. In the thumbnail strip the arrows, `Home` and `End` move along the strip
-and change the picture with it.
+With `zoom` on, the picture showing is a tab stop that takes the zoom and pan
+keys. Its description lists them after the caption, and a status message reads
+each new zoom level. In the thumbnail strip, the arrows, `Home` and `End` move
+along the strip and change the picture with it.
+
+The viewer is a [Dialog](dialog.md) with a close button, over a
+[Carousel](carousel.md) of pictures and a second one of thumbnails. It dims
+through `OverlayDefaults` like every modal.
 
 ## API
 
@@ -115,24 +99,26 @@ and change the picture with it.
 pub fn use_lightbox(options: LightboxOptions) -> ModalHandle<LightboxOpening>
 ```
 
-Returns the same `ModalHandle` as `use_modal`; every method on it and on
-`Opening` behaves identically. See [Modal](modal.md).
+Returns the same `ModalHandle` as `use_modal`, and it and `Opening` behave the
+same. See [Modal](modal.md). `open_with` takes a `LightboxItem`, a
+`Vec<LightboxItem>` (starting at the first) or a `(Vec<LightboxItem>, usize)`
+pair. An index past the end shows the last picture.
 
 ### `LightboxOptions`
 
-`Default`, so a literal overrides only what it needs:
+`LightboxOptions` implements `Default`, so a literal sets only what it needs,
 `LightboxOptions { thumbnails: false, ..LightboxOptions::default() }`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `zoom` | `bool` | `true` | Wheel, double-click, `z`, `+` and `-` zoom; drag, click and arrow pan. |
-| `max_zoom` | `Option<f64>` | theme (`3.0`) | Upper scale bound. |
+| `zoom` | `bool` | `true` | Lets the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan. |
+| `max_zoom` | `Option<f64>` | `3.0` | Upper scale bound. Unset, the theme's. |
 | `thumbnails` | `bool` | `true` | The strip under the stage. Never shown for one picture. |
-| `captions` | `bool` | `true` | Shows each item's caption, linked to its picture. |
-| `controls` | `bool` | `true` | The previous / next arrows. |
-| `preload` | `usize` | `1` | Neighbours each side loaded `eager`; the rest are `lazy`. |
+| `captions` | `bool` | `true` | Shows each item's caption. |
+| `controls` | `bool` | `true` | The previous and next arrows. |
+| `preload` | `usize` | `1` | Pictures on each side loaded at once. The rest load lazily. |
 | `close_on_swipe_down` | `bool` | `true` | A downward touch swipe closes. Off while zoomed. |
-| `aria_label` | `Option<String>` | theme (`"Gallery"`) | Names the dialog. |
+| `aria_label` | `Option<String>` | `"Gallery"` | Names the dialog. Unset, the localization's label. |
 
 ### `LightboxItem`
 
@@ -158,19 +144,19 @@ Returns the same `ModalHandle` as `use_modal`; every method on it and on
 
 | Field | Type | Description |
 |---|---|---|
-| `width` | `&'static str` | The dialog's widest extent. Below the `sm` breakpoint, or under `30rem` tall (a phone on its side), the viewer is full screen instead, inside the safe-area insets. |
-| `stage_height` | `&'static str` | Every frame's height; full screen, the room the close button, caption and thumbnails leave. A larger picture is scaled down into it; a smaller one shows at its natural size, never upscaled. |
+| `width` | `&'static str` | The dialog's widest extent. Below the `sm` breakpoint, or under `30rem` tall, the viewer is full screen instead. |
+| `stage_height` | `&'static str` | Every frame's height. A larger picture is scaled down into it, and a smaller one is never scaled up. |
 | `thumbnail_size` | `&'static str` | One thumbnail's edge, capping the strip's width. |
 | `thumbnails_per_view` | `f64` | Thumbnails visible at once before the strip scrolls. |
 | `thumbnails_gap` | `Size` | Space between thumbnails. |
 | `max_zoom` | `f64` | Default upper scale bound, `1.0` being the picture as first shown. |
 
-The words are `LightboxLabels` in the [localization](localization.md):
-`label` (the dialog's default name), `thumbnails` (the strip's region name),
-`thumbnail` (a thumbnail's name; `{n}` is the slide number), `keys` (the
-zoomable picture's description), `zoomed` (announced after a zoom; `{n}` is the
-scale in percent) and `fitted` (announced once back to fitted). The close
-button's name is `common.close`.
+The words are `LightboxLabels` in the [localization](localization.md). `label`
+is the dialog's default name, `thumbnails` the strip's region name, `thumbnail`
+a thumbnail's name (`{n}` is the slide number), `keys` the zoomable picture's
+description, `zoomed` the zoom announcement (`{n}` is the scale in percent) and
+`fitted` the announcement once back to fitted. The close button's name is
+`common.close`.
 
 ## CSS variables
 

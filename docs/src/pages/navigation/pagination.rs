@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Pagination, Text},
@@ -30,42 +30,41 @@ pub fn PaginationPage() -> Element {
             markdown: "/md/pagination.md",
             properties: vec![props("Pagination", vec![
                 prop("total", "u32").default("required")
-                    .doc("Page count. `0` renders nothing at all - an empty result set has no pages, and a lone disabled control implies otherwise."),
+                    .doc("Page count. `0` renders nothing."),
                 prop("page", "u32").default("required")
-                    .doc("The current page, 1-based and clamped into range. Strictly controlled, like `Tabs::value`."),
+                    .doc("The current page, 1-based and clamped into range."),
                 prop("onchange", "EventHandler<u32>")
-                    .doc("Asks for a new page. Without it the page can never change, and the component warns."),
+                    .doc("Asks for a new page. Without it the page never changes, and the component warns."),
                 prop("aria_label", "String").default("required")
-                    .doc("Names the `<nav>` landmark. Required, because two paginations on one page have to be distinguishable."),
+                    .doc("Names the `<nav>` landmark, so two paginations on one page can be told apart."),
                 prop("siblings", "u8").default("1")
-                    .doc("Pages either side of the current one."),
+                    .doc("Pages on each side of the current one."),
                 prop("boundaries", "u8").default("1")
-                    .doc("Pages pinned at each end. `0` is clamped to 1 - leading dots with nothing outside them hide a page to show a gap."),
+                    .doc("Pages pinned at each end. `0` counts as 1."),
                 prop("size", "Size").default("md").doc("Control box and font size."),
                 prop("radius", "Size").default("sm").doc("Corner radius, independent of `size`."),
                 prop("color", "ThemeAwareValue").default("primary")
-                    .doc("Fill of the current page. Its readable text comes from the matching `-contrast` twin, so there is no auto-contrast knob."),
-                prop("disabled", "bool").default("false").doc("Disables every control at once."),
-                prop("with_controls", "bool").default("true").doc("Previous and next."),
-                prop("with_edges", "bool").default("false").doc("First and last."),
+                    .doc("Fill of the current page. Its text takes the matching `-contrast` color."),
+                prop("disabled", "bool").default("false").doc("Disables every control."),
+                prop("with_controls", "bool").default("true").doc("Shows the previous and next controls."),
+                prop("with_edges", "bool").default("false").doc("Shows the first and last controls."),
                 prop("label", "Callback<PaginationLabel, String>")
-                    .doc("Overrides every accessible name. Runs during render, so it can read a locale - and it can put the number somewhere other than last."),
+                    .doc("Overrides every accessible name. Runs during render, so it can read a locale."),
             ])],
             lead: rsx! {
                 Text {
-                    "A row of page controls: a named "
+                    "A row of page buttons in a named "
                     Code { source: "nav" }
-                    " landmark around a list of real buttons, with an ellipsis range that never "
-                    "reflows as you click through it. Strictly controlled - "
+                    " landmark. The ellipsis keeps the row the same width as you click "
+                    "through it. You own "
                     Code { source: "page" }
-                    " is yours and "
+                    ", and "
                     Code { source: "onchange" }
                     " asks for a new one."
                 }
                 Text {
-                    "It renders buttons, not links. A pagination is state; whether a navigation "
-                    "happens is not part of its contract, so a content listing that wants "
-                    "shareable URLs wires its own links around this component."
+                    "It renders buttons, not links. A listing that wants shareable URLs wraps "
+                    "its own links around it."
                 }
             },
             // snippet: let mut page = use_signal(|| 1u32);
@@ -114,6 +113,21 @@ pub fn PaginationPage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Every control is a button and a tab stop. The page names come from the "
+                    "localization's "
+                    Code { source: "PaginationLabels" }
+                    ", and "
+                    Code { source: "label" }
+                    " overrides them. At "
+                    Code { source: "xs" }
+                    " the controls are 22px and meet the 24px target size only through the "
+                    "theme's gap, so keep "
+                    Code { source: "theme.pagination.gap" }
+                    " above zero."
+                }
             }
         }
     }

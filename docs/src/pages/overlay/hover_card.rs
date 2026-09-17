@@ -83,9 +83,11 @@ pub fn HoverCardPage() -> Element {
             markdown: "/md/hover_card.md",
             properties: vec![props("HoverCard", vec![
                 prop("content", "Element")
-                    .doc("What the card shows. It may hold links and buttons - the card is a non-modal dialog, not a tooltip."),
+                    .default("required")
+                    .doc("What the card shows. Links and buttons are fine."),
                 prop("children", "Element")
-                    .doc("The trigger. It must hold a focusable element, a link or a button: its focus is the keyboard's only way to open the card. Note that `class`, `sx`, `states` and spread attributes style the *card*, not this."),
+                    .default("required")
+                    .doc("The trigger. It must hold a link or a button, since focus is the keyboard's only way to open the card."),
                 prop("side", "Side")
                     .default("Bottom")
                     .doc("Which side of the trigger the card opens on. It flips when that side has no room."),
@@ -97,10 +99,10 @@ pub fn HoverCardPage() -> Element {
                     .doc("Milliseconds the pointer must rest on the trigger before the card opens."),
                 prop("close_delay", "u32")
                     .default(theme.hover_card.close_delay.to_string())
-                    .doc("Milliseconds the card waits after the pointer leaves. It is also the time the pointer has to cross into the card, so `0` makes the card unreachable by pointer."),
+                    .doc("Milliseconds the card waits after the pointer leaves. The pointer needs this time to reach the card, so `0` makes it unreachable."),
                 prop("open", "bool")
                     .default("unset")
-                    .doc("Forces the card open or closed; unset leaves it to hover and focus. A card forced open cannot be dismissed."),
+                    .doc("Forces the card open or closed. Unset, hover and focus decide. A card forced open cannot be dismissed."),
                 prop("radius", "Size")
                     .default(theme.hover_card.radius.as_str())
                     .doc("The card's corner radius."),
@@ -109,27 +111,20 @@ pub fn HoverCardPage() -> Element {
                     .doc("The card's elevation."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Renders `children` bare - no wrapper, no card."),
+                    .doc("Renders `children` alone, with no card."),
             ])],
             lead: rsx! {
                 Text {
-                    "A card that opens while its trigger is hovered or focused, and stays open "
-                    "while the pointer or focus is inside it, so its links and buttons can be "
-                    "used. Unlike "
+                    "A card that opens while its trigger is hovered or focused. It stays open "
+                    "while the pointer or focus is inside, so its links and buttons work. Unlike "
                     Code { source: "Tooltip" }
-                    " it is a "
-                    Code { source: "role=\"dialog\"" }
-                    " with a name of its own, is portaled so no "
-                    Code { source: "overflow: hidden" }
-                    " ancestor clips it, flips when its side has no room, and closes on "
+                    ", it is a named dialog. It flips when its side has no room, and "
                     Kbd { "Esc" }
-                    ". The surface is the theme's "
-                    Code { source: "paper" }
-                    "; "
+                    " closes it. "
                     Code { source: "sx" }
                     ", "
                     Code { source: "class" }
-                    " and spread attributes land on the card."
+                    " and extra attributes land on the card, not the trigger."
                 }
             },
             Demo {
@@ -185,41 +180,32 @@ pub fn HoverCardPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "A hover card is a preview for sighted users. The trigger says nothing "
-                    "about the card, so a screen reader does not announce it when focus opens "
-                    "it. Keep the card to extras the trigger's own target already offers; "
-                    "content a user needs goes in a popover ("
+                    "A hover card is a preview for sighted users. A screen reader does not "
+                    "announce it, so keep it to extras the trigger's own target already offers. "
+                    "Content a user needs goes in a popover ("
                     Code { source: "use_popover" }
                     ") that a click opens."
                 }
                 Text {
-                    "Focusing the trigger from the keyboard opens the card; a click does not "
-                    "keep it open. " Kbd { "Tab" } " on the trigger moves into the card, "
-                    Kbd { "Tab" } " past its last link moves on to whatever follows the "
-                    "trigger, and " Kbd { "Shift" } " " Kbd { "Tab" } " walks back. "
-                    Kbd { "Esc" } " closes it wherever focus is - even when the pointer opened "
-                    "it and focus never left a text field - and hands focus back to the "
-                    "trigger when it was inside."
-                }
-                Text {
-                    "So the trigger must take focus: put a link or a button in "
+                    "Focusing the trigger opens the card, so "
                     Code { source: "children" }
-                    ", not plain text. A trigger with nothing focusable warns in the console."
-                }
-                Text {
-                    "The card is a dialog, so name it: "
+                    " must hold a link or a button. " Kbd { "Tab" }
+                    " on the trigger moves into the card, and past its last link to whatever "
+                    "follows the trigger. " Kbd { "Esc" }
+                    " closes it and returns focus to the trigger if focus was inside. Name the "
+                    "card with "
                     Code { source: "aria_label" }
-                    ", or "
+                    " or "
                     Code { source: "aria-labelledby" }
-                    " pointing into the content. An unnamed card warns in the console."
+                    ". A trigger with nothing focusable and an unnamed card both warn in the "
+                    "console."
                 }
                 Text {
-                    "Escape everywhere relies on a document-level key listener, which only the "
-                    "web has. On desktop and mobile the card hears "
-                    Kbd { "Esc" }
-                    " only while focus is on its trigger or inside it, so a card the pointer "
-                    "opened cannot be dismissed from the keyboard there - WCAG 1.4.13 is not met "
-                    "on those targets. Touch is sticky: a tap opens it, a tap elsewhere closes it."
+                    "On the web, " Kbd { "Esc" }
+                    " closes the card wherever focus is. On desktop and mobile it works only "
+                    "while focus is on the trigger or in the card, so a card the pointer opened "
+                    "cannot be dismissed from the keyboard there (WCAG 1.4.13). On touch, a tap "
+                    "opens it and a tap elsewhere closes it."
                 }
             }
         }

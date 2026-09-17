@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, UNSET, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Burger, Code, Flex, Input, Paper, Text};
 use libero::sx::sx;
@@ -77,40 +79,31 @@ pub fn BurgerPage() -> Element {
             markdown: "/md/burger.md",
             properties: vec![props("Burger", vec![
                 prop("open", "bool")
-                    .doc("`true` draws the X, and either value emits `aria-expanded`, which makes the button a disclosure. Omit it entirely for a burger that opens something that is not one - a modal."),
+                    .doc("`true` draws the X. Set either way, it makes the button a disclosure with `aria-expanded`. Leave it unset when the burger opens a modal."),
                 prop("onclick", "EventHandler<MouseEvent>")
-                    .doc("`Burger` never owns the open state; the panel does, and the caller already holds that signal to drive the panel itself."),
+                    .doc("Click handler. The caller holds the open state and toggles it here."),
                 prop("label", "Callback<bool, String>")
-                    .doc("Replaces the localization's labels, called with the open state. It runs during render, so it can read a live locale."),
+                    .doc("Replaces the localization's labels. Called with the open state during render, so it can read a live locale."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
-                    .doc("The glyph's width and height. The bars are a twelfth of it thick, and the button around it is one `spacing.xs` larger. Below 24px it still takes presses in an invisible 24x24 box."),
+                    .doc("The glyph's width and height. The button is one `spacing.xs` step larger. Below 24px it still takes presses in a 24x24 box."),
                 prop("color", "ThemeAwareValue")
                     .default("currentColor")
-                    .doc("The bars. Unset they inherit, so styling the button's `color` reaches them."),
+                    .doc("The bars. Unset, they follow the button's `color`."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Passed through to the underlying button."),
+                    .doc("Disables the button."),
             ])],
             lead: rsx! {
                 Text {
                     "Three bars that morph into an X. It renders an "
                     Code { source: "ActionIcon" }
-                    " - a real "
-                    Code { source: "<button type=\"button\">" }
-                    " with the ripple and the disabled handling already right - and adds the "
-                    "glyph plus the three ARIA facts a burger is usually missing: "
+                    " with "
                     Code { source: "aria-expanded" }
-                    ", a name that stays the same while that attribute carries the state, and the "
+                    " and a name that stays the same in both states. You spread "
                     Code { source: "aria-controls" }
-                    " you spread to name the panel. The morph animates "
-                    Code { source: "background-color" }
-                    " and "
-                    Code { source: "transform" }
-                    " only, and is dropped entirely under "
-                    Code { source: "prefers-reduced-motion: reduce" }
-                    " - the two states differ in shape, not just in position, so snapping "
-                    "between them stays legible."
+                    " to name the panel it opens. Under reduced motion the bars snap instead "
+                    "of morphing."
                 }
             },
             Demo {
@@ -145,6 +138,25 @@ pub fn BurgerPage() -> Element {
                         disabled: values.str("disabled") == "true",
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Set "
+                    Code { source: "open" }
+                    " only when the burger expands a panel, and spread "
+                    Code { source: "aria-controls" }
+                    " with that panel's id, or "
+                    Code { source: "Burger" }
+                    " warns. Leave "
+                    Code { source: "open" }
+                    " unset for a burger that opens a modal. The name is \"Toggle navigation\" "
+                    "while "
+                    Code { source: "open" }
+                    " is set, since "
+                    Code { source: "aria-expanded" }
+                    " carries the state, and \"Open navigation\" otherwise. Focus stays on the "
+                    "burger when the panel opens."
+                }
             }
         }
     }

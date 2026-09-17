@@ -4,20 +4,16 @@ Crate: `libero`
 Import: `use libero::components::{Menu, MenuEntry, MenuItem, use_menu};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/menu>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A list of commands that drops from a caller-supplied trigger - the WAI-ARIA menu button, with groups, separators and submenus.
+Description: A list of commands that drops from a trigger, with groups, separators and submenus.
 
-A list of commands that drops from a trigger - the WAI-ARIA menu button. The
-items are data, not children, so the menu owns their order: the arrow keys and
-typeahead index a `Vec` rather than asking the page. `use_menu()` keeps the
-open state in your scope, and the trigger is your own `Button`, wired by
-`menu.a11y_attributes()`. The menu is a surface from the theme's `paper`
-defaults, portaled so no `overflow: hidden` ancestor clips it.
+A list of commands that drops from a trigger. The items are data, not
+children. `use_menu()` keeps the open state in your scope, and the trigger is
+your own `Button`, wired by `menu.a11y_attributes()`. The menu is portaled, so
+no `overflow: hidden` ancestor clips it.
 
-Focus moves onto the items - one of them is tabbable at a time - so a screen
-reader follows it. A submenu opens beside its item on ArrowRight, a click, or
-the pointer resting on the item for `theme.menu.submenu_delay` (150ms). Moving
-on to a sibling waits the same delay, so the pointer can cross one on its way
-into the submenu. There is no "safe triangle".
+A submenu opens beside its item on ArrowRight, a click, or when the pointer
+rests on the item for 150ms. Moving to a sibling waits as long, so the pointer
+can cross one on its way into the submenu.
 
 ## Usage
 
@@ -73,81 +69,63 @@ fn Demo() -> Element {
 ## Accessibility
 
 On the trigger, Enter, Space and ArrowDown open the menu on its first item,
-ArrowUp on its last. In the menu, ArrowDown/ArrowUp move an item (wrapping
-unless `loop_focus` is off), Home/End go to the ends, Enter and Space choose,
-ArrowRight opens a submenu and ArrowLeft closes it. Escape closes only the menu
-it is pressed in and hands focus back to whatever opened it; Tab closes every
-level and moves on from the trigger. Typing jumps to an item: "s" to the next
-one starting with S, "sav" to Save; a half-second pause starts over. A disabled
-item stays in the arrow order but cannot be chosen.
+ArrowUp on its last.
 
-- Spread `menu.a11y_attributes()` on the trigger; it ties the trigger to the
-  menu.
-- `leading` and `trailing` sit inside the item's button: never put anything
-  interactive there.
-- A picked-one-of-several item takes `radio`, an on/off setting `checkbox`,
-  not a checkmark in `trailing`: a drawn mark says nothing to a screen reader.
-- A shortcut hint takes `shortcut`, not a `Kbd` in `trailing`: it reaches a
-  screen reader as `aria-keyshortcuts` instead of joining the item's name. The
-  menu does not listen for the key; bind it yourself.
+In the menu, ArrowDown and ArrowUp move an item, wrapping unless `loop_focus`
+is off, and Home and End go to the ends. Enter and Space choose. ArrowRight
+opens a submenu and ArrowLeft closes it again. Escape closes only the menu it
+is pressed in and returns focus to what opened it. Tab closes every level and
+moves on from the trigger. Typing jumps to an item, "s" to the next one
+starting with S and "sav" to Save. A pause of half a second starts over.
+
+Put a shortcut hint in `shortcut`, not `trailing`. A screen reader then hears
+it as `aria-keyshortcuts`, not as part of the item's name.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `state` | `MenuState` | required | From `use_menu()`. |
-| `items` | `Vec<MenuEntry>` | required | `Item`, `Group { label, items }`, `Separator`. |
-| `children` | `Element` | required | The trigger, carrying `menu.a11y_attributes()`. |
-| `side` | `Side` | `Bottom` | Opening side; flips when it has no room. |
-| `align` | `Align` | `Start` | Alignment along that side. |
-| `close_on_select` | `bool` | `theme.menu.close_on_select` (`true`) | Choosing an item closes the menu. |
-| `loop_focus` | `bool` | `theme.menu.loop_focus` (`true`) | Arrows wrap. |
+| `state` | `MenuState` | required | From `use_menu()`. Holds the open state and wires the trigger to the menu. |
+| `items` | `Vec<MenuEntry>` | required | The menu, in order. `MenuEntry::Item`, `MenuEntry::Group { label, items }` for a named section, and `MenuEntry::Separator`. |
+| `children` | `Element` | required | The trigger, carrying `menu.a11y_attributes()`. It needs no click or key handler of its own. |
+| `side` | `Side` | `Bottom` | Which side of the trigger the menu opens on. It flips when that side has no room. |
+| `align` | `Align` | `Start` | Where the menu lines up along that side. |
+| `close_on_select` | `bool` | `true` | Whether choosing an item closes the menu. |
+| `loop_focus` | `bool` | `true` | Whether the arrow keys wrap from the last item to the first. |
 | `size` | `Size` | `md` | Item height and font size. |
-| `radius` | `Size` | `sm` | Menu corner radius; items nest with it minus the padding. |
-| `disabled` | `bool` | `false` | The trigger opens nothing. |
-| `onedge` | `Option<Callback<MenuEdge>>` | `None` | Hears ArrowLeft (top level) and ArrowRight (an item without a submenu) when no submenu answers them - `MenuEdge::Previous` / `Next`. `Menubar` uses it. |
+| `radius` | `Size` | `sm` | The menu's corner radius. The items' corners follow it. |
+| `disabled` | `bool` | `false` | The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled. |
+| `onedge` | `Callback<MenuEdge>` | - | Called with ArrowLeft on the top level, or ArrowRight on an item without a submenu. `Menubar` uses it to move to the next menu. |
 
-`sx`, `class`, `states` and `attributes` land on the root menu box.
+Like every component, `Menu` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. They land on the menu.
 
-`MenuItem` builder: `new(label)`, `onselect(FnMut(()))`, `submenu(Vec<MenuEntry>)`
-(an item does one or the other; the later call wins), `leading(Element)`,
-`trailing(Element)`, `shortcut(&str)`, `radio(bool)`, `checkbox(bool)`,
-`disabled(bool)`.
+### MenuItem
 
-`radio` makes an item one choice of several: a `menuitemradio` announcing
-`aria-checked`, with a check drawn before the label while it is checked. Put
-the choices in one `Group`, which is the radio group a reader hears; keeping
-exactly one checked is yours. A menu with a checked item opens on it rather
-than on its first item, and it is the tab stop until another is focused.
-
-`checkbox` makes it an independent on/off setting instead: a `menuitemcheckbox`
-announcing `aria-checked`, in the same check slot. Flip it in `onselect`. An
-item is one or the other; the later call wins, with a debug warning.
-
-Once one item of a menu level is checkable, every row of that level keeps the
-check slot, empty on a plain row, so all its labels line up.
-
-`shortcut` takes `aria-keyshortcuts` syntax (`"Control+Shift+S"`), sets that
-attribute on the item and draws the hint at the far end ("Ctrl+Shift+S"),
-`aria-hidden`. Only `Control` is shortened, to the localization's
-`menu.control`; there is no platform mapping. On a
-disabled item the hint dims with the label.
+| Method | Type | Default | Description |
+|---|---|---|---|
+| `new(label)` | `String` | required | The visible text, the accessible name, and what typeahead matches. |
+| `onselect` | `FnMut(())` | - | Runs when the item is chosen by a click, Enter or Space. |
+| `submenu` | `Vec<MenuEntry>` | - | Opens a second menu beside the item instead. An item runs a command or opens a submenu, and the later call wins. |
+| `leading` | `Element` | - | Before the label, such as an icon. Nothing interactive, since it sits inside the item's button. |
+| `trailing` | `Element` | - | At the far end, such as a badge. It joins the accessible name. Nothing interactive. |
+| `shortcut` | `&str` | - | The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`"Control+X"`). Drawn as a hint ("Ctrl+X") and kept out of the name. You bind the key yourself. |
+| `radio` | `bool` | - | Makes the item one choice of several, with a check while `true`. Put the choices in one `Group` and keep one checked. A menu opens on its checked item. |
+| `checkbox` | `bool` | - | Makes the item an on/off setting, with a check while `true`. Flip it in `onselect`. An item is `radio` or `checkbox`, and the later call wins. |
+| `disabled` | `bool` | `false` | Stays in the arrow-key order but cannot be chosen, and typeahead skips it. |
 
 ## Theme defaults
 
-`theme.menu: MenuDefaults` - `size` (`Md`), `radius` (`Sm`), `max_height`
-(`"340px"`), `sizes: Sizes<MenuSizeLevel { font_size, item_height, padding_x,
-label_font_size }>`, `submenu_delay` (`150` ms), and the defaults of the
-`close_on_select` and `loop_focus` props (both `true`).
+`MenuDefaults` on the theme holds `size`, `radius`, `max_height` (`"340px"`),
+the per-size `sizes`, `submenu_delay` (150ms), and the defaults of
+`close_on_select` and `loop_focus`. The surface is the theme's `paper`.
 
 ## CSS variables
 
-`--lsx-menu-max-height`, `--lsx-menu-font-size-{size}`,
-`--lsx-menu-item-height-{size}`, `--lsx-menu-padding-x-{size}`,
-`--lsx-menu-label-font-size-{size}`; resolved on the box as
-`--lsx-menu-item-font`, `--lsx-menu-item-min-height`, `--lsx-menu-item-pad-x`,
-`--lsx-menu-label-font`, `--lsx-menu-item-radius`.
+Per size: `--lsx-menu-font-size-{size}`, `--lsx-menu-item-height-{size}`,
+`--lsx-menu-padding-x-{size}` and `--lsx-menu-label-font-size-{size}`. Also
+`--lsx-menu-max-height`.
 
 ## Data attributes
 
-On the menu box: `size-{size}`, `radius-{size}`, `bordered`.
+On the menu: `size-{size}`, `radius-{size}` and `bordered`.

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Input, Overlay, Text},
@@ -14,31 +14,31 @@ pub fn OverlayPage() -> Element {
             markdown: "/md/overlay.md",
             properties: vec![
                 props("Overlay", vec![
-                    prop("z_index", "ThemeAwareValue").default("300").doc("Stacking order for the dim/blur layer."),
-                    prop("opacity", "ThemeAwareValue").default("0.6").doc("Alpha of the black dim behind the content."),
-                    prop("blur", "ThemeAwareValue").default("none").doc("A backdrop-filter blur amount."),
-                    prop("onclick", "EventHandler<MouseEvent>").doc("Fires on a click anywhere on the overlay - the backdrop-click case."),
-                    prop("children", "Element").doc("Centred content, e.g. a loading spinner."),
+                    prop("z_index", "ThemeAwareValue").default("300").doc("Stacking order of the layer."),
+                    prop("opacity", "ThemeAwareValue").default("0.6").doc("How dark the dim is."),
+                    prop("blur", "ThemeAwareValue").default("none").doc("How much the content behind is blurred. A bare number becomes `px`."),
+                    prop("onclick", "EventHandler<MouseEvent>").doc("Called on a click anywhere on the overlay, such as a backdrop click."),
+                    prop("children", "Element").doc("Content centred on the overlay, such as a loading spinner."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "Dims and blurs whatever is behind it - a modal renders one behind its "
-                    "content. Render it conditionally; there is no "
+                    "Dims and blurs whatever is behind it. A modal renders one behind its "
+                    "content. There is no "
                     Code { source: "open" }
-                    ". It spans the viewport as "
-                    Code { source: "position: fixed" }
-                    " by default, so the demo below overrides that to "
-                    Code { source: "absolute" }
-                    " to stay inside its frame - that frame and its "
-                    Code { source: "z-index: 0" }
-                    " are the demo's own scaffolding, left out of the code below. Containing "
-                    "an overlay always takes both: "
+                    " prop, so render it conditionally. Its children are centred, which makes "
+                    "it a loading screen as well as a backdrop."
+                }
+                Text {
+                    "It covers the viewport. To keep it inside a box of your own, give that box a "
                     Code { source: "position" }
-                    " alone starts no stacking context, so the overlay's "
-                    Code { source: "z-index: 300" }
-                    " would escape and compete with the whole page. Children are centred in "
-                    "it, which is what makes it a loading layer as well as a backdrop."
+                    " and a "
+                    Code { source: "z-index" }
+                    ", and the overlay "
+                    Code { source: "position: absolute" }
+                    ". Without the "
+                    Code { source: "z-index" }
+                    ", the overlay still stacks against the whole page."
                 }
             },
             Demo {
@@ -68,6 +68,16 @@ pub fn OverlayPage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "An overlay does not trap focus or hide the page from a screen reader. "
+                    "For a modal backdrop, use a "
+                    Code { source: "Dialog" }
+                    " in "
+                    Code { source: "use_modal" }
+                    ", which brings its own overlay."
+                }
             }
         }
     }

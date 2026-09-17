@@ -6,22 +6,17 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/naviga
 Index: [index.md](index.md) - every other component's markdown page
 Description: One strip of tabs over an enum, with only the selected tab's panel built.
 
-One strip of tabs over an enum, with the selected tab's panel below it. The tabs
-are the enum's variants - `#[derive(Options)]` lists them in declaration order
-and names each one - and `panel` is a match over the same type, so a forgotten or
-misspelled tab is a compile error rather than a blank page. Only the selected
-panel is built at all; the others cost nothing until they are picked.
+A strip of tabs over an enum, with the selected tab's panel below it.
+`#[derive(Options)]` lists and names the tabs. `panel` matches on the same enum,
+so a missing tab does not compile. Only the selected panel is built.
 
-`option_label` overrides what the derive named a tab, and it runs during render - so it
-can read a locale from a signal or from context, and the strip repaints when that
-changes. Return a string to rename a tab, or `OptionLabel::rich` to draw it as rsx
-(an icon, a badge) - that one asks for the name as well, since the rsx is what a
-screen reader cannot use.
+`option_label` renames tabs during render, so the strip follows a locale
+signal. `OptionLabel::rich` draws a tab as rsx, such as an icon, and takes a
+text name for screen readers.
 
 ## Usage
 
-The enum *is* the tab strip, so it is part of every snippet. `#[option(label = ..)]`
-renames a variant whose Rust name is not what a reader should see.
+The enum is the tab strip. `#[option(label = ..)]` renames a variant.
 
 ```rust
 use dioxus::prelude::*;
@@ -53,13 +48,14 @@ fn Demo() -> Element {
 }
 ```
 
-Strictly controlled: `value` is the tab that is drawn as selected, and `onchange`
-asks for the next one. Without `onchange` the selection can never change, and
-without `panel` there is nothing below the strip - the library warns about
-either.
+You own `value`, and `onchange` asks for the next tab. Without `onchange` the
+selection never changes, and without `panel` nothing shows below the strip.
+`Tabs` warns about both.
 
-`option_label` renames the whole strip at once. Because it runs during render, reading a
-locale signal inside it is enough to make the strip follow the language:
+## Renamed tabs
+
+`option_label` renames the whole strip. It runs during render, so reading a
+locale signal inside it makes the strip follow the language.
 
 ```rust
 use dioxus::prelude::*;
@@ -97,10 +93,11 @@ fn Demo() -> Element {
 }
 ```
 
+## Rich labels
+
 `OptionLabel::rich` draws a tab as rsx and names it separately. A tab is a
-`<button>`, so its content has to stay phrasing content: an [Icon](icon.md) is an
-inline-flex `<span>`, while a [Flex](flex.md) is a `<div>` and does not belong
-there.
+`<button>`, so keep its content inline. An [Icon](icon.md) fits, a
+[Flex](flex.md) does not.
 
 ```rust
 use dioxus::prelude::*;
@@ -136,29 +133,27 @@ fn Demo() -> Element {
 # #[component] fn FileIcon() -> Element { rsx! {} }
 ```
 
-`FileIcon` there is your own icon component - any `svg` will do; `Icon` is what
-sizes it.
+`FileIcon` is your own icon component. Any `svg` works, and `Icon` sizes it.
 
-`options` narrows the strip to a subset of the enum's variants, and an
-`OptionItem::new(tab).disabled(true)` inside it renders a tab that cannot be
-picked.
+## Disabled tabs
+
+`options` narrows the strip to some of the variants.
+`OptionList::from_options().disabling(|s| *s == Section::Billing)` keeps every
+tab and disables one.
 
 ## Accessibility
 
 Only the selected tab is in the tab order. Left and Right move between tabs and
-select as they go, stepping over disabled ones; Home and End jump to the ends.
-With `activation: TabsActivation::Manual` the keys move only the focus, and
-Enter or Space selects the focused tab - for panels that are slow to build.
+select as they go, skipping disabled ones. Home and End jump to the ends. With
+`activation: TabsActivation::Manual`, the keys move only the focus, and Enter
+or Space selects. Use it for panels that are slow to build.
 
-Name the strip with `aria_label` or `aria_labelledby` on `Tabs`: both go to the
-`tablist`, not the root.
+Name the strip with `aria_label` or `aria_labelledby` on `Tabs`, which land on
+the `tablist`, not the root. If you remove the focused tab from `options`, move
+the focus back to the strip yourself.
 
-Dropping the focused tab from `options` can drop the focus to the page: move it
-back to the strip yourself.
-
-`OptionLabel::rich` takes the accessible name as its first argument: the rsx it
-draws is what a screen reader cannot use, and that name becomes the tab's
-`aria-label`.
+`OptionLabel::rich` takes the accessible name as its first argument. It becomes
+the tab's `aria-label`.
 
 ## Props
 
@@ -166,32 +161,32 @@ draws is what a screen reader cannot use, and that name becomes the tab's
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `T` | required | The selected tab. Strictly controlled - pair it with `onchange`. |
+| `value` | `T` | required | The selected tab. Pair it with `onchange`. |
 | `onchange` | `EventHandler<T>` | - | Called with the tab that should become selected. |
-| `panel` | `Callback<T, Element>` | - | The body of the selected tab. Called for `value` only, so the other panels cost nothing. |
-| `options` | `OptionSource<T>` | `T::options()` | The tabs to show. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`. Named groups are accepted and drawn flattened - a strip has no room for headings. |
-| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed. |
+| `panel` | `Callback<T, Element>` | - | The body of the selected tab. Only the selected panel is built. |
+| `options` | `OptionSource<T>` | `T::options()` | The tabs to show. A `Vec<T>` converts, and an `OptionList<T>` can disable single tabs. Groups draw flattened. A source still loading draws no tabs. |
+| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a tab's label. Runs during render, so it can read a locale. |
 | `size` | `Size` | `md` | Tab strip size. |
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
 | `full_width` | `bool` | `false` | Tabs share the row evenly instead of sizing to their label. |
-| `activation` | `TabsActivation` | `Automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus; Enter or Space selects - for panels that are slow to build. |
+| `activation` | `TabsActivation` | `Automatic` | `Automatic` selects as the arrows move. `Manual` moves only the focus, and Enter or Space selects. Use it for slow panels. |
 
-Like every component, `Tabs` also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes.
+`Tabs` also takes the shared props `sx`, `class`, `states`, and any extra HTML
+attributes.
 
 ### OptionLabel
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `name` | `String` | required | The tab's visible text and accessible name. |
-| `content` | `Element` | - | Drawn in place of the name, via `OptionLabel::rich` - an icon or a badge. `name` still names the tab, since the rsx is what a screen reader cannot use. |
+| `content` | `Element` | - | Drawn in place of the name, such as an icon, via `OptionLabel::rich`. `name` still names the tab. |
 
-`OptionLabel` is a value, not a component - it takes no shared props. A bare string
+`OptionLabel` is a value, not a component, and takes no shared props. A string
 converts into one (`"Konto".into()`).
 
 ## Theme defaults
 
-`TabsDefaults` on the theme; per-size values live in its `sizes` scale.
+`TabsDefaults` on the theme. Per-size values live in its `sizes` scale.
 
 | Field | Type | Description |
 |---|---|---|
@@ -226,6 +221,5 @@ State tokens on the root's `data-state`, space separated.
 | `size-<size>` | The `size` in effect. |
 | `full-width` | `full_width` is set. |
 
-The tabs themselves carry no `data-state`; their styling keys off ARIA -
-`[aria-selected="true"]` for the indicator, `[aria-disabled="true"]` for the
-dimmed look.
+The tabs carry no `data-state`. Style them through `[aria-selected="true"]`
+and `[aria-disabled="true"]`.

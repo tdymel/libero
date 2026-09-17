@@ -4,17 +4,15 @@ Crate: `libero`
 Import: `use libero::components::{MenuEntry, MenuItem, Menubar, MenubarMenu};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/menubar.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A row of menus - the WAI-ARIA menubar. Each menu is a `Menu`; the bar owns which one is open and the single tab stop.
+Description: A row of menus. Each menu is a `Menu`, and the bar is a single tab stop with one menu open at most.
 
-A row of menus - the WAI-ARIA menubar, a desktop application's File, Edit and
-View. Each menu is a `Menu` with the same `MenuEntry` items; the bar owns which
-one is open (at most one) and which trigger is its tab stop, so the caller
-passes data and nothing else. Click a trigger to open its menu; while one is
-open, the pointer on another trigger switches to it with no delay. Nothing
-opens on hover alone.
+A row of menus, like a desktop app's File, Edit and View. Each menu is a
+[`Menu`](menu.md) with the same `MenuEntry` items. The bar keeps one menu open
+at most and is a single tab stop. Click a trigger to open its menu. While one
+is open, hovering another trigger switches to it. Nothing opens on hover alone.
 
-It belongs in an application - an editor, an IDE. For a page's navigation use
-links; for one set of actions, a single `Menu`.
+Use it in an app such as an editor. For page navigation, use links. For one set
+of actions, use a single `Menu`.
 
 ## Usage
 
@@ -50,23 +48,19 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-On a trigger: ArrowLeft/ArrowRight move along the bar, wrapping unless
-`loop_focus` is off; if a menu is open the new one opens. A disabled trigger
-takes focus like the others and opens nothing: moving onto it closes the open
-menu, but the next enabled trigger along opens its own, until Escape or Tab.
-Home/End go to the first/last trigger. Enter, Space and
-ArrowDown open the menu on its first item, ArrowUp on its last. Typing jumps to
-a trigger by its label.
+`aria_label` names the bar and is required.
 
-In an open menu: ArrowRight on an item without a submenu, and ArrowLeft on the
-top level, close the menu and open the neighbouring one on its first item.
-ArrowRight on a submenu item opens the submenu; ArrowLeft in a submenu closes
-it. Escape closes the menu and returns focus to its trigger; Tab closes it and
-leaves the bar. Everything else is `Menu`'s, including `MenuItem`'s
-`shortcut` (announced as `aria-keyshortcuts`; binding the key is yours) and
-`checkbox` for an on/off setting.
+On a trigger, ArrowLeft and ArrowRight move along the bar, wrapping unless
+`loop_focus` is off. If a menu is open, the next one opens. A disabled trigger
+takes focus and opens nothing. Home and End go to the first and last trigger.
+Enter, Space and ArrowDown open the menu on its first item, ArrowUp on its last.
+Typing jumps to a trigger by its label.
 
-`aria_label` is required: it names the bar.
+In an open menu, ArrowRight on an item without a submenu and ArrowLeft on the
+top level move to the next menu. ArrowRight on a submenu item opens the
+submenu, and ArrowLeft closes it. Escape closes the menu and returns focus to
+its trigger. Tab closes it and leaves the bar. The rest works as in `Menu`,
+including `MenuItem`'s `shortcut` and `checkbox`.
 
 ## Props
 
@@ -74,31 +68,48 @@ leaves the bar. Everything else is `Menu`'s, including `MenuItem`'s
 |---|---|---|---|
 | `menus` | `Vec<MenubarMenu>` | required | The top-level menus, in order. |
 | `aria_label` | `String` | required | The bar's accessible name. |
-| `loop_focus` | `bool` | `theme.menubar.loop_focus` (`true`) | Arrows wrap - along the bar and down each menu. |
-| `side` | `Side` | `Bottom` | Opening side of every menu; flips when it has no room. |
-| `align` | `Align` | `Start` | Alignment along that side. |
-| `size` | `Size` | `md` | Trigger font and padding, and each menu's item size. |
-| `radius` | `Size` | `sm` | Trigger and menu corner radius. |
+| `loop_focus` | `bool` | `true` | Whether the arrow keys wrap at the ends, along the bar and down each menu. |
+| `side` | `Side` | `Bottom` | Which side of its trigger every menu opens on. It flips when that side has no room. |
+| `align` | `Align` | `Start` | Where each menu lines up along that side. |
+| `size` | `Size` | `md` | The triggers' font and padding, and each menu's item size. |
+| `radius` | `Size` | `sm` | The triggers' and the menus' corner radius. |
 
-`sx`, `class`, `states` and `attributes` land on the bar.
+Like every component, `Menubar` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. They land on the bar.
 
-`MenubarMenu { label, items, disabled }`, or `MenubarMenu::new(label, items)`
-and `.disabled(bool)`. `items` is `Menu`'s `Vec<MenuEntry>`.
+### `MenubarMenu`
+
+`MenubarMenu::new(label, items)`, plus `.disabled(bool)`.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `label` | `String` | required | The trigger's text, which typeahead on the bar matches. |
+| `items` | `Vec<MenuEntry>` | required | `Menu`'s items. |
+| `disabled` | `bool` | `false` | The trigger stays in view and in the arrow order, and opens nothing. |
 
 ## Theme defaults
 
-`theme.menubar: MenubarDefaults` - `size` (`Md`), `radius` (`Sm`), `gap`
-(`"2px"`), `sizes: Sizes<MenubarSizeLevel { font_size, padding_x, padding_y }>`,
-`loop_focus` (`true`), the default of the prop. The menus read `theme.menu`,
-but take the bar's resolved `loop_focus`.
+`MenubarDefaults` on the theme. The menus read `MenuDefaults`, but take the
+bar's `loop_focus`.
+
+| Field | Description |
+|---|---|
+| `size` | Default `size`, `md`. |
+| `radius` | Default `radius`, `sm`. |
+| `gap` | Space between triggers, `2px`. |
+| `sizes` | Per size, the trigger's `font_size`, `padding_x` and `padding_y`. |
+| `loop_focus` | Default `loop_focus`, `true`. |
 
 ## CSS variables
 
-`--lsx-menubar-gap`, `--lsx-menubar-font-size-{size}`,
-`--lsx-menubar-padding-x-{size}`, `--lsx-menubar-padding-y-{size}`; resolved on
-the bar as `--lsx-menubar-trigger-font`, `--lsx-menubar-trigger-pad-x`,
-`--lsx-menubar-trigger-pad-y`, `--lsx-menubar-trigger-radius`.
+| Variable | Description |
+|---|---|
+| `--lsx-menubar-gap` | Space between triggers. |
+| `--lsx-menubar-font-size-<size>` | Trigger font size per size step. |
+| `--lsx-menubar-padding-x-<size>`, `--lsx-menubar-padding-y-<size>` | Trigger padding per size step. |
+| `--lsx-menubar-trigger-font`, `--lsx-menubar-trigger-pad-x`, `--lsx-menubar-trigger-pad-y`, `--lsx-menubar-trigger-radius` | The values in effect, on the bar. |
 
 ## Data attributes
 
-On the bar: `size-{size}`, `radius-{size}`. Triggers: `data-menubar-index`.
+State tokens on the bar's `data-state`: `size-<size>` and `radius-<size>`. Each
+trigger carries `data-menubar-index`.

@@ -67,10 +67,8 @@ fn width_of(value: &str) -> PopoverWidth {
     }
 }
 
-/// `generate_code` prints rsx props, and what this page has to show is a
-/// builder chain inside a hook call - so the snippet is rebuilt from the
-/// control values by hand, and preview-equals-code is maintained here rather
-/// than by the generator.
+/// `generate_code` prints rsx props, but this page shows a builder chain in a
+/// hook call. So the snippet is rebuilt from the control values by hand.
 fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
     let mut options = format!(
         "PopoverOptions::new({}.0, theme.popover.padding)\n    .side(Side::{})\n    .align(Align::{})",
@@ -245,43 +243,62 @@ pub fn PopoverPage() -> Element {
                         .doc("The preferred side of the anchor. Flipping may override it."),
                     prop("align", "Align")
                         .default("Start")
-                        .doc("Where the box lines up along that side's cross axis."),
+                        .doc("Where the box lines up along that side."),
                     prop("gap", "f64")
                         .default("theme.popover.gap")
-                        .doc("Pixels between the anchor's edge and the box."),
+                        .doc("Pixels between the anchor and the box."),
                     prop("padding", "f64")
                         .default("theme.popover.padding")
-                        .doc("How close to a viewport edge the box may come before it flips or shifts. The box is also never wider than the viewport less this at both edges."),
+                        .doc("How close to a viewport edge the box may come before it flips or shifts. The box is never wider than the viewport less this on both sides."),
                     prop("flip", "bool")
                         .default("true")
-                        .doc("Move to the opposite side when the preferred one has no room."),
+                        .doc("Moves to the opposite side when the preferred one has no room."),
                     prop("shift", "bool")
                         .default("true")
-                        .doc("Slide along the side to stay on screen, once flipping cannot help."),
+                        .doc("Slides along the side to stay on screen when flipping does not help."),
                     prop("width", "PopoverWidth")
                         .default("Auto")
-                        .doc("Whether the box follows its own content, the anchor's width exactly, or at least the anchor's width."),
+                        .doc("`Auto` follows the content, `Match` takes the anchor's width, and `Min` is at least the anchor's width."),
                     prop("remeasure", "u64")
                         .default("0")
-                        .doc("Not a placement input: changing it re-measures. For an anchor that resizes while the box is open - nothing else re-measures."),
+                        .doc("Changing it measures the box again. Use it for an anchor that resizes while the box is open."),
                     prop("dismiss", "bool")
                         .default("false")
-                        .doc("Escape anywhere and a press outside close the box, through `on_dismiss`. Spread `anchor_events()` on the trigger and `floating_events()` on the box."),
+                        .doc("Escape and a press outside close the box, through `on_dismiss`. Spread `anchor_events()` on the trigger and `floating_events()` on the box."),
+                ]).without_base_props(),
+                props("PopoverHandle", vec![
+                    prop("floating()", "&ElementHandle")
+                        .doc("Mount it on the box. Nothing is placed until it is attached."),
+                    prop("placed()", "bool")
+                        .doc("Whether the box has been measured. `false` on the render that opens it."),
+                    prop("placement()", "Placement")
+                        .doc("The side and align the box landed on, after flipping."),
+                    prop("style()", "Option<String>")
+                        .doc("The box's `style`, with its position and width."),
+                    prop("show(content)", "Option<Element>")
+                        .doc("Renders the box. `None` removes it."),
+                    prop("on_dismiss(f)", "impl FnMut()")
+                        .doc("What Escape and a press outside call, with `dismiss` on. Call it on every render."),
+                    prop("anchor_events()", "Vec<Attribute>")
+                        .doc("Spread on the trigger, with `dismiss` on."),
+                    prop("floating_events()", "Vec<Attribute>")
+                        .doc("Spread on the box, with `dismiss` on."),
                 ]).without_base_props(),
             ],
             lead: rsx! {
                 Text {
-                    "A popover is a hook, not a component: a dropdown, a menu and a hover "
-                    "card share when and where, never what the box looks like. "
+                    "A popover is a hook, not a component. A dropdown, a menu and a hover "
+                    "card share where the box goes, not how it looks. "
                     Code { source: "use_popover" }
-                    " portals the box to the document root, so it escapes an "
+                    " portals the box, so no "
                     Code { source: "overflow: hidden" }
-                    " ancestor, and places it in viewport coordinates, flipping and shifting "
-                    "to stay on screen. It owns no open state - "
+                    " ancestor clips it, and flips and shifts it to stay on screen."
+                }
+                Text {
+                    "It owns no open state. Pass "
                     Code { source: "show(None)" }
-                    " is how a closed popover stops rendering. Popovers nest with nothing "
-                    "extra: anchor the inner one to a row inside the outer box, and the one "
-                    "shown later paints over the earlier."
+                    " to take a closed box away. Popovers nest. Anchor the inner one to a row "
+                    "in the outer box, and the one shown later paints on top."
                 }
             },
             // snippet: let mut opened = use_signal(|| false);
@@ -323,54 +340,51 @@ pub fn PopoverPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "The hook contributes no role and no keyboard - a popover has no "
-                    "semantics. The consumer supplies "
+                    "The hook adds no role and no keys. Put a "
                     Code { source: "role" }
-                    " on the box and the "
+                    " on the box, and "
                     Code { source: "aria-haspopup" }
                     ", "
                     Code { source: "aria-expanded" }
                     " and "
                     Code { source: "aria-controls" }
-                    " that name the trigger, as the demo above does. Drive "
+                    " on the trigger, as the example does. Drive "
                     Code { source: "aria-expanded" }
-                    " from the same signal the hook is given: a trigger claiming to be closed "
-                    "over an open box is announced as closed."
+                    " from the same signal the hook gets, or a screen reader hears the wrong "
+                    "state."
                 }
                 Text {
-                    "Escape must close the box (WCAG 2.1 SC 1.4.13). "
-                    Code { source: "dismiss(true)" }
-                    " does it, plus a press outside: "
                     Kbd { "Esc" }
-                    " anywhere closes the box and hands focus back to the trigger when it was "
-                    "on the trigger or in the box; focus leaving both closes it and stays where "
-                    "it went. Give the box "
+                    " must close the box (WCAG 1.4.13). With "
+                    Code { source: "dismiss(true)" }
+                    ", "
+                    Kbd { "Esc" }
+                    " closes it and returns focus to the trigger. Focus leaving the trigger "
+                    "and the box closes it too. Give the box "
                     Code { source: "tabindex=\"-1\"" }
                     ", or a click on its text moves focus out and closes it. Safari does not "
-                    "focus a button on click, so there a press outside a pointer-opened box "
-                    "does not close it. Off the web only the element holding focus hears "
-                    Kbd { "Esc" }
-                    ", which is why both event lists are spread. Focus is deliberately not "
-                    "trapped - Tab closes the surface and moves on. If you animate the close, give the closing box "
+                    "focus a button on click, so there a press outside a box opened by pointer "
+                    "does not close it."
+                }
+                Text {
+                    "Focus is not trapped. " Kbd { "Tab" }
+                    " closes the box and moves on. If you animate the close, give the closing "
+                    "box "
                     Code { source: "visibility: hidden" }
                     " or "
                     Code { source: "inert" }
-                    " for the duration: until it unmounts it is still tabbable and still "
-                    "announced."
+                    ". Until it unmounts, it is still tabbable and still announced."
                 }
             }
 
             DocSection {
                 title: "What it cannot do",
                 Text {
-                    "Scroll tracking needs a document-level scroll notification, which only "
-                    "the web answers today - natively an open popover drifts when the page "
-                    "scrolls. Nothing tracks a resize on any backend; "
+                    "Only the web tells the box when the page scrolls. Elsewhere an open "
+                    "popover drifts. No backend tracks a resize, so use "
                     Code { source: "remeasure" }
-                    " is the only answer there. "
-                    Code { source: "dismiss" }
-                    "'s press outside needs a renderer that can say where focus is: the web "
-                    "and Blitz can, a WebView cannot, so there only "
+                    ". A press outside needs to know where focus is. The web and Blitz can "
+                    "tell, a WebView cannot, so there only "
                     Kbd { "Esc" }
                     " and your own handlers close the box."
                 }

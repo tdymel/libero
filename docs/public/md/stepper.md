@@ -6,11 +6,10 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/naviga
 Index: [index.md](index.md) - every other component's markdown page
 Description: The stages of a process over an enum, horizontal or vertical, with the current step's content.
 
-The stages of a process over an enum, with the current one's content. The steps
-are the enum's variants - `#[derive(Options)]` lists them in declaration order
-and names each one - and `panel` is a match over the same type, so a step
-without a body is a compile error. `value` is strictly controlled: moving on is
-the caller's, usually from a button inside the step.
+The stages of a process, one per variant of an enum, with the current step's
+content. `#[derive(Options)]` lists and names the steps. `panel` matches on the
+same enum, so a step without a body does not compile. You own `value` and move
+it on, usually from a button inside the step.
 
 ## Usage
 
@@ -54,67 +53,60 @@ fn Demo() -> Element {
 # fn address_valid() -> bool { true }
 ```
 
-## Where a step's state comes from
+## Step states
 
-`StepState` is `Pending`, `Active`, `Completed` or `Error`.
+`StepState` is `Pending`, `Active`, `Completed` or `Error`. Steps before `value`
+are completed, `value` is active, the rest are pending. `value: None` shows
+every step as completed, with none current. Render your own done screen for
+that case.
 
-- Three are derived from position: steps before `value` are completed,
-  `value` is current, the rest are pending.
-- `value: None` means every step is finished: all show as completed and none is
-  current. There is no `Stepper.Completed`; render your own done screen.
-- `state` only overrides. Returning `None` keeps the derived state, so you name
-  just the step that differs. It is the only way to say `Error`.
-- `Error` changes the marker and the status text, never which step is current:
-  an errored active step keeps `aria-current` and its content.
+`state` overrides single steps. Returning `None` keeps the derived state, so
+you name only the step that differs. It is the only way to mark a step `Error`.
+An error changes the marker and the status text, not which step is current.
 
 ## Orientation
 
-- `horizontal` (default): markers in a row joined by connectors, and one content
-  region below the strip for the current step. `label_position` puts labels
-  `side` (default) or `below` the markers.
-- `vertical`: each step's content sits under the step in a `Collapse`, open only
-  for the current step. `label_position` is ignored. `panel` is called for
-  every step here, because a closing step animates out around its content; a
-  closed step's content is still never mounted and keeps no state.
-
-## Props
-
-| Prop | Type | Default | What |
-|---|---|---|---|
-| `value` | `Option<T>` | required | The current step; `None` = all finished |
-| `panel` | `Callback<T, Element>` | - | A step's body |
-| `options` | `Vec<T>` | `T::options()` | The steps to show, in order |
-| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Rename a step, or `OptionLabel::rich` to draw it as rsx |
-| `option_description` | `Callback<T, String>` | - | A second line under the label; `""` prints none |
-| `state` | `Callback<T, Option<StepState>>` | derived | Override a step's state; the only source of `Error` |
-| `onstepclick` | `EventHandler<T>` | - | Absent: the steps are not interactive |
-| `allow_next_steps` | `bool` | `false` | With `onstepclick`, pending steps are clickable too |
-| `orientation` | `Orientation` | `horizontal` | `vertical` collapses each step's content under it |
-| `label_position` | `StepLabelPosition` | `theme.stepper.label_position` (`side`) | `side` or `below`; ignored when vertical |
-| `size` | `Size` | `theme.stepper.size` (`md`) | Marker, type and spacing |
-| `color` | `ThemeAwareValue` | `theme.stepper.color` (`primary.6`) | Current and completed markers, and connectors behind them |
-
-Plus `class`, `sx`, `states` and any global attribute (`id` seeds the ids below).
-The root is a `div` holding the `<ol>` and, horizontally, the content region.
+`horizontal` draws the markers in a row and shows the current step's content
+below. `label_position` puts the labels at the `side` of the markers or
+`below` them. `vertical` shows each step's content under the step and collapses
+the others. A closed step's content is never mounted, so it keeps no state.
 
 ## Accessibility
 
 With `onstepclick`, completed steps and the current one are buttons, and
-pending ones too with `allow_next_steps`. Each is a tab stop in document order;
-Enter and Space activate. There are no arrow keys.
+pending ones too with `allow_next_steps`. Each is a tab stop. Enter and Space
+activate. There are no arrow keys.
 
-Name the steps with `aria_label` or `aria_labelledby` on `Stepper`: both go to
+Name the steps with `aria_label` or `aria_labelledby` on `Stepper`. Both land on
 the `<ol>`, not the root, so two steppers on a page are two named lists.
 
-With `OptionLabel::rich` the name replaces the drawn label for a screen reader,
-so it must contain the visible text: a voice-control user says what they see
-(WCAG 2.5.3).
+With `OptionLabel::rich`, the name replaces the drawn label for a screen
+reader, so it must contain the visible text (WCAG 2.5.3).
 
-## Theme
+## Props
 
-`theme.stepper`: `size`, `sizes` (marker, font size, description font size, gap
-between marker and label, spacing between steps), `label_position`, `color`,
-`pending_color`, `error_color`, `connector_color`, `description_color`,
-`line_width`, `content_padding`. The vertical arm's height animation is
-`theme.collapse.duration`. The status words are `StepperLabels` (`completed`,
-`error`) in the [localization](localization.md).
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `Option<T>` | required | The current step. `None` means every step is finished. |
+| `panel` | `Callback<T, Element>` | - | A step's body. Horizontal shows it below the strip, vertical under its own step. A closed step's content is not mounted. |
+| `options` | `Vec<T>` | `T::options()` | The steps to show, in order. |
+| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides a step's label. `OptionLabel::rich` draws it as rsx and keeps a text name. |
+| `option_description` | `Callback<T, String>` | - | A second line under a step's label. An empty string prints none. |
+| `state` | `Callback<T, Option<StepState>>` | derived | Overrides a step's state. `None` keeps the derived one. The only way to mark a step `Error`. |
+| `onstepclick` | `EventHandler<T>` | - | Called with the picked step. Without it the steps are plain text with no tab stops. |
+| `allow_next_steps` | `bool` | `false` | With `onstepclick`, lets steps not reached yet be picked too. |
+| `orientation` | `Orientation` | `horizontal` | `vertical` puts each step's content under the step itself. |
+| `label_position` | `StepLabelPosition` | `side` | `side` or `below` the marker. Ignored when vertical. Below 360px wide, `side` draws as `below`. |
+| `size` | `Size` | `md` | Marker, type and spacing. |
+| `color` | `ThemeAwareValue` | `primary` | The current and completed markers, and the connectors behind them. |
+
+It also takes `sx`, `class`, `states`, and any extra HTML attributes. An `id`
+seeds the ids of the steps.
+
+## Theme defaults
+
+`StepperDefaults` on the theme: `size`, `sizes` (marker, font sizes, gaps),
+`label_position`, `color`, `pending_color`, `error_color`, `connector_color`,
+`description_color`, `line_width` and `content_padding`. The vertical collapse
+takes `theme.collapse.duration`. The status words are `StepperLabels`
+(`completed`, `error`) in the [localization](localization.md).

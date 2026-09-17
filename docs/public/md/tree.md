@@ -6,28 +6,19 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/naviga
 Index: [index.md](index.md) - every other component's markdown page
 Description: A data-driven, keyboard-navigable tree view over your own node type.
 
-Data-driven, not composed via children - pass `Vec<TreeNode<T>>` where `T` is
-entirely your own data shape. `T` only needs to implement `TreeLabel` (one
-method, `fn tree_label(&self) -> String`), which is used for keyboard typeahead
-and as the default row rendering. A `String` already implements it, so a plain
-tree needs nothing further - and `default_tree_render(args)` gives one row that
-rendering back.
+A tree view over `Vec<TreeNode<T>>`, where `T` is your own data type. `T`
+implements `TreeLabel`, whose text feeds typeahead and the default row.
+`String` already does. The tree keeps its own expanded state, and
+`default_expanded` seeds it.
 
-Which nodes are expanded is `Tree`'s own business, not the caller's -
-`default_expanded` only seeds the initial state. Selection and what happens on
-click, though, are entirely `render_node`'s call: `Tree` doesn't assume clicking
-a leaf means "select it" - a leaf might just as well be a real link. The closure
-also gets the row's live `expanded` state, so content can react to it.
+`Tree` has no selection. `render_node` decides what a row does, and gets the
+row's live `expanded` state. `TreeItem` makes a row a button that picks up the
+tab stop and `disabled`. A row that links somewhere is a
+[`NavLink`](nav_link.md) with `args.tabindex`. `default_tree_render(args)` draws
+the default row, so a custom `render_node` can fall back to it.
 
-`TreeItem` is the row content a clickable leaf wants: the `button` Enter/Space
-activation looks for, with its chrome stripped and the page's type inherited. It
-takes the row's tab stop and `disabled` from the row itself, so neither can be
-forgotten. A row that is a real link is a [`NavLink`](nav_link.md) instead - pass
-it `args.tabindex` yourself.
-
-`Tree` renders through [`List`](list.md) and has no size scale of its own: `size`
-is the row gap and the per-level indent together. Off-scale, or the two apart,
-goes through `sx` - rows are yours, so their type scale is too.
+`Tree` renders through [`List`](list.md). `size` sets the row gap and the
+per-level indent together. Set them apart through `sx`.
 
 ## Usage
 
@@ -93,21 +84,20 @@ fn Demo() -> Element {
 }
 ```
 
-Selection is the caller's state, not `Tree`'s - the readout above is part of the
-example, not something the component provides.
+The selection readout is the example's own state, not part of `Tree`.
 
 ## Accessibility
 
-`aria_label` is required - WAI-ARIA's tree pattern needs a name.
+`aria_label` names the tree and is required.
 
-Arrow keys move between visible rows, `Left`/`Right` collapse/expand (or jump
-to the parent/first child), `Home`/`End` jump to the first/last row, and typing
-a letter jumps to the next row whose `tree_label` matches. A disabled node is
-still reachable by the arrows, but nothing activates, expands or collapses it.
+The tree is one tab stop. Up and Down move between visible rows. Left and Right
+collapse and expand, or jump to the parent and first child. Home and End jump
+to the first and last row, and typing jumps to the next row whose `tree_label`
+matches. A disabled node is still reachable, but nothing activates, expands or
+collapses it.
 
-The tree is one roving tab stop, so any interactive element `render_node`
-renders must take `args.tabindex`, or it becomes a second stop the arrow keys
-never move to. `TreeItem` does that for you.
+Any link or button `render_node` draws must take `args.tabindex`, or it adds a
+tab stop the arrow keys never reach. `TreeItem` does this for you.
 
 ## Props
 
@@ -115,25 +105,27 @@ never move to. `TreeItem` does that for you.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Row gap and per-level indent together - `List`'s scale, since `Tree` renders through it. Off-scale, or the two apart, goes through `sx`. |
-| `aria_label` | `String` | - | Required by WAI-ARIA's tree pattern. |
-| `data` | `Vec<TreeNode<T>>` | required | The tree's data, entirely your own shape. |
-| `render_node` | `Callback<TreeNodeRenderArgs<T>, Element>` | `default_tree_render` | Each visible row's content. The default can also be called selectively - say, default branches and `NavLink` leaves. |
-| `default_expanded` | `HashSet<String>` | - | Seeds `Tree`'s internal state once. Not a controlled prop. |
-| `current` | `Option<String>` | - | The id of the node where the user is - a nav's current page. Tab into the tree lands on it rather than on the first row, until the arrow keys move on; when it changes, the tab stop follows it. Inside a collapsed branch, the tab stop goes to the branch. |
-| `onexpandedchange` | `EventHandler<HashSet<String>>` | - | Notification only - it doesn't drive rendering. |
+| `size` | `Size` | `md` | Row gap and per-level indent together, from `List`'s scale. Set them apart through `sx`. |
+| `aria_label` | `String` | required | The tree's accessible name. |
+| `data` | `Vec<TreeNode<T>>` | required | The nodes, over your own data type. |
+| `render_node` | `Callback<TreeNodeRenderArgs<T>, Element>` | `default_tree_render` | Each visible row's content. A custom one can still call the default for some rows. |
+| `default_expanded` | `HashSet<String>` | - | The ids expanded at first. Read once. |
+| `current` | `String` | - | The id of the node the user is on, such as a nav's current page. Tab into the tree lands on it, or on its collapsed branch. Its row carries `aria-current`. |
+| `onexpandedchange` | `EventHandler<HashSet<String>>` | - | Called with the expanded ids when they change. It does not control them. |
 
 Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
 
 ### `TreeNode<T>`
 
+`TreeNode::new(id, data)`, plus `.children(..)` and `.disabled(bool)`.
+
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `id` | `String` | required | The node's identity, used for expansion state and keyboard navigation. |
-| `data` | `T` | required | The caller's own data for this node. |
-| `children` | `Vec<TreeNode<T>>` | - | Nested nodes - an empty vec makes this a leaf. |
-| `disabled` | `bool` | `false` | Reachable by the arrow keys; nothing activates, expands or collapses it. Its descendants are disabled too. |
+| `id` | `String` | required | The node's unique id. |
+| `data` | `T` | required | Your data for this node. |
+| `children` | `Vec<TreeNode<T>>` | - | Nested nodes. Without any, the node is a leaf. |
+| `disabled` | `bool` | `false` | The arrow keys still reach it, but it does not activate, expand or collapse. Its descendants are disabled too. |
 
 ### `TreeNodeRenderArgs<T>`
 
@@ -141,32 +133,31 @@ Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 |---|---|---|
 | `id` | `String` | The node's id. |
 | `data` | `T` | The node's data. |
-| `expanded` | `bool` | `None` for a leaf - no children, no chevron, no `aria-expanded`. |
-| `disabled` | `bool` | Whether the node is disabled, by its own flag or an ancestor's. |
-| `tabindex` | `&'static str` | Apply to any interactive element your content renders - the row is already the roving tab stop, without this a link/button adds a second one arrow keys never move. |
-| `depth` | `usize` | 0 at top level. Lets `render_node` take indentation over entirely. |
+| `expanded` | `Option<bool>` | `None` for a leaf. |
+| `disabled` | `bool` | Whether the node or an ancestor is disabled. |
+| `tabindex` | `&'static str` | Put it on any link or button in the row, or it adds a tab stop the arrow keys never reach. |
+| `depth` | `usize` | 0 at the top level, for custom indentation. |
 
 ### `TreeItem`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `onclick` | `EventHandler<MouseEvent>` | - | Fires on click. |
-| `children` | `Element` | required | The row's content - an icon, the label. |
+| `onclick` | `EventHandler<MouseEvent>` | - | Click handler. |
+| `children` | `Element` | required | The row's content, such as an icon and the label. |
 
 ## Theme defaults
 
-`TreeDefaults` on the theme. `Tree` renders through `List`, so this only picks
-which of `List`'s levels it defaults to - the gap and indent values themselves
-live in `ListDefaults`.
+`TreeDefaults` on the theme. It picks the default `List` level. The gap and
+indent values live in `ListDefaults`.
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Size` | Default `size` when the prop is omitted; `md`. |
+| `size` | `Size` | Default `size`, `md`. |
 
 ## CSS variables
 
-`Tree` declares none of its own; sizing comes from `List`'s
-`--lsx-list-gap-<size>` and `--lsx-list-indent-<size>`.
+None of its own. Sizing comes from `List`'s `--lsx-list-gap-<size>` and
+`--lsx-list-indent-<size>`.
 
 ## Data attributes
 

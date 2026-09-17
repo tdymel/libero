@@ -7,8 +7,8 @@ use libero::{
     hooks::{Align, Side},
 };
 
-/// Everything above the `rsx!`: the state, what a pick does, and the item
-/// list itself - `generate_code` only emits props, and the list is a `let`.
+/// Everything above the `rsx!`, the state, the pick handler and the items.
+/// `generate_code` only emits props, and the list is a `let`.
 const PREAMBLE: &str = r#"let menu = use_menu();
 let mut last = use_signal(|| String::from("nothing yet"));
 let pick = move |name: &'static str| move |_| last.set(name.to_string());
@@ -214,11 +214,14 @@ pub fn MenuPage() -> Element {
             properties: vec![
                 props("Menu", vec![
                     prop("state", "MenuState")
-                        .doc("From `use_menu()`: the open state and the id the aria wiring is built from. Required."),
+                        .default("required")
+                        .doc("From `use_menu()`. Holds the open state and wires the trigger to the menu."),
                     prop("items", "Vec<MenuEntry>")
-                        .doc("The menu, in order: `MenuEntry::Item`, `MenuEntry::Group { label, items }` for a named section, and `MenuEntry::Separator`. Required."),
+                        .default("required")
+                        .doc("The menu, in order. `MenuEntry::Item`, `MenuEntry::Group { label, items }` for a named section, and `MenuEntry::Separator`."),
                     prop("children", "Element")
-                        .doc("The trigger, carrying `menu.a11y_attributes()`. Its clicks and keys are caught on the wrapper they bubble to, so it needs no handler of its own."),
+                        .default("required")
+                        .doc("The trigger, carrying `menu.a11y_attributes()`. It needs no click or key handler of its own."),
                     prop("side", "Side")
                         .default("Bottom")
                         .doc("Which side of the trigger the menu opens on. It flips when that side has no room."),
@@ -226,73 +229,64 @@ pub fn MenuPage() -> Element {
                         .default("Start")
                         .doc("Where the menu lines up along that side."),
                     prop("close_on_select", "bool")
-                        .default("theme.menu.close_on_select")
+                        .default("true")
                         .doc("Whether choosing an item closes the menu."),
                     prop("loop_focus", "bool")
-                        .default("theme.menu.loop_focus")
+                        .default("true")
                         .doc("Whether the arrow keys wrap from the last item to the first."),
                     prop("size", "Size")
                         .default("md")
                         .doc("Item height and font size."),
                     prop("radius", "Size")
                         .default("sm")
-                        .doc("The menu's corner radius. Items nest inside it with a radius tightened by the menu's padding."),
+                        .doc("The menu's corner radius. The items' corners follow it."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("The trigger opens nothing. Disable the trigger too, which draws its own dimmed state."),
-                    prop("onedge", "Option<Callback<MenuEdge>>")
-                        .default("None")
-                        .doc("Hears ← and → when no submenu answers them: ← on the top level, → on any item without a submenu. `Menubar` moves to the neighbouring menu with it."),
+                        .doc("The trigger opens nothing, and an open menu closes. Disable the trigger too, so it looks disabled."),
+                    prop("onedge", "Callback<MenuEdge>")
+                        .doc("Called with ← on the top level, or → on an item without a submenu. `Menubar` uses it to move to the next menu."),
                 ]),
                 props("MenuItem", vec![
                     prop("new(label)", "String")
                         .doc("The visible text, the accessible name, and what typeahead matches."),
                     prop("onselect", "FnMut(())")
-                        .doc("Runs when the item is chosen: a click, or Enter or Space on it."),
+                        .doc("Runs when the item is chosen by a click, Enter or Space."),
                     prop("submenu", "Vec<MenuEntry>")
-                        .doc("Opens a second menu beside the item instead. An item either runs a command or opens a submenu - the later call replaces the earlier."),
+                        .doc("Opens a second menu beside the item instead. An item runs a command or opens a submenu, and the later call wins."),
                     prop("leading", "Element")
-                        .doc("Before the label - an icon. It sits inside the item's button, so nothing interactive."),
+                        .doc("Before the label, such as an icon. Nothing interactive, since it sits inside the item's button."),
                     prop("trailing", "Element")
-                        .doc("At the far end - a badge. Part of the accessible name, and nothing interactive, for the same reason."),
+                        .doc("At the far end, such as a badge. It joins the accessible name. Nothing interactive."),
                     prop("shortcut", "&str")
-                        .doc("The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`\"Control+X\"`). Set as that attribute and drawn as a hint (\"Ctrl+X\", `Ctrl` from the localization's `menu.control`) hidden from screen readers, so it stays out of the name. No platform mapping, and binding the key is yours."),
+                        .doc("The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`\"Control+X\"`). Drawn as a hint (\"Ctrl+X\") and kept out of the name. You bind the key yourself."),
                     prop("radio", "bool")
-                        .doc("Unset, a plain command. Set, it makes the item one choice of several: a `menuitemradio` announcing `aria-checked`, with a check before the label while `true`. Put the choices in one `Group`; keeping exactly one checked is yours. A menu holding a checked item opens on it."),
+                        .doc("Makes the item one choice of several, with a check while `true`. Put the choices in one `Group` and keep one checked. A menu opens on its checked item."),
                     prop("checkbox", "bool")
-                        .doc("An independent on/off setting instead: a `menuitemcheckbox` announcing `aria-checked`, same check slot. Flip it in `onselect`. An item is `radio` or `checkbox`; the later call wins."),
+                        .doc("Makes the item an on/off setting, with a check while `true`. Flip it in `onselect`. An item is `radio` or `checkbox`, and the later call wins."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Stays in the arrow-key order, cannot be chosen, and typeahead skips it."),
+                        .doc("Stays in the arrow-key order but cannot be chosen, and typeahead skips it."),
                 ]).without_base_props(),
             ],
             lead: rsx! {
                 Text {
-                    "A list of commands that drops from a trigger - the WAI-ARIA menu button. "
-                    "The items are data, not children, so the menu owns their order: the arrow "
-                    "keys and typeahead index a "
-                    Code { source: "Vec" }
-                    " rather than asking the page. "
+                    "A list of commands that drops from a trigger. The items are data, not "
+                    "children. "
                     Code { source: "use_menu()" }
                     " keeps the open state in your scope, and the trigger is your own "
                     Code { source: "Button" }
                     ", wired by "
                     Code { source: "menu.a11y_attributes()" }
-                    ". The menu is a surface from the theme's "
-                    Code { source: "paper" }
-                    " defaults, portaled so no "
+                    ". The menu is portaled, so no "
                     Code { source: "overflow: hidden" }
                     " ancestor clips it."
                 }
                 Text {
-                    "Focus moves onto the items - one of them is tabbable at a time - so a "
-                    "screen reader follows it. A submenu opens beside its item on "
+                    "A submenu opens beside its item on "
                     Kbd { "→" }
-                    ", a click, or the pointer resting on the item for "
-                    Code { source: "theme.menu.submenu_delay" }
-                    " (150ms). Moving on to a sibling waits the same delay, so the pointer can "
-                    "cross one on its way into the submenu. There is no \"safe triangle\": "
-                    "cut the corner slowly enough to rest on a sibling and it takes over."
+                    ", a click, or when the pointer rests on the item for 150ms. Moving to a "
+                    "sibling waits as long, so the pointer can cross one on its way into the "
+                    "submenu."
                 }
             },
             Demo {
@@ -342,22 +336,20 @@ pub fn MenuPage() -> Element {
                     " is off, and " Kbd { "Home" } " " Kbd { "End" } " go to the ends. "
                     Kbd { "Enter" } " and " Kbd { "Space" } " choose. "
                     Kbd { "→" } " opens a submenu and " Kbd { "←" } " closes it again. "
-                    Kbd { "Esc" } " closes only the menu it is pressed in and hands focus back "
-                    "to whatever opened it; " Kbd { "Tab" }
+                    Kbd { "Esc" } " closes only the menu it is pressed in and returns focus "
+                    "to what opened it. " Kbd { "Tab" }
                     " closes every level and moves on from the trigger. Typing jumps to an "
-                    "item: \"s\" to the next one starting with S, \"sav\" to Save, and a pause "
-                    "of half a second starts over. A disabled item stays in the arrow order "
-                    "but cannot be chosen."
+                    "item, \"s\" to the next one starting with S and \"sav\" to Save. A pause "
+                    "of half a second starts over."
                 }
                 Text {
-                    "A shortcut hint belongs in "
+                    "Put a shortcut hint in "
                     Code { source: "shortcut" }
                     ", not "
                     Code { source: "trailing" }
-                    ": it reaches a screen reader as "
+                    ". A screen reader then hears it as "
                     Code { source: "aria-keyshortcuts" }
-                    " rather than as part of the item's name. The menu does not listen for "
-                    "the key; bind it yourself."
+                    ", not as part of the item's name."
                 }
             }
         }

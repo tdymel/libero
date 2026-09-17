@@ -21,9 +21,8 @@ const ANSWER: &str = "answer.set(match result {
     None => \"dismissed\",
 });";
 
-/// `generate_code` prints one component's props, and what this page has to
-/// show is a hook call and its trigger - so the snippet is built by hand, and
-/// preview-equals-code is kept here rather than by the generator.
+/// `generate_code` prints one component's props, but this page shows a hook
+/// call and its trigger. So the snippet is built by hand.
 fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
     let onclick = if values.str("await") == "true" {
         format!(
@@ -186,52 +185,58 @@ pub fn ModalPage() -> Element {
             properties: vec![
                 props("use_modal", vec![
                     prop("render", "impl FnMut(ModalScope<S, R>) -> Element")
-                        .doc("Builds the content, usually a Dialog, only while it is open; a Dialog in it closes the modal from its own header button. Returns a ModalHandle<S, R>; R defaults to (), for a modal that answers nothing. Call it under LiberoProvider, in a component that outlives every trigger."),
+                        .default("required")
+                        .doc("Builds the content, usually a `Dialog`, while the modal is open. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger."),
                 ]).without_base_props(),
                 props("ModalHandle<S, R>", vec![
                     prop("open_with", "fn(impl Into<S>) -> Opening<R>")
-                        .doc("Opens with these arguments, superseding whatever was showing."),
+                        .doc("Opens with these arguments, replacing whatever was showing."),
                     prop("open", "fn() -> Opening<R>")
-                        .doc("Opens with S::default(); needs S: Default."),
+                        .doc("Opens with `S::default()`. Needs `S: Default`."),
                     prop("close", "fn()").doc("Dismisses whatever this modal is showing."),
                     prop("is_open", "fn() -> bool").doc("Whether this modal is showing."),
                 ]).without_base_props(),
                 props("ModalScope<S, R>", vec![
                     prop("args", "fn() -> S").doc("The arguments this opening was given."),
-                    prop("close", "fn()").doc("Ends it as a dismissal - the same outcome as Escape."),
+                    prop("close", "fn()").doc("Ends it as a dismissal, the same as Escape."),
                     prop("resolve", "fn(R)").doc("Ends it with an answer for the caller."),
                 ]).without_base_props(),
                 props("Opening<R>", vec![
                     prop("onresult", "fn(impl FnMut(Option<R>)) -> Self")
-                        .doc("Runs when this opening settles; None if it was dismissed. A superseded opening never runs it."),
+                        .doc("Runs when this opening settles, with `None` if it was dismissed. A replaced opening never runs it."),
                     prop("close", "fn()").doc("Closes this opening, if it is still the one showing."),
-                    prop(".await", "Option<R>").doc("The same outcome, as a future: for an answer that gates work which is already async, or dialogs in sequence."),
+                    prop(".await", "Option<R>").doc("The same outcome, as a future. Use it when async work waits on the answer, or for dialogs in sequence."),
                 ]).without_base_props(),
                 props("ModalContext", vec![
                     prop("is_modal", "fn() -> bool")
-                        .doc("Whether the content is in a modal. Every modal provides the context to what it renders."),
+                        .doc("Whether the content is in a modal. Every modal provides this context to its content."),
                     prop("close", "fn()")
-                        .doc("Dismisses the modal around the content. use_modal_close() is its shorthand, for a component factored out of the render closure."),
+                        .doc("Dismisses the modal around the content. `use_modal_close()` is the shorthand, for a component outside the render closure."),
                 ]).without_base_props(),
             ],
             lead: rsx! {
                 Text {
                     "A modal is a hook, not a component. "
                     Code { source: "use_modal" }
-                    " registers a render closure and returns a handle that opens it "
-                    "wherever you need one - no open flag to thread, and the content is built "
-                    "only while it is showing. Wrap it in a hook of your own, whose parameters "
-                    "every opening shares. Each opening passes its arguments to the closure's "
+                    " takes a render closure and returns a handle that opens it. The content "
+                    "is built only while it shows. Each opening passes its arguments to the "
+                    "closure's "
                     Code { source: "ModalScope" }
                     ", and settles with what "
                     Code { source: "resolve" }
                     " answered, or "
                     Code { source: "None" }
-                    " when dismissed. Make the answer the dialog's own enum, not a "
+                    " when dismissed."
+                }
+                Text {
+                    "Make the answer the dialog's own enum, not a "
                     Code { source: "bool" }
                     ". The handle is "
                     Code { source: "Copy" }
-                    ", so a trigger elsewhere in the tree takes it as a prop or as context."
+                    ", so a trigger elsewhere in the tree can take it as a prop or from "
+                    "context. A "
+                    Code { source: "Dialog" }
+                    " inside closes the modal from its own close button."
                 }
             },
             Demo {

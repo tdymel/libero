@@ -4,29 +4,16 @@ Crate: `libero`
 Import: `use libero::components::Burger;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/burger.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: Three bars that morph into an X - an `ActionIcon` carrying the glyph and the three ARIA facts a nav toggle needs.
+Description: Three bars that morph into an X, an `ActionIcon` with the ARIA a nav toggle needs.
 
-Three bars that morph into an X. It renders an [`ActionIcon`](action-icon.md) -
-a real `<button type="button">` with the ripple and the disabled handling
-already right - and adds the glyph plus the three ARIA facts a burger is
-usually missing: `aria-expanded`, a name that stays the same while that
-attribute carries the state, and the `aria-controls` you spread to name the panel. The morph animates
-`background-color` and `transform` only, and is dropped entirely under
-`prefers-reduced-motion: reduce` - the two states differ in shape, not just in
-position, so snapping between them stays legible.
-
-## Props
-
-| Prop | Type | Default | Does |
-|---|---|---|---|
-| `open` | `bool` | unset | `true` draws the X, and either value emits `aria-expanded`, which makes the button a disclosure. Omit it for a burger that opens something that is not one |
-| `onclick` | `EventHandler<MouseEvent>` | | `Burger` never owns the open state |
-| `label` | `Callback<bool, String>` | localization | Replaces the localization's labels, called with the open state |
-| `size` | `ThemeAwareValue` | `md` | The glyph's width and height; the bars are a twelfth of it thick, and the button is one `spacing.xs` larger. Below 24px (`xs`, `sm`) it takes presses in an invisible 24x24 box, as every `ActionIcon` does |
-| `color` | `ThemeAwareValue` | `currentColor` | The bars. Unset they inherit |
-| `disabled` | `bool` | `false` | Passed through to the button |
+Three bars that morph into an X. It renders an [`ActionIcon`](action_icon.md)
+with `aria-expanded` and a name that stays the same in both states. You spread
+`aria-controls` to name the panel it opens. Under reduced motion the bars snap
+instead of morphing.
 
 ## Usage
+
+The caller holds the open state and hands it to both the burger and the panel.
 
 ```rust
 use dioxus::prelude::*;
@@ -52,33 +39,19 @@ fn Demo() -> Element {
 }
 ```
 
-The panel owns the state. `Burger` is told what it is, and tells the
-accessibility tree - which is why `aria-controls` has to name a real element:
-without it the state is announced but the thing in that state is not.
-
-Focus stays on the burger when the panel opens. Moving it into the panel is the
-panel's decision - [`Drawer`](drawer.md) traps already, and a burger that opens
-a static sidebar must not steal focus.
-
 ## Accessibility
 
-**Leave `open` unset when the burger opens a modal.** `open` makes the
-button a disclosure with `aria-expanded`; a modal is not expanded by its
-trigger, it replaces the page.
+Set `open` only when the burger expands a panel, and spread `aria-controls`
+with that panel's id, or `Burger` warns. Leave `open` unset for a burger that
+opens a modal, since a modal is not expanded by its trigger.
 
 ```rust,ignore
-// No `open`: nothing is expanded, so nothing announces a state.
 Burger { onclick: move |_| modal.open() }
 ```
 
-**Spread `aria-controls` whenever `open` is set**, naming the element that
-opens, or `Burger` warns. Nothing sets it internally.
-
-**The accessible name is the localization's.** With `open` set it is
-`toggle` ("Toggle navigation") in both states, since `aria-expanded` already
-announces the state; unset, it is `open` ("Open navigation"). Translate it
-once in the [localization](localization.md)'s `BurgerLabels`, or per
-burger with `label`:
+The name is "Toggle navigation" while `open` is set, since `aria-expanded`
+carries the state, and "Open navigation" otherwise. Translate both in the
+[localization](localization.md)'s `BurgerLabels`, or per burger with `label`.
 
 ```rust,ignore
 Localization {
@@ -96,28 +69,33 @@ Burger {
 }
 ```
 
-## Styling
+Focus stays on the burger when the panel opens. Moving it is the panel's job,
+and [`Drawer`](drawer.md) already traps it.
 
-The bars read `var(--lsx-burger-color, currentColor)`, and the theme never
-declares that var. So `color: "primary"` sets it, `sx().color("surface")` on the
-button reaches the bars through the fallback, and neither silently wins over
-the other.
+## Props
 
-`BurgerDefaults` carries `size` (`md`), the six-step `sizes` scale
-(12/18/24/34/42/52px),
-`transition_duration` (`300ms`) and `transition_timing` (`ease`).
-Motion is a theme decision, not a per-call-site one; an off-scale one-off goes
-through `sx` like any other off-scale value.
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `open` | `bool` | - | `true` draws the X. Set either way, it makes the button a disclosure with `aria-expanded`. Leave it unset when the burger opens a modal. |
+| `onclick` | `EventHandler<MouseEvent>` | - | Click handler. The caller holds the open state and toggles it here. |
+| `label` | `Callback<bool, String>` | - | Replaces the localization's labels. Called with the open state during render, so it can read a live locale. |
+| `size` | `ThemeAwareValue` | `md` | The glyph's width and height. The button is one `spacing.xs` step larger. Below 24px it still takes presses in a 24x24 box. |
+| `color` | `ThemeAwareValue` | `currentColor` | The bars. Unset, they follow the button's `color`. |
+| `disabled` | `bool` | `false` | Disables the button. |
 
-There is no radius, on the prop or in the defaults: a radius is meaningless on
-three bars, so `Burger` neither takes one nor overrides `ActionIcon`'s.
+Like every component, `Burger` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes, `aria-controls` among them.
 
-The bar thickness is derived (`size / 12`) rather than a prop: it is right at
-every size, and a `line_size` override is one more thing to get wrong.
+## Theme defaults
 
-## Burger or ActionIcon?
+`BurgerDefaults` on the theme.
 
-An `ActionIcon` with an icon child is the right answer for any icon-only
-button. `Burger` is the one where the glyph has two states that morph, the name
-stays put, and `aria-expanded` has to follow - three things a
-caller has to get right at once, bundled so they are right by default.
+| Field | Description |
+|---|---|
+| `size` | Default `size`, `md`. |
+| `sizes` | The six-step size scale, 12, 18, 24, 34, 42 and 52px. |
+| `transition_duration` | Morph duration, `300ms`. |
+| `transition_timing` | Morph easing, `ease`. |
+
+The bars read `var(--lsx-burger-color, currentColor)`. `color` sets that
+variable, and without it a `color` on the button reaches the bars.

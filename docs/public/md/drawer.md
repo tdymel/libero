@@ -4,16 +4,16 @@ Crate: `libero`
 Import: `use libero::hooks::{DrawerOptions, ModalScope, use_drawer};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_drawer.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A dimmed, focus-trapped panel docked to one edge - `use_modal` with the docking around it, so it has the same handle, arguments and results.
+Description: A dimmed, focus-trapped panel docked to one edge, `use_modal` with the docking around it.
 
-A drawer is a hook, not a component. `use_drawer` is [`use_modal`](modal.md)
-with a docked panel around the content: the same handle, the same per-opening
-arguments, the same results. For an in-flow panel, see [Sidebar](sidebar.md).
+A dimmed, focus-trapped panel docked to one edge. `use_drawer` is
+[`use_modal`](modal.md) with the docking around it, so it has the same handle,
+arguments and results. The panel is a [Dialog](dialog.md) surface. For a panel
+in the page flow, use [Sidebar](sidebar.md).
 
 ## Usage
 
-`DrawerOptions` carries what every opening shares - the edge it docks to, how
-wide (or tall) it is, and its stacking order. The closure is the panel's
+`DrawerOptions` holds what every opening shares. The closure is the panel's
 content.
 
 ```rust
@@ -47,14 +47,12 @@ fn Demo() -> Element {
 }
 ```
 
-`anchor` picks the edge - `left`, `right`, `top` or `bottom`. `size` is the
-width along a left/right edge and the height along a top/bottom one, off the
-theme's drawer size scale; the other axis is always the full 100%. Both are read
-on every render, so an anchor held in a signal switches a drawer that is already
-open.
+`anchor` picks the edge, `left`, `right`, `top` or `bottom`. `size` is the
+width on a left or right edge and the height on a top or bottom one. The other
+axis is always full. Both are read on every render, so an anchor in a signal
+moves an open drawer.
 
-The argument and result types are the modal's, so a drawer takes per-opening
-data and answers its caller exactly like any other dialog - see
+A drawer takes per-opening data and returns a result like any modal. See
 [Modal](modal.md) for `open_with`, `Opening`, `onresult` and `.await`.
 
 ```rust,ignore
@@ -79,22 +77,14 @@ if details.open_with(order).await == Some(true) {
 }
 ```
 
-## What it is made of
-
-The hook supplies the portal, the backdrop and the focus trap; a
-[Float](float.md) does the edge docking; and the panel itself is a
-[Dialog](dialog.md) surface, which is where the closure's content lands. That
-last part is why the panel carries the dialog role for free.
-
 ## Accessibility
 
-Escape and a backdrop click close it, settling the `Opening` with `None`, so a
-handler written for an answer never runs on a dismissal.
+Escape and a backdrop click close it and settle the `Opening` with `None`, so a
+result handler never runs on a dismissal.
 
-Set `DrawerOptions::aria_label`: the panel is a dialog and has no name of its
-own. Unset, it warns in a debug build. Unlike a plain
-`Dialog`, the drawer panel renders no header close button - a drawer's content
-owns its own dismissal.
+Set `DrawerOptions::aria_label`, since the panel is a dialog with no name of its
+own. Unset, it warns in a debug build. It has no header close button, so give
+its content a way to close it.
 
 ## API
 
@@ -107,19 +97,19 @@ pub fn use_drawer<S: Clone + 'static, R: Clone + 'static>(
 ) -> ModalHandle<S, R>
 ```
 
-Returns the same `ModalHandle` as `use_modal`; every method on it, on
-`ModalScope` and on `Opening` behaves identically. See [Modal](modal.md).
+Returns the same `ModalHandle` as `use_modal`. It, `ModalScope` and `Opening`
+behave the same. See [Modal](modal.md).
 
 ### `DrawerOptions`
 
-`Default`, so a literal overrides only what it needs:
+`DrawerOptions` implements `Default`, so a literal sets only what it needs,
 `DrawerOptions { anchor: "right".into(), ..Default::default() }`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `anchor` | `Input<DrawerAnchor>` | `left` | The edge the panel docks to. |
-| `size` | `Input<Size>` | `md` | Width along the docked edge, height for top/bottom. |
-| `z_index` | `Input<ThemeAwareValue>` | - | Stacking order for the docked panel. |
+| `size` | `Input<Size>` | `md` | Width when docked left or right, height when docked top or bottom. |
+| `z_index` | `Input<ThemeAwareValue>` | - | Stacking order of the panel. |
 | `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. Unset warns in a debug build. |
 
 ## Theme defaults
@@ -128,11 +118,10 @@ Returns the same `ModalHandle` as `use_modal`; every method on it, on
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Size` | Default `size` when the prop is omitted; `md`. |
+| `size` | `Size` | Default `size`, `md`. |
 | `sizes` | `Sizes<u16>` | Panel extent per size step, in px. |
 
-The panel's surface - background, shadow, padding - comes from the theme's
-`Dialog` defaults.
+The panel's background, shadow and padding come from the `Dialog` defaults.
 
 ## CSS variables
 
