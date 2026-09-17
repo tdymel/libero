@@ -102,6 +102,45 @@ fn a_strip_whose_thumbnails_all_fit_is_quiet() {
     });
 }
 
+/// Forced colours paint every fill `Canvas`: the current thumbnail's frame
+/// must still set it apart from the others (1.4.1).
+#[test]
+fn the_current_thumbnail_shows_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, DIALOG).await.unwrap();
+        // The others are transparent over the dialog's `Canvas`.
+        let [current, canvas]: [String; 2] = page
+            .evaluate(
+                "(() => { const probe = document.createElement('div'); \
+                 probe.style.background = 'Canvas'; document.body.append(probe); \
+                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+                 const current = document.querySelector('[role=dialog] button[aria-current]:has(img)'); \
+                 return [getComputedStyle(current).backgroundColor, canvas]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_ne!(
+            current, canvas,
+            "the current thumbnail's frame is the page's own colour"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The arrows on the picture move to the next picture and take focus with
 /// it; Tab from anywhere in the dialog never reaches a slide that is `inert`;
 /// and Escape after moving still returns focus to the trigger.

@@ -17,7 +17,7 @@ use crate::{
     },
     localization::{LightboxLabels, fill},
     platform::{Dimensions, ElementApi, logical_key},
-    sx::{REDUCED_MOTION, StaticSx, sx},
+    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
     theme::{
         CssVar, LIGHTBOX_STAGE_HEIGHT, LIGHTBOX_THUMBNAIL_SIZE, LIGHTBOX_THUMBNAILS_GAP,
         LIGHTBOX_WIDTH, Size, SizeCss,
@@ -176,6 +176,11 @@ static LIGHTBOX_THUMBNAIL_SX: StaticSx = StaticSx::new(|| {
         .background("transparent")
         .cursor("pointer")
         .when("current", sx().background("primary.6"))
+        // Forced colours paint the frame `Canvas`, like the rest.
+        .media(
+            FORCED_COLORS,
+            sx().when("current", sx().background("Highlight")),
+        )
         // Inset: the carousel slide around it clips.
         .focus_visible(inset_focus_ring_sx("-2px"))
 });

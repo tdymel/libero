@@ -3,7 +3,7 @@
 use e2e::browser::block_on;
 use e2e::passes::contrast;
 use e2e::suite::Suite;
-use e2e::{Fixture, Viewport};
+use e2e::{Fixture, Viewport, wait};
 
 #[test]
 fn it_meets_the_baseline() {
@@ -75,6 +75,48 @@ fn a_done_dot_fills_and_a_pending_one_stays_a_ring() {
             .console
             .assert_clean("the timeline fixture")
             .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Forced colours paint every fill `Canvas`: a done dot and a glyph bullet
+/// must still differ from a pending one there (1.4.1).
+#[test]
+fn done_and_pending_bullets_stay_apart_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/timeline", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        // `[background, glyph colour]` of the done and a pending bullet, per list.
+        let bullets: Vec<Vec<(String, String)>> = page
+            .evaluate(
+                "['#left', '#alternate'].map(id => [1, 3].map(n => { \
+                 const s = getComputedStyle(document.querySelector(`${id} > li:nth-child(${n}) > span`)); \
+                 return [s.backgroundColor, s.color]; }))",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let [dots, glyphs] = bullets.as_slice() else {
+            panic!("expected two lists, got {bullets:?}");
+        };
+        assert_ne!(dots[0].0, dots[1].0, "a done dot fills like a pending one");
+        assert_ne!(glyphs[0], glyphs[1], "a done glyph bullet looks pending");
         fixture.close().await.unwrap();
     });
 }

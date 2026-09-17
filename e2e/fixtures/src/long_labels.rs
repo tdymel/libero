@@ -1,13 +1,13 @@
 //! One label with no break opportunity in each of `Tree` (default row and
 //! `TreeItem`), `NavLink` and `Menu`, for reflow at a narrow width (todo 518),
-//! and in `Tabs`, `Timeline`, `Menubar` (todo 543). One more in `Button`,
+//! and in `Tabs`, `Timeline`, `Menubar` (todo 543), and a horizontal `DataList`. One more in `Button`,
 //! `Chip` and `SegmentedControl`, which keep one line (todo 481).
 
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Chip, Flex, Menu, MenuItem, Menubar, MenubarMenu, NavLink, OptionLabel, Options,
-    SegmentedControl, Tabs, Timeline, TimelineEvent, Tree, TreeItem, TreeNode, TreeNodeRenderArgs,
-    use_menu,
+    Button, Chip, DataList, DataListItem, Flex, Menu, MenuItem, Menubar, MenubarMenu, NavLink,
+    OptionLabel, Options, SegmentedControl, Tabs, Timeline, TimelineEvent, Tree, TreeItem,
+    TreeNode, TreeNodeRenderArgs, use_menu,
 };
 
 use crate::Routes;
@@ -109,6 +109,14 @@ fn LongLabelsPage() -> Element {
                     TimelineEvent::new(LONG).content(rsx! { "{LONG}" }),
                     TimelineEvent::new("Short"),
                 ],
+            }
+            // A multi-word term wider than a phone, and an unbreakable description.
+            DataList { id: "data-list", orientation: "horizontal",
+                DataListItem {
+                    label: rsx! { "Estimated delivery window for international parcels" },
+                    "{LONG}"
+                }
+                DataListItem { label: rsx! { "{LONG}" }, "Short" }
             }
             Menubar {
                 id: "menubar",

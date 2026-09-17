@@ -11,6 +11,8 @@ use crate::{
 // `dt`'s implicit bold.
 fn data_list_reset_sx() -> Sx {
     sx().margin("0")
+        // A long word in a term or description wraps instead of widening the page (1.4.10).
+        .with("overflow-wrap", "anywhere")
         .selector("& dt", sx().font_weight("600"))
         .selector("& dd", sx().margin("0"))
 }
@@ -25,8 +27,10 @@ static DATA_LIST_SX: StaticSx = StaticSx::new(|| {
         .and(data_list_reset_sx())
         .when(
             "horizontal",
+            // A term takes its own width up to half the list, then wraps, so
+            // the description column keeps room at 320px (1.4.10).
             sx().display("grid")
-                .grid_template_columns("max-content 1fr")
+                .grid_template_columns("fit-content(50%) minmax(0, 1fr)")
                 .align_items("baseline")
                 .selector("& dt", sx().grid_column("1"))
                 .selector("& dd", sx().grid_column("2")),

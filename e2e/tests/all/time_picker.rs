@@ -379,6 +379,53 @@ async fn expect(page: &chromiumoxide::Page, id: &str, value: &str, selected: &st
     .unwrap_or_else(|e| panic!("at {at}: {e}"));
 }
 
+/// Forced colours paint every fill `Canvas`: the picked option and mark, the
+/// hand the readout is on, and the hand itself must not vanish (1.4.1, 1.4.11).
+#[test]
+fn picks_and_the_hand_show_in_forced_colours() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/time-picker", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.execute(
+            SetEmulatedMediaParams::builder()
+                .features(vec![MediaFeature::new("forced-colors", "active")])
+                .build(),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
+            "matchMedia('(forced-colors: active)').matches",
+            "forced colours to apply",
+        )
+        .await
+        .unwrap();
+        let canvas_filled: Vec<String> = page
+            .evaluate(
+                "(() => { const probe = document.createElement('div'); \
+                 probe.style.background = 'Canvas'; document.body.append(probe); \
+                 const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
+                 return ['#digital [data-selected]', \"#analog [data-slot='mark'][data-selected]\", \
+                   \"#analog [data-slot='readout'] [data-active]\", \"#analog [data-slot='hand']\", \
+                   \"#analog [data-slot='pivot']\"] \
+                   .filter(s => { const e = document.querySelector(s); \
+                     return !e || getComputedStyle(e).backgroundColor === canvas; }); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            canvas_filled.is_empty(),
+            "painted the page's own colour: {canvas_filled:?}"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 async fn expect_unselected(page: &chromiumoxide::Page, selector: &str, at: &str) {
     let check = format!("!document.querySelector({selector:?}).hasAttribute('data-selected')");
     wait::for_js_true(page, &check, &format!("{selector} to lose its pick"))

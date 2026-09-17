@@ -44,7 +44,7 @@ fn BadgePage() -> Element {
                 for size in SIZES {
                     Indicator { label: 7, size }
                 }
-                Indicator {}
+                Indicator { id: "dot" }
             }
             Flex { gap: "xs", wrap: "wrap", align: "center",
                 for size in SIZES {

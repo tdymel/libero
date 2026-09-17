@@ -21,7 +21,7 @@ use crate::{
     },
     localization::DateLocale,
     platform::ElementApi,
-    sx::{StaticSx, Sx, sx},
+    sx::{FORCED_COLORS, StaticSx, Sx, sx},
     theme::{
         DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DatePickerDefaults, Size, SizeCss,
         TimePickerVariant,
@@ -154,6 +154,21 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& [data-selected]:focus-visible",
             inset_focus_ring_sx("-4px"),
+        )
+        // Forced colours paint every fill `Canvas`: the picks, the readout's
+        // hand and the hand itself would vanish, as in `Calendar`.
+        .media(
+            FORCED_COLORS,
+            sx().selector(
+                "& [data-selected], & [data-slot='readout'] [data-active]",
+                sx().background("Highlight")
+                    .color("HighlightText")
+                    .hover(sx().background("Highlight")),
+            )
+            .selector(
+                "& [data-slot='hand'], & [data-slot='pivot']",
+                sx().background("CanvasText"),
+            ),
         )
 });
 

@@ -1,6 +1,6 @@
 //! A label with no break opportunity wraps instead of widening the page, in
 //! `Tree` rows, `NavLink` and `Menu` items (1.4.10, todo 518), and in
-//! `Tabs`, `Timeline`, `Menubar` (todo 543).
+//! `Tabs`, `Timeline`, `Menubar` (todo 543), and a horizontal `DataList`.
 
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
@@ -13,7 +13,7 @@ const OVERFLOWS: &str = "(() => {
         ...[...document.querySelectorAll('[role=treeitem] > div')].map(e => ['tree row', e]),
         ...[...document.querySelectorAll('#nav a')].map(e => ['nav link', e]),
         ...[...document.querySelectorAll('[data-menu-index]')].map(e => ['menu item', e]),
-        ...['#tabs', '#timeline', '#menubar', '#menubar-crowded'].flatMap(root =>
+        ...['#tabs', '#timeline', '#menubar', '#menubar-crowded', '#data-list'].flatMap(root =>
             [...document.querySelectorAll(`${root}, ${root} *`)].map(e => [root + ' ' + e.tagName, e])),
     ];
     const menu = document.querySelector('[role=menu]');

@@ -7,7 +7,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         CssVar, INDICATOR_BORDER_WIDTH, INDICATOR_PROCESSING_DURATION, INDICATOR_RADII,
         INDICATOR_RADIUS, IndicatorDefaults, PAPER_BACKGROUND, Size, SizeCss,
@@ -37,7 +37,9 @@ static INDICATOR_BASE_SX: StaticSx = StaticSx::new(|| {
         .font_weight("700")
         .user_select("none")
         .background(fill.clone())
-        .color(INDICATOR_CONTRAST_VAR.value_or("inherit"));
+        .color(INDICATOR_CONTRAST_VAR.value_or("inherit"))
+        // Forced colours paint every fill `Canvas`, and a bare dot is nothing else.
+        .media(FORCED_COLORS, sx().background("CanvasText").color("Canvas"));
 
     // A `box-shadow`, not Mantine's `border`: under the global `border-box` a
     // 2px border eats 4px of a 6px dot, and a border moves the dot inside its

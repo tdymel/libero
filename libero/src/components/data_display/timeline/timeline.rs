@@ -8,7 +8,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
         Size, TIMELINE_BULLET, TIMELINE_BULLET_BACKGROUND, TIMELINE_COLOR, TIMELINE_CONNECTOR,
         TIMELINE_LINE_COLOR, TIMELINE_LINE_STYLE, TIMELINE_LINE_WIDTH, TIMELINE_MARKER,
@@ -132,6 +132,16 @@ static TIMELINE_BULLET_SX: StaticSx = StaticSx::new(|| {
             // The surface the bullet is drawn on: whatever contrast the
             // ring had against the accent, the filled glyph now has.
             sx().color(TIMELINE_BULLET_BACKGROUND.value()),
+        )
+        // Forced colours paint every fill `Canvas`, so done and pending dots
+        // would both be rings again.
+        .media(
+            FORCED_COLORS,
+            sx().when(
+                "active",
+                sx().background("Highlight").border_color("Highlight"),
+            )
+            .when("with-child && active", sx().color("HighlightText")),
         )
         .when(
             TimelineAlign::Left.state_name(),
