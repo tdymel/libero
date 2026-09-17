@@ -8,7 +8,7 @@ use super::{
 };
 use crate::{
     components::Input,
-    hooks::{use_localization, use_theme},
+    hooks::{use_formats, use_theme},
 };
 
 date_props! {
@@ -33,7 +33,7 @@ date_props! {
 #[component]
 pub fn DatePicker<V: DateValue>(props: DatePickerProps<V>) -> Element {
     let theme = use_theme();
-    let time_format = use_localization().date.time_format;
+    let time_format = use_formats().time;
     let level = props.level.unwrap_or(DateLevel::Day);
     use_ignored_props_warning::<V>(
         "DatePicker",

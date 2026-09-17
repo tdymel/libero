@@ -130,7 +130,7 @@ clock.
 | `variant` | `TimePickerVariant` | `analog` | Columns or a clock face, for values with a time. |
 | `with_seconds` | `bool` | `false` | A seconds column. Digital only. |
 | `step` | `u8` | `5` | Minutes between offered minutes. Theme: `TimePickerDefaults::step`. |
-| `twelve_hour` | `bool` | theme | A 12-hour clock. |
+| `twelve_hour` | `bool` | `Formats::time` | A 12-hour clock. |
 | `today` | `NaiveDate` | clock | The day marked as today. |
 | `size` | `Size` | `md` | Cell, option and font size. |
 | `name` | `String` | - | Emits a hidden input posting ISO 8601. |
@@ -141,8 +141,9 @@ Props that only some value types use are ignored by the rest.
 ## Theme
 
 `Localization::date` (`DateLocale`, see [localization](theming.md#localization))
-holds the month and weekday names, the first weekday, the formats and the
-button labels - one place to translate.
+holds the month and weekday names and the button labels - one place to
+translate. The provider's `formats` (`Formats::AMERICAN` by default, or
+`Formats::GERMAN`) hold the first weekday and the date and time patterns.
 `Theme::date_picker` and `Theme::time_picker` hold the size steps, the
 default calendar and its `days`, and the default clock variant and minute
 `step`.

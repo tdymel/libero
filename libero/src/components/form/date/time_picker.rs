@@ -16,7 +16,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{
-        Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element,
+        Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_formats,
         use_localization, use_theme,
     },
     localization::DateLocale,
@@ -181,7 +181,7 @@ const INNER_RING: f64 = 0.52;
 #[component]
 pub fn TimePicker(props: TimePickerProps) -> Element {
     let theme = use_theme();
-    let time_format = use_localization().date.time_format;
+    let time_format = use_formats().time;
     NaiveTime::picker(PickerArgs {
         value: props.value,
         onchange: props.onchange,

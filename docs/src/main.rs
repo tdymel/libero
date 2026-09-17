@@ -15,6 +15,7 @@ use libero::{
         Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_spotlight,
     },
     hooks::use_element,
+    localization::Formats,
     platform::ElementApi,
     sx::sx,
     theme::{HEADER_HEIGHT_VAR, ICON_SIZE, PAPER_BACKGROUND, Size, ThemeSet, Z_INDEX_HEADER},
@@ -268,7 +269,7 @@ fn App() -> Element {
     rsx! {
         document::Title { "Libero" }
         document::Link { rel: "icon", href: LOGO }
-        LiberoProvider {
+        LiberoProvider { formats: &Formats::GERMAN,
             Router::<Route> {}
             Notifications {}
         }

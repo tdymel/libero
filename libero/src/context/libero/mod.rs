@@ -9,7 +9,7 @@ pub(crate) use stylesheet_registry::{SheetRank, StylesheetKey};
 use super::{ModalHost, PortalHost, PortalOutlet, WindowHost};
 use crate::{
     css::Stylesheet,
-    localization::Localization,
+    localization::{Formats, Localization},
     platform::{backend, color_scheme, document},
     theme::{THEME_ATTRIBUTE, Theme, ThemeSet},
     tokens::{ColorScheme, ColorSchemeSetting},
@@ -35,6 +35,8 @@ pub struct LiberoContext {
     /// Every string libero shows a reader. A `Signal`, so a language switch
     /// re-renders its readers without touching the theme's sheet.
     pub localization: Signal<&'static Localization>,
+    /// How dates, times and numbers are written, apart from the language.
+    pub formats: Signal<&'static Formats>,
     /// The active theme's name, so a switch can tell a repeat from a change
     /// and the pair from a rebuild.
     pub(crate) active: Signal<&'static str>,
@@ -61,6 +63,7 @@ impl LiberoContext {
         themes: Signal<ThemeSet>,
         theme: Signal<&'static Theme>,
         localization: Signal<&'static Localization>,
+        formats: Signal<&'static Formats>,
         active: Signal<&'static str>,
         scheme_setting: Signal<ColorSchemeSetting>,
         system_scheme: Signal<ColorScheme>,
@@ -71,6 +74,7 @@ impl LiberoContext {
             themes,
             theme,
             localization,
+            formats,
             active,
             scheme_setting,
             system_scheme,
@@ -278,10 +282,25 @@ pub fn LiberoProvider(
     /// [`use_localization_handle`](crate::hooks::use_localization_handle).
     #[props(default = &Localization::ENGLISH)]
     localization: &'static Localization,
+    /// How dates, times and numbers are written, whatever the language. Read
+    /// at mount; switch it later with
+    /// [`use_formats_handle`](crate::hooks::use_formats_handle).
+    ///
+    /// ```ignore
+    /// // English words, German dates: `14. September 2026`, `15:30`.
+    /// LiberoProvider {
+    ///     localization: &Localization::ENGLISH,
+    ///     formats: &Formats::GERMAN,
+    ///     Router::<Route> {}
+    /// }
+    /// ```
+    #[props(default = &Formats::AMERICAN)]
+    formats: &'static Formats,
     children: Element,
 ) -> Element {
     let themes = use_hook(|| themes.clone());
     let localization = use_signal(|| localization);
+    let formats = use_signal(|| formats);
     // Read once, at mount, so the first render already paints the scheme the
     // app was last left in rather than flashing the light one.
     let setting = use_hook(|| {
@@ -316,6 +335,7 @@ pub fn LiberoProvider(
             theme_set,
             theme_signal,
             localization,
+            formats,
             active,
             scheme_setting,
             system_scheme,

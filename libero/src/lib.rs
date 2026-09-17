@@ -28,6 +28,7 @@ pub(crate) use context::CssLayer;
 pub use context::{LiberoContext, LiberoProvider};
 pub use css::Stylesheet;
 pub use hooks::{
-    ColorSchemeHandle, LocalizationHandle, ThemeSetHandle, use_color_scheme, use_localization,
-    use_localization_handle, use_stylesheet, use_theme, use_theme_set,
+    ColorSchemeHandle, FormatsHandle, LocalizationHandle, ThemeSetHandle, use_color_scheme,
+    use_formats, use_formats_handle, use_localization, use_localization_handle, use_stylesheet,
+    use_theme, use_theme_set,
 };

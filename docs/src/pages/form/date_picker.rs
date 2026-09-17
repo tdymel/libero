@@ -50,7 +50,7 @@ pub fn DatePickerPage() -> Element {
                     prop("variant", "TimePickerVariant").default("analog").doc("Columns of numbers or a clock face, for values with a time."),
                     prop("with_seconds", "bool").default("false").doc("A seconds column. Digital only."),
                     prop("step", "u8").default("5").doc("Minutes between the offered minutes. Defaults to the theme's `TimePickerDefaults::step`."),
-                    prop("twelve_hour", "bool").default("localization").doc("A 12-hour clock. Defaults to whether `DateLocale::time_format` is one."),
+                    prop("twelve_hour", "bool").default("formats").doc("A 12-hour clock. Defaults to whether `Formats::time` is one."),
                     prop("today", "NaiveDate").doc("The day marked as today. Unset, the platform clock answers after mount - on the web; elsewhere no day is marked."),
                     prop("size", "Size").default("md").doc("Cell, option and font size."),
                     prop("name", "String").doc("Emits a hidden input of that name, posting the value as ISO 8601."),
@@ -79,8 +79,10 @@ pub fn DatePickerPage() -> Element {
                     " and "
                     Code { source: "onchange" }
                     ". The month shown is the picker's own state: it opens on the value's month, else today's. "
-                    "Names, the first weekday and the heading format come from the localization's "
+                    "Names come from the localization's "
                     Code { source: "DateLocale" }
+                    ", the first weekday and the heading format from the provider's "
+                    Code { source: "Formats" }
                     ". A typed "
                     Code { source: "value" }
                     " alone does not name the type - a typed handler or a turbofish does, as on "

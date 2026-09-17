@@ -47,22 +47,20 @@ fn Demo() -> Element {
 }
 ```
 
-The names come from the [localization](theming.md#localization), so a
-translation is one struct:
+The names come from the [localization](theming.md#localization), so other
+wording is one struct:
 
 ```rust
 use libero::localization::{ColorSchemeButtonLabels, Localization};
 
-static GERMAN: Localization = Localization {
+static WORDS: Localization = Localization {
     color_scheme_button: ColorSchemeButtonLabels {
         to_light: "Helles Design",
         to_dark: "Dunkles Design",
         to_system: "Wie das System",
-        group: "Design",
-        picker: "Design wählen",
-        themes: "Designs",
+        ..ColorSchemeButtonLabels::GERMAN
     },
-    ..Localization::ENGLISH
+    ..Localization::GERMAN
 };
 ```
 

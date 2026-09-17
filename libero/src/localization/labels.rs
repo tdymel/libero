@@ -26,6 +26,14 @@ impl CommonLabels {
         loading: "Loading",
         search: "Search",
     };
+
+    pub const GERMAN: Self = Self {
+        close: "Schließen",
+        clear: "Leeren",
+        remove: "{label} entfernen",
+        loading: "Wird geladen",
+        search: "Suchen",
+    };
 }
 
 /// Every list with a search or typed filter: `Select`, `MultiSelect`,
@@ -40,6 +48,10 @@ pub struct ComboboxLabels {
 impl ComboboxLabels {
     pub const ENGLISH: Self = Self {
         nothing_found: "No results",
+    };
+
+    pub const GERMAN: Self = Self {
+        nothing_found: "Keine Ergebnisse",
     };
 }
 
@@ -61,6 +73,12 @@ impl TagsFieldLabels {
         full: "Tag limit reached, not added: {labels}",
         not_allowed: "Not allowed: {labels}",
     };
+
+    pub const GERMAN: Self = Self {
+        duplicate: "Bereits hinzugefügt: {labels}",
+        full: "Höchstzahl erreicht, nicht hinzugefügt: {labels}",
+        not_allowed: "Nicht erlaubt: {labels}",
+    };
 }
 
 /// What a field holding chips announces when its list changes. `{labels}`,
@@ -79,6 +97,12 @@ impl ChipsLabels {
         removed: "Removed {labels}",
         added_and_removed: "Added {added}. Removed {removed}",
     };
+
+    pub const GERMAN: Self = Self {
+        added: "{labels} hinzugefügt",
+        removed: "{labels} entfernt",
+        added_and_removed: "{added} hinzugefügt. {removed} entfernt",
+    };
 }
 
 /// A zoomable `Image`'s button.
@@ -94,6 +118,11 @@ impl ImageLabels {
     pub const ENGLISH: Self = Self {
         zoom: "Zoom in",
         zoom_named: "Zoom in: {alt}",
+    };
+
+    pub const GERMAN: Self = Self {
+        zoom: "Vergrößern",
+        zoom_named: "Vergrößern: {alt}",
     };
 }
 
@@ -126,6 +155,17 @@ impl CodeBlockLabels {
         removed: "Removed",
         code: "Code",
         code_named: "{language} code",
+    };
+
+    pub const GERMAN: Self = Self {
+        copy: "Code kopieren",
+        copied: "Kopiert",
+        copy_failed: "Kopieren fehlgeschlagen",
+        unrecognized_language: "Unbekannte Sprache",
+        added: "Hinzugefügt",
+        removed: "Entfernt",
+        code: "Code",
+        code_named: "{language}-Code",
     };
 }
 
@@ -162,6 +202,18 @@ impl ColorLabels {
         eye_dropper: "Pick a color from the screen",
         invalid: "Not a valid color",
     };
+
+    pub const GERMAN: Self = Self {
+        saturation: "Sättigung",
+        hue: "Farbton",
+        alpha: "Deckkraft",
+        saturation_value: "Sättigung {s} %, Helligkeit {v} %",
+        hue_value: "{value} Grad",
+        alpha_value: "{value} %",
+        choose: "Farbe wählen",
+        eye_dropper: "Farbe vom Bildschirm aufnehmen",
+        invalid: "Keine gültige Farbe",
+    };
 }
 
 /// `PhoneField`'s country picker. Its search placeholder is
@@ -179,6 +231,11 @@ impl PhoneFieldLabels {
         search: "Search countries",
         country: "Country: {name}, {iso} +{dial}",
     };
+
+    pub const GERMAN: Self = Self {
+        search: "Länder durchsuchen",
+        country: "Land: {name}, {iso} +{dial}",
+    };
 }
 
 /// `PasswordField`'s reveal button, when its props are unset.
@@ -191,6 +248,10 @@ pub struct PasswordFieldLabels {
 impl PasswordFieldLabels {
     pub const ENGLISH: Self = Self {
         show: "Show password",
+    };
+
+    pub const GERMAN: Self = Self {
+        show: "Passwort anzeigen",
     };
 }
 
@@ -205,6 +266,11 @@ impl NumberFieldLabels {
     pub const ENGLISH: Self = Self {
         decrease: "Decrease",
         increase: "Increase",
+    };
+
+    pub const GERMAN: Self = Self {
+        decrease: "Verringern",
+        increase: "Erhöhen",
     };
 }
 
@@ -234,6 +300,15 @@ impl PaginationLabels {
         first: "Go to first page",
         last: "Go to last page",
     };
+
+    pub const GERMAN: Self = Self {
+        page: "Zu Seite {n}",
+        current_page: "Seite {n}",
+        previous: "Zur vorherigen Seite",
+        next: "Zur nächsten Seite",
+        first: "Zur ersten Seite",
+        last: "Zur letzten Seite",
+    };
 }
 
 /// `AvatarGroup`'s overflow chip. `{n}` is the hidden count, `{names}` their
@@ -250,6 +325,11 @@ impl AvatarLabels {
     pub const ENGLISH: Self = Self {
         count: "+{n}",
         more: "{n} more: {names}",
+    };
+
+    pub const GERMAN: Self = Self {
+        count: "+{n}",
+        more: "{n} weitere: {names}",
     };
 }
 
@@ -268,6 +348,11 @@ impl BurgerLabels {
         open: "Open navigation",
         toggle: "Toggle navigation",
     };
+
+    pub const GERMAN: Self = Self {
+        open: "Navigation öffnen",
+        toggle: "Navigation umschalten",
+    };
 }
 
 /// An `Anchor`'s or link `Chip`'s cue for a link that opens a new tab.
@@ -281,6 +366,10 @@ impl AnchorLabels {
     pub const ENGLISH: Self = Self {
         new_tab: "(opens in a new tab)",
     };
+
+    pub const GERMAN: Self = Self {
+        new_tab: "(öffnet in einem neuen Tab)",
+    };
 }
 
 /// A `PinField`'s cells.
@@ -293,6 +382,10 @@ pub struct PinFieldLabels {
 impl PinFieldLabels {
     pub const ENGLISH: Self = Self {
         cell: "Character {n} of {m}",
+    };
+
+    pub const GERMAN: Self = Self {
+        cell: "Zeichen {n} von {m}",
     };
 }
 
@@ -323,6 +416,15 @@ impl ColorSchemeButtonLabels {
         picker: "Choose a theme",
         themes: "Themes",
     };
+
+    pub const GERMAN: Self = Self {
+        to_light: "Zum hellen Design wechseln",
+        to_dark: "Zum dunklen Design wechseln",
+        to_system: "Dem Systemdesign folgen",
+        group: "Design",
+        picker: "Design wählen",
+        themes: "Designs",
+    };
 }
 
 /// Every string a `Spotlight` says to a reader.
@@ -346,6 +448,14 @@ impl SpotlightLabels {
         placeholder: "Search...",
         nothing_found: "Nothing found",
         loading: "Searching",
+    };
+
+    pub const GERMAN: Self = Self {
+        label: "Befehlspalette",
+        search: "Befehle durchsuchen",
+        placeholder: "Suchen …",
+        nothing_found: "Nichts gefunden",
+        loading: "Suche läuft",
     };
 }
 
@@ -384,6 +494,18 @@ impl CarouselLabels {
         status_range: "Slides {from}–{to} of {n}",
         pause: "Pause slideshow",
     };
+
+    pub const GERMAN: Self = Self {
+        label: "Karussell",
+        previous: "Vorherige Folie",
+        next: "Nächste Folie",
+        indicator: "Zu Folie {n}",
+        indicators: "Folie wählen",
+        slide: "{n} von {m}",
+        status: "Folie {n} von {m}",
+        status_range: "Folien {from}–{to} von {n}",
+        pause: "Diashow anhalten",
+    };
 }
 
 /// A `NavLink` with nested links.
@@ -397,6 +519,10 @@ pub struct NavLinkLabels {
 impl NavLinkLabels {
     pub const ENGLISH: Self = Self {
         show_links: "Show links",
+    };
+
+    pub const GERMAN: Self = Self {
+        show_links: "Links anzeigen",
     };
 }
 
@@ -424,6 +550,15 @@ impl LightboxLabels {
         keys: "Z, plus or minus to zoom. Arrow keys pan a zoomed picture, or change the picture.",
         zoomed: "Zoomed to {n}%",
         fitted: "Zoom reset",
+    };
+
+    pub const GERMAN: Self = Self {
+        label: "Galerie",
+        thumbnails: "Vorschaubilder",
+        thumbnail: "Zu Bild {n}",
+        keys: "Z, Plus oder Minus zum Zoomen. Pfeiltasten verschieben ein vergrößertes Bild oder wechseln das Bild.",
+        zoomed: "Auf {n} % gezoomt",
+        fitted: "Zoom zurückgesetzt",
     };
 }
 
@@ -477,6 +612,25 @@ impl FloatingWindowLabels {
         taller: "Taller",
         done: "Done",
     };
+
+    pub const GERMAN: Self = Self {
+        move_handle: "Fenster verschieben",
+        move_hint: "Mit den Pfeiltasten das Fenster verschieben",
+        resize_handle: "Fenstergröße ändern",
+        menu: "Fenstermenü",
+        move_item: "Verschieben",
+        resize_item: "Größe ändern",
+        reset_item: "Position und Größe zurücksetzen",
+        move_up: "Nach oben",
+        move_down: "Nach unten",
+        move_left: "Nach links",
+        move_right: "Nach rechts",
+        narrower: "Schmaler",
+        wider: "Breiter",
+        shorter: "Niedriger",
+        taller: "Höher",
+        done: "Fertig",
+    };
 }
 
 /// The `Notifications` host's words.
@@ -490,6 +644,10 @@ pub struct NotificationsLabels {
 impl NotificationsLabels {
     pub const ENGLISH: Self = Self {
         region: "Notifications ({key})",
+    };
+
+    pub const GERMAN: Self = Self {
+        region: "Benachrichtigungen ({key})",
     };
 }
 
@@ -505,6 +663,11 @@ impl ScrollerLabels {
     pub const ENGLISH: Self = Self {
         backward: "Scroll backward",
         forward: "Scroll forward",
+    };
+
+    pub const GERMAN: Self = Self {
+        backward: "Zurückscrollen",
+        forward: "Vorwärtsscrollen",
     };
 }
 
@@ -522,6 +685,11 @@ impl StepperLabels {
         completed: "Completed",
         error: "Error",
     };
+
+    pub const GERMAN: Self = Self {
+        completed: "Abgeschlossen",
+        error: "Fehler",
+    };
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -533,6 +701,7 @@ pub struct MarqueeLabels {
 
 impl MarqueeLabels {
     pub const ENGLISH: Self = Self { pause: "Pause" };
+    pub const GERMAN: Self = Self { pause: "Anhalten" };
 }
 
 /// A `FileField`'s own words. A chip's x reads [`CommonLabels::remove`].
@@ -540,15 +709,15 @@ impl MarqueeLabels {
 /// ```
 /// use libero::localization::FileFieldLabels;
 ///
-/// const GERMAN: FileFieldLabels = FileFieldLabels {
+/// const WORDS: FileFieldLabels = FileFieldLabels {
 ///     any_of: |group| match group {
-///         "image" => "Bilder".to_string(),
-///         "video" => "Videos".to_string(),
-///         group => format!("{group}-Dateien"),
+///         "image" => "Fotos".to_string(),
+///         group => (FileFieldLabels::GERMAN.any_of)(group),
 ///     },
-///     ..FileFieldLabels::ENGLISH
+///     ..FileFieldLabels::GERMAN
 /// };
-/// assert_eq!((GERMAN.any_of)("image"), "Bilder");
+/// assert_eq!((WORDS.any_of)("image"), "Fotos");
+/// assert_eq!((WORDS.any_of)("video"), "Videos");
 /// assert_eq!((FileFieldLabels::ENGLISH.any_of)("audio"), "audios");
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -568,15 +737,26 @@ pub struct FileFieldLabels {
     /// Names a `type/*` entry of `accept` in the dropzone's hint: `image`
     /// reads as "images". A fn rather than a template, for plural forms.
     pub any_of: fn(&str) -> String,
-    /// A card's file size units, bytes to terabytes, in powers of 1000.
+    /// A card's file size units, bytes to terabytes, in powers of 1000. The
+    /// decimal separator is [`Formats::decimal_separator`](super::Formats).
     pub size_units: [&'static str; 5],
-    /// Between a size's whole and its tenth: `5.4 MB`, `5,4 MB`.
-    pub decimal_separator: &'static str,
 }
 
 /// `FileFieldLabels::ENGLISH.any_of`. A named fn, so every copy compares equal.
 fn english_any_of(group: &str) -> String {
     format!("{group}s")
+}
+
+/// `FileFieldLabels::GERMAN.any_of`: a German plural rarely adds a letter.
+fn german_any_of(group: &str) -> String {
+    match group {
+        "image" => "Bilder".to_string(),
+        "video" => "Videos".to_string(),
+        "audio" => "Audiodateien".to_string(),
+        "text" => "Textdateien".to_string(),
+        "font" => "Schriftarten".to_string(),
+        group => format!("{group}-Dateien"),
+    }
 }
 
 /// `TextareaLabels::ENGLISH.characters_left`. A named fn, so every copy holds
@@ -586,6 +766,11 @@ fn english_characters_left(n: usize) -> String {
         1 => "1 character left".to_string(),
         n => format!("{n} characters left"),
     }
+}
+
+/// `TextareaLabels::GERMAN.characters_left`. "Zeichen" is its own plural.
+fn german_characters_left(n: usize) -> String {
+    format!("Noch {n} Zeichen")
 }
 
 /// A `Textarea`'s `counter`.
@@ -601,13 +786,14 @@ pub struct TextareaLabels {
     /// ```
     /// use libero::localization::TextareaLabels;
     ///
-    /// const GERMAN: TextareaLabels = TextareaLabels {
+    /// const WORDS: TextareaLabels = TextareaLabels {
     ///     characters_left: |n| match n {
-    ///         1 => "Noch 1 Zeichen".to_string(),
-    ///         n => format!("Noch {n} Zeichen"),
+    ///         1 => "Nur noch 1 Zeichen".to_string(),
+    ///         n => format!("Nur noch {n} Zeichen"),
     ///     },
     /// };
-    /// assert_eq!((GERMAN.characters_left)(3), "Noch 3 Zeichen");
+    /// assert_eq!((WORDS.characters_left)(3), "Nur noch 3 Zeichen");
+    /// assert_eq!((TextareaLabels::GERMAN.characters_left)(1), "Noch 1 Zeichen");
     /// assert_eq!((TextareaLabels::ENGLISH.characters_left)(1), "1 character left");
     /// ```
     pub characters_left: fn(usize) -> String,
@@ -616,6 +802,10 @@ pub struct TextareaLabels {
 impl TextareaLabels {
     pub const ENGLISH: Self = Self {
         characters_left: english_characters_left,
+    };
+
+    pub const GERMAN: Self = Self {
+        characters_left: german_characters_left,
     };
 }
 
@@ -627,6 +817,14 @@ impl FileFieldLabels {
         drop_files: "Drop files here, or click to pick",
         any_of: english_any_of,
         size_units: ["B", "kB", "MB", "GB", "TB"],
-        decimal_separator: ".",
+    };
+
+    pub const GERMAN: Self = Self {
+        browse: "Dateien durchsuchen",
+        required: "Pflichtfeld",
+        drop_file: "Datei hier ablegen oder zum Auswählen klicken",
+        drop_files: "Dateien hier ablegen oder zum Auswählen klicken",
+        any_of: german_any_of,
+        size_units: ["B", "kB", "MB", "GB", "TB"],
     };
 }

@@ -17,8 +17,8 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{ElementHandle, use_element, use_localization},
-    localization::DateLocale,
+    hooks::{ElementHandle, use_element, use_formats, use_localization},
+    localization::{DateLocale, Formats},
     platform::{ElementApi, logical_key},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -402,6 +402,7 @@ pub(super) fn use_focus_after_render(root: ElementHandle) -> Signal<Option<Strin
 #[derive(Clone, Copy)]
 struct View {
     names: &'static DateLocale,
+    formats: &'static Formats,
     selection: Selection,
     onpick: EventHandler<NaiveDate>,
     lowest: DateLevel,
@@ -630,6 +631,7 @@ impl View {
     fn strip_view(self, strip: Strip) -> Element {
         let View {
             names,
+            formats,
             selection,
             onpick,
             today,
@@ -659,7 +661,7 @@ impl View {
                         "data-today": (today == Some(day)).then_some("true"),
                         "aria-current": (today == Some(day)).then_some("date"),
                         "data-selected": picked.then_some("true"),
-                        "aria-label": format_date(day, (names.format)(DateLevel::Day), names),
+                        "aria-label": format_date(day, (formats.date)(DateLevel::Day), names),
                         disabled: self.day_disabled(day).then_some(true),
                         tabindex: self.tabindex(day == stop),
                         onclick: move |_| {
@@ -681,7 +683,7 @@ impl View {
                 div { "data-slot": "months",
                     div {
                         role: "grid",
-                        "aria-label": format_date(start, names.month_format, names),
+                        "aria-label": format_date(start, formats.month_heading, names),
                         onkeydown: move |event| strip.keydown(self, event),
                         div { role: "row",
                             for offset in 0..days {
@@ -698,6 +700,7 @@ impl View {
     fn month_view(self, cell_stop: NaiveDate) -> Element {
         let View {
             names,
+            formats,
             selection,
             onpick,
             lowest,
@@ -736,7 +739,7 @@ impl View {
                     "data-selected": picked.then_some("true"),
                     "data-today": is_today.then_some("true"),
                     "aria-current": is_today.then_some("date"),
-                    "aria-label": format_date(month, (names.format)(DateLevel::Month), names),
+                    "aria-label": format_date(month, (formats.date)(DateLevel::Month), names),
                     disabled,
                     tabindex: self.tabindex(month == cell_stop),
                     onclick: move |_| {
@@ -942,6 +945,7 @@ impl Strip {
 #[component]
 pub(super) fn Calendar(props: CalendarProps) -> Element {
     let names = &use_localization().date;
+    let formats = use_formats();
     let selection = props.selection;
     let onpick = props.onpick;
     let columns = props.columns.max(1) as i64;
@@ -974,6 +978,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let last = add_months(first, columns - 1);
     let view = View {
         names,
+        formats,
         selection,
         onpick,
         lowest,
@@ -1003,7 +1008,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     // that can, while one is shown.
     let tab_stop = view.nearest_in(tab_stop, shown).unwrap_or(tab_stop);
 
-    let first_weekday = names.first_weekday.num_days_from_sunday() as usize;
+    let first_weekday = formats.first_weekday.num_days_from_sunday() as usize;
     let column = move |day: NaiveDate| {
         ((day.weekday().num_days_from_sunday() as usize + 7 - first_weekday) % 7) as i64
     };
@@ -1057,7 +1062,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                                 level.set(DateLevel::Month);
                                 focus.to(Focus::Title);
                             },
-                            {format_date(month, names.month_format, names)}
+                            {format_date(month, formats.month_heading, names)}
                         }
                     }
                     Nav {
@@ -1081,7 +1086,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                         div {
                             key: "{index}",
                             role: "grid",
-                            "aria-label": format_date(month, names.month_format, names),
+                            "aria-label": format_date(month, formats.month_heading, names),
                             onkeydown,
                             Weekdays { first_weekday }
                             for (week, first) in weeks(month) {
@@ -1188,7 +1193,7 @@ fn Week(props: WeekProps) -> Element {
     let allowed = day_allowed(min, max, exclude_date.0);
     let names = &use_localization().date;
     // APG: the full date, not only the number shown.
-    let label = date_formatter((names.format)(DateLevel::Day), names);
+    let label = date_formatter((use_formats().date)(DateLevel::Day), names);
     let (mut hover, mut active, mut paged) = (hover, active, paged);
 
     let day = move |offset: i64| add_days(first, offset);

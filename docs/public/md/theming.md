@@ -238,58 +238,81 @@ spells out five `*Defaults` for exactly that reason.
 ## Localization
 
 The words are not in the theme. Every string a component says on its own - an
-accessible name, an announcement, a month name, a date format - comes from
-`LiberoProvider`'s `localization`, which defaults to `Localization::ENGLISH`. It
-is shaped like a theme: one plain struct, a group per component plus `common`
-for the words many share, changed with struct update syntax in a `static`. A
-string with a value in it is a template with named holes, such as
-`"Go to page {n}"`, so a language can put the value wherever it belongs.
+accessible name, an announcement, a month name - comes from `LiberoProvider`'s
+`localization`. Two languages ship: `Localization::ENGLISH` (the default) and
+`Localization::GERMAN`.
+
+How a date or a number is written is a region's, not a language's, so it is
+apart, in `LiberoProvider`'s `formats`, a `Formats`:
+
+| Const | First weekday | Day format | Clock | Decimal separator |
+|---|---|---|---|---|
+| `Formats::AMERICAN` (default) | Sunday | `September 14, 2026` | `3:30 PM` | `.` |
+| `Formats::GERMAN` | Monday | `14. September 2026` | `15:30` | `,` |
+
+Any language goes with any formats: this site is English in German formats. The
+docs page's two switches change the site's.
 
 ```rust,ignore
-static GERMAN: Localization = Localization {
-    common: CommonLabels {
-        close: "Schließen",
-        loading: "Wird geladen",
-        ..CommonLabels::ENGLISH
-    },
-    pagination: PaginationLabels {
-        page: "Gehe zu Seite {n}",
-        current_page: "Seite {n}",
-        ..PaginationLabels::ENGLISH
-    },
-    ..Localization::ENGLISH
-};
-
 fn App() -> Element {
     rsx! {
         LiberoProvider {
-            localization: &GERMAN,
+            localization: &Localization::GERMAN,
+            formats: &Formats::GERMAN,
             Router::<Route> {}
         }
     }
 }
 ```
 
-`use_localization_handle()` switches it at runtime, and every component that
-reads it re-renders; `use_localization()` reads it. A prop that names what only
+It is shaped like a theme: one plain struct, a group per component plus
+`common` for the words many share, changed with struct update syntax in a
+`static`. A string with a value in it is a template with named holes, such as
+`"Go to page {n}"`, so a language can put the value wherever it belongs.
+
+```rust,ignore
+static WORDS: Localization = Localization {
+    common: CommonLabels {
+        close: "Zumachen",
+        ..CommonLabels::GERMAN
+    },
+    pagination: PaginationLabels {
+        page: "Gehe zu Seite {n}",
+        ..PaginationLabels::GERMAN
+    },
+    ..Localization::GERMAN
+};
+```
+
+`use_localization_handle()` and `use_formats_handle()` switch them at runtime,
+and every component that reads them re-renders; `use_localization()` and
+`use_formats()` read them. A prop that names what only
 the call site knows, such as a dialog's close button, still wins over it.
 
 ```rust,ignore
 let localization = use_localization_handle();
+let formats = use_formats_handle();
 
 rsx! {
-    Button { onclick: move |_| localization.set(&GERMAN), "Deutsch" }
+    Button {
+        onclick: move |_| {
+            localization.set(&Localization::GERMAN);
+            formats.set(&Formats::GERMAN);
+        },
+        "Deutsch"
+    }
 }
 ```
 
 The groups live in `libero::localization`: `CommonLabels`, `DateLocale`,
 `PaginationLabels`, `AvatarLabels`, `BurgerLabels`, `AnchorLabels`,
 `PinFieldLabels`, `ColorSchemeButtonLabels`,
-`SpotlightLabels`, `CarouselLabels`, `LightboxLabels`, `FloatingWindowLabels`,
+`SpotlightLabels`, `CarouselLabels`, `NavLinkLabels`, `LightboxLabels`, `FloatingWindowLabels`,
 `NotificationsLabels`, `ScrollerLabels`, `StepperLabels`, `MarqueeLabels`, `ChipsLabels`,
-`ImageLabels`, `CodeBlockLabels`, `ColorLabels`, `PhoneFieldLabels`,
-`PasswordFieldLabels`, `NumberFieldLabels` and `FileFieldLabels`, each with an `ENGLISH`
-const. `fill(template, &[("n", &3)])` fills a template's holes.
+`ComboboxLabels`, `TagsFieldLabels`, `ImageLabels`, `CodeBlockLabels`, `ColorLabels`,
+`PhoneFieldLabels`, `PasswordFieldLabels`, `NumberFieldLabels`, `FileFieldLabels` and
+`TextareaLabels`, each with an `ENGLISH` and a `GERMAN` const.
+`fill(template, &[("n", &3)])` fills a template's holes. `Formats` lives there too.
 
 ## Reading the theme
 

@@ -19,8 +19,8 @@ use crate::{
         layout::{BoxStyle, use_box},
     },
     hooks::{
-        ElementHandle, LocalState, current_localization, id_selector, use_css, use_element,
-        use_local_state, use_theme,
+        ElementHandle, LocalState, current_formats, current_localization, id_selector, use_css,
+        use_element, use_local_state, use_theme,
     },
     localization::fill,
     platform::{self, ElementApi, logical_key, nested_interactive},
@@ -1259,7 +1259,11 @@ fn default_card(
 ) -> Element {
     let name = file.name();
     let words = current_localization();
-    let size = format_size(file.size(), &words.file_field);
+    let size = format_size(
+        file.size(),
+        &words.file_field,
+        current_formats().decimal_separator,
+    );
     let remove_label = fill(words.common.remove, &[("label", &name)]);
     rsx! {
         span { "data-slot": "name", "{name}" }

@@ -7,6 +7,7 @@ mod color_picker;
 mod combobox;
 mod date_common;
 mod date_field;
+pub(crate) mod date_locales;
 mod date_picker;
 mod fieldset;
 mod file_field;

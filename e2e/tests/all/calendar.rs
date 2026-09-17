@@ -53,23 +53,35 @@ fn the_keys_move_focus_through_the_grid() {
                     "ArrowDown",
                 ),
                 (keyboard::ARROW_UP, "2026-03-18", "March 2026", "ArrowUp"),
-                (keyboard::HOME, "2026-03-16", "March 2026", "Home (Monday)"),
-                (keyboard::END, "2026-03-22", "March 2026", "End (Sunday)"),
-                (keyboard::PAGE_DOWN, "2026-04-22", "April 2026", "PageDown"),
-                (keyboard::PAGE_UP, "2026-03-22", "March 2026", "PageUp"),
+                (keyboard::HOME, "2026-03-15", "March 2026", "Home (Sunday)"),
+                (keyboard::END, "2026-03-21", "March 2026", "End (Saturday)"),
+                (keyboard::PAGE_DOWN, "2026-04-21", "April 2026", "PageDown"),
+                (keyboard::PAGE_UP, "2026-03-21", "March 2026", "PageUp"),
                 (
                     keyboard::PAGE_UP,
-                    "2026-02-22",
+                    "2026-02-21",
                     "February 2026",
                     "PageUp again",
                 ),
-                // Mar 1 is drawn in February's grid as an outside day; the
+                (
+                    keyboard::ARROW_DOWN,
+                    "2026-02-28",
+                    "February 2026",
+                    "ArrowDown in February",
+                ),
+                // Mar 7 is drawn in February's grid as an outside day; the
                 // step must page to March and focus March's own cell.
                 (
                     keyboard::ARROW_DOWN,
-                    "2026-03-01",
+                    "2026-03-07",
                     "March 2026",
                     "ArrowDown off the month",
+                ),
+                (
+                    keyboard::HOME,
+                    "2026-03-01",
+                    "March 2026",
+                    "Home to the 1st",
                 ),
                 (
                     keyboard::ARROW_LEFT,

@@ -1,40 +1,20 @@
-use chrono::Weekday;
-
-use crate::theme::DateLevel;
-
-/// `DateLocale::ENGLISH.format`. A named fn, so every copy of the locale
-/// holds the same address and compares equal.
-fn english_format(level: DateLevel) -> &'static str {
-    match level {
-        DateLevel::Day => "MMMM D, YYYY",
-        DateLevel::Month => "MMMM YYYY",
-        DateLevel::Year => "YYYY",
-    }
-}
-
-/// The words and conventions every date and time component shares: one place
-/// to translate. English by default; a translation replaces the names, a
-/// region the first weekday and the format.
+/// The words every date and time component shares: one place to translate.
+/// English by default, German in [`GERMAN`](Self::GERMAN). How dates are
+/// written - first weekday, patterns, clock - is [`Formats`](super::Formats).
 ///
 /// The names follow dayjs' locale files (`months`, `monthsShort`, `weekdays`,
 /// `weekdaysShort`, `weekdaysMin`), so an existing translation copies over.
 ///
-/// # Fields, in three groups
+/// # Fields, in two groups
 ///
-/// - **Names** a language gives: `months`, `months_short`, `weekdays`,
-///   `weekdays_short`, `weekdays_min`, `am`, `pm`.
-/// - **Conventions** a region picks: `first_weekday`, `format`,
-///   `month_format`, `time_format`, `range_separator`.
+/// - **Names**: `months`, `months_short`, `weekdays`, `weekdays_short`,
+///   `weekdays_min`, `am`, `pm`.
 /// - **Labels** a screen reader or a sighted reader gets: the paging buttons
 ///   (`previous_month` to `next_days`), the errors (`invalid_date` to
 ///   `unavailable`), the switch segments
 ///   (`date_label` to `end_label`), the switches themselves and the
 ///   `TimePicker` columns.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-#[allow(
-    unpredictable_function_pointer_comparisons,
-    reason = "`format` compares by address; a miss on a copied closure only re-renders"
-)]
 pub struct DateLocale {
     // Names.
     /// `January` to `December`. `MMMM` in a format, and what a typed month
@@ -43,8 +23,8 @@ pub struct DateLocale {
     /// `Jan` to `Dec`. `MMM` in a format; typed names match these too.
     pub months_short: [&'static str; 12],
     /// `Sunday` to `Saturday` - always Sunday first, as dayjs has them,
-    /// whatever `first_weekday` says, so `Weekday::num_days_from_sunday`
-    /// indexes them. `dddd` in a format.
+    /// whatever `Formats::first_weekday` says, so
+    /// `Weekday::num_days_from_sunday` indexes them. `dddd` in a format.
     pub weekdays: [&'static str; 7],
     /// `Sun` to `Sat`. `ddd` in a format.
     pub weekdays_short: [&'static str; 7],
@@ -54,37 +34,6 @@ pub struct DateLocale {
     pub am: &'static str,
     /// `A` in a format, and what a typed `pm` matches.
     pub pm: &'static str,
-
-    // Conventions.
-    /// The first column of a calendar.
-    pub first_weekday: Weekday,
-    /// How a date field shows a day, a month or a year, in dayjs tokens:
-    /// `YYYY`, `M`, `MM`, `MMM`, `MMMM`, `D`, `DD`, `dd`, `ddd`, `dddd`. Text
-    /// in `[brackets]` is literal. Call it as `(names.format)(level)`.
-    ///
-    /// One level overridden, the rest English:
-    ///
-    /// ```
-    /// use libero::{components::DateLevel, localization::DateLocale};
-    ///
-    /// const ISO_DAYS: DateLocale = DateLocale {
-    ///     format: |level| match level {
-    ///         DateLevel::Day => "YYYY-MM-DD",
-    ///         level => (DateLocale::ENGLISH.format)(level),
-    ///     },
-    ///     ..DateLocale::ENGLISH
-    /// };
-    /// assert_eq!((ISO_DAYS.format)(DateLevel::Day), "YYYY-MM-DD");
-    /// assert_eq!((ISO_DAYS.format)(DateLevel::Month), "MMMM YYYY");
-    /// ```
-    pub format: fn(DateLevel) -> &'static str,
-    /// A calendar's month heading.
-    pub month_format: &'static str,
-    /// How a time is shown, in dayjs tokens: `H`, `HH`, `h`, `hh`, `m`, `mm`,
-    /// `s`, `ss`, `A`, `a`. An `h` or an `A` makes pickers 12-hour.
-    pub time_format: &'static str,
-    /// Between a range's two ends in a field's text.
-    pub range_separator: &'static str,
 
     // Labels.
     /// Names the button that pages a calendar back.
@@ -159,11 +108,6 @@ impl DateLocale {
         weekdays_min: ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
         am: "AM",
         pm: "PM",
-        first_weekday: Weekday::Mon,
-        format: english_format,
-        month_format: "MMMM YYYY",
-        time_format: "HH:mm",
-        range_separator: " – ",
         previous_month: "Previous month",
         next_month: "Next month",
         previous_year: "Previous year",
@@ -186,5 +130,62 @@ impl DateLocale {
         hours_label: "Hours",
         minutes_label: "Minutes",
         seconds_label: "Seconds",
+    };
+
+    pub const GERMAN: Self = Self {
+        months: [
+            "Januar",
+            "Februar",
+            "März",
+            "April",
+            "Mai",
+            "Juni",
+            "Juli",
+            "August",
+            "September",
+            "Oktober",
+            "November",
+            "Dezember",
+        ],
+        months_short: [
+            "Jan.", "Feb.", "März", "Apr.", "Mai", "Juni", "Juli", "Aug.", "Sept.", "Okt.", "Nov.",
+            "Dez.",
+        ],
+        weekdays: [
+            "Sonntag",
+            "Montag",
+            "Dienstag",
+            "Mittwoch",
+            "Donnerstag",
+            "Freitag",
+            "Samstag",
+        ],
+        weekdays_short: ["So.", "Mo.", "Di.", "Mi.", "Do.", "Fr.", "Sa."],
+        weekdays_min: ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"],
+        am: "AM",
+        pm: "PM",
+        previous_month: "Vorheriger Monat",
+        next_month: "Nächster Monat",
+        previous_year: "Vorheriges Jahr",
+        next_year: "Nächstes Jahr",
+        previous_decade: "Vorheriges Jahrzehnt",
+        next_decade: "Nächstes Jahrzehnt",
+        previous_days: "Vorherige Tage",
+        next_days: "Nächste Tage",
+        invalid_date: "Kein gültiges Datum",
+        // "Frühestens" and "spätestens" fit a day and a time alike.
+        on_or_after: "Frühestens {min}",
+        on_or_before: "Spätestens {max}",
+        between: "Muss zwischen {min} und {max} liegen",
+        unavailable: "Dieses Datum ist nicht verfügbar",
+        date_label: "Datum",
+        time_label: "Uhrzeit",
+        start_label: "Beginn",
+        end_label: "Ende",
+        part_switch_label: "Datum oder Uhrzeit",
+        side_switch_label: "Ende des Zeitraums",
+        hours_label: "Stunden",
+        minutes_label: "Minuten",
+        seconds_label: "Sekunden",
     };
 }

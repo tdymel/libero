@@ -13,7 +13,7 @@ use super::{
     picker_field::picker_field,
     props::date_props,
 };
-use crate::{components::Input, localization::DateLocale};
+use crate::components::Input;
 
 /// Whether a day passes `min`, `max` and `exclude_date`.
 pub(super) fn day_allowed(
@@ -28,14 +28,10 @@ pub(super) fn day_allowed(
     }
 }
 
-/// The time format a field shows when the caller names none: the theme's,
-/// adjusted for `with_seconds` and `twelve_hour`; separators, padding and text stay.
-pub(super) fn time_format(
-    names: &DateLocale,
-    twelve_hour: Option<bool>,
-    with_seconds: bool,
-) -> String {
-    let theme = names.time_format;
+/// The time format a field shows when the caller names none: `theme`, the
+/// formats' own, adjusted for `with_seconds` and `twelve_hour`; separators,
+/// padding and text stay.
+pub(super) fn time_format(theme: &str, twelve_hour: Option<bool>, with_seconds: bool) -> String {
     let twelve = twelve_hour.unwrap_or_else(|| uses_twelve_hours(theme));
     if !with_seconds && twelve == uses_twelve_hours(theme) {
         return theme.to_string();
@@ -257,11 +253,7 @@ mod tests {
     use super::*;
 
     fn adjusted(theme: &'static str, twelve_hour: Option<bool>, with_seconds: bool) -> String {
-        let names = DateLocale {
-            time_format: theme,
-            ..DateLocale::ENGLISH
-        };
-        time_format(&names, twelve_hour, with_seconds)
+        time_format(theme, twelve_hour, with_seconds)
     }
 
     #[test]

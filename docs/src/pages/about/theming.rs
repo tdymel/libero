@@ -1,10 +1,12 @@
 use crate::components::{DocPage, DocSection};
+use crate::pages::form::date_locales::{Choice, FORMATS, LANGUAGES, options, picked};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, CodeBlock, Flex, Text},
+    chrono::{NaiveDate, NaiveDateTime, NaiveTime},
+    components::{Box, Code, CodeBlock, DateField, DayPicker, Flex, SegmentedControl, Text},
     sx::sx,
     theme::Size,
-    use_theme,
+    use_formats_handle, use_localization_handle, use_theme,
 };
 
 // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] Home {} }
@@ -56,34 +58,39 @@ rsx! {
 
 // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] Home {} }
 // snippet: item #[component] fn Home() -> Element { rsx! {} }
-const LOCALIZATION: &str = r#"static GERMAN: Localization = Localization {
-    common: CommonLabels {
-        close: "Schließen",
-        loading: "Wird geladen",
-        ..CommonLabels::ENGLISH
-    },
-    pagination: PaginationLabels {
-        page: "Gehe zu Seite {n}",
-        current_page: "Seite {n}",
-        ..PaginationLabels::ENGLISH
-    },
-    ..Localization::ENGLISH
-};
-
-fn App() -> Element {
+const LOCALIZATION: &str = r#"fn App() -> Element {
     rsx! {
         LiberoProvider {
-            localization: &GERMAN,
+            localization: &Localization::GERMAN,
+            formats: &Formats::GERMAN,
             Router::<Route> {}
         }
     }
 }"#;
 
-// snippet: ignore - `GERMAN` is the app's own
+const OVERRIDE_LOCALIZATION: &str = r#"static WORDS: Localization = Localization {
+    common: CommonLabels {
+        close: "Zumachen",
+        ..CommonLabels::GERMAN
+    },
+    pagination: PaginationLabels {
+        page: "Gehe zu Seite {n}",
+        ..PaginationLabels::GERMAN
+    },
+    ..Localization::GERMAN
+};"#;
+
 const SWITCH_LOCALIZATION: &str = r#"let localization = use_localization_handle();
+let formats = use_formats_handle();
 
 rsx! {
-    Button { onclick: move |_| localization.set(&GERMAN), "Deutsch" }
+    Button {
+        onclick: move |_| {
+            localization.set(&Localization::GERMAN);
+            formats.set(&Formats::GERMAN);
+        },
+        "Deutsch"
+    }
 }"#;
 
 // snippet: ignore - `Control` is the docs site's own
@@ -388,14 +395,34 @@ pub fn ThemingPage() -> Element {
                 title: "Localization",
                 Text {
                     "The words are not in the theme. Every string a component says on its own - "
-                    "an accessible name, an announcement, a month name, a date format - comes "
-                    "from "
+                    "an accessible name, an announcement, a month name - comes from "
                     Code { source: "LiberoProvider" }
                     "'s "
                     Code { source: "localization" }
-                    ", which defaults to "
+                    ". Two languages ship: "
                     Code { source: "Localization::ENGLISH" }
-                    ". It is shaped like a theme: one plain struct, a group per component plus "
+                    ", the default, and "
+                    Code { source: "Localization::GERMAN" }
+                    "."
+                }
+                Text {
+                    "How a date or a number is written is a region's, not a language's, so it is apart, in "
+                    Code { source: "formats" }
+                    ": the date and time patterns, the first weekday, the range and decimal separators. "
+                    Code { source: "Formats::AMERICAN" }
+                    " is the default - Sunday first, a 12-hour clock, "
+                    Code { source: "September 14, 2026" }
+                    " - and "
+                    Code { source: "Formats::GERMAN" }
+                    " is Monday first, a 24-hour clock, "
+                    Code { source: "14. September 2026" }
+                    ". Any language goes with any formats: this site is English in German formats. "
+                    "The switches below change this site's."
+                }
+                LocalizationPreview {}
+                CodeBlock { source: LOCALIZATION, language: "rust" }
+                Text {
+                    "It is shaped like a theme: one plain struct, a group per component plus "
                     Code { source: "common" }
                     " for the words many share, changed with struct update syntax in a "
                     Code { source: "static" }
@@ -403,12 +430,16 @@ pub fn ThemingPage() -> Element {
                     Code { source: "\"Go to page {{n}}\"" }
                     ", so a language can put the value wherever it belongs."
                 }
-                CodeBlock { source: LOCALIZATION, language: "rust" }
+                CodeBlock { source: OVERRIDE_LOCALIZATION, language: "rust" }
                 Text {
                     Code { source: "use_localization_handle()" }
-                    " switches it at runtime, and every component that reads it re-renders; "
+                    " and "
+                    Code { source: "use_formats_handle()" }
+                    " switch them at runtime, and every component that reads them re-renders; "
                     Code { source: "use_localization()" }
-                    " reads it. A prop that names what only the call site knows, such as a "
+                    " and "
+                    Code { source: "use_formats()" }
+                    " read them. A prop that names what only the call site knows, such as a "
                     "dialog's close button, still wins over it."
                 }
                 CodeBlock { source: SWITCH_LOCALIZATION, language: "rust" }
@@ -417,9 +448,13 @@ pub fn ThemingPage() -> Element {
                     Code { source: "libero::localization" }
                     ", each with an "
                     Code { source: "ENGLISH" }
+                    " and a "
+                    Code { source: "GERMAN" }
                     " const, and "
                     Code { source: "fill(template, &[(\"n\", &3)])" }
-                    " fills a template's holes."
+                    " fills a template's holes. "
+                    Code { source: "Formats" }
+                    " lives there too."
                 }
             }
 
@@ -447,6 +482,69 @@ pub fn ThemingPage() -> Element {
                     "one cached class no matter what the theme says."
                 }
                 CodeBlock { source: EMITTED_CSS, language: "css" }
+            }
+        }
+    }
+}
+
+/// The option naming `current`, the first if none does.
+fn option_of<T: PartialEq + 'static>(choices: &[Choice<T>; 2], current: &T) -> String {
+    let (label, ..) = choices
+        .iter()
+        .find(|(_, _, value)| *value == current)
+        .unwrap_or(&choices[0]);
+    label.to_string()
+}
+
+/// A language and a formats switch over a calendar and a date-time field.
+/// They set the site's own and put them back on leaving the page.
+#[component]
+fn LocalizationPreview() -> Element {
+    let localization = use_localization_handle();
+    let formats = use_formats_handle();
+    let site = use_hook(|| (localization.get(), formats.get()));
+    use_drop(move || {
+        localization.set(site.0);
+        formats.set(site.1);
+    });
+    let mut language = use_signal(|| option_of(&LANGUAGES, site.0));
+    let mut conventions = use_signal(|| option_of(&FORMATS, site.1));
+    let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 9, 14));
+    let mut moment = use_signal(|| {
+        NaiveDate::from_ymd_opt(2026, 9, 14)
+            .zip(NaiveTime::from_hms_opt(15, 30, 0))
+            .map(|(day, time)| NaiveDateTime::new(day, time))
+    });
+    rsx! {
+        Flex { direction: "column", gap: "md", align: "start",
+            Flex { gap: "md", wrap: "wrap",
+                SegmentedControl {
+                    "aria-label": "Language",
+                    value: language(),
+                    options: options(&LANGUAGES).map(str::to_string).to_vec(),
+                    onchange: move |next: String| {
+                        localization.set(picked(&LANGUAGES, &next).1);
+                        language.set(next);
+                    },
+                }
+                SegmentedControl {
+                    "aria-label": "Formats",
+                    value: conventions(),
+                    options: options(&FORMATS).map(str::to_string).to_vec(),
+                    onchange: move |next: String| {
+                        formats.set(picked(&FORMATS, &next).1);
+                        conventions.set(next);
+                    },
+                }
+            }
+            Flex { gap: "md", wrap: "wrap", align: "start",
+                DayPicker { value: day(), onchange: move |next| day.set(next) }
+                DateField::<NaiveDateTime> {
+                    value: moment(),
+                    onchange: move |next| moment.set(next),
+                    label: "When",
+                    sx: sx().width("260px"),
+                }
             }
         }
     }

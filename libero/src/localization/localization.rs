@@ -1,7 +1,9 @@
 use super::*;
 
 /// Every string libero puts in front of a reader, one group per component
-/// plus [`CommonLabels`]. English by default; no other language ships.
+/// plus [`CommonLabels`]: the language. Two ship: [`ENGLISH`](Self::ENGLISH),
+/// the default, and [`GERMAN`](Self::GERMAN). How dates and numbers are
+/// written is apart, in [`Formats`], so any language goes with any formats.
 ///
 /// Handed to `LiberoProvider { localization }` and read with
 /// [`use_localization`](crate::hooks::use_localization). A per-instance prop
@@ -11,12 +13,12 @@ use super::*;
 /// ```
 /// use libero::localization::{CommonLabels, Localization, PaginationLabels};
 ///
-/// static GERMAN: Localization = Localization {
-///     common: CommonLabels { close: "Schließen", ..CommonLabels::ENGLISH },
-///     pagination: PaginationLabels { page: "Gehe zu Seite {n}", ..PaginationLabels::ENGLISH },
-///     ..Localization::ENGLISH
+/// static WORDS: Localization = Localization {
+///     common: CommonLabels { close: "Zumachen", ..CommonLabels::GERMAN },
+///     pagination: PaginationLabels { page: "Gehe zu Seite {n}", ..PaginationLabels::GERMAN },
+///     ..Localization::GERMAN
 /// };
-/// assert_eq!(GERMAN.common.close, "Schließen");
+/// assert_eq!(WORDS.common.close, "Zumachen");
 /// ```
 ///
 /// Templates take named holes (`{n}`, `{m}`, `{names}`), so a language can
@@ -26,7 +28,7 @@ use super::*;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Localization {
     pub common: CommonLabels,
-    /// Names, first weekday and formats for every date and time component.
+    /// Names and labels for every date and time component.
     pub date: DateLocale,
     pub pagination: PaginationLabels,
     pub avatar: AvatarLabels,
@@ -87,16 +89,92 @@ impl Localization {
         file_field: FileFieldLabels::ENGLISH,
         textarea: TextareaLabels::ENGLISH,
     };
+
+    /// Hand it to `LiberoProvider { localization }`; German dates are `Formats::GERMAN`.
+    pub const GERMAN: Localization = Localization {
+        common: CommonLabels::GERMAN,
+        date: DateLocale::GERMAN,
+        pagination: PaginationLabels::GERMAN,
+        avatar: AvatarLabels::GERMAN,
+        burger: BurgerLabels::GERMAN,
+        anchor: AnchorLabels::GERMAN,
+        pin_field: PinFieldLabels::GERMAN,
+        color_scheme_button: ColorSchemeButtonLabels::GERMAN,
+        spotlight: SpotlightLabels::GERMAN,
+        carousel: CarouselLabels::GERMAN,
+        nav_link: NavLinkLabels::GERMAN,
+        lightbox: LightboxLabels::GERMAN,
+        floating_window: FloatingWindowLabels::GERMAN,
+        notifications: NotificationsLabels::GERMAN,
+        scroller: ScrollerLabels::GERMAN,
+        stepper: StepperLabels::GERMAN,
+        marquee: MarqueeLabels::GERMAN,
+        chips: ChipsLabels::GERMAN,
+        combobox: ComboboxLabels::GERMAN,
+        tags_field: TagsFieldLabels::GERMAN,
+        image: ImageLabels::GERMAN,
+        code_block: CodeBlockLabels::GERMAN,
+        color: ColorLabels::GERMAN,
+        phone_field: PhoneFieldLabels::GERMAN,
+        password_field: PasswordFieldLabels::GERMAN,
+        number_field: NumberFieldLabels::GERMAN,
+        file_field: FileFieldLabels::GERMAN,
+        textarea: TextareaLabels::GERMAN,
+    };
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    /// Every hole an English template has, filled: nothing is left behind.
+    /// Every template with a hole, in one order for every language.
+    fn templates(words: &Localization) -> [&'static str; 28] {
+        [
+            words.common.remove,
+            words.chips.added,
+            words.chips.removed,
+            words.chips.added_and_removed,
+            words.tags_field.duplicate,
+            words.tags_field.full,
+            words.tags_field.not_allowed,
+            words.image.zoom_named,
+            words.color.saturation_value,
+            words.color.hue_value,
+            words.color.alpha_value,
+            words.phone_field.country,
+            words.pagination.page,
+            words.pagination.current_page,
+            words.avatar.count,
+            words.avatar.more,
+            words.carousel.indicator,
+            words.carousel.slide,
+            words.carousel.status,
+            words.carousel.status_range,
+            words.lightbox.thumbnail,
+            words.lightbox.zoomed,
+            words.notifications.region,
+            words.pin_field.cell,
+            words.code_block.code_named,
+            words.date.on_or_after,
+            words.date.on_or_before,
+            words.date.between,
+        ]
+    }
+
+    /// A template's hole names, sorted.
+    fn holes_of(template: &str) -> Vec<&str> {
+        let mut holes: Vec<&str> = template
+            .split('{')
+            .skip(1)
+            .filter_map(|rest| rest.split_once('}').map(|(name, _)| name))
+            .collect();
+        holes.sort_unstable();
+        holes
+    }
+
+    /// Every hole a template has, filled: nothing is left behind.
     #[test]
-    fn every_english_template_fills_completely() {
-        let english = &Localization::ENGLISH;
+    fn every_template_fills_completely() {
         let holes: &[(&str, &dyn std::fmt::Display)] = &[
             ("n", &2),
             ("m", &5),
@@ -116,38 +194,24 @@ mod tests {
             ("language", &"Rust"),
             ("min", &"March 5, 2026"),
             ("max", &"March 9, 2026"),
+            ("from", &1),
+            ("to", &3),
         ];
-        for template in [
-            english.common.remove,
-            english.chips.added,
-            english.chips.removed,
-            english.chips.added_and_removed,
-            english.tags_field.duplicate,
-            english.tags_field.full,
-            english.tags_field.not_allowed,
-            english.image.zoom_named,
-            english.color.saturation_value,
-            english.color.hue_value,
-            english.color.alpha_value,
-            english.phone_field.country,
-            english.pagination.page,
-            english.pagination.current_page,
-            english.avatar.count,
-            english.avatar.more,
-            english.carousel.indicator,
-            english.carousel.slide,
-            english.carousel.status,
-            english.lightbox.thumbnail,
-            english.lightbox.zoomed,
-            english.notifications.region,
-            english.pin_field.cell,
-            english.code_block.code_named,
-            english.date.on_or_after,
-            english.date.on_or_before,
-            english.date.between,
-        ] {
-            let filled = fill(template, holes);
-            assert!(!filled.contains('{'), "{template} -> {filled}");
+        for words in [&Localization::ENGLISH, &Localization::GERMAN] {
+            for template in templates(words) {
+                let filled = fill(template, holes);
+                assert!(!filled.contains('{'), "{template} -> {filled}");
+            }
+        }
+    }
+
+    /// German has every hole English has, and no other: no value goes unsaid.
+    #[test]
+    fn german_fills_the_same_holes_as_english() {
+        let english = templates(&Localization::ENGLISH);
+        let german = templates(&Localization::GERMAN);
+        for (english, german) in english.into_iter().zip(german) {
+            assert_eq!(holes_of(german), holes_of(english), "{english} / {german}");
         }
     }
 }

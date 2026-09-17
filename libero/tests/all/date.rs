@@ -14,7 +14,7 @@ use libero::{
         DateField, DateLevel, DatePicker, DateRange, DateRangePicker, DayField, DayPicker,
         MonthPicker, SegmentedControl, TimePicker, YearPicker,
     },
-    localization::{DateLocale, Localization},
+    localization::Formats,
     theme::CalendarVariant,
 };
 
@@ -29,11 +29,11 @@ fn a_time_picker_draws_a_column_per_part_and_posts_the_time() {
     }
     let html = body(&render(app));
 
-    // 24 hours, then 00, 15, 30 and 45.
-    assert_eq!(html.matches("data-slot=\"option\"").count(), 28);
-    assert_eq!(html.matches("data-selected=\"true\"").count(), 2);
-    assert_eq!(html.matches("aria-pressed=\"true\"").count(), 2);
-    assert_eq!(html.matches("aria-pressed=\"false\"").count(), 26);
+    // The default en-US clock: 12 hours, then 00, 15, 30 and 45, then AM and PM.
+    assert_eq!(html.matches("data-slot=\"option\"").count(), 18);
+    assert_eq!(html.matches("data-selected=\"true\"").count(), 3);
+    assert_eq!(html.matches("aria-pressed=\"true\"").count(), 3);
+    assert_eq!(html.matches("aria-pressed=\"false\"").count(), 15);
     assert!(html.contains("type=\"hidden\" name=\"at\" value=\"09:30:00\""));
 }
 
@@ -173,12 +173,12 @@ fn a_picker_draws_six_weeks_from_the_first_weekday() {
     let html = body(&render(app));
 
     assert_eq!(html.matches("data-slot=\"day\"").count(), 42);
-    // September 2026 starts on a Tuesday, so a Monday-first grid opens on
-    // August 31 and ends on October 11.
-    let first = html.find("data-date=\"2026-08-31\"").expect("Monday first");
+    // September 2026 starts on a Tuesday, so the default Sunday-first grid
+    // opens on August 30 and ends on October 10.
+    let first = html.find("data-date=\"2026-08-30\"").expect("Sunday first");
     assert!(first < html.find("data-date=\"2026-09-01\"").expect("the 1st"));
-    assert!(html.contains("data-date=\"2026-10-11\""));
-    assert!(!html.contains("data-date=\"2026-10-12\""));
+    assert!(html.contains("data-date=\"2026-10-10\""));
+    assert!(!html.contains("data-date=\"2026-10-11\""));
     assert!(html.contains("September 2026"));
 
     assert_eq!(html.matches("data-selected=\"true\"").count(), 1);
@@ -192,17 +192,14 @@ fn a_picker_draws_six_weeks_from_the_first_weekday() {
 /// The weekday arrays are Sunday first whatever `first_weekday` says; the
 /// grid and its headers rotate to it.
 #[test]
-fn a_sunday_first_locale_starts_the_grid_and_the_headers_on_sunday() {
-    static SUNDAY: Localization = Localization {
-        date: DateLocale {
-            first_weekday: Weekday::Sun,
-            ..DateLocale::ENGLISH
-        },
-        ..Localization::ENGLISH
+fn a_monday_first_locale_starts_the_grid_and_the_headers_on_monday() {
+    static MONDAY: Formats = Formats {
+        first_weekday: Weekday::Mon,
+        ..Formats::AMERICAN
     };
     fn app() -> Element {
         rsx! {
-            LiberoProvider { localization: &SUNDAY,
+            LiberoProvider { formats: &MONDAY,
                 DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} }
             }
         }
@@ -211,15 +208,12 @@ fn a_sunday_first_locale_starts_the_grid_and_the_headers_on_sunday() {
 
     let headers = tags_with(&html, &["role=\"columnheader\""]);
     assert_eq!(headers.len(), 7);
-    assert!(headers[0].contains("aria-label=\"Sunday\""), "{headers:?}");
-    assert!(
-        headers[6].contains("aria-label=\"Saturday\""),
-        "{headers:?}"
-    );
-    // September 2026 starts on a Tuesday: the grid opens on Sunday, August 30.
+    assert!(headers[0].contains("aria-label=\"Monday\""), "{headers:?}");
+    assert!(headers[6].contains("aria-label=\"Sunday\""), "{headers:?}");
+    // September 2026 starts on a Tuesday: the grid opens on Monday, August 31.
     let first = html.find("data-slot=\"day\"").expect("a day");
     assert_eq!(
-        html[first..].find("data-date=\"2026-08-30\""),
+        html[first..].find("data-date=\"2026-08-31\""),
         html[first..].find("data-date=")
     );
 }
@@ -517,9 +511,9 @@ fn one_field_takes_its_format_and_posting_from_the_value_type() {
 
     assert!(html.contains("value=\"September 4, 2026\""));
     assert!(html.contains("name=\"day\" value=\"2026-09-04\""));
-    assert!(html.contains("value=\"13:05\""));
+    assert!(html.contains("value=\"1:05 PM\""));
     assert!(html.contains("name=\"time\" value=\"13:05:00\""));
-    assert!(html.contains("value=\"September 14, 2026 09:00 – September 16, 2026 17:00\""));
+    assert!(html.contains("value=\"September 14, 2026 9:00 AM – September 16, 2026 5:00 PM\""));
     // chrono's `Display` would put a space where ISO 8601 puts the `T`.
     assert!(html.contains("name=\"stay\" value=\"2026-09-14T09:00:00/2026-09-16T17:00:00\""));
 }

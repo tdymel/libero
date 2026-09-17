@@ -12,7 +12,7 @@ use super::{
 };
 use crate::{
     components::Input,
-    hooks::{use_localization, use_theme},
+    hooks::{use_formats, use_localization, use_theme},
     localization::fill,
     theme::{CalendarVariant, TimePickerVariant},
 };
@@ -32,7 +32,7 @@ date_props! {
 /// `onchange` or a turbofish has to.
 ///
 /// `level` makes a `NaiveDate` field a month or a year field: the text reads
-/// `(DateLocale::format)(level)` (`MMMM YYYY` or `YYYY` in English) unless
+/// `(Formats::date)(level)` (`MMMM YYYY` or `YYYY` in both formats) unless
 /// `format` says otherwise, the value is the month's first day or the year's
 /// January 1, and the dropdown opens on that grid.
 ///
@@ -157,10 +157,11 @@ pub(super) fn date_field<V: DateValue>(
 ) -> Element {
     let theme = use_theme();
     let names = &use_localization().date;
+    let conventions = use_formats();
     let with_seconds = options.with_seconds.unwrap_or(false);
     let time = options
         .time_format
-        .unwrap_or_else(|| time_format(names, options.twelve_hour, with_seconds));
+        .unwrap_or_else(|| time_format(conventions.time, options.twelve_hour, with_seconds));
     let level = options.level;
     let picker = PickerOptions {
         min: options.min,
@@ -184,9 +185,10 @@ pub(super) fn date_field<V: DateValue>(
     let formats = Formats {
         date: options
             .format
-            .unwrap_or_else(|| (names.format)(level).to_string()),
+            .unwrap_or_else(|| (conventions.date)(level).to_string()),
         time,
         names,
+        range_separator: conventions.range_separator,
         level,
     };
     // Only a day level passes the props a month or year dropdown drops.
@@ -331,12 +333,13 @@ mod tests {
     /// Todo 536: each refusal names its rule, the bounds in the field's format.
     #[test]
     fn a_refusal_names_the_bound_it_missed() {
-        let names = &DateLocale::ENGLISH;
+        let american = crate::localization::Formats::AMERICAN;
         let day = |day| NaiveDate::from_ymd_opt(2026, 3, day).unwrap();
         let at = |level| Formats {
-            date: (names.format)(level).to_string(),
-            time: names.time_format.to_string(),
-            names,
+            date: (american.date)(level).to_string(),
+            time: american.time.to_string(),
+            names: &DateLocale::ENGLISH,
+            range_separator: american.range_separator,
             level,
         };
         let refused = |value: NaiveDate, min, max, level| {
