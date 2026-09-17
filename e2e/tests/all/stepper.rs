@@ -27,6 +27,59 @@ fn suite(name: &'static str, route: &'static str) -> Suite {
         )
 }
 
+/// Under RTL the vertical rail runs down under the markers, which sit at the
+/// right, and the content clears them on that side.
+#[test]
+fn under_rtl_the_vertical_rail_stays_under_the_markers() {
+    block_on(async {
+        let fixture = Fixture::open("/stepper-vertical", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate("document.documentElement.dir = 'rtl'")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            "getComputedStyle(document.body).direction === 'rtl'",
+            "the page to turn RTL",
+        )
+        .await
+        .unwrap();
+        let (off, content): (Vec<f64>, String) = page
+            .evaluate(
+                "(() => { const items = [...document.querySelectorAll('ol > li')].slice(0, -1); \
+                 const off = items.map(li => { \
+                   const box = li.getBoundingClientRect(); \
+                   const m = li.querySelector('[data-step-marker]').getBoundingClientRect(); \
+                   const rail = getComputedStyle(li, '::before'); \
+                   const x = box.left + parseFloat(rail.left) \
+                     + (parseFloat(rail.borderLeftWidth) + parseFloat(rail.borderRightWidth)) / 2; \
+                   return Math.abs(x - (m.left + m.width / 2)); }); \
+                 const c = getComputedStyle(document.querySelector('[data-step-content]')); \
+                 return [off, c.paddingLeft + ' / ' + c.paddingRight]; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!off.is_empty(), "no connector measured");
+        assert!(
+            off.iter().all(|px| *px < 2.0),
+            "rail centre off the marker centre by {off:?}px"
+        );
+        assert!(
+            content.starts_with("0px /"),
+            "content padding (left / right): {content}"
+        );
+        fixture
+            .console
+            .assert_clean("RTL vertical stepper")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 #[test]
 fn it_meets_the_baseline() {
     suite("stepper", "/stepper").run();

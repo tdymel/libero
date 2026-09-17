@@ -201,7 +201,9 @@ pub fn TabsPage() -> Element {
                     Code { source: "aria_label" }
                     " or "
                     Code { source: "aria_labelledby" }
-                    ": both go to the tablist, not the root."
+                    ": both go to the tablist, not the root. Dropping the focused tab from "
+                    Code { source: "options" }
+                    " can drop the focus to the page: move it back to the strip yourself."
                 }
             }
         }

@@ -233,6 +233,85 @@ fn manual_activation_selects_on_enter_and_space() {
     });
 }
 
+/// The strip is one tab stop from wherever the focus sits in it: Tab from a
+/// focused, unselected tab leaves for the panel rather than landing on the
+/// selected tab further along.
+#[test]
+fn tab_leaves_the_strip_from_a_focused_unselected_tab() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-manual", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        reset_tab_position(page).await.unwrap();
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        for key in [keyboard::END, keyboard::ENTER, keyboard::HOME] {
+            keyboard::press(page, key).await.unwrap();
+            settle(&fixture).await;
+        }
+        assert_eq!(focus_and_selection(&fixture).await, "0:2", "before Tab");
+        keyboard::press(page, keyboard::TAB).await.unwrap();
+        settle(&fixture).await;
+        let role: String = page
+            .evaluate(
+                "document.activeElement.getAttribute('role') || document.activeElement.tagName",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(role, "tabpanel", "Tab from the focused tab");
+
+        fixture
+            .console
+            .assert_clean("tabbing out of the strip")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Shift+Tab from a clicked disabled tab leaves the strip too, rather than
+/// stopping on the selected tab before it.
+#[test]
+fn shift_tab_leaves_the_strip_from_a_clicked_disabled_tab() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs-disabled", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        pointer::click(page, "[role=tab]:nth-child(2)")
+            .await
+            .unwrap();
+        settle(&fixture).await;
+        assert_eq!(
+            focus_and_selection(&fixture).await,
+            "1:0",
+            "after the click"
+        );
+        keyboard::press_with(page, keyboard::TAB, keyboard::SHIFT)
+            .await
+            .unwrap();
+        settle(&fixture).await;
+        let inside: bool = page
+            .evaluate("!!document.activeElement.closest('[role=tablist]')")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            !inside,
+            "Shift+Tab stayed in the strip: {}",
+            focus_and_selection(&fixture).await
+        );
+
+        fixture
+            .console
+            .assert_clean("shift-tabbing out of the strip")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Alt+Left is the browser's Back; a chord is not the strip's to take.
 #[test]
 fn shortcut_chords_pass_through() {

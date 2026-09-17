@@ -1297,12 +1297,17 @@ struct NavProps {
     paged: Signal<Option<NaiveDate>>,
 }
 
+/// The header runs right to left under RTL, so the chevrons point the other way.
+static NAV_SX: StaticSx =
+    StaticSx::new(|| sx().selector("&:dir(rtl) svg", sx().transform("scaleX(-1)")));
+
 #[component]
 fn Nav(props: NavProps) -> Element {
     let (targets, forward, mut paged) = (props.targets, props.forward, props.paged);
     rsx! {
         ActionIcon {
             aria_label: props.label,
+            sx: &NAV_SX,
             variant: Input::Value(Variant::Standard),
             size: ThemeAwareValue::Size(nav_size(props.size)),
             tabindex: if props.focusable { "0" } else { "-1" },

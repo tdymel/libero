@@ -284,3 +284,81 @@ fn carousel_dots_step_forward_on_arrow_left() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Which way a glyph points on screen, as the x of its drawn `(vx, vy)` after
+/// every CSS transform from it up to the root: `ChevronRightIcon` draws
+/// `(1, 0)`, `ChevronDownIcon` `(0, 1)`.
+async fn screen_x(page: &Page, selector: &str, vx: f64, vy: f64) -> Option<f64> {
+    page.evaluate(format!(
+        "(() => {{ let el = document.querySelector({selector:?}); \
+         if (!el) return null; \
+         let m = new DOMMatrix(); \
+         for (; el; el = el.parentElement) {{ \
+           const t = getComputedStyle(el).transform; \
+           if (t && t !== 'none') m = new DOMMatrix(t).multiply(m); }} \
+         return m.a * {vx} + m.c * {vy}; }})()"
+    ))
+    .await
+    .unwrap()
+    .into_value()
+    .unwrap()
+}
+
+/// A chevron that means "previous", "next" or "has children" points the way
+/// the layout goes, so under RTL it mirrors (the Scroller and Menu rule).
+#[test]
+fn directional_chevrons_mirror() {
+    block_on(async {
+        let mut wrong = Vec::new();
+        // Route, glyph, the vector it draws, and +1 for forward, -1 for back.
+        let cases: [(&str, &str, (f64, f64), f64); 5] = [
+            (
+                "/pagination",
+                "[aria-label='Go to previous page'] svg",
+                (-1.0, 0.0),
+                -1.0,
+            ),
+            (
+                "/pagination",
+                "[aria-label='Go to next page'] svg",
+                (1.0, 0.0),
+                1.0,
+            ),
+            ("/calendar", "[aria-label^='Next'] svg", (1.0, 0.0), 1.0),
+            (
+                "/tree/default",
+                "[data-tree-id='src'] [data-tree-chevron] svg",
+                (1.0, 0.0),
+                1.0,
+            ),
+            ("/cascader", "[data-slot='branch'] svg", (0.0, 1.0), 1.0),
+        ];
+        for (route, glyph, (vx, vy), forward) in cases {
+            let fixture = open_rtl(route).await;
+            let page = &fixture.page;
+            if route == "/cascader" {
+                keyboard::tab_to(page, "[role=combobox]", 10).await.unwrap();
+                keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+                wait::for_visible(page, glyph).await.unwrap();
+            }
+            // The tree chevron turns with a transition when `dir` flips.
+            wait::for_js_true(
+                page,
+                "document.getAnimations().every(a => a.playState !== 'running')",
+                "transitions to end",
+            )
+            .await
+            .unwrap();
+            // Under RTL forward is towards -x.
+            let x = screen_x(page, glyph, vx, vy).await;
+            if x.is_none_or(|x| x * forward > -0.5) {
+                wrong.push(format!("{route} {glyph}: x {x:?}"));
+            }
+            fixture.close().await.unwrap();
+        }
+        assert!(
+            wrong.is_empty(),
+            "chevrons not mirrored under RTL: {wrong:#?}"
+        );
+    });
+}

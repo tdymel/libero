@@ -10,7 +10,21 @@ pub const ROUTES: Routes = &[
     ("/tree/links", || rsx! { LinkTreePage {} }),
     ("/tree/links/arrived", || rsx! { "arrived" }),
     ("/tree/delete", || rsx! { DeleteTreePage {} }),
+    ("/tree/default", || rsx! { DefaultTreePage {} }),
 ];
+
+/// The default row render, the one that draws the chevron.
+#[component]
+fn DefaultTreePage() -> Element {
+    let data = vec![
+        TreeNode::new("src", "src").children(vec![TreeNode::new("src/lib.rs", "lib.rs")]),
+        TreeNode::new("README.md", "README.md"),
+    ];
+
+    rsx! {
+        Tree { aria_label: "Project files", data }
+    }
+}
 
 /// Delete removes the focused row from `data`, as a file manager would.
 #[component]

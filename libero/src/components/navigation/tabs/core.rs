@@ -9,7 +9,7 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{id_selector, use_element},
+    hooks::{id_selector, use_element, use_focus_within},
     platform::{ElementApi, logical_key},
     sx::{FORCED_COLORS, StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -152,10 +152,27 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     } = view;
 
     let disabled: Vec<bool> = tabs.iter().map(|tab| tab.disabled).collect();
-    // One tab stop for the strip: the selected tab, or the first enabled one
-    // when `value` is not among the tabs, so the strip stays reachable.
-    let tab_stop = selected.or_else(|| disabled.iter().position(|off| !off));
+    // One tab stop for the strip: the focused tab, so Tab leaves from there
+    // (manual mode, a clicked disabled tab); else the selected tab, or the
+    // first enabled one when `value` is not among the tabs.
+    let mut focused = use_signal(|| None::<usize>);
+    let tab_stop = focused()
+        .filter(|&index| index < tabs.len())
+        .or(selected)
+        .or_else(|| disabled.iter().position(|off| !off));
     let root_element = use_element();
+    let list_element = use_element();
+    // Focus leaving the strip hands the tab stop back to the selected tab.
+    // Also on Blitz, whose Tab fires no blur.
+    let focus = use_focus_within(
+        move || vec![list_element.mounted()],
+        move |change| {
+            if !change.within {
+                let mut focused = focused;
+                focused.set(None);
+            }
+        },
+    );
     let keydown_root = root.clone();
     // Steps from the focused tab: a click focuses a disabled tab without
     // selecting it.
@@ -179,6 +196,8 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         if !manual {
             onselect.call(next);
         }
+        // Blitz fires no focus event for a scripted `focus()`.
+        focused.set(Some(next));
         if let Ok(tab) =
             root_element.query_selector(&id_selector(&format!("{keydown_root}-tab-{next}")))
         {
@@ -220,6 +239,8 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                     id: "{list_id}",
                     role: "tablist",
                     "aria-orientation": "horizontal",
+                    onmounted: list_element.mount(),
+                    onfocusout: focus.focusout(0),
                     ..naming,
                     for (index, tab) in tabs.iter().enumerate() {
                         button {
@@ -239,9 +260,11 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                             "aria-label": tab.name.clone(),
                             tabindex: if tab_stop == Some(index) { "0" } else { "-1" },
                             onkeydown: move |event| onkeydown.call((index, event)),
+                            onfocus: move |_| focused.set(Some(index)),
                             onclick: {
                                 let disabled = tab.disabled;
                                 move |_| {
+                                    focused.set(Some(index));
                                     if !disabled {
                                         onselect.call(index);
                                     }

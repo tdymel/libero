@@ -6,7 +6,8 @@ use crate::{
     components::{
         Box, Carousel, CarouselJump, CarouselQuietWhenFits, Dialog, Input, States, Variables,
         common::{
-            inset_focus_ring_sx, ring_overlay, ring_overlay_sx, states, use_name_warning, variables,
+            has_shortcut_modifier, inset_focus_ring_sx, ring_overlay, ring_overlay_sx, states,
+            use_name_warning, variables,
         },
         form::{Announcer, use_announcer},
     },
@@ -662,7 +663,8 @@ fn lightbox_slide(
                 tabindex: zoomable.then_some(if is_current { "0" } else { "-1" }),
                 aria_describedby: if is_current { described.clone() } else { None },
                 onkeydown: move |event: Event<KeyboardData>| {
-                    if !zoomable || i != *index.peek() {
+                    // Ctrl/Alt/Meta chords are the browser's: Alt+Left is Back.
+                    if !zoomable || i != *index.peek() || has_shortcut_modifier(&event) {
                         return;
                     }
                     let from = zooming.held();
@@ -688,10 +690,6 @@ fn lightbox_slide(
                             return;
                         }
                     }
-                    // Ctrl/Cmd with `+` and `-` is the browser's own zoom.
-                    let plain = !event.modifiers().ctrl()
-                        && !event.modifiers().meta()
-                        && !event.modifiers().alt();
                     // The pan above stays physical; the slides follow the
                     // strip, which mirrors under RTL.
                     match logical_key(&event) {
@@ -699,13 +697,13 @@ fn lightbox_slide(
                         Key::ArrowRight => stage.go(i + 1, true),
                         Key::Home => stage.go(0, true),
                         Key::End => stage.go(last, true),
-                        Key::Character(ref c) if plain && c.eq_ignore_ascii_case("z") => {
+                        Key::Character(ref c) if c.eq_ignore_ascii_case("z") => {
                             zoom_about(root, image, zooming, i, None, move |scale| {
                                 zooming.toggle_scale(scale)
                             });
                         }
                         // The wheel's steps, so the keyboard reaches `max_zoom` too.
-                        Key::Character(ref c) if plain && matches!(c.as_str(), "+" | "=" | "-") => {
+                        Key::Character(ref c) if matches!(c.as_str(), "+" | "=" | "-") => {
                             let closer = c == "-";
                             zoom_about(root, image, zooming, i, None, move |scale| {
                                 wheel_step(scale, closer, max_zoom)
@@ -820,6 +818,9 @@ fn lightbox_thumbnails(
                     tabindex: if is_current { "0" } else { "-1" },
                     onclick: move |_| stage.go(i, false),
                     onkeydown: move |event: Event<KeyboardData>| {
+                        if has_shortcut_modifier(&event) {
+                            return;
+                        }
                         let target = match logical_key(&event) {
                             Key::ArrowLeft => i.saturating_sub(1),
                             Key::ArrowRight => (i + 1).min(last),

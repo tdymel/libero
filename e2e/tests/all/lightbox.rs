@@ -161,6 +161,39 @@ fn arrows_move_the_picture_and_tab_skips_inert_slides() {
     });
 }
 
+/// Ctrl/Alt/Meta with an arrow, Home or End is the browser's, on the picture
+/// and on a thumbnail alike (todo 503's family).
+#[test]
+fn shortcut_chords_pass_through() {
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        motion::set_reduced_motion(page, true).await.unwrap();
+        keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_visible(page, DIALOG).await.unwrap();
+        wait_showing(page, 0).await.unwrap();
+        let keys = [
+            keyboard::ARROW_RIGHT,
+            keyboard::ARROW_LEFT,
+            keyboard::HOME,
+            keyboard::END,
+        ];
+        let probe = "document.activeElement.outerHTML.slice(0, 80)";
+        for stop in [PICTURE, "[role=dialog] button[aria-current=true]"] {
+            keyboard::tab_to(page, stop, 12).await.unwrap();
+            keyboard::assert_chords_ignored(page, &keys, probe)
+                .await
+                .unwrap_or_else(|e| panic!("on {stop}: {e}"));
+        }
+        fixture
+            .console
+            .assert_clean("chords in the lightbox")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Under reduced motion, so every slide change is an instant scroll. A smooth
 /// one is unreliable in the suite's background pages: at 390px a smooth
 /// `scrollTo` from picture 6 to 5 moved nothing and ended in a `scrollend` at

@@ -153,6 +153,9 @@ Enter or Space selects the focused tab - for panels that are slow to build.
 Name the strip with `aria_label` or `aria_labelledby` on `Tabs`: both go to the
 `tablist`, not the root.
 
+Dropping the focused tab from `options` can drop the focus to the page: move it
+back to the strip yourself.
+
 `OptionLabel::rich` takes the accessible name as its first argument: the rsx it
 draws is what a screen reader cannot use, and that name becomes the tab's
 `aria-label`.

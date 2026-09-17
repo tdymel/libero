@@ -153,7 +153,9 @@ fn cascader_rows_sx() -> Sx {
             .display("inline-flex")
             .width("1em")
             .height("1em")
-            .transform("rotate(-90deg)"),
+            .transform("rotate(-90deg)")
+            // The next column opens to the left.
+            .selector("&:dir(rtl)", sx().transform("rotate(90deg)")),
     )
     .selector(
         "& [data-slot='branch'] > svg",
