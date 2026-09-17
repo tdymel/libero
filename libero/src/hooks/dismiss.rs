@@ -354,7 +354,7 @@ pub(crate) struct DismissHandle {
     inside_next: Signal<u64>,
     onfocusmoved: Option<Callback<()>>,
     focus: FocusWithin,
-    /// Bumped when a silent focus move left the box; root-owned.
+    /// Bumped when a silent focus move left the box.
     left_tick: Signal<u64>,
 }
 
@@ -497,7 +497,7 @@ impl DismissHandle {
         match change.in_group {
             _ if change.within => {}
             Some(true) => {}
-            // Landed already, and heard outside every scope: recorded for the
+            // Landed already, heard at `Outlet`'s flush: recorded for the
             // effect in `use_dismiss`, as Escape is.
             Some(false) => {
                 let mut tick = self.left_tick;
@@ -663,8 +663,7 @@ pub(crate) fn use_dismiss(
     let inside_next = use_signal(|| 0u64);
     let global = use_global_escape();
     let focus = use_focus_within(Vec::new, |_| {});
-    let left_tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
-    use_drop(move || left_tick.manually_drop());
+    let left_tick = use_signal(|| 0u64);
 
     let handle = DismissHandle {
         anchor,
@@ -763,17 +762,14 @@ fn use_document_escape(listen: bool, global: bool, mut onescape: impl FnMut() + 
     type Listening = Rc<RefCell<Option<(Box<dyn KeySubscription>, LayerGuard)>>>;
     let listening: Listening = use_hook(|| Rc::new(RefCell::new(None)));
 
-    // Bumped from the key callback, which runs outside every dioxus scope - so
-    // the signal is owned by the root and dropped by hand, the same obligation
-    // `use_popover`'s scroll callback has. The callback deliberately does not
-    // close anything: it only records the press, and the effect below acts, in
-    // the runtime.
-    let escape_tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
+    // Bumped from the key callback, which on the web runs outside every dioxus
+    // scope. The callback deliberately does not close anything: it only records
+    // the press, and the effect below acts, in the runtime.
+    let escape_tick = use_signal(|| 0u64);
     use_drop({
         let listening = listening.clone();
         move || {
             listening.borrow_mut().take();
-            escape_tick.manually_drop();
         }
     });
 

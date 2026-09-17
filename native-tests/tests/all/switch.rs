@@ -72,6 +72,37 @@ fn space_and_enter_toggle_the_focused_switch() {
     assert!(page.is_focused(INPUT));
 }
 
+/// Todo 757: Blitz ignores `clip`, so the hidden input painted a speck beside
+/// the track, and its focus outline a blue square; only the ring may show.
+#[test]
+fn the_hidden_input_paints_nothing() {
+    fn padded() -> Element {
+        let mut on = use_signal(|| false);
+        rsx! {
+            div { padding: "10px",
+                Switch { checked: on(), onchange: move |v| on.set(v), label: "Wifi" }
+            }
+        }
+    }
+    let mut page = mount(padded);
+    let (x, y, ..) = page.rect(INPUT);
+    // Around the input, inside the ring, which starts 2px left of it.
+    let (x, y) = (x as u32, y as u32);
+    let window: Vec<_> = (x - 1..x + 3)
+        .flat_map(|px| (y - 4..y + 5).map(move |py| (px, py)))
+        .collect();
+    let background = page.painted_pixel(1, 1);
+    assert_eq!(page.painted_pixel(x, y), background, "a speck at the input");
+    let idle = page.painted_pixels(&window);
+    page.tab();
+    assert!(page.is_focused(INPUT), "Tab reached {}", page.focus_owner());
+    assert_eq!(
+        page.painted_pixels(&window),
+        idle,
+        "the focused input painted"
+    );
+}
+
 fn form_app() -> Element {
     let mut on = use_signal(|| false);
     let mut submits = use_signal(|| 0u32);

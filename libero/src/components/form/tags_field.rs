@@ -170,6 +170,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     let cursor = TagCursor {
         slot: use_element(),
         input: input_element,
+        entering: use_hook(|| CopyValue::new(false)),
     };
 
     let rules = TagRules {
@@ -480,9 +481,23 @@ fn split(text: &str, split_chars: &[String]) -> Vec<String> {
 struct TagCursor {
     slot: ElementHandle,
     input: ElementHandle,
+    /// Set while the input hands focus to a tag, so its blur keeps the draft.
+    entering: CopyValue<bool>,
 }
 
 impl TagCursor {
+    /// Moves from the input onto tag `index`, leaving the draft in the input.
+    fn enter(mut self, index: usize) {
+        self.entering.set(true);
+        self.focus(Some(index));
+        self.entering.set(false);
+    }
+
+    /// Whether the input's blur is [`enter`](Self::enter)'s.
+    fn entering(self) -> bool {
+        *self.entering.peek()
+    }
+
     /// Focuses tag `index`'s button, or the input for `None`.
     fn focus(self, index: Option<usize>) {
         let _ = match index {
@@ -504,6 +519,13 @@ impl TagCursor {
 
 fn tag_selector(index: usize) -> String {
     format!("[data-tag-index='{index}'] button")
+}
+
+/// Whether the input's caret sits before the draft's first character. No
+/// renderer reports the caret yet (todo 666 waits on `selection_start`).
+fn caret_at_start(input: ElementHandle) -> bool {
+    let _ = input;
+    false
 }
 
 /// Where the cursor goes once tag `index` of `count` is removed: the next tag,
@@ -761,14 +783,15 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                     next.pop();
                     onchange(next);
                 }
-                // Only on an empty draft: the caret's position is not readable
-                // here, and leaving would commit the draft on blur.
+                // From an empty draft, or from the start of one, which stays.
                 Key::ArrowLeft
-                    if text().is_empty() && !held.is_empty() && event.modifiers().is_empty() =>
+                    if (text().is_empty() || caret_at_start(cursor.input))
+                        && !held.is_empty()
+                        && event.modifiers().is_empty() =>
                 {
                     event.prevent_default();
                     event.stop_propagation();
-                    cursor.focus(Some(held.len() - 1));
+                    cursor.enter(held.len() - 1);
                 }
                 _ => {}
             }
@@ -778,7 +801,11 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         // it off, and one for "discard my typing" is not worth the line.
         .event("onblur", move |_: FocusEvent| {
             let draft = text();
-            if !readonly && !draft.trim().is_empty() && blurring(vec![draft]).is_none() {
+            if !readonly
+                && !cursor.entering()
+                && !draft.trim().is_empty()
+                && blurring(vec![draft]).is_none()
+            {
                 text.set(String::new());
             }
             state.close();

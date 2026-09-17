@@ -18,7 +18,8 @@ fn it_meets_the_baseline() {
         .state(
             "ticked",
             &[Step::TabTo("#terms"), Step::Press(SPACE)],
-            "#terms:checked",
+            // The box beside it: the input itself is `opacity: 0` (todo 757).
+            "#terms:checked + *",
         )
         .run();
 }

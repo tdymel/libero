@@ -40,7 +40,8 @@ fn it_meets_the_baseline() {
         .state(
             "third",
             &[Step::TabTo(CHECKED), Step::Press(keyboard::ARROW_DOWN)],
-            THIRD_CHECKED,
+            // The circle beside it: the input itself is `opacity: 0` (todo 757).
+            "[role=radiogroup] input[type=radio][data-radio-index=\"2\"]:checked + *",
         )
         .run();
 }

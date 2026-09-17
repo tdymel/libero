@@ -75,7 +75,8 @@ fn only_a_focusable_one_reveals_on_focus() {
 
 /// The hosted inputs keep the shared `absolute` recipe. Tab onto one scrolls
 /// its `relative` label into view; under `fixed` it scrolled nothing and the
-/// label stayed off-screen (todo 63, measured on four pages).
+/// label stayed off-screen (todo 63, measured on four pages). `opacity: 0`
+/// hides it natively, where Blitz ignores `clip` (todo 757).
 #[test]
 fn a_hosted_hidden_input_stays_absolute() {
     fn app() -> Element {
@@ -88,10 +89,13 @@ fn a_hosted_hidden_input_stays_absolute() {
 
     let html = render(app);
     let input = classes_of(&html, "input");
-    assert!(
-        input
-            .iter()
-            .any(|class| html.contains(&format!(".{class}{{position:absolute"))),
-        "{input:?}"
-    );
+    let rule = input
+        .iter()
+        .find_map(|class| {
+            let start = html.find(&format!(".{class}{{position:absolute"))?;
+            let rule = &html[start..];
+            Some(rule[..rule.find('}')?].to_string())
+        })
+        .unwrap_or_else(|| panic!("no absolute rule for {input:?}"));
+    assert!(rule.contains("opacity:0"), "{rule}");
 }

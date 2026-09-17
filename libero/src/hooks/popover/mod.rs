@@ -238,12 +238,11 @@ pub(crate) fn use_popover_on(
     let mut anchor_width = use_signal(|| None::<f64>);
     let slot = use_portal_slot();
 
-    // Bumped from the scroll callback, which runs outside every dioxus scope -
-    // so the signal is owned by the root and dropped by hand, the same
-    // obligation anything portaled has ([[codebase/use-popover]]). The callback
-    // deliberately does *not* measure: it only invalidates, and the effect
-    // below does the work, in the runtime, where a `Read` may be created.
-    let scroll_tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
+    // Bumped from the scroll callback, which on the web runs outside every
+    // dioxus scope. The callback deliberately does *not* measure: it only
+    // invalidates, and the effect below does the work, in the runtime, where a
+    // `Read` may be created.
+    let scroll_tick = use_signal(|| 0u64);
     // Alive exactly while the popover is open. Dropping it removes the
     // listener, so a page full of closed dropdowns listens to nothing.
     let subscription: Rc<RefCell<Option<Box<dyn ScrollSubscription>>>> =
@@ -255,7 +254,6 @@ pub(crate) fn use_popover_on(
         let subscription = subscription.clone();
         move || {
             subscription.borrow_mut().take();
-            scroll_tick.manually_drop();
         }
     });
 

@@ -272,9 +272,9 @@ fn use_page_switch(
     let layer = use_dismiss_layer();
     // Where the page had focus: the opener at first, then wherever F6 left.
     let mut page = use_hook(|| CopyValue::new(opener.call(())));
-    // Bumped from the key callback, which runs outside every scope; the
-    // effect below moves focus (the `Spotlight` hotkey's shape).
-    let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
+    // Bumped from the key callback, which on the web runs outside every scope;
+    // the effect below moves focus (the `Spotlight` hotkey's shape).
+    let tick = use_signal(|| 0u64);
     let slot: Rc<RefCell<Option<Box<dyn KeySubscription>>>> = use_hook(|| {
         let callback = Box::new(move |chord: KeyChord| {
             let modifiers = chord.modifiers;
@@ -301,7 +301,6 @@ fn use_page_switch(
     });
     use_drop(move || {
         slot.borrow_mut().take();
-        tick.manually_drop();
     });
 
     let mut seen = use_signal(|| 0u64);

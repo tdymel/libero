@@ -427,17 +427,16 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
 /// (a `Modal`, a popover), the chord is left alone. A held chord is one press.
 fn use_hotkey(handle: SpotlightHandle, shortcut: Option<char>) {
     let layer = use_dismiss_layer();
-    // Bumped from the key callback, which runs outside every scope - on the
-    // web with no runtime at all - so it only records the press, and the
-    // effect below toggles ([[codebase/platform-timer]]).
-    let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
+    // Bumped from the key callback, which on the web runs with no runtime at
+    // all, so it only records the press, and the effect below toggles
+    // ([[codebase/platform-timer]]).
+    let tick = use_signal(|| 0u64);
     let slot: Rc<RefCell<Option<Box<dyn KeySubscription>>>> =
         use_hook(|| Rc::new(RefCell::new(None)));
     use_drop({
         let slot = slot.clone();
         move || {
             slot.borrow_mut().take();
-            tick.manually_drop();
         }
     });
 

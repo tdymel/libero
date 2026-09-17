@@ -2,7 +2,7 @@
 
 use std::{cell::Cell, rc::Rc, time::Duration};
 
-use dioxus::prelude::*;
+use dioxus::{core::current_scope_id, prelude::*};
 use libero::{
     components::{Button, HoverCard},
     hooks::{ModalScope, use_modal},
@@ -123,6 +123,48 @@ fn a_dropped_subscription_hears_nothing() {
     page.focus("#off");
     page.press(Key::Character("a".into()));
     assert_eq!(HEARD.get(), 1, "a dropped subscription still heard a press");
+}
+
+/// Todo 729: a callback runs in the scope that subscribed, so it may bump a
+/// signal that scope owns without a `dioxus_signals` warning.
+#[test]
+fn a_callback_runs_in_the_subscribing_scope() {
+    thread_local! {
+        static SCOPES: Cell<Option<(ScopeId, ScopeId)>> = const { Cell::new(None) };
+    }
+    fn app() -> Element {
+        rsx! {
+            Button { id: "page", "Page" }
+            Counter {}
+        }
+    }
+    #[component]
+    fn Counter() -> Element {
+        let presses = use_signal(|| 0u32);
+        let subscription = use_hook(|| {
+            let scope = current_scope_id();
+            Rc::new(keyboard().unwrap().on_key(Box::new(move |chord| {
+                let hit = chord.key == Key::Character("g".into());
+                if hit {
+                    SCOPES.set(Some((scope, current_scope_id())));
+                    let mut presses = presses;
+                    presses += 1;
+                }
+                hit
+            })))
+        });
+        let _ = subscription;
+        rsx! {
+            p { id: "count", "{presses}" }
+        }
+    }
+
+    let mut page = mount(app);
+    page.focus("#page");
+    page.press(Key::Character("g".into()));
+    let (subscribed, ran) = SCOPES.get().expect("the press was not heard");
+    assert_eq!(ran, subscribed, "the callback ran outside its scope");
+    assert_eq!(page.text("#count"), "1");
 }
 
 const CARD: &str = "[role=dialog][aria-label='Ada Lovelace']";

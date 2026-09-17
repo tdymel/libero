@@ -20,7 +20,8 @@ fn it_meets_the_baseline() {
         .state(
             "ticked",
             &[Step::TabTo("#css > input"), Step::Press(SPACE)],
-            "#css > input:checked",
+            // What it draws: the input itself is `opacity: 0` (todo 757).
+            "#css > input:checked + *",
         )
         .run();
 }

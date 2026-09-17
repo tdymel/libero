@@ -136,7 +136,7 @@ struct Doc {
     /// A `scroll_into_view` waiting for its target's first layout. See [`show`].
     show_retry: RefCell<Option<Box<dyn TimerSubscription>>>,
     /// Every [`BlitzKeyboard`] subscription: id, whether it skips text entry,
-    /// callback. Called by [`Listener`]'s `onkeydown`.
+    /// the subscribing scope, callback. Called by [`Listener`]'s `onkeydown`.
     key_callbacks: RefCell<Vec<KeyCallback>>,
     focus: focus::Watch,
 }
@@ -213,7 +213,7 @@ fn doc() -> Option<Rc<Doc>> {
     Some(doc)
 }
 
-type KeyCallback = (u64, bool, Rc<dyn Fn(KeyChord) -> bool>);
+type KeyCallback = (u64, bool, Origin, Rc<dyn Fn(KeyChord) -> bool>);
 
 /// Subscribers, each under the id its subscription drops, run in the scope
 /// that subscribed.
@@ -369,17 +369,18 @@ fn keyed(event: &Event<KeyboardData>) {
         .key_callbacks
         .borrow()
         .iter()
-        .filter(|(_, skip_text_entry, _)| !(typing && *skip_text_entry))
-        .map(|(_, skip_text_entry, callback)| (*skip_text_entry, callback.clone()))
+        .filter(|(_, skip_text_entry, ..)| !(typing && *skip_text_entry))
+        .map(|(_, skip_text_entry, origin, callback)| (*skip_text_entry, *origin, callback.clone()))
         .collect();
     let (key, modifiers) = (event.key(), event.modifiers());
     let mut taken = false;
-    for (skip_text_entry, callback) in callbacks {
-        let handled = callback(KeyChord {
+    for (skip_text_entry, origin, callback) in callbacks {
+        let chord = KeyChord {
             key: key.clone(),
             modifiers,
             repeat: event.is_auto_repeating(),
-        });
+        };
+        let handled = origin.run(|| callback(chord));
         if handled && skip_text_entry {
             warn_reserved_chord(&key, modifiers);
         }
@@ -718,9 +719,12 @@ impl BlitzKeyboard {
         let id = NEXT_CALLBACK.replace(NEXT_CALLBACK.get() + 1);
         let doc = doc();
         if let Some(doc) = &doc {
-            doc.key_callbacks
-                .borrow_mut()
-                .push((id, skip_text_entry, Rc::from(callback)));
+            doc.key_callbacks.borrow_mut().push((
+                id,
+                skip_text_entry,
+                Origin::here(),
+                Rc::from(callback),
+            ));
         }
         Box::new(BlitzKeySubscription(id, doc.as_ref().map(Rc::downgrade)))
     }
@@ -748,7 +752,7 @@ impl Drop for BlitzKeySubscription {
         if let Some(doc) = self.1.as_ref().and_then(Weak::upgrade) {
             doc.key_callbacks
                 .borrow_mut()
-                .retain(|(id, _, _)| *id != self.0);
+                .retain(|(id, ..)| *id != self.0);
         }
     }
 }

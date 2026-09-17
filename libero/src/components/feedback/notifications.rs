@@ -849,9 +849,9 @@ pub fn Notifications(
 /// the filtered stream, so it is not taken from a text field; any other key,
 /// F8 above all, is heard from anywhere.
 fn use_hotkey(store: NotificationStore, hotkey: Key) {
-    // Bumped from the key callback, which runs outside every scope; the
-    // effect below moves focus (the `Spotlight` hotkey's shape).
-    let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
+    // Bumped from the key callback, which on the web runs outside every scope;
+    // the effect below moves focus (the `Spotlight` hotkey's shape).
+    let tick = use_signal(|| 0u64);
     let slot: Rc<RefCell<Option<std::boxed::Box<dyn KeySubscription>>>> =
         use_hook(|| Rc::new(RefCell::new(None)));
     let host = use_hook(|| NEXT_ID.fetch_add(1, Ordering::Relaxed));
@@ -860,7 +860,6 @@ fn use_hotkey(store: NotificationStore, hotkey: Key) {
         move || {
             slot.borrow_mut().take();
             HOTKEYS.with_borrow_mut(|hosts| hosts.retain(|(other, ..)| *other != host));
-            tick.manually_drop();
         }
     });
 

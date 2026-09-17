@@ -324,7 +324,8 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         }
     };
     // Element 0 is the text input, 1 the dropdown; the box closes once focus
-    // is in neither. Only the dropdown's `focusout` waits to see where it went.
+    // is in neither. The wrapper's and the dropdown's `focusout` wait to see
+    // where it went.
     let focus = use_focus_within(
         move || vec![anchor.mounted(), floating.mounted()],
         move |change| {

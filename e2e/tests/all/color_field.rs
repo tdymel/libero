@@ -67,6 +67,39 @@ fn tab_past_the_dropdown_moves_on_from_the_field() {
     });
 }
 
+/// Todo 706: a blur of the text input closes the dropdown, as natively and in
+/// `DateField` (the wrapper's `focusout` since 8eea95fa).
+#[test]
+fn a_blur_of_the_text_input_closes_the_dropdown() {
+    block_on(async {
+        let fixture = Fixture::open("/color-field/alpha", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        expect(
+            page,
+            "!!document.querySelector('[role=dialog]')",
+            "focus on the text input to open the dropdown",
+        )
+        .await;
+        page.evaluate(format!("document.querySelector({INPUT:?}).blur()"))
+            .await
+            .unwrap();
+        expect(
+            page,
+            "!document.querySelector('[role=dialog]')",
+            "a blur of the text input to close the dropdown",
+        )
+        .await;
+        fixture
+            .console
+            .assert_clean("a blurred color field")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Every thumb is named without the caller naming it, and hue and alpha are
 /// heard in their units.
 #[test]

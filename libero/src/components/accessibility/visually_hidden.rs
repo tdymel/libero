@@ -20,6 +20,9 @@ pub(crate) static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(|| {
         .clip("rect(0, 0, 0, 0)")
         .white_space("nowrap")
         .border_width("0")
+        // Blitz ignores `clip`: it painted the input as a speck and its focus
+        // outline as a blue square (todo 757).
+        .opacity("0")
 });
 
 /// The same recipe, `fixed`. For a box nothing hosts: an absolute span with no
