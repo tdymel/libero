@@ -6,7 +6,7 @@ use super::slider_value::{SliderChangeEvent, SliderMark, SliderStep, SliderValue
 use super::value::SliderCoreValue;
 use crate::{
     components::{FieldStatus, Input, common::field_props, form::use_bound, use_field},
-    hooks::use_theme,
+    hooks::{use_localization, use_theme},
     sx::ThemeAwareValue,
 };
 
@@ -44,11 +44,12 @@ field_props! {
         #[props(default)]
         marks: Vec<SliderMark<V>>,
         /// Names the lower thumb, which the field's own label cannot tell
-        /// apart from the upper one.
-        #[props(default = Some("Minimum".to_string()))]
+        /// apart from the upper one. Unset or `None`, the localization's
+        /// `slider.minimum`.
+        #[props(default)]
         aria_label_from: Option<String>,
-        /// Names the upper thumb.
-        #[props(default = Some("Maximum".to_string()))]
+        /// Names the upper thumb. Unset or `None`, the localization's `slider.maximum`.
+        #[props(default)]
         aria_label_to: Option<String>,
         /// Emits two hidden inputs of that name, in track order, so the pair
         /// posts with a form - `FormData::get_all` reads it back.
@@ -80,6 +81,7 @@ field_props! {
 #[component]
 pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
     let theme = use_theme();
+    let labels = use_localization().slider;
     let scale = Scale::of::<V>(props.min.as_ref(), props.max.as_ref(), props.step);
     let (min, max, step) = scale.bounds();
     let bound = use_bound(&props.name, props.oninput.is_some());
@@ -179,8 +181,8 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             disabled: Some(bound.disabled(props.disabled)),
             readonly: props.readonly.unwrap_or(false),
             label: labelled.then_some(label),
-            aria_label: props.aria_label_from,
-            aria_label_to: props.aria_label_to,
+            aria_label: props.aria_label_from.unwrap_or_else(|| labels.minimum.to_string()),
+            aria_label_to: props.aria_label_to.unwrap_or_else(|| labels.maximum.to_string()),
             labelledby: field.label_id(),
             describedby: field.describedby(),
             invalid: field.invalid(),

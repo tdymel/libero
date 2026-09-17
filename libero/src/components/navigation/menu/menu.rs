@@ -13,8 +13,8 @@ use crate::{
     },
     hooks::{
         Align, DismissHandle, DismissOptions, ElementHandle, PopoverOptions, Side, TYPEAHEAD_RESET,
-        Typeahead, typeahead_match, use_dismiss, use_element, use_popover_on, use_theme,
-        use_typeahead,
+        Typeahead, current_localization, typeahead_match, use_dismiss, use_element, use_popover_on,
+        use_theme, use_typeahead,
     },
     platform::{ElementApi, TimerSubscription, logical_key, timer},
     sx::{StaticSx, sx},
@@ -1076,7 +1076,7 @@ fn menu_item(
             // Out of the name: `aria-keyshortcuts` announces it instead.
             if let Some(keys) = item.shortcut.as_deref() {
                 span { "data-menu-section": "shortcut", "aria-hidden": "true",
-                    Kbd { {shortcut_hint(keys)} }
+                    Kbd { {shortcut_hint(keys, current_localization().menu.control)} }
                 }
             }
             if has_submenu {

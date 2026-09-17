@@ -498,7 +498,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .flatten()
         .or_else(|| (language.is_none() && marked).then(|| plain_lines(&display_source)));
     let label = language
-        .map(Language::label)
+        .map(|language| language.name(&labels))
         .unwrap_or(labels.unrecognized_language);
     let copy_source = copyable.then(|| display_source.clone());
     let (highlighted_lines, overrun) = props
@@ -549,10 +549,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     });
     let scrolls = overflows();
     let scroll_label = match language {
-        Some(language) => fill(
-            labels.code_named,
-            &[("language", &Language::label(language))],
-        ),
+        Some(language) => fill(labels.code_named, &[("language", &language.name(&labels))]),
         None => labels.code.to_string(),
     };
     let scroll_box = use_box()

@@ -223,12 +223,12 @@ impl MenuItem {
 }
 
 /// The visible hint for an `aria-keyshortcuts` value: its first alternative,
-/// with `Control` shortened to `Ctrl` - "Control+X Meta+X" draws "Ctrl+X".
-pub(super) fn shortcut_hint(keys: &str) -> String {
+/// with `Control` drawn as `control` - "Control+X Meta+X" draws "Ctrl+X".
+pub(super) fn shortcut_hint(keys: &str, control: &str) -> String {
     let first = keys.split_whitespace().next().unwrap_or_default();
     first
         .split('+')
-        .map(|key| if key == "Control" { "Ctrl" } else { key })
+        .map(|key| if key == "Control" { control } else { key })
         .collect::<Vec<_>>()
         .join("+")
 }
@@ -267,8 +267,9 @@ mod tests {
 
     #[test]
     fn the_hint_shortens_control_and_keeps_the_first_alternative() {
-        assert_eq!(shortcut_hint("Control+Shift+S"), "Ctrl+Shift+S");
-        assert_eq!(shortcut_hint("Control+X Meta+X"), "Ctrl+X");
-        assert_eq!(shortcut_hint("F2"), "F2");
+        assert_eq!(shortcut_hint("Control+Shift+S", "Ctrl"), "Ctrl+Shift+S");
+        assert_eq!(shortcut_hint("Control+X Meta+X", "Ctrl"), "Ctrl+X");
+        assert_eq!(shortcut_hint("Control+C", "Strg"), "Strg+C");
+        assert_eq!(shortcut_hint("F2", "Ctrl"), "F2");
     }
 }

@@ -6,6 +6,7 @@
 //! covered by letting adjacent greedy patterns compete by position instead.
 
 use crate::components::Input;
+use crate::localization::CodeBlockLabels;
 use crate::platform::{PreparedText, RegexMatch, regex_api};
 
 use super::language_catalog::LANGUAGE_CATALOG;
@@ -38,8 +39,12 @@ impl Language {
             .map(Language)
     }
 
-    pub(crate) fn label(self) -> &'static str {
-        self.0.label
+    /// The label a reader sees: plain text, the one entry that is no language name, is localized.
+    pub(crate) fn name(self, labels: &CodeBlockLabels) -> &'static str {
+        match std::ptr::eq(self.0, &LANGUAGE_CATALOG[0]) {
+            true => labels.plain_text,
+            false => self.0.label,
+        }
     }
 
     fn grammar(self) -> Grammar {
@@ -598,7 +603,8 @@ mod tests {
             let input: Input<Language> = alias.into();
             assert!(matches!(input, Input::Value(_)), "{alias} should parse");
         }
-        assert_eq!(lang("text").label(), "Plain text");
+        assert_eq!(lang("text").name(&CodeBlockLabels::ENGLISH), "Plain text");
+        assert_eq!(lang("text").name(&CodeBlockLabels::GERMAN), "Nur-Text");
         assert_eq!(
             flat("let x = \"//\"; // hi\n", lang("text")),
             vec![("let x = \"//\"; // hi".to_string(), None)]

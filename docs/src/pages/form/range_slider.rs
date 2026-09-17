@@ -250,11 +250,11 @@ pub fn RangeSliderPage() -> Element {
                         .default("one per option, discretely")
                         .doc("Ticks on the track; a labeled one gets a caption below it. Replaces the marks a discrete scale derives."),
                     prop("aria_label_from", "String")
-                        .default("Minimum")
-                        .doc("Names the lower thumb, which the field's label cannot tell apart from the upper one."),
+                        .default("slider.minimum")
+                        .doc("Names the lower thumb, which the field's label cannot tell apart from the upper one. Unset, the localization's `slider.minimum` - \"Minimum\" in English."),
                     prop("aria_label_to", "String")
-                        .default("Maximum")
-                        .doc("Names the upper thumb."),
+                        .default("slider.maximum")
+                        .doc("Names the upper thumb. Unset, the localization's `slider.maximum` - \"Maximum\" in English."),
                     prop("name", "String")
                         .doc("Emits two hidden inputs of that name, in track order, so the pair posts with a form - `FormData::get_all` reads it back."),
                     prop("oninput", "EventHandler<SliderChangeEvent<(V, V)>>")

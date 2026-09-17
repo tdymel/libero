@@ -256,7 +256,7 @@ pub fn MenuPage() -> Element {
                     prop("trailing", "Element")
                         .doc("At the far end - a badge. Part of the accessible name, and nothing interactive, for the same reason."),
                     prop("shortcut", "&str")
-                        .doc("The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`\"Control+X\"`). Set as that attribute and drawn as a hint (\"Ctrl+X\") hidden from screen readers, so it stays out of the name. No platform mapping, and binding the key is yours."),
+                        .doc("The key that runs the item outside the menu, in `aria-keyshortcuts` syntax (`\"Control+X\"`). Set as that attribute and drawn as a hint (\"Ctrl+X\", `Ctrl` from the localization's `menu.control`) hidden from screen readers, so it stays out of the name. No platform mapping, and binding the key is yours."),
                     prop("radio", "bool")
                         .doc("Unset, a plain command. Set, it makes the item one choice of several: a `menuitemradio` announcing `aria-checked`, with a check before the label while `true`. Put the choices in one `Group`; keeping exactly one checked is yours. A menu holding a checked item opens on it."),
                     prop("checkbox", "bool")

@@ -129,7 +129,8 @@ check slot, empty on a plain row, so all its labels line up.
 
 `shortcut` takes `aria-keyshortcuts` syntax (`"Control+Shift+S"`), sets that
 attribute on the item and draws the hint at the far end ("Ctrl+Shift+S"),
-`aria-hidden`. Only `Control` is shortened; there is no platform mapping. On a
+`aria-hidden`. Only `Control` is shortened, to the localization's
+`menu.control`; there is no platform mapping. On a
 disabled item the hint dims with the label.
 
 ## Theme defaults

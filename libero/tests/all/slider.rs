@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{RangeSlider, Slider, SliderMark, SliderValue},
+    localization::{Localization, SliderLabels},
     theme::{Size, SliderDefaults, Theme},
 };
 
@@ -124,6 +125,29 @@ fn a_range_slider_renders_two_thumbs_and_posts_both_values() {
     let first = html.find(r#"value="20""#).expect("the lower value");
     let second = html.find(r#"value="80""#).expect("the upper value");
     assert!(first < second, "{html}");
+}
+
+#[test]
+fn a_range_slider_names_its_thumbs_from_the_localization_unless_told() {
+    static WORDS: Localization = Localization {
+        slider: SliderLabels {
+            minimum: "Ab",
+            maximum: "Bis",
+        },
+        ..Localization::GERMAN
+    };
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { localization: &WORDS,
+                RangeSlider { label: "Preis", value: (20.0, 80.0), aria_label_to: "Höchstens" }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(html.contains(r#"aria-label="Ab""#), "{html}");
+    assert!(html.contains(r#"aria-label="Höchstens""#), "{html}");
+    assert!(!html.contains(r#"aria-label="Bis""#), "{html}");
 }
 
 /// The value bubble is a `role="tooltip"`, and a tooltip nothing points at

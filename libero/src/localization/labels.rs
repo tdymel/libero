@@ -143,6 +143,8 @@ pub struct CodeBlockLabels {
     pub code: &'static str,
     /// The scroll region's name with a known language; `{language}` is its name.
     pub code_named: &'static str,
+    /// The header's language name for `language: "text"`, no highlighting.
+    pub plain_text: &'static str,
 }
 
 impl CodeBlockLabels {
@@ -155,6 +157,7 @@ impl CodeBlockLabels {
         removed: "Removed",
         code: "Code",
         code_named: "{language} code",
+        plain_text: "Plain text",
     };
 
     pub const GERMAN: Self = Self {
@@ -166,6 +169,7 @@ impl CodeBlockLabels {
         removed: "Entfernt",
         code: "Code",
         code_named: "{language}-Code",
+        plain_text: "Nur-Text",
     };
 }
 
@@ -272,6 +276,38 @@ impl NumberFieldLabels {
         decrease: "Verringern",
         increase: "Erhöhen",
     };
+}
+
+/// `RangeSlider`'s thumbs, when its props are unset. Each follows the field's
+/// label: "Price Minimum".
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SliderLabels {
+    pub minimum: &'static str,
+    pub maximum: &'static str,
+}
+
+impl SliderLabels {
+    pub const ENGLISH: Self = Self {
+        minimum: "Minimum",
+        maximum: "Maximum",
+    };
+
+    pub const GERMAN: Self = Self {
+        minimum: "Minimum",
+        maximum: "Maximum",
+    };
+}
+
+/// A `Menu` item's drawn shortcut hint. The spoken one is `aria-keyshortcuts`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct MenuLabels {
+    /// Stands in for `Control`: "Control+S" draws "Ctrl+S".
+    pub control: &'static str,
+}
+
+impl MenuLabels {
+    pub const ENGLISH: Self = Self { control: "Ctrl" };
+    pub const GERMAN: Self = Self { control: "Strg" };
 }
 
 /// Every string `Pagination` puts in front of a reader.

@@ -19,6 +19,7 @@ pub(crate) struct LanguageEntry {
 pub(crate) static LANGUAGE_CATALOG: LazyLock<Vec<LanguageEntry>> = LazyLock::new(|| {
     // Every push below is feature-gated, so with no language compiled in
     // nothing else is ever written.
+    // Plain text stays first: `Language::name` finds it there to localize it.
     #[allow(unused_mut)]
     let mut catalog = vec![LanguageEntry {
         label: "Plain text",

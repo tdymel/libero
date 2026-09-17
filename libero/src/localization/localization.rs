@@ -56,6 +56,8 @@ pub struct Localization {
     pub number_field: NumberFieldLabels,
     pub file_field: FileFieldLabels,
     pub textarea: TextareaLabels,
+    pub slider: SliderLabels,
+    pub menu: MenuLabels,
 }
 
 impl Localization {
@@ -88,6 +90,8 @@ impl Localization {
         number_field: NumberFieldLabels::ENGLISH,
         file_field: FileFieldLabels::ENGLISH,
         textarea: TextareaLabels::ENGLISH,
+        slider: SliderLabels::ENGLISH,
+        menu: MenuLabels::ENGLISH,
     };
 
     /// Hand it to `LiberoProvider { localization }`; German dates are `Formats::GERMAN`.
@@ -120,6 +124,8 @@ impl Localization {
         number_field: NumberFieldLabels::GERMAN,
         file_field: FileFieldLabels::GERMAN,
         textarea: TextareaLabels::GERMAN,
+        slider: SliderLabels::GERMAN,
+        menu: MenuLabels::GERMAN,
     };
 }
 
