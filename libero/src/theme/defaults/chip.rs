@@ -30,33 +30,33 @@ impl ChipDefaults {
         sizes: Sizes::new(
             ChipSizeLevel {
                 font_size: "0.6875rem",
-                height: "20px",
-                padding_x: "8px",
+                height: "1.25rem",
+                padding_x: "0.5rem",
             },
             ChipSizeLevel {
                 font_size: "0.75rem",
-                height: "24px",
-                padding_x: "10px",
+                height: "1.5rem",
+                padding_x: "0.625rem",
             },
             ChipSizeLevel {
                 font_size: "0.8125rem",
-                height: "28px",
-                padding_x: "12px",
+                height: "1.75rem",
+                padding_x: "0.75rem",
             },
             ChipSizeLevel {
                 font_size: "0.875rem",
-                height: "32px",
-                padding_x: "14px",
+                height: "2rem",
+                padding_x: "0.875rem",
             },
             ChipSizeLevel {
                 font_size: "0.9375rem",
-                height: "36px",
-                padding_x: "16px",
+                height: "2.25rem",
+                padding_x: "1rem",
             },
             ChipSizeLevel {
                 font_size: "1rem",
-                height: "40px",
-                padding_x: "18px",
+                height: "2.5rem",
+                padding_x: "1.125rem",
             },
         ),
     };
@@ -84,5 +84,22 @@ impl ToCssDeclarations for ChipDefaults {
             declarations.push(CHIP_PADDING_X.declare(size, level.padding_x));
         }
         declarations
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A px box under `overflow: hidden` clips a rem label at 200% text size
+    /// (todo 741).
+    #[test]
+    fn every_box_length_follows_the_text_size() {
+        for size in Size::ALL {
+            let level = ChipDefaults::DEFAULT.sizes.get(size);
+            for length in [level.font_size, level.height, level.padding_x] {
+                assert!(length.ends_with("rem"), "{size:?}: {length}");
+            }
+        }
     }
 }

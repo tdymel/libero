@@ -4,7 +4,7 @@ use crate::{
     components::{HtmlTag, Input, Variables, common::base_props, layout::use_box, variables},
     hooks::use_theme,
     sx::{ColorRole, StaticSx, ThemeAwareValue, sx},
-    theme::{Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, NamedColorCss},
+    theme::{ANCHOR_COLOR, Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, NamedColorCss},
 };
 
 // Light enough to stay a tint rather than a fill, so text reads over it.
@@ -33,6 +33,9 @@ fn mark_background_color(value: Option<&ThemeAwareValue>, default_color: Color) 
 static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().color(format!("var({}, inherit)", MARK_COLOR_VAR.name()))
         .background(MARK_BACKGROUND_VAR.value())
+        // A link set in the text's colour needs its underline to stand out
+        // (1.4.1); `:any-link` outranks `Anchor`'s `underline` state.
+        .selector("& a:any-link", sx().text_decoration("underline"))
 });
 
 /// `--lsx-focus-contrast` is published beside the tint, because `sx`'s
@@ -53,7 +56,9 @@ fn mark_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Vari
             text.clone(),
         )
         .with(FOCUS_RING_HALO, text.as_ref().and(fill))
-        .with(MARK_COLOR_VAR, text)
+        .with(MARK_COLOR_VAR, text.clone())
+        // No one link colour reads on every tint (1.01:1 on `info.6`, todo 762).
+        .with(ANCHOR_COLOR, text)
 }
 
 base_props! {
@@ -91,11 +96,12 @@ mod tests {
         let twin = ColorValue::Contrast(color, shade).value();
         let fill = ColorValue::Fill(color, shade).value();
         format!(
-            "{}:{fill};{}:{twin};{}:{fill};{}:{twin};",
+            "{}:{fill};{}:{twin};{}:{fill};{}:{twin};{}:{twin};",
             MARK_BACKGROUND_VAR.name(),
             NamedColorCss::FOCUS_CONTRAST.name(),
             FOCUS_RING_HALO.name(),
             MARK_COLOR_VAR.name(),
+            ANCHOR_COLOR.name(),
         )
     }
 
@@ -147,11 +153,12 @@ mod tests {
         assert_eq!(
             variables,
             format!(
-                "{}:#1e3a8a;{}:#FFFFFF;{}:#1e3a8a;{}:#FFFFFF;",
+                "{}:#1e3a8a;{}:#FFFFFF;{}:#1e3a8a;{}:#FFFFFF;{}:#FFFFFF;",
                 MARK_BACKGROUND_VAR.name(),
                 NamedColorCss::FOCUS_CONTRAST.name(),
                 FOCUS_RING_HALO.name(),
-                MARK_COLOR_VAR.name()
+                MARK_COLOR_VAR.name(),
+                ANCHOR_COLOR.name()
             )
         );
     }

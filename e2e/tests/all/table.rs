@@ -5,7 +5,7 @@ use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard};
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Viewport, ax, wait};
 
 const SORT: &str = "th[data-sortable] button";
 
@@ -203,6 +203,34 @@ async fn arrow_opacity(page: &Page, header: &str, expected: &str) -> Result<()> 
         &format!("{header}'s arrow at opacity {expected}"),
     )
     .await
+}
+
+/// Todo 742: the row header column is `th scope="row"`, exposed as a row
+/// header, and looks like the cells beside it.
+#[test]
+fn a_row_header_column_names_its_rows() {
+    block_on(async {
+        let fixture = Fixture::open("/table", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        click(page).await.unwrap();
+        rows(page, "Apple:12 left|Banana:0 left|Cherry:3 left")
+            .await
+            .unwrap();
+        let same_look: bool = page
+            .evaluate(
+                "(() => { const ths = document.querySelectorAll('tbody th[scope=row]'); \
+                 const td = document.querySelector('tbody td'); \
+                 return ths.length === 3 && getComputedStyle(ths[0]).fontWeight === getComputedStyle(td).fontWeight; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(same_look, "three row headers, set like the cells");
+        let snapshot = ax::snapshot(page, "table").await.unwrap();
+        assert_eq!(snapshot.matches("rowheader").count(), 3, "{snapshot}");
+        fixture.close().await.unwrap();
+    });
 }
 
 async fn click(page: &Page) -> Result<()> {

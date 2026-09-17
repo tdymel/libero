@@ -23,6 +23,7 @@ pub struct Column<T> {
     pub(super) header: String,
     pub(super) align: CellAlign,
     pub(super) sortable: bool,
+    pub(super) row_header: bool,
     pub(super) sort_key: Rc<dyn Fn(&T) -> SortKey>,
     /// The cell as plain text, drawn inline in its `td`.
     pub(super) text: Rc<dyn Fn(&T) -> String>,
@@ -43,6 +44,7 @@ impl ColumnHeader {
             header: self.header,
             align: V::align(),
             sortable: false,
+            row_header: false,
             sort_key: Rc::new(move |row| sort_value(row).sort_key()),
             text: Rc::new(move |row| value(row).cell_text()),
             render: None,
@@ -54,6 +56,20 @@ impl<T> Column<T> {
     /// Makes the header a sort button.
     pub fn sortable(mut self) -> Self {
         self.sortable = true;
+        self
+    }
+
+    /// Renders this column's cells as `th scope="row"`, so a screen reader
+    /// names each row by it while moving down another column. One per table,
+    /// usually the first.
+    ///
+    /// ```no_run
+    /// # use libero::components::column;
+    /// # #[derive(Clone, PartialEq)] struct User { name: String }
+    /// column("Name").value(|u: &User| u.name.clone()).row_header();
+    /// ```
+    pub fn row_header(mut self) -> Self {
+        self.row_header = true;
         self
     }
 
@@ -80,6 +96,7 @@ impl<T> Clone for Column<T> {
             header: self.header.clone(),
             align: self.align,
             sortable: self.sortable,
+            row_header: self.row_header,
             sort_key: self.sort_key.clone(),
             text: self.text.clone(),
             render: self.render.clone(),
@@ -91,7 +108,10 @@ impl<T> Clone for Column<T> {
 // `vec![..]` of the same columns must not defeat memoization.
 impl<T> PartialEq for Column<T> {
     fn eq(&self, other: &Self) -> bool {
-        self.header == other.header && self.align == other.align && self.sortable == other.sortable
+        self.header == other.header
+            && self.align == other.align
+            && self.sortable == other.sortable
+            && self.row_header == other.row_header
     }
 }
 
@@ -106,6 +126,7 @@ mod tests {
 
         assert!(a == b);
         assert!(a != b.clone().sortable());
+        assert!(a != b.clone().row_header());
         assert!(a != column("Other").value(|row: &u32| *row));
     }
 

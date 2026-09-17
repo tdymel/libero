@@ -33,7 +33,7 @@ fn people() -> Vec<Person> {
 // snippet: let people: Vec<Person> = Vec::new();
 // snippet: in Table { caption: "Team members", data: people, .. }
 const COLUMNS: &str = r#"columns: vec![
-        column("Name").value(|p: &Person| p.name.clone()).sortable(),
+        column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
         column("Role")
             .value(|p: &Person| p.role.clone())
             .sortable()
@@ -94,6 +94,7 @@ pub fn TablePage() -> Element {
                     prop("sortable", "bool").default("false").doc("Turns the header into a sort button."),
                     prop("render", "fn(&T) -> Element").doc("Replaces the cell body. Sorting still uses `value`."),
                     prop("align", "CellAlign").default("follows the cell type").doc("Overrides the alignment `value`'s type chose."),
+                    prop("row_header", "bool").default("false").doc("Renders the column's cells as `th scope=\"row\"`, so a screen reader names each row by it. One per table, usually the first."),
                 ]).without_base_props(),
             ],
             lead: rsx! {
@@ -149,7 +150,7 @@ pub fn TablePage() -> Element {
                         empty: no_rows(&values).then(|| rsx! { "No team members yet." }),
                         data: if no_rows(&values) { Vec::new() } else { people() },
                         columns: vec![
-                            column("Name").value(|p: &Person| p.name.clone()).sortable(),
+                            column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
                             column("Role")
                                 .value(|p: &Person| p.role.clone())
                                 .sortable()
@@ -174,6 +175,11 @@ pub fn TablePage() -> Element {
                     "A table wider than its container needs "
                     Code { source: "scroll: true" }
                     ": the region is a tab stop, so a keyboard user can scroll it with the arrow keys. A sortable header is a button; Enter or Space sorts."
+                }
+                Text {
+                    "Mark the column that names a row with "
+                    Code { source: ".row_header()" }
+                    ": a screen reader then reads that name as it moves down any other column."
                 }
             }
         }

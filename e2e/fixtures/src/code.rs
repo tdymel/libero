@@ -1,7 +1,7 @@
 //! `Code` and `CodeBlock`, on the browser's regex engine.
 
 use dioxus::prelude::*;
-use libero::components::{Code, CodeBlock, Flex};
+use libero::components::{Code, CodeBlock, Flex, Text};
 
 use crate::Routes;
 
@@ -40,6 +40,13 @@ fn CodePage() -> Element {
             CodeBlock { id: "wide-block", language: "rust", copyable: true, highlight_lines: "2",
                 // One token that starts in view: axe skips a token scrolled out whole.
                 source: "fn main() {{\n    let s = \"a string long enough to scroll the block sideways\";\n}}"
+            }
+            // Todo 732: a shrink-to-fit parent, where `anywhere` split a short span after its `#`.
+            div { style: "width: min-content",
+                Text { "Add " Code { id: "short-code", source: "#[derive(Options)]" } " above it." }
+            }
+            Text { id: "long-code-text",
+                Code { id: "long-code", source: "an_identifier_far_too_long_for_a_three_hundred_twenty_pixel_column" }
             }
         }
     }

@@ -14,6 +14,54 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 741: at 200% text size a px box clipped its rem label (md: 20px text in
+/// an 18px box). Every size's line of text fits its box.
+#[test]
+fn a_badge_grows_with_the_text_size() {
+    block_on(async {
+        let fixture = Fixture::open("/badge", Viewport::Desktop).await.unwrap();
+        let clipped: Vec<String> = fixture
+            .page
+            .evaluate(
+                "(() => { document.documentElement.style.fontSize = '200%'; \
+                 return [...document.querySelectorAll('#badge-sizes > span')] \
+                 .filter(b => parseFloat(getComputedStyle(b).fontSize) * 1.2 > b.clientHeight) \
+                 .map(b => b.textContent); })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(clipped.is_empty(), "clipped at 200%: {clipped:?}");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 743: an ordered `List` draws its numbers, in a gutter inside its box.
+#[test]
+fn an_ordered_list_shows_its_numbers() {
+    block_on(async {
+        let fixture = Fixture::open("/badge", Viewport::Desktop).await.unwrap();
+        let shown: bool = fixture
+            .page
+            .evaluate(
+                "(() => { const ol = document.querySelector('ol#ordered-list'); \
+                 const li = ol.querySelector('li'); const s = getComputedStyle(li); \
+                 return s.display === 'list-item' && s.listStyleType === 'decimal' \
+                 && li.getBoundingClientRect().left - ol.getBoundingClientRect().left >= 16; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(
+            shown,
+            "the ordered list draws no numbers, or no room for them"
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Forced colours paint every fill `Canvas`: a bare `Indicator` dot, which is
 /// nothing but its fill, must not vanish into the page.
 #[test]

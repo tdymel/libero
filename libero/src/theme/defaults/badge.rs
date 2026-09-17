@@ -42,7 +42,7 @@ pub struct BadgeDefaults {
     pub font_weight: &'static str,
     pub sizes: Sizes<BadgeSizeLevel>,
     /// The badge's own radius scale, not the global one: a badge is at most
-    /// 38px tall, so every global step past `sm` is already a pill on most of
+    /// 2.375rem tall, so every global step past `sm` is already a pill on most of
     /// its sizes. `xxl` is the pill itself.
     pub radii: Sizes<&'static str>,
 }
@@ -57,39 +57,39 @@ impl BadgeDefaults {
         letter_spacing: "0.25px",
         font_weight: "700",
         // `xs`..`xl` are Mantine's own numbers; `xxl` continues the ramp,
-        // since our scale has a sixth step and theirs does not. Font sizes
-        // are rem so they follow a reader's own text size, the way
-        // `Button` and `Chip` already do; the boxes around them are px.
+        // since our scale has a sixth step and theirs does not. All rem, so
+        // the box grows with a reader's own text size instead of clipping
+        // the label at 200% (todo 741).
         sizes: Sizes::new(
             BadgeSizeLevel {
                 font_size: "0.5625rem",
-                height: "16px",
-                padding_x: "6px",
+                height: "1rem",
+                padding_x: "0.375rem",
             },
             BadgeSizeLevel {
                 font_size: "0.625rem",
-                height: "18px",
-                padding_x: "8px",
+                height: "1.125rem",
+                padding_x: "0.5rem",
             },
             BadgeSizeLevel {
                 font_size: "0.6875rem",
-                height: "20px",
-                padding_x: "10px",
+                height: "1.25rem",
+                padding_x: "0.625rem",
             },
             BadgeSizeLevel {
                 font_size: "0.8125rem",
-                height: "26px",
-                padding_x: "12px",
+                height: "1.625rem",
+                padding_x: "0.75rem",
             },
             BadgeSizeLevel {
                 font_size: "1rem",
-                height: "32px",
-                padding_x: "16px",
+                height: "2rem",
+                padding_x: "1rem",
             },
             BadgeSizeLevel {
                 font_size: "1.125rem",
-                height: "38px",
-                padding_x: "20px",
+                height: "2.375rem",
+                padding_x: "1.25rem",
             },
         ),
         radii: Sizes::new("2px", "4px", "6px", "8px", "12px", "9999px"),
@@ -135,5 +135,22 @@ impl ToCssDeclarations for BadgeDefaults {
         declarations.push(BADGE_LETTER_SPACING.declare(self.letter_spacing));
         declarations.push(BADGE_FONT_WEIGHT.declare(self.font_weight));
         declarations
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A px box under `overflow: hidden` clips a rem label at 200% text size
+    /// (todo 741).
+    #[test]
+    fn every_box_length_follows_the_text_size() {
+        for size in Size::ALL {
+            let level = BadgeDefaults::DEFAULT.sizes.get(size);
+            for length in [level.font_size, level.height, level.padding_x] {
+                assert!(length.ends_with("rem"), "{size:?}: {length}");
+            }
+        }
     }
 }

@@ -108,7 +108,7 @@ Like every component, `Badge` also takes the shared props `sx`, `class`,
 | `text_transform` | `&'static str` | `uppercase`. Most of what tells a badge from a chip at a glance; set it to `none` for a badge that carries a name. |
 | `letter_spacing` | `&'static str` | `0.25px`, which opens up the uppercase. |
 | `font_weight` | `&'static str` | `700`. |
-| `sizes` | `Sizes<BadgeSizeLevel>` | `font_size`/`height`/`padding_x` per step: `0.5625rem/16px/6px`, `0.625rem/18px/8px`, `0.6875rem/20px/10px`, `0.8125rem/26px/12px`, `1rem/32px/16px`, `1.125rem/38px/20px`. |
+| `sizes` | `Sizes<BadgeSizeLevel>` | `font_size`/`height`/`padding_x` per step: `0.5625rem/1rem/0.375rem`, `0.625rem/1.125rem/0.5rem`, `0.6875rem/1.25rem/0.625rem`, `0.8125rem/1.625rem/0.75rem`, `1rem/2rem/1rem`, `1.125rem/2.375rem/1.25rem`. All rem, so the box grows with the reader's text size. |
 | `radii` | `Sizes<&'static str>` | The badge's own radius scale: `2px`, `4px`, `6px`, `8px`, `12px`, `9999px`. |
 
 `color` is not a theme field - it falls back to `primary` shade 6 in the component.

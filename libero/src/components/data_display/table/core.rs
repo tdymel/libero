@@ -8,6 +8,7 @@ pub(super) struct HeaderSpec {
     pub header: String,
     pub align: CellAlign,
     pub sortable: bool,
+    pub row_header: bool,
 }
 
 /// A row's cells, keyed by its position in the unsorted `data`. A cell is its
@@ -125,12 +126,22 @@ pub(super) fn render_body(
                 tr {
                     key: "{row.index}",
                     for (index , (text , body)) in row.cells.into_iter().enumerate() {
-                        td {
-                            key: "{index}",
-                            "data-align": headers.get(index).and_then(|spec| align_attr(spec.align)),
-                            // Text inline: a nested node per cell costs ~1 us a sort.
-                            "{text}"
-                            {body}
+                        if headers.get(index).is_some_and(|spec| spec.row_header) {
+                            th {
+                                key: "{index}",
+                                scope: "row",
+                                "data-align": headers.get(index).and_then(|spec| align_attr(spec.align)),
+                                "{text}"
+                                {body}
+                            }
+                        } else {
+                            td {
+                                key: "{index}",
+                                "data-align": headers.get(index).and_then(|spec| align_attr(spec.align)),
+                                // Text inline: a nested node per cell costs ~1 us a sort.
+                                "{text}"
+                                {body}
+                            }
                         }
                     }
                 }
@@ -190,6 +201,7 @@ mod tests {
                 header: name.to_string(),
                 align: CellAlign::Start,
                 sortable: true,
+                row_header: false,
             })
             .collect()
     }

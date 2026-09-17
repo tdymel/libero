@@ -27,6 +27,9 @@ pub fn ListPage() -> Element {
                     prop("size", "Size")
                         .default("md")
                         .doc("Item gap and nested-list indent, together."),
+                    prop("ordered", "bool")
+                        .default("false")
+                        .doc("An `ol` with visible numbers, for items whose order is the point."),
                     prop("children", "Element").doc("The list's items."),
                 ]),
                 props("ListItem", vec![
@@ -44,7 +47,11 @@ pub fn ListPage() -> Element {
                     Code { source: "size" }
                     " (xs-xxl, default "
                     Code { source: "md" }
-                    ") controls item gap and nested-list indent together."
+                    ") controls item gap and nested-list indent together. "
+                    Code { source: "ordered" }
+                    " makes it an "
+                    Code { source: "ol" }
+                    " with visible numbers, for steps whose order matters."
                 }
             },
             Demo {
@@ -54,10 +61,12 @@ pub fn ListPage() -> Element {
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
+                    Control::switch("ordered"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     List {
                         size: values.str("size"),
+                        ordered: values.str("ordered") == "true",
                         ListItem { "First item" }
                         ListItem { "Second item" }
                         ListItem {

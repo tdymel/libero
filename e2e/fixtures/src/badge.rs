@@ -31,7 +31,7 @@ fn BadgePage() -> Element {
                     }
                 }
             }
-            Flex { gap: "xs", wrap: "wrap", align: "center",
+            Flex { id: "badge-sizes", gap: "xs", wrap: "wrap", align: "center",
                 for size in SIZES {
                     Badge { size, "{size}" }
                 }
@@ -59,6 +59,10 @@ fn BadgePage() -> Element {
                         ListItem { "Nested" }
                     }
                 }
+            }
+            List { id: "ordered-list", ordered: true,
+                ListItem { "Install" }
+                ListItem { "Configure" }
             }
         }
     }

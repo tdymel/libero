@@ -46,7 +46,7 @@ fn Demo() -> Element {
             caption: "Team members",
             data: people,
             columns: vec![
-                column("Name").value(|p: &Person| p.name.clone()).sortable(),
+                column("Name").value(|p: &Person| p.name.clone()).sortable().row_header(),
                 column("Role")
                     .value(|p: &Person| p.role.clone())
                     .sortable()
@@ -162,6 +162,10 @@ A table wider than its container needs `scroll: true`: the wrapper is a
 scroll it with the arrow keys. A sortable header is a button; Enter or Space
 sorts. Only the sorted header carries `aria-sort`.
 
+Mark the column that names a row with `.row_header()`: its cells render as
+`th scope="row"`, so a screen reader reads that name as it moves down any other
+column. It looks like the other cells; the change is semantic only.
+
 ## Props
 
 ### Table
@@ -186,6 +190,7 @@ Like every component, `Table` also takes the shared props `sx`, `class`,
 | `sortable` | `bool` | `false` | Turns the header into a sort button. |
 | `render` | `fn(&T) -> Element` | - | Replaces the cell body. Sorting still uses `value`. |
 | `align` | `CellAlign` | follows the cell type | Overrides the alignment `value`'s type chose. |
+| `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
 
 `column()` is a builder, not a component - it takes no shared props.
 

@@ -51,3 +51,32 @@ fn the_list_keeps_its_semantics_through_an_explicit_role() {
         "presentation"
     );
 }
+
+/// Items whose order is the point get an `ol` with visible numbers (todo 743).
+#[test]
+fn an_ordered_list_is_a_numbered_ol() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                List { ordered: true,
+                    ListItem { "one" }
+                    ListItem { "two" }
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    assert!(body.contains("<ol"), "{body}");
+    assert!(!body.contains("<ul"), "{body}");
+    assert!(
+        attributes_of(&html, "ol")["data-state"].contains("ordered"),
+        "{body}"
+    );
+    assert!(
+        html.contains(r#"[data-state~="ordered"]{list-style-type:decimal;"#),
+        "{html}"
+    );
+}

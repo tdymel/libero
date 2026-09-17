@@ -42,7 +42,7 @@ pub fn TablePage() -> Element {
             aria_label: "Fruit",
             data: fruit(),
             columns: vec![
-                column("Name").value(|fruit: &Fruit| fruit.name.to_string()).sortable(),
+                column("Name").value(|fruit: &Fruit| fruit.name.to_string()).sortable().row_header(),
                 column("Stock")
                     .value(|fruit: &Fruit| fruit.stock)
                     .render(|fruit: &Fruit| rsx! { b { "{fruit.stock} left" } }),

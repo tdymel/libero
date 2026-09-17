@@ -27,6 +27,8 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             sx().text_align("start").vertical_align("middle"),
         )
         .selector("& thead th", sx().font_weight("600"))
+        // A row header is semantics, not a look: it reads like its row.
+        .selector("& tbody th", sx().font_weight("inherit"))
         .selector(
             "& caption",
             sx().text_align("start")
@@ -183,6 +185,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
             header: column.header.clone(),
             align: column.align,
             sortable: column.sortable,
+            row_header: column.row_header,
         })
         .collect();
 

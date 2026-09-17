@@ -265,6 +265,36 @@ fn a_highlighted_line_keeps_its_bar_in_forced_colours() {
     });
 }
 
+/// Todo 732. A short span stays whole even where `overflow-wrap: anywhere`
+/// lowered its min-content; a long one still wraps inside 320px (1.4.10).
+#[test]
+fn a_short_code_span_keeps_its_token_whole() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let lines: i64 = page
+            .evaluate("document.querySelector('#short-code').getClientRects().length")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(lines, 1, "the short span broke across lines");
+
+        let overflow: bool = page
+            .evaluate(
+                "(() => { const t = document.querySelector('#long-code-text'); \
+                 return t.scrollWidth > t.clientWidth \
+                 || document.querySelector('#long-code').getClientRects().length < 2; })()",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!overflow, "the long span ran out of its 320px column");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 424. The gutter is drawn only once highlighting resolves, which SSR
 /// never sees; read aloud, its numbers interleave with the code.
 #[test]

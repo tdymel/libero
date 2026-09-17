@@ -33,13 +33,14 @@ StaticText "ERROR"
 StaticText "INFO"
 StaticText "SUCCESS"
 StaticText "WARNING"
-StaticText "XS"
-StaticText "SM"
-StaticText "MD"
-StaticText "LG"
-StaticText "XL"
-StaticText "XXL"
-StaticText "9"
+generic
+  StaticText "XS"
+  StaticText "SM"
+  StaticText "MD"
+  StaticText "LG"
+  StaticText "XL"
+  StaticText "XXL"
+  StaticText "9"
 generic
   StaticText "Ctrl"
 generic
@@ -60,3 +61,10 @@ list
     list
       listitem [level=2]
         StaticText "Nested"
+list
+  listitem [level=1]
+    ListMarker "1. "
+    StaticText "Install"
+  listitem [level=1]
+    ListMarker "2. "
+    StaticText "Configure"

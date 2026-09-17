@@ -82,5 +82,8 @@ and `.lsx-tok-italic`.
 
 ## Data attributes
 
-`Code` sets no state tokens of its own; a `states` prop is passed through
-unchanged.
+State tokens on the `<code>`'s `data-state`, beside any `states` you pass.
+
+| Token | Condition |
+|---|---|
+| `short` | `source` is at most 20 characters: the span stays on one line (`white-space: nowrap`). A longer one breaks anywhere rather than run out of a narrow column. |

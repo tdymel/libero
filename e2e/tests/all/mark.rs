@@ -6,7 +6,7 @@
 //! the surface it is measured against is the link's parent: the `Mark`.
 
 use e2e::browser::block_on;
-use e2e::passes::focus;
+use e2e::passes::{contrast, focus};
 use e2e::{Fixture, Viewport};
 
 const LINKS: &[&str] = &[
@@ -37,6 +37,19 @@ fn a_link_inside_a_mark_has_a_ring_that_clears_three_to_one() {
         }
 
         fixture.console.assert_clean("the mark fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 762: the link colour read 3.5-4.0:1 on every tint and 1.01:1 on
+/// `info.6`. A link now takes the tint's text twin, underlined.
+#[test]
+fn a_link_inside_a_mark_reads_on_every_tint() {
+    block_on(async {
+        let fixture = Fixture::open("/mark", Viewport::Desktop).await.unwrap();
+
+        contrast::assert_clean(&fixture.page, "body").await.unwrap();
+
         fixture.close().await.unwrap();
     });
 }

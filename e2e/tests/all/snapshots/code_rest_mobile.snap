@@ -67,3 +67,11 @@ generic
       StaticText ""a string long enough to scroll the block sideways""
       StaticText ";"
       StaticText "}"
+paragraph
+  StaticText "Add "
+  code
+    StaticText "#[derive(Options)]"
+  StaticText " above it."
+paragraph
+  code
+    StaticText "an_identifier_far_too_long_for_a_three_hundred_twenty_pixel_column"

@@ -11,7 +11,15 @@ nested lists indent relative to their own content. `size` (`xs`-`xxl`, default
 `md`) controls item gap and nested-list indent together. Only the outer list
 carries `size`: a nested list's indent comes from the parent's own `& ul` rule,
 so setting `size` again on the inner `List` changes its items' gap, not its
-indent.
+indent. `ordered: true` renders an `<ol>` with visible numbers instead, for
+steps whose order matters.
+
+```rust,ignore
+List { ordered: true,
+    ListItem { "Install" }
+    ListItem { "Configure" }
+}
+```
 
 ## Usage
 
@@ -49,6 +57,7 @@ breaks the list and its item count for a screen reader.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Item gap and nested-list indent, together. |
+| `ordered` | `bool` | `false` | An `ol` with visible numbers, for items whose order is the point. |
 | `children` | `Element` | required | The list's items. |
 
 ### ListItem
@@ -80,10 +89,11 @@ pixels.
 
 ## Data attributes
 
-State tokens on the `<ul>`'s `data-state`, space separated.
+State tokens on the `<ul>`'s (or `<ol>`'s) `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
 | `size-<size>` | The `size` in effect - this is what selects the gap and indent variables. |
+| `ordered` | `ordered` is set: decimal markers in a `2em` gutter. |
 
 `ListItem` sets no state tokens of its own.

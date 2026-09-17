@@ -58,6 +58,43 @@ fn a_table_marks_only_sortable_headers_and_aligns_by_cell_type() {
     assert_eq!(body.matches("<th scope=\"col\"").count(), 2);
 }
 
+/// A screen reader names each row by its row header while moving down another
+/// column (todo 742).
+#[test]
+fn a_row_header_column_renders_th_scope_row() {
+    #[derive(Clone, PartialEq)]
+    struct Row {
+        name: &'static str,
+        age: u32,
+    }
+
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Table {
+                    aria_label: "People",
+                    data: vec![
+                        Row { name: "Ada", age: 36 },
+                        Row { name: "Grace", age: 45 },
+                    ],
+                    columns: vec![
+                        column("Name").value(|row: &Row| row.name.to_string()).row_header(),
+                        column("Age").value(|row: &Row| row.age),
+                    ],
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    assert_eq!(body.matches("<th scope=\"row\"").count(), 2, "{body}");
+    assert!(body.contains("<th scope=\"row\">Ada</th>"), "{body}");
+    assert_eq!(body.matches("<td").count(), 2);
+    assert_eq!(body.matches("<th scope=\"col\"").count(), 2);
+}
+
 #[test]
 fn a_custom_render_replaces_the_cell_body() {
     #[derive(Clone, PartialEq)]
