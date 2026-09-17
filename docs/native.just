@@ -9,6 +9,10 @@
 # fractional scale - so pin it. Ignored outside X11.
 x11 := "WINIT_X11_SCALE_FACTOR=1"
 
+# wgpu takes the first adapter, the iGPU on a hybrid laptop: ask for the discrete
+# one, via NVIDIA PRIME offload where present. Without a dGPU both are no-ops.
+gpu := "WGPU_POWER_PREF=high __NV_PRIME_RENDER_OFFLOAD=1 __VK_LAYER_NV_optimus=NVIDIA_only"
+
 # `--renderer native` names the renderer but not the *target*, and dx only
 # autodetects one when exactly one feature key maps to a renderer. Adding the
 # Android `mobile` feature made that two (`native` and `mobile`), so dx has
@@ -25,22 +29,22 @@ check-native:
 
 # Hot-reloading serve in a Blitz window.
 start-native: _dx
-    {{x11}} {{dx}} serve --platform linux --renderer native --debug-symbols=false {{nfeat}}
+    {{x11}} {{gpu}} {{dx}} serve --platform linux --renderer native --debug-symbols=false {{nfeat}}
 
 # dioxus-native's default renderer: lighter on the GPU, but its image atlas
 # is fixed-size and never evicts, so it eventually panics. For comparison.
 start-native-hybrid: _dx
-    {{x11}} {{dx}} serve --platform linux --renderer native --debug-symbols=false {{nhybrid}}
+    {{x11}} {{gpu}} {{dx}} serve --platform linux --renderer native --debug-symbols=false {{nhybrid}}
 
 # Optimised end to end, via the workspace's `native` profile - `release`
 # without its wasm-size trade-offs. Slow to build, and no hot reload.
 start-native-release: _dx
-    {{x11}} {{dx}} serve --platform linux --renderer native --debug-symbols=false --profile native {{nfeat}}
+    {{x11}} {{gpu}} {{dx}} serve --platform linux --renderer native --debug-symbols=false --profile native {{nfeat}}
 
 # The shortest path to a window (no `dx`, no hot reload, no devserver) - use
 # it when a failure might be `dx`'s rather than the app's.
 run-native:
-    cd {{root}} && {{x11}} cargo run -p docs {{nfeat}}
+    cd {{root}} && {{x11}} {{gpu}} cargo run -p docs {{nfeat}}
 
 build-native: _dx
     {{dx}} build --platform linux --renderer native --debug-symbols=false {{nfeat}}
