@@ -89,7 +89,7 @@ Focus inside a closing panel does not return to the trigger on its own. The
 browser drops it to the page body and a keyboard user loses their place.
 `Collapse` never sees the trigger, so the code that owns both returns focus.
 
-Use `use_focus_return`. Call `remember_active()` on every open, since
+Use [`use_focus_return`](use_focus_return.md). Call `remember_active()` on every open, since
 `restore()` forgets the trigger after one use. Call `restore()` wherever the
 panel closes from inside.
 
