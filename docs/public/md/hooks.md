@@ -2,42 +2,42 @@
 
 Crate: `libero`
 Index: [index.md](index.md) - every other component's markdown page
-Description: Every public libero hook in one table, with what it is for and the page that documents it.
+Description: Every public libero hook in one table, with what it is for and a link to its page.
 
 Libero's components are built from these hooks, and they are public for yours.
 They are positional like every dioxus hook, so call them unconditionally, in the
-same order every render. The five primitives have a page each. A hook that
-belongs to a component or a guide is documented there.
+same order every render. Each has a page with a small demo. A hook that belongs
+to a component links to that component's page for the rest.
 
 ## Every public hook
 
-| Hook | What it is for | Documented on |
-|---|---|---|
-| `use_id` | A unique id for the aria wiring between one instance's elements. | [use_id](use_id.md) |
-| `use_element` | A handle to one of your component's elements, to focus, scroll or measure it. | [use_element](use_element.md) |
-| `use_focus_return` | Puts focus back on the trigger when a panel closes. | [use_focus_return](use_focus_return.md) |
-| `use_drag` | Pointer capture and deltas for a drag. | [use_drag](use_drag.md) |
-| `use_clipboard` | Copies text and reports whether the write worked. | [use_clipboard](use_clipboard.md) |
-| `use_modal` | Registers a modal and returns a handle that opens it. | [Modal](modal.md) |
-| `use_modal_close` | Closes the modal it is called inside. | [Modal](modal.md) |
-| `use_drawer` | Registers a drawer and returns a handle that opens it. | [Drawer](drawer.md) |
-| `use_popover` | Places a floating box next to an anchor. | [Popover](popover.md) |
-| `use_menu` | Keeps a Menu's open state in your scope. | [Menu](menu.md) |
-| `use_spotlight` | Registers a command palette and its hotkey. | [Spotlight](spotlight.md) |
-| `use_lightbox` | Opens a picture viewer over the page. | [Lightbox](lightbox.md) |
-| `use_floating_window` | Opens a movable, resizable window. | [FloatingWindow](floating_window.md) |
-| `use_notifications` | Shows and dismisses notifications. | [Notifications](notifications.md) |
-| `use_notifications_with` | Notifications drawn from your own data type. | [Notifications](notifications.md) |
-| `use_combobox` | Keeps a Combobox's open state in your scope. | [Combobox](combobox.md) |
-| `use_scroll_area` | Scrolls a ScrollArea from code. | [ScrollArea](scroll_area.md) |
-| `use_scroller` | Steps a Scroller from code. | [Scroller](scroller.md) |
-| `use_form` | A form's handle: values, validation and submit. | [Form](form.md) |
-| `use_form_context` | The enclosing Form's handle. | [Form](form.md) |
-| `use_theme` | The active theme. | [Theming](theming.md) |
-| `use_theme_set` | Switches between the themes of a set. | [Theming](theming.md) |
-| `use_color_scheme` | Reads and sets light or dark. | [Theming](theming.md) |
-| `use_localization` | The labels libero's components read, in the active language. | [Localization](localization.md) |
-| `use_localization_handle` | Switches the locale at runtime. | [Localization](localization.md) |
-| `use_formats` | The active date, time and number formats. | [Localization](localization.md) |
-| `use_formats_handle` | Switches the formats at runtime. | [Localization](localization.md) |
-| `use_stylesheet` | Registers a stylesheet of your own, above every libero layer. | [Styling](styling.md) |
+| Hook | What it is for |
+|---|---|
+| [`use_id`](use_id.md) | A unique id for the aria wiring between one instance's elements. |
+| [`use_element`](use_element.md) | A handle to one of your component's elements, to focus, scroll or measure it. |
+| [`use_focus_return`](use_focus_return.md) | Puts focus back on the trigger when a panel closes. |
+| [`use_drag`](use_drag.md) | Pointer capture and deltas for a drag. |
+| [`use_clipboard`](use_clipboard.md) | Copies text and reports whether the write worked. |
+| [`use_theme`](use_theme.md) | The active theme, for values CSS cannot carry. |
+| [`use_theme_set`](use_theme_set.md) | Reads and swaps the active theme set. |
+| [`use_color_scheme`](use_color_scheme.md) | Reads and sets light or dark. |
+| [`use_localization`](use_localization.md) | The words libero's components say, in the active language. |
+| [`use_localization_handle`](use_localization_handle.md) | Switches the language at runtime. |
+| [`use_formats`](use_formats.md) | The active date, time and number formats. |
+| [`use_formats_handle`](use_formats_handle.md) | Switches the formats at runtime. |
+| [`use_stylesheet`](use_stylesheet.md) | Registers a stylesheet of your own, above every libero layer. |
+| [`use_scroll_area`](use_scroll_area.md) | Scrolls a ScrollArea from code. |
+| [`use_scroller`](use_scroller.md) | Steps a Scroller from controls of your own. |
+| [`use_form`](use_form.md) | Controls a Form: validity, check, submit and reset. |
+| [`use_form_context`](use_form_context.md) | The handle of the Form it is called inside. |
+| [`use_combobox`](use_combobox.md) | Keeps a Combobox's open state in your scope. |
+| [`use_modal`](use_modal.md) | Registers a modal and returns the handle that opens it. |
+| [`use_modal_close`](use_modal_close.md) | Closes the modal it is rendered in. |
+| [`use_drawer`](use_drawer.md) | Registers a drawer and returns the handle that opens it. |
+| [`use_popover`](use_popover.md) | Places a floating box next to an anchor. |
+| [`use_menu`](use_menu.md) | Keeps a Menu's open state in your scope. |
+| [`use_spotlight`](use_spotlight.md) | Registers a command palette and its hotkey. |
+| [`use_lightbox`](use_lightbox.md) | Opens a picture viewer over the page. |
+| [`use_floating_window`](use_floating_window.md) | Opens a movable, non-modal window. |
+| [`use_notifications`](use_notifications.md) | Shows notifications drawn as an Alert. |
+| [`use_notifications_with`](use_notifications_with.md) | Notifications of your own data type and template. |

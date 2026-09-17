@@ -8,188 +8,158 @@ struct HookRow {
     hook: &'static str,
     purpose: &'static str,
     route: Route,
-    page: &'static str,
 }
 
-fn row(hook: &'static str, purpose: &'static str, route: Route, page: &'static str) -> HookRow {
+fn row(hook: &'static str, purpose: &'static str, route: Route) -> HookRow {
     HookRow {
         hook,
         purpose,
         route,
-        page,
     }
 }
 
-/// Every public `use_*` of libero: the primitives first, then by the page that owns them.
+/// Every public `use_*` of libero: the primitives first, then in the docs' group order.
 fn hooks() -> Vec<HookRow> {
     vec![
         row(
             "use_id",
             "A unique id for the aria wiring between one instance's elements.",
             Route::UseIdPage {},
-            "use_id",
         ),
         row(
             "use_element",
             "A handle to one of your component's elements, to focus, scroll or measure it.",
             Route::UseElementPage {},
-            "use_element",
         ),
         row(
             "use_focus_return",
             "Puts focus back on the trigger when a panel closes.",
             Route::UseFocusReturnPage {},
-            "use_focus_return",
         ),
         row(
             "use_drag",
             "Pointer capture and deltas for a drag.",
             Route::UseDragPage {},
-            "use_drag",
         ),
         row(
             "use_clipboard",
             "Copies text and reports whether the write worked.",
             Route::UseClipboardPage {},
-            "use_clipboard",
-        ),
-        row(
-            "use_modal",
-            "Registers a modal and returns a handle that opens it.",
-            Route::ModalPage {},
-            "Modal",
-        ),
-        row(
-            "use_modal_close",
-            "Closes the modal it is called inside.",
-            Route::ModalPage {},
-            "Modal",
-        ),
-        row(
-            "use_drawer",
-            "Registers a drawer and returns a handle that opens it.",
-            Route::DrawerPage {},
-            "Drawer",
-        ),
-        row(
-            "use_popover",
-            "Places a floating box next to an anchor.",
-            Route::PopoverPage {},
-            "Popover",
-        ),
-        row(
-            "use_menu",
-            "Keeps a Menu's open state in your scope.",
-            Route::MenuPage {},
-            "Menu",
-        ),
-        row(
-            "use_spotlight",
-            "Registers a command palette and its hotkey.",
-            Route::SpotlightPage {},
-            "Spotlight",
-        ),
-        row(
-            "use_lightbox",
-            "Opens a picture viewer over the page.",
-            Route::LightboxPage {},
-            "Lightbox",
-        ),
-        row(
-            "use_floating_window",
-            "Opens a movable, resizable window.",
-            Route::FloatingWindowPage {},
-            "FloatingWindow",
-        ),
-        row(
-            "use_notifications",
-            "Shows and dismisses notifications.",
-            Route::NotificationsPage {},
-            "Notifications",
-        ),
-        row(
-            "use_notifications_with",
-            "Notifications drawn from your own data type.",
-            Route::NotificationsPage {},
-            "Notifications",
-        ),
-        row(
-            "use_combobox",
-            "Keeps a Combobox's open state in your scope.",
-            Route::ComboboxPage {},
-            "Combobox",
-        ),
-        row(
-            "use_scroll_area",
-            "Scrolls a ScrollArea from code.",
-            Route::ScrollAreaPage {},
-            "ScrollArea",
-        ),
-        row(
-            "use_scroller",
-            "Steps a Scroller from code.",
-            Route::ScrollerPage {},
-            "Scroller",
-        ),
-        row(
-            "use_form",
-            "A form's handle: values, validation and submit.",
-            Route::FormPage {},
-            "Form",
-        ),
-        row(
-            "use_form_context",
-            "The enclosing Form's handle.",
-            Route::FormPage {},
-            "Form",
         ),
         row(
             "use_theme",
-            "The active theme.",
-            Route::ThemingPage {},
-            "Theming",
+            "The active theme, for values CSS cannot carry.",
+            Route::UseThemePage {},
         ),
         row(
             "use_theme_set",
-            "Switches between the themes of a set.",
-            Route::ThemingPage {},
-            "Theming",
+            "Reads and swaps the active theme set.",
+            Route::UseThemeSetPage {},
         ),
         row(
             "use_color_scheme",
             "Reads and sets light or dark.",
-            Route::ThemingPage {},
-            "Theming",
+            Route::UseColorSchemePage {},
         ),
         row(
             "use_localization",
-            "The labels libero's components read, in the active language.",
-            Route::LocalizationPage {},
-            "Localization",
+            "The words libero's components say, in the active language.",
+            Route::UseLocalizationPage {},
         ),
         row(
             "use_localization_handle",
-            "Switches the locale at runtime.",
-            Route::LocalizationPage {},
-            "Localization",
+            "Switches the language at runtime.",
+            Route::UseLocalizationHandlePage {},
         ),
         row(
             "use_formats",
             "The active date, time and number formats.",
-            Route::LocalizationPage {},
-            "Localization",
+            Route::UseFormatsPage {},
         ),
         row(
             "use_formats_handle",
             "Switches the formats at runtime.",
-            Route::LocalizationPage {},
-            "Localization",
+            Route::UseFormatsHandlePage {},
         ),
         row(
             "use_stylesheet",
             "Registers a stylesheet of your own, above every libero layer.",
-            Route::StylingPage {},
-            "Styling",
+            Route::UseStylesheetPage {},
+        ),
+        row(
+            "use_scroll_area",
+            "Scrolls a ScrollArea from code.",
+            Route::UseScrollAreaPage {},
+        ),
+        row(
+            "use_scroller",
+            "Steps a Scroller from controls of your own.",
+            Route::UseScrollerPage {},
+        ),
+        row(
+            "use_form",
+            "Controls a Form: validity, check, submit and reset.",
+            Route::UseFormPage {},
+        ),
+        row(
+            "use_form_context",
+            "The handle of the Form it is called inside.",
+            Route::UseFormContextPage {},
+        ),
+        row(
+            "use_combobox",
+            "Keeps a Combobox's open state in your scope.",
+            Route::UseComboboxPage {},
+        ),
+        row(
+            "use_modal",
+            "Registers a modal and returns the handle that opens it.",
+            Route::UseModalPage {},
+        ),
+        row(
+            "use_modal_close",
+            "Closes the modal it is rendered in.",
+            Route::UseModalClosePage {},
+        ),
+        row(
+            "use_drawer",
+            "Registers a drawer and returns the handle that opens it.",
+            Route::UseDrawerPage {},
+        ),
+        row(
+            "use_popover",
+            "Places a floating box next to an anchor.",
+            Route::UsePopoverPage {},
+        ),
+        row(
+            "use_menu",
+            "Keeps a Menu's open state in your scope.",
+            Route::UseMenuPage {},
+        ),
+        row(
+            "use_spotlight",
+            "Registers a command palette and its hotkey.",
+            Route::UseSpotlightPage {},
+        ),
+        row(
+            "use_lightbox",
+            "Opens a picture viewer over the page.",
+            Route::UseLightboxPage {},
+        ),
+        row(
+            "use_floating_window",
+            "Opens a movable, non-modal window.",
+            Route::UseFloatingWindowPage {},
+        ),
+        row(
+            "use_notifications",
+            "Shows notifications drawn as an Alert.",
+            Route::UseNotificationsPage {},
+        ),
+        row(
+            "use_notifications_with",
+            "Notifications of your own data type and template.",
+            Route::UseNotificationsWithPage {},
         ),
     ]
 }
@@ -204,9 +174,9 @@ pub fn HooksPage() -> Element {
                 Text {
                     "Libero's components are built from these hooks, and they are public for "
                     "yours. They are positional like every dioxus hook, so call them "
-                    "unconditionally, in the same order every render. The five primitives "
-                    "have a page each. A hook that belongs to a component or a guide is "
-                    "documented there."
+                    "unconditionally, in the same order every render. Each has a page with a "
+                    "small demo. A hook that belongs to a component links to that component's "
+                    "page for the rest."
                 }
             },
 
@@ -219,14 +189,11 @@ pub fn HooksPage() -> Element {
                         column("Hook")
                             .value(|row: &HookRow| row.hook)
                             .render(|row: &HookRow| rsx! {
-                                Code { source: row.hook }
+                                Anchor { to: row.route.clone(),
+                                    Code { source: row.hook }
+                                }
                             }),
                         column("What it is for").value(|row: &HookRow| row.purpose),
-                        column("Documented on")
-                            .value(|row: &HookRow| row.page)
-                            .render(|row: &HookRow| rsx! {
-                                Anchor { to: row.route.clone(), "{row.page}" }
-                            }),
                     ],
                 }
             }

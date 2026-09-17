@@ -141,12 +141,35 @@ fetch only the file you need.
 
 ## Hooks
 
-- [Overview](hooks.md): Every public libero hook in one table, with what it is for and the page that documents it.
+- [Overview](hooks.md): Every public libero hook in one table, with what it is for and a link to its page.
 - [use_id](use_id.md): A process-unique id, stable for the component's lifetime, for the aria wiring between one instance's elements.
 - [use_element](use_element.md): A handle to one of your component's own elements, to focus, scroll and measure it on every renderer.
 - [use_focus_return](use_focus_return.md): Puts focus back on the element that opened a panel or popup once it closes, with fallbacks for a trigger that is gone.
 - [use_drag](use_drag.md): Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.
 - [use_clipboard](use_clipboard.md): Writes text to the system clipboard and reports whether the write worked.
+- [use_theme](use_theme.md): The active theme, for the values CSS cannot carry.
+- [use_theme_set](use_theme_set.md): Reads and swaps the active theme set, which a theme picker is built on.
+- [use_color_scheme](use_color_scheme.md): Reads and sets light or dark, or hands the choice back to the platform.
+- [use_localization](use_localization.md): The words libero's components say on their own, in the active language.
+- [use_localization_handle](use_localization_handle.md): Switches the language libero's components speak at runtime.
+- [use_formats](use_formats.md): How the active region writes dates, times and numbers.
+- [use_formats_handle](use_formats_handle.md): Switches the date, time and number formats at runtime, independent of the language.
+- [use_stylesheet](use_stylesheet.md): Registers a stylesheet of your own above every libero layer and returns its class.
+- [use_scroll_area](use_scroll_area.md): A handle that scrolls a ScrollArea from code.
+- [use_scroller](use_scroller.md): A handle that steps a Scroller from controls of your own.
+- [use_form](use_form.md): A handle that controls a Form from the component that renders it.
+- [use_form_context](use_form_context.md): The handle of the Form it is called inside, so a part of a form reaches it without a prop.
+- [use_combobox](use_combobox.md): Keeps a Combobox's open state and active option in your scope, for a trigger of your own.
+- [use_modal](use_modal.md): Registers a modal and returns the handle that opens it, with arguments and a result.
+- [use_modal_close](use_modal_close.md): Closes the modal it is rendered in, for a component factored out of the render closure.
+- [use_drawer](use_drawer.md): Registers a panel docked to one edge and returns the handle that opens it.
+- [use_popover](use_popover.md): Portals a box to the document root and places it next to an anchor, flipping and shifting to stay on screen.
+- [use_menu](use_menu.md): Keeps a Menu's open state in your scope, so your own trigger opens it.
+- [use_spotlight](use_spotlight.md): Registers a command palette and its hotkey and returns the handle that opens it.
+- [use_lightbox](use_lightbox.md): Registers a picture viewer over the page and returns the handle that opens it.
+- [use_floating_window](use_floating_window.md): Registers a movable, non-modal window over the page and returns the handle that opens it.
+- [use_notifications](use_notifications.md): Shows notifications drawn as an Alert, in the host placed once near the root.
+- [use_notifications_with](use_notifications_with.md): Shows notifications of your own data type, drawn by your own template.
 
 ---
 
