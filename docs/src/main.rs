@@ -73,6 +73,16 @@ pub(crate) enum Route {
 
     #[route("/hooks")]
     HooksPage {},
+    #[route("/hooks/use-id")]
+    UseIdPage {},
+    #[route("/hooks/use-element")]
+    UseElementPage {},
+    #[route("/hooks/use-focus-return")]
+    UseFocusReturnPage {},
+    #[route("/hooks/use-drag")]
+    UseDragPage {},
+    #[route("/hooks/use-clipboard")]
+    UseClipboardPage {},
 
     #[route("/buttons/action-icon")]
     ActionIconPage {},

@@ -142,7 +142,12 @@ fetch only the file you need.
 
 ## Hooks
 
-- [Overview](hooks.md): The public hooks libero's components are built from - `use_drag` for pointer drags and `use_clipboard` for copying.
+- [Overview](hooks.md): Every public libero hook in one table, with what it is for and the page that documents it.
+- [use_id](use_id.md): A process-unique id, stable for the component's lifetime, for the aria wiring between one instance's elements.
+- [use_element](use_element.md): A handle to one of your component's own elements, to focus, scroll and measure it on every renderer.
+- [use_focus_return](use_focus_return.md): Puts focus back on the element that opened a panel or popup once it closes, with fallbacks for a trigger that is gone.
+- [use_drag](use_drag.md): Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.
+- [use_clipboard](use_clipboard.md): Writes text to the system clipboard and reports whether the write worked.
 
 ---
 

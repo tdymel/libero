@@ -294,10 +294,18 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::VisuallyHiddenPage {}, "VisuallyHidden"),
             ],
         ),
+        // The overview, then the primitives: ids, element handles, and what builds on them.
         group(
             "hooks",
             "Hooks",
-            vec![page(Route::HooksPage {}, "Overview")],
+            vec![
+                page(Route::HooksPage {}, "Overview"),
+                page(Route::UseIdPage {}, "use_id"),
+                page(Route::UseElementPage {}, "use_element"),
+                page(Route::UseFocusReturnPage {}, "use_focus_return"),
+                page(Route::UseDragPage {}, "use_drag"),
+                page(Route::UseClipboardPage {}, "use_clipboard"),
+            ],
         ),
     ]
 }

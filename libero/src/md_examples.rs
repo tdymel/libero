@@ -135,5 +135,10 @@ md_pages! {
     Title => "title",
     Tooltip => "tooltip",
     Tree => "tree",
+    UseClipboard => "use_clipboard",
+    UseDrag => "use_drag",
+    UseElement => "use_element",
+    UseFocusReturn => "use_focus_return",
+    UseId => "use_id",
     VisuallyHidden => "visually_hidden",
 }

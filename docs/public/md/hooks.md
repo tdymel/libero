@@ -1,200 +1,43 @@
 # Hooks
 
 Crate: `libero`
-Import: `use libero::hooks::{Drag, DragMove, DragOptions, DragStart, drag_handle_sx, use_clipboard, use_drag, use_element, use_focus_return, use_id};`
 Index: [index.md](index.md) - every other component's markdown page
-Description: The public hooks libero's components are built from - `use_drag` for pointer drags and `use_clipboard` for copying.
+Description: Every public libero hook in one table, with what it is for and the page that documents it.
 
-The hooks below are what libero's own components are built from, and they are
-public for yours. Like every dioxus hook they are positional: call them
-unconditionally, in the same order every render. The overlay hooks have pages of
-their own: [`use_popover`](popover.md), [`use_modal`](modal.md),
-[`use_drawer`](drawer.md), [`use_lightbox`](lightbox.md) and
-[`use_floating_window`](floating_window.md).
+Libero's components are built from these hooks, and they are public for yours.
+They are positional like every dioxus hook, so call them unconditionally, in the
+same order every render. The five primitives have a page each. A hook that
+belongs to a component or a guide is documented there.
 
-## use_drag
+## Every public hook
 
-Pointer plumbing for a drag: capture, the start point, a delta against it, and
-one end path for both release and cancel. It knows no axes and no units -
-convert the delta yourself. `onpointerdown` goes on the grab handle, the other
-three on the `capture` element, which owns the geometry. Measure in `onstart`,
-and call its `cancel` to refuse the drag. Give the handle `drag_handle_sx()`, or
-a touch scrolls the page and never moves.
-
-```rust
-use dioxus::prelude::*;
-use libero::{
-    components::Box,
-    hooks::{DragMove, DragOptions, DragStart, drag_handle_sx, use_drag, use_element},
-    sx::sx,
-};
-
-#[component]
-fn Knob() -> Element {
-    let track = use_element();
-    let mut x = use_signal(|| 0.0);
-    let mut from = use_signal(|| 0.0);
-    let drag = use_drag(DragOptions {
-        capture: track,
-        onstart: Callback::new(move |_: DragStart| from.set(x())),
-        onmove: Callback::new(move |step: DragMove| {
-            x.set((from() + step.delta().x).clamp(0.0, 200.0));
-        }),
-        onend: Callback::new(|()| {}),
-    });
-
-    rsx! {
-        Box {
-            onmounted: track.mount(),
-            onpointermove: move |event| drag.onpointermove.call(event),
-            onpointerup: move |event| drag.onpointerup.call(event),
-            onpointercancel: move |event| drag.onpointercancel.call(event),
-            sx: sx().position("relative").width("232px").height("32px")
-                .background("muted.1").border_radius("16px"),
-            Box {
-                onpointerdown: move |event| drag.onpointerdown.call(event),
-                // The keyboard path a drag needs: focusable, named, and on the arrows.
-                tabindex: 0,
-                role: "slider",
-                aria_label: "Knob position",
-                aria_valuemin: 0,
-                aria_valuemax: 200,
-                aria_valuenow: "{x}",
-                onkeydown: move |event: KeyboardEvent| {
-                    let next = match event.key() {
-                        Key::ArrowLeft | Key::ArrowDown => x() - 10.0,
-                        Key::ArrowRight | Key::ArrowUp => x() + 10.0,
-                        Key::Home => 0.0,
-                        Key::End => 200.0,
-                        _ => return,
-                    };
-                    event.prevent_default();
-                    x.set(next.clamp(0.0, 200.0));
-                },
-                sx: drag_handle_sx().position("absolute").width("32px").height("32px")
-                    .border_radius("16px").background("primary.6").cursor("grab")
-                    // The fill publishes its contrast colour, white, for what is
-                    // drawn *on* it - which overrides the ring's stripe and
-                    // leaves it the same white as the halo, so the ring drawn
-                    // outside vanishes rather than reading against itself.
-                    // Inset it into the fill: 4.86:1 rather than 1.11:1.
-                    .focus_visible(sx().outline_offset("-4px")),
-                style: "left: {x}px",
-            }
-        }
-    }
-}
-```
-
-A pointer is not a keyboard, so anything a drag sets needs a second way in. The
-knob is a focusable, named slider that takes the arrow keys, Home and End.
-
-## use_clipboard
-
-`copy(text)` writes to the clipboard, and `copied()` turns true once the
-platform confirms the write - a denied permission leaves it false and logs a
-warning. The flag stays up until you call `reset()`. Say the result in a status
-region that is already mounted; a button whose own label changes is not
-announced.
-
-```rust
-use dioxus::prelude::*;
-use libero::{components::Button, hooks::use_clipboard};
-
-#[component]
-fn CopyLink() -> Element {
-    let mut clipboard = use_clipboard();
-
-    rsx! {
-        Button {
-            variant: "outlined",
-            onclick: move |_| clipboard.copy("https://github.com/tdymel/libero"),
-            onblur: move |_| clipboard.reset(),
-            "Copy link"
-        }
-        // Mounted before it has anything to say, so the change is announced.
-        span { role: "status", if clipboard.copied() { "Copied" } }
-    }
-}
-```
-
-## Other hooks
-
-| Hook | What it is for | Used on |
+| Hook | What it is for | Documented on |
 |---|---|---|
-| `use_element() -> ElementHandle` | A handle to one of the component's own elements, mounted with `onmounted: handle.mount()`. It implements `ElementApi`. | [Platform](platform.md) |
-| `use_id() -> Signal<String>` | A process-unique id, stable for the component's lifetime, for the aria wiring between one instance's parts. | [Popover](popover.md) |
-| `use_focus_return() -> FocusReturn` | Remembers where focus came from, with `remember(event)` on a trigger's `onmounted` or `remember_active()` as it opens, and `restore()` puts it back - onto `fallback(handle)` if the trigger is gone. | [Collapse](collapse.md) |
-
-## API
-
-### `use_drag`
-
-```rust,ignore
-pub fn use_drag(options: DragOptions) -> Drag
-pub fn drag_handle_sx() -> Sx
-```
-
-`DragOptions`:
-
-| Field | Type | Description |
-|---|---|---|
-| `capture` | `ElementHandle` | The element that takes pointer capture and carries the move, up and cancel handlers. |
-| `onstart` | `Callback<DragStart>` | The pointer went down. `DragStart` has `client: DragPoint` and `cancel: Callback<()>`. |
-| `onmove` | `Callback<DragMove>` | `DragMove` has `start` and `client`, and `delta()`. |
-| `onend` | `Callback<()>` | Released or cancelled. Not called after `cancel`. |
-
-`Drag` is `Copy`: `dragging: Signal<bool>`, and the four handlers
-`onpointerdown`, `onpointermove`, `onpointerup`, `onpointercancel`, each a
-`Callback<Event<PointerData>>`. A right or middle button never starts a drag,
-and a second pointer is ignored.
-
-### `use_clipboard`
-
-```rust,ignore
-pub fn use_clipboard() -> Clipboard
-```
-
-| Method | Returns | Description |
-|---|---|---|
-| `copy(text: impl Into<String>)` | `()` | Writes `text`; `copied()` flips once the platform confirms. |
-| `copied()` | `bool` | Whether the last write succeeded and nothing has reset it. Reactive. |
-| `reset()` | `()` | Clears the flag. |
-
-`Clipboard` is `Copy`. Where the target has no clipboard, `copy` logs a warning
-and does nothing.
-
-### `use_element`
-
-```rust,ignore
-pub fn use_element() -> ElementHandle
-```
-
-| Method | Returns | Description |
-|---|---|---|
-| `mount()` | `impl FnMut(Event<MountedData>)` | The `onmounted` handler that fills the handle in. |
-| `is_mounted()` | `bool` | Reactive: an effect reading it re-runs once the element mounts. |
-
-`ElementHandle` is `Copy` and implements `ElementApi` - see [platform.md](platform.md).
-Every call answers `PlatformError::Unsupported` until the element is mounted.
-
-### `use_id`
-
-```rust,ignore
-pub fn use_id() -> Signal<String>
-```
-
-A process-unique `lsx-N`, stable for the component's lifetime.
-
-### `use_focus_return`
-
-```rust,ignore
-pub fn use_focus_return() -> FocusReturn
-```
-
-| Method | Returns | Description |
-|---|---|---|
-| `remember(event: Event<MountedData>)` | `()` | Use as the trigger's `onmounted`. |
-| `remember_active()` | `()` | Remembers whatever has focus now. Call it synchronously in the handler that opens the overlay. |
-| `fallback(element: ElementHandle)` | `()` | Where focus goes if the remembered element is gone. Appends: call it once per tier, nearest first. |
-| `restore()` | `()` | Puts focus back. |
+| `use_id` | A unique id for the aria wiring between one instance's elements. | [use_id](use_id.md) |
+| `use_element` | A handle to one of your component's elements, to focus, scroll or measure it. | [use_element](use_element.md) |
+| `use_focus_return` | Puts focus back on the trigger when a panel closes. | [use_focus_return](use_focus_return.md) |
+| `use_drag` | Pointer capture and deltas for a drag. | [use_drag](use_drag.md) |
+| `use_clipboard` | Copies text and reports whether the write worked. | [use_clipboard](use_clipboard.md) |
+| `use_modal` | Registers a modal and returns a handle that opens it. | [Modal](modal.md) |
+| `use_modal_close` | Closes the modal it is called inside. | [Modal](modal.md) |
+| `use_drawer` | Registers a drawer and returns a handle that opens it. | [Drawer](drawer.md) |
+| `use_popover` | Places a floating box next to an anchor. | [Popover](popover.md) |
+| `use_menu` | Keeps a Menu's open state in your scope. | [Menu](menu.md) |
+| `use_spotlight` | Registers a command palette and its hotkey. | [Spotlight](spotlight.md) |
+| `use_lightbox` | Opens a picture viewer over the page. | [Lightbox](lightbox.md) |
+| `use_floating_window` | Opens a movable, resizable window. | [FloatingWindow](floating_window.md) |
+| `use_notifications` | Shows and dismisses notifications. | [Notifications](notifications.md) |
+| `use_notifications_with` | Notifications drawn from your own data type. | [Notifications](notifications.md) |
+| `use_combobox` | Keeps a Combobox's open state in your scope. | [Combobox](combobox.md) |
+| `use_scroll_area` | Scrolls a ScrollArea from code. | [ScrollArea](scroll_area.md) |
+| `use_scroller` | Steps a Scroller from code. | [Scroller](scroller.md) |
+| `use_form` | A form's handle: values, validation and submit. | [Form](form.md) |
+| `use_form_context` | The enclosing Form's handle. | [Form](form.md) |
+| `use_theme` | The active theme. | [Theming](theming.md) |
+| `use_theme_set` | Switches between the themes of a set. | [Theming](theming.md) |
+| `use_color_scheme` | Reads and sets light or dark. | [Theming](theming.md) |
+| `use_localization` | The labels libero's components read, in the active language. | [Localization](localization.md) |
+| `use_localization_handle` | Switches the locale at runtime. | [Localization](localization.md) |
+| `use_formats` | The active date, time and number formats. | [Localization](localization.md) |
+| `use_formats_handle` | Switches the formats at runtime. | [Localization](localization.md) |
+| `use_stylesheet` | Registers a stylesheet of your own, above every libero layer. | [Styling](styling.md) |
