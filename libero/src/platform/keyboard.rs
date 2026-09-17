@@ -52,8 +52,7 @@ pub trait KeyboardApi {
     ///
     /// **A press the user is typing never arrives.** The capability drops
     /// anything targeting a text-like `input`, a `textarea`, a `select` or a
-    /// `contenteditable` - Mantine's `tagsToIgnore`, enforced here rather than
-    /// left to each consumer. A checkbox, radio, button or range input is not
+    /// `contenteditable`, enforced here rather than left to each consumer. A checkbox, radio, button or range input is not
     /// text entry, so a hotkey still works after a click on one. So a shortcut cannot eat a character out of a
     /// text field, and equally cannot fire while focus is in one: a palette
     /// opens from the page, not from a search box. Focus on `<body>` or inside

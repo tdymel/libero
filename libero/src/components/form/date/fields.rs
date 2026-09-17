@@ -133,8 +133,7 @@ date_props! {
     field DayFieldProps(NaiveDate, NaiveDate): format, limits, exclude_date, today, calendar, close_on_change
 }
 
-/// A text field holding a day, with a `DayPicker` in a dropdown - Mantine's
-/// `DateInput`.
+/// A text field holding a day, with a `DayPicker` in a dropdown.
 ///
 /// Controlled: it renders `value` and asks for a new one through `onchange`.
 /// Typed text stays as typed until the field blurs or Enter is pressed; then
@@ -159,8 +158,7 @@ date_props! {
     field TimeFieldProps(NaiveTime, NaiveTime): time_format, limits, clock
 }
 
-/// A text field holding a time, with a `TimePicker` in a dropdown - Mantine's
-/// `TimeInput` with a picker. Typing reads `13:05`, `1:05 pm`, `1305`.
+/// A text field holding a time, with a `TimePicker` in a dropdown. Typing reads `13:05`, `1:05 pm`, `1305`.
 #[component]
 pub fn TimeField(props: TimeFieldProps) -> Element {
     let options = FieldOptions {
@@ -181,7 +179,7 @@ date_props! {
 }
 
 /// A text field holding a day and a time. The dropdown picks the day, then
-/// the time - a `SegmentedControl` goes back - Mantine's `DateTimePicker`.
+/// the time, and a `SegmentedControl` goes back.
 /// The text shows the day, then the time after a space.
 #[component]
 pub fn DateTimeField(props: DateTimeFieldProps) -> Element {
@@ -206,8 +204,8 @@ date_props! {
     field DateRangeFieldProps(DateRange<NaiveDate>, NaiveDate): format, limits, exclude_date, today, columns, close_on_change
 }
 
-/// A text field holding a range of days, with two months in a dropdown -
-/// Mantine's `DatePickerInput type="range"`. An `end` of `None` is a range
+/// A text field holding a range of days, with two months in a dropdown.
+/// An `end` of `None` is a range
 /// still being picked. The text joins both days with the theme's
 /// `range_separator`; typing takes `–`, ` - ` or ` to ` between them.
 #[component]

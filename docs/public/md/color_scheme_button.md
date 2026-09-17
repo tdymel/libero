@@ -47,7 +47,7 @@ fn Demo() -> Element {
 }
 ```
 
-The names come from the [localization](theming.md#localization), so other
+The names come from the [localization](localization.md), so other
 wording is one struct:
 
 ```rust

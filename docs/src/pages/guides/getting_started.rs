@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use libero::components::{Code, CodeBlock, Divider, Flex, Text};
 
 // snippet: ignore - a Cargo.toml fragment, not Rust
-const FEATURES_EXAMPLE: &str = r#"libero = { version = "*", default-features = false, features = [
+const FEATURES_EXAMPLE: &str = r#"libero = { version = "0.1", default-features = false, features = [
     "code-lang-rust",
     "full-polymorphism",
 ] }"#;
@@ -38,7 +38,7 @@ pub fn GettingStarted() -> Element {
                 Text {
                     "Wrap your app in "
                     Code { source: "LiberoProvider" }
-                    " once, at the root - it registers the theme and every style your components use."
+                    " once, at the root. It registers the theme and every style your components use."
                 }
                 CodeBlock { source: QUICK_START_EXAMPLE, language: "rust" }
             }
@@ -48,41 +48,39 @@ pub fn GettingStarted() -> Element {
                 Text {
                     "Dioxus's "
                     Code { source: "wasm-split" }
-                    " feature puts every route in its own chunk, fetched when it is first "
-                    "visited instead of bloating every page's initial bundle. On this docs site "
-                    "that is 297 KB of brotli-compressed main bundle instead of 414 KB. Libero "
-                    "adds no split points of its own - the per-route chunks already carry "
+                    " feature puts every route in its own chunk, fetched on its first visit, "
+                    "so the initial bundle stays small. On this docs site the brotli-compressed "
+                    "main bundle is 297 KB instead of 414 KB. Libero adds no split points of its "
+                    "own. The per-route chunks already carry "
                     Code { source: "Code" }
                     "'s highlighter and "
                     Code { source: "QrCode" }
                     "'s encoder to the pages that use them."
                 }
                 CodeBlock {
-                    source: "dioxus = {{ version = \"*\", features = [\"router\", \"wasm-split\"] }}",
+                    source: "dioxus = {{ version = \"0.8.0-alpha.1\", features = [\"router\", \"wasm-split\"] }}",
                     language: "toml",
                 }
                 Text {
                     "It is experimental, and "
                     Code { source: "dx" }
-                    " only enables it when asked - with the feature on, always build and serve "
+                    " enables it only when asked. With the feature on, always build and serve "
                     "with "
                     Code { source: "--wasm-split" }
-                    ", or the app will fail to load entirely (a dangling module import, not a "
-                    "graceful fallback)."
+                    ", or the app fails to load."
                 }
                 CodeBlock {
                     source: "dx serve --platform web --release --debug-symbols=false --wasm-split",
                     language: "shell",
                 }
                 Text {
-                    "Don't need it? Drop the feature and skip "
+                    "Without it, drop the feature and the "
                     Code { source: "--wasm-split" }
-                    " entirely - the app renders identically either way, just from one bundle "
-                    "instead of per-route chunks. Either way, keep only the languages your own "
-                    "examples use:"
+                    " flag. The app renders the same, from one bundle. Either way, keep only "
+                    "the languages your own examples use:"
                 }
                 CodeBlock {
-                    source: "libero = {{ version = \"*\", default-features = false, features = [\"code-lang-rust\"] }}",
+                    source: "libero = {{ version = \"0.1\", default-features = false, features = [\"code-lang-rust\"] }}",
                     language: "toml",
                 }
             }
@@ -90,9 +88,10 @@ pub fn GettingStarted() -> Element {
             DocSection {
                 title: "Feature flags",
                 Text {
-                    "Every libero feature is additive, and the default set is five "
+                    "Every libero feature is additive. The default set is five "
                     Code { source: "code-lang-*" }
-                    " grammars: Rust, Bash, Markdown, HTML and CSS. Two are worth knowing about."
+                    " grammars: Rust, Bash, Markdown, HTML and CSS. Three features are worth "
+                    "knowing."
                 }
                 Text {
                     Code { source: "code-lang-*" }
@@ -112,7 +111,7 @@ pub fn GettingStarted() -> Element {
                     Code { source: "component" }
                     " prop can render. All 111 HTML5 element names are accepted and type-check "
                     "either way, but only 83 of them compile a match arm by default: every "
-                    "sectioning, text-level, list, table and form element - "
+                    "sectioning, text-level, list, table and form element, such as "
                     Code { source: "footer" }
                     ", "
                     Code { source: "strong" }
@@ -126,8 +125,7 @@ pub fn GettingStarted() -> Element {
                     Code { source: "details" }
                     ", "
                     Code { source: "dialog" }
-                    " and the rest. The feature adds the remaining 28, which are document "
-                    "metadata ("
+                    ". The feature adds the remaining 28: document metadata ("
                     Code { source: "head" }
                     ", "
                     Code { source: "meta" }
@@ -188,9 +186,8 @@ pub fn GettingStarted() -> Element {
                 Text {
                     "Pass one of those 28 without the feature and you get a "
                     Code { source: "div" }
-                    " - with a console warning in a debug build, and silently in a release "
-                    "build, because the warning compiles to nothing there. On this docs site "
-                    "the feature costs 14.8 KB of wasm, 1.0 KB after brotli."
+                    ", with a console warning in a debug build and none in a release build. "
+                    "On this docs site the feature costs 14.8 KB of wasm, 1.0 KB after brotli."
                 }
                 CodeBlock {
                     source: FEATURES_EXAMPLE,
@@ -198,10 +195,9 @@ pub fn GettingStarted() -> Element {
                 }
                 Text {
                     Code { source: "native" }
-                    " is the third: it reaches elements through Blitz when you run under "
+                    " reaches elements through Blitz when you run under "
                     Code { source: "dioxus-native" }
-                    ", instead of Dioxus's portable mounted handle, which cannot query a "
-                    "subtree or report focus."
+                    ". Dioxus's portable mounted handle cannot query a subtree or report focus."
                 }
             }
 
@@ -210,8 +206,8 @@ pub fn GettingStarted() -> Element {
                 gap: "lg",
                 Divider {}
                 Text {
-                    "Styling, Theming and Performance cover how the library works; the rest "
-                    "of the sidebar is one page per component."
+                    "Styling, Theming, Localization and Performance cover how the library "
+                    "works. The rest of the sidebar is one page per component."
                 }
             }
         }

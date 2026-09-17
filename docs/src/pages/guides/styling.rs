@@ -88,11 +88,11 @@ const MEDIA: &str = r#"sx()
     .transition("transform 200ms ease")
     .media("(prefers-reduced-motion: reduce)", sx().transition("none"))"#;
 
-const MEDIA_NESTING: &str = r#"// Wrong - the transition still plays under reduced motion.
+const MEDIA_NESTING: &str = r#"// Wrong: the transition still plays under reduced motion.
 sx().when("open", sx().transition("transform 200ms ease"))
     .media("(prefers-reduced-motion: reduce)", sx().transition("none"))
 
-// Right - both rules are 0-2-0, and the media one comes later.
+// Right: both rules are 0-2-0, and the media one comes later.
 sx().when(
     "open",
     sx().transition("transform 200ms ease")
@@ -159,21 +159,21 @@ pub fn StylingPage() -> Element {
                     Code { source: "class" }
                     " for a stylesheet you already have, and everything a "
                     Code { source: "GlobalAttributes" }
-                    " element accepts - "
+                    " element accepts ("
                     Code { source: "id" }
                     ", "
                     Code { source: "onclick" }
-                    ", the rest - straight through to the rendered tag."
+                    " and the rest) passed straight through to the rendered tag."
                 }
                 Text {
                     Code { source: "sx()" }
-                    " builds a list of declarations, not an inline style: identical "
+                    " builds a list of declarations, not an inline style. Identical "
                     "declarations hash to one "
                     Code { source: "lsx-*" }
                     " class shared by every element that asked for it, emitted once into a "
                     Code { source: "<style>" }
                     " tag. So a thousand rows styled alike cost one rule, and pseudo-classes "
-                    "and media queries work - neither of which an inline style can express."
+                    "and media queries work, which an inline style cannot express."
                 }
             },
             DocSection {
@@ -207,7 +207,7 @@ pub fn StylingPage() -> Element {
                 title: "Theme values",
                 Text {
                     "A value is a plain string, and the ones the theme knows resolve against "
-                    "it. A bare color name is shade 6; "
+                    "it. A bare color name is shade 6. "
                     Code { source: "1" }
                     " through "
                     Code { source: "9" }
@@ -217,18 +217,17 @@ pub fn StylingPage() -> Element {
                     Code { source: "xs" }
                     " to "
                     Code { source: "xxl" }
-                    ") resolves through whichever scale the property belongs to - spacing for "
+                    ") resolves through the scale the property belongs to: spacing for "
                     Code { source: "padding" }
-                    "/"
+                    ", "
                     Code { source: "margin" }
-                    "/"
+                    " and "
                     Code { source: "gap" }
                     ", radius for the "
                     Code { source: "border_radius" }
-                    " family. Prefix it with a "
+                    " family. A leading "
                     Code { source: "-" }
-                    " to read the same scale in the negative direction. Everything else is "
-                    "CSS text, untouched."
+                    " negates it. Everything else is CSS text, untouched."
                 }
                 CodeBlock { source: THEME_VALUES, language: "rust" }
                 Text {
@@ -247,8 +246,7 @@ pub fn StylingPage() -> Element {
             DocSection {
                 title: "States",
                 Text {
-                    "Your own variants are not a second class per variant: fold every one "
-                    "into the same "
+                    "Your own variants need no second class. Fold every one into the same "
                     Code { source: "sx" }
                     " with "
                     Code { source: "when" }
@@ -256,9 +254,9 @@ pub fn StylingPage() -> Element {
                     Code { source: "states" }
                     " prop, which renders a "
                     Code { source: "data-state" }
-                    " attribute. One shared class, per-instance variation - the same "
-                    "mechanism every Libero component uses for its own size and variant "
-                    "props. A condition can combine tokens with "
+                    " attribute. One shared class, varied per instance, is how every Libero "
+                    "component handles its own size and variant props. A condition can "
+                    "combine tokens with "
                     Code { source: "&&" }
                     " and "
                     Code { source: "||" }
@@ -308,14 +306,14 @@ pub fn StylingPage() -> Element {
                     Code { source: "&" }
                     " with the class this "
                     Code { source: "Sx" }
-                    " generates - so "
+                    " generates, so "
                     Code { source: "&" }
                     " can sit anywhere in the pattern, including after an ancestor. A "
-                    "pattern without one is appended, making "
+                    "pattern without one is appended, so "
                     Code { source: "\":hover\"" }
                     " and "
                     Code { source: "\"&:hover\"" }
-                    " the same thing, and a comma list expands to one rule per part."
+                    " are the same. A comma list expands to one rule per part."
                 }
                 CodeBlock { source: SELECTORS, language: "rust" }
             }
@@ -343,13 +341,14 @@ pub fn StylingPage() -> Element {
                 CodeBlock { source: RESPONSIVE_VALUE, language: "rust" }
                 Text {
                     "It carries no base value, and a second call to the same property "
-                    "replaces the first rather than adding to it - so a property that also "
-                    "needs a value below the smallest breakpoint wants the nested form for "
-                    "the base. The steps apply from the smallest up, in whatever order they "
-                    "are written."
+                    "replaces the first. A property that also needs a value below the "
+                    "smallest breakpoint sets that base outside "
+                    Code { source: "bp()" }
+                    ". The steps apply from the smallest up, in whatever order they are "
+                    "written."
                 }
                 Text {
-                    "The six breakpoints are fixed literals rather than theme values - a "
+                    "The six breakpoints are fixed literals, not theme values, because a "
                     Code { source: "@media" }
                     " query cannot read a CSS custom property:"
                 }
@@ -374,18 +373,17 @@ pub fn StylingPage() -> Element {
                     Code { source: "Sx" }
                     " under any "
                     Code { source: "@media" }
-                    " query, passed through verbatim. It is the general form "
+                    " query, passed through verbatim. "
                     Code { source: "breakpoint" }
-                    " is the shorthand of, and the reason it exists is "
+                    " is its shorthand. The main use is "
                     Code { source: "prefers-reduced-motion" }
                     ":"
                 }
                 CodeBlock { source: MEDIA, language: "rust" }
                 Text {
-                    "Nothing validates the query, so a typo silently matches nothing - the "
-                    "same tradeoff "
+                    "Nothing validates the query, so a typo silently matches nothing, as with "
                     Code { source: "when" }
-                    " makes. Nested "
+                    ". Nested "
                     Code { source: "media" }
                     " modifiers fold into a single "
                     Code { source: "and" }
@@ -398,21 +396,20 @@ pub fn StylingPage() -> Element {
                     Code { source: "media" }
                     " inside the condition, never the condition inside "
                     Code { source: "media" }
-                    ". A media query adds no specificity: the rule inside it carries the "
-                    "same selector as the one outside. A condition appends "
+                    ". A media query adds no specificity, and a condition appends "
                     Code { source: "[data-state~=\"open\"]" }
-                    ", so it is one class and one attribute (0-2-0) against a bare class "
-                    "(0-1-0), and the flat form loses no matter where it sits in the file:"
+                    " (0-2-0 against a bare class's 0-1-0). So the flat form loses wherever "
+                    "it sits in the file:"
                 }
                 CodeBlock { source: MEDIA_NESTING, language: "rust" }
                 Text {
-                    "The same applies to any modifier that changes the selector - "
+                    "The same applies to every modifier that changes the selector: "
                     Code { source: "hover" }
                     ", "
                     Code { source: "selector" }
                     " and "
                     Code { source: "when" }
-                    " all do. "
+                    ". "
                     Code { source: "breakpoint" }
                     " and "
                     Code { source: "container_query" }
@@ -427,15 +424,16 @@ pub fn StylingPage() -> Element {
                     " asks about the viewport, but "
                     "\"does this component have room\" is almost always a question about "
                     "the box it sits in. The two disagree whenever a component lives in a "
-                    "column narrower than the window - a sidebar, a grid cell, a card."
+                    "column narrower than the window, such as a sidebar, a grid cell or a "
+                    "card."
                 }
                 Text {
                     Code { source: "container" }
                     " marks an ancestor as a query container and "
                     Code { source: "container_query" }
-                    " asks about it by name. The name is required: an anonymous container "
-                    "binds the query to the nearest ancestor container, which picks the "
-                    "wrong one as soon as containers nest."
+                    " asks about it by name. The name is required, because an anonymous "
+                    "query binds to the nearest container, the wrong one as soon as "
+                    "containers nest."
                 }
                 CodeBlock { source: CONTAINER, language: "rust" }
                 Text {
@@ -444,10 +442,10 @@ pub fn StylingPage() -> Element {
                     Code { source: "container-type: inline-size" }
                     ", which is "
                     Code { source: "contain: layout style inline-size" }
-                    ". The element stops being sized by its own contents in the inline "
-                    "axis, becomes a stacking context, and becomes the containing block "
-                    "for absolutely positioned descendants - so never mark a shrink-to-fit "
-                    "box as a container. Like "
+                    ". The element is no longer sized by its contents in the inline axis, "
+                    "becomes a stacking context, and becomes the containing block for "
+                    "absolutely positioned descendants. So never mark a shrink-to-fit box "
+                    "as a container. Like "
                     Code { source: "@media" }
                     ", the condition cannot read a CSS custom property."
                 }
@@ -457,7 +455,7 @@ pub fn StylingPage() -> Element {
                 title: "class and attributes",
                 Text {
                     Code { source: "sx" }
-                    " is additive, not exclusive: "
+                    " is additive. "
                     Code { source: "class" }
                     " puts your own class names on the same element for CSS you already "
                     "have, and any attribute or event a "
@@ -470,19 +468,17 @@ pub fn StylingPage() -> Element {
             DocSection {
                 title: "Cascade layers",
                 Text {
-                    "Nothing that styles an element is settled by specificity or source "
-                    "order. Libero emits one "
+                    "Libero emits one "
                     Code { source: "@layer" }
                     " statement up front, and every rule it writes that styles an element "
-                    "goes into one of those layers - a later layer beats an earlier one "
-                    "however weak its selector is, and specificity only decides ties "
-                    Code { source: "within" }
-                    " a layer. The theme's custom properties on "
+                    "goes into one of those layers. A later layer beats an earlier one "
+                    "however weak its selector is, and specificity only decides ties within "
+                    "a layer. The theme's custom properties on "
                     Code { source: ":root" }
                     " and its "
                     Code { source: "@keyframes" }
-                    " stay outside it: neither is a cascaded rule, so a layer would only "
-                    "make them harder to override."
+                    " stay outside. Neither is a cascaded rule, so a layer would only make "
+                    "them harder to override."
                 }
                 CodeBlock { source: LAYER_ORDER, language: "css" }
                 DataList {
@@ -519,11 +515,10 @@ pub fn StylingPage() -> Element {
                     }
                 }
                 Text {
-                    "That last row is the one to remember: a plain stylesheet of your own is "
-                    "not in the cascade layers at all, and CSS puts unlayered rules above "
-                    "every layered one. So "
+                    "Remember the last row. A plain stylesheet of your own is in no layer, "
+                    "and CSS puts unlayered rules above every layered one. So "
                     Code { source: "class" }
-                    " is the heaviest hammer on the page - reach for "
+                    " is the heaviest hammer on the page. Reach for "
                     Code { source: "sx" }
                     " first, and keep "
                     Code { source: "class" }
@@ -532,31 +527,31 @@ pub fn StylingPage() -> Element {
                 Text {
                     "Layers rank by first mention, and Libero declares its own when "
                     Code { source: "LiberoProvider" }
-                    " mounts - after anything already in "
+                    " mounts, after anything already in "
                     Code { source: "<head>" }
-                    ". So a stylesheet of yours that declares layers has them ranked "
-                    "below every lsx layer, and a layered "
+                    ". So layers your own stylesheet declares rank below every "
+                    Code { source: "lsx-*" }
+                    " layer, and a layered "
                     Code { source: "body {{ margin: 2rem }}" }
                     " of yours still loses to "
                     Code { source: "lsx-base" }
-                    ". Leave the rule unlayered and it wins - that is what moving the "
-                    "reset into a layer bought you - or declare the whole order yourself, "
-                    "first in a stylesheet the browser sees before Libero's, and put your own layers "
-                    "wherever you want them. Both measured in Chromium."
+                    ". Leave the rule unlayered and it wins. Or declare the whole order "
+                    "yourself, first in a stylesheet the browser sees before Libero's, and "
+                    "put your own layers wherever you want them. Both measured in Chromium."
                 }
                 CodeBlock { source: APP_LAYER_ORDER, language: "css" }
                 Text {
                     "A utility framework like Tailwind composes with Libero once you declare "
                     "the order. Tailwind v3's utilities are unlayered, so a "
                     Code { source: "class: \"mt-4\"" }
-                    " outranks every Libero layer. Tailwind v4 layers everything - its reset "
+                    " outranks every Libero layer. Tailwind v4 layers everything (its reset "
                     "in "
                     Code { source: "base" }
                     ", its utilities in "
                     Code { source: "utilities" }
-                    " - and left alone those rank below Libero's: the reset leaves Libero's "
-                    "components alone, but a utility class on one loses. Put this first in "
-                    "your CSS, before "
+                    "), and left alone those rank below Libero's. The reset then leaves "
+                    "Libero's components alone, but a utility class on one loses. Put this "
+                    "first in your CSS, before "
                     Code { source: "@import \"tailwindcss\"" }
                     ", so the reset stays under Libero's components and the utilities win "
                     "over them. Measured in Chromium: every Button kept its fill and "
@@ -572,25 +567,22 @@ pub fn StylingPage() -> Element {
                 Text {
                     "An "
                     Code { source: "Sx" }
-                    " written inline is rebuilt, re-hashed and (the first time that exact "
-                    "content appears) rendered to CSS on every render. When the styling "
-                    "does not depend on props, hoist it into a "
+                    " written inline is rebuilt and re-hashed on every render. When the "
+                    "styling does not depend on props, hoist it into a "
                     Code { source: "StaticSx" }
-                    " and pass a reference: the builder runs once per process, the CSS text "
-                    "is rendered once and cached by address, and the per-render check "
-                    "becomes a pointer comparison instead of a content hash."
+                    " and pass a reference. The builder then runs once per process, and the "
+                    "per-render check is a pointer comparison instead of a content hash."
                 }
                 CodeBlock { source: STATIC_SX, language: "rust" }
                 Text {
-                    "Measured at roughly 210 ns per call site per render - too small to "
-                    "matter in a page, worth having in a component that a hundred rows "
-                    "mount. Every constant "
+                    "The difference is roughly 210 ns per call site per render, too little to "
+                    "matter in a page, and worth having in a component a hundred rows mount. "
+                    "Every constant "
                     Code { source: "sx" }
-                    " inside Libero itself is a "
+                    " inside Libero is a "
                     Code { source: "StaticSx" }
-                    " for that reason. If you are building components on top of Libero, "
-                    "that is the pattern to copy: a static per component, with the parts "
-                    "that genuinely vary carried by "
+                    " for that reason. Components built on top of Libero should copy the "
+                    "pattern: a static per component, with the parts that vary carried by "
                     Code { source: "states" }
                     " rather than by a fresh "
                     Code { source: "Sx" }

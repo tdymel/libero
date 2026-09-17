@@ -176,7 +176,7 @@ Props that only some value types use are ignored by the rest.
 
 `Theme::date_field` (`DateFieldDefaults`): `size`, `radius`,
 `close_on_change`. Names, labels and errors come from `Localization::date`, a
-`DateLocale` (see [localization](theming.md#localization)). Its weekday arrays
+`DateLocale` (see [localization](localization.md)). Its weekday arrays
 are Sunday first, as dayjs' locale files have them. The date and time patterns,
 the first weekday and the range separator come from the provider's `formats`:
 `Formats::AMERICAN`, the default (Sunday first, a 12-hour clock), or

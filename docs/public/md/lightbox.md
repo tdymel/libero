@@ -165,7 +165,7 @@ Returns the same `ModalHandle` as `use_modal`; every method on it and on
 | `thumbnails_gap` | `Size` | Space between thumbnails. |
 | `max_zoom` | `f64` | Default upper scale bound, `1.0` being the picture as first shown. |
 
-The words are `LightboxLabels` in the [localization](theming.md#localization):
+The words are `LightboxLabels` in the [localization](localization.md):
 `label` (the dialog's default name), `thumbnails` (the strip's region name),
 `thumbnail` (a thumbnail's name; `{n}` is the slide number), `keys` (the
 zoomable picture's description), `zoomed` (announced after a zoom; `{n}` is the

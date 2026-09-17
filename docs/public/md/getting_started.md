@@ -18,7 +18,7 @@ cargo add libero
 
 ## Quick start
 
-Wrap your app in `LiberoProvider` once, at the root - it registers the theme and
+Wrap your app in `LiberoProvider` once, at the root. It registers the theme and
 every style your components use.
 
 ```rust
@@ -39,37 +39,35 @@ is styled.
 
 ## Building for the web
 
-Dioxus's `wasm-split` feature puts every route in its own chunk, fetched when it
-is first visited instead of bloating every page's initial bundle. On this docs
-site that is 297 KB of brotli-compressed main bundle instead of 414 KB. Libero
-adds no split points of its own - the per-route chunks already carry
-[Code](code.md)'s highlighter and [QrCode](qr_code.md)'s encoder to the pages
-that use them.
+Dioxus's `wasm-split` feature puts every route in its own chunk, fetched on its
+first visit, so the initial bundle stays small. On this docs site the
+brotli-compressed main bundle is 297 KB instead of 414 KB. Libero adds no split
+points of its own. The per-route chunks already carry [Code](code.md)'s
+highlighter and [QrCode](qr_code.md)'s encoder to the pages that use them.
 
 ```toml
-dioxus = { version = "*", features = ["router", "wasm-split"] }
+dioxus = { version = "0.8.0-alpha.1", features = ["router", "wasm-split"] }
 ```
 
-It is experimental, and `dx` only enables it when asked - with the feature on,
-always build and serve with `--wasm-split`, or the app will fail to load
-entirely (a dangling module import, not a graceful fallback).
+It is experimental, and `dx` enables it only when asked. With the feature on,
+always build and serve with `--wasm-split`, or the app fails to load.
 
 ```shell
 dx serve --platform web --release --debug-symbols=false --wasm-split
 ```
 
-Don't need it? Drop the feature and skip `--wasm-split` entirely - the app
-renders identically either way, just from one bundle instead of per-route
-chunks. Either way, keep only the languages your own examples use:
+Without it, drop the feature and the `--wasm-split` flag. The app renders the
+same, from one bundle. Either way, keep only the languages your own examples
+use:
 
 ```toml
-libero = { version = "*", default-features = false, features = ["code-lang-rust"] }
+libero = { version = "0.1", default-features = false, features = ["code-lang-rust"] }
 ```
 
 ## Feature flags
 
-Every libero feature is additive, and the default set is five `code-lang-*`
-grammars: Rust, Bash, Markdown, HTML and CSS. Two are worth knowing about.
+Every libero feature is additive. The default set is five `code-lang-*`
+grammars: Rust, Bash, Markdown, HTML and CSS. Three features are worth knowing.
 
 `code-lang-*` compiles one hand-ported grammar each for [Code](code.md) and
 [CodeBlock](code_block.md). There are 30 of them; with
@@ -78,8 +76,8 @@ grammars: Rust, Bash, Markdown, HTML and CSS. Two are worth knowing about.
 `full-polymorphism` widens what [Box](box.md)'s `component` prop can render.
 All 111 HTML5 element names are accepted and type-check either way, but only 83
 of them compile a match arm by default: every sectioning, text-level, list,
-table and form element - `footer`, `strong`, `em`, `small`, `time`, `details`,
-`dialog` and the rest. The feature adds the remaining 28:
+table and form element, such as `footer`, `strong`, `em`, `small`, `time`,
+`details` and `dialog`. The feature adds the remaining 28:
 
 | Family | Tags |
 |---|---|
@@ -88,24 +86,22 @@ table and form element - `footer`, `strong`, `em`, `small`, `time`, `details`,
 | Web components | `template`, `slot` |
 | Bidi and ruby annotation | `bdi`, `bdo`, `ruby`, `rp`, `rt` |
 
-Pass one of those 28 without the feature and you get a `div` - with a console
-warning in a debug build, and silently in a release build, because the warning
-compiles to nothing there. On this docs site the feature costs 14.8 KB of wasm,
-1.0 KB after brotli.
+Pass one of those 28 without the feature and you get a `div`, with a console
+warning in a debug build and none in a release build. On this docs site the
+feature costs 14.8 KB of wasm, 1.0 KB after brotli.
 
 ```toml
-libero = { version = "*", default-features = false, features = [
+libero = { version = "0.1", default-features = false, features = [
     "code-lang-rust",
     "full-polymorphism",
 ] }
 ```
 
-`native` is the third: it reaches elements through Blitz when you run under
-`dioxus-native`, instead of Dioxus's portable mounted handle, which cannot
-query a subtree or report focus.
+`native` reaches elements through Blitz when you run under `dioxus-native`.
+Dioxus's portable mounted handle cannot query a subtree or report focus.
 
 ## Where to go next
 
-[Styling](styling.md), [Theming](theming.md) and
-[Performance](performance.md) cover how the library works;
+[Styling](styling.md), [Theming](theming.md), [Localization](localization.md)
+and [Performance](performance.md) cover how the library works.
 [index.md](index.md) lists one page per component.

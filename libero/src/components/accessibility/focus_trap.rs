@@ -168,7 +168,7 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
 }
 
 /// A hidden placeholder that soaks up initial focus, then leaves the tab
-/// order once blurred. Mantine's `FocusTrap.InitialFocus` equivalent.
+/// order once blurred.
 #[component]
 pub fn FocusTrapInitialFocus() -> Element {
     let used = use_local_state(|| false);

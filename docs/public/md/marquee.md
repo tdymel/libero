@@ -125,7 +125,7 @@ Like every component, `Marquee` also takes the shared props `sx`, `class`,
 | `fade_size` | `&'static str` | How far the fade reaches in - `5%`. |
 
 The toggle's accessible name, `"Pause"`, is `MarqueeLabels::pause` in the
-[localization](theming.md#localization).
+[localization](localization.md).
 
 ## CSS variables
 

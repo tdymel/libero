@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Index: [index.md](index.md) - every other component's markdown page
-Description: The four principles behind libero, in order of priority - developer experience, accessibility, batteries included, simple yet modern - and where each shows in the code.
+Description: The four principles behind libero in order of priority (developer experience, accessibility, batteries included, simple yet modern) and where each shows in the code.
 
 Libero is a component library for Dioxus. Four principles decide what goes into
 it and how it is shaped, listed here in order of priority. Each section says what

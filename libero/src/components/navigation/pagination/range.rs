@@ -20,10 +20,6 @@ pub enum PaginationItem {
 
 /// Which page numbers to draw, and where the gaps go.
 ///
-/// Ours is MUI's range restated symmetrically; it differs from Mantine's only
-/// where Mantine's right-hand test is off by one against its left-hand one, and
-/// that difference is the invariant below.
-///
 /// **An ellipsis never hides exactly one page.** Hiding `9` behind `…` costs
 /// the same width as printing it, so the gap is only drawn where it saves
 /// something. That also fixes the rendered length at `2·siblings +

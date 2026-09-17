@@ -27,7 +27,7 @@ pub struct PaginationDefaults {
     pub siblings: u8,
     pub boundaries: u8,
     pub gap: Size,
-    /// Control box, in px. Mantine's scale plus an `xxl`.
+    /// Control box, in px.
     pub control_sizes: Sizes<u16>,
     pub font_sizes: Sizes<u16>,
     /// `ColorValue`, not a `&'static str`: a raw `"muted.4"` is declared

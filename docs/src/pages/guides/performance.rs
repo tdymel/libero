@@ -9,9 +9,9 @@ const RATIOS: [(&str, &str); 7] = [
     ("Text", "1.6x"),
     ("Flex", "2.1x"),
     ("Button", "2.4x"),
+    ("Sidebar", "4.7x"),
     ("NativeSelect", "6.1x"),
     ("Splitter", "8.2x"),
-    ("Sidebar", "4.7x"),
 ];
 
 /// Each row is `(what, cost, why it is worth knowing)`.
@@ -19,17 +19,17 @@ const COSTS: [(&str, &str, &str); 6] = [
     (
         "A component scope",
         "~300 ns",
-        "The floor for anything that is its own component - and the price of a memoization boundary.",
+        "The floor for anything that is its own component, and the price of a memoization boundary.",
     ),
     (
-        "A dynamic node - any {..} hole in rsx!",
+        "A dynamic node, any {..} hole in rsx!",
         "~400-600 ns",
-        "Paid whether or not it renders anything. Static markup is free: templates are const.",
+        "Paid whether or not it renders anything. Static markup is free, because templates are const.",
     ),
     (
         "An EventHandler props field",
         "~300 ns",
-        "Even when the caller never sets it - the default still allocates. Option<EventHandler<T>> costs ~95 ns.",
+        "Even when the caller never sets it, because the default allocates. Option<EventHandler<T>> costs ~95 ns.",
     ),
     (
         "An attribute through the builder",
@@ -44,7 +44,7 @@ const COSTS: [(&str, &str, &str); 6] = [
     (
         "A hook slot",
         "~51 ns",
-        "use_context, use_hook and use_drop are one each. Props field count, on the other hand, is free.",
+        "use_context, use_hook and use_drop are one each.",
     ),
 ];
 
@@ -67,40 +67,37 @@ pub fn PerformancePage() -> Element {
             markdown: "/md/performance.md",
             lead: rsx! {
                 Text {
-                    "Every number on this page was measured by ablation - removing a thing "
-                    "and taking the delta - rather than reasoned about or read off a timer. "
-                    "Timers inside a render lie in both directions: attributes are diffed "
-                    "after "
+                    "Every number on this page was measured by ablation: remove a thing and "
+                    "take the delta. Timers inside a render lie in both directions. "
+                    "Attributes are diffed after "
                     Code { source: "rsx!" }
                     " returns, so a probe around a render body misses them, and a dozen "
                     "nested probes inflated one component by 25%."
                 }
                 Text {
-                    "The short version: styling is not what costs, and neither is the size "
-                    "of a props struct. What costs is the shape of the tree - how many "
-                    "component scopes and dynamic nodes there are, and how much of it "
-                    "re-renders when something changes."
+                    "In short, neither styling nor the size of a props struct is what costs. "
+                    "The shape of the tree is: how many component scopes and dynamic nodes "
+                    "there are, and how much of it re-renders when something changes."
                 }
             },
             DocSection {
                 title: "What a component costs",
                 Text {
                     "A Libero component is one Dioxus component scope plus one styling "
-                    "pass. Measured against a component that renders a bare "
+                    "pass. Against a component that renders a bare "
                     Code { source: "span" }
-                    " and nothing else, the cheap ones - "
+                    " and nothing else, the cheap ones ("
                     Code { source: "Box" }
                     ", "
                     Code { source: "Text" }
                     ", "
                     Code { source: "Center" }
-                    " - land around 1.5x, and that cluster is the floor. Anything above it "
-                    "is paying for markup of its own: "
+                    ") land around 1.5x, and that cluster is the floor. Anything above it "
+                    "pays for its own markup. "
                     Code { source: "NativeSelect" }
-                    " renders a label, a trigger and a list; "
+                    " renders a label, a trigger and a list, and "
                     Code { source: "Sidebar" }
-                    " renders a bordered panel around a scroll area. The spread across the "
-                    "library:"
+                    " a bordered panel around a scroll area. The spread across the library:"
                 }
                 Flex {
                     direction: "row",
@@ -112,8 +109,8 @@ pub fn PerformancePage() -> Element {
                 }
                 Text {
                     "Ratios travel between machines; absolute nanoseconds do not. So these "
-                    "are an ordering - which components to look at first when a screen is "
-                    "slow - and not a budget."
+                    "are an ordering of which components to look at first when a screen is "
+                    "slow, not a budget."
                 }
             }
 
@@ -125,32 +122,31 @@ pub fn PerformancePage() -> Element {
                     " hashes to a class by its content, so a thousand elements styled alike "
                     "share one class and one CSS rule, built once. Per render, an unchanged "
                     Code { source: "sx" }
-                    " costs a hash comparison and nothing else - no CSS is re-rendered and "
-                    "no style attribute is diffed."
+                    " costs a hash comparison. No CSS is re-rendered and no style attribute "
+                    "is diffed."
                 }
                 Text {
-                    "Three things keep it that way, and all three are the styling page's "
-                    "advice for a different reason: hoist a constant style into a "
+                    "Three habits keep it that way, all also advised on the styling page. "
+                    "Hoist a constant style into a "
                     Code { source: "StaticSx" }
-                    " so it is built once per process and compared by pointer; switch "
+                    ", so it is built once per process and compared by pointer. Switch "
                     "variants with "
                     Code { source: "states" }
-                    " so every variant shares one class instead of minting one each; and "
-                    "for a genuinely unbounded value - a drag offset, a percentage - use "
+                    ", so every variant shares one class. For an unbounded value, such as a "
+                    "drag offset or a percentage, use "
                     Code { source: "Variables" }
-                    ", which writes a CSS custom property into the style attribute rather "
-                    "than a new class per distinct value."
+                    ", which writes a CSS custom property into the style attribute instead "
+                    "of a new class per value."
                 }
             }
 
             DocSection {
                 title: "Memoization boundaries",
                 Text {
-                    "A component scope is not just overhead - it is a boundary Dioxus stops "
-                    "at. While a component's props compare equal, its whole subtree is "
-                    "skipped. So a block of markup that only changes with one piece of "
-                    "state, sitting inside something that re-renders for other reasons, is "
-                    "often cheaper as its own component: one scope bought, a subtree saved. "
+                    "A component scope is also a boundary Dioxus stops at. While a "
+                    "component's props compare equal, its whole subtree is skipped. So "
+                    "markup that changes with one piece of state, inside something that "
+                    "re-renders for other reasons, is often cheaper as its own component. "
                     "Extracting the divider out of "
                     Code { source: "Splitter" }
                     " that way cost one scope and saved 27% of the component."
@@ -161,26 +157,25 @@ pub fn PerformancePage() -> Element {
                     Code { source: "Signal" }
                     "s and a "
                     Code { source: "use_callback" }
-                    " do; a bare closure never does, and neither does "
+                    " do. A bare closure never does, and neither does "
                     Code { source: "children" }
-                    " - two "
+                    ", because two "
                     Code { source: "Element" }
-                    "s compare by pointer, so a component that takes children can never "
-                    "memoize."
+                    "s compare by pointer. A component that takes children never memoizes."
                 }
                 CodeBlock { source: MEMOIZE, language: "rust" }
             }
 
             DocSection {
-                title: "What actually costs",
+                title: "What costs",
                 Text {
-                    "Per re-rendered instance, all by ablation. The surprise in this table "
-                    "is usually the second row: a "
+                    "Per re-rendered instance, all by ablation. The second row usually "
+                    "surprises. A "
                     Code { source: "{{..}}" }
                     " hole in "
                     Code { source: "rsx!" }
-                    " is paid for on every render even when the branch inside it renders "
-                    "nothing, while static markup around it is free."
+                    " is paid for on every render even when its branch renders nothing, "
+                    "while static markup around it is free."
                 }
                 DataList {
                     for (what, cost, note) in COSTS {
@@ -191,15 +186,16 @@ pub fn PerformancePage() -> Element {
                             },
                             Text {
                                 Code { source: cost }
-                                " - {note}"
+                                ". {note}"
                             }
                         }
                     }
                 }
                 Text {
                     "Props field count is free: nine extra optional fields on a component "
-                    "that does nothing else measured at zero. Only the EventHandler is "
-                    "expensive, and only because its default allocates."
+                    "that does nothing else measured at zero. Only the "
+                    Code { source: "EventHandler" }
+                    " is expensive, because its default allocates."
                 }
             }
 
@@ -212,13 +208,12 @@ pub fn PerformancePage() -> Element {
                 }
                 CodeBlock { source: MEASURE, language: "bash" }
                 Text {
-                    "Four rules make a run trustworthy, in the order of how much grief each "
-                    "one saves: price a thing by removing it, not by wrapping it in a "
-                    "timer; keep a control row in every run, so machine drift is visible; "
-                    "interleave the variants and keep a per-variant minimum, because "
-                    "sequential runs drift enough to invert a sign; and compare against a "
-                    "baseline you ran on the same machine, never against a number someone "
-                    "wrote down."
+                    "Four rules make a run trustworthy, most important first. Price a thing "
+                    "by removing it, not by wrapping it in a timer. Keep a control row in "
+                    "every run, so machine drift is visible. Interleave the variants and "
+                    "keep a per-variant minimum, because sequential runs drift enough to "
+                    "invert a sign. Compare against a baseline you ran on the same machine, "
+                    "never against a number someone wrote down."
                 }
             }
         }

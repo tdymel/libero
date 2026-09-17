@@ -87,6 +87,7 @@ md_pages! {
     Lightbox => "lightbox",
     List => "list",
     Loader => "loader",
+    Localization => "localization",
     Mark => "mark",
     Marquee => "marquee",
     Menu => "menu",

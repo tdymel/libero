@@ -144,7 +144,7 @@ Like every component, `Scroller` also takes the shared props `sx`, `class`,
 | `draggable` | `bool` | `false`. |
 
 The controls' names, `"Scroll backward"` / `"Scroll forward"`, are
-`ScrollerLabels` in the [localization](theming.md#localization).
+`ScrollerLabels` in the [localization](localization.md).
 
 ## CSS variables
 

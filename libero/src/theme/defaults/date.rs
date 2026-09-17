@@ -37,8 +37,7 @@ str_enum! {
         /// A month of days, with a heading that climbs to months and years.
         #[default]
         Full = "full",
-        /// One row of days, with buttons that page it - Mantine's
-        /// `MiniCalendar`.
+        /// One row of days, with buttons that page it.
         Mini = "mini",
     }
 }

@@ -106,7 +106,7 @@ Barbara Liskov, Margaret Hamilton".
 name is already visible beside the avatar, or it is announced twice.
 
 The chip's text is English by default. To translate it, set the
-[localization](theming.md#localization)'s `avatar`: `{n}` is the hidden count
+[localization](localization.md)'s `avatar`: `{n}` is the hidden count
 and `{names}` their names, so a language can put the count wherever it belongs,
 e.g. `AvatarLabels { count: "+{n}", more: "{n} weitere: {names}" }`.
 

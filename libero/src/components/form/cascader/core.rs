@@ -234,7 +234,7 @@ field_props! {
         /// The trigger's text. Empty shows `placeholder`.
         display: String,
         separator: String,
-        /// Mantine's `changeOnSelect`: a branch commits as well as expanding.
+        /// A branch commits as well as expanding.
         any_level: bool,
         /// Committing the path that is already committed clears it instead.
         allow_deselect: bool,

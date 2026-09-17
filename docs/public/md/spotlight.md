@@ -171,7 +171,7 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
 (`"80px"`), `max_list_height` (`"400px"`), `radius` (`Md`), `padding` (`"4px"`),
 `search_font_size` (`"1.125rem"`), `group_color` and `description_color`
 (`muted.7`). The words are `SpotlightLabels` (`label`, `placeholder`,
-`nothing_found`, `loading`) in the [localization](theming.md#localization).
+`nothing_found`, `loading`) in the [localization](localization.md).
 
 ## CSS variables
 

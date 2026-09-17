@@ -230,7 +230,7 @@ Like every component, `Carousel` also takes the shared props `sx`, `class`,
 | `control_color` | `ColorValue` | `muted.7` | The controls' glyph, and their focus ring. Change it with `control_background`. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
 
-The words are `CarouselLabels` in the [localization](theming.md#localization):
+The words are `CarouselLabels` in the [localization](localization.md):
 
 | Field | Default | Description |
 |---|---|---|

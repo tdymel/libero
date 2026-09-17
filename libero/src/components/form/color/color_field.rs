@@ -101,7 +101,7 @@ field_props! {
 }
 
 /// A text field holding a color, with a preview swatch, an eyedropper and a
-/// `ColorPicker` in a dropdown - Mantine's `ColorInput`.
+/// `ColorPicker` in a dropdown.
 ///
 /// Controlled: it renders `value` and asks for a new one through `oninput`.
 /// Typed text is kept as typed until it blurs; each time it parses, the color

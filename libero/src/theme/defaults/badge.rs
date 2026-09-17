@@ -35,7 +35,7 @@ pub struct BadgeDefaults {
     /// The step of [`Self::radii`] a badge takes when a call site names none.
     pub radius: Size,
     /// Uppercase is most of what separates a badge from a chip at a glance.
-    /// Mantine hardcodes it with no prop at all; here a project flips it once.
+    /// A project turns it off here, once.
     pub text_transform: &'static str,
     /// Opens up the uppercase, which sets tighter than lowercase.
     pub letter_spacing: &'static str,

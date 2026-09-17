@@ -1,7 +1,6 @@
 use crate::components::Options;
 
-/// One entry of a `Cascader`'s tree - Mantine's `CascaderOption`, over any
-/// value a `Select` could hold.
+/// One entry of a `Cascader`'s tree, over any value a `Select` could hold.
 ///
 /// `value` is what the field holds, `label` what it shows. Values are unique
 /// across the whole tree, not just among siblings: the cascader finds the path

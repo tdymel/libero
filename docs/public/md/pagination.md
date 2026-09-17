@@ -84,7 +84,7 @@ fn Demo() -> Element {
 
 ## Accessible names
 
-Every string lives in the [localization](theming.md#localization)'s
+Every string lives in the [localization](localization.md)'s
 `pagination`, which is English by default. Its page names are templates, so a
 language puts `{n}` wherever it belongs. `label` is the escape hatch for a name
 a template cannot express. It sees the five

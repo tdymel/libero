@@ -58,8 +58,7 @@ field_props! {
         /// selection was cleared - by the x, or by `allow_deselect`.
         #[props(default)]
         onchange: Option<EventHandler<Option<T>>>,
-        /// Mantine's `changeOnSelect`: a branch commits its own value as well
-        /// as expanding. Off, only a leaf can be picked.
+        /// A branch commits its own value as well as expanding. Off, only a leaf can be picked.
         #[props(default)]
         any_level: Option<bool>,
         /// Picking the committed option again clears it. Off by default:
@@ -122,7 +121,7 @@ field_props! {
 /// `value` - any `T` a `Select` could hold; what it adds is the path to that
 /// option, which it finds in `data` itself and shows in the trigger.
 ///
-/// It takes its own `CascaderOption<T>`, Mantine's shape. Only this shell is
+/// It takes its own `CascaderOption<T>`. Only this shell is
 /// generic: the engine under it walks the tree by index path and never sees a
 /// `T`, so a second `T` costs a few small functions, not a second engine. Unlike `Tree` it is a
 /// field: it sits in a frame with a label, it posts, it validates, and focus

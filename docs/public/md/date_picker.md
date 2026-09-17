@@ -138,7 +138,7 @@ Props that only some value types use are ignored by the rest.
 
 ## Theme
 
-`Localization::date` (`DateLocale`, see [localization](theming.md#localization))
+`Localization::date` (`DateLocale`, see [localization](localization.md))
 holds the month and weekday names and the button labels - one place to
 translate. The provider's `formats` (`Formats::AMERICAN` by default, or
 `Formats::GERMAN`) hold the first weekday and the date and time patterns.

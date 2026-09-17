@@ -17,7 +17,8 @@ categories = ["gui", "wasm", "web-programming"]
 # of the crates.io 0.7.10 release. `dx` must come from the same rev (see
 # ci.yml's e2e job), or CLI and app speak different wire protocols. Unwind
 # back to a crates.io version before any real release: a git dep blocks
-# publishing to crates.io.
+# publishing to crates.io. The unwind also updates the dioxus version in the
+# Getting started page (`getting_started.rs` and its md), so the two move together.
 dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "mounted", "router", "logger"] }
 fast_qr = { version = "0.13.1", default-features = false, features = ["svg"] }
 libero-macros = { path = "../libero-macros", version = "0.1.0" }

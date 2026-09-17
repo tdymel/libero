@@ -77,7 +77,7 @@ opens, or `Burger` warns. Nothing sets it internally.
 **The accessible name is the localization's.** With `open` set it is
 `toggle` ("Toggle navigation") in both states, since `aria-expanded` already
 announces the state; unset, it is `open` ("Open navigation"). Translate it
-once in the [localization](theming.md#localization)'s `BurgerLabels`, or per
+once in the [localization](localization.md)'s `BurgerLabels`, or per
 burger with `label`:
 
 ```rust,ignore

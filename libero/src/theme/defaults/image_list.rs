@@ -30,8 +30,8 @@ str_enum! {
         /// `standard`, plus `ImageItem::rows`: a cell may take more than one
         /// row, and the quilt's rows stay equal.
         Quilted = "quilted",
-        /// `standard`, with every second cell shortened to 70% and centred -
-        /// the alternating rhythm MUI calls woven. Decoration, and it crops.
+        /// `standard`, with every second cell shortened to 70% and centred for
+        /// an alternating rhythm. Decoration, and it crops.
         Woven = "woven",
     }
 }

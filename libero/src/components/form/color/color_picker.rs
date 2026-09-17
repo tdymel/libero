@@ -161,7 +161,7 @@ base_props! {
 }
 
 /// A saturation panel, a hue slider, an optional alpha slider with a preview,
-/// and optional preset swatches - Mantine's `ColorPicker`.
+/// and optional preset swatches.
 ///
 /// Controlled: it renders `value` and asks for a new one through `oninput`.
 /// The value is a [`ColorCode`], which converts to any CSS form afterwards.

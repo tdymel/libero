@@ -52,10 +52,9 @@ pub struct LoaderDefaults {
     pub variant: LoaderVariant,
     pub size: Size,
     pub color: Color,
-    /// `xs`..`xl` are Mantine's own numbers; `xxl` continues the ramp, since
-    /// our scale has a sixth step and theirs does not. px throughout: a
-    /// spinner is a glyph at a fixed optical weight, not text - it does not
-    /// follow a reader's font size the way `Badge`'s label does.
+    /// px throughout: a spinner is a glyph at a fixed optical weight, not
+    /// text, so it does not follow a reader's font size the way `Badge`'s
+    /// label does.
     pub sizes: Sizes<&'static str>,
 }
 

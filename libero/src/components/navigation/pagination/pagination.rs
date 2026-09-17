@@ -31,8 +31,8 @@ use super::range::{PaginationItem, pagination_range};
 /// caller writing the exhaustive match would get a dead branch.
 ///
 /// `current` rides on [`Page`](Self::Page) rather than being a sixth variant
-/// because it is the same control with a different name, which is the whole of
-/// MUI's asymmetry: the current page is `Page 4`, every other `Go to page 4`.
+/// because it is the same control with a different name: the current page is
+/// `Page 4`, every other `Go to page 4`.
 /// `aria-current` already says "current", so repeating "go to" on the page you
 /// are on is a lie.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

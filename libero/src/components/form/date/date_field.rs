@@ -22,8 +22,7 @@ date_props! {
 }
 
 /// One text field for every date and time value, with the [`DatePicker`](super::DatePicker)
-/// its type calls for in a dropdown - Mantine's `DateInput`, `TimeInput`,
-/// `DateTimePicker` and `DatePickerInput` in one.
+/// its type calls for in a dropdown.
 ///
 /// Controlled: it renders `value` and asks for a new one through `onchange`.
 /// Typed text stays as typed until the field blurs or Enter is pressed; then

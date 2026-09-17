@@ -37,7 +37,7 @@ pub struct IndicatorSizeLevel {
 pub struct IndicatorDefaults {
     pub size: Size,
     /// A dot that is not about something the reader should look at is not
-    /// worth drawing, so the default is the error role - Mantine's too.
+    /// worth drawing, so the default is the error role.
     pub color: Color,
     /// The step of [`Self::radii`] a dot takes when a call site names none.
     pub radius: Size,

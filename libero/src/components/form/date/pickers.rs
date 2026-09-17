@@ -17,8 +17,8 @@ date_props! {
     picker DayPickerProps(NaiveDate, NaiveDate): limits, exclude_date, allow_deselect, columns, calendar, today
 }
 
-/// A month of days to pick one from - Mantine's `DatePicker`, and what
-/// `DatePicker` draws for a `NaiveDate`.
+/// A month of days to pick one from, and what `DatePicker` draws for a
+/// `NaiveDate`.
 ///
 /// Controlled: it renders `value` and asks for a new one through `onchange`.
 /// The month shown is its own state: it opens on `value`'s month, else
@@ -58,8 +58,7 @@ date_props! {
     picker DateRangePickerProps(DateRange<NaiveDate>, NaiveDate): limits, exclude_date, columns, today
 }
 
-/// Two months side by side to pick a start and an end from - Mantine's
-/// `DatePicker type="range"`. The first pick starts a new range and the second
+/// Two months side by side to pick a start and an end from. The first pick starts a new range and the second
 /// sets its end, swapped in when it comes first. While the end is missing, the
 /// days up to the one under the mouse preview the range.
 #[component]
@@ -89,8 +88,7 @@ date_props! {
     picker MonthPickerProps(NaiveDate, NaiveDate): limits, today
 }
 
-/// The months of a year to pick one from - Mantine's `MonthPicker`, and
-/// `DatePicker` at `DateLevel::Month`. The heading climbs to a decade of years.
+/// The months of a year to pick one from, and `DatePicker` at `DateLevel::Month`. The heading climbs to a decade of years.
 /// A month is held as its first day.
 #[component]
 pub fn MonthPicker(props: MonthPickerProps) -> Element {
@@ -118,8 +116,7 @@ date_props! {
     picker YearPickerProps(NaiveDate, NaiveDate): limits, today
 }
 
-/// A decade of years to pick one from - Mantine's `YearPicker`, and
-/// `DatePicker` at `DateLevel::Year`. A year is held as its January 1.
+/// A decade of years to pick one from, and `DatePicker` at `DateLevel::Year`. A year is held as its January 1.
 #[component]
 pub fn YearPicker(props: YearPickerProps) -> Element {
     NaiveDate::picker(PickerArgs {

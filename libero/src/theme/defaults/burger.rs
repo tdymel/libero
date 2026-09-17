@@ -26,12 +26,10 @@ pub const BURGER_TRANSITION_TIMING: CssVar = CssVar::new("--lsx-burger-transitio
 pub struct BurgerDefaults {
     /// The glyph's width and height, not the button's.
     pub size: Size,
-    /// `xs`..`xl` are Mantine's five, adopted exactly. `xxl` is ours,
-    /// continuing the ramp past the widest step Mantine offers.
+    /// The glyph's size per step, in px.
     pub sizes: Sizes<u16>,
-    /// Motion is a theme decision, not a per-call-site one - Mantine's
-    /// `transitionDuration`/`transitionTimingFunction` props are declined.
-    /// An off-scale one-off goes through `sx`.
+    /// Motion is a theme decision, not a per-call-site one, so there is no
+    /// prop for it. An off-scale one-off goes through `sx`.
     pub transition_duration: &'static str,
     pub transition_timing: &'static str,
 }

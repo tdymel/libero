@@ -21,7 +21,7 @@ pub struct BlockquoteSizeLevel {
     pub padding_y: &'static str,
     pub padding_x: &'static str,
     /// The accent bar's thickness. Scales with `size` so the frame stays
-    /// proportional at `xxl`, rather than Mantine's flat 3px.
+    /// proportional at `xxl`.
     pub border_width: &'static str,
 }
 
