@@ -138,6 +138,25 @@ fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f6
     Some((min_x, min_y, max_x - min_x, max_y - min_y))
 }
 
+/// crates.io Blitz stops marking ancestors at a stale dirty bit, so a clock
+/// tick's restyle can be skipped and freeze a transition (Blitz #789, todo 880).
+/// libero heals at a flush, a read or a pointer move; a tick has none of those.
+fn heal_dirty_bits(doc: &BaseDocument) {
+    let mut dirty = Vec::new();
+    doc.visit(|id, node| {
+        if node.has_dirty_descendants() {
+            dirty.push(id);
+        }
+    });
+    for id in dirty {
+        let mut parent = doc.get_node(id).and_then(|node| node.parent);
+        while let Some(node) = parent.and_then(|id| doc.get_node(id)) {
+            node.set_dirty_descendants();
+            parent = node.parent;
+        }
+    }
+}
+
 fn viewport(scheme: ColorScheme) -> Viewport {
     Viewport::new(VIEWPORT.0, VIEWPORT.1, 1.0, scheme)
 }
@@ -211,6 +230,7 @@ impl Page {
     /// Advances the animation clock, so a CSS transition reaches its end.
     pub fn advance(&mut self, seconds: f64) {
         self.time += seconds;
+        heal_dirty_bits(&self.doc.inner.borrow());
         self.settle();
     }
 

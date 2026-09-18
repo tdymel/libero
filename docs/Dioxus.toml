@@ -6,8 +6,9 @@ public_dir = "public"
 
 [web]
 # Emits brotli siblings (`.br`, no gzip) for the wasm and assets in release
-# builds: the main wasm is 1.12MB raw against 300KB brotli. The host must be
-# configured to serve them - `serve_dist.py` is the local equivalent.
+# builds: the main wasm is 6.76 MB raw against 1.58 MB brotli (2026-09-27).
+# The host must be configured to serve them - `serve_dist.py` is the local
+# equivalent.
 pre_compress = true
 
 [web.app]

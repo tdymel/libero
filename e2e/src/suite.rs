@@ -86,6 +86,8 @@ pub struct Suite {
     viewports: Vec<Viewport>,
     tab_budget: usize,
     reduced_motion: bool,
+    /// Visible once the page is at rest; the battery waits for it first.
+    ready: Option<&'static str>,
 }
 
 impl Suite {
@@ -109,6 +111,7 @@ impl Suite {
             viewports: Viewport::ALL.to_vec(),
             tab_budget: 10,
             reduced_motion: false,
+            ready: None,
         }
     }
 
@@ -273,6 +276,13 @@ impl Suite {
         self
     }
 
+    /// Wait for `selector` to be visible before the battery, for a rest state
+    /// that lands after the first render (a broken picture's fallback).
+    pub fn ready(mut self, selector: &'static str) -> Self {
+        self.ready = Some(selector);
+        self
+    }
+
     pub fn tab_budget(mut self, budget: usize) -> Self {
         self.tab_budget = budget;
         self
@@ -335,6 +345,11 @@ impl Suite {
 
     async fn battery(&self, fixture: &Fixture) -> anyhow::Result<()> {
         let page = &fixture.page;
+        if let Some(ready) = self.ready {
+            crate::wait::for_visible(page, ready)
+                .await
+                .map_err(|e| e.context("waiting for the page to come to rest"))?;
+        }
 
         // Contrast and the ARIA-validity rules, at rest.
         contrast::assert_clean_except(page, self.root, self.waivers).await?;

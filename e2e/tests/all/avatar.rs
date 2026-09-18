@@ -6,7 +6,9 @@ use e2e::{Fixture, Suite, Viewport, wait};
 
 #[test]
 fn it_meets_the_baseline() {
+    // The fallback lands with the 404: axe and the baseline see it, not the `<img>` (todo 703).
     Suite::new("avatar", "/avatar")
+        .ready("#broken:not(:has(img))")
         .focusable("#group [tabindex='0']")
         .run();
 }

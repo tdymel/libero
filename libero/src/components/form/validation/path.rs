@@ -272,9 +272,9 @@ macro_rules! path {
         fn typed<R, T>(
             _: fn(&R) -> &T,
             path: &'static str,
-            steps: &'static [$crate::components::form::Step],
-        ) -> $crate::components::form::FieldPath<R, T> {
-            $crate::components::form::FieldPath::from_parts(path, steps)
+            steps: &'static [$crate::components::Step],
+        ) -> $crate::components::FieldPath<R, T> {
+            $crate::components::FieldPath::from_parts(path, steps)
         }
         fn get(value: &dyn ::std::any::Any) -> ::std::option::Option<&dyn ::std::any::Any> {
             value
@@ -288,10 +288,10 @@ macro_rules! path {
                 .downcast_mut::<$root>()
                 .map(|root| &mut root.$first $(.$rest)* as &mut dyn ::std::any::Any)
         }
-        const STEPS: &[$crate::components::form::Step] = &[$crate::components::form::Step {
+        const STEPS: &[$crate::components::Step] = &[$crate::components::Step {
             get,
             get_mut,
-            key: $crate::components::form::StepKey::Name(concat!(stringify!($first) $(, ".", stringify!($rest))*)),
+            key: $crate::components::StepKey::Name(concat!(stringify!($first) $(, ".", stringify!($rest))*)),
         }];
         typed(
             |root: &$root| &root.$first $(.$rest)*,
