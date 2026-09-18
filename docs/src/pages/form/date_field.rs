@@ -81,7 +81,7 @@ pub fn DateFieldPage() -> Element {
                     prop("max", "V::Bound").doc("The latest value accepted. For a range, the latest end."),
                     prop("exclude_date", "Callback<NaiveDate, bool>").doc("Days that are not accepted, on top of `min` and `max`. Ignored for a time, a month and a year."),
                     prop("today", "NaiveDate").doc("The day marked as today, and the year used when typed text has none. Unset, the platform clock answers after mount."),
-                    prop("variant", "TimePickerVariant").default("analog").doc("Columns of numbers, or a clock face, for values with a time."),
+                    prop("variant", "TimePickerVariant").default("analog").doc("A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time."),
                     prop("with_seconds", "bool").default("false").doc("Seconds in the text and on the clock."),
                     prop("step", "u8").default("5").doc("Minutes between the offered minutes."),
                     prop("twelve_hour", "bool").doc("A 12-hour clock with AM and PM. Defaults to whether the time format is one."),

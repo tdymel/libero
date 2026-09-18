@@ -26,10 +26,10 @@ and no turbofish.
 | `V` | Draws | `min` / `max` |
 |---|---|---|
 | `NaiveDate` | a month of days, or with `level` the months of a year or a decade of years | `NaiveDate` |
-| `NaiveTime` | an analog clock face, or digital columns | `NaiveTime` |
-| `NaiveDateTime` | the day, then the time, with a switch between them | `NaiveDateTime` |
+| `NaiveTime` | an analog clock face, or a digital clock | `NaiveTime` |
+| `NaiveDateTime` | the day, then the time, under tabs between them | `NaiveDateTime` |
 | `DateRange<NaiveDate>` | two months, and the second pick ends the range | `NaiveDate` |
-| `DateRange<NaiveDateTime>` | start then end, each a day and a time | `NaiveDateTime` |
+| `DateRange<NaiveDateTime>` | the days, then the start time, then the end time, under three tabs | `NaiveDateTime` |
 
 With `calendar: "mini"` a day or a date-time is picked from one row of
 `days` days instead of a month. Each day shows its
@@ -99,17 +99,25 @@ Page Up / Page Down move `days` days. The two buttons page the row by `days`.
 
 The clock keys:
 
-| Key | Analog face (one tab stop) | Digital column (one tab stop each) |
+| Key | Analog face (one tab stop) | Digital column (a spinbutton, one tab stop each) |
 |---|---|---|
-| Arrow Up / Right | the hand forward by an hour or `step` minutes | Up: the option above |
-| Arrow Down / Left | the hand back | Down: the option below |
-| Home / End | - | the first / last option |
-| Enter | from the hour to the minute | picks |
+| Arrow Up / Right | the hand forward by an hour or `step` minutes | Up: a step forward |
+| Arrow Down / Left | the hand back | Down: a step back |
+| Page Up / Page Down | - | a bigger step |
+| Home / End | - | the first / last value |
+| Digits | - | pick; a filled column moves on to the next |
+| Enter | from the hour to the minute | to the next column |
 | Tab | to the next control | to the next column |
 
-The arrows on the face change the value at once and skip what `min` and `max`
-rule out. A date-time picks the day first, and picking it moves focus into the
-clock.
+The keys change the value at once and skip what `min` and `max` rule out. The
+wheel and a drag turn a digital column too, and a press on the value above or
+below picks it.
+
+A date-time's day and time are tabs above the picker, and picking the day moves
+focus into the clock. A date-time range has three tabs: the days, the start time
+and the end time. Each shows its value once picked, such as `12–14 Oct` or
+`09:00`, and each step moves on to the next when it is complete. The start and
+the end may be on different days.
 
 ## Props
 
@@ -127,7 +135,7 @@ clock.
 | `columns` | `usize` | `1, or 2 for a range` | Months side by side, for a day or a range of days. |
 | `calendar` | `CalendarVariant` | `full` | A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time. |
 | `days` | `usize` | `7` | Days in the mini calendar's row. |
-| `variant` | `TimePickerVariant` | `analog` | Columns of numbers or a clock face, for values with a time. |
+| `variant` | `TimePickerVariant` | `analog` | A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time. |
 | `with_seconds` | `bool` | `false` | A seconds column. Digital only. |
 | `step` | `u8` | `5` | Minutes between the offered minutes. |
 | `twelve_hour` | `bool` | `formats` | A 12-hour clock with AM and PM. Defaults to whether `Formats::time` is one. |

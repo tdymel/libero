@@ -3,11 +3,11 @@ use dioxus::prelude::*;
 use chrono::{NaiveTime, Timelike};
 
 use super::{
-    calendar::use_focus_after_render,
     date_value::{PickerArgs, PickerOptions, Sealed},
     format::uses_twelve_hours,
     parse_time::MIDNIGHT,
     props::date_props,
+    spin_column::{SpinAt, SpinColumn, SpinOption},
 };
 use crate::{
     components::{
@@ -55,23 +55,49 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .gap("8px")
         .font_size(DATE_PICKER_FONT_SIZE.value())
-        .selector("& > [data-slot='columns']", sx().display("flex").gap("4px"))
+        // A digital clock: `HH:MM`, each number between its faded neighbours.
         .selector(
-            "& [data-slot='column']",
+            "& > [data-slot='columns']",
             sx().display("flex")
-                .flex_direction("column")
-                .gap("2px")
-                .padding("2px")
-                .overflow_y("auto")
-                .max_height(format!("calc(7 * {day})")),
+                .align_items("center")
+                .justify_content("center")
+                // Room for the focus ring, clear of the separators and an edge.
+                .gap("6px")
+                .padding("4px")
+                .with("font-variant-numeric", "tabular-nums")
+                .white_space("nowrap"),
         )
         .selector(
-            "& [data-slot='option']",
-            button
-                .clone()
-                .min_width(format!("calc(1.5 * {day})"))
-                .min_height(day.clone())
-                .height(day.clone()),
+            "& [data-slot='spin']",
+            sx().display("flex")
+                .flex_direction("column")
+                .align_items("center")
+                .min_width(format!("calc(1.25 * {day})"))
+                .padding("2px 6px")
+                .border_radius(SizeCss::RADIUS.value(Size::Sm))
+                .line_height("1.25")
+                .cursor("ns-resize")
+                // A touch drags the column rather than scrolling the page.
+                .touch_action("none")
+                .user_select("none")
+                .hover(sx().background("muted.1")),
+        )
+        .selector(
+            "& [data-slot='spin'] > [data-slot='value']",
+            sx().font_size("1.75em").font_weight("500"),
+        )
+        .selector(
+            "& [data-slot='spin'] > [data-slot='neighbour']",
+            sx().min_height("1.25em").color("text-dimmed").cursor("pointer"),
+        )
+        .selector("& [data-slot='spin']:focus-visible", focus_ring_sx())
+        .selector(
+            "& [data-slot='spin']:focus-visible > [data-slot='value']",
+            sx().color("primary.6"),
+        )
+        .selector(
+            "& [data-slot='separator']",
+            sx().font_size("1.75em").font_weight("500").color("text-dimmed"),
         )
         .selector(
             "& > [data-slot='readout']",
@@ -241,6 +267,10 @@ pub(super) struct ClockProps {
     sx: Input<Sx>,
     states: Input<States>,
     attributes: Vec<Attribute>,
+    /// Called once the last part is set: the last hand picked, or Enter on
+    /// the last column. A date-time range moves on to its next step.
+    #[props(default)]
+    oncomplete: Option<Callback<()>>,
 }
 
 /// A column of the digital variant.
@@ -252,15 +282,22 @@ enum Column {
     Meridiem,
 }
 
-/// One option of a digital column. Plain values only: what a click picks is
-/// worked out from the column and the index, so the options do not change
-/// when another column's value does.
-#[derive(Clone, Copy, PartialEq)]
-struct Choice {
-    /// Also its key: labels are unique within a column.
-    label: &'static str,
-    selected: bool,
-    disabled: bool,
+impl Column {
+    const ALL: [Self; 4] = [Self::Hours, Self::Minutes, Self::Seconds, Self::Meridiem];
+
+    fn named(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|column| column.name() == name)
+    }
+
+    /// Its `data-column`.
+    fn name(self) -> &'static str {
+        match self {
+            Self::Hours => "Hours",
+            Self::Minutes => "Minutes",
+            Self::Seconds => "Seconds",
+            Self::Meridiem => "Meridiem",
+        }
+    }
 }
 
 /// `00` to `59`, so a pick allocates no label.
@@ -291,6 +328,7 @@ struct ClockView {
     step: u8,
     focusable: bool,
     hand: Signal<Hand>,
+    oncomplete: Option<Callback<()>>,
 }
 
 impl ClockView {
@@ -404,6 +442,16 @@ impl ClockView {
         }
     }
 
+    /// On to the next hand, or complete after the last.
+    fn advance(self) {
+        let mut hand = self.hand;
+        match (self.after(hand()), self.oncomplete) {
+            (Some(next), _) => hand.set(next),
+            (None, Some(oncomplete)) => oncomplete.call(()),
+            (None, None) => {}
+        }
+    }
+
     /// A digital option picked by its column and index.
     fn pick(self, column: Column, index: usize) {
         let base = self.base;
@@ -420,13 +468,13 @@ impl ClockView {
         self.emit(next);
     }
 
-    /// `handles` are the hours, minutes, seconds and meridiem columns.
+    /// A digital clock: a spinbutton each for the hours, the minutes, the
+    /// seconds and AM/PM. `pick` gets a column's picked index, `ondone` the
+    /// column Enter or typing has finished.
     fn digital_view(
         self,
-        handles: [ElementHandle; 4],
-        active: Signal<Option<(Column, usize)>>,
-        focus_request: Signal<Option<String>>,
-        pick: Callback<(Column, usize)>,
+        pick: Callback<(&'static str, usize)>,
+        ondone: Callback<&'static str>,
     ) -> Element {
         let ClockView {
             names,
@@ -439,26 +487,31 @@ impl ClockView {
             focusable,
             ..
         } = self;
-        let [
-            hours_column,
-            minutes_column,
-            seconds_column,
-            meridiem_column,
-        ] = handles;
+        // An empty column steps from `base`; a set one shows its value.
+        let place = |index: usize, exact: bool| match (value, exact) {
+            (None, _) => SpinAt::Empty(index),
+            (Some(_), true) => SpinAt::At(index),
+            (Some(_), false) => SpinAt::Past(index),
+        };
         let column = move |column: Column,
-                           label: Option<&'static str>,
-                           handle: ElementHandle,
-                           choices: Vec<Choice>| {
+                           label: String,
+                           options: Vec<SpinOption>,
+                           at: SpinAt,
+                           text: &'static str,
+                           page: usize| {
             rsx! {
-                ClockColumn {
-                    column,
+                SpinColumn {
+                    column: column.name(),
                     label,
-                    handle,
-                    choices,
+                    options,
+                    at,
+                    text: if value.is_some() { text } else { "--" },
+                    // Round like a clock's digits; AM and PM just sit apart.
+                    wrap: column != Column::Meridiem,
+                    page,
                     focusable,
-                    active,
-                    focus_request,
                     onpick: pick,
+                    ondone,
                 }
             }
         };
@@ -466,58 +519,69 @@ impl ClockView {
             .map(|index| {
                 let label = self.hour_label(index);
                 let hour = self.hour_of(label);
-                Choice {
-                    label: TWO_DIGITS[label as usize],
-                    selected: value.is_some_and(|value| value.hour() == hour),
+                SpinOption {
+                    text: TWO_DIGITS[label as usize],
                     disabled: !self.within(at(hour, 0, 0), at(hour, 59, 59)),
                 }
             })
             .collect();
+        let hour_index = (base.hour() % if twelve { 12 } else { 24 }) as usize;
+        let hour_text = TWO_DIGITS[self.hour_label(hour_index) as usize];
         let minutes = (0..60u32)
             .step_by(step as usize)
-            .map(|minute| Choice {
-                label: TWO_DIGITS[minute as usize],
-                selected: value.is_some_and(|value| value.minute() == minute),
+            .map(|minute| SpinOption {
+                text: TWO_DIGITS[minute as usize],
                 disabled: !self.within(at(base.hour(), minute, 0), at(base.hour(), minute, 59)),
             })
             .collect();
+        let minute = base.minute();
+        let step = u32::from(step);
+        let minutes_at = place((minute / step) as usize, minute % step == 0);
         let seconds = with_seconds.then(|| {
-            let choices = (0..60u32)
+            let options = (0..60u32)
                 .map(|second| {
                     let time = at(base.hour(), base.minute(), second);
-                    Choice {
-                        label: TWO_DIGITS[second as usize],
-                        selected: value.is_some_and(|value| value.second() == second),
+                    SpinOption {
+                        text: TWO_DIGITS[second as usize],
                         disabled: !self.within(time, time),
                     }
                 })
                 .collect();
-            column(
-                Column::Seconds,
-                Some(names.seconds_label),
-                seconds_column,
-                choices,
-            )
+            let second = base.second() as usize;
+            rsx! {
+                span { "data-slot": "separator", "aria-hidden": "true", ":" }
+                {column(Column::Seconds, names.seconds_label.to_string(), options, place(second, true), TWO_DIGITS[second], 15)}
+            }
         });
         let meridiem = twelve.then(|| {
-            let choices = vec![
-                Choice {
-                    label: names.am,
-                    selected: value.is_some() && !pm,
+            let options = vec![
+                SpinOption {
+                    text: names.am,
                     disabled: self.half(false).is_none(),
                 },
-                Choice {
-                    label: names.pm,
-                    selected: value.is_some() && pm,
+                SpinOption {
+                    text: names.pm,
                     disabled: self.half(true).is_none(),
                 },
             ];
-            column(Column::Meridiem, None, meridiem_column, choices)
+            let text = if pm { names.pm } else { names.am };
+            // Named by what it holds: no locale word for the half of the day.
+            let label = format!("{}/{}", names.am, names.pm);
+            column(
+                Column::Meridiem,
+                label,
+                options,
+                place(pm as usize, true),
+                text,
+                1,
+            )
         });
+        let minutes_page = (15 / step).max(1) as usize;
         rsx! {
             div { "data-slot": "columns",
-                {column(Column::Hours, Some(names.hours_label), hours_column, hours)}
-                {column(Column::Minutes, Some(names.minutes_label), minutes_column, minutes)}
+                {column(Column::Hours, names.hours_label.to_string(), hours, place(hour_index, true), hour_text, 3)}
+                span { "data-slot": "separator", "aria-hidden": "true", ":" }
+                {column(Column::Minutes, names.minutes_label.to_string(), minutes, minutes_at, TWO_DIGITS[minute as usize], minutes_page)}
                 {seconds}
                 {meridiem}
             }
@@ -599,7 +663,7 @@ impl ClockView {
         if has_shortcut_modifier(&event) {
             return;
         }
-        let mut hand = self.hand;
+        let hand = self.hand;
         let step = self.step_of(hand());
         let page = match hand() {
             Hand::Hour => 3,
@@ -629,9 +693,7 @@ impl ClockView {
             }
             Key::Enter => {
                 event.prevent_default();
-                if let Some(next) = self.after(hand()) {
-                    hand.set(next);
-                }
+                self.advance();
                 return;
             }
             _ => return,
@@ -878,40 +940,41 @@ pub(super) fn Clock(props: ClockProps) -> Element {
         step: props.step.unwrap_or(theme.time_picker.step).clamp(1, 30),
         focusable: props.focusable,
         hand,
+        oncomplete: props.oncomplete,
     };
     let root = use_element();
-    let hours_column = use_element();
-    let minutes_column = use_element();
-    let seconds_column = use_element();
-    let meridiem_column = use_element();
-    // Once each column mounts, its picked option scrolls to the top.
-    use_effect(move || {
-        for column in [hours_column, minutes_column, seconds_column] {
-            scroll_picked_into_view(column);
-        }
-    });
-    // The digital option the keyboard is on.
-    let active = use_signal(|| None::<(Column, usize)>);
-    let focus_request = use_focus_after_render(root);
 
     // One identity across renders, so the columns' props compare equal and a
     // pick in one column skips the others.
-    let pick = use_callback(move |(column, index): (Column, usize)| clock.pick(column, index));
+    let pick = use_callback(move |(name, index): (&'static str, usize)| {
+        if let Some(column) = Column::named(name) {
+            clock.pick(column, index);
+        }
+    });
+    // Enter, or typing that fills a column, moves on to the next, as a native
+    // time input; after the last the time is complete.
+    let oncomplete = props.oncomplete;
+    let ondone = use_callback(move |name: &'static str| {
+        let later = Column::ALL
+            .into_iter()
+            .skip_while(|column| column.name() != name);
+        let next = later.skip(1).find_map(|column| {
+            root.query_selector(&format!("[data-column='{}']", column.name()))
+                .ok()
+        });
+        match (next, oncomplete) {
+            (Some(next), _) => {
+                let _ = next.focus();
+            }
+            (None, Some(oncomplete)) => oncomplete.call(()),
+            (None, None) => {}
+        }
+    });
     let face = use_element();
     let drag = use_face_drag(clock, face);
 
     let body = match props.variant {
-        TimePickerVariant::Digital => clock.digital_view(
-            [
-                hours_column,
-                minutes_column,
-                seconds_column,
-                meridiem_column,
-            ],
-            active,
-            focus_request,
-            pick,
-        ),
+        TimePickerVariant::Digital => clock.digital_view(pick, ondone),
         TimePickerVariant::Analog => clock.analog_view(face, drag),
     };
 
@@ -981,9 +1044,8 @@ fn use_face_drag(clock: ClockView, face: ElementHandle) -> Drag {
     let finish = move |clock: ClockView| {
         let picked = press.cloned().is_some_and(|press| press.picked);
         { press }.set(None);
-        let mut hand = clock.hand;
-        if let Some(next) = clock.after(hand()).filter(|_| picked) {
-            hand.set(next);
+        if picked {
+            clock.advance();
         }
     };
     let onstart = use_callback(move |start: DragStart| {
@@ -1033,100 +1095,6 @@ fn use_face_drag(clock: ClockView, face: ElementHandle) -> Drag {
     })
 }
 
-/// A column of the digital variant. Its own scope: a pick in another column
-/// leaves its props equal, so it skips the re-render.
-#[derive(Props, Clone, PartialEq)]
-struct ClockColumnProps {
-    column: Column,
-    #[props(!optional)]
-    label: Option<&'static str>,
-    handle: ElementHandle,
-    choices: Vec<Choice>,
-    focusable: bool,
-    /// The option the keyboard is on, in whichever column.
-    active: Signal<Option<(Column, usize)>>,
-    /// A selector the clock focuses after the next render.
-    focus_request: Signal<Option<String>>,
-    onpick: Callback<(Column, usize)>,
-}
-
-/// One tab stop: the option the keyboard is on, else the picked one, else the
-/// first enabled. Up and Down, Home and End move within the column.
-#[component]
-fn ClockColumn(props: ClockColumnProps) -> Element {
-    let ClockColumnProps {
-        column,
-        label,
-        handle,
-        choices,
-        focusable,
-        mut active,
-        mut focus_request,
-        onpick,
-    } = props;
-    let enabled: Vec<usize> = choices
-        .iter()
-        .enumerate()
-        .filter(|(_, choice)| !choice.disabled)
-        .map(|(index, _)| index)
-        .collect();
-    let stop = active()
-        .filter(|(active, index)| *active == column && enabled.contains(index))
-        .map(|(_, index)| index)
-        .or_else(|| {
-            choices
-                .iter()
-                .position(|choice| choice.selected && !choice.disabled)
-        })
-        .or_else(|| enabled.first().copied());
-    let onkeydown = move |event: KeyboardEvent| {
-        let Some(at) = stop.and_then(|stop| enabled.iter().position(|index| *index == stop)) else {
-            return;
-        };
-        if has_shortcut_modifier(&event) {
-            return;
-        }
-        let next = match event.key() {
-            Key::ArrowDown => enabled[(at + 1).min(enabled.len() - 1)],
-            Key::ArrowUp => enabled[at.saturating_sub(1)],
-            Key::Home => enabled[0],
-            Key::End => enabled[enabled.len() - 1],
-            _ => return,
-        };
-        event.prevent_default();
-        active.set(Some((column, next)));
-        focus_request.set(Some(format!(
-            "[data-column='{column:?}'] [data-index='{next}']"
-        )));
-    };
-    rsx! {
-        div {
-            "data-slot": "column",
-            "data-column": "{column:?}",
-            // A named group, so an option is heard with its column's name.
-            role: "group",
-            "aria-label": label,
-            onmounted: handle.mount(),
-            onkeydown,
-            for (index, choice) in choices.into_iter().enumerate() {
-                button {
-                    key: "{choice.label}",
-                    r#type: "button",
-                    "data-slot": "option",
-                    "data-index": index as i64,
-                    "data-selected": choice.selected.then_some("true"),
-                    "aria-pressed": if choice.selected { "true" } else { "false" },
-                    disabled: choice.disabled.then_some(true),
-                    tabindex: if focusable && stop == Some(index) { "0" } else { "-1" },
-                    onfocus: move |_| active.set(Some((column, index))),
-                    onclick: move |_| onpick.call((column, index)),
-                    "{choice.label}"
-                }
-            }
-        }
-    }
-}
-
 /// One mark on the analog face.
 #[derive(Clone, Copy, PartialEq)]
 struct Mark {
@@ -1173,28 +1141,4 @@ fn ClockMarks(marks: Vec<Mark>) -> Element {
     rsx! {
         {marks}
     }
-}
-
-/// Scrolls a column so its picked option sits at the top. The reads start
-/// here, outside the `spawn`: under Blitz a read resolves where it is called.
-fn scroll_picked_into_view(column: ElementHandle) {
-    if !column.is_mounted() {
-        return;
-    }
-    let Ok(picked) = column.query_selector("[data-selected]") else {
-        return;
-    };
-    let (column_at, picked_at, scrolled) = (
-        column.client_offset(),
-        picked.client_offset(),
-        column.scroll_offset(),
-    );
-    spawn(async move {
-        let (Ok((_, column_y)), Ok((_, picked_y)), Ok((_, scrolled_y))) =
-            (column_at.await, picked_at.await, scrolled.await)
-        else {
-            return;
-        };
-        let _ = column.scroll_to(0.0, scrolled_y + picked_y - column_y);
-    });
 }

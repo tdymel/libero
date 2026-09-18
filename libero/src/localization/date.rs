@@ -12,8 +12,8 @@
 /// - **Labels** a screen reader or a sighted reader gets: the paging buttons
 ///   (`previous_month` to `next_days`), the errors (`invalid_date` to
 ///   `unavailable`), the switch segments
-///   (`date_label` to `end_label`), the switches themselves and the
-///   `TimePicker` columns.
+///   (`date_label` to `end_label`), the switches themselves, the range steps
+///   (`dates_label` to `range_steps_label`) and the `TimePicker` columns.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DateLocale {
     // Names.
@@ -70,6 +70,13 @@ pub struct DateLocale {
     pub part_switch_label: &'static str,
     /// Names the start/end switch itself.
     pub side_switch_label: &'static str,
+    /// The steps of a date-time range dropdown: its days, then the start's
+    /// time, then the end's. Each tab shows its value once there is one.
+    pub dates_label: &'static str,
+    pub start_time_label: &'static str,
+    pub end_time_label: &'static str,
+    /// Names the strip of those steps.
+    pub range_steps_label: &'static str,
     /// Names a `TimePicker`'s columns.
     pub hours_label: &'static str,
     pub minutes_label: &'static str,
@@ -127,6 +134,10 @@ impl DateLocale {
         end_label: "End",
         part_switch_label: "Date or time",
         side_switch_label: "Range end",
+        dates_label: "Dates",
+        start_time_label: "Start time",
+        end_time_label: "End time",
+        range_steps_label: "Dates and times",
         hours_label: "Hours",
         minutes_label: "Minutes",
         seconds_label: "Seconds",
@@ -184,6 +195,10 @@ impl DateLocale {
         end_label: "Ende",
         part_switch_label: "Datum oder Uhrzeit",
         side_switch_label: "Ende des Zeitraums",
+        dates_label: "Zeitraum",
+        start_time_label: "Startzeit",
+        end_time_label: "Endzeit",
+        range_steps_label: "Zeitraum und Uhrzeiten",
         hours_label: "Stunden",
         minutes_label: "Minuten",
         seconds_label: "Sekunden",

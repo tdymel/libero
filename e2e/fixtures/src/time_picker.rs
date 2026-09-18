@@ -2,8 +2,8 @@
 
 use dioxus::prelude::*;
 use libero::{
-    chrono::{NaiveDateTime, NaiveTime},
-    components::{DatePicker, Flex, TimePicker},
+    chrono::{NaiveDate, NaiveDateTime, NaiveTime},
+    components::{DatePicker, DateRange, Flex, TimePicker},
 };
 
 use crate::Routes;
@@ -12,13 +12,36 @@ pub const ROUTES: Routes = &[
     ("/time-picker", || rsx! { TimePickerPage {} }),
     ("/time-picker/date-time", || rsx! { DateTimePage {} }),
     ("/time-picker/analog", || rsx! { AnalogPage {} }),
+    ("/time-picker/range", || rsx! { RangePage {} }),
 ];
+
+/// An empty date-time range picker on the digital clock, `today` pinned to
+/// 2026-03-18, echoing its value.
+#[component]
+fn RangePage() -> Element {
+    let mut range = use_signal(|| None::<DateRange<NaiveDateTime>>);
+    let shown = range().map(|value| value.to_string()).unwrap_or_default();
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            DatePicker::<DateRange<NaiveDateTime>> {
+                variant: "digital",
+                twelve_hour: false,
+                today: NaiveDate::from_ymd_opt(2026, 3, 18),
+                value: range(),
+                onchange: move |next: Option<DateRange<NaiveDateTime>>| range.set(next),
+            }
+            span { id: "range-value", {shown} }
+        }
+    }
+}
 
 /// An analog face at a one-minute step, with seconds, from 10:00 with `min`
 /// 09:30, and a digital picker with the same `min` (its early hours disabled).
 #[component]
 fn AnalogPage() -> Element {
     let mut fine = use_signal(|| NaiveTime::from_hms_opt(10, 0, 0));
+    let mut limited = use_signal(|| NaiveTime::from_hms_opt(10, 0, 0));
     let shown = fine().map(|value| value.to_string()).unwrap_or_default();
 
     rsx! {
@@ -38,7 +61,8 @@ fn AnalogPage() -> Element {
             variant: "digital",
             twelve_hour: false,
             min: NaiveTime::from_hms_opt(9, 30, 0),
-            value: NaiveTime::from_hms_opt(10, 0, 0),
+            value: limited(),
+            onchange: move |next: Option<NaiveTime>| limited.set(next),
         }
     }
 }

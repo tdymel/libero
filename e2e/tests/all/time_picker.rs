@@ -6,71 +6,265 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, wait};
 
 const MINUTES: &str = "#digital [data-column='Minutes']";
 const HOURS: &str = "#digital [data-column='Hours']";
 
+/// The digital clock (todo 817): each column an APG spinbutton the keys, a
+/// press on a neighbour, the wheel and a drag turn.
 #[test]
-fn a_digital_pick_moves_the_selection() {
+fn a_digital_column_turns_by_keys_presses_wheel_and_drag() {
     block_on(async {
         for viewport in Viewport::ALL {
             let at = viewport.name();
             let fixture = Fixture::open("/time-picker", viewport).await.unwrap();
             let page = &fixture.page;
+            let value = |value: &'static str, what: &'static str| async move {
+                let check =
+                    format!("document.getElementById('digital-value').textContent === {value:?}");
+                wait::for_js_true(page, &check, what)
+                    .await
+                    .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            };
 
-            // Minute 35 is the eighth option at a 5-minute step.
-            click(page, &format!("{MINUTES} [data-index='7']")).await;
-            expect(
-                page,
-                "digital-value",
-                "09:35:00",
-                &format!("{MINUTES} [data-index='7']"),
-                at,
-            )
-            .await;
-            expect_unselected(page, &format!("{MINUTES} [data-index='6']"), at).await;
+            let roles: String = page
+                .evaluate(
+                    "[...document.querySelectorAll('#digital [role=spinbutton]')].map(s => \
+                     [s.getAttribute('aria-label'), s.getAttribute('aria-valuenow'), \
+                      s.getAttribute('aria-valuemin'), s.getAttribute('aria-valuemax')].join()).join(';')",
+                )
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(roles, "Hours,9,0,23;Minutes,30,0,55", "at {at}");
 
-            click(page, &format!("{HOURS} [data-index='10']")).await;
-            expect(
-                page,
-                "digital-value",
-                "10:35:00",
-                &format!("{HOURS} [data-index='10']"),
-                at,
-            )
-            .await;
-            expect_unselected(page, &format!("{HOURS} [data-index='9']"), at).await;
-            // The minutes column kept its pick through the hour change.
-            expect(
-                page,
-                "digital-value",
-                "10:35:00",
-                &format!("{MINUTES} [data-index='7']"),
-                at,
-            )
-            .await;
-
-            // The keyboard's focus request finds the option by its index.
-            let focused = format!("{MINUTES} [data-index='7']");
-            page.evaluate(format!("document.querySelector({focused:?}).focus()"))
+            page.evaluate(format!("document.querySelector({MINUTES:?}).focus()"))
                 .await
                 .unwrap();
+            keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+            value("09:35:00", "ArrowUp to step five minutes").await;
+            keyboard::press(page, keyboard::PAGE_DOWN).await.unwrap();
+            value("09:20:00", "PageDown to step fifteen minutes back").await;
+            keyboard::press(page, keyboard::HOME).await.unwrap();
+            value("09:00:00", "Home to the first minute").await;
             keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-            let check = format!(
-                "document.activeElement === document.querySelector(\"{MINUTES} [data-index='8']\")"
-            );
-            wait::for_js_true(page, &check, "ArrowDown to focus minute 40")
+            value("09:55:00", "ArrowDown to wrap round").await;
+
+            pointer::click(page, &format!("{HOURS} [data-slot=neighbour]:last-child"))
                 .await
-                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+                .unwrap();
+            value("10:55:00", "a press on the hour below").await;
+
+            wheel(page, MINUTES, 100.0).await;
+            value("10:05:00", "a wheel down to turn two steps").await;
+
+            let from = pointer::centre_of(page, MINUTES).await.unwrap();
+            let to = pointer::Point {
+                x: from.x,
+                y: from.y - 50.0,
+            };
+            pointer::drag(page, from, to, 8).await.unwrap();
+            value("10:15:00", "a drag up to turn two steps").await;
 
             fixture
                 .console
-                .assert_clean(&format!("the digital picks at {at}"))
+                .assert_clean(&format!("the digital clock at {at}"))
                 .unwrap();
             fixture.close().await.unwrap();
         }
     });
+}
+
+/// Typed digits pick, and a filled column moves on to the next; the columns
+/// skip what `min` rules out.
+#[test]
+fn typing_fills_the_digital_columns() {
+    block_on(async {
+        let fixture = Fixture::open("/time-picker", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!("document.querySelector({HOURS:?}).focus()"))
+            .await
+            .unwrap();
+        digits(page, "1445").await;
+        wait::for_js_true(
+            page,
+            "document.getElementById('digital-value').textContent === '14:45:00'",
+            "1445 typed to read 14:45",
+        )
+        .await
+        .unwrap();
+
+        let limited = "#limited [data-column='Hours']";
+        fixture.close().await.unwrap();
+        let fixture = Fixture::open("/time-picker/analog", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(format!("document.querySelector({limited:?}).focus()"))
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::HOME).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector({limited:?}).getAttribute('aria-valuetext') === '09'"),
+            "Home to the first hour inside min",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("typing the clock").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+#[test]
+fn the_digital_clock_meets_the_baseline() {
+    Suite::new("time-picker-digital", "/time-picker")
+        .root("#digital")
+        .focusable(MINUTES)
+        .targets("#digital [role=spinbutton]")
+        .run();
+}
+
+#[test]
+fn the_date_time_range_steps_meet_the_baseline() {
+    Suite::new("date-time-range", "/time-picker/range")
+        .focusable("[role=tab][aria-selected=true]")
+        .targets("[role=tab]")
+        .run();
+}
+
+/// Todo 815: the days, then the start's time, then the end's, each step moving
+/// on once complete, under tabs showing the picked values after hidden step
+/// names.
+#[test]
+fn a_date_time_range_takes_the_days_then_both_times() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let at = viewport.name();
+            let fixture = Fixture::open("/time-picker/range", viewport).await.unwrap();
+            let page = &fixture.page;
+            let tabs = || async move {
+                let tabs: String = page
+                    .evaluate(
+                        "[...document.querySelectorAll('[role=tab]')].map(t => \
+                         (t.getAttribute('aria-selected') === 'true' ? '*' : '') + t.textContent).join('|')",
+                    )
+                    .await
+                    .unwrap()
+                    .into_value()
+                    .unwrap();
+                tabs
+            };
+            let expect = |check: String, what: &'static str| async move {
+                wait::for_js_true(page, &check, what)
+                    .await
+                    .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            };
+            assert_eq!(tabs().await, "*Dates|Start time|End time", "at {at}");
+            let list: String = page
+                .evaluate("document.querySelector('[role=tablist]').getAttribute('aria-label')")
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap();
+            assert_eq!(list, "Dates and times");
+
+            pointer::click(page, "[data-date='2026-03-12']")
+                .await
+                .unwrap();
+            pointer::click(page, "[data-date='2026-03-14']")
+                .await
+                .unwrap();
+            expect(
+                "document.activeElement?.dataset.column === 'Hours'".into(),
+                "the days to move on to the start's clock",
+            )
+            .await;
+            assert_eq!(
+                tabs().await,
+                "Dates, 12–14 Mar|*Start time, 00:00|End time, 00:00",
+                "at {at}"
+            );
+
+            digits(page, "0900").await;
+            expect(
+                "document.querySelectorAll('[role=tab]')[2].getAttribute('aria-selected') === 'true' \
+                 && document.activeElement?.dataset.column === 'Hours'"
+                    .into(),
+                "a filled start time to move on to the end's clock",
+            )
+            .await;
+            digits(page, "1730").await;
+            expect(
+                "document.getElementById('range-value').textContent \
+                 === '2026-03-12T09:00:00/2026-03-14T17:30:00'"
+                    .into(),
+                "the range to read 12th 09:00 to 14th 17:30",
+            )
+            .await;
+            assert_eq!(
+                tabs().await,
+                "Dates, 12–14 Mar|Start time, 09:00|*End time, 17:30",
+                "at {at}"
+            );
+
+            // The strip is APG tabs: the arrows move the selection along it.
+            page.evaluate("document.querySelector('[role=tab][aria-selected=true]').focus()")
+                .await
+                .unwrap();
+            keyboard::press(page, keyboard::HOME).await.unwrap();
+            expect(
+                "!!document.querySelector('[role=grid]')".into(),
+                "Home on the tabs to show the days again",
+            )
+            .await;
+
+            fixture
+                .console
+                .assert_clean(&format!("the range steps at {at}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// Presses each digit as a key: a column reads `keydown`, which the bare
+/// `char` events of `type_text` never fire.
+async fn digits(page: &chromiumoxide::Page, text: &'static str) {
+    for (i, digit) in text.char_indices() {
+        let key = &text[i..i + 1];
+        let key = keyboard::Key {
+            key,
+            code: "",
+            vk: 48 + i64::from(digit.to_digit(10).unwrap()),
+            text: Some(key),
+        };
+        keyboard::press(page, key).await.unwrap();
+    }
+}
+
+/// A wheel of `dy` pixels over `selector`'s centre.
+async fn wheel(page: &chromiumoxide::Page, selector: &str, dy: f64) {
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchMouseEventParams, DispatchMouseEventType,
+    };
+    let at = pointer::centre_of(page, selector).await.unwrap();
+    page.execute(
+        DispatchMouseEventParams::builder()
+            .r#type(DispatchMouseEventType::MouseWheel)
+            .x(at.x)
+            .y(at.y)
+            .delta_x(0.0)
+            .delta_y(dy)
+            .build()
+            .unwrap(),
+    )
+    .await
+    .unwrap();
 }
 
 #[test]
@@ -106,19 +300,20 @@ fn a_time_picked_first_lands_on_today() {
             .await
             .unwrap();
         let page = &fixture.page;
-        page.evaluate(
-            "[...document.querySelectorAll('label')].find(label => label.textContent === 'Time').click()",
-        )
-        .await
-        .unwrap();
+        pointer::click(page, "[role=tab]:nth-child(2)")
+            .await
+            .unwrap();
         wait::for_js_true(
             page,
-            &format!("!!document.querySelector(\"{HOURS_ANY} [data-index='10']\")"),
+            &format!("!!document.querySelector({HOURS_ANY:?})"),
             "the clock to replace the calendar",
         )
         .await
         .unwrap();
-        click(page, &format!("{HOURS_ANY} [data-index='10']")).await;
+        page.evaluate(format!("document.querySelector({HOURS_ANY:?}).focus()"))
+            .await
+            .unwrap();
+        digits(page, "10").await;
         let today = "(() => { const d = new Date(); \
                      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })()";
         wait::for_js_true(
@@ -151,16 +346,15 @@ fn modifier_chords_go_to_the_browser() {
         let fixture = Fixture::open("/time-picker", Viewport::Desktop)
             .await
             .unwrap();
-        let option = format!("{MINUTES} [data-index='6']");
         fixture
             .page
-            .evaluate(format!("document.querySelector({option:?}).focus()"))
+            .evaluate(format!("document.querySelector({MINUTES:?}).focus()"))
             .await
             .unwrap();
         keyboard::assert_chords_ignored(
             &fixture.page,
             &[arrows[0], arrows[1], keyboard::HOME, keyboard::END],
-            "[document.activeElement.dataset.index, document.getElementById('digital-value').textContent]",
+            "[document.activeElement.dataset.column, document.getElementById('digital-value').textContent]",
         )
         .await
         .unwrap();
@@ -358,27 +552,6 @@ async fn expect_mark(page: &chromiumoxide::Page, value: &str, label: &str, at: &
         .unwrap_or_else(|e| panic!("at {at}: {e}"));
 }
 
-async fn click(page: &chromiumoxide::Page, selector: &str) {
-    page.evaluate(format!("document.querySelector({selector:?}).click()"))
-        .await
-        .unwrap();
-}
-
-/// Waits until `#id` reads `value` and `selected` is the picked option.
-async fn expect(page: &chromiumoxide::Page, id: &str, value: &str, selected: &str, at: &str) {
-    let check = format!(
-        "document.getElementById({id:?}).textContent === {value:?} \
-         && document.querySelector({selected:?}).hasAttribute('data-selected')"
-    );
-    wait::for_js_true(
-        page,
-        &check,
-        &format!("{id} to read {value} with {selected} picked"),
-    )
-    .await
-    .unwrap_or_else(|e| panic!("at {at}: {e}"));
-}
-
 /// Forced colours paint every fill `Canvas`: the picked option and mark, the
 /// hand the readout is on, and the hand itself must not vanish (1.4.1, 1.4.11).
 #[test]
@@ -408,7 +581,7 @@ fn picks_and_the_hand_show_in_forced_colours() {
                 "(() => { const probe = document.createElement('div'); \
                  probe.style.background = 'Canvas'; document.body.append(probe); \
                  const canvas = getComputedStyle(probe).backgroundColor; probe.remove(); \
-                 return ['#digital [data-selected]', \"#analog [data-slot='mark'][data-selected]\", \
+                 return [\"#analog [data-slot='mark'][data-selected]\", \
                    \"#analog [data-slot='readout'] [data-active]\", \"#analog [data-slot='hand']\", \
                    \"#analog [data-slot='pivot']\"] \
                    .filter(s => { const e = document.querySelector(s); \
@@ -427,7 +600,8 @@ fn picks_and_the_hand_show_in_forced_colours() {
 }
 
 /// Todo 744: the hand the readout sets carries the house on-state ring, not a
-/// tint. Todo 745: a disabled mark or option turns `GrayText` in forced colours.
+/// tint. Todo 745: a disabled mark turns `GrayText` in forced colours; the
+/// digital columns skip disabled values rather than show them.
 #[test]
 fn the_readout_hand_is_ringed_and_disabled_parts_gray_out() {
     use crate::button::{assert_gray_in_forced_colours, assert_on_marker};
@@ -451,15 +625,6 @@ fn the_readout_hand_is_ringed_and_disabled_parts_gray_out() {
 
         crate::calendar::force_colours(page).await;
         assert_gray_in_forced_colours(page, r#"#fine [data-slot="mark"][data-disabled]"#).await;
-        assert_gray_in_forced_colours(page, r#"#limited [data-column="Hours"] button:disabled"#)
-            .await;
         fixture.close().await.unwrap();
     });
-}
-
-async fn expect_unselected(page: &chromiumoxide::Page, selector: &str, at: &str) {
-    let check = format!("!document.querySelector({selector:?}).hasAttribute('data-selected')");
-    wait::for_js_true(page, &check, &format!("{selector} to lose its pick"))
-        .await
-        .unwrap_or_else(|e| panic!("at {at}: {e}"));
 }

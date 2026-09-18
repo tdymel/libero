@@ -154,6 +154,8 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
             color: base_color(props.color.as_ref()),
             full_width: props.full_width.unwrap_or(false),
             manual: props.activation.copied_or(TabsActivation::Automatic) == TabsActivation::Manual,
+            focusable: true,
+            panel_stop: true,
             size: props.size.copied_or(theme.tabs.size),
             class: props.class,
             sx: props.sx,

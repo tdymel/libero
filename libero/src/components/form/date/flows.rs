@@ -1,59 +1,54 @@
 //! What a field's dropdown shows when one picker is not enough: a calendar and
-//! a clock, for a day and a time, and both twice over for a range of them.
+//! a clock for a day and a time, under tabs; for a range of them, the days,
+//! then the start's time, then the end's.
 
-use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use dioxus::prelude::*;
 
 use super::{
-    DateRange, DayPicker, TimePicker,
+    DateRange, DayPicker,
     calendar::{Calendar, Selection},
     parse_time::MIDNIGHT,
     picker_field::FieldValue,
+    time_picker::Clock,
     today::use_today,
 };
 use crate::{
     components::{
-        ClassList, HtmlTag, Input, OptionLabel, Options, SegmentedControl, States, layout::use_box,
+        ClassList, HtmlTag, Input, States, VisuallyHidden,
+        common::base_color,
+        layout::use_box,
+        navigation::{TabSpec, TabsView, render_tabs},
     },
-    hooks::{ElementHandle, use_element, use_localization, use_theme},
+    hooks::{ElementHandle, use_element, use_id, use_localization, use_theme},
+    localization::DateLocale,
     platform::ElementApi,
     sx::Sx,
     theme::{Size, TimePickerVariant},
 };
 
-/// The two stacked pickers share this column.
+/// The tabs and the picker under them share this column.
 const FLOW_STYLE: &str = "display: flex; flex-direction: column; gap: 8px;";
+/// A picker takes the width it needs, centred under the tabs.
+const PART_STYLE: &str = "display: flex; justify-content: center;";
 
+/// The steps of `DateTimeFlow`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) enum Part {
     Date,
     Time,
 }
 
-impl Options for Part {
-    fn options() -> &'static [Self] {
-        &[Self::Date, Self::Time]
-    }
-
-    fn label(&self) -> String {
-        format!("{self:?}")
-    }
-}
-
+/// The steps of `DateTimeRangeFlow`.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(super) enum Side {
+pub(super) enum Step {
+    Dates,
     Start,
     End,
 }
 
-impl Options for Side {
-    fn options() -> &'static [Self] {
-        &[Self::Start, Self::End]
-    }
-
-    fn label(&self) -> String {
-        format!("{self:?}")
-    }
+impl Step {
+    const ALL: [Self; 3] = [Self::Dates, Self::Start, Self::End];
 }
 
 /// The time limits that apply on `date`: `min`'s time only on `min`'s day.
@@ -70,30 +65,114 @@ fn time_limits(
     (on(min), on(max))
 }
 
-/// A switch between the calendar and the clock. Calls hooks: its handlers
-/// keep one identity across renders, so the control skips a re-render that
-/// does not change the part.
-fn part_switch(part: Signal<Part>, size: Size, focusable: bool) -> Element {
-    let names = &use_localization().date;
-    let mut part = part;
-    let onchange = use_callback(move |next: Part| part.set(next));
-    let label = use_callback(move |part: Part| {
-        OptionLabel::from(match part {
-            Part::Date => names.date_label,
-            Part::Time => names.time_label,
-        })
-    });
-    rsx! {
-        SegmentedControl {
-            value: part(),
-            onchange,
-            size,
-            full_width: true,
-            focusable,
-            option_label: label,
-            "aria-label": names.part_switch_label,
-        }
+/// A day as a tab shows it, `12 Oct`, with the year when `year`.
+fn short_day(day: NaiveDate, year: bool, names: &DateLocale) -> String {
+    let month = names.months_short[day.month0() as usize];
+    match year {
+        true => format!("{} {month} {}", day.day(), day.year()),
+        false => format!("{} {month}", day.day()),
     }
+}
+
+/// A range of days as a tab shows it: `12–14 Oct`, `30 Sep – 2 Oct`, the
+/// years only when they differ, `12 Oct –` while the end is missing.
+pub(super) fn short_days(range: DateRange<NaiveDate>, names: &DateLocale) -> String {
+    let start = range.start;
+    let Some(end) = range.end else {
+        return format!("{} –", short_day(start, false, names));
+    };
+    match (start.year() == end.year(), start.month() == end.month()) {
+        (true, true) if start == end => short_day(start, false, names),
+        (true, true) => format!("{}–{}", start.day(), short_day(end, false, names)),
+        (true, false) => format!(
+            "{} – {}",
+            short_day(start, false, names),
+            short_day(end, false, names)
+        ),
+        (false, _) => format!(
+            "{} – {}",
+            short_day(start, true, names),
+            short_day(end, true, names)
+        ),
+    }
+}
+
+/// A time as a tab shows it: `09:00`, or `9:00 AM` on a 12-hour clock.
+pub(super) fn short_time(
+    time: NaiveTime,
+    twelve: bool,
+    seconds: bool,
+    names: &DateLocale,
+) -> String {
+    let rest = match seconds {
+        true => format!("{:02}:{:02}", time.minute(), time.second()),
+        false => format!("{:02}", time.minute()),
+    };
+    match twelve {
+        true => {
+            let half = if time.hour() < 12 { names.am } else { names.pm };
+            format!("{}:{rest} {half}", (time.hour() + 11) % 12 + 1)
+        }
+        false => format!("{:02}:{rest}", time.hour()),
+    }
+}
+
+/// One tab: `name` alone before there is a value, else the value it shows
+/// after a hidden `name, `, so the content names it with its visible text in
+/// the name (2.5.3).
+fn step_tab(name: &'static str, value: Option<String>) -> TabSpec {
+    let content = match value {
+        Some(value) => rsx! {
+            VisuallyHidden { "{name}, " }
+            "{value}"
+        },
+        None => rsx! { "{name}" },
+    };
+    TabSpec {
+        name: String::new(),
+        content,
+        disabled: false,
+    }
+}
+
+/// The APG tabs over the flow's steps, the picker as the panel. Calls hooks.
+#[allow(clippy::too_many_arguments)]
+fn step_tabs(
+    id: String,
+    label: &'static str,
+    tabs: Vec<TabSpec>,
+    selected: usize,
+    onselect: Callback<usize>,
+    size: Size,
+    focusable: bool,
+    panel: Element,
+) -> Element {
+    render_tabs(
+        TabsView {
+            tabs,
+            selected: Some(selected),
+            panel: rsx! {
+                div { "data-slot": "part", style: PART_STYLE, {panel} }
+            },
+            onselect,
+            color: base_color(None),
+            full_width: true,
+            manual: false,
+            focusable,
+            // The picker's first control takes focus.
+            panel_stop: false,
+            // Slim: never taller than the small strip.
+            size: match size {
+                Size::Xs => Size::Xs,
+                _ => Size::Sm,
+            },
+            class: Input::default(),
+            sx: Input::default(),
+            states: Input::default(),
+            attributes: vec![Attribute::new("aria-label", label, None, false)],
+        },
+        id,
+    )
 }
 
 /// The column both flows stand in, wearing the caller's class and style.
@@ -115,7 +194,7 @@ fn flow_root(
         .render(HtmlTag::Div, attributes, children)
 }
 
-/// Moves focus into the picker a pick switched to, so a keyboard user is not
+/// Moves focus into the picker a step switched to, so a keyboard user is not
 /// left on `body` when the day grid gives way to the clock.
 fn use_handoff() -> (ElementHandle, Signal<bool>) {
     let root = use_element();
@@ -173,11 +252,14 @@ pub(super) struct DateTimeFlowProps {
     attributes: Vec<Attribute>,
 }
 
-/// Day, then time. Picking a day keeps the time and moves on to the clock.
+/// Day, then time, under two tabs. Picking a day keeps the time and moves on
+/// to the clock.
 #[component]
 pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
+    let names = &use_localization().date;
     let mut part = use_signal(|| Part::Date);
     let (root, mut handoff) = use_handoff();
+    let tabs_id = use_id();
     let focusable = props.focusable;
     let (value, onpick) = (props.value, props.onpick);
     let today = use_today(props.today);
@@ -211,16 +293,8 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
             }
         },
         Part::Time => rsx! {
-            TimePicker {
+            Clock {
                 value: time,
-                variant: Input::Value(props.variant),
-                with_seconds: props.with_seconds,
-                step: props.step,
-                twelve_hour: props.twelve_hour,
-                min: min_time,
-                max: max_time,
-                size,
-                focusable: props.focusable,
                 onchange: move |next: Option<NaiveTime>| {
                     match (date.or(today), next) {
                         (Some(day), Some(next)) => onpick.call(Some(NaiveDateTime::new(day, next))),
@@ -228,10 +302,40 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
                         _ => {}
                     }
                 },
+                variant: props.variant,
+                with_seconds: props.with_seconds,
+                step: props.step,
+                twelve_hour: props.twelve_hour,
+                min: min_time,
+                max: max_time,
+                size: Input::Value(size),
+                focusable: props.focusable,
+                name: None,
+                class: Input::default(),
+                sx: Input::default(),
+                states: Input::default(),
+                attributes: Vec::new(),
             }
         },
     };
 
+    let onselect = use_callback(move |index: usize| {
+        part.set(if index == 0 { Part::Date } else { Part::Time });
+    });
+    let tabs = vec![
+        step_tab(names.date_label, None),
+        step_tab(names.time_label, None),
+    ];
+    let strip = step_tabs(
+        tabs_id(),
+        names.part_switch_label,
+        tabs,
+        (part() == Part::Time) as usize,
+        onselect,
+        size,
+        props.focusable,
+        picker,
+    );
     flow_root(
         &props.class,
         &props.sx,
@@ -239,8 +343,7 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
         props.attributes,
         &root,
         rsx! {
-            {part_switch(part, size, props.focusable)}
-            div { "data-slot": "part", {picker} }
+            {strip}
             {hidden(props.name, value)}
         },
     )
@@ -272,59 +375,60 @@ pub(super) struct DateTimeRangeFlowProps {
     attributes: Vec<Attribute>,
 }
 
-/// Start, then end - each a day, then a time. The end cannot be picked before
-/// the start's day, and an end that lands before the start swaps with it.
+/// Three steps under three tabs: the days, the start's time, the end's time.
+/// Each step moves on to the next once it is complete. The end never comes
+/// before the start: on the start's day its clock starts at the start's time.
 #[component]
 pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
     let theme = use_theme();
     let names = &use_localization().date;
     let size = props.size.copied_or(theme.date_picker.size);
-    let mut side = use_signal(|| Side::Start);
-    let mut part = use_signal(|| Part::Date);
+    let mut step = use_signal(|| Step::Dates);
     let (root, mut handoff) = use_handoff();
+    let tabs_id = use_id();
     let focusable = props.focusable;
     let (value, onpick) = (props.value, props.onpick);
     let today = use_today(props.today);
-    // The start's time, picked with no day and no clock, as in `DateTimeFlow`.
-    let mut pending = use_signal(|| None::<NaiveTime>);
+    // Times picked before their day, as in `DateTimeFlow`.
+    let mut pending_start = use_signal(|| None::<NaiveTime>);
+    let mut pending_end = use_signal(|| None::<NaiveTime>);
     let start = value.map(|range| range.start);
     let end = value.and_then(|range| range.end);
+    let start_time = start.map(|start| start.time()).or(pending_start());
+    let end_time = end.map(|end| end.time()).or(pending_end());
     let emit = move |start: NaiveDateTime, end: Option<NaiveDateTime>| {
-        onpick.call(Some(DateRange::new(start, end).ordered()));
+        onpick.call(Some(DateRange::new(start, end.map(|end| end.max(start)))));
     };
-    // The end's side only means something once there is a start.
-    let editing_end = side() == Side::End && start.is_some();
-    let current = if editing_end { end } else { start };
-    let (min_time, max_time) = time_limits(current.map(|value| value.date()), props.min, props.max);
+    let mut next_step = move |to: Step| {
+        step.set(to);
+        handoff.set(focusable && root.query_selector(":focus").is_ok());
+    };
     // One identity across renders, so the calendar's props compare equal and
     // a re-render from above skips it.
     let onpick_day = use_callback(move |day: NaiveDate| {
-        match (editing_end, start) {
-            (true, Some(start)) => {
-                let time = end.map_or(start.time(), |end| end.time());
-                emit(start, Some(NaiveDateTime::new(day, time)));
-            }
-            _ => {
-                let time = start.map(|start| start.time()).or(pending());
-                let next = NaiveDateTime::new(day, time.unwrap_or(MIDNIGHT));
-                pending.set(None);
-                emit(next, end.filter(|end| *end >= next));
-            }
+        let days =
+            value.map(|range| DateRange::new(range.start.date(), range.end.map(|end| end.date())));
+        let days = DateRange::pick(days, day);
+        let from = start_time.unwrap_or(MIDNIGHT);
+        let start = NaiveDateTime::new(days.start, from);
+        let end = days
+            .end
+            .map(|day| NaiveDateTime::new(day, end_time.unwrap_or(from)));
+        pending_start.set(None);
+        pending_end.set(None);
+        emit(start, end);
+        if end.is_some() {
+            next_step(Step::Start);
         }
-        part.set(Part::Time);
-        handoff.set(focusable && root.query_selector(":focus").is_ok());
     });
 
-    let picker = match part() {
-        Part::Date => rsx! {
+    let picker = match step() {
+        Step::Dates => rsx! {
             Calendar {
                 selection: Selection::Range(value.map(|range| {
                     DateRange::new(range.start.date(), range.end.map(|end| end.date()))
                 })),
-                min: match editing_end {
-                    true => start.map(|start| start.date()),
-                    false => props.min.map(|min| min.date()),
-                },
+                min: props.min.map(|min| min.date()),
                 max: props.max.map(|max| max.date()),
                 exclude_date: props.exclude_date,
                 today,
@@ -333,71 +437,145 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
                 onpick: onpick_day,
             }
         },
-        Part::Time => rsx! {
-            TimePicker {
-                value: current.map(|value| value.time()).or(pending().filter(|_| !editing_end)),
-                variant: Input::Value(props.variant),
-                with_seconds: props.with_seconds,
-                step: props.step,
-                twelve_hour: props.twelve_hour,
-                min: min_time,
-                max: max_time,
-                size,
-                focusable: props.focusable,
-                onchange: move |time: Option<NaiveTime>| {
-                    let day = start.map(|start| start.date()).or(today);
-                    if !editing_end && day.is_none() {
-                        pending.set(time);
-                        return;
-                    }
-                    let Some(time) = time else {
-                        return;
-                    };
-                    match (editing_end, start) {
-                        (true, Some(start)) => {
-                            let day = end.map_or(start.date(), |end| end.date());
-                            emit(start, Some(NaiveDateTime::new(day, time)));
-                        }
-                        _ => {
-                            if let Some(day) = day {
-                                emit(NaiveDateTime::new(day, time), end);
-                            }
-                        }
-                    }
-                },
+        Step::Start => {
+            let (min, max) = time_limits(start.map(|start| start.date()), props.min, props.max);
+            let onchange = EventHandler::new(move |time: Option<NaiveTime>| {
+                let Some(time) = time else {
+                    return;
+                };
+                match start.map(|start| start.date()).or(today) {
+                    Some(day) => emit(NaiveDateTime::new(day, time), end),
+                    None => pending_start.set(Some(time)),
+                }
+            });
+            rsx! {
+                Clock {
+                    value: start_time,
+                    onchange,
+                    oncomplete: move |()| next_step(Step::End),
+                    variant: props.variant,
+                    with_seconds: props.with_seconds,
+                    step: props.step,
+                    twelve_hour: props.twelve_hour,
+                    min,
+                    max,
+                    size: Input::Value(size),
+                    focusable: props.focusable,
+                    name: None,
+                    class: Input::default(),
+                    sx: Input::default(),
+                    states: Input::default(),
+                    attributes: Vec::new(),
+                }
             }
-        },
+        }
+        Step::End => {
+            let end_day = end.or(start).map(|moment| moment.date());
+            let (mut min, max) = time_limits(end_day, props.min, props.max);
+            // On the start's day the end cannot come before the start.
+            if let Some(start) = start.filter(|start| Some(start.date()) == end_day) {
+                min = Some(min.map_or(start.time(), |min| min.max(start.time())));
+            }
+            let onchange = EventHandler::new(move |time: Option<NaiveTime>| {
+                let Some(time) = time else {
+                    return;
+                };
+                match (start, end_day) {
+                    (Some(start), Some(day)) => emit(start, Some(NaiveDateTime::new(day, time))),
+                    _ => pending_end.set(Some(time)),
+                }
+            });
+            rsx! {
+                Clock {
+                    value: end_time,
+                    onchange,
+                    variant: props.variant,
+                    with_seconds: props.with_seconds,
+                    step: props.step,
+                    twelve_hour: props.twelve_hour,
+                    min,
+                    max,
+                    size: Input::Value(size),
+                    focusable: props.focusable,
+                    name: None,
+                    class: Input::default(),
+                    sx: Input::default(),
+                    states: Input::default(),
+                    attributes: Vec::new(),
+                }
+            }
+        }
     };
 
-    // One identity across renders, as in `part_switch`.
-    let side_change = use_callback(move |next: Side| side.set(next));
-    let side_label = use_callback(move |side: Side| {
-        OptionLabel::from(match side {
-            Side::Start => names.start_label,
-            Side::End => names.end_label,
-        })
-    });
-    let switch = part_switch(part, size, props.focusable);
-    let children = rsx! {
-            SegmentedControl {
-                value: side(),
-                onchange: side_change,
-                size,
-                full_width: true,
-                focusable: props.focusable,
-                option_label: side_label,
-                "aria-label": names.side_switch_label,
-            }
-            {switch}
-            div { "data-slot": "part", {picker} }
-            {hidden(props.name, value)}
-    };
+    let onselect = use_callback(move |index: usize| step.set(Step::ALL[index]));
+    let (twelve, seconds) = (props.twelve_hour, props.with_seconds);
+    let days =
+        value.map(|range| DateRange::new(range.start.date(), range.end.map(|end| end.date())));
+    let tabs = vec![
+        step_tab(names.dates_label, days.map(|days| short_days(days, names))),
+        step_tab(
+            names.start_time_label,
+            start_time.map(|time| short_time(time, twelve, seconds, names)),
+        ),
+        step_tab(
+            names.end_time_label,
+            end_time.map(|time| short_time(time, twelve, seconds, names)),
+        ),
+    ];
+    let selected = Step::ALL.iter().position(|at| *at == step()).unwrap_or(0);
+    let strip = step_tabs(
+        tabs_id(),
+        names.range_steps_label,
+        tabs,
+        selected,
+        onselect,
+        size,
+        props.focusable,
+        picker,
+    );
     flow_root(
         &props.class,
         &props.sx,
         &props.states,
         props.attributes,
         &root,
-        children,
+        rsx! {
+            {strip}
+            {hidden(props.name, value)}
+        },
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn day(month: u32, day: u32) -> NaiveDate {
+        NaiveDate::from_ymd_opt(2026, month, day).expect("a real day")
+    }
+
+    #[test]
+    fn a_range_of_days_shows_short() {
+        let names = &DateLocale::ENGLISH;
+        let range = |start, end| short_days(DateRange::new(start, end), names);
+        assert_eq!(range(day(10, 12), Some(day(10, 14))), "12–14 Oct");
+        assert_eq!(range(day(9, 30), Some(day(10, 2))), "30 Sep – 2 Oct");
+        assert_eq!(range(day(10, 12), Some(day(10, 12))), "12 Oct");
+        assert_eq!(range(day(10, 12), None), "12 Oct –");
+        let next_year = NaiveDate::from_ymd_opt(2027, 1, 2).expect("a real day");
+        assert_eq!(
+            range(day(12, 30), Some(next_year)),
+            "30 Dec 2026 – 2 Jan 2027"
+        );
+    }
+
+    #[test]
+    fn a_time_shows_short() {
+        let names = &DateLocale::ENGLISH;
+        let time = NaiveTime::from_hms_opt(17, 30, 5).expect("a real time");
+        assert_eq!(short_time(time, false, false, names), "17:30");
+        assert_eq!(short_time(time, true, false, names), "5:30 PM");
+        assert_eq!(short_time(time, false, true, names), "17:30:05");
+        assert_eq!(short_time(MIDNIGHT, true, false, names), "12:00 AM");
+    }
 }

@@ -23,7 +23,8 @@ pub enum DateLevel {
 str_enum! {
     /// How a `TimePicker` shows the time.
     pub enum TimePickerVariant {
-        /// Scrolling columns of hours, minutes and seconds.
+        /// A digital clock: a spinbutton column each for the hours, minutes,
+        /// seconds and AM/PM.
         Digital = "digital",
         /// A clock face: the hour, then the minute.
         #[default]

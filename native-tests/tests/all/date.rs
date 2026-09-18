@@ -265,32 +265,57 @@ fn digital() -> Element {
     }
 }
 
+/// A press on the value below picks it; one above picks that.
 #[test]
-fn a_click_on_a_digital_option_picks_it() {
+fn a_press_on_a_digital_neighbour_picks_it() {
     let mut page = mount(digital);
-    page.click(&format!("{MINUTES} [data-index='7']"));
+    page.click(&format!("{MINUTES} [data-slot='neighbour']:last-child"));
     assert_eq!(page.text("#echo"), "09:35:00", "{}", page.tree());
-    page.click(&format!("{HOURS} [data-index='10']"));
-    assert_eq!(page.text("#echo"), "10:35:00", "{}", page.tree());
+    page.click(&format!("{HOURS} [data-slot='neighbour']:first-child"));
+    assert_eq!(page.text("#echo"), "08:35:00", "{}", page.tree());
 }
 
-/// Tab lands on each column's picked option; the keys move from there.
+/// Each column is one tab stop, an APG spinbutton: the arrows step, typed
+/// digits pick, and a filled column moves on to the next.
 #[test]
-fn arrow_down_moves_focus_down_a_digital_column() {
+fn the_keys_turn_a_digital_column() {
     let mut page = mount(digital);
     page.tab();
+    assert!(page.is_focused(HOURS), "{}", page.focus_owner());
     page.tab();
-    assert!(
-        page.is_focused(&format!("{MINUTES} [data-index='6']")),
-        "{}",
-        page.focus_owner()
+    assert!(page.is_focused(MINUTES), "{}", page.focus_owner());
+    page.press(Key::ArrowUp);
+    assert_eq!(page.text("#echo"), "09:35:00", "{}", page.tree());
+    page.press(Key::PageDown);
+    assert_eq!(page.text("#echo"), "09:20:00", "{}", page.tree());
+    page.press(Key::End);
+    assert_eq!(page.text("#echo"), "09:55:00", "{}", page.tree());
+    page.press(Key::ArrowUp);
+    assert_eq!(
+        page.text("#echo"),
+        "09:00:00",
+        "wraps round: {}",
+        page.tree()
     );
-    page.press(Key::ArrowDown);
-    assert!(
-        page.is_focused(&format!("{MINUTES} [data-index='7']")),
-        "{}",
-        page.focus_owner()
-    );
+    assert_eq!(page.attr(MINUTES, "aria-valuenow").as_deref(), Some("0"));
+
+    page.focus(HOURS);
+    typing(&mut page, "14");
+    assert_eq!(page.text("#echo"), "14:00:00", "{}", page.tree());
+    assert!(page.is_focused(MINUTES), "{}", page.focus_owner());
+}
+
+/// A drag up brings the values below into the middle, a wheel down too.
+/// Within the column: Blitz stops reporting moves once the pointer leaves it.
+#[test]
+fn a_drag_or_a_wheel_turns_a_digital_column() {
+    let mut page = mount(digital);
+    page.drag(MINUTES, 0.0, -24.0);
+    assert_eq!(page.text("#echo"), "09:35:00", "{}", page.tree());
+    page.hover(HOURS);
+    page.wheel(HOURS, 80.0);
+    // Blitz hands `onwheel` the finger's sign, so a wheel down turns back here.
+    assert_eq!(page.text("#echo"), "07:35:00", "{}", page.tree());
 }
 
 fn analog() -> Element {

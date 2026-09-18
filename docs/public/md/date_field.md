@@ -166,7 +166,7 @@ whatever the text shows, such as `2026-02-01`, `13:05:00`, `2026-02-01T13:05:00`
 | `max` | `V::Bound` | - | The latest value accepted. For a range, the latest end. |
 | `exclude_date` | `Callback<NaiveDate, bool>` | - | Days that are not accepted, on top of `min` and `max`. Ignored for a time, a month and a year. |
 | `today` | `NaiveDate` | - | The day marked as today, and the year used when typed text has none. Unset, the platform clock answers after mount. |
-| `variant` | `TimePickerVariant` | `analog` | Columns of numbers, or a clock face, for values with a time. |
+| `variant` | `TimePickerVariant` | `analog` | A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time. |
 | `with_seconds` | `bool` | `false` | Seconds in the text and on the clock. |
 | `step` | `u8` | `5` | Minutes between the offered minutes. |
 | `twelve_hour` | `bool` | - | A 12-hour clock with AM and PM. Defaults to whether the time format is one. |

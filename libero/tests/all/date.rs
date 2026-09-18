@@ -19,7 +19,7 @@ use libero::{
 };
 
 #[test]
-fn a_time_picker_draws_a_column_per_part_and_posts_the_time() {
+fn a_time_picker_draws_a_spinbutton_per_part_and_posts_the_time() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -29,11 +29,22 @@ fn a_time_picker_draws_a_column_per_part_and_posts_the_time() {
     }
     let html = body(&render(app));
 
-    // The default en-US clock: 12 hours, then 00, 15, 30 and 45, then AM and PM.
-    assert_eq!(html.matches("data-slot=\"option\"").count(), 18);
-    assert_eq!(html.matches("data-selected=\"true\"").count(), 3);
-    assert_eq!(html.matches("aria-pressed=\"true\"").count(), 3);
-    assert_eq!(html.matches("aria-pressed=\"false\"").count(), 15);
+    // The default en-US clock: hours, minutes at 15, AM/PM.
+    assert_eq!(html.matches("role=\"spinbutton\"").count(), 3);
+    for text in ["09", "30", "AM"] {
+        assert!(
+            html.contains(&format!("aria-valuetext=\"{text}\"")),
+            "{text}: {html}"
+        );
+    }
+    assert!(html.contains("aria-label=\"AM/PM\""), "{html}");
+    // Each value sits between its neighbours; the digits wrap round, AM/PM not.
+    let neighbours: Vec<&str> = html
+        .split("data-slot=\"neighbour\"")
+        .skip(1)
+        .filter_map(|after| after.split('>').nth(1)?.split('<').next())
+        .collect();
+    assert_eq!(neighbours, ["08", "10", "15", "45", "", "PM"]);
     assert!(html.contains("type=\"hidden\" name=\"at\" value=\"09:30:00\""));
 }
 
@@ -55,16 +66,20 @@ fn a_half_of_the_day_outside_min_and_max_is_disabled_on_both_faces() {
 
     // The tag of every button whose text starts with the label.
     let tags = |label: &str| -> Vec<String> {
-        html.split(&format!(">{label}</button>"))
+        let end = format!(">{label}</button>");
+        html.split(&end)
             .filter_map(|before| before.rsplit("<button").next())
-            .take(2)
+            .take(html.matches(&end).count())
             .map(str::to_owned)
             .collect()
     };
     let (am, pm) = (tags("AM"), tags("PM"));
-    assert_eq!((am.len(), pm.len()), (2, 2));
+    assert_eq!((am.len(), pm.len()), (1, 1));
     assert!(am.iter().all(|tag| tag.contains("disabled")), "{am:?}");
     assert!(pm.iter().all(|tag| !tag.contains("disabled")), "{pm:?}");
+    // The digital AM/PM column has no AM to step to: no neighbour shows it.
+    assert!(html.contains("aria-valuetext=\"PM\""), "{html}");
+    assert!(!html.contains(">AM</span>"), "{html}");
 }
 
 #[test]

@@ -219,9 +219,9 @@ fn a_refused_date_says_which_rule_it_broke() {
     });
 }
 
-/// A digital column is a named group, so its buttons are heard with "Hours".
+/// A digital column is a named spinbutton, so its value is heard with "Hours".
 #[test]
-fn a_digital_column_is_a_named_group() {
+fn a_digital_column_is_a_named_spinbutton() {
     block_on(async {
         let fixture = Fixture::open("/date-field/digital", Viewport::Desktop)
             .await
@@ -232,12 +232,12 @@ fn a_digital_column_is_a_named_group() {
         keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
         expect(
             page,
-            "document.activeElement.getAttribute('data-slot') === 'option'",
-            "Arrow Down to focus the held hour",
+            "document.activeElement.getAttribute('data-slot') === 'spin'",
+            "Arrow Down to focus the hours",
         )
         .await;
         let tree = e2e::ax::snapshot(page, "[role=dialog]").await.unwrap();
-        for column in ["group \"Hours\"", "group \"Minutes\""] {
+        for column in ["spinbutton \"Hours\"", "spinbutton \"Minutes\""] {
             assert!(tree.contains(column), "no {column} in:\n{tree}");
         }
 

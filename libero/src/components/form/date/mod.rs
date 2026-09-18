@@ -20,6 +20,7 @@ mod parse_time;
 mod picker_field;
 mod props;
 mod range;
+mod spin_column;
 mod today;
 
 // The deny above overrides the crate's `allow`, so the modules whose `Props`

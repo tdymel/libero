@@ -47,7 +47,7 @@ pub fn DatePickerPage() -> Element {
                     prop("columns", "usize").default("1, or 2 for a range").doc("Months side by side, for a day or a range of days."),
                     prop("calendar", "CalendarVariant").default("full").doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
                     prop("days", "usize").default("7").doc("Days in the mini calendar's row."),
-                    prop("variant", "TimePickerVariant").default("analog").doc("Columns of numbers or a clock face, for values with a time."),
+                    prop("variant", "TimePickerVariant").default("analog").doc("A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time."),
                     prop("with_seconds", "bool").default("false").doc("A seconds column. Digital only."),
                     prop("step", "u8").default("5").doc("Minutes between the offered minutes."),
                     prop("twelve_hour", "bool").default("formats").doc("A 12-hour clock with AM and PM. Defaults to whether `Formats::time` is one."),
@@ -179,9 +179,11 @@ pub fn DatePickerPage() -> Element {
                     Code { source: "max" }
                     " rule out. "
                     Kbd { "Enter" } " moves from the hour to the minute. "
-                    "Digital columns are one tab stop each. "
-                    Kbd { "↑" } " " Kbd { "↓" } " " Kbd { "Home" } " " Kbd { "End" } " move within the column, "
-                    Kbd { "Enter" } " picks, and " Kbd { "Tab" } " goes to the next column."
+                    "Each digital column is a spinbutton and one tab stop. "
+                    Kbd { "↑" } " " Kbd { "↓" } " turn it a step, "
+                    Kbd { "PageUp" } " " Kbd { "PageDown" } " a bigger step, "
+                    Kbd { "Home" } " " Kbd { "End" } " to the first and last value, and typed digits pick. "
+                    "A filled column and " Kbd { "Enter" } " move on to the next. The wheel and a drag turn it too."
                 }
                 Text {
                     "The mini calendar's days are one tab stop. "
@@ -189,7 +191,11 @@ pub fn DatePickerPage() -> Element {
                     Kbd { "Home" } " " Kbd { "End" } " go to the row's ends, and "
                     Kbd { "PageUp" } " " Kbd { "PageDown" } " move a row's worth of days. The buttons page the row."
                 }
-                Text { "A date-time picks the day first, and picking it moves focus into the clock." }
+                Text {
+                    "A date-time's day and time are tabs above the picker, and picking the day moves focus into the clock. "
+                    "A date-time range has three: the days, the start time and the end time, each showing its value once picked. "
+                    "Each step moves on to the next when it is complete."
+                }
             }
         }
     }

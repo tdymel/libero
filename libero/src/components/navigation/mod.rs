@@ -18,6 +18,7 @@ pub use pagination::{
     Pagination, PaginationItem, PaginationLabel, PaginationProps, pagination_range,
 };
 pub use stepper::{StepLabelPosition, StepState, Stepper, StepperProps};
+pub(crate) use tabs::{TabSpec, TabsView, render_tabs};
 pub use tabs::{Tabs, TabsActivation, TabsProps};
 pub use tree::{
     Tree, TreeItem, TreeItemProps, TreeLabel, TreeNode, TreeNodeRenderArgs, TreeProps, TreeValue,

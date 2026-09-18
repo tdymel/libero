@@ -109,7 +109,7 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
 });
 
 /// One tab, with `T` already gone: `content` is the rendered label and `name`
-/// the accessible one.
+/// the accessible one, or empty for the content's own.
 pub(crate) struct TabSpec {
     pub name: String,
     pub content: Element,
@@ -126,6 +126,12 @@ pub(crate) struct TabsView {
     pub full_width: bool,
     /// Arrows move the focus only; the tab's own click (Enter, Space) selects.
     pub manual: bool,
+    /// `false` keeps the tabs out of the tab order, as a picker in a dropdown
+    /// whose text input keeps focus.
+    pub focusable: bool,
+    /// The panel is a tab stop of its own: APG's rule for a panel whose first
+    /// content cannot take focus.
+    pub panel_stop: bool,
     pub size: Size,
     pub class: Input<ClassList>,
     pub sx: Input<crate::sx::Sx>,
@@ -144,6 +150,8 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         color,
         full_width,
         manual,
+        focusable,
+        panel_stop,
         size,
         class,
         sx: user_sx,
@@ -257,8 +265,9 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                             // `aria-disabled`, not `disabled`: a disabled tab
                             // stays reachable, it just cannot be picked.
                             "aria-disabled": if tab.disabled { "true" } else { "false" },
-                            "aria-label": tab.name.clone(),
-                            tabindex: if tab_stop == Some(index) { "0" } else { "-1" },
+                            // An empty name leaves the content to name the tab.
+                            "aria-label": (!tab.name.is_empty()).then(|| tab.name.clone()),
+                            tabindex: if focusable && tab_stop == Some(index) { "0" } else { "-1" },
                             onkeydown: move |event| onkeydown.call((index, event)),
                             onfocus: move |_| focused.set(Some(index)),
                             onclick: {
@@ -279,7 +288,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                         id: "{panel_id}",
                         role: "tabpanel",
                         "aria-labelledby": "{labelled_by}",
-                        tabindex: "0",
+                        tabindex: (focusable && panel_stop).then_some("0"),
                         {panel}
                     }
                 }
