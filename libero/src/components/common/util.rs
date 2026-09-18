@@ -189,7 +189,6 @@ pub(crate) fn borderless_on_state_sx() -> crate::sx::Sx {
 /// whose full-width ring would read as its focus ring. `color` is the row's one
 /// on-state indicator beside its tint, so it must reach 3:1 on it (1.4.11).
 pub(crate) fn on_start_bar_sx(inset: &str, color: &str) -> crate::sx::Sx {
-    let end = crate::sx::sx().with("background-position", format!("right {inset} center"));
     crate::sx::sx()
         .with(
             "background-image",
@@ -201,9 +200,7 @@ pub(crate) fn on_start_bar_sx(inset: &str, color: &str) -> crate::sx::Sx {
         )
         .with("background-position", format!("left {inset} center"))
         .with("background-repeat", "no-repeat")
-        // Blitz's stylo does not match `:dir()` (todo 735); the attribute covers it there.
-        .selector("&:dir(rtl)", end.clone())
-        .selector(":where([dir=rtl]) &", end)
+        .rtl(crate::sx::sx().with("background-position", format!("right {inset} center")))
         // Unforced by `forced_on_sx`: the author colour would vanish on `Highlight`.
         .media(
             crate::sx::FORCED_COLORS,

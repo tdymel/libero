@@ -61,10 +61,10 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
             "multiple",
             sx().flex("1 1 0")
                 .selector("&:not(:first-child)", sx().margin_left("-4px"))
-                .selector(
-                    "&:not(:first-child):dir(rtl)",
+                .rtl(sx().selector(
+                    "&:not(:first-child)",
                     sx().margin_left("0").margin_right("-4px"),
-                ),
+                )),
         )
         .when("disabled", sx().cursor("not-allowed"))
 });

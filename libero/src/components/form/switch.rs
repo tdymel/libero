@@ -86,13 +86,10 @@ static SWITCH_THUMB_SX: StaticSx = StaticSx::new(|| {
             SWITCH_ON.value(),
         ))
         // Off sits at the start, so under RTL it starts on the right.
-        .selector(
-            "&:dir(rtl)",
-            sx().left("auto").right(INSET).transform(format!(
-                "translate(calc(-1 * {} * ({travel})), -50%)",
-                SWITCH_ON.value(),
-            )),
-        )
+        .rtl(sx().left("auto").right(INSET).transform(format!(
+            "translate(calc(-1 * {} * ({travel})), -50%)",
+            SWITCH_ON.value(),
+        )))
         .transition("transform 150ms ease")
 });
 

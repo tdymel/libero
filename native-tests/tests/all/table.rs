@@ -59,6 +59,32 @@ fn the_arrow_turns_when_the_sort_flips() {
     assert_ne!(ascending, descending, "the arrow stayed at {ascending}");
 }
 
+/// Todo 772: Blitz's collapsing model painted a 3px black grid from the first
+/// cell's top border. The row line is the theme's 1px, and the cell's side
+/// edge carries none.
+#[test]
+fn a_row_line_is_one_thin_theme_line() {
+    let page = mount(app);
+    let (x, y, w, h) = page.rect("tbody td");
+    let line = page.computed("tbody td", "border-bottom-color");
+    let column: Vec<(u32, u32)> = (0..6)
+        .map(|i| ((x + w / 2.0) as u32, (y + h - 3.0) as u32 + i))
+        .collect();
+    let px = page.painted_pixels(&column);
+    let lined = px.iter().filter(|p| **p != [255, 255, 255, 255]).count();
+    assert_eq!(lined, 1, "the row line is {lined}px, {line}: {px:?}");
+    assert!(
+        px.iter().all(|p| *p != [0, 0, 0, 255]),
+        "a black line: {px:?}"
+    );
+    let side = page.painted_pixels(&[(x as u32, (y + h / 2.0) as u32)])[0];
+    assert_eq!(
+        side,
+        [255, 255, 255, 255],
+        "the cell's side edge is painted"
+    );
+}
+
 #[test]
 fn the_painted_arrow_turns_too() {
     let mut page = mount(app);

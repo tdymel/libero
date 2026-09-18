@@ -44,7 +44,7 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
             "& label > [data-slot='required']",
             sx().color("error.7")
                 .margin_left("2px")
-                .selector("&:dir(rtl)", sx().margin_left("0").margin_right("2px")),
+                .rtl(sx().margin_left("0").margin_right("2px")),
         )
         // A control with no frame - a checkbox, a radio - sits beside its
         // label instead of under it. The control takes column one of the

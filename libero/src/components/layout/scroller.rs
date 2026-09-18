@@ -296,17 +296,11 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             "start",
-            sx().selector(
-                "&:dir(rtl)",
-                control_side_sx(&fade, "right", "left", "-90deg"),
-            ),
+            sx().rtl(control_side_sx(&fade, "right", "left", "-90deg")),
         )
         .when(
             "end",
-            sx().selector(
-                "&:dir(rtl)",
-                control_side_sx(&fade, "left", "right", "90deg"),
-            ),
+            sx().rtl(control_side_sx(&fade, "left", "right", "90deg")),
         )
         // The glyph dims, not the button: the button's opacity would dim its
         // focus ring with it.

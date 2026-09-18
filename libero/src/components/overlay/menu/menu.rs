@@ -130,10 +130,7 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
             sx().width("100%").height("100%"),
         )
         // The submenu opens on the left under RTL, so the chevron points there.
-        .selector(
-            "&:dir(rtl) [data-menu-chevron] svg",
-            sx().transform("scaleX(-1)"),
-        )
+        .rtl(sx().selector("& [data-menu-chevron] svg", sx().transform("scaleX(-1)")))
 });
 
 base_props! {

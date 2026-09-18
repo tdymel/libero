@@ -60,6 +60,27 @@ fn the_painted_thumb_moves_too() {
     assert_ne!(off, on, "the painted thumb stayed at {off:?}");
 }
 
+/// Todo 781: an off thumb starts at the right under an `[dir=rtl]` ancestor,
+/// which stylo matches where it does not match `:dir(rtl)`.
+#[test]
+fn an_rtl_thumb_starts_at_the_right() {
+    const THUMB: &str = "[role=switch] + [aria-hidden=true] > span";
+    fn rtl() -> Element {
+        rsx! {
+            div { dir: "rtl",
+                Switch { checked: false, onchange: move |_| {}, label: "Wifi" }
+            }
+        }
+    }
+    let page = mount(rtl);
+    let (track_x, _, track_w, _) = page.rect(TRACK);
+    let (thumb_x, _, thumb_w, _) = page.rect(THUMB);
+    assert!(
+        thumb_x + thumb_w / 2.0 > track_x + track_w / 2.0,
+        "the thumb sits at {thumb_x} in a track at {track_x}+{track_w}"
+    );
+}
+
 /// Outside a `Form`, Enter toggles as Space does (todo 648).
 #[test]
 fn space_and_enter_toggle_the_focused_switch() {

@@ -11,7 +11,7 @@ use std::time::Duration;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Autocomplete, Cascader, CascaderOption, CodeBlock, MultiSelect, NavLink, NumberField,
+        Autocomplete, Box, Cascader, CascaderOption, CodeBlock, MultiSelect, NavLink, NumberField,
         Options, PasswordField, Select, States, TagsField, TextField, Tree, TreeNode,
         TreeNodeRenderArgs,
     },
@@ -298,6 +298,44 @@ fn assert_trailing_icons_read(page: &Page) {
 fn field_trailing_icons_read_on_a_dark_window() {
     let page = mount_in(fields_app, ColorScheme::Dark);
     assert_trailing_icons_read(&page);
+}
+
+/// A flex row whose text and icon change colour on hover.
+fn hover_app() -> Element {
+    rsx! {
+        Box {
+            id: "row",
+            sx: sx().display("flex")
+                .gap("8px")
+                .padding("8px")
+                .color("rgb(0, 0, 0)")
+                .hover(sx().color("rgb(200, 0, 0)")),
+            svg { id: "icon", width: "16", height: "16", view_box: "0 0 16 16",
+                // No fill: `painted_stroke` reads the first colour in the tree.
+                path { d: "M2 8h12", fill: "none", stroke: "currentColor", stroke_width: "4" }
+            }
+            "Label"
+        }
+        div { id: "away", height: "40px", "Away" }
+    }
+}
+
+/// Todo 634: the anonymous block and the svg rebuild with a hover, not only
+/// with a theme switch.
+#[test]
+fn a_hover_repaints_a_flex_rows_text_and_icon() {
+    let mut page = mount(hover_app);
+    page.hover("#row");
+    let hovered = page.computed("#row", "color");
+    assert_eq!(hovered, "rgb(200, 0, 0)", "the hover did not restyle");
+    assert_eq!(page.painted_text("#row"), hovered);
+    assert_eq!(page.painted_stroke("#icon"), hovered);
+
+    page.hover("#away");
+    let left = page.computed("#row", "color");
+    assert_eq!(left, "rgb(0, 0, 0)");
+    assert_eq!(page.painted_text("#row"), left);
+    assert_eq!(page.painted_stroke("#icon"), left);
 }
 
 #[test]

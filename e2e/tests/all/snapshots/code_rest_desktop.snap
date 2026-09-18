@@ -67,6 +67,17 @@ generic
       StaticText ""a string long enough to scroll the block sideways""
       StaticText ";"
       StaticText "}"
+generic
+  StaticText "Rust"
+  code
+    StaticText "let"
+    StaticText " a = "
+    StaticText "1"
+    StaticText ";"
+    StaticText "let"
+    StaticText " b = "
+    StaticText "2"
+    StaticText ";"
 paragraph
   StaticText "Add "
   code

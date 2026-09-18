@@ -155,7 +155,7 @@ fn cascader_rows_sx() -> Sx {
             .height("1em")
             .transform("rotate(-90deg)")
             // The next column opens to the left.
-            .selector("&:dir(rtl)", sx().transform("rotate(90deg)")),
+            .rtl(sx().transform("rotate(90deg)")),
     )
     .selector(
         "& [data-slot='branch'] > svg",
@@ -191,10 +191,7 @@ static CASCADER_COLUMNS_SX: StaticSx = StaticSx::new(|| {
             "& > [data-slot='column'] + [data-slot='column']",
             sx().border_left("1px solid")
                 .border_color("muted.2")
-                .selector(
-                    "&:dir(rtl)",
-                    sx().border_left("none").border_right("1px solid"),
-                ),
+                .rtl(sx().border_left("none").border_right("1px solid")),
         )
 });
 

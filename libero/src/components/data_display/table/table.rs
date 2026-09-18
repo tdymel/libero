@@ -20,8 +20,10 @@ use super::{
 static TABLE_SX: StaticSx = StaticSx::new(|| {
     TableDefaults::theme_vars()
         .width("100%")
-        // Row borders only render at all in the collapsing model.
-        .border_collapse("collapse")
+        // Separate, with the row lines on the cells: Blitz's collapsing model paints
+        // one grid from the first cell's top border, a black 3px one here (todo 772).
+        .border_collapse("separate")
+        .border_spacing("0")
         .selector(
             "& th, & td",
             sx().text_align("start").vertical_align("middle"),

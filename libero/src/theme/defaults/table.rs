@@ -41,7 +41,8 @@ impl TableDefaults {
         sx().font_size(TABLE_FONT_SIZE.value())
             .selector("& th, & td", sx().padding(Self::padding()))
             .selector("& thead th", sx().border_bottom(Self::border()))
-            .selector("& tbody tr", sx().border_bottom(Self::border()))
+            // On the cells: a row's own border draws only when borders collapse.
+            .selector("& tbody tr > *", sx().border_bottom(Self::border()))
             .selector("& tbody tr:hover", sx().background(TABLE_HOVER.value()))
     }
 }

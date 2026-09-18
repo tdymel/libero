@@ -150,7 +150,7 @@ static NAV_GROUP_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& [data-nav-children]",
             sx().padding_left("lg")
-                .selector("&:dir(rtl)", sx().padding_left("0").padding_right("lg")),
+                .rtl(sx().padding_left("0").padding_right("lg")),
         )
 });
 

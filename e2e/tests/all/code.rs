@@ -330,6 +330,24 @@ fn a_short_code_span_keeps_its_token_whole() {
     });
 }
 
+/// Todo 771. Without a gutter a blank line keeps a full row's height.
+#[test]
+fn a_blank_line_keeps_its_row_without_line_numbers() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        const HEIGHTS: &str = r#"[...document.querySelectorAll('#blank-line-block pre > code > span')]
+            .map(r => Math.round(r.getBoundingClientRect().height)).join()"#;
+        wait::for_js_true(
+            &fixture.page,
+            &format!("{HEIGHTS} === '20,20,20'"),
+            "three 20px rows, the blank one included",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 424. The gutter is drawn only once highlighting resolves, which SSR
 /// never sees; read aloud, its numbers interleave with the code.
 #[test]

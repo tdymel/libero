@@ -184,10 +184,7 @@ static DEFAULT_RENDER_ROW_SX: StaticSx = StaticSx::new(|| {
         )
         // A closed row's chevron points to the start of the line. Before the
         // expanded rule, which wins at equal specificity.
-        .selector(
-            "& [data-tree-chevron]:dir(rtl)",
-            sx().transform("rotate(180deg)"),
-        )
+        .rtl(sx().selector("& [data-tree-chevron]", sx().transform("rotate(180deg)")))
         .selector(
             "& [data-tree-chevron][data-state~=\"expanded\"]",
             sx().transform("rotate(90deg)"),

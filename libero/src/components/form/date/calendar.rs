@@ -1302,7 +1302,7 @@ struct NavProps {
 
 /// The header runs right to left under RTL, so the chevrons point the other way.
 static NAV_SX: StaticSx =
-    StaticSx::new(|| sx().selector("&:dir(rtl) svg", sx().transform("scaleX(-1)")));
+    StaticSx::new(|| sx().rtl(sx().selector("& svg", sx().transform("scaleX(-1)"))));
 
 #[component]
 fn Nav(props: NavProps) -> Element {

@@ -145,7 +145,14 @@ static WINDOW_SX: StaticSx = StaticSx::new(|| {
                      transparent 62%, transparent 75%, currentColor 75%, currentColor 82%, transparent 82%)",
                 )
                 .opacity("0.6")
-                .selector("&:focus-visible", inset_focus_ring_sx("-2px")),
+                .selector("&:focus-visible", inset_focus_ring_sx("-2px"))
+                // The end corner under RTL is the bottom-left (todo 796).
+                .rtl(
+                    sx().right("auto").left("0").cursor("nesw-resize").background(
+                        "linear-gradient(225deg, transparent 55%, currentColor 55%, currentColor 62%, \
+                         transparent 62%, transparent 75%, currentColor 75%, currentColor 82%, transparent 82%)",
+                    ),
+                ),
         )
 });
 
@@ -464,8 +471,13 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     let (float_placement, offset_x, offset_y) = match position() {
         Some((x, y)) => {
             let measured = measured();
+            // The offsets are physical, from the left: under RTL that corner is the end.
+            let left = match root.is_rtl() {
+                true => Placement::TopEnd,
+                false => Placement::TopStart,
+            };
             (
-                Input::<Placement>::Value(Placement::TopStart),
+                Input::<Placement>::Value(left),
                 Input::from(clamped(x, measured.map(|m| m.0), "100dvw")),
                 Input::from(clamped(y, measured.map(|m| m.1), "100dvh")),
             )
@@ -855,13 +867,17 @@ fn use_window_geometry(
         onend: use_callback(move |()| report(root, onmove)),
     });
 
+    let mut left_origin = use_signal(|| 0.0);
+    let mut resize_rtl = use_signal(|| false);
     let resize_drag = use_drag(DragOptions {
         capture: root,
         onstart: use_callback(move |_: DragStart| {
             size_origin.set(None);
-            let dimensions = root.dimensions();
+            resize_rtl.set(root.is_rtl());
+            let (dimensions, offset) = (root.dimensions(), root.client_offset());
             spawn(async move {
-                if let Ok(dimensions) = dimensions.await {
+                if let (Ok(dimensions), Ok((x, _))) = (dimensions.await, offset.await) {
+                    left_origin.set(x);
                     size_origin.set(Some((dimensions.width, dimensions.height)));
                 }
             });
@@ -869,10 +885,17 @@ fn use_window_geometry(
         onmove: use_callback(move |event: DragMove| {
             if let Some((width, height)) = size_origin() {
                 let delta = event.delta();
-                size.set(Some((
-                    (width + delta.x).max(0.0),
-                    (height + delta.y).max(0.0),
-                )));
+                // Under RTL the grip is the bottom-left corner: a drag left widens.
+                let dx = if *resize_rtl.peek() {
+                    -delta.x
+                } else {
+                    delta.x
+                };
+                let next = ((width + dx).max(0.0), (height + delta.y).max(0.0));
+                size.set(Some(next));
+                if *resize_rtl.peek() {
+                    keep_right_edge(position, bounds, *left_origin.peek() + width, next.0);
+                }
             }
         }),
         onend: use_callback(move |()| report(root, onresize)),
@@ -979,7 +1002,9 @@ impl WindowGeometry {
                 } else {
                     self.resize_step
                 };
-                arrow_delta(&key, step).map(Ok)
+                // The grip's arrows move its corner, the bottom-left under RTL.
+                let flip = if self.root.is_rtl() { -1.0 } else { 1.0 };
+                arrow_delta(&key, step).map(|(dx, dy)| Ok((dx * flip, dy)))
             }
         };
         let Some(request) = request else { return };
@@ -992,22 +1017,40 @@ impl WindowGeometry {
     /// the window's min/max constraints clamp either. Reports it.
     fn resize_to(self, request: Result<(f64, f64), (f64, f64)>) {
         let (mut size, mut owed, onresize) = (self.size, self.owed, self.onresize);
-        let dimensions = self.root.dimensions();
+        let (position, bounds, rtl) = (self.position, self.bounds, self.root.is_rtl());
+        let (dimensions, offset) = (self.root.dimensions(), self.root.client_offset());
         spawn(async move {
-            let next = match request {
-                Err(absolute) => absolute,
-                Ok((dx, dy)) => match dimensions.await {
-                    Ok(dimensions) => (
-                        (dimensions.width + dx).max(0.0),
-                        (dimensions.height + dy).max(0.0),
-                    ),
-                    Err(_) => return,
-                },
+            let dimensions = dimensions.await.ok();
+            let next = match (request, dimensions) {
+                (Err(absolute), _) => absolute,
+                (Ok((dx, dy)), Some(dimensions)) => (
+                    (dimensions.width + dx).max(0.0),
+                    (dimensions.height + dy).max(0.0),
+                ),
+                (Ok(_), None) => return,
             };
             size.set(Some(next));
+            if rtl && let (Some(dimensions), Ok((x, _))) = (dimensions, offset.await) {
+                keep_right_edge(position, bounds, x + dimensions.width, next.0);
+            }
             owed.write().extend(onresize);
         });
     }
+}
+
+/// Under RTL a moved window resizes from its bottom-left corner, so its right
+/// edge stays at `right` while the width becomes `width`, as clamped.
+fn keep_right_edge(
+    mut position: Signal<Option<(f64, f64)>>,
+    bounds: Signal<Option<WindowBounds>>,
+    right: f64,
+    width: f64,
+) {
+    let Some((_, y)) = *position.peek() else {
+        return;
+    };
+    let drawn = bounds.peek().map_or(width, |b| b.fit((width, 0.0)).0);
+    position.set(Some((right - drawn, y)));
 }
 
 #[cfg(test)]

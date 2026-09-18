@@ -185,7 +185,7 @@ static CAROUSEL_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // The row runs right to left, so the arrows point the other way.
         .when(
             "horizontal",
-            sx().selector("&:dir(rtl) > svg", sx().transform("scaleX(-1)")),
+            sx().rtl(sx().selector("& > svg", sx().transform("scaleX(-1)"))),
         )
         .hover(sx().background(CAROUSEL_CONTROL_HOVER_BACKGROUND.value()))
         // Disabled by `aria-disabled`, not `disabled`: the button keeps its

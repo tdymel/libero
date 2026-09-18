@@ -41,6 +41,10 @@ fn CodePage() -> Element {
                 // One token that starts in view: axe skips a token scrolled out whole.
                 source: "fn main() {{\n    let s = \"a string long enough to scroll the block sideways\";\n}}"
             }
+            // Todo 771: no gutter digit holds the blank line's height.
+            CodeBlock { id: "blank-line-block", language: "rust", line_numbers: false, copyable: false,
+                source: "let a = 1;\n\nlet b = 2;"
+            }
             // Todo 732: a shrink-to-fit parent, where `anywhere` split a short span after its `#`.
             div { style: "width: min-content",
                 Text { "Add " Code { id: "short-code", source: "#[derive(Options)]" } " above it." }

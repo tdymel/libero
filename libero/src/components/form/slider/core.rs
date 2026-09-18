@@ -127,7 +127,7 @@ static SLIDER_BAR_SX: StaticSx = StaticSx::new(|| {
         .border_radius("inherit")
         .media(FORCED_COLORS, sx().background("Highlight"))
         // Under RTL the track runs right to left, as a native range does.
-        .selector("&:dir(rtl)", sx().left("auto").right("0"))
+        .rtl(sx().left("auto").right("0"))
 });
 
 /// A range fills *between* its thumbs, so the bar starts at the lower one's
@@ -145,10 +145,7 @@ static SLIDER_RANGE_BAR_SX: StaticSx = StaticSx::new(|| {
         .background(SLIDER_COLOR.value())
         .border_radius("inherit")
         .media(FORCED_COLORS, sx().background("Highlight"))
-        .selector(
-            "&:dir(rtl)",
-            sx().left("auto").right(along_track(SLIDER_FILLED_FROM)),
-        )
+        .rtl(sx().left("auto").right(along_track(SLIDER_FILLED_FROM)))
 });
 
 /// Carries the thumb's position, because the `Tooltip` between them styles
@@ -163,10 +160,7 @@ static SLIDER_THUMB_ANCHOR_SX: StaticSx = StaticSx::new(|| {
         // Not inline: the tooltip's inline-block wrapper would sit on a
         // baseline and pull the thumb off the track's centre.
         .display("flex")
-        .selector(
-            "&:dir(rtl)",
-            sx().left("auto").right(along_track(SLIDER_THUMB_AT)),
-        )
+        .rtl(sx().left("auto").right(along_track(SLIDER_THUMB_AT)))
 });
 
 static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
@@ -228,8 +222,7 @@ static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
             "filled",
             sx().background("surface").border_color("transparent"),
         )
-        .selector(
-            "&:dir(rtl)",
+        .rtl(
             sx().left("auto")
                 .right(along_track(SLIDER_MARK_AT))
                 .transform("translate(50%, -50%)"),
@@ -260,8 +253,7 @@ static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
         ))
         .color("muted.7")
         .white_space("nowrap")
-        .selector(
-            "&:dir(rtl)",
+        .rtl(
             sx().left("auto")
                 .right(along_track(SLIDER_MARK_AT))
                 .transform(format!(

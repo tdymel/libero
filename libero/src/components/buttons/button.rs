@@ -337,8 +337,7 @@ fn button_icon_sx() -> Sx {
         .align_items("center")
         .flex("0 0 auto")
         .margin_right(SizeCss::SPACING.value(Size::Xs))
-        .selector(
-            "&:dir(rtl)",
+        .rtl(
             sx().margin_right("0")
                 .margin_left(SizeCss::SPACING.value(Size::Xs)),
         )

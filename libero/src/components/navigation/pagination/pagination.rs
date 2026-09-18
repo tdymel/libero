@@ -119,7 +119,7 @@ static PAGINATION_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // disables every `<button>` natively (todo 514).
         .selector("&:disabled", sx().opacity("0.5").cursor("default"))
         // The row runs right to left, so the arrows point the other way.
-        .selector("&:dir(rtl) svg", sx().transform("scaleX(-1)"))
+        .rtl(sx().selector("& svg", sx().transform("scaleX(-1)")))
 });
 
 static PAGINATION_ELLIPSIS_SX: StaticSx = StaticSx::new(|| {

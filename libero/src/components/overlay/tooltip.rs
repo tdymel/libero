@@ -51,7 +51,7 @@ fn bridge_sx(side: Side) -> Sx {
     };
     let base = sx().selector("&::before", bridge);
     match rtl {
-        Some(rtl) => base.selector("&:dir(rtl)::before", rtl),
+        Some(rtl) => base.rtl(sx().selector("&::before", rtl)),
         None => base,
     }
 }

@@ -29,17 +29,11 @@ static STEPPERS_SX: StaticSx =
 /// mirrors.
 static DECREMENT_SX: StaticSx = StaticSx::new(|| {
     sx().selector("::before", sx().left("calc(100% - 23px)").right("-1px"))
-        .selector(
-            "&:dir(rtl)::before",
-            sx().left("-1px").right("calc(100% - 23px)"),
-        )
+        .rtl(sx().selector("&::before", sx().left("-1px").right("calc(100% - 23px)")))
 });
 static INCREMENT_SX: StaticSx = StaticSx::new(|| {
     sx().selector("::before", sx().left("-1px").right("calc(100% - 23px)"))
-        .selector(
-            "&:dir(rtl)::before",
-            sx().left("calc(100% - 23px)").right("-1px"),
-        )
+        .rtl(sx().selector("&::before", sx().left("calc(100% - 23px)").right("-1px")))
 });
 
 field_props! {

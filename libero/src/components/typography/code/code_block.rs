@@ -118,6 +118,8 @@ static CODE_LINES_SX: StaticSx = StaticSx::new(|| {
 static CODE_LINE_ROW_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("row")
+        // A blank line has no gutter digit or text to give it height (todo 771).
+        .min_height(format!("{CODE_LINE_HEIGHT_PX}px"))
         .when("highlighted", marked_row_sx(ColorCss::PRIMARY))
         .when("diff-add", marked_row_sx(ColorCss::SUCCESS))
         .when("diff-remove", marked_row_sx(ColorCss::ERROR))

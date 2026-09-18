@@ -178,18 +178,19 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                 .and(rail.connector_sx(RailInset::Start)),
         )
         // `Rail` is physical; under RTL the inline-start edge is the right.
-        .selector(
-            "& > ol > li:dir(rtl)",
-            rail.connector_sx(RailInset::End)
-                .selector("&:not(:last-of-type)::before", sx().left("auto")),
+        .rtl(
+            sx().selector(
+                "& > ol > li",
+                rail.connector_sx(RailInset::End)
+                    .selector("&:not(:last-of-type)::before", sx().left("auto")),
+            ),
         )
         .selector(
             "& > ol > li [data-step-content]",
             sx().padding_left(rail.content_inset(&STEPPER_GAP.value()))
                 .padding_top(STEPPER_CONTENT_PADDING.value())
                 .padding_bottom(STEPPER_CONTENT_PADDING.value())
-                .selector(
-                    "&:dir(rtl)",
+                .rtl(
                     sx().padding_left("0")
                         .padding_right(rail.content_inset(&STEPPER_GAP.value())),
                 ),

@@ -30,10 +30,12 @@ static AVATAR_GROUP_SX: StaticSx = StaticSx::new(|| {
             sx().margin_left(format!("calc(-1 * {})", AVATAR_GROUP_SPACING.value())),
         )
         // Under RTL the previous circle is on the right.
-        .selector(
-            "&:dir(rtl) > * + *",
-            sx().margin_left("0")
-                .margin_right(format!("calc(-1 * {})", AVATAR_GROUP_SPACING.value())),
+        .rtl(
+            sx().selector(
+                "& > * + *",
+                sx().margin_left("0")
+                    .margin_right(format!("calc(-1 * {})", AVATAR_GROUP_SPACING.value())),
+            ),
         )
 });
 

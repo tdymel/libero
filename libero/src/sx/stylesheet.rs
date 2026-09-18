@@ -702,6 +702,17 @@ mod tests {
         )));
     }
 
+    /// Todo 781: Blitz matches no `:dir()`, so the ancestor arm follows the root.
+    #[test]
+    fn an_rtl_arm_also_matches_under_a_dir_attribute() {
+        let base = sx().rtl(sx().selector("& > svg", sx().height("1px")));
+        let css = Stylesheet::from(&base).as_str().to_string();
+        let class = base.class_name();
+
+        assert!(css.contains(&format!(".{class}:dir(rtl) > svg{{height:1px;}}")));
+        assert!(css.contains(&format!(":where([dir=rtl]) .{class} > svg{{height:1px;}}")));
+    }
+
     #[test]
     fn a_selector_list_inside_is_keeps_the_root_on_the_outside() {
         let base = sx().selector(

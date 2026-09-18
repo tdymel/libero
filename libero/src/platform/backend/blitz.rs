@@ -143,6 +143,8 @@ struct Doc {
     key_callbacks: RefCell<Vec<KeyCallback>>,
     focus: focus::Watch,
     resize: resize::Watch,
+    /// Where hover was at the last `pointermove`. See [`rebuild_on_hover_change`].
+    hovered: Cell<Option<NodeId>>,
 }
 
 /// A mounted [`Outlet`]: `flushes` is bumped to remount its flush element,
@@ -174,6 +176,7 @@ impl Doc {
             key_callbacks: RefCell::new(Vec::new()),
             focus: focus::Watch::default(),
             resize: resize::Watch::default(),
+            hovered: Cell::new(None),
         }
     }
 
@@ -332,6 +335,7 @@ pub(super) fn Listener(children: Element) -> Element {
             onpointermove: move |event| {
                 // Before the hover restyle this move asked for: see `heal_dirty_bits`.
                 heal_now();
+                rebuild_on_hover_change();
                 followed(&event, false);
             },
             onpointerup: move |event| {
@@ -1583,6 +1587,57 @@ fn rebuild_baked_boxes(doc: &mut BaseDocument) {
     let Ok(elements) = doc.query_selector_all("*") else {
         return;
     };
+    rebuild_baked(doc, elements);
+}
+
+/// What gains or loses `:hover` rebuilds its baked boxes, before the restyle
+/// this move asked for (todo 634). Blitz has moved hover by the time a
+/// `pointermove` handler runs.
+fn rebuild_on_hover_change() {
+    let (Some(anchor), Some(state)) = (anchor(), doc()) else {
+        return;
+    };
+    let Some(doc) = anchor.try_doc() else {
+        return;
+    };
+    let now = doc.get_hover_node_id();
+    let before = state.hovered.replace(now);
+    if before == now {
+        return;
+    }
+    let chain = |id: Option<NodeId>| {
+        let mut chain = id.map(|id| doc.node_chain(id)).unwrap_or_default();
+        chain.reverse();
+        chain
+    };
+    let (old, new) = (chain(before), chain(now));
+    let shared = old.iter().zip(&new).take_while(|(a, b)| a == b).count();
+    let roots: Vec<NodeId> = old
+        .get(shared)
+        .into_iter()
+        .chain(new.get(shared))
+        .copied()
+        .collect();
+    drop(doc);
+    if roots.is_empty() {
+        return;
+    }
+    let rebuild = move |doc: &mut BaseDocument| {
+        let mut subtree = Vec::new();
+        let mut stack = roots;
+        while let Some(id) = stack.pop() {
+            if let Some(node) = doc.get_node(id) {
+                subtree.push(id);
+                stack.extend(node.children.iter().copied());
+            }
+        }
+        rebuild_baked(doc, subtree);
+    };
+    run_or_defer(&anchor, rebuild);
+}
+
+/// Re-sets an attribute on each of `elements` that bakes a colour.
+fn rebuild_baked(doc: &mut BaseDocument, elements: impl IntoIterator<Item = NodeId>) {
     let attrs: Vec<_> = elements
         .into_iter()
         .filter_map(|id| {

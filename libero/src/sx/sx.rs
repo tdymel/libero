@@ -93,6 +93,13 @@ impl Sx {
         self.modifier(SxModifierKey::Selector(selector.into()), nested)
     }
 
+    /// Styles under a right-to-left direction. Blitz's stylo does not match
+    /// `:dir()`, so an `[dir=rtl]` ancestor arm repeats it there (todo 735).
+    pub(crate) fn rtl(self, nested: Sx) -> Self {
+        self.selector("&:dir(rtl)", nested.clone())
+            .selector(":where([dir=rtl]) &", nested)
+    }
+
     pub fn breakpoint(self, breakpoint: Size, nested: Sx) -> Self {
         self.modifier(SxModifierKey::Breakpoint(breakpoint), nested)
     }

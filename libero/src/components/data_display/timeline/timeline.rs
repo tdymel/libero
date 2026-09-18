@@ -92,14 +92,14 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
             TimelineAlign::Start.state_name(),
             sx().padding_left(inset.clone())
                 .and(rail.connector_sx(RailInset::Start))
-                .selector("&:dir(rtl)", rail_on(RailInset::End, &inset)),
+                .rtl(rail_on(RailInset::End, &inset)),
         )
         .when(
             TimelineAlign::End.state_name(),
             sx().padding_right(inset.clone())
                 .text_align("end")
                 .and(rail.connector_sx(RailInset::End))
-                .selector("&:dir(rtl)", rail_on(RailInset::Start, &inset)),
+                .rtl(rail_on(RailInset::Start, &inset)),
         );
 
     // The alternating layout, unconditionally. There is no width below which
@@ -118,13 +118,13 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
                     .text_align("end"),
             )
             // Mirrored: the first event's content sits left of the rail.
-            .selector(
-                "&:dir(rtl)",
-                sx().padding_left("0").padding_right(centred.clone()),
-            )
-            .selector(
-                "&:nth-of-type(even):dir(rtl)",
-                sx().padding_right("0").padding_left(centred.clone()),
+            .rtl(
+                sx().padding_left("0")
+                    .padding_right(centred.clone())
+                    .selector(
+                        "&:nth-of-type(even)",
+                        sx().padding_right("0").padding_left(centred.clone()),
+                    ),
             ),
     )
 });
@@ -171,13 +171,13 @@ static TIMELINE_BULLET_SX: StaticSx = StaticSx::new(|| {
             TimelineAlign::Start.state_name(),
             sx().left("0")
                 .right("auto")
-                .selector("&:dir(rtl)", sx().right("0").left("auto")),
+                .rtl(sx().right("0").left("auto")),
         )
         .when(
             TimelineAlign::End.state_name(),
             sx().right("0")
                 .left("auto")
-                .selector("&:dir(rtl)", sx().left("0").right("auto")),
+                .rtl(sx().left("0").right("auto")),
         )
         .when(
             TimelineAlign::Alternate.state_name(),

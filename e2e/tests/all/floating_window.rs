@@ -202,6 +202,46 @@ pub async fn keyboard_resize(page: &Page) -> Result<()> {
     assert_separator(page, largest, "End").await
 }
 
+/// Todo 796: under RTL the grip is the bottom-left corner, ArrowLeft widens a
+/// moved window, and its right edge stays where it was.
+#[test]
+fn under_rtl_the_grip_resizes_from_the_bottom_left() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate("document.documentElement.dir = 'rtl'")
+            .await
+            .unwrap();
+        open(page).await.unwrap();
+        let (window, grip) = (
+            rect(page, DIALOG).await.unwrap(),
+            rect(page, SEPARATOR).await.unwrap(),
+        );
+        assert!(
+            (grip.0 - window.0).abs() <= 2.0,
+            "the grip {grip:?} is not at the window's left {window:?}"
+        );
+
+        keyboard::tab_to(page, HANDLE, TAB_BUDGET).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        let moved = wait_for_move(page, window, (-STEP, 0.0)).await.unwrap();
+
+        keyboard::tab_to(page, SEPARATOR, TAB_BUDGET).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
+        let wider = wait_for_size(page, (moved.2 + STEP, moved.3), "a step left under RTL")
+            .await
+            .unwrap();
+        assert!(
+            (wider.0 + wider.2 - (moved.0 + moved.2)).abs() <= 1.0,
+            "the right edge moved: {moved:?} -> {wider:?}"
+        );
+        fixture.console.assert_clean("an RTL resize").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The separator is the only thing that tells a screen-reader user how big
 /// the window is: its value is the drawn width, its text the drawn size, and
 /// its range the caller's own bounds in pixels (todo 388).

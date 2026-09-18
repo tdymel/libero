@@ -429,7 +429,7 @@ pub fn DocsNav(
                     // `args.depth` below only pads a leaf's *label* inward.
                     sx: sx()
                         .gap("0")
-                        .selector("& ul", sx().gap("0").padding_left("0")),
+                        .selector("& ul", sx().gap("0").padding_inline_start("0")),
                     data,
                     default_expanded: expanded.peek().clone(),
                     onexpandedchange: move |open: HashSet<String>| expanded.set(open),
@@ -439,7 +439,7 @@ pub fn DocsNav(
                         if args.expanded.is_some() {
                             return default_tree_render(args);
                         }
-                        let padding_left = 7 + args.depth as u32 * 16;
+                        let padding_start = 7 + args.depth as u32 * 16;
                         // Closes the panel when a page link is clicked, and
                         // only then - a chevron must expand its section, not
                         // close the panel. `NavLink` takes no `onclick`
@@ -494,12 +494,12 @@ pub fn DocsNav(
                                     // that same continuity.
                                     sx: sx()
                                         .align_self("stretch")
-                                        .padding_left(0)
+                                        .padding_inline_start(0)
                                         .when("leaf", sx()
                                             .border_radius("0")
-                                            .margin_left("7px")
-                                            .padding_left(format!("{padding_left}px"))
-                                            .border_left(format!(
+                                            .margin_inline_start("7px")
+                                            .padding_inline_start(format!("{padding_start}px"))
+                                            .border_inline_start(format!(
                                                 "2px solid {}",
                                                 ColorCss::MUTED.value(ColorShade::S3),
                                             ))
@@ -507,7 +507,7 @@ pub fn DocsNav(
                                             // `NavLink`'s start bar goes; in the bar's colour, which reads on the tint.
                                             .when(
                                                 "active",
-                                                sx().border_left(format!(
+                                                sx().border_inline_start(format!(
                                                     "2px solid var({}, {})",
                                                     ColorCss::PRIMARY.role_name("on-tint-", ColorShade::S6),
                                                     ColorCss::PRIMARY.role_value("text-", ColorShade::S6),

@@ -102,35 +102,17 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
             "collapsed",
             sx().when(
                 Orientation::Horizontal.state_name(),
-                // Each direction gets its own pair: under RTL the previous
-                // segment is on the right.
+                // Logical sides: under RTL the previous segment is on the right,
+                // and Blitz's stylo matches no `:dir()` (todo 781).
                 sx().selector(
-                    "&:dir(ltr)",
-                    sx().selector(
-                        collapse_start,
-                        sx().margin_left("-1px")
-                            .border_top_left_radius("0")
-                            .border_bottom_left_radius("0"),
-                    )
-                    .selector(
-                        collapse_end,
-                        sx().border_top_right_radius("0")
-                            .border_bottom_right_radius("0"),
-                    ),
+                    collapse_start,
+                    sx().margin_inline_start("-1px")
+                        .border_start_start_radius("0")
+                        .border_end_start_radius("0"),
                 )
                 .selector(
-                    "&:dir(rtl)",
-                    sx().selector(
-                        collapse_start,
-                        sx().margin_right("-1px")
-                            .border_top_right_radius("0")
-                            .border_bottom_right_radius("0"),
-                    )
-                    .selector(
-                        collapse_end,
-                        sx().border_top_left_radius("0")
-                            .border_bottom_left_radius("0"),
-                    ),
+                    collapse_end,
+                    sx().border_start_end_radius("0").border_end_end_radius("0"),
                 ),
             )
             .when(
