@@ -60,7 +60,7 @@ pub fn HeaderPage() -> Element {
                 component: "Header",
                 children_text: "Libero",
                 controls: vec![
-                    Control::toggle("position", ["sticky", "static"]),
+                    Control::toggle("position", ["sticky", "static"]).labels(["Sticky", "Static"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     // Opens on the tinted banner, since that is what

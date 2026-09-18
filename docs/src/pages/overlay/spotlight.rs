@@ -357,7 +357,7 @@ pub fn SpotlightPage() -> Element {
                     prop("close_on_action", "bool").default("true").doc("Closes after running an action."),
                     prop("clear_on_close", "bool").default("true").doc("Starts every opening with an empty query."),
                     prop("aria_label", "String").default("\"Command palette\"").doc("Names the dialog and its list."),
-                    prop("shortcut", "Option<char>").default("Some('k')").doc("Ctrl (Cmd on a Mac) plus this key toggles the palette. `None` for no hotkey. Web only. A key the browser already uses, such as L, T or W, warns in a debug build."),
+                    prop("shortcut", "Option<char>").default("Some('k')").doc("Ctrl (Cmd on a Mac) plus this key toggles the palette. `None` for no hotkey. Web only. A key the browser already uses, such as L, T or W, warns in a debug build. Elsewhere, open the palette from a button. Two palettes on one page should not share a key."),
                     prop("highlight_first_on_query", "bool").default("true").doc("Highlights the first row after every keystroke, so Enter runs it. Off, Enter does nothing until the arrows pick a row."),
                     prop("loading", "bool").default("false").doc("The results are still coming. A loader replaces the rows, and a screen reader hears \"Searching\"."),
                     prop("onquery", "Callback<String>").doc("Called with the query on every keystroke. Set `loading` and start the search here."),
@@ -410,7 +410,7 @@ pub fn SpotlightPage() -> Element {
                     // example the code block prints.
                     Control::toggle("example", ["commands", "files", "issues", "search"])
                         .labels(["Commands", "Files", "200 issues", "Slow search"]),
-                    Control::toggle("shortcut", ["j", "p", "none"]),
+                    Control::toggle("shortcut", ["j", "p", "none"]).labels(["J", "P", "None"]),
                     Control::slider("limit", ["3", "5", "10", "none"]).default("none"),
                     Control::switch("close_on_action").default("true"),
                     Control::switch("clear_on_close").default("true"),

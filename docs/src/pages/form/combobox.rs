@@ -474,9 +474,9 @@ pub fn ComboboxPage() -> Element {
             properties: vec![
                 props("Combobox", vec![
                     prop("state", "ComboboxState")
-                        .doc("From `use_combobox()`. The open state, the highlighted row and the id the aria wiring uses. Required."),
+                        .doc("From `use_combobox()`. The open state, the highlighted row and the id the aria wiring uses. Required. One state drives one combobox."),
                     prop("options", "OptionSource<T>")
-                        .doc("The options to list, already filtered. Required. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself."),
+                        .doc("The options to list, already filtered. Required. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself. Every option renders, so cap the list here. A failed fetch is an empty list, so show your own error beside the field."),
                     prop("option", "Callback<ComboboxOptionArgs<T>, Element>")
                         .doc("Draws one row, usually a `ComboboxOption`. Required."),
                     prop("children", "Element")
@@ -525,7 +525,9 @@ pub fn ComboboxPage() -> Element {
                     " draws the rows and "
                     Code { source: "children" }
                     " is the trigger. The combobox adds the placement, the arrow keys and the "
-                    "row styling."
+                    "row styling. Closing on an outside click is yours, and "
+                    Code { source: "onpick" }
+                    " is the only way to pick."
                 }
             },
             // snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }

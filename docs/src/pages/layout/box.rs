@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Text},
@@ -71,6 +71,7 @@ pub fn BoxPage() -> Element {
                 fixed: vec![SX.to_string()],
                 controls: vec![
                     Control::toggle("component", ["div", "section", "a", "button"])
+                        .labels(["Div", "Section", "A", "Button"])
                         .code(tag_code),
                 ],
                 render: move |values: DemoValues| {
@@ -86,6 +87,18 @@ pub fn BoxPage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    Code { source: "Box" }
+                    " adds no roles, so the semantics are whatever tag "
+                    Code { source: "component" }
+                    " names. A clickable "
+                    Code { source: "div" }
+                    " has no keyboard support. Use "
+                    Code { source: "button" }
+                    " instead."
+                }
             }
         }
     }

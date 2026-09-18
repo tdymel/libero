@@ -135,7 +135,7 @@ pub fn DateFieldPage() -> Element {
                 Text {
                     "Typed text is read on blur or Enter, and leniently. Any separator works, "
                     "as do one-digit days, month names as a unique prefix, and a missing year. "
-                    "Only the order of day, month and year follows "
+                    "Two-digit years are not read. Only the order of day, month and year follows "
                     Code { source: "format" }
                     ". Text the field cannot accept stays, and the error says why. The form "
                     "always gets ISO 8601."
@@ -230,7 +230,7 @@ pub fn DateFieldPage() -> Element {
                                 "default" => vec![],
                                 format => vec![format!("time_format: {format:?}")],
                             }),
-                        Control::toggle("variant", ["analog", "digital"]).default("analog").hidden_when(|values| !has_time(values)).code(|_, values| {
+                        Control::toggle("variant", ["analog", "digital"]).labels(["Analog", "Digital"]).default("analog").hidden_when(|values| !has_time(values)).code(|_, values| {
                             match values.str("variant").as_str() {
                                 "digital" => vec![r#"variant: "digital""#.to_string()],
                                 _ => vec![],

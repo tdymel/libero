@@ -8,7 +8,10 @@ Description: A scrollable region that fills its parent, with themed scrollbars, 
 
 Scrolls its content and fills its parent, so give the parent a size. `onscroll`
 reports the position as a percent of each axis, and each edge has its own event.
-`Virtualize` renders only the rows in view.
+The buttons scroll through a handle from `use_scroll_area()`. `Virtualize`
+renders only the rows in view out of 50,000. It draws no element of its own and
+needs a `ScrollArea` above it, one per area. Without one, or as the second, it
+warns and renders every row.
 
 ## Usage
 
@@ -70,24 +73,7 @@ fn Demo() -> Element {
 }
 ```
 
-`ScrollPositionEvent` is `Start` when a scroll begins, `Change` while it runs
-and `End` when it stops, each with the x and y percent.
-
-`use_scroll_area()` returns a `Copy` handle. Pass it as `handle`, then call
-`scroll_to_percent(x, y)` (0-100, `None` keeps that axis) or `scroll_to(x, y)`
-in px from any handler. Every call scrolls. A call before the area mounts does
-nothing.
-
-`scroll_position_x` and `scroll_position_y` scroll to a percent too. A signal
-re-applies only when its value changes, so asking for the same position twice
-does nothing. Use the handle for buttons.
-
-## Virtualize
-
-`Virtualize` renders only the rows the area can show, so a list of 50,000 rows
-costs about a dozen elements. It draws no element of its own, so it goes
-wherever the rows go, inside a `List`, a table body or a plain stack. It needs a
-`ScrollArea` above it, which keeps the scrollbar the length of the whole list.
+With virtualize on, the rows come from `Virtualize`:
 
 ```rust
 use dioxus::prelude::*;
@@ -112,26 +98,12 @@ fn Rows() -> Element {
 }
 ```
 
-It takes a `count` and an `item` closure rather than the rows, so only the
-visible rows are read.
-
-Every row must have the same height. `Virtualize` measures the first rows and
-assumes the rest match. Pass `item_size` in px to skip the measurement.
-
-Without a `ScrollArea` above it, `Virtualize` warns and renders every row. A
-`ScrollArea` holds one `Virtualize`. A second one warns and renders every row
-too.
-
 ## Accessibility
 
 Tab reaches focusable content inside the area as usual. When the content has
-nothing to focus, like a block of text, the area itself becomes a tab stop with
-`role="region"` while it overflows, so the arrow keys can scroll it.
-`focusable: true` keeps the stop always. Your own `tabindex`, or a `role` other
-than `region`, turns it off.
-
-Name the area with `aria_label` or `aria_labelledby`. A debug build warns about
-a tab stop without a name. The name applies only while the area has a role.
+nothing to focus, like a block of text, the area itself becomes a tab stop while
+it overflows, so the arrow keys can scroll it. `focusable: true` keeps the stop
+always.
 
 ```rust,ignore
 ScrollArea {
@@ -140,8 +112,9 @@ ScrollArea {
 }
 ```
 
-`scrollbars: "none"` clips the overflow on both axes, so the content outside the
-box is out of reach. Use it only when something else scrolls.
+Name the area with `aria_label` or `aria_labelledby`. A debug build warns about
+a tab stop without a name. `scrollbars: "none"` puts the clipped content out of
+reach, so use it only where something else scrolls.
 
 ## Props
 
@@ -153,9 +126,9 @@ box is out of reach. Use it only when something else scrolls.
 | `scrollbar_color` | `ThemeAwareValue` | - | Thumb color. The track stays transparent. Unset it is `muted.5`. |
 | `scroll_position_x` | `f64` | - | Scrolls to this percent (0-100) horizontally. A signal re-applies it on every change, a literal once at mount. |
 | `scroll_position_y` | `f64` | - | The same as `scroll_position_x`, vertically. |
-| `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call. |
+| `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call. A `None` percent keeps that axis; a call before the area mounts does nothing. |
 | `focusable` | `bool` | `false` | Makes the area a tab stop always. Without it, the area is one only while it overflows and holds nothing focusable. Your own `tabindex`, or a `role` other than `region`, turns that off. |
-| `onscroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll with the position as a percent of each axis. |
+| `onscroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll with the position as a percent of each axis: `Start` when a scroll begins, `Change` while it runs, `End` when it stops. |
 | `onresize` | `EventHandler<Event<ResizeData>>` | - | Fires after the area resized. |
 | `ontopreached` | `EventHandler<()>` | - | Fires once when the top edge is reached. |
 | `onbottomreached` | `EventHandler<()>` | - | Fires once when the bottom edge is reached. |

@@ -77,6 +77,17 @@ pub fn FloatPage() -> Element {
                             "bottom-end",
                         ],
                     )
+                    .labels([
+                        "Top start",
+                        "Top center",
+                        "Top end",
+                        "Center start",
+                        "Center",
+                        "Center end",
+                        "Bottom start",
+                        "Bottom center",
+                        "Bottom end",
+                    ])
                     .default(theme.float.placement.as_str()),
                     Control::slider(
                         "offset_x",

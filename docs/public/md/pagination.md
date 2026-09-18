@@ -35,80 +35,12 @@ fn Demo() -> Element {
 }
 ```
 
-## The range
-
-An ellipsis never stands for a single page, since printing that page takes the
-same width. The row is always `2·siblings + 2·boundaries + 3` items wide.
-
-```text
-total  siblings  boundaries  page   rendered
-    7         1           1     4   1 2 3 4 5 6 7
-   10         1           1     1   1 2 3 4 5 … 10
-   10         1           1     5   1 … 4 5 6 … 10
-   10         1           1     7   1 … 6 7 8 9 10
-   20         2           1    10   1 … 8 9 10 11 12 … 20
-   20         1           2    10   1 2 … 9 10 11 … 19 20
-   11         0           1     6   1 … 6 … 11
-```
-
-`pagination_range` is public, for a custom strip:
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{pagination_range, PaginationItem};
-
-#[component]
-fn Demo() -> Element {
-    let items = pagination_range(42, 7, 1, 1);
-
-    rsx! {
-        for item in items {
-            match item {
-                PaginationItem::Page(n) => rsx! { button { "{n}" } },
-                PaginationItem::Ellipsis => rsx! { span { "…" } },
-            }
-        }
-    }
-}
-```
-
 ## Accessibility
 
-Every control is a button and a tab stop. `aria_label` names the `<nav>`. The
-page names come from the [localization](localization.md)'s `PaginationLabels`,
-whose templates put `{n}` wherever a language needs it. `label` overrides every
-name and never sees the ellipsis.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Pagination, PaginationLabel};
-
-#[component]
-fn Demo() -> Element {
-    let mut page = use_signal(|| 1u32);
-
-    rsx! {
-        Pagination {
-            total: 42,
-            page: page(),
-            onchange: move |next| page.set(next),
-            aria_label: "Suchergebnisse",
-            label: |label: PaginationLabel| match label {
-                PaginationLabel::Page { number, current: true } => format!("Seite {number}, aktuell"),
-                PaginationLabel::Page { number, .. } => format!("Seite {number}"),
-                PaginationLabel::First => "Erste Seite".to_string(),
-                PaginationLabel::Previous => "Vorherige Seite".to_string(),
-                PaginationLabel::Next => "Nächste Seite".to_string(),
-                PaginationLabel::Last => "Letzte Seite".to_string(),
-            },
-        }
-    }
-}
-```
-
+Every control is a button and a tab stop. The page names come from the
+[localization](localization.md)'s `PaginationLabels`, and `label` overrides them.
 At `xs` the controls are 22px and meet the 24px target size only through the
-theme's 4px gap. A theme that sets `theme.pagination.gap` to zero drops an `xs`
-pagination below WCAG AA.
+theme's gap, so keep `theme.pagination.gap` above zero.
 
 ## Props
 
@@ -118,7 +50,7 @@ pagination below WCAG AA.
 | `page` | `u32` | required | The current page, 1-based and clamped into range. |
 | `onchange` | `EventHandler<u32>` | - | Asks for a new page. Without it the page never changes, and the component warns. |
 | `aria_label` | `String` | required | Names the `<nav>` landmark, so two paginations on one page can be told apart. |
-| `siblings` | `u8` | `1` | Pages on each side of the current one. |
+| `siblings` | `u8` | `1` | Pages on each side of the current one. The row is always `2·siblings + 2·boundaries + 3` items wide, and an ellipsis never stands for a single page. |
 | `boundaries` | `u8` | `1` | Pages pinned at each end. `0` counts as 1. |
 | `size` | `Size` | `md` | Control box and font size. |
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |

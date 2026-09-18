@@ -118,12 +118,12 @@ pub fn ScrollAreaPage() -> Element {
                 prop("scroll_position_y", "f64")
                     .doc("The same as `scroll_position_x`, vertically."),
                 prop("handle", "ScrollAreaHandle")
-                    .doc("From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call."),
+                    .doc("From `use_scroll_area()`. Its `scroll_to_percent(x, y)` and `scroll_to(x, y)` in px scroll the area from any handler, on every call. A `None` percent keeps that axis; a call before the area mounts does nothing."),
                 prop("focusable", "bool")
                     .default("false")
                     .doc("Makes the area a tab stop always. Without it, the area is one only while it overflows and holds nothing focusable. Your own `tabindex`, or a `role` other than `region`, turns that off."),
                 prop("onscroll", "EventHandler<ScrollPositionEvent>")
-                    .doc("Fires on every scroll with the position as a percent of each axis."),
+                    .doc("Fires on every scroll with the position as a percent of each axis: `Start` when a scroll begins, `Change` while it runs, `End` when it stops."),
                 prop("onresize", "EventHandler<Event<ResizeData>>")
                     .doc("Fires after the area resized."),
                 prop("ontopreached", "EventHandler<()>").doc("Fires once when the top edge is reached."),
@@ -151,7 +151,11 @@ pub fn ScrollAreaPage() -> Element {
                     Code { source: "use_scroll_area()" }
                     ". With virtualize on, "
                     Code { source: "Virtualize" }
-                    " renders only the rows in view out of 50,000."
+                    " renders only the rows in view out of 50,000. It draws no element of "
+                    "its own and needs a "
+                    Code { source: "ScrollArea" }
+                    " above it, one per area. Without one, or as the second, it warns and "
+                    "renders every row."
                 }
             },
             Demo {
@@ -164,10 +168,13 @@ pub fn ScrollAreaPage() -> Element {
                 fixed: FIXED.map(str::to_string).to_vec(),
                 controls: vec![
                     Control::toggle("scrollbars", ["vertical", "horizontal", "both", "none"])
+                        .labels(["Vertical", "Horizontal", "Both", "None"])
                         .default(theme.scroll_area.scrollbars.as_str()),
                     Control::toggle("scrollbar_visibility", ["always", "hover", "hidden"])
+                        .labels(["Always", "Hover", "Hidden"])
                         .default(theme.scroll_area.visibility.as_str()),
                     Control::toggle("scrollbar_size", ["thin", "auto"])
+                        .labels(["Thin", "Auto"])
                         .default(theme.scroll_area.size.as_str()),
                     // The unset thumb is grey-5, which a bare `grey` would
                     // *not* resolve to - so the first swatch is unset, and it
@@ -283,7 +290,10 @@ pub fn ScrollAreaPage() -> Element {
                     Code { source: "aria_label" }
                     " or "
                     Code { source: "aria_labelledby" }
-                    ". A debug build warns about a tab stop without a name."
+                    ". A debug build warns about a tab stop without a name. "
+                    Code { source: "scrollbars: \"none\"" }
+                    " puts the clipped content out of reach, so use it only where something "
+                    "else scrolls."
                 }
             }
 

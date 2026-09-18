@@ -1,8 +1,9 @@
 use crate::components::{DocPage, DocSection};
+use crate::icons::CheckmarkIcon;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Alert, Code, CodeBlock, Flex, List, ListItem, Options, Table, Tabs, Text, column,
+        Alert, Code, CodeBlock, Flex, Icon, List, ListItem, Options, Table, Tabs, Text, column,
     },
     sx::sx,
 };
@@ -146,6 +147,18 @@ pub fn GettingStarted() -> Element {
     }
 }
 
+/// A small list with Philosophy's check marks, so it does not read as a paragraph.
+#[component]
+fn Checklist(children: Element) -> Element {
+    rsx! {
+        List {
+            size: "sm",
+            icon: rsx! { Icon { variant: "standard", color: "primary", size: "sm", CheckmarkIcon {} } },
+            {children}
+        }
+    }
+}
+
 /// A tab's body: a column with room under the strip.
 #[component]
 fn Panel(children: Element) -> Element {
@@ -160,7 +173,7 @@ fn WebPanel() -> Element {
         Panel {
             CodeBlock { source: WEB_COMMANDS, language: "shell" }
             Text { "What keeps the download small:" }
-            List { size: "sm",
+            Checklist {
                 ListItem {
                     "A release profile tuned for size. "
                     Code { source: "dx build --release" }
@@ -186,7 +199,7 @@ fn WebPanel() -> Element {
                 ListItem {
                     "Dioxus's experimental "
                     Code { source: "wasm-split" }
-                    " feature fetches each route's code on its first visit. It takes this site's main bundle from 414 KB to 297 KB in brotli. With it on, always pass "
+                    " feature fetches each route's code on its first visit. With it on, always pass "
                     Code { source: "--wasm-split" }
                     " to "
                     Code { source: "dx" }
@@ -217,7 +230,7 @@ fn NativePanel() -> Element {
             CodeBlock { source: NATIVE_CARGO, language: "toml" }
             CodeBlock { source: NATIVE_COMMANDS, language: "shell" }
             Text { "On Linux you need:" }
-            List { size: "sm",
+            Checklist {
                 ListItem {
                     Code { source: "pkg-config" }
                     ", "
@@ -259,7 +272,7 @@ fn AndroidPanel() -> Element {
                 " feature; libero needs no feature of its own."
             }
             Text { "Install once:" }
-            List { size: "sm",
+            Checklist {
                 ListItem { "The Android SDK with the NDK (27), platform 34 and build tools 34, and a JDK." }
                 ListItem { "An emulator or a device that " Code { source: "adb devices" } " lists." }
             }

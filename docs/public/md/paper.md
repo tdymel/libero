@@ -40,12 +40,6 @@ like a `2px` corner or no shadow, goes through `sx`.
 Paper { sx: sx().padding("lg").box_shadow("none"), "Flat" }
 ```
 
-## Building on it
-
-A component that is a surface itself, rather than one holding a `Paper`, starts
-its base style from `paper_sx()` (`use libero::components::paper_sx;`), adds its
-own rules and passes the result as `framework_sx`. `Dialog` works this way.
-
 ## Accessibility
 
 A `Paper` rendered as a `section` or `aside` is a landmark and needs your

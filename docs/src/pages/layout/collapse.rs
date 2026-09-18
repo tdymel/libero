@@ -171,7 +171,7 @@ pub fn CollapsePage() -> Element {
                     .doc("Whether the panel is expanded. You own this state."),
                 prop("keep_mounted", "bool")
                     .default("true")
-                    .doc("Keeps the children in the DOM while closed. `false` removes them once the panel has closed."),
+                    .doc("Keeps the children in the DOM while closed, out of the focus order and hidden from screen readers, so a half-typed form survives. `false` removes them once the panel has closed."),
                 prop("duration", "u32")
                     .default("200")
                     .doc("Animation length in milliseconds. `0` turns the animation off."),

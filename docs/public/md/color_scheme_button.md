@@ -33,12 +33,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Accessibility
-
-The accessible name says what a press does, such as "Switch to the dark
-theme". The icon is hidden from screen readers. Opening the picker puts focus
-on the checked theme set.
-
 ## Props
 
 | Prop | Type | Default | Description |

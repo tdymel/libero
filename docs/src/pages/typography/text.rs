@@ -35,7 +35,8 @@ pub fn TextPage() -> Element {
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
-                    Control::toggle("component", ["p", "span", "div"]),
+                    Control::toggle("component", ["p", "span", "div"])
+                        .labels(["P", "Span", "Div"]),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Text {

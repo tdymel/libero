@@ -147,7 +147,7 @@ pub fn AccordionPage() -> Element {
                 props("Accordion", vec![
                     prop("open", "AccordionOpen<T>")
                         .default("One(None)")
-                        .doc("Which sections are open. `One(Option<T>)` holds at most one, `Many(Vec<T>)` any number. Controlled, so pair it with `onchange`."),
+                        .doc("Which sections are open. `One(Option<T>)` holds at most one, `Many(Vec<T>)` any number. Controlled, so pair it with `onchange`. An `Option<T>` or a `Vec<T>` converts into one."),
                     prop("onchange", "EventHandler<AccordionOpen<T>>")
                         .default("None")
                         .doc("Called with the whole new open set, in the same mode, ready to store."),
@@ -211,7 +211,9 @@ pub fn AccordionPage() -> Element {
                         }),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
-                    Control::toggle("heading", ["h2", "h3", "h4"]).default("h3"),
+                    Control::toggle("heading", ["h2", "h3", "h4"])
+                        .labels(["H2", "H3", "H4"])
+                        .default("h3"),
                     // The flag lives inside `options`, so the switch stands
                     // for one named section rather than for a prop of its own.
                     Control::switch("disabled_option").code(|_, values| {

@@ -11,99 +11,61 @@ shown while there is more content that way. A press scrolls by `scroll_amount`
 pixels. Touch, trackpad and the arrow keys scroll it as usual. The content fades
 out under each control, so set `fade_color` to the surface the strip sits on.
 
+`onedgechange` reports whether the strip rests against an end, printed under the
+strip. With `controls: "never"`, move the strip from your own buttons through a
+`use_scroller()` handle.
+
 ## Usage
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Chip, Flex, Scroller};
-
-const TAGS: [&str; 6] = ["Rust", "Dioxus", "WebAssembly", "Accessibility", "Layout", "Theming"];
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Scroller {
-            aria_label: "Tags",
-            Flex { direction: "row", gap: "sm", wrap: "nowrap",
-                for tag in TAGS {
-                    Chip { key: "{tag}", "{tag}" }
-                }
-            }
-        }
-    }
-}
-```
-
-On another surface, pass its colour as `fade_color`, or the control shows as a
-band.
-
-```rust,ignore
-Scroller { aria_label: "Tags", fade_color: "muted.1", /* .. */ }
-```
-
-## Edges
-
-`onedgechange` reports whether the strip rests against an end, once when it is
-first measured and again whenever that changes. With `controls: "never"` a strip
-can say so in its own words.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Chip, Flex, Scroller, ScrollerEdges, Text};
+use libero::{
+    components::{Button, Chip, Flex, Scroller, ScrollerEdges, Text, use_scroller},
+    sx::sx,
+};
 
 const TAGS: [&str; 6] = ["Rust", "Dioxus", "WebAssembly", "Accessibility", "Layout", "Theming"];
 
 #[component]
 fn Demo() -> Element {
     let mut edges = use_signal(|| None::<ScrollerEdges>);
+    let strip = use_scroller();
 
     rsx! {
-        Scroller {
-            aria_label: "Tags",
-            controls: "never",
-            onedgechange: move |next| edges.set(Some(next)),
-            Flex { direction: "row", gap: "sm", wrap: "nowrap",
-                for tag in TAGS {
-                    Chip { key: "{tag}", "{tag}" }
+        Flex { direction: "column", gap: "sm", sx: sx().width("100%"),
+            Scroller {
+                aria_label: "Tags",
+                controls: "never",
+                handle: strip,
+                onedgechange: move |next| edges.set(Some(next)),
+                Flex { direction: "row", gap: "sm", wrap: "nowrap",
+                    for tag in TAGS {
+                        Chip { key: "{tag}", "{tag}" }
+                    }
+                }
+            }
+            Flex { direction: "row", gap: "sm",
+                Button { variant: "outlined", onclick: move |_| strip.step_back(), "Back" }
+                Button { variant: "outlined", onclick: move |_| strip.step_forward(), "Forward" }
+            }
+            Text { size: "sm",
+                match edges() {
+                    Some(ScrollerEdges { at_start: true, at_end: true }) => "Everything fits",
+                    Some(ScrollerEdges { at_end: false, .. }) => "More to the right",
+                    Some(_) => "End of the list",
+                    None => "",
                 }
             }
         }
-        Text { size: "sm",
-            match edges() {
-                Some(ScrollerEdges { at_start: true, at_end: true }) => "Everything fits",
-                Some(ScrollerEdges { at_end: false, .. }) => "More to the right",
-                Some(_) => "End of the list",
-                None => "",
-            }
-        }
     }
 }
 ```
-
-To move the strip from your own buttons, pass a `use_scroller()` handle as
-`handle`. `step_forward()` and `step_back()` move it as the controls do, by
-`scroll_amount` and never past an end.
-
-```rust,ignore
-let strip = use_scroller();
-
-rsx! {
-    Scroller { aria_label: "Tags", controls: "never", handle: strip,
-        onedgechange: move |next| edges.set(Some(next)),
-        // ...
-    }
-    Button { onclick: move |_| strip.step_back(), "Back" }
-    Button { onclick: move |_| strip.step_forward(), "Forward" }
-}
-```
-
-A call before the strip has mounted does nothing.
 
 ## Accessibility
 
-The strip is a named region and a tab stop, so `aria_label` is required. On the
-focused strip `←` and `→` scroll it. `Home` and `End` do not. A control at its
-own end leaves the tab order, but keeps focus if it had it.
+The strip is a tab stop, so `aria_label` is required. On the focused strip `←`
+and `→` scroll it. A control at its own end leaves the tab order, but keeps
+focus if it had it.
 
 ## Props
 

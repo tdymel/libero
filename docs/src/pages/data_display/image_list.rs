@@ -254,10 +254,10 @@ pub fn ImageListPage() -> Element {
                         .doc("One cell each, in render order."),
                     prop("cols", "Responsive<u8>")
                         .default(defaults.cols.to_string())
-                        .doc("Columns, as `cols: 3` or one count per breakpoint, `cols: responsive(1).sm(2).md(4)`. Each count snaps to 1, 2, 3, 4, 6 or 12, since a cell spans twelfths of a `GridZone`. An `ImageItem::span` stays the same at every width."),
+                        .doc("Columns, as `cols: 3` or one count per breakpoint, `cols: responsive(1).sm(2).md(4)`. Each count snaps to 1, 2, 3, 4, 6 or 12, since a cell spans twelfths of a `GridZone`. Any other count snaps to the nearest, a tie to the wider cell, and warns. An `ImageItem::span` stays the same at every width."),
                     prop("variant", "ImageListVariant")
                         .default(defaults.variant.as_str())
-                        .doc("`standard` gives every cell the same height, `masonry` keeps each picture's own and packs them, `quilted` lets a cell take more than one row, and `woven` shortens every second cell to 70%."),
+                        .doc("`standard` gives every cell the same height, `masonry` keeps each picture's own and packs them, `quilted` lets a cell take more than one row, and `woven` shortens every second cell to 70%. `masonry` measures in the browser, and without a DOM draws an ordinary grid."),
                     prop("gap", "Size")
                         .default(defaults.gap.as_str())
                         .doc("Between cells."),
@@ -273,7 +273,7 @@ pub fn ImageListPage() -> Element {
                     prop("span(span)", "GridSpan").doc("This cell's width, in the twelfths a `GridItem` takes. Overrides the one `cols` gives."),
                     prop("rows(rows)", "u8").doc("This cell's height in rows. `quilted` only. Other variants ignore it with a warning."),
                     prop("bar(bar)", "ImageBar").doc("The caption strip."),
-                    prop("to(target)", "NavigationTarget").doc("Makes the whole cell a link. A `zoomable` `Image` in it draws no zoom button and warns."),
+                    prop("to(target)", "NavigationTarget").doc("Makes the whole cell a link. Keep everything inside the cell unpositioned, or the hit area stops there. A `zoomable` `Image` in it draws no zoom button and warns."),
                 ]),
                 props("ImageBar", vec![
                     prop("new(content)", "Element").doc("The strip's content, laid out as a flex row. Give a text block `flex: 1 1 auto; min-width: 0` and a `<button>` `color: inherit`."),
@@ -282,7 +282,7 @@ pub fn ImageListPage() -> Element {
                         .doc("`bottom`, `top` or `below`, for this cell."),
                     prop("scrim(on)", "bool")
                         .default("true")
-                        .doc("The gradient behind an overlay bar and its light text color. Off leaves a bare transparent strip."),
+                        .doc("The gradient behind an overlay bar and its light text color. Off leaves a bare transparent strip. A `below` bar has none."),
                 ]),
             ],
             lead: rsx! {
@@ -362,6 +362,7 @@ pub fn ImageListPage() -> Element {
                         .code(|_, _| vec![]),
                     Control::switch("link").code(|_, _| vec![]),
                     Control::toggle("bar", ["none", "bottom", "top", "below"])
+                        .labels(["None", "Bottom", "Top", "Below"])
                         .default(defaults.bar_position.as_str())
                         .code(|_, values| vec![items_code(values)]),
                     Control::switch("scrim")

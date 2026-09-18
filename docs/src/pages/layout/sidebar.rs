@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Sidebar, Text},
@@ -60,7 +62,7 @@ pub fn SidebarPage() -> Element {
                 // A `md` panel is 240px, wider than the preview beside the controls.
                 wide_preview: true,
                 controls: vec![
-                    Control::toggle("side", ["start", "end"]),
+                    Control::toggle("side", ["start", "end"]).labels(["Start", "End"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                 ],
@@ -96,6 +98,19 @@ pub fn SidebarPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_layout),
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "The root is an "
+                    Code { source: "aside" }
+                    ", the "
+                    Code { source: "complementary" }
+                    " landmark. For the site navigation pass "
+                    Code { source: "component: \"nav\"" }
+                    ". Give it an "
+                    Code { source: "aria_label" }
+                    " when the page has more than one landmark of that kind."
+                }
             }
         }
     }

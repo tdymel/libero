@@ -50,9 +50,8 @@ What keeps the download small:
   asset beside it. Your host has to serve the `.br` files.
 - Only the `code-lang-*` grammars your pages highlight.
 - Dioxus's experimental `wasm-split` feature fetches each route's code on its
-  first visit. It takes this site's main bundle from 414 KB to 297 KB in
-  brotli. With it on, always pass `--wasm-split` to `dx`, or the app fails to
-  load.
+  first visit. With it on, always pass `--wasm-split` to `dx`, or the app fails
+  to load.
 
 ```toml
 [profile.release]

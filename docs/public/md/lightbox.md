@@ -11,6 +11,11 @@ around it. Each opening carries its pictures and where to start, and focus
 returns to the thumbnail that opened it. `Image { zoomable }` ([Image](image.md))
 is this viewer with one picture.
 
+Double-click or press `z` to step through 2x, 4x and 8x and back to fitted. The
+zoom buttons, `+` and `-` zoom in finer steps. Scroll to zoom at the cursor.
+Drag, click or use the arrows to pan. At the edge of a pan the arrows move to
+the next picture, so the keyboard never gets stuck.
+
 ## Usage
 
 The options are shared by every opening and read once. The gallery travels with
@@ -55,46 +60,12 @@ fn Demo(photos: Vec<Photo>) -> Element {
 }
 ```
 
-## Zoom and pan
-
-| Input | Action |
-|---|---|
-| Double-click, `z` | Steps through 2x, 4x and 8x, capped at `max_zoom`, then back to fitted. A double-click zooms at the cursor. |
-| Wheel | Zooms at the cursor, between fitted and `max_zoom`. |
-| `+`, `-` | Zooms in or out one step at the centre. |
-| Zoom in, Zoom out buttons | Zoom in or out one step at the centre, like `+` and `-`. Disabled at `max_zoom` and when fitted. |
-| Drag | Pans while zoomed. |
-| Click | While zoomed, moves the clicked spot to the centre. |
-| `ArrowLeft`, `ArrowRight` | Pan while zoomed. At the pan edge, or when fitted, go to the previous or next picture. |
-| `ArrowUp`, `ArrowDown` | Pan while zoomed. |
-| `Home`, `End` | Go to the first or last picture. |
-| Swipe down (touch) | Closes, with `close_on_swipe_down` and not zoomed. |
-| `Escape`, backdrop, Close | Closes. |
-
-The keys act while the picture has focus. A pan keeps the picture covering its
-frame, and moving to another picture resets the zoom. With focus on the track,
-the arrows page through the pictures as in any [Carousel](carousel.md).
-
-On desktop and mobile, a drag stops following once the pointer leaves the
-picture. The wheel, the keys and double-click still work.
-
 ## Accessibility
 
-Name the dialog with `aria_label`, which falls back to "Gallery". Give every
-picture its own `alt`.
-
-With `zoom` on, the picture showing is a tab stop that takes the zoom and pan
-keys. Its description lists them after the caption, and a status message reads
-each new zoom level. In the thumbnail strip, the arrows, `Home` and `End` move
-along the strip and change the picture with it.
-
-The zoom buttons sit before the close button, which takes focus on open. At a
-limit a zoom button is `aria-disabled` and keeps its tab stop, so focus stays
-on it.
-
-The viewer is a [Dialog](dialog.md) with zoom and close buttons, over a
-[Carousel](carousel.md) of pictures and a second one of thumbnails. It dims
-through `OverlayDefaults` like every modal.
+Give every picture its own `alt`. With `zoom` on, the picture showing is a tab
+stop that takes the zoom and pan keys. Its description lists them, and a status
+message reads each new zoom level. In the thumbnail strip, the arrows, Home and
+End move along the strip and change the picture with it. Esc closes the viewer.
 
 ## API
 
@@ -116,7 +87,7 @@ pair. An index past the end shows the last picture.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `zoom` | `bool` | `true` | Lets the zoom buttons, the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan. |
+| `zoom` | `bool` | `true` | Lets the zoom buttons, the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan. On desktop and mobile a drag stops once the pointer leaves the picture. |
 | `max_zoom` | `Option<f64>` | `8.0` | Upper scale bound. Unset, the theme's. |
 | `thumbnails` | `bool` | `true` | The strip under the stage. Never shown for one picture. |
 | `captions` | `bool` | `true` | Shows each item's caption. |

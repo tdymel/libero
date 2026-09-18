@@ -129,6 +129,7 @@ pub fn FieldsetPage() -> Element {
                 wrap: Wrap(fieldset_code),
                 controls: vec![
                     Control::toggle("status", ["auto", "warning", "error"])
+                        .labels(["Auto", "Warning", "Error"])
                         .default("auto")
                         .code(silent),
                     Control::switch("description").code(silent),

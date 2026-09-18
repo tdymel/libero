@@ -69,7 +69,8 @@ pub fn AnchorPage() -> Element {
                             _ => vec!["new_tab_hint: false".to_string()],
                         }
                     }),
-                    Control::toggle("underline", ["hover", "always", "never"]),
+                    Control::toggle("underline", ["hover", "always", "never"])
+                        .labels(["Hover", "Always", "Never"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                 ],
@@ -104,7 +105,10 @@ pub fn AnchorPage() -> Element {
                 Text {
                     "The link text is the accessible name, so make it say where the link goes. A "
                     Code { source: "target: \"_blank\"" }
-                    " link also reads \"(opens in a new tab)\". With "
+                    " link draws a small external icon and reads a hidden \"(opens in a new "
+                    "tab)\". "
+                    Code { source: "new_tab_hint: false" }
+                    " drops both, for a link whose text already says it. With "
                     Code { source: "underline: \"never\"" }
                     ", a link inside a paragraph stands out by color alone."
                 }

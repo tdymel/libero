@@ -12,6 +12,10 @@ a match over the same enum, so a forgotten section is a compile error. A closed
 panel is not mounted, so what it held, such as a half-typed form, is gone when
 it closes.
 
+`open` is controlled, and its variant is the mode. `AccordionOpen::One` holds at
+most one section, so opening another closes the first. `AccordionOpen::Many`
+toggles each on its own. `onchange` hands back the whole new set.
+
 ## Usage
 
 ```rust
@@ -44,36 +48,25 @@ fn Demo() -> Element {
 }
 ```
 
-## One or many
-
-`open` is controlled, and its variant is the mode.
-
-- `AccordionOpen::One(Option<T>)` holds at most one section. Opening another
-  closes the first.
-- `AccordionOpen::Many(Vec<T>)` toggles each section on its own.
-
-`onchange` hands back the whole new set in the same mode, ready to `set`.
-`From<Option<T>>` and `From<Vec<T>>` build either, and `.one()` and `.values()`
-read them back.
-
 ## Accessibility
 
-- Every trigger is a tab stop. Enter and Space toggle. Up and Down move focus
-  to the next or previous trigger, wrapping and skipping disabled ones. Home
-  and End jump to the ends. Arrows never toggle.
-- Pick the heading level the page outline needs, then the size. `h3` assumes a
-  section title above the accordion.
-- Every open panel is a region named by its trigger. A `Many` accordion with a
-  dozen open sections makes a long landmark list.
-- With `OptionLabel::rich`, the name replaces the drawn label, so it must
-  contain the visible text. A voice-control user says what they see (WCAG
-  2.5.3).
+Every trigger is a tab stop. Enter and Space toggle. `↑` and `↓` move between
+triggers, and Home and End jump to the ends, without toggling.
+
+Pick the heading level the page outline needs, then the size. `h3` assumes a
+section title above the accordion.
+
+Every open panel is a region named by its trigger. A `Many` accordion with a
+dozen open sections makes a long landmark list.
+
+With `OptionLabel::rich`, the name replaces the drawn label, so it must contain
+the visible text (WCAG 2.5.3).
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `open` | `AccordionOpen<T>` | `One(None)` | Which sections are open. `One(Option<T>)` holds at most one, `Many(Vec<T>)` any number. Controlled, so pair it with `onchange`. |
+| `open` | `AccordionOpen<T>` | `One(None)` | Which sections are open. `One(Option<T>)` holds at most one, `Many(Vec<T>)` any number. Controlled, so pair it with `onchange`. An `Option<T>` or a `Vec<T>` converts into one. |
 | `onchange` | `EventHandler<AccordionOpen<T>>` | `None` | Called with the whole new open set, in the same mode, ready to store. |
 | `panel` | `Callback<T, Element>` | `None` | A section's body. A closed panel is not mounted, so it keeps no state. |
 | `options` | `OptionSource<T>` | `T::options()` | The sections to show. A `Vec<T>` converts. An `OptionList<T>` can disable a section, which renders, cannot be toggled and stays a tab stop. Groups are drawn flat. |

@@ -109,7 +109,8 @@ pub fn DrawerPage() -> Element {
                 children_text: "",
                 children_code: CONTENT.to_string(),
                 controls: vec![
-                    Control::toggle("anchor", ["start", "end", "top", "bottom"]),
+                    Control::toggle("anchor", ["start", "end", "top", "bottom"])
+                        .labels(["Start", "End", "Top", "Bottom"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                 ],
                 render: move |values: DemoValues| rsx! {

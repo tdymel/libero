@@ -68,20 +68,8 @@ let spotlight = use_spotlight(SpotlightOptions {
 });
 ```
 
-## Opening it
-
-Ctrl + K (Cmd + K on a Mac) toggles the palette from anywhere on the page.
-Change the key with `shortcut: Some('p')`, or turn it off with `None`. The
-hotkey is ignored while focus is in a text field and while a dialog or popover
-is open. A key the browser already uses, such as L, T or W, warns in a debug
-build. Only the web has the hotkey. Elsewhere, open the palette from a button.
-Two palettes on one page should not share a key.
-
-## Slow search
-
-For results from a server, return a signal's contents from `actions`. Start the
-search from `onquery` and set `loading` until it answers. A loader then
-replaces the rows, and "Nothing found" never flashes before the answer.
+For results from a server, return a signal's contents from `actions`, start the
+search from `onquery` and set `loading` until it answers.
 
 ```rust,ignore
 let mut results = use_signal(Vec::<SpotlightAction>::new);
@@ -105,11 +93,12 @@ let spotlight = use_spotlight(SpotlightOptions {
 
 ## Accessibility
 
-Focus stays in the search box. ArrowDown and ArrowUp move the highlight,
-wrapping at both ends. Enter runs the highlighted action, by default the first
-row. Turn `highlight_first_on_query` off for a palette whose actions change
-things. Then nothing is highlighted until you press ArrowDown. Escape or a
-click outside closes, and focus goes back to what opened it.
+Focus stays in the search box. `↓` `↑` move the highlight, wrapping at both
+ends. Enter runs the highlighted action, by default the first row. Turn
+`highlight_first_on_query` off for a palette whose actions change things. Then
+nothing is highlighted until you press `↓`. Esc or a click outside closes, and
+focus goes back to what opened it. The hotkey is ignored while you type in
+another text field, and while a dialog or popover is open.
 
 ## API
 
@@ -129,7 +118,7 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
 | `close_on_action` | `bool` | `true` | Closes after running an action. |
 | `clear_on_close` | `bool` | `true` | Starts every opening with an empty query. |
 | `aria_label` | `String` | `"Command palette"` | Names the dialog and its list. |
-| `shortcut` | `Option<char>` | `Some('k')` | Ctrl (Cmd on a Mac) plus this key toggles the palette. `None` for no hotkey. Web only. A key the browser already uses, such as L, T or W, warns in a debug build. |
+| `shortcut` | `Option<char>` | `Some('k')` | Ctrl (Cmd on a Mac) plus this key toggles the palette. `None` for no hotkey. Web only. A key the browser already uses, such as L, T or W, warns in a debug build. Elsewhere, open the palette from a button. Two palettes on one page should not share a key. |
 | `highlight_first_on_query` | `bool` | `true` | Highlights the first row after every keystroke, so Enter runs it. Off, Enter does nothing until the arrows pick a row. |
 | `loading` | `bool` | `false` | The results are still coming. A loader replaces the rows, and a screen reader hears "Searching". |
 | `onquery` | `Callback<String>` | - | Called with the query on every keystroke. Set `loading` and start the search here. |

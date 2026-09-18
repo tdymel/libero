@@ -151,6 +151,7 @@ pub fn TagsFieldPage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("sm"),
                     Control::toggle("status", ["valid", "warning", "error"])
+                        .labels(["Valid", "Warning", "Error"])
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {
                             "warning" => vec![
@@ -162,6 +163,7 @@ pub fn TagsFieldPage() -> Element {
                     // Its own `code`, so the snippet prints `max_tags: 5` and
                     // not `max_tags: "5"`.
                     Control::toggle("max_tags", ["unset", "3", "5"])
+                        .labels(["Unset", "3", "5"])
                         .default("unset")
                         .code(|_, values| match max_tags(values) {
                             Some(max) => vec![format!("max_tags: {max}")],

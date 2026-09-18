@@ -64,21 +64,6 @@ Values must be unique across the whole tree, not just among siblings. The
 cascader finds its value by searching the tree with `==`, and a value no option
 holds selects nothing and warns. The hidden input posts `Options::value()`.
 
-## Layouts
-
-| `layout` | What the open list is |
-|---|---|
-| `"columns"` (default) | One `role="listbox"` per level, side by side. The columns open down to the highlighted row, never past it |
-| `"paths"` | One row per full path, labels joined by `separator` |
-
-`searchable` always renders `"paths"`. The search box narrows the list to the
-paths that match, case-insensitively over the joined labels. `filter` replaces
-that rule and gets the query, the joined label and the path's values.
-
-Without `any_level` only a leaf can be picked, so `"paths"` lists only leaf
-paths. With `any_level` a branch picks its own value as well as expanding, and
-every option gets a row.
-
 ## Accessibility
 
 | Key | State | Effect |
@@ -115,7 +100,7 @@ unnamed combobox.
 | `onchange` | `EventHandler<Option<T>>` | - | Called with the value to select next, or `None` when the selection was cleared. |
 | `any_level` | `bool` | `false` | Lets a branch be picked as well as expanded, as its own value. Off, only a leaf commits. |
 | `allow_deselect` | `bool` | `false` | Picking the selected option again clears it. Off, a re-pick keeps the value. |
-| `layout` | `CascaderLayout` | `columns` | `"columns"` draws one list per level, `"paths"` one row per full path. A search always renders `"paths"`. |
+| `layout` | `CascaderLayout` | `columns` | `"columns"` draws one list per level, `"paths"` one row per full path. A search always renders `"paths"`. Without `any_level` it lists only leaf paths. |
 | `searchable` | `bool` | `false` | Puts a search box at the top of the list, which narrows it to the paths that match. |
 | `filter` | `Callback<CascaderFilterArgs<T>, bool>` | - | Narrows the paths while searching. Defaults to a case-insensitive `contains` over the joined path. |
 | `separator` | `String` | `" / "` | Between labels, in the trigger and in a `"paths"` row. |

@@ -12,11 +12,12 @@ what libero does not do.
 ## On and disabled states
 
 A pressed, selected or current control never differs by colour alone. It also
-carries a line in its own text colour. `Button`, `ActionIcon`, `Chip`,
-`SegmentedControl`, the current `Pagination` page and the current `Stepper`
-marker draw a thin ring just inside their edge. An active `NavLink` and a
-selected row in a `Select`, `MultiSelect` or `Combobox` list draw a short 2px
-bar at their start edge. A disabled control fades to half.
+carries a line. `Button`, `ActionIcon`, `Chip`, `SegmentedControl`, the current
+`Pagination` page and the current `Stepper` marker draw a thin ring in their own
+text colour just inside their edge. An active `NavLink` and a selected row in a
+`Select`, `MultiSelect` or `Combobox` list get a light tint of their colour and
+a 2px bar at their start edge, in a darker shade of that colour that reaches
+4.5:1 on the tint. A disabled control fades to half.
 
 ## Forced colors and Windows High Contrast
 

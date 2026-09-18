@@ -167,6 +167,7 @@ pub fn SkeletonPage() -> Element {
                     // its content, but a shape with no content and no height
                     // is zero pixels tall.
                     Control::toggle("height", ["auto", "12px", "40px"])
+                        .labels(["Auto", "12px", "40px"])
                         .code(height_code)
                         .hidden_when(|values| !with_content(values)),
                     Control::toggle("shape_height", ["12px", "40px", "80px"])

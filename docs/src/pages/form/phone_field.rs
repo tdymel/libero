@@ -130,6 +130,7 @@ pub fn PhoneFieldPage() -> Element {
                             vec![format!("country: \"{}\"", values.str("country").to_uppercase())]
                         }),
                     Control::toggle("status", ["valid", "warning", "error"])
+                        .labels(["Valid", "Warning", "Error"])
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {
                             "warning" => vec![

@@ -19,7 +19,9 @@ fn controls() -> Vec<Control> {
             .labels(["Filled", "Tonal", "Outlined"]),
         Control::toggle("color", ["primary", "success", "error"])
             .labels(["Primary", "Success", "Error"]),
-        Control::toggle("size", ["sm", "md", "lg", "xl"]).default("md"),
+        Control::toggle("size", ["sm", "md", "lg", "xl"])
+            .labels(["Small", "Medium", "Large", "Extra large"])
+            .default("md"),
         Control::switch("loading"),
     ]
 }

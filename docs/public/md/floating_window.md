@@ -9,7 +9,8 @@ Description: A non-modal window over the page that drags, moves by keyboard and 
 A non-modal window over the page, with a title bar that drags, an optional
 resize corner, a menu that moves and resizes it without a drag, and a close
 button. `use_floating_window` returns a `Copy` handle that opens and closes it.
-There is no overlay or focus trap, so the page stays usable.
+There is no overlay or focus trap, so the page stays usable. A drag re-renders
+the whole window, so keep its body shallow.
 
 ## Usage
 
@@ -60,6 +61,17 @@ let inspector = use_floating_window(
 );
 ```
 
+## Accessibility
+
+A window takes focus when it opens. Tab reaches the title bar, where `←` `↑` `→`
+`↓` move it 10px and Shift + arrow 1px. On the resize handle the arrows resize,
+and Home End ask for the smallest and largest size allowed. The title bar's menu
+offers Move, Resize and Reset. Move and Resize show step buttons, one click per
+step, so neither needs a drag. Done or Esc hides them. Esc closes the window and
+returns focus to its trigger. F6 moves focus between the page and the topmost
+window. The page behind a window still takes Tab, so pick a placement that does
+not cover its controls.
+
 ## API
 
 `use_floating_window(options, render) -> FloatingWindowHandle`. `render` gets the
@@ -85,42 +97,6 @@ handle, so the body can close its own window.
 | `onresize` | `Option<Callback<WindowRect>>` | - | Called after a resize by pointer, keyboard or button, or a Reset. |
 
 `WindowRect { x, y, width, height }` is in viewport pixels.
-
-## Geometry
-
-- The window stays at `placement` until moved, then where it was put, always
-  inside the viewport. A window whose `min_width` is wider than the viewport
-  pins to the top-left.
-- The title bar's menu button ("Window menu") offers Move, Resize (with
-  `resizable`) and Reset. Move and Resize show step buttons under the title
-  bar, one click per `move_step` or `resize_step`, until Done or Escape. Reset
-  puts the window back at `placement` at its content's size. Without
-  `resizable` and with `pinned`, there is no menu.
-- A drag re-renders the whole window, so keep the body shallow.
-
-## Stacking
-
-Windows sit on their own layer, `theme.z_index.window` (250), above the page's
-dropdowns and below overlays and modals. A modal opened from a window covers
-it. Clicking or focusing a window brings it to the front.
-
-## Accessibility
-
-- Give it a `title`, which names the window.
-- It takes focus on open. Escape, the close button or `close()` returns focus
-  to the trigger. A `close()` from elsewhere on the page leaves focus there.
-- The title bar is a tab stop. Arrow keys move it 10px (`move_step`),
-  Shift+Arrow 1px. Its description says "Use arrow keys to move the window".
-- On the resize handle, Arrow resizes by `resize_step`, Shift+Arrow by 1px, and
-  Home and End ask for the smallest and largest size allowed.
-- Moving and resizing need no drag (WCAG 2.5.7). The menu's step buttons do
-  both with single clicks. Choosing Move or Resize focuses the first button,
-  and Done or Escape returns focus to the menu button.
-- F6 moves focus between the page and the topmost window, but not while a
-  modal or popover is open. Tab alone reaches the window last.
-- The page behind a window still takes Tab. Pick a `placement` that does not
-  cover the page's controls, such as a corner away from the header (WCAG
-  2.4.11).
 
 ## Theme defaults
 

@@ -10,11 +10,15 @@ A saturation panel and a hue slider, with an optional alpha slider and preset
 swatches. The value is a `ColorCode`, which parses from hex, `rgb()` or `hsl()`
 and converts back to any of them.
 
+`ColorCode::hex(0x228be6)` and its siblings build one, and a theme `HexColor`
+converts into one. It prints as `#rrggbb`, or `#rrggbbaa` when translucent,
+which a `style` accepts.
+
 ## Usage
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{ColorCode, ColorPicker, SliderChangeEvent};
+use libero::components::{ColorCode, ColorPicker, SliderChangeEvent, Swatches};
 
 #[component]
 fn Demo() -> Element {
@@ -25,18 +29,13 @@ fn Demo() -> Element {
             value: color(),
             oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
             with_alpha: true,
-            swatches: ["#fa5252", "#228be6", "#40c057"],
+            swatches: Swatches::labelled([("#fa5252", "Red"), ("#228be6", "Blue"), ("#40c057", "Green")]),
         }
     }
 }
 ```
 
-## `ColorCode`
-
-One type for every CSS form. It parses from `#rgb`, `#rgba`, `#rrggbb`,
-`#rrggbbaa` (the `#` optional), `rgb()`, `rgba()`, `hsl()` and `hsla()`, comma
-or space separated, with alpha as a number or a percentage. It converts back to
-any of them.
+Parsing and printing a `ColorCode`:
 
 ```rust
 use libero::components::{ColorCode, ColorFormat};
@@ -57,105 +56,15 @@ color.to_hsla_channels(); // (208.0, 0.8, 0.52, 1.0)
 # }
 ```
 
-Constructors: `ColorCode::hex(0x228be6)`, `rgb`, `rgba`, `hsl`, `hsla`, `hsva`,
-and `From<HexColor>` for a theme color. `Display` writes `#rrggbb`, or
-`#rrggbbaa` when translucent, which a `style` accepts.
-
-A `ColorCode` keeps its hue on greys, so the hue thumb stays put when the panel
-is dragged onto white or black.
-
-## `oninput`
-
-Carries a `SliderChangeEvent<ColorCode>`, as on a `Slider`. `Start` and `End`
-bracket a drag on the panel or a slider, and `Change` carries every color in
-between. A key press and a swatch click send `Change`, then `End`. Read
-`event.value()` for the color, and save on `End` to save once per choice.
-
-## Alpha
-
-`with_alpha: true` shows the alpha slider and a preview swatch beside the
-sliders. Without it the color is opaque. The picker ignores any alpha on
-`value`, and every color it sends is fully opaque.
-
-## Swatches
-
-`swatches` takes `ColorCode`s or CSS strings, so a list can come from config.
-A string that is no color is skipped with a warning. Swatches wrap, and
-`swatches_per_row` caps how many share a row.
-
-`onswatchclick` fires after `oninput` when one is clicked.
-
-The swatch equal to `value` is pressed (`aria-pressed`) and carries a check
-mark. A swatch is named by its hex, and `Swatches::labelled` names them
-instead.
-
-```rust,ignore
-ColorPicker {
-    value: color(),
-    oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
-    swatches: Swatches::labelled([("#fa5252", "Red"), ("#40c057", "Green")]),
-}
-```
-
-`with_picker: false` leaves only the swatches, a palette. Without `swatches`
-that draws nothing and warns.
-
-Seven swatches fit a row at each `size`. `full_width` stretches the picker, not
-the swatches, so more fit per row. `radius` sets the corners of the swatches
-and the preview, round by default and square at `xs`.
-
-## Forms
-
-`name` posts the color in a hidden input. `format` picks its text, `hex` by
-default, `hexa` with alpha, or `rgb`, `rgba`, `hsl` or `hsla`.
-
 ## Accessibility
 
-- The panel's thumb moves saturation with Left/Right and brightness with
-  Up/Down, one percent per press, ten with Shift.
-- The hue slider moves one degree per arrow, the alpha slider one percent.
-  Both take Home, End, PageUp and PageDown like a `Slider`.
-- Swatches are toggle buttons: the one equal to the value is pressed. They
-  are named by their hex unless `Swatches::labelled` names them.
+Each thumb is a slider with the usual keys. The hue and alpha tracks meet the
+24px target size of WCAG 2.5.8 from `md` up, and not at `sm` or `xs`. The
+saturation panel meets it at every size.
 
-Name the three thumbs with `saturation_label`, `hue_label` and `alpha_label`.
-Unset, the names and the announced values come from the localization's `color`
-group.
-
-`focusable: false` takes all of it out of the tab order and stops a drag from
-focusing a thumb. It is for a picker inside a dropdown whose text input must
-keep focus, as in `ColorField`.
-
-The hue and alpha tracks meet the 24px target size of WCAG 2.5.8 from `md` up,
-and not at `sm` or `xs`. The saturation panel meets it at every size.
-
-## `HueSlider`, `AlphaSlider`, `ColorSwatch`
-
-The picker's parts, public on their own.
-
-```rust,ignore
-HueSlider {
-    value: hue(),                      // degrees, 0-360
-    oninput: move |event: SliderChangeEvent| hue.set(event.value()),
-    aria_label: "Hue",
-}
-
-AlphaSlider {
-    value: alpha(),                    // 0.0-1.0
-    color: ColorCode::hex(0x228be6),   // the color the track fades in
-    oninput: move |event: SliderChangeEvent| alpha.set(event.value()),
-    aria_label: "Opacity",
-}
-
-ColorSwatch { color: ColorCode::hex(0x228be6) }
-ColorSwatch { color: "rgba(250, 82, 82, 0.4)".parse().unwrap() }
-ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, "✓" }
-```
-
-Both sliders are a `Slider` with a gradient track as tall as the thumb, and no
-filled bar or bubble. `ColorSwatch` shows a checkerboard through a translucent
-color, becomes a `<button>` with `onclick`, and draws `children` in black or
-white, whichever reads on the color.
+The swatch equal to the value is pressed and checked. Swatches are named by
+their hex, which a screen reader spells out, so name them with
+`Swatches::labelled`.
 
 ## Props
 

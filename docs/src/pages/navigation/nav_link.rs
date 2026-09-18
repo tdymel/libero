@@ -49,7 +49,7 @@ pub fn NavLinkPage() -> Element {
             properties: vec![props("NavLink", vec![
                 prop("to", "NavigationTarget").default("required").doc("A path, a URL or a typed route, as in `Anchor::to`."),
                 prop("target", "String").doc("The link's `target` attribute."),
-                prop("color", "ThemeAwareValue").default("primary").doc("Tints the active and hovered link."),
+                prop("color", "ThemeAwareValue").default("primary").doc("Colours the active link's tint and start bar. Only the color family counts: the tint is its lightest shade."),
                 prop("active", "bool")
                     .default("follows the route")
                     .doc("Unset, it compares `to` with the current route, which needs an internal target and a router. Set it for a section's parent item, or where there is no route to compare."),
@@ -68,9 +68,11 @@ pub fn NavLinkPage() -> Element {
                 Text {
                     "A navigation list item for a sidebar or nav bar. It is an "
                     Code { source: "Anchor" }
-                    " that marks the current page with an active style and "
+                    " that marks the current page with "
                     Code { source: "aria-current" }
-                    ". Left unset, "
+                    ", a light tint of its "
+                    Code { source: "color" }
+                    " and a 2px bar in a darker shade at its start edge. Left unset, "
                     Code { source: "active" }
                     " compares "
                     Code { source: "to" }

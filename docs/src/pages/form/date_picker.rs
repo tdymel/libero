@@ -65,9 +65,11 @@ pub fn DatePickerPage() -> Element {
                     Code { source: "NaiveTime" }
                     " a clock, "
                     Code { source: "NaiveDateTime" }
-                    " the day and then the time, and a "
+                    " the day and then the time, a "
                     Code { source: "DateRange" }
-                    " of either a start and an end. "
+                    " of either a start and an end, and a "
+                    Code { source: "TimeDelta" }
+                    " a duration, one column per part. "
                     Code { source: "level" }
                     " turns a day picker into a month or a year picker, and "
                     Code { source: "calendar: \"mini\"" }
@@ -127,7 +129,7 @@ pub fn DatePickerPage() -> Element {
                         code
                     }),
                     Control::slider("size", SIZES).default("md"),
-                    Control::toggle("variant", ["analog", "digital"]).default("analog").hidden_when(|values| !has_time(values)).code(|_, values| {
+                    Control::toggle("variant", ["analog", "digital"]).labels(["Analog", "Digital"]).default("analog").hidden_when(|values| !has_time(values)).code(|_, values| {
                         match values.str("variant").as_str() {
                             "digital" => vec![r#"variant: "digital""#.to_string()],
                             _ => vec![],

@@ -289,7 +289,8 @@ pub fn FloatingWindowPage() -> Element {
                     " returns a "
                     Code { source: "Copy" }
                     " handle that opens and closes it. There is no overlay or focus trap, so "
-                    "the page stays usable."
+                    "the page stays usable. A drag re-renders the whole window, so keep its "
+                    "body shallow."
                 }
                 Text {
                     "Windows sit on the viewport, not in this preview. The buttons open them "

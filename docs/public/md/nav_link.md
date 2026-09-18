@@ -7,8 +7,9 @@ Index: [index.md](index.md) lists every other page
 Description: A navigation list item for a sidebar or nav bar, a link that marks the current page with `aria-current`.
 
 A navigation list item for a sidebar or nav bar. It is an [`Anchor`](anchor.md)
-that marks the current page with an active style and `aria-current`. Left
-unset, `active` compares `to` with the current route.
+that marks the current page with `aria-current`, a light tint of its `color`
+and a 2px bar in a darker shade at its start edge. Left unset, `active` compares
+`to` with the current route.
 
 ## Usage
 
@@ -103,7 +104,7 @@ button toggles the panel, and the link still navigates.
 |---|---|---|---|
 | `to` | `NavigationTarget` | required | A path, a URL or a typed route, as in `Anchor::to`. |
 | `target` | `String` | - | The link's `target` attribute. |
-| `color` | `ThemeAwareValue` | `primary` | Tints the active and hovered link. Only the color family counts, and the tint is its lightest shade. |
+| `color` | `ThemeAwareValue` | `primary` | Colours the active link's tint and start bar. Only the color family counts: the tint is its lightest shade. |
 | `active` | `bool` | follows the route | Unset, it compares `to` with the current route, which needs an internal target and a router. Set it for a section's parent item, or where there is no route to compare. |
 | `disabled` | `bool` | `false` | Dims the link and stops navigation. |
 | `scroll_into_view` | `bool` | `false` | Scrolls the link into view when it becomes active. It scrolls the nearest scrollable ancestor, so use it in a sidebar. |
@@ -123,13 +124,14 @@ Like every component, `NavLink` also takes the shared props `sx`, `class`,
 
 | Field | Type | Description |
 |---|---|---|
-| `color` | `Color` | Color family of the active tint, `primary`. |
+| `color` | `Color` | Color family of the active tint and bar, `primary`. |
 
 ## CSS variables
 
 | Variable | Description |
 |---|---|
 | `--lsx-nav-link-active-background` | Background of the active link, the lightest shade of the color family. |
+| `--lsx-nav-link-active-bar` | Colour of the active link's start bar, a darker shade of the color family that reaches 4.5:1 on the tint. |
 
 ## Data attributes
 

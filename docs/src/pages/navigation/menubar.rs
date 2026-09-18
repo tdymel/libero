@@ -216,9 +216,11 @@ pub fn MenubarPage() -> Element {
                 wrap: Wrap(wrap),
                 controls: vec![
                     Control::toggle("side", ["bottom", "top"])
+                        .labels(["Bottom", "Top"])
                         .default("bottom")
                         .code(enum_code),
                     Control::toggle("align", ["start", "center", "end"])
+                        .labels(["Start", "Center", "End"])
                         .default("start")
                         .code(enum_code),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])

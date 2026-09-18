@@ -84,6 +84,7 @@ pub fn TextareaPage() -> Element {
                         },
                     ),
                     Control::toggle("status", ["valid", "warning", "error"])
+                        .labels(["Valid", "Warning", "Error"])
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {
                             "warning" => vec![

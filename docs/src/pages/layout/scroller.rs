@@ -218,6 +218,7 @@ pub fn ScrollerPage() -> Element {
                     // `never` hands the stepping to the caller's own buttons,
                     // so it also prints the handle they drive.
                     Control::toggle("controls", ["auto", "always", "never"])
+                        .labels(["Auto", "Always", "Never"])
                         .default(theme.scroller.controls.as_str())
                         .code(|control, values| {
                             let value = values.str(control.name);

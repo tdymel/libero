@@ -4,7 +4,9 @@ Crate: `libero`
 Import: `use libero::components::Tooltip;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/tooltip.rs>
 Index: [index.md](index.md) lists every other page
-Description: A label that appears while its child is hovered or focused by keyboard. The
+Description: A label that appears while its child is hovered or focused by keyboard, portaled so nothing clips it.
+
+A label that appears while its child is hovered or focused by keyboard. The
 bubble is portaled, so no `overflow: hidden` ancestor clips it, and it flips
 when its side has no room. `sx`, `class`, `states` and extra attributes land on
 the bubble, not the trigger.

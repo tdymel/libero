@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{AspectRatio, Code, Flex, Text},
@@ -83,6 +83,14 @@ pub fn AspectRatioPage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "The edges of the child get cropped, so keep nothing meaningful there. "
+                    "An image still needs "
+                    Code { source: "alt" }
+                    " text that describes what the reader can see."
+                }
             }
         }
     }

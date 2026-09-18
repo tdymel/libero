@@ -307,9 +307,15 @@ pub fn PopoverPage() -> Element {
                 component: "PopoverDemo",
                 children_text: "",
                 controls: vec![
-                    Control::toggle("side", ["top", "end", "bottom", "start"]).default("bottom"),
-                    Control::toggle("align", ["start", "center", "end"]).default("start"),
-                    Control::toggle("width", ["auto", "match", "min"]).default("auto"),
+                    Control::toggle("side", ["top", "end", "bottom", "start"])
+                        .labels(["Top", "End", "Bottom", "Start"])
+                        .default("bottom"),
+                    Control::toggle("align", ["start", "center", "end"])
+                        .labels(["Start", "Center", "End"])
+                        .default("start"),
+                    Control::toggle("width", ["auto", "match", "min"])
+                        .labels(["Auto", "Match", "Min"])
+                        .default("auto"),
                     Control::slider("gap", GAPS).default("4"),
                     Control::switch("flip").default("true"),
                     Control::switch("shift").default("true"),

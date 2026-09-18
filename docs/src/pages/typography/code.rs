@@ -73,7 +73,7 @@ pub fn CodePage() -> Element {
                     Control::toggle("language", ["rust", "python"])
                         // `python` is a real, recognized name whose
                         // `code-lang-*` feature this build leaves off.
-                        .labels(["rust", "python (off)"])
+                        .labels(["Rust", "Python (off)"])
                         .code(|_, values| {
                             let language = values.str("language");
                             // Inline sources are one short line, so they

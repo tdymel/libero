@@ -68,7 +68,8 @@ fetch only the file you need.
 - [RadioGroup](radio_group.md): A group of radios over an enum, exactly one selected, with one tab stop, arrow-key selection and the question as the group's name.
 - [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected, with the field slots.
 - [Slider](slider.md): A value dragged along a track, continuous over `f64` or discrete over an ordered enum that derives `SliderValue`.
-- [RangeSlider](range_slider.md): Two thumbs on one track, for a span instead of a point, over the same values as `Slider`.- [ColorField](color_field.md): A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
+- [RangeSlider](range_slider.md): Two thumbs on one track, for a span instead of a point, over the same values as `Slider`.
+- [ColorField](color_field.md): A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
 - [ColorPicker](color_picker.md): A saturation panel and a hue slider, with an optional alpha slider and preset swatches, over one `ColorCode`. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
 - [DateField](date_field.md): A text field for every date and time value, typed leniently, with the matching `DatePicker` in a dropdown.
 - [DatePicker](date_picker.md): One picker for every date and time value, from days, months and years to times, date-times and ranges of them.

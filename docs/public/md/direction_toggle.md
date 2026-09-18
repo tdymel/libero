@@ -30,11 +30,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Accessibility
-
-The accessible name says what a press does, such as "Switch to right-to-left
-text". The icon is hidden from screen readers.
-
 ## Props
 
 | Prop | Type | Default | Description |

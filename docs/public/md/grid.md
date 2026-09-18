@@ -53,32 +53,7 @@ fn Demo() -> Element {
 }
 ```
 
-## masonry and dense
-
-`dense` fills the gaps a wider item left, moving items sideways only. The gap
-under a short card needs `masonry`, which measures every item and packs it
-against the one above. A wall of mixed spans wants both.
-
-`masonry` watches the size of every item. Without a DOM, as in SSR, the zone
-renders as an ordinary grid, unpacked but correct.
-
-## Named areas
-
-A `GridTemplate` is a matrix of enum variants. Each row shares its width equally
-between its cells, and `cells(area, n)` gives one area several. A row of
-`cell(Sidebar)` plus `cells(Content, 3)` splits one to three. Rows of different
-lengths meet at their least common multiple, so a one-cell row above a four-cell
-row gives four columns. `build` rejects an area that is not a rectangle, and
-rows that need more than twelve columns.
-
-Cells set how much width an area gets, not how many items it holds. Every zone
-is its own twelve-column grid, so a one-cell header can hold two items or six.
-In a narrow zone the gutter between columns shrinks so the zone still fits.
-
-Zones land by name, so their order only sets the reading and tab order. The
-example below puts the content first and the sidebar last, and the header still
-renders on top. A zone whose `area` is not in the template warns and places
-itself.
+Named areas: a template of a header over a sidebar and the content. The zones are written content-first and land by name.
 
 ```rust
 use dioxus::prelude::*;
@@ -140,20 +115,7 @@ fn Demo() -> Element {
 }
 ```
 
-## Spans
-
-Every `GridSpan` is an exact number of twelfths: `Full` (12), `ThreeQuarters`
-(9), `TwoThirds` (8), `Half` (6), `Third` (4), `Quarter` (3), `Sixth` (2),
-`Twelfth` (1).
-
-`rows` sets an item's height in rows of the zone's grid. A masonry zone ignores
-it and sets the rows from the measured height.
-
-## Responsive spans
-
-A zone is rarely as wide as the window, so a `responsive(..)` span keys off the zone's
-width, not the window's. Narrow the window and the three cards below go from
-three across to two, with C wrapping, to one per row.
+Responsive spans: `responsive(..)` keys the span off the zone's width, not the window's.
 
 ```rust
 use dioxus::prelude::*;
@@ -186,30 +148,6 @@ fn Demo() -> Element {
 #     StaticGridTemplate::new(|template| template.row(|row| row.cell(SpanArea::Row)));
 ```
 
-The breakpoints are the same `Size` scale a viewport query uses, `sm` is 48rem.
-They measure the zone, so a zone a quarter of a wide page still counts as small
-and keeps its base span. The breakpoints need a zone with an `area`. Without
-one the base span stands.
-
-## Caveats
-
-A masonry zone's height follows its items, so it cannot scroll. Put a
-[`ScrollArea`](scroll_area.md) inside a `GridItem`, not around the zone. Don't
-put a masonry zone in a container whose width follows its content either. A
-scrollbar coming and going makes it measure again and again.
-
-Set no `align-self` or `margin-bottom` on an item in a masonry zone. Masonry
-relies on both, and an item that overrides them grows without bound.
-
-A zone with an area is a stacking context and the containing block of any
-absolutely positioned descendant. Something in a `GridItem` that positions
-itself against the page cannot escape it.
-
-A zone on its own has no width of its own. Give it one, as the usage example
-does.
-
-Build templates once, as a `StaticGridTemplate` static, like every example here.
-
 ## Props
 
 ### Grid
@@ -225,9 +163,9 @@ Build templates once, as a `StaticGridTemplate` static, like every example here.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `area` | `AreaName` | - | The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is the containing block of any absolutely positioned descendant. Omit it to use the zone on its own, without a `Grid`. |
+| `area` | `AreaName` | - | The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is the containing block of any absolutely positioned descendant. Omit it to use the zone on its own, without a `Grid`, and give it a width. |
 | `dense` | `bool` | `false` | Fills the gaps a wider item left, moving items sideways only. |
-| `masonry` | `bool` | `false` | Packs items of different heights with no vertical gaps. The zone's height follows its items, so scroll inside a `GridItem`, not around the zone, and set no `align-self` or `margin-bottom` on an item. |
+| `masonry` | `bool` | `false` | Packs items of different heights with no vertical gaps. The zone's height follows its items, so scroll inside a `GridItem`, not around the zone, and set no `align-self` or `margin-bottom` on an item. Keep it out of a container whose width follows its content: a scrollbar coming and going makes it measure again and again. |
 | `gap` | `Size` | `md` | Space between items. |
 | `component` | `HtmlTag` | `div` | The element to render. |
 | `children` | `Element` | required | `GridItem`s. |
@@ -236,7 +174,7 @@ Build templates once, as a `StaticGridTemplate` static, like every example here.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `span` | `Responsive<GridSpan>` | `full` | Width in twelfths of the zone. A `GridSpan`, or `responsive(..)` for a span that follows the zone's width, not the window's. Its breakpoints need a zone with an `area`. |
+| `span` | `Responsive<GridSpan>` | `full` | Width in twelfths of the zone. A `GridSpan` (`Full` 12, `ThreeQuarters` 9, `TwoThirds` 8, `Half` 6, `Third` 4, `Quarter` 3, `Sixth` 2, `Twelfth` 1), or `responsive(..)` for a span that follows the zone's width, not the window's. Its breakpoints need a zone with an `area`. |
 | `rows` | `u8` | - | Height in rows of the zone's grid. Ignored in a masonry zone, which sets it from the measured height. |
 | `component` | `HtmlTag` | `div` | The element to render. |
 | `children` | `Element` | required | The item's content. |

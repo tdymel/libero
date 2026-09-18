@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Input, Paper, Text, Title},
@@ -86,7 +86,8 @@ pub fn PaperPage() -> Element {
                             }
                         }),
                     Control::switch("bordered"),
-                    Control::toggle("component", ["div", "section", "article"]),
+                    Control::toggle("component", ["div", "section", "article"])
+                        .labels(["Div", "Section", "Article"]),
                 ],
                 render: move |values: DemoValues| {
                     // `none` is not a `Size`, so the prop goes unset and the
@@ -118,6 +119,22 @@ pub fn PaperPage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "A "
+                    Code { source: "Paper" }
+                    " rendered as a "
+                    Code { source: "section" }
+                    " or "
+                    Code { source: "aside" }
+                    " is a landmark and needs your "
+                    Code { source: "aria-label" }
+                    ". As an "
+                    Code { source: "a" }
+                    " the whole surface is one link, named by its contents, so nothing "
+                    "interactive belongs inside it."
+                }
             }
         }
     }

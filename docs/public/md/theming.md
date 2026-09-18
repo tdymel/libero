@@ -55,12 +55,6 @@ fn Status() -> Element {
 }
 ```
 
-## Scales
-
-`spacing` and `radius` hold a pixel value per step, `xs` to `xxl`. Every `size`,
-`gap` and `radius` prop, and the size words in `sx`, step along them.
-`elevation` does the same for shadows.
-
 ## Component defaults
 
 Every prop a caller leaves unset comes from the component's struct on the theme.
@@ -131,19 +125,18 @@ fn Gap() -> Element {
 
 ## Theme fields
 
-`Theme` is not `Copy`: at about 2 KB, a stray by-value use would be a silent
-memcpy. `Theme::DEFAULT` is a `const`, and `use_theme()` hands out
-`&'static Theme`.
+`Theme` is about 2 KB and not `Copy`, so a stray by-value use cannot copy it
+silently. `use_theme()` hands out a `&'static Theme`.
 
 | Field | Type | Description |
 |---|---|---|
-| `spacing` | `Sizes<u8>` | Pixels per spacing step; what `gap`/`padding` size words resolve through. |
+| `spacing` | `Sizes<u8>` | Pixels per spacing step, xs to xxl. Every size word, gap and padding steps along it. |
 | `radius` | `Sizes<u8>` | Pixels per radius step. |
-| `elevation` | `Sizes<&'static str>` | One `box-shadow` per elevation step. `Theme::DARK` has its own, deeper scale, since a shadow on a dark page needs more alpha to show. |
-| `primary`, `secondary`, `success`, `error`, `warning`, `info`, `neutral`, `muted` | `HexColor` | One hex per palette role; the 1-9 shade ramp and its `-contrast` twin are generated. |
-| `ink`, `surface` | `HexColor` | What text is set in, and the page it is set on. Every color role is derived against `surface`. |
+| `elevation` | `Sizes<&'static str>` | One box-shadow per elevation step. `Theme::DARK` has a deeper scale, since a shadow on a dark page needs more alpha to show. |
+| `primary`, `secondary`, `success`, `error`, `warning`, `info`, `neutral`, `muted` | `HexColor` | One hex per palette role. Nine shades, and a readable text color for each, are derived from it. |
+| `ink`, `surface` | `HexColor` | The text color and the page it is set on. Every role is derived against `surface`. |
 | `font_smoothing` | `bool` | Whether the reset asks for antialiased text. |
-| one field per component | `*Defaults` | For example `button: ButtonDefaults`, `dialog: DialogDefaults`, `mark: MarkDefaults`. Each component's markdown page documents its own struct. |
+| one field per component | `*Defaults` | For example `button: ButtonDefaults`. Each component's page lists its own struct. |
 
 ## CSS variables
 

@@ -60,8 +60,6 @@ window is pulled into it, so a centred three-up carousel asked for slide 0
 reports slide 1. Where a slide visibly rests shows best with a fractional
 `per_view`. At a whole number the alignments often rest on the same offset.
 
-## Vertical
-
 A vertical carousel needs a `height`:
 
 ```rust,ignore
@@ -73,17 +71,7 @@ Carousel {
 }
 ```
 
-A vertical slide is as long as the carousel makes it, a third of the `height`
-at `per_view: 3`. Give slide content `height: 100%` and turn any fixed height
-into a `min-height`, as the usage example does.
-
-## Controlled slide
-
-Pass `index` and the carousel follows it. `onindexchange` fires once a scroll
-settles, so it is safe to write straight back into the signal. It may also fire
-with an index you did not ask for. When the one you passed is out of reach,
-such as slide 0 on a centred three-up strip, the carousel clamps it and tells
-you.
+A controlled slide:
 
 ```rust
 use dioxus::prelude::*;
@@ -110,29 +98,23 @@ fn Demo(photos: Vec<Photo>) -> Element {
 # struct Photo { url: String, alt: String }
 ```
 
-## Autoplay
-
-`autoplay` advances on a timer. A pause button comes first in the carousel's
-Tab order, and hover pauses too. Focus entering the carousel stops it until the
-pause button is pressed. While it rotates the live region stays quiet. Under
-`prefers-reduced-motion: reduce` it opens paused.
+Autoplay:
 
 ```rust,ignore
 Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: slides() }
 ```
 
-## Dragging
-
-`draggable` adds drag to scroll for a mouse. Touch swipes without it. Blitz and
-the WebView cannot capture the pointer, so a mouse drag there stops once the
-pointer leaves the track.
-
 ## Accessibility
 
-- Set `aria_label` to name the region.
-- The track is a tab stop. `ArrowLeft` and `ArrowRight`, or `ArrowUp` and `ArrowDown` when vertical, move to the previous and next slide. `Home` and `End` go to the first and last.
-- The indicators are one tab stop with the same keys, and focus follows the slide.
-- With `autoplay`, the pause button is the first tab stop. Focus entering the carousel stops it until the button is pressed. Hover only pauses it.
+Set `aria_label` to name the region.
+
+The track is a tab stop. `←` `→`, or `↑` `↓` when vertical, move to the previous
+and next slide. Home and End go to the first and last.
+
+The indicators are one tab stop with the same keys, and focus follows the slide.
+
+With `autoplay`, the pause button is the first tab stop. Focus entering the
+carousel stops it until the button is pressed. Hover only pauses it.
 
 ## Props
 
@@ -141,17 +123,17 @@ pointer leaves the track.
 | `slides` | `Vec<Element>` | `[]` | The slides, in order. |
 | `slide_label` | `Callback<usize, String>` | `{n} of {m}` | Each slide's accessible name. |
 | `index` | `usize` | uncontrolled | The current slide. Set it and the carousel follows. |
-| `onindexchange` | `EventHandler<usize>` | - | Fires once a scroll settles, and on every control, key, indicator and autoplay step. |
+| `onindexchange` | `EventHandler<usize>` | - | Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here. |
 | `per_view` | `f64` | `1` | Slides visible at once. A fraction lets the next one peek in. |
 | `gap` | `Size` | `md` | Between slides. |
 | `align` | `CarouselAlign` | `center` | Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach. |
 | `orientation` | `Orientation` | `horizontal` | Scroll axis. |
-| `height` | `ThemeAwareValue` | `auto` | Required for a vertical carousel, which has nothing else to take its height from. |
+| `height` | `ThemeAwareValue` | `auto` | Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`. |
 | `controls` | `bool` | `true` | Previous and next buttons. |
 | `indicators` | `bool` | `false` | The dot strip, one dot per place the strip can rest. That is fewer than the slides when `per_view` is above 1. |
 | `aria_label` | `String` | localization `label` | Names the region. Unset, it falls back to the localization's label and warns. |
-| `draggable` | `bool` | `false` | Drag to scroll with a mouse. Touch swipes without it. |
-| `autoplay` | `bool` | `false` | Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. |
+| `draggable` | `bool` | `false` | Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track. |
+| `autoplay` | `bool` | `false` | Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
 | `r#loop` | `bool` | `false` | Wraps around at both ends. The cloned slides at each end are `aria-hidden` and `inert`. |
 

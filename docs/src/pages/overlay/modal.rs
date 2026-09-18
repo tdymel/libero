@@ -186,7 +186,7 @@ pub fn ModalPage() -> Element {
                 props("use_modal", vec![
                     prop("render", "impl FnMut(ModalScope<S, R>) -> Element")
                         .default("required")
-                        .doc("Builds the content, usually a `Dialog`, while the modal is open. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger."),
+                        .doc("Builds the content, usually a `Dialog`, while the modal is open. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component."),
                 ]).without_base_props(),
                 props("ModalHandle<S, R>", vec![
                     prop("open_with", "fn(impl Into<S>) -> Opening<R>")
@@ -203,7 +203,7 @@ pub fn ModalPage() -> Element {
                 ]).without_base_props(),
                 props("Opening<R>", vec![
                     prop("onresult", "fn(impl FnMut(Option<R>)) -> Self")
-                        .doc("Runs when this opening settles, with `None` if it was dismissed. A replaced opening never runs it."),
+                        .doc("Runs when this opening settles, with `None` if it was dismissed. A replaced opening never runs it. Awaiting the `Opening` gives the same answer instead, and `None` once replaced."),
                     prop("close", "fn()").doc("Closes this opening, if it is still the one showing."),
                     prop(".await", "Option<R>").doc("The same outcome, as a future. Use it when async work waits on the answer, or for dialogs in sequence."),
                 ]).without_base_props(),

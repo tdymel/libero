@@ -330,6 +330,7 @@ pub fn RangeSliderPage() -> Element {
                         .code(number_code)
                         .hidden_when(discrete),
                     Control::toggle("status", ["valid", "warning", "error"])
+                        .labels(["Valid", "Warning", "Error"])
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {
                             "warning" => vec![

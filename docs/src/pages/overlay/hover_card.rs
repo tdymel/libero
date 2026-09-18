@@ -135,9 +135,11 @@ pub fn HoverCardPage() -> Element {
                 wrap: Wrap(wrap),
                 controls: vec![
                     Control::toggle("side", ["top", "end", "bottom", "start"])
+                        .labels(["Top", "End", "Bottom", "Start"])
                         .default("bottom")
                         .code(enum_code),
                     Control::toggle("align", ["start", "center", "end"])
+                        .labels(["Start", "Center", "End"])
                         .default("start")
                         .code(enum_code),
                     Control::slider("open_delay", ["auto", "200", "500", "1000"])

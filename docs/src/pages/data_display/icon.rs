@@ -60,7 +60,7 @@ pub fn IconPage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
-                    Control::toggle("component", ["span", "div"]),
+                    Control::toggle("component", ["span", "div"]).labels(["Span", "Div"]),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Icon {

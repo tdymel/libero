@@ -101,7 +101,7 @@ pub fn TabsPage() -> Element {
                 props("OptionLabel", vec![
                     prop("name", "String").default("required").doc("The tab's visible text and accessible name."),
                     prop("content", "Element")
-                        .doc("Drawn in place of the name, such as an icon, via `OptionLabel::rich`. `name` still names the tab."),
+                        .doc("Drawn in place of the name, such as an icon, via `OptionLabel::rich`. `name` still names the tab. Keep it inline: an `Icon` fits, a `Flex` does not."),
                 ]).without_base_props(),
             ],
             lead: rsx! {

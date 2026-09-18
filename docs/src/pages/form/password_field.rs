@@ -78,6 +78,7 @@ pub fn PasswordFieldPage() -> Element {
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
                     Control::toggle("status", ["valid", "warning", "error"])
+                        .labels(["Valid", "Warning", "Error"])
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {
                             "warning" => vec![

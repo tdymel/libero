@@ -100,6 +100,7 @@ pub fn TooltipPage() -> Element {
                 fixed: vec![LABEL.to_string(), LABEL_ID.to_string()],
                 controls: vec![
                     Control::toggle("side", ["top", "end", "bottom", "start"])
+                        .labels(["Top", "End", "Bottom", "Start"])
                         .default(theme.tooltip.side.as_str()),
                     Control::slider("size", SIZES).default(theme.tooltip.size.as_str()),
                     Control::slider("gap", SIZES).default(theme.tooltip.gap.as_str()),

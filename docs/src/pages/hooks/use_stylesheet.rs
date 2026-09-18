@@ -75,6 +75,7 @@ pub fn UseStylesheetPage() -> Element {
                 children_text: "",
                 controls: vec![
                     Control::toggle("background", ["primary.1", "success.1", "warning.1"])
+                        .labels(["Primary 1", "Success 1", "Warning 1"])
                         .default("primary.1"),
                     Control::slider("padding", SIZES).default("md"),
                     Control::slider("border_radius", SIZES).default("md"),

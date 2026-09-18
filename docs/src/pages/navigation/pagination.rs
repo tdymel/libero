@@ -38,7 +38,7 @@ pub fn PaginationPage() -> Element {
                 prop("aria_label", "String").default("required")
                     .doc("Names the `<nav>` landmark, so two paginations on one page can be told apart."),
                 prop("siblings", "u8").default("1")
-                    .doc("Pages on each side of the current one."),
+                    .doc("Pages on each side of the current one. The row is always `2·siblings + 2·boundaries + 3` items wide, and an ellipsis never stands for a single page."),
                 prop("boundaries", "u8").default("1")
                     .doc("Pages pinned at each end. `0` counts as 1."),
                 prop("size", "Size").default("md").doc("Control box and font size."),

@@ -11,6 +11,10 @@ content. `#[derive(Options)]` lists and names the steps. `panel` matches on the
 same enum, so a step without a body does not compile. You own `value` and move
 it on, usually from a button inside the step.
 
+Steps before `value` are completed, the rest pending. `state` overrides single
+steps and is the only way to mark one `StepState::Error`. An error changes the
+marker, not which step is current.
+
 ## Usage
 
 ```rust
@@ -53,35 +57,13 @@ fn Demo() -> Element {
 # fn address_valid() -> bool { true }
 ```
 
-## Step states
-
-`StepState` is `Pending`, `Active`, `Completed` or `Error`. Steps before `value`
-are completed, `value` is active, the rest are pending. `value: None` shows
-every step as completed, with none current. Render your own done screen for
-that case.
-
-`state` overrides single steps. Returning `None` keeps the derived state, so
-you name only the step that differs. It is the only way to mark a step `Error`.
-An error changes the marker and the status text, not which step is current.
-
-## Orientation
-
-`horizontal` draws the markers in a row and shows the current step's content
-below. `label_position` puts the labels at the `side` of the markers or
-`below` them. `vertical` shows each step's content under the step and collapses
-the others. A closed step's content is never mounted, so it keeps no state.
-
 ## Accessibility
 
-With `onstepclick`, completed steps and the current one are buttons, and
-pending ones too with `allow_next_steps`. Each is a tab stop. Enter and Space
-activate. There are no arrow keys.
+With `onstepclick`, each clickable step is a button and a tab stop. Enter and
+Space activate. There are no arrow keys. Name the steps with `aria_label` or
+`aria_labelledby`, which land on the step list, not the root. A rich label's
+name must contain its visible text.
 
-Name the steps with `aria_label` or `aria_labelledby` on `Stepper`. Both land on
-the `<ol>`, not the root, so two steppers on a page are two named lists.
-
-With `OptionLabel::rich`, the name replaces the drawn label for a screen
-reader, so it must contain the visible text (WCAG 2.5.3).
 
 ## Props
 

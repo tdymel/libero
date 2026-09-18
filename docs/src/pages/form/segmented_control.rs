@@ -231,6 +231,7 @@ pub fn SegmentedControlPage() -> Element {
                     // and share their borders.
                     Control::slider("gap", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
                     Control::toggle("status", ["valid", "warning", "error"])
+                        .labels(["Valid", "Warning", "Error"])
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {
                             "warning" => vec![

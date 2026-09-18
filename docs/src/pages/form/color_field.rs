@@ -95,12 +95,14 @@ pub fn ColorFieldPage() -> Element {
                     Control::slider("size", SIZES).default("md"),
                     Control::slider("radius", SIZES).default("sm"),
                     Control::select("format", ["hex", "hexa", "rgb", "rgba", "hsl", "hsla"])
+                        .labels(["Hex", "Hexa", "RGB", "RGBA", "HSL", "HSLA"])
                         .default("hex")
                         .code(|_, values| match values.str("format").as_str() {
                             "hex" => vec![],
                             format => vec![format!("format: {format:?}")],
                         }),
                     Control::toggle("status", ["valid", "warning", "error"])
+                        .labels(["Valid", "Warning", "Error"])
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {
                             "warning" => vec![

@@ -104,6 +104,7 @@ pub fn ButtonPage() -> Element {
                     // prop, so it prints as the raw identifier. A link has
                     // no `type`.
                     Control::toggle("type", ["button", "submit", "reset"])
+                        .labels(["Button", "Submit", "Reset"])
                         .hidden_when(is_link)
                         .code(
                         |control, values| match values.str("type") {

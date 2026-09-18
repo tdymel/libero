@@ -96,7 +96,7 @@ pub fn CodeBlockPage() -> Element {
                         Control::toggle("language", ["rust", "python"])
                             // `python` is a real, recognized name whose
                             // `code-lang-*` feature this build leaves off.
-                            .labels(["rust", "python (off)"])
+                            .labels(["Rust", "Python (off)"])
                             .code(|_, values| {
                                 vec![
                                     format!("source: {}", example(values).0),

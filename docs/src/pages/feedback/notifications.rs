@@ -518,6 +518,17 @@ pub fn NotificationsPage() -> Element {
                         "bottom-center",
                         "bottom-end",
                     ])
+                    .labels([
+                        "Top start",
+                        "Top center",
+                        "Top end",
+                        "Center start",
+                        "Center",
+                        "Center end",
+                        "Bottom start",
+                        "Bottom center",
+                        "Bottom end",
+                    ])
                     .default("bottom-end"),
                     // A host prop, and the preview only has a host of its own
                     // while it is contained.

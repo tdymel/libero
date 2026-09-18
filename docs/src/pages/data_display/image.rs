@@ -75,6 +75,7 @@ pub fn ImagePage() -> Element {
                         "fit",
                         ["fill", "contain", "cover", "none", "scale-down"],
                     )
+                    .labels(["Fill", "Contain", "Cover", "None", "Scale down"])
                     .default(theme.image.fit.as_str()),
                     // The theme's `0` is a CSS length, not a step: `none`
                     // leaves the prop unset.

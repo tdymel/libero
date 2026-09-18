@@ -7,21 +7,26 @@ Index: [index.md](index.md) lists every other page
 Description: A text field for every date and time value, typed leniently, with the matching `DatePicker` in a dropdown.
 
 A text field for every date and time value, with a [DatePicker](date_picker.md)
-of the same value type in a dropdown. `level` makes a `NaiveDate` field a month
-or a year field. The types are `chrono`'s, re-exported as `libero::chrono`.
+in a dropdown. The value's type picks what the dropdown shows: `NaiveDate` a
+calendar, `NaiveTime` a clock, `NaiveDateTime` both, a `DateRange` of either
+picks two, and `TimeDelta` is a duration. `level` makes a `NaiveDate` field a
+month or a year field, typed as `September 2026` or `2026`. The types are
+`chrono`'s, re-exported as `libero::chrono`.
 
-Typed text is read on blur or Enter, and leniently. Only the order of day, month
-and year follows `format`. Text the field cannot accept stays, and the error
-says why. The form always gets ISO 8601.
+Typed text is read on blur or Enter, and leniently. Any separator works, as do
+one-digit days, month names as a unique prefix, and a missing year. Two-digit
+years are not read. Only the order of day, month and year follows `format`.
+Text the field cannot accept stays, and the error says why. The form always
+gets ISO 8601.
 
-For one value type each there is a field with only the props that type uses,
-and no turbofish.
+The language of names, labels and errors comes from the provider's
+`Localization`. The patterns, first weekday and 12- or 24-hour clock come from
+its `Formats`, `Formats::AMERICAN` by default or `Formats::GERMAN`.
 
-- `DayField`, a `NaiveDate`, with `DayPicker` in the dropdown.
-- `TimeField`, a `NaiveTime`, with `TimePicker`.
-- `DateTimeField`, a `NaiveDateTime`, the day and then the time.
-- `DateRangeField`, a `DateRange<NaiveDate>`, with `DateRangePicker`.
-- `DateTimeRangeField`, a `DateRange<NaiveDateTime>`, the start and then the end.
+A typed value alone does not name the type. A handler that stores into a typed
+signal does, or a turbofish such as `DateField::<NaiveTime> { .. }`. For one
+value type there are `DayField`, `TimeField`, `DateTimeField`, `DateRangeField`
+and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 
 ## Usage
 
@@ -45,34 +50,7 @@ fn Demo() -> Element {
 }
 ```
 
-A typed `value` alone does not name `V`, because dioxus converts every prop. A
-handler that stores into a typed signal names it, as above. Otherwise use a
-turbofish, `DateField::<NaiveTime> { name: "alarm" }`. Without either, the
-compiler reports E0283 "type annotations needed".
-
-## Value types
-
-`DateField<V: DateValue>` holds an `Option<V>`. The type picks the dropdown:
-
-| `V` | Dropdown | `min` / `max` |
-|---|---|---|
-| `NaiveDate` | a month of days | `NaiveDate` |
-| `NaiveTime` | a clock | `NaiveTime` |
-| `NaiveDateTime` | the day, then the time | `NaiveDateTime` |
-| `DateRange<NaiveDate>` | two months, start then end | `NaiveDate` |
-| `DateRange<NaiveDateTime>` | start then end, each a day and a time | `NaiveDateTime` |
-| `TimeDelta` | a column each for hours, minutes and seconds | `TimeDelta` |
-
-`DateValue` is sealed. The `chrono` types are re-exported as `libero::chrono`.
-
-## Months and years
-
-`level: DateLevel::Month` makes a `NaiveDate` field a month field. The text
-reads `MMMM YYYY` unless `format` says otherwise, the value is the month's first
-day, and the dropdown opens on the month grid. `DateLevel::Year` reads `YYYY`
-and holds January 1. `min` and `max` accept any month or year they reach. A
-month without a year takes the current year, and a year field reads only a
-four-digit year.
+A month field:
 
 ```rust
 use dioxus::prelude::*;
@@ -93,21 +71,20 @@ fn Demo() -> Element {
 }
 ```
 
-## Durations
+## Duration
 
-A `TimeDelta` field holds a span of time. It shows `1 h 30 min`, with the units
-from `DateLocale` (`hours_short`, `minutes_short`, `seconds_short`), and posts
-ISO 8601, `PT1H30M` (`PT0S` for none). The dropdown, named by
-`DateLocale::duration_label`, is a spinbutton column each for the hours, the
-minutes at `step`, and with `with_seconds` the seconds. The minutes and seconds
-wrap round without carrying into the next column. The value runs from `min`, 0
-by default, to `max`, 99 h 59 min 59 s by default, and the hours column ends at
-`max`. It reads only `with_seconds` and `step` of the clock props.
+A `TimeDelta` field holds a span of time rather than a moment. It shows
+`1 h 30 min`, with the units from `DateLocale`, and posts ISO 8601, `PT1H30M`.
+Typing reads `1 h 30 min`, `1h30`, `1:30` or a bare number of minutes.
 
-Typing reads `1 h 30 min`, `1h30`, `1 hour 30 minutes`, `90 min`, `1:30`,
-`1:30:15`, and a bare number as minutes. A number after a unit counts in the
-next smaller one. The locale's unit words read as well as English ones. A
-negative duration is not read.
+The dropdown has a column each for the hours, the minutes at `step` and, with
+`with_seconds`, the seconds. The minutes and seconds wrap round without
+carrying into the next column. The value runs from `min`, 0 by default, to
+`max`, 99 h 59 min 59 s by default. The hours column ends at `max`.
+
+A duration has its own errors: `Must be at least 15 min` names the bound it
+missed, and `Not a valid duration` is text it cannot read. A screen reader
+hears each column's value with its unit, `2 hours`.
 
 ```rust
 use dioxus::prelude::*;
@@ -130,63 +107,13 @@ fn Demo() -> Element {
 }
 ```
 
-## Typing
-
-Text stays as typed until the field blurs or Enter is pressed. Then it is read
-leniently. For a day, only the order of day, month and year has to match
-`format`.
-
-| Input | Read as, for `DD.MM.YYYY` |
-|---|---|
-| `1/2/2026`, `01-02-2026`, `1. 2. 2026` | February 1, 2026 |
-| `01022026` | February 1, 2026 (digits alone, at full width) |
-| `1 feb 2026`, `1 FEBR 2026` | February 1, 2026 (a name, or a prefix naming one month) |
-| `1.2` | February 1 of the current year |
-| `1.2.26` | rejected, two-digit years are not read |
-| `31.2.2026` | rejected, no such day |
-
-Literal text from the format is skipped, so `2026年3月4日` reads for
-`YYYY年M月D日` and `14 h 05` for `HH[ h ]mm`. Accents are not folded, so
-`fevrier` is not `février`.
-
-Times read `13:05`, `1305`, `1:05 pm` and `9`. A date-time is a day, then a
-time. A range splits on `–`, `—`, ` - ` or ` to `.
-
-Emptied text commits `None`. Text that is not a value the field accepts
-stays, and the field says why, in words from the `DateLocale`.
-
-| Text | Error (English) |
-|---|---|
-| unreadable | `invalid_date`: Not a valid date |
-| before `min`, no `max` | `on_or_after`: Must be on or after March 5, 2026 |
-| after `max`, no `min` | `on_or_before`: Must be on or before March 9, 2026 |
-| outside `min` and `max` | `between`: Must be between March 5, 2026 and March 9, 2026 |
-| a day `exclude_date` refuses | `unavailable`: That date is not available |
-
-The bounds are shown in the field's own format, so a month field says
-"March 2026".
-
 ## Accessibility
 
-The input is a `combobox` whose dropdown is a non-modal `dialog`, named by
-`DateLocale::date_label` (`time_label` for a time, `duration_label` for a
-duration). Focus opens the dropdown
-and stays in the text input, so you can type at once.
-
-| Key | In the text input | In the dropdown |
-|---|---|---|
-| Arrow Down | moves focus into the picker, onto the picked day, else today, or the clock | the picker's own keys ([DatePicker](date_picker.md#accessibility)) |
-| Enter | commits the typed text | picks. A pick that closes returns focus to the text |
-| Escape | closes the dropdown | closes it and returns focus to the text |
-
-Focus leaving both the text and the dropdown closes it. A mouse click in the
-dropdown leaves focus in the text.
-
-## Posting
-
-The text input carries no `name`. A hidden input does, holding ISO 8601
-whatever the text shows, such as `2026-02-01`, `13:05:00`, `2026-02-01T13:05:00`, `PT1H30M` for a
-duration, and `start/end` for a range.
+Focus opens the dropdown and stays in the text, so you can type at once. `↓`
+moves focus into the picker, onto the picked day or the clock, where the
+[DatePicker](date_picker.md) keys apply. Escape goes back to the text, and so
+does a pick that closes the dropdown. Focus leaving both the text and the
+dropdown closes it. A mouse click in the dropdown leaves focus in the text.
 
 ## Props
 
@@ -219,7 +146,7 @@ duration, and `start/end` for a range.
 | `label` | `Caption` | - | The caption above the control, and the field's name. |
 | `description` | `Caption` | - | Between the label and the control. What to enter. |
 | `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry changes. |
-| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. Text the field cannot accept shows its own error instead, such as `DateLocale::invalid_date` or the bound it missed. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. Text the field cannot accept shows its own error instead, such as `DateLocale::invalid_date`, `invalid_duration` or the bound it missed. |
 | `required` | `bool` | `false` | Sets `required` on the input and marks the label. |
 | `disabled` | `bool` | `false` | Disables typing and the dropdown, and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |

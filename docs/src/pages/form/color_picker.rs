@@ -157,6 +157,18 @@ pub fn ColorPickerPage() -> Element {
                     Code { source: "hsl()" }
                     " and converts back to any of them."
                 }
+                Text {
+                    Code { source: "ColorCode::hex(0x228be6)" }
+                    " and its siblings build one, and a theme "
+                    Code { source: "HexColor" }
+                    " converts into one. It prints as "
+                    Code { source: "#rrggbb" }
+                    ", or "
+                    Code { source: "#rrggbbaa" }
+                    " when translucent, which a "
+                    Code { source: "style" }
+                    " accepts."
+                }
             },
             Demo {
                 component: "ColorPicker",

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Container, Text},
@@ -46,7 +46,8 @@ pub fn ContainerPage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("lg"),
                     Control::slider("gutters", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
-                    Control::toggle("component", ["div", "main", "section"]),
+                    Control::toggle("component", ["div", "main", "section"])
+                        .labels(["Div", "Main", "Section"]),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Container {
@@ -57,6 +58,21 @@ pub fn ContainerPage() -> Element {
                         "Centered, width-capped content."
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Use "
+                    Code { source: "component: \"main\"" }
+                    " or "
+                    Code { source: "\"section\"" }
+                    " when the region is a landmark. A "
+                    Code { source: "section" }
+                    " needs an accessible name ("
+                    Code { source: "aria-label" }
+                    " or "
+                    Code { source: "aria-labelledby" }
+                    ") to count as one."
+                }
             }
         }
     }

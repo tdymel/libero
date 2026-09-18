@@ -35,15 +35,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Accessibility
-
-The accessible name is the host's name, with the star count once it shows,
-and says that the link opens a new tab: "GitHub, 1.2k stars (opens in a new
-tab)". The name replaces the link's content, so the count is not heard twice,
-and the icon is hidden from screen readers. On a muted button that is not
-filled, the count is set in the page's text colour: the muted icon colour is
-enough for an icon (3:1) but not for text (4.5:1).
-
 ## Props
 
 | Prop | Type | Default | Description |

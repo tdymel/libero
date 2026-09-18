@@ -28,6 +28,41 @@ const PARTS: [Part; 4] = [
     ),
 ];
 
+/// The fields of `Theme`: name, type, what it holds.
+const FIELDS: [Part; 7] = [
+    (
+        "spacing",
+        "Sizes<u8>",
+        "Pixels per spacing step, xs to xxl. Every size word, gap and padding steps along it.",
+    ),
+    ("radius", "Sizes<u8>", "Pixels per radius step."),
+    (
+        "elevation",
+        "Sizes<&'static str>",
+        "One box-shadow per elevation step. Theme::DARK has a deeper scale, since a shadow on a dark page needs more alpha to show.",
+    ),
+    (
+        "primary, secondary, success, error, warning, info, neutral, muted",
+        "HexColor",
+        "One hex per palette role. Nine shades, and a readable text color for each, are derived from it.",
+    ),
+    (
+        "ink, surface",
+        "HexColor",
+        "The text color and the page it is set on. Every role is derived against surface.",
+    ),
+    (
+        "font_smoothing",
+        "bool",
+        "Whether the reset asks for antialiased text.",
+    ),
+    (
+        "one field per component",
+        "*Defaults",
+        "For example button: ButtonDefaults. Each component's page lists its own struct.",
+    ),
+];
+
 // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] Home {} }
 // snippet: item #[component] fn Home() -> Element { rsx! {} }
 const CUSTOM_THEME: &str = r#"static THEME: Theme = Theme {
@@ -174,6 +209,33 @@ pub fn ThemingPage() -> Element {
                     "."
                 }
                 CodeBlock { source: READING_THE_THEME, language: "rust" }
+            }
+
+            DocSection {
+                title: "Theme fields",
+                Text {
+                    Code { source: "Theme" }
+                    " is about 2 KB and not "
+                    Code { source: "Copy" }
+                    ", so a stray by-value use cannot copy it silently. "
+                    Code { source: "use_theme()" }
+                    " hands out a "
+                    Code { source: "&'static Theme" }
+                    "."
+                }
+                Table {
+                    aria_label: "Theme fields",
+                    data: FIELDS.to_vec(),
+                    columns: vec![
+                        column("Field")
+                            .value(|row: &Part| row.0)
+                            .render(|row: &Part| rsx! { Code { source: row.0 } }),
+                        column("Type")
+                            .value(|row: &Part| row.1)
+                            .render(|row: &Part| rsx! { Code { source: row.1 } }),
+                        column("Description").value(|row: &Part| row.2),
+                    ],
+                }
             }
         }
     }

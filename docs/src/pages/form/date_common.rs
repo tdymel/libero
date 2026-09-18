@@ -35,6 +35,7 @@ pub fn captions_of(values: &DemoValues) -> (&'static str, &'static str) {
 pub fn field_controls() -> Vec<Control> {
     vec![
         Control::toggle("status", ["valid", "warning", "error"])
+            .labels(["Valid", "Warning", "Error"])
             .default("valid")
             .code(|_, values| match values.str("status").as_str() {
                 "warning" => {
@@ -115,6 +116,7 @@ pub fn is_mini(values: &DemoValues) -> bool {
 pub fn calendar_controls() -> Vec<Control> {
     vec![
         Control::toggle("calendar", ["full", "mini"])
+            .labels(["Full", "Mini"])
             .default("full")
             .hidden_when(|values| !has_calendar(values))
             .code(|_, values| match values.str("calendar").as_str() {

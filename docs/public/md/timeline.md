@@ -67,10 +67,8 @@ A bullet draws active for `0..=active`, and the connector below an event for
 `0..active`. So the rail between completed events is filled, and the span below
 the current one is not.
 
-## Events
-
-`TimelineEvent` is a builder. A title alone is the common case, and content, a
-custom bullet, a color and a line style are each optional.
+`.color(..)` gives one event its own accent, and `.line(..)` styles the
+connector below it:
 
 ```rust
 use dioxus::prelude::*;
@@ -93,25 +91,6 @@ fn Demo() -> Element {
 }
 ```
 
-`.color(..)` overrides the accent for one event, and `.line(..)` sets the
-connector below the event it is called on. The last event has no connector. A
-`.bullet(..)` holding an icon inverts when active, so the glyph stays visible.
-
-## Alignment
-
-`align` puts content on either side of the rail, or alternates it.
-
-```rust,ignore
-Timeline { align: "alternate", items: vec![/* .. */] }
-```
-
-`"alternate"` alternates at every width and fills its parent, where `"start"`
-and `"end"` shrink to their content. Give it a parent as wide as you want the
-rail centred in.
-
-In a right-to-left layout, `"start"` puts the rail on the right and `"end"` on
-the left.
-
 ## Accessibility
 
 The list gives a screen reader the position and count the rail shows. Bullets
@@ -124,8 +103,8 @@ name. Interactive content belongs in `.content(..)`.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `items` | `Vec<TimelineEvent>` | `vec![]` | The events, in render order. |
-| `active` | `usize` | `None` | The current event. Bullets up to and including it, and the connectors between them, draw in the accent. An index past the end clamps to the last event. |
-| `align` | `TimelineAlign` | `start` | `start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. |
+| `active` | `usize` | `None` | The current event. Bullets up to and including it, and the connectors between them, draw in the accent. An index past the end clamps to the last event, so "step 7 of 4" means finished. |
+| `align` | `TimelineAlign` | `start` | `start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower. |
 | `color` | `ThemeAwareValue` | `primary` | The active accent. An event's own `.color(..)` overrides it. |
 | `bullet_size` | `Size` | `md` | Bullet diameter. |
 | `radius` | `Size` | `xl` | Bullet corner radius. `xl` is a dot. |
@@ -139,7 +118,7 @@ name. Interactive content belongs in `.content(..)`.
 | `.content(..)` | `Element` | none | The body below the title. |
 | `.bullet(..)` | `Element` | the dot | An icon or avatar inside the bullet. Inverts when active. |
 | `.color(..)` | `impl Into<ThemeAwareValue>` | inherits | This event's own accent. |
-| `.line(..)` | `TimelineLine` | `Solid` | The connector below this event, `Solid`, `Dashed` or `Dotted`. |
+| `.line(..)` | `TimelineLine` | `Solid` | The connector below this event, `Solid`, `Dashed` or `Dotted`. The last event has none. |
 
 Like every component, `Timeline` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

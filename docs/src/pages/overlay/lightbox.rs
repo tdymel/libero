@@ -131,7 +131,7 @@ pub fn LightboxPage() -> Element {
             markdown: "/md/lightbox.md",
             properties: vec![
                 props("LightboxOptions", vec![
-                    prop("zoom", "bool").default("true").doc("Lets the zoom buttons, the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan."),
+                    prop("zoom", "bool").default("true").doc("Lets the zoom buttons, the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan. On desktop and mobile a drag stops once the pointer leaves the picture."),
                     prop("max_zoom", "Option<f64>").default("8.0").doc("Upper scale bound. Unset, the theme's."),
                     prop("thumbnails", "bool").default("true").doc("The strip under the stage. Never shown for one picture."),
                     prop("captions", "bool").default("true").doc("Shows each item's caption."),

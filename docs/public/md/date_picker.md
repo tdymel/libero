@@ -6,39 +6,18 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/d
 Index: [index.md](index.md) lists every other page
 Description: One picker for every date and time value, from days, months and years to times, date-times and ranges of them.
 
-One picker for every date and time value. The value's type picks what it draws,
-and `level` turns a day picker into a month or a year picker.
-[DateField](date_field.md) shows it in a dropdown.
+One picker for every date and time value. The value's type picks what it draws.
+`NaiveDate` a month of days, `NaiveTime` a clock, `NaiveDateTime` the day and
+then the time, a `DateRange` of either a start and an end, and a `TimeDelta` a
+duration, one column per part. `level` turns a day picker into a month or a
+year picker, and `calendar: "mini"` into one row of days.
 
-For one value type each there is a picker with only the props that type uses,
-and no turbofish.
-
-- `DayPicker`, a `NaiveDate` day.
-- `MonthPicker`, a month, as `level: DateLevel::Month`.
-- `YearPicker`, a year, as `level: DateLevel::Year`.
-- `TimePicker`, a `NaiveTime`, digital or analog.
-- `DateRangePicker`, a `DateRange<NaiveDate>`.
-
-## Value types
-
-`DatePicker<V: DateValue>` holds an `Option<V>`. The type picks what is drawn.
-
-| `V` | Draws | `min` / `max` |
-|---|---|---|
-| `NaiveDate` | a month of days, or with `level` the months of a year or a decade of years | `NaiveDate` |
-| `NaiveTime` | an analog clock face, or a digital clock | `NaiveTime` |
-| `NaiveDateTime` | the day, then the time, under tabs between them | `NaiveDateTime` |
-| `DateRange<NaiveDate>` | two months, and the second pick ends the range | `NaiveDate` |
-| `DateRange<NaiveDateTime>` | the days, then the start time, then the end time, under three tabs | `NaiveDateTime` |
-| `TimeDelta` | a duration: a spinbutton column each for the hours, the minutes and, with `with_seconds`, the seconds | `TimeDelta` |
-
-With `calendar: "mini"` a day or a date-time is picked from one row of
-`days` days instead of a month. Each day shows its
-month over its number. The row starts at the value, else today.
-
-At `DateLevel::Month` the value is the month's first day, and at
-`DateLevel::Year` the year's January 1. A range whose `end` is `None` waits for its second
-pick, and the days up to the hovered one preview it.
+It opens on the value's month, else today's. Names come from the localization's
+`DateLocale`, and the first weekday and heading format from the provider's
+`Formats`. As on [DateField](date_field.md), a typed handler or a turbofish
+names the value type. For one value type there are `DayPicker`, `MonthPicker`,
+`YearPicker`, `TimePicker` and `DateRangePicker`, with only the props that type
+uses and no turbofish.
 
 ## Usage
 

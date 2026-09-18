@@ -276,7 +276,7 @@ pub fn StylingPage() -> Element {
                     children_text: "Badge",
                     fixed: vec![STATES_SX.to_string()],
                     controls: vec![
-                        Control::toggle("state", ["default", "active", "danger"]).code(
+                        Control::toggle("state", ["default", "active", "danger"]).labels(["Default", "Active", "Danger"]).code(
                             |_, values| match values.str("state").as_str() {
                                 "default" => vec![],
                                 state => {

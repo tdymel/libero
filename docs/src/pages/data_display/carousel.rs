@@ -78,7 +78,7 @@ pub fn CarouselPage() -> Element {
                         .default("uncontrolled")
                         .doc("The current slide. Set it and the carousel follows."),
                     prop("onindexchange", "EventHandler<usize>")
-                        .doc("Fires once a scroll settles, and on every control, key, indicator and autoplay step."),
+                        .doc("Fires once a scroll settles, and on every control, key, indicator and autoplay step. Safe to write straight back into `index`. An `index` out of reach is clamped and reported here."),
                     prop("per_view", "f64")
                         .default("1")
                         .doc("Slides visible at once. A fraction lets the next one peek in."),
@@ -91,7 +91,7 @@ pub fn CarouselPage() -> Element {
                         .doc("Scroll axis."),
                     prop("height", "ThemeAwareValue")
                         .default("auto")
-                        .doc("Required for a vertical carousel, which has nothing else to take its height from."),
+                        .doc("Required for a vertical carousel, which has nothing else to take its height from. A slide is as long as the carousel makes it, so give its content `height: 100%`."),
                     prop("controls", "bool")
                         .default(theme.carousel.controls.to_string())
                         .doc("Previous and next buttons."),
@@ -101,10 +101,10 @@ pub fn CarouselPage() -> Element {
                     prop("aria_label", "String").doc("Names the region. Unset, it falls back to the localization's label and warns."),
                     prop("draggable", "bool")
                         .default("false")
-                        .doc("Drag to scroll with a mouse. Touch swipes without it."),
+                        .doc("Drag to scroll with a mouse. Touch swipes without it. On Blitz and the WebView a drag stops once the pointer leaves the track."),
                     prop("autoplay", "bool")
                         .default("false")
-                        .doc("Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed."),
+                        .doc("Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. Under `prefers-reduced-motion: reduce` it opens paused."),
                     prop("r#loop", "bool")
                         .default("false")
                         .doc("Wraps around at both ends."),
@@ -149,6 +149,7 @@ pub fn CarouselPage() -> Element {
                     Control::slider("gap", ["xs", "sm", "md", "lg", "xl"])
                         .default(theme.carousel.gap.as_str()),
                     Control::toggle("align", ["start", "center", "end"])
+                        .labels(["Start", "Center", "End"])
                         .default(theme.carousel.align.as_str()),
                     // A vertical strip has no height of its own, so the demo
                     // sets one - and prints it, because the component needs it.

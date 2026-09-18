@@ -102,7 +102,7 @@ pub fn CascaderPage() -> Element {
                         .doc("Picking the selected option again clears it. Off, a re-pick keeps the value."),
                     prop("layout", "CascaderLayout")
                         .default("columns")
-                        .doc("`\"columns\"` draws one list per level, `\"paths\"` one row per full path. A search always renders `\"paths\"`."),
+                        .doc("`\"columns\"` draws one list per level, `\"paths\"` one row per full path. A search always renders `\"paths\"`. Without `any_level` it lists only leaf paths."),
                     prop("searchable", "bool")
                         .default("false")
                         .doc("Puts a search box at the top of the list, which narrows it to the paths that match."),
@@ -162,8 +162,11 @@ pub fn CascaderPage() -> Element {
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("sm"),
-                    Control::toggle("layout", ["columns", "paths"]).default("columns"),
+                    Control::toggle("layout", ["columns", "paths"])
+                        .labels(["Columns", "Paths"])
+                        .default("columns"),
                     Control::toggle("status", ["valid", "warning", "error"])
+                        .labels(["Valid", "Warning", "Error"])
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {
                             "warning" => vec![

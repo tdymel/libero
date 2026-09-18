@@ -24,9 +24,7 @@ fn Demo() -> Element {
 }
 ```
 
-## Internal routes
-
-Pass a typed route to navigate through the router.
+A typed route in `to` navigates through the router.
 
 ```rust
 use dioxus::prelude::*;
@@ -51,8 +49,8 @@ fn Demo() -> Element {
 
 The link text is the accessible name, so make it say where the link goes. A
 `target: "_blank"` link draws a small external icon and reads a hidden "(opens
-in a new tab)" from the localization's `AnchorLabels`. `new_tab_hint: false`
-drops both, for a link whose text already says it. With `underline: "never"`, a
+in a new tab)". `new_tab_hint: false` drops both, for a link whose text already
+says it. With `underline: "never"`, a
 link inside a paragraph stands out by color alone.
 
 ## Props

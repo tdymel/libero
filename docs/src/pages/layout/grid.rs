@@ -184,15 +184,15 @@ pub fn GridPage() -> Element {
                     prop("children", "Element").doc("`GridZone`s."),
                 ]),
                 props("GridZone", vec![
-                    prop("area", "AreaName").doc("The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is the containing block of any absolutely positioned descendant. Omit it to use the zone on its own, without a `Grid`."),
+                    prop("area", "AreaName").doc("The `Grid` area this zone fills. Zones land by name, so their order only sets the reading and tab order. A zone with an area is the containing block of any absolutely positioned descendant. Omit it to use the zone on its own, without a `Grid`, and give it a width."),
                     prop("dense", "bool").default("false").doc("Fills the gaps a wider item left, moving items sideways only."),
-                    prop("masonry", "bool").default("false").doc("Packs items of different heights with no vertical gaps. The zone's height follows its items, so scroll inside a `GridItem`, not around the zone, and set no `align-self` or `margin-bottom` on an item."),
+                    prop("masonry", "bool").default("false").doc("Packs items of different heights with no vertical gaps. The zone's height follows its items, so scroll inside a `GridItem`, not around the zone, and set no `align-self` or `margin-bottom` on an item. Keep it out of a container whose width follows its content: a scrollbar coming and going makes it measure again and again."),
                     prop("gap", "Size").default("md").doc("Space between items."),
                     prop("component", "HtmlTag").default("div").doc("The element to render."),
                     prop("children", "Element").doc("`GridItem`s."),
                 ]),
                 props("GridItem", vec![
-                    prop("span", "Responsive<GridSpan>").default("full").doc("Width in twelfths of the zone. A `GridSpan`, or `responsive(..)` for a span that follows the zone's width, not the window's. Its breakpoints need a zone with an `area`."),
+                    prop("span", "Responsive<GridSpan>").default("full").doc("Width in twelfths of the zone. A `GridSpan` (`Full` 12, `ThreeQuarters` 9, `TwoThirds` 8, `Half` 6, `Third` 4, `Quarter` 3, `Sixth` 2, `Twelfth` 1), or `responsive(..)` for a span that follows the zone's width, not the window's. Its breakpoints need a zone with an `area`."),
                     prop("rows", "u8").doc("Height in rows of the zone's grid. Ignored in a masonry zone, which sets it from the measured height."),
                     prop("component", "HtmlTag").default("div").doc("The element to render."),
                     prop("children", "Element").doc("The item's content."),

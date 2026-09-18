@@ -86,54 +86,8 @@ fn Demo() -> Element {
 }
 ```
 
-## Openings
-
-`open_with` returns an `Opening` for that one showing. A later opening replaces
-it. A replaced `Opening` never runs its handler, cannot close what is on screen
-now, and awaits to `None`.
-
-```rust,ignore
-// Attach the consequence to this one opening.
-prompt.open_with("notes.md").onresult(move |answer| { /* ... */ });
-
-// Awaited, when async work waits on the answer or for dialogs in sequence.
-match prompt.open_with("notes.md").await {
-    Some(SaveChoice::Save) => save().await,
-    Some(SaveChoice::Discard) => discard().await,
-    None => return,
-}
-
-// No arguments, when the argument type is `Default`.
-prompt.open();
-
-// Held and closed later.
-let opening = prompt.open_with("notes.md");
-opening.close();
-
-// Closes whatever this modal is showing.
-prompt.close();
-```
-
-## Where to call it
-
-Call `use_modal` under `LiberoProvider`, in a component that outlives every
-trigger. The modal unmounts with that component.
-
-For one shared instance behind several triggers, provide the handle from your
-own hook.
-
-```rust,ignore
-fn use_save_prompt(discard_label: &'static str) -> ModalHandle<String, SaveChoice> {
-    let handle = use_modal(/* ... */);
-    use_context_provider(|| handle);
-    handle
-}
-```
-
-## Closing from inside
-
 Content in the render closure captures the `ModalScope`. A component outside
-the closure uses `use_modal_close()` instead.
+the closure closes the modal with `use_modal_close()`:
 
 ```rust
 use dioxus::prelude::*;
@@ -149,9 +103,7 @@ fn CancelButton() -> Element {
 }
 ```
 
-`use_modal_close()` is the shorthand for `ModalContext`, which every modal
-provides to its content. Use the context when a component has to ask whether it
-is in a modal at all.
+`ModalContext` tells a component whether it is in a modal at all:
 
 ```rust
 use dioxus::prelude::*;
@@ -188,7 +140,7 @@ pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
 
 | Argument | Type | Default | Description |
 |---|---|---|---|
-| `render` | `impl FnMut(ModalScope<S, R>) -> Element` | required | Builds the content, usually a `Dialog`, while the modal is open. `R` defaults to `()`, for a modal that answers nothing. |
+| `render` | `impl FnMut(ModalScope<S, R>) -> Element` | required | Builds the content, usually a `Dialog`, while the modal is open. Returns a `ModalHandle<S, R>`. `R` defaults to `()`, for a modal that answers nothing. Call it under `LiberoProvider`, in a component that outlives every trigger. The modal unmounts with that component. |
 
 ### `ModalHandle<S, R = ()>`
 
@@ -211,9 +163,9 @@ pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
 
 | Method | Returns | Description |
 |---|---|---|
-| `onresult(f: impl FnMut(Option<R>))` | `Self` | Runs when this opening settles, with `None` if it was dismissed. A replaced opening never runs it. |
+| `onresult(f: impl FnMut(Option<R>))` | `Self` | Runs when this opening settles, with `None` if it was dismissed. A replaced opening never runs it. Awaiting the `Opening` gives the same answer instead, and `None` once replaced. |
 | `close()` | `()` | Closes this opening, if it is still the one showing. |
-| `.await` | `Option<R>` | The same outcome, as a future. |
+| `.await` | `Option<R>` | The same outcome, as a future. `None` once replaced. |
 
 ### `ModalContext`
 

@@ -111,8 +111,6 @@ fn Principle(
                         color: "primary",
                         size: "xl",
                         radius: "md",
-                        // The glyph fills the box by default; an inset reads as a badge.
-                        sx: sx().selector("& svg", sx().width("60%").height("60%")),
                         {icon}
                     }
                     Title { size: "lg", component: "h2", sx: sx().flex("1").min_width("0"), "{title}" }
