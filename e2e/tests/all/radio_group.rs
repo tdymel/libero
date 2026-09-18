@@ -21,8 +21,10 @@ pub const ROWS: &str = "[role=radiogroup] > div";
 /// which is not where Tab enters a group whose second option is checked.
 const CHECKED: &str = "[role=radiogroup] input[type=radio]:checked";
 /// What the "third" state waits on. Not `CHECKED`: the second radio is
-/// checked at rest, so that wait returned before the arrow press landed.
-const THIRD_CHECKED: &str = "[role=radiogroup] input[type=radio][data-radio-index=\"2\"]:checked";
+/// checked at rest, so that wait returned before the arrow press landed. The
+/// circle beside the input: the input itself is `opacity: 0` (todo 757).
+const THIRD_CHECKED: &str =
+    "[role=radiogroup] input[type=radio][data-radio-index=\"2\"]:checked + *";
 
 #[test]
 fn it_meets_the_baseline() {
@@ -40,8 +42,7 @@ fn it_meets_the_baseline() {
         .state(
             "third",
             &[Step::TabTo(CHECKED), Step::Press(keyboard::ARROW_DOWN)],
-            // The circle beside it: the input itself is `opacity: 0` (todo 757).
-            "[role=radiogroup] input[type=radio][data-radio-index=\"2\"]:checked + *",
+            THIRD_CHECKED,
         )
         .run();
 }
