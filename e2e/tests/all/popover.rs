@@ -3,7 +3,8 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard, pointer};
-use e2e::{Fixture, Viewport, wait};
+use e2e::suite::Step;
+use e2e::{Fixture, Suite, Viewport, wait};
 
 const TRIGGER: &str = "#trigger";
 const BOX: &str = "#box";
@@ -11,6 +12,14 @@ const BOX_TEXT: &str = "#box-text";
 const IN_BOX: &str = "#in-box";
 const BLANK: &str = "#blank";
 const AFTER: &str = "#after";
+
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("popover", "/popover")
+        .focusable(TRIGGER)
+        .state("open", &[Step::Click(TRIGGER)], BOX)
+        .run();
+}
 
 async fn open(page: &chromiumoxide::Page) {
     pointer::click(page, TRIGGER).await.unwrap();

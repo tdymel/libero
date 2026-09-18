@@ -3,7 +3,18 @@
 
 use e2e::browser::block_on;
 use e2e::passes::focus;
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, wait};
+
+const CLOSE: &str = "#inline button[aria-label='Close']";
+
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("dialog", "/dialog")
+        .focusable(CLOSE)
+        .focusable("#card")
+        .targets(CLOSE)
+        .run();
+}
 
 /// Outside a modal: a named `role=dialog` that claims no modality and takes
 /// no tab stop of its own.
@@ -41,7 +52,7 @@ fn the_close_button_of_an_inline_dialog_calls_onclose() {
         let fixture = Fixture::open("/dialog", Viewport::Desktop).await.unwrap();
         let page = &fixture.page;
         wait::for_selector(page, "#inline").await.unwrap();
-        page.find_element("#inline button[aria-label='Close']")
+        page.find_element(CLOSE)
             .await
             .unwrap()
             .click()

@@ -69,6 +69,9 @@ pub struct Node {
     pub html: String,
     #[serde(default)]
     pub failure_summary: Option<String>,
+    /// axe's CSS selector for the node, frames and shadow roots joined by ` > `.
+    #[serde(default)]
+    pub target: String,
 }
 
 /// Lift `Modal`'s scroll lock for the duration of an axe run, and prove that
@@ -158,16 +161,24 @@ async fn inject(page: &Page) -> Result<()> {
     Ok(())
 }
 
+/// One axe run: its violations, and the nodes it could not decide.
 #[derive(Debug, Deserialize)]
-struct Run {
+pub struct Run {
     /// `Some` when lifting the scroll lock changed the layout, which would make
     /// every reading in this run one of a page nobody sees.
     moved: Option<String>,
-    violations: Vec<Violation>,
+    pub violations: Vec<Violation>,
+    /// Text over an image, a gradient or a pseudo-element: axe measures no ratio.
+    pub incomplete: Vec<Violation>,
 }
 
 /// Run axe over the subtree at `selector`.
 pub async fn run(page: &Page, selector: &str) -> Result<Vec<Violation>> {
+    Ok(run_full(page, selector).await?.violations)
+}
+
+/// [`run`], keeping axe's undecided nodes too.
+pub async fn run_full(page: &Page, selector: &str) -> Result<Run> {
     inject(page).await?;
 
     let script = format!(
@@ -176,16 +187,19 @@ pub async fn run(page: &Page, selector: &str) -> Result<Vec<Violation>> {
             const result = await window.axe.run(document.querySelector({}), {{
                 runOnly: {{ type: 'rule', values: {} }},
             }});
+            const shape = v => ({{
+                id: v.id,
+                help: v.help,
+                nodes: v.nodes.map(n => ({{
+                    html: n.html,
+                    failure_summary: n.failureSummary || null,
+                    target: n.target.flat().join(' > '),
+                }})),
+            }});
             return {{
                 moved: __moved,
-                violations: result.violations.map(v => ({{
-                    id: v.id,
-                    help: v.help,
-                    nodes: v.nodes.map(n => ({{
-                        html: n.html,
-                        failure_summary: n.failureSummary || null,
-                    }})),
-                }})),
+                violations: result.violations.map(shape),
+                incomplete: result.incomplete.map(shape),
             }};
             {RELOCK}
         }})()"#,
@@ -194,14 +208,14 @@ pub async fn run(page: &Page, selector: &str) -> Result<Vec<Violation>> {
     );
 
     let run: Run = page.evaluate(script).await?.into_value()?;
-    if let Some(moved) = run.moved {
+    if let Some(moved) = &run.moved {
         bail!(
             "lifting the modal scroll lock for the axe run changed the layout ({moved}), \
              so the contrast reading would be of a page nobody sees. See `UNLOCK` in \
              `passes/contrast.rs` and todo 327."
         );
     }
-    Ok(run.violations)
+    Ok(run)
 }
 
 #[derive(Debug, Deserialize)]
@@ -267,6 +281,21 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
                 }}
                 return false;
             }};
+            // Out of sight on purpose: inside a visually-hidden wrapper (1x1, overflow
+            // hidden), or scrolled out of a scroller. A box clipped to nothing still counts.
+            const clipped = el => {{
+                const e = el.getBoundingClientRect();
+                for (let at = el.parentElement; at; at = at.parentElement) {{
+                    const s = getComputedStyle(at);
+                    if (s.overflow === 'visible') continue;
+                    const r = at.getBoundingClientRect();
+                    if (r.width <= 1 && r.height <= 1) return true;
+                    const scrolls = /auto|scroll/.test(s.overflowX + s.overflowY);
+                    if (scrolls && (e.bottom <= r.top || e.top >= r.bottom
+                        || e.right <= r.left || e.left >= r.right)) return true;
+                }}
+                return false;
+            }};
 
             const wanted = [];
             for (const host of document.querySelectorAll({selector})) {{
@@ -282,7 +311,7 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
                     // A label of a disabled control is inactive too.
                     const label = el.closest('label');
                     if (label && label.control && disabled(label.control)) continue;
-                    if (el.closest('[inert]') || folded(el)) continue;
+                    if (el.closest('[inert]') || folded(el) || clipped(el)) continue;
                     const style = getComputedStyle(el);
                     if (style.display === 'none' || style.visibility === 'hidden'
                         || style.opacity === '0') continue;

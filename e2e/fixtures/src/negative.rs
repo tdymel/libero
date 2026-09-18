@@ -38,7 +38,33 @@ pub const ROUTES: Routes = &[
         || rsx! { MissingActiveDescendant {} },
     ),
     ("/broken/static-highlight", || rsx! { StaticHighlight {} }),
+    ("/broken/faint-boundary", || rsx! { FaintBoundary {} }),
+    ("/broken/layered-text", || rsx! { LayeredText {} }),
 ];
+
+/// WCAG 1.4.11: a field whose only boundary is a border near the page's white.
+#[component]
+pub fn FaintBoundary() -> Element {
+    rsx! {
+        input {
+            id: "faint-boundary",
+            "aria-label": "Faint boundary",
+            style: "border: 1px solid #e8e8e8; background: transparent; padding: 8px; outline-offset: 2px;",
+        }
+    }
+}
+
+/// WCAG 1.4.3 over a positioned layer that covers part of the text: axe leaves
+/// it undecided ("partially obscured"), the sweep measures it.
+#[component]
+pub fn LayeredText() -> Element {
+    rsx! {
+        div { style: "position: relative; padding: 8px; max-width: 240px;",
+            span { style: "position: absolute; inset: 0 30% 0 0; background: #f4f4f4;" }
+            span { id: "layered", style: "position: relative; color: #c0c0c0;", "Faint text over a layer" }
+        }
+    }
+}
 
 /// WCAG 2.4.7 Focus Visible: a control that removes its own indicator.
 #[component]

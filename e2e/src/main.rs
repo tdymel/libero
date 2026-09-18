@@ -51,10 +51,25 @@ const GUARD_ENV: &str = "E2E_GUARD";
 /// else's app can produce, which is why `wait_for_app` waits for it.
 const FIXTURE_TITLE: &str = "libero e2e fixtures";
 
+/// The docs site's `<title>`, from `docs/Dioxus.toml`, for `sweep`.
+const DOCS_TITLE: &str = "libero";
+
 fn main() -> Result<()> {
     if std::env::var_os(GUARD_ENV).is_some() {
         return guard();
     }
+    // `sweep` (todo 760) serves the docs site instead of the fixtures and runs
+    // `tests/sweep.rs` alone: a report over every page, too slow for the suite.
+    let mut passthrough: Vec<String> = std::env::args().skip(1).collect();
+    let sweep = passthrough.first().is_some_and(|arg| arg == "sweep");
+    if sweep {
+        passthrough.remove(0);
+        passthrough.push("--nocapture".into());
+    }
+    let (app_dir, title, test) = match sweep {
+        true => ("docs", DOCS_TITLE, "sweep"),
+        false => ("e2e/fixtures", FIXTURE_TITLE, "all"),
+    };
     let root = workspace_root()?;
     let port = free_port()?;
     let base_url = format!("http://127.0.0.1:{port}");
@@ -120,9 +135,9 @@ fn main() -> Result<()> {
 
     let mut guard = Guard::spawn()?;
 
-    eprintln!("e2e: starting the fixture server on {base_url}");
+    eprintln!("e2e: starting the {app_dir} server on {base_url}");
     let mut server = Command::new(&dx)
-        .current_dir(root.join("e2e/fixtures"))
+        .current_dir(root.join(app_dir))
         .args([
             "run",
             "--web",
@@ -147,7 +162,7 @@ fn main() -> Result<()> {
         .context("start dx run")?;
     guard.tell(&format!("group {}", server.id()));
 
-    let ready = wait_for_app(&base_url, &mut server, &dx_log);
+    let ready = wait_for_app(&base_url, title, &mut server, &dx_log);
     if let Err(error) = ready {
         stop(&mut server);
         guard.done();
@@ -170,16 +185,16 @@ fn main() -> Result<()> {
     // and the run dies having told you nothing about your tests. libtest takes
     // a name filter after `--` just as happily, so both
     // `-- focus_contrast` and `-- --nocapture` work.
-    let passthrough: Vec<String> = std::env::args().skip(1).collect();
     let status = Command::new(env!("CARGO"))
         .current_dir(&root)
-        .args(["test", "-p", "e2e", "--test", "all", "--target-dir"])
+        .args(["test", "-p", "e2e", "--test", test, "--target-dir"])
         .arg(&target_dir)
         // Before the `--`: after it, `--target-dir` would go to the test
         // binary and cargo would build into `target/main` without a word.
         .arg("--")
         .args(&passthrough)
         .env("E2E_BASE_URL", &base_url)
+        .env("E2E_SWEEP_REPORT", root.join("target/a11y-sweep/report.md"))
         .env("E2E_CHROME_PROFILE", &profile)
         .env("E2E_ARTIFACTS", &artifacts)
         // Read here, to see whether anything ran. Echoed line by line.
@@ -551,7 +566,12 @@ fn stop(server: &mut Child) {
 ///   like. Without this check the runner sat out the full build timeout and
 ///   then reported a timeout, hiding a compile error behind a 45-minute wait;
 /// * the deadline passes.
-fn wait_for_app(base_url: &str, server: &mut Child, dx_log: &std::path::Path) -> Result<()> {
+fn wait_for_app(
+    base_url: &str,
+    title: &str,
+    server: &mut Child,
+    dx_log: &std::path::Path,
+) -> Result<()> {
     let started = Instant::now();
     let deadline = started + BUILD_TIMEOUT;
     let (mut polls, mut slowest) = (0u32, Duration::ZERO);
@@ -570,7 +590,7 @@ fn wait_for_app(base_url: &str, server: &mut Child, dx_log: &std::path::Path) ->
         }
 
         let at = Instant::now();
-        let stage = app_readiness(base_url);
+        let stage = app_readiness(base_url, title);
         polls += 1;
         slowest = slowest.max(at.elapsed());
         if stage == Readiness::Ready {
@@ -641,11 +661,11 @@ enum Readiness {
 /// and it reads each link out of what was actually served rather than
 /// hardcoding a path - a hardcoded one that quietly stopped matching would
 /// make the check vacuous again, which is the failure mode being fixed.
-fn app_readiness(base_url: &str) -> Readiness {
+fn app_readiness(base_url: &str, title: &str) -> Readiness {
     let Some(index) = http_get(base_url) else {
         return Readiness::NoServer;
     };
-    if !index.contains(FIXTURE_TITLE) {
+    if !index.contains(title) {
         return Readiness::NotOurApp;
     }
     // `.js`, not merely the first `src="`: an icon or an image would send the

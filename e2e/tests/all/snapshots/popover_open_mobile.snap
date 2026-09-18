@@ -1,0 +1,18 @@
+---
+source: e2e/src/suite.rs
+description: popover at mobile (open)
+expression: tree
+---
+button "Popover" [expanded] [haspopup=dialog]
+  StaticText "Popover"
+paragraph
+  StaticText "Nothing to focus here"
+button "After"
+  StaticText "After"
+generic
+  dialog "Example popover"
+    paragraph
+      StaticText "Popover content"
+    button "Inside"
+      StaticText "Inside"
+      generic

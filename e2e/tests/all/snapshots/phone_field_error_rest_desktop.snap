@@ -1,0 +1,17 @@
+---
+source: e2e/src/suite.rs
+description: phone_field_error at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Mobile"
+generic
+  generic
+    button "Country: United States, US +1" [expanded=false] [haspopup=listbox]
+      StaticText "US"
+      StaticText "+1"
+    status [atomic] [live=polite]
+  textbox "Mobile" [invalid] [required]
+    generic
+generic
+  StaticText "Enter a phone number."

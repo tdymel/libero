@@ -1,0 +1,25 @@
+---
+source: e2e/src/suite.rs
+description: focus_trap at mobile (open)
+expression: tree
+---
+generic
+  button "Rename file"
+    StaticText "Rename file"
+    generic
+generic
+  generic
+    generic
+    generic
+      dialog "Rename" [modal]
+        heading "Rename" [level=2]
+          StaticText "Rename"
+        button "Close"
+        paragraph
+          StaticText "Pick a new name."
+        button "Keep"
+          StaticText "Keep"
+          generic
+        button "Rename"
+          StaticText "Rename"
+          generic

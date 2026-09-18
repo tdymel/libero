@@ -469,3 +469,52 @@ fn the_snapshot_records_a_dangling_aria_controls() {
         );
     });
 }
+
+/// Todo 760: each family of the docs sweep reports its broken fixture. The
+/// sweep never fails on a hit, so a hit is turned into the error here.
+async fn sweep_must_report(route: &str, family: &'static str, element: &'static str, value: &str) {
+    must_fail(route, "the docs sweep", family, |fixture| async move {
+        let checked = e2e::sweep::check(&fixture.page, Viewport::Desktop, route, "light desktop")
+            .await
+            .unwrap_or_else(|e| panic!("sweeping {route}: {e:#}"));
+        let found = checked
+            .hits
+            .iter()
+            .find(|hit| {
+                hit.family == family && hit.element.contains(element) && hit.value.contains(value)
+            })
+            .map(|hit| anyhow::anyhow!("{}: {} ({})", hit.family, hit.element, hit.value));
+        (fixture, found.map_or(Ok(()), Err))
+    })
+    .await;
+}
+
+#[test]
+fn the_sweep_reports_each_family() {
+    block_on(async {
+        sweep_must_report("/broken/contrast", "text-contrast", "#faint", "").await;
+        sweep_must_report(
+            "/broken/layered-text",
+            "text-contrast",
+            "#layered",
+            "measured by the sweep",
+        )
+        .await;
+        sweep_must_report(
+            "/broken/faint-boundary",
+            "boundary-contrast",
+            "#faint-boundary",
+            "",
+        )
+        .await;
+        sweep_must_report("/broken/focus-ring", "focus-ring-missing", "#no-ring", "").await;
+        sweep_must_report(
+            "/broken/faint-field-ring",
+            "focus-ring-contrast",
+            "#faint-input",
+            "",
+        )
+        .await;
+        sweep_must_report("/broken/target-spacing", "target-size", "#cramped-a", "").await;
+    });
+}

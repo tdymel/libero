@@ -132,23 +132,8 @@ pub async fn assert_focus_ring(page: &Page, selector: &str, tab_budget: usize) -
 
     let after = ring_chain(page, selector).await?;
 
-    // A drawn ring, outline or shadow, wins over a border that changed colour.
-    // A field frame's border turns on `:focus-within`, which a click shows as
-    // well, and the keyboard ring is drawn by its `[data-ring]` overlay. With
-    // the border counted first, deleting the overlay's rule left every field
-    // green (review 7, E4). So a border counts only where there is no overlay
-    // to carry the ring.
-    let pairs: Vec<(&Ring, &Ring)> = before.iter().zip(after.iter()).collect();
-    let drawn = pairs
-        .iter()
-        .find(|(b, a)| b.outline != a.outline || b.box_shadow != a.box_shadow);
-    let has_overlay = after.iter().any(|r| r.overlay);
-    let bordered = pairs
-        .iter()
-        .find(|(b, a)| b.border_color != a.border_color)
-        .filter(|_| !has_overlay);
-
-    let Some((_, ring)) = drawn.or(bordered) else {
+    let Some(ring) = pick_ring(&before, &after) else {
+        let has_overlay = after.iter().any(|r| r.overlay);
         let shown = after
             .iter()
             .map(|r| {
@@ -173,7 +158,28 @@ pub async fn assert_focus_ring(page: &Page, selector: &str, tab_budget: usize) -
         );
     };
 
-    Ok((*ring).clone())
+    Ok(ring.clone())
+}
+
+/// The level of a [`ring_chain`] whose styles changed on focus, if any.
+///
+/// A drawn ring, outline or shadow, wins over a border that changed colour.
+/// A field frame's border turns on `:focus-within`, which a click shows as
+/// well, and the keyboard ring is drawn by its `[data-ring]` overlay. With
+/// the border counted first, deleting the overlay's rule left every field
+/// green (review 7, E4). So a border counts only where there is no overlay
+/// to carry the ring.
+pub fn pick_ring<'a>(before: &[Ring], after: &'a [Ring]) -> Option<&'a Ring> {
+    let pairs: Vec<(&Ring, &Ring)> = before.iter().zip(after.iter()).collect();
+    let drawn = pairs
+        .iter()
+        .find(|(b, a)| b.outline != a.outline || b.box_shadow != a.box_shadow);
+    let has_overlay = after.iter().any(|r| r.overlay);
+    let bordered = pairs
+        .iter()
+        .find(|(b, a)| b.border_color != a.border_color)
+        .filter(|_| !has_overlay);
+    drawn.or(bordered).map(|(_, ring)| *ring)
 }
 
 /// WCAG 1.4.11: a focus indicator is a non-text contrast case, so 3:1 against
@@ -265,7 +271,8 @@ pub fn assert_ring_contrast(ring: &Ring) -> Result<()> {
     Ok(())
 }
 
-async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
+/// The ring-bearing styles of `selector`, its ancestors and their ring overlays.
+pub async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
     let chain = page
         .evaluate(format!(
             r#"(() => {{

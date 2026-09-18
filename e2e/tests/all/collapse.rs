@@ -8,11 +8,21 @@
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, TAB};
 use e2e::passes::{motion, pointer};
-use e2e::{Fixture, Viewport, ax, wait};
+use e2e::suite::Step;
+use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 pub const TOGGLE: &str = "#toggle-details";
 pub const ROOT: &str = "#details";
 const CONTENT: &str = "#details-text";
+
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("collapse", "/collapse")
+        .focusable(TOGGLE)
+        .targets(TOGGLE)
+        .state("open", &[Step::Click(TOGGLE)], CONTENT)
+        .run();
+}
 
 /// Under reduced motion nothing in the collapse transitions, open or closed,
 /// and closing still unmounts the content.

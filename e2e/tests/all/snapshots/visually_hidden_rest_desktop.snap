@@ -1,0 +1,10 @@
+---
+source: e2e/src/suite.rs
+description: visually_hidden at desktop (rest)
+expression: tree
+---
+generic
+  link "Skip to content"
+    StaticText "Skip to content"
+main
+  StaticText "Content"

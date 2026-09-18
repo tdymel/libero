@@ -7,7 +7,19 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{contrast, focus};
-use e2e::{Fixture, Viewport};
+use e2e::{Fixture, Suite, Viewport};
+
+/// Rings again under the dark scheme, whose tints differ.
+#[test]
+fn it_meets_the_baseline() {
+    LINKS
+        .iter()
+        .fold(Suite::new("mark", "/mark"), |suite, link| {
+            suite.focusable(link)
+        })
+        .tab_budget(LINKS.len() + 2)
+        .run();
+}
 
 const LINKS: &[&str] = &[
     "#mark-default",

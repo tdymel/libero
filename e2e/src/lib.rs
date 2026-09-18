@@ -18,6 +18,7 @@ pub mod driver;
 pub mod journal;
 pub mod passes;
 pub mod suite;
+pub mod sweep;
 pub mod vendor;
 pub mod wait;
 

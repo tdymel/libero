@@ -48,7 +48,7 @@ const EPSILON: f64 = 0.01;
 /// The roles a pointer press acts on, plus anything a caller put in the tab
 /// order. Deliberately generous: a target the exception forgets is clearance
 /// this pass would grant and a user would not have.
-const TARGETS: &str = "a[href], button, input:not([type=hidden]), select, textarea, summary, \
+pub const TARGETS: &str = "a[href], button, input:not([type=hidden]), select, textarea, summary, \
                        [role=button], [role=link], [role=checkbox], [role=radio], [role=switch], \
                        [role=tab], [role=menuitem], [role=menuitemcheckbox], \
                        [role=menuitemradio], [role=option], [role=slider], [role=spinbutton], \

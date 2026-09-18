@@ -3,9 +3,14 @@
 
 use e2e::browser::block_on;
 use e2e::passes::pointer;
-use e2e::{Fixture, Viewport, ax, wait};
+use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const FILL: &str = "getComputedStyle(document.querySelector('#icon')).backgroundColor";
+
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("icon", "/icon").focusable("#swap").run();
+}
 
 #[test]
 fn a_filled_icon_repaints_when_its_colour_changes() {

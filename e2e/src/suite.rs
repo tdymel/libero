@@ -156,7 +156,8 @@ impl Suite {
     }
 
     /// Known, tracked axe violations. Every waiver names a todo, and waived
-    /// violations are still printed.
+    /// violations are still printed. A `target-size` waiver holds a target
+    /// whose selector contains its `contains`.
     pub fn waive(mut self, waivers: &'static [contrast::Waiver]) -> Self {
         self.waivers = waivers;
         self
@@ -448,20 +449,29 @@ impl Suite {
     ) -> anyhow::Result<()> {
         for (index, target) in self.targets.iter().enumerate() {
             let selector = target.selector;
-            if target.spacing_exception {
+            let verdict = if target.spacing_exception {
                 let measured = target_size::measure_spacing(page, selector).await?;
                 if measured.is_empty() {
                     continue;
                 }
                 seen[index] = true;
-                target_size::assert_sizes_spaced(selector, &measured)?;
+                target_size::assert_sizes_spaced(selector, &measured)
             } else {
                 let sizes = target_size::measure_all(page, selector).await?;
                 if sizes.is_empty() {
                     continue;
                 }
                 seen[index] = true;
-                target_size::assert_sizes(selector, &sizes)?;
+                target_size::assert_sizes(selector, &sizes)
+            };
+            let Err(error) = verdict else { continue };
+            let waiver = self
+                .waivers
+                .iter()
+                .find(|w| w.rule == "target-size" && selector.contains(w.contains));
+            match waiver {
+                Some(w) => eprintln!("waived: target-size - {}\n      {error:#}", w.why),
+                None => return Err(error),
             }
         }
         Ok(())

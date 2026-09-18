@@ -1,0 +1,7 @@
+---
+source: e2e/src/suite.rs
+description: collapse at mobile (rest)
+expression: tree
+---
+button "Shipping details"
+  StaticText "Shipping details"

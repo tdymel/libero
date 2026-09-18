@@ -1,0 +1,11 @@
+---
+source: e2e/src/suite.rs
+description: popover at mobile (rest)
+expression: tree
+---
+button "Popover" [expanded=false] [haspopup=dialog]
+  StaticText "Popover"
+paragraph
+  StaticText "Nothing to focus here"
+button "After"
+  StaticText "After"

@@ -2,10 +2,18 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard, motion, pointer};
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The strip's scrolling viewport.
 const STRIP: &str = "[role=region]";
+
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("scroller", "/scroller")
+        .focusable("#tag-0")
+        .targets("#strip > button")
+        .run();
+}
 
 /// How much of the focused item is hidden, in px: under a control that is
 /// showing, or outside the strip's clip.

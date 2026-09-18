@@ -1,0 +1,28 @@
+---
+source: e2e/src/suite.rs
+description: table at desktop (rest)
+expression: tree
+---
+table "Fruit"
+  rowgroup
+    row
+      columnheader "Name"
+        button "Name"
+          StaticText "Name"
+      columnheader "Stock"
+        StaticText "Stock"
+  row
+    rowheader "Cherry"
+      StaticText "Cherry"
+    cell "3 left"
+      StaticText "3 left"
+  row
+    rowheader "Apple"
+      StaticText "Apple"
+    cell "12 left"
+      StaticText "12 left"
+  row
+    rowheader "Banana"
+      StaticText "Banana"
+    cell "0 left"
+      StaticText "0 left"

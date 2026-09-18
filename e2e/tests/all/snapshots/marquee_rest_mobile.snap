@@ -1,0 +1,39 @@
+---
+source: e2e/src/suite.rs
+description: marquee at mobile (rest)
+expression: tree
+---
+generic
+  link "L1"
+    StaticText "L1"
+  link "L2"
+    StaticText "L2"
+  link "L3"
+    StaticText "L3"
+  link "L4"
+    StaticText "L4"
+  link "L5"
+    StaticText "L5"
+  link "L6"
+    StaticText "L6"
+  link "L7"
+    StaticText "L7"
+  link "L8"
+    StaticText "L8"
+  link "L9"
+    StaticText "L9"
+  link "L10"
+    StaticText "L10"
+  link "L11"
+    StaticText "L11"
+  link "L12"
+    StaticText "L12"
+  link "L13"
+    StaticText "L13"
+  link "L14"
+    StaticText "L14"
+  link "L15"
+    StaticText "L15"
+  link "L16"
+    StaticText "L16"
+  button "Pause" [pressed=false]

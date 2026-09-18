@@ -2,11 +2,31 @@
 
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::{Fixture, Viewport, ax, passes::keyboard, passes::pointer, wait};
+use e2e::suite::Step;
+use e2e::{Fixture, Suite, Viewport, ax, passes::keyboard, passes::pointer, wait};
 
 const PICKER: &str = "button[aria-haspopup=listbox]";
 const SEARCH: &str = "input[role=combobox]";
 const TEL: &str = "input[type=tel]";
+
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("phone_field", "/phone-field")
+        .focusable(PICKER)
+        .focusable(TEL)
+        .targets(PICKER)
+        .state(
+            "open",
+            &[Step::TabTo(PICKER), Step::Press(keyboard::ENTER)],
+            "[role=listbox]",
+        )
+        .run();
+}
+
+#[test]
+fn an_error_field_meets_the_baseline() {
+    Suite::new("phone_field_error", "/phone-field/error").run();
+}
 
 /// The highlighted row's text, or `None`.
 async fn highlighted(page: &Page) -> Option<String> {

@@ -220,6 +220,17 @@ impl Fixture {
     /// before navigation, so the first paint is already in that scheme, and
     /// the page is checked to have resolved it (see [`Fixture::assert_scheme`]).
     pub async fn open_in(route: &str, viewport: Viewport, scheme: Scheme) -> Result<Self> {
+        Self::open_until(route, viewport, scheme, "[data-fixture-ready]").await
+    }
+
+    /// [`Fixture::open_in`] for an app without the fixture marker, the docs
+    /// site in the sweep: `ready` is what the app renders once it is up.
+    pub async fn open_until(
+        route: &str,
+        viewport: Viewport,
+        scheme: Scheme,
+        ready: &str,
+    ) -> Result<Self> {
         // Resolved first, deliberately: it panics with an explanation when the
         // runner did not set it, and doing that *before* launching Chrome is
         // what stops a bare `cargo test` leaving a browser and a profile
@@ -319,7 +330,7 @@ impl Fixture {
             console,
             closes_on_drop,
         };
-        crate::wait::for_selector_kind("fixture-ready", &fixture.page, "[data-fixture-ready]")
+        crate::wait::for_selector_kind("fixture-ready", &fixture.page, ready)
             .await
             .with_context(|| {
                 format!(

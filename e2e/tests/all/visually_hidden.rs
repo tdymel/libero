@@ -3,7 +3,14 @@
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, wait};
+
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("visually_hidden", "/visually-hidden")
+        .focusable("#skip-link")
+        .run();
+}
 
 const WIDTH: &str = "document.querySelector('#skip').getBoundingClientRect().width";
 

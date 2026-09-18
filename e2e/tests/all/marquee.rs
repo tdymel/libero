@@ -4,10 +4,20 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, motion};
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, wait};
 
 const LINKS: &str = "[data-slot=group]:first-child a";
 const PAUSE: &str = "[data-slot=pause]";
+
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("marquee", "/marquee")
+        .focusable(PAUSE)
+        .targets(PAUSE)
+        // The pause button comes after every link in the scrolling copies.
+        .tab_budget(20)
+        .run();
+}
 
 /// Under reduced motion nothing moves, one copy shows and the toggle, which
 /// would control nothing, is gone.

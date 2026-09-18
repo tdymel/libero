@@ -1,0 +1,9 @@
+---
+source: e2e/src/suite.rs
+description: focus_trap at mobile (rest)
+expression: tree
+---
+generic
+  button "Rename file"
+    StaticText "Rename file"
+    generic

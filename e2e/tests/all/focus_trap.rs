@@ -5,7 +5,24 @@ use anyhow::{Result, ensure};
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
-use e2e::{Fixture, Viewport, wait};
+use e2e::suite::Step;
+use e2e::{Fixture, Suite, Viewport, wait};
+
+const OPEN: &str = "#open-dialog";
+
+/// The modal page: the stops pages are bare native controls.
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("focus_trap", "/focus-trap/dialog")
+        .focusable(OPEN)
+        .contrast_covers("[role=dialog]")
+        .state(
+            "open",
+            &[Step::TabTo(OPEN), Step::Press(keyboard::ENTER)],
+            "[role=dialog]",
+        )
+        .run();
+}
 
 /// The focused id after each of `presses` Tabs, or Shift+Tabs.
 async fn walk<D: Driver>(d: &mut D, presses: usize, backwards: bool) -> Result<Vec<String>> {

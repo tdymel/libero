@@ -5,9 +5,22 @@ use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard};
-use e2e::{Fixture, Viewport, ax, wait};
+use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const SORT: &str = "th[data-sortable] button";
+
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("table", "/table")
+        .focusable(SORT)
+        .targets(SORT)
+        .run();
+}
+
+#[test]
+fn a_wide_table_meets_the_baseline() {
+    Suite::new("table_wide", "/table/wide").run();
+}
 
 #[test]
 fn a_header_click_sorts_and_flips_the_rows() {

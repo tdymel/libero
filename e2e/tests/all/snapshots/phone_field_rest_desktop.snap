@@ -1,0 +1,16 @@
+---
+source: e2e/src/suite.rs
+description: phone_field at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Mobile"
+generic
+  generic
+    button "Country: Germany, DE +49" [expanded=false] [haspopup=listbox]
+      StaticText "DE"
+      StaticText "+49"
+    status [atomic] [live=polite]
+  textbox "Mobile"
+    generic
+paragraph

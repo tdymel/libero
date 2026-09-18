@@ -1,0 +1,11 @@
+---
+source: e2e/src/suite.rs
+description: collapse at mobile (open)
+expression: tree
+---
+button "Shipping details"
+  StaticText "Shipping details"
+generic
+  generic
+    paragraph
+      StaticText "Shipping is calculated at checkout."
