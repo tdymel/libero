@@ -83,31 +83,31 @@ pub fn ColorPickerPage() -> Element {
             markdown: "/md/color_picker.md",
             properties: vec![
                 props("ColorPicker", vec![
+                    prop("size", "Size").default("md").doc("Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker."),
+                    prop("radius", "Size").default("xxl").doc("Corner radius of the swatches and the preview. `xs` makes them square."),
                     prop("value", "ColorCode")
-                        .doc("Strictly controlled - pair it with `oninput`."),
+                        .doc("The color. Pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<ColorCode>>")
-                        .doc("`Start`/`End` bracket a drag on the panel or a slider. A key press or a swatch click emits `Change` then `End`, so committing on `End` is enough."),
+                        .doc("`Start` and `End` bracket a drag on the panel or a slider. A key press or a swatch click sends `Change`, then `End`, so saving on `End` is enough."),
                     prop("with_alpha", "bool")
                         .default("false")
-                        .doc("Shows the alpha slider and the preview swatch beside it."),
+                        .doc("Shows the alpha slider and a preview swatch beside it. Without it, the color is always opaque."),
                     prop("swatches", "Swatches")
-                        .doc("Preset colors under the panel. Takes `ColorCode`s or CSS strings; a string that is no color is skipped with a warning. Named by their hex; `Swatches::labelled` names them. The one equal to `value` is pressed and checked."),
-                    prop("swatches_per_row", "usize").doc("Caps how many swatches share a row. Unset, they wrap to fill the width - seven per row at a size step's own width."),
+                        .doc("Preset colors under the panel, as `ColorCode`s or CSS strings. A string that is no color is skipped with a warning. The swatch equal to `value` shows as picked."),
+                    prop("swatches_per_row", "usize").doc("Caps how many swatches share a row. Unset, they wrap to fill the width, seven per row at the picker's own width."),
                     prop("with_picker", "bool")
                         .default("true")
-                        .doc("`false` leaves only the swatches - a palette. Without `swatches` it draws nothing and warns in a debug build."),
+                        .doc("`false` leaves only the swatches, a palette. Without `swatches` it draws nothing and warns."),
                     prop("onswatchclick", "EventHandler<ColorCode>")
                         .doc("A swatch was clicked. `oninput` fires with the same color first."),
                     prop("full_width", "bool")
                         .default("false")
                         .doc("Takes the container's width instead of the size step's."),
-                    prop("size", "Size").default("md").doc("Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker."),
-                    prop("radius", "Size").default("xxl").doc("Corner radius of the swatches and the preview - `xs` for squares."),
                     prop("name", "String")
-                        .doc("Emits a hidden input of that name, so the color posts with a form."),
+                        .doc("Posts the color in a hidden input of that name."),
                     prop("format", "ColorFormat")
                         .default("hex, or hexa with alpha")
-                        .doc("How the hidden input writes the color: `hex`, `hexa`, `rgb`, `rgba`, `hsl` or `hsla`."),
+                        .doc("How the hidden input writes the color. `hex`, `hexa`, `rgb`, `rgba`, `hsl` or `hsla`."),
                     prop("focusable", "bool")
                         .default("true")
                         .doc("`false` keeps the thumbs and swatches out of the tab order, for a picker in a dropdown whose input must keep focus."),
@@ -116,7 +116,7 @@ pub fn ColorPickerPage() -> Element {
                     prop("alpha_label", "String").default("color.alpha").doc("Names the alpha slider's thumb. Unset, the localization's `color.alpha`."),
                 ]),
                 props("HueSlider", vec![
-                    prop("value", "f64").doc("Degrees, `0-360`. Strictly controlled."),
+                    prop("value", "f64").doc("The hue in degrees, 0 to 360. Pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent>").doc("Every new hue."),
                     prop("size", "Size").default("md").doc("Track height and thumb."),
                     prop("disabled", "bool").default("false").doc("Dims the slider and stops it moving."),
@@ -124,7 +124,7 @@ pub fn ColorPickerPage() -> Element {
                     prop("aria_label", "String").doc("Names the thumb."),
                 ]),
                 props("AlphaSlider", vec![
-                    prop("value", "f64").doc("`0.0-1.0`. Strictly controlled."),
+                    prop("value", "f64").doc("The alpha, 0.0 to 1.0. Pair it with `oninput`."),
                     prop("color", "ColorCode").doc("The color the track fades in. Its own alpha is ignored."),
                     prop("oninput", "EventHandler<SliderChangeEvent>").doc("Every new alpha."),
                     prop("size", "Size").default("md").doc("Track height and thumb."),
@@ -135,31 +135,22 @@ pub fn ColorPickerPage() -> Element {
                 props("ColorSwatch", vec![
                     prop("color", "ColorCode").doc("The color. A translucent one shows a checkerboard through."),
                     prop("size", "Size").default("md").doc("Diameter."),
-                    prop("radius", "Size").default("xxl").doc("Corner radius - round by default."),
+                    prop("radius", "Size").default("xxl").doc("Corner radius. Round by default."),
                     prop("with_shadow", "bool").default("true").doc("A faint inner ring, so a color close to the background keeps an edge."),
                     prop("onclick", "EventHandler<MouseEvent>").doc("Makes the swatch a `<button>`."),
-                    prop("children", "Element").doc("Drawn on the color, in black or white - whichever reads."),
+                    prop("children", "Element").doc("Drawn on the color, such as a check mark, in black or white, whichever reads."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A saturation panel and a hue slider, with an optional alpha slider and preset swatches. "
-                    "Controlled: it renders "
-                    Code { source: "value" }
-                    " and asks for the next color through "
-                    Code { source: "oninput" }
-                    "."
-                }
-                Text {
-                    "The value is a "
+                    "A saturation panel and a hue slider, with an optional alpha slider and "
+                    "preset swatches. The value is a "
                     Code { source: "ColorCode" }
-                    ", one type for every CSS form. It parses from hex, "
+                    ", which parses from hex, "
                     Code { source: "rgb()" }
                     " or "
                     Code { source: "hsl()" }
-                    " text and converts back to any of them, so the picker has no format to choose. "
-                    "It is stored as hue, saturation, value and alpha, which keeps the hue thumb in place "
-                    "when the panel is dragged onto grey or black, where RGB has no hue at all."
+                    " and converts back to any of them."
                 }
             },
             Demo {
@@ -220,33 +211,20 @@ pub fn ColorPickerPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "A press anywhere on the hue or alpha track moves its thumb there, so "
-                    "the target is the track, not just the thumb - and the track is only as "
-                    "tall as its thumb, so its height is what decides. They meet WCAG 2.5.8 "
-                    "(target size) from "
+                    "Each thumb is a slider with the usual keys. The hue and alpha tracks meet "
+                    "the 24px target size of WCAG 2.5.8 from "
                     Code { source: "md" }
-                    " upward and not below it: the two tracks sit 24px apart centre to "
-                    "centre at "
-                    Code { source: "md" }
-                    ", 18px at "
+                    " up, and not at "
                     Code { source: "sm" }
-                    " and 12px at "
+                    " or "
                     Code { source: "xs" }
-                    ", so at the two smallest steps neither the height nor that spacing "
-                    "reaches the 24px the criterion wants. Choose "
-                    Code { source: "md" }
-                    " or larger where 2.5.8 has to be met."
+                    ". The saturation panel meets it at every size."
                 }
                 Text {
                     "The swatch equal to the value is pressed and checked. Swatches are named by "
-                    "their hex, which a screen reader spells out; name them with "
+                    "their hex, which a screen reader spells out, so name them with "
                     Code { source: "Swatches::labelled" }
                     "."
-                }
-                Text {
-                    "The saturation panel is its own target - a press anywhere in it moves "
-                    "the thumb, and the panel is far larger than 24x24 at every size - so it "
-                    "meets 2.5.8 throughout."
                 }
             }
         }

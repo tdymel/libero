@@ -262,62 +262,56 @@ pub fn MultiSelectPage() -> Element {
             markdown: "/md/multi_select.md",
             properties: vec![
                 props("MultiSelect", vec![
-                    prop("size", "Size").default("md").doc("Controls height, padding, font size and the rows' size."),
+                    prop("size", "Size").default("md").doc("Height, padding and font size of the field and its rows."),
                     prop("radius", "Size")
                         .default("sm")
-                        .doc("Corner radius of the frame and the list, independent of size."),
+                        .doc("Corner radius of the frame and the list."),
                     prop("value", "Vec<T>")
-                        .doc("The selection, in the order it was picked; strictly controlled. Empty shows `placeholder`."),
+                        .doc("The selection, in the order it was picked. Pair it with `onchange`. Empty shows `placeholder`."),
                     prop("onchange", "EventHandler<Vec<T>>")
-                        .doc("Called with the whole selection the caller should hold next."),
+                        .doc("Called with the whole next selection."),
+                    prop("name", "FieldName<Vec<T>>")
+                        .doc("Posts each selected option's `Options::value()` under this name. A path such as `Order::FIELDS.toppings()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
+                    prop("validate", "Validators<Vec<T>>")
+                        .doc("Rules over the selection, shown once the select loses focus or its form is submitted."),
                     prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("Narrows or reorders the list. A runtime set passes it here."),
+                        .doc("Narrows or reorders the list. A runtime set goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches."),
                     prop("option", "Callback<SelectOptionArgs<T>, Element>")
                         .default("T::label()")
                         .doc("Draws one row's content. `selected` on the args is there for a checkmark."),
                     prop("selection", "Callback<SelectionArgs<T>, Element>")
                         .default("Chip with an x")
-                        .doc("Draws one selected value beside the trigger, replacing the chip entirely - the remove control with it. `remove` on the args drops that value; the keyboard stays the control's."),
+                        .doc("Draws one selected value in the trigger, remove control included. `remove` on the args drops that value."),
                     prop("placeholder", "String").doc("Shown while `value` is empty."),
-                    prop("name", "String")
-                        .doc("Emits one hidden input of that name per selected option, carrying its `Options::value()`, so the selection posts with a native form."),
                     prop("clearable", "bool")
                         .default("false")
                         .doc("Shows an x in place of the chevron that empties the selection."),
                     prop("searchable", "bool")
                         .default("false")
-                        .doc("Puts a search box at the top of the list. The query survives a pick, so several matches of one search can be ticked without retyping it, and it is cleared when the list closes."),
+                        .doc("Puts a search box at the top of the list. The query survives a pick and is cleared when the list closes."),
                     prop("filter", "Callback<SelectFilterArgs<T>, bool>")
                         .default("contains")
                         .doc("Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`."),
                     prop("search_placeholder", "String")
-                        .doc("What the search box says while empty."),
+                        .doc("What the empty search box says."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the control. Names the trigger through `aria-labelledby`."),
-                    prop("description", "Caption").doc("Between the label and the control: what to pick."),
-                    prop("helper", "Caption").doc("Under the control: constraints, or what the choice affects."),
+                        .doc("The caption above the control, and the select's name."),
+                    prop("description", "Caption").doc("Between the label and the control. What to pick."),
+                    prop("helper", "Caption").doc("Under the control. Constraints, or what the choice changes."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
-                    prop("required", "bool").default("false").doc("Adds `aria-required` and an asterisk to the label."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                    prop("required", "bool").default("false").doc("Sets `aria-required` and marks the label."),
                     prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A listbox over an enum that holds any number of its options. The list stays "
-                    "open on a pick and a pick toggles the row; Escape, clicking elsewhere and the "
-                    "trigger close it. The selection is drawn in the trigger as chips, unless "
-                    Code { source: "selection" }
-                    " draws it some other way. Each chip carries an x, and the trigger answers "
-                    Code { source: "ArrowLeft" }
-                    " / "
-                    Code { source: "ArrowRight" }
-                    " to move over the chips and "
-                    Code { source: "Backspace" }
-                    " to remove one - the last, with no chip picked out."
+                    "A listbox over an enum that holds any number of its options, drawn as chips "
+                    "in the trigger. A pick toggles the row and the list stays open. Escape, a "
+                    "click elsewhere or the trigger close it."
                 }
             },
             // snippet: let mut value = use_signal(Vec::<Topping>::new);
@@ -447,20 +441,18 @@ pub fn MultiSelectPage() -> Element {
                 title: "Accessibility",
                 Text {
                     "Closed, the trigger opens on ArrowDown, ArrowUp, Enter or Space, and on Home "
-                    "or End at the first or last row. Open, ArrowDown and "
-                    "ArrowUp move the highlight, Enter or Space toggles the row and leaves the "
-                    "list open, and Escape, Tab or Alt+ArrowUp close it without a pick. ArrowLeft and ArrowRight move a cursor over the chips, "
-                    "and Backspace or Delete removes the one it is on - or the last, with no "
-                    "cursor. Typing searches the labels, buffered for half a second, and opens "
-                    "the list on the match - unlike "
+                    "or End at the first or last row. Open, the arrows move the highlight, Enter "
+                    "or Space toggles the row and keeps the list open, and Escape, Tab or "
+                    "Alt+ArrowUp close it. ArrowLeft and ArrowRight move over the chips, and "
+                    "Backspace or Delete removes the chip you are on, or the last one."
+                }
+                Text {
+                    "Typing jumps to a matching label and opens the list there. Unlike on "
                     Code { source: "Select" }
-                    ", whose closed trigger changes the value in place. A pick here toggles, so "
-                    "typing in place would silently drop a value that was already chosen, and "
-                    "that is the one keyboard difference between the two. Disabled options are "
-                    "read out but skipped by the arrows, by typeahead and by the mouse. With "
+                    ", it never changes the value in place, since a pick here toggles. Disabled "
+                    "options are read out but skipped. With "
                     Code { source: "searchable" }
-                    " the search box replaces typeahead, takes the focus while the list is "
-                    "open, and types its spaces rather than toggling."
+                    " the search box takes over typing and holds the focus while the list is open."
                 }
             }
         }

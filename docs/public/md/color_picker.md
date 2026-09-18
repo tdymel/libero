@@ -4,9 +4,11 @@ Crate: `libero`
 Import: `use libero::components::{ColorPicker, ColorCode};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/color>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A saturation panel and a hue slider, with an optional alpha slider and preset swatches, holding one `ColorCode` that converts to any CSS form. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
+Description: A saturation panel and a hue slider, with an optional alpha slider and preset swatches, over one `ColorCode`. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
 
-The value is a typed `ColorCode`, not a string.
+A saturation panel and a hue slider, with an optional alpha slider and preset
+swatches. The value is a `ColorCode`, which parses from hex, `rgb()` or `hsl()`
+and converts back to any of them.
 
 ## Usage
 
@@ -32,9 +34,9 @@ fn Demo() -> Element {
 ## `ColorCode`
 
 One type for every CSS form. It parses from `#rgb`, `#rgba`, `#rrggbb`,
-`#rrggbbaa` (the `#` optional), `rgb()`, `rgba()`, `hsl()` and `hsla()` - comma
-or space separated, alpha as a number or a percentage - and converts back to
-any of them:
+`#rrggbbaa` (the `#` optional), `rgb()`, `rgba()`, `hsl()` and `hsla()`, comma
+or space separated, with alpha as a number or a percentage. It converts back to
+any of them.
 
 ```rust,ignore
 let color: ColorCode = "#228be6".parse()?;
@@ -52,42 +54,35 @@ color.to_hsla_channels(); // (208.0, 0.8, 0.52, 1.0)
 
 Constructors: `ColorCode::hex(0x228be6)`, `rgb`, `rgba`, `hsl`, `hsla`, `hsva`,
 and `From<HexColor>` for a theme color. `Display` writes `#rrggbb`, or
-`#rrggbbaa` when translucent - what a `style` accepts.
+`#rrggbbaa` when translucent, which a `style` accepts.
 
-It is stored as hue, saturation, value and alpha. RGB has no hue on a grey, so
-a picker holding RGB would lose its hue - and jump its hue thumb to red - the
-moment the panel is dragged onto white or black. Stored as HSVA, the hue
-survives as long as the caller keeps the value it was handed.
+A `ColorCode` keeps its hue on greys, so the hue thumb stays put when the panel
+is dragged onto white or black.
 
 ## `oninput`
 
-Carries a `SliderChangeEvent<ColorCode>`, the `Slider` shape: `Start` and `End`
-bracket a drag on the panel or on a slider, `Change` carries every color in
-between. A key press and a swatch click emit `Change` then `End`, because
-either settles on its color at once. Read `event.value()` for the color; match
-on the phase to commit only on `End` - every way of choosing a color ends
-there.
+Carries a `SliderChangeEvent<ColorCode>`, as on a `Slider`. `Start` and `End`
+bracket a drag on the panel or a slider, and `Change` carries every color in
+between. A key press and a swatch click send `Change`, then `End`. Read
+`event.value()` for the color, and save on `End` to save once per choice.
 
 ## Alpha
 
 `with_alpha: true` shows the alpha slider and a preview swatch beside the
-sliders. Without it the color is solid: any alpha on `value` is ignored when
-rendering, and every color the picker emits - from the panel, the hue slider
-or a swatch - is fully opaque.
+sliders. Without it the color is opaque. The picker ignores any alpha on
+`value`, and every color it sends is fully opaque.
 
 ## Swatches
 
-`swatches` takes `ColorCode`s or CSS strings, parsed at runtime - a list from
-config or a design token file. A string that is no color is skipped with a dev
-warning, never a panic. Swatches wrap, so a
-`full_width` picker fills its width with them. `swatches_per_row` caps how many
-share a row.
+`swatches` takes `ColorCode`s or CSS strings, so a list can come from config.
+A string that is no color is skipped with a warning. Swatches wrap, and
+`swatches_per_row` caps how many share a row.
 
 `onswatchclick` fires after `oninput` when one is clicked.
 
 The swatch equal to `value` is pressed (`aria-pressed`) and carries a check
-mark. A swatch is named by its hex; `Swatches::labelled` gives each one a name
-instead:
+mark. A swatch is named by its hex, and `Swatches::labelled` names them
+instead.
 
 ```rust,ignore
 ColorPicker {
@@ -97,26 +92,23 @@ ColorPicker {
 }
 ```
 
-`with_picker: false` leaves only the swatches - a palette. Without `swatches`
-that draws nothing, and a debug build warns about it.
+`with_picker: false` leaves only the swatches, a palette. Without `swatches`
+that draws nothing and warns.
 
-A swatch has a fixed size per `size` step, chosen so seven of them and their
-gaps fit the step's width. `full_width` stretches the picker, not the swatches:
-more of them fit per row instead.
-`radius` sets the corners of the swatches and the preview: round by default,
-`xs` for squares.
+Seven swatches fit a row at each `size`. `full_width` stretches the picker, not
+the swatches, so more fit per row. `radius` sets the corners of the swatches
+and the preview, round by default and square at `xs`.
 
 ## Forms
 
-`name` emits a hidden input, so the color posts with a form. `format` decides
-its text: `hex` by default, `hexa` with alpha, or any of `rgb`, `rgba`, `hsl`,
-`hsla`.
+`name` posts the color in a hidden input. `format` picks its text, `hex` by
+default, `hexa` with alpha, or `rgb`, `rgba`, `hsl` or `hsla`.
 
 ## Accessibility
 
 - The panel's thumb moves saturation with Left/Right and brightness with
   Up/Down, one percent per press, ten with Shift.
-- The hue slider moves one degree per arrow; the alpha slider one percent.
+- The hue slider moves one degree per arrow, the alpha slider one percent.
   Both take Home, End, PageUp and PageDown like a `Slider`.
 - Swatches are toggle buttons: the one equal to the value is pressed. They
   are named by their hex unless `Swatches::labelled` names them.
@@ -126,21 +118,11 @@ Unset, the names and the announced values come from the localization's `color`
 group.
 
 `focusable: false` takes all of it out of the tab order and stops a drag from
-focusing a thumb. It exists for a picker inside a dropdown whose text input must
-keep focus - which is how `ColorField` uses it.
+focusing a thumb. It is for a picker inside a dropdown whose text input must
+keep focus, as in `ColorField`.
 
-A press anywhere on the hue or alpha track moves its thumb there, so the target
-is the track, not just the thumb - and the track is only as tall as its thumb,
-so its height is what decides. They meet WCAG 2.5.8 (target size) from `md`
-upward and not below it: the two tracks sit 24px apart centre to centre at `md`,
-18px at `sm` and 12px at `xs`, so at the two smallest steps neither the height
-nor that spacing reaches the 24px the criterion wants. Choose `md` or larger
-where 2.5.8 has to be met.
-
-The saturation panel is its own target - a press anywhere in it moves the thumb,
-and the panel is far larger than 24x24 at every size - so it meets 2.5.8
-throughout. See [accessibility.md](accessibility.md) for the library's overall
-position.
+The hue and alpha tracks meet the 24px target size of WCAG 2.5.8 from `md` up,
+and not at `sm` or `xs`. The saturation panel meets it at every size.
 
 ## `HueSlider`, `AlphaSlider`, `ColorSwatch`
 
@@ -165,62 +147,75 @@ ColorSwatch { color: "rgba(250, 82, 82, 0.4)".parse().unwrap() }
 ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, "✓" }
 ```
 
-Both sliders render the same engine as `Slider`, with a gradient track as tall
-as the thumb and no filled bar or value bubble. `ColorSwatch` shows a
-checkerboard through a translucent color, becomes a `<button>` with `onclick`,
-and draws `children` in black or white, whichever reads on the color.
+Both sliders are a `Slider` with a gradient track as tall as the thumb, and no
+filled bar or bubble. `ColorSwatch` shows a checkerboard through a translucent
+color, becomes a `<button>` with `onclick`, and draws `children` in black or
+white, whichever reads on the color.
 
 ## Props
 
-### ColorPicker
+### `ColorPicker`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `ColorCode` | required | Strictly controlled. |
-| `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | | Every new color, bracketed by `Start`/`End` on a drag. A key press or a swatch click emits `Change` then `End`. |
-| `with_alpha` | `bool` | `false` | Alpha slider and preview swatch. |
-| `swatches` | `Swatches` | | Preset colors; `ColorCode`s or CSS strings, or `Swatches::labelled` for named ones. The one equal to `value` is pressed. |
-| `swatches_per_row` | `usize` | | Caps swatches per row; unset, they wrap. |
-| `with_picker` | `bool` | `true` | `false` leaves only the swatches; warns in debug without any. |
-| `onswatchclick` | `EventHandler<ColorCode>` | | A swatch was clicked, after `oninput`. |
-| `full_width` | `bool` | `false` | The container's width instead of the size step's. |
-| `size` | `Size` | `md` | Width, panel height, thumbs, preview and swatch size. |
-| `radius` | `Size` | `xxl` | Corners of the swatches and the preview. |
-| `name` | `String` | | Hidden input, so the color posts. |
-| `format` | `ColorFormat` | `hex` / `hexa` | The hidden input's text. |
-| `focusable` | `bool` | `true` | `false` for a picker in a dropdown. |
-| `saturation_label` | `String` | `color.saturation` | Names the panel's thumb. |
-| `hue_label` | `String` | `color.hue` | Names the hue thumb. |
-| `alpha_label` | `String` | `color.alpha` | Names the alpha thumb. |
+| `size` | `Size` | `md` | Width, panel height, thumbs, preview and swatches. Swatches keep their size when `full_width` stretches the picker. |
+| `radius` | `Size` | `xxl` | Corner radius of the swatches and the preview. `xs` makes them square. |
+| `value` | `ColorCode` | - | The color. Pair it with `oninput`. |
+| `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | - | `Start` and `End` bracket a drag on the panel or a slider. A key press or a swatch click sends `Change`, then `End`, so saving on `End` is enough. |
+| `with_alpha` | `bool` | `false` | Shows the alpha slider and a preview swatch beside it. Without it, the color is always opaque. |
+| `swatches` | `Swatches` | - | Preset colors under the panel, as `ColorCode`s or CSS strings. A string that is no color is skipped with a warning. The swatch equal to `value` shows as picked. |
+| `swatches_per_row` | `usize` | - | Caps how many swatches share a row. Unset, they wrap to fill the width, seven per row at the picker's own width. |
+| `with_picker` | `bool` | `true` | `false` leaves only the swatches, a palette. Without `swatches` it draws nothing and warns. |
+| `onswatchclick` | `EventHandler<ColorCode>` | - | A swatch was clicked. `oninput` fires with the same color first. |
+| `full_width` | `bool` | `false` | Takes the container's width instead of the size step's. |
+| `name` | `String` | - | Posts the color in a hidden input of that name. |
+| `format` | `ColorFormat` | `hex, or hexa with alpha` | How the hidden input writes the color. `hex`, `hexa`, `rgb`, `rgba`, `hsl` or `hsla`. |
+| `focusable` | `bool` | `true` | `false` keeps the thumbs and swatches out of the tab order, for a picker in a dropdown whose input must keep focus. |
+| `saturation_label` | `String` | `color.saturation` | Names the saturation panel's thumb. Unset, the localization's `color.saturation`. |
+| `hue_label` | `String` | `color.hue` | Names the hue slider's thumb. Unset, the localization's `color.hue`. |
+| `alpha_label` | `String` | `color.alpha` | Names the alpha slider's thumb. Unset, the localization's `color.alpha`. |
 
-Plus `class`, `sx`, `states` and global attributes on the root.
-
-### HueSlider / AlphaSlider
+### `HueSlider`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `f64` | required | Degrees `0-360` / alpha `0.0-1.0`. |
-| `color` | `ColorCode` | required | `AlphaSlider` only: the color the track fades in. |
-| `oninput` | `EventHandler<SliderChangeEvent>` | | Every new value. |
+| `value` | `f64` | - | The hue in degrees, 0 to 360. Pair it with `oninput`. |
+| `oninput` | `EventHandler<SliderChangeEvent>` | - | Every new hue. |
 | `size` | `Size` | `md` | Track height and thumb. |
-| `disabled` | `bool` | `false` | Dims it and stops it moving. |
+| `disabled` | `bool` | `false` | Dims the slider and stops it moving. |
 | `focusable` | `bool` | `true` | `false` keeps the thumb out of the tab order. |
-| `aria_label` | `String` | | Names the thumb. |
+| `aria_label` | `String` | - | Names the thumb. |
 
-### ColorSwatch
+### `AlphaSlider`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ColorCode` | required | The color. |
+| `value` | `f64` | - | The alpha, 0.0 to 1.0. Pair it with `oninput`. |
+| `color` | `ColorCode` | - | The color the track fades in. Its own alpha is ignored. |
+| `oninput` | `EventHandler<SliderChangeEvent>` | - | Every new alpha. |
+| `size` | `Size` | `md` | Track height and thumb. |
+| `disabled` | `bool` | `false` | Dims the slider and stops it moving. |
+| `focusable` | `bool` | `true` | `false` keeps the thumb out of the tab order. |
+| `aria_label` | `String` | - | Names the thumb. |
+
+### `ColorSwatch`
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `color` | `ColorCode` | - | The color. A translucent one shows a checkerboard through. |
 | `size` | `Size` | `md` | Diameter. |
-| `radius` | `Size` | `xxl` | Corner radius; round by default. |
-| `with_shadow` | `bool` | `true` | Faint inner ring. |
-| `onclick` | `EventHandler<MouseEvent>` | | Makes it a `<button>`. |
-| `children` | `Element` | | Drawn on the color in black or white. |
+| `radius` | `Size` | `xxl` | Corner radius. Round by default. |
+| `with_shadow` | `bool` | `true` | A faint inner ring, so a color close to the background keeps an edge. |
+| `onclick` | `EventHandler<MouseEvent>` | - | Makes the swatch a `<button>`. |
+| `children` | `Element` | - | Drawn on the color, such as a check mark, in black or white, whichever reads. |
 
-## Theme
+Like every component, each of them also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. The attributes land on the
+root.
 
-`Theme::color_picker` (`ColorPickerDefaults`): `size`, `swatches_per_row`,
+## Theme defaults
+
+`theme.color_picker` is a `ColorPickerDefaults` with `size`, `swatches_per_row`,
 `radius`, and per size step `width`, `saturation_height`, `thumb_size`,
-`preview_size`, `spacing`, `swatch_size`. `Theme::color_swatch` (`ColorSwatchDefaults`): `size`, `radius`,
-`sizes`.
+`preview_size`, `spacing` and `swatch_size`. `theme.color_swatch` is a
+`ColorSwatchDefaults` with `size`, `radius` and `sizes`.

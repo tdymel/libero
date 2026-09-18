@@ -4,12 +4,11 @@ Crate: `libero`
 Import: `use libero::components::Autocomplete;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/autocomplete.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A text field that offers completions - the value stays a `String`, and the suggestions are drawn from any `Options` type.
+Description: A text field that offers completions from any `Options` type, while the value stays a `String`.
 
-A [TextField](text_field.md) that offers completions, with the five slots every
-field shares. The value is a `String` at all times: picking a suggestion inserts
-its label, it does not make the field hold the suggestion's type. To *choose* out
-of a fixed set instead, reach for [Select](select.md).
+A [TextField](text_field.md) that offers completions. The value stays a
+`String`, and picking a suggestion inserts its label. To choose from a fixed
+set, use [Select](select.md).
 
 ## Usage
 
@@ -34,16 +33,15 @@ fn Demo() -> Element {
 }
 ```
 
-`String` implements `Options`, so a list of strings needs no ceremony. The
-generic is inferred from `options`, so no call site ever annotates it.
+`String` implements `Options`, so a list of strings works as is. `T` is
+inferred from `options`.
 
-## Filtering
-
-By default the component narrows `options` itself, case-insensitively, on
-`Options::label`. Two props change that:
+The component narrows `options` case-insensitively on `Options::label`.
+`filter` replaces the test, and `prefiltered` turns filtering off for a list
+that is already narrowed:
 
 ```rust,ignore
-// A different test - prefix instead of contains.
+// Prefix instead of contains.
 Autocomplete {
     options: cities,
     value: city(),
@@ -53,7 +51,7 @@ Autocomplete {
     },
 }
 
-// A list fetched per keystroke is already narrowed - don't narrow it twice.
+// A list fetched per keystroke.
 Autocomplete {
     options: results(),
     prefiltered: true,
@@ -62,13 +60,8 @@ Autocomplete {
 }
 ```
 
-`prefiltered` skips filtering entirely, so `filter` never runs alongside it.
-
-## Rich rows, and the record behind the text
-
-`option` draws a row's *content*; the row around it - its highlight, its click -
-stays the component's. `onpick` fires after `oninput` with the whole value, which
-is how a caller reaches the id behind the label:
+`option` draws a row's content. `onpick` fires after `oninput` with the whole
+value, which is how you reach the id behind the label:
 
 ```rust,ignore
 Autocomplete {
@@ -82,14 +75,7 @@ Autocomplete {
 }
 ```
 
-`AutocompleteOptionArgs<T>` carries `value` and `index`. There is no `selected`:
-a suggestion is not a selection.
-
-## Nothing matches
-
-A list with no rows and no `empty` renders nothing at all, which is usually what
-you want while the field is still being typed into. Pass `empty` to say so out
-loud:
+`empty` is shown in place of the list when nothing matches:
 
 ```rust,ignore
 Autocomplete {
@@ -102,10 +88,10 @@ Autocomplete {
 
 ## Accessibility
 
-Typing opens the list, and so does ArrowDown; the arrows, Home and End move the
-highlight; Enter picks the highlighted row; Escape and Tab close. Nothing is
-highlighted until the user arrows onto a row, so Enter on text that matches no
-suggestion still submits the form.
+Typing or ArrowDown opens the list. The arrows, Home and End move the highlight,
+Enter picks the highlighted row, and Escape and Tab close. Nothing is
+highlighted until you arrow onto a row, so Enter on text that matches nothing
+still submits the form.
 
 ## Props
 
@@ -113,51 +99,54 @@ suggestion still submits the form.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Controls height, padding, font size and the rows' size. |
+| `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
 | `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
-| `value` | `String` | `""` | The text; strictly controlled. |
-| `oninput` | `EventHandler<String>` | - | Per keystroke, and again with the label on a pick or a clear. |
+| `value` | `String` | `""` | The text. Pair it with `oninput`. Picking a suggestion inserts its label. |
+| `oninput` | `EventHandler<String>` | - | Fires per keystroke, and again with the label when a suggestion is picked or the field is cleared. |
+| `name` | `FieldName<String>` | - | What the field posts as. A path such as `Signup::FIELDS.city()` also binds it to the surrounding `Form`'s value when it has no `oninput`. |
+| `validate` | `Validators<String>` | - | Rules over the text, shown once the field loses focus or its form is submitted. |
 | `options` | `Vec<T>` | `[]` | The suggestions to offer. `T` is inferred from it. |
-| `option` | `Callback<AutocompleteOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. |
-| `onpick` | `EventHandler<T>` | - | A suggestion was accepted, with the whole value. Fires after `oninput`. |
-| `filter` | `Callback<AutocompleteFilterArgs<T>, bool>` | case-insensitive `contains` | Narrows `options`. |
-| `prefiltered` | `bool` | `false` | `options` is already narrowed. Skips filtering, so `filter` never runs. |
+| `option` | `Callback<AutocompleteOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. The highlight and click stay the component's. |
+| `onpick` | `EventHandler<T>` | - | A suggestion was accepted, with the whole value behind the text. Fires after `oninput`. |
+| `filter` | `Callback<AutocompleteFilterArgs<T>, bool>` | `contains` | Narrows `options`. Defaults to a case-insensitive `contains` over the label. |
+| `prefiltered` | `bool` | `false` | `options` arrives already narrowed, such as a list fetched per keystroke. Skips filtering, so `filter` never runs. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
-| `clearable` | `bool` | `false` | An x that empties the field, at the end of the frame. |
-| `empty` | `Element` | - | Shown in place of the list when nothing matches. The status still announces the localization's `combobox.nothing_found`: an `Element` has no text to read, so override that string to match. |
-| `leading` | `Element` | - | Inside the frame, before the control - a search icon. |
+| `clearable` | `bool` | `false` | Shows an x at the end of the frame that empties the field. |
+| `empty` | `Element` | - | Shown in place of the list when nothing matches. Screen readers hear the localization's `combobox.nothing_found` either way, so change that string to match. |
+| `leading` | `Element` | - | Inside the frame, before the control, such as a search icon. |
 | `trailing` | `Element` | - | Inside the frame, after the control, before the clear x. |
-| `describe_leading` | `bool` | `false` | `leading` is text that describes the input, so it joins the input's `aria-describedby`. |
-| `describe_trailing` | `bool` | `false` | The same for `trailing`. The clear x stays out of the description. |
-| `label` | `Caption` | - | The field's caption, above the control. |
-| `description` | `Caption` | - | Between the label and the control. |
-| `helper` | `Caption` | - | Under the control. |
+| `describe_leading` | `bool` | `false` | `leading` is text that describes the value, such as a unit, so screen readers read it with the input. |
+| `describe_trailing` | `bool` | `false` | The same for `trailing`. |
+| `label` | `Caption` | - | The caption above the control, and the field's name. |
+| `description` | `Caption` | - | Between the label and the control. What to enter. |
+| `helper` | `Caption` | - | Under the control. Formatting rules, or what the entry changes. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Adds `aria-required` and marks the label. |
+| `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
 | `disabled` | `bool` | `false` | Takes the input out of the tab order and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead. |
 
+`AutocompleteOptionArgs<T>` carries `value` and `index`.
 `AutocompleteFilterArgs<T>` carries `value` and `query`.
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes; the attributes land on the input.
+`states`, and any extra HTML attributes. The attributes land on the input.
 
 ## Theme defaults
 
 Almost everything is `FieldDefaults`, shared by every field, and the list is
-`ComboboxDefaults`. `AutocompleteDefaults` keeps only which `size` and `radius`
-the component starts at.
+`ComboboxDefaults`. `AutocompleteDefaults` holds only the starting `size` and
+`radius`.
 
 | Field | Type | Description |
 |---|---|---|
 | `field.sizes` | `Sizes<FieldSizeLevel>` | The frame's font size, height and padding per size. |
 | `combobox.max_dropdown_height` | `String` | How tall the list grows before it scrolls. |
 | `popover.gap` | `f64` | Pixels between the field and the list. |
-| `autocomplete.size` | `Size` | Default `size` when the prop is omitted; `md`. |
-| `autocomplete.radius` | `Size` | Default `radius` when the prop is omitted; `sm`. |
+| `autocomplete.size` | `Size` | Default `size` when the prop is omitted, `md`. |
+| `autocomplete.radius` | `Size` | Default `radius` when the prop is omitted, `sm`. |
 
 ## Data attributes
 
-The wrapper and the frame carry the field's `data-state` tokens: `size-<size>`,
+The wrapper and the frame carry the field's `data-state` tokens `size-<size>`,
 `radius-<size>`, `disabled`, `required`, `warning`, `error`. The rows are
-`ComboboxOption`s, with `active` - never `selected`.
+`ComboboxOption`s, with `active` but never `selected`.

@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -474,18 +474,18 @@ pub fn ComboboxPage() -> Element {
             properties: vec![
                 props("Combobox", vec![
                     prop("state", "ComboboxState")
-                        .doc("From `use_combobox()`: the open state, the arrow-key highlight, and the id the aria wiring is built from. Required."),
+                        .doc("From `use_combobox()`. The open state, the highlighted row and the id the aria wiring uses. Required."),
                     prop("options", "OptionSource<T>")
-                        .doc("The options to list, already filtered. Required. A `Vec<T>` converts, and so do an `OptionList<T>` - named groups and per-option `disabled` - and a `Resource<Vec<T>>`, which is the whole of the async wiring: the list reads pending against ready itself. `None::<OptionList<T>>` says pending for a fetch you drive by hand."),
+                        .doc("The options to list, already filtered. Required. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself."),
                     prop("option", "Callback<ComboboxOptionArgs<T>, Element>")
-                        .doc("Draws one row - typically a `ComboboxOption`. Required."),
+                        .doc("Draws one row, usually a `ComboboxOption`. Required."),
                     prop("children", "Element")
-                        .doc("The trigger, and anything else that belongs with it - a hidden input, say."),
+                        .doc("The trigger, and anything that belongs with it, such as a hidden input."),
                     prop("empty", "Element")
                         .doc("Shown in place of the list when `options` is empty."),
                     prop("loading_label", "String")
-                        .default("localization")
-                        .doc("What the status region says while `options` is pending. A pending list replaces the rows and `empty` with a `Loader` and marks the dropdown `aria-busy`; it wins over `empty`, so an async list does not flash \"no results\" on every keystroke. Unset, the localization's `common.loading` - \"Loading\" in English."),
+                        .default("common.loading")
+                        .doc("What screen readers hear while `options` is pending. A pending list shows a `Loader` instead of the rows or `empty`."),
                     prop("size", "Size")
                         .default("md")
                         .doc("A row's height and font size."),
@@ -494,33 +494,38 @@ pub fn ComboboxPage() -> Element {
                         .doc("The dropdown's corner radius."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Blocks the arrow keys. Disable the trigger too, which draws its own dimmed state."),
+                        .doc("Blocks the arrow keys. Disable the trigger too."),
                 ]),
                 props("ComboboxOption", vec![
                     prop("selected", "bool")
-                        .doc("The current selection - `aria-selected` and a tint. Leave it unset for a suggestion list."),
+                        .doc("Marks the current selection with `aria-selected` and a tint. Leave it unset in a suggestion list."),
                     prop("active", "bool")
                         .default("from the Combobox")
-                        .doc("Overrides the keyboard highlight, which otherwise comes from the `Combobox` drawing the row."),
+                        .doc("Overrides the keyboard highlight."),
+                    prop("disabled", "bool")
+                        .default("from the Combobox")
+                        .doc("Overrides whether the row is refused. A refused row is greyed and ignores the click and Enter."),
                     prop("onpick", "EventHandler<()>")
                         .doc("Called on a click, and by Enter while the row is active."),
                     prop("size", "Size")
-                        .doc("Row height and font size. Defaults to the `Combobox`'s own `size`."),
+                        .doc("Row height and font size. Defaults to the `Combobox`'s `size`."),
                     prop("radius", "Size")
-                        .doc("Corner radius, tightened by the dropdown's padding so the row nests inside it. Defaults to the `Combobox`'s own."),
+                        .doc("Corner radius. Defaults to the `Combobox`'s, reduced so the row nests inside the dropdown."),
+                    prop("children", "Element")
+                        .doc("The row's content. Put a long label in `span { \"data-slot\": \"label\" }` to end it in an ellipsis."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A listbox that hangs off whatever control you put in it. It holds "
-                    "no state of its own: "
+                    "A listbox that hangs off whatever control you put in it. It holds no "
+                    "state of its own. "
                     Code { source: "use_combobox()" }
-                    " keeps it in your scope, the selection is yours entirely, the rows "
-                    "are drawn by "
+                    " keeps the open state in your scope, the selection is yours, "
                     Code { source: "option" }
-                    ", and the trigger is just "
+                    " draws the rows and "
                     Code { source: "children" }
-                    ". All it adds is the placement, the arrow keys, and the row theming."
+                    " is the trigger. The combobox adds the placement, the arrow keys and the "
+                    "row styling."
                 }
             },
             // snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
@@ -546,6 +551,19 @@ pub fn ComboboxPage() -> Element {
                     "fetching" => rsx! { FetchingDemo { values } },
                     _ => rsx! { SelectDemo { values } },
                 },
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "Focus stays on your trigger, so typing keeps working. Spread "
+                    Code { source: "state.a11y_attributes()" }
+                    " on it, or screen readers cannot tie the list to it. ArrowDown opens and "
+                    "moves down, ArrowUp moves up, Home and End jump to the ends, Enter picks "
+                    "and Escape and Tab close. Close the list on your trigger's blur, or an "
+                    "enclosing "
+                    Code { source: "Modal" }
+                    " stops hearing Escape while the list stays open."
+                }
             }
         }
     }

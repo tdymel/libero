@@ -86,12 +86,12 @@ pub fn CascaderPage() -> Element {
             markdown: "/md/cascader.md",
             properties: vec![
                 props("Cascader", vec![
-                    prop("size", "Size").default("md").doc("Controls height, padding and font size, of the frame and of the rows alike."),
-                    prop("radius", "Size").default("sm").doc("Corner radius of the frame and the list, independent of size."),
+                    prop("size", "Size").default("md").doc("Height, padding and font size of the frame and its rows."),
+                    prop("radius", "Size").default("sm").doc("Corner radius of the frame and the list."),
                     prop("data", "Vec<CascaderOption<T>>")
-                        .doc("The tree to walk: `CascaderOption::new(value, label)`, with `.children(..)` and `.disabled(..)`. `T` is any `Options` type, as for `Select`. Values are unique across the whole tree, not just among siblings."),
+                        .doc("The tree, built with `CascaderOption::new(value, label)`, `.children(..)` and `.disabled(..)`. `T` is any `Options` type. Values must be unique across the whole tree."),
                     prop("value", "Option<T>")
-                        .doc("The selected option's value; strictly controlled. The cascader finds the path to it in `data`. A value no option holds selects nothing."),
+                        .doc("The selected option's value. Pair it with `onchange`. The cascader finds the path to it in `data`, and a value no option holds selects nothing."),
                     prop("onchange", "EventHandler<Option<T>>")
                         .doc("Called with the value to select next, or `None` when the selection was cleared."),
                     prop("any_level", "bool")
@@ -102,7 +102,7 @@ pub fn CascaderPage() -> Element {
                         .doc("Picking the selected option again clears it. Off, a re-pick keeps the value."),
                     prop("layout", "CascaderLayout")
                         .default("columns")
-                        .doc("`\"columns\"` draws one listbox per level; `\"paths\"` draws one row per full path. A search renders `\"paths\"` whatever this says."),
+                        .doc("`\"columns\"` draws one list per level, `\"paths\"` one row per full path. A search always renders `\"paths\"`."),
                     prop("searchable", "bool")
                         .default("false")
                         .doc("Puts a search box at the top of the list, which narrows it to the paths that match."),
@@ -112,50 +112,42 @@ pub fn CascaderPage() -> Element {
                         .default("\" / \"")
                         .doc("Between labels, in the trigger and in a `\"paths\"` row."),
                     prop("format_value", "Callback<Vec<String>, String>")
-                        .doc("Overrides the joined labels in the trigger; takes the labels root to option. A `String` and not a node, because the value slot clips for an ellipsis."),
+                        .doc("Replaces the joined labels in the trigger. Gets the labels from root to option, and returns a `String` so the trigger can still cut it off with an ellipsis."),
                     prop("node", "Callback<CascaderNodeArgs<T>, Element>")
                         .default("label")
-                        .doc("Draws one row's content. The row itself - its highlight, its `aria-selected`, its chevron, its click - stays the component's."),
+                        .doc("Draws one row's content. The highlight, chevron and click stay the component's."),
                     prop("column_width", "String")
                         .default("220px")
-                        .doc("One column's width, and its minimum: when the trigger is wider than the open columns, they share the rest. `\"max-content\"` is how a column takes the width of its longest row."),
+                        .doc("Width and minimum width of one column. A trigger wider than the open columns shares the rest among them. `\"max-content\"` fits the longest row."),
+                    prop("name", "FieldName<Option<T>>")
+                        .doc("Posts the selected value's `Options::value()` in a hidden input of that name. A path such as `Listing::FIELDS.category()` also binds the selection to the surrounding `Form`'s value when there is no `onchange`."),
                     prop("validate", "Validators<Option<T>>")
                         .doc("Rules over the selected value, shown once the field loses focus or its form is submitted."),
-                    prop("name", "FieldName<Option<T>>")
-                        .doc("Emits a hidden input of that name carrying the selected value's `Options::value()`. A path also binds the selection to the surrounding `Form`'s value."),
                     prop("placeholder", "String").doc("Shown while nothing is selected."),
                     prop("search_placeholder", "String").doc("What the search box says while empty."),
                     prop("clearable", "bool")
                         .default("false")
                         .doc("Shows an x in place of the chevron while a value is selected."),
-                    prop("label", "Caption").doc("The field's caption, above the control."),
-                    prop("description", "Caption").doc("Between the label and the control: what to enter."),
-                    prop("helper", "Caption").doc("Under the control: formatting rules, or what the entry affects."),
+                    prop("label", "Caption").doc("The caption above the control, and the field's name."),
+                    prop("description", "Caption").doc("Between the label and the control. What to pick."),
+                    prop("helper", "Caption").doc("Under the control. What the choice changes."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
-                    prop("required", "bool").default("false").doc("Adds `aria-required` and an asterisk to the label."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                    prop("required", "bool").default("false").doc("Sets `aria-required` and marks the label."),
                     prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A field for choosing one option from a tree, level by level. Its value is one "
-                    "option's "
+                    "Picks one option from a tree, one level at a time. The value is that option's "
                     Code { source: "value" }
-                    " - any "
+                    ", any "
                     Code { source: "T" }
                     " a "
                     Code { source: "Select" }
-                    " could hold. The cascader finds the path to that value itself and shows it in the "
-                    "trigger. The tree is built from "
-                    Code { source: "CascaderOption<T>" }
-                    ", not from "
-                    Code { source: "Tree" }
-                    "'s nodes: a "
-                    Code { source: "Tree" }
-                    " expands and activates rather than selecting."
+                    " could hold. The cascader finds the path to it and shows the path in the trigger."
                 }
             },
             Demo {
@@ -241,25 +233,23 @@ pub fn CascaderPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Closed, the trigger opens on ArrowDown, ArrowUp, ArrowRight, Enter, Space, "
-                    "Home or End. Typing a letter moves to the next row of the cursor's column "
-                    "that starts with it, unless searchable. Open, ArrowDown and ArrowUp move "
-                    "inside the cursor's column and skip "
-                    "disabled rows, ArrowRight expands into the children, ArrowLeft goes back up "
-                    "a level, Enter (or Space, unless searchable) commits a leaf - or expands a branch, unless "
+                    "The arrows, Enter, Space, Home and End open the list. Inside it, ArrowUp and "
+                    "ArrowDown move within a column and skip disabled rows. ArrowRight goes into "
+                    "the children and ArrowLeft back up. Enter picks a leaf and expands a branch, "
+                    "and with "
                     Code { source: "any_level" }
-                    " - and Escape closes without changing the value. Tab and Alt+ArrowUp "
-                    "commit the highlighted row when Enter would, then close. In "
+                    " it picks the branch too. Escape closes without a change. Unless the list "
+                    "is searchable, Space acts like Enter and typing a letter jumps to a row. "
+                    "In "
                     Code { source: "\"paths\"" }
-                    ", and so while searching, ArrowLeft and ArrowRight belong to the search "
-                    "box's caret instead."
+                    ", and so while searching, ArrowLeft and ArrowRight move the search box's caret."
                 }
                 Text {
                     "Without a "
                     Code { source: "label" }
-                    ", the trigger has no name of its own - set "
+                    ", set "
                     Code { source: "aria_label" }
-                    ", or a screen reader announces an unnamed combobox."
+                    ". Otherwise screen readers announce an unnamed combobox."
                 }
             }
         }

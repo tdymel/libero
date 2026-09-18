@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, Switch, Text};
 
@@ -16,52 +16,55 @@ pub fn SwitchPage() -> Element {
             properties: vec![props("Switch", vec![
                 prop("color", "ThemeAwareValue")
                     .default("primary")
-                    .doc("Track color when checked; a theme color name or a literal CSS color."),
-                prop("size", "Size").default("md").doc("Controls track and thumb size, and the label beside them."),
+                    .doc("Track color when on. A theme color name or any CSS color."),
+                prop("size", "Size").default("md").doc("Size of the track, the thumb and the label."),
                 prop("radius", "Size")
                     .default("xl")
-                    .doc("Track corner radius; the thumb is always a circle."),
+                    .doc("Track corner radius. The thumb stays a circle."),
                 prop("checked", "bool")
-                    .doc("Pair it with `onchange`. Left out, the switch keeps its own state unless a `name` binds it to the form around it."),
+                    .doc("Whether it is on. Pair it with `onchange`. Left out, the switch keeps its own state, or the form's when `name` binds it."),
                 prop("onchange", "EventHandler<bool>")
                     .doc("Called with the value `checked` should take next."),
+                prop("name", "FieldName<bool>")
+                    .doc("What the switch posts as. A path such as `Signup::FIELDS.terms()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
+                prop("validate", "Validators<bool>")
+                    .doc("Rules over `checked`, shown once the switch loses focus or its form is submitted."),
                 prop("label", "Caption")
-                    .doc("The caption beside the track. Names the switch through a `for`/`id` pair."),
+                    .doc("The caption beside the track, and the switch's name."),
                 prop("description", "Caption")
-                    .doc("Under the label: what turning it on does."),
+                    .doc("Under the label. What turning it on does."),
                 prop("helper", "Caption")
                     .doc("Under the description, in the label's column."),
                 prop("status", "FieldStatus")
                     .default("Valid")
-                    .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                    .doc("Validation state, under the helper. A bare `&str` is an error."),
                 prop("required", "bool")
                     .default("false")
-                    .doc("Marks the switch required, adds `aria-required` and shows an asterisk in the label."),
+                    .doc("Sets `aria-required` and marks the label with an asterisk."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Disables interaction and dims the switch."),
+                    .doc("Disables and dims the switch."),
                 prop("readonly", "bool")
                     .default("false")
-                    .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. Sets `aria-readonly`, which Chromium does not announce on a switch: say it in the label or description where it matters."),
+                    .doc("Focusable and posted with the form, but not editable. `disabled` drops the switch from the tab order and the post instead. Chromium does not announce read-only on a switch, so say it in the label or description where it matters."),
                 prop("aria_label", "String")
                     .doc("Names the switch when it has no `label`."),
                 prop("variant", "ChoiceVariant")
                     .default("plain")
-                    .doc("`card` draws the switch as a bordered surface and makes all of it the hit area. Pair it with a `description`. On the web a link inside the card keeps its own click; natively it toggles the card."),
+                    .doc("`card` draws the switch as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles."),
             ])],
             lead: rsx! {
                 Text {
-                    "A checkbox styled as a track and thumb. A visually hidden "
-                    Code { source: "input" }
-                    " does the real work, so it is announced as a switch. Space toggles it; "
-                    "so does Enter outside a Form, while inside one Enter submits it, as on a native checkbox. It takes the same slots every field takes, with the track "
-                    "where a checkbox puts its box. The browser never toggles the input "
-                    "itself, so the track, the DOM property and the form submission can never "
-                    "disagree with Rust. "
+                    "An on/off toggle drawn as a track and thumb. It is a checkbox underneath, "
+                    "announced as a switch, with the label beside the track and the "
+                    "description, helper and status under both. Pass "
                     Code { source: "checked" }
-                    " drives the look when you pass it, paired with "
+                    " with "
                     Code { source: "onchange" }
-                    "; with neither, and outside a form binding, the switch keeps its own state."
+                    " to own the state. With neither, the switch keeps its own, or the form's "
+                    "when "
+                    Code { source: "name" }
+                    " binds it."
                 }
             },
             // snippet: let mut enabled = use_signal(|| false);
@@ -157,6 +160,17 @@ pub fn SwitchPage() -> Element {
                         disabled: (values.str("disabled") == "true").then_some(true),
                     }
                 },
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "Space toggles the switch. Outside a "
+                    Code { source: "Form" }
+                    " Enter toggles it too. Inside one, Enter submits the form, as on a native "
+                    "checkbox. Without a visible label, set "
+                    Code { source: "aria_label" }
+                    ". A debug build warns when the switch has neither."
+                }
             }
         }
     }

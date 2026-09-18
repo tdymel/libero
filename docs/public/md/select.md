@@ -4,12 +4,12 @@ Crate: `libero`
 Import: `use libero::components::{Options, Select};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/select/select.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A listbox over an enum with libero's own rows, in the same field frame as every other input.
+Description: A listbox over an enum with rows you can draw yourself, in the same field frame as every other input.
 
-A listbox over an enum, with the five slots every field shares. Unlike
-[NativeSelect](native_select.md) the rows are libero's own, so `option` can draw
-them with anything. That costs the OS picker on phones and working without wasm;
-reach for `NativeSelect` when those matter.
+A listbox over an enum, in the same frame as every other field. Unlike
+[NativeSelect](native_select.md), the rows are libero's own, so `option` can
+draw them with anything. In exchange there is no OS picker on phones. Pass
+`value` with `onchange`. `clearable` lets the user go back to `None`.
 
 ## Usage
 
@@ -40,30 +40,12 @@ fn Demo() -> Element {
 }
 ```
 
-`onchange` hands over `Option<T>`: `Some` for a pick, `None` for the clear
-button. Without `clearable` nothing produces `None`.
+`onchange` hands over `Option<T>`, `Some` for a pick and `None` for the clear
+button. `value: None` leaves nothing to infer `T` from, so write `None::<Fruit>`
+and annotate the handler.
 
-## Captions
-
-`label`, `description` and `helper` are `Caption`s, so each takes a string or an
-`Element`. They sit where they do on every other field: the label and the
-description above the trigger, the helper and the status below it.
-
-```rust,ignore
-Select {
-    label: "Fruit",
-    description: "Delivered with your next box.",
-    helper: "You can swap it until Friday.",
-    value: value(),
-    onchange: move |next| value.set(next),
-}
-```
-
-## Drawing the rows and the selection
-
-`option` draws a row's *content*. The row around it - its highlight, its
-`aria-selected`, its click - stays the component's, so a custom row cannot break
-the wiring:
+`option` draws a row's content. The highlight, selection and click stay the
+component's. `selection` draws the value in the trigger and takes the bare `T`:
 
 ```rust,ignore
 Select {
@@ -76,37 +58,14 @@ Select {
 }
 ```
 
-`selection` takes the bare `T` rather than `SelectOptionArgs`, since an index
-means nothing inside the trigger. Drawing the same thing in both places takes two
-closures.
-
-## Nothing picked yet
-
-`value: None` leaves `T` with nothing to be inferred from, so write
-`None::<Fruit>` and annotate the handler. The same holds for `NativeSelect`.
-
-## Searching
-
-`searchable` puts a search box at the top of the list. The trigger is unchanged -
-it still shows the selection - so a closed select looks exactly as it did.
+`searchable` puts a search box at the top of the list. It narrows
+case-insensitively on `Options::label`, and `filter` replaces that test, so a
+search can match a synonym or a code:
 
 ```rust,ignore
 Select {
-    label: "Fruit",
     searchable: true,
     search_placeholder: "Search fruit",
-    value: value(),
-    onchange: move |next| value.set(next),
-}
-```
-
-By default it narrows case-insensitively on `Options::label`. `filter` replaces
-that test, so a search can match anything the caller knows - a synonym, a code,
-a record's id:
-
-```rust,ignore
-Select {
-    searchable: true,
     value: value(),
     onchange: move |next| value.set(next),
     filter: move |f: SelectFilterArgs<Fruit>| {
@@ -117,39 +76,18 @@ Select {
 }
 ```
 
-That is the `filter` switch in the demo above: with it on, "thumb" finds Mango
-and "counter" finds Banana, through notes that are never drawn on the row.
+The query is cleared when the list closes. To complete free text rather than
+choose from a set, use [Autocomplete](autocomplete.md).
 
-The box takes focus while the list is open, and the query is cleared when it
-closes, so a reopened list always starts unfiltered. A query that matches
-nothing leaves the box on screen with an empty list under it - closing it there
-would take away the thing you need to edit. On `MultiSelect` the query instead
-survives a pick, so several matches of one search can be ticked without
-retyping it.
-
-To complete free text rather than choose from a set, reach for
-[Autocomplete](autocomplete.md).
-
-## Posting with a form
-
-`name` emits a hidden input carrying the selected option's `Options::value()`,
-so the select takes part in a plain `<form>` submit. The trigger is a
-`<div role="combobox">` and cannot carry a `name` itself, which is why this is a
-prop and not an attribute you can spread.
+`name` posts the selected option's `Options::value()` with a plain `<form>`.
+For a derived enum that is the variant's name, never the label. A disabled
+select posts nothing.
 
 ```rust,ignore
 Select { label: "Fruit", name: "fruit", value: fruit(), onchange: move |next| fruit.set(next) }
 ```
 
-`Options::value()` is the **variant's name** for a derived enum, never the
-label - so a `#[option(label = "..")]` or a translated label never changes what
-a form sends. For a runtime set like `String` it is the string itself.
-
-A disabled select posts nothing: the hidden input is disabled with the field.
-
-## Groups and unavailable options
-
-Both arrive through `options`, as an `OptionList<T>` the caller builds:
+Groups and disabled options come through `options`, as an `OptionList<T>`:
 
 ```rust,ignore
 OptionList::grouped()
@@ -157,42 +95,22 @@ OptionList::grouped()
     .group("Tropical", [Fruit::Banana, Fruit::Mango].map(OptionItem::new))
 ```
 
-Groups are explicit - not a field on the option and not a `group_by` closure -
-because the caller is the only one who knows both the order the groups go in
-and what each is called. A named run is drawn as a `role="group"` named by its
-heading; a group named twice appends to the run it already has. Custom rows are
-unaffected: richness lives in the `option` callback, which is orthogonal to the
-shape of the list. **The caller's order is always kept**: a label used again
-after another group draws its heading a second time rather than merging the two
-runs, since merging would silently reorder options that were listed in a
-particular order. Two adjacent calls with one label still draw one heading.
-
-`disabled` is a flag on the option, not a closure and not a value your `T`
-refuses everywhere - a row this particular field will not take. It is drawn and
-read out, `aria-disabled="true"`, and the arrows, typeahead and clicks all pass
-over it.
-
-Groups change how rows are wrapped, never which index a row reports, and a
-search that empties a group simply leaves its heading out.
+Each group is a `role="group"` named by its heading. Your order is kept, so a
+group label used again after another group draws its heading again. A disabled
+option is read out, and the arrows, typeahead and clicks skip it.
 
 ## Accessibility
 
-Enter, Space, ArrowDown and ArrowUp open the list on the selected row, Home and
-End on the first and last row; open, the arrows, Home and End move the
-highlight; Enter or Space picks; Tab and Alt+ArrowUp pick the highlighted row,
-then close; Escape closes without a pick. With `searchable`, Space in the
-search box types.
+Closed, the trigger opens on ArrowDown, ArrowUp, Enter or Space, and on Home or
+End at the first or last row. Open, the arrows move the highlight, Home and End
+jump to the ends, and Enter or Space picks. Tab and Alt+ArrowUp pick the
+highlighted row and close. Escape closes without a pick.
 
-Typing searches the labels. The characters are buffered for half a second, so
-"b", "e", "r" finds Berlin while a lone "b" after the pause cycles the rows
-starting with it - a native `<select>`'s rule, and Space still opens the list
-rather than typing, except mid-query where it is part of "new york". A **closed
-trigger changes the value in place**, as the native control does - which needs
-`onchange` to actually move `value`, since the search starts from the selected
-row: a control whose value never changes has typeahead land on the same row
-every press. Disabled rows are skipped. With `searchable` the search box replaces typeahead: it is a
-different affordance, and it takes the focus while the list is open - along with
-the combobox role and the field's label, captions and states.
+Typing jumps to a matching label. "b", "e", "r" typed quickly finds Berlin, and
+a lone "b" after a pause cycles the rows starting with it. On a closed trigger
+this changes the value in place, as on a native `<select>`. Disabled options are
+read out but skipped. With `searchable` the search box takes over typing and
+holds the focus while the list is open.
 
 ## Props
 
@@ -200,50 +118,51 @@ the combobox role and the field's label, captions and states.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Controls height, padding, font size and the rows' size. |
+| `size` | `Size` | `md` | Height, padding and font size of the field and its rows. |
 | `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
-| `value` | `Option<T>` | - | The selected option; strictly controlled. `None` shows `placeholder`. |
-| `onchange` | `EventHandler<Option<T>>` | - | The option to select next, or `None` from the clear button. |
-| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set passes it here. A `Vec<T>` converts, as do an `OptionList<T>` (named groups, per-option `disabled`) and a `Resource<Vec<T>>` (the whole async wiring). |
-| `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. |
+| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` shows `placeholder`. |
+| `onchange` | `EventHandler<Option<T>>` | - | Called with the option to select next, or `None` from the clear button. |
+| `name` | `FieldName<Option<T>>` | - | Posts the selected option's `Options::value()` under this name. A path such as `Order::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field. |
+| `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. The highlight, selection and click stay the component's. |
 | `selection` | `Callback<T, Element>` | `T::label()` | Draws the selected value inside the trigger. |
 | `placeholder` | `String` | - | Shown while `value` is `None`. |
-| `name` | `String` | - | Emits a hidden input of that name carrying the selected option's `Options::value()`, so the select posts with a native form. |
-| `clearable` | `bool` | `false` | An x in place of the chevron while something is selected. |
-| `searchable` | `bool` | `false` | A search box at the top of the list. |
-| `filter` | `Callback<SelectFilterArgs<T>, bool>` | case-insensitive `contains` | Narrows the options while searching. |
-| `search_placeholder` | `String` | - | What the search box says while empty. |
-| `label` | `Caption` | - | The field's caption. Names the trigger through `aria-labelledby`. |
-| `description` | `Caption` | - | Between the label and the control. |
-| `helper` | `Caption` | - | Under the control. |
+| `clearable` | `bool` | `false` | Shows an x in place of the chevron while something is selected. The only way `onchange` gets `None`. |
+| `searchable` | `bool` | `false` | Puts a search box at the top of the list. The query is cleared when the list closes. |
+| `filter` | `Callback<SelectFilterArgs<T>, bool>` | `contains` | Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`. |
+| `search_placeholder` | `String` | - | What the empty search box says. |
+| `label` | `Caption` | - | The caption above the control, and the select's name. |
+| `description` | `Caption` | - | Between the label and the control. What to pick. |
+| `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Adds `aria-required` and marks the label. |
+| `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
 | `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead. |
 
 `SelectOptionArgs<T>` carries `value`, `index`, `selected` and `disabled`.
 `SelectFilterArgs<T>` carries `value` and `query`.
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes; the attributes land on the trigger.
+`states`, and any extra HTML attributes. The attributes land on the trigger.
 
 ## Theme defaults
 
 Almost everything is `FieldDefaults`, shared by every field, and the list is
-`ComboboxDefaults`. `SelectDefaults` keeps only which `size` and `radius` the
-component starts at.
+`ComboboxDefaults`. `SelectDefaults` holds only the starting `size` and
+`radius`.
 
 | Field | Type | Description |
 |---|---|---|
 | `field.sizes` | `Sizes<FieldSizeLevel>` | The frame's font size, height and padding per size. |
 | `combobox.max_dropdown_height` | `String` | How tall the list grows before it scrolls. |
 | `popover.gap` | `f64` | Pixels between the trigger and the list. |
-| `select.size` | `Size` | Default `size` when the prop is omitted; `md`. |
-| `select.radius` | `Size` | Default `radius` when the prop is omitted; `sm`. |
+| `select.size` | `Size` | Default `size` when the prop is omitted, `md`. |
+| `select.radius` | `Size` | Default `radius` when the prop is omitted, `sm`. |
 
 ## Data attributes
 
-The wrapper, the frame and the trigger carry the field's `data-state` tokens:
+The wrapper, the frame and the trigger carry the field's `data-state` tokens
 `size-<size>`, `radius-<size>`, `disabled`, `required`, `warning`, `error`.
 The trigger adds `multiple` on a `MultiSelect`. The rows are `ComboboxOption`s,
 with `active` and `selected`.

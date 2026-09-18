@@ -53,24 +53,23 @@ fetch only the file you need.
 - [PhoneField](phone_field.md): A country picker in front of a `tel` input, whose value is an E.164 string.
 - [NumberField](number_field.md): A numeric field over your own number type, with optional steppers in its trailing slot.
 - [PinField](pin_field.md): A pin, one character per cell, with auto-advance, paste spreading and an `oncomplete` that fires the moment the last cell fills.
-- [Autocomplete](autocomplete.md): A text field that offers completions - the value stays a `String`, and the suggestions are drawn from any `Options` type.
-- [Cascader](cascader.md): A field for choosing one option of a tree, column by column; its value is that option's `T`, and it finds the path itself.
-- [Select](select.md): A listbox over an enum with libero's own rows, in the same field frame as every other input.
+- [Autocomplete](autocomplete.md): A text field that offers completions from any `Options` type, while the value stays a `String`.
+- [Cascader](cascader.md): A field that picks one option from a tree, one level at a time, and shows the path in the trigger.
+- [Select](select.md): A listbox over an enum with rows you can draw yourself, in the same field frame as every other input.
 - [MultiSelect](multi_select.md): A listbox over an enum that holds any number of its options, drawn as chips in the trigger.
 - [TagsField](tags_field.md): A field whose value is a `Vec<String>` of typed tags, drawn as chips around the input.
-- [NativeSelect](native_select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
-- [Combobox](combobox.md): A virtualized listbox that hangs off a caller-supplied trigger, holding no state of its own.
-- [Checkbox](checkbox.md): A checkbox with its label beside the box, the field slots under both, and an indeterminate state that lives in Rust rather than in the DOM.
-- [Chip](chip.md): A compact token - a tag, a filter, or a small inline action.
-- [Switch](switch.md): A strictly controlled on/off toggle - a visually hidden checkbox with `role="switch"`, drawn as a track and thumb, wearing the field slots.
-- [RadioGroup](radio_group.md): A group of radios over an enum, exactly one selected - one tab stop, arrow-key selection, and the question announced as the group's name.
-- [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected, wearing the field slots.
-- [Slider](slider.md): A value dragged along a track - continuous over `f64`, or discrete over an ordered enum that derives `SliderValue`.
-- [RangeSlider](range_slider.md): Two thumbs on one track for a span rather than a point - the `Slider` engine, over a pair of values.
-- [ColorField](color_field.md): A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
-- [ColorPicker](color_picker.md): A saturation panel and a hue slider, with an optional alpha slider and preset swatches, holding one `ColorCode` that converts to any CSS form. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
-- [DateField](date_field.md): One text field for every date and time value, typed leniently, with the matching `DatePicker` in a dropdown. Also lists `DayField`, `TimeField`, `DateTimeField`, `DateRangeField` and `DateTimeRangeField`.
-- [DatePicker](date_picker.md): One picker for every date and time value - days, months, years, times, date-times and ranges of them. Also lists `DayPicker`, `MonthPicker`, `YearPicker`, `TimePicker` and `DateRangePicker`.
+- [NativeSelect](native_select.md): A styled native `<select>` over an enum, with the field slots.
+- [Combobox](combobox.md): A listbox that hangs off a trigger you supply, holding no state of its own.
+- [Checkbox](checkbox.md): A checkbox with its label beside the box, the field slots under both, and an indeterminate state.
+- [Chip](chip.md): A compact token: a tag, a filter, a small action or a link.
+- [Switch](switch.md): An on/off toggle drawn as a track and thumb, announced as a switch, with the field slots.
+- [RadioGroup](radio_group.md): A group of radios over an enum, exactly one selected, with one tab stop, arrow-key selection and the question as the group's name.
+- [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected, with the field slots.
+- [Slider](slider.md): A value dragged along a track, continuous over `f64` or discrete over an ordered enum that derives `SliderValue`.
+- [RangeSlider](range_slider.md): Two thumbs on one track, for a span instead of a point, over the same values as `Slider`.- [ColorField](color_field.md): A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
+- [ColorPicker](color_picker.md): A saturation panel and a hue slider, with an optional alpha slider and preset swatches, over one `ColorCode`. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
+- [DateField](date_field.md): A text field for every date and time value, typed leniently, with the matching `DatePicker` in a dropdown.
+- [DatePicker](date_picker.md): One picker for every date and time value, from days, months and years to times, date-times and ranges of them.
 - [FileField](file_field.md): Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.
 
 ## Navigation

@@ -4,12 +4,11 @@ Crate: `libero`
 Import: `use libero::components::Chip;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/chip.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A compact token - a tag, a filter, or a small inline action.
+Description: A compact token: a tag, a filter, a small action or a link.
 
-A compact token. With `onchange` it is a real checkbox - a visually hidden
-`<input>` plus a `<label>` - so it gets checked semantics, Space-to-toggle and
-focus for free. With `onclick` it is a `<button>`, with `to` a router-aware
-link, and with none of them a plain `<span>`.
+A compact token. With `onchange` or a `name` it is a checkbox, with `onclick` a
+button, with `to` a link, and with none of them a plain tag. `variant` sets the
+unselected look. A checked chip is always a tinted container.
 
 ## Usage
 
@@ -25,12 +24,8 @@ fn Demo() -> Element {
 }
 ```
 
-A selectable chip is strictly controlled: `checked` drives the look, `onchange` reports the value it
-should take next. A checked chip is a tinted container - Material 3's selected
-filter chip, which also drops the outline - whatever its `variant`, so `variant`
-describes the unselected state. `checked` without `onchange` can never change,
-and `onchange` without `checked` can never look selected - the library warns
-about either alone.
+For a selectable chip, pass `checked` with `onchange`. A debug build warns when
+one comes without the other.
 
 ```rust
 use dioxus::prelude::*;
@@ -63,10 +58,9 @@ fn Demo() -> Element {
 }
 ```
 
-A `name` alone also makes the chip a checkbox: it now has something to post.
-Give each chip of a filter row the same `name` and its own `value`, and the row
-posts one entry per selected chip - `tags=rust&tags=css`. A chip with no
-`value` posts `name=on`, as `Checkbox` does.
+A `name` alone also makes the chip a checkbox. Give each chip of a filter row
+the same `name` and its own `value`, and the row posts one entry per selected
+chip, such as `tags=rust&tags=css`. A chip with no `value` posts `name=on`.
 
 ```rust
 use dioxus::prelude::*;
@@ -84,8 +78,8 @@ fn Demo() -> Element {
 }
 ```
 
-`onclick` makes the chip a `<button>`, `to` a router-aware link that takes
-precedence over `onclick`. Neither combines with `onchange`.
+`onclick` makes the chip a button, `to` a router-aware link that wins over
+`onclick`. Neither combines with `onchange`.
 
 ```rust
 use dioxus::prelude::*;
@@ -104,11 +98,9 @@ fn Demo() -> Element {
 }
 ```
 
-An icon goes in `icon`: it sits before the label with a gap, and never
-shrinks. The children are the chip's own flex items, never wrapped, so an
-icon among them keeps the gap too. A long label is cut at the chip's edge; for
-an ellipsis, give the text a span of its own, as below. A remove x goes in
-`trailing`, after the label; a label that ellipsizes never clips it.
+An icon goes in `icon`, before the label, and a remove button in `trailing`,
+after it. Neither shrinks. A long label is cut at the chip's edge. For an
+ellipsis, give the text a span of its own:
 
 ```rust
 use dioxus::prelude::*;
@@ -135,41 +127,38 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Space toggles a selectable chip; a `readonly` one keeps its tab stop and
-refuses the toggle. Keep `children` to text and `Icon` - a
-`<label>` hijacks clicks on any nested control.
-
-A `to` chip with `target: "_blank"` draws the same external icon and hidden
-"(opens in a new tab)" as `Anchor`; `new_tab_hint: false` drops both.
+Space toggles a selectable chip. A `readonly` one keeps its tab stop and
+ignores the toggle. Keep `children` to text and `Icon`, because a selectable
+chip is a `<label>`, which takes the clicks of any control inside it.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
-| `variant` | `Variant` | `filled` | The unselected look; a checked chip is a tonal container whatever its variant. |
-| `size` | `Size` | `md` | Controls height, padding, and font size. |
-| `radius` | `Size` | `xl` | Corner radius, independent of `size`. |
-| `checked` | `bool` | - | Selection state - pair it with `onchange`. Left out, a chip with a `name` keeps its own state unless that name binds it to the form around it. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the chip. |
-| `readonly` | `bool` | `false` | A checkbox chip stays focusable and posted with the form, but clicks and Space no longer toggle it, as on `Checkbox`. Said with `aria-readonly`. |
-| `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. Its presence makes the chip a real checkbox. |
-| `name` | `FieldName<bool>` | - | Makes the chip a checkbox that posts under this name. A path - `Filters::FIELDS.open()` - also binds it to the surrounding `Form`'s value when the chip has no `onchange`, as on `Checkbox`. |
-| `value` | `String` | `on` | What the chip posts under its `name` when it is checked, so a row of filter chips can share one name. Left out, it posts the browser's `on`, as `Checkbox` does. |
-| `onclick` | `EventHandler<MouseEvent>` | - | A plain action; its presence makes the chip a `<button>`. |
-| `to` | `NavigationTarget` | - | Renders a router-aware link instead. Takes precedence over `onclick`. |
-| `target` | `String` | - | Link target, e.g. `_blank`. Only with `to`. `"_blank"` adds a small external icon and a hidden "(opens in a new tab)" from the localization, as on `Anchor`. |
+| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
+| `variant` | `Variant` | `filled` | The unselected look. A checked chip is always a tonal container. |
+| `size` | `Size` | `md` | Height, padding and font size. |
+| `radius` | `Size` | `xl` | Corner radius. |
+| `checked` | `bool` | - | Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it. |
+| `disabled` | `bool` | `false` | Disables and dims the chip. |
+| `readonly` | `bool` | `false` | A selectable chip stays focusable and posted with the form, but clicks and Space no longer toggle it. |
+| `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. Makes the chip a checkbox. |
+| `name` | `FieldName<bool>` | - | Makes the chip a checkbox that posts under this name. A path such as `Filters::FIELDS.open()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `value` | `String` | `on` | What the chip posts under its `name` when checked, so a row of filter chips can share one name. |
+| `onclick` | `EventHandler<MouseEvent>` | - | A plain action. Makes the chip a `<button>`. |
+| `to` | `NavigationTarget` | - | Makes the chip a router-aware link. Wins over `onclick`. |
+| `target` | `String` | - | Link target, such as `_blank`. Only with `to`. `"_blank"` adds an external icon and a hidden "(opens in a new tab)". |
 | `new_tab_hint` | `bool` | `true` | `false` drops the icon and the hidden text a `"_blank"` target adds. |
-| `icon` | `Element` | - | Drawn before the label, with a gap; it never shrinks. |
-| `trailing` | `Element` | - | Drawn after the label, with a gap; it never shrinks - a remove x. Outside a checkbox chip's `<label>`, so it may be a button, but not on an `onclick` or `to` chip. |
-| `children` | `Element` | required | The label, laid out as the chip's own flex items and cut at its edge. Text and `Icon` only - a `<label>` hijacks clicks on nested controls. |
+| `icon` | `Element` | - | Drawn before the label, with a gap. It never shrinks. |
+| `trailing` | `Element` | - | Drawn after the label, with a gap, such as a remove button. It never shrinks. Not on an `onclick` or `to` chip, which is a button already. |
+| `children` | `Element` | required | The label, cut at the chip's edge. Text and `Icon` only. |
 
 Like every component, `Chip` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 
-`ChipDefaults` on the theme; per-size values live in its `sizes` scale.
+`ChipDefaults` on the theme. Per-size values live in its `sizes` scale.
 
 | Field | Type | Description |
 |---|---|---|
@@ -189,7 +178,7 @@ Like every component, `Chip` also takes the shared props `sx`, `class`,
 | `--lsx-chip-contrast` | Text color on top of that accent. |
 | `--lsx-chip-hover` | Accent color while hovered. |
 | `--lsx-chip-container` | Container fill of `tonal`. |
-| `--lsx-chip-on-container` | Label color on that container - black or white, whichever reads on it. |
+| `--lsx-chip-on-container` | Label color on that container, black or white, whichever reads on it. |
 
 ## Data attributes
 
@@ -203,4 +192,4 @@ State tokens on the root's `data-state`, space separated.
 | `checked` | `checked` is set. |
 | `disabled` | `disabled` is set. |
 | `clickable` | The chip is a button or link, not a checkbox. |
-| `selectable` | The chip is a checkbox (`onchange` or `name`). Its root does not clip, so the focus ring drawn out by its border shows; its label clips instead. Every other chip clips at its root. |
+| `selectable` | The chip is a checkbox (`onchange` or `name`). |

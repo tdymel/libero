@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -117,21 +117,25 @@ pub fn AutocompletePage() -> Element {
             markdown: "/md/autocomplete.md",
             properties: vec![
                 props("Autocomplete", vec![
-                    prop("size", "Size").default("md").doc("Controls height, padding, font size and the rows' size."),
+                    prop("size", "Size").default("md").doc("Height, padding and font size of the field and its rows."),
                     prop("radius", "Size")
                         .default("sm")
-                        .doc("Corner radius of the frame and the list, independent of size."),
+                        .doc("Corner radius of the frame and the list."),
                     prop("value", "String")
                         .default("\"\"")
-                        .doc("The text; strictly controlled. Picking a suggestion inserts its label - the value is never a `T`."),
+                        .doc("The text. Pair it with `oninput`. Picking a suggestion inserts its label."),
                     prop("oninput", "EventHandler<String>")
                         .doc("Fires per keystroke, and again with the label when a suggestion is picked or the field is cleared."),
+                    prop("name", "FieldName<String>")
+                        .doc("What the field posts as. A path such as `Signup::FIELDS.city()` also binds it to the surrounding `Form`'s value when it has no `oninput`."),
+                    prop("validate", "Validators<String>")
+                        .doc("Rules over the text, shown once the field loses focus or its form is submitted."),
                     prop("options", "Vec<T>")
                         .default("[]")
-                        .doc("The suggestions to offer. `T` is inferred from it, so no call site annotates one."),
+                        .doc("The suggestions to offer. `T` is inferred from it."),
                     prop("option", "Callback<AutocompleteOptionArgs<T>, Element>")
                         .default("T::label()")
-                        .doc("Draws one row's content. The row itself - highlight, click - stays the component's. No `selected`: a suggestion is not a selection."),
+                        .doc("Draws one row's content. The highlight and click stay the component's."),
                     prop("onpick", "EventHandler<T>")
                         .doc("A suggestion was accepted, with the whole value behind the text. Fires after `oninput`."),
                     prop("filter", "Callback<AutocompleteFilterArgs<T>, bool>")
@@ -139,43 +143,42 @@ pub fn AutocompletePage() -> Element {
                         .doc("Narrows `options`. Defaults to a case-insensitive `contains` over the label."),
                     prop("prefiltered", "bool")
                         .default("false")
-                        .doc("`options` arrives already narrowed - a list fetched per keystroke. Skips filtering, so `filter` never runs."),
+                        .doc("`options` arrives already narrowed, such as a list fetched per keystroke. Skips filtering, so `filter` never runs."),
                     prop("placeholder", "String").doc("Shown while the field is empty."),
                     prop("clearable", "bool")
                         .default("false")
-                        .doc("Shows an x that empties the field, at the end of the frame."),
+                        .doc("Shows an x at the end of the frame that empties the field."),
                     prop("empty", "Element")
-                        .doc("Shown in place of the list when nothing matches. Without it, typed text matching no option shows the localization's `combobox.nothing_found`; either way that string is announced. An `Element` has no text to read, so override that string to match your `empty`."),
-                    prop("leading", "Element").doc("Inside the frame, before the control - a search icon."),
+                        .doc("Shown in place of the list when nothing matches. Screen readers hear the localization's `combobox.nothing_found` either way, so change that string to match."),
+                    prop("leading", "Element").doc("Inside the frame, before the control, such as a search icon."),
                     prop("trailing", "Element").doc("Inside the frame, after the control, before the clear x."),
                     prop("describe_leading", "bool")
                         .default("false")
-                        .doc("`leading` is text that describes the input - a unit - so it joins the input's `aria-describedby`."),
+                        .doc("`leading` is text that describes the value, such as a unit, so screen readers read it with the input."),
                     prop("describe_trailing", "bool")
                         .default("false")
-                        .doc("The same for `trailing`. The clear x stays out of the description."),
-                    prop("label", "Caption").doc("The field's caption, above the control."),
-                    prop("description", "Caption").doc("Between the label and the control: what to enter."),
-                    prop("helper", "Caption").doc("Under the control: formatting rules, or what the entry affects."),
+                        .doc("The same for `trailing`."),
+                    prop("label", "Caption").doc("The caption above the control, and the field's name."),
+                    prop("description", "Caption").doc("Between the label and the control. What to enter."),
+                    prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry changes."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
-                    prop("required", "bool").default("false").doc("Adds `aria-required` and an asterisk to the label."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                    prop("required", "bool").default("false").doc("Sets `aria-required` and marks the label."),
                     prop("disabled", "bool").default("false").doc("Takes the input out of the tab order and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),
                 ]),
             ],
             lead: rsx! {
                 Text {
                     "A "
                     Code { source: "TextField" }
-                    " that offers completions. The value is a "
+                    " that offers completions. The value stays a "
                     Code { source: "String" }
-                    " at all times - picking a suggestion inserts its label, it does not make the field hold a "
-                    Code { source: "T" }
-                    ". To choose out of a fixed set instead, reach for "
+                    ", and picking a suggestion inserts its label. To choose from a fixed set, "
+                    "use "
                     Code { source: "Select" }
-                    ". Nothing is highlighted until you press ArrowDown, so Enter on text that matches nothing still submits a form."
+                    "."
                 }
             },
             // snippet: let mut value = use_signal(String::new);
@@ -282,6 +285,15 @@ pub fn AutocompletePage() -> Element {
                         oninput: move |next| value.set(next),
                     }
                 },
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "Typing or ArrowDown opens the list. The arrows, Home and End move the "
+                    "highlight, Enter picks the highlighted row, and Escape and Tab close. "
+                    "Nothing is highlighted until you arrow onto a row, so Enter on text that "
+                    "matches nothing still submits the form."
+                }
             }
         }
     }

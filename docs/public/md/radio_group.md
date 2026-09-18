@@ -4,25 +4,14 @@ Crate: `libero`
 Import: `use libero::components::{Radio, RadioGroup};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/radio_group.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A group of radios over an enum, exactly one selected - one tab stop, arrow-key selection, and the question announced as the group's name.
+Description: A group of radios over an enum, exactly one selected, with one tab stop, arrow-key selection and the question as the group's name.
 
-A group of radios over an enum. The group is the field, and that is the point:
-a radio on its own cannot be correct.
+A group of radios over an enum, exactly one of them selected. The group is the
+field. It holds the question's label and captions, makes the options exclusive
+and gives the whole set one tab stop.
 
-## Why the group, and not just a Radio
-
-Three things belong to the set rather than to any one option, and each is a bug
-if a lone radio tries to own it.
-
-| Concern | Why it is the group's |
-|---|---|
-| `name` | Native exclusivity comes from a shared `name`. Left to callers, one typo gives two independently checkable radios |
-| One tab stop | WAI-ARIA's radiogroup pattern: Tab enters the group, arrows move *and* select, Tab leaves. A lone radio is its own tab stop, which is the wrong pattern |
-| Grouping | A radio's label names one option. Only the group can say the question is "Plan", through `role="radiogroup"` and `aria-labelledby` |
-
-The field chrome follows from the same split: one `description`, one `helper`,
-one `status` for the question, and a single `value`/`onchange` pair, because
-the answer is one value and not N booleans.
+Use a `Radio` on its own only to lay a group out by hand. Then the shared
+`name`, the tab order and the group's name are yours to set.
 
 ## Usage
 
@@ -53,46 +42,12 @@ fn Demo() -> Element {
 }
 ```
 
-The options are `T::options()` unless `options` narrows them, so a misspelled
-option is a compile error and `onchange` hands back the value itself - the same
-contract [NativeSelect](native_select.md) has.
+The options are `T::options()` unless `options` narrows them, and `onchange`
+hands back the value itself. `value: None` selects nothing. The first option
+then holds the tab stop.
 
-`value: None` selects nothing, which is what an unanswered question looks like.
-The group still needs a way in, so the first option holds the tab stop until
-something is selected.
-
-## Accessibility
-
-One tab stop for the whole group:
-
-| Key | Effect |
-|---|---|
-| Tab | Enters at the selected option, or the first one that is not disabled |
-| Arrow down / right | Next option that is not disabled, selected as focus lands |
-| Arrow up / left | Previous option that is not disabled, selected as focus lands |
-| Tab | Leaves the group entirely |
-
-Selection follows focus, as it does natively.
-
-Give it a `label`: an option's label names one option, and only the group's
-label says what the question is. Without a visible one, spread `"aria-label"`.
-With neither, it warns in a debug build.
-
-## Standalone `Radio`
-
-Exported for a caller laying a group out by hand - a radio inside a table row,
-say. It is a field like [Checkbox](checkbox.md), with `checked` and `onselect`,
-and it is the caller's job to pass a shared `name`, manage the tab order and
-group it for assistive tech. Prefer `RadioGroup`.
-
-`onselect` reports a pick and never an unpick: a radio is turned off by another
-one being turned on.
-
-## Cards
-
-`variant: "card"` draws every option as a bordered surface, and a click
-anywhere on it picks the option. Give each one a line of its own with
-`option_description` - a card without one is only a border:
+`variant: "card"` draws every option as a bordered surface you can click
+anywhere. Give each one a line with `option_description`:
 
 ```rust,ignore
 RadioGroup {
@@ -110,12 +65,12 @@ RadioGroup {
 }
 ```
 
-In a row the cards stretch to one height. The keyboard, the single tab stop and
-the aria wiring are the plain group's; the focus ring moves from the circle to
-the card. The selected card is marked by its filled circle, not by its border,
-which is decoration. On the web a link or button inside a label or description
-keeps its own click, and the option is not picked. Natively (Blitz) the whole
-card is still one click target, so a link inside it picks the option.
+## Accessibility
+
+Tab enters the group at the selected option, or the first one that is not
+disabled, and Tab leaves it. The arrow keys move to the next or previous option
+and select it, wrapping at the ends. Without a visible `label`, spread
+`"aria-label"`, since the option labels do not say what the question is.
 
 ## Props
 
@@ -123,45 +78,48 @@ card is still one click target, so a link inside it picks the option.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `Option<T>` | - | The selected option; strictly controlled. |
-| `onchange` | `EventHandler<T>` | - | Called with the option the caller should select next. |
-| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set passes them here. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`, which the arrow keys step over. Named groups are drawn flattened - the group is the field. |
-| `option_label` | `Callback<T, String>` | `T::label()` | Overrides what the derive named an option. |
-| `option_description` | `Callback<T, String>` | - | A line under each option's label; an empty string renders none. |
-| `variant` | `ChoiceVariant` | `plain` | `card` draws every option as a bordered surface that is its own hit area. |
-| `orientation` | `Orientation` | `vertical` | A row instead of a column. |
-| `color` | `ThemeAwareValue` | `primary` | The ring and dot color of the selected option. |
-| `size` | `Size` | `md` | Every circle, and the labels beside them. |
-| `label` | `Caption` | - | The question. Names the group through `aria-labelledby`. |
-| `description` | `Caption` | - | Between the question and the options. |
-| `helper` | `Caption` | - | Under the options. |
+| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` selects nothing, as for an unanswered question. |
+| `onchange` | `EventHandler<T>` | - | Called with the option to select next. |
+| `name` | `FieldName<Option<T>>` | - | What the group posts as. A path such as `Survey::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the group loses focus or its form is submitted. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single options. Named groups are drawn flat, without headings. |
+| `option_label` | `Callback<T, String>` | `T::label()` | Renames an option. Runs during render, so it can read a locale from context. |
+| `option_description` | `Callback<T, String>` | - | A line under each option's label. An empty string renders none. |
+| `variant` | `ChoiceVariant` | `plain` | `card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height. |
+| `orientation` | `Orientation` | `vertical` | `horizontal` lays the options out in a row, for two or three short ones. |
+| `color` | `ThemeAwareValue` | `primary` | Ring and dot color of the selected option. |
+| `size` | `Size` | `md` | Size of the circles and their labels. |
+| `label` | `Caption` | - | The question, and the group's name. |
+| `description` | `Caption` | - | Between the question and the options. How to choose. |
+| `helper` | `Caption` | - | Under the options. What the choice changes. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Sets `aria-required` and marks the label. |
+| `required` | `bool` | `false` | Sets `aria-required` on the group and marks the label. |
 | `disabled` | `bool` | `false` | Disables every option and dims the group. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. Sets `aria-readonly` on the group, which Chromium does not announce: say it in the label or description where it matters. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the group from the tab order and the post instead. Chromium does not announce read-only on a group, so say it in the label or description where it matters. |
 
 ### `Radio`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `checked` | `bool` | - | Strictly controlled - pair it with `onselect`. |
-| `onselect` | `EventHandler<()>` | - | Fires when this radio is picked; never to unpick one. |
-| `name` | `String` | - | Shared by every radio in one group. `RadioGroup` sets it. |
+| `checked` | `bool` | - | Whether it is selected. Pair it with `onselect`. |
+| `onselect` | `EventHandler<()>` | - | Fires when this radio is picked. Never when another one is. |
+| `name` | `String` | - | Shared by every radio in one group, which makes them exclusive. `RadioGroup` sets it. |
 | `tabindex` | `String` | - | Which radio is the group's tab stop. `RadioGroup` sets it. |
+| `color` | `ThemeAwareValue` | `primary` | Ring and dot color when selected. |
 | `aria_label` | `String` | - | Names the radio when it has no `label`. |
-| `readonly` | `bool` | `false` | Refuses the pick. ARIA has no read-only radio: `RadioGroup` says it on the group, a lone radio says nothing. |
-| `variant` | `ChoiceVariant` | `plain` | `card` draws the radio as a bordered surface that is its own hit area. |
+| `readonly` | `bool` | `false` | Refuses the pick. ARIA has no read-only radio, so only `RadioGroup` can announce it. |
+| `variant` | `ChoiceVariant` | `plain` | `card` draws the radio as a bordered surface you can click anywhere. |
 
-Both also take the field props - `label`, `description`, `helper`, `status`,
-`size`, `disabled`, `required` - and the shared `sx`, `class`, `style`,
+`Radio` also takes the field props `label`, `description`, `helper`, `status`,
+`size`, `disabled` and `required`. Both take the shared `sx`, `class`, `style`,
 `states` and any extra HTML attributes.
 
 ## Theme defaults
 
-`RadioDefaults`: `variant` (`plain`, for a `Radio` and for a `RadioGroup`), `size`, and one circle per size step (`14px` to `24px`),
-published as `--lsx-radio-circle-size-*`. The same scale the checkbox box uses,
-so a form mixing the two lines up. There is no `radius`: a radio is a circle at
-every size, which is what tells it apart from a checkbox at a glance.
+`RadioDefaults` holds `variant` (`plain`, for a `Radio` and a `RadioGroup`),
+`size`, and one circle per size step (`14px` to `24px`), published as
+`--lsx-radio-circle-size-*`. It is the scale the checkbox uses, so a form mixing
+the two lines up. A radio is a circle at every size, so it has no `radius`.
 
 ## CSS variables
 
@@ -169,12 +127,12 @@ every size, which is what tells it apart from a checkbox at a glance.
 |---|---|
 | `--lsx-radio-circle-size-<size>` | Circle diameter for that size step. |
 | `--lsx-radio-circle` | The picked step, resolved on the control so the circle and dot inherit it. |
-| `--lsx-radio-color` | Ring and dot color: the resolved `color` when checked, `muted.6` when not. |
-| `--lsx-radio-on` | `0` or `1`, scaling the dot, so only this var changes between states. |
+| `--lsx-radio-color` | Ring and dot color. The resolved `color` when checked, `muted.6` when not. |
+| `--lsx-radio-on` | `0` or `1`, scaling the dot. |
 
 ## Data attributes
 
 The group's wrapper carries `size-*`, plus `disabled`, `required` and the status
-token when they apply; the `role="radiogroup"` element adds `horizontal` when
+token when they apply. The `role="radiogroup"` element adds `horizontal` when
 the orientation is a row. Each radio's control carries `checked` when it is the
 selected one. A card option's wrapper and control both carry `card`.

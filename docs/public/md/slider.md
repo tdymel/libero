@@ -4,23 +4,17 @@ Crate: `libero`
 Import: `use libero::components::{Slider, SliderChangeEvent, SliderMark, SliderValue};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/slider>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A value dragged along a track - continuous over `f64`, or discrete over an ordered enum that derives `SliderValue`.
+Description: A value dragged along a track, continuous over `f64` or discrete over an ordered enum that derives `SliderValue`.
 
-A value dragged along a track. Controlled: it renders `value` and asks for a new
-one through `oninput`. Pointer, touch and keyboard all drive it - the thumb is
-a `role="slider"` with arrows, Page keys, Home and End.
-
-What it slides over is a `SliderValue`: libero implements it for `f64` - a
-continuous range - and an ordered enum of your own derives it. A type that lists
-its options makes the slider discrete, and the range, step grid, marks and
-captions all come from that list.
+A value you drag along a track. It slides over any `SliderValue`. An `f64`
+gives a continuous range. An ordered enum that derives it makes the slider
+discrete, and the range, steps, marks and captions come from its options.
 
 ## Usage
 
-A controlled continuous slider. `oninput` carries a `SliderChangeEvent`:
-`Start` and `End` bracket one drag, `Change` carries every value in between. A
-key press emits `Change` then `End`, so committing on `End` catches a keyboard
-edit too.
+`oninput` carries a `SliderChangeEvent`. `Start` and `End` bracket one drag,
+and `Change` carries every value in between. A key press sends `Change`, then
+`End`, so saving on `End` catches keyboard edits too.
 
 ```rust
 use dioxus::prelude::*;
@@ -48,12 +42,10 @@ fn Demo() -> Element {
 }
 ```
 
-## Discrete values
-
-Deriving `SliderValue` on an ordered enum makes the slider discrete: the range,
-the step grid and one mark per option all come from the option list, and
-`#[slider(label = "..")]` renames a variant's caption. `min`, `max` and the
-bounds are written in the value's own type; `step` is a count of options.
+Derive `SliderValue` on an ordered enum for a discrete slider. The range, the
+steps and one mark per option come from the variants, and
+`#[slider(label = "..")]` renames one. `min` and `max` are written as variants,
+and `step` counts options.
 
 ```rust
 use dioxus::prelude::*;
@@ -92,13 +84,9 @@ fn Demo() -> Element {
 }
 ```
 
-## Marks and labels
-
-`marks` puts ticks on the track; a labeled one gets a caption below it. On a
-discrete slider it *replaces* the one-per-option set the type derives; on a
-continuous one there is nothing to derive, so it adds them. `format` formats the
-bubble shown on hover, drag and keyboard focus, and becomes the thumb's
-`aria-valuetext`.
+`marks` puts ticks on the track, and a labeled one gets a caption below it. On
+a discrete slider they replace the one mark per option. `format` sets the text
+of the bubble and the thumb's `aria-valuetext`.
 
 ```rust
 use dioxus::prelude::*;
@@ -126,77 +114,79 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Arrow keys move one `step`, Shift+arrow, PageUp and PageDown move `big_step` of
-them, Home and End jump to `min` and `max`. A continuous `step: 0.0` has no
-grid, so there a step is 1% of the range.
+The arrows move one step. Shift with an arrow, PageUp and PageDown move
+`big_step` steps, and Home and End jump to the ends. With `step: 0.0` a step is
+1% of the range.
 
-Without a `label`, name it with the `aria_label` prop; an `aria_label` passed
-through `attributes` lands on the field wrapper instead of the thumb. Pass
-`format` where a bare number does not say the unit.
+Without a `label`, set the `aria_label` prop. Put in `attributes`, it would name
+the wrapper instead of the thumb. Pass `format` when a bare number does not say
+the unit.
 
-To translate a discrete slider, pass `format` as well: it replaces
-`SliderValue::label` in the bubble, the mark captions and `aria-valuetext`,
-and runs during render, so it can read the current locale from context.
+To translate a discrete slider, pass `format`. It replaces `SliderValue::label`
+in the bubble, the captions and `aria-valuetext`, and runs during render, so it
+can read the locale from context.
 
-A discrete slider's mark captions are `aria-hidden`: the thumb's
-`aria-valuetext` already names each value. A continuous slider's captions stay
-exposed, since they can say more than the number.
+On a discrete slider the mark captions are hidden from screen readers, since the
+thumb already names each value. On a continuous one they stay, since they can
+say more than the number.
 
 ## Props
 
-`Slider`
+### `Slider`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `V` | required | Strictly controlled - pair it with `oninput`. |
-| `min` | `V` | first option, or `0.0` | Lower bound, written in the value's own type. |
-| `max` | `V` | last option, or `100.0` | Upper bound, written in the value's own type. |
-| `step` | `V::Step` | - | Distance one step covers, measured from `min`: a count of options discretely, a value continuously. Also sets how many decimals an emitted value keeps. |
-| `size` | `Size` | `md` | Controls track, thumb, and font size. |
-| `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the slider. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
-| `format` | `Callback<V, String>` | bare value, or `SliderValue::label` | Formats the bubble shown on hover, drag and keyboard focus, and sets the thumb's `aria-valuetext`. |
-| `marks` | `Vec<SliderMark<V>>` | one per option, discretely | Ticks on the track; a labeled one gets a caption below it. Replaces the marks a discrete scale derives. |
-| `aria_label` | `String` | - | Names the thumb when the field has no `label` - an `aria_label` in `attributes` would land on the wrapper instead. |
-| `label` | `Caption` | - | The field's caption, above the track. Named by `aria-labelledby`, since `for` cannot name the thumb. |
-| `description` | `Caption` | - | Between the label and the track: what the value means. |
+| `size` | `Size` | `md` | Track, thumb and font size. |
+| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
+| `value` | `Option<V>` | - | The value. Pair it with `oninput`, or bind it with a path `name` inside a `Form`. |
+| `oninput` | `EventHandler<SliderChangeEvent<V>>` | - | Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new value. A key press sends `Change`, then `End`. |
+| `min` | `V` | `first option, or 0.0` | Lower bound, in the value's own type. |
+| `max` | `V` | `last option, or 100.0` | Upper bound, in the value's own type. |
+| `step` | `V::Step` | - | How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one. Also sets how many decimals a value keeps. |
+| `format` | `Callback<V, String>` | `bare value, or SliderValue::label` | Text of the bubble and the thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes. |
+| `marks` | `Vec<SliderMark<V>>` | `one per option, discretely` | Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. |
+| `aria_label` | `String` | - | Names the thumb when the field has no `label`. Put in `attributes`, it would land on the wrapper instead. |
+| `name` | `FieldName<V>` | - | Posts the value in a hidden input of that name. A path such as `Settings::FIELDS.volume()` also binds the value to the surrounding `Form`'s value when there is no `oninput`. |
+| `validate` | `Validators<V>` | - | Rules over the value, shown once the slider loses focus or its form is submitted. |
+| `label` | `Caption` | - | The caption above the track, and the thumb's name. |
+| `description` | `Caption` | - | Between the label and the track. What the value means. |
 | `helper` | `Caption` | - | Under the track, below the mark captions. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Adds `aria-required` to the thumb and marks the label. |
-| `name` | `String` | - | Emits a hidden input of that name, so the value posts with a form. |
-| `oninput` | `EventHandler<SliderChangeEvent<V>>` | - | Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new value. A key press emits `Change` then `End`. |
+| `required` | `bool` | `false` | Sets `aria-required` on the thumb and marks the label. |
+| `disabled` | `bool` | `false` | Takes the thumb out of the tab order and dims the slider. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead. |
 
-Like every component, `Slider` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
-
-`SliderMark`
+### `SliderMark`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `V` | required | Where the tick sits on the track. |
-| `label` | `String` | - | Caption shown below the tick; omit for an unlabeled mark. |
+| `value` | `V` | - | Where the tick sits on the track. |
+| `label` | `String` | - | Caption below the tick. Leave it out for a bare tick. |
+
+`SliderMark::new(value)` makes a bare tick, `SliderMark::labeled(value, label)`
+one with a caption.
+
+Like every component, `Slider` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. The attributes land on the
+field wrapper.
 
 ## Theme defaults
 
-`SliderDefaults` on the theme; per-size values live in its `sizes` scale.
+`theme.slider` is a `SliderDefaults`. Per-size values live in its `sizes` scale.
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Size` | Default `size` when the prop is omitted. |
+| `size` | `Size` | Default `size` when the prop is omitted, `md`. |
 | `sizes` | `Sizes<SliderSizeLevel>` | `track_size`, `thumb_size`, `font_size` per size. |
 | `step` | `f64` | Steps moved per arrow key press. |
 | `big_step` | `f64` | Steps moved per Shift+arrow, PageUp or PageDown. |
 
 ## CSS variables
 
-The per-size scales are declared once; the picked level is resolved on the root
-as `--lsx-slider-track`/`-thumb`, so the track, thumb and mark children -
-which carry no `data-state` of their own - inherit it.
+The size in effect resolves on the root as `--lsx-slider-track` and
+`--lsx-slider-thumb`, and the track, thumb and marks read those.
 
-The track is always a pill. The shared `radius` prop is not wired: the radius
-scale starts at 2px and a track is 2-10px tall, so every step above the
-smallest clamped to the same half-height curve.
+The track is always a pill, so the shared `radius` prop does nothing.
 
 | Variable | Description |
 |---|---|
@@ -220,7 +210,7 @@ below, space separated.
 | `size-<size>` | The `size` in effect. |
 | `dragging` | A pointer drag is in progress. |
 | `disabled` | `disabled` is set. |
-| `readonly` | `readonly` is set: the thumbs keep their tab stop, and neither a key nor a drag moves them. |
+| `readonly` | `readonly` is set. The thumb keeps its tab stop, but neither a key nor a drag moves it. |
 | `marks-labeled` | At least one mark carries a label, so the captions need room. |
 
 The unfilled track is `muted.6`, 3:1 on the page (WCAG 1.4.11). A mark is an

@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -220,81 +222,73 @@ pub fn RangeSliderPage() -> Element {
             markdown: "/md/range_slider.md",
             properties: vec![
                 props("RangeSlider", vec![
-                    prop("value", "(V, V)")
-                        .doc("The two ends, in track order. Strictly controlled - pair it with `oninput`."),
-                    prop("min", "V")
-                        .default("first option, or 0.0")
-                        .doc("Lower bound of the track, written in the value's own type."),
-                    prop("max", "V")
-                        .default("last option, or 100.0")
-                        .doc("Upper bound of the track, written in the value's own type."),
-                    prop("step", "V::Step")
-                        .doc("Distance one step covers, measured from `min`: a count of options discretely, a value continuously. Also sets how many decimals an emitted value keeps."),
-                    prop("min_range", "V::Step")
-                        .default("0 - the thumbs may meet")
-                        .doc("The smallest gap the two thumbs keep. Neither can cross the other."),
-                    prop("size", "Size").default("md").doc("Controls track, thumb, and font size."),
+                    prop("size", "Size").default("md").doc("Track, thumb and font size."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
-                        .doc("Accent color; a theme color name or a literal CSS color."),
-                    prop("disabled", "bool")
-                        .default("false")
-                        .doc("Disables interaction and dims the slider."),
-                    prop("readonly", "bool")
-                        .default("false")
-                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                        .doc("Accent color. A theme color name or any CSS color."),
+                    prop("value", "Option<(V, V)>")
+                        .doc("The two ends, in track order. Pair it with `oninput`, or bind it with a path `name` inside a `Form`."),
+                    prop("oninput", "EventHandler<SliderChangeEvent<(V, V)>>")
+                        .doc("Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new pair. A key press sends `Change`, then `End`."),
+                    prop("min", "V")
+                        .default("first option, or 0.0")
+                        .doc("Lower bound of the track, in the value's own type."),
+                    prop("max", "V")
+                        .default("last option, or 100.0")
+                        .doc("Upper bound of the track, in the value's own type."),
+                    prop("step", "V::Step")
+                        .doc("How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one. Also sets how many decimals a value keeps."),
+                    prop("min_range", "V::Step")
+                        .default("0")
+                        .doc("The smallest gap the thumbs keep, in the unit of `step`. At 0 they may meet, and they never cross."),
                     prop("format", "Callback<V, String>")
                         .default("bare value, or SliderValue::label")
-                        .doc("Formats the bubble shown on hover, drag and keyboard focus, and sets each thumb's `aria-valuetext`."),
+                        .doc("Text of the bubbles and each thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes."),
                     prop("marks", "Vec<SliderMark<V>>")
                         .default("one per option, discretely")
-                        .doc("Ticks on the track; a labeled one gets a caption below it. Replaces the marks a discrete scale derives."),
+                        .doc("Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself."),
                     prop("aria_label_from", "String")
                         .default("slider.minimum")
-                        .doc("Names the lower thumb, which the field's label cannot tell apart from the upper one. Unset, the localization's `slider.minimum` - \"Minimum\" in English."),
+                        .doc("Names the lower thumb. Unset, the localization's `slider.minimum`, \"Minimum\" in English."),
                     prop("aria_label_to", "String")
                         .default("slider.maximum")
-                        .doc("Names the upper thumb. Unset, the localization's `slider.maximum` - \"Maximum\" in English."),
-                    prop("name", "String")
-                        .doc("Emits two hidden inputs of that name, in track order, so the pair posts with a form - `FormData::get_all` reads it back."),
-                    prop("oninput", "EventHandler<SliderChangeEvent<(V, V)>>")
-                        .doc("Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new pair. A key press emits `Change` then `End`."),
+                        .doc("Names the upper thumb. Unset, the localization's `slider.maximum`, \"Maximum\" in English."),
+                    prop("name", "FieldName<(V, V)>")
+                        .doc("Posts the pair as two hidden inputs of that name, in track order. A path such as `Settings::FIELDS.price()` also binds the pair to the surrounding `Form`'s value when there is no `oninput`."),
+                    prop("validate", "Validators<(V, V)>")
+                        .doc("Rules over the pair, shown once the slider loses focus or its form is submitted."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the track. Named by `aria-labelledby`, since `for` cannot name a thumb."),
+                        .doc("The caption above the track. Both thumbs' names start with it."),
                     prop("description", "Caption")
-                        .doc("Between the label and the track: what the range means."),
+                        .doc("Between the label and the track. What the range means."),
                     prop("helper", "Caption")
                         .doc("Under the track, below the mark captions."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Adds `aria-required` to both thumbs and marks the label."),
+                        .doc("Sets `aria-required` on both thumbs and marks the label."),
+                    prop("disabled", "bool")
+                        .default("false")
+                        .doc("Takes the thumbs out of the tab order and dims the slider."),
+                    prop("readonly", "bool")
+                        .default("false")
+                        .doc("Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead."),
                 ]),
                 props("SliderMark", vec![
                     prop("value", "V").doc("Where the tick sits on the track."),
-                    prop("label", "String").doc("Caption shown below the tick; omit for an unlabeled mark."),
+                    prop("label", "String").doc("Caption below the tick. Leave it out for a bare tick."),
                 ])
                 .without_base_props(),
             ],
             lead: rsx! {
                 Text {
-                    "Two thumbs on one track, for a span rather than a point. Controlled: "
-                    "it renders "
-                    Code { source: "value" }
-                    " - a pair, in track order - and asks for a new one through "
-                    Code { source: "oninput" }
-                    "."
-                }
-                Text {
-                    "The same engine and the same value types as "
+                    "Two thumbs on one track, for a span instead of a point. It takes the same "
+                    "values as "
                     Code { source: "Slider" }
-                    ": continuous over "
-                    Code { source: "f64" }
-                    ", discrete over an ordered enum that derives "
-                    Code { source: "SliderValue" }
-                    ". The thumbs never cross - each stops at the other, or "
+                    ", as a pair in track order. The thumbs never cross, and each stops at the "
+                    "other or "
                     Code { source: "min_range" }
                     " short of it."
                 }
@@ -442,6 +436,23 @@ pub fn RangeSliderPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_readout),
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "The keys move the focused thumb. The arrows move one step, Shift with an "
+                    "arrow, PageUp and PageDown move "
+                    Code { source: "big_step" }
+                    " steps, and Home and End jump to the end, stopping at the other thumb."
+                }
+                Text {
+                    "Each thumb is named by the label plus its own word, such as \"Price "
+                    "Minimum\" and \"Price Maximum\". Set "
+                    Code { source: "aria_label_from" }
+                    " and "
+                    Code { source: "aria_label_to" }
+                    " when those words do not fit."
+                }
             }
         }
     }

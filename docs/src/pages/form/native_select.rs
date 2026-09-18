@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, NativeSelect, OptionList, Options, Text};
 
@@ -38,53 +38,55 @@ pub fn NativeSelectPage() -> Element {
             markdown: "/md/native_select.md",
             properties: vec![
                 props("NativeSelect", vec![
-                    prop("size", "Size").default("md").doc("Controls height, padding, and font size."),
+                    prop("size", "Size").default("md").doc("Height, padding and font size."),
                     prop("radius", "Size")
                         .default("sm")
-                        .doc("Corner radius, independent of size."),
+                        .doc("Corner radius."),
                     prop("value", "Option<T>")
-                        .doc("The selected option; strictly controlled. `None` shows `placeholder` and selects nothing."),
+                        .doc("The selected option. Pair it with `onchange`. `None` shows `placeholder` and selects nothing."),
                     prop("onchange", "EventHandler<T>")
-                        .doc("Called with the option the caller should select next. Never fires for the placeholder, which cannot be picked."),
+                        .doc("Called with the option to select next. Never for the placeholder, which cannot be picked."),
+                    prop("name", "FieldName<Option<T>>")
+                        .doc("What the select posts as. A path such as `Order::FIELDS.size()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
+                    prop("validate", "Validators<Option<T>>")
+                        .doc("Rules over the selection, shown once the select loses focus or its form is submitted."),
                     prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here, since only an enum lists its own. A `Vec<T>` converts; an `OptionList` adds disabled options (`<option disabled>`) and named groups (`<optgroup>`). A pending source draws no options."),
+                        .doc("Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList` adds disabled options and named groups. A pending source draws no options."),
                     prop("option_label", "Callback<T, String>")
                         .default("T::label()")
-                        .doc("Overrides what the derive named an option. Returns a `String`, not an `OptionLabel`: an `<option>` holds text and nothing else."),
+                        .doc("Renames an option. Returns a `String`, since an `<option>` holds only text."),
                     prop("placeholder", "String")
-                        .doc("Shown while `value` is `None`, as an unpickable first entry."),
+                        .doc("Shown while `value` is `None`, as a first entry that cannot be picked."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the control. Names the field through a `for`/`id` pair. Takes a string or an `Element`."),
+                        .doc("The caption above the control, and the select's name. A string or an `Element`."),
                     prop("description", "Caption")
-                        .doc("Between the label and the control: what to pick."),
+                        .doc("Between the label and the control. What to pick."),
                     prop("helper", "Caption")
-                        .doc("Under the control: constraints, or what the choice affects."),
+                        .doc("Under the control. Constraints, or what the choice changes."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Marks the field required, adds `aria-required` and shows an asterisk in the label. No native `required`, so an untouched select is not announced invalid; `validate` or the surrounding `Form` enforces it."),
+                        .doc("Sets `aria-required` and marks the label. An untouched select is not announced invalid. `validate` or the surrounding `Form` enforces it."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Disables interaction and dims the field. There is no `readonly`: a native `<select>` has no read-only state. For a picker that stays focusable and posted but cannot change, use `Select`."),
+                        .doc("Disables and dims the field. A native `<select>` has no read-only state, so there is no `readonly`. Use `Select` for that."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A styled native select over an enum, with the five slots every field "
-                    "shares: label, description, the control, helper text, and a validation "
-                    "message. The options are the enum's variants - "
-                    Code { source: "#[derive(Options)]" }
-                    " lists them in declaration order - so "
+                    "A styled native select over an enum, with a label, captions and a status "
+                    "like every field. The options are the enum's variants, so "
                     Code { source: "onchange" }
-                    " hands back the value itself rather than a string to look up again. "
-                    "Strictly controlled: "
+                    " hands back the value itself. "
                     Code { source: "value" }
-                    " drives it, and "
+                    " is an "
+                    Code { source: "Option" }
+                    ", and "
                     Code { source: "None" }
-                    " is a real state - the field nobody has filled in yet."
+                    " is a field nobody has filled in yet."
                 }
             },
             // snippet: let mut value = use_signal(|| Some(FontSize::Small));
@@ -170,6 +172,18 @@ pub fn NativeSelectPage() -> Element {
                         onchange: move |next| value.set(Some(next)),
                     }
                 },
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "Without a visible "
+                    Code { source: "label" }
+                    ", set "
+                    Code { source: "aria_label" }
+                    ". A select with no name is a defect. Your own "
+                    Code { source: "aria-describedby" }
+                    " ids come first, before the captions."
+                }
             }
         }
     }

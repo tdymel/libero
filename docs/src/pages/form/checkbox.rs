@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Checkbox, Code, FieldStatus, Text};
 
@@ -17,55 +17,57 @@ pub fn CheckboxPage() -> Element {
                 props("Checkbox", vec![
                     prop("color", "ThemeAwareValue")
                         .default("primary")
-                        .doc("The box's color when checked; a theme color name or a literal CSS color."),
-                    prop("size", "Size").default("md").doc("The size of the box, and of the label and captions beside it."),
+                        .doc("The box's color when checked. A theme color name or any CSS color."),
+                    prop("size", "Size").default("md").doc("Size of the box, the label and the captions."),
                     prop("radius", "Size")
                         .default("sm")
-                        .doc("Corner radius of the box, independent of size."),
+                        .doc("Corner radius of the box."),
                     prop("checked", "bool")
-                        .doc("Pair it with `onchange`. Left out, the box keeps its own state unless a `name` binds it to the form around it."),
+                        .doc("Whether it is checked. Pair it with `onchange`. Left out, the box keeps its own state, or the form's when `name` binds it."),
                     prop("indeterminate", "bool")
                         .default("false")
-                        .doc("Draws the mixed state and reads as mixed to assistive tech. Outranks `checked` visually; toggling from it gives `true`."),
+                        .doc("Draws a dash and reads as mixed. It wins over `checked`, and toggling from it gives `true`."),
                     prop("onchange", "EventHandler<bool>")
                         .doc("Called with the value `checked` should take next."),
+                    prop("name", "FieldName<bool>")
+                        .doc("What the checkbox posts as. A path such as `Signup::FIELDS.terms()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
+                    prop("validate", "Validators<bool>")
+                        .doc("Rules over `checked`, shown once the checkbox loses focus or its form is submitted."),
                     prop("label", "Caption")
-                        .doc("The caption beside the box. Names the checkbox through a `for`/`id` pair."),
+                        .doc("The caption beside the box, and the checkbox's name."),
                     prop("description", "Caption")
-                        .doc("Under the label: what checking it means."),
+                        .doc("Under the label. What checking it means."),
                     prop("helper", "Caption")
-                        .doc("Under the description, in the same column as the label."),
+                        .doc("Under the description, in the label's column."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Marks the checkbox required, adds `aria-required` and shows an asterisk in the label."),
+                        .doc("Sets `aria-required` and marks the label with an asterisk."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Disables interaction and dims the checkbox."),
+                        .doc("Disables and dims the checkbox."),
                     prop("readonly", "bool")
                         .default("false")
-                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. Sets `aria-readonly`, which Chromium does not announce on a checkbox: say it in the label or description where it matters."),
+                        .doc("Focusable and posted with the form, but not editable. `disabled` drops the checkbox from the tab order and the post instead. Chromium does not announce read-only on a checkbox, so say it in the label or description where it matters."),
                     prop("aria_label", "String")
                         .doc("Names the checkbox when it has no `label`."),
                     prop("variant", "ChoiceVariant")
                         .default("plain")
-                        .doc("`card` draws the checkbox as a bordered surface and makes all of it the hit area. Pair it with a `description`. On the web a link inside the card keeps its own click; natively it toggles the card."),
+                        .doc("`card` draws the checkbox as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A checkbox, with its label beside the box and the description, helper text "
-                    "and validation message under both. It takes the same slots every field has; "
-                    "what it does not take is a frame - the box "
-                    Code { source: "is" }
-                    " the control. The browser never toggles the input itself, so the box, "
-                    "the DOM property and the form submission can never disagree with Rust. "
+                    "A checkbox with its label beside the box and the description, helper and "
+                    "status under the label. It has no frame, since the box is the control. Pass "
                     Code { source: "checked" }
-                    " drives the look when you pass it, paired with "
+                    " with "
                     Code { source: "onchange" }
-                    "; with neither, and outside a form binding, the box keeps its own state."
+                    " to own the state. With neither, the box keeps its own, or the form's when "
+                    Code { source: "name" }
+                    " binds it."
                 }
             },
             Demo {
@@ -171,6 +173,14 @@ pub fn CheckboxPage() -> Element {
                         disabled: (values.str("disabled") == "true").then_some(true),
                     }
                 },
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "Space toggles the checkbox. Without a visible label, set "
+                    Code { source: "aria_label" }
+                    "."
+                }
             }
         }
     }

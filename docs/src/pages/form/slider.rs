@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -223,74 +225,67 @@ pub fn SliderPage() -> Element {
             markdown: "/md/slider.md",
             properties: vec![
                 props("Slider", vec![
-                    prop("value", "V").doc("Strictly controlled - pair it with `oninput`."),
-                    prop("min", "V")
-                        .default("first option, or 0.0")
-                        .doc("Lower bound, written in the value's own type."),
-                    prop("max", "V")
-                        .default("last option, or 100.0")
-                        .doc("Upper bound, written in the value's own type."),
-                    prop("step", "V::Step")
-                        .doc("Distance one step covers, measured from `min`: a count of options discretely, a value continuously. Also sets how many decimals an emitted value keeps."),
-                    prop("size", "Size").default("md").doc("Controls track, thumb, and font size."),
+                    prop("size", "Size").default("md").doc("Track, thumb and font size."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
-                        .doc("Accent color; a theme color name or a literal CSS color."),
-                    prop("disabled", "bool")
-                        .default("false")
-                        .doc("Disables interaction and dims the slider."),
-                    prop("readonly", "bool")
-                        .default("false")
-                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                        .doc("Accent color. A theme color name or any CSS color."),
+                    prop("value", "Option<V>").doc("The value. Pair it with `oninput`, or bind it with a path `name` inside a `Form`."),
+                    prop("oninput", "EventHandler<SliderChangeEvent<V>>")
+                        .doc("Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new value. A key press sends `Change`, then `End`."),
+                    prop("min", "V")
+                        .default("first option, or 0.0")
+                        .doc("Lower bound, in the value's own type."),
+                    prop("max", "V")
+                        .default("last option, or 100.0")
+                        .doc("Upper bound, in the value's own type."),
+                    prop("step", "V::Step")
+                        .doc("How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one. Also sets how many decimals a value keeps."),
                     prop("format", "Callback<V, String>")
                         .default("bare value, or SliderValue::label")
-                        .doc("Formats the bubble shown on hover, drag and keyboard focus, and sets the thumb's `aria-valuetext`."),
+                        .doc("Text of the bubble and the thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes."),
                     prop("marks", "Vec<SliderMark<V>>")
                         .default("one per option, discretely")
-                        .doc("Ticks on the track; a labeled one gets a caption below it. Replaces the marks a discrete scale derives."),
+                        .doc("Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself."),
                     prop("aria_label", "String")
-                        .doc("Names the thumb when the field has no `label` - an `aria_label` in `attributes` would land on the wrapper instead."),
-                    prop("name", "String")
-                        .doc("Emits a hidden input of that name, so the value posts with a form."),
-                    prop("oninput", "EventHandler<SliderChangeEvent<V>>")
-                        .doc("Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new value. A key press emits `Change` then `End`."),
+                        .doc("Names the thumb when the field has no `label`. Put in `attributes`, it would land on the wrapper instead."),
+                    prop("name", "FieldName<V>")
+                        .doc("Posts the value in a hidden input of that name. A path such as `Settings::FIELDS.volume()` also binds the value to the surrounding `Form`'s value when there is no `oninput`."),
+                    prop("validate", "Validators<V>")
+                        .doc("Rules over the value, shown once the slider loses focus or its form is submitted."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the track. Named by `aria-labelledby`, since `for` cannot name the thumb."),
+                        .doc("The caption above the track, and the thumb's name."),
                     prop("description", "Caption")
-                        .doc("Between the label and the track: what the value means."),
+                        .doc("Between the label and the track. What the value means."),
                     prop("helper", "Caption")
                         .doc("Under the track, below the mark captions."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Adds `aria-required` to the thumb and marks the label."),
+                        .doc("Sets `aria-required` on the thumb and marks the label."),
+                    prop("disabled", "bool")
+                        .default("false")
+                        .doc("Takes the thumb out of the tab order and dims the slider."),
+                    prop("readonly", "bool")
+                        .default("false")
+                        .doc("Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead."),
                 ]),
                 props("SliderMark", vec![
                     prop("value", "V").doc("Where the tick sits on the track."),
-                    prop("label", "String").doc("Caption shown below the tick; omit for an unlabeled mark."),
+                    prop("label", "String").doc("Caption below the tick. Leave it out for a bare tick."),
                 ])
                 .without_base_props(),
             ],
             lead: rsx! {
                 Text {
-                    "A value dragged along a track. Controlled: it renders "
-                    Code { source: "value" }
-                    " and asks for a new one through "
-                    Code { source: "oninput" }
-                    ". Pointer, touch and keyboard all drive it - the thumb is a "
-                    Code { source: "role=\"slider\"" }
-                    " with arrows, Page keys, Home and End."
-                }
-                Text {
-                    "What it slides over is a "
+                    "A value you drag along a track. It slides over any "
                     Code { source: "SliderValue" }
-                    ": libero implements it for "
+                    ". An "
                     Code { source: "f64" }
-                    " - a continuous range - and an ordered enum of your own derives "
-                    "it. A type that lists its options makes the slider discrete, and "
-                    "the range, step grid, marks and captions all come from that list."
+                    " gives a continuous range. An ordered enum that derives it makes the "
+                    "slider discrete, and the range, steps, marks and captions come from its "
+                    "options."
                 }
             },
             // snippet: let mut volume = use_signal(|| 40.0);
@@ -450,6 +445,20 @@ pub fn SliderPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_readout),
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "The arrows move one step. Shift with an arrow, PageUp and PageDown move "
+                    Code { source: "big_step" }
+                    " steps, and Home and End jump to the ends. Without a "
+                    Code { source: "label" }
+                    ", set the "
+                    Code { source: "aria_label" }
+                    " prop, and pass "
+                    Code { source: "format" }
+                    " when a bare number does not say the unit."
+                }
             }
         }
     }

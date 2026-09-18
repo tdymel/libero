@@ -4,14 +4,11 @@ Crate: `libero`
 Import: `use libero::components::{Options, NativeSelect};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/native_select.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
+Description: A styled native `<select>` over an enum, with the field slots.
 
-A styled native select over an enum, with the five slots every field shares:
-label, description, the control, helper text, and a validation message.
-The options are the enum's variants - `#[derive(Options)]` lists them in
-declaration order and names each one - so `onchange` hands back the value itself
-rather than a string the caller has to look up again. Strictly controlled:
-`value` drives it, and `None` is a real state, the field nobody has filled in
+A styled native select over an enum, with a label, captions and a status like
+every field. The options are the enum's variants, so `onchange` hands back the
+value itself. `value` is an `Option`, and `None` is a field nobody has filled in
 yet.
 
 ## Usage
@@ -45,46 +42,8 @@ fn Demo() -> Element {
 }
 ```
 
-`size` and `radius` step independently, and `disabled` dims the whole field.
-Both read the same `FieldDefaults` scale [TextField](text_field.md) does, so the
-two line up in one form by construction.
-
-## Captions
-
-`label`, `description` and `helper` are `Caption`s, so each takes either a string
-or an `Element`:
-
-```rust,ignore
-NativeSelect {
-    label: "Plan",
-    description: "Billed monthly.",
-    helper: rsx! { "Change it any time from " strong { "Settings" } },
-    value: plan(),
-    onchange: move |next| plan.set(Some(next)),
-}
-```
-
-A string caption is given an id and named by the select's `aria-describedby`.
-Markup is rendered and styled the same way but names nothing - a caller who
-passes markup owns its accessibility.
-
-`status` is separate because a validator produces it. `FieldStatus::Error` and
-`FieldStatus::Warning` each carry their message; `&str` and `String` convert into
-`Error`, so `status: "Pick a size."` works. An error also sets `aria-invalid`; a
-warning does not, since it would announce a working field as broken.
-
-Note that `description` and `placeholder` say different things: the description
-is a caption above the control, the placeholder is the unpickable first entry
-that stands for "nothing picked yet".
-
-## Nothing picked yet
-
-`value` is an `Option`, so a field the user has not filled in is a state the type
-can hold rather than a sentinel option in the list. While it is `None` the
-`placeholder` shows as the selected entry, disabled and hidden - so the native
-control cannot silently take the first option, and once a real value is picked
-there is no way back to it. It is dimmed like a text field's placeholder, so an
-empty select does not look filled.
+While `value` is `None`, the `placeholder` shows as the selected entry. It
+cannot be picked again once a real value is:
 
 ```rust
 use dioxus::prelude::*;
@@ -112,16 +71,11 @@ fn Demo() -> Element {
 }
 ```
 
-## A runtime set of options
-
-`options` narrows or reorders the list. Only an enum lists its own options, so a
-set that is data - `String`s, or records fetched from a server - passes them
-here. Any type can be an option by implementing `Options`; `label` is the only
-required method. `value` is the second, and it defaults to `label` - it is what
-each `<option>` posts in a native form, and what `onchange` looks the pick up
-by, so no two options may share one. Override it when the label is text a
-backend should never receive. The derive overrides it already: for an
-enum the wire value is the variant's name, never a customised label.
+A runtime set, such as `String`s or records from a server, goes in `options`.
+Any type can be an option by implementing `Options`. `label` is the only
+required method. `value` is what each `<option>` posts and defaults to `label`,
+so no two options may share one. For an enum the derive posts the variant's
+name.
 
 ```rust
 use dioxus::prelude::*;
@@ -157,13 +111,12 @@ fn Demo(orders: Vec<Order>) -> Element {
 # type OrderId = u32;
 ```
 
-`onchange` hands back the `Order`, not an id to look up again. Note that
-`PartialEq` is how the component finds the selected option, so it must be
-**identity, not content**: an `Order` that derives `PartialEq` over every field
-loses its selection the moment one of those fields changes underneath it.
+`onchange` hands back the `Order`. The select finds the selected option with
+`PartialEq`, so make it compare identity, not content. An `Order` that derives
+`PartialEq` over every field loses its selection when one of them changes.
 
-Labels that need data the value does not carry go through `option_label`, which
-runs during render - so it can read a lookup table or a locale from context:
+Labels that need data the value lacks go through `option_label`, which runs
+during render:
 
 ```rust,ignore
 NativeSelect {
@@ -174,16 +127,9 @@ NativeSelect {
 }
 ```
 
-An `<option>` holds text and nothing else, so `option_label` returns a `String`.
-There is no rich form here the way [Tabs](tabs.md) and
-[SegmentedControl](segmented_control.md) have `OptionLabel::rich` - an icon per
-option needs a listbox rather than a native `<select>`.
-
-## Disabled and grouped options
-
-`options` takes the same `OptionList` as [Select](select.md). A disabled
-`OptionItem` renders as `<option disabled>`: shown and announced, but the picker
-and the arrow keys pass over it. A named group renders as an `<optgroup>`.
+`options` also takes an `OptionList`, as on [Select](select.md). A disabled
+`OptionItem` renders as `<option disabled>`, and a named group as an
+`<optgroup>`:
 
 ```rust
 use dioxus::prelude::*;
@@ -215,15 +161,10 @@ fn Demo() -> Element {
 }
 ```
 
-`OptionList::from_options().disabling(..)` keeps the enum's own list and refuses
-a few of it.
-
 ## Accessibility
 
-Leave `label` unset only when something else already names the select; a bare
-`<select>` with no accessible name is a defect. A caller-supplied
-`aria-describedby` joins the one built from the caption slots - the caller's
-ids first - so the validation message is never lost.
+Without a visible `label`, set `aria_label`. A select with no name is a defect.
+Your own `aria-describedby` ids come first, before the captions.
 
 ## Props
 
@@ -231,36 +172,37 @@ ids first - so the validation message is never lost.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `size` | `Size` | `md` | Controls height, padding, and font size. |
-| `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
-| `value` | `Option<T>` | - | The selected option; strictly controlled. `None` shows `placeholder` and selects nothing. |
-| `onchange` | `EventHandler<T>` | - | Called with the option the caller should select next. Never fires for the placeholder, which cannot be picked. A handler that ignores the pick leaves it in the DOM: a `<select>`'s change cannot be cancelled. |
-| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here, since only an enum lists its own. A `Vec<T>` converts; an `OptionList` adds disabled options and named groups. A pending source draws no options. |
-| `option_label` | `Callback<T, String>` | `T::label()` | Overrides what the derive named an option. Returns a `String`, not an `OptionLabel`: an `<option>` holds text and nothing else. |
-| `placeholder` | `String` | - | Shown while `value` is `None`, as an unpickable first entry. |
-| `label` | `Caption` | - | The field's caption, above the control. Names the field through a `for`/`id` pair. |
-| `description` | `Caption` | - | Between the label and the control: what to pick. |
-| `helper` | `Caption` | - | Under the control: constraints, or what the choice affects. |
+| `size` | `Size` | `md` | Height, padding and font size. |
+| `radius` | `Size` | `sm` | Corner radius. |
+| `value` | `Option<T>` | - | The selected option. Pair it with `onchange`. `None` shows `placeholder` and selects nothing. |
+| `onchange` | `EventHandler<T>` | - | Called with the option to select next. Never for the placeholder, which cannot be picked. |
+| `name` | `FieldName<Option<T>>` | - | What the select posts as. A path such as `Order::FIELDS.size()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `validate` | `Validators<Option<T>>` | - | Rules over the selection, shown once the select loses focus or its form is submitted. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList` adds disabled options and named groups. A pending source draws no options. |
+| `option_label` | `Callback<T, String>` | `T::label()` | Renames an option. Returns a `String`, since an `<option>` holds only text. |
+| `placeholder` | `String` | - | Shown while `value` is `None`, as a first entry that cannot be picked. |
+| `label` | `Caption` | - | The caption above the control, and the select's name. A string or an `Element`. |
+| `description` | `Caption` | - | Between the label and the control. What to pick. |
+| `helper` | `Caption` | - | Under the control. Constraints, or what the choice changes. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Sets `aria-required` and marks the label. No native `required`, so an untouched select is not announced invalid; `validate` or the surrounding `Form` enforces it. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the field. There is no `readonly`: a native `<select>` has no read-only state. For a picker that stays focusable and posted but cannot change, use `Select`. |
+| `required` | `bool` | `false` | Sets `aria-required` and marks the label. An untouched select is not announced invalid. `validate` or the surrounding `Form` enforces it. |
+| `disabled` | `bool` | `false` | Disables and dims the field. A native `<select>` has no read-only state, so there is no `readonly`. Use `Select` for that. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
 
 ## Theme defaults
 
-Almost everything is `FieldDefaults`, shared by every field. `NativeSelectDefaults`
-keeps only what is genuinely this component's: which `size` and `radius` it
-starts at.
+Almost everything is `FieldDefaults`, shared by every field.
+`NativeSelectDefaults` holds only the starting `size` and `radius`.
 
 | Field | Type | Description |
 |---|---|---|
 | `field.gap` | `&'static str` | Vertical gap between the slots. |
 | `field.frame_gap` | `&'static str` | Horizontal gap inside the frame. |
 | `field.sizes` | `Sizes<FieldSizeLevel>` | `label_font_size`, `caption_font_size`, `font_size`, `height`, `padding_y`, `padding_x` per size. |
-| `native_select.size` | `Size` | Default `size` when the prop is omitted; `md`. |
-| `native_select.radius` | `Size` | Default `radius` when the prop is omitted; `sm`. |
+| `native_select.size` | `Size` | Default `size` when the prop is omitted, `md`. |
+| `native_select.radius` | `Size` | Default `radius` when the prop is omitted, `sm`. |
 
 ## CSS variables
 

@@ -114,91 +114,81 @@ pub fn SegmentedControlPage() -> Element {
             properties: vec![
                 props("SegmentedControl", vec![
                     prop("value", "T")
-                        .doc("Strictly controlled - pair it with `onchange`. Exactly one segment is selected, which is what makes this a radio group and not a row of toggles. A control bound to a `Form` through `name` leaves it out."),
+                        .doc("The selected segment. Pair it with `onchange`. A control bound to a `Form` through `name` leaves it out."),
                     prop("onchange", "EventHandler<T>")
-                        .doc("Called with the segment that should become selected."),
+                        .doc("Called with the segment to select next."),
                     prop("name", "FieldName<T>")
-                        .doc("What the control posts as. A path - `Settings::FIELDS.align()` - also binds it to the surrounding `Form`'s value when it has no `onchange`."),
+                        .doc("What the control posts as. A path such as `Settings::FIELDS.align()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
                     prop("validate", "Validators<T>")
                         .doc("Rules over the selection, shown once the control loses focus or its form is submitted."),
                     prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("Narrows or reorders the strip. A runtime set of `String`s passes them here, since `String` lists no options of its own. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`. Named groups are accepted and drawn flattened - a single row of segments has nowhere to put headings."),
+                        .doc("Narrows or reorders the strip. A runtime set of `String`s goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single segments. Named groups are drawn flat, without headings."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
-                        .doc("Overrides what the derive named a segment. Runs during render, so it can read a locale from context."),
+                        .doc("Renames a segment, or draws it with `OptionLabel::rich`. Runs during render, so it can read a locale from context."),
                     prop("orientation", "Orientation")
                         .default("horizontal")
-                        .doc("Row or column layout."),
+                        .doc("A row or a column."),
                     prop("variant", "Variant")
                         .default("filled")
                         .doc("The unselected look, shared by every segment."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
-                        .doc("Accent color; a theme color name or a literal CSS color."),
-                    prop("size", "Size").default("md").doc("Shared by every segment, and by the captions around them."),
+                        .doc("Accent color. A theme color name or any CSS color."),
+                    prop("size", "Size").default("md").doc("Size of the segments and the captions."),
                     prop("radius", "Size")
                         .default("md")
-                        .doc("Corner radius of the control's outer corners; inner ones are square."),
+                        .doc("Radius of the control's outer corners. Inner corners are square."),
                     prop("gap", "Size")
-                        .doc("Space between the segments. Set it and they stop sharing borders - each keeps its own, and its own radius."),
+                        .doc("Space between the segments. Set, each segment gets its own border and radius."),
                     prop("full_width", "bool")
                         .default("false")
-                        .doc("Segments share the width evenly instead of sizing to their label. Either way a label too long for the strip ends in an ellipsis, with the whole name as its `title`."),
+                        .doc("Segments share the width evenly instead of sizing to their label. A label too long for its segment ends in an ellipsis either way."),
                     prop("focusable", "bool")
                         .default("true")
-                        .doc("`false` keeps the segments out of the tab order, and a click leaves focus where it is - for a control inside a field's dropdown."),
+                        .doc("`false` keeps the segments out of the tab order, and a click leaves focus where it is. For a control inside a field's dropdown."),
                     prop("label", "Caption")
-                        .doc("The question. Names the group through `aria-labelledby`, since `for` cannot name a `role=\"radiogroup\"`."),
+                        .doc("The question, and the group's name."),
                     prop("description", "Caption")
-                        .doc("Between the label and the segments: how to choose."),
+                        .doc("Between the label and the segments. How to choose."),
                     prop("helper", "Caption")
-                        .doc("Under the segments. Consequences of the choice."),
+                        .doc("Under the segments. What the choice changes."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Adds `aria-required` to the group and marks the label."),
+                        .doc("Sets `aria-required` on the group and marks the label."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables every segment and dims the captions."),
                     prop("readonly", "bool")
                         .default("false")
-                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                        .doc("Focusable and posted with the form, but not editable. `disabled` drops the control from the tab order and the post instead."),
                 ]),
                 props("OptionLabel", vec![
                     prop("name", "String").doc("The segment's accessible name, and its text when there is no `content`."),
                     prop("content", "Element")
-                        .doc("Drawn in place of the name, via `OptionLabel::rich` - an icon or a badge. `name` still names the segment, since the rsx is what a screen reader cannot use."),
+                        .doc("Drawn in place of the name, such as an icon and text. `name` still names the segment for screen readers."),
                 ]),
             ],
             lead: rsx! {
                 Text {
                     "A connected strip of segments over an enum, exactly one of them selected. "
-                    "The segments are the enum's variants - "
-                    Code { source: "#[derive(Options)]" }
-                    " lists them in declaration order and names each one - so a misspelled "
-                    "segment is a compile error rather than a selection that never matches. "
-                    "Strictly controlled: "
+                    "The segments are the enum's variants, so a misspelled one does not "
+                    "compile. Pass "
                     Code { source: "value" }
-                    " drives the look, "
+                    " with "
                     Code { source: "onchange" }
-                    " reports the segment that should become selected. A runtime set of "
-                    Code { source: "String" }
-                    "s goes through "
-                    Code { source: "options" }
-                    " instead."
-                }
-                Text {
-                    "It is a field like "
-                    Code { source: "RadioGroup" }
-                    ": a label, captions and a status around the strip, a "
-                    Code { source: "name" }
-                    " that binds it to a "
+                    ", or bind it to a "
                     Code { source: "Form" }
-                    ", and rules through "
-                    Code { source: "validate" }
+                    " through "
+                    Code { source: "name" }
+                    ". A runtime set of "
+                    Code { source: "String" }
+                    "s goes in "
+                    Code { source: "options" }
                     "."
                 }
             },
@@ -323,10 +313,13 @@ pub fn SegmentedControlPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Arrow keys move the selection; Tab enters and leaves the whole control. "
-                    "Space picks the focused segment, and so does Enter outside a Form; inside one Enter submits it, as on a native radio. Without a visible label, name it by spreading "
+                    "The arrow keys move the selection, and Tab enters and leaves the whole "
+                    "control. Space picks the focused segment. Outside a "
+                    Code { source: "Form" }
+                    " Enter does too. Inside one, Enter submits the form, as on a native radio. "
+                    "Without a visible label, spread "
                     Code { source: "\"aria-label\"" }
-                    ": the segments name the options, not the question."
+                    ", since the segments name the options, not the question."
                 }
             }
         }

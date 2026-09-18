@@ -4,17 +4,12 @@ Crate: `libero`
 Import: `use libero::components::{Options, SegmentedControl};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/segmented_control>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A connected strip of segments over an enum, exactly one of them selected, wearing the field slots.
+Description: A connected strip of segments over an enum, exactly one of them selected, with the field slots.
 
 A connected strip of segments over an enum, exactly one of them selected. The
-segments are the enum's variants - `#[derive(Options)]` lists them in
-declaration order - so a misspelled segment is a compile error rather than a
-selection that never matches. Strictly controlled: `value` drives the look,
-`onchange` reports the segment that should become selected.
-
-It is a field like [RadioGroup](radio_group.md): a label, captions and a status
-around the strip, a `name` that binds it to a [Form](form.md), and rules
-through `validate`.
+segments are the enum's variants, so a misspelled one does not compile. Pass
+`value` with `onchange`, or bind it to a [Form](form.md) through `name`. A
+runtime set of `String`s goes in `options`.
 
 ## Usage
 
@@ -42,48 +37,13 @@ fn Demo() -> Element {
 }
 ```
 
-Nobody writes the list of segments, so nobody can write one that disagrees with
-`value`. Setting `gap` stops the segments sharing borders - each keeps its own
-border and its own radius.
+`#[option(label = "..")]` renames a segment at the type. `option_label` renames
+it during render, which is what a translated strip needs.
 
-## Renaming a segment
-
-The derive names a segment after its variant. `#[option(label = "..")]` renames
-it at the type, and the `option_label` prop renames it during render - which is what a
-translated strip needs, since it repaints when the locale signal it reads does.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Options, SegmentedControl};
-
-#[derive(Clone, Copy, PartialEq, Options)]
-enum Density {
-    Compact,
-    Cosy,
-    #[option(label = "Roomy")]
-    Comfortable,
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut density = use_signal(|| Density::Cosy);
-
-    rsx! {
-        SegmentedControl {
-            value: density(),
-            onchange: move |next| density.set(next),
-        }
-    }
-}
-```
-
-## Drawing a segment
-
-`OptionLabel::rich` draws a segment as rsx and names it separately. A segment is
-a radio, so the name is what a screen reader reads - the rsx it cannot use. A
-segment is a `<label>`, so its content has to stay phrasing content: an
-[Icon](icon.md) is an inline-flex `span` (and it is what sizes the raw svg), a
-[Flex](flex.md) is a `div`.
+`OptionLabel::rich` draws a segment as rsx and names it separately, since a
+screen reader reads only the name. A segment is a `<label>`, so its content must
+be phrasing content. An [Icon](icon.md) is a `span` and works, a
+[Flex](flex.md) is a `div` and does not.
 
 ```rust
 use dioxus::prelude::*;
@@ -128,16 +88,10 @@ fn Demo() -> Element {
 # #[component] fn AlignRightIcon() -> Element { rsx! {} }
 ```
 
-The `Align*Icon`s there are your own icon components - any `svg` will do; `Icon`
-is what sizes and colors it. The segment separates the icon from the text
-itself, so no `sx` is needed for the gap.
+The `Align*Icon`s are your own icon components. `Icon` sizes and colors them.
 
-## A runtime set of segments
-
-`options` narrows or reorders the strip. `String` implements `Options` and
-lists nothing of its own, so a set that is data rather than a type passes the
-segments here - the same shape as `f64: SliderValue` for a continuous
-[Slider](slider.md).
+A runtime set passes its segments in `options`, since `String` lists none of
+its own:
 
 ```rust
 use dioxus::prelude::*;
@@ -157,45 +111,8 @@ fn Demo(options: Vec<String>) -> Element {
 }
 ```
 
-## Disabling a segment
-
-The flag rides on the option, inside the one `options` prop: an `OptionItem`
-the control refuses, rather than an alignment the type refuses everywhere.
-`OptionList::from_options()` is the enum's own list, and `disabling` says which
-of it this field says no to. `disabled` disables every segment, like on any
-other field.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{OptionList, Options, SegmentedControl};
-
-#[derive(Clone, Copy, PartialEq, Options)]
-enum Alignment {
-    Left,
-    Center,
-    Right,
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut alignment = use_signal(|| Alignment::Left);
-
-    rsx! {
-        SegmentedControl {
-            value: alignment(),
-            onchange: move |next| alignment.set(next),
-            options: OptionList::from_options()
-                .disabling(|align| *align == Alignment::Center),
-        }
-    }
-}
-```
-
-## In a form
-
-With a label and captions it is laid out like every other field. Bound to a
-[Form](form.md) through a path, it needs neither `value` nor `onchange`: the
-selection is read from the form's value and written back into it.
+Bound to a [Form](form.md) through a path, it needs neither `value` nor
+`onchange`. The selection is read from the form's value and written back:
 
 ```rust
 use dioxus::prelude::*;
@@ -233,11 +150,10 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Arrow keys move the selection; Tab enters and leaves the whole control. Space
-picks the focused segment, and so does Enter outside a `Form`; inside one Enter
-submits it, as on a native radio. Without
-a visible `label`, name the control by spreading `"aria-label"`: the segments
-name the options, not the question. With neither, it warns in a debug build.
+The arrow keys move the selection, and Tab enters and leaves the whole control.
+Space picks the focused segment. Outside a `Form` Enter does too. Inside one,
+Enter submits the form, as on a native radio. Without a visible label, spread
+`"aria-label"`, since the segments name the options, not the question.
 
 ## Props
 
@@ -245,41 +161,41 @@ name the options, not the question. With neither, it warns in a debug build.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `T` | - | Strictly controlled - pair it with `onchange`. Exactly one segment is selected, which is what makes this a radio group and not a row of toggles. A control bound to a `Form` through `name` leaves it out. |
-| `onchange` | `EventHandler<T>` | - | Called with the segment that should become selected. |
-| `name` | `FieldName<T>` | - | What the control posts as. A path - `Settings::FIELDS.align()` - also binds it to the surrounding `Form`'s value when it has no `onchange`. |
+| `value` | `T` | - | The selected segment. Pair it with `onchange`. A control bound to a `Form` through `name` leaves it out. |
+| `onchange` | `EventHandler<T>` | - | Called with the segment to select next. |
+| `name` | `FieldName<T>` | - | What the control posts as. A path such as `Settings::FIELDS.align()` also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `validate` | `Validators<T>` | - | Rules over the selection, shown once the control loses focus or its form is submitted. |
-| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the strip. A runtime set of `String`s passes them here, since `String` lists no options of its own. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`. Named groups are accepted and drawn flattened - a single row of segments has nowhere to put headings. |
-| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides what the derive named a segment. Runs during render, so it can read a locale from context. |
-| `orientation` | `Orientation` | `horizontal` | Row or column layout. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the strip. A runtime set of `String`s goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single segments. Named groups are drawn flat, without headings. |
+| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Renames a segment, or draws it with `OptionLabel::rich`. Runs during render, so it can read a locale from context. |
+| `orientation` | `Orientation` | `horizontal` | A row or a column. |
 | `variant` | `Variant` | `filled` | The unselected look, shared by every segment. |
-| `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
-| `size` | `Size` | `md` | Shared by every segment, and by the captions around them. |
-| `radius` | `Size` | `md` | Corner radius of the control's outer corners; inner ones are square. |
-| `gap` | `Size` | - | Space between the segments. Set it and they stop sharing borders - each keeps its own, and its own radius. |
-| `full_width` | `bool` | `false` | Segments share the width evenly instead of sizing to their label. Either way a label too long for the strip ends in an ellipsis, with the whole name as its `title`. |
-| `focusable` | `bool` | `true` | `false` keeps the segments out of the tab order, and a click leaves focus where it is - for a control inside a field's dropdown. |
-| `label` | `Caption` | - | The question. Names the group through `aria-labelledby`, since `for` cannot name a `role="radiogroup"`. |
-| `description` | `Caption` | - | Between the label and the segments: how to choose. |
-| `helper` | `Caption` | - | Under the segments. Consequences of the choice. |
-| `status` | `FieldStatus` | `Valid` | Validation state, rendered under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Adds `aria-required` to the group and marks the label. |
+| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
+| `size` | `Size` | `md` | Size of the segments and the captions. |
+| `radius` | `Size` | `md` | Radius of the control's outer corners. Inner corners are square. |
+| `gap` | `Size` | - | Space between the segments. Set, each segment gets its own border and radius. |
+| `full_width` | `bool` | `false` | Segments share the width evenly instead of sizing to their label. A label too long for its segment ends in an ellipsis either way. |
+| `focusable` | `bool` | `true` | `false` keeps the segments out of the tab order, and a click leaves focus where it is. For a control inside a field's dropdown. |
+| `label` | `Caption` | - | The question, and the group's name. |
+| `description` | `Caption` | - | Between the label and the segments. How to choose. |
+| `helper` | `Caption` | - | Under the segments. What the choice changes. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Sets `aria-required` on the group and marks the label. |
 | `disabled` | `bool` | `false` | Disables every segment and dims the captions. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the control from the tab order and the post instead. |
 
 ### OptionLabel
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `name` | `String` | required | The segment's accessible name, and its text when there is no `content`. |
-| `content` | `Element` | - | Drawn in place of the name, via `OptionLabel::rich` - an icon or a badge. `name` still names the segment, since the rsx is what a screen reader cannot use. |
+| `content` | `Element` | - | Drawn in place of the name, such as an icon and text. `name` still names the segment for screen readers. |
 
-`OptionLabel` is a value, not a component - it takes no shared props. A bare
-string is one (`"Konto".into()`), and it is shared with [Tabs](tabs.md).
+`OptionLabel` is a value, not a component, so it takes no shared props. A bare
+string converts (`"Konto".into()`). [Tabs](tabs.md) uses it too.
 
 Like every component, `SegmentedControl` also takes the shared props `sx`,
 `class`, `style`, `states`, and any extra HTML attributes. `sx`, `class` and
-`states` land on the field's wrapper; the attributes land on the
+`states` land on the field's wrapper, and the attributes on the
 `radiogroup`.
 
 ## Theme defaults
@@ -288,7 +204,7 @@ Like every component, `SegmentedControl` also takes the shared props `sx`,
 
 | Field | Type | Description |
 |---|---|---|
-| `variant` | `Variant` | Default `variant` when the prop is omitted (`filled`). Its own field, so tonal buttons do not change a segmented control. |
+| `variant` | `Variant` | Default `variant` when the prop is omitted (`filled`). Separate from `ButtonDefaults::variant`. |
 
 For `size` and `radius` the control reads [Button](button.md)'s
 `ButtonDefaults`. `gap` resolves against the theme's spacing scale.
@@ -297,7 +213,7 @@ For `size` and `radius` the control reads [Button](button.md)'s
 
 | Variable | Description |
 |---|---|
-| `--lsx-button-color` | The accent, resolved from `color`. Set on the root; the segments inherit it. |
+| `--lsx-button-color` | The accent, resolved from `color`. Set on the root, and the segments inherit it. |
 | `--lsx-button-contrast` | Label color on a `filled` segment. |
 | `--lsx-button-hover` | Hover background. |
 | `--lsx-button-selected` | Background of the selected segment. |
@@ -306,7 +222,7 @@ For `size` and `radius` the control reads [Button](button.md)'s
 
 ## Data attributes
 
-The field's wrapper carries the usual field tokens - size, radius, status,
+The field's wrapper carries the usual field tokens: size, radius, status,
 `disabled` and `required`. State tokens on the `radiogroup`'s `data-state`,
 space separated:
 
@@ -315,7 +231,7 @@ space separated:
 | `horizontal` / `vertical` | The `orientation` in effect. |
 | `filled` / `tonal` / `elevated` / `outlined` / `standard` | The `variant` in effect. |
 | `full-width` | `full_width` is set. |
-| `collapsed` | No `gap` - the segments share borders and square off their inner corners. |
+| `collapsed` | No `gap`. The segments share borders and square off their inner corners. |
 | `size-<size>` | The `gap` step in effect, when `gap` is set. |
 
 Each segment `<label>` carries its own `data-state`.

@@ -36,30 +36,30 @@ pub fn DatePickerPage() -> Element {
             markdown: "/md/date_picker.md",
             properties: vec![
                 props("DatePicker<V: DateValue>", vec![
-                    prop("value", "Option<V>").doc("The picked value; strictly controlled. Its type picks the picker."),
-                    prop("onchange", "EventHandler<Option<V>>").doc("Called with the value the caller should hold next."),
-                    prop("level", "DateLevel").default("Day").doc("Picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for every other value."),
+                    prop("value", "Option<V>").doc("The picked value. Its type picks what the picker draws. Pair it with `onchange`."),
+                    prop("onchange", "EventHandler<Option<V>>").doc("Called with the value to hold next."),
+                    prop("level", "DateLevel").default("Day").doc("Picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for other values."),
                     prop("min", "V::Bound").doc("The earliest value that can be picked. For a range, the earliest end."),
-                    prop("max", "V::Bound").doc("The latest value, likewise."),
+                    prop("max", "V::Bound").doc("The latest value that can be picked. For a range, the latest end."),
                     prop("exclude_date", "Callback<NaiveDate, bool>")
-                        .doc("Days that cannot be picked."),
+                        .doc("Days that cannot be picked, on top of `min` and `max`."),
                     prop("allow_deselect", "bool").default("false").doc("Clicking the picked day again clears it. Only for a day."),
                     prop("columns", "usize").default("1, or 2 for a range").doc("Months side by side, for a day or a range of days."),
-                    prop("calendar", "CalendarVariant").default("full").doc("A month of days, or `mini`: one row of days with buttons that page it. For a day or a date-time."),
+                    prop("calendar", "CalendarVariant").default("full").doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
                     prop("days", "usize").default("7").doc("Days in the mini calendar's row."),
                     prop("variant", "TimePickerVariant").default("analog").doc("Columns of numbers or a clock face, for values with a time."),
                     prop("with_seconds", "bool").default("false").doc("A seconds column. Digital only."),
-                    prop("step", "u8").default("5").doc("Minutes between the offered minutes. Defaults to the theme's `TimePickerDefaults::step`."),
-                    prop("twelve_hour", "bool").default("formats").doc("A 12-hour clock. Defaults to whether `Formats::time` is one."),
-                    prop("today", "NaiveDate").doc("The day marked as today. Unset, the platform clock answers after mount - on the web; elsewhere no day is marked."),
+                    prop("step", "u8").default("5").doc("Minutes between the offered minutes."),
+                    prop("twelve_hour", "bool").default("formats").doc("A 12-hour clock with AM and PM. Defaults to whether `Formats::time` is one."),
+                    prop("today", "NaiveDate").doc("The day marked as today. Unset, the platform clock answers after mount on the web. Elsewhere no day is marked."),
                     prop("size", "Size").default("md").doc("Cell, option and font size."),
-                    prop("name", "String").doc("Emits a hidden input of that name, posting the value as ISO 8601."),
+                    prop("name", "String").doc("Posts the value as ISO 8601 in a hidden input of that name."),
                     prop("focusable", "bool").default("true").doc("`false` keeps the picker out of the tab order, for a picker inside a dropdown whose input keeps focus."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "One picker for every date and time value. The value's type picks what it draws: "
+                    "One picker for every date and time value. The value's type picks what it draws. "
                     Code { source: "NaiveDate" }
                     " a month of days, "
                     Code { source: "NaiveTime" }
@@ -74,20 +74,15 @@ pub fn DatePickerPage() -> Element {
                     " into one row of days."
                 }
                 Text {
-                    "Controlled through "
-                    Code { source: "value" }
-                    " and "
-                    Code { source: "onchange" }
-                    ". The month shown is the picker's own state: it opens on the value's month, else today's. "
-                    "Names come from the localization's "
+                    "It opens on the value's month, else today's. Names come from the "
+                    "localization's "
                     Code { source: "DateLocale" }
-                    ", the first weekday and the heading format from the provider's "
+                    ", and the first weekday and heading format from the provider's "
                     Code { source: "Formats" }
-                    ". A typed "
-                    Code { source: "value" }
-                    " alone does not name the type - a typed handler or a turbofish does, as on "
+                    ". As on "
                     Code { source: "DateField" }
-                    ". For one value type there are "
+                    ", a typed handler or a turbofish names the value type. For one value type "
+                    "there are "
                     Code { source: "DayPicker" }
                     ", "
                     Code { source: "MonthPicker" }
@@ -165,36 +160,36 @@ pub fn DatePickerPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Days, months and years are one tab stop each: the picked cell, else today, else the first. "
+                    "Days, months and years are one tab stop each, on the picked cell, else today, else the first. "
                     Kbd { "←" } " " Kbd { "→" } " move a cell, "
                     Kbd { "↑" } " " Kbd { "↓" } " a week or a row, "
                     Kbd { "Home" } " " Kbd { "End" } " to the ends of the week or row, and "
-                    Kbd { "PageUp" } " " Kbd { "PageDown" } " page a month, a year or a decade - with "
-                    Kbd { "Shift" } " a year among days. "
-                    Kbd { "Enter" } " and " Kbd { "Space" } " pick. Enter on the month heading climbs to the months and keeps focus on the year heading. Enter on the year heading climbs to the years and moves focus into the years: the decade heading is disabled, there is no level above it."
+                    Kbd { "PageUp" } " " Kbd { "PageDown" } " page a month, a year or a decade, or a year among days with "
+                    Kbd { "Shift" } ". "
+                    Kbd { "Enter" } " and " Kbd { "Space" } " pick. Enter on a heading climbs a level, up to the years."
                 }
                 Text {
-                    "The analog clock face is one tab stop: "
-                    Kbd { "↑" } " " Kbd { "→" } " step the hand forward - an hour, or "
+                    "The analog clock face is one tab stop. "
+                    Kbd { "↑" } " " Kbd { "→" } " step the hand forward by an hour or "
                     Code { source: "step" }
-                    " minutes - and "
+                    " minutes, and "
                     Kbd { "↓" } " " Kbd { "←" } " back, skipping what "
                     Code { source: "min" }
                     " and "
                     Code { source: "max" }
                     " rule out. "
                     Kbd { "Enter" } " moves from the hour to the minute. "
-                    "Digital columns are one tab stop each: "
+                    "Digital columns are one tab stop each. "
                     Kbd { "↑" } " " Kbd { "↓" } " " Kbd { "Home" } " " Kbd { "End" } " move within the column, "
                     Kbd { "Enter" } " picks, and " Kbd { "Tab" } " goes to the next column."
                 }
                 Text {
-                    "The mini calendar's days are one tab stop: "
+                    "The mini calendar's days are one tab stop. "
                     Kbd { "←" } " " Kbd { "→" } " move a day and slide the row past its ends, "
                     Kbd { "Home" } " " Kbd { "End" } " go to the row's ends, and "
                     Kbd { "PageUp" } " " Kbd { "PageDown" } " move a row's worth of days. The buttons page the row."
                 }
-                Text { "A date-time picks the day first; picking it moves focus into the clock." }
+                Text { "A date-time picks the day first, and picking it moves focus into the clock." }
             }
         }
     }

@@ -4,20 +4,17 @@ Crate: `libero`
 Import: `use libero::components::{RangeSlider, SliderChangeEvent, SliderMark, SliderValue};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/slider>
 Index: [index.md](index.md) - every other component's markdown page
-Description: Two thumbs on one track for a span rather than a point - the `Slider` engine, over a pair of values.
+Description: Two thumbs on one track, for a span instead of a point, over the same values as `Slider`.
 
-Two thumbs on one track, for a span rather than a point. Controlled: it renders
-`value` - a pair, in track order - and asks for a new one through `oninput`.
-
-The same engine and the same value types as [Slider](slider.md): continuous over
-`f64`, discrete over an ordered enum that derives `SliderValue`. The thumbs
-never cross - each stops at the other, or `min_range` short of it.
+Two thumbs on one track, for a span instead of a point. It takes the same
+values as [Slider](slider.md), as a pair in track order. The thumbs never cross,
+and each stops at the other or `min_range` short of it.
 
 ## Usage
 
-`oninput` carries a `SliderChangeEvent<(V, V)>`: `Start` and `End` bracket one
-drag, `Change` carries every pair in between. A key press emits `Change` then
-`End`, so committing on `End` catches a keyboard edit too.
+`oninput` carries a `SliderChangeEvent<(V, V)>`. `Start` and `End` bracket one
+drag, and `Change` carries every pair in between. A key press sends `Change`,
+then `End`, so saving on `End` catches keyboard edits too.
 
 ```rust
 use dioxus::prelude::*;
@@ -45,15 +42,10 @@ fn Demo() -> Element {
 }
 ```
 
-## Keeping the thumbs apart
-
-`min_range` is the smallest gap the two keep: the dragged thumb stops that far
-short of the other rather than pushing it along. It is written in the same unit
-as `step` - a distance continuously, a count of options discretely - and
-defaults to zero, which lets the thumbs meet. The track's own `min` and `max`
-win over the gap, so a range too narrow to hold one never puts a thumb off the
-track. Both thumbs stay on the step grid, so a gap that is no multiple of
-`step` rounds up to one: `step: 10, min_range: 3` keeps them a full step apart.
+`min_range` is the smallest gap the thumbs keep. The dragged thumb stops that far
+short of the other instead of pushing it. It uses the unit of `step`, and at the
+default 0 the thumbs may meet. The gap rounds up to whole steps, so
+`step: 10, min_range: 3` keeps them a full step apart.
 
 ```rust,ignore
 RangeSlider {
@@ -67,12 +59,9 @@ RangeSlider {
 }
 ```
 
-## Discrete values
-
-Deriving `SliderValue` on an ordered enum makes the range discrete, exactly as
-it does a `Slider`: the track, the step grid and one mark per option come from
-the option list, `min`/`max` are written in the value's own type, and `step` and
-`min_range` are counts of options.
+An ordered enum that derives `SliderValue` makes the range discrete, as on a
+`Slider`. `min` and `max` are written as variants, and `step` and `min_range`
+count options.
 
 ```rust
 use dioxus::prelude::*;
@@ -104,17 +93,10 @@ fn Demo() -> Element {
 }
 ```
 
-## Marks and labels
+`marks` and `format` work as on a `Slider`, and one `format` covers both
+bubbles. The bar fills between the thumbs.
 
-`marks` and `format` behave as they do on a `Slider`: ticks with optional
-captions, and one formatter for both bubbles. A mark reads as filled while it
-lies *between* the thumbs, which is also where the bar is drawn - a range fills
-from the lower thumb rather than from the track's start.
-
-## Posting with a form
-
-`name` renders two hidden inputs under that one name, in track order, so the
-pair posts natively and reads back as a pair:
+`name` posts the pair as two hidden inputs under one name, in track order.
 
 ```rust,ignore
 RangeSlider { name: "price", value: price(), oninput: move |e| price.set(e.value()) }
@@ -126,61 +108,62 @@ form.getAll("price") // ["20", "80"]
 
 ## Accessibility
 
-The focused thumb is the one the keys move. Arrows move one `step`,
-Shift+arrow, PageUp and PageDown move `big_step` of them, and Home and End jump
-that thumb to `min` or `max` - stopping at its neighbour like any other move.
+The keys move the focused thumb. The arrows move one step, Shift with an arrow,
+PageUp and PageDown move `big_step` steps, and Home and End jump to the end,
+stopping at the other thumb.
 
-A `label` names both thumbs, so each follows it with its own name: "Price
-Minimum" and "Price Maximum", from the localization's `slider.minimum` and `slider.maximum` by default. Pass `aria_label_from` and `aria_label_to` where those
-words do not fit, and `format` where a bare number does not say the unit.
+Each thumb is named by the label plus its own word, such as "Price Minimum" and
+"Price Maximum", from the localization's `slider.minimum` and `slider.maximum`.
+Set `aria_label_from` and `aria_label_to` when those words do not fit, and
+`format` when a bare number does not say the unit.
 
-To translate a discrete range, pass `format` as well: it replaces
-`SliderValue::label` in both bubbles, the mark captions and both thumbs'
-`aria-valuetext`, and runs during render, so it can read the current locale
-from context. A discrete range's mark captions are `aria-hidden`, as
-`Slider`'s are: the thumbs' `aria-valuetext` names each value.
+To translate a discrete range, pass `format`, as on a `Slider`. On a discrete
+range the mark captions are hidden from screen readers, since the thumbs
+already name each value.
 
 ## Props
 
-`RangeSlider`
+### `RangeSlider`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `(V, V)` | required | The two ends, in track order. Strictly controlled - pair it with `oninput`. |
-| `min` | `V` | first option, or `0.0` | Lower bound of the track, written in the value's own type. |
-| `max` | `V` | last option, or `100.0` | Upper bound of the track, written in the value's own type. |
-| `step` | `V::Step` | - | Distance one step covers, measured from `min`: a count of options discretely, a value continuously. Also sets how many decimals an emitted value keeps. |
-| `min_range` | `V::Step` | `0` - the thumbs may meet | The smallest gap the two thumbs keep. Neither can cross the other. |
-| `size` | `Size` | `md` | Controls track, thumb, and font size. |
-| `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the slider. |
-| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
-| `format` | `Callback<V, String>` | bare value, or `SliderValue::label` | Formats the bubble shown on hover, drag and keyboard focus, and sets each thumb's `aria-valuetext`. |
-| `marks` | `Vec<SliderMark<V>>` | one per option, discretely | Ticks on the track; a labeled one gets a caption below it. Replaces the marks a discrete scale derives. |
-| `aria_label_from` | `String` | `slider.minimum` | Names the lower thumb, which the field's label cannot tell apart from the upper one. Unset, the localization's `slider.minimum` - "Minimum" in English. |
-| `aria_label_to` | `String` | `slider.maximum` | Names the upper thumb. Unset, the localization's `slider.maximum` - "Maximum" in English. |
-| `label` | `Caption` | - | The field's caption, above the track. Named by `aria-labelledby`, since `for` cannot name a thumb. |
-| `description` | `Caption` | - | Between the label and the track: what the range means. |
+| `size` | `Size` | `md` | Track, thumb and font size. |
+| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
+| `value` | `Option<(V, V)>` | - | The two ends, in track order. Pair it with `oninput`, or bind it with a path `name` inside a `Form`. |
+| `oninput` | `EventHandler<SliderChangeEvent<(V, V)>>` | - | Fires per value while dragging. `Start` and `End` bracket a drag, `Change` carries each new pair. A key press sends `Change`, then `End`. |
+| `min` | `V` | `first option, or 0.0` | Lower bound of the track, in the value's own type. |
+| `max` | `V` | `last option, or 100.0` | Upper bound of the track, in the value's own type. |
+| `step` | `V::Step` | - | How far one step goes from `min`. A count of options on a discrete scale, a value on a continuous one. Also sets how many decimals a value keeps. |
+| `min_range` | `V::Step` | `0` | The smallest gap the thumbs keep, in the unit of `step`. At 0 they may meet, and they never cross. |
+| `format` | `Callback<V, String>` | `bare value, or SliderValue::label` | Text of the bubbles and each thumb's `aria-valuetext`. On a discrete scale it also names the marks, so this is where a translation goes. |
+| `marks` | `Vec<SliderMark<V>>` | `one per option, discretely` | Ticks on the track. A labeled one gets a caption below it. Replaces the marks a discrete scale draws itself. |
+| `aria_label_from` | `String` | `slider.minimum` | Names the lower thumb. Unset, the localization's `slider.minimum`, "Minimum" in English. |
+| `aria_label_to` | `String` | `slider.maximum` | Names the upper thumb. Unset, the localization's `slider.maximum`, "Maximum" in English. |
+| `name` | `FieldName<(V, V)>` | - | Posts the pair as two hidden inputs of that name, in track order. A path such as `Settings::FIELDS.price()` also binds the pair to the surrounding `Form`'s value when there is no `oninput`. |
+| `validate` | `Validators<(V, V)>` | - | Rules over the pair, shown once the slider loses focus or its form is submitted. |
+| `label` | `Caption` | - | The caption above the track. Both thumbs' names start with it. |
+| `description` | `Caption` | - | Between the label and the track. What the range means. |
 | `helper` | `Caption` | - | Under the track, below the mark captions. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
-| `required` | `bool` | `false` | Adds `aria-required` to both thumbs and marks the label. |
-| `name` | `String` | - | Emits two hidden inputs of that name, in track order, so the pair posts with a form. |
-| `oninput` | `EventHandler<SliderChangeEvent<(V, V)>>` | - | Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new pair. A key press emits `Change` then `End`. |
+| `required` | `bool` | `false` | Sets `aria-required` on both thumbs and marks the label. |
+| `disabled` | `bool` | `false` | Takes the thumbs out of the tab order and dims the slider. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable. `disabled` drops the slider from the tab order and the post instead. |
 
-Like every component, `RangeSlider` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes.
-
-`SliderMark`
+### `SliderMark`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `V` | required | Where the tick sits on the track. |
-| `label` | `String` | - | Caption shown below the tick; omit for an unlabeled mark. |
+| `value` | `V` | - | Where the tick sits on the track. |
+| `label` | `String` | - | Caption below the tick. Leave it out for a bare tick. |
+
+Like every component, `RangeSlider` also takes the shared props `sx`, `class`,
+`style`, `states`, and any extra HTML attributes. The attributes land on the
+field wrapper.
 
 ## Theme defaults
 
-`SliderDefaults` on the theme - the same one a `Slider` reads, including `step`
-and `big_step`. See [Slider](slider.md#theme-defaults).
+`theme.slider`, the same `SliderDefaults` a `Slider` reads. See
+[Slider](slider.md#theme-defaults).
 
 ## CSS variables
 
@@ -188,11 +171,11 @@ Every variable a `Slider` sets, plus the two the second thumb needs.
 
 | Variable | Description |
 |---|---|
-| `--lsx-slider-filled-from` | Where the filled bar starts, `0` to `1`; `0` on a single-thumb slider. |
+| `--lsx-slider-filled-from` | Where the filled bar starts, `0` to `1`, and `0` on a single-thumb slider. |
 | `--lsx-slider-filled-span` | How much of the track the bar covers, `0` to `1`. |
 | `--lsx-slider-thumb-at` | One thumb's own position along the track, `0` to `1`, set on its anchor. |
 
 ## Data attributes
 
-The same tokens a `Slider` carries - `size-*`, `dragging`, `disabled`,
+The same tokens a `Slider` carries: `size-*`, `dragging`, `disabled`,
 `readonly` and `marks-labeled`.

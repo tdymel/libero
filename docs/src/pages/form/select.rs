@@ -222,60 +222,65 @@ pub fn SelectPage() -> Element {
             markdown: "/md/select.md",
             properties: vec![
                 props("Select", vec![
-                    prop("size", "Size").default("md").doc("Controls height, padding, font size and the rows' size."),
+                    prop("size", "Size").default("md").doc("Height, padding and font size of the field and its rows."),
                     prop("radius", "Size")
                         .default("sm")
-                        .doc("Corner radius of the frame and the list, independent of size."),
+                        .doc("Corner radius of the frame and the list."),
                     prop("value", "Option<T>")
-                        .doc("The selected option; strictly controlled. `None` shows `placeholder`."),
+                        .doc("The selected option. Pair it with `onchange`. `None` shows `placeholder`."),
                     prop("onchange", "EventHandler<Option<T>>")
-                        .doc("Called with the option the caller should select next, or `None` when the clear button is clicked."),
+                        .doc("Called with the option to select next, or `None` from the clear button."),
+                    prop("name", "FieldName<Option<T>>")
+                        .doc("Posts the selected option's `Options::value()` under this name. A path such as `Order::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
+                    prop("validate", "Validators<Option<T>>")
+                        .doc("Rules over the selection, shown once the select loses focus or its form is submitted."),
                     prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here. A `Vec<T>` converts; an `OptionList<T>` adds named groups and per-option `disabled`; a `Resource<Vec<T>>` is the whole of the async wiring, and the list derives its loader, `aria-busy` and the held-back empty state from it. A fetch that failed is an empty list - show your own error beside the field."),
+                        .doc("Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. A failed fetch is an empty list, so show your own error beside the field."),
                     prop("option", "Callback<SelectOptionArgs<T>, Element>")
                         .default("T::label()")
-                        .doc("Draws one row's content. The row itself - highlight, `aria-selected`, click - stays the component's."),
+                        .doc("Draws one row's content. The highlight, selection and click stay the component's."),
                     prop("selection", "Callback<T, Element>")
                         .default("T::label()")
                         .doc("Draws the selected value inside the trigger."),
                     prop("placeholder", "String").doc("Shown while `value` is `None`."),
-                    prop("name", "String")
-                        .doc("Emits a hidden input of that name carrying the selected option's `Options::value()`, so the select posts with a native form. The trigger is a `div` and cannot carry the name itself."),
                     prop("clearable", "bool")
                         .default("false")
-                        .doc("Shows an x in place of the chevron while something is selected. The only way `onchange` fires `None`."),
+                        .doc("Shows an x in place of the chevron while something is selected. The only way `onchange` gets `None`."),
                     prop("searchable", "bool")
                         .default("false")
-                        .doc("Puts a search box at the top of the list. It takes focus while the list is open, and the query is cleared when it closes."),
+                        .doc("Puts a search box at the top of the list. The query is cleared when the list closes."),
                     prop("filter", "Callback<SelectFilterArgs<T>, bool>")
                         .default("contains")
                         .doc("Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`."),
                     prop("search_placeholder", "String")
-                        .doc("What the search box says while empty."),
+                        .doc("What the empty search box says."),
                     prop("label", "Caption")
-                        .doc("The field's caption, above the control. Names the trigger through `aria-labelledby`."),
-                    prop("description", "Caption").doc("Between the label and the control: what to pick."),
-                    prop("helper", "Caption").doc("Under the control: constraints, or what the choice affects."),
+                        .doc("The caption above the control, and the select's name."),
+                    prop("description", "Caption").doc("Between the label and the control. What to pick."),
+                    prop("helper", "Caption").doc("Under the control. Constraints, or what the choice changes."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
-                    prop("required", "bool").default("false").doc("Adds `aria-required` and an asterisk to the label."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
+                    prop("required", "bool").default("false").doc("Sets `aria-required` and marks the label."),
                     prop("disabled", "bool").default("false").doc("Takes the trigger out of the tab order and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A listbox over an enum, in the same field frame as every other input. Unlike "
+                    "A listbox over an enum, in the same frame as every other field. Unlike "
                     Code { source: "NativeSelect" }
                     ", the rows are libero's own, so "
                     Code { source: "option" }
-                    " can draw them with anything. Strictly controlled: "
+                    " can draw them with anything. In exchange there is no OS picker on "
+                    "phones. Pass "
                     Code { source: "value" }
-                    " drives it, and "
+                    " with "
+                    Code { source: "onchange" }
+                    ". "
                     Code { source: "clearable" }
-                    " is what lets the user go back to "
+                    " lets the user go back to "
                     Code { source: "None" }
                     "."
                 }
@@ -409,24 +414,18 @@ pub fn SelectPage() -> Element {
                 title: "Accessibility",
                 Text {
                     "Closed, the trigger opens on ArrowDown, ArrowUp, Enter or Space, and on Home "
-                    "or End at the first or last row. Open, ArrowDown and "
-                    "ArrowUp move the highlight, Home and End jump to the ends, and Enter or "
-                    "Space picks. Tab and Alt+ArrowUp pick the highlighted row too, then close; "
-                    "only Escape closes without a pick. Typing searches the labels: the characters are buffered for "
-                    "half a second, so \"b\", \"e\", \"r\" finds Berlin while a lone \"b\" after the "
-                    "pause cycles the rows starting with it. A closed trigger changes the value "
-                    "in place, the way a native "
+                    "or End at the first or last row. Open, the arrows move the highlight, Home "
+                    "and End jump to the ends, and Enter or Space picks. Tab and Alt+ArrowUp pick "
+                    "the highlighted row and close. Escape closes without a pick."
+                }
+                Text {
+                    "Typing jumps to a matching label. \"b\", \"e\", \"r\" typed quickly finds "
+                    "Berlin, and a lone \"b\" after a pause cycles the rows starting with it. On a "
+                    "closed trigger this changes the value in place, as on a native "
                     Code { source: "<select>" }
-                    " does - which needs "
-                    Code { source: "onchange" }
-                    " to actually move "
-                    Code { source: "value" }
-                    ", since the search starts from the selected row: a control whose value never "
-                    "changes has typeahead land on the same row every press. Disabled options are "
-                    "read out but skipped by the arrows, by typeahead and by the mouse. With "
+                    ". Disabled options are read out but skipped. With "
                     Code { source: "searchable" }
-                    " the search box replaces typeahead, takes the focus while the list is "
-                    "open, and types its spaces rather than picking."
+                    " the search box takes over typing and holds the focus while the list is open."
                 }
             }
         }

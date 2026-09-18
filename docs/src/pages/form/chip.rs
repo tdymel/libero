@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, Input, Text};
 
@@ -12,54 +12,58 @@ pub fn ChipPage() -> Element {
             properties: vec![props("Chip", vec![
                 prop("color", "ThemeAwareValue")
                     .default("primary")
-                    .doc("Accent color; a theme color name or a literal CSS color."),
+                    .doc("Accent color. A theme color name or any CSS color."),
                 prop("variant", "Variant")
                     .default("filled")
-                    .doc("The unselected look; a checked chip is a tonal container whatever its variant."),
-                prop("size", "Size").default("md").doc("Controls height, padding, and font size."),
+                    .doc("The unselected look. A checked chip is always a tonal container."),
+                prop("size", "Size").default("md").doc("Height, padding and font size."),
                 prop("radius", "Size")
                     .default("xl")
-                    .doc("Corner radius, independent of size."),
+                    .doc("Corner radius."),
                 prop("checked", "bool")
-                    .doc("Selection state - pair it with `onchange`. Left out, a chip with a `name` keeps its own state unless that name binds it to the form around it."),
+                    .doc("Whether it is selected. Pair it with `onchange`. Left out, a chip with a `name` keeps its own state, or the form's when that name binds it."),
                 prop("disabled", "bool")
                     .default("false")
-                    .doc("Disables interaction and dims the chip."),
+                    .doc("Disables and dims the chip."),
                 prop("readonly", "bool")
                     .default("false")
-                    .doc("A checkbox chip stays focusable and posted with the form, but clicks and Space no longer toggle it, as on `Checkbox`."),
+                    .doc("A selectable chip stays focusable and posted with the form, but clicks and Space no longer toggle it."),
                 prop("onchange", "EventHandler<bool>")
-                    .doc("Called with the value `checked` should take next. Its presence makes the chip a real checkbox."),
+                    .doc("Called with the value `checked` should take next. Makes the chip a checkbox."),
                 prop("name", "FieldName<bool>")
-                    .doc("Makes the chip a checkbox that posts under this name. A path - `Filters::FIELDS.open()` - also binds it to the surrounding `Form`'s value when the chip has no `onchange`, as on `Checkbox`."),
+                    .doc("Makes the chip a checkbox that posts under this name. A path such as `Filters::FIELDS.open()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
                 prop("value", "String")
                     .default("on")
-                    .doc("What the chip posts under its `name` when it is checked, so a row of filter chips can share one name. Left out, it posts the browser's `on`, as `Checkbox` does."),
+                    .doc("What the chip posts under its `name` when checked, so a row of filter chips can share one name."),
                 prop("onclick", "EventHandler<MouseEvent>")
-                    .doc("A plain action; its presence makes the chip a `button`."),
+                    .doc("A plain action. Makes the chip a `button`."),
                 prop("to", "NavigationTarget")
-                    .doc("Renders a router-aware link instead. Takes precedence over `onclick`."),
+                    .doc("Makes the chip a router-aware link. Wins over `onclick`."),
                 prop("target", "String")
-                    .doc("Link target, e.g. `_blank`. Only with `to`. `\"_blank\"` adds a small external icon and a hidden \"(opens in a new tab)\" from the localization, as on `Anchor`."),
+                    .doc("Link target, such as `_blank`. Only with `to`. `\"_blank\"` adds an external icon and a hidden \"(opens in a new tab)\"."),
                 prop("new_tab_hint", "bool")
                     .default("true")
                     .doc("`false` drops the icon and the hidden text a `\"_blank\"` target adds."),
                 prop("icon", "Element")
-                    .doc("Drawn before the label, with a gap; it never shrinks."),
+                    .doc("Drawn before the label, with a gap. It never shrinks."),
                 prop("trailing", "Element")
-                    .doc("Drawn after the label, with a gap; it never shrinks - a remove x. Outside a checkbox chip's `label`, so it may be a button, but not on an `onclick` or `to` chip."),
+                    .doc("Drawn after the label, with a gap, such as a remove button. It never shrinks. Not on an `onclick` or `to` chip, which is a button already."),
                 prop("children", "Element")
-                    .doc("The label, laid out as the chip's own flex items and cut at its edge. Text and `Icon` only - a `<label>` hijacks clicks on nested controls."),
+                    .doc("The label, cut at the chip's edge. Text and `Icon` only."),
             ])],
             lead: rsx! {
                 Text {
                     "A compact token. With "
                     Code { source: "onchange" }
-                    " it is a real checkbox - a visually hidden "
-                    Code { source: "input" }
-                    " plus a "
-                    Code { source: "label" }
-                    ", so selection is announced and Space toggles it. Without it, a plain tag."
+                    " or a "
+                    Code { source: "name" }
+                    " it is a checkbox, with "
+                    Code { source: "onclick" }
+                    " a button, with "
+                    Code { source: "to" }
+                    " a link, and with none of them a plain tag. "
+                    Code { source: "variant" }
+                    " sets the unselected look. A checked chip is always a tinted container."
                 }
             },
             // snippet: let mut selected = use_signal(|| false);
@@ -130,6 +134,20 @@ pub fn ChipPage() -> Element {
                         "rust"
                     }
                 },
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "Space toggles a selectable chip. A "
+                    Code { source: "readonly" }
+                    " one keeps its tab stop and ignores the toggle. Keep "
+                    Code { source: "children" }
+                    " to text and "
+                    Code { source: "Icon" }
+                    ", because a selectable chip is a "
+                    Code { source: "label" }
+                    ", which takes the clicks of any control inside it."
+                }
             }
         }
     }

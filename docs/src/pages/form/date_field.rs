@@ -67,40 +67,40 @@ pub fn DateFieldPage() -> Element {
             markdown: "/md/date_field.md",
             properties: vec![
                 props("DateField<V: DateValue>", vec![
-                    prop("value", "Option<V>").doc("The value; strictly controlled. `None` is the empty field. Its type picks the dropdown."),
-                    prop("onchange", "EventHandler<Option<V>>")
-                        .doc("Called when typed text is committed - on blur or Enter - and on every pick. Emptied text commits `None`."),
-                    prop("level", "DateLevel").default("Day").doc("Types and picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for every other value."),
-                    prop("format", "String")
-                        .default("(Formats::date)(level)")
-                        .doc("How the text shows the value, in dayjs tokens, at the field's level. Defaults to the provider's `(Formats::date)(level)`: `MMMM D, YYYY` in American formats, `D. MMMM YYYY` in German, and `MMMM YYYY`, `YYYY` in both. Typing is lenient either way: only the order of day, month and year has to match."),
-                    prop("time_format", "String").default("Formats::time").doc("How the text shows a time: `h:mm A` in American formats, `HH:mm` in German."),
-                    prop("min", "V::Bound").doc("The earliest value that can be picked or typed. For a range, the earliest end: a `NaiveDate` or `NaiveDateTime`."),
-                    prop("max", "V::Bound").doc("The latest value, likewise."),
-                    prop("exclude_date", "Callback<NaiveDate, bool>").doc("Days that cannot be picked or typed. Ignored for a time."),
-                    prop("today", "NaiveDate").doc("The day marked as today, and the year typed text without one falls back to. Unset, the platform clock answers after mount."),
-                    prop("variant", "TimePickerVariant").default("analog").doc("The clock, for values with a time."),
-                    prop("with_seconds", "bool").default("false").doc("Seconds in the text and the clock, for values with a time."),
-                    prop("step", "u8").default("5").doc("Minutes between the offered minutes. Defaults to the theme's `TimePickerDefaults::step`."),
-                    prop("twelve_hour", "bool").doc("A 12-hour clock. Defaults to whether the time format is one."),
-                    prop("calendar", "CalendarVariant").default("full").doc("A month of days, or `mini`: one row of days with buttons that page it. For a day or a date-time."),
-                    prop("days", "usize").default("7").doc("Days in the mini calendar's row."),
-                    prop("columns", "usize").default("2").doc("Months side by side, for a range of days."),
-                    prop("close_on_change", "bool").default("true").doc("Picking a day, or a range's end, closes the dropdown."),
-                    prop("name", "FieldName<Option<V>>").doc("What the field posts as - the value in ISO 8601, whatever the text shows. A path also binds it to the surrounding `Form`."),
-                    prop("validate", "Validators<Option<V>>").doc("Rules over the value."),
-                    prop("placeholder", "String").doc("Shown while the text is empty."),
                     prop("size", "Size").default("md").doc("Control height, font size and the dropdown's picker."),
                     prop("radius", "Size").default("sm").doc("Corner radius of the frame."),
-                    prop("label", "Caption").doc("The field's caption."),
-                    prop("description", "Caption").doc("Between the label and the control."),
-                    prop("helper", "Caption").doc("Under the control."),
+                    prop("value", "Option<V>").doc("The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`."),
+                    prop("onchange", "EventHandler<Option<V>>")
+                        .doc("Called on every pick, and when typed text is committed on blur or Enter. Emptied text commits `None`."),
+                    prop("level", "DateLevel").default("Day").doc("Types and picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for other values."),
+                    prop("format", "String")
+                        .default("(Formats::date)(level)")
+                        .doc("How the text shows the value, in dayjs tokens. The default is `MMMM D, YYYY` in American formats, `D. MMMM YYYY` in German, and `MMMM YYYY` or `YYYY` in both for a month or a year. Typing only has to match the order of day, month and year."),
+                    prop("time_format", "String").default("Formats::time").doc("How the text shows a time. `h:mm A` in American formats, `HH:mm` in German."),
+                    prop("min", "V::Bound").doc("The earliest value accepted. For a range, the earliest end."),
+                    prop("max", "V::Bound").doc("The latest value accepted. For a range, the latest end."),
+                    prop("exclude_date", "Callback<NaiveDate, bool>").doc("Days that are not accepted, on top of `min` and `max`. Ignored for a time, a month and a year."),
+                    prop("today", "NaiveDate").doc("The day marked as today, and the year used when typed text has none. Unset, the platform clock answers after mount."),
+                    prop("variant", "TimePickerVariant").default("analog").doc("Columns of numbers, or a clock face, for values with a time."),
+                    prop("with_seconds", "bool").default("false").doc("Seconds in the text and on the clock."),
+                    prop("step", "u8").default("5").doc("Minutes between the offered minutes."),
+                    prop("twelve_hour", "bool").doc("A 12-hour clock with AM and PM. Defaults to whether the time format is one."),
+                    prop("calendar", "CalendarVariant").default("full").doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
+                    prop("days", "usize").default("7").doc("Days in the mini calendar's row."),
+                    prop("columns", "usize").default("1, or 2 for a range").doc("Months side by side."),
+                    prop("close_on_change", "bool").default("true").doc("Picking a day, or a range's second end, closes the dropdown."),
+                    prop("name", "FieldName<Option<V>>").doc("What the field posts as, the value in ISO 8601 whatever the text shows. A path also binds it to the surrounding `Form`'s value when it has no `onchange`."),
+                    prop("validate", "Validators<Option<V>>").doc("Rules over the value, shown once the field loses focus or its form is submitted."),
+                    prop("placeholder", "String").doc("Shown while the text is empty."),
+                    prop("label", "Caption").doc("The caption above the control, and the field's name."),
+                    prop("description", "Caption").doc("Between the label and the control. What to enter."),
+                    prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry changes."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state. Text the field cannot accept shows why instead: `DateLocale::invalid_date`, or the `min`/`max` or `exclude_date` it missed."),
-                    prop("required", "bool").default("false").doc("Adds `required` to the input and an asterisk to the label."),
+                        .doc("Validation state, under the helper. Text the field cannot accept shows its own error instead, such as `DateLocale::invalid_date` or the bound it missed."),
+                    prop("required", "bool").default("false").doc("Sets `required` on the input and marks the label."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
-                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),
                 ]),
             ],
             lead: rsx! {
@@ -130,50 +130,29 @@ pub fn DateFieldPage() -> Element {
                     "."
                 }
                 Text {
-                    "Typed text stays as typed until the field blurs or Enter is pressed, then it is read leniently: "
-                    "any separator, one-digit days and months, month names in any case or as a unique prefix, "
-                    "and a missing year taken from today. Only the order of day, month and year follows "
+                    "Typed text is read on blur or Enter, and leniently. Any separator works, "
+                    "as do one-digit days, month names as a unique prefix, and a missing year. "
+                    "Only the order of day, month and year follows "
                     Code { source: "format" }
-                    ". Two-digit years are rejected. Text that is not an accepted value stays, and the field's error says why: "
-                    "unreadable, or before, after or outside "
-                    Code { source: "min" }
-                    " and "
-                    Code { source: "max" }
-                    " in the field's own format, or an excluded day. "
-                    "The form gets ISO 8601, whatever the text shows."
+                    ". Text the field cannot accept stays, and the error says why. The form "
+                    "always gets ISO 8601."
                 }
                 Text {
-                    "Two things given to "
-                    Code { source: "LiberoProvider" }
-                    " shape the text, apart. The language - month and day names, labels and errors - is the "
-                    Code { source: "DateLocale" }
-                    " in the "
+                    "The language of names, labels and errors comes from the provider's "
                     Code { source: "Localization" }
-                    "'s "
-                    Code { source: "date" }
-                    ": "
-                    Code { source: "Localization::ENGLISH" }
-                    ", the default, or "
-                    Code { source: "Localization::GERMAN" }
-                    ". The formats - the date and time patterns, the first weekday, the range separator - are "
-                    Code { source: "formats" }
-                    ": "
+                    ". The patterns, first weekday and 12- or 24-hour clock come from its "
+                    Code { source: "Formats" }
+                    ", "
                     Code { source: "Formats::AMERICAN" }
-                    ", the default - Sunday first, a 12-hour clock - or "
+                    " by default or "
                     Code { source: "Formats::GERMAN" }
-                    " - Monday first, a 24-hour clock, "
-                    Code { source: "14. September 2026" }
-                    ". This site uses English with German formats. The "
-                    Code { source: "language" }
-                    " and "
-                    Code { source: "formats" }
-                    " controls switch each."
+                    ". This site uses English with German formats."
                 }
                 Text {
                     "A typed "
                     Code { source: "value" }
-                    " alone does not name the type, because dioxus converts every prop. A handler that stores into a typed signal names it; "
-                    "without one, a turbofish does: "
+                    " alone does not name the type. A handler that stores into a typed signal "
+                    "does, or a turbofish such as "
                     Code { source: "DateField::<NaiveTime> {{ .. }}" }
                     ". For one value type there are "
                     Code { source: "DayField" }
@@ -185,7 +164,7 @@ pub fn DateFieldPage() -> Element {
                     Code { source: "DateRangeField" }
                     " and "
                     Code { source: "DateTimeRangeField" }
-                    ": only the props that type uses, no turbofish, and a value of the wrong type is a plain type mismatch."
+                    ", with only the props that type uses and no turbofish."
                 }
             },
             // snippet: item use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
@@ -285,7 +264,7 @@ pub fn DateFieldPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Focus opens the dropdown and stays in the text, so typing works at once. "
+                    "Focus opens the dropdown and stays in the text, so you can type at once. "
                     Kbd { "↓" } " moves focus into the picker, onto the picked day or the clock, where the "
                     Code { source: "DatePicker" }
                     " keys apply. "

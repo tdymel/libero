@@ -4,12 +4,12 @@ Crate: `libero`
 Import: `use libero::components::{Combobox, ComboboxOption, ComboboxOptionArgs, use_combobox};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/combobox>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A listbox that hangs off a caller-supplied trigger, holding no state of its own.
+Description: A listbox that hangs off a trigger you supply, holding no state of its own.
 
 A listbox that hangs off whatever control you put in it. It holds no state of
-its own: `use_combobox()` keeps it in the caller's scope, the selection is the
-caller's entirely, the rows are drawn by `option`, and the trigger is just
-`children`. All it adds is the placement, the arrow keys, and the row theming.
+its own. `use_combobox()` keeps the open state in your scope, the selection is
+yours, `option` draws the rows and `children` is the trigger. The combobox adds
+the placement, the arrow keys and the row styling.
 
 ## Usage
 
@@ -59,16 +59,12 @@ fn Demo() -> Element {
 }
 ```
 
-## It holds nothing
+## State
 
-There is no `value`, no `onchange`, and no open state inside. `Combobox` is an
-arrangement, not a control: a wrapper, your `children` in it, and a list
-portaled to `PortalOutlet` and placed under them, or above when there is
-no room below.
-
-What open state there is lives in **your** scope. `use_combobox()` returns a
-`ComboboxState` - three signals and the id that ties them together - which you
-pass in as `state` and can drive yourself at any time:
+There is no `value`, no `onchange` and no open state inside. The list is
+portaled and placed under the children, or above them when there is no room
+below. `use_combobox()` returns a `ComboboxState`, which you pass as `state` and
+can drive yourself:
 
 ```rust,ignore
 let fruit = use_combobox();
@@ -79,25 +75,13 @@ fruit.active();           // the row the arrow keys are on
 fruit.a11y_attributes();  // the aria wiring for whatever control you use
 ```
 
-`Combobox` writes those same signals when a key asks it to - ArrowDown opens,
-Enter/Escape/Tab close - but it is your signal either way, so there is no
-"controlled or uncontrolled" question to answer and no change handler to route.
+The combobox writes the same state when a key asks it to. ArrowDown opens, and
+Enter, Escape and Tab close. Closing on an outside click and picking are yours.
+`ComboboxOption`'s `onpick` is the only way to pick, on a click and on Enter
+alike. An open list with no options and no `empty` renders nothing.
 
-The rest stays yours:
-
-- **Closing on an outside click.** `Combobox` never takes focus, so it has
-  nothing to blur; call `close()` from your trigger's own blur if you want it.
-- **Picking.** `ComboboxOption`'s `onpick` is the only path, on a click and on
-  Enter alike, and what it does with the value is entirely up to you.
-
-An open list with no options and no `empty` renders nothing at all, so
-`options` being empty is a perfectly good way to keep the dropdown away - you do
-not have to gate `opened` on it.
-
-## Children, not a target
-
-`children` is the trigger, and anything that has to travel with it - a hidden
-`input` for a plain form post, say:
+`children` is the trigger, and anything that has to travel with it, such as a
+hidden `input` for a plain form post:
 
 ```rust,ignore
 Combobox {
@@ -107,49 +91,27 @@ Combobox {
 }
 ```
 
-Keyboard events are caught on the wrapper, where they bubble to, rather than on
-a field `Combobox` owns - so the arrow keys work whatever the trigger is, and
-`Combobox` never has to hand handlers back out.
+The arrow keys work whatever the trigger is.
 
 ## Rows
 
-`option` draws one row and is handed the value and its index. `ComboboxOption`
-is the themed row: it takes the click, registers itself as Enter's target while
-it is active, cancels `mousedown` so a click does not blur the trigger out from
-under itself, and reads its own `id` and highlight from the `Combobox` around it
-- so a row needs no wiring props at all. `args.active` is there for a row drawn
-without `ComboboxOption`.
+`option` draws one row and gets the value and its index. `ComboboxOption` is the
+styled row. It takes the click and reads its id and highlight from the
+`Combobox` around it, so it needs no wiring props. `args.active` is there for a
+row drawn without `ComboboxOption`.
 
-The row is a flex row, so bare text that is too long is cut at its edge. Put the
-text in `span { "data-slot": "label", .. }` and it ends in an ellipsis instead,
-which is how `Select`'s and `Autocomplete`'s own rows draw it.
+Bare text that is too long is cut at the row's edge. Put it in
+`span { "data-slot": "label", .. }` to end it in an ellipsis. `selected` sets
+`aria-selected` and tints the row, so leave it out in a suggestion list. A
+taller custom row grows.
 
-`selected` is deliberately optional. It sets `aria-selected` and tints the row -
-which is select semantics. A suggestion list has no selection, so it just does
-not pass it.
-
-A row's height is a `min-height`, so a taller custom row simply grows. Nothing
-has to be told about it: every row is a real element, rendered eagerly.
-
-## How long a list
-
-Every option renders, eagerly: `Combobox` draws the rows and hands them down as
-a `Vec<Element>` rather than a callback the list could invoke lazily. That is
-deliberate. Two `Callback`s built in the same scope on different renders compare
-*equal* - `GenerationalBox::ptr_eq` sees the recycled slot - so a lazy row
-callback lets the whole subtree memoize, and a filtered `options` leaves stale
-rows on screen. A `Vec<Element>` never compares equal, which is the guarantee
-the rows need.
-
-The list scrolls past `260px`, from the theme's `max_dropdown_height`. That is
-not a prop yet - deliberately. **Keeping the list short enough to render is the
-caller's job**, and it is the job `options` already exists for: hand in the
-matches, capped however the data wants capping.
+Every option renders, so keep the list short. `options` is where you cap it. The
+list scrolls past the theme's `max_dropdown_height`, `260px`.
 
 ## Searching
 
-There is no `filter` prop and no search field. Narrowing a list is filtering a
-`Vec`, and the caller already has the query - it is the trigger's own value:
+There is no `filter` prop and no search field. Filter the `Vec` yourself with
+the trigger's own value:
 
 ```rust,ignore
 let suggestions = use_combobox();
@@ -179,13 +141,7 @@ rsx! {
 }
 ```
 
-That also covers a filter on something other than the label - an option shown by
-name but searched by email is a different closure in the same `filter` call, not
-a prop.
-
-## Groups and unavailable options
-
-Both arrive through `options`, as an `OptionList<T>` the caller builds:
+Groups and disabled options come through `options`, as an `OptionList<T>`:
 
 ```rust,ignore
 OptionList::grouped()
@@ -193,28 +149,13 @@ OptionList::grouped()
     .group("Tropical", [Fruit::Banana, Fruit::Mango].map(OptionItem::new))
 ```
 
-Groups are explicit - not a field on the option and not a `group_by` closure -
-because the caller is the only one who knows both the order the groups go in
-and what each is called. A named run is drawn as a `role="group"` named by its
-heading; a group named twice appends to the run it already has. Custom rows are
-unaffected: richness lives in the `option` callback, which is orthogonal to the
-shape of the list. **The caller's order is always kept**: a label used again
-after another group draws its heading a second time rather than merging the two
-runs, since merging would silently reorder options that were listed in a
-particular order. Two adjacent calls with one label still draw one heading.
-
-`disabled` is a flag on the option, not a closure and not a value your `T`
-refuses everywhere - a row this particular field will not take. It is drawn and
-read out, `aria-disabled="true"`, and the arrows, typeahead and clicks all pass
-over it.
-
-Groups change how rows are wrapped, never which index a row reports, and a
-search that empties a group simply leaves its heading out.
+Each group is a `role="group"` named by its heading. Your order is kept, so a
+group label used again after another group draws its heading again. A disabled
+row is read out, and the arrows and clicks skip it.
 
 ## Fetching options
 
-`options` is an `OptionSource<T>`, and the shortest async list is a
-`use_resource` handed straight to it:
+The shortest async list is a `use_resource` passed to `options`:
 
 ```rust,ignore
 let fruit = use_resource(move || async move { search(query()).await });
@@ -224,21 +165,13 @@ rsx! {
 }
 ```
 
-There is **no `loading` flag**. A source is pending until it first holds a
-value, and the list derives everything from that: a [`Loader`](loader.md) in
-place of the rows **and of `empty`**, `aria-busy` on the dropdown, and
-`loading_label` in the status region beside the trigger. Holding the empty
-state back is the point - an async list's options are empty between a keystroke
-and its answer, so a separate flag that someone forgets to set flashes "no
-results" on every keystroke. The rows are replaced too: they belong to the
-previous query, and the arrows and Enter skip them.
+While the source is pending, a [Loader](loader.md) replaces the rows and
+`empty`, and screen readers hear `loading_label`. So an async list does not
+flash "no results" between a keystroke and its answer. A failed fetch is an
+empty list, so show your own error beside the field.
 
-A fetch that **failed** is an empty list. The library knows pending and ready,
-nothing else - show your own error beside the field, where you can say what
-went wrong and offer a retry.
-
-Driving the request yourself, `None` is pending and `Some(list)` is the answer,
-an empty one included:
+When you drive the request yourself, `None` is pending and `Some(list)` is the
+answer:
 
 ```rust,ignore
 /// How long the fake search takes.
@@ -293,18 +226,12 @@ rsx! {
 }
 ```
 
-## What it does not do yet
-
-Multi-selection is nothing but a longer list of `selected` rows, so it needs no
-support here, but there is no creatable mode. One `ComboboxState` drives one `Combobox`. `max_dropdown_height` is not a prop yet, only the theme's
-`combobox.max_dropdown_height`.
+There is no creatable mode yet, and one `ComboboxState` drives one `Combobox`.
 
 ## Accessibility
 
-Focus stays on your trigger - a text field, a button - and the arrows move a
-highlight, so typing keeps working. The trigger is the one element `Combobox`
-does not render, so spread `state.a11y_attributes()` on it. Without that the
-list is not tied to the trigger for a screen reader:
+Focus stays on your trigger, so typing keeps working. Spread
+`state.a11y_attributes()` on it, or screen readers cannot tie the list to it:
 
 ```rust,ignore
 TextField {
@@ -314,16 +241,11 @@ TextField {
 }
 ```
 
-Pass `selected` only on rows that really are selected; a plain suggestion list
-has no selection to announce.
-
-Keyboard, from anywhere inside the wrapper: ArrowDown opens and moves down,
-ArrowUp moves up, Home and End jump to the ends, Enter picks the active row and
-closes, Escape and Tab close. Disabled rows are skipped by every one of them.
-
+ArrowDown opens and moves down, ArrowUp moves up, Home and End jump to the ends,
+Enter picks and closes, and Escape and Tab close. Disabled rows are skipped.
 Close the list on your trigger's blur (`onblur: move |_| suggestions.close()`),
-or an enclosing `Modal` or `HoverCard` stops hearing Escape on the web while
-the list stays open.
+or an enclosing `Modal` or `HoverCard` stops hearing Escape while the list stays
+open.
 
 ## Props
 
@@ -331,36 +253,32 @@ the list stays open.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `state` | `ComboboxState` | - | From `use_combobox()`. Required. |
-| `options` | `OptionSource<T>` | - | The options to list, already filtered. Required. A `Vec<T>` converts, as do an `OptionList<T>` (named groups, per-option `disabled`) and a `Resource<Vec<T>>` (the whole async wiring). `None::<OptionList<T>>` is pending. |
-| `option` | `Callback<ComboboxOptionArgs<T>, Element>` | - | Draws one row. Required. |
-| `children` | `Element` | - | The trigger, and anything else that belongs with it. |
+| `state` | `ComboboxState` | required | From `use_combobox()`. The open state, the highlighted row and the id the aria wiring uses. |
+| `options` | `OptionSource<T>` | required | The options to list, already filtered. A `Vec<T>` converts, an `OptionList<T>` adds named groups and disabled options, and a `Resource<Vec<T>>` adds the loader while it fetches. `None::<OptionList<T>>` is pending, for a fetch you drive yourself. |
+| `option` | `Callback<ComboboxOptionArgs<T>, Element>` | required | Draws one row, usually a `ComboboxOption`. |
+| `children` | `Element` | required | The trigger, and anything that belongs with it, such as a hidden input. |
 | `empty` | `Element` | - | Shown in place of the list when `options` is empty. |
-| `loading_label` | `String` | localization | What the status region says while `options` is pending. Unset, the localization's `common.loading` - "Loading" in English. |
+| `loading_label` | `String` | `common.loading` | What screen readers hear while `options` is pending. A pending list shows a `Loader` instead of the rows or `empty`. |
 | `size` | `Size` | `md` | A row's height and font size. |
 | `radius` | `Size` | `sm` | The dropdown's corner radius. |
-| `disabled` | `bool` | `false` | Blocks the arrow keys. |
+| `disabled` | `bool` | `false` | Blocks the arrow keys. Disable the trigger too. |
 
-`T` is any `Clone + PartialEq` - `Options` is not required, since the list is
-handed in rather than derived.
+`T` is any `Clone + PartialEq`. `Options` is not required, since you hand the
+list in.
 
-`sx`, `class`, `states` and any extra HTML attributes land on the **dropdown**,
-not on a wrapper: the element the dropdown hangs off is positioning scaffolding
-rather than something to style.
+`sx`, `class`, `states` and any extra HTML attributes land on the dropdown.
 
 ### `ComboboxState`
 
-From `use_combobox()`, which lives with the component rather than in `hooks` -
-it is `Combobox`'s half of the contract, not a general-purpose hook. `Copy`, so
-it goes into event handlers by value.
+From `use_combobox()`. It is `Copy`, so it goes into event handlers by value.
 
 | Method | Returns | Description |
 |---|---|---|
 | `id()` | `String` | The id every part of the wiring is built from. |
 | `is_open()` | `bool` | Whether the list is showing. |
 | `open()` / `close()` / `toggle()` / `set_open(bool)` | - | Drive it. |
-| `active()` | `usize` | The row the arrow keys are on, indexing `options`. |
-| `set_active(usize)` | - | Move the highlight. |
+| `active()` | `Option<usize>` | The row the arrow keys are on, indexing `options`. `None` is no highlight. |
+| `set_active(Option<usize>)` | - | Move the highlight. |
 | `a11y_attributes()` | `Vec<Attribute>` | The trigger's aria wiring, to spread with `attributes:`. |
 
 ### `ComboboxOptionArgs<T>`
@@ -376,27 +294,26 @@ it goes into event handlers by value.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `selected` | `bool` | - | The current selection - `aria-selected` and a tint. Unset for a suggestion list. |
+| `selected` | `bool` | - | Marks the current selection with `aria-selected` and a tint. Leave it unset in a suggestion list. |
 | `active` | `bool` | from the `Combobox` | Overrides the keyboard highlight. |
-| `disabled` | `bool` | from the `Combobox` | Overrides whether the list refuses this row: greyed, `aria-disabled`, and answering neither the click nor Enter. |
+| `disabled` | `bool` | from the `Combobox` | Overrides whether the row is refused. A refused row is greyed and ignores the click and Enter. |
 | `onpick` | `EventHandler<()>` | - | A click, or Enter while the row is active. |
 | `size` | `Size` | the `Combobox`'s | Row height and font size. |
-| `radius` | `Size` | the `Combobox`'s | Corner radius, tightened by the dropdown's padding. |
+| `radius` | `Size` | the `Combobox`'s | Corner radius, reduced so the row nests inside the dropdown. |
+| `children` | `Element` | required | The row's content. |
 
 ## Theme defaults
 
-`ComboboxDefaults` on the theme; per-size values live in its `sizes` scale,
-seeded with the numbers `FieldDefaults` uses.
+`ComboboxDefaults` on the theme. Per-size values live in its `sizes` scale.
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Size` | Default `size` when the prop is omitted; `md`. |
-| `radius` | `Size` | Default `radius` when the prop is omitted; `sm`. |
-| `max_dropdown_height` | `&'static str` | Height past which the option list scrolls; `260px`. No prop overrides it yet. |
+| `size` | `Size` | Default `size` when the prop is omitted, `md`. |
+| `radius` | `Size` | Default `radius` when the prop is omitted, `sm`. |
+| `max_dropdown_height` | `&'static str` | Height past which the option list scrolls, `260px`. |
 | `sizes` | `Sizes<ComboboxSizeLevel>` | `font_size`, `row_height`, `padding_x` per size. |
 
-`row_height` is applied as a `min-height`, so a taller custom row grows rather
-than being clipped.
+`row_height` is a `min-height`, so a taller custom row grows.
 
 ## CSS variables
 
@@ -406,11 +323,8 @@ than being clipped.
 | `--lsx-combobox-row-height-<size>` | A row's `height` for that size step. |
 | `--lsx-combobox-padding-x-<size>` | A row's horizontal padding for that size step. |
 
-`radius` reads the shared `--lsx-radius-<size>` scale rather than one of its
-own. A row's corner is `max(0px, calc(<that> - 4px))`, the 4px being the
-dropdown's padding: a row nests that far inside, so an equal radius would cross
-the dropdown's own corner. The dropdown also clips, so nothing can escape it at
-`xxl`, where the radius is 64px.
+`radius` reads the shared `--lsx-radius-<size>` scale. A row's corner is 4px
+smaller, the dropdown's padding, so it nests inside.
 
 ## Data attributes
 
@@ -422,7 +336,5 @@ the dropdown's own corner. The dropdown also clips, so nothing can escape it at
 | `active` | The row the arrows are on. | Rows |
 | `selected` | `selected` is `true`. | Rows |
 
-A row draws three states without them cancelling out: hover tints it, `selected`
-tints it more strongly, and `active` adds a focus ring *on top of* whichever
-tint is underneath. A tint alone cannot mark the keyboard's row when that row is
-already tinted by the selection, which is why the highlight is a ring.
+Hover tints a row, `selected` tints it more strongly, and `active` adds a ring
+on top of either tint.

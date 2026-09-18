@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, OptionList, Options, RadioGroup, Text};
 
@@ -71,79 +71,84 @@ pub fn RadioGroupPage() -> Element {
             properties: vec![
                 props("RadioGroup", vec![
                     prop("value", "Option<T>")
-                        .doc("The selected option; strictly controlled. `None` selects nothing, which is what an unanswered question looks like."),
+                        .doc("The selected option. Pair it with `onchange`. `None` selects nothing, as for an unanswered question."),
                     prop("onchange", "EventHandler<T>")
-                        .doc("Called with the option the caller should select next."),
+                        .doc("Called with the option to select next."),
+                    prop("name", "FieldName<Option<T>>")
+                        .doc("What the group posts as. A path such as `Survey::FIELDS.plan()` also binds it to the surrounding `Form`'s value when it has no `onchange`."),
+                    prop("validate", "Validators<Option<T>>")
+                        .doc("Rules over the selection, shown once the group loses focus or its form is submitted."),
                     prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here, since only an enum lists its own. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`. Named groups are accepted and drawn flattened - the group is the field, so it draws no headings inside itself."),
+                        .doc("Narrows or reorders the list. A runtime set, such as `String`s or records from a server, goes here. A `Vec<T>` converts, and an `OptionList<T>` can disable single options. Named groups are drawn flat, without headings."),
                     prop("option_label", "Callback<T, String>")
                         .default("T::label()")
-                        .doc("Overrides what the derive named an option. Runs during render, so it can read a locale from context."),
+                        .doc("Renames an option. Runs during render, so it can read a locale from context."),
                     prop("option_description", "Callback<T, String>")
-                        .doc("A line under each option's label; an empty string renders none. What makes a card option worth its surface."),
+                        .doc("A line under each option's label. An empty string renders none."),
                     prop("variant", "ChoiceVariant")
                         .default("plain")
-                        .doc("`card` draws every option as a bordered surface that is its own hit area. A row of cards stretches them to one height."),
+                        .doc("`card` draws every option as a bordered surface you can click anywhere. A row of cards stretches them to one height."),
                     prop("orientation", "Orientation")
                         .default("vertical")
-                        .doc("Lays the options out in a row instead of a column. A form stacks; a row is for two or three short options."),
+                        .doc("`horizontal` lays the options out in a row, for two or three short ones."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
-                        .doc("The ring and dot color of the selected option."),
-                    prop("size", "Size").default("md").doc("The size of every circle, and of the labels beside them."),
+                        .doc("Ring and dot color of the selected option."),
+                    prop("size", "Size").default("md").doc("Size of the circles and their labels."),
                     prop("label", "Caption")
-                        .doc("The question. Names the group through `aria-labelledby`, since `for` cannot name a `role=\"radiogroup\"`."),
+                        .doc("The question, and the group's name."),
                     prop("description", "Caption")
-                        .doc("Between the question and the options: how to choose."),
+                        .doc("Between the question and the options. How to choose."),
                     prop("helper", "Caption")
-                        .doc("Under the options. Consequences of the choice."),
+                        .doc("Under the options. What the choice changes."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                        .doc("Validation state, under the helper. A bare `&str` is an error."),
                     prop("required", "bool")
                         .default("false")
-                        .doc("Adds `aria-required` to the group and marks the label."),
+                        .doc("Sets `aria-required` on the group and marks the label."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables every option and dims the group."),
                     prop("readonly", "bool")
                         .default("false")
-                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. Sets `aria-readonly` on the group, which Chromium does not announce: say it in the label or description where it matters."),
+                        .doc("Focusable and posted with the form, but not editable. `disabled` drops the group from the tab order and the post instead. Chromium does not announce read-only on a group, so say it in the label or description where it matters."),
                 ]),
                 props("Radio", vec![
                     prop("checked", "bool")
-                        .doc("Strictly controlled - pair it with `onselect`."),
+                        .doc("Whether it is selected. Pair it with `onselect`."),
                     prop("onselect", "EventHandler<()>")
-                        .doc("Fires when this radio is picked. Never fires to unpick one: a radio is turned off by another in its group being turned on."),
+                        .doc("Fires when this radio is picked. Never when another one is."),
                     prop("name", "String")
-                        .doc("Shared by every radio in one group, which is what makes the native control exclusive. `RadioGroup` sets it."),
+                        .doc("Shared by every radio in one group, which makes them exclusive. `RadioGroup` sets it."),
                     prop("tabindex", "String")
-                        .doc("`RadioGroup` makes exactly one radio the group's tab stop and takes the rest out of the tab order."),
+                        .doc("Which radio is the group's tab stop. `RadioGroup` sets it."),
+                    prop("color", "ThemeAwareValue")
+                        .default("primary")
+                        .doc("Ring and dot color when selected."),
                     prop("aria_label", "String")
                         .doc("Names the radio when it has no `label`."),
                     prop("readonly", "bool")
                         .default("false")
-                        .doc("Refuses the pick. ARIA has no read-only radio: `RadioGroup` says it on the group, a lone radio says nothing."),
+                        .doc("Refuses the pick. ARIA has no read-only radio, so only `RadioGroup` can announce it."),
                     prop("variant", "ChoiceVariant")
                         .default("plain")
-                        .doc("`card` draws the radio as a bordered surface and makes all of it the hit area."),
+                        .doc("`card` draws the radio as a bordered surface you can click anywhere."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A group of radios over an enum, exactly one of them selected. The group is "
-                    "the field: it owns the question's label and captions, the "
-                    Code { source: "name" }
-                    " that makes the set exclusive, and the single tab stop the ARIA pattern "
-                    "asks for. Arrow keys move through the options and select as they go, "
-                    "wrapping at the ends."
+                    "A group of radios over an enum, exactly one of them selected. The group "
+                    "is the field. It holds the question's label and captions, makes the "
+                    "options exclusive and gives the whole set one tab stop."
                 }
                 Text {
-                    "Reach for a "
+                    "Use a "
                     Code { source: "Radio" }
-                    " on its own only to lay a group out by hand - alone it owns none of those "
-                    "three things."
+                    " on its own only to lay a group out by hand. Then the shared "
+                    Code { source: "name" }
+                    ", the tab order and the group's name are yours to set."
                 }
             },
             // snippet: let mut plan = use_signal(|| Some(Plan::Pro));
@@ -244,6 +249,18 @@ pub fn RadioGroupPage() -> Element {
                     }
                 },
                 wrap: Wrap(|_values, code| format!("{PLAN_ENUM}{code}")),
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "Tab enters the group at the selected option, or the first one that is not "
+                    "disabled, and Tab leaves it. The arrow keys move to the next or previous "
+                    "option and select it, wrapping at the ends. Without a visible "
+                    Code { source: "label" }
+                    ", spread "
+                    Code { source: "\"aria-label\"" }
+                    ", since the option labels do not say what the question is."
+                }
             }
         }
     }
