@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use crate::icons::CheckmarkIcon;
 use dioxus::prelude::*;
 use libero::{
@@ -249,13 +249,15 @@ pub fn ImageListPage() -> Element {
             markdown: "/md/image_list.md",
             properties: vec![
                 props("ImageList", vec![
-                    prop("items", "Vec<ImageItem>").doc("One cell each, in render order."),
+                    prop("items", "Vec<ImageItem>")
+                        .default("vec![]")
+                        .doc("One cell each, in render order."),
                     prop("cols", "Responsive<u8>")
                         .default(defaults.cols.to_string())
-                        .doc("Columns. `cols: 3`, or one count per viewport breakpoint: `cols: responsive(1).sm(2).md(4)` is one column below `sm`, two from `sm` and four from `md` up. Each count is snapped to a divisor of twelve - 1, 2, 3, 4, 6 or 12 - because a cell is a span of a `GridZone`'s twelve tracks. An `ImageItem::span` stays the same at every width."),
+                        .doc("Columns, as `cols: 3` or one count per breakpoint, `cols: responsive(1).sm(2).md(4)`. Each count snaps to 1, 2, 3, 4, 6 or 12, since a cell spans twelfths of a `GridZone`. An `ImageItem::span` stays the same at every width."),
                     prop("variant", "ImageListVariant")
                         .default(defaults.variant.as_str())
-                        .doc("`standard` gives every cell the same height; `masonry` keeps each picture's own and packs them with no dead space; `quilted` lets a cell take more than one row; `woven` shortens every second cell to 70%."),
+                        .doc("`standard` gives every cell the same height, `masonry` keeps each picture's own and packs them, `quilted` lets a cell take more than one row, and `woven` shortens every second cell to 70%."),
                     prop("gap", "Size")
                         .default(defaults.gap.as_str())
                         .doc("Between cells."),
@@ -264,32 +266,29 @@ pub fn ImageListPage() -> Element {
                         .doc("Each cell's corner radius."),
                     prop("ratio", "f32")
                         .default("1.0, from theme.aspect_ratio")
-                        .doc("Cell aspect ratio, e.g. `16.0 / 9.0`. Ignored by `masonry`, where the picture's own height is the point. Under `quilted` it is the ratio of *one* cell of the quilt, and a taller or wider cell scales from it."),
+                        .doc("Cell aspect ratio, such as `16.0 / 9.0`. Ignored by `masonry`. Under `quilted` it is the ratio of one cell, and a bigger cell scales from it."),
                 ]),
                 props("ImageItem", vec![
-                    prop("new(content)", "Element").doc("The cell's content - an `Image` with `fit: \"cover\"`, usually."),
-                    prop("span(span)", "GridSpan").doc("This cell's width, overriding the one `cols` derives. The same twelfths a `GridItem` takes, so a span means here exactly what it means there."),
-                    prop("rows(rows)", "u8").doc("This cell's height, in rows - `quilted`'s whole vocabulary. Quilted only, by design: `standard` stays a uniform grid, and `masonry` derives the span from the measured height. Every other variant ignores it with a warn."),
+                    prop("new(content)", "Element").doc("The cell's content, usually an `Image` with `fit: \"cover\"`."),
+                    prop("span(span)", "GridSpan").doc("This cell's width, in the twelfths a `GridItem` takes. Overrides the one `cols` gives."),
+                    prop("rows(rows)", "u8").doc("This cell's height in rows. `quilted` only. Other variants ignore it with a warning."),
                     prop("bar(bar)", "ImageBar").doc("The caption strip."),
-                    prop("to(target)", "NavigationTarget").doc("Makes the cell a link. The anchor is the picture and a stretched `::after` extends the hit area over the tile, so the accessible name is the image's `alt` - a decorative image (`alt: \"\"`) leaves the link unnamed. The bar sits above the hit area, so a control in it still works. The link wins over a `zoomable` `Image`: it draws no zoom button there, and warns."),
+                    prop("to(target)", "NavigationTarget").doc("Makes the whole cell a link. A `zoomable` `Image` in it draws no zoom button and warns."),
                 ]),
                 props("ImageBar", vec![
-                    prop("new(content)", "Element").doc("The strip's content - anything. A flex row is all `ImageBar` adds, so a text block wants `flex: 1 1 auto; min-width: 0` and a `<button>` wants `color: inherit`. Sibling content, never a label for the image."),
+                    prop("new(content)", "Element").doc("The strip's content, laid out as a flex row. Give a text block `flex: 1 1 auto; min-width: 0` and a `<button>` `color: inherit`."),
                     prop("position(position)", "BarPosition")
                         .default(defaults.bar_position.as_str())
-                        .doc("`bottom`, `top` or `below` - overriding the theme's, per cell. Where the strip sits is the cell's own layout, so it stays a prop."),
+                        .doc("`bottom`, `top` or `below`, for this cell."),
                     prop("scrim(on)", "bool")
                         .default("true")
-                        .doc("The gradient behind an overlay bar, and the light text colour with it. Off hands you a bare transparent strip. Mind the contrast: white on the default scrim is 9.3:1 at the strip's bottom edge but 1.8:1 near its top, so a second line over a bright picture is the case that fails - a `text-shadow` is the cheap fix."),
+                        .doc("The gradient behind an overlay bar and its light text color. Off leaves a bare transparent strip."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A grid of pictures, each with an optional caption bar. Renders a "
-                    Code { source: "<ul role=\"list\">" }
-                    " of "
-                    Code { source: "<li>" }
-                    "s, so a gallery is announced with a count - and every cell is a "
+                    "A grid of pictures, each with an optional caption bar. It renders a list, "
+                    "so a screen reader announces the count. Each cell is a "
                     Code { source: "GridItem" }
                     " of a "
                     Code { source: "GridZone" }
@@ -297,20 +296,7 @@ pub fn ImageListPage() -> Element {
                     Code { source: "cols" }
                     " and "
                     Code { source: "ImageItem::span" }
-                    " are spans of the library's own twelve tracks rather than a second "
-                    "grid with its own track count."
-                }
-                Text {
-                    "Three things the controls below show but cannot say. "
-                    Code { source: "ImageItem::to" }
-                    " makes the picture the anchor and stretches its hit area over the "
-                    "whole tile, so the link's accessible name is the image's "
-                    Code { source: "alt" }
-                    " - a decorative image leaves it unnamed. The bar sits above that "
-                    "hit area, so a control you put in it still works. And the scrim is "
-                    "a gradient, so white text on it runs from 9.3:1 at the strip's "
-                    "bottom edge to 1.8:1 near its top: a second line over a bright "
-                    "picture is the case to check."
+                    " count twelfths, as the rest of the grid does."
                 }
             },
             // snippet: item struct Picture { id: u32, url: String, alt: String }
@@ -407,6 +393,28 @@ pub fn ImageListPage() -> Element {
                     }
                 },
                 wrap: Wrap(placeholder_header),
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Each picture's name is its own "
+                    Code { source: "alt" }
+                    ". A cell with a bar is a "
+                    Code { source: "figure" }
+                    ", and the bar is its caption. "
+                    Code { source: "ImageItem::to" }
+                    " makes the picture the link and stretches it over the tile, so the "
+                    "link's name is the image's "
+                    Code { source: "alt" }
+                    ". A decorative image leaves the link unnamed. The bar sits above the "
+                    "link, so a control in it still works."
+                }
+                Text {
+                    "The scrim is a gradient. White text on it runs from 9.3:1 at the bottom "
+                    "edge to 1.8:1 near the top, so check a second line over a bright "
+                    "picture. A "
+                    Code { source: "below" }
+                    " bar has no scrim and always reads."
+                }
             }
         }
     }

@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use crate::icons::{CheckmarkIcon, CodeIcon, FileIcon, GitHubIcon};
 use dioxus::prelude::*;
 use libero::components::{Code, Text, Timeline, TimelineEvent, TimelineLine};
@@ -38,7 +40,7 @@ fn items_code(values: &DemoValues) -> String {
     out
 }
 
-/// `items` is not a control, so `generate_code` never prints it - but it is
+/// `items` is not a control, so `generate_code` never prints it, but it is
 /// most of what the reader needs. The generated block is reopened and the
 /// whole `vec![..]` literal spliced in before the closing brace, so the
 /// snippet is the one that produces the preview.
@@ -100,21 +102,22 @@ pub fn TimelinePage() -> Element {
                         .default("vec![]")
                         .doc("The events, in render order."),
                     prop("active", "usize")
-                        .doc("The current event, strictly controlled: bind it to whatever already knows how far along the process is. Bullets `0..=active` and the connectors `0..active` draw active; out of range clamps to the last event, so \"step 7 of 4\" means finished."),
+                        .default("None")
+                        .doc("The current event. Bullets up to and including it, and the connectors between them, draw in the accent. An index past the end clamps to the last event, so \"step 7 of 4\" means finished."),
                     prop("align", "TimelineAlign")
-                        .default("theme.timeline.align")
-                        .doc("`\"start\"`, `\"end\"`, or `\"alternate\"` - content either side of a centred rail. Logical: mirrored under `dir=\"rtl\"`. `\"alternate\"` alternates at every width and fills its parent, so a narrower parent is how you make it narrower."),
+                        .default("start")
+                        .doc("`start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. `alternate` fills its parent, so a narrower parent makes it narrower."),
                     prop("color", "ThemeAwareValue")
-                        .default("theme.timeline.color")
-                        .doc("The active accent. A per-event `.color(..)` overrides it."),
+                        .default("primary")
+                        .doc("The active accent. An event's own `.color(..)` overrides it."),
                     prop("bullet_size", "Size")
-                        .default("theme.timeline.bullet_size")
+                        .default("md")
                         .doc("Bullet diameter."),
                     prop("radius", "Size")
-                        .default("theme.timeline.radius")
-                        .doc("Bullet corner radius; `xl` is the dot."),
+                        .default("xl")
+                        .doc("Bullet corner radius. `xl` is a dot."),
                     prop("gap", "Size")
-                        .default("theme.timeline.gap")
+                        .default("xl")
                         .doc("Space between events, which is also each connector's length."),
                 ]),
                 props("TimelineEvent", vec![
@@ -124,33 +127,21 @@ pub fn TimelinePage() -> Element {
                     prop(".content(Element)", "Element")
                         .doc("The body below the title."),
                     prop(".bullet(Element)", "Element")
-                        .doc("An icon or avatar inside the bullet instead of the dot. A bullet with a child inverts when active."),
+                        .doc("An icon or avatar inside the bullet in place of the dot. It inverts when active."),
                     prop(".color(value)", "impl Into<ThemeAwareValue>")
-                        .doc("This event's own accent - an error step in an otherwise unremarkable run."),
+                        .doc("This event's own accent, such as an error step in an ordinary run."),
                     prop(".line(TimelineLine)", "TimelineLine")
                         .default("Solid")
-                        .doc("The connector below this event: `Solid`, `Dashed` or `Dotted`."),
+                        .doc("The connector below this event, `Solid`, `Dashed` or `Dotted`."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "An ordered list of events drawn against a rail. It renders an "
-                    Code { source: "<ol role=\"list\">" }
-                    " - the rail shows position and count visually, and the list is how a "
-                    "screen-reader user gets the same two facts. "
+                    "An ordered list of events drawn against a rail. "
                     Code { source: "active" }
-                    " names the current event: bullets up to and including it fill with the "
-                    "accent, and the connectors between them draw in it, so the rail reads as "
-                    "progress rather than as a highlight, and not by colour alone. Bullets are decorative and hidden from the "
-                    "accessibility tree; the title is the text. A custom "
-                    Code { source: ".bullet(..)" }
-                    " is hidden too, so never put anything focusable in one - "
-                    Code { source: "aria-hidden" }
-                    " does not remove an element from the tab order, and a button in a bullet "
-                    "would stay tabbable while announcing as nothing. Interactive content "
-                    "belongs in "
-                    Code { source: ".content(..)" }
-                    "."
+                    " marks the current event. Bullets up to it fill with the accent and "
+                    "the connectors between them draw in it, so the rail reads as progress. "
+                    "Done and pending bullets differ by shape too, not by color alone."
                 }
             },
             Demo {
@@ -207,6 +198,18 @@ pub fn TimelinePage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "The list gives a screen reader the position and count the rail shows. "
+                    "Bullets are hidden from screen readers, and the title is the text. A "
+                    "custom "
+                    Code { source: ".bullet(..)" }
+                    " is hidden too, so never put anything focusable in one. It would stay a "
+                    "tab stop with no name. Interactive content belongs in "
+                    Code { source: ".content(..)" }
+                    "."
+                }
             }
         }
     }

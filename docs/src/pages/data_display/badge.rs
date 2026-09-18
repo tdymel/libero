@@ -1,9 +1,9 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Badge, Code, Input, Text};
 
 /// The label is a child, not a prop, so the control that varies it prints
-/// nothing of its own - `Demo` renders it as the child.
+/// nothing of its own. `Demo` renders it as the child.
 fn label(values: &DemoValues) -> String {
     values.str("label")
 }
@@ -18,31 +18,31 @@ pub fn BadgePage() -> Element {
             properties: vec![props("Badge", vec![
                 prop("variant", "Variant")
                     .default("filled")
-                    .doc("Chrome, shared with `Button` and `Chip`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. A badge is not interactive, so it takes no hover response."),
+                    .doc("The look, shared with `Button` and `Chip`. A badge is not interactive, so it has no hover state."),
                 prop("color", "ThemeAwareValue")
                     .default("primary")
-                    .doc("The accent; a theme color name or a literal CSS color. A theme color also brings the `-contrast` twin the label reads with."),
+                    .doc("A theme color name or a CSS color. A theme color also sets a label color that reads on it."),
                 prop("size", "Size")
                     .default("md")
-                    .doc("Height, horizontal padding and font size, on the badge's own scale - smaller than a chip's."),
+                    .doc("Height, horizontal padding and font size, on a scale smaller than a chip's."),
                 prop("radius", "Size")
                     .default("xxl")
-                    .doc("A step on the badge's own radius scale, `2px` to `12px`. The default, `xxl`, is `9999px`: a pill at every height."),
+                    .doc("A step on the badge's own radius scale, `2px` to `12px`. The default `xxl` is a pill at every height."),
                 prop("circle", "bool")
                     .default("false")
-                    .doc("Drops the horizontal padding and floors the width at the height, for a one- or two-character count."),
-                prop("children", "Element").doc("The label."),
+                    .doc("Drops the horizontal padding and makes the width at least the height, for a count of one or two characters."),
+                prop("children", "Element").default("required").doc("The label."),
             ])],
             lead: rsx! {
                 Text {
-                    "A short status label. Renders one "
+                    "A short status label, rendered as one "
                     Code { source: "<span>" }
-                    " with no role and no ARIA - a badge is visible text, read in document "
-                    "order, so its content already is its accessible name. The theme owns the "
-                    "uppercase, the letter spacing and the weight that tell a badge from a chip "
-                    "at a glance; a project flips them once in "
+                    ". An icon and text as children sit one spacing step apart. The theme "
+                    "sets the uppercase, letter spacing and weight in "
                     Code { source: "BadgeDefaults" }
-                    " rather than per call site."
+                    ". For something a user can select, click or follow, use "
+                    Code { source: "Chip" }
+                    "."
                 }
             },
             Demo {
@@ -79,6 +79,30 @@ pub fn BadgePage() -> Element {
                     }
                 },
                 child: Child(label),
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "A badge has no role, so screen readers read its text in place and "
+                    "announce no change. For a badge that reports a change, wrap it in your "
+                    "own "
+                    Code { source: "role=\"status\"" }
+                    " region."
+                }
+                Text {
+                    Code { source: "filled" }
+                    " and "
+                    Code { source: "tonal" }
+                    " labels reach 4.5:1 in every color. The other variants print the label "
+                    "in the color itself, which stays under 4.5:1 on white for "
+                    Code { source: "warning" }
+                    " and "
+                    Code { source: "success" }
+                    ". Pick "
+                    Code { source: "filled" }
+                    " or "
+                    Code { source: "tonal" }
+                    " for those."
+                }
             }
         }
     }

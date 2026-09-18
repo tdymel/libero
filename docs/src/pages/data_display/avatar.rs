@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Avatar, AvatarGroup, AvatarSpec, Code, Input, Text};
 
@@ -6,7 +8,7 @@ static AVATAR_IMAGE: Asset = asset!("/assets/avatar.svg");
 
 const MISSING_SRC: &str = "/does-not-exist.png";
 
-/// The six people the group demo holds, printed verbatim by `Wrap` - `people`
+/// The six people the group demo holds, printed verbatim by `Wrap`. `people`
 /// is not a control, and it is most of what a reader needs. One field per
 /// line: the code block does not wrap, and a one-line struct literal runs off
 /// the right of it.
@@ -108,87 +110,85 @@ pub fn AvatarPage() -> Element {
                 props("Avatar", vec![
                     prop("name", "String")
                         .default("required")
-                        .doc("The person this avatar stands for, announced as its accessible name."),
-                    prop("src", "String")
-                        .doc("The picture. Falls through to the rest of the chain once it fails to load."),
-                    prop("initials", "String")
+                        .doc("The person this avatar stands for, read as its accessible name."),
+                    prop("src", "Option<String>")
+                        .default("None")
+                        .doc("The picture. Falls back to the rest of the chain when it fails to load."),
+                    prop("initials", "Option<String>")
+                        .default("None")
                         .doc("Drawn when there is no picture. Nothing is derived from `name`."),
-                    prop("alt", "String")
-                        .default("follows name")
-                        .doc("Overrides the announced name. `alt: \"\"` marks the avatar decorative."),
+                    prop("alt", "Option<String>")
+                        .default("None")
+                        .doc("Replaces the announced name. `alt: \"\"` marks the avatar decorative."),
                     prop("size", "Size")
-                        .default("theme.avatar.size")
-                        .doc("The square's side, which also sets the placeholder's font size."),
+                        .default("md")
+                        .doc("The side of the square, which also sets the placeholder's font size."),
                     prop("radius", "Size")
-                        .default("theme.avatar.radius")
-                        .doc("A step on the avatar's own radius scale, `2px` to `32px`. The default, `xxl`, is `9999px`: a circle."),
+                        .default("xxl")
+                        .doc("A step on the avatar's own radius scale, `2px` to `32px`. The default `xxl` is a circle."),
                     prop("variant", "Variant")
                         .default("tonal")
-                        .doc("Placeholder chrome; invisible once a picture loads."),
+                        .doc("The placeholder's look. Hidden once a picture loads."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
-                        .doc("Placeholder tint."),
-                    prop("children", "Element")
-                        .doc("Anything at all in place of the initials - an icon, a glyph."),
+                        .doc("The placeholder's tint."),
+                    prop("children", "Option<Element>")
+                        .default("None")
+                        .doc("Anything in place of the initials, such as an icon."),
                 ]),
                 props("AvatarGroup", vec![
                     prop("people", "Vec<AvatarSpec>")
                         .default("required")
-                        .doc("The members, in paint order: the first is drawn on top. The group owns them rather than taking children, which is what lets it count them."),
-                    prop("max", "usize")
-                        .doc("How many circles in total, the chip included, so the chip always stands for at least two people. Past that, the rest collapse into a `+N` chip, focusable and tooltipped, whose `aria-label` lists the same names."),
+                        .doc("The members. The first is drawn on top."),
+                    prop("max", "Option<usize>")
+                        .default("None")
+                        .doc("How many circles in total, the `+N` chip included, so the chip always stands for at least two people."),
                     prop("spacing", "Size")
-                        .default("theme.avatar_group.spacing")
-                        .doc("How far each circle is pulled over the one before it."),
+                        .default("sm")
+                        .doc("How far each circle overlaps the one before it."),
                     prop("size", "Size")
-                        .default("theme.avatar.size")
-                        .doc("Applied to every member, the chip included."),
+                        .default("md")
+                        .doc("For every member and the chip."),
                     prop("radius", "Size")
-                        .default("theme.avatar.radius")
-                        .doc("Applied to every member, the chip included."),
+                        .default("xxl")
+                        .doc("For every member and the chip."),
                     prop("variant", "Variant")
                         .default("tonal")
-                        .doc("Applied to every member, the chip included."),
+                        .doc("For every member and the chip."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
-                        .doc("The tint a member without a `color` of its own takes."),
+                        .doc("The tint of every member without a `color` of its own."),
                 ]),
                 props("AvatarSpec", vec![
                     prop("name", "String")
                         .default("required")
-                        .doc("The accessible name, and what the overflow chip lists."),
+                        .doc("The accessible name, and what the chip lists."),
                     prop("src", "Option<String>")
+                        .default("None")
                         .doc("The picture."),
                     prop("initials", "Option<String>")
+                        .default("None")
                         .doc("Drawn when there is no picture."),
                     prop("color", "Option<ThemeAwareValue>")
-                        .doc("This member's own tint, overriding the group's."),
+                        .default("None")
+                        .doc("This member's own tint."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A person as a fixed square, with a fallback chain: the picture, then "
+                    "A person as a fixed square. It shows the picture, else "
                     Code { source: "children" }
-                    ", then "
+                    ", else "
                     Code { source: "initials" }
-                    ", then a person glyph. Nothing is derived from "
+                    ", else a person glyph. A picture that fails to load falls back too. "
+                    "Nothing is derived from "
                     Code { source: "name" }
-                    " - an initial is a first grapheme cluster rather than a first character, "
-                    "and which one abbreviates a name is a property of the script, so the "
-                    "caller supplies it. The root is a "
-                    Code { source: "span role=\"img\"" }
-                    " carrying "
-                    Code { source: "name" }
-                    ", so a screen reader announces \"Ada Lovelace\" instead of spelling out "
-                    "the two letters; "
-                    Code { source: "alt: \"\"" }
-                    " marks it decorative, for the common case of an avatar sitting beside the "
-                    "person's visible name. It is not focusable and not interactive - wrap it "
-                    "in a "
+                    ", since the letters that abbreviate a name depend on the script. The "
+                    "avatar is not focusable. Wrap it in a "
                     Code { source: "Button" }
                     " or an "
                     Code { source: "Anchor" }
-                    " if it should be either."
+                    " to make it interactive."
                 }
             },
             Demo {
@@ -262,6 +262,24 @@ pub fn AvatarPage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    Code { source: "name" }
+                    " is the accessible name, so a screen reader says \"Ada Lovelace\" "
+                    "rather than the initials. Pass "
+                    Code { source: "alt: \"\"" }
+                    " where the name shows beside the avatar, or it is read twice. A "
+                    "decorative avatar is hidden whole, so put nothing focusable in it."
+                }
+                Text {
+                    "The group's "
+                    Code { source: "+N" }
+                    " chip is focusable, and its label lists the hidden names. Its words come "
+                    "from the "
+                    Code { source: "avatar" }
+                    " labels of the localization."
+                }
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Chip, Code, Marquee, Text},
@@ -46,7 +46,7 @@ pub fn MarqueePage() -> Element {
             properties: vec![props("Marquee", vec![
                 prop("children", "Element")
                     .default("required")
-                    .doc("What scrolls. Rendered once per copy; interactive children work only in the first copy."),
+                    .doc("What scrolls, rendered once per copy. Interactive children work only in the first copy."),
                 prop("orientation", "Orientation")
                     .default("horizontal")
                     .doc("The axis it scrolls along. A vertical marquee needs a height from `sx`, or it is as tall as all its copies."),
@@ -55,62 +55,44 @@ pub fn MarqueePage() -> Element {
                     .doc("Scrolls towards the end instead of the start."),
                 prop("duration", "u32")
                     .default("40000")
-                    .doc("Milliseconds per full cycle. A duration, not a speed: the same number moves a longer strip faster."),
+                    .doc("Milliseconds per full cycle. The same number moves a longer strip faster."),
                 prop("gap", "Size")
                     .default("md")
                     .doc("Between copies, and between the last and the first."),
                 prop("repeat", "u8")
                     .default("4")
-                    .doc("Copies laid in a row. Raise it when a gap crosses the view. Anything below 2 renders 2."),
+                    .doc("Copies in a row. Raise it when a gap crosses the view. Anything below 2 renders 2."),
                 prop("pause_on_hover", "bool")
                     .default("false")
-                    .doc("Pointer hover pauses. Not a way to stop it on its own: a keyboard or a touch screen cannot hover."),
+                    .doc("Pauses under the pointer. Not enough on its own, since a keyboard or a touch screen cannot hover."),
                 prop("paused", "Option<bool>")
                     .default("None")
-                    .doc("Strictly controlled when set - pair it with `onpausechange`. `None` leaves the state to the built-in toggle."),
+                    .doc("Controlled when set, so pair it with `onpausechange`. `None` leaves the state to the built-in toggle."),
                 prop("onpausechange", "EventHandler<bool>")
+                    .default("None")
                     .doc("The built-in toggle was pressed, with the state it asks for."),
                 prop("pause_control", "bool")
                     .default("true")
-                    .doc("Renders the pause toggle. Turn it off only when the page offers its own control, through `paused`."),
+                    .doc("Renders the pause toggle. Turn it off only when the page offers its own control through `paused`."),
                 prop("fade_edges", "bool")
                     .default("false")
-                    .doc("Fades both ends into the surface color, `--lsx-paper-background`. Only right on a surface of that color."),
+                    .doc("Fades both ends into the surface color. Only right on a surface of that color."),
             ])],
             lead: rsx! {
                 Text {
-                    "Content that scrolls on its own in an endless loop - a logo strip, a "
-                    "ticker. The children are rendered "
+                    "Content that scrolls on its own in an endless loop, such as a logo strip "
+                    "or a ticker. The children render "
                     Code { source: "repeat" }
-                    " times in a row, and every copy after the first is "
-                    Code { source: "aria-hidden" }
-                    " and "
-                    Code { source: "inert" }
-                    ", so it is read and tabbed through once - and interactive children "
-                    "work only in the first copy. "
+                    " times in a row. "
                     Code { source: "duration" }
-                    " is one full cycle, so adding an item makes the whole strip move faster."
-                }
-                Text {
-                    "The pause toggle is there for WCAG 2.2.2, which asks for a way to stop "
-                    "any motion that runs longer than five seconds. Its name stays "
-                    "\"Pause\" and "
-                    Code { source: "aria-pressed" }
-                    " says whether it is paused. Turn it off with "
-                    Code { source: "pause_control: false" }
-                    " only when the page offers its own control through "
-                    Code { source: "paused" }
-                    " and "
-                    Code { source: "onpausechange" }
-                    "."
+                    " is one full cycle, so adding an item makes the strip move faster."
                 }
                 Text {
                     "Under "
                     Code { source: "prefers-reduced-motion: reduce" }
-                    " it does not move at all: it shows one copy in a strip the reader "
-                    "scrolls themselves, without the fade or the toggle. That is pure CSS, "
-                    "so no control below can show it - switch the setting in your system "
-                    "or your browser's dev tools."
+                    " it does not move. It shows one copy in a strip the reader scrolls, "
+                    "without the fade or the toggle. To see it, switch the setting in your "
+                    "system or your browser's dev tools."
                 }
             },
             Demo {
@@ -156,6 +138,21 @@ pub fn MarqueePage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Every copy after the first is hidden and inert, so the content is read "
+                    "and tabbed through once. The pause toggle meets WCAG 2.2.2, which asks "
+                    "for a way to stop motion that runs longer than five seconds. It is a tab "
+                    "stop named \"Pause\", and "
+                    Code { source: "aria-pressed" }
+                    " says whether it is paused. Turn it off only when the page offers its "
+                    "own control through "
+                    Code { source: "paused" }
+                    " and "
+                    Code { source: "onpausechange" }
+                    "."
+                }
             }
         }
     }

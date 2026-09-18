@@ -1,15 +1,15 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use crate::icons::{ClipboardCheckIcon, CreditCardIcon, TruckIcon};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Accordion, AccordionOpen, Box, Button, Code, Flex, Icon, OptionLabel, OptionList, Options,
-        Text,
+        Accordion, AccordionOpen, Box, Button, Code, Flex, Icon, Kbd, List, ListItem, OptionLabel,
+        OptionList, Options, Text,
     },
     sx::sx,
 };
 
-/// The flag sits on the option, inside the one `options` prop - a section
+/// The flag sits on the option, inside the one `options` prop. A section
 /// this list refuses, rather than a step the type refuses everywhere.
 // snippet: after STEP_ENUM
 // snippet: let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
@@ -147,51 +147,41 @@ pub fn AccordionPage() -> Element {
                 props("Accordion", vec![
                     prop("open", "AccordionOpen<T>")
                         .default("One(None)")
-                        .doc("Which sections are expanded. The variant is the mode: `One(Option<T>)` holds at most one, `Many(Vec<T>)` any number. Strictly controlled - pair it with `onchange`."),
-                    prop("onchange", "EventHandler<AccordionOpen<T>>").doc("Called with the whole new open set, in the same mode, ready to store."),
-                    prop("panel", "Callback<T, Element>").doc("A section's body. A closed panel's content is never mounted, so it keeps no state."),
-                    prop("options", "OptionSource<T>").default("T::options()").doc("The sections to show. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`, for a section that renders but cannot be toggled and stays a tab stop. Named groups are accepted and drawn flattened - a section's own heading is already the outline."),
+                        .doc("Which sections are open. `One(Option<T>)` holds at most one, `Many(Vec<T>)` any number. Controlled, so pair it with `onchange`."),
+                    prop("onchange", "EventHandler<AccordionOpen<T>>")
+                        .default("None")
+                        .doc("Called with the whole new open set, in the same mode, ready to store."),
+                    prop("panel", "Callback<T, Element>")
+                        .default("None")
+                        .doc("A section's body. A closed panel is not mounted, so it keeps no state."),
+                    prop("options", "OptionSource<T>")
+                        .default("T::options()")
+                        .doc("The sections to show. A `Vec<T>` converts. An `OptionList<T>` can disable a section, which renders, cannot be toggled and stays a tab stop. Groups are drawn flat."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
-                        .doc("Overrides what the derive named a section. `OptionLabel::rich` draws the trigger as rsx and still names it."),
-                    prop("heading", "HtmlTag").default("h3").doc("The heading around each trigger, `h1`..`h6`."),
+                        .doc("Renames a section. `OptionLabel::rich` draws the trigger as rsx and still names it."),
+                    prop("heading", "HtmlTag").default("h3").doc("The heading around each trigger, `h1` to `h6`."),
                     prop("size", "Size").default("md").doc("Type and padding of the triggers and panels."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A list of sections over an enum, each a heading with a button that expands "
-                    "its panel. The sections are the enum's variants and "
+                    "Sections over an enum, each a heading with a button that opens its "
+                    "panel. "
                     Code { source: "panel" }
-                    " is a match over the same type, so a forgotten section is a compile error. "
-                    "A closed panel's content is not mounted: what it held is gone when it closes."
+                    " is a match over the same enum, so a forgotten section is a compile "
+                    "error. A closed panel is not mounted, so what it held is gone when it "
+                    "closes."
                 }
                 Text {
                     Code { source: "open" }
-                    " is strictly controlled, and its variant is the mode: "
+                    " is controlled, and its variant is the mode. "
                     Code { source: "AccordionOpen::One" }
-                    " holds at most one section, so opening another closes the first by "
-                    "construction; "
+                    " holds at most one section, so opening another closes the first. "
                     Code { source: "AccordionOpen::Many" }
                     " toggles each on its own. "
                     Code { source: "onchange" }
-                    " hands back the whole new set in the same mode."
-                }
-                Text {
-                    "Each trigger sits in a heading, "
-                    Code { source: "h3" }
-                    " unless "
-                    Code { source: "heading" }
-                    " says otherwise - pick the level the page outline needs first; "
-                    Code { source: "size" }
-                    " only changes the look. Every trigger is a tab stop; Up and Down move "
-                    "between triggers and Home and End jump to the ends, without toggling. Every "
-                    "open panel is a "
-                    Code { source: "role=\"region\"" }
-                    " named by its trigger, so a screen reader lists each one as a landmark "
-                    "- with a dozen sections open at once in "
-                    Code { source: "Many" }
-                    " mode that list gets long."
+                    " hands back the whole new set."
                 }
             },
             Demo {
@@ -281,6 +271,34 @@ pub fn AccordionPage() -> Element {
                         }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                List {
+                    ListItem {
+                        "Every trigger is a tab stop. "
+                        Kbd { "Enter" } " and " Kbd { "Space" } " toggle. "
+                        Kbd { "↑" } " and " Kbd { "↓" }
+                        " move between triggers, and "
+                        Kbd { "Home" } " and " Kbd { "End" }
+                        " jump to the ends, without toggling."
+                    }
+                    ListItem {
+                        "Pick the heading level the page outline needs, then the size. "
+                        Code { source: "h3" }
+                        " assumes a section title above the accordion."
+                    }
+                    ListItem {
+                        "Every open panel is a region named by its trigger. A "
+                        Code { source: "Many" }
+                        " accordion with a dozen open sections makes a long landmark list."
+                    }
+                    ListItem {
+                        "With "
+                        Code { source: "OptionLabel::rich" }
+                        ", the name replaces the drawn label, so it must contain the visible "
+                        "text (WCAG 2.5.3)."
+                    }
+                }
             }
         }
     }

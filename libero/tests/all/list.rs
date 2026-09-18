@@ -80,3 +80,39 @@ fn an_ordered_list_is_a_numbered_ol() {
         "{html}"
     );
 }
+
+/// The list's icon marks every item, an item's own replaces it, and a nested
+/// list does not inherit it (todo 778).
+#[test]
+fn list_icons_mark_items_and_stay_out_of_nested_lists() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                List { icon: rsx! { "L" },
+                    ListItem { "one" }
+                    ListItem { icon: rsx! { "I" }, "two" }
+                    ListItem {
+                        "three"
+                        List { ListItem { "nested" } }
+                    }
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    assert_eq!(body.matches(r#"data-slot="icon""#).count(), 3, "{body}");
+    assert_eq!(
+        body.matches(r#"aria-hidden="true">L</span>"#).count(),
+        2,
+        "{body}"
+    );
+    assert_eq!(
+        body.matches(r#"aria-hidden="true">I</span>"#).count(),
+        1,
+        "{body}"
+    );
+    assert_eq!(body.matches("with-icon").count(), 3, "{body}");
+}

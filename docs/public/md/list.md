@@ -4,15 +4,15 @@ Crate: `libero`
 Import: `use libero::components::{List, ListItem};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/list>
 Index: [index.md](index.md) lists every other page
-Description: An unstyled `<ul>`/`<li>` pair with themed gaps and nested indent.
+Description: A `<ul>` of `<li>` items without the browser's list styling, with themed gaps and nested indent.
 
-Renders a `<ul>`/`<li>` pair with the browser's default list styling removed -
-nested lists indent relative to their own content. `size` (`xs`-`xxl`, default
-`md`) controls item gap and nested-list indent together. Only the outer list
-carries `size`: a nested list's indent comes from the parent's own `& ul` rule,
-so setting `size` again on the inner `List` changes its items' gap, not its
-indent. `ordered: true` renders an `<ol>` with visible numbers instead, for
-steps whose order matters.
+A `<ul>` of `<li>` items without the browser's list styling. A nested list
+indents from its own content. Set `size` on the outer list only, since the
+parent sets a nested list's indent. On an inner `List`, `size` changes only the
+gap. `ordered: true` renders an `<ol>` with visible numbers.
+
+An `icon` on the list marks every item. A `ListItem`'s own `icon` replaces it
+for that item. A nested list does not take its parent's icon.
 
 ```rust,ignore
 List { ordered: true,
@@ -45,10 +45,33 @@ fn Demo() -> Element {
 }
 ```
 
+With icons:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Icon, List, ListItem};
+
+#[component]
+fn Checklist() -> Element {
+    rsx! {
+        List { icon: rsx! { Icon { variant: "standard", color: "primary", size: "sm", "✓" } },
+            ListItem { "Tests pass" }
+            ListItem { "Docs updated" }
+            ListItem { icon: rsx! { Icon { variant: "standard", color: "error", size: "sm", "✗" } },
+                "Changelog missing"
+            }
+        }
+    }
+}
+```
+
 ## Accessibility
 
-Keep the children of a `List` to `ListItem`s - a stray element between them
-breaks the list and its item count for a screen reader.
+Keep a `List`'s children to `ListItem`s. A stray element between them breaks
+the list and its item count for a screen reader.
+
+Icons are hidden from screen readers. When an icon carries meaning, such as
+done or missing, say it in the item's text too.
 
 ## Props
 
@@ -57,13 +80,15 @@ breaks the list and its item count for a screen reader.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Item gap and nested-list indent, together. |
-| `ordered` | `bool` | `false` | An `ol` with visible numbers, for items whose order is the point. |
+| `ordered` | `bool` | `false` | An `ol` with visible numbers, for items whose order matters. |
+| `icon` | `Option<Element>` | `None` | Shown at the start of every item, beside its first line. Hidden from screen readers. |
 | `children` | `Element` | required | The list's items. |
 
 ### ListItem
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
+| `icon` | `Option<Element>` | `None` | This item's own icon, in place of the list's. |
 | `children` | `Element` | required | The item's content. |
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
@@ -71,7 +96,7 @@ Like every component, both also take the shared props `sx`, `class`, `style`,
 
 ## Theme defaults
 
-`ListDefaults` on the theme; the gap and indent scales are separate, both in
+`ListDefaults` on the theme. The gap and indent scales are separate, both in
 pixels.
 
 | Field | Type | Description |
@@ -93,7 +118,8 @@ State tokens on the `<ul>`'s (or `<ol>`'s) `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `size-<size>` | The `size` in effect - this is what selects the gap and indent variables. |
-| `ordered` | `ordered` is set: decimal markers in a `2em` gutter. |
+| `size-<size>` | The `size` in effect, which selects the gap and indent variables. |
+| `ordered` | `ordered` is set. Decimal markers in a `2em` gutter. |
 
-`ListItem` sets no state tokens of its own.
+On a `ListItem`, `with-icon` is set while it shows an icon. The icon then sits
+in a `data-slot="icon"` span and the content in a `data-slot="body"` div.

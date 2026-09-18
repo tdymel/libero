@@ -4,10 +4,10 @@ Crate: `libero`
 Import: `use libero::components::{DataList, DataListItem};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/data_list>
 Index: [index.md](index.md) lists every other page
-Description: A `<dl>` of term/description pairs.
+Description: A `<dl>` of term/description pairs, where one term can carry several descriptions.
 
-Renders a `<dl>` of term/description pairs. A term's descriptions share one
-`<dd>`: dioxus merges `DataListItem`'s children into one node.
+A `<dl>` of terms and descriptions. One term can carry several descriptions,
+which share one `<dd>`.
 
 ## Usage
 
@@ -29,7 +29,7 @@ fn Demo() -> Element {
             DataListItem {
                 label: rsx! { "Phone" },
                 for phone in &phones {
-                    "{phone}"
+                    div { "{phone}" }
                 }
             }
         }
@@ -37,14 +37,13 @@ fn Demo() -> Element {
 }
 ```
 
-`orientation: "horizontal"` switches the `<dl>` to a two-column grid, terms in
-the first column and every description in the second - pinned explicitly, so a
-term's second `<dd>` cannot flow back into the term column.
+`orientation: "horizontal"` makes the `<dl>` a two-column grid, with terms in
+the first column and every description in the second.
 
 ## Accessibility
 
-Keep the `DataListItem`s directly inside the `DataList` - an intervening wrapper
-element breaks the term/description pairing.
+Put each `DataListItem` directly inside the `DataList`. A wrapper element
+between them breaks the pairing of term and description.
 
 ## Props
 
@@ -52,23 +51,23 @@ element breaks the term/description pairing.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `orientation` | `Orientation` | `vertical` | `horizontal` puts each description beside its term; `vertical` stacks it below. |
-| `gap` | `Size` | `md` | Row gap. Off-scale values go through `sx`. |
-| `children` | `Element` | required | `DataListItem`s, or any `dt`/`dd` content. |
+| `orientation` | `Orientation` | `vertical` | `horizontal` puts each description beside its term, `vertical` below it. |
+| `gap` | `Size` | `md` | Row gap. Other values go through `sx`. |
+| `children` | `Element` | required | `DataListItem`s, or any `dt` and `dd` content. |
 
 ### DataListItem
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `label` | `Element` | required | The term (`<dt>`). `sx`/`class`/`states` decorate this element only - nothing wraps a term together with its descriptions. |
-| `children` | `Element` | required | Descriptions for `label`, in a single `<dd>`: dioxus merges the children into one node. |
+| `label` | `Element` | required | The term, a `<dt>`. `sx`, `class` and `states` style the term only. |
+| `children` | `Element` | required | The term's descriptions, in one `<dd>`. |
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
 
 ## Theme defaults
 
-`DataListDefaults` on the theme; the gap scale is in pixels.
+`DataListDefaults` on the theme. The gap scale is in pixels.
 
 | Field | Type | Description |
 |---|---|---|
@@ -87,8 +86,8 @@ State tokens on the `<dl>`'s `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `size-<size>` | The `gap` step in effect - this is what selects the gap variable. |
-| `horizontal` | `orientation` is `horizontal`; this is what switches the `<dl>` to a grid. |
+| `size-<size>` | The `gap` step in effect, which selects the gap variable. |
+| `horizontal` | `orientation` is `horizontal`, which makes the `<dl>` a grid. |
 
-`DataListItem` sets no state tokens of its own; its `states` prop lands on the
+`DataListItem` sets no state tokens of its own. Its `states` prop lands on the
 `<dt>`.

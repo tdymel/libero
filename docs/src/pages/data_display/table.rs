@@ -82,49 +82,42 @@ pub fn TablePage() -> Element {
             markdown: "/md/table.md",
             properties: vec![
                 props("Table", vec![
-                    prop("data", "Vec<T>").doc("One row each, in source order until a column is sorted."),
-                    prop("columns", "Vec<Column<T>>").doc("Built with `column(..)`."),
-                    prop("caption", "Option<String>").doc("A visible title above the header row, and the table's accessible name."),
-                    prop("empty", "Option<Element>").doc("Shown in one full-width row when `data` is empty."),
-                    prop("scroll", "bool").default("false").doc("Wraps the table in a named, focusable `role=\"region\"` that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
+                    prop("data", "Vec<T>").default("required").doc("One row each, in source order until a column is sorted."),
+                    prop("columns", "Vec<Column<T>>").default("required").doc("Built with `column(..)`."),
+                    prop("caption", "Option<String>").default("None").doc("A visible title above the header row, and the table's accessible name."),
+                    prop("empty", "Option<Element>").default("None").doc("Shown in one full-width row when `data` is empty."),
+                    prop("scroll", "bool").default("false").doc("Wraps the table in a named, focusable region that scrolls sideways. `class`, `sx` and `attributes` stay on the table."),
                 ]),
                 props("column()", vec![
-                    prop("header", "String").doc("The column's title, given as the argument to `column(..)`."),
-                    prop("value", "fn(&T) -> V").doc("Reads one cell out of a row. `V`'s `CellValue` impl decides sort order and alignment, then is erased. Strings sort as text and align left, every integer and float sorts numerically and aligns right, `bool` prints `true`/`false`, and `Option<V>` keeps the inner alignment, renders `None` empty and sorts it last in both directions. Your own type joins them with one `impl CellValue`: `cell_text` is required, `sort_key` and `align` have defaults."),
+                    prop("header", "String").default("required").doc("The column's title, the argument to `column(..)`."),
+                    prop("value", "fn(&T) -> V").default("required").doc("Reads one cell out of a row. `V` sets the sort order and alignment. Text sorts as text and aligns left, numbers sort numerically and align right, and `Option<V>` renders `None` empty and sorts it last. Your own type joins them with one `impl CellValue`."),
                     prop("sortable", "bool").default("false").doc("Turns the header into a sort button."),
-                    prop("render", "fn(&T) -> Element").doc("Replaces the cell body. Sorting still uses `value`."),
-                    prop("align", "CellAlign").default("follows the cell type").doc("Overrides the alignment `value`'s type chose."),
+                    prop("render", "fn(&T) -> Element").default("None").doc("Replaces the cell body. Sorting still uses `value`."),
+                    prop("align", "CellAlign").default("follows the cell type").doc("Overrides the alignment the cell type chose."),
                     prop("row_header", "bool").default("false").doc("Renders the column's cells as `th scope=\"row\"`, so a screen reader names each row by it. One per table, usually the first."),
                 ]).without_base_props(),
             ],
             lead: rsx! {
                 Text {
-                    "Data in, table out. Each column is built with "
-                    Code { source: "column" }
-                    " - a header, a "
-                    Code { source: "value" }
-                    " that reads one cell out of a row, and whatever else that column needs. "
-                    Code { source: "Table" }
-                    " itself needs only "
+                    "A table built from "
                     Code { source: "data" }
                     " and "
                     Code { source: "columns" }
-                    "."
-                }
-                Text {
-                    "The cell's type does the quiet work: "
+                    ". Each column comes from "
+                    Code { source: "column" }
+                    ", with a header and a "
                     Code { source: "value" }
-                    " reads it for the column's sort order and alignment, then erases it, which is why columns over different cell types live in one "
-                    Code { source: "Vec" }
-                    ". A numeric column sorts numerically and aligns right without being told."
+                    " that reads one cell out of a row. The cell's type sets the sort order "
+                    "and alignment, so a numeric column sorts numerically and aligns right "
+                    "on its own."
                 }
                 Text {
                     Code { source: "sortable" }
-                    " turns a header into a button - the first click sorts ascending, the next flips it, and the sort state stays inside "
-                    Code { source: "Table" }
-                    ". "
+                    " turns a header into a button. The first click sorts ascending and the "
+                    "next flips it. "
                     Code { source: "render" }
-                    " changes only what a cell draws, so the Role column below still sorts by its text and not by its chip."
+                    " changes only what a cell draws, so the Role column below still sorts "
+                    "by its text."
                 }
             },
             Demo {
@@ -163,23 +156,24 @@ pub fn TablePage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Name every table: "
+                    "Name every table. "
                     Code { source: "caption" }
-                    " shows a title and names it, or "
+                    " shows a title and names it, "
                     Code { source: "aria_labelledby" }
-                    " points at a heading already on the page, or "
+                    " points at a heading already on the page, and "
                     Code { source: "aria_label" }
-                    " names it without text. An unnamed table warns in the console in debug builds."
+                    " names it without text. An unnamed table warns in a debug build."
                 }
                 Text {
                     "A table wider than its container needs "
                     Code { source: "scroll: true" }
-                    ": the region is a tab stop, so a keyboard user can scroll it with the arrow keys. A sortable header is a button; Enter or Space sorts."
+                    ". The region is a tab stop, so a keyboard user can scroll it with the "
+                    "arrow keys. A sortable header is a button, and Enter or Space sorts."
                 }
                 Text {
                     "Mark the column that names a row with "
                     Code { source: ".row_header()" }
-                    ": a screen reader then reads that name as it moves down any other column."
+                    ". A screen reader then reads that name as it moves down any other column."
                 }
             }
         }

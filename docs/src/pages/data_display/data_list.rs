@@ -1,10 +1,10 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, DataList, DataListItem, Text};
 
-/// The pairs are the fixture - `orientation` and `gap` are the props - so the
-/// code block prints them verbatim, `for` loop included: that loop is the
-/// multi-description claim the lead makes.
+/// The pairs are the fixture, and `orientation` and `gap` the props, so the
+/// code block prints them verbatim. The `for` loop shows the lead's claim of
+/// several descriptions per term.
 // snippet: let phones = ["+49 30 1234567"];
 // snippet: in DataList { .. }
 const CHILDREN: &str = r#"DataListItem {
@@ -15,7 +15,7 @@ DataListItem { label: rsx! { "Owner" }, "Jamie Chen" }
 DataListItem {
     label: rsx! { "Phone" },
     for phone in &phones {
-        "{phone}"
+        div { "{phone}" }
     }
 }"#;
 
@@ -32,26 +32,31 @@ pub fn DataListPage() -> Element {
                 props("DataList", vec![
                     prop("orientation", "Orientation")
                         .default("vertical")
-                        .doc("`horizontal` puts each description beside its term; `vertical` stacks it below."),
+                        .doc("`horizontal` puts each description beside its term, `vertical` below it."),
                     prop("gap", "Size")
                         .default("md")
-                        .doc("Row gap. Off-scale values go through `sx`."),
-                    prop("children", "Element").doc("DataListItems, or any dt/dd content."),
+                        .doc("Row gap. Other values go through `sx`."),
+                    prop("children", "Element")
+                        .default("required")
+                        .doc("`DataListItem`s, or any `dt` and `dd` content."),
                 ]),
                 props("DataListItem", vec![
-                    prop("label", "Element").doc("The term (`<dt>`). `sx`/`class`/`states` decorate this element only - nothing wraps a term together with its descriptions."),
-                    prop("children", "Element").doc("Descriptions for `label`, in a single `<dd>`: dioxus merges the children into one node."),
+                    prop("label", "Element")
+                        .default("required")
+                        .doc("The term, a `<dt>`. `sx`, `class` and `states` style the term only."),
+                    prop("children", "Element")
+                        .default("required")
+                        .doc("The term's descriptions, in one `<dd>`."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "Renders a "
+                    "A "
                     Code { source: "dl" }
-                    " of term/description pairs. A term's descriptions share one "
+                    " of terms and descriptions. One term can carry several descriptions, "
+                    "which share one "
                     Code { source: "dd" }
-                    ": dioxus merges "
-                    Code { source: "DataListItem" }
-                    "'s children into one node."
+                    "."
                 }
             },
             // snippet: let phones = ["+49 30 1234567"];
@@ -78,11 +83,21 @@ pub fn DataListPage() -> Element {
                         DataListItem {
                             label: rsx! { "Phone" },
                             for phone in phones.clone() {
-                                "{phone}"
+                                div { "{phone}" }
                             }
                         }
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Put each "
+                    Code { source: "DataListItem" }
+                    " directly inside the "
+                    Code { source: "DataList" }
+                    ". A wrapper element between them breaks the pairing of term and "
+                    "description."
+                }
             }
         }
     }

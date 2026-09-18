@@ -4,7 +4,7 @@ use libero::components::{Code, Icon, Input, Text};
 
 use crate::icons::CheckmarkIcon;
 
-/// The svg the badge wraps - a subtree, so the code block prints it verbatim.
+/// The svg the box wraps. A subtree, so the code block prints it verbatim.
 const CHILDREN: &str = "CheckmarkIcon {}";
 
 #[component]
@@ -19,31 +19,29 @@ pub fn IconPage() -> Element {
                     prop("component", "HtmlTag").default("span").doc("Element to render as."),
                     prop("variant", "Variant")
                         .default("filled")
-                        .doc("Chrome around the svg, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. A badge is not interactive, so it takes no hover response."),
+                        .doc("The look, shared with `Button`. An icon is not interactive, so it has no hover state."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
-                        .doc("Sets the container's CSS color, which a currentColor svg then inherits. A theme color also tints the background under variant filled."),
+                        .doc("The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background."),
                     prop("size", "ThemeAwareValue")
                         .default("md")
-                        .doc("Badge width and height."),
+                        .doc("Width and height."),
                     prop("radius", "ThemeAwareValue")
                         .default("sm")
-                        .doc("Corner radius of the badge."),
-                    prop("children", "Element").doc("The svg to badge."),
+                        .doc("Corner radius."),
+                    prop("children", "Element").default("required").doc("The svg."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "Wraps an svg child in a sized, colored badge. "
-                    Code { source: "color" }
-                    " sets the container's CSS color, which any child svg using "
+                    "Wraps an svg in a sized, colored box. An svg drawn in "
                     Code { source: "currentColor" }
-                    " for its fill/stroke then inherits. Hidden from assistive technology "
-                    "unless named: an "
-                    Code { source: "aria_label" }
-                    " makes it "
-                    Code { source: "role=\"img\"" }
-                    "."
+                    " takes the box's "
+                    Code { source: "color" }
+                    ". With "
+                    Code { source: "standard" }
+                    " the svg fills the box. Every other variant insets it, clear of the "
+                    "box's edges."
                 }
             },
             Demo {
@@ -80,11 +78,16 @@ pub fn IconPage() -> Element {
             }
             DocSection { title: "Accessibility",
                 Text {
-                    "An icon that means something needs "
+                    "An icon is hidden from screen readers. One that means something needs "
                     Code { source: "aria_label" }
+                    ", which makes it "
+                    Code { source: "role=\"img\"" }
                     ". A "
                     Code { source: "<title>" }
-                    " inside the svg does not name it: an unnamed Icon hides it with the rest."
+                    " inside the svg does not name it, since it is hidden with the rest. "
+                    "For a clickable icon, use "
+                    Code { source: "ActionIcon" }
+                    "."
                 }
             }
         }

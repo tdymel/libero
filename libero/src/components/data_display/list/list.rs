@@ -29,8 +29,19 @@ base_props! {
         /// An `ol` with visible numbers, for items whose order is the point.
         #[props(default)]
         ordered: bool,
+        /// Shown at the start of every item, beside its first line. A
+        /// `ListItem`'s own `icon` overrides it.
+        #[props(default)]
+        icon: Option<Element>,
         children: Element,
     }
+}
+
+/// The list's `icon`, for its items. Every `List` provides one, so a nested
+/// list does not inherit its parent's.
+#[derive(Clone, Copy)]
+pub(crate) struct ListContext {
+    pub(crate) icon: Signal<Option<Element>>,
 }
 
 /// A vertical list of [`ListItem`](super::ListItem)s: a bare `ul`, or with
@@ -50,6 +61,16 @@ base_props! {
 pub fn List(props: ListProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.list.size);
+
+    let context = use_context_provider(|| ListContext {
+        icon: Signal::new(props.icon.clone()),
+    });
+    // Guarded render-time write, as `Grid` does, so an unchanged render wakes
+    // no item.
+    if *context.icon.peek() != props.icon {
+        let mut icon = context.icon;
+        icon.set(props.icon.clone());
+    }
 
     let states: Input<States> = props
         .states

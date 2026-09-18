@@ -6,12 +6,10 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_d
 Index: [index.md](index.md) lists every other page
 Description: An ordered list of events drawn against a rail, with an `active` index colouring the bullets and connectors up to the current one.
 
-An ordered list of events drawn against a rail. It renders an
-`<ol role="list">` - the rail shows position and count visually, and the list is
-how a screen-reader user gets the same two facts. `active` names the current
-event: bullets up to and including it draw in the accent, as do the connectors
-between them, so the rail reads as progress rather than as a highlight. Bullets
-are decorative and hidden from the accessibility tree; the title is the text.
+An ordered list of events drawn against a rail, rendered as an
+`<ol role="list">`. `active` marks the current event. Bullets up to it fill
+with the accent and the connectors between them draw in it, so the rail reads
+as progress. Done and pending bullets differ by shape too, not by color alone.
 
 ## Usage
 
@@ -39,14 +37,9 @@ fn Demo() -> Element {
 }
 ```
 
-`items` is a `Vec`, not compound children, and that is a dioxus constraint
-rather than a preference: there is no `Children.map`, so `Timeline.Item`
-children could not see their own order, and an item's connector colour is a
-function of `active` and its own index. A `Vec` makes that plain indexing.
-
-`active` is strictly controlled. Bind it to whatever already knows how far
-along the process is, and the rail follows. An index past the end clamps to the
-last event, so "step 7 of 4" means finished rather than nothing.
+`active` is controlled. Bind it to whatever knows how far along the process
+is. An index past the end clamps to the last event, so "step 7 of 4" means
+finished.
 
 ```rust
 use dioxus::prelude::*;
@@ -70,17 +63,14 @@ fn Demo() -> Element {
 }
 ```
 
-Two active states move independently. A bullet draws active for `0..=active`,
-and the connector *below* an event draws active for `0..active` - so the rail
-between completed events is filled, and the span below the current one is not.
-An active bullet fills with the accent where a pending one stays a ring, so
-done and pending differ by shape as well as by colour.
+A bullet draws active for `0..=active`, and the connector below an event for
+`0..active`. So the rail between completed events is filled, and the span below
+the current one is not.
 
 ## Events
 
-`TimelineEvent` is a builder, because the parts compose: a title alone is the
-common case, and content, a custom bullet, a colour and a line style are each
-independently optional.
+`TimelineEvent` is a builder. A title alone is the common case, and content, a
+custom bullet, a color and a line style are each optional.
 
 ```rust
 use dioxus::prelude::*;
@@ -103,59 +93,45 @@ fn Demo() -> Element {
 }
 ```
 
-`.color(..)` overrides the timeline's accent for one event - an error step in
-an otherwise unremarkable run - and `.line(..)` sets the connector *below* the
-event it is called on. The last event has no connector: a rail that runs past
-its final marker points at nothing.
-
-A `.bullet(..)` holding an icon inverts when active: the bullet fills with the
-accent and the glyph takes the surface colour, because a light glyph on a
-white ring is invisible.
-
-**Never put anything focusable in a bullet.** It is `aria-hidden="true"`, and
-`aria-hidden` does not remove an element from the tab order - a `Button` or a
-link in a bullet stays tabbable and announces as nothing, which is a dead stop
-for a keyboard user. Nothing can detect this for you: `.bullet()` takes any
-`Element`. Interactive content belongs in `.content(..)`.
+`.color(..)` overrides the accent for one event, and `.line(..)` sets the
+connector below the event it is called on. The last event has no connector. A
+`.bullet(..)` holding an icon inverts when active, so the glyph stays visible.
 
 ## Alignment
 
-`align` puts content on either side of the rail, or alternates it:
+`align` puts content on either side of the rail, or alternates it.
 
 ```rust,ignore
 Timeline { align: "alternate", items: vec![/* .. */] }
 ```
 
-`"alternate"` alternates at every width. There is no minimum below which it
-falls back to one side: a timeline that narrow will be cramped, but asking for
-one is a decision you have made and the component does not overrule it.
+`"alternate"` alternates at every width and fills its parent, where `"start"`
+and `"end"` shrink to their content. Give it a parent as wide as you want the
+rail centred in.
 
-`"alternate"` also makes the list fill its parent's width, where `"start"` and
-`"end"` shrink to their content - a rail centred in the list needs a width
-to be centred in. Give it a parent with the width you want the rail centred
-in, and that is also how you make it narrower.
-
-The sides are logical: under `dir="rtl"` `"start"` puts the rail on the right,
-`"end"` on the left, and `"alternate"` starts its first event left of the rail.
+In a right-to-left layout, `"start"` puts the rail on the right and `"end"` on
+the left.
 
 ## Accessibility
 
-Bullets are `aria-hidden`, so a focusable element inside a bullet is a tab stop
-with no accessible name - see "Events".
+The list gives a screen reader the position and count the rail shows. Bullets
+are `aria-hidden`, and the title is the text. A custom `.bullet(..)` is hidden
+too, so never put anything focusable in one. It would stay a tab stop with no
+name. Interactive content belongs in `.content(..)`.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `items` | `Vec<TimelineEvent>` | `vec![]` | The events, in render order. |
-| `active` | `usize` | - | The current event. Bullets `0..=active` and connectors `0..active` draw active; out of range clamps to the last event. |
-| `align` | `TimelineAlign` | `theme.timeline.align` | `"start"`, `"end"` or `"alternate"`; mirrored under `dir="rtl"`. |
-| `color` | `ThemeAwareValue` | `theme.timeline.color` | The active accent. A per-event `.color(..)` overrides it. |
-| `bullet_size` | `Size` | `theme.timeline.bullet_size` | Bullet diameter. |
-| `radius` | `Size` | `theme.timeline.radius` | Bullet corner radius; `xl` is the dot. |
-| `gap` | `Size` | `theme.timeline.gap` | Space between events, which is also each connector's length. |
+| `active` | `usize` | `None` | The current event. Bullets up to and including it, and the connectors between them, draw in the accent. An index past the end clamps to the last event. |
+| `align` | `TimelineAlign` | `start` | `start`, `end`, or `alternate` for content on both sides of a centred rail. Mirrored in a right-to-left layout. |
+| `color` | `ThemeAwareValue` | `primary` | The active accent. An event's own `.color(..)` overrides it. |
+| `bullet_size` | `Size` | `md` | Bullet diameter. |
+| `radius` | `Size` | `xl` | Bullet corner radius. `xl` is a dot. |
+| `gap` | `Size` | `xl` | Space between events, which is also each connector's length. |
 
-`TimelineEvent`:
+`TimelineEvent`
 
 | Method | Type | Default | Description |
 |---|---|---|---|
@@ -163,7 +139,7 @@ with no accessible name - see "Events".
 | `.content(..)` | `Element` | none | The body below the title. |
 | `.bullet(..)` | `Element` | the dot | An icon or avatar inside the bullet. Inverts when active. |
 | `.color(..)` | `impl Into<ThemeAwareValue>` | inherits | This event's own accent. |
-| `.line(..)` | `TimelineLine` | `Solid` | The connector below this event: `Solid`, `Dashed`, `Dotted`. |
+| `.line(..)` | `TimelineLine` | `Solid` | The connector below this event, `Solid`, `Dashed` or `Dotted`. |
 
 Like every component, `Timeline` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
@@ -177,7 +153,7 @@ Like every component, `Timeline` also takes the shared props `sx`, `class`,
 | `align` | `TimelineAlign` | `Start` | Which side content sits on. |
 | `color` | `&'static str` | `"primary.6"` | The active accent. |
 | `line_color` | `&'static str` | `"muted.6"` | Inactive bullets and connectors, 3:1 on the page (WCAG 1.4.11). |
-| `bullet_background` | `&'static str` | `PAPER_BACKGROUND` | The bullet's fill, and the glyph colour once it inverts. Reads the surface token, so dark mode is a change to `PaperDefaults`. |
+| `bullet_background` | `&'static str` | `PAPER_BACKGROUND` | The bullet's fill, and the glyph colour once it inverts. Follows the surface color, so dark mode comes from `PaperDefaults`. |
 | `radius` | `Size` | `Xl` | Bullet corner radius. |
 | `bullet_size` | `Size` | `Md` | Which step of `bullet_sizes` is the default. |
 | `bullet_sizes` | `Sizes<u16>` | 12/16/20/24/28/32 px | The bullet scale. |
@@ -192,20 +168,19 @@ Like every component, `Timeline` also takes the shared props `sx`, `class`,
 | `--lsx-timeline-color` | The active accent. Set per event by `.color(..)`. |
 | `--lsx-timeline-line-color` | Inactive bullets and connectors. |
 | `--lsx-timeline-line-width` | Connector thickness and bullet ring width. |
-| `--lsx-timeline-bullet-background` | The bullet's fill; `var(--lsx-paper-background)` by default. |
+| `--lsx-timeline-bullet-background` | The bullet's fill, `var(--lsx-paper-background)` by default. |
 | `--lsx-timeline-bullet-size-*` | The bullet scale, one per `Size`. |
 | `--lsx-timeline-gap-*` | The event-spacing scale, one per `Size`. |
 
-Three more are resolved per element rather than per theme, so one rule serves
-every combination instead of one rule per combination: `--lsx-timeline-bullet`,
-`--lsx-timeline-space` and `--lsx-timeline-radius` hold the picked step of each
-size axis on the root, and `--lsx-timeline-line-style`,
-`--lsx-timeline-connector` and `--lsx-timeline-marker` hold each event's line
-style and its two active colours.
+Some are set per element. `--lsx-timeline-bullet`, `--lsx-timeline-space` and
+`--lsx-timeline-radius` hold the picked step of each size on the root.
+`--lsx-timeline-line-style`, `--lsx-timeline-connector` and
+`--lsx-timeline-marker` hold each event's line style and its two active
+colours.
 
 ## Data attributes
 
-On the root:
+On the root.
 
 | Token | When |
 |---|---|
@@ -214,7 +189,7 @@ On the root:
 | `radius-xs`..`radius-xxl` | The resolved `radius`. |
 | `gap-xs`..`gap-xxl` | The resolved `gap`. |
 
-On each event, and on its bullet:
+On each event, and on its bullet.
 
 | Token | When |
 |---|---|

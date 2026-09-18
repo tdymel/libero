@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Avatar, Box, Code, Float, Indicator, Input, Text},
@@ -48,39 +50,35 @@ pub fn IndicatorPage() -> Element {
             properties: vec![props("Indicator", vec![
                 prop("label", "Option<u32>")
                     .default("None")
-                    .doc("The count. `None` is the bare dot. A number, not text, so `max` can cap it."),
+                    .doc("The count. `None` is the bare dot. A number, so `max` can cap it."),
                 prop("max", "Option<u32>")
                     .default("99")
-                    .doc("Above it, the label renders as `{max}+`. The theme's cap unless set."),
+                    .doc("Above it, the label renders as `{max}+`. Falls back to the theme's cap."),
                 prop("size", "Size")
                     .default("md")
-                    .doc("The dot's diameter, and the height of a labelled one, on the indicator's own scale - 6px to 22px."),
+                    .doc("The dot's diameter, and the height of a labelled one, from 6px to 22px."),
                 prop("color", "ThemeAwareValue")
                     .default("error")
-                    .doc("The fill; a theme color name or a literal CSS color. A theme color also brings the `-contrast` twin the label reads with."),
+                    .doc("The fill, a theme color name or a CSS color. A theme color also sets a label color that reads on it."),
                 prop("radius", "Size")
                     .default("xxl")
-                    .doc("A step on the indicator's own radius scale, `1px` to `6px`. The default, `xxl`, is `9999px`: round at every diameter."),
+                    .doc("A step on the indicator's own radius scale, `1px` to `6px`. The default `xxl` is round at every size."),
                 prop("with_border", "bool")
                     .default("false")
-                    .doc("A ring in the surface color, `--lsx-paper-background`, so the dot reads on top of a picture."),
+                    .doc("A ring in the surface color, so the dot reads on top of a picture."),
                 prop("processing", "bool")
                     .default("false")
-                    .doc("A ping growing and fading behind the dot, repeating until you set it back to `false`: turn it off when the work ends (WCAG 2.2.2). Stops under `prefers-reduced-motion`."),
+                    .doc("A ping behind the dot that repeats until you set it back to `false`. Stops under `prefers-reduced-motion`."),
             ])],
             lead: rsx! {
                 Text {
-                    "A dot or a small count pinned to something else - an unread marker on an "
-                    "avatar, a pending count on a button. Renders one "
-                    Code { source: "<span aria-hidden=\"true\">" }
-                    " and nothing that positions it: the corner, the offset and the layer are "
+                    "A dot or a small count pinned to something else, such as an unread "
+                    "marker on an avatar. It does not position itself. Put it in a "
                     Code { source: "Float" }
-                    "'s, inside a "
+                    " inside a "
                     Code { source: "position: relative" }
-                    " parent. To hide it, do not render it. The count is not announced - put "
-                    "it in the name of what the indicator marks, as the avatar's "
-                    Code { source: "alt" }
-                    " does below."
+                    " parent, which sets the corner, the offset and the layer. To hide it, "
+                    "do not render it."
                 }
             },
             Demo {
@@ -128,6 +126,28 @@ pub fn IndicatorPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_anchor),
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Screen readers never read the indicator. Put the count in the name of "
+                    "what it marks, as the avatar's "
+                    Code { source: "alt" }
+                    " does above, or "
+                    Code { source: "aria_label: \"Messages, 128 unread\"" }
+                    " on a button. To have the indicator read, pass "
+                    Code { source: "aria_hidden: \"false\"" }
+                    " and wrap it in your own "
+                    Code { source: "role=\"status\"" }
+                    " region."
+                }
+                Text {
+                    Code { source: "processing" }
+                    " pings until you turn it off. Set it back to "
+                    Code { source: "false" }
+                    " when the work ends, since motion that never stops fails WCAG 2.2.2. A "
+                    "theme color labels the count at 4.5:1 or better. With a CSS color, check "
+                    "the contrast yourself."
+                }
             }
         }
     }

@@ -6,19 +6,14 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_d
 Index: [index.md](index.md) lists every other page
 Description: A sortable data table built from a row type and a list of column definitions.
 
-Data in, table out. Each column is built with `column(..)` - a header, a `value`
-that reads one cell out of a row, and whatever else that column needs. `Table`
-itself needs only `data` and `columns`.
+A table built from `data` and `columns`. Each column comes from `column(..)`,
+with a header and a `value` that reads one cell out of a row. The cell's type
+sets the sort order and alignment, so a numeric column sorts numerically and
+aligns right on its own.
 
-The cell's type does the quiet work: `value` reads it for the column's sort order
-and alignment, then erases it, which is why columns over different cell types
-live in one `Vec`. A numeric column sorts numerically and aligns right without
-being told.
-
-`sortable` turns a header into a button - the first click sorts ascending, the
-next flips it, and the sort state stays inside `Table`. `render` changes only
-what a cell draws, so a Role column rendered as a [Chip](chip.md) still sorts by
-its text and not by its chip.
+`sortable` turns a header into a button. The first click sorts ascending and
+the next flips it. `render` changes only what a cell draws, so a Role column
+rendered as a [Chip](chip.md) still sorts by its text.
 
 ## Usage
 
@@ -59,8 +54,8 @@ fn Demo() -> Element {
 ```
 
 Strings sort as text and align left. Every integer and float sorts numerically
-and aligns right. `bool` prints `true`/`false`. `Option<V>` keeps the inner
-type's alignment, renders `None` as empty, and sorts it last in both directions.
+and aligns right. `bool` prints `true` or `false`. `Option<V>` keeps the inner
+type's alignment, renders `None` empty and sorts it last in both directions.
 
 ```rust,ignore
 |p: &Person| p.name.clone()  // String      -> text sort, start-aligned
@@ -68,8 +63,8 @@ type's alignment, renders `None` as empty, and sorts it last in both directions.
 |p: &Person| p.bonus        // Option<f64> -> None renders empty, sorts last
 ```
 
-Your own type joins them with one `impl CellValue`: `cell_text` is required,
-`sort_key` and `align` have defaults.
+Your own type joins them with one `impl CellValue`. `cell_text` is required,
+and `sort_key` and `align` have defaults.
 
 ```rust
 use dioxus::prelude::*;
@@ -87,8 +82,7 @@ impl CellValue for Money {
         SortKey::num(self.0 as f64)
     }
 
-    // An associated function, not a method: alignment is a property of the
-    // type, not of one cell.
+    // An associated function, since alignment belongs to the type.
     fn align() -> CellAlign {
         CellAlign::End
     }
@@ -120,11 +114,10 @@ fn Demo() -> Element {
 }
 ```
 
-`align` on the column overrides whatever the cell type chose, for the case where
-one column should not follow its type.
+`align` on the column overrides the alignment the cell type chose.
 
 A table wider than its container takes `scroll: true`, and `empty` fills the
-body while `data` has no rows:
+body while `data` has no rows.
 
 ```rust
 use dioxus::prelude::*;
@@ -153,18 +146,18 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Name every table: `caption` shows a title and names it, `aria_labelledby`
-points at a heading already on the page, or `aria_label` names it without text.
-An unnamed table warns in the console in debug builds.
+Name every table. `caption` shows a title and names it, `aria_labelledby`
+points at a heading already on the page, and `aria_label` names it without
+text. An unnamed table warns in a debug build.
 
-A table wider than its container needs `scroll: true`: the wrapper is a
+A table wider than its container needs `scroll: true`. The wrapper is a
 `role="region"` named like the table and a tab stop, so a keyboard user can
-scroll it with the arrow keys. A sortable header is a button; Enter or Space
-sorts. Only the sorted header carries `aria-sort`.
+scroll it with the arrow keys. A sortable header is a button, and Enter or
+Space sorts. Only the sorted header carries `aria-sort`.
 
-Mark the column that names a row with `.row_header()`: its cells render as
+Mark the column that names a row with `.row_header()`. Its cells render as
 `th scope="row"`, so a screen reader reads that name as it moves down any other
-column. It looks like the other cells; the change is semantic only.
+column. It looks like the other cells.
 
 ## Props
 
@@ -174,30 +167,29 @@ column. It looks like the other cells; the change is semantic only.
 |---|---|---|---|
 | `data` | `Vec<T>` | required | One row each, in source order until a column is sorted. |
 | `columns` | `Vec<Column<T>>` | required | Built with `column(..)`. |
-| `caption` | `Option<String>` | - | A visible title above the header row, and the table's accessible name. |
-| `empty` | `Option<Element>` | - | Shown in one full-width row when `data` is empty. |
-| `scroll` | `bool` | `false` | Wraps the table in a named, focusable `role="region"` that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
+| `caption` | `Option<String>` | `None` | A visible title above the header row, and the table's accessible name. |
+| `empty` | `Option<Element>` | `None` | Shown in one full-width row when `data` is empty. |
+| `scroll` | `bool` | `false` | Wraps the table in a named, focusable region that scrolls sideways. `class`, `sx` and `attributes` stay on the table. |
 
 Like every component, `Table` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes - `aria_label` among them.
+`style`, `states`, and any extra HTML attributes, `aria_label` among them.
 
 ### column()
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `header` | `String` | required | The column's title, given as the argument to `column(..)`. |
-| `value` | `fn(&T) -> V` | required | Reads one cell out of a row. `V`'s `CellValue` impl decides sort order and alignment, then is erased. |
+| `header` | `String` | required | The column's title, the argument to `column(..)`. |
+| `value` | `fn(&T) -> V` | required | Reads one cell out of a row. `V`'s `CellValue` impl sets the sort order and alignment. |
 | `sortable` | `bool` | `false` | Turns the header into a sort button. |
-| `render` | `fn(&T) -> Element` | - | Replaces the cell body. Sorting still uses `value`. |
-| `align` | `CellAlign` | follows the cell type | Overrides the alignment `value`'s type chose. |
+| `render` | `fn(&T) -> Element` | `None` | Replaces the cell body. Sorting still uses `value`. |
+| `align` | `CellAlign` | follows the cell type | Overrides the alignment the cell type chose. |
 | `row_header` | `bool` | `false` | Renders the column's cells as `th scope="row"`, so a screen reader names each row by it. One per table, usually the first. |
 
-`column()` is a builder, not a component - it takes no shared props.
+`column()` is a builder, not a component, so it takes no shared props.
 
 ## Theme defaults
 
-`TableDefaults` on the theme. Flat values, not a `Sizes` scale: `Table` has no
-`size` prop, so a per-size scale would be six numbers expressing one.
+`TableDefaults` on the theme. Flat values, since `Table` has no `size` prop.
 
 | Field | Type | Description |
 |---|---|---|
@@ -225,7 +217,7 @@ default `start`.
 | Attribute | Condition |
 |---|---|
 | `data-align="center"` | The column's alignment is `center`. |
-| `data-align="end"` | The column's alignment is `end` - what every numeric cell type picks. |
+| `data-align="end"` | The column's alignment is `end`, as for every numeric cell type. |
 | `data-sortable` | On a sortable header. |
-| `aria-sort` | On the sorted header only: `ascending` or `descending`. |
+| `aria-sort` | On the sorted header only, `ascending` or `descending`. |
 | `data-empty` | On the body row that holds `empty`. |

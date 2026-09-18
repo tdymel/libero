@@ -42,7 +42,7 @@ fn demo_slides() -> Vec<Element> {
                         .display("flex")
                         .align_items("center")
                         .justify_content("center")
-                        // A slide has whatever length the carousel gives it -
+                        // A slide has whatever length the carousel gives it,
                         // a vertical one is 300px of the 300px track - so the
                         // fixed height is a floor, not the size. It used to be
                         // `height`, and a vertical slide then painted 160 of
@@ -73,41 +73,41 @@ pub fn CarouselPage() -> Element {
                     prop("slides", "Vec<Element>").doc("The slides, in order."),
                     prop("slide_label", "Callback<usize, String>")
                         .default("{n} of {m}")
-                        .doc("Each slide group's accessible name."),
+                        .doc("Each slide's accessible name."),
                     prop("index", "usize")
                         .default("uncontrolled")
                         .doc("The current slide. Set it and the carousel follows."),
                     prop("onindexchange", "EventHandler<usize>")
-                        .doc("Fired once a scroll settles, and on every control, key, indicator and autoplay tick."),
+                        .doc("Fires once a scroll settles, and on every control, key, indicator and autoplay step."),
                     prop("per_view", "f64")
                         .default("1")
-                        .doc("Slides visible at once. Fractional peeks the next one."),
+                        .doc("Slides visible at once. A fraction lets the next one peek in."),
                     prop("gap", "Size").default(theme.carousel.gap.as_str()).doc("Between slides."),
                     prop("align", "CarouselAlign")
                         .default(theme.carousel.align.as_str())
-                        .doc("Where a snapped slide comes to rest - start, center or end. Visible with a fractional per_view; at a whole one the alignments can share their resting offsets. Above per_view 1 it also moves which indices are reachable, because the browser clamps the scroll at both ends."),
+                        .doc("Where a snapped slide comes to rest. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach."),
                     prop("orientation", "Orientation")
                         .default("horizontal")
                         .doc("Scroll axis."),
                     prop("height", "ThemeAwareValue")
                         .default("auto")
-                        .doc("Required for a vertical carousel, which has nothing to take its height from."),
+                        .doc("Required for a vertical carousel, which has nothing else to take its height from."),
                     prop("controls", "bool")
                         .default(theme.carousel.controls.to_string())
-                        .doc("Prev/next buttons."),
+                        .doc("Previous and next buttons."),
                     prop("indicators", "bool")
                         .default(theme.carousel.indicators.to_string())
-                        .doc("The dot strip - one per scroll position, which is fewer than the slides when per_view is above 1."),
-                    prop("aria_label", "String").doc("Names the region. Leaving it unset falls back to the localization's label and warns."),
+                        .doc("The dot strip, one dot per place the strip can rest. That is fewer than the slides when `per_view` is above 1."),
+                    prop("aria_label", "String").doc("Names the region. Unset, it falls back to the localization's label and warns."),
                     prop("draggable", "bool")
                         .default("false")
-                        .doc("Mouse drag-to-scroll. Touch already swipes natively."),
+                        .doc("Drag to scroll with a mouse. Touch swipes without it."),
                     prop("autoplay", "bool")
                         .default("false")
-                        .doc("Advances on a timer, with a pause control first in Tab order. Hover pauses it; focus entering stops it until Play is pressed."),
+                        .doc("Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed."),
                     prop("r#loop", "bool")
                         .default("false")
-                        .doc("Wraps at both ends by cloning slides onto each end and jumping back across the seam once the scroll settles. Each slide has one live copy, a clone when that is the one showing; the other copies are aria-hidden and inert."),
+                        .doc("Wraps around at both ends."),
                     prop("autoplay_delay", "u32")
                         .default(theme.carousel.autoplay_delay.to_string())
                         .doc("Milliseconds between advances."),
@@ -115,14 +115,9 @@ pub fn CarouselPage() -> Element {
             ],
             lead: rsx! {
                 Text {
-                    "A scroll-snap strip that knows which slide it is on. The scrolling is the "
-                    "browser's - so touch, momentum and rubber-banding are the platform's, not "
-                    "ours - and the index is derived from the scroll position, which is what "
-                    "makes a swipe, an arrow key, a control click and an autoplay tick all end "
-                    "up in the same place. "
-                    Code { source: "per_view" }
-                    " sets how many slides are visible at once, fractionally if you want the "
-                    "next one peeking."
+                    "A strip of slides that snaps as it scrolls and knows which slide it is "
+                    "on. The browser does the scrolling, so touch and momentum feel native. A "
+                    "swipe, an arrow key, a button and autoplay all land on the same slide."
                 }
             },
             // snippet: let mut index = use_signal(|| 2);
@@ -225,13 +220,13 @@ pub fn CarouselPage() -> Element {
                     ListItem {
                         "Set "
                         Code { source: "aria_label" }
-                        ": it names the region."
+                        " to name the region."
                     }
                     ListItem {
                         "The track is a tab stop. "
                         Kbd { "←" } " " Kbd { "→" } ", or " Kbd { "↑" } " " Kbd { "↓" }
-                        " when vertical: previous and next. "
-                        Kbd { "Home" } " " Kbd { "End" } ": first and last."
+                        " when vertical, move to the previous and next slide. "
+                        Kbd { "Home" } " and " Kbd { "End" } " go to the first and last."
                     }
                     ListItem {
                         "The indicators are one tab stop with the same keys, and focus follows "
@@ -240,8 +235,8 @@ pub fn CarouselPage() -> Element {
                     ListItem {
                         "With "
                         Code { source: "autoplay" }
-                        ", the pause toggle is the first tab stop. Focus entering the carousel "
-                        "stops rotation until the toggle is pressed; hovering only pauses it."
+                        ", the pause button is the first tab stop. Focus entering the carousel "
+                        "stops it until the button is pressed. Hover only pauses it."
                     }
                 }
             }

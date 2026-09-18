@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Image, Input, Text},
@@ -8,7 +8,7 @@ use libero::{
 };
 
 /// `alt` is required, and the box has to be sized before `fit` means
-/// anything - neither is a control, so both print as `fixed`.
+/// anything. Neither is a control, so both print as `fixed`.
 const FIXED: [&str; 2] = [
     r#"alt: "A stylised landscape""#,
     r#"sx: sx().width("160px").height("160px").background("muted.1")"#,
@@ -27,33 +27,37 @@ pub fn ImagePage() -> Element {
             markdown: "/md/image.md",
             properties: vec![
                 props("Image", vec![
-                    prop("src", "String").doc("The image source."),
-                    prop("fallback_src", "String").doc("Shown in place of `src` once it fails to load."),
-                    prop("zoomed_src", "String")
-                        .default("follows src")
-                        .doc("Source shown in the zoom overlay, if different from the inline image."),
+                    prop("src", "String").default("required").doc("The image source."),
+                    prop("fallback_src", "Option<String>")
+                        .default("None")
+                        .doc("Shown in place of `src` once it fails to load."),
+                    prop("zoomed_src", "Option<String>")
+                        .default("None")
+                        .doc("A larger source for the zoom overlay. Falls back to `src`."),
                     prop("fit", "ImageFit").default("cover").doc("Maps onto `object-fit`."),
                     prop("radius", "Size")
                         .default("0")
-                        .doc("Corner radius, a step on the radius scale. Anything else goes through `sx`."),
-                    prop("alt", "Option<String>").doc("What the picture shows. Left unset, a debug build warns: describe it, or set `decorative`."),
+                        .doc("Corner radius, a step on the radius scale. Any other value goes through `sx`."),
+                    prop("alt", "Option<String>")
+                        .default("None")
+                        .doc("What the picture shows. A debug build warns when neither `alt` nor `decorative` is set."),
                     prop("decorative", "bool")
                         .default("false")
-                        .doc("Marks the picture as decoration: `alt=\"\"` and `role=\"presentation\"`, hidden from assistive technology. Wins over `alt`, with a warning in a debug build."),
+                        .doc("Marks the picture as decoration, hidden from screen readers. Wins over `alt`, with a warning in a debug build."),
                     prop("zoomable", "bool")
                         .default("false")
-                        .doc("Opens the picture in a single-picture Lightbox on click. Ignored inside a linked `ImageItem`, with a warning: the link wins."),
+                        .doc("Opens the picture in a single-picture Lightbox on click. Ignored inside a linked `ImageItem`, with a warning."),
                     prop("loading", "ImageLoading")
                         .default("eager")
-                        .doc("The `<img>`'s `loading`: `lazy` defers a picture until it nears the viewport."),
+                        .doc("The `<img>`'s `loading`. `lazy` loads the picture only when it nears the viewport."),
                 ]),
             ],
             lead: rsx! {
                 Text {
                     "An "
-                    Code { source: "img" }
-                    " with a fallback source on load error, optional rounded corners, and an "
-                    "optional click-to-zoom overlay. "
+                    Code { source: "<img>" }
+                    " with a fallback source for when it fails to load, rounded corners and "
+                    "an optional click-to-zoom overlay. It fills its box, so size the box for "
                     Code { source: "fit" }
                     " maps straight onto "
                     Code { source: "object-fit" }
@@ -111,6 +115,18 @@ pub fn ImagePage() -> Element {
                         sx: sx().width("160px").height("160px").background("muted.1"),
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "Give every image an "
+                    Code { source: "alt" }
+                    ", or set "
+                    Code { source: "decorative" }
+                    " for one that carries nothing. A zoomable image is a button named "
+                    "after its "
+                    Code { source: "alt" }
+                    ". Space or Enter opens the overlay, and Escape closes it."
+                }
             }
         }
     }

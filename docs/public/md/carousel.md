@@ -4,14 +4,11 @@ Crate: `libero`
 Import: `use libero::components::Carousel;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/carousel.rs>
 Index: [index.md](index.md) lists every other page
-Description: A scroll-snap strip of slides that knows which one it is on, with controls, indicators, optional autoplay and no JavaScript carousel library underneath.
+Description: A strip of slides that snaps as it scrolls and knows which one it is on, with controls, indicators and optional autoplay.
 
-A scroll-snap strip that knows which slide it is on. The scrolling is the
-browser's - so touch, momentum and rubber-banding are the platform's, not ours
-- and the index is derived from the scroll position, which is what makes a
-swipe, an arrow key, a control click and an autoplay tick all end up in the
-same place. `per_view` sets how many slides are visible at once, fractionally
-if you want the next one peeking.
+A strip of slides that snaps as it scrolls and knows which slide it is on. The
+browser does the scrolling, so touch and momentum feel native. A swipe, an
+arrow key, a button and autoplay all land on the same slide.
 
 ## Usage
 
@@ -49,50 +46,23 @@ fn Demo() -> Element {
 }
 ```
 
-Slides are a `Vec<Element>` rather than children. Reasoning about their order
-and count is the whole job of this component, and dioxus cannot inspect
-children. They are not a `Callback` either: a snap track has every slide in the
-DOM, so a closure would buy no laziness, and a closure prop that should change
-can compare equal.
+With `per_view` above 1 the strip runs out of scroll before it runs out of
+slides. Six slides three-up stop at index 3, not 5. The indicators follow, with
+four dots rather than six, each named by the first slide it shows. The live
+region names the slides in view, "Slides 1–3 of 6", counting a slide at least
+half in view. When every slide fits, there is one position, one dot, and both
+buttons are inactive. With no slides there is no status, no dots and no
+buttons, and the empty track is not a tab stop.
 
-`per_view` above `1` shows several slides at once, and the strip then runs out
-of scroll before it runs out of slides - six slides three-up stop at index 3,
-not 5. The indicator strip follows that: four dots rather than six, one per
-place the strip can rest, each named by the first slide it
-shows. The live region names the slides showing instead - "Slides 1–3 of 6" -
-counting a slide at least half in view. A strip whose slides all fit is one
-position: one dot, "Slides 1–6 of 6", and both controls inactive.
-
-With no slides at all there is no position, so nothing counts one: no status,
-no dots, no controls and no pause button. The root still renders, so the
-caller's size and placement hold while slides load, but it is not a named
-region and the empty track is not a tab stop.
-
-`align` moves that window rather than just the look. Six slides three-up reach
-indices 0-3 aligned to the start, 1-4 centred and 2-5 aligned to the end,
-because at either end the browser clamps the scroll and the slide sitting in the
-aligned position is not the first or last one. The reported index, the lit dot
-and the live region all follow what is actually in that position, and an `index`
-outside the window is pulled into it - so a centred three-up carousel asked for
-slide 0 reports slide 1, which is the one genuinely centred. At `per_view: 1`
-all three alignments coincide.
-
-Where a slide visibly rests needs a fractional `per_view`. With equal slides at
-a whole number, a centred or end-aligned snap often lands on the same offset as
-a start-aligned one - three-up, every alignment rests on whole-slide steps, and
-only the reported index differs. At the very start of the strip, too, every
-alignment rests the same way. The demo above is `1.5` up and opens on slide 3,
-so switching `align` moves that slide to the left, the middle or the right.
-
-Each slide pads its content by the focus ring's reach (offset plus width, 4px
-by default), so a focusable flush with a slide's edge keeps its whole ring
-inside the slide's clip. The slide takes no caller `sx`; the padding moves with
-the theme's `focus_ring` numbers.
+`align` moves that window too. Six slides three-up reach indices 0-3 aligned to
+the start, 1-4 centred and 2-5 aligned to the end. An `index` outside the
+window is pulled into it, so a centred three-up carousel asked for slide 0
+reports slide 1. Where a slide visibly rests shows best with a fractional
+`per_view`. At a whole number the alignments often rest on the same offset.
 
 ## Vertical
 
-A vertical carousel has nothing to take its height from, so `height` is
-required there:
+A vertical carousel needs a `height`:
 
 ```rust,ignore
 Carousel {
@@ -103,25 +73,17 @@ Carousel {
 }
 ```
 
-A vertical slide is as long as the carousel gives it - one third of the
-`height` at `per_view: 3`, all of it at `per_view: 1` - so slide content with a
-fixed height paints that much and leaves the rest of the slide blank. Give the
-content `height: 100%` and keep any fixed height as a `min-height`, which is
-what the usage snippet above does.
+A vertical slide is as long as the carousel makes it, a third of the `height`
+at `per_view: 3`. Give slide content `height: 100%` and turn any fixed height
+into a `min-height`, as the usage example does.
 
 ## Controlled slide
 
-Pass `index` and the carousel follows it; read `onindexchange` to follow the
-carousel. It fires once a scroll settles rather than on every frame, so it is
-safe to write straight back into the signal that drives it.
-
-While you are driving `index`, it can also fire with an index you did not ask
-for, and that is deliberate: if the one you passed is outside the reachable
-window - slide 0 on a centred three-up strip, or an index left over after the
-slides got shorter - the carousel clamps it and tells you. Without that the two
-of you would disagree forever, with your code pushing the same unreachable value
-back on every render and nothing ever converging. An uncontrolled carousel stays
-quiet, because there is no second party holding a wrong value.
+Pass `index` and the carousel follows it. `onindexchange` fires once a scroll
+settles, so it is safe to write straight back into the signal. It may also fire
+with an index you did not ask for. When the one you passed is out of reach,
+such as slide 0 on a centred three-up strip, the carousel clamps it and tells
+you.
 
 ```rust
 use dioxus::prelude::*;
@@ -150,16 +112,10 @@ fn Demo(photos: Vec<Photo>) -> Element {
 
 ## Autoplay
 
-`autoplay` advances on a timer and brings its whole WCAG 2.2.2 contract with
-it: a real pause control, first in the carousel's Tab order, and a pause on
-hover. Focus entering the carousel stops rotation for good, as in the APG
-carousel pattern: it resumes only when the pause control is pressed, not when
-focus leaves. Hover only pauses, and the pointer leaving resumes it. The pause
-control is a button rather than a hover affordance, because hovering helps
-neither a keyboard nor a touch user. While it rotates unattended
-the live region is `aria-live="off"`, and it becomes polite again the moment it
-stops. Under `prefers-reduced-motion: reduce` it opens paused; the pause control
-starts it.
+`autoplay` advances on a timer. A pause button comes first in the carousel's
+Tab order, and hover pauses too. Focus entering the carousel stops it until the
+pause button is pressed. While it rotates the live region stays quiet. Under
+`prefers-reduced-motion: reduce` it opens paused.
 
 ```rust,ignore
 Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: slides() }
@@ -167,40 +123,37 @@ Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: s
 
 ## Dragging
 
-`draggable` adds mouse drag-to-scroll. It does nothing for touch, deliberately:
-a swipe is already the platform's own scroll, and making the track a drag
-handle would need `touch-action: none`, which would take that away. Pointer
-capture is unsupported on Blitz and on the WebView floor, so a mouse drag there
-loses the pointer once it leaves the track; touch and every other input are
-unaffected.
+`draggable` adds drag to scroll for a mouse. Touch swipes without it. Blitz and
+the WebView cannot capture the pointer, so a mouse drag there stops once the
+pointer leaves the track.
 
 ## Accessibility
 
-- Set `aria_label`: it names the region.
-- The track is a tab stop. `ArrowLeft` / `ArrowRight`, or `ArrowUp` / `ArrowDown` when vertical: previous and next. `Home` / `End`: first and last.
+- Set `aria_label` to name the region.
+- The track is a tab stop. `ArrowLeft` and `ArrowRight`, or `ArrowUp` and `ArrowDown` when vertical, move to the previous and next slide. `Home` and `End` go to the first and last.
 - The indicators are one tab stop with the same keys, and focus follows the slide.
-- With `autoplay`, the pause toggle is the first tab stop. Focus entering the carousel stops rotation until the toggle is pressed; hovering only pauses it.
+- With `autoplay`, the pause button is the first tab stop. Focus entering the carousel stops it until the button is pressed. Hover only pauses it.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `slides` | `Vec<Element>` | `[]` | The slides, in order. |
-| `slide_label` | `Callback<usize, String>` | `{n} of {m}` | Each slide group's accessible name. |
+| `slide_label` | `Callback<usize, String>` | `{n} of {m}` | Each slide's accessible name. |
 | `index` | `usize` | uncontrolled | The current slide. Set it and the carousel follows. |
-| `onindexchange` | `EventHandler<usize>` | - | Fired once a scroll settles, and on every control, key, indicator and autoplay tick. |
-| `per_view` | `f64` | `1` | Slides visible at once. Fractional peeks the next one. |
+| `onindexchange` | `EventHandler<usize>` | - | Fires once a scroll settles, and on every control, key, indicator and autoplay step. |
+| `per_view` | `f64` | `1` | Slides visible at once. A fraction lets the next one peek in. |
 | `gap` | `Size` | `md` | Between slides. |
-| `align` | `CarouselAlign` | `center` | Where a snapped slide comes to rest - `start`, `center` or `end`. Visible with a fractional `per_view`; at a whole one the alignments can share their resting offsets. Above `per_view: 1` it also moves which indices are reachable. |
-| `orientation` | `Orientation` | `horizontal` | Scroll axis. Note this differs from `Orientation`'s own default. |
-| `height` | `ThemeAwareValue` | `auto` | Required for a vertical carousel. |
-| `controls` | `bool` | `true` | Prev/next buttons. |
-| `indicators` | `bool` | `false` | The dot strip - one per scroll position, which is fewer than the slides when `per_view` is above 1. |
-| `aria_label` | `String` | theme `label` | Names the region. Leaving it unset falls back to the theme's generic name and warns. |
-| `draggable` | `bool` | `false` | Mouse drag-to-scroll. Touch already swipes natively. |
-| `autoplay` | `bool` | `false` | Advances on a timer, with a pause control first in Tab order. Hover pauses it; focus entering stops it until Play is pressed. |
+| `align` | `CarouselAlign` | `center` | Where a snapped slide comes to rest, `start`, `center` or `end`. Shows best with a fractional `per_view`. Above `per_view` 1 it also moves which slides the strip can reach. |
+| `orientation` | `Orientation` | `horizontal` | Scroll axis. |
+| `height` | `ThemeAwareValue` | `auto` | Required for a vertical carousel, which has nothing else to take its height from. |
+| `controls` | `bool` | `true` | Previous and next buttons. |
+| `indicators` | `bool` | `false` | The dot strip, one dot per place the strip can rest. That is fewer than the slides when `per_view` is above 1. |
+| `aria_label` | `String` | localization `label` | Names the region. Unset, it falls back to the localization's label and warns. |
+| `draggable` | `bool` | `false` | Drag to scroll with a mouse. Touch swipes without it. |
+| `autoplay` | `bool` | `false` | Advances on a timer, with a pause button first in Tab order. Hover pauses it, and focus stops it until the button is pressed. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
-| `r#loop` | `bool` | `false` | Wraps at both ends, by cloning slides onto each end. Each slide has one live copy, a clone when that is the one showing; the other copies are `aria-hidden` and `inert`. |
+| `r#loop` | `bool` | `false` | Wraps around at both ends. The cloned slides at each end are `aria-hidden` and `inert`. |
 
 Like every component, `Carousel` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
@@ -220,35 +173,35 @@ Like every component, `Carousel` also takes the shared props `sx`, `class`,
 | `control_size` | `&'static str` | `28px` | Diameter of a control. |
 | `controls_offset` | `Size` | `Sm` | Inset from the viewport edge. |
 | `indicator_length` | `&'static str` | `24px` | Along the scroll axis. |
-| `indicator_current_length` | `&'static str` | `40px` | The current dot's length - the second channel beside its colour. |
+| `indicator_current_length` | `&'static str` | `40px` | The current dot's length, so position is not shown by colour alone. |
 | `indicator_thickness` | `&'static str` | `5px` | Across it. |
 | `indicators_gap` | `&'static str` | `8px` | Between dots. |
-| `indicator_color` | `ColorValue` | `muted.6` | An idle dot. It is a button carrying the only visible position affordance, so it owes 3:1 against the surface (SC 1.4.11): `muted.6` is 3.32:1 on white, `muted.4` is 1.49:1. |
+| `indicator_color` | `ColorValue` | `muted.6` | An idle dot. It needs 3:1 against the surface (SC 1.4.11). `muted.6` is 3.32:1 on white, `muted.4` only 1.49:1. |
 | `indicator_current_color` | `ColorValue` | `primary.6` | The current dot. |
 | `control_background` | `ColorValue` | `white` | The previous/next and pause buttons' fill. |
 | `control_hover_background` | `ColorValue` | `muted.1` | A previous/next button's fill under the pointer. |
 | `control_color` | `ColorValue` | `muted.7` | The controls' glyph, and their focus ring. Change it with `control_background`. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
 
-The words are `CarouselLabels` in the [localization](localization.md):
+The words are `CarouselLabels` in the [localization](localization.md).
 
 | Field | Default | Description |
 |---|---|---|
-| `label` | `Carousel` | Stands in when a caller omits `aria_label` - which also warns. |
+| `label` | `Carousel` | Stands in when `aria_label` is unset, which also warns. |
 | `previous` / `next` | `Previous slide` / `Next slide` | The controls' names. |
-| `indicator` | `Go to slide {n}` | An indicator's name: `{n}` is the first slide it shows. |
+| `indicator` | `Go to slide {n}` | An indicator's name. `{n}` is the first slide it shows. |
 | `indicators` | `Choose slide` | Names the dot strip's group. |
 | `slide` | `{n} of {m}` | A slide group's name. |
 | `status` | `Slide {n} of {m}` | What the live region reads one-up. `{m}` counts resting positions, not slides. |
-| `status_range` | `Slides {from}–{to} of {n}` | What it reads above one slide per view: the slides showing, of all `{n}`. |
-| `pause` | `Pause slideshow` | The autoplay control's name. It does not change when paused: `aria-pressed` carries the state. |
+| `status_range` | `Slides {from}–{to} of {n}` | What it reads above one slide per view, the slides showing of all `{n}`. |
+| `pause` | `Pause slideshow` | The autoplay button's name. It stays the same when paused, and `aria-pressed` carries the state. |
 
 ## CSS variables
 
 | Variable | Description |
 |---|---|
 | `--lsx-carousel-gap` | Between slides. `--lsx-carousel-gap-override` is the `gap` prop. |
-| `--lsx-carousel-per-view` | Unitless; the slide-size formula divides by it. `--lsx-carousel-per-view-override` is the `per_view` prop. |
+| `--lsx-carousel-per-view` | Unitless slides per view. `--lsx-carousel-per-view-override` is the `per_view` prop. |
 | `--lsx-carousel-radius` | A slide's corner radius. |
 | `--lsx-carousel-control-size` | Diameter of a control and of the pause button. |
 | `--lsx-carousel-controls-offset` | Inset from the viewport edge. |
@@ -258,7 +211,7 @@ The words are `CarouselLabels` in the [localization](localization.md):
 | `--lsx-carousel-indicator-color` / `-current-color` | An idle dot and the current one. |
 | `--lsx-carousel-control-background` / `-hover-background` | A control's fill, and a previous/next control's under the pointer. |
 | `--lsx-carousel-control-color` | A control's glyph and focus ring. |
-| `--lsx-carousel-height` | Set from the `height` prop; the track is `auto` without it. |
+| `--lsx-carousel-height` | Set from the `height` prop. The track is `auto` without it. |
 
 ## Data attributes
 
@@ -268,7 +221,7 @@ The words are `CarouselLabels` in the [localization](localization.md):
 | `align-start` / `align-center` / `align-end` | each slide | From `align`. |
 | `current` | the current slide, the current indicator | Its index is the current one. |
 | `disabled` | a control | The carousel is at that end. |
-| `dragging` | the track | A mouse drag is in progress; smooth scrolling is off for it. |
-| `seam` | the track | A looping strip is jumping across the seam; smooth scrolling is off for the jump. |
+| `dragging` | the track | A mouse drag is in progress. Smooth scrolling is off for it. |
+| `seam` | the track | A looping strip is jumping across the seam. Smooth scrolling is off for the jump. |
 
 Each slide also carries `data-current="true"` when it is the current one.

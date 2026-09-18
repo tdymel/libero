@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, QrCode, Text},
@@ -17,37 +17,25 @@ pub fn QrCodePage() -> Element {
             markdown: "/md/qr_code.md",
             properties: vec![
                 props("QrCode", vec![
-                    prop("data", "String").doc("The payload encoded into the code."),
+                    prop("data", "String").default("required").doc("The payload encoded into the code."),
                     prop("robustness", "QrRobustness")
                         .default("medium")
-                        .doc("How much damage or occlusion the code tolerates, at the cost of density."),
+                        .doc("How much damage the code survives. Higher levels make a denser code."),
                     prop("aria_label", "String")
-                        .doc("Required: a QR code says nothing to a screen reader without one."),
+                        .default("required")
+                        .doc("The code's accessible name. Say where it leads."),
                 ]),
             ],
             lead: rsx! {
                 Text {
                     "Encodes "
                     Code { source: "data" }
-                    " as a scalable QR code, rendered as an inline SVG. Background/"
-                    "foreground colors come from the theme ("
-                    Code { source: "Theme::qr_code" }
-                    "), not per-instance props - "
+                    " as a QR code in an inline SVG. The colors come from the theme. The SVG "
+                    "has no size of its own and fills its container, so give it a width. If "
+                    Code { source: "data" }
+                    " is too long for the "
                     Code { source: "robustness" }
-                    " is the only thing you tune per code: higher levels tolerate more "
-                    "damage or occlusion at the cost of a denser code, and unset takes "
-                    Code { source: "Theme::qr_code.robustness" }
-                    " (Medium)."
-                }
-                Text {
-                    "The SVG has no fixed width or height, just a square "
-                    Code { source: "viewBox" }
-                    ", so it fills its container - which is why the demo carries an "
-                    Code { source: "sx" }
-                    " width. "
-                    Code { source: "aria_label" }
-                    " is required, not optional: a QR code carries real information to a "
-                    "sighted or scanning user and none at all to a screen reader without one."
+                    ", it renders nothing."
                 }
             },
             Demo {
@@ -81,6 +69,15 @@ pub fn QrCodePage() -> Element {
                         sx: sx().width("160px"),
                     }
                 },
+            }
+            DocSection { title: "Accessibility",
+                Text {
+                    "A screen reader user cannot scan the code, so "
+                    Code { source: "aria_label" }
+                    " is the only way to the payload. Say where the code leads or what it "
+                    "holds, not that it is a QR code. Next to a real link, the link serves "
+                    "better."
+                }
             }
         }
     }

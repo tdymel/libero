@@ -31,9 +31,9 @@ pub fn PhilosophyPage() -> Element {
                     why: "AI writes a lot of code now, and someone still has to read it, review it \
                           and change it next month. Code that is hard to get wrong is easier for a \
                           person to check and for a model to get right.",
-                    Point { "Let the compiler catch mistakes before a reviewer has to." }
-                    Point { "Keep one way of doing things, the same across every component." }
-                    Point { "Write docs that you and your AI assistant can copy from, with examples that build." }
+                    ListItem {"Let the compiler catch mistakes before a reviewer has to." }
+                    ListItem {"Keep one way of doing things, the same across every component." }
+                    ListItem {"Write docs that you and your AI assistant can copy from, with examples that build." }
                 }
                 Principle {
                     number: 2,
@@ -53,10 +53,10 @@ pub fn PhilosophyPage() -> Element {
                             }
                         }
                     },
-                    Point { "Follow WAI-ARIA, the APG patterns and WCAG. A deviation needs a reason." }
-                    Point { "Aim for WCAG 2.2 AA." }
-                    Point { "Never show a state by colour alone." }
-                    Point { "Speak the user's language: the words components say on their own translate, with English and German built in." }
+                    ListItem {"Follow WAI-ARIA, the APG patterns and WCAG. A deviation needs a reason." }
+                    ListItem {"Aim for WCAG 2.2 AA." }
+                    ListItem {"Never show a state by colour alone." }
+                    ListItem {"Speak the user's language: the words components say on their own translate, with English and German built in." }
                 }
                 Principle {
                     number: 3,
@@ -65,9 +65,9 @@ pub fn PhilosophyPage() -> Element {
                     icon: rsx! { BatteryIcon {} },
                     why: "Starting an app should not mean hunting for a date picker. Your time goes \
                           into your app, not into stitching libraries together.",
-                    Point { "Cover the everyday needs, forms and overlays included: {components} components." }
-                    Point { "Work the same on the web and natively." }
-                    Point { "Be honest where a platform falls short: a missing feature is absent, not broken." }
+                    ListItem {"Cover the everyday needs, forms and overlays included: {components} components." }
+                    ListItem {"Work the same on the web and natively." }
+                    ListItem {"Be honest where a platform falls short: a missing feature is absent, not broken." }
                 }
                 Principle {
                     number: 4,
@@ -76,10 +76,10 @@ pub fn PhilosophyPage() -> Element {
                     icon: rsx! { SparkleIcon {} },
                     why: "Your app should look like your app. A quiet default gets you started, and \
                           when you want your own look, nothing stands in the way.",
-                    Point { "Aim for a default that fits most apps as it is." }
-                    Point { "Make changing the look ordinary Rust, not a fight with the library." }
-                    Point { "Offer light and dark from the start." }
-                    Point { "Let your own styles win over ours." }
+                    ListItem {"Aim for a default that fits most apps as it is." }
+                    ListItem {"Make changing the look ordinary Rust, not a fight with the library." }
+                    ListItem {"Offer light and dark from the start." }
+                    ListItem {"Let your own styles win over ours." }
                 }
             }
         }
@@ -121,7 +121,11 @@ fn Principle(
                 }
                 Text { size: "lg", sx: sx().font_weight("600"), "{summary}" }
                 Label { "What we do" }
-                List { size: "sm", {children} }
+                List {
+                    size: "sm",
+                    icon: rsx! { Icon { variant: "standard", color: "primary", size: "sm", CheckmarkIcon {} } },
+                    {children}
+                }
                 if let Some(limit) = limit {
                     {limit}
                 }
@@ -137,18 +141,6 @@ fn Principle(
 fn Label(children: Element) -> Element {
     rsx! {
         Text { size: "sm", sx: sx().font_weight("600"), {children} }
-    }
-}
-
-#[component]
-fn Point(children: Element) -> Element {
-    rsx! {
-        ListItem {
-            Flex { direction: "row", align: "flex-start", gap: "xs", wrap: "nowrap",
-                Icon { variant: "standard", color: "primary", size: "sm", sx: sx().margin_top("4px"), CheckmarkIcon {} }
-                Text { component: "span", sx: sx().flex("1").min_width("0"), {children} }
-            }
-        }
     }
 }
 

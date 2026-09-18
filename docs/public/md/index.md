@@ -109,19 +109,19 @@ fetch only the file you need.
 
 ## Data display
 
-- [Icon](icon.md): A sized, colored badge around an svg child, whose `currentColor` fill inherits the badge's color.
-- [Badge](badge.md): A short status label - one uppercase pill, sized under a control, with no role and no interaction.
-- [Indicator](indicator.md): A dot or a small capped count pinned to something else with a Float - presentational only, and never announced itself.
+- [Icon](icon.md): A sized, colored box around an svg, which takes the box's color through `currentColor`.
+- [Badge](badge.md): A short status label, one uppercase pill with no role and no interaction.
+- [Indicator](indicator.md): A dot or a small capped count pinned to something else with a `Float`, never read out itself.
 - [Avatar](avatar.md): A person as a fixed square, with a fallback chain from a picture down to a person glyph, and a group that collapses its overflow into a +N chip.
-- [Image](image.md): An img with a fallback source on load error, rounded corners, and an optional click-to-zoom overlay.
-- [ImageList](image_list.md): A gallery of pictures with optional caption bars, rendered as a ul/li list over a GridZone - so cols is a span of the library's own twelve tracks and masonry is that zone's measuring engine.
-- [Carousel](carousel.md): A scroll-snap strip of slides that knows which one it is on, with controls, indicators, optional autoplay and no JavaScript carousel library underneath.
-- [List](list.md): An unstyled `<ul>`/`<li>` pair with themed gaps and nested indent.
+- [Image](image.md): An `<img>` with a fallback source on load error, rounded corners and an optional click-to-zoom overlay.
+- [ImageList](image_list.md): A gallery of pictures with optional caption bars, laid out on a `GridZone`, so `cols` counts the library's twelve tracks.
+- [Carousel](carousel.md): A strip of slides that snaps as it scrolls and knows which one it is on, with controls, indicators and optional autoplay.
+- [List](list.md): A `<ul>` of `<li>` items without the browser's list styling, with themed gaps and nested indent.
 - [DataList](data_list.md): A `<dl>` of term/description pairs, where one term can carry several descriptions.
 - [Table](table.md): A sortable data table built from a row type and a list of column definitions.
 - [Timeline](timeline.md): An ordered list of events drawn against a rail, with an `active` index colouring the bullets and connectors up to the current one.
-- [Accordion](accordion.md): Sections over an enum, each a heading whose button expands its panel; one or many open.
-- [Marquee](marquee.md): Content that scrolls on its own in an endless loop, measured by nothing, with a pause toggle and a reduced-motion fallback.
+- [Accordion](accordion.md): Sections over an enum, each a heading whose button opens its panel, with one or many open.
+- [Marquee](marquee.md): Content that scrolls on its own in an endless loop, with a pause toggle and a still fallback under reduced motion.
 - [QrCode](qr_code.md): Encodes a string as a scalable QR code, rendered as an inline SVG.
 
 ## Typography
