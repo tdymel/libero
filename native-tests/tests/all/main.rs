@@ -33,6 +33,7 @@ mod modal;
 mod nav_link;
 mod notifications;
 mod overlays;
+mod paper;
 mod pointer;
 mod popover;
 mod repo_button;

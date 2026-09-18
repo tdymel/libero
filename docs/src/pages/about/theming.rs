@@ -18,8 +18,8 @@ const PARTS: [Part; 4] = [
     ),
     (
         "Scales",
-        "spacing, radius, elevation",
-        "Every size word, gap, corner and shadow.",
+        "spacing, radius, elevation, font_size",
+        "Every size word, gap, corner, shadow and font size.",
     ),
     (
         "Components",
@@ -87,6 +87,16 @@ const COMPONENT_DEFAULTS: &str = r#"static THEME: Theme = Theme {
     button: ButtonDefaults {
         radius: Size::Xl,
         ..ButtonDefaults::DEFAULT
+    },
+    ..Theme::DEFAULT
+};"#;
+
+const SCALES: &str = r#"static THEME: Theme = Theme {
+    font_size: Sizes::new("0.8rem", "0.9rem", "1rem", "1.2rem", "1.4rem", "1.6rem"),
+    paper: PaperDefaults {
+        glass_background: 85,
+        glass_blur: "blur(20px)",
+        ..PaperDefaults::DEFAULT
     },
     ..Theme::DEFAULT
 };"#;
@@ -171,6 +181,29 @@ pub fn ThemingPage() -> Element {
                     "the theme. Pill-shaped buttons everywhere is one change here."
                 }
                 CodeBlock { source: COMPONENT_DEFAULTS, language: "rust" }
+            }
+
+            DocSection {
+                title: "Type scale and glass",
+                Text {
+                    Code { source: "font_size" }
+                    " holds six steps, "
+                    Code { source: "xs" }
+                    " to "
+                    Code { source: "xxl" }
+                    ". "
+                    Code { source: "sx().font_size(\"sm\")" }
+                    " and "
+                    Code { source: "Text" }
+                    " read it, so one change rescales the text. "
+                    Code { source: "paper.glass_background" }
+                    " is how much of the surface a "
+                    Code { source: "glass" }
+                    " Paper or Header keeps, in percent, and "
+                    Code { source: "paper.glass_blur" }
+                    " blurs what shows through. Stay at 70 or more, so text keeps its contrast."
+                }
+                CodeBlock { source: SCALES, language: "rust" }
             }
 
             DocSection {

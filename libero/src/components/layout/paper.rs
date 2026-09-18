@@ -5,6 +5,7 @@ use crate::{
         common::{HtmlTag, Input, States, Variables, base_props},
         layout::use_box,
     },
+    platform::draws_backdrop_filter,
     sx::{StaticSx, Sx, sx},
     theme::{PAPER_BORDER_COLOR, PaperDefaults, Size},
 };
@@ -34,6 +35,7 @@ pub fn paper_sx() -> Sx {
             "bordered",
             sx().border(format!("1px solid {}", PAPER_BORDER_COLOR.value())),
         )
+        .when("glass", PaperDefaults::glass_sx())
 }
 
 static PAPER_BASE_SX: StaticSx = StaticSx::new(paper_sx);
@@ -55,6 +57,12 @@ base_props! {
         /// together with a shadow - that is a design choice, not a misuse.
         #[props(default)]
         bordered: bool,
+        /// Frosted glass: translucent, blurring what is behind it, tuned by
+        /// the theme's `glass_background`/`glass_blur`. Meant over app chrome,
+        /// not imagery. Opaque under reduced transparency, forced colours and
+        /// natively, where Blitz draws no backdrop blur.
+        #[props(default)]
+        glass: bool,
         /// Which element to render as - `div` by default. `section`,
         /// `article`, `aside` and `a` are the ones worth naming; a surface
         /// that becomes a landmark owns its own `aria-label`.
@@ -124,8 +132,9 @@ pub fn Paper(props: PaperProps) -> Element {
 fn paper_states(props: &PaperProps) -> Input<States> {
     let radius = props.radius.as_ref();
     let shadow = props.shadow.as_ref();
+    let glass = props.glass && draws_backdrop_filter();
 
-    if radius.is_none() && shadow.is_none() && !props.bordered {
+    if radius.is_none() && shadow.is_none() && !props.bordered && !glass {
         return props.states.clone();
     }
 
@@ -136,7 +145,10 @@ fn paper_states(props: &PaperProps) -> Input<States> {
     if let Some(shadow) = shadow {
         states = states.active(shadow.shadow_state_name());
     }
-    states.with("bordered", props.bordered).into()
+    states
+        .with("bordered", props.bordered)
+        .with("glass", glass)
+        .into()
 }
 
 #[cfg(test)]
@@ -149,6 +161,7 @@ mod tests {
             radius: Input::None,
             shadow: Input::None,
             bordered: false,
+            glass: false,
             component: Input::None,
             variables: Input::None,
             framework_sx: None,
@@ -192,6 +205,52 @@ mod tests {
             states.as_ref().and_then(States::data_state).as_deref(),
             Some("selected radius-sm")
         );
+    }
+
+    /// Natively there is no `glass` token at all, so the surface stays opaque.
+    #[test]
+    fn glass_is_a_token_only_where_the_renderer_blurs() {
+        let states = paper_states(&PaperProps {
+            glass: true,
+            ..props()
+        });
+        let state = states.as_ref().and_then(States::data_state);
+
+        if draws_backdrop_filter() {
+            assert_eq!(state.as_deref(), Some("glass"));
+        } else {
+            assert_eq!(state, None);
+        }
+    }
+
+    #[test]
+    fn glass_turns_opaque_under_reduced_transparency_and_forced_colours() {
+        let css = Stylesheet::from(&paper_sx());
+        let css = css.as_str();
+
+        assert!(
+            css.contains("background:var(--lsx-glass-background);"),
+            "{css}"
+        );
+        assert!(
+            css.contains("backdrop-filter:var(--lsx-glass-blur);"),
+            "{css}"
+        );
+        for query in [
+            "prefers-reduced-transparency:reduce",
+            "forced-colors:active",
+        ] {
+            let block = css
+                .split("@media")
+                .find(|block| block.replace(' ', "").contains(query))
+                .unwrap_or_else(|| panic!("no {query} block: {css}"));
+            assert!(block.contains("glass"), "{block}");
+            assert!(block.contains("backdrop-filter:none;"), "{block}");
+            assert!(
+                block.contains("background:var(--lsx-paper-background);"),
+                "{block}"
+            );
+        }
     }
 
     #[test]

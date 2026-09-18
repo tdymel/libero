@@ -99,6 +99,61 @@ fn only_an_opted_in_header_publishes_its_height() {
     });
 }
 
+/// `#banner` and `#card` as `backdrop|background alpha|text colour`, each.
+const GLASS: &str = "(() => ['#banner', '#card'].map(id => { \
+    const s = getComputedStyle(document.querySelector(id)); \
+    const alpha = (s.backgroundColor.match(/[\\d.]+/g) || [])[3] ?? '1'; \
+    return [s.backdropFilter, alpha, s.color].join('|'); }).join(' / '))()";
+
+/// Todo 812. Glass is translucent with a blur on the web, drops the banner's
+/// `color`, and turns opaque under reduced transparency and forced colours.
+#[test]
+fn glass_blurs_and_turns_opaque_where_asked() {
+    use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
+    block_on(async {
+        let fixture = Fixture::open("/header-glass", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#card").await.unwrap();
+        let glass: String = page.evaluate(GLASS).await.unwrap().into_value().unwrap();
+        let body: String = page
+            .evaluate("getComputedStyle(document.body).color")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        for surface in glass.split(" / ") {
+            let parts: Vec<&str> = surface.split('|').collect();
+            assert_eq!(parts[0], "blur(12px)", "{glass}");
+            assert_eq!(parts[1], "0.8", "{glass}");
+            assert_eq!(parts[2], body, "the banner kept its colour: {glass}");
+        }
+
+        for feature in [
+            MediaFeature::new("prefers-reduced-transparency", "reduce"),
+            MediaFeature::new("forced-colors", "active"),
+        ] {
+            let name = feature.name.clone();
+            page.execute(
+                SetEmulatedMediaParams::builder()
+                    .features(vec![feature])
+                    .build(),
+            )
+            .await
+            .unwrap();
+            let opaque: String = page.evaluate(GLASS).await.unwrap().into_value().unwrap();
+            for surface in opaque.split(" / ") {
+                let parts: Vec<&str> = surface.split('|').collect();
+                assert_eq!(parts[0], "none", "{name}: {opaque}");
+                assert_eq!(parts[1], "1", "{name}: {opaque}");
+            }
+        }
+        fixture.console.assert_clean("the glass fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Without `scroll-padding-top` the browser leaves a button it thinks is on
 /// screen where it is, under a sticky header; the banner sets it on `:root`.
 #[test]

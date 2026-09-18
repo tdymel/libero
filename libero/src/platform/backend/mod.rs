@@ -185,6 +185,10 @@ pub(crate) const OPENS_SELECT_PICKER: bool =
 pub(crate) const LAYS_OUT_CAPTIONS: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// No Blitz backend draws a `backdrop-filter`; see [`draws_backdrop_filter`](crate::platform::draws_backdrop_filter).
+pub(crate) const DRAWS_BACKDROP_FILTER: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     #[cfg(target_arch = "wasm32")]
     return web::document();

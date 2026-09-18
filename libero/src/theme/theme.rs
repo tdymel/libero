@@ -12,6 +12,8 @@ pub struct Theme {
     pub radius: Sizes<u8>,
     /// Drop shadows, `xs` (resting) to `xxl` (a modal). M3's elevation levels.
     pub elevation: Sizes<&'static str>,
+    /// The type scale `Sx::font_size(Size)` resolves to, as CSS lengths.
+    pub font_size: Sizes<&'static str>,
     pub flex: FlexDefaults,
     pub grid: GridDefaults,
     pub carousel: CarouselDefaults,
@@ -141,6 +143,9 @@ impl Theme {
             "0 4px 10px rgba(0, 0, 0, 0.18), 0 12px 28px rgba(0, 0, 0, 0.20)",
             "0 8px 18px rgba(0, 0, 0, 0.20), 0 20px 44px rgba(0, 0, 0, 0.24)",
             "0 12px 28px rgba(0, 0, 0, 0.22), 0 28px 64px rgba(0, 0, 0, 0.30)",
+        ),
+        font_size: Sizes::new(
+            "0.75rem", "0.875rem", "1rem", "1.125rem", "1.25rem", "1.375rem",
         ),
         flex: FlexDefaults::DEFAULT,
         grid: GridDefaults::DEFAULT,

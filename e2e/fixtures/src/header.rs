@@ -1,14 +1,24 @@
 //! `Header`: a sticky banner with a nav, above a page that scrolls under it.
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Header, Text};
+use libero::components::{Button, Flex, Header, Paper, Text};
 
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/header", || rsx! { HeaderPage {} }),
     ("/header-static", || rsx! { StaticPage {} }),
+    ("/header-glass", || rsx! { GlassPage {} }),
 ];
+
+/// A glass banner given a `color` it must drop, and a glass `Paper`.
+#[component]
+fn GlassPage() -> Element {
+    rsx! {
+        Header { id: "banner", color: "primary", glass: true, "Glass" }
+        Paper { id: "card", glass: true, Text { "A glass card." } }
+    }
+}
 
 /// A publishing sticky `lg` banner mounted before a static `xs` header and a
 /// sticky `sm` one that did not opt in; neither may publish over the banner.

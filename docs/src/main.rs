@@ -367,14 +367,12 @@ fn AppShell() -> Element {
                 // No `color`: the header is the page's own surface, so it
                 // reads as chrome rather than as a
                 // banner and follows the colour scheme without a second
-                // palette. Translucent plus a blur, so content scrolling
-                // under it is suggested rather than hidden - the bar is
-                // sticky, and an opaque one reads as a lid.
+                // palette. Glass, so content scrolling under it is suggested
+                // rather than hidden - the bar is sticky, and an opaque one
+                // reads as a lid.
                 publish_height: true,
-                sx: sx()
-                    .gap("md")
-                    .background("color-mix(in srgb, var(--lsx-paper-background) 80%, transparent)")
-                    .backdrop_filter("blur(12px)"),
+                glass: true,
+                sx: sx().gap("md"),
                 // Where focus goes when a page link closes the drawer: the
                 // link hides with it, and focus would fall to `<body>`.
                 // `Burger` takes no `onmounted`, so a `display: contents`

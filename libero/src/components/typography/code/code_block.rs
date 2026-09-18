@@ -25,7 +25,7 @@ use crate::{
     theme::{
         CODE_BLOCK_BACKGROUND, CODE_BLOCK_BORDER, CODE_BLOCK_COPY_HOVER_BACKGROUND,
         CODE_BLOCK_COPY_HOVER_TEXT, CODE_BLOCK_LINE_NUMBER, CODE_BLOCK_MUTED_TEXT,
-        CODE_FONT_FAMILY, ColorCss, ColorShade, CssVar,
+        CODE_FONT_FAMILY, ColorCss, ColorShade, CssVar, Size,
     },
     utils::warn,
 };
@@ -57,7 +57,7 @@ static CODE_BLOCK_HEADER_SX: StaticSx = StaticSx::new(|| {
         .border_bottom("1px solid")
         .border_color(CODE_BLOCK_BORDER.value())
         .font_family(CODE_FONT_FAMILY.value())
-        .font_size("0.75rem")
+        .font_size(Size::Xs)
         .color(CODE_BLOCK_MUTED_TEXT.value())
 });
 
@@ -108,7 +108,7 @@ static CODE_LINES_SX: StaticSx = StaticSx::new(|| {
         .min_width("100%")
         .padding(format!("{}px 0", CODE_LINES_VERTICAL_PADDING_PX / 2))
         .font_family(CODE_FONT_FAMILY.value())
-        .font_size("0.875rem")
+        .font_size(Size::Sm)
         // Explicit, not the font's metrics: the copy button's centering and
         // `max_lines`' scroll height are computed against this exact value.
         .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
@@ -183,7 +183,7 @@ static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
         .margin("0")
         .padding(format!("{}px 16px", CODE_LINES_VERTICAL_PADDING_PX / 2))
         .font_family(CODE_FONT_FAMILY.value())
-        .font_size("0.875rem")
+        .font_size(Size::Sm)
         // Matches `CODE_LINES_SX`, so `max_lines` is right while highlighting
         // is still in flight.
         .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))

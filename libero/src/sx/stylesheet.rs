@@ -548,6 +548,16 @@ mod tests {
     }
 
     #[test]
+    fn sx_font_size_size_resolves_to_the_theme_scale() {
+        let stylesheet =
+            Stylesheet::from(&sx().font_size(Size::Sm).when("big", sx().font_size("xl")));
+        let css = stylesheet.as_str();
+
+        assert!(css.contains("font-size:var(--lsx-font-size-sm);"), "{css}");
+        assert!(css.contains("font-size:var(--lsx-font-size-xl);"), "{css}");
+    }
+
+    #[test]
     fn sx_bare_padding_size_resolves_to_spacing_css_var() {
         let stylesheet = Stylesheet::from(&sx().padding(Size::Lg));
         let css = stylesheet.as_str();

@@ -15,12 +15,12 @@ use crate::{
     },
     css::Stylesheet,
     hooks::{use_css, use_id},
-    platform::{document, when_laid_out},
+    platform::{document, draws_backdrop_filter, when_laid_out},
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, HEADER_HEIGHT, HEADER_HEIGHT_VAR,
-        NamedColorCss, PAPER_BACKGROUND, Size, Z_INDEX_HEADER,
+        NamedColorCss, PAPER_BACKGROUND, PaperDefaults, Size, Z_INDEX_HEADER,
     },
 };
 
@@ -145,10 +145,13 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .top("0")
         .when("static", sx().position("static"))
         .when("fixed", sx().position("fixed").top("0"))
+        .when("glass", PaperDefaults::glass_sx())
 });
 
 fn header_variables(props: &HeaderProps) -> Variables {
-    let base = header_base_color(props.color.as_ref());
+    // Glass is the paper surface, so a `color` would leave its text unreadable.
+    let color = props.color.as_ref().filter(|_| !props.glass);
+    let base = header_base_color(color);
     let contrast = base
         .as_ref()
         .and_then(header_contrast_color)
@@ -194,6 +197,11 @@ base_props! {
         /// Set it on the page's own banner only; the last one mounted wins.
         #[props(default)]
         publish_height: bool,
+        /// Frosted glass, as on `Paper`: content scrolling under a sticky bar
+        /// shows through, blurred. Takes the paper surface, so it replaces a
+        /// `color`. Opaque under reduced transparency, forced colours and natively.
+        #[props(default)]
+        glass: bool,
         children: Element,
     }
 }
@@ -221,6 +229,7 @@ pub fn Header(props: HeaderProps) -> Element {
         .unwrap_or_default()
         .with("static", position == HeaderPosition::Static)
         .with("fixed", position == HeaderPosition::Fixed)
+        .with("glass", props.glass && draws_backdrop_filter())
         .into();
 
     // An opted-in sticky or fixed Header publishes its height on `:root`, the
@@ -279,6 +288,7 @@ mod tests {
             color,
             z_index: Input::None,
             publish_height: false,
+            glass: false,
             children: rsx! {},
         }
     }
@@ -321,6 +331,18 @@ mod tests {
         );
         set_publishing("a", false);
         assert!(PUBLISHERS.with_borrow(Vec::is_empty));
+    }
+
+    #[test]
+    fn glass_drops_the_color_it_replaces() {
+        let props = HeaderProps {
+            glass: true,
+            ..header_props(Color::Primary.into())
+        };
+        let variables = header_variables(&props).to_string();
+
+        assert!(!variables.contains(HEADER_BACKGROUND_VAR.name()));
+        assert!(!variables.contains(HEADER_COLOR_VAR.name()));
     }
 
     /// Unset means the themed default applies, so neither var is pinned.

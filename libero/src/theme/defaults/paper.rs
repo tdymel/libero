@@ -1,5 +1,5 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
-use crate::sx::{Sx, sx};
+use crate::sx::{FORCED_COLORS, Sx, sx};
 use crate::theme::{
     Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, NamedColorCss, Size, SizeCss,
 };
@@ -16,6 +16,15 @@ pub const PAPER_BORDER_COLOR: CssVar = CssVar::new("--lsx-paper-border-color");
 pub const PAPER_CONTRAST: CssVar = CssVar::new("--lsx-paper-contrast");
 pub const PAPER_RADIUS: CssVar = CssVar::new("--lsx-paper-radius");
 pub const PAPER_SHADOW: CssVar = CssVar::new("--lsx-paper-shadow");
+/// A `glass` surface's translucent background, [`PAPER_BACKGROUND`] mixed
+/// with transparency.
+pub const GLASS_BACKGROUND: CssVar = CssVar::new("--lsx-glass-background");
+/// The `backdrop-filter` behind a `glass` surface.
+pub const GLASS_BLUR: CssVar = CssVar::new("--lsx-glass-blur");
+
+/// Users who turned transparency off get opaque surfaces. Not Baseline yet, so
+/// [`FORCED_COLORS`] and the native branch back it up.
+const REDUCED_TRANSPARENCY: &str = "(prefers-reduced-transparency: reduce)";
 
 /// What a surface looks like when nobody says otherwise.
 ///
@@ -37,6 +46,11 @@ pub struct PaperDefaults {
     /// the other.
     pub contrast: ColorValue,
     pub border_color: ColorValue,
+    /// How much of `background` a `glass` surface keeps, in percent. Keep it
+    /// at 70 or more: text contrast is measured against what shows through.
+    pub glass_background: u8,
+    /// The `backdrop-filter` behind a `glass` surface, e.g. `"blur(12px)"`.
+    pub glass_blur: &'static str,
 }
 
 impl PaperDefaults {
@@ -46,6 +60,8 @@ impl PaperDefaults {
         background: "#fff",
         contrast: ColorValue::Shade(Color::Ink, ColorShade::S1),
         border_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
+        glass_background: 80,
+        glass_blur: "blur(12px)",
     };
 
     /// The card on an inked page: one step off the surface, the way the light
@@ -90,6 +106,19 @@ impl PaperDefaults {
             .per_radius(Self::radius_sx)
             .per_shadow(Self::shadow_sx)
     }
+
+    /// Translucent plus a backdrop blur, and opaque again wherever the blur
+    /// would hurt: reduced transparency, and forced colours, which keep the
+    /// author's alpha on `Canvas`.
+    pub(crate) fn glass_sx() -> Sx {
+        let opaque = sx()
+            .background(PAPER_BACKGROUND.value())
+            .backdrop_filter("none");
+        sx().background(GLASS_BACKGROUND.value())
+            .backdrop_filter(GLASS_BLUR.value())
+            .media(REDUCED_TRANSPARENCY, opaque.clone())
+            .media(FORCED_COLORS, opaque)
+    }
 }
 
 impl ToCssDeclarations for PaperDefaults {
@@ -100,6 +129,12 @@ impl ToCssDeclarations for PaperDefaults {
             PAPER_BACKGROUND.declare(self.background),
             PAPER_CONTRAST.declare(self.contrast.value()),
             PAPER_BORDER_COLOR.declare(self.border_color.value()),
+            GLASS_BACKGROUND.declare(format!(
+                "color-mix(in srgb, {} {}%, transparent)",
+                PAPER_BACKGROUND.value(),
+                self.glass_background
+            )),
+            GLASS_BLUR.declare(self.glass_blur),
         ]
     }
 }

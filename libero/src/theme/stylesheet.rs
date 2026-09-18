@@ -186,6 +186,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         spacing,
         radius,
         elevation,
+        font_size,
         dialog,
         drawer,
         sidebar,
@@ -301,6 +302,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(spacing.to_css_declarations(SizeCss::SPACING, "px"));
     declarations.extend(radius.to_css_declarations(SizeCss::RADIUS, "px"));
     declarations.extend(elevation.to_css_declarations(SizeCss::SHADOW, ""));
+    declarations.extend(font_size.to_css_declarations(SizeCss::FONT_SIZE, ""));
     push_breakpoint_declarations(&mut declarations);
     declarations.extend(dialog.to_css_declarations());
     declarations.extend(drawer.to_css_declarations());
@@ -1061,6 +1063,14 @@ mod tests {
             ("--lsx-spacing-xl", "20px"),
             ("--lsx-breakpoint-xs", "36rem"),
             ("--lsx-breakpoint-xl", "88rem"),
+            ("--lsx-font-size-xs", "0.75rem"),
+            ("--lsx-font-size-md", "1rem"),
+            ("--lsx-font-size-xxl", "1.375rem"),
+            (
+                "--lsx-glass-background",
+                "color-mix(in srgb, var(--lsx-paper-background) 80%, transparent)",
+            ),
+            ("--lsx-glass-blur", "blur(12px)"),
         ]);
     }
 
@@ -1156,12 +1166,10 @@ mod tests {
             ("--lsx-title-font-size-sm", "0.875rem"),
             ("--lsx-title-font-size-xs", "0.75rem"),
             ("--lsx-title-font-weight-xxl", "400"),
-            ("--lsx-text-font-size-xs", "0.75rem"),
-            ("--lsx-text-font-size-sm", "0.875rem"),
-            ("--lsx-text-font-size-md", "1rem"),
-            ("--lsx-text-font-size-lg", "1.125rem"),
-            ("--lsx-text-font-size-xl", "1.25rem"),
-            ("--lsx-text-font-size-xxl", "1.375rem"),
+            // Text reads the global scale.
+            ("--lsx-text-font-size-xs", "var(--lsx-font-size-xs)"),
+            ("--lsx-text-font-size-md", "var(--lsx-font-size-md)"),
+            ("--lsx-text-font-size-xxl", "var(--lsx-font-size-xxl)"),
             ("--lsx-text-font-weight-xs", "400"),
             ("--lsx-text-line-height-md", "1.5"),
         ]);

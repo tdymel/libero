@@ -37,6 +37,9 @@ pub fn HeaderPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default("none, a neutral background")
                     .doc("Fills the header with shade 6 and a readable text color."),
+                prop("glass", "bool")
+                    .default("false")
+                    .doc("Frosted glass, as on `Paper`: content scrolling under the bar shows through, blurred. It takes the paper surface, so it replaces `color`. Opaque when the user reduces transparency, in forced colours, and in native windows."),
                 prop("z_index", "ThemeAwareValue")
                     .default("100")
                     .doc("Stacking order."),
@@ -72,6 +75,7 @@ pub fn HeaderPage() -> Element {
                         UNSET => vec![],
                         color => vec![format!("color: {color:?}")],
                     }),
+                    Control::switch("glass"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Box {
@@ -87,6 +91,7 @@ pub fn HeaderPage() -> Element {
                                 UNSET => Input::None,
                                 color => Input::from(color),
                             },
+                            glass: values.str("glass") == "true",
                             "Libero"
                         }
                         Box {

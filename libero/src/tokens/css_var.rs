@@ -102,6 +102,7 @@ impl SizeCss {
     pub const BREAKPOINT: SizeCss = SizeCss::new("--lsx-breakpoint-");
     pub const RADIUS: SizeCss = SizeCss::new("--lsx-radius-");
     pub const SHADOW: SizeCss = SizeCss::new("--lsx-shadow-");
+    pub const FONT_SIZE: SizeCss = SizeCss::new("--lsx-font-size-");
 
     pub const fn new(prefix: &'static str) -> Self {
         Self { prefix }

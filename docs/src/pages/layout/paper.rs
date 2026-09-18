@@ -40,6 +40,9 @@ pub fn PaperPage() -> Element {
                     prop("bordered", "bool")
                         .default("false")
                         .doc("A hairline border in the theme's surface border colour. Works together with a shadow."),
+                    prop("glass", "bool")
+                        .default("false")
+                        .doc("Frosted glass: translucent, blurring what is behind it, tuned by the theme's `paper.glass_background` and `paper.glass_blur`. Use it over app chrome, not over images, where text can lose contrast. Opaque when the user reduces transparency, in forced colours, and in native windows."),
                     prop("component", "HtmlTag")
                         .default("div")
                         .doc("The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. A `section` or `aside` is a landmark and needs your `aria-label`."),
@@ -60,7 +63,10 @@ pub fn PaperPage() -> Element {
                     Code { source: "Paper" }
                     " with a role. It has no ARIA of its own. Padding comes from your "
                     Code { source: "sx" }
-                    "."
+                    ". "
+                    Code { source: "glass" }
+                    " turns it into frosted glass for chrome such as a sticky bar, the way this "
+                    "site's header is drawn."
                 }
             },
             Demo {
@@ -86,6 +92,7 @@ pub fn PaperPage() -> Element {
                             }
                         }),
                     Control::switch("bordered"),
+                    Control::switch("glass"),
                     Control::toggle("component", ["div", "section", "article"])
                         .labels(["Div", "Section", "Article"]),
                 ],
@@ -108,6 +115,7 @@ pub fn PaperPage() -> Element {
                             radius: values.str("radius"),
                             shadow,
                             bordered: values.str("bordered") == "true",
+                            glass: values.str("glass") == "true",
                             component: values.str("component"),
                             sx,
                             // `md` is an h4 by size, and the preview sits

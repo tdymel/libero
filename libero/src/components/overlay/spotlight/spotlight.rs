@@ -53,7 +53,7 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& [data-spotlight-group-label]",
             sx().padding("8px 12px 4px")
-                .font_size("0.75rem")
+                .font_size(Size::Xs)
                 .font_weight("600")
                 .color(SPOTLIGHT_GROUP_COLOR.value())
                 .user_select("none"),

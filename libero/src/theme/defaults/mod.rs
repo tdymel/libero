@@ -250,7 +250,10 @@ pub use pagination::{
     PAGINATION_ACTIVE_BACKGROUND, PAGINATION_ACTIVE_COLOR, PAGINATION_BORDER,
     PAGINATION_CONTROL_SIZE, PAGINATION_FONT_SIZE, PAGINATION_GAP, PaginationDefaults,
 };
-pub use paper::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, PAPER_SHADOW, PaperDefaults};
+pub use paper::{
+    GLASS_BACKGROUND, GLASS_BLUR, PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, PAPER_SHADOW,
+    PaperDefaults,
+};
 pub use password_field::PasswordFieldDefaults;
 pub use phone_field::PhoneFieldDefaults;
 pub use pin_field::{PIN_FIELD_GAP, PinFieldDefaults, PinKind};

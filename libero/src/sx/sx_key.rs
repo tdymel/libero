@@ -86,7 +86,7 @@ properties! {
     MaxHeight => "max-height", max_height;
     Font => "font", font;
     FontFamily => "font-family", font_family;
-    FontSize => "font-size", font_size;
+    FontSize => "font-size", font_size, SizeCss::FONT_SIZE;
     FontWeight => "font-weight", font_weight;
     LetterSpacing => "letter-spacing", letter_spacing;
     LineHeight => "line-height", line_height;
