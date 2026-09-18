@@ -3,24 +3,19 @@
 Crate: `libero`
 Import: `use libero::{LiberoProvider, localization::{Formats, Localization}};`
 Index: [index.md](index.md) - every other component's markdown page
-Description: The words components say on their own and how dates and numbers are written: `Localization`, `Formats` and the hooks that switch them.
+Description: The words components say on their own, how dates and numbers are written, and the reading direction: `Localization`, `Formats` and the hooks that switch them.
 
-Every string a component says on its own, such as an accessible name, an
-announcement or a month name, comes from `LiberoProvider`'s `localization`. Two
-languages ship: `Localization::ENGLISH`, the default, and `Localization::GERMAN`.
+Every word a component says on its own, such as an accessible name or a month,
+comes from `LiberoProvider`'s `localization`. How dates and numbers are written
+depends on the region, so it is a prop of its own, `formats`. Any language goes
+with any formats: this site is English in German formats.
 
-How a date or a number is written depends on the region, not the language, so
-it is a prop of its own, `formats`. Any language goes with any formats: this
-site is English in German formats.
+Direction comes from the document. Components follow a `dir="rtl"` around them,
+and their directional props say start and end, not left and right.
 
-## Language and formats
+## Usage
 
-| Const | First weekday | Day format | Clock | Decimal separator |
-|---|---|---|---|---|
-| `Formats::AMERICAN` (default) | Sunday | `September 14, 2026` | `3:30 PM` | `.` |
-| `Formats::GERMAN` | Monday | `14. September 2026` | `15:30` | `,` |
-
-The docs page's two switches change the site's.
+The docs page's controls switch the site's language, formats and direction.
 
 ```rust
 use dioxus::prelude::*;
@@ -28,10 +23,13 @@ use libero::{LiberoProvider, localization::{Formats, Localization}};
 
 fn App() -> Element {
     rsx! {
-        LiberoProvider {
-            localization: &Localization::GERMAN,
-            formats: &Formats::GERMAN,
-            Router::<Route> {}
+        // Round the provider, so its portals (menus, popovers) flip too.
+        div { dir: "rtl",
+            LiberoProvider {
+                localization: &Localization::GERMAN,
+                formats: &Formats::GERMAN,
+                Router::<Route> {}
+            }
         }
     }
 }
@@ -44,12 +42,21 @@ fn App() -> Element {
 # #[component] fn Home() -> Element { rsx! {} }
 ```
 
-## Formats
+## What ships
 
-`Formats` holds the first weekday, a date pattern per level (day, month, year),
-the month heading, the time pattern, and the range and decimal separators. The
-patterns use dayjs tokens such as `YYYY`, `MMMM`, `D` and `HH`. An `h` or an `A`
-in the time pattern makes the pickers 12-hour.
+`Localization::ENGLISH` is the default language, and `Localization::GERMAN` the
+other. Two formats ship too:
+
+| Formats | First weekday | Day | Time |
+|---|---|---|---|
+| `Formats::AMERICAN` (default) | Sunday | `September 14, 2026` | `3:30 PM` |
+| `Formats::GERMAN` | Monday | `14. September 2026` | `15:30` |
+
+## Your own words and formats
+
+Both are plain structs. Change what you need with struct update syntax in a
+`static`. The format patterns use dayjs tokens such as `D. MMMM YYYY`; an `h` or
+an `A` in the time pattern makes the pickers 12-hour.
 
 ```rust
 use libero::localization::Formats;
@@ -69,11 +76,11 @@ static SWISS: Formats = Formats {
 | `range_separator` | `&'static str` | Between a range's two ends in a field's text. |
 | `decimal_separator` | `&'static str` | Between a number's whole and its fraction: `5.4 MB`, `5,4 MB`. |
 
-## Changing the words
-
-`Localization` is shaped like a theme: one struct with a group per component,
-plus `common` for the words many components share. Change it with struct update
-syntax in a `static`.
+`Localization` has a group per component, plus `common` for the words many
+share. A value inside a string is a named hole such as `{n}`, so each language
+puts it where its grammar wants it. `fill(template, &[("n", &3)])` fills the
+holes. A prop that names what only the call site knows, such as a dialog's
+close label, still wins over the localization.
 
 ```rust
 use libero::localization::{CommonLabels, Localization, PaginationLabels};
@@ -91,12 +98,6 @@ static WORDS: Localization = Localization {
 };
 ```
 
-A string with a value in it is a template with named holes, such as
-`"Go to page {n}"`, so a language can put the value where its grammar wants it.
-`fill(template, &[("n", &3)])` fills the holes. A prop that names what only the
-call site knows, such as a dialog's close label, still wins over the
-localization.
-
 The groups live in `libero::localization`, each with an `ENGLISH` and a `GERMAN`
 const: `CommonLabels`, `DateLocale`, `PaginationLabels`, `AvatarLabels`,
 `BurgerLabels`, `AnchorLabels`, `PinFieldLabels`, `ColorSchemeButtonLabels`,
@@ -111,11 +112,9 @@ component's labels.
 
 ## Switching at runtime
 
-`use_localization()` and `use_formats()` read the active ones, and every
-component that reads them re-renders on a switch. `use_localization_handle()`
-and `use_formats_handle()` add `get()` and `set()`, which a language or region
-picker is built on. The provider reads its props once, at mount, so switch
-through the handles.
+The provider reads its props once. Switch later through
+`use_localization_handle()` and `use_formats_handle()`, and every component that
+reads them follows.
 
 ```rust
 use dioxus::prelude::*;

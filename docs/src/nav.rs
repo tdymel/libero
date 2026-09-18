@@ -155,8 +155,8 @@ fn pages() -> Vec<(String, &'static str, Option<&'static str>)> {
 fn nav_tree() -> Vec<TreeNode<NavEntry>> {
     vec![
         group(
-            "guides",
-            "Guides",
+            "about",
+            "About",
             vec![
                 page(Route::GettingStarted {}, "Getting started"),
                 page(Route::PhilosophyPage {}, "Philosophy"),

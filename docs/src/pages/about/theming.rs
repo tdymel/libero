@@ -1,6 +1,32 @@
 use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Anchor, Code, CodeBlock, Text};
+use libero::components::{Code, CodeBlock, Table, Text, column};
+
+/// A part of the theme, its fields, and what it changes.
+type Part = (&'static str, &'static str, &'static str);
+
+const PARTS: [Part; 4] = [
+    (
+        "Colors",
+        "primary, secondary, success, error, warning, info",
+        "One hex per role, with nine shades and a text color derived from it.",
+    ),
+    (
+        "Page",
+        "surface, ink",
+        "The page and the text on it. A dark surface makes a dark theme.",
+    ),
+    (
+        "Scales",
+        "spacing, radius, elevation",
+        "Every size word, gap, corner and shadow.",
+    ),
+    (
+        "Components",
+        "button, dialog, ...",
+        "Every prop a caller leaves unset.",
+    ),
+];
 
 // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] Home {} }
 // snippet: item #[component] fn Home() -> Element { rsx! {} }
@@ -61,10 +87,20 @@ pub fn ThemingPage() -> Element {
             markdown: "/md/theming.md",
             lead: rsx! {
                 Text {
-                    "A theme is one struct: a color per role, the spacing and radius scales, "
-                    "and a defaults struct per component. Hand yours to "
+                    "A theme is one struct. Hand yours to "
                     Code { source: "LiberoProvider" }
                     " and every component follows it."
+                }
+                Table {
+                    aria_label: "What a theme holds",
+                    data: PARTS.to_vec(),
+                    columns: vec![
+                        column("Part").value(|row: &Part| row.0),
+                        column("Fields")
+                            .value(|row: &Part| row.1)
+                            .render(|row: &Part| rsx! { Code { source: row.1 } }),
+                        column("What it changes").value(|row: &Part| row.2),
+                    ],
                 }
             },
 
@@ -81,20 +117,8 @@ pub fn ThemingPage() -> Element {
             DocSection {
                 title: "Colors",
                 Text {
-                    "Each role ("
-                    Code { source: "primary" }
-                    ", "
-                    Code { source: "secondary" }
-                    ", "
-                    Code { source: "success" }
-                    ", "
-                    Code { source: "error" }
-                    ", "
-                    Code { source: "warning" }
-                    ", "
-                    Code { source: "info" }
-                    ") is one hex value. Libero derives nine shades from it and keeps text "
-                    "legible on each, so a brand color is one line. In "
+                    "One hex per role is enough. Libero derives nine shades from it and keeps "
+                    "text legible on each. In "
                     Code { source: "sx" }
                     ", a role name is its base color and "
                     Code { source: "primary.1" }
@@ -106,35 +130,10 @@ pub fn ThemingPage() -> Element {
             }
 
             DocSection {
-                title: "Scales",
-                Text {
-                    Code { source: "spacing" }
-                    " and "
-                    Code { source: "radius" }
-                    " hold a pixel value per step, "
-                    Code { source: "xs" }
-                    " to "
-                    Code { source: "xxl" }
-                    ". Every "
-                    Code { source: "size" }
-                    ", "
-                    Code { source: "gap" }
-                    " and "
-                    Code { source: "radius" }
-                    " prop, and the size words in "
-                    Code { source: "sx" }
-                    ", step along them. "
-                    Code { source: "elevation" }
-                    " does the same for shadows."
-                }
-            }
-
-            DocSection {
                 title: "Component defaults",
                 Text {
                     "Every prop a caller leaves unset comes from the component's struct on "
-                    "the theme. Pill-shaped buttons everywhere is one change here, not a "
-                    "prop at every call site."
+                    "the theme. Pill-shaped buttons everywhere is one change here."
                 }
                 CodeBlock { source: COMPONENT_DEFAULTS, language: "rust" }
             }
@@ -175,15 +174,6 @@ pub fn ThemingPage() -> Element {
                     "."
                 }
                 CodeBlock { source: READING_THE_THEME, language: "rust" }
-            }
-
-            DocSection {
-                title: "Localization",
-                Text {
-                    "Words and date formats are not part of the theme. See "
-                    Anchor { to: crate::Route::LocalizationPage {}, "Localization" }
-                    "."
-                }
             }
         }
     }

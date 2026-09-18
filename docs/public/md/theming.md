@@ -5,9 +5,15 @@ Import: `use libero::{LiberoProvider, theme::{HexColor, Size, Sizes, Theme}};`
 Index: [index.md](index.md) - every other component's markdown page
 Description: How to customize a Libero theme and use it: colors, scales, per-component defaults, light and dark pairs, and reading the active theme.
 
-A theme is one struct: a color per role, the spacing and radius scales, and a
-defaults struct per component. Hand yours to `LiberoProvider` and every
-component follows it.
+A theme is one struct. Hand yours to `LiberoProvider` and every component
+follows it.
+
+| Part | Fields | What it changes |
+|---|---|---|
+| Colors | `primary`, `secondary`, `success`, `error`, `warning`, `info` | One hex per role, with nine shades and a text color derived from it. |
+| Page | `surface`, `ink` | The page and the text on it. A dark surface makes a dark theme. |
+| Scales | `spacing`, `radius`, `elevation` | Every size word, gap, corner and shadow. |
+| Components | `button`, `dialog`, ... | Every prop a caller leaves unset. |
 
 ## A custom theme
 
@@ -32,10 +38,9 @@ fn App() -> Element {
 
 ## Colors
 
-Each role (`primary`, `secondary`, `success`, `error`, `warning`, `info`) is one
-hex value. Libero derives nine shades from it and keeps text legible on each, so
-a brand color is one line. In `sx`, a role name is its base color and
-`primary.1` to `primary.9` are the shades.
+One hex per role is enough. Libero derives nine shades from it and keeps text
+legible on each. In `sx`, a role name is its base color and `primary.1` to
+`primary.9` are the shades.
 
 ```rust
 use dioxus::prelude::*;
@@ -59,8 +64,7 @@ fn Status() -> Element {
 ## Component defaults
 
 Every prop a caller leaves unset comes from the component's struct on the theme.
-Pill-shaped buttons everywhere is one change here, not a prop at every call
-site.
+Pill-shaped buttons everywhere is one change here.
 
 ```rust,ignore
 static THEME: Theme = Theme {
@@ -124,11 +128,6 @@ fn Gap() -> Element {
     rsx! { Text { "The md gap is {gap}px" } }
 }
 ```
-
-## Localization
-
-Words and date formats are not part of the theme. See
-[Localization](localization.md).
 
 ## Theme fields
 

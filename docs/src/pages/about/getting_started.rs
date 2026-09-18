@@ -1,0 +1,274 @@
+use crate::components::{DocPage, DocSection};
+use dioxus::prelude::*;
+use libero::{
+    components::{
+        Alert, Code, CodeBlock, Flex, List, ListItem, Options, Table, Tabs, Text, column,
+    },
+    sx::sx,
+};
+
+const FEATURES: [(&str, &str); 3] = [
+    (
+        "code-lang-<name>",
+        "One grammar for Code and CodeBlock, 30 in all. Rust, Bash, Markdown, HTML and CSS are the default.",
+    ),
+    (
+        "full-polymorphism",
+        "Box renders the rarer HTML elements too (metadata, media, web components). Without it they fall back to a div.",
+    ),
+    (
+        "native",
+        "Element access through Blitz, for apps on dioxus-native.",
+    ),
+];
+
+// snippet: ignore - a Cargo.toml fragment, not Rust
+const FEATURES_EXAMPLE: &str = r#"libero = { version = "0.1", default-features = false, features = [
+    "code-lang-rust",
+    "full-polymorphism",
+] }"#;
+
+const QUICK_START_EXAMPLE: &str = r#"fn App() -> Element {
+    rsx! {
+        LiberoProvider {
+            Text { "Hello, Libero!" }
+        }
+    }
+}"#;
+
+// snippet: ignore - shell commands, not Rust
+const WEB_COMMANDS: &str = "dx serve --platform web
+dx build --platform web --release";
+
+// snippet: ignore - a Cargo.toml fragment, not Rust
+const WEB_PROFILE: &str = r#"[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true"#;
+
+// snippet: ignore - a Dioxus.toml fragment, not Rust
+const WEB_DIOXUS: &str = r#"[web]
+pre_compress = true"#;
+
+// snippet: ignore - a Cargo.toml fragment, not Rust
+const NATIVE_CARGO: &str = r#"[dependencies]
+dioxus ={ version = "0.8.0-alpha.1", features = ["native"] }
+libero = { version = "0.1", features = ["native"] }
+
+# Blitz is unusably slow unoptimised; this keeps your own crate debuggable.
+[profile.dev.package."*"]
+opt-level = 3
+
+# `release` above is tuned for wasm size, the wrong trade for a window.
+[profile.native]
+inherits = "release"
+opt-level = 3
+lto = "thin"
+codegen-units = 16"#;
+
+// snippet: ignore - shell commands, not Rust
+const NATIVE_COMMANDS: &str = "dx serve --platform linux --renderer native
+dx build --platform linux --renderer native --profile native";
+
+// snippet: ignore - shell commands, not Rust
+const ANDROID_COMMANDS: &str = "rustup target add aarch64-linux-android x86_64-linux-android
+export ANDROID_HOME=$HOME/Android/Sdk
+dx serve --platform android
+dx build --platform android";
+
+// snippet: ignore - a Dioxus.toml fragment, not Rust
+const ANDROID_DIOXUS: &str = r#"[android]
+identifier = "com.example.app""#;
+
+/// Where the app runs, one tab each.
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Environment {
+    Web,
+    #[option(label = "Native (Blitz)")]
+    Native,
+    Android,
+}
+
+#[component]
+pub fn GettingStarted() -> Element {
+    let mut environment = use_signal(|| Environment::Web);
+
+    rsx! {
+        DocPage {
+            title: "Getting started",
+            markdown: "/md/getting_started.md",
+            lead: rsx! {
+                Text {
+                    "Libero is a Dioxus component library focused on developer experience, UX, accessibility, and configurability."
+                }
+            },
+            DocSection {
+                title: "Installation",
+                CodeBlock { source: "cargo add libero", language: "shell" }
+                Text {
+                    "Wrap your app in "
+                    Code { source: "LiberoProvider" }
+                    " once, at the root. It registers the theme and every style your components use."
+                }
+                CodeBlock { source: QUICK_START_EXAMPLE, language: "rust" }
+            }
+
+            DocSection {
+                title: "Build and run",
+                Tabs {
+                    value: environment(),
+                    onchange: move |next| environment.set(next),
+                    panel: |environment: Environment| match environment {
+                        Environment::Web => rsx! { WebPanel {} },
+                        Environment::Native => rsx! { NativePanel {} },
+                        Environment::Android => rsx! { AndroidPanel {} },
+                    },
+                }
+            }
+
+            DocSection {
+                title: "Feature flags",
+                Text { "Every feature is additive." }
+                Table {
+                    aria_label: "Feature flags",
+                    data: FEATURES.to_vec(),
+                    columns: vec![
+                        column("Flag")
+                            .value(|row: &(&str, &str)| row.0)
+                            .render(|row: &(&str, &str)| rsx! { Code { source: row.0, sx: sx().white_space("nowrap") } }),
+                        column("What it does").value(|row: &(&str, &str)| row.1),
+                    ],
+                }
+                CodeBlock { source: FEATURES_EXAMPLE, language: "toml" }
+            }
+        }
+    }
+}
+
+/// A tab's body: a column with room under the strip.
+#[component]
+fn Panel(children: Element) -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", sx: sx().padding_top("md"), {children} }
+    }
+}
+
+#[component]
+fn WebPanel() -> Element {
+    rsx! {
+        Panel {
+            CodeBlock { source: WEB_COMMANDS, language: "shell" }
+            Text { "What keeps the download small:" }
+            List { size: "sm",
+                ListItem {
+                    "A release profile tuned for size. "
+                    Code { source: "dx build --release" }
+                    " runs "
+                    Code { source: "wasm-opt" }
+                    " on top, which "
+                    Code { source: "dx" }
+                    " downloads itself."
+                }
+                ListItem {
+                    Code { source: "pre_compress" }
+                    " in "
+                    Code { source: "Dioxus.toml" }
+                    " writes a brotli copy of the wasm and every asset beside it. Your host has to serve the "
+                    Code { source: ".br" }
+                    " files."
+                }
+                ListItem {
+                    "Only the "
+                    Code { source: "code-lang-*" }
+                    " grammars your pages highlight."
+                }
+                ListItem {
+                    "Dioxus's experimental "
+                    Code { source: "wasm-split" }
+                    " feature fetches each route's code on its first visit. It takes this site's main bundle from 414 KB to 297 KB in brotli. With it on, always pass "
+                    Code { source: "--wasm-split" }
+                    " to "
+                    Code { source: "dx" }
+                    ", or the app fails to load."
+                }
+            }
+            CodeBlock { source: WEB_PROFILE, language: "toml" }
+            CodeBlock { source: WEB_DIOXUS, language: "toml" }
+        }
+    }
+}
+
+#[component]
+fn NativePanel() -> Element {
+    rsx! {
+        Panel {
+            Text {
+                "A window drawn by Blitz, no browser involved. Turn on "
+                Code { source: "native" }
+                " in dioxus and in libero, and name your platform ("
+                Code { source: "linux" }
+                ", "
+                Code { source: "macos" }
+                " or "
+                Code { source: "windows" }
+                ")."
+            }
+            CodeBlock { source: NATIVE_CARGO, language: "toml" }
+            CodeBlock { source: NATIVE_COMMANDS, language: "shell" }
+            Text { "On Linux you need:" }
+            List { size: "sm",
+                ListItem {
+                    Code { source: "fontconfig" }
+                    " to build ("
+                    Code { source: "libfontconfig1-dev" }
+                    " on Debian and Ubuntu)."
+                }
+                ListItem {
+                    "A Vulkan driver to draw ("
+                    Code { source: "mesa-vulkan-drivers" }
+                    ", or "
+                    Code { source: "vulkan-intel" }
+                    " on Arch). Without a GPU, dioxus-native's CPU renderer ("
+                    Code { source: "vello-cpu-softbuffer" }
+                    ") still draws."
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn AndroidPanel() -> Element {
+    rsx! {
+        Panel {
+            Alert { title: "Early",
+                Text {
+                    "Android runs, but it is the least tested target. Focus traps and tree keys do nothing there yet."
+                }
+            }
+            Text {
+                "The app runs in the system WebView, so it looks and behaves like the web build. Turn on dioxus's "
+                Code { source: "mobile" }
+                " feature; libero needs no feature of its own."
+            }
+            Text { "Install once:" }
+            List { size: "sm",
+                ListItem { "The Android SDK with the NDK (27), platform 34 and build tools 34, and a JDK." }
+                ListItem { "An emulator or a device that " Code { source: "adb devices" } " lists." }
+            }
+            CodeBlock { source: ANDROID_COMMANDS, language: "shell" }
+            Text {
+                Code { source: "dx" }
+                " finds the NDK only through "
+                Code { source: "ANDROID_HOME" }
+                ". It regenerates the gradle project on every build, so set the app id in "
+                Code { source: "Dioxus.toml" }
+                ". A Rust panic shows only in "
+                Code { source: "adb logcat" }
+                "."
+            }
+            CodeBlock { source: ANDROID_DIOXUS, language: "toml" }
+        }
+    }
+}

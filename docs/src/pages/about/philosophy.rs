@@ -1,19 +1,11 @@
 use crate::components::DocPage;
-use crate::icons::{CheckmarkIcon, ChevronIcon, CodeIcon};
+use crate::icons::{CheckmarkIcon, CodeIcon};
 use dioxus::prelude::*;
 use libero::{
     components::{Alert, Anchor, Badge, Divider, Flex, Icon, List, ListItem, Paper, Text, Title},
     sx::sx,
     theme::Size,
 };
-
-/// The principles in priority order, as the strip names them.
-const RANKING: [&str; 4] = [
-    "Developer experience",
-    "Accessibility",
-    "Batteries included",
-    "Simple yet modern",
-];
 
 #[component]
 pub fn PhilosophyPage() -> Element {
@@ -28,7 +20,6 @@ pub fn PhilosophyPage() -> Element {
                     "Four principles decide what goes into libero and how it is shaped. They are "
                     "ranked: when two pull in different directions, the higher one wins."
                 }
-                Ranking {}
             },
 
             Flex { direction: "row", align: "stretch", gap: "lg", wrap: "wrap",
@@ -89,23 +80,6 @@ pub fn PhilosophyPage() -> Element {
                     Point { "Make changing the look ordinary Rust, not a fight with the library." }
                     Point { "Offer light and dark from the start." }
                     Point { "Let your own styles win over ours." }
-                }
-            }
-        }
-    }
-}
-
-/// The priority order at a glance; the chevrons are named so it reads as a sentence.
-#[component]
-fn Ranking() -> Element {
-    rsx! {
-        Flex { direction: "row", align: "center", gap: "xs", wrap: "wrap",
-            for (index, name) in RANKING.iter().enumerate() {
-                Flex { key: "{name}", direction: "row", align: "center", gap: "xs",
-                    if index > 0 {
-                        Icon { variant: "standard", size: "sm", aria_label: "before", ChevronIcon {} }
-                    }
-                    Badge { variant: "tonal", size: "lg", sx: sx().text_transform("none"), "{index + 1}. {name}" }
                 }
             }
         }

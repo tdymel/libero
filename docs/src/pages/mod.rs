@@ -1,9 +1,9 @@
+mod about;
 mod accessibility;
 mod buttons;
 mod data_display;
 mod feedback;
 mod form;
-mod guides;
 mod home;
 mod hooks;
 mod layout;
@@ -12,12 +12,12 @@ mod overlay;
 mod typography;
 
 // One glob per category, so a new page touches only its own category `mod.rs`.
+pub use about::*;
 pub use accessibility::*;
 pub use buttons::*;
 pub use data_display::*;
 pub use feedback::*;
 pub use form::*;
-pub use guides::*;
 pub use home::Home;
 pub use hooks::*;
 pub use layout::*;

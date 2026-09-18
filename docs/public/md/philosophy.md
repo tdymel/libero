@@ -7,11 +7,6 @@ Description: The four principles behind libero in order of priority (developer e
 Four principles decide what goes into libero and how it is shaped. They are
 ranked: when two pull in different directions, the higher one wins.
 
-1. Developer experience
-2. Accessibility
-3. Batteries included
-4. Simple yet modern
-
 ## 1. Developer experience
 
 An API that is small, clear and hard to misuse.

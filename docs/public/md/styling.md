@@ -5,16 +5,16 @@ Import: `use libero::sx::{Sx, StaticSx, bp, sx};`
 Index: [index.md](index.md) - every other component's markdown page
 Description: The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers and `StaticSx`.
 
-Every component takes the same four styling props: `sx` for CSS, `states` for
-your own variants, `class` for a stylesheet you already have, and everything a
-`GlobalAttributes` element accepts (`id`, `onclick` and the rest) passed
-straight through to the rendered tag.
+Every component takes the same styling props. `sx()` is not an inline style.
+Identical declarations share one `lsx-*` class, emitted once, so a thousand rows
+styled alike cost one rule, and hover and media queries work.
 
-`sx()` builds a list of declarations, not an inline style. Identical
-declarations hash to one `lsx-*` class shared by every element that asked for
-it, emitted once into a `<style>` tag. So a thousand rows styled alike cost one
-rule, and pseudo-classes and media queries work, which an inline style cannot
-express.
+| Prop | For |
+|---|---|
+| `sx` | CSS, compiled to one shared class. |
+| `states` | Your own variants, matched by `when`. |
+| `class` | A stylesheet you already have. |
+| `id`, `onclick`, ... | Any global attribute or event, passed to the rendered tag. |
 
 ## Usage
 
@@ -40,12 +40,16 @@ fn Demo() -> Element {
 
 ## Theme values
 
-A value is a plain string, and the ones the theme knows resolve against it. A
-bare color name is shade 6. `1` through `9` are generated from that one hex
-value, and `-contrast` is whichever of black or white reads on it. A size word
-(`xs` to `xxl`) resolves through the scale the property belongs to: spacing for
-`padding`, `margin` and `gap`, radius for the `border_radius` family. A leading
-`-` negates it. Everything else is CSS text, untouched.
+A value is a plain string. The ones the theme knows resolve against it.
+
+| Value | Resolves to |
+|---|---|
+| `"primary"` | The role's base color, shade 6. |
+| `"primary.1"` to `"primary.9"` | Shades generated from it. |
+| `"primary-contrast"` | Black or white, whichever reads on it. |
+| `"xs"` to `"xxl"` | A step of the property's scale: spacing for `padding`, `margin` and `gap`, radius for the `border_radius` family. |
+| `"-sm"` | The same step, negated. |
+| anything else | CSS text, untouched. |
 
 ```rust,ignore
 sx()
@@ -58,17 +62,15 @@ sx()
     .width("240px")               // anything else is CSS text, untouched
 ```
 
-A theme color given to `background` or `background_color` also tells the focus
-rings inside the element which color reads on it. A `var()` or any other CSS
-text tells them nothing, so they keep the surrounding one.
+A theme color given to `background` also tells the focus rings inside the
+element which color reads on it. A `var()` tells them nothing.
 
 ## States
 
-Your own variants need no second class. Fold every one into the same `sx` with
-`when`, and switch between them with the `states` prop, which renders a
-`data-state` attribute. One shared class, varied per instance, is how every
-Libero component handles its own size and variant props. A condition can combine
-tokens with `&&` and `||`.
+Fold every variant into one `sx` with `when`, and pick one with the `states`
+prop, which renders a `data-state` attribute. Every libero component handles its
+own size and variant this way. A condition can combine tokens with `&&` and
+`||`.
 
 ```rust
 use dioxus::prelude::*;
@@ -94,11 +96,9 @@ fn Demo() -> Element {
 
 ## Selectors
 
-`hover`, `focus` and `focus_visible` nest an `Sx` under that pseudo-class. They
-are conveniences over `selector`, which takes any selector text and substitutes
-`&` with the class this `Sx` generates, so `&` can sit anywhere in the pattern,
-including after an ancestor. A pattern without one is appended, so `":hover"`
-and `"&:hover"` are the same. A comma list expands to one rule per part.
+`selector` takes any selector text, with `&` standing for the element. A pattern
+without one is appended, and a comma list expands to one rule per part.
+`hover`, `focus` and `focus_visible` are shorthands for it.
 
 ```rust,ignore
 sx()
@@ -112,11 +112,10 @@ sx()
 
 ## Responsive
 
-`breakpoint` nests a whole `Sx` under a `min-width` media query, so the
-unnested declarations are the small-screen ones and each breakpoint overrides
-upwards. Several blocks apply in the order they are written, so write them
-smallest first; a debug build warns when a wider one comes before a narrower
-one.
+Write the small screen first, then override upwards with `breakpoint`, smallest
+first; a debug build warns about the wrong order. For a single property, `bp()`
+puts the steps inside the value. It carries no base value, so set that outside
+`bp()`.
 
 ```rust,ignore
 sx()
@@ -125,20 +124,12 @@ sx()
     .breakpoint(Size::Sm, sx().flex_direction("row").gap("lg"))
 ```
 
-When only one property changes, `bp()` puts the breakpoints inside the value
-instead of wrapping a block around it:
-
 ```rust,ignore
 sx().width(bp().sm("480px").lg("720px"))
 ```
 
-It carries no base value, and a second call to the same property replaces the
-first. A property that also needs a value below the smallest breakpoint sets
-that base outside `bp()`. The steps apply from the smallest up, in whatever
-order they are written.
-
-The six breakpoints are fixed literals, not theme values, because a `@media`
-query cannot read a CSS custom property:
+The breakpoints are fixed, because a `@media` query cannot read a CSS custom
+property:
 
 | Size | `min-width` |
 |---|---|
@@ -149,10 +140,10 @@ query cannot read a CSS custom property:
 | `xl` | `88rem` |
 | `xxl` | `101rem` |
 
-## Media queries
+## Media and container queries
 
-`media` nests an `Sx` under any `@media` query, passed through verbatim.
-`breakpoint` is its shorthand. The main use is `prefers-reduced-motion`:
+`media` nests styles under any `@media` query, passed through verbatim, mostly
+for reduced motion. Nothing validates the query.
 
 ```rust,ignore
 sx()
@@ -160,14 +151,9 @@ sx()
     .media("(prefers-reduced-motion: reduce)", sx().transition("none"))
 ```
 
-Nothing validates the query, so a typo silently matches nothing, as with
-`when`. Nested `media` modifiers fold into a single `and` query,
-exactly like nested `breakpoint`s.
-
-Nest `media` inside the condition, never the condition inside `media`. A media
-query adds no specificity, and a condition appends `[data-state~="open"]`
-(0-2-0 against a bare class's 0-1-0). So the flat form loses wherever it sits in
-the file:
+Nest `media` inside a `when`, never the other way round. A media query adds no
+specificity and a state adds some, so the flat form loses. The same goes for
+`hover` and `selector`.
 
 ```rust,ignore
 // Wrong: the transition still plays under reduced motion.
@@ -182,20 +168,11 @@ sx().when(
 )
 ```
 
-The same applies to every modifier that changes the selector: `hover`,
-`selector` and `when`. `breakpoint` and `container_query` do not, so those compose
-in either order.
-
-## Container queries
-
-`breakpoint` asks about the viewport, but "does this component have room" is
-almost always a question about the box it sits in. The two disagree whenever a
-component lives in a column narrower than the window, such as a sidebar, a grid
-cell or a card.
-
-`container` marks an ancestor as a query container and `container_query` asks
-about it by name. The name is required, because an anonymous query binds to the
-nearest container, the wrong one as soon as containers nest.
+`container_query` asks about a named ancestor instead of the window, for a
+component in a sidebar, a grid cell or a card. The name is required, because an
+anonymous query binds to the nearest container. `container` emits
+`container-type: inline-size`: the element no longer takes its width from its
+content, so never make a shrink-to-fit box one.
 
 ```rust,ignore
 // The ancestor whose width the answer depends on:
@@ -209,16 +186,10 @@ sx().width("100%")
 sx().container_breakpoint("demo-card", Size::Md, sx().width("388px"))
 ```
 
-`container` emits `container-type: inline-size`, which is `contain: layout style
-inline-size`. The element is no longer sized by its contents in the inline axis,
-becomes a stacking context, and becomes the containing block for absolutely
-positioned descendants. So never mark a shrink-to-fit box as a container. Like `@media`, the condition cannot read a CSS custom property.
-
 ## class and attributes
 
-`sx` is additive. `class` puts your own class names on the same
-element for CSS you already have, and any attribute or event a
-`GlobalAttributes` element accepts is forwarded to the rendered tag.
+`class` adds your own class names beside `sx`, and every other attribute or
+event goes to the rendered tag.
 
 ```rust,ignore
 Box {
@@ -231,12 +202,9 @@ Box {
 
 ## Cascade layers
 
-Libero emits one `@layer` statement up front, and every rule it writes that
-styles an element goes into one of those layers. A later layer beats an earlier
-one however weak its selector is, and specificity only decides ties within a
-layer. The theme's custom properties on `:root` and its `@keyframes` stay
-outside. Neither is a cascaded rule, so a layer would only make them harder to
-override.
+Libero writes its rules into CSS layers. A later layer wins whatever its
+selectors, so your `sx` always beats a component's own styling. The theme's
+custom properties and `@keyframes` stay outside the layers.
 
 ```css
 @layer lsx-base, lsx-framework, lsx-user-static, lsx-user-custom;
@@ -244,56 +212,37 @@ override.
 
 | Layer | What it holds |
 |---|---|
-| `lsx-base` | The theme's reset and its `body` rules. First, so everything else outranks them. |
-| `lsx-framework` | Each component's own styling, and its focus ring. |
-| `lsx-user-static` | Your `sx` prop. Beats the component's own styling, always. |
-| `lsx-user-custom` | A stylesheet you registered yourself with `use_stylesheet()`. |
-| unlayered | Your own CSS files, reached through the `class` prop. Unlayered CSS outranks every layer, so these win outright. |
+| `lsx-base` | The theme's reset and its `body` rules. |
+| `lsx-framework` | Each component's own styling. |
+| `lsx-user-static` | Your `sx` prop. Beats the component's own styling. |
+| `lsx-user-custom` | Stylesheets registered with `use_stylesheet()`. |
+| unlayered | Your own CSS files, through `class`. Beats every layer. |
 
-Remember the last row. A plain stylesheet of your own is in no layer, and CSS
-puts unlayered rules above every layered one. So `class` is the heaviest hammer
-on the page. Reach for `sx` first, and keep `class` for stylesheets you already
-own.
+A stylesheet of your own is in no layer, so `class` beats everything. Reach for
+`sx` first.
 
-Layers rank by first mention, and Libero declares its own when
-`LiberoProvider` mounts, after anything already in `<head>`. So layers your own
-stylesheet declares rank below every `lsx-*` layer, and a layered
-`body { margin: 2rem }` of yours still loses to `lsx-base`. Two ways out, both
-measured in Chromium:
-
-- Leave the rule unlayered. Unlayered beats every layer, including `lsx-base`.
-- Declare the whole order yourself, first in a stylesheet the browser sees
-  before Libero's statement. Then you decide where your layers sit:
+Layers rank by first mention, and libero declares its own when `LiberoProvider`
+mounts, so layers your stylesheet declares rank below every `lsx-*` layer. To
+rank them among libero's, declare the whole order yourself, first in a
+stylesheet the browser sees before libero's:
 
 ```css
 @layer lsx-base, app-base, lsx-framework, lsx-user-static, lsx-user-custom, app-overrides;
 ```
 
-That is what `lsx-base` is for. You can rank above it without outranking a
-component's own styling.
-
-A utility framework like Tailwind composes with Libero once you declare the
-order. Tailwind v3's utilities are unlayered, so a `class: "mt-4"` outranks
-every Libero layer. Tailwind v4 layers everything (`theme`, `base` for its
-reset, `components`, `utilities`), and left alone those rank below Libero's. The
-reset then leaves Libero's components alone, but a utility class on one loses.
-Put this first in your CSS, before `@import "tailwindcss"`, so the reset stays
-under Libero's components and the utilities win over them:
+Declaring the order also makes Tailwind v4 work: its reset under libero's
+components, its utilities over them. Put this before `@import "tailwindcss"`
+(measured in Chromium; unsupported, not forbidden):
 
 ```css
 @layer theme, base, lsx-base, lsx-framework, lsx-user-static, lsx-user-custom, components, utilities;
 ```
 
-Measured in Chromium on the Button page: with that line every Button kept its
-fill and `bg-red-500` won on all 15; without it, `bg-red-500` won on none.
-Using Tailwind alongside Libero is unsupported, not forbidden.
-
 ## Static sx
 
-An `Sx` written inline is rebuilt and re-hashed on every render. When the
-styling does not depend on props, hoist it into a `StaticSx` and pass a
-reference. The builder then runs once per process, and the per-render check is a
-pointer comparison instead of a content hash.
+Styling that doesn't depend on props can live in a `StaticSx`, built once per
+process instead of on every render. Every constant `sx` inside libero is one,
+and your own components should copy that.
 
 ```rust
 use dioxus::prelude::*;
@@ -318,12 +267,6 @@ fn Demo() -> Element {
     }
 }
 ```
-
-The difference is roughly 210 ns per call site per render, too little to matter
-in a page, and worth having in a component a hundred rows mount. Every constant
-`sx` inside Libero is a `StaticSx` for that reason. Components built on top of
-Libero should copy the pattern: a static per component, with the parts that vary
-carried by `states` rather than by a fresh `Sx` per render.
 
 ## Props
 

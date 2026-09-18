@@ -54,17 +54,17 @@ pub(crate) enum Route {
     #[route("/")]
     Home {},
 
-    #[route("/guides/getting-started")]
+    #[route("/about/getting-started")]
     GettingStarted {},
-    #[route("/guides/philosophy")]
+    #[route("/about/philosophy")]
     PhilosophyPage {},
-    #[route("/guides/styling")]
+    #[route("/about/styling")]
     StylingPage {},
-    #[route("/guides/theming")]
+    #[route("/about/theming")]
     ThemingPage {},
-    #[route("/guides/localization")]
+    #[route("/about/localization")]
     LocalizationPage {},
-    #[route("/guides/platform")]
+    #[route("/about/platform")]
     PlatformPage {},
 
     #[route("/accessibility")]

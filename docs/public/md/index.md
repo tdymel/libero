@@ -9,14 +9,14 @@ The docs site is a Dioxus app, so its HTML carries no content until the wasm
 runs - these files are the readable source of the same pages. Start here, then
 fetch only the file you need.
 
-## Guides
+## About
 
-- [Getting started](getting_started.md): Installing libero, wrapping an app in LiberoProvider, and the feature flags a web build wants.
+- [Getting started](getting_started.md): Installing libero, wrapping an app in LiberoProvider, building for the web, natively and for Android, and the feature flags.
 - [Philosophy](philosophy.md): The four principles behind libero in order of priority (developer experience, accessibility, batteries included, simple yet modern) and what we do about each.
 - [Styling](styling.md): The `sx` styling builder every component takes: theme values, states, selectors, responsive, media and container queries, cascade layers and `StaticSx`.
 - [Theming](theming.md): How to customize a Libero theme and use it: colors, scales, per-component defaults, light and dark pairs, and reading the active theme.
-- [Localization](localization.md): The words components say on their own and how dates and numbers are written: `Localization`, `Formats` and the hooks that switch them.
-- [Platform](platform.md): The platform APIs for timers, document-level keys, scroll, focus and viewport, the clock and element handles, and how to use them where a renderer lacks one.
+- [Localization](localization.md): The words components say on their own, how dates and numbers are written, and the reading direction: `Localization`, `Formats` and the hooks that switch them.
+- [Platform](platform.md): Every platform API (elements, timers, keys, scroll, the document, the colour scheme and the clock), what each makes possible, and how to use them where a renderer lacks one.
 
 ## Layout
 

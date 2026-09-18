@@ -3,20 +3,16 @@
 Crate: `libero`
 Import: `use libero::LiberoProvider;`
 Index: [index.md](index.md) - every component's markdown page
-Description: Installing libero, wrapping an app in LiberoProvider, and the feature flags a web build wants.
+Description: Installing libero, wrapping an app in LiberoProvider, building for the web, natively and for Android, and the feature flags.
 
 Libero is a Dioxus component library focused on developer experience, UX,
 accessibility, and configurability.
 
 ## Installation
 
-Add Libero to your project with cargo:
-
 ```shell
 cargo add libero
 ```
-
-## Quick start
 
 Wrap your app in `LiberoProvider` once, at the root. It registers the theme and
 every style your components use.
@@ -37,31 +33,101 @@ fn App() -> Element {
 Without it, components render but carry no theme and no stylesheet, so nothing
 is styled.
 
-## Building for the web
+## Build and run
 
-Dioxus's `wasm-split` feature puts every route in its own chunk, fetched on its
-first visit, so the initial bundle stays small. On this docs site the
-brotli-compressed main bundle is 297 KB instead of 414 KB. Libero adds no split
-points of its own. The per-route chunks already carry [Code](code.md)'s
-highlighter and [QrCode](qr_code.md)'s encoder to the pages that use them.
-
-```toml
-dioxus = { version = "0.8.0-alpha.1", features = ["router", "wasm-split"] }
-```
-
-It is experimental, and `dx` enables it only when asked. With the feature on,
-always build and serve with `--wasm-split`, or the app fails to load.
+### Web
 
 ```shell
-dx serve --platform web --release --debug-symbols=false --wasm-split
+dx serve --platform web
+dx build --platform web --release
 ```
 
-Without it, drop the feature and the `--wasm-split` flag. The app renders the
-same, from one bundle. Either way, keep only the languages your own examples
-use:
+What keeps the download small:
+
+- A release profile tuned for size. `dx build --release` runs `wasm-opt` on
+  top, which `dx` downloads itself.
+- `pre_compress` in `Dioxus.toml` writes a brotli copy of the wasm and every
+  asset beside it. Your host has to serve the `.br` files.
+- Only the `code-lang-*` grammars your pages highlight.
+- Dioxus's experimental `wasm-split` feature fetches each route's code on its
+  first visit. It takes this site's main bundle from 414 KB to 297 KB in
+  brotli. With it on, always pass `--wasm-split` to `dx`, or the app fails to
+  load.
 
 ```toml
-libero = { version = "0.1", default-features = false, features = ["code-lang-rust"] }
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+```
+
+```toml
+[web]
+pre_compress = true
+```
+
+### Native (Blitz)
+
+A window drawn by Blitz, no browser involved. Turn on `native` in dioxus and in
+libero, and name your platform (`linux`, `macos` or `windows`).
+
+```toml
+[dependencies]
+dioxus = { version = "0.8.0-alpha.1", features = ["native"] }
+libero = { version = "0.1", features = ["native"] }
+
+# Blitz is unusably slow unoptimised; this keeps your own crate debuggable.
+[profile.dev.package."*"]
+opt-level = 3
+
+# `release` above is tuned for wasm size, the wrong trade for a window.
+[profile.native]
+inherits = "release"
+opt-level = 3
+lto = "thin"
+codegen-units = 16
+```
+
+```shell
+dx serve --platform linux --renderer native
+dx build --platform linux --renderer native --profile native
+```
+
+On Linux you need:
+
+- `fontconfig` to build (`libfontconfig1-dev` on Debian and Ubuntu).
+- A Vulkan driver to draw (`mesa-vulkan-drivers`, or `vulkan-intel` on Arch).
+  Without a GPU, dioxus-native's CPU renderer (`vello-cpu-softbuffer`) still
+  draws.
+
+### Android
+
+Early: Android runs, but it is the least tested target. Focus traps and tree
+keys do nothing there yet.
+
+The app runs in the system WebView, so it looks and behaves like the web build.
+Turn on dioxus's `mobile` feature; libero needs no feature of its own.
+
+Install once:
+
+- The Android SDK with the NDK (27), platform 34 and build tools 34, and a JDK.
+- An emulator or a device that `adb devices` lists.
+
+```shell
+rustup target add aarch64-linux-android x86_64-linux-android
+export ANDROID_HOME=$HOME/Android/Sdk
+dx serve --platform android
+dx build --platform android
+```
+
+`dx` finds the NDK only through `ANDROID_HOME`. It regenerates the gradle
+project on every build, so set the app id in `Dioxus.toml`. A Rust panic shows
+only in `adb logcat`.
+
+```toml
+[android]
+identifier = "com.example.app"
 ```
 
 ## Feature flags
