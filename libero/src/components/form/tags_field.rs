@@ -269,6 +269,8 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     let frame = use_field_frame()
         .trailing(&clear)
         .states(field.states())
+        // As the input's own: only while no tag is held.
+        .placeholder(props.placeholder.as_deref().filter(|_| held.is_empty()))
         .prepare();
 
     // The frame draws the ring, so neither the slot nor the input draws a

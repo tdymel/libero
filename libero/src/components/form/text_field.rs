@@ -130,6 +130,7 @@ fn TextFieldShell(
         .trailing(&trailing)
         .states(field.states())
         .ids(field.slot_ids())
+        .placeholder(props.placeholder.as_deref())
         .prepare();
 
     // The frame draws the ring, so the control must not draw a second one.

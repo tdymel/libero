@@ -39,6 +39,23 @@ fn space_toggles_a_focused_checkbox() {
     assert!(!checked(&page));
 }
 
+/// Blitz's svg parser reads only `currentColor` as the current colour; the
+/// lowercase keyword left the checked box without its mark.
+#[test]
+fn a_checked_box_paints_its_mark() {
+    fn app() -> Element {
+        rsx! {
+            Checkbox { checked: true, onchange: |_| {}, label: "Remember me" }
+        }
+    }
+    let page = mount(app);
+    let mark = format!("{CHECKBOX} + [aria-hidden=true]");
+    assert_eq!(
+        page.painted_stroke(&format!("{mark} > svg")),
+        page.computed(&mark, "color")
+    );
+}
+
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Plan {
     Free,

@@ -14,12 +14,14 @@ use style::properties::PropertyId;
 mod activate;
 mod baked;
 mod focus;
+mod placeholder;
 mod redraw;
 mod resize;
 mod wheel;
 
 pub(super) use activate::focus_selectors;
 pub(super) use focus::{press_kept_focus, silent_focus};
+pub(super) use placeholder::sync_soon as placeholder_drawn;
 pub(super) use resize::{on_content_change, on_resize};
 
 use super::{INTERACTIVE, origin::Origin};
@@ -347,6 +349,7 @@ pub(super) fn Listener(children: Element) -> Element {
                 }
                 resize::pressed();
                 baked::check_soon();
+                placeholder::sync_soon();
             },
             onkeydown: |event| {
                 forget_press();
@@ -362,7 +365,9 @@ pub(super) fn Listener(children: Element) -> Element {
                 activate::key_up(&event);
                 resize::pressed();
                 baked::check_soon();
+                placeholder::sync_soon();
             },
+            oninput: |_| placeholder::sync_now(),
             onpointermove: move |event| {
                 // A release off the app is never seen here; the next move is.
                 if event.held_buttons().is_empty() {
@@ -1249,6 +1254,7 @@ pub(super) fn Outlet() -> Element {
                         if let Some(anchor) = doc.anchor() {
                             redraw::watch(doc, &mut anchor.doc_mut());
                             activate::sync_marks(&mut anchor.doc_mut());
+                            placeholder::sync(&mut anchor.doc_mut());
                             heal_dirty_bits(&anchor.doc_mut());
                             heal_while_animating(doc);
                             // Last: after every focus move this flush made.

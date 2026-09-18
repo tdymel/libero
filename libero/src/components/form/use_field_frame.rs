@@ -7,9 +7,12 @@ use crate::{
         common::{HtmlTag, Input, States, focus_ring_sx, ring_overlay, ring_overlay_sx},
         layout::{BoxStyle, use_box},
     },
-    platform::padding_press,
+    platform::{
+        PLACEHOLDER_ATTR, PLACEHOLDER_SHOWN_ATTR, draws_placeholders, padding_press,
+        placeholder_drawn,
+    },
     sx::{StaticSx, Sx, sx},
-    theme::{FieldDefaults, PaperDefaults, Size, SizeCss},
+    theme::{FIELD_FRAME_GAP, FieldDefaults, PaperDefaults, Size, SizeCss},
 };
 
 /// The bordered box a control sits in. Shared by every framed field, so the
@@ -64,6 +67,30 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
                 // `PhoneField`'s country code, which inherits from here - so
                 // it is dimmed text, not a grey (todo 240).
                 .color("text-dimmed"),
+        )
+        // Where the renderer draws no placeholder: no width and a margin
+        // taking back the gap, so the control keeps its place, and the text
+        // overflows over the control's own.
+        .selector(
+            format!("& > [{PLACEHOLDER_ATTR}]"),
+            sx().flex("0 0 0")
+                .width("0")
+                .margin_inline_end(format!("calc(-1 * {})", FIELD_FRAME_GAP.value()))
+                .align_self("center")
+                .white_space("nowrap")
+                .line_height("1.5")
+                .pointer_events("none")
+                .color("text-dimmed")
+                .visibility("hidden"),
+        )
+        .selector(
+            format!("& > [{PLACEHOLDER_SHOWN_ATTR}]"),
+            sx().visibility("visible"),
+        )
+        // A `Textarea`'s first line is at its top, not the frame's middle.
+        .selector(
+            format!("& > [{PLACEHOLDER_ATTR}][data-multiline]"),
+            sx().align_self("flex-start"),
         )
 });
 
@@ -130,9 +157,26 @@ pub(crate) struct FieldFrameBuilder<'a> {
     states: Option<&'a Input<States>>,
     ondrop: Option<Rc<dyn Fn(DragEvent)>>,
     ids: [Option<String>; 2],
+    placeholder: Option<&'a str>,
+    multiline: bool,
 }
 
 impl<'a> FieldFrameBuilder<'a> {
+    /// The control's `placeholder`, drawn by the frame where the renderer
+    /// draws none (Blitz). Pass what the control's attribute holds.
+    #[inline]
+    pub fn placeholder(mut self, placeholder: Option<&'a str>) -> Self {
+        self.placeholder = placeholder;
+        self
+    }
+
+    /// The control is a `Textarea`: the drawn placeholder sits at its top.
+    #[inline]
+    pub fn multiline(mut self) -> Self {
+        self.multiline = true;
+        self
+    }
+
     /// Makes the whole frame a drop target: a drop the control did not take
     /// (on the padding, in a slot) reaches `ondrop`. Opt-in; only `FileField`.
     #[inline]
@@ -232,6 +276,10 @@ impl<'a> FieldFrameBuilder<'a> {
             leading: self
                 .leading
                 .map(|leading| slot("leading", leading_id, leading)),
+            placeholder: self
+                .placeholder
+                .filter(|text| !text.is_empty() && !draws_placeholders())
+                .map(|text| placeholder(text, self.multiline)),
             trailing: self
                 .trailing
                 .map(|trailing| slot("trailing", trailing_id, trailing)),
@@ -245,13 +293,16 @@ impl<'a> FieldFrameBuilder<'a> {
 pub(crate) struct PreparedFrame {
     frame: BoxStyle,
     leading: Option<Element>,
+    placeholder: Option<Element>,
     trailing: Option<Element>,
 }
 
 impl PreparedFrame {
     pub fn render(self, control: Element) -> Element {
-        let mut children = Vec::with_capacity(3);
+        let mut children = Vec::with_capacity(5);
         children.extend(self.leading);
+        // Right before the control: the renderer finds it as the next element.
+        children.extend(self.placeholder);
         children.push(control);
         children.extend(self.trailing);
         children.push(ring_overlay());
@@ -294,6 +345,21 @@ pub(crate) fn use_live_slot(content: Option<Element>) -> Option<Signal<Option<El
 #[component]
 pub(crate) fn LiveSlot(content: Signal<Option<Element>>) -> Element {
     content.cloned().unwrap_or_else(|| rsx! {})
+}
+
+/// Hidden until the renderer marks its control empty; the control's own
+/// `placeholder` still names it to assistive tech.
+fn placeholder(text: &str, multiline: bool) -> Element {
+    rsx! {
+        span {
+            // `PLACEHOLDER_ATTR`; `rsx!` takes only a literal name.
+            "data-lsx-placeholder": true,
+            "data-multiline": multiline.then_some(true),
+            "aria-hidden": "true",
+            onmounted: |_| placeholder_drawn(),
+            "{text}"
+        }
+    }
 }
 
 /// No ring overlay in a slot: a button there draws its own ring, around

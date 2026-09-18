@@ -518,7 +518,8 @@ pub(crate) fn CheckboxMarkIcon(indeterminate: bool) -> Element {
         svg {
             view_box: "0 0 24 24",
             fill: "none",
-            stroke: "currentcolor",
+            // This casing: Blitz's svg parser matches `currentColor` exactly.
+            stroke: "currentColor",
             stroke_width: "3",
             stroke_linecap: "round",
             stroke_linejoin: "round",

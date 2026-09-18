@@ -132,7 +132,11 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .attributes(&props.attributes)
         .prepare();
 
-    let frame = use_field_frame().states(field.states()).prepare();
+    let frame = use_field_frame()
+        .states(field.states())
+        .placeholder(props.placeholder.as_deref())
+        .multiline()
+        .prepare();
 
     // The frame draws the ring, so the control must not draw a second one.
     let control = use_box()

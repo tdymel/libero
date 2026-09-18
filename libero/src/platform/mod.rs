@@ -27,6 +27,7 @@ mod http;
 mod keyboard;
 mod motion;
 mod paint;
+mod placeholder;
 mod regex;
 mod resize;
 mod scroll;
@@ -69,6 +70,9 @@ pub(crate) use keyboard::warn_reserved_chord;
 pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};
 pub(crate) use motion::prefers_reduced_motion;
 pub(crate) use paint::draws_backdrop_filter;
+pub(crate) use placeholder::{
+    PLACEHOLDER_ATTR, PLACEHOLDER_SHOWN_ATTR, draws_placeholders, placeholder_drawn,
+};
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub(crate) use resize::{is_measured_resize, on_resize};
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};

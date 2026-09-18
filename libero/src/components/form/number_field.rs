@@ -243,6 +243,7 @@ fn NumberFieldShell<T: NumberValue>(
     let frame = use_field_frame()
         .trailing(&trailing)
         .states(field.states())
+        .placeholder(props.placeholder.as_deref())
         .prepare();
 
     let control = use_box()

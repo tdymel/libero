@@ -34,6 +34,7 @@ mod nav_link;
 mod notifications;
 mod overlays;
 mod paper;
+mod placeholder;
 mod pointer;
 mod popover;
 mod qr_code;

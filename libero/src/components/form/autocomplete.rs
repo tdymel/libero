@@ -250,6 +250,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .trailing(&trailing)
         .states(field.states())
         .ids([leading_id, None])
+        .placeholder(props.placeholder.as_deref())
         .prepare();
 
     // The frame draws the ring, so the control must not draw a second one.

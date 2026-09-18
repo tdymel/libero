@@ -376,7 +376,10 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .attributes(&field.attributes)
         .prepare();
 
-    let frame = use_field_frame().states(field_box.states()).prepare();
+    let frame = use_field_frame()
+        .states(field_box.states())
+        .placeholder(field.placeholder.as_deref())
+        .prepare();
     // The frame draws the ring, so the control must not draw a second one.
     let control = use_box()
         .framework_sx(&FIELD_CONTROL_SX)

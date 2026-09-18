@@ -243,6 +243,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .leading(&leading)
         .trailing(&trailing)
         .states(field.states())
+        .placeholder(props.placeholder.as_deref())
         .prepare();
 
     // The frame draws the ring, so the control must not draw a second one.

@@ -46,6 +46,28 @@ fn it_honours_the_combobox_contract() {
     });
 }
 
+/// The browser draws the `placeholder` itself; the frame's native stand-in
+/// (todo 734) never reaches the web DOM.
+#[test]
+fn the_web_draws_its_own_placeholder() {
+    block_on(async {
+        let fixture = Fixture::open("/tags-field", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            &format!(
+                "!!document.querySelector('{TRIGGER}') \
+                 && !document.querySelector('[data-lsx-placeholder]')"
+            ),
+            "the field and no stand-in span",
+        )
+        .await
+        .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// The suggestion list is named by the field's label, like Autocomplete's
 /// (todo 449).
 #[test]

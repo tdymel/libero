@@ -189,6 +189,17 @@ pub(crate) const LAYS_OUT_CAPTIONS: bool =
 pub(crate) const DRAWS_BACKDROP_FILTER: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz draws no `placeholder`; see [`draws_placeholders`](crate::platform::draws_placeholders).
+pub(crate) const DRAWS_PLACEHOLDERS: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
+/// Only Blitz marks libero's own placeholders - see
+/// [`placeholder_drawn`](crate::platform::placeholder_drawn).
+pub(crate) fn placeholder_drawn() {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    blitz::placeholder_drawn();
+}
+
 pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     #[cfg(target_arch = "wasm32")]
     return web::document();

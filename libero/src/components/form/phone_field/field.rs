@@ -391,6 +391,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let frame = use_field_frame()
         .leading(&leading)
         .states(field.states())
+        .placeholder(props.placeholder.as_deref())
         .prepare();
 
     // The frame draws the ring, so the control must not draw a second one.
