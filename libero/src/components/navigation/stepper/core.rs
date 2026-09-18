@@ -89,6 +89,8 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         .position("relative")
         .display("flex")
         .align_items("flex-start")
+        // Blitz's UA sheet centres a button's content.
+        .justify_content("flex-start")
         .gap(STEPPER_GAP.value())
         .appearance("none")
         .background("transparent")
@@ -101,6 +103,8 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         // A long unbreakable word wraps inside the step instead of widening a
         // narrow page (1.4.10).
         .with("overflow-wrap", "anywhere")
+        // No min-content measure: Blitz kept a label broken per glyph from one (734).
+        .min_width("0")
         .selector("& [data-step-marker]", marker)
         // At least a marker tall and centred, so a one-line label sits on the
         // marker's middle and a label with a description grows downward.

@@ -4,7 +4,7 @@ use libero::{
         Box, CodeBlock, Flex, Input, NativeSelect, OptionLabel, SegmentedControl, Slider,
         SliderChangeEvent, Switch, Text,
     },
-    sx::sx,
+    sx::{Sx, sx},
     theme::{CODE_BLOCK_BORDER, Size, TEXT_FONT_SIZE},
 };
 use std::sync::LazyLock;
@@ -13,6 +13,19 @@ use super::{Control, ControlKind, color::ColorControl};
 
 /// The card is the query container the control panel keys off.
 const DEMO_CARD: &str = "demo-card";
+
+/// The sidebar and page padding around the card on a desktop window.
+const CARD_INSET: usize = 388;
+
+/// `nested` once the card is `min_width` wide. Blitz has no container queries:
+/// natively the window stands in, with the card's inset added.
+fn card_query(base: Sx, min_width: usize, nested: Sx) -> Sx {
+    if cfg!(any(feature = "native", feature = "native-cpu")) {
+        base.media(format!("(min-width: {}px)", min_width + CARD_INSET), nested)
+    } else {
+        base.container_query(DEMO_CARD, format!("(min-width: {min_width}px)"), nested)
+    }
+}
 
 /// The color belongs *inside* the shorthand: a later `border-left: 1px solid`
 /// would otherwise reset the color to `currentColor`. A `&'static str`, not a
@@ -344,9 +357,9 @@ pub fn Demo(
                                 // slack so a subpixel rounding at the boundary
                                 // can't put the wrap and the query on opposite
                                 // sides.
-                                panel.container_query(
-                                    DEMO_CARD,
-                                    "(min-width: 768px)",
+                                card_query(
+                                    panel,
+                                    768,
                                     sx()
                                         // 464px of controls plus the padding
                                         // either side - `box-sizing` is
@@ -480,15 +493,10 @@ pub fn Demo(
                                     // is what a JS width check would cost us a
                                     // hook and a resize observer for.
                                     ControlKind::Toggle if segments_need(control.options.len()).is_some() => {
-                                        let needed = format!(
-                                            "(min-width: {}px)",
-                                            segments_need(control.options.len()).unwrap_or_default(),
-                                        );
+                                        let needed = segments_need(control.options.len()).unwrap_or_default();
                                         rsx! {
                                             Box {
-                                                sx: sx()
-                                                    .display("none")
-                                                    .container_query(DEMO_CARD, needed.clone(), sx().display("block")),
+                                                sx: card_query(sx().display("none"), needed, sx().display("block")),
                                                 ToggleSegments {
                                                     control: control.clone(),
                                                     value: values().str(control.name),
@@ -498,9 +506,7 @@ pub fn Demo(
                                                 }
                                             }
                                             Box {
-                                                sx: sx()
-                                                    .display("block")
-                                                    .container_query(DEMO_CARD, needed, sx().display("none")),
+                                                sx: card_query(sx().display("block"), needed, sx().display("none")),
                                                 NativeSelect {
                                                     size: "sm",
                                                     // The row's own `Text`

@@ -3,7 +3,7 @@
 //! is `ElementApi::click` queueing `UiEvent::Activate`.
 
 use dioxus::prelude::*;
-use libero::components::{Tree, TreeNode, TreeNodeRenderArgs};
+use libero::components::{Tree, TreeItem, TreeNode, TreeNodeRenderArgs};
 use native_tests::{Key, mount};
 
 const BRANCH: &str = "[role=treeitem][aria-expanded]";
@@ -49,6 +49,30 @@ fn link_app() -> Element {
             },
         }
     }
+}
+
+/// Blitz's UA sheet centres a button's content; a row starts at its edge.
+#[test]
+fn a_row_starts_its_content_at_the_edge() {
+    let page = mount(|| {
+        rsx! {
+            Tree {
+                aria_label: "Files",
+                data: vec![TreeNode::new("README.md", "README.md")],
+                render_node: |args: TreeNodeRenderArgs<&'static str>| rsx! {
+                    TreeItem { span { "{args.data}" } }
+                },
+            }
+        }
+    });
+    let row = page.rect("[role=treeitem] button");
+    let first = page.rect("[role=treeitem] button > *");
+    assert_eq!(
+        first.0,
+        row.0,
+        "row {row:?}, first child {first:?}\n{}",
+        page.tree()
+    );
 }
 
 #[test]

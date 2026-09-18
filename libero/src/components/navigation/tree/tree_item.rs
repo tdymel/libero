@@ -15,6 +15,8 @@ use super::tree_row::TreeRowContext;
 static TREE_ITEM_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
+        // Blitz's UA sheet centres a button's content.
+        .justify_content("flex-start")
         .gap("6px")
         .width("100%")
         .padding("6px 0")

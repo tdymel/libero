@@ -128,7 +128,8 @@ pub fn TooltipPage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     Box {
-                        sx: sx().padding("40px"),
+                        // Flex: Blitz hit-tests no inline box in a padded block.
+                        sx: sx().padding("40px").display("flex"),
                         Tooltip {
                             label: rsx! { "Saves the current draft" },
                             label_id: "draft-tip",
