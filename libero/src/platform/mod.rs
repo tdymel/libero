@@ -65,6 +65,7 @@ pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};
 pub(crate) use motion::prefers_reduced_motion;
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub(crate) use resize::{is_measured_resize, on_resize};
+pub(crate) use scroll::wheel_travel_y;
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
 pub(crate) use select::opens_select_picker;
 pub(crate) use session::{session_get, session_set};

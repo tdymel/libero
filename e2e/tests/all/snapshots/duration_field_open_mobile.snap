@@ -1,0 +1,23 @@
+---
+source: e2e/src/suite.rs
+description: duration_field at mobile (open)
+expression: tree
+---
+LabelText
+  StaticText "Length"
+generic
+  combobox "Length" = 1 h 30 min [expanded] [haspopup=dialog]
+    generic
+      StaticText "1 h 30 min"
+status [atomic] [live=polite]
+paragraph
+  StaticText "5400"
+generic
+  dialog "Duration"
+    spinbutton "Hours" = 1 [valuemax=12] [valuemin=0]
+      StaticText "01"
+    spinbutton "Minutes" = 30 [valuemax=45] [valuemin=0]
+      StaticText "30"
+    spinbutton "Seconds" = 0 [valuemax=59] [valuemin=0]
+      StaticText "00"
+--> aria-controls [id="lsx-N-dialog"] (rendered above)

@@ -1,7 +1,7 @@
 # DateField
 
 Crate: `libero`
-Import: `use libero::{chrono::{NaiveDate, NaiveDateTime, NaiveTime}, components::{DateField, DateRange}};`
+Import: `use libero::{chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta}, components::{DateField, DateRange}};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/date/date_field.rs>
 Index: [index.md](index.md) lists every other page
 Description: A text field for every date and time value, typed leniently, with the matching `DatePicker` in a dropdown.
@@ -61,6 +61,7 @@ compiler reports E0283 "type annotations needed".
 | `NaiveDateTime` | the day, then the time | `NaiveDateTime` |
 | `DateRange<NaiveDate>` | two months, start then end | `NaiveDate` |
 | `DateRange<NaiveDateTime>` | start then end, each a day and a time | `NaiveDateTime` |
+| `TimeDelta` | a column each for hours, minutes and seconds | `TimeDelta` |
 
 `DateValue` is sealed. The `chrono` types are re-exported as `libero::chrono`.
 
@@ -87,6 +88,43 @@ fn Demo() -> Element {
             level: DateLevel::Month,
             value: month(),
             onchange: move |next| month.set(next),
+        }
+    }
+}
+```
+
+## Durations
+
+A `TimeDelta` field holds a span of time. It shows `1 h 30 min`, with the units
+from `DateLocale` (`hours_short`, `minutes_short`, `seconds_short`), and posts
+ISO 8601, `PT1H30M` (`PT0S` for none). The dropdown, named by
+`DateLocale::duration_label`, is a spinbutton column each for the hours, the
+minutes at `step`, and with `with_seconds` the seconds. The minutes and seconds
+wrap round without carrying into the next column. The value runs from `min`, 0
+by default, to `max`, 99 h 59 min 59 s by default, and the hours column ends at
+`max`. It reads only `with_seconds` and `step` of the clock props.
+
+Typing reads `1 h 30 min`, `1h30`, `1 hour 30 minutes`, `90 min`, `1:30`,
+`1:30:15`, and a bare number as minutes. A number after a unit counts in the
+next smaller one. The locale's unit words read as well as English ones. A
+negative duration is not read.
+
+```rust
+use dioxus::prelude::*;
+use libero::{chrono::TimeDelta, components::DateField};
+
+#[component]
+fn Demo() -> Element {
+    let mut length = use_signal(|| TimeDelta::try_minutes(90));
+
+    rsx! {
+        DateField {
+            label: "Length",
+            value: length(),
+            onchange: move |next| length.set(next),
+            max: TimeDelta::try_hours(12),
+            step: 15,
+            name: "length",
         }
     }
 }
@@ -131,7 +169,8 @@ The bounds are shown in the field's own format, so a month field says
 ## Accessibility
 
 The input is a `combobox` whose dropdown is a non-modal `dialog`, named by
-`DateLocale::date_label` (`time_label` for a time). Focus opens the dropdown
+`DateLocale::date_label` (`time_label` for a time, `duration_label` for a
+duration). Focus opens the dropdown
 and stays in the text input, so you can type at once.
 
 | Key | In the text input | In the dropdown |
@@ -146,8 +185,8 @@ dropdown leaves focus in the text.
 ## Posting
 
 The text input carries no `name`. A hidden input does, holding ISO 8601
-whatever the text shows, such as `2026-02-01`, `13:05:00`, `2026-02-01T13:05:00`, and
-`start/end` for a range.
+whatever the text shows, such as `2026-02-01`, `13:05:00`, `2026-02-01T13:05:00`, `PT1H30M` for a
+duration, and `start/end` for a range.
 
 ## Props
 
@@ -162,13 +201,13 @@ whatever the text shows, such as `2026-02-01`, `13:05:00`, `2026-02-01T13:05:00`
 | `level` | `DateLevel` | `Day` | Types and picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for other values. |
 | `format` | `String` | `(Formats::date)(level)` | How the text shows the value, in dayjs tokens. The default is `MMMM D, YYYY` in American formats, `D. MMMM YYYY` in German, and `MMMM YYYY` or `YYYY` in both for a month or a year. Typing only has to match the order of day, month and year. |
 | `time_format` | `String` | `Formats::time` | How the text shows a time. `h:mm A` in American formats, `HH:mm` in German. |
-| `min` | `V::Bound` | - | The earliest value accepted. For a range, the earliest end. |
-| `max` | `V::Bound` | - | The latest value accepted. For a range, the latest end. |
+| `min` | `V::Bound` | - | The earliest value accepted. For a range, the earliest end. A duration's is 0 when unset. |
+| `max` | `V::Bound` | - | The latest value accepted. For a range, the latest end. A duration's is 99 h 59 min 59 s when unset. |
 | `exclude_date` | `Callback<NaiveDate, bool>` | - | Days that are not accepted, on top of `min` and `max`. Ignored for a time, a month and a year. |
 | `today` | `NaiveDate` | - | The day marked as today, and the year used when typed text has none. Unset, the platform clock answers after mount. |
 | `variant` | `TimePickerVariant` | `analog` | A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time. |
-| `with_seconds` | `bool` | `false` | Seconds in the text and on the clock. |
-| `step` | `u8` | `5` | Minutes between the offered minutes. |
+| `with_seconds` | `bool` | `false` | Seconds in the text and on the clock, or a duration's seconds column. |
+| `step` | `u8` | `5` | Minutes between the offered minutes, on a clock or a duration's minutes column. |
 | `twelve_hour` | `bool` | - | A 12-hour clock with AM and PM. Defaults to whether the time format is one. |
 | `calendar` | `CalendarVariant` | `full` | A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time. |
 | `days` | `usize` | `7` | Days in the mini calendar's row. |

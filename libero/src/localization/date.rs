@@ -13,7 +13,8 @@
 ///   (`previous_month` to `next_days`), the errors (`invalid_date` to
 ///   `unavailable`), the switch segments
 ///   (`date_label` to `end_label`), the switches themselves, the range steps
-///   (`dates_label` to `range_steps_label`) and the `TimePicker` columns.
+///   (`dates_label` to `range_steps_label`), the `TimePicker` columns and a
+///   duration's label and units (`duration_label` to `seconds_short`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DateLocale {
     // Names.
@@ -81,6 +82,12 @@ pub struct DateLocale {
     pub hours_label: &'static str,
     pub minutes_label: &'static str,
     pub seconds_label: &'static str,
+    /// Names a duration field's dropdown.
+    pub duration_label: &'static str,
+    /// The units a duration shows, as in `1 h 30 min`; typed units match these too.
+    pub hours_short: &'static str,
+    pub minutes_short: &'static str,
+    pub seconds_short: &'static str,
 }
 
 impl DateLocale {
@@ -141,6 +148,10 @@ impl DateLocale {
         hours_label: "Hours",
         minutes_label: "Minutes",
         seconds_label: "Seconds",
+        duration_label: "Duration",
+        hours_short: "h",
+        minutes_short: "min",
+        seconds_short: "s",
     };
 
     pub const GERMAN: Self = Self {
@@ -202,5 +213,9 @@ impl DateLocale {
         hours_label: "Stunden",
         minutes_label: "Minuten",
         seconds_label: "Sekunden",
+        duration_label: "Dauer",
+        hours_short: "Std.",
+        minutes_short: "Min.",
+        seconds_short: "Sek.",
     };
 }

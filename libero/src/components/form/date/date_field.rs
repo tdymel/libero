@@ -30,6 +30,10 @@ date_props! {
 /// field shows an error. A typed `value` alone does not name `V`, so a typed
 /// `onchange` or a turbofish has to.
 ///
+/// A `TimeDelta` field is a duration: it shows `1 h 30 min`, reads that,
+/// `1h30`, `1:30` or a bare number of minutes, posts `PT1H30M`, and runs from
+/// `min` (0 by default) to `max` (99 h 59 min 59 s by default).
+///
 /// `level` makes a `NaiveDate` field a month or a year field: the text reads
 /// `(Formats::date)(level)` (`MMMM YYYY` or `YYYY` in both formats) unless
 /// `format` says otherwise, the value is the month's first day or the year's
@@ -53,7 +57,8 @@ date_props! {
 /// ```
 ///
 /// Props a value type does not use are ignored, with a warning in debug
-/// builds: the clock props and `time_format` need a time, `format`, `today`
+/// builds: the clock props and `time_format` need a time (a `TimeDelta`
+/// reads `with_seconds` and `step`), `format`, `today`
 /// and `exclude_date` a day, `columns` and `close_on_change` a day or a range
 /// of days, `calendar` and `days` a day or a date-time, `level` a single
 /// `NaiveDate`. A month or year field also ignores `exclude_date`, `columns`,
@@ -162,9 +167,10 @@ pub(super) fn date_field<V: DateValue>(
         .time_format
         .unwrap_or_else(|| time_format(conventions.time, options.twelve_hour, with_seconds));
     let level = options.level;
+    let (min, max) = V::limits(options.min, options.max);
     let picker = PickerOptions {
-        min: options.min,
-        max: options.max,
+        min,
+        max,
         exclude_date: options.exclude_date,
         allow_deselect: false,
         columns: options.columns,

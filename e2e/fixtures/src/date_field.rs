@@ -1,9 +1,9 @@
-//! `DateField` at month level, at day level between two buttons, and as a
-//! date-time field.
+//! `DateField` at month level, at day level between two buttons, as a
+//! date-time field, on the digital columns and as a duration.
 
 use dioxus::prelude::*;
 use libero::{
-    chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, Weekday},
+    chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Weekday},
     components::{Button, DateField, DateLevel, Flex, Input, Text},
     theme::TimePickerVariant,
 };
@@ -15,7 +15,31 @@ pub const ROUTES: Routes = &[
     ("/date-field/day", || rsx! { DayFieldPage {} }),
     ("/date-field/moment", || rsx! { MomentFieldPage {} }),
     ("/date-field/digital", || rsx! { DigitalFieldPage {} }),
+    ("/date-field/duration", || rsx! { DurationFieldPage {} }),
 ];
+
+/// A duration of 1 h 30 min held, 15 min to 12 h, minutes at 15 and seconds
+/// shown. The readout shows it in seconds.
+#[component]
+fn DurationFieldPage() -> Element {
+    let mut length = use_signal(|| TimeDelta::try_minutes(90));
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            DateField::<TimeDelta> {
+                label: "Length",
+                min: TimeDelta::try_minutes(15),
+                max: TimeDelta::try_hours(12),
+                step: 15,
+                with_seconds: true,
+                value: length(),
+                onchange: move |next| length.set(next),
+                name: "length",
+            }
+            Text { id: "readout", {length().map(|length| length.num_seconds().to_string()).unwrap_or_default()} }
+        }
+    }
+}
 
 /// A time field on the digital columns, 09:30 held.
 #[component]

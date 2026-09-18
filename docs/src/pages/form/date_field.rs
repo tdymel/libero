@@ -1,11 +1,11 @@
 use super::date_common::{
-    SIZES, calendar_controls, day_limits, field_controls, has_days, has_time, is_on, is_weekend,
-    moment_limits, shared_controls, shown, status_of, step_of, text_of, time_limits, today_of,
-    twelve_hour_of,
+    SIZES, calendar_controls, day_limits, duration_limits, field_controls, has_days, has_time,
+    is_on, is_weekend, moment_limits, shared_controls, shown, status_of, step_of, text_of,
+    time_limits, today_of, twelve_hour_of,
 };
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
-use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
+use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use libero::components::{
     Code, DateField, DateLevel, DateRange, Flex, Kbd, Rule, Text, Validators, not_empty,
 };
@@ -13,7 +13,7 @@ use libero::{use_formats_handle, use_localization_handle};
 
 use super::date_locales::{FORMATS, LANGUAGES, options, picked};
 
-const KINDS: [&str; 7] = [
+const KINDS: [&str; 8] = [
     "date",
     "month",
     "year",
@@ -21,6 +21,7 @@ const KINDS: [&str; 7] = [
     "date-time",
     "date-range",
     "date-time-range",
+    "duration",
 ];
 
 /// The root's props for the picked language and formats, unless they are the site's.
@@ -77,13 +78,13 @@ pub fn DateFieldPage() -> Element {
                         .default("(Formats::date)(level)")
                         .doc("How the text shows the value, in dayjs tokens. The default is `MMMM D, YYYY` in American formats, `D. MMMM YYYY` in German, and `MMMM YYYY` or `YYYY` in both for a month or a year. Typing only has to match the order of day, month and year."),
                     prop("time_format", "String").default("Formats::time").doc("How the text shows a time. `h:mm A` in American formats, `HH:mm` in German."),
-                    prop("min", "V::Bound").doc("The earliest value accepted. For a range, the earliest end."),
-                    prop("max", "V::Bound").doc("The latest value accepted. For a range, the latest end."),
+                    prop("min", "V::Bound").doc("The earliest value accepted. For a range, the earliest end. A duration's is 0 when unset."),
+                    prop("max", "V::Bound").doc("The latest value accepted. For a range, the latest end. A duration's is 99 h 59 min 59 s when unset."),
                     prop("exclude_date", "Callback<NaiveDate, bool>").doc("Days that are not accepted, on top of `min` and `max`. Ignored for a time, a month and a year."),
                     prop("today", "NaiveDate").doc("The day marked as today, and the year used when typed text has none. Unset, the platform clock answers after mount."),
                     prop("variant", "TimePickerVariant").default("analog").doc("A digital clock, `HH:MM` with a column to turn per part, or a clock face, for values with a time."),
-                    prop("with_seconds", "bool").default("false").doc("Seconds in the text and on the clock."),
-                    prop("step", "u8").default("5").doc("Minutes between the offered minutes."),
+                    prop("with_seconds", "bool").default("false").doc("Seconds in the text and on the clock, or a duration's seconds column."),
+                    prop("step", "u8").default("5").doc("Minutes between the offered minutes, on a clock or a duration's minutes column."),
                     prop("twelve_hour", "bool").doc("A 12-hour clock with AM and PM. Defaults to whether the time format is one."),
                     prop("calendar", "CalendarVariant").default("full").doc("A month of days, or `mini`, one row of days with buttons that page it. For a day or a date-time."),
                     prop("days", "usize").default("7").doc("Days in the mini calendar's row."),
@@ -113,9 +114,11 @@ pub fn DateFieldPage() -> Element {
                     Code { source: "NaiveTime" }
                     " a clock, "
                     Code { source: "NaiveDateTime" }
-                    " both, and a "
+                    " both, a "
                     Code { source: "DateRange" }
-                    " of either picks two. "
+                    " of either picks two, and "
+                    Code { source: "TimeDelta" }
+                    " is a duration. "
                     Code { source: "level" }
                     " makes a "
                     Code { source: "NaiveDate" }
@@ -167,7 +170,7 @@ pub fn DateFieldPage() -> Element {
                     ", with only the props that type uses and no turbofish."
                 }
             },
-            // snippet: item use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
+            // snippet: item use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
             // snippet: let mut date = use_signal(|| None::<NaiveDate>);
             // snippet: let mut month = use_signal(|| None::<NaiveDate>);
             // snippet: let mut year = use_signal(|| None::<NaiveDate>);
@@ -175,6 +178,7 @@ pub fn DateFieldPage() -> Element {
             // snippet: let mut date_time = use_signal(|| None::<NaiveDateTime>);
             // snippet: let mut date_range = use_signal(|| None::<DateRange<NaiveDate>>);
             // snippet: let mut date_time_range = use_signal(|| None::<DateRange<NaiveDateTime>>);
+            // snippet: let mut duration = use_signal(|| None::<TimeDelta>);
             Demo {
                 component: "DateField",
                 children_text: "",
@@ -194,6 +198,7 @@ pub fn DateFieldPage() -> Element {
                                 "date-time" => ("date_time", "Option<NaiveDateTime>", None),
                                 "date-range" => ("date_range", "Option<DateRange<NaiveDate>>", None),
                                 "date-time-range" => ("date_time_range", "Option<DateRange<NaiveDateTime>>", None),
+                                "duration" => ("duration", "Option<TimeDelta>", None),
                                 _ => ("date", "Option<NaiveDate>", None),
                             };
                             let mut code = vec![
@@ -244,7 +249,7 @@ pub fn DateFieldPage() -> Element {
                                 false => vec![],
                             }
                         }),
-                        Control::switch("close_on_change").default("true").hidden_when(|values| values.str("value") == "time").code(|_, values| {
+                        Control::switch("close_on_change").default("true").hidden_when(|values| matches!(values.str("value").as_str(), "time" | "duration")).code(|_, values| {
                             match is_on(values, "close_on_change") {
                                 true => vec![],
                                 false => vec!["close_on_change: false".to_string()],
@@ -260,6 +265,40 @@ pub fn DateFieldPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     DateFieldDemo { values }
                 },
+            }
+            DocSection {
+                title: "Duration",
+                Text {
+                    "A "
+                    Code { source: "TimeDelta" }
+                    " field holds a span of time rather than a moment. It shows "
+                    Code { source: "1 h 30 min" }
+                    ", with the units from "
+                    Code { source: "DateLocale" }
+                    ", and posts ISO 8601, "
+                    Code { source: "PT1H30M" }
+                    ". Typing reads "
+                    Code { source: "1 h 30 min" }
+                    ", "
+                    Code { source: "1h30" }
+                    ", "
+                    Code { source: "1:30" }
+                    " or a bare number of minutes."
+                }
+                Text {
+                    "The dropdown has a column each for the hours, the minutes at "
+                    Code { source: "step" }
+                    " and, with "
+                    Code { source: "with_seconds" }
+                    ", the seconds. The minutes and seconds wrap round without carrying into the next column. "
+                    "The value runs from "
+                    Code { source: "min" }
+                    ", 0 by default, to "
+                    Code { source: "max" }
+                    ", 99 h 59 min 59 s by default. The hours column ends at "
+                    Code { source: "max" }
+                    "."
+                }
             }
             DocSection {
                 title: "Accessibility",
@@ -287,6 +326,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
     let mut date_range = use_signal(|| day(14).map(|start| DateRange::new(start, day(18))));
     let mut date_time_range =
         use_signal(|| moment(14, 9).map(|start| DateRange::new(start, moment(16, 17))));
+    let mut duration = use_signal(|| TimeDelta::try_minutes(90));
 
     let size = values.str("size");
     let radius = values.str("radius");
@@ -327,6 +367,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
     let (min_day, max_day) = day_limits(&values);
     let (min_time, max_time) = time_limits(&values);
     let (min_moment, max_moment) = moment_limits(&values);
+    let (min_duration, max_duration) = duration_limits(&values);
 
     let (field, readout) = match values.str("value").as_str() {
         "month" => (
@@ -396,6 +437,17 @@ fn DateFieldDemo(values: DemoValues) -> Element {
                 }
             },
             shown(date_time_range()),
+        ),
+        "duration" => (
+            rsx! {
+                DateField {
+                    value: duration(), onchange: move |next| duration.set(next),
+                    min: min_duration, max: max_duration, with_seconds, step,
+                    validate: rules(validate),
+                    size, radius, label, aria_label, description, helper, placeholder, status, required, disabled,
+                }
+            },
+            shown(duration()),
         ),
         _ => (
             rsx! {

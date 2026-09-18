@@ -33,7 +33,7 @@ use crate::{
 
 input_from_str!(TimePickerVariant);
 
-static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
+pub(super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
     let day = DATE_PICKER_DAY.value();
     let button = sx()
         .display("flex")
@@ -98,6 +98,11 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& [data-slot='separator']",
             sx().font_size("1.75em").font_weight("500").color("text-dimmed"),
+        )
+        // A duration's unit after each column: `h`, `min`.
+        .selector(
+            "& [data-slot='unit']",
+            sx().color("text-dimmed"),
         )
         .selector(
             "& > [data-slot='readout']",

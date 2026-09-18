@@ -1,5 +1,6 @@
 //! Date and time pickers and fields over `chrono`'s naive types - a calendar
-//! day, a wall-clock time, or both, with no time zone. What is ours is the
+//! day, a wall-clock time, or both, with no time zone - and over a
+//! `TimeDelta`, a duration. What is ours is the
 //! part `chrono` cannot do for a UI: theme-named formatting, lenient reading
 //! of typed text, and the components.
 //!
@@ -29,6 +30,8 @@ mod today;
 mod date_field;
 #[allow(unnameable_types)]
 mod date_picker;
+#[allow(unnameable_types)]
+mod duration;
 #[allow(unnameable_types)]
 mod fields;
 #[allow(unnameable_types)]

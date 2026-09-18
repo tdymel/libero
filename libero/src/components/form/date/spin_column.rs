@@ -2,11 +2,12 @@
 //! values - the hours, the minutes at a step, AM and PM. `TimePicker` stacks
 //! them into `HH:MM`; anything else counted in steps can reuse them.
 
-use dioxus::{html::geometry::WheelDelta, prelude::*};
+use dioxus::prelude::*;
 
 use crate::{
     components::common::has_shortcut_modifier,
     hooks::{DragMove, DragOptions, DragStart, use_drag, use_element},
+    platform,
 };
 
 /// The wheel travel, in pixels, that turns a column one step.
@@ -230,11 +231,7 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
     let options_for_wheel = options.clone();
     let onwheel = move |event: Event<WheelData>| {
         event.prevent_default();
-        let travel = match event.data().delta() {
-            WheelDelta::Pixels(delta) => delta.y,
-            WheelDelta::Lines(delta) => delta.y * WHEEL_STEP,
-            WheelDelta::Pages(delta) => delta.y * WHEEL_STEP * page as f64,
-        };
+        let travel = platform::wheel_travel_y(&event.data(), WHEEL_STEP, page as f64);
         let total = *wheel.peek() + travel;
         // Down the page brings the value below up: the next one.
         let steps = (total / WHEEL_STEP).trunc();

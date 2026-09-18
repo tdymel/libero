@@ -9,7 +9,7 @@ use dioxus::dioxus_core::{NoOpMutations, ScopeId, VirtualDom};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, Weekday},
+    chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Weekday},
     components::{
         DateField, DateLevel, DatePicker, DateRange, DateRangePicker, DayField, DayPicker,
         MonthPicker, SegmentedControl, TimePicker, YearPicker,
@@ -570,6 +570,42 @@ fn one_picker_draws_what_the_value_type_calls_for() {
     assert!(html.contains("day-picker"));
     assert!(html.contains("id=\"clock\""));
     assert!(html.contains("flow"));
+}
+
+#[test]
+fn a_duration_shows_its_units_and_posts_iso_8601() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                DateField::<TimeDelta> { value: TimeDelta::try_minutes(90), onchange: move |_| {}, name: "length",
+                    min: TimeDelta::try_minutes(15), max: TimeDelta::try_hours(12), step: 15, with_seconds: true, label: "Length" }
+                DatePicker::<TimeDelta> {
+                    value: TimeDelta::try_seconds(2 * 3600 + 15 * 60 + 30),
+                    onchange: move |_| {},
+                    with_seconds: true,
+                    step: 15,
+                    max: TimeDelta::try_hours(12),
+                    name: "rest",
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    assert!(html.contains("value=\"1 h 30 min\""));
+    assert!(html.contains("name=\"length\" value=\"PT1H30M\""));
+    assert!(html.contains("name=\"rest\" value=\"PT2H15M30S\""));
+    // A spinbutton per part, the hours up to `max`, the minutes at the step.
+    assert_eq!(html.matches("role=\"spinbutton\"").count(), 3);
+    for text in ["02", "15", "30"] {
+        assert!(
+            html.contains(&format!("aria-valuetext=\"{text}\"")),
+            "{text}: {html}"
+        );
+    }
+    assert!(html.contains("aria-valuemax=12>"), "{html}");
+    assert!(html.contains("aria-valuemax=45>"), "{html}");
+    assert!(html.contains(">min</span>"), "{html}");
 }
 
 thread_local! {

@@ -30,6 +30,7 @@ and no turbofish.
 | `NaiveDateTime` | the day, then the time, under tabs between them | `NaiveDateTime` |
 | `DateRange<NaiveDate>` | two months, and the second pick ends the range | `NaiveDate` |
 | `DateRange<NaiveDateTime>` | the days, then the start time, then the end time, under three tabs | `NaiveDateTime` |
+| `TimeDelta` | a duration: a spinbutton column each for the hours, the minutes and, with `with_seconds`, the seconds | `TimeDelta` |
 
 With `calendar: "mini"` a day or a date-time is picked from one row of
 `days` days instead of a month. Each day shows its

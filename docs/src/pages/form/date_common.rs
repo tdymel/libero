@@ -2,7 +2,7 @@
 //! controls of a field, the controls both demos have, and reading them back.
 
 use crate::components::{Control, DemoValues};
-use libero::chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
+use libero::chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use libero::components::FieldStatus;
 
 pub const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
@@ -78,10 +78,19 @@ pub fn has_time(values: &DemoValues) -> bool {
     )
 }
 
+/// Whether the demoed value type has minutes to step, so `step` and
+/// `with_seconds` apply: a time or a duration.
+pub fn has_clock(values: &DemoValues) -> bool {
+    has_time(values) || values.str("value") == "duration"
+}
+
 /// Whether the demoed value type is picked from days, so `exclude_date`
 /// applies.
 pub fn has_days(values: &DemoValues) -> bool {
-    !matches!(values.str("value").as_str(), "time" | "month" | "year")
+    !matches!(
+        values.str("value").as_str(),
+        "time" | "month" | "year" | "duration"
+    )
 }
 
 /// Whether the demoed value type is picked from a calendar that can be mini.
@@ -120,7 +129,7 @@ pub fn shared_controls() -> Vec<Control> {
     vec![
         Control::toggle("step", ["1", "5", "15", "30"])
             .default("5")
-            .hidden_when(|values| !has_time(values))
+            .hidden_when(|values| !has_clock(values))
             .code(|_, values| match values.str("step").as_str() {
                 "5" => vec![],
                 step => vec![format!("step: {step}")],
@@ -129,7 +138,7 @@ pub fn shared_controls() -> Vec<Control> {
             true => limits_code(values),
             false => vec![],
         }),
-        Control::switch("with_seconds").hidden_when(|values| !has_time(values)),
+        Control::switch("with_seconds").hidden_when(|values| !has_clock(values)),
         Control::switch("twelve_hour").hidden_when(|values| !has_time(values)),
         Control::switch("today").code(|_, values| match is_on(values, "today") {
             true => vec!["today: NaiveDate::from_ymd_opt(2026, 9, 20)".to_string()],
@@ -167,6 +176,7 @@ fn limits_code(values: &DemoValues) -> Vec<String> {
             "NaiveTime::from_hms_opt(8, 0, 0)",
             "NaiveTime::from_hms_opt(18, 0, 0)",
         ),
+        "duration" => ("TimeDelta::try_minutes(15)", "TimeDelta::try_hours(8)"),
         "date-time" | "date-time-range" => (
             "NaiveDate::from_ymd_opt(2026, 9, 5).and_then(|day| day.and_hms_opt(8, 0, 0))",
             "NaiveDate::from_ymd_opt(2026, 9, 25).and_then(|day| day.and_hms_opt(18, 0, 0))",
@@ -218,6 +228,13 @@ pub fn moment_limits(values: &DemoValues) -> Limits<NaiveDateTime> {
             NaiveDate::from_ymd_opt(2026, 9, 5).and_then(|day| day.and_hms_opt(8, 0, 0)),
             NaiveDate::from_ymd_opt(2026, 9, 25).and_then(|day| day.and_hms_opt(18, 0, 0)),
         ),
+        false => (None, None),
+    }
+}
+
+pub fn duration_limits(values: &DemoValues) -> Limits<TimeDelta> {
+    match is_on(values, "min_max") {
+        true => (TimeDelta::try_minutes(15), TimeDelta::try_hours(8)),
         false => (None, None),
     }
 }

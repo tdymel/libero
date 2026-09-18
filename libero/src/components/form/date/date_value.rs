@@ -2,12 +2,13 @@
 //! drawn, so `DatePicker` and `DateField` are one component each for all of
 //! them, and the typed pickers are the same drawing under a name.
 
-use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
+use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use dioxus::prelude::*;
 
 use super::{
     DateRange,
     calendar::{Calendar, DateLevel, Selection, first_of_month},
+    duration::{DurationClock, bounds},
     flows::{DateTimeFlow, DateTimeRangeFlow},
     picker_field::{FieldValue, Formats},
     time_picker::Clock,
@@ -73,8 +74,9 @@ pub struct PickerArgs<V: DateValue> {
 }
 
 /// A value [`DatePicker`](super::DatePicker) and [`DateField`](super::DateField)
-/// can hold: `NaiveDate`, `NaiveTime`, `NaiveDateTime`, and a `DateRange` of
-/// days or of date-times. Sealed: the five are all there is.
+/// can hold: `NaiveDate`, `NaiveTime`, `NaiveDateTime`, a `DateRange` of days
+/// or of date-times, and a `TimeDelta` duration. Sealed: the six are all there
+/// is.
 #[allow(
     private_bounds,
     reason = "the seal, which keeps its machinery out of rustdoc"
@@ -122,6 +124,21 @@ pub(super) trait Sealed: FieldValue {
     fn accepts(self, options: &PickerOptions<<Self as DateValue>::Bound>) -> Result<(), Refusal>
     where
         Self: DateValue;
+
+    /// `min` and `max` with the value type's defaults, for an error that
+    /// names them.
+    fn limits(
+        min: Option<<Self as DateValue>::Bound>,
+        max: Option<<Self as DateValue>::Bound>,
+    ) -> (
+        Option<<Self as DateValue>::Bound>,
+        Option<<Self as DateValue>::Bound>,
+    )
+    where
+        Self: DateValue,
+    {
+        (min, max)
+    }
 
     /// A bound as the field shows it, for an error that names it.
     fn show_bound(bound: <Self as DateValue>::Bound, formats: &Formats) -> String
@@ -308,6 +325,56 @@ impl Sealed for NaiveTime {
                 with_seconds: options.with_seconds,
                 step: options.step,
                 twelve_hour: options.twelve_hour,
+                min: options.min,
+                max: options.max,
+                size: args.size,
+                focusable: args.focusable,
+                name: args.name,
+                class: args.class,
+                sx: args.sx,
+                states: args.states,
+                attributes: args.attributes,
+            }
+        }
+    }
+}
+
+impl DateValue for TimeDelta {
+    type Bound = TimeDelta;
+}
+
+impl Sealed for TimeDelta {
+    const USES: &'static [&'static str] = &["with_seconds", "step"];
+
+    fn limits(
+        min: Option<TimeDelta>,
+        max: Option<TimeDelta>,
+    ) -> (Option<TimeDelta>, Option<TimeDelta>) {
+        let (min, max) = bounds(min, max);
+        (Some(min), Some(max))
+    }
+
+    fn accepts(self, options: &PickerOptions<TimeDelta>) -> Result<(), Refusal> {
+        let (min, max) = Self::limits(options.min, options.max);
+        within(self, min, max)
+    }
+
+    fn show_bound(bound: TimeDelta, formats: &Formats) -> String {
+        bound.show(formats)
+    }
+
+    fn closes(_: Option<Self>) -> bool {
+        false
+    }
+
+    fn picker(args: PickerArgs<Self>) -> Element {
+        let options = args.options;
+        rsx! {
+            DurationClock {
+                value: args.value,
+                onchange: args.onchange,
+                with_seconds: options.with_seconds,
+                step: options.step,
                 min: options.min,
                 max: options.max,
                 size: args.size,

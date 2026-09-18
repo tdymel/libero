@@ -17,7 +17,7 @@ use crate::{
         use_id, use_localization, use_modal_close, use_theme,
     },
     localization::{LightboxLabels, fill},
-    platform::{Dimensions, ElementApi, logical_key},
+    platform::{self, Dimensions, ElementApi, logical_key},
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, sx},
     theme::{
         CssVar, LIGHTBOX_STAGE_HEIGHT, LIGHTBOX_THUMBNAIL_SIZE, LIGHTBOX_THUMBNAILS_GAP,
@@ -716,7 +716,7 @@ fn lightbox_slide(
                         return;
                     }
                     event.prevent_default();
-                    let closer = event.data().delta().strip_units().y > 0.0;
+                    let closer = platform::wheel_travel_y(&event.data(), 1.0, 1.0) > 0.0;
                     let client = event.client_coordinates();
                     zoom_about(
                         root,

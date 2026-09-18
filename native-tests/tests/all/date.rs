@@ -1,4 +1,5 @@
-//! Dates and times: `DateField`, `DatePicker`, `TimeField`, `TimePicker`.
+//! Dates and times: `DateField`, `DatePicker`, `TimeField`, `TimePicker`, and
+//! a `TimeDelta` duration.
 //! `today` is pinned wherever a grid is drawn.
 
 use blitz_traits::events::{
@@ -7,7 +8,7 @@ use blitz_traits::events::{
 };
 use dioxus::prelude::*;
 use libero::{
-    chrono::{NaiveDate, NaiveTime},
+    chrono::{NaiveDate, NaiveTime, TimeDelta},
     components::{DateField, DateLevel, DatePicker, TimeField, TimePicker},
 };
 use native_tests::{Key, Modifiers, Page, mount};
@@ -305,17 +306,72 @@ fn the_keys_turn_a_digital_column() {
     assert!(page.is_focused(MINUTES), "{}", page.focus_owner());
 }
 
-/// A drag up brings the values below into the middle, a wheel down too.
-/// Within the column: Blitz stops reporting moves once the pointer leaves it.
+/// A drag down past the column's edge turns it back (todo 845: the moves
+/// follow the pointer), and a wheel down turns it forward, as on the web (844).
 #[test]
 fn a_drag_or_a_wheel_turns_a_digital_column() {
     let mut page = mount(digital);
-    page.drag(MINUTES, 0.0, -24.0);
-    assert_eq!(page.text("#echo"), "09:35:00", "{}", page.tree());
+    page.drag(MINUTES, 0.0, 72.0);
+    assert_eq!(page.text("#echo"), "09:15:00", "{}", page.tree());
     page.hover(HOURS);
     page.wheel(HOURS, 80.0);
-    // Blitz hands `onwheel` the finger's sign, so a wheel down turns back here.
-    assert_eq!(page.text("#echo"), "07:35:00", "{}", page.tree());
+    assert_eq!(page.text("#echo"), "11:15:00", "{}", page.tree());
+}
+
+fn duration_field() -> Element {
+    let mut value = use_signal(|| TimeDelta::try_minutes(90));
+    rsx! {
+        DateField::<TimeDelta> {
+            label: "Length",
+            value: value(),
+            onchange: move |next| value.set(next),
+        }
+        span { id: "echo", {value().map(|span| span.num_seconds().to_string()).unwrap_or_default()} }
+    }
+}
+
+/// Todo 818: typed units read, and the text redraws with the locale's.
+#[test]
+fn a_typed_duration_commits_on_enter() {
+    let mut page = mount(duration_field);
+    page.click(INPUT);
+    clear(&mut page);
+    typing(&mut page, "2h15");
+    page.press(Key::Enter);
+    assert_eq!(page.text("#echo"), "8100", "{}", page.tree());
+    assert_eq!(page.attr(INPUT, "value").as_deref(), Some("2 h 15 min"));
+}
+
+fn duration() -> Element {
+    let mut value = use_signal(|| TimeDelta::try_minutes(90));
+    rsx! {
+        DatePicker::<TimeDelta> {
+            step: 15,
+            value: value(),
+            onchange: move |next| value.set(next),
+        }
+        span { id: "echo", {value().map(|span| span.num_seconds().to_string()).unwrap_or_default()} }
+    }
+}
+
+/// The minutes wrap round without carrying into the hours; typing a full
+/// hour moves on to the minutes.
+#[test]
+fn the_keys_turn_a_duration_column() {
+    let mut page = mount(duration);
+    page.tab();
+    page.tab();
+    assert!(page.is_focused(MINUTES), "{}", page.focus_owner());
+    page.press(Key::ArrowUp);
+    page.press(Key::ArrowUp);
+    assert_eq!(page.text("#echo"), "3600", "no carry: {}", page.tree());
+    page.focus(HOURS);
+    typing(&mut page, "42");
+    assert_eq!(page.text("#echo"), "151200", "{}", page.tree());
+    assert!(page.is_focused(MINUTES), "{}", page.focus_owner());
+    page.hover(MINUTES);
+    page.wheel(MINUTES, 80.0);
+    assert_eq!(page.text("#echo"), "153000", "{}", page.tree());
 }
 
 fn analog() -> Element {

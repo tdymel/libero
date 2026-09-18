@@ -1,4 +1,23 @@
+use dioxus::html::geometry::WheelDelta;
+use dioxus::prelude::WheelData;
+
 use super::backend;
+
+/// A wheel's vertical travel in the web's sign, positive down the page, with
+/// lines and pages counted as `line` pixels and `page` lines. Blitz reports
+/// the finger's sign (todo 844).
+pub(crate) fn wheel_travel_y(data: &WheelData, line: f64, page: f64) -> f64 {
+    let travel = match data.delta() {
+        WheelDelta::Pixels(delta) => delta.y,
+        WheelDelta::Lines(delta) => delta.y * line,
+        WheelDelta::Pages(delta) => delta.y * line * page,
+    };
+    if cfg!(all(not(target_arch = "wasm32"), feature = "native")) {
+        -travel
+    } else {
+        travel
+    }
+}
 
 /// A live scroll subscription. **Dropping it unsubscribes** - that is the whole
 /// contract, which is why the trait has no methods.

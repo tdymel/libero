@@ -5,7 +5,8 @@
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
-use e2e::{Fixture, Viewport, wait};
+use e2e::suite::Step;
+use e2e::{Fixture, Suite, Viewport, wait};
 
 const INPUT: &str = "input[data-controlled]";
 
@@ -242,6 +243,154 @@ fn a_digital_column_is_a_named_spinbutton() {
         }
 
         fixture.console.assert_clean("the digital columns").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 818: `/date-field/duration` holds 1 h 30 min, 15 min to 12 h, minutes
+/// at 15, seconds shown.
+#[test]
+fn the_duration_field_meets_the_baseline() {
+    Suite::new("duration_field", "/date-field/duration")
+        .focusable(INPUT)
+        .state(
+            "open",
+            &[Step::TabTo(INPUT), Step::Press(keyboard::ARROW_DOWN)],
+            "[role=dialog]:focus-within",
+        )
+        .run();
+}
+
+/// Typed units read leniently, the form gets ISO 8601, and a duration past
+/// `max` or short of `min` says the bounds in the field's own words.
+#[test]
+fn a_typed_duration_reads_its_units_and_refuses_the_bounds() {
+    block_on(async {
+        let fixture = Fixture::open("/date-field/duration", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        expect(
+            page,
+            &value_is("1 h 30 min"),
+            "the held duration shown with units",
+        )
+        .await;
+        for (text, seconds, shown, iso) in [
+            ("2h45", "9900", "2 h 45 min", "PT2H45M"),
+            ("1:05:30", "3930", "1 h 5 min 30 s", "PT1H5M30S"),
+            ("20", "1200", "20 min", "PT20M"),
+        ] {
+            page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+                .await
+                .unwrap();
+            keyboard::type_text(page, text).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            expect(
+                page,
+                &readout_is(seconds),
+                &format!("{text:?} held as {seconds} s"),
+            )
+            .await;
+            expect(
+                page,
+                &value_is(shown),
+                &format!("{text:?} redrawn as {shown:?}"),
+            )
+            .await;
+            expect(
+                page,
+                &format!("document.querySelector('input[name=length]').value === {iso:?}"),
+                &format!("{text:?} posted as {iso}"),
+            )
+            .await;
+        }
+        for text in ["13 h", "5 min"] {
+            page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
+                .await
+                .unwrap();
+            keyboard::type_text(page, text).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            expect(
+                page,
+                &format!(
+                    "(() => {{ const input = document.querySelector({INPUT:?}); \
+                     const ids = (input.getAttribute('aria-describedby') || '').split(' '); \
+                     return input.getAttribute('aria-invalid') === 'true' && ids.some(id => \
+                       document.getElementById(id)?.textContent.trim() === 'Must be between 15 min and 12 h'); }})()"
+                ),
+                &format!("{text:?} refused with both bounds"),
+            )
+            .await;
+        }
+        expect(page, &readout_is("1200"), "the held duration kept").await;
+
+        fixture.console.assert_clean("typing durations").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The columns are named spinbuttons in a dialog named "Duration". The
+/// minutes wrap round without carrying into the hours; Enter moves on.
+#[test]
+fn a_duration_column_wraps_without_carrying() {
+    block_on(async {
+        let fixture = Fixture::open("/date-field/duration", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        keyboard::tab_to(page, INPUT, 5).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        expect(
+            page,
+            "document.activeElement.getAttribute('data-column') === 'Hours'",
+            "Arrow Down to focus the hours",
+        )
+        .await;
+        let tree = e2e::ax::snapshot(page, "body").await.unwrap();
+        for part in [
+            "dialog \"Duration\"",
+            "spinbutton \"Hours\"",
+            "spinbutton \"Minutes\"",
+            "spinbutton \"Seconds\"",
+        ] {
+            assert!(tree.contains(part), "no {part} in:\n{tree}");
+        }
+
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        expect(page, &readout_is("9000"), "Arrow Up to add an hour").await;
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        expect(
+            page,
+            "document.activeElement.getAttribute('data-column') === 'Minutes'",
+            "Enter to move on to the minutes",
+        )
+        .await;
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        expect(page, &readout_is("9900"), "30 min up to 45").await;
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        expect(
+            page,
+            &readout_is("7200"),
+            "45 min round to 00, the hours kept",
+        )
+        .await;
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        expect(page, &readout_is("9900"), "00 back round to 45").await;
+        expect(
+            page,
+            &value_is("2 h 45 min"),
+            "the text follows the columns",
+        )
+        .await;
+
+        fixture
+            .console
+            .assert_clean("turning duration columns")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }

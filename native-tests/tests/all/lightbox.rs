@@ -53,6 +53,22 @@ fn z_zooms_and_an_arrow_pans() {
     assert_ne!(zoomed, panned, "ArrowLeft did not pan it");
 }
 
+/// A wheel up zooms in, as on the web: Blitz's finger sign is turned round
+/// (todo 844).
+#[test]
+fn a_wheel_up_zooms_in() {
+    let mut page = mount(app);
+    page.click("#open");
+    page.hover(PICTURE);
+    page.wheel(PICTURE, -100.0);
+    page.advance(1.0);
+    let transform = page.computed(PICTURE, "transform");
+    assert!(
+        transform.starts_with("scale("),
+        "not zoomed in: {transform}"
+    );
+}
+
 /// Three pictures, so the stage is a `Carousel` that has to scroll.
 fn gallery_app() -> Element {
     let lightbox = use_lightbox(LightboxOptions {
