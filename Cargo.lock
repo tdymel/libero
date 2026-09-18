@@ -2531,7 +2531,13 @@ name = "e2e-fixtures"
 version = "0.1.0"
 dependencies = [
  "dioxus",
+ "js-sys",
  "libero",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-wasm",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

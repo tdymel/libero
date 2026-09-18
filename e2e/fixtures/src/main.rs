@@ -54,6 +54,7 @@ mod field_frame;
 mod field_value;
 mod file_field;
 mod floating_window;
+mod flows;
 mod focus_contrast;
 mod focus_return;
 mod focus_trap;
@@ -82,6 +83,7 @@ mod negative;
 mod notifications;
 mod number_field;
 mod pagination;
+mod perf;
 mod phone_field;
 mod picker_dialog;
 mod pin_field;
@@ -151,6 +153,7 @@ const FIXTURES: &[Routes] = &[
     field_value::ROUTES,
     file_field::ROUTES,
     floating_window::ROUTES,
+    flows::ROUTES,
     focus_contrast::ROUTES,
     focus_return::ROUTES,
     focus_trap::ROUTES,
@@ -179,6 +182,7 @@ const FIXTURES: &[Routes] = &[
     notifications::ROUTES,
     number_field::ROUTES,
     pagination::ROUTES,
+    perf::ROUTES,
     phone_field::ROUTES,
     picker_dialog::ROUTES,
     pin_field::ROUTES,
@@ -213,6 +217,7 @@ const FIXTURES: &[Routes] = &[
 ];
 
 fn main() {
+    perf::install();
     dioxus::launch(App);
 }
 
