@@ -14,6 +14,8 @@ generic
     generic
     generic
       dialog "Gallery" [modal]
+        button "Zoom out" [disabled]
+        button "Zoom in"
         button "Close"
         region "Gallery"
           status [atomic] [live=polite]

@@ -100,6 +100,63 @@ fn a_gallery_is_a_named_modal_dialog() {
     );
 }
 
+fn button_named<'a>(
+    buttons: &'a [BTreeMap<String, String>],
+    name: &str,
+) -> Option<&'a BTreeMap<String, String>> {
+    buttons
+        .iter()
+        .find(|button| button.get("aria-label").is_some_and(|label| label == name))
+}
+
+/// Todo 864: zoom out, zoom in, then close. Fitted on open, so zoom out is
+/// `aria-disabled` and keeps its tab stop; the close button takes the focus.
+#[test]
+fn the_toolbar_zooms_and_opens_fitted() {
+    let html = open(LightboxOptions::default(), 0);
+    let buttons = all_attributes_of(&html, "button");
+    let names: Vec<&str> = buttons
+        .iter()
+        .filter_map(|button| button.get("aria-label").map(String::as_str))
+        .take(3)
+        .collect();
+
+    assert_eq!(names, ["Zoom out", "Zoom in", "Close"], "{html}");
+    assert_eq!(
+        button_named(&buttons, "Zoom out").unwrap()["aria-disabled"],
+        "true"
+    );
+    assert_eq!(
+        button_named(&buttons, "Zoom in").unwrap()["aria-disabled"],
+        "false"
+    );
+    assert!(
+        button_named(&buttons, "Close")
+            .unwrap()
+            .contains_key("data-autofocus")
+    );
+}
+
+/// Nothing to zoom, no zoom buttons: with `zoom` off, or a `max_zoom` of 1.
+#[test]
+fn the_toolbar_has_no_zoom_buttons_without_zoom() {
+    for options in [
+        LightboxOptions {
+            zoom: false,
+            ..LightboxOptions::default()
+        },
+        LightboxOptions {
+            max_zoom: Some(1.0),
+            ..LightboxOptions::default()
+        },
+    ] {
+        let html = open(options, 0);
+        let buttons = all_attributes_of(&html, "button");
+        assert!(button_named(&buttons, "Zoom in").is_none(), "{html}");
+        assert!(button_named(&buttons, "Close").is_some());
+    }
+}
+
 /// The plan's `alt="" role=presentation` would have left a slide named only
 /// "3 of 7". Each picture keeps its own text alternative.
 #[test]

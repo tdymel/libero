@@ -669,6 +669,10 @@ pub struct LightboxLabels {
     pub zoomed: &'static str,
     /// Announced once a zoom is back to the fitted size.
     pub fitted: &'static str,
+    /// Names the toolbar's zoom-in button.
+    pub zoom_in: &'static str,
+    /// Names the toolbar's zoom-out button.
+    pub zoom_out: &'static str,
 }
 
 impl LightboxLabels {
@@ -679,6 +683,8 @@ impl LightboxLabels {
         keys: "Z, plus or minus to zoom. Arrow keys pan a zoomed picture, or change the picture.",
         zoomed: "Zoomed to {n}%",
         fitted: "Zoom reset",
+        zoom_in: "Zoom in",
+        zoom_out: "Zoom out",
     };
 
     pub const GERMAN: Self = Self {
@@ -688,6 +694,8 @@ impl LightboxLabels {
         keys: "Z, Plus oder Minus zum Zoomen. Pfeiltasten verschieben ein vergrößertes Bild oder wechseln das Bild.",
         zoomed: "Auf {n} % gezoomt",
         fitted: "Zoom zurückgesetzt",
+        zoom_in: "Vergrößern",
+        zoom_out: "Verkleinern",
     };
 }
 

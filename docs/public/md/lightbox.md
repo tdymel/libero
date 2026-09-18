@@ -59,9 +59,10 @@ fn Demo(photos: Vec<Photo>) -> Element {
 
 | Input | Action |
 |---|---|
-| Double-click, `z` | Toggles between fitted and `min(2, max_zoom)`. A double-click zooms at the cursor. |
+| Double-click, `z` | Steps through 2x, 4x and 8x, capped at `max_zoom`, then back to fitted. A double-click zooms at the cursor. |
 | Wheel | Zooms at the cursor, between fitted and `max_zoom`. |
 | `+`, `-` | Zooms in or out one step at the centre. |
+| Zoom in, Zoom out buttons | Zoom in or out one step at the centre, like `+` and `-`. Disabled at `max_zoom` and when fitted. |
 | Drag | Pans while zoomed. |
 | Click | While zoomed, moves the clicked spot to the centre. |
 | `ArrowLeft`, `ArrowRight` | Pan while zoomed. At the pan edge, or when fitted, go to the previous or next picture. |
@@ -87,7 +88,11 @@ keys. Its description lists them after the caption, and a status message reads
 each new zoom level. In the thumbnail strip, the arrows, `Home` and `End` move
 along the strip and change the picture with it.
 
-The viewer is a [Dialog](dialog.md) with a close button, over a
+The zoom buttons sit before the close button, which takes focus on open. At a
+limit a zoom button is `aria-disabled` and keeps its tab stop, so focus stays
+on it.
+
+The viewer is a [Dialog](dialog.md) with zoom and close buttons, over a
 [Carousel](carousel.md) of pictures and a second one of thumbnails. It dims
 through `OverlayDefaults` like every modal.
 
@@ -111,7 +116,7 @@ pair. An index past the end shows the last picture.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `zoom` | `bool` | `true` | Lets the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan. |
+| `zoom` | `bool` | `true` | Lets the zoom buttons, the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan. |
 | `max_zoom` | `Option<f64>` | `8.0` | Upper scale bound. Unset, the theme's. |
 | `thumbnails` | `bool` | `true` | The strip under the stage. Never shown for one picture. |
 | `captions` | `bool` | `true` | Shows each item's caption. |
@@ -155,8 +160,8 @@ The words are `LightboxLabels` in the [localization](localization.md). `label`
 is the dialog's default name, `thumbnails` the strip's region name, `thumbnail`
 a thumbnail's name (`{n}` is the slide number), `keys` the zoomable picture's
 description, `zoomed` the zoom announcement (`{n}` is the scale in percent) and
-`fitted` the announcement once back to fitted. The close button's name is
-`common.close`.
+`fitted` the announcement once back to fitted, and `zoom_in` and `zoom_out`
+name the zoom buttons. The close button's name is `common.close`.
 
 ## CSS variables
 

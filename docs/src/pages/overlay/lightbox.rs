@@ -131,7 +131,7 @@ pub fn LightboxPage() -> Element {
             markdown: "/md/lightbox.md",
             properties: vec![
                 props("LightboxOptions", vec![
-                    prop("zoom", "bool").default("true").doc("Lets the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan."),
+                    prop("zoom", "bool").default("true").doc("Lets the zoom buttons, the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan."),
                     prop("max_zoom", "Option<f64>").default("8.0").doc("Upper scale bound. Unset, the theme's."),
                     prop("thumbnails", "bool").default("true").doc("The strip under the stage. Never shown for one picture."),
                     prop("captions", "bool").default("true").doc("Shows each item's caption."),
@@ -161,11 +161,11 @@ pub fn LightboxPage() -> Element {
                 Text {
                     "Double-click or press "
                     Kbd { "z" }
-                    " to zoom, and "
+                    " to step through 2x, 4x and 8x and back to fitted. The zoom buttons, "
                     Kbd { "+" }
-                    " or "
+                    " and "
                     Kbd { "-" }
-                    " to step it. Scroll to zoom at the cursor. Drag, click or use the arrows "
+                    " zoom in finer steps. Scroll to zoom at the cursor. Drag, click or use the arrows "
                     "to pan. At the edge of a pan the arrows move to the next picture, so the "
                     "keyboard never gets stuck."
                 }

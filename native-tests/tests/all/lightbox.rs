@@ -53,6 +53,75 @@ fn z_zooms_and_an_arrow_pans() {
     assert_ne!(zoomed, panned, "ArrowLeft did not pan it");
 }
 
+/// Todo 864: `z` steps on to 4x and 8x, then back to fit.
+#[test]
+fn z_steps_to_max_zoom_then_fits() {
+    let mut page = mount(app);
+    zoomed(&mut page);
+    for scale in ["scale(4)", "scale(8)", "none"] {
+        page.press(Key::Character("z".into()));
+        page.advance(1.0);
+        let transform = page.computed(PICTURE, "transform");
+        assert!(transform.starts_with(scale), "not {scale}: {transform}");
+    }
+}
+
+/// Todo 864: the toolbar zooms in and out, and a button at its limit is
+/// `aria-disabled` and keeps the focus.
+#[test]
+fn the_zoom_buttons_step_and_disable_at_their_limits() {
+    const ZOOM_IN: &str = "button[aria-label=\"Zoom in\"]";
+    const ZOOM_OUT: &str = "button[aria-label=\"Zoom out\"]";
+    let mut page = mount(app);
+    page.click("#open");
+    page.advance(1.0);
+    assert_eq!(
+        page.attr(ZOOM_OUT, "aria-disabled").as_deref(),
+        Some("true")
+    );
+
+    page.click(ZOOM_IN);
+    page.advance(1.0);
+    // The zoom's own variable: after a pointer click Blitz's computed
+    // `transform` stays at the transition's start, `scale(1)`.
+    let style = page.attr(PICTURE, "style").unwrap_or_default();
+    assert!(style.contains("scale(1.25)"), "not zoomed in: {style}");
+    assert_eq!(
+        page.attr(ZOOM_OUT, "aria-disabled").as_deref(),
+        Some("false")
+    );
+
+    page.focus(ZOOM_IN);
+    for _ in 0..10 {
+        page.press(Key::Enter);
+        page.advance(1.0);
+    }
+    let transform = page.computed(PICTURE, "transform");
+    assert!(transform.starts_with("scale(8)"), "not at 8x: {transform}");
+    assert_eq!(page.attr(ZOOM_IN, "aria-disabled").as_deref(), Some("true"));
+    assert!(
+        page.is_focused(ZOOM_IN),
+        "focus left: {}",
+        page.focus_owner()
+    );
+
+    page.focus(ZOOM_OUT);
+    for _ in 0..12 {
+        page.press(Key::Enter);
+        page.advance(1.0);
+    }
+    assert_eq!(page.computed(PICTURE, "transform"), "none");
+    assert_eq!(
+        page.attr(ZOOM_OUT, "aria-disabled").as_deref(),
+        Some("true")
+    );
+    assert!(
+        page.is_focused(ZOOM_OUT),
+        "focus left: {}",
+        page.focus_owner()
+    );
+}
+
 /// A wheel up zooms in, as on the web: Blitz's finger sign is turned round
 /// (todo 844).
 #[test]

@@ -366,8 +366,8 @@ async fn assert_tab_skips_inert(page: &Page) -> Result<()> {
     Ok(())
 }
 
-/// `z` only toggles to 2x; `+` and `-` step like the wheel, so the keyboard
-/// reaches `max_zoom` (the theme's 8x) and back (WCAG 2.1.1).
+/// `+` and `-` step like the wheel, so the keyboard reaches `max_zoom` (the
+/// theme's 8x) and back in fine steps (WCAG 2.1.1).
 #[test]
 fn plus_and_minus_zoom_to_max_zoom_and_back() {
     const PLUS: keyboard::Key = keyboard::Key {
@@ -424,6 +424,117 @@ fn plus_and_minus_zoom_to_max_zoom_and_back() {
             .unwrap();
         fixture.close().await.unwrap();
     });
+}
+
+/// Todo 864: the toolbar's zoom buttons step like `+` and `-` about the centre,
+/// and at a limit turn `aria-disabled` without losing focus; a double-click
+/// steps through 2x, 4x and 8x, then back to fit.
+#[test]
+fn the_zoom_buttons_and_double_click_step_the_zoom() {
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
+        zoom_buttons(&fixture.page).await.unwrap();
+        fixture
+            .console
+            .assert_clean("the lightbox zoom buttons")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn zoom_buttons(page: &Page) -> Result<()> {
+    const ZOOM_IN: &str = "[role=dialog] button[aria-label='Zoom in']";
+    const ZOOM_OUT: &str = "[role=dialog] button[aria-label='Zoom out']";
+    const STYLE: &str =
+        "document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img').style.cssText";
+    let disabled = |selector: &str, value: bool| {
+        format!("document.querySelector({selector:?})?.getAttribute('aria-disabled') === '{value}'")
+    };
+    let wait_style = async |check: String, what: &str| -> Result<()> {
+        if wait::for_js_true(page, &check, what).await.is_err() {
+            let style: String = page.evaluate(STYLE).await?.into_value()?;
+            bail!("waiting for {what}, the picture's style is {style:?}");
+        }
+        Ok(())
+    };
+    motion::set_reduced_motion(page, true).await?;
+    keyboard::tab_to(page, TRIGGER, 5).await?;
+    keyboard::press(page, keyboard::ENTER).await?;
+    wait::for_visible(page, DIALOG).await?;
+    wait_showing(page, 0).await?;
+    wait::for_js_true(
+        page,
+        &disabled(ZOOM_OUT, true),
+        "zoom out disabled when fitted",
+    )
+    .await?;
+    wait::for_js_true(
+        page,
+        &disabled(ZOOM_IN, false),
+        "zoom in enabled when fitted",
+    )
+    .await?;
+    // Disabled looks it, and a hover does not light it up.
+    let look = format!(
+        "(() => {{ const s = getComputedStyle(document.querySelector({ZOOM_OUT:?})); return [s.opacity, s.backgroundColor, s.color].join(' '); }})()"
+    );
+    let rest: String = page.evaluate(look.as_str()).await?.into_value()?;
+    pointer::hover(page, ZOOM_OUT).await?;
+    let hovered: String = page.evaluate(look.as_str()).await?.into_value()?;
+    if !rest.starts_with("0.5 ") || hovered != rest {
+        bail!("disabled zoom out: {rest:?} at rest, {hovered:?} hovered");
+    }
+
+    pointer::click(page, ZOOM_IN).await?;
+    wait_style(
+        format!("{STYLE}.includes('scale(1.25)')"),
+        "one wheel step in",
+    )
+    .await?;
+    wait::for_js_true(
+        page,
+        &disabled(ZOOM_OUT, false),
+        "zoom out enabled once zoomed",
+    )
+    .await?;
+
+    // 1.25^10 passes 8: the button clamps, disables, and keeps the focus.
+    keyboard::tab_to(page, ZOOM_IN, 12).await?;
+    for _ in 0..10 {
+        keyboard::press(page, keyboard::ENTER).await?;
+    }
+    wait_style(format!("{STYLE}.includes('scale(8)')"), "the picture at 8x").await?;
+    wait::for_js_true(page, &disabled(ZOOM_IN, true), "zoom in disabled at 8x").await?;
+    focus::assert_focused(page, ZOOM_IN, "zoom in at its limit").await?;
+
+    keyboard::tab_to(page, ZOOM_OUT, 12).await?;
+    for _ in 0..12 {
+        keyboard::press(page, keyboard::ENTER).await?;
+    }
+    wait_style(format!("!{STYLE}.includes('scale(')"), "the picture fitted").await?;
+    wait::for_js_true(
+        page,
+        &disabled(ZOOM_OUT, true),
+        "zoom out disabled when fitted again",
+    )
+    .await?;
+    focus::assert_focused(page, ZOOM_OUT, "zoom out at its limit").await?;
+
+    let picture = "[role=dialog] [data-lightbox-frame=\"0\"] img";
+    for scale in ["scale(2)", "scale(4)", "scale(8)"] {
+        pointer::double_click(page, picture).await?;
+        wait_style(
+            format!("{STYLE}.includes('{scale}')"),
+            &format!("a double-click to {scale}"),
+        )
+        .await?;
+    }
+    pointer::double_click(page, picture).await?;
+    wait_style(
+        format!("!{STYLE}.includes('scale(')"),
+        "a double-click back to fit",
+    )
+    .await
 }
 
 /// Todo 421: zoom, pan to the edge, then turn the window into a phone. The pan
@@ -624,13 +735,16 @@ async fn click_pan(page: &Page) -> Result<()> {
         bail!("a 30px drag down from dy -60 left the picture at {seen:?}, not dy -30");
     }
 
-    keyboard::press(page, Z).await?;
-    wait::for_js_true(
-        page,
-        &format!("{STATUS}.includes('Zoom reset')"),
-        "the zoom reset to be announced",
-    )
-    .await?;
+    // Todo 864: `z` steps on to 4x and 8x, then back to fit.
+    for said in ["Zoomed to 400%", "Zoomed to 800%", "Zoom reset"] {
+        keyboard::press(page, Z).await?;
+        wait::for_js_true(
+            page,
+            &format!("{STATUS}.includes('{said}')"),
+            &format!("z to announce {said:?}"),
+        )
+        .await?;
+    }
     Ok(())
 }
 

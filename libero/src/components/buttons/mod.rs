@@ -4,6 +4,7 @@ mod color_scheme_button;
 mod direction_toggle;
 mod repo_button;
 
+pub(crate) use action_icon::ACTION_ICON_COLOR_VAR;
 pub use action_icon::{ActionIcon, ActionIconProps};
 pub(crate) use button::button_variables;
 pub use button::{Button, ButtonProps};

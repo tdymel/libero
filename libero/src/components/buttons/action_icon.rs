@@ -19,7 +19,7 @@ use crate::{
     utils::warn,
 };
 
-const ACTION_ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-action-icon-color");
+pub(crate) const ACTION_ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-action-icon-color");
 const ACTION_ICON_FILL_VAR: CssVar = CssVar::new("--lsx-action-icon-fill");
 const ACTION_ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-action-icon-contrast");
 const ACTION_ICON_HOVER_VAR: CssVar = CssVar::new("--lsx-action-icon-hover");

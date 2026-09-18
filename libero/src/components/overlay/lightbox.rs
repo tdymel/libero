@@ -4,10 +4,13 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Carousel, CarouselJump, CarouselQuietWhenFits, Dialog, Input, States, Variables,
+        ActionIcon, Box, Carousel, CarouselJump, CarouselQuietWhenFits, Dialog, Input, States,
+        Variables,
+        buttons::ACTION_ICON_COLOR_VAR,
         common::{
-            has_shortcut_modifier, inset_focus_ring_sx, ring_overlay, ring_overlay_sx, states,
-            use_name_warning, variables,
+            CloseIcon, MinusIcon, PlusIcon, disabled_look_sx, has_shortcut_modifier,
+            inset_focus_ring_sx, ring_overlay, ring_overlay_sx, states, use_name_warning,
+            variables,
         },
         form::{Announcer, use_announcer},
     },
@@ -29,8 +32,8 @@ use crate::{
 const PAN_STEP: f64 = 48.0;
 /// Scale change per wheel notch.
 const WHEEL_FACTOR: f64 = 1.25;
-/// Double-click and `z` zoom to this, or to `max_zoom` if that is lower.
-const TOGGLE_ZOOM: f64 = 2.0;
+/// Double-click and `z` step from this, doubling up to `max_zoom`.
+const FIRST_STEP_ZOOM: f64 = 2.0;
 /// How far down a swipe has to travel to close.
 const SWIPE_CLOSE_DISTANCE: f64 = 96.0;
 /// How far a press on a zoomed picture may travel and still be a click.
@@ -148,6 +151,27 @@ static LIGHTBOX_IMAGE_SX: StaticSx = StaticSx::new(|| {
         .when("zoomed", drag_handle_sx().cursor("grab"))
         // A drag is the pointer's own position: easing towards it lags.
         .when("dragging", sx().cursor("grabbing").transition("none"))
+});
+
+// The zoom buttons and the close button, laid out like `Dialog`'s own header.
+static LIGHTBOX_TOOLBAR_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .align_items("center")
+        .justify_content("flex-end")
+        .gap("sm")
+        .margin_bottom("md")
+});
+
+// A zoom button at its limit keeps its tab stop, so it is `aria-disabled`, which
+// `ActionIcon`'s own disabled look and hover skip do not read.
+static LIGHTBOX_ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
+    sx().selector("&[aria-disabled=\"true\"]", disabled_look_sx("not-allowed"))
+        // The `standard` variant's rest chrome, over its hover.
+        .selector(
+            "&[aria-disabled=\"true\"]:hover",
+            sx().background("transparent")
+                .color(ACTION_ICON_COLOR_VAR.value()),
+        )
 });
 
 static LIGHTBOX_CAPTION_SX: StaticSx =
@@ -318,6 +342,19 @@ fn wheel_step(scale: f64, closer: bool, max_zoom: f64) -> f64 {
     .clamp(1.0, max_zoom)
 }
 
+/// One double-click or `z` from `scale`: the next of 2x, 4x, 8x... past it,
+/// capped at `max_zoom`, and from `max_zoom` back to fit.
+fn zoom_step(scale: f64, max_zoom: f64) -> f64 {
+    if scale >= max_zoom {
+        return 1.0;
+    }
+    let mut step = FIRST_STEP_ZOOM;
+    while step <= scale {
+        step *= 2.0;
+    }
+    step.min(max_zoom)
+}
+
 /// Whether a swipe travelled far enough, and mostly downwards, to close.
 fn swipe_closes(delta: DragPoint) -> bool {
     delta.y > SWIPE_CLOSE_DISTANCE && delta.y > delta.x.abs()
@@ -347,22 +384,30 @@ fn reopened(zoom: Zoom, index: usize, count: usize) -> (usize, Zoom) {
 }
 
 /// Frame `index`'s bounds and its top-left in the viewport. Measures the
-/// untransformed frame, never the zoomed `<img>`.
-async fn measure_fit(
+/// untransformed frame, never the zoomed `<img>`. Called in the handler and
+/// awaited in the task: Blitz answers a read only while the document is free.
+fn measure_fit(
     stage: ElementHandle,
     picture: ElementHandle,
     index: usize,
-) -> Option<(Fit, f64, f64)> {
-    let frame = stage.query_selector(&frame_selector(index)).ok()?;
-    let (dimensions, origin, natural) = (
-        frame.dimensions(),
-        frame.client_offset(),
-        picture.natural_size(),
-    );
-    let (Ok(dimensions), Ok((left, top))) = (dimensions.await, origin.await) else {
-        return None;
-    };
-    Some((Fit::new(dimensions, natural.await.ok()), left, top))
+) -> impl Future<Output = Option<(Fit, f64, f64)>> {
+    let reads = stage
+        .query_selector(&frame_selector(index))
+        .ok()
+        .map(|frame| {
+            (
+                frame.dimensions(),
+                frame.client_offset(),
+                picture.natural_size(),
+            )
+        });
+    async move {
+        let (dimensions, origin, natural) = reads?;
+        let (Ok(dimensions), Ok((left, top))) = (dimensions.await, origin.await) else {
+            return None;
+        };
+        Some((Fit::new(dimensions, natural.await.ok()), left, top))
+    }
 }
 
 /// A viewport point as an offset from the centre of a frame at `left`/`top`.
@@ -385,8 +430,9 @@ fn zoom_about(
     next: impl Fn(f64) -> f64 + 'static,
 ) {
     let (mut zoom, mut fit) = (zooming.zoom, zooming.fit);
+    let measured = measure_fit(stage, picture, index);
     spawn(async move {
-        let Some((bounds, left, top)) = measure_fit(stage, picture, index).await else {
+        let Some((bounds, left, top)) = measured.await else {
             return;
         };
         fit.set(Some(bounds));
@@ -419,8 +465,9 @@ fn centre_on(
     client: DragPoint,
 ) {
     let (mut zoom, mut fit) = (zooming.zoom, zooming.fit);
+    let measured = measure_fit(stage, picture, index);
     spawn(async move {
-        let Some((bounds, left, top)) = measure_fit(stage, picture, index).await else {
+        let Some((bounds, left, top)) = measured.await else {
             return;
         };
         fit.set(Some(bounds));
@@ -438,8 +485,9 @@ fn refit(stage: ElementHandle, picture: ElementHandle, zooming: Zooming) {
     if !held.is_zoomed() {
         return;
     }
+    let measured = measure_fit(stage, picture, held.index);
     spawn(async move {
-        let Some((bounds, ..)) = measure_fit(stage, picture, held.index).await else {
+        let Some((bounds, ..)) = measured.await else {
             return;
         };
         // Only the zoom this measured: a move or a zoom out meanwhile wins.
@@ -491,12 +539,9 @@ impl Zooming {
         }
     }
 
-    /// Double-click and `z` toggle between fit and [`TOGGLE_ZOOM`].
-    fn toggle_scale(self, scale: f64) -> f64 {
-        match scale > 1.0 {
-            true => 1.0,
-            false => TOGGLE_ZOOM.min(self.max_zoom),
-        }
+    /// Double-click and `z` step through [`zoom_step`].
+    fn step_scale(self, scale: f64) -> f64 {
+        zoom_step(scale, self.max_zoom)
     }
 }
 
@@ -697,7 +742,7 @@ fn lightbox_slide(
                         Key::End => stage.go(last, true),
                         Key::Character(ref c) if c.eq_ignore_ascii_case("z") => {
                             zoom_about(root, image, zooming, i, None, move |scale| {
-                                zooming.toggle_scale(scale)
+                                zooming.step_scale(scale)
                             });
                         }
                         // The wheel's steps, so the keyboard reaches `max_zoom` too.
@@ -738,7 +783,7 @@ fn lightbox_slide(
                         zooming,
                         i,
                         Some(DragPoint { x: client.x, y: client.y }),
-                        move |scale| zooming.toggle_scale(scale),
+                        move |scale| zooming.step_scale(scale),
                     );
                 },
                 // Panning without a drag: a click centres the spot clicked.
@@ -1042,11 +1087,59 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     let thumbnails = lightbox_thumbnails(stage_parts, &items, localization.lightbox.thumbnail);
     let show_thumbnails = options.thumbnails && count > 1;
 
+    let max_zoom = zooming.max_zoom;
+    let zoom_buttons = options.zoom && count > 0 && max_zoom > 1.0;
+    let (at_max, at_fit) = (active.scale >= max_zoom, !active.is_zoomed());
+    // About the stage's centre, in the wheel's steps.
+    let shown_picture = (count > 0 && !pending).then(|| picture(current));
+    let zoom_by = move |closer: bool| {
+        if let Some(image) = shown_picture {
+            zoom_about(stage, image, zooming, current, None, move |scale| {
+                wheel_step(scale, closer, max_zoom)
+            });
+        }
+    };
+
     rsx! {
         Dialog {
             aria_label: label.clone(),
-            close_label: localization.common.close,
+            close_button: false,
             sx: &LIGHTBOX_DIALOG_SX,
+            Box { framework_sx: &LIGHTBOX_TOOLBAR_SX,
+                if zoom_buttons {
+                    ActionIcon {
+                        variant: "standard",
+                        color: "muted",
+                        size: "sm",
+                        sx: &LIGHTBOX_ZOOM_BUTTON_SX,
+                        aria_label: localization.lightbox.zoom_out,
+                        "aria-disabled": at_fit.to_string(),
+                        onclick: move |_: MouseEvent| if !at_fit { zoom_by(true) },
+                        MinusIcon {}
+                    }
+                    ActionIcon {
+                        variant: "standard",
+                        color: "muted",
+                        size: "sm",
+                        sx: &LIGHTBOX_ZOOM_BUTTON_SX,
+                        aria_label: localization.lightbox.zoom_in,
+                        "aria-disabled": at_max.to_string(),
+                        onclick: move |_: MouseEvent| if !at_max { zoom_by(false) },
+                        PlusIcon {}
+                    }
+                }
+                // Focused on open, as `Dialog`'s own close button was: a zoom
+                // button first in the tab order would open disabled.
+                ActionIcon {
+                    variant: "standard",
+                    color: "muted",
+                    size: "sm",
+                    aria_label: localization.common.close,
+                    "data-autofocus": "true",
+                    onclick: move |_: MouseEvent| close.call(()),
+                    CloseIcon {}
+                }
+            }
             Box {
                 framework_sx: &LIGHTBOX_BODY_SX,
                 onmounted: stage.mount(),
@@ -1276,6 +1369,21 @@ mod tests {
         assert_eq!(wheel_step(1.0, false, 3.0), WHEEL_FACTOR);
         assert_eq!(wheel_step(2.8, false, 3.0), 3.0);
         assert_eq!(wheel_step(1.1, true, 3.0), 1.0);
+    }
+
+    /// Todo 864: 2x, 4x, 8x, then back to fit; a lower `max_zoom` caps the
+    /// last step, and a wheel's in-between scale steps to the next double.
+    #[test]
+    fn a_zoom_step_doubles_up_to_max_zoom_then_fits() {
+        let steps: Vec<f64> = std::iter::successors(Some(1.0), |&s| Some(zoom_step(s, 8.0)))
+            .skip(1)
+            .take(4)
+            .collect();
+        assert_eq!(steps, [2.0, 4.0, 8.0, 1.0]);
+        assert_eq!(zoom_step(2.0, 3.0), 3.0);
+        assert_eq!(zoom_step(3.0, 3.0), 1.0);
+        assert_eq!(zoom_step(WHEEL_FACTOR, 8.0), 2.0);
+        assert_eq!(zoom_step(1.0, 1.0), 1.0);
     }
 
     #[test]
