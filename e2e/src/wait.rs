@@ -14,7 +14,7 @@ use chromiumoxide::Page;
 /// Overridable, because the right value depends on the machine and on how much
 /// else is running. A fixed budget that is fine on an idle laptop is the
 /// classic source of "passes locally, flakes under load".
-fn timeout() -> Duration {
+pub(crate) fn timeout() -> Duration {
     std::env::var("E2E_TIMEOUT_MS")
         .ok()
         .and_then(|v| v.parse().ok())

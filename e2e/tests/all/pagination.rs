@@ -1,13 +1,12 @@
 //! `Pagination`: an arrow that disables under its own press hands focus to the
 //! current page, whether the caller answers at once or late (todo 406).
 
+use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::passes::{focus, keyboard, pointer};
+use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
-
-/// Sync, then a caller that sets the page 150 ms after `onchange`.
-const ROUTES: [&str; 2] = ["/pagination", "/pagination-async"];
 
 const PREVIOUS: &str = "[aria-label=\"Go to previous page\"]";
 const LAST: &str = "[aria-label=\"Go to last page\"]";
@@ -48,60 +47,58 @@ async fn wait_for_page(page: &Page, number: u32, route: &str) {
     .unwrap();
 }
 
-async fn is_disabled(page: &Page, selector: &str) -> bool {
-    page.evaluate(format!("document.querySelector({selector:?}).disabled"))
-        .await
-        .unwrap()
-        .into_value()
-        .unwrap()
+/// `#page` and the current page button both read `number`.
+async fn reached<D: Driver>(d: &mut D, number: u32, route: &str) -> Result<()> {
+    let number = number.to_string();
+    eventually(d, &format!("page {number} on {route}"), async |d| {
+        Ok(
+            d.attr("#page", "data-page").await?.as_deref() == Some(number.as_str())
+                && d.text(CURRENT).await? == number,
+        )
+    })
+    .await
 }
 
-#[test]
-fn a_disabling_arrow_hands_focus_to_the_current_page() {
-    block_on(async {
-        for route in ROUTES {
-            let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
-            let page = &fixture.page;
+/// One scenario for the web and Blitz (todo 822). A page button stays the same
+/// node when it becomes current, so it keeps focus without any repair.
+async fn a_disabling_arrow_hands_focus_on<D: Driver>(d: &mut D, route: &str) -> Result<()> {
+    d.focus("[aria-label=\"Go to page 3\"]").await?;
+    d.press(keyboard::ENTER).await?;
+    reached(d, 3, route).await?;
+    eventually_focused(d, CURRENT, "choosing page 3").await?;
 
-            // A page button stays the same node when it becomes current, so it
-            // keeps focus without any repair.
-            let three = "[aria-label=\"Go to page 3\"]";
-            keyboard::tab_to(page, three, 8).await.unwrap();
-            keyboard::press(page, keyboard::ENTER).await.unwrap();
-            wait_for_page(page, 3, route).await;
-            focus::assert_focused(page, CURRENT, &format!("choosing page 3 on {route}"))
-                .await
-                .unwrap();
+    // Previous twice: the second press lands on page 1 and disables it.
+    d.focus(PREVIOUS).await?;
+    d.press(keyboard::ENTER).await?;
+    reached(d, 2, route).await?;
+    d.press(keyboard::ENTER).await?;
+    reached(d, 1, route).await?;
+    anyhow::ensure!(
+        d.attr(PREVIOUS, "disabled").await?.is_some(),
+        "{route}: previous at page 1"
+    );
+    eventually_focused(d, CURRENT, "previous to page 1").await?;
 
-            // Previous twice: the second press lands on page 1 and disables it.
-            keyboard::tab_to(page, PREVIOUS, 12).await.unwrap();
-            keyboard::press(page, keyboard::ENTER).await.unwrap();
-            wait_for_page(page, 2, route).await;
-            keyboard::press(page, keyboard::ENTER).await.unwrap();
-            wait_for_page(page, 1, route).await;
-            assert!(
-                is_disabled(page, PREVIOUS).await,
-                "{route}: previous at page 1"
-            );
-            focus::wait_for_focus(page, CURRENT, &format!("previous to page 1 on {route}"))
-                .await
-                .unwrap();
-
-            pointer::click(page, LAST).await.unwrap();
-            wait_for_page(page, 10, route).await;
-            assert!(is_disabled(page, LAST).await, "{route}: last at page 10");
-            focus::wait_for_focus(page, CURRENT, &format!("clicking last on {route}"))
-                .await
-                .unwrap();
-
-            fixture
-                .console
-                .assert_clean(&format!("paging on {route}"))
-                .unwrap();
-            fixture.close().await.unwrap();
-        }
-    });
+    d.click(LAST).await?;
+    reached(d, 10, route).await?;
+    anyhow::ensure!(
+        d.attr(LAST, "disabled").await?.is_some(),
+        "{route}: last at page 10"
+    );
+    eventually_focused(d, CURRENT, "clicking last").await
 }
+
+e2e::scenario!(
+    a_disabling_arrow_hands_focus_to_the_current_page,
+    "/pagination",
+    a_disabling_arrow_hands_focus_on
+);
+e2e::scenario!(
+    a_late_answer_hands_focus_to_the_current_page_too,
+    // The caller sets the page 150 ms after `onchange`.
+    "/pagination-async",
+    a_disabling_arrow_hands_focus_on
+);
 
 /// Todo 526: the current page is no change, so its click emits nothing, like
 /// Select's same-value pick. Page 3 after it proves the first click was seen.

@@ -1,7 +1,12 @@
 //! `Pagination`, answered at once and answered late.
 
+use std::time::Duration;
+
 use dioxus::prelude::*;
-use libero::components::{Fieldset, Flex, Pagination};
+use libero::{
+    components::{Fieldset, Flex, Pagination},
+    platform::timer,
+};
 
 use crate::Routes;
 
@@ -44,6 +49,8 @@ fn PaginationStatesPage() -> Element {
 fn PaginationPage(delay_ms: u32) -> Element {
     let mut page = use_signal(|| 2u32);
     let mut changes = use_signal(|| 0u32);
+    // libero's timer, not `document::eval`: the page mounts in Blitz too (822).
+    let mut pending = use_hook(|| CopyValue::new(None));
 
     rsx! {
         Flex { direction: "column", gap: "md",
@@ -58,13 +65,8 @@ fn PaginationPage(delay_ms: u32) -> Element {
                         page.set(next);
                         return;
                     }
-                    spawn(async move {
-                        let _ = document::eval(&format!(
-                            "await new Promise(r => setTimeout(r, {delay_ms})); return 1;"
-                        ))
-                        .await;
-                        page.set(next);
-                    });
+                    let delay = Duration::from_millis(u64::from(delay_ms));
+                    pending.set(timer().map(|timer| timer.after(delay, Box::new(move || page.set(next)))));
                 },
             }
             span { id: "page", "data-page": "{page}", "data-changes": "{changes}" }

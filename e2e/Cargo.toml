@@ -30,3 +30,11 @@ insta = "1.48"
 # `curl`: a harness that fails when a system binary is missing fails for a
 # reason that has nothing to do with the code under test.
 zip = { version = "2", default-features = false, features = ["deflate"] }
+# The native backend (todo 822): the same fixture pages mounted in Blitz by
+# `native-tests`' `Page`. A feature, so the browser tier builds no Blitz:
+# `cargo test -p e2e --features native --test all -- ::native`.
+native-tests = { path = "../native-tests", optional = true }
+e2e-fixtures = { path = "fixtures", optional = true }
+
+[features]
+native = ["dep:native-tests", "dep:e2e-fixtures"]

@@ -14,6 +14,7 @@ pub mod archetypes;
 pub mod ax;
 pub mod browser;
 pub mod clock;
+pub mod driver;
 pub mod journal;
 pub mod passes;
 pub mod suite;
@@ -21,6 +22,8 @@ pub mod vendor;
 pub mod wait;
 
 pub use browser::{Fixture, Scheme, Viewport};
+// For `scenario!`'s native arm.
+pub use futures;
 pub use suite::Suite;
 
 /// Where the fixture server is listening. Set by the runner.

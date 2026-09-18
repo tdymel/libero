@@ -36,7 +36,6 @@ mod modal;
 mod nav_link;
 mod notifications;
 mod overlays;
-mod pagination;
 mod pointer;
 mod popover;
 mod range_slider;
