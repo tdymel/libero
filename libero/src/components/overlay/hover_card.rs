@@ -5,8 +5,8 @@ use dioxus::prelude::*;
 use super::hover_intent::{TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
     components::{
-        FOCUSABLE_SELECTOR, HtmlTag, Input, States,
-        common::base_props,
+        HtmlTag, Input, States,
+        common::{FOCUSABLE_SELECTOR, base_props},
         layout::{paper_sx, use_box},
     },
     hooks::{

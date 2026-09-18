@@ -17,8 +17,8 @@ use super::{
 };
 use crate::{
     components::{
-        Caption, ClassList, FOCUSABLE_SELECTOR, FieldName, HtmlTag, Input, States, Validators,
-        common::{NavigationChord, navigation_chord},
+        Caption, ClassList, FieldName, HtmlTag, Input, States, Validators,
+        common::{FOCUSABLE_SELECTOR, NavigationChord, navigation_chord},
         form::{
             FIELD_CONTROL_SX, FieldStatus, use_announcer, use_bound, use_field, use_field_frame,
         },

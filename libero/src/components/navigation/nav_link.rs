@@ -18,7 +18,7 @@ use crate::{
     theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss, TEXT_FONT_SIZE},
 };
 
-use super::render_anchor;
+use crate::components::layout::render_anchor;
 
 // A literal hex/css color has no derivable "lighter shade", so it falls
 // through to the theme's default.

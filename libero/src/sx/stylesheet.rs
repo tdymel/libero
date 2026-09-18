@@ -1,6 +1,5 @@
 use crate::css::{AtRule, CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
-use crate::theme::FOCUS_RING_HALO;
-use crate::tokens::{NamedColorCss, Size};
+use crate::tokens::{FOCUS_RING_HALO, NamedColorCss, Size};
 use crate::utils::warn;
 
 use super::{

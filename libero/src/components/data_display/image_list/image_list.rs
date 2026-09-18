@@ -4,8 +4,7 @@ use crate::{
     components::{
         HtmlTag, Input, LinkedImageScope, States, Variables,
         common::{base_props, input_from_str, inset_focus_ring_sx, variables},
-        layout::use_box,
-        navigation::InternalAnchor,
+        layout::{InternalAnchor, use_box},
     },
     hooks::use_theme,
     sx::{StaticSx, Sx, sx},

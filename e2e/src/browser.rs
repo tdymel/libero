@@ -97,13 +97,32 @@ struct Harness {
     browser: Browser,
     /// Caps how many fixtures navigate at once.
     ///
-    /// Every run gets a fresh Chrome profile, so the HTTP cache is empty and
-    /// each page load pulls the whole wasm bundle again. Eight tests opening
-    /// pages simultaneously against one dev server timed out the lot of them -
-    /// a failure that reads like every component being broken. Three at a time
-    /// keeps the server honest and costs nothing: the tests are dominated by
-    /// the browser, not by this.
+    /// Every run gets a fresh Chrome profile, so the HTTP cache starts empty.
+    /// Eight tests pulling the cold wasm bundle at once against one dev server
+    /// timed out the lot of them. So the first navigation runs alone and fills
+    /// the cache, then [`NAVIGATIONS`] run at once: the old cap of three was
+    /// half the suite's time (146 s against 72 s unbounded, todo 823).
     navigations: tokio::sync::Semaphore,
+    primed: std::sync::Once,
+}
+
+/// Navigations at once after the first, `E2E_NAVIGATIONS` to override.
+const NAVIGATIONS: usize = 16;
+
+/// Opens the navigation cap once the first navigation ended, however it ended.
+struct PrimesOnDrop;
+
+impl Drop for PrimesOnDrop {
+    fn drop(&mut self) {
+        let harness = harness();
+        harness.primed.call_once(|| {
+            let limit = std::env::var("E2E_NAVIGATIONS")
+                .ok()
+                .and_then(|n| n.parse().ok())
+                .unwrap_or(NAVIGATIONS);
+            harness.navigations.add_permits(limit.max(1) - 1);
+        });
+    }
 }
 
 static HARNESS: OnceLock<Harness> = OnceLock::new();
@@ -145,7 +164,8 @@ fn harness() -> &'static Harness {
         Harness {
             runtime,
             browser,
-            navigations: tokio::sync::Semaphore::new(3),
+            navigations: tokio::sync::Semaphore::new(1),
+            primed: std::sync::Once::new(),
         }
     })
 }
@@ -211,6 +231,7 @@ impl Fixture {
             .acquire()
             .await
             .expect("navigation semaphore");
+        let _primes = PrimesOnDrop;
 
         // Everything from here to the ready marker is journalled as
         // `navigation` (todo 364). It is the half of the run that shares the

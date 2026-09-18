@@ -320,7 +320,7 @@ mod tests {
 
     #[test]
     fn per_size_and_per_radius_match_the_folds_they_replaced() {
-        use crate::theme::Size;
+        use crate::tokens::Size;
 
         let helpers = super::sx()
             .per_size(|size| super::sx().padding(size.state_name()))

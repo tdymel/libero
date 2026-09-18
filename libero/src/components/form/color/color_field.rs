@@ -3,8 +3,10 @@ use dioxus::prelude::*;
 use super::{ColorCode, ColorFormat, ColorPicker, ColorSwatch, Swatches};
 use crate::{
     components::{
-        ActionIcon, FOCUSABLE_SELECTOR, HtmlTag, Input, States,
-        common::{EyeDropperIcon, NavigationChord, field_props, navigation_chord},
+        ActionIcon, HtmlTag, Input, States,
+        common::{
+            EyeDropperIcon, FOCUSABLE_SELECTOR, NavigationChord, field_props, navigation_chord,
+        },
         form::{
             FIELD_CONTROL_SX, FieldStatus, SliderChangeEvent, slot_icon_size, use_announcer,
             use_bound, use_field, use_field_frame,

@@ -15,16 +15,14 @@ use dioxus::{
 
 use crate::{
     components::{
-        FOCUSABLE_SELECTOR, HtmlTag, Input, States, Variant,
-        common::focus_ring_sx,
+        HtmlTag, Input, States, Variant,
+        common::{FOCUSABLE_SELECTOR, focus_ring_sx},
         feedback::Alert,
         layout::{Box, Float, use_box},
     },
     hooks::{use_focus_within, use_localization, use_portal_slot, use_theme},
     localization::fill,
-    platform::{
-        ElementApi, KeyChord, KeySubscription, TimerSubscription, backend, keyboard, timer,
-    },
+    platform::{self, ElementApi, KeyChord, KeySubscription, TimerSubscription, keyboard, timer},
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         AutoClose, NOTIFICATION_GAP, NOTIFICATION_IN, NOTIFICATION_OFFSET, NOTIFICATION_OUT,
@@ -340,7 +338,7 @@ impl NotificationStore {
             .filter(open)
             .filter_map(|other| elements.get(other))
             .find_map(|item| {
-                let item = backend::element(item);
+                let item = platform::element(item);
                 item.query_selector(r#"[data-slot="close"]"#)
                     .or_else(|_| item.query_selector(FOCUSABLE_SELECTOR))
                     .ok()
@@ -407,7 +405,7 @@ impl NotificationStore {
         let Some(item) = self.elements.peek().get(&id).cloned() else {
             return;
         };
-        let item = backend::element(&item);
+        let item = platform::element(&item);
         let _ = match item.query_selector(FOCUSABLE_SELECTOR) {
             Ok(inner) => inner.focus(),
             Err(_) => item.focus(),
@@ -1050,7 +1048,7 @@ fn focusable_before(
     item: &Rc<MountedData>,
     host: &str,
 ) -> Result<Option<std::boxed::Box<dyn ElementApi>>, crate::platform::PlatformError> {
-    backend::element(item).previous_focusable(&format!("{FOCUSABLE_SELECTOR}:not({host} *)"))
+    platform::element(item).previous_focusable(&format!("{FOCUSABLE_SELECTOR}:not({host} *)"))
 }
 
 fn NotificationItem(props: ItemProps) -> Element {

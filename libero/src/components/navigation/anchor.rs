@@ -12,7 +12,7 @@ use crate::{
     theme::{AnchorDefaults, Size},
 };
 
-use super::render_anchor;
+use crate::components::layout::render_anchor;
 
 pub use crate::theme::AnchorUnderline;
 

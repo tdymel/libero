@@ -84,6 +84,8 @@ futures-channel = { version = "0.3", optional = true }
 dioxus-ssr = { git = "https://github.com/DioxusLabs/dioxus" }
 # Only to name `NativeFileData::byte_stream`'s return type in a fake file.
 futures-core = "0.3"
+# The layering rules in `tests/all/architecture.rs`, checked on the source files.
+archunit = "0.0.1"
 
 [features]
 # Reach elements through Blitz directly when running under `dioxus-native`.

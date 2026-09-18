@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::platform::backend;
+use crate::platform;
 
 pub(crate) struct PortalEntry {
     pub(crate) id: u64,
@@ -33,7 +33,7 @@ impl PortalHost {
 pub(crate) fn PortalOutlet() -> Element {
     let host = use_context::<PortalHost>();
 
-    backend::PortalRoot(rsx! {
+    platform::PortalRoot(rsx! {
         for (id , element , idle) in host
             .entries
             .read()
@@ -42,7 +42,7 @@ pub(crate) fn PortalOutlet() -> Element {
         {
             Fragment {
                 key: "{id}",
-                {backend::PortalEntry(element, idle)}
+                {platform::PortalEntry(element, idle)}
             }
         }
     })

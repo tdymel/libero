@@ -10,7 +10,7 @@
 //! [`use_element`](crate::hooks::use_element), whose handle picks the richest
 //! backend the renderer offers. See [`backend`].
 
-pub(crate) mod backend;
+mod backend;
 mod click;
 mod clipboard;
 mod clock;
@@ -35,6 +35,8 @@ mod task;
 mod timer;
 mod transition;
 
+// The renderer seams everything above `platform` reaches `backend` through (todo 820).
+pub(crate) use backend::{Listener, Outlet, PortalEntry, PortalRoot, element};
 pub(crate) use click::{DoublePress, follow_pointer, nested_interactive, padding_press};
 pub(crate) use clipboard::clipboard;
 pub use clock::{ClockApi, clock};

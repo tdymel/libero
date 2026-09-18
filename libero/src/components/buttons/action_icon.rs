@@ -3,15 +3,14 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables, Variant,
-        buttons::{VariantVars, interactive_variant_sx, variant_colors, variant_selected_sx},
         common::base_props,
         common::{
-            base_color, borderless_on_state_sx, contrast_color, disabled_look_sx, fill_color,
-            focus_ring_sx, names_itself, text_color, use_name_warning,
+            VariantVars, base_color, borderless_on_state_sx, contrast_color, disabled_look_sx,
+            fill_color, focus_ring_sx, interactive_variant_sx, names_itself, text_color,
+            use_name_warning, variant_colors, variant_selected_sx,
         },
         feedback::Loader,
-        layout::use_box,
-        navigation::InternalAnchor,
+        layout::{InternalAnchor, use_box},
         variables,
     },
     hooks::{clipped_ripple_sx, use_ripple, use_theme},

@@ -411,6 +411,8 @@ mod tests {
     /// and `muted.5` below it is not (WCAG 1.4.11, todo 490).
     #[test]
     fn muted_6_is_the_first_boundary_shade_at_3_to_1() {
+        // Measured against the library themes: exempt from the layer rule.
+        // archunit: ignore theme
         use crate::theme::Theme;
 
         for theme in [Theme::DEFAULT, Theme::DARK] {

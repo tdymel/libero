@@ -3,8 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables, Variant,
-        buttons::{VariantVars, variant_chrome_sx, variant_colors},
-        common::{base_color, base_props, contrast_color, fill_color, names_itself, text_color},
+        common::{
+            VariantVars, base_color, base_props, contrast_color, fill_color, names_itself,
+            text_color, variant_chrome_sx, variant_colors,
+        },
         layout::use_box,
         variables,
     },
@@ -152,7 +154,7 @@ pub fn Icon(props: IconProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::buttons::interactive_variant_sx;
+    use crate::components::common::interactive_variant_sx;
     use crate::tokens::{Color, ColorShade, ColorValue};
 
     fn icon_props(color: Input<ThemeAwareValue>) -> IconProps {

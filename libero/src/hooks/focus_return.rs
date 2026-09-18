@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     hooks::ElementHandle,
-    platform::{ElementApi, backend, document},
+    platform::{self, ElementApi, document},
 };
 
 /// Two ways of naming the same element. An overlay that renders its own
@@ -24,7 +24,7 @@ impl Trigger {
     /// every restore under a WebView.
     fn is_connected(&self) -> bool {
         match self {
-            Trigger::Mounted(data) => backend::element(data).is_connected(),
+            Trigger::Mounted(data) => platform::element(data).is_connected(),
             Trigger::Active(element) => element.is_connected(),
         }
     }
@@ -153,7 +153,7 @@ impl FocusReturn {
         // the backend knows to defer the command (todo 189).
         spawn(async move {
             let _ = match target {
-                Trigger::Mounted(data) => backend::element(&data).focus(),
+                Trigger::Mounted(data) => platform::element(&data).focus(),
                 Trigger::Active(element) => element.focus(),
             };
         });

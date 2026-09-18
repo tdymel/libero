@@ -11,7 +11,7 @@ use crate::{
     css::Stylesheet,
     localization::{Formats, Localization},
     platform::{
-        apply_direction, backend, color_scheme, document, focus_selectors, set_root_direction,
+        self, apply_direction, color_scheme, document, focus_selectors, set_root_direction,
         store_direction, stored_direction,
     },
     theme::{THEME_ATTRIBUTE, Theme, ThemeSet},
@@ -437,11 +437,11 @@ pub fn LiberoProvider(
             dangerous_inner_html: "{context.layer_order_css}"
         }
         ThemeStyle {}
-        {backend::Listener(rsx! {
+        {platform::Listener(rsx! {
             {children}
             PortalOutlet {}
         })}
         StyleOutlet {}
-        backend::Outlet {}
+        platform::Outlet {}
     }
 }

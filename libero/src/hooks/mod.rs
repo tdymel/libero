@@ -58,8 +58,9 @@ pub use theme::{ThemeSetHandle, use_theme, use_theme_set};
 pub(crate) use typeahead::{TYPEAHEAD_RESET, Typeahead, typeahead_match, use_typeahead};
 
 // The overlay hooks render a component, so they live beside it (todo 178).
-// Re-exported here, where they have always been public. The layer-order
-// guard (`tests/all/layer_order.rs`) allows these lines and nothing else.
+// Re-exported here, where they have always been public. The layer rule
+// (`tests/all/architecture.rs`) exempts this `use` and nothing else.
+// archunit: ignore components::overlay
 pub use crate::components::overlay::{
     use_drawer::{DrawerOptions, use_drawer},
     use_floating_window::{FloatingWindowHandle, use_floating_window},

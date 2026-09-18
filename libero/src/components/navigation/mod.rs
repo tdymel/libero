@@ -1,6 +1,5 @@
 mod anchor;
 mod burger;
-mod internal_anchor;
 mod menubar;
 mod nav_link;
 mod pagination;
@@ -11,7 +10,6 @@ mod tree;
 pub use anchor::{Anchor, AnchorProps, AnchorUnderline};
 pub(crate) use anchor::{NewTabHint, wants_new_tab_hint};
 pub use burger::{Burger, BurgerProps};
-pub(crate) use internal_anchor::{InternalAnchor, render_anchor};
 pub use menubar::{Menubar, MenubarMenu, MenubarProps};
 pub use nav_link::{NavLink, NavLinkProps};
 pub use pagination::{

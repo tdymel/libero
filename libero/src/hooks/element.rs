@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::prelude::*;
 
 use crate::platform::{
-    ContentSubscription, Dimensions, ElementApi, PlatformError, Read, backend, is_rtl,
+    self, ContentSubscription, Dimensions, ElementApi, PlatformError, Read, is_rtl,
     on_content_change, on_form_reset, on_resize,
 };
 
@@ -80,7 +80,7 @@ impl ElementHandle {
 
     fn get(&self) -> Result<Box<dyn ElementApi>, PlatformError> {
         match self.mounted.read().as_ref() {
-            Some(mounted) => Ok(backend::element(mounted)),
+            Some(mounted) => Ok(platform::element(mounted)),
             None => Err(PlatformError::Unsupported),
         }
     }

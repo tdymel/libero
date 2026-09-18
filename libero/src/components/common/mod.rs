@@ -2,6 +2,7 @@ mod base_props;
 mod closing_focus;
 mod color_variant;
 mod field_props;
+mod focusable;
 mod icons;
 mod neighbour;
 mod number_value;
@@ -13,6 +14,7 @@ mod rail;
 mod style_attributes;
 mod util;
 mod variant;
+mod variant_chrome;
 mod warnings;
 
 pub use crate::sx::class_list::{ClassList, class_list};
@@ -25,6 +27,7 @@ pub(crate) use color_variant::{
     hover_contrast_color, on_tint_color, selected_color, shade_color, text_color,
 };
 pub(crate) use field_props::field_props;
+pub(crate) use focusable::FOCUSABLE_SELECTOR;
 pub(crate) use icons::{
     ArrowDownIcon, CheckIcon, CheckboxMarkIcon, ChevronDownIcon, ChevronFirstIcon, ChevronLastIcon,
     ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CloseIcon, CopiedIcon, CopyFailedIcon,
@@ -51,4 +54,9 @@ pub(crate) use util::{
     on_start_bar_sx, on_state_sx, ring_overlay, ring_overlay_sx, shadow_sx,
 };
 pub use variant::Variant;
+pub(crate) use variant_chrome::{
+    BUTTON_COLOR_VAR, BUTTON_CONTAINER_VAR, BUTTON_CONTRAST_VAR, BUTTON_FILL_VAR, BUTTON_HOVER_VAR,
+    BUTTON_ON_CONTAINER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS, VariantColors,
+    VariantVars, interactive_variant_sx, variant_chrome_sx, variant_colors, variant_selected_sx,
+};
 pub(crate) use warnings::{is_javascript_url, names_itself, use_name_warning};
