@@ -86,7 +86,9 @@ pub fn NavLinkPage() -> Element {
                 controls: vec![
                     // Unset compares `to` against the current route, which
                     // is why the second link reads active on its own.
-                    Control::toggle("active", ["auto", "true", "false"]).code(
+                    Control::toggle("active", ["auto", "false", "true"])
+                        .labels(["Auto", "Off", "On"])
+                        .code(
                         |_, values| match values.str("active").as_str() {
                             "auto" => vec![],
                             active => vec![format!("active: {active}")],

@@ -35,8 +35,8 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// Shown in place of the list when `options` is empty.
     #[props(default)]
     empty: Option<Element>,
-    /// What the status region says while the options are being fetched. Unset, the theme's
-    /// [`ComboboxLabels`](crate::theme::ComboboxLabels) says it.
+    /// What the status region says while the options are being fetched. Unset, the
+    /// localization's [`CommonLabels::loading`](crate::localization::CommonLabels::loading) says it.
     #[props(default, into)]
     loading_label: Option<String>,
     /// A row's height and font size.

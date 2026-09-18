@@ -1,15 +1,16 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, CodeBlock, Flex, Text},
+    components::{Button, Code, Flex, Text},
     hooks::use_clipboard,
 };
 
-const CLIPBOARD: &str = r#"#[component]
-fn CopyLink() -> Element {
-    let mut clipboard = use_clipboard();
+/// The hook call and its button, as `CopyLink` renders them.
+fn code(_: &DemoValues, _: &str) -> String {
+    r#"let mut clipboard = use_clipboard();
 
-    rsx! {
+rsx! {
+    Flex { direction: "row", align: "center", gap: "md",
         Button {
             variant: "outlined",
             onclick: move |_| clipboard.copy("https://github.com/tdymel/libero"),
@@ -21,22 +22,25 @@ fn CopyLink() -> Element {
             if clipboard.copied() { "Copied" } else if clipboard.failed() { "Copy failed" }
         }
     }
-}"#;
+}"#
+    .to_string()
+}
 
-/// `CLIPBOARD`, rendered.
 #[component]
 fn CopyLink() -> Element {
     let mut clipboard = use_clipboard();
 
     rsx! {
-        Button {
-            variant: "outlined",
-            onclick: move |_| clipboard.copy("https://github.com/tdymel/libero"),
-            onblur: move |_| clipboard.reset(),
-            "Copy link"
-        }
-        span { role: "status",
-            if clipboard.copied() { "Copied" } else if clipboard.failed() { "Copy failed" }
+        Flex { direction: "row", align: "center", gap: "md",
+            Button {
+                variant: "outlined",
+                onclick: move |_| clipboard.copy("https://github.com/tdymel/libero"),
+                onblur: move |_| clipboard.reset(),
+                "Copy link"
+            }
+            span { role: "status",
+                if clipboard.copied() { "Copied" } else if clipboard.failed() { "Copy failed" }
+            }
         }
     }
 }
@@ -67,15 +71,12 @@ pub fn UseClipboardPage() -> Element {
                 }
             },
 
-            DocSection {
-                title: "Usage",
-                Flex {
-                    direction: "row",
-                    align: "center",
-                    gap: "md",
-                    CopyLink {}
-                }
-                CodeBlock { source: CLIPBOARD, language: "rust" }
+            Demo {
+                component: "use_clipboard",
+                children_text: "",
+                controls: Vec::new(),
+                render: move |_: DemoValues| rsx! { CopyLink {} },
+                wrap: Wrap(code),
             }
 
             DocSection {

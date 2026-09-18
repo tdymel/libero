@@ -186,7 +186,7 @@ field wrapper.
 The size in effect resolves on the root as `--lsx-slider-track` and
 `--lsx-slider-thumb`, and the track, thumb and marks read those.
 
-The track is always a pill, so the shared `radius` prop does nothing.
+The track is always a pill, so a slider has no `radius`.
 
 | Variable | Description |
 |---|---|

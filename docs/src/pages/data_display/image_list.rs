@@ -335,6 +335,7 @@ pub fn ImageListPage() -> Element {
                             }
                         }),
                     Control::toggle("variant", ["standard", "masonry", "quilted", "woven"])
+                        .labels(["Standard", "Masonry", "Quilted", "Woven"])
                         .default(defaults.variant.as_str()),
                     Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(defaults.gap.as_str()),

@@ -70,6 +70,11 @@ fn picker(values: &DemoValues) -> bool {
     values.str("component") == "picker"
 }
 
+/// The switch only shows beside swatches: off alone would draw nothing.
+fn with_picker(values: &DemoValues) -> bool {
+    is_on(values, "with_picker") || !is_on(values, "swatches")
+}
+
 fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
 }
@@ -173,7 +178,7 @@ pub fn ColorPickerPage() -> Element {
                         .code(|_, _| vec![]),
                     Control::slider("size", SIZES).default("md").hidden_when(|values| !picker(values)),
                     Control::slider("radius", SIZES).default("xxl").hidden_when(|values| !picker(values)),
-                    Control::switch("with_alpha").hidden_when(|values| !picker(values)),
+                    Control::switch("with_alpha").hidden_when(|values| !picker(values) || !with_picker(values)),
                     Control::switch("swatches").hidden_when(|values| !picker(values)).code(|_, values| match is_on(values, "swatches") {
                         // The whole list, one swatch to a line, so the
                         // snippet needs no constant of ours.
@@ -186,7 +191,8 @@ pub fn ColorPickerPage() -> Element {
                         }
                         false => vec![],
                     }),
-                    Control::switch("with_picker").default("true").hidden_when(|values| !picker(values)).code(|_, values| {
+                    // Without swatches, `with_picker: false` would draw nothing.
+                    Control::switch("with_picker").default("true").hidden_when(|values| !picker(values) || !is_on(values, "swatches")).code(|_, values| {
                         match is_on(values, "with_picker") {
                             true => vec![],
                             false => vec!["with_picker: false".to_string()],
@@ -249,8 +255,8 @@ fn ColorPickerDemo(values: DemoValues) -> Element {
                 oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
                 size: values.str("size"),
                 radius: values.str("radius"),
-                with_picker: is_on(&values, "with_picker"),
-                with_alpha: is_on(&values, "with_alpha"),
+                with_picker: with_picker(&values),
+                with_alpha: is_on(&values, "with_alpha") && with_picker(&values),
                 full_width,
                 swatches,
                 saturation_label: "Saturation",

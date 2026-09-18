@@ -68,9 +68,13 @@ impl DemoValues {
         let Some(mut values) = self.1 else {
             return;
         };
-        if let Some(entry) = values.write().0.iter_mut().find(|(key, _)| *key == name) {
-            entry.1 = value.into();
-        }
+        // `render` is the page's callback, so its handlers run in the page's
+        // scope; the write belongs to the `Demo` that owns the signal.
+        dioxus::core::Runtime::current().in_scope(values.origin_scope(), || {
+            if let Some(entry) = values.write().0.iter_mut().find(|(key, _)| *key == name) {
+                entry.1 = value.into();
+            }
+        });
     }
 
     pub fn str(&self, name: &str) -> String {
@@ -323,7 +327,10 @@ pub fn Demo(
                         // Wrapped, the controls sit below the preview, so the
                         // divider has to move with them.
                         sx: {
+                            // Packed at the top: a preview taller than the
+                            // controls would otherwise spread their lines apart.
                             let panel = sx()
+                                .align_content("start")
                                 .width("100%")
                                 .flex_shrink("0")
                                 .padding("24px")

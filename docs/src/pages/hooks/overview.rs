@@ -1,5 +1,6 @@
 use crate::Route;
 use crate::components::{DocPage, DocSection};
+use crate::nav::page_label;
 use dioxus::prelude::*;
 use libero::components::{Anchor, Code, Table, Text, column};
 
@@ -49,7 +50,7 @@ fn hooks() -> Vec<HookRow> {
         row(
             "use_theme",
             "The active theme, for values CSS cannot carry.",
-            Route::UseThemePage {},
+            Route::ThemingPage {},
         ),
         row(
             "use_theme_set",
@@ -59,27 +60,27 @@ fn hooks() -> Vec<HookRow> {
         row(
             "use_color_scheme",
             "Reads and sets light or dark.",
-            Route::UseColorSchemePage {},
+            Route::ThemingPage {},
         ),
         row(
             "use_localization",
             "The words libero's components say, in the active language.",
-            Route::UseLocalizationPage {},
+            Route::LocalizationPage {},
         ),
         row(
             "use_localization_handle",
             "Switches the language at runtime.",
-            Route::UseLocalizationHandlePage {},
+            Route::LocalizationPage {},
         ),
         row(
             "use_formats",
             "The active date, time and number formats.",
-            Route::UseFormatsPage {},
+            Route::LocalizationPage {},
         ),
         row(
             "use_formats_handle",
             "Switches the formats at runtime.",
-            Route::UseFormatsHandlePage {},
+            Route::LocalizationPage {},
         ),
         row(
             "use_stylesheet",
@@ -89,77 +90,77 @@ fn hooks() -> Vec<HookRow> {
         row(
             "use_scroll_area",
             "Scrolls a ScrollArea from code.",
-            Route::UseScrollAreaPage {},
+            Route::ScrollAreaPage {},
         ),
         row(
             "use_scroller",
             "Steps a Scroller from controls of your own.",
-            Route::UseScrollerPage {},
+            Route::ScrollerPage {},
         ),
         row(
             "use_form",
             "Controls a Form: validity, check, submit and reset.",
-            Route::UseFormPage {},
+            Route::FormPage {},
         ),
         row(
             "use_form_context",
             "The handle of the Form it is called inside.",
-            Route::UseFormContextPage {},
+            Route::FormPage {},
         ),
         row(
             "use_combobox",
             "Keeps a Combobox's open state in your scope.",
-            Route::UseComboboxPage {},
+            Route::ComboboxPage {},
         ),
         row(
             "use_modal",
             "Registers a modal and returns the handle that opens it.",
-            Route::UseModalPage {},
+            Route::ModalPage {},
         ),
         row(
             "use_modal_close",
             "Closes the modal it is rendered in.",
-            Route::UseModalClosePage {},
+            Route::ModalPage {},
         ),
         row(
             "use_drawer",
             "Registers a drawer and returns the handle that opens it.",
-            Route::UseDrawerPage {},
+            Route::DrawerPage {},
         ),
         row(
             "use_popover",
             "Places a floating box next to an anchor.",
-            Route::UsePopoverPage {},
+            Route::PopoverPage {},
         ),
         row(
             "use_menu",
             "Keeps a Menu's open state in your scope.",
-            Route::UseMenuPage {},
+            Route::MenuPage {},
         ),
         row(
             "use_spotlight",
             "Registers a command palette and its hotkey.",
-            Route::UseSpotlightPage {},
+            Route::SpotlightPage {},
         ),
         row(
             "use_lightbox",
             "Opens a picture viewer over the page.",
-            Route::UseLightboxPage {},
+            Route::LightboxPage {},
         ),
         row(
             "use_floating_window",
             "Opens a movable, non-modal window.",
-            Route::UseFloatingWindowPage {},
+            Route::FloatingWindowPage {},
         ),
         row(
             "use_notifications",
             "Shows notifications drawn as an Alert.",
-            Route::UseNotificationsPage {},
+            Route::NotificationsPage {},
         ),
         row(
             "use_notifications_with",
             "Notifications of your own data type and template.",
-            Route::UseNotificationsWithPage {},
+            Route::NotificationsPage {},
         ),
     ]
 }
@@ -174,9 +175,9 @@ pub fn HooksPage() -> Element {
                 Text {
                     "Libero's components are built from these hooks, and they are public for "
                     "yours. They are positional like every dioxus hook, so call them "
-                    "unconditionally, in the same order every render. Each has a page with a "
-                    "small demo. A hook that belongs to a component links to that component's "
-                    "page for the rest."
+                    "unconditionally, in the same order every render. The primitives and the "
+                    "theme-set and stylesheet hooks have a page of their own. The rest are "
+                    "shown on the component or guide page they belong to."
                 }
             },
 
@@ -189,11 +190,16 @@ pub fn HooksPage() -> Element {
                         column("Hook")
                             .value(|row: &HookRow| row.hook)
                             .render(|row: &HookRow| rsx! {
-                                Anchor { to: row.route.clone(),
-                                    Code { source: row.hook }
-                                }
+                                Code { source: row.hook }
                             }),
                         column("What it is for").value(|row: &HookRow| row.purpose),
+                        column("Page")
+                            .value(|row: &HookRow| page_label(&row.route).unwrap_or_default())
+                            .render(|row: &HookRow| rsx! {
+                                Anchor { to: row.route.clone(),
+                                    {page_label(&row.route).unwrap_or_default()}
+                                }
+                            }),
                     ],
                 }
             }

@@ -1,33 +1,44 @@
 use crate::Route;
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap};
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Box, Code, CodeBlock, Text},
+    components::{Anchor, Box, Code, Text},
     sx::sx,
     use_stylesheet,
 };
 
-const CALLOUT: &str = r#"#[component]
-fn Callout(children: Element) -> Element {
-    let class = use_stylesheet(&sx().background("primary.1").padding("md").border_radius("md"));
+const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
-    rsx! {
-        Box { class: class.unwrap_or_default(), {children} }
-    }
-}"#;
+/// The hook call and the box that wears its class, as `Callout` renders them.
+fn code(values: &DemoValues, _: &str) -> String {
+    format!(
+        "let class = use_stylesheet(\n    \
+             &sx().background({:?}).padding({:?}).border_radius({:?}),\n\
+         );\n\n\
+         rsx! {{\n    \
+             Box {{ class: class.unwrap_or_default(),\n        \
+                 Text {{ \"Registered once, shared by every Callout.\" }}\n    \
+             }}\n\
+         }}",
+        values.str("background"),
+        values.str("padding"),
+        values.str("border_radius"),
+    )
+}
 
-/// `CALLOUT`, rendered.
 #[component]
-fn Callout(children: Element) -> Element {
+fn Callout(background: String, padding: String, border_radius: String) -> Element {
     let class = use_stylesheet(
         &sx()
-            .background("primary.1")
-            .padding("md")
-            .border_radius("md"),
+            .background(background)
+            .padding(padding)
+            .border_radius(border_radius),
     );
 
     rsx! {
-        Box { class: class.unwrap_or_default(), {children} }
+        Box { class: class.unwrap_or_default(),
+            Text { "Registered once, shared by every Callout." }
+        }
     }
 }
 
@@ -49,12 +60,6 @@ pub fn UseStylesheetPage() -> Element {
                     Anchor { to: Route::StylingPage {}, "Styling" }
                     " explains the layers."
                 }
-            },
-
-            DocSection {
-                title: "Usage",
-                Callout { Text { "Registered once, shared by every Callout." } }
-                CodeBlock { source: CALLOUT, language: "rust" }
                 Text {
                     "Raw CSS as a "
                     Code { source: "&str" }
@@ -64,6 +69,24 @@ pub fn UseStylesheetPage() -> Element {
                     Code { source: "None" }
                     ". Components that register the same sheet share one copy of it."
                 }
+            },
+            Demo {
+                component: "use_stylesheet",
+                children_text: "",
+                controls: vec![
+                    Control::toggle("background", ["primary.1", "success.1", "warning.1"])
+                        .default("primary.1"),
+                    Control::slider("padding", SIZES).default("md"),
+                    Control::slider("border_radius", SIZES).default("md"),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Callout {
+                        background: values.str("background"),
+                        padding: values.str("padding"),
+                        border_radius: values.str("border_radius"),
+                    }
+                },
+                wrap: Wrap(code),
             }
         }
     }

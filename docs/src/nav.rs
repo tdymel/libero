@@ -131,6 +131,15 @@ pub fn neighbours(route: &Route) -> [Option<(Route, &'static str)>; 2] {
     [pick(at.checked_sub(1)), pick(Some(at + 1))]
 }
 
+/// The sidebar label of `route`'s page.
+pub fn page_label(route: &Route) -> Option<&'static str> {
+    let path = route.to_string();
+    pages()
+        .into_iter()
+        .find(|(id, ..)| *id == path)
+        .map(|(_, label, _)| label)
+}
+
 // Every page as (path, label, group label), in sidebar order.
 fn pages() -> Vec<(String, &'static str, Option<&'static str>)> {
     fn walk(
@@ -324,7 +333,8 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::VisuallyHiddenPage {}, "VisuallyHidden"),
             ],
         ),
-        // The overview, the primitives, then each component's hooks in the groups' order.
+        // The overview, the primitives, then the app-wide ones. A hook a
+        // component or guide page already shows well has no page of its own.
         group(
             "hooks",
             "Hooks",
@@ -335,32 +345,8 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseFocusReturnPage {}, "use_focus_return"),
                 page(Route::UseDragPage {}, "use_drag"),
                 page(Route::UseClipboardPage {}, "use_clipboard"),
-                page(Route::UseThemePage {}, "use_theme"),
                 page(Route::UseThemeSetPage {}, "use_theme_set"),
-                page(Route::UseColorSchemePage {}, "use_color_scheme"),
-                page(Route::UseLocalizationPage {}, "use_localization"),
-                page(
-                    Route::UseLocalizationHandlePage {},
-                    "use_localization_handle",
-                ),
-                page(Route::UseFormatsPage {}, "use_formats"),
-                page(Route::UseFormatsHandlePage {}, "use_formats_handle"),
                 page(Route::UseStylesheetPage {}, "use_stylesheet"),
-                page(Route::UseScrollAreaPage {}, "use_scroll_area"),
-                page(Route::UseScrollerPage {}, "use_scroller"),
-                page(Route::UseFormPage {}, "use_form"),
-                page(Route::UseFormContextPage {}, "use_form_context"),
-                page(Route::UseComboboxPage {}, "use_combobox"),
-                page(Route::UseModalPage {}, "use_modal"),
-                page(Route::UseModalClosePage {}, "use_modal_close"),
-                page(Route::UseDrawerPage {}, "use_drawer"),
-                page(Route::UsePopoverPage {}, "use_popover"),
-                page(Route::UseMenuPage {}, "use_menu"),
-                page(Route::UseSpotlightPage {}, "use_spotlight"),
-                page(Route::UseLightboxPage {}, "use_lightbox"),
-                page(Route::UseFloatingWindowPage {}, "use_floating_window"),
-                page(Route::UseNotificationsPage {}, "use_notifications"),
-                page(Route::UseNotificationsWithPage {}, "use_notifications_with"),
             ],
         ),
     ]

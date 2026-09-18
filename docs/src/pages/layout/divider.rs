@@ -61,21 +61,16 @@ pub fn DividerPage() -> Element {
                 component: "Divider",
                 children_text: "OR",
                 controls: vec![
-                    Control::toggle("orientation", ["horizontal", "vertical"]),
+                    Control::toggle("orientation", ["horizontal", "vertical"])
+                        .labels(["Horizontal", "Vertical"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("xs"),
                     Control::switch("with_label").default("true").code(|_, _| vec![]),
-                    // Meaningless without a label, so it doesn't print then.
-                    Control::toggle("label_position", ["center", "start", "end"]).code(
-                        |control, values| {
-                            let value = values.str("label_position");
-                            match values.str("with_label") == "true" && value != control.default
-                            {
-                                true => vec![format!("label_position: {value:?}")],
-                                false => vec![],
-                            }
-                        },
-                    ),
+                    // Meaningless without a label.
+                    Control::toggle("label_position", ["start", "center", "end"])
+                        .labels(["Start", "Center", "End"])
+                        .default("center")
+                        .hidden_when(|values| values.str("with_label") != "true"),
                     // The unset line is grey-4, which a bare `grey` would
                     // *not* resolve to - it is tinted to shade 3 like every
                     // other bare color. So the first swatch is unset, painted

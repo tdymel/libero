@@ -163,6 +163,7 @@ pub fn RadioGroupPage() -> Element {
                     // A card only reads as one with a description, so the
                     // card brings the per-option descriptions with it.
                     Control::toggle("variant", ["plain", "card"])
+                        .labels(["Plain", "Card"])
                         .default("plain")
                         .code(|_, values| match values.str("variant").as_str() {
                             "card" => vec![
@@ -174,7 +175,8 @@ pub fn RadioGroupPage() -> Element {
                     Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
-                    Control::toggle("orientation", ["vertical", "horizontal"])
+                    Control::toggle("orientation", ["horizontal", "vertical"])
+                        .labels(["Horizontal", "Vertical"])
                         .default("vertical")
                         .code(|_, values| match values.str("orientation").as_str() {
                             "horizontal" => vec![r#"orientation: "horizontal""#.to_string()],

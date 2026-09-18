@@ -87,52 +87,10 @@ pub(crate) enum Route {
     UseDragPage {},
     #[route("/hooks/use-clipboard")]
     UseClipboardPage {},
-    #[route("/hooks/use-theme")]
-    UseThemePage {},
     #[route("/hooks/use-theme-set")]
     UseThemeSetPage {},
-    #[route("/hooks/use-color-scheme")]
-    UseColorSchemePage {},
-    #[route("/hooks/use-localization")]
-    UseLocalizationPage {},
-    #[route("/hooks/use-localization-handle")]
-    UseLocalizationHandlePage {},
-    #[route("/hooks/use-formats")]
-    UseFormatsPage {},
-    #[route("/hooks/use-formats-handle")]
-    UseFormatsHandlePage {},
     #[route("/hooks/use-stylesheet")]
     UseStylesheetPage {},
-    #[route("/hooks/use-scroll-area")]
-    UseScrollAreaPage {},
-    #[route("/hooks/use-scroller")]
-    UseScrollerPage {},
-    #[route("/hooks/use-form")]
-    UseFormPage {},
-    #[route("/hooks/use-form-context")]
-    UseFormContextPage {},
-    #[route("/hooks/use-combobox")]
-    UseComboboxPage {},
-    #[route("/hooks/use-modal")]
-    UseModalPage {},
-    #[route("/hooks/use-modal-close")]
-    UseModalClosePage {},
-    #[route("/hooks/use-drawer")]
-    UseDrawerPage {},
-    #[route("/hooks/use-popover")]
-    UsePopoverPage {},
-    #[route("/hooks/use-menu")]
-    UseMenuPage {},
-    #[route("/hooks/use-spotlight")]
-    UseSpotlightPage {},
-    #[route("/hooks/use-lightbox")]
-    UseLightboxPage {},
-    #[route("/hooks/use-floating-window")]
-    UseFloatingWindowPage {},
-    #[route("/hooks/use-notifications")]
-    UseNotificationsPage {},
-    #[route("/hooks/use-notifications-with")]
-    UseNotificationsWithPage {},
 
     #[route("/buttons/action-icon")]
     ActionIconPage {},

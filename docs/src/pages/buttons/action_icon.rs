@@ -7,6 +7,10 @@ use crate::icons::CheckmarkIcon;
 /// The svg the button wraps - a subtree, so the code block prints it verbatim.
 const CHILDREN: &str = "CheckmarkIcon {}";
 
+fn is_link(values: &DemoValues) -> bool {
+    values.str("link") == "true"
+}
+
 #[component]
 pub fn ActionIconPage() -> Element {
     rsx! {
@@ -68,17 +72,29 @@ pub fn ActionIconPage() -> Element {
                 children_code: CHILDREN,
                 fixed: vec!["aria_label: \"Confirm\"".to_string()],
                 controls: vec![
-                    Control::toggle("variant", ["filled", "tonal", "outlined", "standard"])
-                        .labels(["Filled", "Tonal", "Outlined", "Standard"]),
+                    Control::toggle(
+                        "variant",
+                        ["filled", "tonal", "elevated", "outlined", "standard"],
+                    )
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"]),
                     // A bare `primary` is what an unset `color` resolves
                     // to, so that swatch prints nothing.
                     Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
-                    Control::switch("selected"),
+                    // As on Button: off is still a toggle, unset a plain action.
+                    Control::toggle("selected", ["unset", "false", "true"])
+                        .labels(["Unset", "Off", "On"])
+                        .default("unset")
+                        .hidden_when(is_link)
+                        .code(|_, values| match values.str("selected").as_str() {
+                            "unset" => vec![],
+                            value => vec![format!("selected: {value}")],
+                        }),
                     Control::switch("disabled"),
-                    Control::switch("loading"),
+                    // An `<a>` has nothing to wait for: ignored, with a warning.
+                    Control::switch("loading").hidden_when(is_link),
                     // `to` and `target` together, since the preview's link
                     // must not navigate the docs away.
                     Control::switch("link").code(|_, values| match values.str("link").as_str() {
@@ -98,14 +114,14 @@ pub fn ActionIconPage() -> Element {
                         },
                         size: values.str("size"),
                         radius: values.str("radius"),
-                        // `Some(false)` is still a toggle (`aria-pressed="false"`);
-                        // unset is not.
                         selected: match values.str("selected").as_str() {
+                            _ if is_link(&values) => None,
                             "true" => Some(true),
+                            "false" => Some(false),
                             _ => None,
                         },
                         disabled: values.str("disabled") == "true",
-                        loading: values.str("loading") == "true",
+                        loading: values.str("loading") == "true" && !is_link(&values),
                         to: match values.str("link").as_str() {
                             "true" => Input::from("https://dioxuslabs.com"),
                             _ => Input::None,

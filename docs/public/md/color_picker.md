@@ -38,18 +38,23 @@ One type for every CSS form. It parses from `#rgb`, `#rgba`, `#rrggbb`,
 or space separated, with alpha as a number or a percentage. It converts back to
 any of them.
 
-```rust,ignore
+```rust
+use libero::components::{ColorCode, ColorFormat};
+
+# fn main() -> Result<(), libero::components::ParseColorError> {
 let color: ColorCode = "#228be6".parse()?;
 
-color.to_hex();    // "#228be6"
-color.to_hexa();   // "#228be6ff"
-color.to_rgb();    // "rgb(34, 139, 230)"
-color.to_rgba();   // "rgba(34, 139, 230, 1)"
-color.to_hsl();    // "hsl(208, 80%, 52%)"
-color.to_hsla();   // "hsla(208, 80%, 52%, 1)"
-color.to_format(ColorFormat::Rgba);
+assert_eq!(color.to_hex(), "#228be6");
+assert_eq!(color.to_hexa(), "#228be6ff");
+assert_eq!(color.to_rgb(), "rgb(34, 139, 230)");
+assert_eq!(color.to_rgba(), "rgba(34, 139, 230, 1)");
+assert_eq!(color.to_hsl(), "hsl(208, 80%, 52%)");
+assert_eq!(color.to_hsla(), "hsla(208, 80%, 52%, 1)");
+assert_eq!(color.to_format(ColorFormat::Rgba), color.to_rgba());
 color.to_rgba_channels(); // (34, 139, 230, 1.0)
 color.to_hsla_channels(); // (208.0, 0.8, 0.52, 1.0)
+# Ok(())
+# }
 ```
 
 Constructors: `ColorCode::hex(0x228be6)`, `rgb`, `rgba`, `hsl`, `hsla`, `hsva`,

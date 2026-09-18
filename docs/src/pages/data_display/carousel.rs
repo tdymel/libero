@@ -157,7 +157,9 @@ pub fn CarouselPage() -> Element {
                         .default(theme.carousel.align.as_str()),
                     // A vertical strip has no height of its own, so the demo
                     // sets one - and prints it, because the component needs it.
-                    Control::toggle("orientation", ["horizontal", "vertical"]).code(
+                    Control::toggle("orientation", ["horizontal", "vertical"])
+                        .labels(["Horizontal", "Vertical"])
+                        .code(
                         |_, values| match values.str("orientation").as_str() {
                             "vertical" => vec![
                                 r#"orientation: "vertical""#.to_string(),

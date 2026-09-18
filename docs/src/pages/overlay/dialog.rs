@@ -95,7 +95,7 @@ pub fn DialogPage() -> Element {
                 children_code: CONTENT.to_string(),
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl"]).default("md"),
+                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     // Unnamed, a dialog is announced as just "dialog", so off
                     // names it through `aria_label` instead.
                     Control::switch("title")

@@ -98,8 +98,25 @@ bubbles. The bar fills between the thumbs.
 
 `name` posts the pair as two hidden inputs under one name, in track order.
 
-```rust,ignore
-RangeSlider { name: "price", value: price(), oninput: move |e| price.set(e.value()) }
+```rust
+use dioxus::prelude::*;
+use libero::components::{RangeSlider, SliderChangeEvent};
+
+#[component]
+fn Demo() -> Element {
+    let mut price = use_signal(|| (20.0, 80.0));
+
+    rsx! {
+        form {
+            RangeSlider {
+                label: "Price",
+                name: "price",
+                value: price(),
+                oninput: move |event: SliderChangeEvent<(f64, f64)>| price.set(event.value()),
+            }
+        }
+    }
+}
 ```
 
 ```js

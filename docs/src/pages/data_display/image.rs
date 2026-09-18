@@ -1,8 +1,9 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Image, Text},
+    components::{Code, Image, Input, Text},
     sx::sx,
+    theme::Size,
     use_theme,
 };
 
@@ -58,7 +59,7 @@ pub fn ImagePage() -> Element {
                     Code { source: "object-fit" }
                     "; "
                     Code { source: "radius" }
-                    " takes the radius scale or any CSS length."
+                    " takes a step on the radius scale."
                 }
             },
             Demo {
@@ -71,8 +72,14 @@ pub fn ImagePage() -> Element {
                         ["fill", "contain", "cover", "none", "scale-down"],
                     )
                     .default(theme.image.fit.as_str()),
-                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "50%"])
-                        .default(theme.image.radius),
+                    // The theme's `0` is a CSS length, not a step: `none`
+                    // leaves the prop unset.
+                    Control::slider("radius", ["none", "xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("none")
+                        .code(|_, values| match values.str("radius").as_str() {
+                            "none" => vec![],
+                            radius => vec![format!("radius: {radius:?}")],
+                        }),
                     Control::switch("zoomable"),
                     // Drives `src` too: a fallback only shows once the
                     // real source fails, so the switch has to break it.
@@ -96,7 +103,10 @@ pub fn ImagePage() -> Element {
                         fallback_src: crate::FALLBACK_IMAGE.to_string(),
                         alt: "A stylised landscape",
                         fit: values.str("fit"),
-                        radius: values.str("radius"),
+                        radius: match values.str("radius").as_str() {
+                            "none" => Input::None,
+                            radius => Input::from(Size::from(radius)),
+                        },
                         zoomable: values.str("zoomable") == "true",
                         sx: sx().width("160px").height("160px").background("muted.1"),
                     }

@@ -2,6 +2,10 @@ use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, pr
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Input, Text};
 
+fn is_link(values: &DemoValues) -> bool {
+    values.str("link") == "true"
+}
+
 #[component]
 pub fn ButtonPage() -> Element {
     rsx! {
@@ -78,12 +82,15 @@ pub fn ButtonPage() -> Element {
                     Control::toggle("selected", ["unset", "false", "true"])
                         .labels(["Unset", "Off", "On"])
                         .default("unset")
+                        // A link keeps the look but not `aria-pressed`, and warns.
+                        .hidden_when(is_link)
                         .code(|_, values| match values.str("selected").as_str() {
                             "unset" => vec![],
                             value => vec![format!("selected: {value}")],
                         }),
                     Control::switch("disabled"),
-                    Control::switch("loading"),
+                    // An `<a>` has nothing to wait for: ignored, with a warning.
+                    Control::switch("loading").hidden_when(is_link),
                     // `to` and `target` together, since the preview's link
                     // must not navigate the docs away.
                     Control::switch("link").code(|_, values| match values.str("link").as_str() {
@@ -97,7 +104,7 @@ pub fn ButtonPage() -> Element {
                     // prop, so it prints as the raw identifier. A link has
                     // no `type`.
                     Control::toggle("type", ["button", "submit", "reset"])
-                        .hidden_when(|values| values.str("link") == "true")
+                        .hidden_when(is_link)
                         .code(
                         |control, values| match values.str("type") {
                             _ if values.str("link") == "true" => vec![],
@@ -114,12 +121,13 @@ pub fn ButtonPage() -> Element {
                         radius: values.str("radius"),
                         full_width: values.str("full_width") == "true",
                         selected: match values.str("selected").as_str() {
+                            _ if is_link(&values) => None,
                             "true" => Some(true),
                             "false" => Some(false),
                             _ => None,
                         },
                         disabled: values.str("disabled") == "true",
-                        loading: values.str("loading") == "true",
+                        loading: values.str("loading") == "true" && !is_link(&values),
                         r#type: values.str("type"),
                         to: match values.str("link").as_str() {
                             "true" => Input::from("https://dioxuslabs.com"),

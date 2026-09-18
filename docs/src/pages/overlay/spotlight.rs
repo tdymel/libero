@@ -124,13 +124,20 @@ let mut loading = use_signal(|| false);
 const LATENCY: Duration = Duration::from_millis(700);
 
 /// The four examples: the name of the handle and the actions fn in the
-/// printed code, the actions fn's source, and the trigger's label.
+/// printed code, the actions fn's source, and the dialog's `aria_label`.
 const EXAMPLES: [(&str, &str, &str, &str); 4] = [
     ("commands", "commands", COMMANDS_CODE, "Commands"),
     ("files", "files", FILES_CODE, "Files"),
-    ("issues", "issues", ISSUES_CODE, "200 issues"),
-    ("search", "issues", ISSUES_CODE, "Slow search"),
+    ("issues", "issues", ISSUES_CODE, "Issues"),
+    ("search", "issues", ISSUES_CODE, "Issue search"),
 ];
+
+fn dialog_name(example: &str) -> &'static str {
+    EXAMPLES
+        .into_iter()
+        .find(|(name, ..)| *name == example)
+        .map_or(EXAMPLES[0].3, |(.., label)| label)
+}
 
 /// What the controls add to every palette's options.
 fn option_lines(values: &DemoValues) -> Vec<String> {
@@ -158,7 +165,7 @@ fn option_lines(values: &DemoValues) -> Vec<String> {
 /// The code of the example opened last. The preview's buttons pick it.
 fn wrap_example(values: &DemoValues, _: &str) -> String {
     let example = values.str("example");
-    let (handle, actions, actions_code, _) = EXAMPLES
+    let (handle, actions, actions_code, label) = EXAMPLES
         .into_iter()
         .find(|(name, ..)| *name == example)
         .unwrap_or(EXAMPLES[0]);
@@ -191,6 +198,7 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
                 .into(),
         );
     }
+    options.push(format!("aria_label: Some({label:?}.into()),"));
     if handle == "files" {
         options.push(r#"placeholder: Some("Go to file...".into()),"#.into());
         options.push(r#"nothing_found: Some(rsx! { "No file by that name." }),"#.into());
@@ -250,6 +258,7 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
         clear_on_close,
         highlight_first_on_query,
         shortcut: shortcut.filter(|_| example == name),
+        aria_label: Some(dialog_name(name).into()),
         ..Default::default()
     };
 

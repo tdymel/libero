@@ -1,19 +1,20 @@
 use crate::Route;
-use crate::components::{DocPage, DocSection};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap};
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Button, Checkbox, Code, CodeBlock, Flex, Text},
+    components::{Anchor, Button, Checkbox, Code, Flex, Text},
     hooks::use_focus_return,
     sx::sx,
 };
 
-const FILTERS: &str = r#"#[component]
-fn Filters() -> Element {
-    let mut open = use_signal(|| false);
-    let mut in_stock = use_signal(|| false);
-    let trigger = use_focus_return();
+/// The hook call and the panel it returns focus from, as `Filters` renders them.
+fn code(_: &DemoValues, _: &str) -> String {
+    r#"let mut open = use_signal(|| false);
+let mut in_stock = use_signal(|| false);
+let trigger = use_focus_return();
 
-    rsx! {
+rsx! {
+    Flex { direction: "column", align: "flex-start", gap: "sm",
         Button {
             variant: "outlined",
             aria_expanded: open(),
@@ -55,9 +56,10 @@ fn Filters() -> Element {
             }
         }
     }
-}"#;
+}"#
+    .to_string()
+}
 
-/// `FILTERS`, rendered.
 #[component]
 fn Filters() -> Element {
     let mut open = use_signal(|| false);
@@ -65,42 +67,44 @@ fn Filters() -> Element {
     let trigger = use_focus_return();
 
     rsx! {
-        Button {
-            variant: "outlined",
-            aria_expanded: open(),
-            aria_controls: "filters-panel",
-            onclick: move |_| {
-                if !open() {
-                    trigger.remember_active();
-                }
-                open.toggle();
-            },
-            "Filters"
-        }
-        if open() {
-            Flex {
-                id: "filters-panel",
-                direction: "column",
-                align: "flex-start",
-                gap: "sm",
-                sx: sx().padding("md").background("muted.1").border_radius("8px"),
-                onkeydown: move |event: KeyboardEvent| {
-                    if event.key() == Key::Escape {
-                        open.set(false);
-                        trigger.restore();
+        Flex { direction: "column", align: "flex-start", gap: "sm",
+            Button {
+                variant: "outlined",
+                aria_expanded: open(),
+                aria_controls: "filters-panel",
+                onclick: move |_| {
+                    if !open() {
+                        trigger.remember_active();
                     }
+                    open.toggle();
                 },
-                Checkbox {
-                    label: "In stock only",
-                    checked: in_stock(),
-                    onchange: move |next| in_stock.set(next),
-                }
-                Button {
-                    onclick: move |_| {
-                        open.set(false);
-                        trigger.restore();
+                "Filters"
+            }
+            if open() {
+                Flex {
+                    id: "filters-panel",
+                    direction: "column",
+                    align: "flex-start",
+                    gap: "sm",
+                    sx: sx().padding("md").background("muted.1").border_radius("8px"),
+                    onkeydown: move |event: KeyboardEvent| {
+                        if event.key() == Key::Escape {
+                            open.set(false);
+                            trigger.restore();
+                        }
                     },
-                    "Apply"
+                    Checkbox {
+                        label: "In stock only",
+                        checked: in_stock(),
+                        onchange: move |next| in_stock.set(next),
+                    }
+                    Button {
+                        onclick: move |_| {
+                            open.set(false);
+                            trigger.restore();
+                        },
+                        "Apply"
+                    }
                 }
             }
         }
@@ -142,15 +146,12 @@ pub fn UseFocusReturnPage() -> Element {
                 }
             },
 
-            DocSection {
-                title: "Usage",
-                Flex {
-                    direction: "column",
-                    align: "flex-start",
-                    gap: "sm",
-                    Filters {}
-                }
-                CodeBlock { source: FILTERS, language: "rust" }
+            Demo {
+                component: "use_focus_return",
+                children_text: "",
+                controls: Vec::new(),
+                render: move |_: DemoValues| rsx! { Filters {} },
+                wrap: Wrap(code),
             }
 
             DocSection {

@@ -8,7 +8,7 @@ use libero::{
     use_theme,
 };
 
-const SIZES: [&str; 5] = ["xs", "sm", "md", "lg", "xl"];
+const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
 // snippet: in Tooltip { .., Button { "Save" } }
 const LABEL: &str = r#"label: rsx! { "Saves the current draft" }"#;
@@ -108,7 +108,9 @@ pub fn TooltipPage() -> Element {
                     Control::slider("close_delay", ["auto", "200", "500", "1000"])
                         .code(delay_code),
                     // `Some(false)` pins it shut, which hover cannot override.
-                    Control::toggle("open", ["auto", "true", "false"]).code(
+                    Control::toggle("open", ["auto", "false", "true"])
+                        .labels(["Auto", "Off", "On"])
+                        .code(
                         |_, values| match values.str("open").as_str() {
                             "auto" => vec![],
                             open => vec![format!("open: {open}")],

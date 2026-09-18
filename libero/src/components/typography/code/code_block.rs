@@ -499,9 +499,8 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .clone()
         .flatten()
         .or_else(|| (language.is_none() && marked).then(|| plain_lines(&display_source)));
-    let label = language
-        .map(|language| language.name(&labels))
-        .unwrap_or(labels.unrecognized_language);
+    // No language, no label: the empty span keeps the copy button at the end.
+    let label = language.map(|language| language.name(&labels));
     let copy_source = copyable.then(|| display_source.clone());
     let (highlighted_lines, overrun) = props
         .highlight_lines

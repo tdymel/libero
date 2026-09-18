@@ -172,7 +172,7 @@ grid: unpacked, but correct.
 `quilted` is not a second layout engine. It is `grid-row: span n` per item plus
 an aspect ratio scaled by that cell's own width and height (`ratio * columns /
 rows`), so a 2x2 cell is exactly twice the size of a 1x1 one without anyone
-naming a pixel height; `ratio` and [AspectRatio](aspect-ratio.md) do that
+naming a pixel height; `ratio` and [AspectRatio](aspect_ratio.md) do that
 arithmetic.
 
 Not implemented: a row height, an action position, a raw pixel `gap`, and the
@@ -257,7 +257,7 @@ list re-renders whenever its parent does. That is `Table`'s rows and
 | `bar_color` | `&'static str` | `"#fff"` | Bar text, on either scrim. |
 | `bar_padding` | `Size` | `Size::Sm` | The bar's inset. |
 
-There is no `ratio` field: the aspect ratio is [AspectRatio](aspect-ratio.md)'s
+There is no `ratio` field: the aspect ratio is [AspectRatio](aspect_ratio.md)'s
 `--lsx-aspect-ratio`, so a caller who retunes `theme.aspect_ratio` gets galleries
 that match.
 

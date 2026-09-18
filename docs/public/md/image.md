@@ -8,7 +8,7 @@ Description: An img with a fallback source on load error, rounded corners, and a
 
 An `<img>` with a fallback source on load error, optional rounded corners, and
 an optional click-to-zoom overlay. `fit` maps straight onto `object-fit`;
-`radius` takes the radius scale or any CSS length.
+`radius` takes a step on the radius scale.
 
 ## Usage
 

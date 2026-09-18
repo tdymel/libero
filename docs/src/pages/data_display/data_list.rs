@@ -60,7 +60,9 @@ pub fn DataListPage() -> Element {
                 children_text: "",
                 children_code: CHILDREN,
                 controls: vec![
-                    Control::toggle("orientation", ["vertical", "horizontal"]),
+                    Control::toggle("orientation", ["horizontal", "vertical"])
+                        .labels(["Horizontal", "Vertical"])
+                        .default("vertical"),
                     Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                 ],

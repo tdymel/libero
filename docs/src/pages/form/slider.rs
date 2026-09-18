@@ -10,7 +10,7 @@ use libero::{
     use_theme,
 };
 
-const SIZES: [&str; 5] = ["xs", "sm", "md", "lg", "xl"];
+const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
 /// The demo's own discrete type, so the code block can show the derive that
 /// makes it one - the preview slides over exactly this enum.

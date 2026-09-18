@@ -134,7 +134,7 @@ pub fn HoverCardPage() -> Element {
                 code_child: Child(|_| TRIGGER.to_string()),
                 wrap: Wrap(wrap),
                 controls: vec![
-                    Control::toggle("side", ["bottom", "top", "end", "start"])
+                    Control::toggle("side", ["top", "end", "bottom", "start"])
                         .default("bottom")
                         .code(enum_code),
                     Control::toggle("align", ["start", "center", "end"])
@@ -144,7 +144,9 @@ pub fn HoverCardPage() -> Element {
                         .code(delay_code),
                     Control::slider("close_delay", ["auto", "0", "300", "1000"])
                         .code(delay_code),
-                    Control::toggle("open", ["auto", "true", "false"]).code(
+                    Control::toggle("open", ["auto", "false", "true"])
+                        .labels(["Auto", "Off", "On"])
+                        .code(
                         |_, values| match values.str("open").as_str() {
                             "auto" => vec![],
                             open => vec![format!("open: {open}")],

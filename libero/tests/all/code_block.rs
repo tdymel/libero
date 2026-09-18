@@ -56,12 +56,12 @@ static BARE: libero::theme::Theme = libero::theme::Theme {
 fn unset_chrome_props_follow_the_theme() {
     fn default() -> Element {
         rsx! {
-            LiberoProvider { CodeBlock { source: "let x = 1;" } }
+            LiberoProvider { CodeBlock { source: "let x = 1;", language: "text" } }
         }
     }
     fn bare() -> Element {
         rsx! {
-            LiberoProvider { themes: &BARE, CodeBlock { source: "let x = 1;" } }
+            LiberoProvider { themes: &BARE, CodeBlock { source: "let x = 1;", language: "text" } }
         }
     }
     fn overridden() -> Element {
@@ -72,13 +72,28 @@ fn unset_chrome_props_follow_the_theme() {
 
     let html = body(&render(default));
     assert!(html.contains("<button"), "{html}");
-    assert!(html.contains("Unrecognized language"), "{html}");
+    assert!(html.contains("Plain text"), "{html}");
 
     let html = body(&render(bare));
     assert!(!html.contains("<button"), "{html}");
-    assert!(!html.contains("Unrecognized language"), "{html}");
+    assert!(!html.contains("Plain text"), "{html}");
 
     assert!(body(&render(overridden)).contains("<button"));
+}
+
+/// Todo 826. No language, no label in the header; the copy button stays.
+#[test]
+fn a_block_without_a_language_shows_no_language_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { CodeBlock { source: "a -> b" } }
+        }
+    }
+
+    let html = body(&render(app));
+    assert!(html.contains("<button"), "{html}");
+    assert!(!html.contains("Unrecognized language"), "{html}");
+    assert!(html.contains("<span></span>"), "{html}");
 }
 
 /// Todo 668. No grammar still draws the diff's marker and spoken word, on the

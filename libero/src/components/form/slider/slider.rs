@@ -11,6 +11,7 @@ use crate::{
 };
 
 field_props! {
+    without(radius);
     pub struct SliderProps<V: SliderValue> {
         /// Strictly controlled - pair it with `oninput`. Inside a `Form`, a
         /// path `name` can supply it instead.

@@ -138,8 +138,10 @@ pub fn StepperPage() -> Element {
                 fixed: vec!["value: stage()".to_string(), CONTENT.to_string()],
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
+                        .labels(["Horizontal", "Vertical"])
                         .default("horizontal"),
                     Control::toggle("label_position", ["side", "below"])
+                        .labels(["Side", "Below"])
                         .default("side")
                         .hidden_when(|values| values.str("orientation") == "vertical"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])

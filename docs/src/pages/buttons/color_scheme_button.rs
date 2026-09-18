@@ -60,13 +60,18 @@ pub fn ColorSchemeButtonPage() -> Element {
                 component: "ColorSchemeButton",
                 children_text: "",
                 controls: vec![
-                    Control::toggle("variant", ["outlined", "filled", "tonal", "standard"])
-                        .labels(["Outlined", "Filled", "Tonal", "Standard"])
-                        .default("outlined"),
+                    Control::toggle(
+                        "variant",
+                        ["filled", "tonal", "elevated", "outlined", "standard"],
+                    )
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"])
+                    .default("outlined"),
                     // `muted` is what an unset `color` resolves to, so that
                     // swatch prints nothing.
                     Control::color("color").default("muted"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("sm"),
                     Control::switch("disabled"),
                     Control::switch("themes").code(|_, values| match values.str("themes").as_str() {
                         "true" => vec!["themes: ThemeSet::CATALOGUE".to_string()],
@@ -81,6 +86,7 @@ pub fn ColorSchemeButtonPage() -> Element {
                             color => Input::from(color),
                         },
                         size: values.str("size"),
+                        radius: values.str("radius"),
                         disabled: values.str("disabled") == "true",
                         themes: (values.str("themes") == "true").then_some(ThemeSet::CATALOGUE),
                     }

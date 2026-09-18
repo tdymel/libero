@@ -88,6 +88,7 @@ fn radio_variables(checked: bool, base: &ThemeAwareValue) -> String {
 
 field_props! {
     extends(input);
+    without(radius);
     pub struct RadioProps {
         /// The ring and dot colour when checked.
         #[props(default, into)]

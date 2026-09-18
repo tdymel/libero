@@ -45,6 +45,7 @@ fn focus_option(root: &ElementHandle, index: usize) {
 }
 
 field_props! {
+    without(radius);
     pub struct RadioGroupProps<T: Options> {
         /// Strictly controlled - pair it with `onchange`. `None` selects
         /// nothing, which is what an unanswered question looks like.

@@ -1,11 +1,13 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Button, Code, CodeBlock, Flex, Text},
+    components::{Box, Button, Code, Flex, Text},
     hooks::use_id,
 };
 
-const DISCLOSURE: &str = r#"#[component]
+/// The id is per instance, so the snippet is the component and two of it.
+fn code(_: &DemoValues, _: &str) -> String {
+    r#"#[component]
 fn Disclosure(title: String, children: Element) -> Element {
     let panel = use_id();
     let mut open = use_signal(|| false);
@@ -22,15 +24,13 @@ fn Disclosure(title: String, children: Element) -> Element {
     }
 }
 
-#[component]
-fn Faq() -> Element {
-    rsx! {
-        Disclosure { title: "Shipping", Text { "Two to four working days." } }
-        Disclosure { title: "Returns", Text { "Free within 30 days." } }
-    }
-}"#;
+Flex { direction: "column", align: "flex-start", gap: "xs",
+    Disclosure { title: "Shipping", Text { "Two to four working days." } }
+    Disclosure { title: "Returns", Text { "Free within 30 days." } }
+}"#
+    .to_string()
+}
 
-/// `DISCLOSURE`, rendered.
 #[component]
 fn Disclosure(title: String, children: Element) -> Element {
     let panel = use_id();
@@ -64,17 +64,17 @@ pub fn UseIdPage() -> Element {
                     "component renders twice."
                 }
             },
-
-            DocSection {
-                title: "Usage",
-                Flex {
-                    direction: "column",
-                    align: "flex-start",
-                    gap: "xs",
-                    Disclosure { title: "Shipping", Text { "Two to four working days." } }
-                    Disclosure { title: "Returns", Text { "Free within 30 days." } }
-                }
-                CodeBlock { source: DISCLOSURE, language: "rust" }
+            Demo {
+                component: "use_id",
+                children_text: "",
+                controls: Vec::new(),
+                render: move |_: DemoValues| rsx! {
+                    Flex { direction: "column", align: "flex-start", gap: "xs",
+                        Disclosure { title: "Shipping", Text { "Two to four working days." } }
+                        Disclosure { title: "Returns", Text { "Free within 30 days." } }
+                    }
+                },
+                wrap: Wrap(code),
             }
 
             DocSection {

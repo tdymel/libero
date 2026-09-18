@@ -10,7 +10,7 @@ use libero::{
     use_theme,
 };
 
-const SIZES: [&str; 5] = ["xs", "sm", "md", "lg", "xl"];
+const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
 /// The demo's own discrete type - a range slides over the same values a
 /// single-thumb `Slider` does.

@@ -24,11 +24,14 @@
 /// no way to honour it (`NativeSelect`: HTML has no read-only `<select>`). It
 /// cannot be combined with `extends(..)`; no such field exists yet.
 ///
+/// `without(radius);`, after an `extends(..)` if there is one, leaves `radius`
+/// out, for a field whose shape is fixed (a radio's circle, a slider's pill).
+///
 /// Like [`base_props`], the leading `extends(..)` clause needs the internal
 /// `@build` arm plus two dispatch arms: `$(extends(..);)?` before the struct is
 /// a `local ambiguity when calling macro` error, since both can match empty.
 macro_rules! field_props {
-    (@build [$($extra_extends:tt)*] [$($readonly:ident)?]
+    (@build [$($extra_extends:tt)*] [$($readonly:ident)?] [$($radius:ident)?]
         $(#[$struct_meta:meta])*
         $vis:vis struct $name:ident $(< $($generic:ident : $bound:path),+ $(,)? >)? {
             $($fields:tt)*
@@ -54,9 +57,11 @@ macro_rules! field_props {
                 status: Input<crate::components::FieldStatus>,
                 #[props(default, into)]
                 size: Input<crate::theme::Size>,
-                /// Corner radius, independent of `size`.
-                #[props(default, into)]
-                radius: Input<crate::theme::Size>,
+                $(
+                    /// Corner radius, independent of `size`.
+                    #[props(default, into)]
+                    $radius: Input<crate::theme::Size>,
+                )?
                 /// `None` is "not stated" - what a `Fieldset` will cascade
                 /// into later.
                 #[props(default)]
@@ -75,16 +80,24 @@ macro_rules! field_props {
         }
     };
 
+    (extends($($extra_extends:ident),+ $(,)?); without(radius); $($rest:tt)*) => {
+        crate::components::common::field_props!(@build [$(, extends = $extra_extends)+] [readonly] [] $($rest)*);
+    };
+
     (extends($($extra_extends:ident),+ $(,)?); $($rest:tt)*) => {
-        crate::components::common::field_props!(@build [$(, extends = $extra_extends)+] [readonly] $($rest)*);
+        crate::components::common::field_props!(@build [$(, extends = $extra_extends)+] [readonly] [radius] $($rest)*);
     };
 
     (without(readonly); $($rest:tt)*) => {
-        crate::components::common::field_props!(@build [] [] $($rest)*);
+        crate::components::common::field_props!(@build [] [] [radius] $($rest)*);
+    };
+
+    (without(radius); $($rest:tt)*) => {
+        crate::components::common::field_props!(@build [] [readonly] [] $($rest)*);
     };
 
     ($($rest:tt)*) => {
-        crate::components::common::field_props!(@build [] [readonly] $($rest)*);
+        crate::components::common::field_props!(@build [] [readonly] [radius] $($rest)*);
     };
 }
 

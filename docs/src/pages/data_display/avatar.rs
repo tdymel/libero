@@ -222,6 +222,7 @@ pub fn AvatarPage() -> Element {
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "standard"],
                     )
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"])
                     .default("tonal"),
                     // An unset `color` is `base_color`'s primary shade 6,
                     // which is exactly what a bare `primary` resolves to - so

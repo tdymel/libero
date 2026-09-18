@@ -225,7 +225,8 @@ pub fn SegmentedControlPage() -> Element {
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
-                    Control::toggle("orientation", ["horizontal", "vertical"]),
+                    Control::toggle("orientation", ["horizontal", "vertical"])
+                        .labels(["Horizontal", "Vertical"]),
                     // "auto" is no gap at all: the segments stay connected
                     // and share their borders.
                     Control::slider("gap", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),

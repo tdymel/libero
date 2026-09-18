@@ -73,6 +73,7 @@ pub fn SwitchPage() -> Element {
                 children_text: "",
                 controls: vec![
                     Control::toggle("variant", ["plain", "card"])
+                        .labels(["Plain", "Card"])
                         .default("plain")
                         .code(|_, values| match values.str("variant").as_str() {
                             "card" => vec![r#"variant: "card""#.to_string()],

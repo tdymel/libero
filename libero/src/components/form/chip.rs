@@ -285,7 +285,7 @@ pub fn Chip(props: ChipProps) -> Element {
     if props.value.is_some() && props.name.is_empty() {
         warn("Chip: `value` without `name` is posted by nothing.");
     }
-    if props.readonly.is_some() && !selectable {
+    if props.readonly == Some(true) && !selectable {
         warn("Chip: `readonly` without `onchange` or `name` has nothing to lock.");
     }
 

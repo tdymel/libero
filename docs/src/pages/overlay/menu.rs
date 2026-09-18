@@ -296,7 +296,7 @@ pub fn MenuPage() -> Element {
                 code_child: Child(|_| TRIGGER.to_string()),
                 wrap: Wrap(wrap),
                 controls: vec![
-                    Control::toggle("side", ["bottom", "top", "end", "start"])
+                    Control::toggle("side", ["top", "end", "bottom", "start"])
                         .default("bottom")
                         .code(enum_code),
                     Control::toggle("align", ["start", "center", "end"])

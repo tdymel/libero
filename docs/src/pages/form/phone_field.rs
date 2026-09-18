@@ -150,6 +150,12 @@ pub fn PhoneFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::switch("helper").code(|_, values| {
+                        match values.str("helper").as_str() {
+                            "true" => vec!["helper: \"Include the area code.\"".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("placeholder").code(|_, values| {
                         match values.str("placeholder").as_str() {
                             "true" => vec!["placeholder: \"213 373 4253\"".to_string()],
@@ -186,6 +192,8 @@ pub fn PhoneFieldPage() -> Element {
                                 aria_label: (values.str("label") != "true").then_some("Mobile"),
                                 description: (values.str("description") == "true")
                                     .then(|| "We only text you about deliveries.".to_string()),
+                                helper: (values.str("helper") == "true")
+                                    .then(|| "Include the area code.".to_string()),
                                 placeholder: (values.str("placeholder") == "true")
                                     .then(|| "213 373 4253".to_string()),
                                 status: match values.str("status").as_str() {
