@@ -19,6 +19,9 @@ pub(crate) const ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-icon-contrast");
 const ICON_RADIUS_VAR: CssVar = CssVar::new("--lsx-icon-radius");
 const ICON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-icon-container");
 const ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-icon-on-container");
+const ICON_GLYPH_VAR: CssVar = CssVar::new("--lsx-icon-glyph");
+/// The glyph's share of a contained icon's box, MUI Avatar's 24px in 40px.
+const ICON_GLYPH_INSET: &str = "60%";
 
 pub(crate) const ICON_VARS: VariantVars<'static> = VariantVars {
     color: &ICON_COLOR_VAR,
@@ -37,11 +40,22 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .width(ICON_SIZE.overridable(Size::Md))
         .height(ICON_SIZE.overridable(Size::Md))
         .border_radius(ICON_RADIUS_VAR.value_or(SizeCss::RADIUS.value(Size::Sm)))
-        .selector("& svg", sx().width("100%").height("100%"));
+        .selector(
+            "& svg",
+            sx().width(ICON_GLYPH_VAR.value())
+                .height(ICON_GLYPH_VAR.value()),
+        );
 
     // Chrome only: a badge is not interactive, so it takes no hover response.
     Variant::ALL.iter().fold(base, |base, &variant| {
-        base.when(variant.state_name(), variant_chrome_sx(variant, &ICON_VARS))
+        let chrome = variant_chrome_sx(variant, &ICON_VARS);
+        // A glyph inside a container keeps clear of its edges; a bare one fills the box.
+        let glyph = match variant {
+            Variant::Standard => "100%",
+            _ => ICON_GLYPH_INSET,
+        };
+        let chrome = chrome.var(ICON_GLYPH_VAR, glyph);
+        base.when(variant.state_name(), chrome)
     })
 });
 
@@ -81,7 +95,9 @@ base_props! {
 }
 
 /// Wraps an svg child in a sized, colored badge. `color` sets the container's
-/// CSS `color`, which a `currentColor` svg then inherits.
+/// CSS `color`, which a `currentColor` svg then inherits. The svg fills a
+/// `standard` icon's box; every other variant insets it to 60%
+/// (`--lsx-icon-glyph`).
 ///
 /// Decorative (`aria-hidden`) unless named: pass `aria_label` or
 /// `aria_labelledby` and it becomes `role="img"` under that name.

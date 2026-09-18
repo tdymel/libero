@@ -32,7 +32,7 @@ fn Demo() -> Element {
             onclick: move |_| open.toggle(),
             sx: sx().breakpoint(Size::Sm, sx().display("none")),
         }
-        Sidebar { id: "site-nav", side: "left", role: "navigation",
+        Sidebar { id: "site-nav", side: "start", role: "navigation",
             // ..
         }
     }

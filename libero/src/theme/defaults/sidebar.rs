@@ -7,12 +7,13 @@ pub const SIDEBAR_SIZE: SizeCss = SizeCss::new("--lsx-sidebar-size-");
 str_enum! {
     /// Which edge a `Sidebar` borders and which axis its `size` applies to.
     /// Descriptive only - an in-flow panel is placed by its parent's layout,
-    /// so this must match the DOM position you give it.
+    /// so this must match the DOM position you give it. Logical: `Start` is
+    /// the right under `dir="rtl"`.
     #[state_prefix = "side"]
     pub enum SidebarSide {
         #[default]
-        Left = "left",
-        Right = "right",
+        Start = "start",
+        End = "end",
         Top = "top",
         Bottom = "bottom",
     }

@@ -12,7 +12,7 @@ use crate::{
 pub struct DrawerOptions {
     /// The edge it docks to.
     pub anchor: Input<DrawerAnchor>,
-    /// Width when docked left or right, height when docked top or bottom.
+    /// Width when docked start or end, height when docked top or bottom.
     pub size: Input<Size>,
     pub z_index: Input<ThemeAwareValue>,
     /// Names the panel, which is a dialog. Unset is a `warn()`.
@@ -28,7 +28,7 @@ pub struct DrawerOptions {
 /// # use libero::hooks::{DrawerOptions, ModalScope, use_drawer};
 /// # fn app() -> Element {
 /// let options = DrawerOptions {
-///     anchor: "right".into(),
+///     anchor: "end".into(),
 ///     aria_label: Some("Navigation".into()),
 ///     ..Default::default()
 /// };

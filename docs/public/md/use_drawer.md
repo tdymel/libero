@@ -24,7 +24,7 @@ use libero::{
 fn FilterPanel() -> Element {
     let filters = use_drawer(
         DrawerOptions {
-            anchor: "right".into(),
+            anchor: "end".into(),
             size: "sm".into(),
             aria_label: Some("Filters".into()),
             ..Default::default()
@@ -57,5 +57,5 @@ pub fn use_drawer<S: Clone + 'static, R: Clone + 'static>(
 ) -> ModalHandle<S, R>
 ```
 
-`DrawerOptions` has `anchor` (`left` by default), `size` (`md`), `z_index` and
+`DrawerOptions` has `anchor` (`start` by default), `size` (`md`), `z_index` and
 `aria_label`. The handle is the one [use_modal](use_modal.md) returns.

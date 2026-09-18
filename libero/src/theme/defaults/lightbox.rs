@@ -39,7 +39,7 @@ impl LightboxDefaults {
         thumbnail_size: "64px",
         thumbnails_per_view: 7.0,
         thumbnails_gap: Size::Xs,
-        max_zoom: 3.0,
+        max_zoom: 8.0,
     };
 }
 

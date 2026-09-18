@@ -7,7 +7,7 @@ Index: [index.md](index.md) - every other component's markdown page
 Description: An in-flow panel on one edge of its parent that scrolls its own content, like a nav rail or an inspector.
 
 An in-flow panel on one edge of its parent that scrolls its own content. `side`
-picks the border, not the position, so a right sidebar comes after its sibling
+picks the border, not the position, so an end sidebar comes after its sibling
 in the DOM. For a panel that slides in over the page, see
 [`use_drawer`](drawer.md).
 
@@ -46,7 +46,7 @@ fn Demo() -> Element {
 }
 ```
 
-The same panel on the right, after its sibling, with a wider `size`.
+The same panel at the end, after its sibling, with a wider `size`.
 
 ```rust
 use dioxus::prelude::*;
@@ -69,7 +69,7 @@ fn Demo() -> Element {
                 Text { "Rest of the layout" }
             }
             Sidebar {
-                side: "right",
+                side: "end",
                 size: "lg",
                 Text { "Navigation" }
             }
@@ -91,12 +91,12 @@ landmark of that kind.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `side` | `SidebarSide` | `left` | The edge that gets the border, and whether `size` is a width or a height. It does not move the panel, so put it at the matching end of the DOM. |
+| `side` | `SidebarSide` | `start` | The edge that gets the border, and whether `size` is a width or a height. It does not move the panel, so put it at the matching end of the DOM. |
 | `size` | `Size` | `md` | The panel's width, or its height on a `top` or `bottom` side. |
 | `component` | `HtmlTag` | `aside` | The element to render, such as `nav` for a navigation panel. |
 | `children` | `Element` | required | The panel's content, scrolled by an inner `ScrollArea`. |
 
-`SidebarSide` is `left`, `right`, `top` or `bottom`.
+`SidebarSide` is `start`, `end`, `top` or `bottom`. `start` and `end` follow the text direction: `start` is the right edge under `dir="rtl"`.
 
 Like every component, `Sidebar` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
@@ -122,5 +122,5 @@ State tokens on the root's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `side-left` / `side-right` / `side-top` / `side-bottom` | The `side` in effect. |
+| `side-start` / `side-end` / `side-top` / `side-bottom` | The `side` in effect. |
 | `size-<size>` | The `size` in effect. |

@@ -33,7 +33,9 @@ fn Demo() -> Element {
 ```
 
 Any svg works, including one from an icon crate - `Icon` only sizes and colors
-it. The child is stretched to fill the badge (`& svg { width: 100%; height: 100% }`).
+it. With `standard`, which draws no container, the svg fills the box. Every other
+variant insets it to 60% of the box, so the glyph keeps clear of the container's
+edges. Set `--lsx-icon-glyph` in `sx` to pick another share.
 
 ```rust
 use dioxus::prelude::*;

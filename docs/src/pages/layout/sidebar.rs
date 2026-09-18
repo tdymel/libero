@@ -19,7 +19,7 @@ fn wrap_layout(values: &DemoValues, code: &str) -> String {
     let panel = indent(code);
     let rest = indent(REST);
     let body = match values.str("side").as_str() {
-        "right" => format!("{rest}{panel}"),
+        "end" => format!("{rest}{panel}"),
         _ => format!("{panel}{rest}"),
     };
     format!(
@@ -36,8 +36,8 @@ pub fn SidebarPage() -> Element {
             markdown: "/md/sidebar.md",
             properties: vec![props("Sidebar", vec![
                 prop("side", "SidebarSide")
-                    .default("left")
-                    .doc("The edge that gets the border, and whether `size` is a width or a height. It does not move the panel, so put it at the matching end of the DOM."),
+                    .default("start")
+                    .doc("The edge that gets the border, and whether `size` is a width or a height. `start` is the right edge under `dir=\"rtl\"`. It does not move the panel, so put it at the matching end of the DOM."),
                 prop("size", "Size").default("md").doc("The panel's width, or its height on a `top` or `bottom` side."),
                 prop("component", "HtmlTag").default("aside").doc("The element to render, such as `nav` for a navigation panel."),
                 prop("children", "Element").doc("The panel's content, scrolled by an inner `ScrollArea`."),
@@ -47,7 +47,7 @@ pub fn SidebarPage() -> Element {
                     "An in-flow panel on one edge of its parent that scrolls its own "
                     "content. "
                     Code { source: "side" }
-                    " picks the border, not the position, so a right sidebar comes after "
+                    " picks the border, not the position, so an end sidebar comes after "
                     "its sibling in the DOM. For a panel that slides in over the page, see "
                     Code { source: "use_drawer" }
                     "."
@@ -60,7 +60,7 @@ pub fn SidebarPage() -> Element {
                 // A `md` panel is 240px, wider than the preview beside the controls.
                 wide_preview: true,
                 controls: vec![
-                    Control::toggle("side", ["left", "right"]),
+                    Control::toggle("side", ["start", "end"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                 ],
@@ -80,7 +80,7 @@ pub fn SidebarPage() -> Element {
                         }
                     };
                     let (first, second) = match values.str("side").as_str() {
-                        "right" => (rest, panel),
+                        "end" => (rest, panel),
                         _ => (panel, rest),
                     };
                     rsx! {

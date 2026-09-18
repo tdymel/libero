@@ -36,7 +36,7 @@ fn modal() -> Element {
 fn drawer() -> Element {
     let nav = use_drawer(
         DrawerOptions {
-            anchor: "right".into(),
+            anchor: "end".into(),
             size: "sm".into(),
             aria_label: Some("Navigation".into()),
             ..Default::default()

@@ -27,7 +27,7 @@ use libero::{
 fn Demo() -> Element {
     let nav = use_drawer(
         DrawerOptions {
-            anchor: "right".into(),
+            anchor: "end".into(),
             size: "sm".into(),
             aria_label: Some("Menu".into()),
             ..Default::default()
@@ -47,10 +47,11 @@ fn Demo() -> Element {
 }
 ```
 
-`anchor` picks the edge, `left`, `right`, `top` or `bottom`. `size` is the
-width on a left or right edge and the height on a top or bottom one. The other
+`anchor` picks the edge, `start`, `end`, `top` or `bottom`. `size` is the
+width on a start or end edge and the height on a top or bottom one. The other
 axis is always full. Both are read on every render, so an anchor in a signal
-moves an open drawer.
+moves an open drawer. `start` and `end` follow the text direction: `start` is
+the right edge under `dir="rtl"`.
 
 A drawer takes per-opening data and returns a result like any modal. See
 [Modal](modal.md) for `open_with`, `Opening`, `onresult` and `.await`.
@@ -58,7 +59,7 @@ A drawer takes per-opening data and returns a result like any modal. See
 ```rust,ignore
 let details = use_drawer(
     DrawerOptions {
-        anchor: "right".into(),
+        anchor: "end".into(),
         aria_label: Some("Order details".into()),
         ..Default::default()
     },
@@ -103,12 +104,12 @@ behave the same. See [Modal](modal.md).
 ### `DrawerOptions`
 
 `DrawerOptions` implements `Default`, so a literal sets only what it needs,
-`DrawerOptions { anchor: "right".into(), ..Default::default() }`.
+`DrawerOptions { anchor: "end".into(), ..Default::default() }`.
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `anchor` | `Input<DrawerAnchor>` | `left` | The edge the panel docks to. |
-| `size` | `Input<Size>` | `md` | Width when docked left or right, height when docked top or bottom. |
+| `anchor` | `Input<DrawerAnchor>` | `start` | The edge the panel docks to. |
+| `size` | `Input<Size>` | `md` | Width when docked start or end, height when docked top or bottom. |
 | `z_index` | `Input<ThemeAwareValue>` | - | Stacking order of the panel. |
 | `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. Unset warns in a debug build. |
 
@@ -137,5 +138,5 @@ State tokens on the panel's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `anchor-left` / `anchor-right` / `anchor-top` / `anchor-bottom` | The `anchor` in effect. |
+| `anchor-start` / `anchor-end` / `anchor-top` / `anchor-bottom` | The `anchor` in effect. |
 | `size-<size>` | The `size` in effect. |

@@ -86,8 +86,8 @@ pub fn DrawerPage() -> Element {
             markdown: "/md/drawer.md",
             properties: vec![
                 props("DrawerOptions", vec![
-                    prop("anchor", "Input<DrawerAnchor>").default("left").doc("The edge the panel docks to."),
-                    prop("size", "Input<Size>").default("md").doc("Width when docked left or right, height when docked top or bottom."),
+                    prop("anchor", "Input<DrawerAnchor>").default("start").doc("The edge the panel docks to. `start` is the right edge under `dir=\"rtl\"`."),
+                    prop("size", "Input<Size>").default("md").doc("Width when docked start or end, height when docked top or bottom."),
                     prop("z_index", "Input<ThemeAwareValue>").doc("Stacking order of the panel."),
                     prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. Unset warns in a debug build."),
                 ]).without_base_props(),
@@ -109,7 +109,7 @@ pub fn DrawerPage() -> Element {
                 children_text: "",
                 children_code: CONTENT.to_string(),
                 controls: vec![
-                    Control::toggle("anchor", ["left", "right", "top", "bottom"]),
+                    Control::toggle("anchor", ["start", "end", "top", "bottom"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                 ],
                 render: move |values: DemoValues| rsx! {

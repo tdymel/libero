@@ -49,6 +49,7 @@ mod dialog;
 mod divider;
 mod docs_shell;
 mod drawer;
+mod elevation;
 mod field_frame;
 mod field_value;
 mod file_field;
@@ -145,6 +146,7 @@ const FIXTURES: &[Routes] = &[
     divider::ROUTES,
     docs_shell::ROUTES,
     drawer::ROUTES,
+    elevation::ROUTES,
     field_frame::ROUTES,
     field_value::ROUTES,
     file_field::ROUTES,

@@ -367,7 +367,7 @@ async fn assert_tab_skips_inert(page: &Page) -> Result<()> {
 }
 
 /// `z` only toggles to 2x; `+` and `-` step like the wheel, so the keyboard
-/// reaches `max_zoom` (the theme's 3x) and back (WCAG 2.1.1).
+/// reaches `max_zoom` (the theme's 8x) and back (WCAG 2.1.1).
 #[test]
 fn plus_and_minus_zoom_to_max_zoom_and_back() {
     const PLUS: keyboard::Key = keyboard::Key {
@@ -393,21 +393,22 @@ fn plus_and_minus_zoom_to_max_zoom_and_back() {
         wait::for_visible(page, DIALOG).await.unwrap();
         wait_showing(page, 0).await.unwrap();
         keyboard::tab_to(page, PICTURE, 12).await.unwrap();
-        for _ in 0..6 {
+        // 1.25^10 passes 8, so the tenth press clamps.
+        for _ in 0..10 {
             keyboard::press(page, PLUS).await.unwrap();
         }
         if wait::for_js_true(
             page,
-            &format!("{STYLE}.includes('scale(3)')"),
-            "the picture at 3x",
+            &format!("{STYLE}.includes('scale(8)')"),
+            "the picture at 8x",
         )
         .await
         .is_err()
         {
             let style: String = page.evaluate(STYLE).await.unwrap().into_value().unwrap();
-            panic!("six presses of + left the picture at {style:?}, not the theme's max_zoom 3x");
+            panic!("ten presses of + left the picture at {style:?}, not the theme's max_zoom 8x");
         }
-        for _ in 0..6 {
+        for _ in 0..10 {
             keyboard::press(page, MINUS).await.unwrap();
         }
         wait::for_js_true(

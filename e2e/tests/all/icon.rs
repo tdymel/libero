@@ -30,6 +30,39 @@ fn a_filled_icon_repaints_when_its_colour_changes() {
     });
 }
 
+/// Todo 786: a contained glyph keeps clear of its box's edges; a bare one fills it.
+#[test]
+fn a_contained_glyph_is_inset_and_a_bare_one_fills_the_box() {
+    block_on(async {
+        let fixture = Fixture::open("/icon", Viewport::Desktop).await.unwrap();
+        let share = |id: &str| {
+            format!(
+                "(() => {{ const b = document.getElementById('{id}'); \
+                 return b.querySelector('svg').getBoundingClientRect().width / b.getBoundingClientRect().width; }})()"
+            )
+        };
+
+        let filled: f64 = fixture
+            .page
+            .evaluate(share("icon"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!((filled - 0.6).abs() < 0.02, "filled glyph share {filled}");
+        let bare: f64 = fixture
+            .page
+            .evaluate(share("bare"))
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!((bare - 1.0).abs() < 0.02, "standard glyph share {bare}");
+
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 612: an unnamed icon is not in the accessibility tree; a named one is
 /// an image under its name.
 #[test]

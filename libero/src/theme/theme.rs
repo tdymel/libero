@@ -130,13 +130,15 @@ impl Theme {
     pub const DEFAULT: Theme = Theme {
         spacing: Sizes::new(4, 8, 12, 16, 20, 24),
         radius: Sizes::new(2, 4, 8, 16, 32, 64),
+        // A tight key shadow for the edge, a wide ambient one for the lift. No
+        // negative spread or inset: Blitz draws plain offset-and-blur layers.
         elevation: Sizes::new(
-            "0 1px 2px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.06)",
-            "0 1px 2px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.10)",
-            "0 2px 4px rgba(0, 0, 0, 0.10), 0 4px 10px rgba(0, 0, 0, 0.12)",
-            "0 4px 8px rgba(0, 0, 0, 0.10), 0 8px 20px rgba(0, 0, 0, 0.14)",
-            "0 8px 16px rgba(0, 0, 0, 0.12), 0 12px 32px rgba(0, 0, 0, 0.18)",
-            "0 12px 24px rgba(0, 0, 0, 0.14), 0 20px 48px rgba(0, 0, 0, 0.22)",
+            "0 1px 2px rgba(0, 0, 0, 0.20), 0 1px 4px rgba(0, 0, 0, 0.12)",
+            "0 1px 3px rgba(0, 0, 0, 0.20), 0 4px 12px rgba(0, 0, 0, 0.14)",
+            "0 2px 6px rgba(0, 0, 0, 0.18), 0 8px 20px rgba(0, 0, 0, 0.16)",
+            "0 4px 10px rgba(0, 0, 0, 0.18), 0 12px 28px rgba(0, 0, 0, 0.20)",
+            "0 8px 18px rgba(0, 0, 0, 0.20), 0 20px 44px rgba(0, 0, 0, 0.24)",
+            "0 12px 28px rgba(0, 0, 0, 0.22), 0 28px 64px rgba(0, 0, 0, 0.30)",
         ),
         flex: FlexDefaults::DEFAULT,
         grid: GridDefaults::DEFAULT,
@@ -270,6 +272,16 @@ impl Theme {
         neutral: HexColor::new(0xCED4DA),
         paper: PaperDefaults::DARK,
         code: CodeDefaults::DARK,
+        // The light scale's shapes, darker: a black shadow on an inked page
+        // needs about three times the alpha to read at all.
+        elevation: Sizes::new(
+            "0 1px 2px rgba(0, 0, 0, 0.60), 0 1px 4px rgba(0, 0, 0, 0.40)",
+            "0 1px 3px rgba(0, 0, 0, 0.60), 0 4px 12px rgba(0, 0, 0, 0.45)",
+            "0 2px 6px rgba(0, 0, 0, 0.55), 0 8px 20px rgba(0, 0, 0, 0.50)",
+            "0 4px 10px rgba(0, 0, 0, 0.55), 0 12px 28px rgba(0, 0, 0, 0.55)",
+            "0 8px 18px rgba(0, 0, 0, 0.60), 0 20px 44px rgba(0, 0, 0, 0.60)",
+            "0 12px 28px rgba(0, 0, 0, 0.65), 0 28px 64px rgba(0, 0, 0, 0.65)",
+        ),
         ..Theme::DEFAULT
     };
 }

@@ -29,6 +29,7 @@ mod dialog;
 mod divider;
 mod docs_shell;
 mod drawer;
+mod elevation;
 mod field_frame;
 mod field_value;
 mod file_field;

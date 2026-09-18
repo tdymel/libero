@@ -12,7 +12,7 @@ fn a_drawer_renders_through_the_portal_outlet() {
     #[component]
     fn Opener() -> Element {
         let options = DrawerOptions {
-            anchor: "right".into(),
+            anchor: "end".into(),
             aria_label: Some("Navigation".into()),
             ..Default::default()
         };
@@ -32,7 +32,7 @@ fn a_drawer_renders_through_the_portal_outlet() {
 
     assert_eq!(html.matches("drawer content").count(), 1);
     assert!(
-        html.contains(r#"data-state="size-md anchor-right""#),
+        html.contains(r#"data-state="size-md anchor-end""#),
         "got {html}"
     );
     assert!(html.contains(r#"aria-label="Navigation""#), "got {html}");
@@ -51,7 +51,7 @@ fn an_unsized_drawer_takes_the_themes_default_size() {
     #[component]
     fn Opener() -> Element {
         let options = DrawerOptions {
-            anchor: "right".into(),
+            anchor: "end".into(),
             aria_label: Some("Navigation".into()),
             ..Default::default()
         };
@@ -70,7 +70,7 @@ fn an_unsized_drawer_takes_the_themes_default_size() {
     let html = render(app);
 
     assert!(
-        html.contains(r#"data-state="size-lg anchor-right""#),
+        html.contains(r#"data-state="size-lg anchor-end""#),
         "got {html}"
     );
 }

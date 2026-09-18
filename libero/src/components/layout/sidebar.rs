@@ -25,8 +25,8 @@ static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = sx()
         .flex_shrink("0")
         .min_height("0")
-        .when("side-left", sx().border_right(border.clone()))
-        .when("side-right", sx().border_left(border.clone()))
+        .when("side-start", sx().border_inline_end(border.clone()))
+        .when("side-end", sx().border_inline_start(border.clone()))
         .when("side-top", sx().border_bottom(border.clone()))
         .when("side-bottom", sx().border_top(border));
 
@@ -35,7 +35,7 @@ static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
         let value = SIDEBAR_SIZE.value(size);
 
         acc.when(
-            format!("side-left && {state} || side-right && {state}"),
+            format!("side-start && {state} || side-end && {state}"),
             sx().width(value.clone()),
         )
         .when(

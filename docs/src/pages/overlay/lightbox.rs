@@ -132,7 +132,7 @@ pub fn LightboxPage() -> Element {
             properties: vec![
                 props("LightboxOptions", vec![
                     prop("zoom", "bool").default("true").doc("Lets the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan."),
-                    prop("max_zoom", "Option<f64>").default("3.0").doc("Upper scale bound. Unset, the theme's."),
+                    prop("max_zoom", "Option<f64>").default("8.0").doc("Upper scale bound. Unset, the theme's."),
                     prop("thumbnails", "bool").default("true").doc("The strip under the stage. Never shown for one picture."),
                     prop("captions", "bool").default("true").doc("Shows each item's caption."),
                     prop("controls", "bool").default("true").doc("The previous and next arrows."),

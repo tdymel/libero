@@ -72,6 +72,52 @@ fn the_required_marker_keeps_its_gap() {
     );
 }
 
+/// A `start` sidebar draws its border on its end edge (784).
+#[test]
+fn a_start_sidebar_borders_its_end_edge() {
+    mirrors(
+        "/layout",
+        "const style = getComputedStyle(document.getElementById('sidebar')); \
+         const [end, start] = rtl ? [style.borderLeftWidth, style.borderRightWidth] \
+                                  : [style.borderRightWidth, style.borderLeftWidth]; \
+         return end === '1px' && start === '0px';",
+        "the border on the end edge",
+    );
+}
+
+/// An `end` drawer docks to the end edge of the viewport (794).
+#[test]
+fn an_end_drawer_docks_at_the_end() {
+    block_on(async {
+        for dir in ["ltr", "rtl"] {
+            let fixture = open_in("/drawer", dir).await;
+            fixture
+                .page
+                .evaluate(format!(
+                    "document.querySelector('{}').click()",
+                    crate::drawer::TRIGGER
+                ))
+                .await
+                .unwrap();
+            let condition = format!(
+                "(() => {{ const d = document.querySelector('[role=dialog]'); if (!d) return false; \
+                 const r = d.getBoundingClientRect(); \
+                 return {} ? Math.abs(r.left) < 1 : Math.abs(innerWidth - r.right) < 1; }})()",
+                dir == "rtl"
+            );
+            wait::for_js_true(
+                &fixture.page,
+                &condition,
+                &format!("{dir}: the drawer at the end"),
+            )
+            .await
+            .unwrap();
+            fixture.console.assert_clean(dir).unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
 /// A `top-end` float sits in the end corner.
 #[test]
 fn an_end_float_sits_at_the_end() {

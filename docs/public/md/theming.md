@@ -139,7 +139,7 @@ memcpy. `Theme::DEFAULT` is a `const`, and `use_theme()` hands out
 |---|---|---|
 | `spacing` | `Sizes<u8>` | Pixels per spacing step; what `gap`/`padding` size words resolve through. |
 | `radius` | `Sizes<u8>` | Pixels per radius step. |
-| `elevation` | `Sizes<&'static str>` | One `box-shadow` per elevation step. |
+| `elevation` | `Sizes<&'static str>` | One `box-shadow` per elevation step. `Theme::DARK` has its own, deeper scale, since a shadow on a dark page needs more alpha to show. |
 | `primary`, `secondary`, `success`, `error`, `warning`, `info`, `neutral`, `muted` | `HexColor` | One hex per palette role; the 1-9 shade ramp and its `-contrast` twin are generated. |
 | `ink`, `surface` | `HexColor` | What text is set in, and the page it is set on. Every color role is derived against `surface`. |
 | `font_smoothing` | `bool` | Whether the reset asks for antialiased text. |

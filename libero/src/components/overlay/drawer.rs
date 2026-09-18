@@ -18,8 +18,8 @@ static DRAWER_SX: StaticSx = StaticSx::new(|| {
         .margin("0")
         .border_radius("0")
         .max_width("none")
-        .when("anchor-left", sx().height("100%"))
-        .when("anchor-right", sx().height("100%"))
+        .when("anchor-start", sx().height("100%"))
+        .when("anchor-end", sx().height("100%"))
         .when("anchor-top", sx().width("100%"))
         .when("anchor-bottom", sx().width("100%"));
 
@@ -28,7 +28,7 @@ static DRAWER_SX: StaticSx = StaticSx::new(|| {
         let value = DRAWER_SIZE.value(size);
 
         acc.when(
-            format!("anchor-left && {state} || anchor-right && {state}"),
+            format!("anchor-start && {state} || anchor-end && {state}"),
             sx().width(value.clone()),
         )
         .when(
@@ -47,18 +47,20 @@ static DRAWER_FLOAT_HORIZONTAL_SX: StaticSx = StaticSx::new(|| sx().right("0"));
 
 fn drawer_float_placement(anchor: DrawerAnchor) -> (Placement, &'static StaticSx) {
     match anchor {
-        DrawerAnchor::Left => (Placement::TopStart, &DRAWER_FLOAT_VERTICAL_SX),
-        DrawerAnchor::Right => (Placement::TopEnd, &DRAWER_FLOAT_VERTICAL_SX),
+        DrawerAnchor::Start => (Placement::TopStart, &DRAWER_FLOAT_VERTICAL_SX),
+        DrawerAnchor::End => (Placement::TopEnd, &DRAWER_FLOAT_VERTICAL_SX),
         DrawerAnchor::Top => (Placement::TopStart, &DRAWER_FLOAT_HORIZONTAL_SX),
         DrawerAnchor::Bottom => (Placement::BottomStart, &DRAWER_FLOAT_HORIZONTAL_SX),
     }
 }
 
 str_enum! {
+    /// The edge a drawer docks to. Logical: `Start` is the right under
+    /// `dir="rtl"`.
     pub enum DrawerAnchor {
         #[default]
-        Left = "left",
-        Right = "right",
+        Start = "start",
+        End = "end",
         Top = "top",
         Bottom = "bottom",
     }
@@ -93,8 +95,8 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
         .states
         .unwrap_or_default()
         .active(size.state_name())
-        .with("anchor-left", anchor == DrawerAnchor::Left)
-        .with("anchor-right", anchor == DrawerAnchor::Right)
+        .with("anchor-start", anchor == DrawerAnchor::Start)
+        .with("anchor-end", anchor == DrawerAnchor::End)
         .with("anchor-top", anchor == DrawerAnchor::Top)
         .with("anchor-bottom", anchor == DrawerAnchor::Bottom);
 

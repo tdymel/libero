@@ -10,7 +10,7 @@ const FILTERS: &str = r#"#[component]
 fn FilterPanel() -> Element {
     let filters = use_drawer(
         DrawerOptions {
-            anchor: "right".into(),
+            anchor: "end".into(),
             size: "sm".into(),
             aria_label: Some("Filters".into()),
             ..Default::default()
@@ -32,7 +32,7 @@ fn FilterPanel() -> Element {
 fn FilterPanel() -> Element {
     let filters = use_drawer(
         DrawerOptions {
-            anchor: "right".into(),
+            anchor: "end".into(),
             size: "sm".into(),
             aria_label: Some("Filters".into()),
             ..Default::default()

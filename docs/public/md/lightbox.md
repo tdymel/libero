@@ -112,7 +112,7 @@ pair. An index past the end shows the last picture.
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `zoom` | `bool` | `true` | Lets the wheel, a double-click, `z`, `+` and `-` zoom, and a drag, a click or the arrows pan. |
-| `max_zoom` | `Option<f64>` | `3.0` | Upper scale bound. Unset, the theme's. |
+| `max_zoom` | `Option<f64>` | `8.0` | Upper scale bound. Unset, the theme's. |
 | `thumbnails` | `bool` | `true` | The strip under the stage. Never shown for one picture. |
 | `captions` | `bool` | `true` | Shows each item's caption. |
 | `controls` | `bool` | `true` | The previous and next arrows. |

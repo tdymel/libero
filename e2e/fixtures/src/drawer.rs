@@ -14,7 +14,7 @@ pub const ROUTES: Routes = &[("/drawer", || rsx! { DrawerPage {} })];
 fn DrawerPage() -> Element {
     let nav = use_drawer(
         DrawerOptions {
-            anchor: "right".into(),
+            anchor: "end".into(),
             size: "sm".into(),
             aria_label: Some("Navigation".into()),
             ..Default::default()

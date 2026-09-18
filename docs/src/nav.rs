@@ -402,7 +402,7 @@ pub fn DocsNav(
         Sidebar {
             // What the header's `Burger` names in its `aria-controls`.
             id: "docs-nav",
-            side: "left",
+            side: "start",
             component: "nav",
             sx: nav_responsive_sx(open(), drawer),
             Flex {

@@ -27,7 +27,7 @@ fn a_sidebar_names_its_side_in_data_state() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Sidebar { side: "right", "sidebar content" }
+                Sidebar { side: "end", "sidebar content" }
             }
         }
     }
@@ -35,7 +35,7 @@ fn a_sidebar_names_its_side_in_data_state() {
     let html = render(app);
 
     let state = &attributes_of(&html, "aside")["data-state"];
-    assert!(state.contains("side-right"), "got {state}");
+    assert!(state.contains("side-end"), "got {state}");
 }
 
 static WIDE_SIDEBARS: Theme = Theme {

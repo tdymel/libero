@@ -1,5 +1,5 @@
 //! A filled `Icon` in a theme colour, for its cached colour variables, and a
-//! named one beside the unnamed one (todo 612).
+//! named one beside the unnamed one (todo 612), and a `standard` one (786).
 
 use dioxus::prelude::*;
 use libero::components::{Button, Icon};
@@ -18,6 +18,9 @@ fn IconPage() -> Element {
         }
         Button { id: "swap", onclick: move |_| error.toggle(), "Swap colour" }
         Icon { id: "named", aria_label: "Verified",
+            svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
+        }
+        Icon { id: "bare", variant: "standard",
             svg { view_box: "0 0 24 24", circle { cx: "12", cy: "12", r: "8" } }
         }
     }
