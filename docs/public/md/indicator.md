@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Indicator;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/indicator.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A dot or a small capped count pinned to something else with a `Float` - presentational only, and never announced itself.
 
 A dot or a small count pinned to something else - an unread marker on an avatar,

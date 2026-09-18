@@ -37,8 +37,6 @@ pub struct BurgerDefaults {
 impl BurgerDefaults {
     pub const DEFAULT: Self = Self {
         size: Size::Md,
-        // `xs`..`xl` are Mantine's own five, adopted exactly. `xxl`
-        // continues the ramp past the widest step it offers.
         sizes: Sizes::new(12, 18, 24, 34, 42, 52),
         transition_duration: "300ms",
         transition_timing: "ease",

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::use_form;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/handle.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A handle that controls a Form from the component that renders it.
 
 `use_form() -> FormHandle` controls a `Form` from the component that renders

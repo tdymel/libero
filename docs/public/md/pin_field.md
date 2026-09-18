@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::PinField;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/pin_field.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A pin, one character per cell, with auto-advance, paste spreading and an `oncomplete` that fires the moment the last cell fills.
 
 A pin, one character per cell. Typing fills a cell and moves to the next,

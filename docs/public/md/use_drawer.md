@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_drawer;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_drawer.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Registers a panel docked to one edge and returns the handle that opens it.
 
 `use_drawer(options, render) -> ModalHandle<S, R>` registers a panel docked to

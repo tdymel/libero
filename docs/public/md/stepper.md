@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Options, StepState, Stepper};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/stepper>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: The stages of a process over an enum, horizontal or vertical, with the current step's content.
 
 The stages of a process, one per variant of an enum, with the current step's

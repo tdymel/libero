@@ -60,8 +60,7 @@ fn dot(delay: &str) -> Sx {
 
 static LOADER_BASE_SX: StaticSx = StaticSx::new(|| {
     let edge = LOADER_SIZE.value();
-    // Every number below is a fraction of the one edge. Mantine's geometry,
-    // and the two divisions are not independent: three bars at `edge / 5` with
+    // Every number below is a fraction of the one edge, and the two divisions are not independent: three bars at `edge / 5` with
     // two gaps of `edge / 5` fill the row exactly, and three dots at
     // `edge / 3 - edge / 15` with two gaps of `edge / 10` do the same. Change
     // one and the shape stops being square.

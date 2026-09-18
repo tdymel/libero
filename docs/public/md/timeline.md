@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Timeline, TimelineEvent, TimelineLine};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/timeline>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: An ordered list of events drawn against a rail, with an `active` index colouring the bullets and connectors up to the current one.
 
 An ordered list of events drawn against a rail. It renders an

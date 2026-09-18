@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::{LiberoProvider, theme::{HexColor, Size, Sizes, Theme}};`
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: How to customize a Libero theme and use it: colors, scales, per-component defaults, light and dark pairs, and reading the active theme.
 
 A theme is one struct. Hand yours to `LiberoProvider` and every component

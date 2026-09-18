@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_formats_handle;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/formats.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Switches the date, time and number formats at runtime, independent of the language.
 
 `use_formats_handle() -> FormatsHandle` switches the date, time and number

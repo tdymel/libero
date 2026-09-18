@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::use_scroll_area;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/scroll_area/handle.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A handle that scrolls a ScrollArea from code.
 
 `use_scroll_area() -> ScrollAreaHandle` scrolls a `ScrollArea` from code. Pass

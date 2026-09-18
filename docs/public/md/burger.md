@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Burger;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/burger.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Three bars that morph into an X, an `ActionIcon` with the ARIA a nav toggle needs.
 
 Three bars that morph into an X. It renders an [`ActionIcon`](action_icon.md)

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Radio, RadioGroup};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/radio_group.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A group of radios over an enum, exactly one selected, with one tab stop, arrow-key selection and the question as the group's name.
 
 A group of radios over an enum, exactly one of them selected. The group is the

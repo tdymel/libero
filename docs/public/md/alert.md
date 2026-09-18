@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Alert;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/alert.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A tinted surface for something the reader has to know, with a title, an optional icon and close button, and a role that follows its color.
 
 A tinted surface for something the reader has to know, such as an error, a

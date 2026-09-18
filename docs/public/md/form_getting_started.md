@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Form, Fieldset, Fields, FieldName, Rule, Validator, Validators};`
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: How to build libero forms, with specialized fields, composed parts, validators at each layer, typed paths from `#[derive(Fields)]` and binding.
 
 libero's forms are built in layers. A field holds one value. A specialized

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Code;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/code/code.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: An inline `<code>` snippet, optionally syntax highlighted.
 
 A `<code>` element for a snippet inside a sentence. Pass the text as `source`

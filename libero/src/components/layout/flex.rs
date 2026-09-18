@@ -13,7 +13,7 @@ use crate::{
 
 /*
  * Notes:
- * - Mantine Group has an option to set equal group width.
+ * - An option to give every child the same width is missing.
  *   We should at least provide a variable to use it on children.
  *   Not sure if we should provide a similar API.
  */

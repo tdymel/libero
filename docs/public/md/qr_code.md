@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::QrCode;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/qr_code.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Encodes a string as a scalable QR code, rendered as an inline SVG.
 
 Encodes `data` as a scalable QR code, rendered as an inline SVG.

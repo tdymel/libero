@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{SpotlightAction, SpotlightHandle, SpotlightOptions, spotlight_filter, use_spotlight};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/spotlight>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A command palette. A modal search box over your actions, with groups, arrow-key highlight and a Ctrl/Cmd+K hotkey.
 
 A command palette, a modal search box over a list of actions. `use_spotlight`

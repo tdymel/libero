@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{ColorPicker, ColorCode};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/color>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A saturation panel and a hue slider, with an optional alpha slider and preset swatches, over one `ColorCode`. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
 
 A saturation panel and a hue slider, with an optional alpha slider and preset

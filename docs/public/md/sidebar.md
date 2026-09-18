@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Sidebar;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/sidebar.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: An in-flow panel on one edge of its parent that scrolls its own content, like a nav rail or an inspector.
 
 An in-flow panel on one edge of its parent that scrolls its own content. `side`

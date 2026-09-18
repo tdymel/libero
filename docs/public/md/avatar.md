@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Avatar, AvatarGroup, AvatarSpec};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/avatar/avatar.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A person as a fixed square, with a fallback chain from a picture down to a person glyph, and a group that collapses its overflow into a +N chip.
 
 A person as a fixed square, with a fallback chain: the picture, then `children`,

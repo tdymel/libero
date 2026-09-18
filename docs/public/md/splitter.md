@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Splitter, SplitterResizeEvent};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/splitter>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Two panes split by a divider you can drag or move with the keyboard. Nest another `Splitter` in a pane for more than two.
 
 Two panes, `panel_a` and `panel_b`, split by a divider you can drag or move with

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_floating_window;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_floating_window.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Registers a movable, non-modal window over the page and returns the handle that opens it.
 
 `use_floating_window(options, render) -> FloatingWindowHandle` registers a

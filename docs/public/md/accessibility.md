@@ -1,7 +1,7 @@
 # Accessibility
 
 Crate: `libero`
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: What libero's accessibility support covers across the library and what it does not, from on and disabled states to forced colors, which is covered only in part.
 
 Each component page has its own Accessibility section with the keys the

@@ -296,7 +296,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let searchable = props.searchable && !disabled;
 
     // One index per level. `[2, 0]` highlights the first child of the third
-    // root, and - Mantine's `getCascaderColumns` rule - does *not* expand it:
+    // root, and does *not* expand it:
     // the columns never run ahead of the cursor.
     let cursor = use_signal(Vec::<usize>::new);
     let query = use_signal(String::new);

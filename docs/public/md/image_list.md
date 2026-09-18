@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{ImageBar, ImageItem, ImageList};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/image_list/image_list.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A gallery of pictures with optional caption bars, rendered as a `ul`/`li` list over a `GridZone` - so `cols` is a span of the library's own twelve tracks and `masonry` is that zone's measuring engine.
 
 A grid of pictures, each with an optional caption bar. Renders a

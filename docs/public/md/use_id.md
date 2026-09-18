@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_id;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/id.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A process-unique id, stable for the component's lifetime, for the aria wiring between one instance's elements.
 
 `use_id() -> Signal<String>` returns an id that is unique in the process and

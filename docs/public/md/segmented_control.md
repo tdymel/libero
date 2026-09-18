@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Options, SegmentedControl};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/segmented_control>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A connected strip of segments over an enum, exactly one of them selected, with the field slots.
 
 A connected strip of segments over an enum, exactly one of them selected. The

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Box;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/box.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: The primitive every other component is built on, rendered as any tag via `component` and styled through `sx`.
 
 The primitive every other component is built on. `component` picks the tag, and

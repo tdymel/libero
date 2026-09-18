@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Marquee;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/marquee.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Content that scrolls on its own in an endless loop, measured by nothing, with a pause toggle and a reduced-motion fallback.
 
 Content that scrolls on its own in an endless loop - a logo strip, a ticker. The

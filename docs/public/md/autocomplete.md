@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Autocomplete;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/autocomplete.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A text field that offers completions from any `Options` type, while the value stays a `String`.
 
 A [TextField](text_field.md) that offers completions. The value stays a

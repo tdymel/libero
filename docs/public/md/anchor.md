@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Anchor;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/anchor.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A real link styled and sized like `Text`, router-aware through `to`.
 
 A link styled and sized like [`Text`](text.md). A typed route in `to` navigates

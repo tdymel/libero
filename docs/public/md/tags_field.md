@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::TagsField;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/tags_field.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A field whose value is a `Vec<String>` of typed tags, drawn as chips around the input.
 
 A field whose value is a list of typed strings, drawn as chips around the

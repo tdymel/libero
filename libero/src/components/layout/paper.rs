@@ -23,7 +23,7 @@ use crate::{
 /// block's specificity.
 pub fn paper_sx() -> Sx {
     PaperDefaults::theme_vars()
-        // Mantine's two base declarations: a surface is a block, and it drops
+        // A surface is a block, and it drops
         // the underline so `component: "a"` reads as a card, not as a link.
         .display("block")
         .text_decoration("none")
@@ -36,8 +36,8 @@ pub fn paper_sx() -> Sx {
 static PAPER_BASE_SX: StaticSx = StaticSx::new(paper_sx);
 
 base_props! {
-    // `href`/`target`: a surface rendered as an `<a>` is Mantine's clickable
-    // card, and the base is written for it.
+    // `href`/`target`: a surface rendered as an `<a>` is a clickable card, and
+    // the base is written for it.
     extends(a);
     pub struct PaperProps {
         /// Corner radius, a step on the shared radius scale. An off-scale

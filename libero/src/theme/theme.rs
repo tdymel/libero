@@ -263,7 +263,7 @@ impl Theme {
     /// neutral on paper and so has to be a text-light one here - and the
     /// `*Defaults` that carry literal CSS colours rather than theme ones.
     pub const DARK: Theme = Theme {
-        // Mantine's `dark.7`, with `dark.6` as the card in `PaperDefaults`.
+        // A near-black page; `PaperDefaults` lifts the card one step above it.
         surface: HexColor::new(0x1A1B1E),
         ink: HexColor::new(0xE9ECEF),
         // The counterpart of the default's `#373A3C`: what a `neutral`

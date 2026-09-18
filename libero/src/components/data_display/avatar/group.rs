@@ -92,8 +92,7 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
 
     let total = props.people.len();
     // `max` is the number of *circles*, the chip included - so the chip always
-    // stands for at least two people and a `+1` is unrepresentable. MUI draws
-    // one by hiding a single avatar in its own space; we cannot.
+    // stands for at least two people and a `+1` is unrepresentable.
     let shown = match props.max {
         Some(max) if total > max => max.saturating_sub(1),
         _ => total,

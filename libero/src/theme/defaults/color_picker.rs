@@ -69,7 +69,6 @@ pub struct ColorPickerDefaults {
 }
 
 impl ColorPickerDefaults {
-    // Mantine's scale, with a `xxl` step continued from it.
     pub const DEFAULT: Self = Self {
         size: Size::Md,
         swatches_per_row: None,

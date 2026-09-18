@@ -42,7 +42,8 @@ start-native-release: _dx
     {{x11}} {{gpu}} {{dx}} serve --platform linux --renderer native --debug-symbols=false --profile native {{nfeat}}
 
 # The shortest path to a window (no `dx`, no hot reload, no devserver) - use
-# it when a failure might be `dx`'s rather than the app's.
+# it when a failure might be `dx`'s rather than the app's. Only dx bundles
+# `assets/`, so every `asset!()` image is missing here, the header logo included.
 run-native:
     cd {{root}} && {{x11}} {{gpu}} cargo run -p docs {{nfeat}}
 
@@ -66,6 +67,7 @@ check-native-cpu:
 # back on beside the CPU one - a combination dioxus-native can't compile. So
 # no hot-reloading equivalent of this recipe exists.
 #
-# A window on a machine with no usable Vulkan adapter.
+# A window on a machine with no usable Vulkan adapter. No `asset!()` images,
+# as with `run-native`.
 run-native-cpu:
     cd {{root}} && {{x11}} cargo run -p docs {{ncpu}}

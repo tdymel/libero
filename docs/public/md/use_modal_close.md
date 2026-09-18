@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_modal_close;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_modal.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Closes the modal it is rendered in, for a component factored out of the render closure.
 
 `use_modal_close() -> Callback<()>` closes the modal it is rendered in. It is

@@ -27,7 +27,7 @@ fn bare_app() -> Element {
     }
 }
 
-/// The whole reason the shape is not Mantine's. WHATWG: "Attribution for the
+/// Why the attribution sits outside the quote. WHATWG: "Attribution for the
 /// quotation, if any, must be placed outside the blockquote element" - nested,
 /// assistive technology and quote-extraction tools read the attribution as
 /// quoted words.

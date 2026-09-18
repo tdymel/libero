@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Carousel;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/carousel.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A scroll-snap strip of slides that knows which one it is on, with controls, indicators, optional autoplay and no JavaScript carousel library underneath.
 
 A scroll-snap strip that knows which slide it is on. The scrolling is the

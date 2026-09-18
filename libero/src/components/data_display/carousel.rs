@@ -233,7 +233,7 @@ static CAROUSEL_INDICATOR_SX: StaticSx = StaticSx::new(|| {
         // Colour alone would not carry it: `primary.6` and `grey.6` are within
         // about 1.07:1 of each other, so in greyscale or with a colour vision
         // deficiency the current dot would be its neighbours' twin. Length is
-        // the second channel, the way Mantine widens the active dot.
+        // the second channel: the current dot is wider.
         .when(
             "current",
             sx().background(CAROUSEL_INDICATOR_CURRENT_COLOR.value())
@@ -325,8 +325,8 @@ fn index_range(count: usize, per_view: f64, align: CarouselAlign) -> (usize, usi
 }
 
 /// Where `index` stands among the positions the strip can actually rest at,
-/// and how many there are - what the status and the dots count, as Mantine
-/// counts Embla's snaps rather than slides. Six slides three-up rest at four
+/// and how many there are - what the status and the dots count: snaps, not
+/// slides. Six slides three-up rest at four
 /// places, so the status runs "1 of 4" to "4 of 4", and a strip whose slides
 /// all fit rests at one: "1 of 1". A looping strip has a position per slide.
 fn snap_position(

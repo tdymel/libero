@@ -77,7 +77,7 @@ static BURGER_GLYPH_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// Mantine's formula, named: the button is the glyph plus one spacing step,
+/// The button is the glyph plus one spacing step,
 /// which is what makes the tap target bigger than the bars. `None` means the
 /// caller named no size, so the theme's active step is the glyph.
 fn button_size(glyph_size: Option<&String>) -> String {

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Checkbox;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/checkbox.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A checkbox with its label beside the box, the field slots under both, and an indeterminate state.
 
 A checkbox with its label beside the box and the description, helper and

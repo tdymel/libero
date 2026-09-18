@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Blockquote;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/blockquote.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A quotation in a tinted frame with an accent bar, with the attribution outside the quote.
 
 A quotation in a tinted frame with an accent bar. The attribution sits in a

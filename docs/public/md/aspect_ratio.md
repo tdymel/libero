@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::AspectRatio;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/aspect_ratio.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Enforces a width-to-height ratio on its child, cropping it to fill the box.
 
 Enforces a width-to-height ratio on its child, cropping it to fill the box.

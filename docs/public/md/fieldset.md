@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Fieldset, Fields, Rule};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/fieldset.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Several fields that form one value under a `<legend>`, with rules over that value that land on the fields they name.
 
 Several fields that form one value, such as an address or a date range, under

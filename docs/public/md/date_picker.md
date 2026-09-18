@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::{chrono::{NaiveDate, NaiveTime}, components::{DateLevel, DatePicker, DateRange}};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/date/date_picker.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: One picker for every date and time value, from days, months and years to times, date-times and ranges of them.
 
 One picker for every date and time value. The value's type picks what it draws,

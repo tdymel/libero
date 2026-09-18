@@ -11,24 +11,12 @@
 //! `--lsx-stepper-*`. Sharing geometry must not mean sharing a theme
 //! namespace, which would couple two components' theming for nothing.
 //!
-//! **On the formula, and why ours differs.** The E4 plan quotes Mantine's
-//! `--offset: calc(bullet/2 + line/2)` as the single inset expression. Both
-//! are correct; they measure different things from different origins.
-//!
-//! Mantine draws the connector as the **item's own `border-left`**, so its
-//! origin is the *line's* leading edge. With the bullet centred on the line's
-//! centreline (at `line / 2`), the bullet spans
-//! `[line/2 - bullet/2, line/2 + bullet/2]`, so its trailing edge - where
-//! content has to begin - is at `bullet/2 + line/2`. `--offset` is therefore a
-//! **content inset measured from a line origin**. It is not a centreline, and
-//! it does not transfer to a box model where the connector is an absolutely
-//! positioned `::before` and the marker's leading edge sits at the item's
-//! edge.
-//!
-//! In our origin that same quantity is `marker` plus the space term, which is
-//! what [`Rail::content_inset`] returns. Hence three named methods rather than
-//! one `offset()`: three different measurements were being carried by one
-//! name, and the name is what got copied without its origin.
+//! **The origin.** The connector is an absolutely positioned `::before`, and
+//! the marker's leading edge sits at the item's edge. Content begins past the
+//! marker, so its inset is `marker` plus the space term, which is what
+//! [`Rail::content_inset`] returns. Three named methods rather than one
+//! `offset()`: the centreline, the connector's position and the content inset
+//! are three different measurements, and one name would blur them.
 //!
 //! `libero/tests/all/timeline.rs` asserts the emitted values, so the geometry is
 //! pinned by what it renders rather than by which formula was quoted.

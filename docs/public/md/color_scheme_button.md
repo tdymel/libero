@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::ColorSchemeButton;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/color_scheme_button.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: An icon button that steps the colour scheme through system, dark and light, with an optional theme picker beside it.
 
 An icon button that switches the app's colour scheme. Each press steps from

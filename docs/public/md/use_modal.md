@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_modal;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_modal.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Registers a modal and returns the handle that opens it, with arguments and a result.
 
 `use_modal(render) -> ModalHandle<S, R>` registers a modal and returns the

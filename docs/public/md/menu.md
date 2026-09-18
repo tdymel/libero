@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Menu, MenuEntry, MenuItem, use_menu};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/menu>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A list of commands that drops from a trigger, with groups, separators and submenus.
 
 A list of commands that drops from a trigger. The items are data, not

@@ -37,7 +37,7 @@ fn it_is_a_named_landmark_around_a_list() {
     assert!(html.contains("<li"), "expected list items: {html}");
 }
 
-/// MUI's asymmetry. `aria-current` already says "current", so repeating "go to"
+/// The current page has no "go to" name. `aria-current` already says "current", so repeating "go to"
 /// on the page the reader is on would be a lie.
 #[test]
 fn the_current_page_is_named_differently_from_the_rest() {

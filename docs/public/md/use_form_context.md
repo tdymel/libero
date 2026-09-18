@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::use_form_context;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/handle.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: The handle of the Form it is called inside, so a part of a form reaches it without a prop.
 
 `use_form_context() -> Option<FormHandle>` returns the handle of the `Form` it

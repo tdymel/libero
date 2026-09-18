@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::use_notifications;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/notifications.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Shows notifications drawn as an Alert, in the host placed once near the root.
 
 `use_notifications() -> NotificationHandle<NotificationData>` shows

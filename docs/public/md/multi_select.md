@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{MultiSelect, Options};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/select/multi_select.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A listbox over an enum that holds any number of its options, drawn as chips in the trigger.
 
 A listbox over an enum that holds any number of its options, drawn as chips in

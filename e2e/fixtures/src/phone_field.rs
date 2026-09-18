@@ -1,7 +1,11 @@
 //! `PhoneField`: the country picker, its searchable list and the `tel` input.
 
 use dioxus::prelude::*;
-use libero::components::{FieldStatus, Flex, PhoneField, Text};
+use libero::{
+    components::{FieldStatus, Flex, PhoneField, Text},
+    hooks::use_localization_handle,
+    localization::Localization,
+};
 
 use crate::Routes;
 
@@ -12,7 +16,20 @@ pub const ROUTES: Routes = &[
         "/phone-field/readonly",
         || rsx! { PhoneFieldReadonlyPage {} },
     ),
+    ("/phone-field/german", || rsx! { PhoneFieldGermanPage {} }),
 ];
+
+/// The German country names, which sort elsewhere than the English ones.
+#[component]
+fn PhoneFieldGermanPage() -> Element {
+    let localization = use_localization_handle();
+    use_effect(move || localization.set(&Localization::GERMAN));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            PhoneField { label: "Mobile", country: "DE" }
+        }
+    }
+}
 
 /// A three-band flag, `aria-hidden`: the docs page's own.
 #[component]

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::use_scroller;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/scroller.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A handle that steps a Scroller from controls of your own.
 
 `use_scroller() -> ScrollerHandle` steps a `Scroller` from controls of your

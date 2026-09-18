@@ -20,7 +20,7 @@ const ICON_RADIUS_VAR: CssVar = CssVar::new("--lsx-icon-radius");
 const ICON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-icon-container");
 const ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-icon-on-container");
 const ICON_GLYPH_VAR: CssVar = CssVar::new("--lsx-icon-glyph");
-/// The glyph's share of a contained icon's box, MUI Avatar's 24px in 40px.
+/// The glyph's share of a contained icon's box: 24px in 40px.
 const ICON_GLYPH_INSET: &str = "60%";
 
 pub(crate) const ICON_VARS: VariantVars<'static> = VariantVars {

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/tree>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A data-driven, keyboard-navigable tree view over your own node type.
 
 A tree view over `Vec<TreeNode<T>>`, where `T` is your own data type. `T`

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/drag.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.
 
 `use_drag(options: DragOptions) -> Drag` is the pointer plumbing for a drag. It

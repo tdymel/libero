@@ -224,8 +224,7 @@ impl Fit {
 
 /// The zoom of one picture. Carries the index it belongs to, so moving to
 /// another picture resets it without a write: a zoom for any other index reads
-/// as fitted. Mantine resets during render for the same reason - the new
-/// picture must never paint zoomed first.
+/// as fitted, so the new picture never paints zoomed first.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Zoom {
     index: usize,
@@ -682,8 +681,7 @@ fn lightbox_slide(
                         let moved = from.panned(dx, dy, bounds);
                         // Only a pan that moved is a pan. At the edge the
                         // key falls through to the slide change, so a
-                        // zoomed picture never traps the keyboard - our
-                        // call, not Mantine's, which never falls through.
+                        // zoomed picture never traps the keyboard.
                         if moved != from {
                             event.prevent_default();
                             zoom.set(moved);

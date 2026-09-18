@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::{LiberoProvider, localization::{Formats, Localization}};`
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: The words components say on their own, how dates and numbers are written, and the reading direction: `Localization`, `Formats` and the hooks that switch them.
 
 Every word a component says on its own, such as an accessible name or a month,

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Kbd;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/kbd.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A single keyboard key, rendered as a real `<kbd>` and styled from the theme.
 
 One keyboard key in a real `<kbd>`, styled from the theme. A shortcut is

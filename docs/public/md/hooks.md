@@ -1,7 +1,7 @@
 # Hooks
 
 Crate: `libero`
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Every public libero hook in one table, with what it is for and a link to its page.
 
 Libero's components are built from these hooks, and they are public for yours.

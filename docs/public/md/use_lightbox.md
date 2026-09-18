@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_lightbox;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_lightbox.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Registers a picture viewer over the page and returns the handle that opens it.
 
 `use_lightbox(options) -> ModalHandle<LightboxOpening>` registers a picture

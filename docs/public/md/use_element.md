@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::{hooks::{ElementHandle, use_element}, platform::ElementApi};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/element.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A handle to one of your component's own elements, to focus, scroll and measure it on every renderer.
 
 `use_element() -> ElementHandle` is a handle to one of your component's own

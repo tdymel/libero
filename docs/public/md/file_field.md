@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{FileField, Files};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/file_field>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.
 
 Files picked from the system dialog or dropped on the control. It shows

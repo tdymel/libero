@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Title;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/title.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A heading, `h1` through `h6`, whose visual size and semantic tag can be set apart.
 
 A heading, `h1` to `h6`. `size` sets the look and the tag: `xxl` is `h1`, `xl`

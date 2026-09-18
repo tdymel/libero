@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{RangeSlider, SliderChangeEvent, SliderMark, SliderValue};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/slider>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Two thumbs on one track, for a span instead of a point, over the same values as `Slider`.
 
 Two thumbs on one track, for a span instead of a point. It takes the same

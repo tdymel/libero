@@ -86,7 +86,7 @@ fn snap_cols(cols: u8) -> u8 {
 }
 
 /// A quilted cell's height, from its own width (`100%` in a `padding-top`,
-/// which resolves against the `<li>`'s width; Blitz has no `cqi`): MUI's
+/// which resolves against the `<li>`'s width; Blitz has no `cqi`):
 /// `rowHeight * rows + gap * (rows - 1)`, with the row height being an
 /// ordinary cell's width over `ratio`.
 ///
@@ -160,7 +160,7 @@ static IMAGE_LIST_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             ImageListVariant::Woven.state_name(),
-            // MUI's woven, mechanism included: every cell fills its row, every
+            // Every cell fills its row, every
             // second one takes 70% of it, and centring is what turns that into
             // an alternating rhythm rather than a ragged bottom edge. The
             // percentages resolve against the row, which the ratio box sizes -

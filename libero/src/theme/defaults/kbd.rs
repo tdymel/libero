@@ -22,7 +22,6 @@ pub struct KbdDefaults {
 
 impl KbdDefaults {
     pub const DEFAULT: Self = Self {
-        // Matches Mantine's own default.
         size: Size::Sm,
         font_sizes: Sizes::new(10, 12, 14, 16, 20, 24),
         font_family: MONO_FONT_FAMILY,

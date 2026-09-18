@@ -43,8 +43,8 @@ static BADGE_BASE_SX: StaticSx = StaticSx::new(|| {
         // what holds it - at which point the label is cut, not wrapped, since
         // the height is fixed. No `text-overflow: ellipsis` to soften that:
         // the property wants a block container, and a flex root is not one, so
-        // it is dead here. Mantine gets its ellipsis from the inner label span
-        // its grid needs; one element is the trade.
+        // it is dead here. An inner label span would give the ellipsis; one
+        // element is the trade.
         .width("fit-content")
         .max_width("100%")
         .overflow("hidden");

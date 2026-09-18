@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_stylesheet;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/stylesheet.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Registers a stylesheet of your own above every libero layer and returns its class.
 
 `use_stylesheet(sheet) -> Option<String>` registers a stylesheet of your own on

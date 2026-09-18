@@ -135,9 +135,6 @@ impl HexColor {
         self.rgb
     }
 
-    /// Fitted to Mantine's palettes, so a Mantine shade-6 base reproduces
-    /// its ramp.
-    ///
     /// **A neutral ramp mixes between the theme's own ends, a chromatic one
     /// between absolute white and black.** The neutral ramp is not a
     /// lightness scale, it is distance from the page: S1 is the step that
@@ -159,8 +156,7 @@ impl HexColor {
         }
     }
 
-    /// Mantine's `autoContrast`: black or white, picked by perceived
-    /// brightness. It says which foreground *belongs* on this fill, not
+    /// Black or white, picked by perceived brightness. It says which foreground *belongs* on this fill, not
     /// whether that foreground passes - ask [`contrast_ratio`] for that.
     ///
     /// [`contrast_ratio`]: Self::contrast_ratio
@@ -261,10 +257,9 @@ impl HexColor {
 
     /// The colour a *fill* use of this base resolves to: the smallest mix
     /// towards the far end on which the foreground [`contrast`](Self::contrast)
-    /// picks passes [`TEXT_CONTRAST`]. Mantine's `autoContrast` stops at
-    /// picking the foreground and leaves a fill like `blue.6` - where white is
-    /// picked and only reaches 3.56:1 - alone; this moves the fill until the
-    /// pair works.
+    /// picks passes [`TEXT_CONTRAST`]. On a fill like `blue.6`, where white is
+    /// picked and only reaches 3.56:1, this moves the fill until the pair
+    /// works.
     ///
     /// It moves away from the surface for the same reason the text one does.
     /// On a paper page the fill darkens into white labels; on an inked one it
@@ -327,8 +322,7 @@ impl Display for HexColor {
 }
 
 /// How far each step of a ramp is mixed from its base, in percent: towards
-/// the surface when positive, towards [`far_end`] when negative. Fitted to
-/// Mantine's palettes.
+/// the surface when positive, towards [`far_end`] when negative.
 const fn mix_percent(ramp: ShadeRamp, shade: ColorShade) -> i8 {
     match ramp {
         ShadeRamp::Chromatic => match shade {
@@ -435,7 +429,7 @@ mod tests {
         }
     }
 
-    /// `blue.6` is the case Mantine's `autoContrast` alone cannot fix: white
+    /// `blue.6` is the case picking a foreground alone cannot fix: white
     /// is the right foreground for it and only reaches 3.56:1, so the fill
     /// darkens instead of relabelling itself in black - but only as far as
     /// the pair needs, not a whole ramp step.

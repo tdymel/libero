@@ -1182,10 +1182,9 @@ mod tests {
         ]);
     }
 
-    /// Both ramps are fitted to Mantine's palettes; this locks them so a
-    /// tweak to one can't silently reshape the other.
+    /// Locks both ramps so a tweak to one can't silently reshape the other.
     #[test]
-    fn theme_css_palette_ramps_track_mantine() {
+    fn theme_css_palette_ramps_are_pinned() {
         let css = Stylesheet::from(&Theme::DEFAULT);
         let css = css.as_str();
 

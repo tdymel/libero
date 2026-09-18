@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::use_menu;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/menu/state.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Keeps a Menu's open state in your scope, so your own trigger opens it.
 
 `use_menu() -> MenuState` keeps a `Menu`'s open state in your scope, so your

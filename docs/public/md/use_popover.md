@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_popover;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/popover/mod.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Portals a box to the document root and places it next to an anchor, flipping and shifting to stay on screen.
 
 `use_popover(anchor, open, options) -> PopoverHandle` portals a box to the

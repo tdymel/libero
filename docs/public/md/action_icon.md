@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::ActionIcon;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/action_icon.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: An icon-only button, rendered as a `button` or a link, with a required `aria_label`.
 
 An icon-only button for actions like copy, close or delete. It renders a

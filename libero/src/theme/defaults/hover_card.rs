@@ -15,7 +15,7 @@ pub struct HoverCardDefaults {
 }
 
 impl HoverCardDefaults {
-    // Mantine's values: a card opens at once and lingers long enough for
+    // A card opens at once and lingers long enough for
     // the pointer to cross the gap into it.
     pub const DEFAULT: Self = Self {
         open_delay: 0,

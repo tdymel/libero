@@ -337,8 +337,8 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 size,
                 radius,
                 disabled: disabled || readonly,
-                // The list stays up after a pick, the way Mantine's `TagsInput`
-                // and our own `MultiSelect` keep it up: the picked row leaves
+                // The list stays up after a pick, the way `MultiSelect` keeps
+                // it up: the picked row leaves
                 // the list and the next one is one key away. `Autocomplete`
                 // closes because its single value is then settled.
                 close_on_pick: false,

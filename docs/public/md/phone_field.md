@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::PhoneField;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/phone_field/field.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A country picker in front of a `tel` input, whose value is an E.164 string.
 
 A country picker in front of a `tel` input. The picker holds the dial code, the

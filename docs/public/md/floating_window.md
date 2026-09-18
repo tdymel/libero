@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::{components::{FloatingWindowOptions, WindowRect}, hooks::{use_floating_window, FloatingWindowHandle}};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_floating_window.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A non-modal window over the page that drags, moves by keyboard and resizes from a corner, opened through a hook.
 
 A non-modal window over the page, with a title bar that drags, an optional

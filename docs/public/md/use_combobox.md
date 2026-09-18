@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::use_combobox;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/combobox/state.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Keeps a Combobox's open state and active option in your scope, for a trigger of your own.
 
 `use_combobox() -> ComboboxState` keeps a `Combobox`'s open state and active

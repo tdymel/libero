@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::ProgressBar;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/progress_bar.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A determinate or indeterminate progress bar over any `min..=max` range.
 
 A bar that fills from `min` to `max`. It shows output and takes no focus. With

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::{Clipboard, use_clipboard};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/clipboard.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Writes text to the system clipboard and reports whether the write worked.
 
 `use_clipboard() -> Clipboard` writes text to the system clipboard. `copy(text)`

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{List, ListItem};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/list>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: An unstyled `<ul>`/`<li>` pair with themed gaps and nested indent.
 
 Renders a `<ul>`/`<li>` pair with the browser's default list styling removed -

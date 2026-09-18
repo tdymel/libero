@@ -186,8 +186,8 @@ fn quilted_app() -> Element {
 /// `quilted` is the standard machinery with a row span, not a second engine:
 /// `grid-row: span n` from `GridItem`'s new `rows`, plus a per-cell height
 /// computed from the cell's own width (`cqi`), its gaps included. Nothing
-/// measures and no pixel height is named - which is why MUI's `rowHeight` is
-/// not needed to make the rows line up.
+/// measures and no pixel height is named, so no row height is needed to make
+/// the rows line up.
 #[test]
 fn a_quilted_cell_spans_rows_and_adds_up_its_gaps() {
     let html = render(quilted_app);

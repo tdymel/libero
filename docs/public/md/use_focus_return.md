@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::{FocusReturn, use_focus_return};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/focus_return.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Puts focus back on the element that opened a panel or popup once it closes, with fallbacks for a trigger that is gone.
 
 `use_focus_return() -> FocusReturn` puts focus back where it came from once a

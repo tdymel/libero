@@ -49,11 +49,8 @@ impl FocusReturn {
     /// it outlives any number of open/close cycles, and
     /// [`restore`](Self::restore) keeps it rather than clearing it.
     ///
-    /// **This arm has no caller in the library and no test**, which is a known
-    /// cost rather than an oversight: every component here arms per open with
-    /// [`remember_active`](Self::remember_active), and exercising this one off
-    /// the web would mean fabricating a `MountedData`. The first consumer
-    /// should bring a browser test with it.
+    /// No component here calls it; the e2e unit `focus_return` covers it in a
+    /// browser.
     pub fn remember(&self, event: Event<MountedData>) {
         let mut trigger = self.trigger;
         trigger.set(Some(Trigger::Mounted(event.data.clone())));

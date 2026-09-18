@@ -136,8 +136,7 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // means there.
         //
         // A shared-out row must fit the box it fills, so a segment may shrink
-        // below its label and the label ends in an ellipsis - Mantine's
-        // answer. Wrapping was the other option, but one word cannot wrap and
+        // below its label and the label ends in an ellipsis. Wrapping was the other option, but one word cannot wrap and
         // a row of segments at different heights stops reading as one strip.
         // The radio's `aria-label` still carries the whole name.
         .when(

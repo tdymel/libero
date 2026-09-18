@@ -518,7 +518,11 @@ fn phone_rows(
             rank(country, &name).map(|rank| (rank, country, name))
         })
         .collect();
-    matched.sort_by_key(|(rank, _, _)| *rank);
+    // The caller's order stands; the full list follows the shown names.
+    match codes {
+        Some(_) => matched.sort_by_key(|(rank, _, _)| *rank),
+        None => matched.sort_by_cached_key(|(rank, _, name)| (*rank, sort_key(name))),
+    }
     matched
         .into_iter()
         .map(|(_, row, name)| {
@@ -540,6 +544,25 @@ fn phone_rows(
                     {content}
                 }
             }
+        })
+        .collect()
+}
+
+/// A name's place in the list: lowercase, Latin accents folded to their base
+/// letter, so "Österreich" sorts among the O's rather than after "Zypern".
+fn sort_key(name: &str) -> String {
+    name.to_lowercase()
+        .chars()
+        .map(|c| match c {
+            'à'..='å' => 'a',
+            'ç' => 'c',
+            'è'..='ë' => 'e',
+            'ì'..='ï' => 'i',
+            'ñ' => 'n',
+            'ò'..='ö' | 'ø' => 'o',
+            'ù'..='ü' => 'u',
+            'ý' | 'ÿ' => 'y',
+            c => c,
         })
         .collect()
 }
@@ -804,6 +827,17 @@ mod tests {
 
     fn country(iso: &str) -> &'static Country {
         countries::find(iso).expect("a country in the table")
+    }
+
+    /// The list sorts by the shown name, an umlaut with its base letter.
+    #[test]
+    fn localized_names_sort_with_their_base_letter() {
+        let mut names = ["Zypern", "Österreich", "Ägypten", "Deutschland", "Oman"];
+        names.sort_by_cached_key(|name| sort_key(name));
+        assert_eq!(
+            names,
+            ["Ägypten", "Deutschland", "Oman", "Österreich", "Zypern"]
+        );
     }
 
     /// The value is E.164 and only E.164, whatever punctuation was typed.

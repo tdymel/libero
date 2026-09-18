@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::LiberoProvider;`
-Index: [index.md](index.md) - every component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Installing libero, wrapping an app in LiberoProvider, building for the web, natively and for Android, and the feature flags.
 
 Libero is a Dioxus component library focused on developer experience, UX,
@@ -96,7 +96,10 @@ dx build --platform linux --renderer native --profile native
 
 On Linux you need:
 
-- `fontconfig` to build (`libfontconfig1-dev` on Debian and Ubuntu).
+- `pkg-config`, `fontconfig` and OpenSSL to build
+  (`pkg-config libfontconfig1-dev libssl-dev` on Debian and Ubuntu).
+- `libxkbcommon` and the Wayland or X11 client libraries to run. winit loads
+  them itself, and a desktop session has them.
 - A Vulkan driver to draw (`mesa-vulkan-drivers`, or `vulkan-intel` on Arch).
   Without a GPU, dioxus-native's CPU renderer (`vello-cpu-softbuffer`) still
   draws.

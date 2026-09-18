@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Form, Fields, Rule, use_form, use_form_context};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/form.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A `<form>` that validates on submit, with plain `Fn(&V) -> bool` rules, typed field paths from `#[derive(Fields)]` and a focused error summary.
 
 A `<form novalidate>` that holds the whole value in one store, runs rules

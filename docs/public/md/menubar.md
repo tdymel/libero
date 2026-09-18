@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{MenuEntry, MenuItem, Menubar, MenubarMenu};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/menubar.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A row of menus. Each menu is a `Menu`, and the bar is a single tab stop with one menu open at most.
 
 A row of menus, like a desktop app's File, Edit and View. Each menu is a

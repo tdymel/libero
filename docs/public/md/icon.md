@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Icon;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/icon.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A sized, colored badge around an svg child, whose `currentColor` fill inherits the badge's color.
 
 Wraps an svg child in a sized, colored badge. `color` sets the container's CSS

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Slider, SliderChangeEvent, SliderMark, SliderValue};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/slider>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A value dragged along a track, continuous over `f64` or discrete over an ordered enum that derives `SliderValue`.
 
 A value you drag along a track. It slides over any `SliderValue`. An `f64`

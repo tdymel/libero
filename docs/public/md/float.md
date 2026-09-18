@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Float;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/float.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Anchors its child to a corner or edge of the nearest positioned ancestor, like a badge on an avatar.
 
 Anchors its child to a corner or edge of the nearest positioned ancestor, like a

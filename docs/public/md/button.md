@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Button;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/button.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A clickable action, a toggle, or a router-aware link.
 
 A clickable action, a toggle, or a link when `to` is set. It defaults to

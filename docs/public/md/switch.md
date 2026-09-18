@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Switch;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/switch.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: An on/off toggle drawn as a track and thumb, announced as a switch, with the field slots.
 
 An on/off toggle drawn as a track and thumb. It is a checkbox underneath,

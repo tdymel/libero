@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::{hooks::use_element, platform::{clock, color_scheme, document, keyboard, scroll, timer}};`
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Every platform API (elements, timers, keys, scroll, the document, the colour scheme and the clock), what each makes possible, and how to use them where a renderer lacks one.
 
 Everything that reaches past dioxus to the machine goes through

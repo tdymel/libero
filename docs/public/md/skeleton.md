@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Skeleton;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/skeleton.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A placeholder for loading content, as a standalone grey shape or a wrapper that hides the real content until it is ready.
 
 A placeholder for content that is still loading. Without children it is a grey

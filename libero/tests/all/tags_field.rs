@@ -77,7 +77,7 @@ fn the_input_is_the_labelled_control() {
 }
 
 /// One wrapper per tag, and its x is **not** a tab stop: the field is one tab
-/// stop, the way `MultiSelect`'s chips and Mantine's `Pill` are, and Backspace
+/// stop, the way `MultiSelect`'s chips are, and Backspace
 /// is how a keyboard takes a tag back.
 #[test]
 fn every_tag_is_a_chip_whose_remove_button_is_not_a_tab_stop() {

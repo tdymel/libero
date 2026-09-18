@@ -56,9 +56,7 @@ impl BadgeDefaults {
         text_transform: "uppercase",
         letter_spacing: "0.25px",
         font_weight: "700",
-        // `xs`..`xl` are Mantine's own numbers; `xxl` continues the ramp,
-        // since our scale has a sixth step and theirs does not. All rem, so
-        // the box grows with a reader's own text size instead of clipping
+        // All rem, so the box grows with a reader's own text size instead of clipping
         // the label at 200% (todo 741).
         sizes: Sizes::new(
             BadgeSizeLevel {

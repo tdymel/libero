@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_color_scheme;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/color_scheme.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Reads and sets light or dark, or hands the choice back to the platform.
 
 `use_color_scheme() -> ColorSchemeHandle` reads and sets light or dark.

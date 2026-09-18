@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Notifications, NotificationData, NotificationOptions, use_notifications};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/notifications.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A hook plus a host. Render `Notifications {}` once, and `use_notifications()` shows messages from anywhere, as an `Alert` or as your own template over your own data.
 
 A hook and a host. Render `Notifications {}` once near the root.

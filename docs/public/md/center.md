@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Center;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/center.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Centers its child horizontally and vertically.
 
 Centers its child horizontally and vertically. It fills the parent's width and

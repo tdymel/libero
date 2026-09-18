@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::use_notifications_with;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/notifications.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Shows notifications of your own data type, drawn by your own template.
 
 `use_notifications_with(template) -> NotificationHandle<T>` shows

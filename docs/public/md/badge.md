@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Badge;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/badge.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A short status label - one uppercase pill, sized under a control, with no role and no interaction.
 
 A short status label. Renders one `<span>` with no role and no ARIA - a badge is

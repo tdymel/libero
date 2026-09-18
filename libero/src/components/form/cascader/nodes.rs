@@ -14,9 +14,8 @@ pub(super) struct FlatPath {
     /// One index per level - the same shape as the cursor.
     pub indices: Vec<usize>,
     pub labels: Vec<String>,
-    /// The node's own `disabled`, or'd with every ancestor's. Mantine's
-    /// `flattenCascaderPaths` rule: a node under a disabled ancestor is
-    /// disabled.
+    /// The node's own `disabled`, or'd with every ancestor's: a node under a
+    /// disabled ancestor is disabled.
     pub disabled: bool,
 }
 

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Image;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/image.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: An img with a fallback source on load error, rounded corners, and an optional click-to-zoom overlay.
 
 An `<img>` with a fallback source on load error, optional rounded corners, and

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_theme;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/theme.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: The active theme, for the values CSS cannot carry.
 
 `use_theme() -> &'static Theme` returns the active theme. Read it for a value

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Chip;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/chip.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A compact token: a tag, a filter, a small action or a link.
 
 A compact token. With `onchange` or a `name` it is a checkbox, with `onclick` a

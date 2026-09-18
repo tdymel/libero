@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Cascader;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/cascader/cascader.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A field that picks one option from a tree, one level at a time, and shows the path in the trigger.
 
 Picks one option from a tree, one level at a time. The value is that option's

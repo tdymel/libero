@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Header;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/header.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: The page's banner landmark, a sticky, static or fixed `header` bar for nav and actions.
 
 The page's banner landmark, always a `header` element. This site's own header is

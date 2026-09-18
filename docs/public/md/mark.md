@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Mark;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/mark.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A `mark` element that highlights text with a light tint of a theme color.
 
 Highlights a chunk of text in a real `<mark>`, tinted with a light shade of the

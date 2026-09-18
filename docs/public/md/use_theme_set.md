@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_theme_set;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/theme.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Reads and swaps the active theme set, which a theme picker is built on.
 
 `use_theme_set() -> ThemeSetHandle` reads and swaps the active theme set, the

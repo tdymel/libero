@@ -9,7 +9,7 @@ use libero::components::{
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
-/// Mantine's own default swatches, with its names for them.
+/// The demo swatches and their names.
 const SWATCHES: [(&str, &str); 14] = [
     ("#2e2e2e", "Dark"),
     ("#868e96", "Gray"),

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Scroller;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/scroller.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A horizontal strip with a hidden scrollbar and a step control over each end, shown while there is more content that way.
 
 A horizontal strip with a hidden scrollbar and a step control over each end,

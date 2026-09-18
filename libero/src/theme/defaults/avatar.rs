@@ -41,7 +41,6 @@ impl AvatarDefaults {
         variant: Variant::Tonal,
         size: Size::Md,
         radius: Size::Xxl,
-        // Mantine's scale, plus an `xxl` continuing its steps.
         sizes: Sizes::new(20, 28, 38, 56, 84, 120),
         font_sizes: Sizes::new(8, 11, 15, 22, 34, 48),
         radii: Sizes::new("2px", "4px", "8px", "16px", "32px", "9999px"),

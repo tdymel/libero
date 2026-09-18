@@ -8,7 +8,39 @@ use libero::{
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/focus-return", || rsx! { FiltersPage {} })];
+pub const ROUTES: Routes = &[
+    ("/focus-return", || rsx! { FiltersPage {} }),
+    ("/focus-return/mounted", || rsx! { MountedPage {} }),
+];
+
+/// The `remember(event)` arm: the trigger is named once from `onmounted`.
+#[component]
+fn MountedPage() -> Element {
+    let mut open = use_signal(|| false);
+    let trigger = use_focus_return();
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            button {
+                id: "trigger",
+                aria_expanded: open(),
+                onmounted: move |event| trigger.remember(event),
+                onclick: move |_| open.toggle(),
+                "Details"
+            }
+            if open() {
+                Button {
+                    id: "close",
+                    onclick: move |_| {
+                        open.set(false);
+                        trigger.restore();
+                    },
+                    "Close"
+                }
+            }
+        }
+    }
+}
 
 #[component]
 fn FiltersPage() -> Element {

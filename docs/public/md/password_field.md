@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::PasswordField;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/password_field.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A `TextField` for secrets, with a button in its trailing slot that shows the text.
 
 A [TextField](text_field.md) for secrets, with a button that shows the text.

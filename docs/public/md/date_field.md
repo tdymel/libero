@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::{chrono::{NaiveDate, NaiveDateTime, NaiveTime}, components::{DateField, DateRange}};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/date/date_field.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A text field for every date and time value, typed leniently, with the matching `DatePicker` in a dropdown.
 
 A text field for every date and time value, with a [DatePicker](date_picker.md)

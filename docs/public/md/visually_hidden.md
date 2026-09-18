@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::VisuallyHidden;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/accessibility/visually_hidden.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A `span` read by screen readers but hidden from sighted layout, for extra context on something vague on its own.
 
 Content for screen readers only, such as extra context for a link that is

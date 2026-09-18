@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_formats;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/formats.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: How the active region writes dates, times and numbers.
 
 `use_formats() -> &'static Formats` returns how the active region writes dates,

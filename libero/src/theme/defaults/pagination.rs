@@ -43,7 +43,6 @@ impl PaginationDefaults {
         siblings: 1,
         boundaries: 1,
         gap: Size::Xs,
-        // Mantine's control scale, plus an `xxl` continuing its steps.
         control_sizes: Sizes::new(22, 26, 32, 38, 44, 52),
         font_sizes: Sizes::new(11, 12, 14, 16, 18, 20),
         border: ColorValue::Shade(Color::Muted, ColorShade::S4),

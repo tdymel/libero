@@ -1,7 +1,7 @@
 # Philosophy
 
 Crate: `libero`
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: The four principles behind libero in order of priority (developer experience, accessibility, batteries included, simple yet modern) and what we do about each.
 
 Four principles decide what goes into libero and how it is shaped. They are

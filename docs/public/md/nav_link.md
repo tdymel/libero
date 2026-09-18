@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::NavLink;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/nav_link.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A navigation list item for a sidebar or nav bar, a link that marks the current page with `aria-current`.
 
 A navigation list item for a sidebar or nav bar. It is an [`Anchor`](anchor.md)

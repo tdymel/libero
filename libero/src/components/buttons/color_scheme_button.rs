@@ -14,8 +14,8 @@ use crate::{
 };
 
 /// The glyph's box. `ActionIcon` stretches any `svg` to its whole box, so an
-/// unsized glyph would be a 22px moon in a 24px button; this leaves the
-/// margin Mantine's own scheme toggle has.
+/// unsized glyph would be a 22px moon in a 24px button; this leaves a margin
+/// around it.
 static GLYPH_SX: StaticSx =
     StaticSx::new(|| sx().display("inline-flex").width("55%").height("55%"));
 

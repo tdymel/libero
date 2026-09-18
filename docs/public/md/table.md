@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Table, column};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/table>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A sortable data table built from a row type and a list of column definitions.
 
 Data in, table out. Each column is built with `column(..)` - a header, a `value`

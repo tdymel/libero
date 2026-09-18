@@ -197,6 +197,49 @@ fn a_query_ranks_names_starting_with_it_first() {
     });
 }
 
+/// Todo 793: the list sorts by the shown, German name, an umlaut with its base
+/// letter: Deutschland among the D's, Österreich among the O's.
+#[test]
+fn the_list_sorts_by_the_localized_name() {
+    block_on(async {
+        let fixture = Fixture::open("/phone-field/german", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, PICKER, 10).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait_open(page, "Enter").await;
+        let names: Vec<String> = page
+            .evaluate("[...document.querySelectorAll('[role=option] [data-slot=name]')].map(n => n.textContent)")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let initial = |name: &str| {
+            let c = name.chars().next().unwrap().to_lowercase().next().unwrap();
+            match c {
+                'ä' | 'å' => 'a',
+                'ö' => 'o',
+                'ü' => 'u',
+                c => c,
+            }
+        };
+        let initials: Vec<char> = names.iter().map(|name| initial(name)).collect();
+        assert!(names.len() > 200, "the whole list: {}", names.len());
+        assert!(
+            initials.windows(2).all(|pair| pair[0] <= pair[1]),
+            "initials in order: {names:?}"
+        );
+        for (name, letter) in [("Deutschland", 'd'), ("Österreich", 'o'), ("Ägypten", 'a')] {
+            let at = names.iter().position(|n| n == name).expect(name);
+            assert_eq!(initials[at], letter, "{name}");
+        }
+
+        fixture.console.assert_clean("/phone-field/german").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 547: the country search's Home and End edit the query.
 #[test]
 fn home_and_end_edit_the_country_search() {

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_localization_handle;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/localization.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Switches the language libero's components speak at runtime.
 
 `use_localization_handle() -> LocalizationHandle` switches the language at

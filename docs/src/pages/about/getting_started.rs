@@ -219,10 +219,16 @@ fn NativePanel() -> Element {
             Text { "On Linux you need:" }
             List { size: "sm",
                 ListItem {
+                    Code { source: "pkg-config" }
+                    ", "
                     Code { source: "fontconfig" }
-                    " to build ("
-                    Code { source: "libfontconfig1-dev" }
+                    " and OpenSSL to build ("
+                    Code { source: "pkg-config libfontconfig1-dev libssl-dev" }
                     " on Debian and Ubuntu)."
+                }
+                ListItem {
+                    Code { source: "libxkbcommon" }
+                    " and the Wayland or X11 client libraries to run. winit loads them itself, and a desktop session has them."
                 }
                 ListItem {
                     "A Vulkan driver to draw ("

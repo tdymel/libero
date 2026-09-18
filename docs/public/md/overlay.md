@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Overlay;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/overlay.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A layer that dims and blurs the page behind it, with centred content. The backdrop behind a modal, or a loading screen.
 
 Dims and blurs whatever is behind it. A [modal](modal.md) renders one behind its

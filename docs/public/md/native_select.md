@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Options, NativeSelect};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/native_select.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A styled native `<select>` over an enum, with the field slots.
 
 A styled native select over an enum, with a label, captions and a status like

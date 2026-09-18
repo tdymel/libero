@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::use_spotlight;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/spotlight/spotlight.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Registers a command palette and its hotkey and returns the handle that opens it.
 
 `use_spotlight(options) -> SpotlightHandle` registers a command palette and

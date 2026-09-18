@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Text;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/text.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Body copy, sized from the theme's text scale.
 
 Body copy in a `<p>`, sized from the theme's text scale. `component` changes

@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{DataList, DataListItem};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/data_display/data_list>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A `<dl>` of term/description pairs.
 
 Renders a `<dl>` of term/description pairs. A term's descriptions share one

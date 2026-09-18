@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Container;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/container.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Centers content and caps its width at a breakpoint.
 
 Centers content and caps its width at a breakpoint. Wrap your main content in

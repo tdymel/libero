@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Textarea;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/textarea.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A multi-line text field, sized by `rows` and resizable by the user.
 
 A multi-line text field with the same slots as [TextField](text_field.md).

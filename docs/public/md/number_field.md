@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::NumberField;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/number_field.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A numeric field over your own number type, with optional steppers in its trailing slot.
 
 A numeric field over your own number type, with optional steppers. Every

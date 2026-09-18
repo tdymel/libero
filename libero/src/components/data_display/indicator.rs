@@ -41,7 +41,7 @@ static INDICATOR_BASE_SX: StaticSx = StaticSx::new(|| {
         // Forced colours paint every fill `Canvas`, and a bare dot is nothing else.
         .media(FORCED_COLORS, sx().background("CanvasText").color("Canvas"));
 
-    // A `box-shadow`, not Mantine's `border`: under the global `border-box` a
+    // A `box-shadow`, not a `border`: under the global `border-box` a
     // 2px border eats 4px of a 6px dot, and a border moves the dot inside its
     // `Float`. The shadow is drawn outside the box and changes no geometry.
     let with_border = sx().box_shadow(format!(

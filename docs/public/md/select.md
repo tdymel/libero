@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::{Options, Select};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/select/select.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A listbox over an enum with rows you can draw yourself, in the same field frame as every other input.
 
 A listbox over an enum, in the same frame as every other field. Unlike

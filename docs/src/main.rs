@@ -453,8 +453,8 @@ fn AppShell() -> Element {
                 }
             }
             Header {
-                // No `color`: the header is the page's own surface, the way
-                // Mantine's is, so it reads as chrome rather than as a
+                // No `color`: the header is the page's own surface, so it
+                // reads as chrome rather than as a
                 // banner and follows the colour scheme without a second
                 // palette. Translucent plus a blur, so content scrolling
                 // under it is suggested rather than hidden - the bar is
@@ -505,8 +505,7 @@ fn AppShell() -> Element {
                 // hidden hint on a phone does not change it; the shortcut
                 // rides `aria-keyshortcuts` instead of the name.
                 // On a phone the search is an icon button and nothing else -
-                // the room belongs to the burger and the title, and that is
-                // what Mantine's own mobile header does. From `Sm` up it
+                // the room belongs to the burger and the title. From `Sm` up it
                 // grows into the field-shaped button, label and shortcut
                 // included. Two controls rather than one arm of it, because
                 // the two want different shapes; only one is ever rendered.

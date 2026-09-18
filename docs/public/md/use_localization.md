@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::hooks::use_localization;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/localization.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: The words libero's components say on their own, in the active language.
 
 `use_localization() -> &'static Localization` returns the words libero's

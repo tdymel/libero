@@ -25,7 +25,7 @@ pub use crate::theme::ScrollerControls;
 
 input_from_str!(ScrollerControls);
 
-/// Mantine's tolerance. A fractional device-pixel offset makes an exact
+/// One pixel of slack: a fractional device-pixel offset makes an exact
 /// comparison flicker a control on and off at rest.
 const EDGE_TOLERANCE: f64 = 1.0;
 

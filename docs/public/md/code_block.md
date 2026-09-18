@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::CodeBlock;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/typography/code/code_block.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: A multi-line code block with line numbers, a copy button, a language header, diffs and highlighted lines.
 
 A multi-line code block with line numbers, a copy button and a header naming

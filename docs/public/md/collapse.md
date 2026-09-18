@@ -3,7 +3,7 @@
 Crate: `libero`
 Import: `use libero::components::Collapse;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/collapse.rs>
-Index: [index.md](index.md) - every other component's markdown page
+Index: [index.md](index.md) lists every other page
 Description: Animates its children's height open and closed, and follows the content when its height changes.
 
 Animates its children's height open and closed, and follows the content when

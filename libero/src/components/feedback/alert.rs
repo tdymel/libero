@@ -47,7 +47,7 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
         // that make `Outlined`'s border visible join here.
         .border_style("solid")
         .border_width("1px")
-        // Mantine's: nothing escapes the tint past the radius.
+        // Nothing escapes the tint past the radius.
         .overflow("hidden")
         .and(AlertDefaults::theme_vars())
         .selector(
