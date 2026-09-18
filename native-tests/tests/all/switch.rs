@@ -1,9 +1,9 @@
-//! `Switch` is a visually hidden checkbox with `role="switch"`: the track takes
-//! the pointer, the input the keyboard.
+//! `Switch`'s paint on Blitz: the thumb's move and the hidden input. Its
+//! toggling is shared with the web in `e2e/tests/all/switch.rs` (todo 822).
 
 use dioxus::prelude::*;
-use libero::components::{Form, Switch};
-use native_tests::{Key, Page, mount};
+use libero::components::Switch;
+use native_tests::mount;
 
 const INPUT: &str = "[role=switch]";
 const TRACK: &str = "[role=switch] + [aria-hidden=true]";
@@ -13,27 +13,6 @@ fn app() -> Element {
     rsx! {
         Switch { checked: on(), onchange: move |v| on.set(v), label: "Wifi" }
     }
-}
-
-fn checked(page: &Page) -> bool {
-    page.attr(INPUT, "checked").is_some_and(|v| v == "true")
-}
-
-#[test]
-fn a_click_on_the_track_toggles_it() {
-    let mut page = mount(app);
-    assert!(!checked(&page));
-    page.click(TRACK);
-    assert!(checked(&page), "{}", page.tree());
-    page.click(TRACK);
-    assert!(!checked(&page));
-}
-
-#[test]
-fn a_click_on_the_label_toggles_it() {
-    let mut page = mount(app);
-    page.click("label");
-    assert!(checked(&page), "{}", page.tree());
 }
 
 #[test]
@@ -81,18 +60,6 @@ fn an_rtl_thumb_starts_at_the_right() {
     );
 }
 
-/// Outside a `Form`, Enter toggles as Space does (todo 648).
-#[test]
-fn space_and_enter_toggle_the_focused_switch() {
-    let mut page = mount(app);
-    page.focus(INPUT);
-    page.press(Key::Character(" ".into()));
-    assert!(checked(&page), "Space");
-    page.press(Key::Enter);
-    assert!(!checked(&page), "Enter");
-    assert!(page.is_focused(INPUT));
-}
-
 /// Todo 757: Blitz ignores `clip`, so the hidden input painted a speck beside
 /// the track, and its focus outline a blue square; only the ring may show.
 #[test]
@@ -122,27 +89,4 @@ fn the_hidden_input_paints_nothing() {
         idle,
         "the focused input painted"
     );
-}
-
-fn form_app() -> Element {
-    let mut on = use_signal(|| false);
-    let mut submits = use_signal(|| 0u32);
-    rsx! {
-        Form::<()> { onsubmit: move |_| submits += 1,
-            Switch { checked: on(), onchange: move |v| on.set(v), label: "Wifi" }
-            button { r#type: "submit", "Save" }
-        }
-        span { id: "submits", "{submits}" }
-    }
-}
-
-/// Inside a `Form`, Enter is the form's: it submits, as for a native checkbox,
-/// and leaves the switch alone (todo 508).
-#[test]
-fn enter_in_a_form_submits_and_toggles_nothing() {
-    let mut page = mount(form_app);
-    page.focus(INPUT);
-    page.press(Key::Enter);
-    assert!(!checked(&page), "Enter toggled it");
-    assert_eq!(page.text("#submits"), "1", "{}", page.tree());
 }

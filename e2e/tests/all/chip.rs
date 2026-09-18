@@ -1,7 +1,9 @@
 //! `Chip`: APG's checkbox pattern for a filter chip, plus the tag, button and
 //! link kinds.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::keyboard::{self, ENTER, SPACE};
 use e2e::passes::pointer::{self, Point};
 use e2e::suite::Step;
@@ -55,6 +57,37 @@ async fn focused(fixture: &Fixture) -> String {
         .into_value()
         .unwrap()
 }
+
+async fn emits<D: Driver>(d: &mut D, expected: &str) -> Result<()> {
+    eventually(d, &format!("the chip to emit {expected}"), async |d| {
+        Ok(d.attr("[data-emitted]", "data-emitted").await?.as_deref() == Some(expected))
+    })
+    .await
+}
+
+/// A filter chip is a hidden checkbox beside its `<label>`: Blitz toggles the
+/// input and reports `input`, not `click`, the shape `Switch` had.
+async fn a_click_on_the_label_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#css label").await?;
+    emits(d, "css:true").await?;
+    d.click("#css label").await?;
+    emits(d, "css:false").await
+}
+
+async fn space_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#css > input").await?;
+    d.press(SPACE).await?;
+    emits(d, "css:true").await?;
+    d.press(SPACE).await?;
+    emits(d, "css:false").await
+}
+
+e2e::scenario!(
+    a_click_on_the_label_toggles_it,
+    "/chip",
+    a_click_on_the_label_toggles
+);
+e2e::scenario!(space_toggles_the_focused_chip, "/chip", space_toggles);
 
 /// Todo 491: a selected chip showed only a faint tint.
 #[test]

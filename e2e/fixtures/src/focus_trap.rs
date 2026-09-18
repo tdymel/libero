@@ -11,6 +11,7 @@ use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/focus-trap", || rsx! { StopsPage {} }),
+    ("/focus-trap/radios", || rsx! { RadiosPage {} }),
     ("/focus-trap/nested", || rsx! { NestedPage {} }),
     ("/focus-trap/dialog", || rsx! { DialogPage {} }),
 ];
@@ -33,6 +34,25 @@ fn StopsPage() -> Element {
             button { id: "last", "Last" }
         }
         button { id: "after", "After" }
+    }
+}
+
+/// Two radio groups in a trap opened by a click, as a dialog's trap is.
+#[component]
+fn RadiosPage() -> Element {
+    let mut open = use_signal(|| false);
+    rsx! {
+        button { id: "open", onclick: move |_| open.set(true), "Open" }
+        if open() {
+            FocusTrap {
+                button { id: "first", "First" }
+                input { id: "r1", r#type: "radio", name: "plan", value: "a" }
+                input { id: "r2", r#type: "radio", name: "plan", value: "b", checked: true }
+                input { id: "s1", r#type: "radio", name: "size", value: "s" }
+                input { id: "s2", r#type: "radio", name: "size", value: "m" }
+                button { id: "last", "Last" }
+            }
+        }
     }
 }
 

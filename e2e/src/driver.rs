@@ -30,11 +30,16 @@ pub trait Driver {
     fn platform(&self) -> Platform;
     async fn click(&mut self, selector: &str) -> Result<()>;
     async fn press(&mut self, key: Key) -> Result<()>;
+    async fn press_shift(&mut self, key: Key) -> Result<()>;
     async fn type_text(&mut self, text: &str) -> Result<()>;
+    /// Presses at the first match's centre, moves by `(dx, dy)` in steps, releases.
+    async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()>;
     async fn focus(&mut self, selector: &str) -> Result<()>;
     async fn text(&mut self, selector: &str) -> Result<String>;
     async fn attr(&mut self, selector: &str, name: &str) -> Result<Option<String>>;
     async fn is_focused(&mut self, selector: &str) -> Result<bool>;
+    /// The focused element's `id`, empty when it has none.
+    async fn focused_id(&mut self) -> Result<String>;
     /// What focus is on, for a failure message.
     async fn focus_owner(&mut self) -> Result<String>;
     /// Lets time pass: timers fire and the page settles.
@@ -81,9 +86,18 @@ pub async fn eventually_focused<D: Driver>(d: &mut D, selector: &str, during: &s
 
 /// Runs `$body(&mut driver, $route)` as `$name::web` and, with the `native`
 /// feature, `$name::native`. The web run also fails on a console error.
+///
+/// A backend gap is a named skip, listed by `--ignored`, never silent:
+/// `scenario!(name, "/route", body, native: skip("Blitz has no <summary> stop"));`
 #[macro_export]
 macro_rules! scenario {
     ($name:ident, $route:expr, $body:ident) => {
+        $crate::scenario!(@web $name, $route, $body, #[test]);
+    };
+    ($name:ident, $route:expr, $body:ident, native: skip($reason:literal)) => {
+        $crate::scenario!(@web $name, $route, $body, #[test] #[ignore = $reason]);
+    };
+    (@web $name:ident, $route:expr, $body:ident, $(#[$native:meta])*) => {
         mod $name {
             #[test]
             fn web() {
@@ -95,7 +109,7 @@ macro_rules! scenario {
             }
 
             #[cfg(feature = "native")]
-            #[test]
+            $(#[$native])*
             fn native() {
                 let mut driver = $crate::driver::Native::open($route);
                 $crate::futures::executor::block_on(super::$body(&mut driver, $route)).unwrap();
@@ -162,8 +176,22 @@ mod web {
             keyboard::press(&self.fixture.page, key).await
         }
 
+        async fn press_shift(&mut self, key: keyboard::Key) -> Result<()> {
+            keyboard::press_shift(&self.fixture.page, key).await
+        }
+
         async fn type_text(&mut self, text: &str) -> Result<()> {
             keyboard::type_text(&self.fixture.page, text).await
+        }
+
+        async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()> {
+            let page = &self.fixture.page;
+            let from = pointer::centre_of(page, selector).await?;
+            let to = pointer::Point {
+                x: from.x + dx,
+                y: from.y + dy,
+            };
+            pointer::drag(page, from, to, 8).await
         }
 
         async fn focus(&mut self, selector: &str) -> Result<()> {
@@ -187,6 +215,10 @@ mod web {
         async fn is_focused(&mut self, selector: &str) -> Result<bool> {
             self.json(&format!("document.activeElement === {}", element(selector)))
                 .await
+        }
+
+        async fn focused_id(&mut self) -> Result<String> {
+            self.json("document.activeElement?.id ?? ''").await
         }
 
         async fn focus_owner(&mut self) -> Result<String> {
@@ -233,6 +265,11 @@ mod native {
         }
     }
 
+    fn native_key(key: keyboard::Key) -> Result<native_tests::Key> {
+        native_tests::Key::from_str(key.key)
+            .map_err(|_| anyhow!("no dioxus key named {:?}", key.key))
+    }
+
     impl Driver for Native {
         fn platform(&self) -> Platform {
             Platform::Native
@@ -244,9 +281,14 @@ mod native {
         }
 
         async fn press(&mut self, key: keyboard::Key) -> Result<()> {
-            let key = native_tests::Key::from_str(key.key)
-                .map_err(|_| anyhow!("no dioxus key named {:?}", key.key))?;
+            let key = native_key(key)?;
             self.page.press(key);
+            Ok(())
+        }
+
+        async fn press_shift(&mut self, key: keyboard::Key) -> Result<()> {
+            let key = native_key(key)?;
+            self.page.press_with(key, native_tests::Modifiers::SHIFT);
             Ok(())
         }
 
@@ -255,6 +297,11 @@ mod native {
                 self.page
                     .press(native_tests::Key::Character(ch.to_string()));
             }
+            Ok(())
+        }
+
+        async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()> {
+            self.page.drag(selector, dx as f32, dy as f32);
             Ok(())
         }
 
@@ -273,6 +320,14 @@ mod native {
 
         async fn is_focused(&mut self, selector: &str) -> Result<bool> {
             Ok(self.page.is_focused(selector))
+        }
+
+        async fn focused_id(&mut self) -> Result<String> {
+            let page = &self.page;
+            Ok(page
+                .focused()
+                .and_then(|node| page.attr_of(node, "id"))
+                .unwrap_or_default())
         }
 
         async fn focus_owner(&mut self) -> Result<String> {

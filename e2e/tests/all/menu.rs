@@ -2,8 +2,10 @@
 //!
 //! Not a focus trap: Tab closes every level and moves on from the trigger.
 
+use anyhow::Result;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::suite::Step;
 use e2e::{
     Fixture, Suite, Viewport,
@@ -53,6 +55,52 @@ fn it_honours_the_overlay_contract() {
         }
     });
 }
+
+async fn expanded<D: Driver>(d: &mut D, open: bool) -> Result<()> {
+    let what = if open {
+        "the menu to open"
+    } else {
+        "the menu to close"
+    };
+    eventually(d, what, async |d| {
+        Ok((d.attr(TRIGGER, "aria-expanded").await?.as_deref() == Some("true")) == open)
+    })
+    .await
+}
+
+/// APG's menu button: Enter opens it onto an item, Escape closes it and hands
+/// focus back to the trigger.
+async fn enter_opens_and_escape_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(TRIGGER).await?;
+    d.press(keyboard::ENTER).await?;
+    expanded(d, true).await?;
+    // The item takes focus once the box is placed, a timer later.
+    eventually_focused(d, "[role=menuitem]", "Enter on the trigger").await?;
+    d.press(keyboard::ESCAPE).await?;
+    expanded(d, false).await?;
+    eventually_focused(d, TRIGGER, "Escape").await
+}
+
+/// A click outside closes it and leaves focus where the click put it.
+async fn a_click_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(TRIGGER).await?;
+    d.press(keyboard::ENTER).await?;
+    expanded(d, true).await?;
+    d.click("#rename").await?;
+    expanded(d, false).await?;
+    eventually_focused(d, "#rename", "a click outside").await
+}
+
+e2e::scenario!(
+    enter_opens_it_and_escape_closes_it_with_focus_back_on_the_trigger,
+    "/menu-submenu-reopen",
+    enter_opens_and_escape_closes
+);
+e2e::scenario!(
+    a_click_outside_closes_it_and_leaves_focus_where_it_went,
+    "/menu-submenu-reopen",
+    a_click_outside_closes
+);
 
 /// The docs demo's row: the trigger and the text beside it share a centre line.
 #[test]

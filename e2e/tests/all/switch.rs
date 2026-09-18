@@ -1,6 +1,8 @@
 //! `Switch`: a hidden checkbox with `role="switch"` in the field slots.
 
+use anyhow::{Result, ensure};
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -86,82 +88,57 @@ fn checked(id: &str) -> String {
     format!("document.getElementById('{id}').checked")
 }
 
+/// `data-<name>` of `selector` reads `expected`, eventually.
+async fn reads<D: Driver>(d: &mut D, selector: &str, name: &str, expected: &str) -> Result<()> {
+    eventually(d, &format!("{selector} {name}={expected}"), async |d| {
+        Ok(d.attr(selector, &format!("data-{name}")).await?.as_deref() == Some(expected))
+    })
+    .await
+}
+
 /// Space, Enter outside a `Form` (todo 648), the label and the track each
 /// toggle it once. The browser's own flip is cancelled, so each is one change.
-#[test]
-fn space_enter_the_label_and_the_track_each_toggle_it_once() {
-    block_on(async {
-        let fixture = Fixture::open("/switch", Viewport::Desktop).await.unwrap();
-        let page = &fixture.page;
-
-        keyboard::tab_to(page, "#plain", 10).await.unwrap();
-        keyboard::press(page, keyboard::SPACE).await.unwrap();
-        wait::for_js_true(page, &checked("plain"), "Space to turn it on")
-            .await
-            .unwrap();
-        keyboard::press(page, keyboard::ENTER).await.unwrap();
-        wait::for_js_true(
-            page,
-            &format!("!{}", checked("plain")),
-            "Enter to turn it off",
-        )
-        .await
-        .unwrap();
-        pointer::click(page, "label[for=plain]").await.unwrap();
-        wait::for_js_true(page, &checked("plain"), "the label click")
-            .await
-            .unwrap();
-        pointer::click(page, "#plain ~ [aria-hidden]")
-            .await
-            .unwrap();
-        wait::for_js_true(page, &format!("{} === '4'", changes()), "the track click")
-            .await
-            .unwrap();
-        let on: bool = page
-            .evaluate(checked("plain"))
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert!(!on, "four toggles left the switch on");
-
-        fixture.console.assert_clean("toggling the switch").unwrap();
-        fixture.close().await.unwrap();
-    });
+async fn each_toggles_once<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#plain").await?;
+    d.press(keyboard::SPACE).await?;
+    reads(d, "#changes", "changes", "1").await?;
+    reads(d, "#changes", "on", "true").await?;
+    d.press(keyboard::ENTER).await?;
+    reads(d, "#changes", "changes", "2").await?;
+    reads(d, "#changes", "on", "false").await?;
+    ensure!(
+        d.is_focused("#plain").await?,
+        "Enter moved focus off the switch"
+    );
+    d.click("label[for=plain]").await?;
+    reads(d, "#changes", "changes", "3").await?;
+    d.click("#plain ~ [aria-hidden]").await?;
+    reads(d, "#changes", "changes", "4").await?;
+    reads(d, "#changes", "on", "false").await
 }
+
+e2e::scenario!(
+    space_enter_the_label_and_the_track_each_toggle_it_once,
+    "/switch",
+    each_toggles_once
+);
 
 /// Todo 508: Enter submits the form around the switch, as it does around a
 /// native checkbox, and leaves it as it was; Space still toggles.
-#[test]
-fn enter_submits_the_form_and_space_toggles() {
-    block_on(async {
-        let fixture = Fixture::open("/switch/form", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        let submits = "document.querySelector('#submits').dataset.submits";
-
-        keyboard::tab_to(page, "#alerts", 10).await.unwrap();
-        keyboard::press(page, keyboard::SPACE).await.unwrap();
-        wait::for_js_true(page, &checked("alerts"), "Space to turn it on")
-            .await
-            .unwrap();
-        keyboard::press(page, keyboard::ENTER).await.unwrap();
-        wait::for_js_true(page, &format!("{submits} === '1'"), "Enter to submit")
-            .await
-            .unwrap();
-        let on: bool = page
-            .evaluate(checked("alerts"))
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert!(on, "Enter toggled the switch");
-
-        fixture.console.assert_clean("Enter in a form").unwrap();
-        fixture.close().await.unwrap();
-    });
+async fn enter_submits_and_space_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#alerts").await?;
+    d.press(keyboard::SPACE).await?;
+    reads(d, "#submits", "on", "true").await?;
+    d.press(keyboard::ENTER).await?;
+    reads(d, "#submits", "submits", "1").await?;
+    reads(d, "#submits", "on", "true").await
 }
+
+e2e::scenario!(
+    enter_submits_the_form_and_space_toggles,
+    "/switch/form",
+    enter_submits_and_space_toggles
+);
 
 /// Todo 660: a raw `<form>` is a form too - read off the DOM, not libero's
 /// `Form` context - so Enter submits it there as well.
@@ -253,28 +230,17 @@ fn a_card_toggles_from_anywhere_on_it() {
 
 /// A track click focuses the input as a native click would, so its blur
 /// shows the rules.
-#[test]
-fn a_track_click_focuses_the_switch() {
-    block_on(async {
-        let fixture = Fixture::open("/switch", Viewport::Desktop).await.unwrap();
-        let page = &fixture.page;
-
-        pointer::click(page, "#plain ~ [aria-hidden]")
-            .await
-            .unwrap();
-        wait::for_js_true(page, &checked("plain"), "the track click")
-            .await
-            .unwrap();
-        let focused: String = page
-            .evaluate("document.activeElement.id")
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert_eq!(focused, "plain", "the track click left focus elsewhere");
-        fixture.close().await.unwrap();
-    });
+async fn a_track_click_focuses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#plain ~ [aria-hidden]").await?;
+    reads(d, "#changes", "on", "true").await?;
+    eventually_focused(d, "#plain", "the track click").await
 }
+
+e2e::scenario!(
+    a_track_click_focuses_the_switch,
+    "/switch",
+    a_track_click_focuses
+);
 
 /// The track shows `not-allowed` like the rest of a disabled switch.
 #[test]

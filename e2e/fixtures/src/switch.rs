@@ -50,7 +50,12 @@ fn SwitchFormPage() -> Element {
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            span { id: "submits", "data-submits": "{submits}", "Submits {submits}" }
+            span {
+                id: "submits",
+                "data-submits": "{submits}",
+                "data-on": "{value().alerts}",
+                "Submits {submits}"
+            }
             Form { value, onsubmit: move |_| submits += 1,
                 Switch { id: "alerts", label: "Alerts", name: Prefs::FIELDS.alerts() }
                 button { r#type: "submit", "Save" }
@@ -80,7 +85,7 @@ fn SwitchPage() -> Element {
                     changes += 1;
                 },
             }
-            div { id: "changes", "data-changes": "{changes}", "Changes {changes}" }
+            div { id: "changes", "data-changes": "{changes}", "data-on": "{on}", "Changes {changes}" }
             Switch {
                 id: "error",
                 label: "Accept terms",

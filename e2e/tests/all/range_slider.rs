@@ -1,11 +1,50 @@
 //! `RangeSlider`: the drag picks a thumb, and only that one moves.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const UPPER: &str = "document.querySelectorAll('[role=slider]')[1]";
 const READOUT: &str = "document.querySelector('#price-readout').textContent";
+const LOWER_THUMB: &str = "[role=slider][aria-valuenow=\"20\"]";
+const UPPER_THUMB: &str = "[role=slider][aria-valuenow=\"80\"]";
+
+async fn reads<D: Driver>(d: &mut D, what: &str, check: impl Fn(&str) -> bool) -> Result<()> {
+    eventually(d, what, async |d| {
+        Ok(check(&d.text("#price-readout").await?))
+    })
+    .await
+}
+
+async fn the_keys_move_the_focused<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(LOWER_THUMB).await?;
+    d.press(keyboard::HOME).await?;
+    reads(d, "Home to move the lower thumb to 0", |r| r == "0-80").await?;
+    d.focus(UPPER_THUMB).await?;
+    d.press(keyboard::END).await?;
+    reads(d, "End to move the upper thumb to 100", |r| r == "0-100").await
+}
+
+async fn a_drag_moves_the_grabbed<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.drag(UPPER_THUMB, -60.0, 0.0).await?;
+    reads(d, "the upper thumb dragged, the lower kept", |r| {
+        r.starts_with("20-") && r != "20-80"
+    })
+    .await
+}
+
+e2e::scenario!(
+    the_keys_move_the_focused_thumb,
+    "/range-slider",
+    the_keys_move_the_focused
+);
+e2e::scenario!(
+    a_drag_moves_the_grabbed_thumb_only,
+    "/range-slider",
+    a_drag_moves_the_grabbed
+);
 
 /// Todo 483: the label, which names both thumbs, focuses the first.
 #[test]
@@ -20,56 +59,54 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// The scenario above drags at desktop width; this adds the phone.
 #[test]
-fn a_drag_moves_the_grabbed_thumb_only() {
+fn a_drag_moves_the_grabbed_thumb_only_on_a_phone() {
     block_on(async {
-        for viewport in Viewport::ALL {
-            let fixture = Fixture::open("/range-slider", viewport).await.unwrap();
-            // Read directly: `centre_of` takes the first match, the lower thumb.
-            let upper: Vec<f64> = fixture
-                .page
-                .evaluate(format!(
-                    "(() => {{ const r = {UPPER}.getBoundingClientRect(); \
-                     return [r.x + r.width / 2, r.y + r.height / 2]; }})()"
-                ))
-                .await
-                .unwrap()
-                .into_value()
-                .unwrap();
-            let start = pointer::Point {
-                x: upper[0],
-                y: upper[1],
-            };
-            let to = pointer::Point {
-                x: start.x - 60.0,
-                y: start.y,
-            };
-
-            wait::for_js_change(
-                &fixture.page,
-                &format!("{UPPER}.getAttribute('aria-valuenow')"),
-                "the upper thumb to move",
-                || pointer::drag(&fixture.page, start, to, 10),
-            )
+        let fixture = Fixture::open("/range-slider", Viewport::Mobile)
             .await
-            .unwrap_or_else(|e| panic!("at {}: the drag did not move it: {e}", viewport.name()));
-            wait::for_js_true(
-                &fixture.page,
-                &format!(
-                    "{READOUT}.startsWith('20-') && {READOUT} !== '20-80' \
-                     && {READOUT}.endsWith('-' + {UPPER}.getAttribute('aria-valuenow'))"
-                ),
-                "the read-out to show the lower value kept and the upper one dragged",
-            )
+            .unwrap();
+        // Read directly: `centre_of` takes the first match, the lower thumb.
+        let upper: Vec<f64> = fixture
+            .page
+            .evaluate(format!(
+                "(() => {{ const r = {UPPER}.getBoundingClientRect(); \
+                 return [r.x + r.width / 2, r.y + r.height / 2]; }})()"
+            ))
             .await
-            .unwrap_or_else(|e| panic!("at {}: {e}", viewport.name()));
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let start = pointer::Point {
+            x: upper[0],
+            y: upper[1],
+        };
+        let to = pointer::Point {
+            x: start.x - 60.0,
+            y: start.y,
+        };
 
-            fixture
-                .console
-                .assert_clean(&format!("a drag at {}", viewport.name()))
-                .unwrap();
-            fixture.close().await.unwrap();
-        }
+        wait::for_js_change(
+            &fixture.page,
+            &format!("{UPPER}.getAttribute('aria-valuenow')"),
+            "the upper thumb to move",
+            || pointer::drag(&fixture.page, start, to, 10),
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            &fixture.page,
+            &format!(
+                "{READOUT}.startsWith('20-') && {READOUT} !== '20-80' \
+                 && {READOUT}.endsWith('-' + {UPPER}.getAttribute('aria-valuenow'))"
+            ),
+            "the read-out to show the lower value kept and the upper one dragged",
+        )
+        .await
+        .unwrap();
+
+        fixture.console.assert_clean("a drag on a phone").unwrap();
+        fixture.close().await.unwrap();
     });
 }
 
@@ -99,29 +136,6 @@ fn each_thumb_is_described_by_its_value_bubble() {
                 "the {value} thumb's computed description"
             );
         }
-        fixture.close().await.unwrap();
-    });
-}
-
-#[test]
-fn the_keys_move_the_focused_thumb() {
-    block_on(async {
-        let fixture = Fixture::open("/range-slider", Viewport::Desktop)
-            .await
-            .unwrap();
-        keyboard::tab_to(&fixture.page, "[role=slider]", 10)
-            .await
-            .unwrap();
-        keyboard::press(&fixture.page, keyboard::HOME)
-            .await
-            .unwrap();
-        wait::for_js_true(
-            &fixture.page,
-            &format!("{READOUT} === '0-80'"),
-            "Home to move the lower thumb to the minimum",
-        )
-        .await
-        .unwrap();
         fixture.close().await.unwrap();
     });
 }
