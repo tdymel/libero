@@ -43,7 +43,6 @@ use std::rc::Rc;
 
 use dioxus::history::{History, MemoryHistory, provide_history_context};
 use dioxus::prelude::*;
-use libero::LiberoProvider;
 
 use crate::Route;
 use crate::components::{DemoCode, DemoValues};
@@ -366,6 +365,8 @@ fn rust_files(dir: &Path, into: &mut Vec<PathBuf>) {
     }
 }
 
+/// The site's own `App` at `route`, so the shell gets every context it reads:
+/// a copy without the `Rtl` provider made the shell panic and hid every `Demo` (todo 827).
 #[component]
 fn Page(route: Route) -> Element {
     use_hook(|| {
@@ -374,7 +375,7 @@ fn Page(route: Route) -> Element {
         )
     });
     rsx! {
-        LiberoProvider { Router::<Route> {} }
+        crate::App {}
     }
 }
 
@@ -581,19 +582,23 @@ fn page_snippets_are_current() {
     }
 
     // Each page's `Demo`s, matched to its `Demo {` lines by order.
+    let mut demo_count = 0;
     for route in Route::static_routes() {
         let demos = demos_of(route.clone());
-        if demos.is_empty() {
-            continue;
-        }
+        demo_count += demos.len();
         let name = format!("{route:?}");
         let name = name.trim_end_matches(" {}").trim_end_matches(" { }");
         let defined = format!("fn {name}(");
         let Some((path, source)) = sources.iter().find(|(_, s)| s.contains(&defined)) else {
-            problems.push(format!("{route}: no page defines `{defined}`"));
+            if !demos.is_empty() {
+                problems.push(format!("{route}: no page defines `{defined}`"));
+            }
             continue;
         };
         let lines = demo_markers(source);
+        if demos.is_empty() && lines.is_empty() {
+            continue;
+        }
         if lines.len() != demos.len() {
             problems.push(format!(
                 "{path}: renders {} `Demo`s but has {} `Demo {{` lines to match them to",
@@ -686,6 +691,11 @@ fn page_snippets_are_current() {
     }
 
     assert!(problems.is_empty(), "{}", problems.join("\n"));
+    // Zero anywhere is the shell failing, not a page: say that, not 90 mismatches.
+    assert!(
+        demo_count > 0,
+        "no route rendered a `Demo`: the shell likely failed"
+    );
     // Gitignored, so nothing to commit. Rewritten only when it changed.
     let generated = root.join("../libero/tests/page_snippets.md");
     if std::fs::read_to_string(&generated).ok().as_deref() != Some(&out) {
