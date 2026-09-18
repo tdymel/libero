@@ -261,8 +261,15 @@ impl LiberoContext {
 #[component]
 fn ThemeStyle() -> Element {
     let context = use_context::<LiberoContext>();
-    let css = context.theme_css.read().clone();
-    let css = focus_selectors(&css);
+    let sheet = context.theme_css.read().clone();
+    let css = focus_selectors(&sheet);
+    // Bumped per rebuilt sheet, for `SheetWatch` (todo 871).
+    let version = use_hook(|| Rc::new(std::cell::Cell::new((0u64, sheet.clone()))));
+    let (mut count, last) = version.take();
+    if !Rc::ptr_eq(&last, &sheet) {
+        count += 1;
+    }
+    version.set((count, sheet.clone()));
 
     // Every rebuilt sheet after the first, once it is in the document.
     let theme_css = context.theme_css;
@@ -280,6 +287,7 @@ fn ThemeStyle() -> Element {
         style {
             dangerous_inner_html: "{css}"
         }
+        {platform::SheetWatch(count)}
     }
 }
 

@@ -5,7 +5,8 @@
 //! A theme switch rebuilds every such box, a hover change the ones under what
 //! gained or lost `:hover`, both before the restyle. Every other state change
 //! (focus, `:checked`, an attribute) is caught after it painted: shortly after
-//! each press or key, [`check`] rebuilds each box whose colour moved on.
+//! each press, key or render (see `redraw`), [`check`] rebuilds each box whose
+//! colour moved on.
 
 use std::{
     cell::{Cell, RefCell},
@@ -195,8 +196,11 @@ fn rebuild(doc: &mut BaseDocument, elements: impl IntoIterator<Item = NodeId>, a
         drop(svgs);
         check_soon();
     }
-    let mut mutator = doc.mutate();
-    for (id, attr) in attrs {
-        mutator.set_attribute(id, attr.name, &attr.value);
-    }
+    // Quiet: a box Blitz will not repaint must not re-arm its own check.
+    super::redraw::quiet(|| {
+        let mut mutator = doc.mutate();
+        for (id, attr) in attrs {
+            mutator.set_attribute(id, attr.name, &attr.value);
+        }
+    });
 }

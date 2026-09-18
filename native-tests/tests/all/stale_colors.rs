@@ -6,7 +6,7 @@
 //! One mount per test: a second mount on the same thread does not flip the
 //! root attribute on a toggle.
 
-use std::time::Duration;
+use std::{rc::Rc, time::Duration};
 
 use dioxus::prelude::*;
 use libero::{
@@ -424,6 +424,73 @@ fn an_attribute_change_repaints_a_flex_rows_text_and_icon() {
     assert_painted(&mut page, "#marked", RED);
     page.click("#toggle");
     assert_painted(&mut page, "#marked", BLACK);
+}
+
+/// Past the first paint on a loaded machine.
+const TIMER: Duration = Duration::from_millis(500);
+
+/// The flex row of [`state_app`], turned red by a timer: no press or key.
+fn timer_app() -> Element {
+    let mut on = use_signal(|| false);
+    use_hook(move || {
+        libero::platform::timer()
+            .map(|timer| Rc::new(timer.after(TIMER, Box::new(move || on.set(true)))))
+    });
+    rsx! {
+        style {
+            "#marked {{ display: flex; gap: 8px; color: rgb(0, 0, 0); }}
+            #marked[data-on=true] {{ color: rgb(200, 0, 0); }}"
+        }
+        div { id: "marked", "data-on": "{on}",
+            svg { width: "16", height: "16", view_box: "0 0 16 16",
+                path { d: "M2 8h12", fill: "none", stroke: "currentColor", stroke_width: "4" }
+            }
+            "Marked"
+        }
+    }
+}
+
+/// Todo 872: a render no input preceded repaints the row's text and icon.
+#[test]
+fn a_timers_colour_change_repaints_a_flex_rows_text_and_icon() {
+    let mut page = mount(timer_app);
+    assert_painted(&mut page, "#marked", BLACK);
+    page.wait(TIMER);
+    assert_painted(&mut page, "#marked", RED);
+}
+
+/// libero's hidden flush elements, which a flush replaces.
+fn flush_elements(page: &Page) -> Vec<String> {
+    let doc = page.doc.inner.borrow();
+    let divs = doc.query_selector_all("div").unwrap_or_default();
+    divs.into_iter()
+        .filter(|&id| {
+            let element = doc.get_node(id).and_then(|node| node.element_data());
+            element
+                .and_then(|element| element.attr(blitz_dom::local_name!("style")))
+                .is_some_and(|style| style.contains("none"))
+        })
+        .map(|id| format!("{id:?}"))
+        .collect()
+}
+
+/// Todo 872's loop guards: the redraw a flush or a baked-box rebuild asks for
+/// arms no flush of its own, so after a render the document comes to rest.
+#[test]
+fn the_document_comes_to_rest_after_a_timers_render() {
+    let mut page = mount(timer_app);
+    page.wait(TIMER + Duration::from_millis(100));
+    assert_painted(&mut page, "#marked", RED);
+    let before = flush_elements(&page);
+    assert!(!before.is_empty(), "no flush element in\n{}", page.tree());
+    for _ in 0..5 {
+        page.wait(Duration::from_millis(40));
+        assert_eq!(
+            flush_elements(&page),
+            before,
+            "libero kept flushing at rest"
+        );
+    }
 }
 
 #[test]

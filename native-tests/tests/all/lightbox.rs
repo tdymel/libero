@@ -1,5 +1,7 @@
 //! `Lightbox`: `z` zooms the picture, then the arrows and a pointer drag pan it.
 
+use std::time::Duration;
+
 use dioxus::prelude::*;
 use libero::{
     components::Button,
@@ -25,13 +27,23 @@ fn app() -> Element {
     }
 }
 
+/// A zoom lands after its measure, a timer on an OS thread: waited out before
+/// the clock jumps, and libero's frame heal after it (todo 870).
+fn settle(page: &mut Page) {
+    page.wait(Duration::from_millis(20));
+    page.advance(1.0);
+    page.wait(Duration::from_millis(40));
+}
+
 /// Opens the viewer and zooms its picture with `z`; returns the zoomed transform.
 fn zoomed(page: &mut Page) -> String {
     page.click("#open");
+    // After the dialog's own first focus, which a timer moves.
+    page.wait(Duration::from_millis(20));
     page.focus(PICTURE);
     assert_eq!(page.computed(PICTURE, "transform"), "none");
     page.press(Key::Character("z".into()));
-    page.advance(1.0);
+    settle(page);
     let zoomed = page.computed(PICTURE, "transform");
     // Stylo's computed value: the web's `getComputedStyle` would say `matrix(...)`.
     assert_eq!(
@@ -48,7 +60,7 @@ fn z_zooms_and_an_arrow_pans() {
     let mut page = mount(app);
     let zoomed = zoomed(&mut page);
     page.press(Key::ArrowLeft);
-    page.advance(1.0);
+    settle(&mut page);
     let panned = page.computed(PICTURE, "transform");
     assert_ne!(zoomed, panned, "ArrowLeft did not pan it");
 }
@@ -60,7 +72,7 @@ fn z_steps_to_max_zoom_then_fits() {
     zoomed(&mut page);
     for scale in ["scale(4)", "scale(8)", "none"] {
         page.press(Key::Character("z".into()));
-        page.advance(1.0);
+        settle(&mut page);
         let transform = page.computed(PICTURE, "transform");
         assert!(transform.starts_with(scale), "not {scale}: {transform}");
     }
@@ -74,18 +86,20 @@ fn the_zoom_buttons_step_and_disable_at_their_limits() {
     const ZOOM_OUT: &str = "button[aria-label=\"Zoom out\"]";
     let mut page = mount(app);
     page.click("#open");
-    page.advance(1.0);
+    settle(&mut page);
     assert_eq!(
         page.attr(ZOOM_OUT, "aria-disabled").as_deref(),
         Some("true")
     );
 
     page.click(ZOOM_IN);
-    page.advance(1.0);
-    // The zoom's own variable: after a pointer click Blitz's computed
-    // `transform` stays at the transition's start, `scale(1)`.
-    let style = page.attr(PICTURE, "style").unwrap_or_default();
-    assert!(style.contains("scale(1.25)"), "not zoomed in: {style}");
+    settle(&mut page);
+    // Todo 870: the transition used to stay at its start, `scale(1)`.
+    let transform = page.computed(PICTURE, "transform");
+    assert!(
+        transform.starts_with("scale(1.25)"),
+        "not zoomed in: {transform}"
+    );
     assert_eq!(
         page.attr(ZOOM_OUT, "aria-disabled").as_deref(),
         Some("false")
@@ -94,7 +108,7 @@ fn the_zoom_buttons_step_and_disable_at_their_limits() {
     page.focus(ZOOM_IN);
     for _ in 0..10 {
         page.press(Key::Enter);
-        page.advance(1.0);
+        settle(&mut page);
     }
     let transform = page.computed(PICTURE, "transform");
     assert!(transform.starts_with("scale(8)"), "not at 8x: {transform}");
@@ -108,7 +122,7 @@ fn the_zoom_buttons_step_and_disable_at_their_limits() {
     page.focus(ZOOM_OUT);
     for _ in 0..12 {
         page.press(Key::Enter);
-        page.advance(1.0);
+        settle(&mut page);
     }
     assert_eq!(page.computed(PICTURE, "transform"), "none");
     assert_eq!(
@@ -130,7 +144,7 @@ fn a_wheel_up_zooms_in() {
     page.click("#open");
     page.hover(PICTURE);
     page.wheel(PICTURE, -100.0);
-    page.advance(1.0);
+    settle(&mut page);
     let transform = page.computed(PICTURE, "transform");
     assert!(
         transform.starts_with("scale("),
@@ -181,12 +195,12 @@ fn assert_centred(page: &Page, index: usize) {
 fn every_picture_comes_to_rest_centred() {
     let mut page = mount(gallery_app);
     page.click("#open");
-    page.advance(1.0);
+    settle(&mut page);
     assert_centred(&page, 0);
     page.focus(PICTURE);
     for index in 1..3 {
         page.press(Key::ArrowRight);
-        page.advance(1.0);
+        settle(&mut page);
         assert_centred(&page, index);
     }
 }
@@ -196,7 +210,7 @@ fn a_drag_pans_a_zoomed_picture() {
     let mut page = mount(app);
     let zoomed = zoomed(&mut page);
     page.drag(PICTURE, 40.0, 0.0);
-    page.advance(1.0);
+    settle(&mut page);
     let panned = page.computed(PICTURE, "transform");
     assert_ne!(zoomed, panned, "the drag did not pan it");
 }

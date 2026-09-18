@@ -4435,6 +4435,7 @@ dependencies = [
  "blitz-dom",
  "blitz-traits",
  "chrono",
+ "cursor-icon",
  "dioxus",
  "dioxus-html",
  "dioxus-native-dom",

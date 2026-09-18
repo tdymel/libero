@@ -3,7 +3,10 @@
 use std::time::Duration;
 
 use dioxus::prelude::*;
-use libero::hooks::use_color_scheme;
+use libero::{
+    hooks::{use_color_scheme, use_theme_set},
+    theme::ThemeSet,
+};
 use native_tests::{ColorScheme, mount, mount_in};
 
 const SCHEME: &str = "#scheme";
@@ -91,4 +94,27 @@ fn a_live_theme_change_reaches_rust_without_input() {
     page.set_color_scheme(ColorScheme::Light);
     page.wait(TICK);
     assert_eq!(page.text(SCHEME), "light");
+}
+
+fn swap_app() -> Element {
+    let themes = use_theme_set();
+    rsx! {
+        button { id: "swap", onclick: move |_| themes.set(ThemeSet::DRACULA.clone()), "Swap" }
+    }
+}
+
+/// Todo 871: a set swap rebuilds the theme's own sheet in the frame a click
+/// focuses the button. Its `:root` rules invalidate stylo fully, so no
+/// snapshot's class is read (todo 837's panic); `SheetWatch` guards it anyway.
+#[test]
+fn a_theme_set_swap_in_a_focusing_click_restyles() {
+    let mut page = mount(swap_app);
+    let ink = page.computed("#swap", "--lsx-ink");
+    page.click("#swap");
+    assert!(
+        page.is_focused("#swap"),
+        "focus is on {}",
+        page.focus_owner()
+    );
+    assert_ne!(page.computed("#swap", "--lsx-ink"), ink);
 }

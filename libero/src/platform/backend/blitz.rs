@@ -14,6 +14,7 @@ use style::properties::PropertyId;
 mod activate;
 mod baked;
 mod focus;
+mod redraw;
 mod resize;
 mod wheel;
 
@@ -117,6 +118,9 @@ thread_local! {
     static FOLLOW: Cell<Option<Follow>> = const { Cell::new(None) };
 
     static NEXT_CALLBACK: Cell<u64> = const { Cell::new(0) };
+
+    /// A button is held: a drag's renders wait for its release. See [`redraw`].
+    static HELD: Cell<bool> = const { Cell::new(false) };
 }
 
 /// One document's backend state, shared by every `LiberoProvider` in it.
@@ -161,6 +165,10 @@ struct Doc {
     baked: baked::Watch,
     /// A `<style>` changed this poll. See [`SheetWatch`].
     sheets_changed: Cell<bool>,
+    /// The document's shell provider is wrapped. See [`redraw`].
+    redraws_watched: Cell<bool>,
+    /// See [`heal_while_animating`].
+    animation_ticks: RefCell<Option<Box<dyn TimerSubscription>>>,
 }
 
 /// A mounted [`Outlet`]: `flushes` is bumped to remount its flush element,
@@ -194,6 +202,8 @@ impl Doc {
             resize: resize::Watch::default(),
             baked: baked::Watch::default(),
             sheets_changed: Cell::new(false),
+            redraws_watched: Cell::new(false),
+            animation_ticks: RefCell::new(None),
         }
     }
 
@@ -314,6 +324,7 @@ pub(super) fn Listener(children: Element) -> Element {
             },
             // Bubble phase: this dioxus has no capture listeners.
             onpointerdown: move |event| {
+                HELD.set(true);
                 activate::pointer_down(&event);
                 pressed(&event);
             },
@@ -353,12 +364,17 @@ pub(super) fn Listener(children: Element) -> Element {
                 baked::check_soon();
             },
             onpointermove: move |event| {
+                // A release off the app is never seen here; the next move is.
+                if event.held_buttons().is_empty() {
+                    HELD.set(false);
+                }
                 // Before the hover restyle this move asked for: see `heal_dirty_bits`.
                 heal_now();
                 baked::on_hover_change();
                 followed(&event, false);
             },
             onpointerup: move |event| {
+                HELD.set(false);
                 followed(&event, true);
                 focus::released();
                 resize::pressed();
@@ -1226,17 +1242,21 @@ pub(super) fn Outlet() -> Element {
                             outlet.handle = handle;
                         }
                     }
-                    run_deferred(doc);
-                    focus::check(doc);
-                    resize::check(doc);
-                    if let Some(anchor) = doc.anchor() {
-                        activate::sync_marks(&mut anchor.doc_mut());
-                        heal_dirty_bits(&anchor.doc_mut());
-                        // Last: after every focus move this flush made.
-                        if doc.sheets_changed.take() {
-                            snapshot_attributes(&mut anchor.doc_mut());
+                    redraw::quiet(|| {
+                        run_deferred(doc);
+                        focus::check(doc);
+                        resize::check(doc);
+                        if let Some(anchor) = doc.anchor() {
+                            redraw::watch(doc, &mut anchor.doc_mut());
+                            activate::sync_marks(&mut anchor.doc_mut());
+                            heal_dirty_bits(&anchor.doc_mut());
+                            heal_while_animating(doc);
+                            // Last: after every focus move this flush made.
+                            if doc.sheets_changed.take() {
+                                snapshot_attributes(&mut anchor.doc_mut());
+                            }
                         }
-                    }
+                    });
                     // Once, at the provider's mount: see `BlitzColorScheme`. A
                     // first key then reaches the wrapper, as it does after a click.
                     if flush == 0 {
@@ -1361,21 +1381,70 @@ fn heal_now() {
 }
 
 /// crates.io Blitz leaves stale dirty bits under a clean ancestor, where a
-/// later change stops marking: its restyle is skipped (upstream #789).
-fn heal_dirty_bits(doc: &BaseDocument) {
+/// later change stops marking: its restyle is skipped (upstream #789). Whether
+/// any bit was stale.
+fn heal_dirty_bits(doc: &BaseDocument) -> bool {
     let mut dirty = Vec::new();
     doc.visit(|id, node| {
         if node.has_dirty_descendants() {
             dirty.push(id);
         }
     });
+    let mut healed = false;
     for id in dirty {
         for id in ancestors(doc, id).skip(1) {
-            if let Some(node) = doc.get_node(id) {
+            if let Some(node) = doc.get_node(id)
+                && !node.has_dirty_descendants()
+            {
+                healed = true;
                 node.set_dirty_descendants();
             }
         }
     }
+    healed
+}
+
+/// How often [`heal_while_animating`] heals.
+const FRAME: Duration = Duration::from_millis(16);
+
+/// Each restyle marks an animating node dirty, and a stale bit above it skips
+/// that restyle: a transition stopped at its start (todo 870). So from each
+/// flush on, until the document stops animating, the bits are healed a frame
+/// apart, and once more with a redraw at the end.
+fn heal_while_animating(state: &Rc<Doc>) {
+    let mut ticks = state.animation_ticks.borrow_mut();
+    if ticks.is_some() {
+        return;
+    }
+    let weak = Rc::downgrade(state);
+    *ticks = super::thread::timer().map(|timer| {
+        timer.every(
+            FRAME,
+            Box::new(move || {
+                let weak = weak.clone();
+                when_free(Box::new(move || {
+                    let Some(state) = weak.upgrade() else {
+                        return;
+                    };
+                    let Some(anchor) = state.anchor() else {
+                        drop(state.animation_ticks.take());
+                        return;
+                    };
+                    let Some(doc) = anchor.try_doc() else {
+                        return;
+                    };
+                    if heal_dirty_bits(&doc) {
+                        redraw::quiet(|| doc.shell_provider.request_redraw());
+                    }
+                    let animating = doc.is_animating();
+                    drop(doc);
+                    if !animating {
+                        drop(state.animation_ticks.take());
+                    }
+                }));
+            }),
+        )
+    });
 }
 
 /// `run`, to run in the scope it is deferred from.

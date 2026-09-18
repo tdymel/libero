@@ -62,6 +62,8 @@ dioxus-native-dom = { git = "https://github.com/DioxusLabs/dioxus", optional = t
 # re-export. Same crates.io version as dioxus-native's, so cargo keeps one copy.
 blitz-dom = { version = "0.3.0-beta.2", optional = true, default-features = false }
 blitz-traits = { version = "0.3.0-beta.2", optional = true }
+# Only to name `ShellProvider::set_cursor`'s argument; blitz-traits' own copy.
+cursor-icon = { version = "1.2", optional = true }
 # Stylo's computed values, for `ElementApi::computed_px`. The version blitz-dom uses.
 style = { package = "stylo", version = "0.20", optional = true }
 # Our own clipboard handle rather than the shell's: `blitz-shell` builds an
@@ -91,7 +93,7 @@ archunit = "0.0.1"
 # Reach elements through Blitz directly when running under `dioxus-native`.
 # Nothing forces it on: without it `platform::backend` falls back to dioxus's
 # portable mounted handle, which cannot query a subtree or report focus.
-native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:style", "dep:arboard", "dep:rfd", "dep:futures-core", "dep:futures-channel"]
+native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:cursor-icon", "dep:style", "dep:arboard", "dep:rfd", "dep:futures-core", "dep:futures-channel"]
 default = [
     "code-lang-rust",
     "code-lang-bash",
