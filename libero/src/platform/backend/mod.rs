@@ -126,6 +126,20 @@ pub(crate) fn Outlet() -> Element {
     return rsx! {};
 }
 
+/// Rendered next to the `<style>`s libero registers, `version` bumped with
+/// each change. Only Blitz needs to know (see `blitz::SheetWatch`).
+#[allow(non_snake_case)]
+pub(crate) fn SheetWatch(version: u64) -> Element {
+    use dioxus::prelude::*;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return rsx! { blitz::SheetWatch { version } };
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return {
+        let _ = version;
+        rsx! {}
+    };
+}
+
 /// Wraps the app on a renderer that has to watch input from above it; only
 /// Blitz does (see `blitz::Listener`). Everywhere else this is `children`.
 #[allow(non_snake_case)]

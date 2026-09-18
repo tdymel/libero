@@ -13,7 +13,7 @@ use blitz_dom::BaseDocument;
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
-use super::{BlitzElement, Callbacks, Doc, ancestors, anchor, defer, doc, flush_soon};
+use super::{BlitzElement, Callbacks, Doc, ancestors, anchor, baked, defer, doc, flush_soon};
 use crate::platform::{
     ElementApi, FocusMove, SilentFocusApi, SilentFocusSubscription, focus::OnMove,
 };
@@ -155,6 +155,7 @@ pub(super) fn check(doc: &Doc) {
     if now == before {
         return;
     }
+    baked::check_soon();
     let moved = Moved {
         before,
         now,

@@ -338,6 +338,94 @@ fn a_hover_repaints_a_flex_rows_text_and_icon() {
     assert_eq!(page.painted_stroke("#icon"), left);
 }
 
+/// Flex rows whose text and icon change colour with a state other than hover:
+/// focus, a sibling's `:checked`, an attribute a click sets on the row.
+fn state_app() -> Element {
+    let mut on = use_signal(|| false);
+    let icon = rsx! {
+        svg { width: "16", height: "16", view_box: "0 0 16 16",
+            path { d: "M2 8h12", fill: "none", stroke: "currentColor", stroke_width: "4" }
+        }
+    };
+    rsx! {
+        style {
+            "#focus, #checked, #marked {{ display: flex; gap: 8px; color: rgb(0, 0, 0); }}
+            #focus:focus, #box:checked + #checked, #marked[data-on=true] {{ color: rgb(200, 0, 0); }}"
+        }
+        button { id: "before", "Before" }
+        div { id: "focus", tabindex: "0", {icon.clone()} "Focus" }
+        button { id: "after", "After" }
+        input { id: "box", r#type: "checkbox" }
+        span { id: "checked", {icon.clone()} "Checked" }
+        button { id: "toggle", onclick: move |_| on.toggle(), "Toggle" }
+        div { id: "marked", "data-on": "{on}", {icon} "Marked" }
+    }
+}
+
+const RED: &str = "rgb(200, 0, 0)";
+const BLACK: &str = "rgb(0, 0, 0)";
+
+#[track_caller]
+fn assert_painted(page: &mut Page, row: &str, color: &str) {
+    // The rebuild follows the frame that painted the change.
+    page.wait(Duration::from_millis(20));
+    assert_eq!(page.computed(row, "color"), color, "{row} did not restyle");
+    assert_eq!(page.painted_text(row), color, "{row}'s text");
+    assert_eq!(
+        page.painted_stroke(&format!("{row} svg")),
+        color,
+        "{row}'s icon"
+    );
+}
+
+/// Todo 834: Tab onto and off a row with a `:focus` colour.
+#[test]
+fn a_focus_by_tab_repaints_a_flex_rows_text_and_icon() {
+    let mut page = mount(state_app);
+    page.focus("#before");
+    page.tab();
+    assert!(
+        page.is_focused("#focus"),
+        "Tab went to {}",
+        page.focus_owner()
+    );
+    assert_painted(&mut page, "#focus", RED);
+    page.tab();
+    assert_painted(&mut page, "#focus", BLACK);
+}
+
+#[test]
+fn a_focus_by_click_repaints_a_flex_rows_text_and_icon() {
+    let mut page = mount(state_app);
+    page.click("#focus");
+    assert!(
+        page.is_focused("#focus"),
+        "the click focused {}",
+        page.focus_owner()
+    );
+    assert_painted(&mut page, "#focus", RED);
+    page.click("#after");
+    assert_painted(&mut page, "#focus", BLACK);
+}
+
+#[test]
+fn a_checked_sibling_repaints_a_flex_rows_text_and_icon() {
+    let mut page = mount(state_app);
+    page.click("#box");
+    assert_painted(&mut page, "#checked", RED);
+    page.click("#box");
+    assert_painted(&mut page, "#checked", BLACK);
+}
+
+#[test]
+fn an_attribute_change_repaints_a_flex_rows_text_and_icon() {
+    let mut page = mount(state_app);
+    page.click("#toggle");
+    assert_painted(&mut page, "#marked", RED);
+    page.click("#toggle");
+    assert_painted(&mut page, "#marked", BLACK);
+}
+
 #[test]
 fn field_trailing_icons_read_after_a_live_switch_to_dark() {
     let mut page = mount(fields_app);

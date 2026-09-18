@@ -271,7 +271,7 @@ fn ThemeStyle() -> Element {
 #[component]
 fn StyleOutlet() -> Element {
     let context = use_context::<LiberoContext>();
-    let _registry_version = context.stylesheet_registry_version.read();
+    let registry_version = *context.stylesheet_registry_version.read();
 
     rsx! {
         for (node_key, stylesheet) in context.stylesheet_registry.stylesheets() {
@@ -280,6 +280,7 @@ fn StyleOutlet() -> Element {
                 dangerous_inner_html: "{focus_selectors(&stylesheet)}"
             }
         }
+        {platform::SheetWatch(registry_version)}
     }
 }
 

@@ -12,6 +12,7 @@ use dioxus_native_dom::{NodeHandle, NodeId};
 use style::properties::PropertyId;
 
 mod activate;
+mod baked;
 mod focus;
 mod resize;
 mod wheel;
@@ -76,6 +77,20 @@ pub(super) fn node_is_rtl(doc: &BaseDocument, node_id: NodeId) -> bool {
     doc.get_node(node_id)
         .and_then(|node| node.primary_styles())
         .is_some_and(|styles| format!("{:?}", styles.clone_direction()) == "Rtl")
+}
+
+/// `false` under a `display: none`, or for a `visibility: hidden` node: the
+/// web's `focus()` ignores both. A node not styled yet counts as rendered.
+fn is_rendered(doc: &BaseDocument, node_id: NodeId) -> bool {
+    let styles = |id| doc.get_node(id).and_then(|node| node.primary_styles());
+    let visible = styles(node_id).is_none_or(|styles| {
+        styles.clone_visibility() == style::computed_values::visibility::T::Visible
+    });
+    visible
+        && doc
+            .node_chain(node_id)
+            .into_iter()
+            .all(|id| styles(id).is_none_or(|styles| !styles.clone_display().is_none()))
 }
 
 thread_local! {
@@ -143,8 +158,9 @@ struct Doc {
     key_callbacks: RefCell<Vec<KeyCallback>>,
     focus: focus::Watch,
     resize: resize::Watch,
-    /// Where hover was at the last `pointermove`. See [`rebuild_on_hover_change`].
-    hovered: Cell<Option<NodeId>>,
+    baked: baked::Watch,
+    /// A `<style>` changed this poll. See [`SheetWatch`].
+    sheets_changed: Cell<bool>,
 }
 
 /// A mounted [`Outlet`]: `flushes` is bumped to remount its flush element,
@@ -176,7 +192,8 @@ impl Doc {
             key_callbacks: RefCell::new(Vec::new()),
             focus: focus::Watch::default(),
             resize: resize::Watch::default(),
-            hovered: Cell::new(None),
+            baked: baked::Watch::default(),
+            sheets_changed: Cell::new(false),
         }
     }
 
@@ -318,6 +335,7 @@ pub(super) fn Listener(children: Element) -> Element {
                     refocus_wrapper();
                 }
                 resize::pressed();
+                baked::check_soon();
             },
             onkeydown: |event| {
                 forget_press();
@@ -327,21 +345,24 @@ pub(super) fn Listener(children: Element) -> Element {
                 keyed(&event);
                 tab_from_start(&event);
                 activate::key_down(&event);
+                baked::check_soon();
             },
             onkeyup: |event| {
                 activate::key_up(&event);
                 resize::pressed();
+                baked::check_soon();
             },
             onpointermove: move |event| {
                 // Before the hover restyle this move asked for: see `heal_dirty_bits`.
                 heal_now();
-                rebuild_on_hover_change();
+                baked::on_hover_change();
                 followed(&event, false);
             },
             onpointerup: move |event| {
                 followed(&event, true);
                 focus::released();
                 resize::pressed();
+                baked::check_soon();
             },
             // A wheel bubbles where its scroll does not: see `BlitzScroll`.
             onwheel: |event| {
@@ -1211,6 +1232,10 @@ pub(super) fn Outlet() -> Element {
                     if let Some(anchor) = doc.anchor() {
                         activate::sync_marks(&mut anchor.doc_mut());
                         heal_dirty_bits(&anchor.doc_mut());
+                        // Last: after every focus move this flush made.
+                        if doc.sheets_changed.take() {
+                            snapshot_attributes(&mut anchor.doc_mut());
+                        }
                     }
                     // Once, at the provider's mount: see `BlitzColorScheme`. A
                     // first key then reaches the wrapper, as it does after a click.
@@ -1221,6 +1246,55 @@ pub(super) fn Outlet() -> Element {
                 }},
             }
         }
+    }
+}
+
+/// A stylesheet change in a frame that also changed an element's state panics
+/// in stylo: its sheet invalidation reads the class off the state-only snapshot
+/// (`ServoElementSnapshot::get_attr` unwraps `attrs`, todo 837). So at this
+/// poll's end, keyed on the change like [`Outlet`]'s flush, every snapshot
+/// takes the attributes too; again at a flush after it.
+#[component]
+pub(super) fn SheetWatch(version: u64) -> Element {
+    // (key, mounted key, version seen): one remount per poll, see `later`.
+    let state = use_hook(|| Rc::new(Cell::new((0u64, None::<u64>, version))));
+    let (mut key, mounted, seen) = state.get();
+    if version != seen && mounted == Some(key) {
+        key += 1;
+    }
+    state.set((key, mounted, version));
+    rsx! {
+        for key in [key] {
+            div {
+                key: "{key}",
+                display: "none",
+                onmounted: {
+                    let state = state.clone();
+                    move |event: MountedEvent| {
+                    let (_, _, seen) = state.get();
+                    state.set((key, Some(key), seen));
+                    let Some(handle) = event.data().downcast::<NodeHandle>().cloned() else {
+                        return;
+                    };
+                    if let Some(doc) = doc() {
+                        doc.sheets_changed.set(true);
+                    }
+                    run_or_defer(&handle, snapshot_attributes);
+                }},
+            }
+        }
+    }
+}
+
+fn snapshot_attributes(doc: &mut BaseDocument) {
+    let mut snapshotted = Vec::new();
+    doc.visit(|id, node| {
+        if node.has_snapshot() {
+            snapshotted.push(id);
+        }
+    });
+    for id in snapshotted {
+        doc.snapshot_node(id);
     }
 }
 
@@ -1560,14 +1634,14 @@ impl DocumentApi for BlitzDocument {
                 None => mutator.clear_attribute(root, name),
             }
             drop(mutator);
-            rebuild_baked_boxes(doc);
+            baked::rebuild_all(doc);
         });
         true
     }
 
     fn colors_changed(&self) {
         if let Some(anchor) = anchor() {
-            run_or_defer(&anchor, rebuild_baked_boxes);
+            run_or_defer(&anchor, baked::rebuild_all);
         }
     }
 }
@@ -1578,86 +1652,6 @@ fn run_or_defer(anchor: &NodeHandle, run: impl FnOnce(&mut BaseDocument) + 'stat
         run(&mut anchor.doc_mut());
     } else {
         defer(anchor, run);
-    }
-}
-
-/// Blitz bakes colours into boxes it builds and keeps them: an inline `<svg>`'s
-/// `currentColor` (todo 478), and the style of an anonymous block, the text of
-/// a flex or grid container (todo 621). Rewriting an attribute rebuilds them.
-fn rebuild_baked_boxes(doc: &mut BaseDocument) {
-    let Ok(elements) = doc.query_selector_all("*") else {
-        return;
-    };
-    rebuild_baked(doc, elements);
-}
-
-/// What gains or loses `:hover` rebuilds its baked boxes, before the restyle
-/// this move asked for (todo 634). Blitz has moved hover by the time a
-/// `pointermove` handler runs.
-fn rebuild_on_hover_change() {
-    let (Some(anchor), Some(state)) = (anchor(), doc()) else {
-        return;
-    };
-    let Some(doc) = anchor.try_doc() else {
-        return;
-    };
-    let now = doc.get_hover_node_id();
-    let before = state.hovered.replace(now);
-    if before == now {
-        return;
-    }
-    let chain = |id: Option<NodeId>| {
-        let mut chain = id.map(|id| doc.node_chain(id)).unwrap_or_default();
-        chain.reverse();
-        chain
-    };
-    let (old, new) = (chain(before), chain(now));
-    let shared = old.iter().zip(&new).take_while(|(a, b)| a == b).count();
-    let roots: Vec<NodeId> = old
-        .get(shared)
-        .into_iter()
-        .chain(new.get(shared))
-        .copied()
-        .collect();
-    drop(doc);
-    if roots.is_empty() {
-        return;
-    }
-    let rebuild = move |doc: &mut BaseDocument| {
-        let mut subtree = Vec::new();
-        let mut stack = roots;
-        while let Some(id) = stack.pop() {
-            if let Some(node) = doc.get_node(id) {
-                subtree.push(id);
-                stack.extend(node.children.iter().copied());
-            }
-        }
-        rebuild_baked(doc, subtree);
-    };
-    run_or_defer(&anchor, rebuild);
-}
-
-/// Re-sets an attribute on each of `elements` that bakes a colour.
-fn rebuild_baked(doc: &mut BaseDocument, elements: impl IntoIterator<Item = NodeId>) {
-    let attrs: Vec<_> = elements
-        .into_iter()
-        .filter_map(|id| {
-            let node = doc.get_node(id)?;
-            let element = node.element_data()?;
-            let anonymous = node
-                .layout_children
-                .borrow()
-                .as_ref()
-                .is_some_and(|boxes| boxes.iter().any(|id| !node.children.contains(id)));
-            if !anonymous && &*element.name.local != "svg" {
-                return None;
-            }
-            Some((id, element.attrs().first()?.clone()))
-        })
-        .collect();
-    let mut mutator = doc.mutate();
-    for (id, attr) in attrs {
-        mutator.set_attribute(id, attr.name, &attr.value);
     }
 }
 
@@ -1718,6 +1712,10 @@ impl ElementApi for BlitzElement {
     fn focus(&self) -> Result<(), PlatformError> {
         let node_id = self.node_id;
         self.command(move |doc| {
+            // Blitz focuses what isn't rendered too (todo 862).
+            if !is_rendered(doc, node_id) {
+                return;
+            }
             focus::watch(doc);
             focus::requested(node_id);
             doc.set_focus_to(node_id);

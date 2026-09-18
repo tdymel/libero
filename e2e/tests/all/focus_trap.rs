@@ -50,11 +50,10 @@ async fn tab_passes_over_hidden_stops<D: Driver>(d: &mut D, _route: &str) -> Res
 e2e::scenario!(
     tab_passes_over_a_stop_that_is_not_rendered,
     "/focus-trap",
-    tab_passes_over_hidden_stops,
-    native: skip("Blitz: Tab in a FocusTrap stops on a display: none button")
+    tab_passes_over_hidden_stops
 );
 
-/// The radio groups alone, in a trap a click opens, for the backend skipped above.
+/// The radio groups alone, in a trap a click opens.
 async fn a_radio_group_is_one_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#open").await?;
     eventually_focused(d, "#first", "opening the trap").await?;

@@ -29,11 +29,12 @@ fn typing(page: &mut Page, text: &str) {
 }
 
 /// Arrow Down enters the picker on the typed day, not on the grid cell the
-/// month shown before held.
+/// month shown before held. A click, not `page.focus`: its focus change and
+/// the stylesheet it adds panicked stylo in one frame (todo 837).
 #[test]
 fn arrow_down_after_typing_enters_on_the_typed_day() {
     let mut page = mount(app);
-    page.focus(DAY);
+    page.click(DAY);
     typing(&mut page, "October 3, 2026");
     page.press(Key::ArrowDown);
     assert!(
@@ -50,7 +51,7 @@ fn on_a_scrolled_page_a_click_beside_the_open_picker_reaches_book() {
     let mut page = mount(app);
     page.wheel_at(100.0, 100.0, 400.0);
     assert_eq!(page.viewport_scroll(), (0.0, 400.0));
-    page.focus(DAY);
+    page.click(DAY);
     typing(&mut page, "October 3, 2026");
     page.press(Key::ArrowDown);
     assert!(page.exists(DIALOG), "{}", page.tree());
