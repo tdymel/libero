@@ -5,28 +5,35 @@
 //! [`Outlet`]: super::Outlet
 
 use std::{
-    cell::{Cell, RefCell},
+    cell::Cell,
     rc::{Rc, Weak},
 };
 
 use blitz_dom::BaseDocument;
-use dioxus::core::Runtime;
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
-use super::{Doc, NEXT_CALLBACK, ancestors, anchor, defer, doc, flush_soon};
-use crate::platform::{FocusMove, SilentFocusApi, SilentFocusSubscription, focus::OnMove};
+use super::{BlitzElement, Callbacks, Doc, ancestors, anchor, defer, doc, flush_soon};
+use crate::platform::{
+    ElementApi, FocusMove, SilentFocusApi, SilentFocusSubscription, focus::OnMove,
+};
 
-/// Id, the subscriber's scope, callback. Every subscription sits in a hook, so
-/// the scope outlives it.
-type Callback = (u64, Option<ScopeId>, Rc<dyn Fn(&dyn FocusMove)>);
+type OnMoves = Callbacks<dyn Fn(&dyn FocusMove)>;
 
 /// One document's silent-move watch.
-#[derive(Default)]
 pub(super) struct Watch {
     /// The focus owner when a silent move may have begun, while a check is armed.
     before: Cell<Option<Option<NodeId>>>,
-    callbacks: RefCell<Vec<Callback>>,
+    callbacks: OnMoves,
+}
+
+impl Default for Watch {
+    fn default() -> Self {
+        Self {
+            before: Cell::new(None),
+            callbacks: Callbacks::new(),
+        }
+    }
 }
 
 thread_local! {
@@ -139,37 +146,29 @@ pub(super) fn check(doc: &Doc) {
     let Some(before) = doc.focus.before.take() else {
         return;
     };
-    let Some(now) = doc
-        .anchor()
-        .as_ref()
-        .and_then(|anchor| Some(anchor.try_doc()?.get_focussed_node_id()))
-    else {
+    let Some(anchor) = doc.anchor() else {
+        return;
+    };
+    let Some(now) = anchor.try_doc().map(|doc| doc.get_focussed_node_id()) else {
         return;
     };
     if now == before {
         return;
     }
-    let callbacks: Vec<_> = doc
-        .focus
-        .callbacks
-        .borrow()
-        .iter()
-        .map(|(_, scope, callback)| (*scope, callback.clone()))
-        .collect();
-    let moved = Moved { before, now };
-    let runtime = Runtime::try_current();
-    // In the subscriber's scope, not `Outlet`'s: what it reads is owned there.
-    for (scope, callback) in callbacks {
-        match (&runtime, scope) {
-            (Some(runtime), Some(scope)) => runtime.in_scope(scope, || callback(&moved)),
-            _ => callback(&moved),
-        }
-    }
+    let moved = Moved {
+        before,
+        now,
+        wrapper: doc.wrapper_id(),
+        anchor,
+    };
+    doc.focus.callbacks.each(|callback| callback(&moved));
 }
 
 struct Moved {
     before: Option<NodeId>,
     now: Option<NodeId>,
+    wrapper: Option<NodeId>,
+    anchor: NodeHandle,
 }
 
 /// A removed node has left the slab, so focus on it reads as outside.
@@ -191,6 +190,31 @@ impl FocusMove for Moved {
     fn is_in(&self, element: &Rc<MountedData>) -> bool {
         holds(element, self.now)
     }
+
+    /// As the web's `relatedTarget`: `<html>`, the wrapper or a removed node
+    /// read as `<body>`.
+    fn entered_from(&self, boundary: &str) -> Option<Option<Box<dyn ElementApi>>> {
+        let doc = self.anchor.try_doc()?;
+        let from = self.before.filter(|&id| {
+            id != doc.root_element().id
+                && Some(id) != self.wrapper
+                && doc
+                    .get_node(id)
+                    .is_some_and(|node| node.flags.is_in_document())
+        });
+        let Some(from) = from else {
+            return Some(None);
+        };
+        let hosts = doc.query_selector_all(boundary).ok()?;
+        if ancestors(&doc, from).any(|id| hosts.contains(&id)) {
+            return None;
+        }
+        drop(doc);
+        Some(Some(Box::new(BlitzElement {
+            anchor: self.anchor.clone(),
+            node_id: from,
+        })))
+    }
 }
 
 pub(in crate::platform::backend) fn silent_focus() -> Option<&'static dyn SilentFocusApi> {
@@ -203,30 +227,22 @@ static SILENT_FOCUS: BlitzSilentFocus = BlitzSilentFocus;
 
 impl SilentFocusApi for BlitzSilentFocus {
     fn on_move(&self, callback: OnMove) -> Box<dyn SilentFocusSubscription> {
-        let id = NEXT_CALLBACK.replace(NEXT_CALLBACK.get() + 1);
         let doc = doc();
-        if let Some(doc) = &doc {
-            let scope = Runtime::try_current().and_then(|runtime| runtime.try_current_scope_id());
-            doc.focus
-                .callbacks
-                .borrow_mut()
-                .push((id, scope, Rc::from(callback)));
-        }
+        let id = doc
+            .as_ref()
+            .map(|doc| doc.focus.callbacks.add(Rc::from(callback)));
         Box::new(Subscription(id, doc.as_ref().map(Rc::downgrade)))
     }
 }
 
-struct Subscription(u64, Option<Weak<Doc>>);
+struct Subscription(Option<u64>, Option<Weak<Doc>>);
 
 impl SilentFocusSubscription for Subscription {}
 
 impl Drop for Subscription {
     fn drop(&mut self) {
-        if let Some(doc) = self.1.as_ref().and_then(Weak::upgrade) {
-            doc.focus
-                .callbacks
-                .borrow_mut()
-                .retain(|(id, ..)| *id != self.0);
+        if let (Some(id), Some(doc)) = (self.0, self.1.as_ref().and_then(Weak::upgrade)) {
+            doc.focus.callbacks.remove(id);
         }
     }
 }

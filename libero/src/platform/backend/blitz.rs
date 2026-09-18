@@ -918,7 +918,8 @@ fn realign_portals() {
 }
 
 fn pressed(event: &Event<PointerData>) {
-    let point = event.client_coordinates();
+    // Blitz hit-tests page points: a client point misses once the root scrolls.
+    let point = event.page_coordinates();
     let wrapper = self::doc().and_then(|doc| doc.wrapper_id());
     HIT.set(None);
     let press = anchor().and_then(|anchor| {
@@ -1058,7 +1059,7 @@ fn followed(event: &Event<PointerData>, up: bool) {
         FOLLOW.set(None);
         catch_pointer(None);
     }
-    let point = event.client_coordinates();
+    let point = event.page_coordinates();
     let outside = anchor().and_then(|anchor| {
         let doc = anchor.try_doc()?;
         // Gone with its element, and so are the handlers.
@@ -1101,7 +1102,7 @@ pub(super) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>
     let Some(handle) = within.downcast::<NodeHandle>() else {
         return;
     };
-    let point = event.client_coordinates();
+    let point = event.page_coordinates();
     let Some(doc) = handle.try_doc() else {
         return;
     };

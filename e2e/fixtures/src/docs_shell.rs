@@ -1,7 +1,10 @@
 //! The docs shell's star pill and heading focus, from the docs' own files.
 
 use dioxus::prelude::*;
-use libero::{components::Button, hooks::use_element};
+use libero::{
+    components::{Button, ScrollArea, use_scroll_area},
+    hooks::use_element,
+};
 
 #[path = "../../../docs/src/github_stars.rs"]
 mod github_stars;
@@ -13,6 +16,7 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/docs-shell/stars", || rsx! { StarsPage {} }),
     ("/docs-shell/heading", || rsx! { HeadingPage {} }),
+    ("/docs-shell/scroll", || rsx! { ScrollPage {} }),
 ];
 
 /// The link mounts on a press, so a test can mock `fetch` before it asks.
@@ -43,6 +47,23 @@ fn HeadingPage() -> Element {
         div { onmounted: content.mount(),
             main {
                 h1 { tabindex: "-1", "Page {page}" }
+            }
+        }
+    }
+}
+
+/// Only the reset: the web's heading focus alone would scroll it back up.
+#[component]
+fn ScrollPage() -> Element {
+    let mut page = use_signal(|| "A");
+    let area = use_scroll_area();
+    heading_focus::use_scroll_reset(page(), area);
+    rsx! {
+        Button { id: "to-b", onclick: move |_| page.set("B"), "Page B" }
+        div { height: "200px",
+            ScrollArea { id: "page-area", handle: area, "aria-label": "Page",
+                h1 { "Page {page}" }
+                div { height: "2000px" }
             }
         }
     }

@@ -27,6 +27,8 @@ pub(crate) trait FocusMove {
     fn was_in(&self, element: &Rc<MountedData>) -> bool;
     /// Whether it is now.
     fn is_in(&self, element: &Rc<MountedData>) -> bool;
+    /// [`focus_entered_from`], for the element focus moved into.
+    fn entered_from(&self, boundary: &str) -> Option<Option<Box<dyn ElementApi>>>;
 }
 
 /// Dropping it stops the callbacks.
@@ -64,6 +66,7 @@ pub(crate) fn focus_visible(event: &Event<FocusData>) -> Option<bool> {
 ///
 /// `None` when it moved within `boundary`, or where this build cannot tell:
 /// **only the wasm32 arm answers** (`FocusData` carries no `relatedTarget`).
+/// Blitz answers for its silent moves, through [`FocusMove::entered_from`].
 pub(crate) fn focus_entered_from(
     event: &Event<FocusData>,
     boundary: &str,

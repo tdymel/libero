@@ -7,7 +7,8 @@ use libero::{
     LiberoProvider,
     components::{
         ActionIcon, Anchor, Box, Burger, Button, ColorSchemeButton, Container, Flex, Header, Image,
-        Kbd, Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_spotlight,
+        Kbd, Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_scroll_area,
+        use_spotlight,
     },
     hooks::use_element,
     localization::Formats,
@@ -404,6 +405,8 @@ fn AppShell() -> Element {
         })),
         ..Default::default()
     });
+    let area = use_scroll_area();
+    heading_focus::use_scroll_reset(use_route::<Route>(), area);
     heading_focus::use_heading_focus(use_route::<Route>(), content);
 
     rsx! {
@@ -605,6 +608,7 @@ fn AppShell() -> Element {
                 sx: sx().height(format!("calc(100vh - {})", HEADER_HEIGHT_VAR.value())),
                 DocsNav { open, burger, drawer: home }
                 ScrollArea {
+                    handle: area,
                     sx: sx()
                         .flex("1")
                         .min_height("0")

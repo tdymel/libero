@@ -120,10 +120,9 @@ fn a_click_on_its_close_button_closes_it() {
 
 /// The store learns focus is inside from `focusin`, which Tab does not fire
 /// on Blitz; the silent-focus check reports it (N6). A harness `focus` is
-/// heard by neither, so the test tabs in. Handing on works; the way back out
-/// needs where focus came from, which a silent move does not carry (todo 734).
+/// heard by neither, so the test tabs in, past the other triggers: the way back
+/// out is the last of them, where focus came from.
 #[test]
-#[ignore = "silent focus moves carry no entered_from, so the trigger is not remembered"]
 fn closing_a_focused_one_hands_focus_on_and_back_out() {
     let mut page = mount(app);
     page.focus(TRIGGER);
@@ -160,8 +159,24 @@ fn closing_a_focused_one_hands_focus_on_and_back_out() {
     page.press(Key::Enter);
     finish(&mut page);
     assert!(!page.exists(ITEM), "{}", page.tree());
+    assert!(page.is_focused(SLOW), "focus is on {}", page.focus_owner());
+}
+
+/// A silent move answers where focus came from (todo 787): Shift+Tab wraps in
+/// from the first control, which is not the one before the stack.
+#[test]
+fn closing_the_last_one_hands_focus_back_to_where_it_came_from() {
+    let mut page = mount(app);
+    page.click(TRIGGER);
+    finish(&mut page);
+    page.focus(ELSEWHERE);
+    page.shift_tab();
+    assert!(page.is_focused(CLOSE), "focus is on {}", page.focus_owner());
+    page.press(Key::Enter);
+    finish(&mut page);
+    assert!(!page.exists(ITEM), "{}", page.tree());
     assert!(
-        page.is_focused(TRIGGER),
+        page.is_focused(ELSEWHERE),
         "focus is on {}",
         page.focus_owner()
     );

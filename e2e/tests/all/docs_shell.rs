@@ -160,3 +160,38 @@ fn a_navigation_focuses_the_new_heading_but_a_load_does_not() {
         fixture.close().await.unwrap();
     });
 }
+
+/// The largest `scrollTop` in the fixture's area: whichever box scrolls.
+const AREA_SCROLL: &str = "Math.max(...[document.querySelector('#page-area'), \
+    ...document.querySelectorAll('#page-area *')].map((e) => e.scrollTop))";
+
+#[test]
+fn a_navigation_starts_the_new_page_at_the_top() {
+    block_on(async {
+        let fixture = Fixture::open("/docs-shell/scroll", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#to-b").await.unwrap();
+        page.evaluate(
+            "document.querySelectorAll('#page-area, #page-area *').forEach((e) => e.scrollTop = 600)",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(page, &format!("{AREA_SCROLL} >= 600"), "the area to scroll")
+            .await
+            .unwrap();
+        page.evaluate("document.querySelector('#to-b').click()")
+            .await
+            .unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelector('#page-area h1').textContent === 'Page B' && {AREA_SCROLL} === 0"),
+            "the new page at the top",
+        )
+        .await
+        .unwrap();
+        fixture.console.assert_clean("the scroll fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

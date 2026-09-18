@@ -342,7 +342,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
             }
         }
     };
-    let (commit_on_blur, mut commit_on_enter) = (commit.clone(), commit);
+    let (commit_on_blur, mut commit_on_enter) = (commit.clone(), commit.clone());
+    let mut commit_on_enter_picker = commit;
 
     // Unaccepted text outranks the caller's status: the field cannot hold what
     // it shows.
@@ -495,6 +496,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
             // APG: Alt+ArrowDown enters like ArrowDown; Ctrl/Meta is the caret's.
             Key::ArrowDown if navigation_chord(&event) != Some(NavigationChord::Browser) => {
                 event.prevent_default();
+                // The picker then enters on the typed day, not the one it showed.
+                commit_on_enter_picker();
                 opened.set(true);
                 entering.set(true);
             }

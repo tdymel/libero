@@ -23,19 +23,30 @@ pub(crate) struct FocusChange<'a> {
     /// Whether focus is in any element of the group now. `None` where focus
     /// has not landed yet: a `focusout`.
     pub(crate) in_group: Option<bool>,
-    event: Option<&'a Event<FocusData>>,
+    source: Source<'a>,
+}
+
+/// What reported a [`FocusChange`].
+enum Source<'a> {
+    Event(&'a Event<FocusData>),
+    Move(&'a dyn FocusMove),
 }
 
 impl FocusChange<'_> {
-    /// [`focus_visible`] of the `focusin`; `None` without an event.
+    /// [`focus_visible`] of the `focusin`; `None` for a silent move.
     pub(crate) fn focus_visible(&self) -> Option<bool> {
-        self.event.and_then(focus_visible)
+        match self.source {
+            Source::Event(event) => focus_visible(event),
+            Source::Move(_) => None,
+        }
     }
 
-    /// [`focus_entered_from`] of the `focusin`; `None` without an event.
+    /// [`focus_entered_from`] of the `focusin`, or of the silent move.
     pub(crate) fn entered_from(&self, boundary: &str) -> Option<Option<Box<dyn ElementApi>>> {
-        self.event
-            .and_then(|event| focus_entered_from(event, boundary))
+        match self.source {
+            Source::Event(event) => focus_entered_from(event, boundary),
+            Source::Move(moved) => moved.entered_from(boundary),
+        }
     }
 }
 
@@ -55,7 +66,7 @@ impl FocusWithin {
                 element,
                 within: true,
                 in_group: Some(true),
-                event: Some(&event),
+                source: Source::Event(&event),
             });
         }
     }
@@ -69,7 +80,7 @@ impl FocusWithin {
                 element,
                 within: false,
                 in_group: None,
-                event: Some(&event),
+                source: Source::Event(&event),
             });
         }
     }
@@ -137,7 +148,7 @@ fn report(current: CopyValue<Rc<Current>>, moved: &dyn FocusMove) {
             element,
             within,
             in_group,
-            event: None,
+            source: Source::Move(moved),
         });
     }
 }
