@@ -543,3 +543,67 @@ pub fn search_matching_nothing(route: &str, trigger: &str) {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 842: a pick writes the selection before `onchange`. A controlled
+/// caller that refuses it keeps the old row, in the form value and in
+/// `aria-selected`; one it takes moves both.
+#[test]
+fn a_refused_pick_keeps_the_old_selection() {
+    const ROUTE: &str = "/select/refused";
+    const FORM_VALUE: &str = "document.querySelector('input[name=fruit]').value";
+    const SELECTED: &str = "[...document.querySelectorAll('[role=option][aria-selected=true]')].map((o) => o.textContent.trim()).join(',')";
+    block_on(async {
+        let fixture = Fixture::open(ROUTE, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let read =
+            async |js: &str| -> String { page.evaluate(js).await.unwrap().into_value().unwrap() };
+        let pick = async |label: &str| {
+            pointer::click(page, TRIGGER).await.unwrap();
+            wait::for_visible(page, "[role=option]").await.unwrap();
+            page.evaluate(format!(
+                "[...document.querySelectorAll('[role=option]')].find((o) => o.textContent.trim() === {label:?}).setAttribute('data-e2e', 'pick')"
+            ))
+            .await
+            .unwrap();
+            pointer::click(page, "[data-e2e=pick]").await.unwrap();
+            wait::for_hidden(page, LISTBOX).await.unwrap();
+            // Longer than any follow-up pass: a late reset would land by now.
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        };
+        let reopened_selection = async || {
+            pointer::click(page, TRIGGER).await.unwrap();
+            wait::for_visible(page, "[role=option]").await.unwrap();
+            let selected = read(SELECTED).await;
+            keyboard::press(page, keyboard::ESCAPE).await.unwrap();
+            wait::for_hidden(page, LISTBOX).await.unwrap();
+            selected
+        };
+
+        let banana = read(FORM_VALUE).await;
+        assert!(!banana.is_empty(), "the hidden input carries Banana");
+
+        pick("Cherry").await;
+        assert_eq!(
+            read(FORM_VALUE).await,
+            banana,
+            "a refused pick posts the old value"
+        );
+        assert_eq!(
+            reopened_selection().await,
+            "Banana",
+            "a refused pick keeps aria-selected on the old row"
+        );
+
+        pick("Apple").await;
+        let apple = read(FORM_VALUE).await;
+        assert_ne!(apple, banana, "a taken pick posts the new value");
+        assert_eq!(
+            reopened_selection().await,
+            "Apple",
+            "a taken pick moves aria-selected"
+        );
+
+        fixture.console.assert_clean(ROUTE).unwrap();
+        fixture.close().await.unwrap();
+    });
+}

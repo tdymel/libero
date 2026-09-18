@@ -2,12 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, OptionSource, Options, States,
         common::{
-            Orientation, field_props, has_shortcut_modifier, names_itself, neighbour,
-            use_name_warning,
+            HtmlTag, Input, OptionSource, Options, Orientation, States, has_shortcut_modifier,
+            names_itself, neighbour, use_name_warning,
         },
-        form::{Radio, use_bound, use_field},
+        form::{Radio, field_props, use_bound, use_field},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
@@ -58,11 +57,11 @@ field_props! {
         /// binds it to the surrounding `Form`'s value when it has no
         /// `onchange`.
         #[props(default, into)]
-        name: crate::components::FieldName<Option<T>>,
+        name: crate::components::form::FieldName<Option<T>>,
         /// Rules over the selection, shown once the group loses focus or its
         /// form is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<Option<T>>,
+        validate: crate::components::form::Validators<Option<T>>,
         /// The options to show. Defaults to every `Options::options()` - which
         /// `String` and any other runtime type leave empty, so those pass them
         /// here.

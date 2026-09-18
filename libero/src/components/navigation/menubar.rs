@@ -7,8 +7,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States,
-        common::{base_props, disabled_look_sx, has_shortcut_modifier, inset_focus_ring_sx},
+        common::{
+            HtmlTag, Input, States, base_props, disabled_look_sx, has_shortcut_modifier,
+            inset_focus_ring_sx,
+        },
         layout::use_box,
     },
     hooks::{

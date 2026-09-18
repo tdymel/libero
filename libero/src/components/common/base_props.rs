@@ -66,11 +66,11 @@ macro_rules! base_props {
             #[props(extends = GlobalAttributes $($extra_extends)*)]
             attributes: Vec<Attribute>,
             #[props(default, into)]
-            class: Input<crate::components::ClassList>,
+            class: Input<crate::components::common::ClassList>,
             #[props(default, into)]
             sx: Input<crate::sx::Sx>,
             #[props(default, into)]
-            states: Input<crate::components::States>,
+            states: Input<crate::components::common::States>,
         }
     };
 

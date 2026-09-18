@@ -2,10 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ClassList, HtmlTag, Input, States,
         common::{
-            Variables, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx, neighbour,
-            text_color, variables,
+            ClassList, HtmlTag, Input, States, Variables, focus_ring_sx, has_shortcut_modifier,
+            inset_focus_ring_sx, neighbour, text_color, variables,
         },
         layout::use_box,
     },

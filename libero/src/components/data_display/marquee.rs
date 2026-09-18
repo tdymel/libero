@@ -2,8 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, HtmlTag, Input, Orientation, States, Variables,
-        common::{PauseIcon, PlayIcon, base_props, variables},
+        buttons::ActionIcon,
+        common::{
+            HtmlTag, Input, Orientation, PauseIcon, PlayIcon, States, Variables, base_props,
+            variables,
+        },
         layout::use_box,
     },
     hooks::{use_localization, use_theme},

@@ -10,10 +10,10 @@ use super::{
 };
 use crate::{
     components::{
-        ActionIcon, ClassList, HtmlTag, Input, States, Variant,
+        buttons::ActionIcon,
         common::{
-            ChevronLeftIcon, ChevronRightIcon, disabled_look_sx, focus_ring_sx,
-            has_shortcut_modifier, inset_focus_ring_sx,
+            ChevronLeftIcon, ChevronRightIcon, ClassList, HtmlTag, Input, States, Variant,
+            disabled_look_sx, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx,
         },
         layout::use_box,
     },

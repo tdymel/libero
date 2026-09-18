@@ -1,4 +1,4 @@
-use crate::components::Options;
+use crate::components::common::Options;
 
 /// One entry of a `Cascader`'s tree, over any value a `Select` could hold.
 ///

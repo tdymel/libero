@@ -1,7 +1,11 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{feedback::Loader, layout::ScrollArea},
+    components::{
+        common::{group_id, listbox_id},
+        feedback::Loader,
+        layout::ScrollArea,
+    },
     sx::sx,
     theme::Size,
 };
@@ -104,7 +108,7 @@ pub(super) fn ComboboxDropdown(
                 ScrollArea {
                     sx: sx().max_height(max_height),
                     scroll_position_y: scroll_y,
-                    id: super::aria::listbox_id(&id),
+                    id: listbox_id(&id),
                     "role": "listbox",
                     "aria-multiselectable": multiselectable.then_some("true"),
                     "aria-labelledby": labelled_by,
@@ -116,9 +120,9 @@ pub(super) fn ComboboxDropdown(
                             div {
                                 key: "group-{start}",
                                 role: "group",
-                                "aria-labelledby": super::aria::group_id(&id, start),
+                                "aria-labelledby": group_id(&id, start),
                                 div {
-                                    id: super::aria::group_id(&id, start),
+                                    id: group_id(&id, start),
                                     // Named by the group's `aria-labelledby`,
                                     // so as an element of its own it would be
                                     // read a second time.

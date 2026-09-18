@@ -2,9 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ClassList, HtmlTag, Input, States,
         accessibility::VISUALLY_HIDDEN_FIXED_SX,
-        common::{NavigationChord, base_props, navigation_chord},
+        common::{
+            ClassList, HtmlTag, Input, NavigationChord, States, base_props, navigation_chord,
+        },
         layout::{paper_sx, use_box},
     },
     hooks::{
@@ -16,7 +17,7 @@ use crate::{
     theme::{COMBOBOX_PADDING, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
-use super::{dropdown::ComboboxDropdown, option::ComboboxContext, state::ComboboxState};
+use super::{ComboboxState, dropdown::ComboboxDropdown, option::ComboboxContext};
 
 // The dropdown is a surface, so its background, border and corner come from
 // `paper_sx()`: the `bordered` and `radius-{step}` tokens below are the ones

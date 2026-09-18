@@ -4,9 +4,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, OptionSource, Options, Select, SelectOptionArgs,
-        common::field_props,
-        form::{LiveControl, field_control_sx, row_label, use_bound, use_field, use_field_frame},
+        common::{HtmlTag, Input, OptionSource, Options},
+        form::{
+            LiveControl, Select, SelectOptionArgs, field_control_sx, field_props, row_label,
+            use_bound, use_field, use_field_frame,
+        },
         layout::use_box,
     },
     hooks::use_theme,
@@ -49,11 +51,11 @@ field_props! {
         /// binds it to the surrounding `Form`'s value when it has no
         /// `onchange`.
         #[props(default, into)]
-        name: crate::components::FieldName<Option<T>>,
+        name: crate::components::form::FieldName<Option<T>>,
         /// Rules over the selection, shown once the select loses focus or its
         /// form is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<Option<T>>,
+        validate: crate::components::form::Validators<Option<T>>,
         /// The options to show. Defaults to every `Options::options()` - which
         /// `String` and any other runtime type leave empty, so those pass them
         /// here. A disabled [`OptionItem`](crate::components::OptionItem) is a

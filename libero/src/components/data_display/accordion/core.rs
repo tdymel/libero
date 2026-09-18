@@ -4,10 +4,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ClassList, HtmlTag, Input, States,
         common::{
-            ChevronDownIcon, disabled_look_sx, has_shortcut_modifier, inset_focus_ring_sx,
-            use_closing_focus,
+            ChevronDownIcon, ClassList, HtmlTag, Input, States, disabled_look_sx,
+            has_shortcut_modifier, inset_focus_ring_sx, use_closing_focus,
         },
         layout::{Collapse, use_box},
     },

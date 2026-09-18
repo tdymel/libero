@@ -3,7 +3,12 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::prelude::*;
 
 use crate::{
-    components::{ActionIcon, Chip, Input, VisuallyHidden, common::CloseIcon},
+    components::{
+        accessibility::VisuallyHidden,
+        buttons::ActionIcon,
+        common::{CloseIcon, Input},
+        form::Chip,
+    },
     hooks::{current_localization, use_localization},
     localization::{ChipsLabels, fill},
     sx::{StaticSx, ThemeAwareValue, sx},

@@ -7,7 +7,7 @@ use super::{
     props::date_props,
 };
 use crate::{
-    components::Input,
+    components::common::Input,
     hooks::{use_formats, use_theme},
 };
 

@@ -4,11 +4,12 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        CaretKeys, ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input,
-        common::{ChevronDownIcon, field_props},
-        form::{FIELD_CONTROL_SX, use_bound, use_field, use_field_frame},
+        common::{ChevronDownIcon, ComboboxState, HtmlTag, Input, use_combobox},
+        form::{
+            CaretKeys, ComboboxCore, ComboboxOption, FIELD_CONTROL_SX, field_props, use_bound,
+            use_field, use_field_frame,
+        },
         layout::{BoxStyle, use_box},
-        use_combobox,
     },
     hooks::{
         ElementHandle, PopoverWidth, current_localization, use_element, use_localization, use_theme,
@@ -145,13 +146,13 @@ field_props! {
         /// is submitted. Nothing here validates a number on its own - the
         /// library ships no numbering-plan data.
         #[props(default, into)]
-        validate: crate::components::Validators<String>,
+        validate: crate::components::form::Validators<String>,
         /// What the field posts as - the E.164, through a hidden input,
         /// because the visible one holds the text being edited. A path -
         /// `Signup::FIELDS.phone()` - also binds it to the surrounding
         /// `Form`'s value when the field has no `oninput`.
         #[props(default, into)]
-        name: crate::components::FieldName<String>,
+        name: crate::components::form::FieldName<String>,
         #[props(default, into)]
         placeholder: Option<String>,
     }

@@ -6,11 +6,9 @@ use dioxus::prelude::*;
 use super::ColorCode;
 use crate::{
     components::{
-        HtmlTag, Input, Variables,
-        common::{has_shortcut_modifier, shadow_sx},
+        common::{HtmlTag, Input, Variables, has_shortcut_modifier, shadow_sx, variables},
         form::SliderChangeEvent,
         layout::use_box,
-        variables,
     },
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, use_drag, use_element,

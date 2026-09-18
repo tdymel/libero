@@ -4,17 +4,18 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, ComboboxOption, HtmlTag, Input, States, VisuallyHidden,
+        accessibility::VisuallyHidden,
         common::{
-            ChevronDownIcon, NavigationChord, attr, field_props, has_shortcut_modifier,
+            ChevronDownIcon, HtmlTag, Input, NavigationChord, States, attr, has_shortcut_modifier,
             input_from_str, navigation_chord,
         },
         form::{
-            ComboboxState, PreparedField, clear_button,
+            ComboboxOption, ComboboxState, PreparedField, clear_button,
             combobox::{COMBOBOX_DROPDOWN_SX, nothing_found_row},
-            field_control_sx, use_combobox, use_field, use_field_frame, use_refocus_on_close,
+            field_control_sx, field_props, use_combobox, use_field, use_field_frame,
+            use_refocus_on_close,
         },
-        layout::{BoxStyle, ScrollArea, use_box},
+        layout::{Box, BoxStyle, ScrollArea, use_box},
     },
     hooks::{
         ElementHandle, PopoverHandle, PopoverOptions, PopoverWidth, TYPEAHEAD_RESET, Typeahead,
@@ -263,7 +264,7 @@ field_props! {
         form_value: Option<String>,
         /// What the skin's `validate` rules say.
         #[props(default)]
-        rules: Option<crate::components::FieldStatus>,
+        rules: Option<crate::components::form::FieldStatus>,
         /// Narrows the paths while searching. `None` is a case-insensitive
         /// `contains` over the joined labels.
         #[props(default)]

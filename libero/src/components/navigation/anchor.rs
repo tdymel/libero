@@ -3,9 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        Input, States,
         accessibility::VisuallyHidden,
-        common::{ExternalLinkIcon, base_props, input_from_str, use_style_attributes},
+        common::{
+            ExternalLinkIcon, Input, States, base_props, input_from_str, use_style_attributes,
+        },
     },
     hooks::{use_css, use_localization, use_theme},
     sx::{StaticSx, Sx, sx},

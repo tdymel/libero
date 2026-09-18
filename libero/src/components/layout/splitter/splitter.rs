@@ -4,8 +4,10 @@ use super::divider::{SPLITTER_DIVIDER_COLOR_VAR, SplitterDivider};
 use crate::{
     CssLayer,
     components::{
-        HtmlTag, Input, Orientation, States, Variables,
-        common::{base_props, has_shortcut_modifier, use_name_warning, variables},
+        common::{
+            HtmlTag, Input, Orientation, States, Variables, base_props, has_shortcut_modifier,
+            use_name_warning, variables,
+        },
         layout::use_box,
     },
     hooks::{DragMove, DragOptions, DragStart, use_css, use_drag, use_element, use_id, use_theme},

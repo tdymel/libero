@@ -1,13 +1,13 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{ClassList, Input, OptionSource, States},
+    components::common::{ClassList, Input, OptionSource, States},
     hooks::use_localization,
     sx::Sx,
     theme::Size,
 };
 
-use super::{core::ComboboxCore, option::ComboboxOptionArgs, state::ComboboxState};
+use super::{ComboboxState, core::ComboboxCore, option::ComboboxOptionArgs};
 
 // Hand-written rather than `base_props!`, which is not generic.
 #[derive(Props, Clone, PartialEq)]

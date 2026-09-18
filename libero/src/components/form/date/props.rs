@@ -80,7 +80,7 @@ macro_rules! date_props {
             /// Columns of numbers, or a clock face. Defaults to the theme's
             /// `TimePickerDefaults::variant`.
             #[props(default, into)]
-            variant: $crate::components::Input<$crate::theme::TimePickerVariant>,
+            variant: $crate::components::common::Input<$crate::theme::TimePickerVariant>,
             /// Seconds in the text and on the clock.
             #[props(default)]
             with_seconds: Option<bool>,
@@ -100,7 +100,7 @@ macro_rules! date_props {
             /// Defaults to the theme's `DatePickerDefaults::calendar`. Ignored
             /// for times, ranges, months and years.
             #[props(default, into)]
-            calendar: $crate::components::Input<$crate::theme::CalendarVariant>,
+            calendar: $crate::components::common::Input<$crate::theme::CalendarVariant>,
             /// Days in the mini calendar's row. Defaults to the theme's
             /// `DatePickerDefaults::days`.
             #[props(default)]
@@ -139,7 +139,7 @@ macro_rules! date_props {
         ] $($rest)*);
     };
     (@munch field [$name:ident $(< $generic:ident : $bound:path >)?] ($v:ty, $b:ty) [$($acc:tt)*]) => {
-        $crate::components::common::field_props! {
+        $crate::components::form::field_props! {
             extends(input);
             pub struct $name $(< $generic: $bound >)? {
                 /// The value in the field; strictly controlled. `None` is the
@@ -155,13 +155,13 @@ macro_rules! date_props {
                 /// Rules over the value, shown once the field loses focus or
                 /// its form is submitted.
                 #[props(default, into)]
-                validate: $crate::components::Validators<Option<$v>>,
+                validate: $crate::components::form::Validators<Option<$v>>,
                 $($acc)*
                 /// What the field posts as - the value in ISO 8601, whatever
                 /// the text shows. A path also binds it to the surrounding
                 /// `Form`'s value when it has no `onchange`.
                 #[props(default, into)]
-                name: $crate::components::FieldName<Option<$v>>,
+                name: $crate::components::form::FieldName<Option<$v>>,
                 #[props(default, into)]
                 placeholder: Option<String>,
             }
@@ -178,7 +178,7 @@ macro_rules! date_props {
                 onchange: Option<EventHandler<Option<$v>>>,
                 $($acc)*
                 #[props(default, into)]
-                size: $crate::components::Input<$crate::theme::Size>,
+                size: $crate::components::common::Input<$crate::theme::Size>,
                 /// Emits a hidden input of that name, posting the value as ISO
                 /// 8601.
                 #[props(default, into)]

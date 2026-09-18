@@ -11,7 +11,7 @@ use super::{
     props::date_props,
 };
 use crate::{
-    components::Input,
+    components::common::Input,
     hooks::{use_formats, use_localization, use_theme},
     localization::fill,
     theme::{CalendarVariant, TimePickerVariant},
@@ -263,7 +263,7 @@ mod tests {
     use crate::{
         LiberoProvider,
         components::{
-            Input,
+            common::Input,
             form::date::{DateField, DateLevel, DatePicker, date_value::Sealed},
         },
         localization::DateLocale,

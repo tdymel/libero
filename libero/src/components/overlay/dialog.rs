@@ -2,10 +2,13 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, Box, HtmlTag, Input, Title, Variables,
-        common::{CloseIcon, attr, base_props, names_itself, use_name_warning},
-        layout::{paper_sx, use_box},
-        variables,
+        buttons::ActionIcon,
+        common::{
+            CloseIcon, HtmlTag, Input, Variables, attr, base_props, names_itself, use_name_warning,
+            variables,
+        },
+        layout::{Box, paper_sx, use_box},
+        typography::Title,
     },
     context::ModalContext,
     hooks::{current_localization, use_id},

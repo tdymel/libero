@@ -15,8 +15,8 @@ use super::{
 };
 use crate::{
     components::{
-        ClassList, HtmlTag, Input, States, VisuallyHidden,
-        common::base_color,
+        accessibility::VisuallyHidden,
+        common::{ClassList, HtmlTag, Input, States, base_color},
         layout::use_box,
         navigation::{TabSpec, TabsView, render_tabs},
     },

@@ -7,8 +7,7 @@ use dioxus::{
 
 use crate::{
     components::{
-        ClassList, HtmlTag, Input, States,
-        common::input_from_str,
+        common::{ClassList, HtmlTag, Input, States, input_from_str},
         form::{
             Binding, Caption, Disabled, FieldEntry, FieldName, FieldStatus, FormScope, Validators,
             worst,

@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::prelude::use_hook;
 
 use crate::{
-    components::{ClassList, Input, States, Variables},
+    components::common::{ClassList, Input, States, Variables},
     hooks::{SxSource, use_box_css},
     sx::{StaticSx, Sx},
 };

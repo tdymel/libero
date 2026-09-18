@@ -2,8 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables, Variant,
-        common::base_props,
+        common::{HtmlTag, Input, States, Variables, Variant, base_props, variables},
         common::{
             VariantVars, base_color, borderless_on_state_sx, contrast_color, disabled_look_sx,
             fill_color, focus_ring_sx, interactive_variant_sx, names_itself, text_color,
@@ -11,7 +10,6 @@ use crate::{
         },
         feedback::Loader,
         layout::{InternalAnchor, use_box},
-        variables,
     },
     hooks::{clipped_ripple_sx, use_ripple, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},

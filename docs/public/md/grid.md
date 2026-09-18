@@ -151,17 +151,19 @@ it and sets the rows from the measured height.
 
 ## Responsive spans
 
-A zone is rarely as wide as the window, so `sp()` keys the span off the zone's
+A zone is rarely as wide as the window, so a `responsive(..)` span keys off the zone's
 width, not the window's. Narrow the window and the three cards below go from
 three across to two, with C wrapping, to one per row.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Grid, GridItem, GridSpan, GridZone, SpanValue, sp};
+use libero::components::{Grid, GridItem, GridSpan, GridZone};
+use libero::theme::{Responsive, responsive};
 
 // Three cards, one span value. Wide: three across. Tablet: two, and C
 // wraps. Phone: one per row.
-const CARD_SPAN: SpanValue = sp().base(GridSpan::Full).sm(GridSpan::Half).md(GridSpan::Third);
+const CARD_SPAN: Responsive<GridSpan> =
+    responsive(GridSpan::Full).sm(GridSpan::Half).md(GridSpan::Third);
 
 #[component]
 fn Demo() -> Element {
@@ -186,8 +188,8 @@ fn Demo() -> Element {
 
 The breakpoints are the same `Size` scale a viewport query uses, `sm` is 48rem.
 They measure the zone, so a zone a quarter of a wide page still counts as small
-and keeps its base span. `sp()` needs a zone with an `area`. Without one the
-base span stands.
+and keeps its base span. The breakpoints need a zone with an `area`. Without
+one the base span stands.
 
 ## Caveats
 
@@ -234,7 +236,7 @@ Build templates once, as a `StaticGridTemplate` static, like every example here.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `span` | `SpanValue` | `full` | Width in twelfths of the zone. A `GridSpan`, or `sp()` for a span that follows the zone's width, not the window's. `sp()` needs a zone with an `area`. |
+| `span` | `Responsive<GridSpan>` | `full` | Width in twelfths of the zone. A `GridSpan`, or `responsive(..)` for a span that follows the zone's width, not the window's. Its breakpoints need a zone with an `area`. |
 | `rows` | `u8` | - | Height in rows of the zone's grid. Ignored in a masonry zone, which sets it from the measured height. |
 | `component` | `HtmlTag` | `div` | The element to render. |
 | `children` | `Element` | required | The item's content. |

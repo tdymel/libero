@@ -2,10 +2,10 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Code, Grid, GridArea, GridItem, GridSpan, GridZone, HtmlTag, SpanValue,
-        StaticGridTemplate, Text, sp,
+        Box, Code, Grid, GridArea, GridItem, GridSpan, GridZone, HtmlTag, StaticGridTemplate, Text,
     },
     sx::sx,
+    theme::{Responsive, responsive},
 };
 
 /// The zone's children, printed verbatim - their point is that they are
@@ -192,7 +192,7 @@ pub fn GridPage() -> Element {
                     prop("children", "Element").doc("`GridItem`s."),
                 ]),
                 props("GridItem", vec![
-                    prop("span", "SpanValue").default("full").doc("Width in twelfths of the zone. A `GridSpan`, or `sp()` for a span that follows the zone's width, not the window's. `sp()` needs a zone with an `area`."),
+                    prop("span", "Responsive<GridSpan>").default("full").doc("Width in twelfths of the zone. A `GridSpan`, or `responsive(..)` for a span that follows the zone's width, not the window's. Its breakpoints need a zone with an `area`."),
                     prop("rows", "u8").doc("Height in rows of the zone's grid. Ignored in a masonry zone, which sets it from the measured height."),
                     prop("component", "HtmlTag").default("div").doc("The element to render."),
                     prop("children", "Element").doc("The item's content."),
@@ -301,15 +301,15 @@ impl GridArea for SpanArea {
 static SPANS: StaticGridTemplate<SpanArea> =
     StaticGridTemplate::new(|template| template.row(|row| row.cell(SpanArea::Row)));
 
-const CARD_SPAN: SpanValue = sp()
-    .base(GridSpan::Full)
+const CARD_SPAN: Responsive<GridSpan> = responsive(GridSpan::Full)
     .sm(GridSpan::Half)
     .md(GridSpan::Third);
 
 // snippet: ignore - `SPANS` is a template the page builds out of sight
 const RESPONSIVE_SOURCE: &str = r#"// Three cards, one span value. Wide: three across. Tablet: two, and C
 // wraps. Phone: one per row.
-const CARD_SPAN: SpanValue = sp().base(GridSpan::Full).sm(GridSpan::Half).md(GridSpan::Third);
+const CARD_SPAN: Responsive<GridSpan> =
+    responsive(GridSpan::Full).sm(GridSpan::Half).md(GridSpan::Third);
 
 rsx! {
     Grid { template: SPANS.clone(),

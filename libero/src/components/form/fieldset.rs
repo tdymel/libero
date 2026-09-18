@@ -4,11 +4,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Caption, HtmlTag, Input,
-        common::base_props,
+        common::{HtmlTag, Input, base_props},
         form::{
-            Binding, Disabled, FieldName, FieldStatus, FormScope, FormValue, Source, Validators,
-            issues_of,
+            Binding, Caption, Disabled, FieldName, FieldStatus, FormScope, FormValue, Source,
+            Validators, issues_of,
             use_field::{caption_content, join_ids, slot_node, status_node},
             worst,
         },
@@ -194,7 +193,7 @@ mod tests {
 
     use crate::{
         LiberoProvider,
-        components::{Fieldset, Rule},
+        components::form::{Fieldset, Rule},
         utils::take_warnings,
     };
 

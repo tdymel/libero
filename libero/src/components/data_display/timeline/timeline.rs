@@ -3,8 +3,10 @@ use dioxus::prelude::*;
 use super::event::TimelineEvent;
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
-        common::{ABSENT, Rail, RailInset, base_props, input_from_str, variables},
+        common::{
+            ABSENT, HtmlTag, Input, Rail, RailInset, States, Variables, base_props, input_from_str,
+            variables,
+        },
         layout::use_box,
     },
     hooks::use_theme,

@@ -2,9 +2,9 @@ use dioxus::prelude::*;
 
 use crate::hooks::use_id;
 
-use super::aria::trigger_aria;
+use super::combobox_aria::trigger_aria;
 
-/// A [`Combobox`](super::Combobox)'s open state, its keyboard highlight, and
+/// A [`Combobox`](crate::components::Combobox)'s open state, its keyboard highlight, and
 /// the id that ties the two together - held in the caller's own scope, so the
 /// component holds nothing.
 ///

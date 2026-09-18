@@ -2,9 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, Variant,
         buttons::ActionIcon,
-        common::{ChevronDownIcon, MoonIcon, SunIcon, SystemSchemeIcon, base_props},
+        common::{
+            ChevronDownIcon, HtmlTag, Input, MoonIcon, SunIcon, SystemSchemeIcon, Variant,
+            base_props,
+        },
         layout::use_box,
         overlay::{Menu, MenuEntry, MenuItem, use_menu},
     },

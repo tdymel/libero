@@ -2,8 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, Variables,
-        common::{base_props, focus_ring_sx, variables},
+        common::{HtmlTag, Input, Variables, base_props, focus_ring_sx, variables},
         layout::use_box,
     },
     sx::{StaticSx, ThemeAwareValue, sx},

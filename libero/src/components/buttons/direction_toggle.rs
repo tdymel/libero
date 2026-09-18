@@ -2,9 +2,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, Variant,
         buttons::ActionIcon,
-        common::{TextDirectionIcon, base_props},
+        common::{HtmlTag, Input, TextDirectionIcon, Variant, base_props},
         layout::use_box,
     },
     hooks::{use_direction, use_localization, use_theme},

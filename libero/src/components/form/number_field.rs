@@ -4,10 +4,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, HtmlTag, Input, NumberValue,
-        common::{MinusIcon, PlusIcon, field_props, navigation_chord},
+        buttons::ActionIcon,
+        common::{HtmlTag, Input, MinusIcon, NumberValue, PlusIcon, navigation_chord},
         form::{
-            FIELD_CONTROL_SX, LiveControl, slot_icon_size, use_bound, use_field, use_field_frame,
+            FIELD_CONTROL_SX, LiveControl, field_props, slot_icon_size, use_bound, use_field,
+            use_field_frame,
         },
         layout::use_box,
     },
@@ -51,7 +52,7 @@ field_props! {
         /// Rules over the number, shown once the field loses focus or its form is
         /// submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<Option<T>>,
+        validate: crate::components::form::Validators<Option<T>>,
         /// Floor. Steps clamp to it; typed text below it clamps once the field
         /// is left or Enter is pressed.
         #[props(default)]
@@ -67,7 +68,7 @@ field_props! {
         /// binds it to the surrounding `Form`'s value when the field has no
         /// `onchange`.
         #[props(default, into)]
-        name: crate::components::FieldName<Option<T>>,
+        name: crate::components::form::FieldName<Option<T>>,
         #[props(default, into)]
         placeholder: Option<String>,
         /// Shows the minus/plus buttons in the trailing slot. Off by default: a

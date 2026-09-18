@@ -4,12 +4,12 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Divider, HtmlTag, Input, Kbd, States,
         common::{
-            CheckIcon, ChevronRightIcon, base_props, disabled_look_sx, has_shortcut_modifier,
-            inset_focus_ring_sx,
+            CheckIcon, ChevronRightIcon, HtmlTag, Input, States, base_props, disabled_look_sx,
+            has_shortcut_modifier, inset_focus_ring_sx,
         },
-        layout::{paper_sx, use_box},
+        layout::{Divider, paper_sx, use_box},
+        typography::Kbd,
     },
     hooks::{
         Align, DismissHandle, DismissOptions, ElementHandle, PopoverOptions, Side, TYPEAHEAD_RESET,
@@ -665,7 +665,7 @@ struct MenuLevelProps {
     #[props(default)]
     attributes: Vec<Attribute>,
     #[props(default)]
-    class: Input<crate::components::ClassList>,
+    class: Input<crate::components::common::ClassList>,
     #[props(default)]
     sx: Input<crate::sx::Sx>,
     #[props(default)]

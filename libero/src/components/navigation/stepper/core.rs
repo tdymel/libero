@@ -4,10 +4,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ClassList, HtmlTag, Input, Orientation, States, Variables, VisuallyHidden,
+        accessibility::VisuallyHidden,
         common::{
-            CheckIcon, CloseIcon, Rail, RailInset, focus_ring_sx, on_ring_sx, use_closing_focus,
-            variables,
+            CheckIcon, ClassList, CloseIcon, HtmlTag, Input, Orientation, Rail, RailInset, States,
+            Variables, focus_ring_sx, on_ring_sx, use_closing_focus, variables,
         },
         layout::{Collapse, use_box},
     },

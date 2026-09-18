@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
+    components::{
+        common::{HtmlTag, Input, States, base_props},
+        layout::use_box,
+    },
     hooks::use_theme,
     sx::StaticSx,
     theme::{Size, TitleDefaults},

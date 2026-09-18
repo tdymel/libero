@@ -4,14 +4,15 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, HtmlTag, Input, Orientation, States, Variables, VisuallyHidden,
+        accessibility::VisuallyHidden,
         common::{
-            ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, PauseIcon, PlayIcon,
-            base_props, focus_ring_sx, has_shortcut_modifier, input_from_str, inset_focus_ring_sx,
-            shadow_sx, states, use_name_warning, variables,
+            ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, HtmlTag, Input,
+            Orientation, PauseIcon, PlayIcon, States, Variables, base_props, focus_ring_sx,
+            has_shortcut_modifier, input_from_str, inset_focus_ring_sx, shadow_sx, states,
+            use_name_warning, variables,
         },
         layout::{
-            ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, inline_x,
+            Box, ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, inline_x,
             physical_x, scroll_area_base, use_box, use_scroll_area,
         },
     },

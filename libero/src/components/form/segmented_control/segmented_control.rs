@@ -3,10 +3,12 @@ use dioxus::prelude::*;
 use super::core::{SegmentSpec, SegmentedControlView, render_segmented_control};
 use crate::{
     components::{
-        Input, OptionLabel, OptionSource, Options, Variant,
         buttons::button_variables,
-        common::{Orientation, base_color, field_props, names_itself, use_name_warning},
-        form::{use_bound, use_field, use_form_context},
+        common::{
+            Input, OptionLabel, OptionSource, Options, Orientation, Variant, base_color,
+            names_itself, use_name_warning,
+        },
+        form::{field_props, use_bound, use_field, use_form_context},
     },
     hooks::{use_cache, use_element, use_form_owner, use_theme},
     sx::ThemeAwareValue,
@@ -29,11 +31,11 @@ field_props! {
         /// also binds it to the surrounding `Form`'s value when it has no
         /// `onchange`.
         #[props(default, into)]
-        name: crate::components::FieldName<T>,
+        name: crate::components::form::FieldName<T>,
         /// Rules over the selection, shown once the control loses focus or its
         /// form is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<T>,
+        validate: crate::components::form::Validators<T>,
         /// The segments to show. Defaults to every `Options::options()` - which
         /// `String` leaves empty, so a runtime set passes them here.
         ///
@@ -124,7 +126,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
     }
 
     let full_width = props.full_width.unwrap_or(false);
-    let field_states: Input<crate::components::States> = props
+    let field_states: Input<crate::components::common::States> = props
         .states
         .as_ref()
         .cloned()

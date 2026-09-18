@@ -2,9 +2,9 @@ use dioxus::prelude::*;
 
 use super::core::{StepSpec, StepState, StepperView, derived_state, render_stepper};
 use crate::{
-    components::{
-        ClassList, Input, OptionLabel, Options, Orientation, States,
-        common::{base_color, contrast_color, fill_color, input_from_str, text_color},
+    components::common::{
+        ClassList, Input, OptionLabel, Options, Orientation, States, base_color, contrast_color,
+        fill_color, input_from_str, text_color,
     },
     hooks::{use_localization, use_root_id, use_theme},
     sx::{Sx, ThemeAwareValue},

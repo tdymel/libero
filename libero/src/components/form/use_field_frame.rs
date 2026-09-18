@@ -4,8 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States,
-        common::{focus_ring_sx, ring_overlay, ring_overlay_sx},
+        common::{HtmlTag, Input, States, focus_ring_sx, ring_overlay, ring_overlay_sx},
         layout::{BoxStyle, use_box},
     },
     platform::padding_press,

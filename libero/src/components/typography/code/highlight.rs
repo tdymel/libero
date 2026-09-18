@@ -5,7 +5,7 @@
 //! What that rematch is for - a `//` inside a string is not a comment - is
 //! covered by letting adjacent greedy patterns compete by position instead.
 
-use crate::components::Input;
+use crate::components::common::Input;
 use crate::localization::CodeBlockLabels;
 use crate::platform::{PreparedText, RegexMatch, regex_api};
 

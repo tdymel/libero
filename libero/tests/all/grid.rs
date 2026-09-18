@@ -3,8 +3,8 @@ use crate::common::{attributes_of, body, has_rule_for, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Grid, GridArea, GridItem, GridSpan, GridTemplate, GridZone, sp},
-    theme::Size,
+    components::{Grid, GridArea, GridItem, GridSpan, GridTemplate, GridZone},
+    theme::{Size, responsive},
 };
 
 /// `attributes_of` reads the first matching tag, and a grid nests three deep.
@@ -136,7 +136,7 @@ fn a_responsive_span_queries_its_zone_not_the_viewport() {
             LiberoProvider {
                 Grid { template: test_template(),
                     GridZone { area: TestArea::Body,
-                        GridItem { span: sp().base(GridSpan::Full).md(GridSpan::Half), "card" }
+                        GridItem { span: responsive(GridSpan::Full).md(GridSpan::Half), "card" }
                     }
                 }
             }

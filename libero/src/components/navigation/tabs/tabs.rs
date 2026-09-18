@@ -2,9 +2,8 @@ use dioxus::prelude::*;
 
 use super::core::{TabSpec, TabsView, render_tabs};
 use crate::{
-    components::{
-        ClassList, Input, OptionLabel, OptionSource, Options, States,
-        common::{base_color, input_from_str},
+    components::common::{
+        ClassList, Input, OptionLabel, OptionSource, Options, States, base_color, input_from_str,
     },
     hooks::{use_root_id, use_theme},
     str_enum::str_enum,

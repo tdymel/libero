@@ -19,7 +19,7 @@ pub(crate) fn group_id(id: &str, first_row: usize) -> String {
 }
 
 /// The trigger's half of the listbox wiring. Reached through
-/// [`ComboboxState::trigger`](crate::hooks::ComboboxState::trigger), which is
+/// [`ComboboxState::aria`](super::ComboboxState::aria), which is
 /// the only place that knows the `id` and the active row at once.
 ///
 /// `aria-controls` only while `listbox` is mounted: a closed list is not in the

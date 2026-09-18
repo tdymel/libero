@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::str_enum::str_enum;
-use crate::{components::OptionLabel, sx::ThemeAwareValue};
+use crate::{components::common::OptionLabel, sx::ThemeAwareValue};
 
 str_enum! {
     /// How the connector *below* an event is drawn.

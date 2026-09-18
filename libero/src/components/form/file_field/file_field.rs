@@ -6,15 +6,16 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        ActionIcon, HtmlTag, Input, States, VisuallyHidden,
+        accessibility::VisuallyHidden,
+        buttons::ActionIcon,
         common::{
-            CloseIcon, UploadIcon, field_props, focus_ring_sx, input_from_str, navigation_chord,
-            ring_overlay, ring_overlay_sx,
+            CloseIcon, HtmlTag, Input, States, UploadIcon, focus_ring_sx, input_from_str,
+            navigation_chord, ring_overlay, ring_overlay_sx,
         },
         feedback::Loader,
         form::{
-            PreparedField, SelectionArgs, Setter, clear_button, field_control_sx, removable_chip,
-            use_bound, use_chip_announcer, use_field, use_field_frame,
+            PreparedField, SelectionArgs, Setter, clear_button, field_control_sx, field_props,
+            removable_chip, use_bound, use_chip_announcer, use_field, use_field_frame,
         },
         layout::{BoxStyle, use_box},
     },
@@ -308,7 +309,7 @@ field_props! {
         /// A path - `Claim::FIELDS.receipts()` - also binds the files to the
         /// surrounding `Form`'s value when there is no `onchange`.
         #[props(default, into)]
-        name: crate::components::FieldName<Files>,
+        name: crate::components::form::FieldName<Files>,
         /// Fires with the files the field should hold next - a pick, a drop,
         /// a removal or a clear.
         #[props(default)]
@@ -316,7 +317,7 @@ field_props! {
         /// Rules over the files, shown once the field loses focus or its form
         /// is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<Files>,
+        validate: crate::components::form::Validators<Files>,
         /// The `Dropzone` variant's prompt, inside the surface. Ignored by
         /// the `Input` variant, which shows `placeholder` instead.
         #[props(default)]

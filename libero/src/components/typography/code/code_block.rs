@@ -7,11 +7,13 @@ use super::token_theme::use_token_theme;
 use crate::{
     CssLayer,
     components::{
-        ActionIcon, Box, HtmlTag, Input, States, Variables, VisuallyHidden,
+        accessibility::VisuallyHidden,
+        buttons::ActionIcon,
         common::{
-            CopiedIcon, CopyFailedIcon, CopyIcon, base_props, inset_focus_ring_sx, variables,
+            CopiedIcon, CopyFailedIcon, CopyIcon, HtmlTag, Input, States, Variables, base_props,
+            inset_focus_ring_sx, variables,
         },
-        layout::use_box,
+        layout::{Box, use_box},
     },
     hooks::{
         Clipboard, use_clipboard, use_css, use_element, use_localization, use_silent_focus_out,

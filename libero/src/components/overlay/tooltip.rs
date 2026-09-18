@@ -5,8 +5,7 @@ use dioxus::prelude::*;
 use super::hover_intent::{HoverIntent, TRIGGER_WRAPPER_SX, use_hover_intent};
 use crate::{
     components::{
-        HtmlTag, Input, States,
-        common::{base_props, input_from_str, variables},
+        common::{HtmlTag, Input, States, base_props, input_from_str, variables},
         layout::use_box,
     },
     hooks::{
@@ -267,7 +266,7 @@ fn TooltipBubble(
         .with(popover.placement().side.state_name(), true)
         .with(size.state_name(), true)
         .into();
-    let variables: Input<crate::components::Variables> = variables()
+    let variables: Input<crate::components::common::Variables> = variables()
         .with(TOOLTIP_GAP_VAR, SizeCss::SPACING.value(gap))
         .with(
             Z_INDEX_POPOVER.override_var(),

@@ -2,8 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States,
-        common::{base_props, forced_on_sx, inset_focus_ring_sx, on_start_bar_sx, on_tint_color},
+        common::{
+            HtmlTag, Input, States, base_props, forced_on_sx, inset_focus_ring_sx, on_start_bar_sx,
+            on_tint_color, option_id,
+        },
         layout::use_box,
     },
     hooks::use_theme,
@@ -177,7 +179,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
             .unwrap_or_else(|| row.is_some_and(|row| row().active));
     let id = combobox
         .zip(row)
-        .map(|(combobox, row)| super::aria::option_id(&(combobox.id)(), row().index));
+        .map(|(combobox, row)| option_id(&(combobox.id)(), row().index));
 
     let onpick = props.onpick;
     // The one gate both the click and Enter go through: Enter fires this same

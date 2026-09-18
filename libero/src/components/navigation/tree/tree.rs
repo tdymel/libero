@@ -4,8 +4,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Input, List,
-        common::{base_props, css_string, has_shortcut_modifier},
+        common::{Input, base_props, css_string, has_shortcut_modifier},
+        data_display::List,
     },
     hooks::{
         ElementHandle, TYPEAHEAD_RESET, typeahead_match, use_element, use_theme, use_typeahead,

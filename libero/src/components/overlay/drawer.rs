@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Dialog, Float, Input, Placement,
-        common::{base_props, input_from_str},
+        common::{Input, base_props, input_from_str},
+        layout::{Float, Placement},
+        overlay::Dialog,
     },
     hooks::{use_css, use_theme},
     str_enum::str_enum,

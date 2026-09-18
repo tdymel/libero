@@ -2,10 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, Variables,
         common::{
-            StyleAttributes, base_props, is_javascript_url, styling_attributes,
-            use_style_attributes,
+            HtmlTag, Input, StyleAttributes, Variables, base_props, is_javascript_url,
+            styling_attributes, use_style_attributes,
         },
         layout::box_style,
     },

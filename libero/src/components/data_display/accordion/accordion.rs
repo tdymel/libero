@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use super::core::{AccordionView, SectionSpec, render_accordion};
 use crate::{
-    components::{HtmlTag, Input, OptionLabel, OptionSource, Options, common::base_props},
+    components::common::{HtmlTag, Input, OptionLabel, OptionSource, Options, base_props},
     hooks::{use_root_id, use_theme},
     theme::Size,
     utils::warn,

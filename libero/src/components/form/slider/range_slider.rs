@@ -5,7 +5,10 @@ use super::scale::{Scale, control_spacing};
 use super::slider_value::{SliderChangeEvent, SliderMark, SliderStep, SliderValue};
 use super::value::SliderCoreValue;
 use crate::{
-    components::{FieldStatus, Input, common::field_props, form::use_bound, use_field},
+    components::{
+        common::Input,
+        form::{FieldStatus, field_props, use_bound, use_field},
+    },
     hooks::{use_localization, use_theme},
     sx::ThemeAwareValue,
 };
@@ -57,7 +60,7 @@ field_props! {
         /// A path - `Settings::FIELDS.volume()` - also binds the value to the
         /// surrounding `Form`'s value when there is no `oninput`.
         #[props(default, into)]
-        name: crate::components::FieldName<(V, V)>,
+        name: crate::components::form::FieldName<(V, V)>,
         /// Fires per value: a drag is the DOM's `input` event, not its
         /// `change`. `Start`/`End` bracket a drag, `Change` carries every new
         /// pair.
@@ -66,7 +69,7 @@ field_props! {
         /// Rules over the pair, shown once the slider loses focus or its form
         /// is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<(V, V)>,
+        validate: crate::components::form::Validators<(V, V)>,
     }
 }
 

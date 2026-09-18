@@ -2,9 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, Input,
-        common::{EyeIcon, EyeOffIcon, field_props},
-        form::{Disabled, FormScope, TextField, slot_icon_size},
+        buttons::ActionIcon,
+        common::{EyeIcon, EyeOffIcon, Input},
+        form::{Disabled, FormScope, TextField, field_props, slot_icon_size},
     },
     hooks::{use_localization, use_theme},
     sx::ThemeAwareValue,
@@ -23,12 +23,12 @@ field_props! {
         /// Rules over the secret, shown once the field loses focus or its form
         /// is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<String>,
+        validate: crate::components::form::Validators<String>,
         /// What the field posts as. A path - `Signup::FIELDS.password()` - also
         /// binds it to the surrounding `Form`'s value when the field has no
         /// `oninput`.
         #[props(default, into)]
-        name: crate::components::FieldName<String>,
+        name: crate::components::form::FieldName<String>,
         #[props(default, into)]
         placeholder: Option<String>,
         /// Offers the reveal button at all. On by default - a password nobody

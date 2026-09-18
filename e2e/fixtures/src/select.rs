@@ -14,7 +14,30 @@ pub const ROUTES: Routes = &[
     ("/select/field", || rsx! { SelectFieldPage {} }),
     ("/select/readonly", || rsx! { SelectReadonlyPage {} }),
     ("/select/unlabelled", || rsx! { SelectUnlabelledPage {} }),
+    ("/select/refused", || rsx! { SelectRefusedPage {} }),
 ];
+
+/// Controlled, and the caller refuses `Cherry`: the select must stay on the
+/// old value, form value included (842).
+#[component]
+fn SelectRefusedPage() -> Element {
+    let mut value = use_signal(|| Some(Fruit::Banana));
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Select {
+                label: "Fruit",
+                name: "fruit",
+                value: value(),
+                onchange: move |next| {
+                    if next != Some(Fruit::Cherry) {
+                        value.set(next);
+                    }
+                },
+            }
+        }
+    }
+}
 
 /// Searchable and named by the caller's `aria-label` alone: the open search
 /// box takes the name over from the trigger.

@@ -3,10 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        HtmlTag, Input, Orientation, Variables,
-        common::{base_props, input_from_str},
+        common::{HtmlTag, Input, Orientation, Variables, base_props, input_from_str, variables},
         layout::use_box,
-        variables,
     },
     hooks::{use_css, use_id, use_theme},
     str_enum::str_enum,

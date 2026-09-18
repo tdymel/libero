@@ -1,7 +1,8 @@
 mod base_props;
 mod closing_focus;
 mod color_variant;
-mod field_props;
+mod combobox_aria;
+mod combobox_state;
 mod focusable;
 mod icons;
 mod neighbour;
@@ -26,7 +27,8 @@ pub(crate) use color_variant::{
     base_color, contrast_color, contrast_shade_color, fill_color, hover_color,
     hover_contrast_color, on_tint_color, selected_color, shade_color, text_color,
 };
-pub(crate) use field_props::field_props;
+pub(crate) use combobox_aria::{group_id, listbox_id, option_id};
+pub use combobox_state::{ComboboxState, use_combobox};
 pub(crate) use focusable::FOCUSABLE_SELECTOR;
 pub(crate) use icons::{
     ArrowDownIcon, CheckIcon, CheckboxMarkIcon, ChevronDownIcon, ChevronFirstIcon, ChevronLastIcon,

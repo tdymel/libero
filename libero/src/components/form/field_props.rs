@@ -1,4 +1,5 @@
-/// Declares a field's `Props` struct: everything [`base_props`] emits, plus the
+/// Declares a field's `Props` struct: everything
+/// [`base_props`](crate::components::common::base_props) emits, plus the
 /// eight props every field shares - the four text slots, the validation status,
 /// `size`, `radius`, `disabled` and `required`. The body lists only what is
 /// specific to the field.
@@ -27,7 +28,7 @@
 /// `without(radius);`, after an `extends(..)` if there is one, leaves `radius`
 /// out, for a field whose shape is fixed (a radio's circle, a slider's pill).
 ///
-/// Like [`base_props`], the leading `extends(..)` clause needs the internal
+/// Like `base_props!`, the leading `extends(..)` clause needs the internal
 /// `@build` arm plus two dispatch arms: `$(extends(..);)?` before the struct is
 /// a `local ambiguity when calling macro` error, since both can match empty.
 macro_rules! field_props {
@@ -44,17 +45,17 @@ macro_rules! field_props {
                 $($fields)*
                 /// The field's caption, above the control.
                 #[props(default, into)]
-                label: crate::components::Caption,
+                label: crate::components::form::Caption,
                 /// Between the label and the control. What to enter.
                 #[props(default, into)]
-                description: crate::components::Caption,
+                description: crate::components::form::Caption,
                 /// Under the control. Formatting rules, constraints, counters.
                 #[props(default, into)]
-                helper: crate::components::Caption,
+                helper: crate::components::form::Caption,
                 /// Validation state, under the helper. A bare `&str` is an
                 /// error.
                 #[props(default, into)]
-                status: Input<crate::components::FieldStatus>,
+                status: Input<crate::components::form::FieldStatus>,
                 #[props(default, into)]
                 size: Input<crate::theme::Size>,
                 $(
@@ -81,23 +82,23 @@ macro_rules! field_props {
     };
 
     (extends($($extra_extends:ident),+ $(,)?); without(radius); $($rest:tt)*) => {
-        crate::components::common::field_props!(@build [$(, extends = $extra_extends)+] [readonly] [] $($rest)*);
+        crate::components::form::field_props!(@build [$(, extends = $extra_extends)+] [readonly] [] $($rest)*);
     };
 
     (extends($($extra_extends:ident),+ $(,)?); $($rest:tt)*) => {
-        crate::components::common::field_props!(@build [$(, extends = $extra_extends)+] [readonly] [radius] $($rest)*);
+        crate::components::form::field_props!(@build [$(, extends = $extra_extends)+] [readonly] [radius] $($rest)*);
     };
 
     (without(readonly); $($rest:tt)*) => {
-        crate::components::common::field_props!(@build [] [] [radius] $($rest)*);
+        crate::components::form::field_props!(@build [] [] [radius] $($rest)*);
     };
 
     (without(radius); $($rest:tt)*) => {
-        crate::components::common::field_props!(@build [] [readonly] [] $($rest)*);
+        crate::components::form::field_props!(@build [] [readonly] [] $($rest)*);
     };
 
     ($($rest:tt)*) => {
-        crate::components::common::field_props!(@build [] [readonly] [radius] $($rest)*);
+        crate::components::form::field_props!(@build [] [readonly] [radius] $($rest)*);
     };
 }
 

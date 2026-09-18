@@ -15,8 +15,7 @@ use dioxus::{
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variant,
-        common::{FOCUSABLE_SELECTOR, focus_ring_sx},
+        common::{FOCUSABLE_SELECTOR, HtmlTag, Input, States, Variant, focus_ring_sx},
         feedback::Alert,
         layout::{Box, Float, use_box},
     },

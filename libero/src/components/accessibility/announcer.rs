@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::components::VisuallyHidden;
+use super::VisuallyHidden;
 
 /// A polite live region for one-off messages: a refusal, an error on Enter.
 /// Render it unconditionally, since a region inserted with its text is not

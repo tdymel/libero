@@ -4,7 +4,10 @@
 use dioxus::prelude::Attribute;
 
 use crate::{
-    components::{Input, common::attr, form::slider::SLIDER_HIT},
+    components::{
+        common::{Input, attr},
+        form::slider::SLIDER_HIT,
+    },
     sx::{StaticSx, Sx},
     theme::{
         COLOR_PICKER_SPACING, COLOR_PICKER_THUMB, ColorPickerDefaults, SLIDER_THUMB, SLIDER_TRACK,

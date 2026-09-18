@@ -3,11 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        HtmlTag, Input, States, Variant,
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
-            VariantColors, VariantVars, base_color, base_props, contrast_color,
-            contrast_shade_color, disabled_look_sx, fill_color, focus_ring_sx,
+            HtmlTag, Input, States, Variant, VariantColors, VariantVars, base_color, base_props,
+            contrast_color, contrast_shade_color, disabled_look_sx, fill_color, focus_ring_sx,
             interactive_variant_sx, on_ring_sx, on_state_sx, ring_overlay, ring_overlay_sx,
             shade_color, text_color, variables, variant_colors,
         },
@@ -208,7 +207,7 @@ base_props! {
         /// `Filters::FIELDS.open()` - also binds it to the surrounding
         /// `Form`'s value when the chip has no `onchange`, as on `Checkbox`.
         #[props(default, into)]
-        name: crate::components::FieldName<bool>,
+        name: crate::components::form::FieldName<bool>,
         /// What the chip posts under its `name` when it is checked, so a row
         /// of filter chips can share one name: `Chip { name: "tags", value:
         /// "rust" }` posts `tags=rust`. Left out, it posts the browser's

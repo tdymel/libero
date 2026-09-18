@@ -2,7 +2,10 @@ use dioxus::prelude::*;
 
 use super::use_modal::{ModalHandle, ModalScope, use_modal};
 use crate::{
-    components::{Drawer, DrawerAnchor, Input},
+    components::{
+        common::Input,
+        overlay::{Drawer, DrawerAnchor},
+    },
     sx::ThemeAwareValue,
     theme::Size,
 };

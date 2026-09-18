@@ -3,7 +3,10 @@ use dioxus::prelude::*;
 use crate::components::form::{row_label, use_bound};
 
 use crate::{
-    components::{ComboboxState, Input, OptionSource, Options, common::field_props, use_combobox},
+    components::{
+        common::{ComboboxState, Input, OptionSource, Options, use_combobox},
+        form::field_props,
+    },
     hooks::{use_localization, use_theme},
     utils::warn,
 };
@@ -90,11 +93,11 @@ field_props! {
         /// A path - `Order::FIELDS.plan()` - also binds the selection to the
         /// surrounding `Form`'s value when there is no `onchange`.
         #[props(default, into)]
-        name: crate::components::FieldName<Option<T>>,
+        name: crate::components::form::FieldName<Option<T>>,
         /// Rules over the selection, shown once the select loses focus or its
         /// form is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<Option<T>>,
+        validate: crate::components::form::Validators<Option<T>>,
         /// Shows an x that clears the selection, which is what makes
         /// `onchange` fire `None`.
         #[props(default)]
@@ -171,10 +174,14 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
         },
     );
     let selection = selected_index.map(|_| SelectionDraw::new(draw, props.selection.is_some()));
-    let picked = use_picked(Picked {
+    let rendered = Picked {
         selected,
         form_values: vec![current.as_ref().map(Options::value).unwrap_or_default()],
-    });
+    };
+    let picked = use_picked(rendered.clone());
+    // The props' selection as of the last render, for `onpick`'s refusal check.
+    let mut latest = use_hook(|| CopyValue::new(rendered.clone()));
+    latest.set(rendered);
 
     let searchable = props.searchable.unwrap_or(false);
     let matches = use_search_mask(searchable, values.clone(), props.filter);
@@ -185,7 +192,21 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     let clear = onchange.clone();
     let onpick = use_callback(move |index: usize| {
         if let (Some(onchange), Some(value)) = (&onchange, values.get(index)) {
+            // Also written here: `use_picked`'s write lands a pass after this
+            // render and re-ran `SelectCore` on every pick (todo 842).
+            let mut picked = picked;
+            picked.set(Picked {
+                selected: (0..values.len()).map(|row| row == index).collect(),
+                form_values: vec![value.value()],
+            });
             onchange(Some(value.clone()));
+            // Runs after the renders `onchange` caused: a caller that kept the
+            // old value left `latest` behind, and the props win again.
+            spawn(async move {
+                if *picked.peek() != *latest.peek() {
+                    picked.set(latest.cloned());
+                }
+            });
         }
     });
     let onclear = use_callback(move |_: ()| {

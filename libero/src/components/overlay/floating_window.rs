@@ -8,13 +8,14 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, Button, HtmlTag, Input, Menu, MenuEntry, MenuItem, Placement, Title, Variables,
+        buttons::{ActionIcon, Button},
         common::{
-            ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CloseIcon,
-            focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx,
+            ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CloseIcon, HtmlTag,
+            Input, Variables, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx, variables,
         },
-        layout::{Float, paper_sx, use_box},
-        use_menu, variables,
+        layout::{Float, Placement, paper_sx, use_box},
+        overlay::{Menu, MenuEntry, MenuItem, use_menu},
+        typography::Title,
     },
     context::{ModalContext, WindowHost},
     hooks::{
@@ -532,7 +533,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         .sx(&user_sx)
         .variables(&window_variables)
         .states(
-            &crate::components::States::default()
+            &crate::components::common::States::default()
                 .active(defaults.radius.radius_state_name())
                 .active(defaults.shadow.shadow_state_name())
                 .with("bordered", true)
@@ -1060,7 +1061,7 @@ mod tests {
     use super::{FloatingWindow, FloatingWindowOptions, WindowBounds};
     use crate::{
         LiberoProvider,
-        components::{Dialog, Modal},
+        components::overlay::{Dialog, Modal},
     };
 
     /// Todo 527: rendered inline in a modal, not portaled, the window still

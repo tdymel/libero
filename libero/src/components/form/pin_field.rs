@@ -4,9 +4,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States,
-        common::{field_props, input_from_str, navigation_chord},
-        form::{FIELD_CONTROL_SX, PreparedFrame, use_bound, use_field, use_field_frame},
+        common::{HtmlTag, Input, States, input_from_str, navigation_chord},
+        form::{
+            FIELD_CONTROL_SX, PreparedFrame, field_props, use_bound, use_field, use_field_frame,
+        },
         layout::{BoxStyle, use_box},
     },
     hooks::{ElementHandle, use_element, use_localization, use_theme},
@@ -54,7 +55,7 @@ field_props! {
         /// Rules over the pin, shown once the field loses focus or its form is
         /// submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<String>,
+        validate: crate::components::form::Validators<String>,
         /// Fires once when the last empty cell fills. Clearing a cell arms it
         /// again.
         #[props(default)]
@@ -84,7 +85,7 @@ field_props! {
         /// A path - `Login::FIELDS.code()` - also binds the pin to the
         /// surrounding `Form`'s value when there is no `oninput`.
         #[props(default, into)]
-        name: crate::components::FieldName<String>,
+        name: crate::components::form::FieldName<String>,
         /// Focuses the first cell on mount.
         #[props(default)]
         autofocus: Option<bool>,

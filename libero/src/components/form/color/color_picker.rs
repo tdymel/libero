@@ -9,11 +9,11 @@ use super::{
 };
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
-        common::{CheckIcon, base_props, input_from_str},
+        common::{
+            CheckIcon, HtmlTag, Input, States, Variables, base_props, input_from_str, variables,
+        },
         form::SliderChangeEvent,
         layout::use_box,
-        variables,
     },
     hooks::{use_localization, use_theme},
     sx::{StaticSx, sx},

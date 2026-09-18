@@ -7,7 +7,7 @@ use std::{
 use dioxus::prelude::*;
 
 use crate::{
-    components::Modal,
+    components::overlay::Modal,
     context::{ModalContext, ModalHost},
     hooks::{FocusReturn, use_focus_return, use_portal_slot},
 };

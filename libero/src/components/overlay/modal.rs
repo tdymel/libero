@@ -5,8 +5,10 @@ use dioxus::prelude::*;
 use super::use_modal::use_modal_z_index;
 use crate::{
     components::{
-        FocusTrap, HtmlTag, Input, Overlay, Variables, common::base_props, layout::use_box,
-        variables,
+        accessibility::FocusTrap,
+        common::{HtmlTag, Input, Variables, base_props, variables},
+        layout::use_box,
+        overlay::Overlay,
     },
     context::ModalContext,
     hooks::{escape_closes, use_dismiss_layer},

@@ -1,4 +1,3 @@
-mod announcer;
 mod autocomplete;
 mod caption;
 mod cascader;
@@ -8,6 +7,7 @@ mod clear;
 mod color;
 mod combobox;
 mod date;
+mod field_props;
 mod field_status;
 mod fieldset;
 mod file_field;
@@ -32,7 +32,6 @@ mod use_field;
 mod use_field_frame;
 mod validation;
 
-pub(crate) use announcer::{Announcer, use_announcer};
 pub use autocomplete::{
     Autocomplete, AutocompleteFilterArgs, AutocompleteOptionArgs, AutocompleteProps,
 };
@@ -54,6 +53,7 @@ pub use combobox::{
     ComboboxState, use_combobox,
 };
 pub use date::*;
+pub(crate) use field_props::field_props;
 pub use field_status::FieldStatus;
 pub use fieldset::{Fieldset, FieldsetProps};
 pub use file_field::{FileField, FileFieldProps, Files};

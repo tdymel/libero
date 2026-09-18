@@ -6,8 +6,10 @@ use super::{
 };
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
-        common::{FOCUSABLE_SELECTOR, base_props, input_from_str, names_itself, variables},
+        common::{
+            FOCUSABLE_SELECTOR, HtmlTag, Input, States, Variables, base_props, input_from_str,
+            names_itself, variables,
+        },
         layout::use_box,
     },
     hooks::{ElementHandle, use_content_changes, use_element, use_resize_fallback, use_theme},
@@ -308,6 +310,29 @@ fn check_tab_stop(root: ElementHandle, axis: ScrollAxis, mut stop: Signal<bool>,
     });
 }
 
+/// The box around the content. A scope of its own, so a `Virtualize` step
+/// redraws only this box's padding, not the whole area (todo 843).
+#[component]
+fn ScrollAreaContent(content: ElementHandle, children: Element) -> Element {
+    let viewport = use_context::<ScrollViewport>();
+    // Unvirtualized content is `display: contents` and reserves nothing.
+    let (states, variables): (Input<States>, Input<Variables>) = if (viewport.virtualized)() {
+        (
+            States::default().with("virtualized", true).into(),
+            scroll_area_content_variables((viewport.offsets)()).into(),
+        )
+    } else {
+        (Input::None, Input::None)
+    };
+    use_box()
+        .framework_sx(&SCROLL_AREA_CONTENT_SX)
+        .states(&states)
+        .variables(&variables)
+        .prepare()
+        .element(&content)
+        .render(HtmlTag::Div, Vec::new(), children)
+}
+
 /// Scrolls its content, filling the parent by default. Read the scroll
 /// position via `onscroll`/`on*reached`; set it imperatively via
 /// `scroll_position_x`/`scroll_position_y` (reactive if bound to a signal,
@@ -491,23 +516,10 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         attributes.retain(|attribute| !matches!(attribute.name, "aria-label" | "aria-labelledby"));
     }
 
-    // Unvirtualized content is `display: contents` and reserves nothing.
     let virtualized = virtualized();
-    let (content_states, content_variables): (Input<States>, Input<Variables>) = if virtualized {
-        (
-            States::default().with("virtualized", true).into(),
-            scroll_area_content_variables(offsets()).into(),
-        )
-    } else {
-        (Input::None, Input::None)
+    let body = rsx! {
+        ScrollAreaContent { content, {props.children} }
     };
-    let body = use_box()
-        .framework_sx(&SCROLL_AREA_CONTENT_SX)
-        .states(&content_states)
-        .variables(&content_variables)
-        .prepare()
-        .element(&content)
-        .render(HtmlTag::Div, Vec::new(), props.children);
 
     // A listener costs a render and, for `onresize`, an observer: attach each
     // only while something reads it.

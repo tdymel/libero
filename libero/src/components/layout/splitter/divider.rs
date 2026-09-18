@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{HtmlTag, Input, States, layout::use_box},
+    components::{
+        common::{HtmlTag, Input, States},
+        layout::use_box,
+    },
     hooks::{ElementHandle, drag_handle_sx},
     sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, CssVar, SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, Size},

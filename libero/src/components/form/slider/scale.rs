@@ -4,7 +4,7 @@
 use super::slider_value::{SliderMark, SliderStep, SliderValue};
 use super::value::sane_bounds;
 use crate::{
-    components::Input,
+    components::common::Input,
     sx::{Sx, sx},
     theme::{Size, SizeCss},
 };

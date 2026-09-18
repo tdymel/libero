@@ -3,10 +3,8 @@ use dioxus::prelude::*;
 use super::{ColorCode, color_slider::CHECKERBOARD};
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
-        common::{base_props, shadow_sx},
+        common::{HtmlTag, Input, States, Variables, base_props, shadow_sx, variables},
         layout::use_box,
-        variables,
     },
     hooks::use_theme,
     sx::{StaticSx, sx},

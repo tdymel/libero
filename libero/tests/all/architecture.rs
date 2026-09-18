@@ -55,21 +55,25 @@ const DOCS_CRATES: [(&str, &str); 4] = [
 
 /// Category edges that close a cycle, each allowed from the named files only.
 /// The item they import is public, so moving it is an API change (todo texts).
-const KNOWN_CYCLES: [(&str, &str, &[&str]); 2] = [
-    // Spotlight's search is a combobox; Lightbox announces zoom with form's `Announcer`.
-    (
-        "overlay",
-        "form",
-        &[
-            "libero/src/components/overlay/lightbox.rs",
-            "libero/src/components/overlay/spotlight/spotlight.rs",
-        ],
-    ),
+/// Categories follow the docs groups, not a layering: the layering todo empties this.
+const KNOWN_CYCLES: [(&str, &str, &[&str]); 3] = [
     // `ColorSchemeButton` opens a `Menu`.
     (
         "buttons",
         "overlay",
         &["libero/src/components/buttons/color_scheme_button.rs"],
+    ),
+    // `Alert`'s close is an `ActionIcon`; buttons show feedback's `Loader`.
+    (
+        "feedback",
+        "buttons",
+        &["libero/src/components/feedback/alert.rs"],
+    ),
+    // `AvatarGroup` names its avatars in a `Tooltip`; `Lightbox` is a `Carousel`.
+    (
+        "data_display",
+        "overlay",
+        &["libero/src/components/data_display/avatar/group.rs"],
     ),
 ];
 
@@ -151,6 +155,24 @@ fn docs_uses_libero_through_its_root_and_known_crates() {
     assert!(
         inside.is_empty(),
         "import from the crate root:\n{inside:#?}"
+    );
+}
+
+/// The flat `components::X` re-exports hide the category from the cycle check below.
+#[test]
+fn components_import_from_the_category_not_the_flat_re_export() {
+    let categories = slice_by_regex(CATEGORY).unwrap();
+    let flat: BTreeSet<String> = graph()
+        .edges()
+        .iter()
+        .filter(|edge| !edge.external && edge.target == "libero/src/components/mod.rs")
+        .filter(|edge| categories.label_for(&edge.source).is_some())
+        .filter(|edge| !is_test_file(&edge.source))
+        .map(|edge| edge.source.clone())
+        .collect();
+    assert!(
+        flat.is_empty(),
+        "import `components::<category>::X`, not `components::X`:\n{flat:#?}"
     );
 }
 

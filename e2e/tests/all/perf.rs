@@ -153,19 +153,21 @@ fn a_select_pick_stays_in_budget() {
         pointer::click(page, "[role=combobox]").await.unwrap();
         wait::for_visible(page, "[role=option]").await.unwrap();
         let opened = settled(page, "opening the select").await;
+        // The popup's second pass is the popover placing the measured box.
         assert_within(
             &opened,
             &[
                 ("Select", 1),
-                ("SelectCore", 2),
-                ("ComboboxCore", 2),
-                ("ComboboxPopup", 3),
-                ("ComboboxDropdown", 2),
-                ("ComboboxRow", 10),
-                ("ComboboxOption", 10),
-                ("ScrollArea", 2),
-                ("Fragment", 3),
-                ("PortalOutlet", 3),
+                ("SelectCore", 1),
+                ("ComboboxCore", 1),
+                ("ComboboxPopup", 2),
+                ("ComboboxDropdown", 1),
+                ("ComboboxRow", 5),
+                ("ComboboxOption", 5),
+                ("ScrollArea", 1),
+                ("ScrollAreaContent", 1),
+                ("Fragment", 2),
+                ("PortalOutlet", 2),
                 ("StyleOutlet", 1),
             ],
             "opening a select of five",
@@ -191,9 +193,9 @@ fn a_select_pick_stays_in_budget() {
                 ("SelectPage", 1),
                 ("Flex", 1),
                 ("Select", 1),
-                ("SelectCore", 2),
-                ("SelectValue", 2),
-                ("ComboboxCore", 2),
+                ("SelectCore", 1),
+                ("SelectValue", 1),
+                ("ComboboxCore", 1),
                 ("PortalOutlet", 1),
                 ("StyleOutlet", 1),
             ],
@@ -261,10 +263,11 @@ fn scrolling_a_virtual_list_stays_in_budget() {
             .unwrap();
         }
         let renders = settled(page, "scrolling").await;
-        // No row is a scope of its own: a step redraws the area and its window.
+        // No row is a scope of its own: a step redraws the window and the
+        // padding box around it, never the area.
         assert_within(
             &renders,
-            &[("ScrollArea", 10), ("Virtualize", 10)],
+            &[("ScrollAreaContent", 10), ("Virtualize", 10)],
             "ten scroll steps",
         );
         fixture.console.assert_clean("scrolling").unwrap();

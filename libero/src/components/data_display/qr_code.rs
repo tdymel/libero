@@ -4,8 +4,7 @@ use fast_qr::{ECL, QRBuilder};
 
 use crate::{
     components::{
-        HtmlTag, Input,
-        common::{base_props, input_from_str},
+        common::{HtmlTag, Input, base_props, input_from_str},
         layout::use_box,
     },
     hooks::use_theme,

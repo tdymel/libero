@@ -2,9 +2,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variant,
         buttons::ActionIcon,
-        common::{GitHubIcon, GitLabIcon, base_props},
+        common::{GitHubIcon, GitLabIcon, HtmlTag, Input, States, Variant, base_props},
         layout::use_box,
     },
     hooks::{use_cache, use_formats, use_localization, use_theme},

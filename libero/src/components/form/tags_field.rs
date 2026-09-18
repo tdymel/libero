@@ -4,14 +4,14 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        CaretKeys, ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input, SelectionArgs,
-        common::{field_props, ring_overlay},
+        accessibility::use_announcer,
+        common::{ComboboxState, HtmlTag, Input, ring_overlay, use_combobox},
         form::{
-            clear_button, field_control_sx, removable_chip, row_label, use_announcer, use_bound,
-            use_chip_announcer, use_field, use_field_frame,
+            CaretKeys, ComboboxCore, ComboboxOption, SelectionArgs, clear_button, field_control_sx,
+            field_props, removable_chip, row_label, use_bound, use_chip_announcer, use_field,
+            use_field_frame,
         },
         layout::{BoxStyle, use_box},
-        use_combobox,
     },
     hooks::{ElementHandle, PopoverWidth, use_element, use_localization, use_theme},
     localization::{TagsFieldLabels, fill},
@@ -100,13 +100,13 @@ field_props! {
         /// Rules over the whole list, shown once the field loses focus or its
         /// form is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<Vec<String>>,
+        validate: crate::components::form::Validators<Vec<String>>,
         /// Emits one hidden input of that name per tag. The visible input holds
         /// the draft, not the value, so it cannot carry the name itself.
         /// A path - `Article::FIELDS.topics()` - also binds the list to the
         /// surrounding `Form`'s value when there is no `onchange`.
         #[props(default, into)]
-        name: crate::components::FieldName<Vec<String>>,
+        name: crate::components::form::FieldName<Vec<String>>,
         /// Shown while there are no tags and nothing has been typed.
         #[props(default, into)]
         placeholder: Option<String>,

@@ -5,12 +5,9 @@ use dioxus::html::{EventHandlerValue, PlatformEventData};
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        ClassList, HtmlTag, Input, States, Variables,
-        common::{
-            IntoChildren, StyleAttributes, attr, base_props, render_polymorphic,
-            use_style_attributes,
-        },
+    components::common::{
+        ClassList, HtmlTag, Input, IntoChildren, States, StyleAttributes, Variables, attr,
+        base_props, render_polymorphic, use_style_attributes,
     },
     sx::{StaticSx, Sx},
 };

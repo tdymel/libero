@@ -3,8 +3,7 @@ use dioxus::prelude::*;
 use super::visually_hidden::VISUALLY_HIDDEN_FIXED_SX;
 use crate::{
     components::{
-        HtmlTag, Input,
-        common::{FOCUSABLE_SELECTOR, base_props},
+        common::{FOCUSABLE_SELECTOR, HtmlTag, Input, base_props},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_local_state},

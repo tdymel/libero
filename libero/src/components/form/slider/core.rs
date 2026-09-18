@@ -5,8 +5,10 @@ use super::value::{SliderCoreValue, fraction, sane_bounds};
 use crate::{
     CssLayer,
     components::{
-        ClassList, HtmlTag, Input, States, Variables,
-        common::{base_color, has_shortcut_modifier, shadow_sx, variables},
+        common::{
+            ClassList, HtmlTag, Input, States, Variables, base_color, has_shortcut_modifier,
+            shadow_sx, variables,
+        },
         layout::use_box,
         overlay::{PressFocus, Tooltip},
     },

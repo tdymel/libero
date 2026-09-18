@@ -4,8 +4,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Alert, HtmlTag, Input,
-        common::base_props,
+        common::{HtmlTag, Input, base_props},
+        feedback::Alert,
         form::{
             Binding, Source, Validators,
             handle::{Control, FormHandle, Summary},

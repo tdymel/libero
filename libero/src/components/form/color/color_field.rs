@@ -3,12 +3,14 @@ use dioxus::prelude::*;
 use super::{ColorCode, ColorFormat, ColorPicker, ColorSwatch, Swatches};
 use crate::{
     components::{
-        ActionIcon, HtmlTag, Input, States,
+        accessibility::use_announcer,
+        buttons::ActionIcon,
         common::{
-            EyeDropperIcon, FOCUSABLE_SELECTOR, NavigationChord, field_props, navigation_chord,
+            EyeDropperIcon, FOCUSABLE_SELECTOR, HtmlTag, Input, NavigationChord, States,
+            navigation_chord,
         },
         form::{
-            FIELD_CONTROL_SX, FieldStatus, SliderChangeEvent, slot_icon_size, use_announcer,
+            FIELD_CONTROL_SX, FieldStatus, SliderChangeEvent, field_props, slot_icon_size,
             use_bound, use_field, use_field_frame,
         },
         layout::{paper_sx, use_box},
@@ -59,7 +61,7 @@ field_props! {
         /// Rules over the color, shown once the field loses focus or its form
         /// is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<ColorCode>,
+        validate: crate::components::form::Validators<ColorCode>,
         /// How the text shows the color, and so what `name` posts. Hex by
         /// default, hexa `with_alpha`. Typing accepts every form either way.
         #[props(default, into)]
@@ -96,7 +98,7 @@ field_props! {
         /// What the field posts as. A path - `Theme::FIELDS.accent()` - also
         /// binds it to the surrounding `Form`'s value when it has no `oninput`.
         #[props(default, into)]
-        name: crate::components::FieldName<ColorCode>,
+        name: crate::components::form::FieldName<ColorCode>,
         #[props(default, into)]
         placeholder: Option<String>,
     }

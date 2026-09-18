@@ -3,13 +3,13 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        HtmlTag, Input, States,
         accessibility::VISUALLY_HIDDEN_SX,
         common::{
-            CheckboxMarkIcon, base_color, contrast_color, field_props, fill_color, focus_ring_sx,
-            names_itself, ring_overlay, ring_overlay_sx, use_name_warning, variables,
+            CheckboxMarkIcon, HtmlTag, Input, States, base_color, contrast_color, fill_color,
+            focus_ring_sx, names_itself, ring_overlay, ring_overlay_sx, use_name_warning,
+            variables,
         },
-        form::{use_bound, use_field},
+        form::{field_props, use_bound, use_field},
         layout::use_box,
     },
     hooks::{use_cache, use_css, use_element, use_theme},
@@ -111,12 +111,12 @@ field_props! {
         /// Rules over `checked`, shown once the checkbox loses focus or its
         /// form is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<bool>,
+        validate: crate::components::form::Validators<bool>,
         /// What the field posts as. A path - `Signup::FIELDS.terms()` - also
         /// binds it to the surrounding `Form`'s value when the field has no
         /// `onchange`.
         #[props(default, into)]
-        name: crate::components::FieldName<bool>,
+        name: crate::components::form::FieldName<bool>,
         /// Names the checkbox when it has no `label`.
         #[props(default, into)]
         aria_label: Option<String>,

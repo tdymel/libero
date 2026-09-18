@@ -26,8 +26,8 @@ pub use flex::{Flex, FlexDirection, FlexProps, FlexWrap};
 pub use float::{Float, FloatProps, Placement};
 pub use grid::{
     AreaName, Grid, GridArea, GridItem, GridItemProps, GridProps, GridSpan, GridTemplate,
-    GridTemplateBuilder, GridTemplateError, GridZone, GridZoneProps, RowBuilder, SpanValue,
-    StaticGridTemplate, sp,
+    GridTemplateBuilder, GridTemplateError, GridZone, GridZoneProps, RowBuilder,
+    StaticGridTemplate,
 };
 pub use header::{Header, HeaderPosition, HeaderProps};
 // A `Box` rendered as a link, here so buttons and navigation share it one-way.

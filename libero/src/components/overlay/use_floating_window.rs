@@ -3,7 +3,7 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use crate::{
-    components::{FloatingWindow, FloatingWindowOptions},
+    components::overlay::{FloatingWindow, FloatingWindowOptions},
     hooks::{FocusReturn, use_focus_return, use_portal},
     platform::{ElementApi, document},
 };

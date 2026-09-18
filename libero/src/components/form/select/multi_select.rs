@@ -4,7 +4,8 @@ use crate::components::form::use_bound;
 
 use crate::{
     components::{
-        Input, OptionSource, Options, common::field_props, form::removable_chip, use_combobox,
+        common::{Input, OptionSource, Options, use_combobox},
+        form::{field_props, removable_chip},
     },
     hooks::{use_localization, use_theme},
     utils::warn,
@@ -54,11 +55,11 @@ field_props! {
         /// A path - `Order::FIELDS.toppings()` - also binds the selection to
         /// the surrounding `Form`'s value when there is no `onchange`.
         #[props(default, into)]
-        name: crate::components::FieldName<Vec<T>>,
+        name: crate::components::form::FieldName<Vec<T>>,
         /// Rules over the selection, shown once the select loses focus or its
         /// form is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<Vec<T>>,
+        validate: crate::components::form::Validators<Vec<T>>,
         /// Shows an x that empties the selection.
         #[props(default)]
         clearable: Option<bool>,

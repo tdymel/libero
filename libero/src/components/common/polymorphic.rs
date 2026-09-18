@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use dioxus::core::AttributeValue;
 
-use crate::components::Input;
+use crate::components::common::Input;
 
 macro_rules! html_tags {
     (

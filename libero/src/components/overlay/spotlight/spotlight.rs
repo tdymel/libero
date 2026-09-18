@@ -4,9 +4,14 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Dialog, Kbd, Loader, ScrollArea, VisuallyHidden,
-        common::{inset_focus_ring_sx, navigation_chord, use_name_warning},
-        form::{ComboboxState, use_combobox},
+        accessibility::VisuallyHidden,
+        common::{
+            ComboboxState, inset_focus_ring_sx, navigation_chord, use_combobox, use_name_warning,
+        },
+        feedback::Loader,
+        layout::{Box, ScrollArea},
+        overlay::Dialog,
+        typography::Kbd,
     },
     hooks::{ModalHandle, ModalScope, use_dismiss_layer, use_localization, use_modal, use_theme},
     platform::{KeyChord, KeySubscription, keyboard, warn_reserved_chord},

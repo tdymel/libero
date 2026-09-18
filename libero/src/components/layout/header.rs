@@ -8,10 +8,10 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        HtmlTag, Input, States, Variables,
-        common::{base_props, fill_color, input_from_str},
+        common::{
+            HtmlTag, Input, States, Variables, base_props, fill_color, input_from_str, variables,
+        },
         layout::use_box,
-        variables,
     },
     css::Stylesheet,
     hooks::{use_css, use_id},

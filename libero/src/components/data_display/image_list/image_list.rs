@@ -2,8 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, LinkedImageScope, States, Variables,
-        common::{base_props, input_from_str, inset_focus_ring_sx, variables},
+        common::{
+            HtmlTag, Input, States, Variables, base_props, input_from_str, inset_focus_ring_sx,
+            variables,
+        },
+        data_display::LinkedImageScope,
         layout::{InternalAnchor, use_box},
     },
     hooks::use_theme,
@@ -127,7 +130,7 @@ fn span_for_cols(cols: u8) -> GridSpan {
 }
 
 /// The spans above the base, as viewport queries on the cell. User layer, as
-/// `GridItem`'s own `sp()` rules, or the base span's recycled class wins.
+/// `GridItem`'s own span breakpoints, or the base span's recycled class wins.
 fn span_breakpoints(spans: Responsive<GridSpan>) -> Sx {
     spans.breakpoints().fold(sx(), |cell, (size, span)| {
         cell.breakpoint(size, sx().grid_column(format!("span {}", span.columns())))

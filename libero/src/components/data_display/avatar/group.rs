@@ -4,9 +4,12 @@ use super::avatar::{avatar_sx, avatar_variables};
 use super::spec::AvatarSpec;
 use crate::{
     components::{
-        Avatar, HtmlTag, Input, States, Tooltip, Variables, Variant,
-        common::{base_props, focus_ring_sx, variables},
+        common::{
+            HtmlTag, Input, States, Variables, Variant, base_props, focus_ring_sx, variables,
+        },
+        data_display::Avatar,
         layout::use_box,
+        overlay::Tooltip,
     },
     hooks::{use_localization, use_theme},
     localization::fill,

@@ -3,7 +3,10 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Input, Options, common::field_props, form::use_bound},
+    components::{
+        common::{Input, Options},
+        form::{field_props, use_bound},
+    },
     hooks::use_theme,
     utils::warn,
 };
@@ -109,11 +112,11 @@ field_props! {
         /// `Listing::FIELDS.category()` - also binds the selection to the
         /// surrounding `Form`'s value when there is no `onchange`.
         #[props(default, into)]
-        name: crate::components::FieldName<Option<T>>,
+        name: crate::components::form::FieldName<Option<T>>,
         /// Rules over the selected value, shown once the cascader loses focus
         /// or its form is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<Option<T>>,
+        validate: crate::components::form::Validators<Option<T>>,
     }
 }
 

@@ -2,8 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
-        common::{base_color, base_props, contrast_color, fill_color, variables},
+        common::{
+            HtmlTag, Input, States, Variables, base_color, base_props, contrast_color, fill_color,
+            variables,
+        },
         layout::use_box,
     },
     hooks::use_theme,

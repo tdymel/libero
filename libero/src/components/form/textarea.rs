@@ -4,9 +4,9 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        HtmlTag, Input, VisuallyHidden,
-        common::field_props,
-        form::{FormScope, field_control_sx, use_bound, use_field, use_field_frame},
+        accessibility::VisuallyHidden,
+        common::{HtmlTag, Input},
+        form::{FormScope, field_control_sx, field_props, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::{use_css, use_element, use_form_owner, use_localization, use_theme},
@@ -38,12 +38,12 @@ field_props! {
         /// Rules over the text, shown once the field loses focus or its form
         /// is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<String>,
+        validate: crate::components::form::Validators<String>,
         /// What the field posts as. A path - `Signup::FIELDS.bio()` - also
         /// binds it to the surrounding `Form`'s value when the field has no
         /// `oninput`.
         #[props(default, into)]
-        name: crate::components::FieldName<String>,
+        name: crate::components::form::FieldName<String>,
         #[props(default, into)]
         placeholder: Option<String>,
         /// Visible lines, which is what sets the starting height. The user can

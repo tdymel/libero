@@ -2,16 +2,15 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
-        common::{base_props, variables},
+        common::{HtmlTag, Input, States, Variables, base_props, variables},
         layout::use_box,
     },
     sx::{StaticSx, sx},
-    theme::{GRID_ITEM_ROW_SPAN_VAR, GRID_ITEM_ROWS_VAR},
+    theme::{GRID_ITEM_ROW_SPAN_VAR, GRID_ITEM_ROWS_VAR, Responsive},
     utils::warn,
 };
 
-use super::{GRID_ITEM_STATE, GridSpan, GridZoneContext, SpanValue, ZoneState, container_name};
+use super::{GRID_ITEM_STATE, GridSpan, GridZoneContext, ZoneState, container_name};
 
 static GRID_ITEM_SX: StaticSx = StaticSx::new(|| {
     let base = sx().min_width("0").when(
@@ -44,10 +43,11 @@ fn rows_spanned(height_px: f64, unit_px: u32, gap_px: u32) -> u32 {
 base_props! {
     pub struct GridItemProps {
         children: Element,
-        /// Width, in twelfths of the zone. A `GridSpan`, or `sp()` for a span
-        /// that changes with the *zone's* width.
+        /// Width, in twelfths of the zone. A `GridSpan`, or
+        /// `responsive(GridSpan::Full).md(GridSpan::Half)` for a span that
+        /// changes with the *zone's* width (a container query, not the viewport).
         #[props(default, into)]
-        span: Input<SpanValue>,
+        span: Input<Responsive<GridSpan>>,
         /// Height, in rows of the zone's implicit grid.
         ///
         /// **Ignored in a masonry zone**, with a warn: there the row span is
@@ -122,12 +122,12 @@ pub fn GridItem(props: GridItemProps) -> Element {
         )
         .into();
 
-    let span = props.span.unwrap_or_default();
+    let span = props.span.copied_or(Responsive::new(GridSpan::default()));
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(GRID_ITEM_STATE, true)
-        .with(span.base_span().state_name(), true)
+        .with(span.base().state_name(), true)
         .with("measured", measured.is_some())
         .with(ROWS_STATE, row_span.is_some())
         .into();
@@ -141,7 +141,7 @@ pub fn GridItem(props: GridItemProps) -> Element {
         "" => {
             if zone.is_some() && span.breakpoints().next().is_some() {
                 warn(
-                    "GridItem: sp() breakpoints are ignored in a GridZone without an area, which has no container to query.",
+                    "GridItem: span breakpoints are ignored in a GridZone without an area, which has no container to query.",
                 );
             }
             props.sx.clone()
@@ -181,7 +181,8 @@ mod tests {
     use super::rows_spanned;
     use crate::{
         LiberoProvider,
-        components::{GridItem, GridSpan, GridZone, sp},
+        components::layout::{GridItem, GridSpan, GridZone},
+        theme::responsive,
         utils::take_warnings,
     };
 
@@ -197,7 +198,7 @@ mod tests {
         let dropped = warnings_of(|| {
             rsx! {
                 LiberoProvider {
-                    GridZone { GridItem { span: sp().base(GridSpan::Full).md(GridSpan::Half), "x" } }
+                    GridZone { GridItem { span: responsive(GridSpan::Full).md(GridSpan::Half), "x" } }
                 }
             }
         });
@@ -208,7 +209,7 @@ mod tests {
         });
 
         assert!(
-            dropped.iter().any(|w| w.contains("sp() breakpoints")),
+            dropped.iter().any(|w| w.contains("span breakpoints")),
             "{dropped:?}"
         );
         assert!(plain.is_empty(), "{plain:?}");

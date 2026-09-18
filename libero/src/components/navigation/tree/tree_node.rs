@@ -3,7 +3,11 @@ use std::{any::Any, rc::Rc};
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Icon, States, common::ChevronRightIcon},
+    components::{
+        common::{ChevronRightIcon, States},
+        data_display::Icon,
+        layout::Box,
+    },
     sx::{StaticSx, sx},
     theme::{ICON_SIZE, Size},
 };

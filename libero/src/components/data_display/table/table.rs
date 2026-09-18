@@ -2,8 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ClassList, HtmlTag, Input, States,
-        common::{attr, inset_focus_ring_sx, names_itself, use_name_warning},
+        common::{
+            ClassList, HtmlTag, Input, States, attr, inset_focus_ring_sx, names_itself,
+            use_name_warning,
+        },
         layout::use_box,
     },
     hooks::use_id,

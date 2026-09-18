@@ -11,10 +11,9 @@ use super::{
 };
 use crate::{
     components::{
-        ClassList, HtmlTag, Input, States,
         common::{
-            borderless_on_state_sx, disabled_look_sx, focus_ring_sx, has_shortcut_modifier,
-            input_from_str, inset_focus_ring_sx,
+            ClassList, HtmlTag, Input, States, borderless_on_state_sx, disabled_look_sx,
+            focus_ring_sx, has_shortcut_modifier, input_from_str, inset_focus_ring_sx,
         },
         layout::use_box,
     },

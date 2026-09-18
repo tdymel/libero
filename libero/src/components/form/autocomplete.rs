@@ -2,11 +2,12 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        CaretKeys, ComboboxCore, ComboboxOption, HtmlTag, Input, Options,
-        common::field_props,
-        form::{FIELD_CONTROL_SX, clear_button, row_label, use_bound, use_field, use_field_frame},
+        common::{HtmlTag, Input, Options, use_combobox},
+        form::{
+            CaretKeys, ComboboxCore, ComboboxOption, FIELD_CONTROL_SX, clear_button, field_props,
+            row_label, use_bound, use_field, use_field_frame,
+        },
         layout::use_box,
-        use_combobox,
     },
     hooks::{PopoverWidth, use_element, use_localization, use_theme},
     utils::warn,
@@ -46,7 +47,7 @@ field_props! {
         /// Rules over the text, shown once the field loses focus or its form
         /// is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<String>,
+        validate: crate::components::form::Validators<String>,
         /// The suggestions to offer. `T` infers from it, so no call site ever
         /// annotates one.
         #[props(default)]
@@ -71,7 +72,7 @@ field_props! {
         /// binds it to the surrounding `Form`'s value when the field has no
         /// `oninput`.
         #[props(default, into)]
-        name: crate::components::FieldName<String>,
+        name: crate::components::form::FieldName<String>,
         #[props(default, into)]
         placeholder: Option<String>,
         /// Shows an x that empties the field while it holds text.

@@ -7,8 +7,7 @@ use super::{
 };
 use crate::{
     components::{
-        Input,
-        common::base_props,
+        common::{Input, base_props},
         form::SliderChangeEvent,
         form::slider::{SliderCore, SliderCoreValue},
     },

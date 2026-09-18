@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
-        common::{base_props, focus_ring_sx, input_from_str, variables},
+        common::{
+            HtmlTag, Input, States, Variables, base_props, focus_ring_sx, input_from_str, variables,
+        },
         layout::use_box,
     },
     str_enum::str_enum,

@@ -4,11 +4,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input,
-        common::field_props,
+        common::{HtmlTag, Input},
         form::{
-            FIELD_CONTROL_SX, LiveControl, LiveSlot, use_bound, use_field, use_field_frame,
-            use_live_slot,
+            FIELD_CONTROL_SX, LiveControl, LiveSlot, field_props, use_bound, use_field,
+            use_field_frame, use_live_slot,
         },
         layout::use_box,
     },
@@ -29,12 +28,12 @@ field_props! {
         /// Rules over the text, shown once the field loses focus or its form
         /// is submitted.
         #[props(default, into)]
-        validate: crate::components::Validators<String>,
+        validate: crate::components::form::Validators<String>,
         /// What the field posts as. A path - `Signup::FIELDS.email()` - also
         /// binds the text to the surrounding `Form`'s value when the field has
         /// no `oninput`.
         #[props(default, into)]
-        name: crate::components::FieldName<String>,
+        name: crate::components::form::FieldName<String>,
         #[props(default, into)]
         placeholder: Option<String>,
         /// Inside the frame, before the control - a search icon, a currency

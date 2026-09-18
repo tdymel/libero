@@ -1,9 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::components::{
-    Input,
-    common::{base_props, styling_attributes, use_style_attributes},
-};
+use crate::components::common::{Input, base_props, styling_attributes, use_style_attributes};
 
 base_props! {
     pub struct DataListItemProps {

@@ -2,13 +2,12 @@ use dioxus::{html::input_data::MouseButton, prelude::*};
 
 use crate::{
     components::{
-        Box, HtmlTag, Input, States, Variables,
         common::{
-            ChevronDownIcon, base_props, focus_ring_sx, input_from_str, inset_focus_ring_sx,
-            states, variables,
+            ChevronDownIcon, HtmlTag, Input, States, Variables, base_props, focus_ring_sx,
+            input_from_str, inset_focus_ring_sx, states, variables,
         },
         layout::{
-            ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, inline_x,
+            Box, ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, inline_x,
             physical_x, scroll_area_base, use_box, use_scroll_area,
         },
     },

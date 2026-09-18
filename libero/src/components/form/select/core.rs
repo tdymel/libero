@@ -2,15 +2,14 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        CaretKeys, ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input, States,
-        VisuallyHidden,
+        accessibility::VisuallyHidden,
         common::{
-            ChevronDownIcon, attr, field_props, focus_ring_sx, has_shortcut_modifier,
-            navigation_chord, ring_overlay,
+            ChevronDownIcon, ComboboxState, HtmlTag, Input, States, attr, focus_ring_sx,
+            has_shortcut_modifier, navigation_chord, ring_overlay,
         },
         form::{
-            PreparedField, clear_button, field_control_sx, use_chip_announcer, use_field,
-            use_field_frame, use_refocus_on_close,
+            CaretKeys, ComboboxCore, ComboboxOption, PreparedField, clear_button, field_control_sx,
+            field_props, use_chip_announcer, use_field, use_field_frame, use_refocus_on_close,
         },
         layout::{BoxStyle, use_box},
     },
@@ -257,7 +256,7 @@ field_props! {
         name: Option<String>,
         /// What the skin's `validate` rules say; `T` never reaches here.
         #[props(default)]
-        rules: Option<crate::components::FieldStatus>,
+        rules: Option<crate::components::form::FieldStatus>,
         /// Each row's plain text, parallel to `rows`, which is what the
         /// typeahead searches. Empty turns typeahead off.
         ///
@@ -434,6 +433,15 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .prepare();
 
     let (rows, groups, row_disabled) = select_rows(&props, &visible, state);
+    // The count `ComboboxCore` would write, written before the trigger reads it:
+    // written from there, it re-ran this whole scope on every open (todo 842).
+    if opened {
+        state.set_rows(if props.loading.is_some() {
+            0
+        } else {
+            rows.len()
+        });
+    }
 
     // A hook, so it is prepared unconditionally and only used when searching.
     let search_box = use_box().framework_sx(&SEARCH_SX).prepare();
