@@ -209,7 +209,7 @@ fn LocalizationPreview(values: DemoValues) -> Element {
     let localization = use_localization_handle();
     let formats = use_formats_handle();
     let direction = use_direction();
-    let site = use_hook(|| (localization.get(), formats.get(), direction.get()));
+    let site = use_hook(|| (localization.get(), formats.get(), direction.kept()));
     let turn_to = if rtl { Direction::Rtl } else { Direction::Ltr };
     {
         let direction = direction.clone();
@@ -224,9 +224,11 @@ fn LocalizationPreview(values: DemoValues) -> Element {
     use_drop(move || {
         localization.set(site.0);
         formats.set(site.1);
-        // Only when turned: a set is kept, and a visit alone should keep nothing.
-        if direction.get() != site.2 {
-            direction.set(site.2);
+        // The choice found, or none: a visit alone should keep nothing.
+        match site.2 {
+            _ if direction.kept() == site.2 => {}
+            Some(found) => direction.set(found),
+            None => direction.clear(),
         }
     });
 

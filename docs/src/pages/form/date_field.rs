@@ -1,7 +1,7 @@
 use super::date_common::{
-    SIZES, calendar_controls, day_limits, duration_limits, field_controls, has_days, has_time,
-    is_on, is_weekend, moment_limits, shared_controls, shown, status_of, step_of, text_of,
-    time_limits, today_of, twelve_hour_of,
+    SIZES, calendar_controls, captions_of, day_limits, duration_limits, field_controls, has_days,
+    has_time, is_on, is_weekend, moment_limits, shared_controls, shown, status_of, step_of,
+    text_of, time_limits, today_of, twelve_hour_of,
 };
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
@@ -98,7 +98,7 @@ pub fn DateFieldPage() -> Element {
                     prop("helper", "Caption").doc("Under the control. Formatting rules, or what the entry changes."),
                     prop("status", "FieldStatus")
                         .default("Valid")
-                        .doc("Validation state, under the helper. Text the field cannot accept shows its own error instead, such as `DateLocale::invalid_date` or the bound it missed."),
+                        .doc("Validation state, under the helper. Text the field cannot accept shows its own error instead, such as `DateLocale::invalid_date`, `invalid_duration` or the bound it missed."),
                     prop("required", "bool").default("false").doc("Sets `required` on the input and marks the label."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),
@@ -299,6 +299,15 @@ pub fn DateFieldPage() -> Element {
                     Code { source: "max" }
                     "."
                 }
+                Text {
+                    "A duration has its own errors: "
+                    Code { source: "Must be at least 15 min" }
+                    " names the bound it missed, and "
+                    Code { source: "Not a valid duration" }
+                    " is text it cannot read. A screen reader hears each column's value with its unit, "
+                    Code { source: "2 hours" }
+                    "."
+                }
             }
             DocSection {
                 title: "Accessibility",
@@ -347,9 +356,10 @@ fn DateFieldDemo(values: DemoValues) -> Element {
     let variant = values.str("variant");
     let exclude_date = is_on(&values, "exclude_weekends").then(|| Callback::new(is_weekend));
     let close_on_change = is_on(&values, "close_on_change");
-    let label = text_of(&values, "label", "When");
-    let aria_label = label.is_none().then_some("When");
-    let description = text_of(&values, "description", "Your local time.");
+    let (caption, about) = captions_of(&values);
+    let label = text_of(&values, "label", caption);
+    let aria_label = label.is_none().then_some(caption);
+    let description = text_of(&values, "description", about);
     let helper = text_of(&values, "helper", "Typing works too.");
     let placeholder = text_of(&values, "placeholder", "Pick one");
     let status = status_of(&values);

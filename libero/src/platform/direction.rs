@@ -32,6 +32,21 @@ pub(crate) fn store_direction(direction: Direction) {
     let _ = direction;
 }
 
+/// Drops the kept choice.
+pub(crate) fn forget_direction() {
+    #[cfg(target_arch = "wasm32")]
+    if let Some(storage) = web_sys::window().and_then(|window| window.local_storage().ok()?) {
+        let _ = storage.remove_item(DIRECTION_STORAGE_KEY);
+    }
+}
+
+/// Removes the root's `dir`, so the page runs as it would without one.
+pub(crate) fn clear_root_direction() {
+    if !document().is_some_and(|document| document.set_root_attribute("dir", None)) {
+        dioxus::document::eval("document.documentElement.removeAttribute('dir');");
+    }
+}
+
 /// Sets the root's `dir`, so the portal outlet turns with the app. A WebView
 /// holds no handle on its DOM, so there the page's own script does it.
 pub(crate) fn apply_direction(direction: Direction) {

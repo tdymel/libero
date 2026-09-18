@@ -43,7 +43,8 @@ pub(crate) use clipboard::clipboard;
 pub use clock::{ClockApi, clock};
 pub use color_scheme::{ColorSchemeApi, ColorSchemeSubscription, color_scheme};
 pub(crate) use direction::{
-    apply_direction, set_root_direction, store_direction, stored_direction,
+    apply_direction, clear_root_direction, forget_direction, set_root_direction, store_direction,
+    stored_direction,
 };
 pub use document::{DocumentApi, document};
 pub(crate) use element::{

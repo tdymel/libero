@@ -50,6 +50,27 @@ impl DirectionHandle {
         self.context.set_direction(direction);
     }
 
+    /// The direction chosen through [`set`](Self::set) and kept, `None` when
+    /// nothing was chosen: the start, or since [`clear`](Self::clear).
+    pub fn kept(&self) -> Option<Direction> {
+        *self.context.kept_direction.read()
+    }
+
+    /// Drops the choice, kept one included: back to `LiberoProvider`'s
+    /// `direction`, or with none, the root's `dir` removed.
+    ///
+    /// ```ignore
+    /// // Puts back what a preview found, choice or none.
+    /// let found = direction.kept();
+    /// match found {
+    ///     Some(found) => direction.set(found),
+    ///     None => direction.clear(),
+    /// }
+    /// ```
+    pub fn clear(&self) {
+        self.context.clear_direction();
+    }
+
     /// Turns the text the other way.
     pub fn toggle(&self) {
         // Bound first: the peek guard would outlive the write inside `set`.

@@ -11,8 +11,8 @@ use crate::{
     css::Stylesheet,
     localization::{Formats, Localization},
     platform::{
-        self, apply_direction, color_scheme, document, focus_selectors, set_root_direction,
-        store_direction, stored_direction,
+        self, apply_direction, clear_root_direction, color_scheme, document, focus_selectors,
+        forget_direction, set_root_direction, store_direction, stored_direction,
     },
     theme::{THEME_ATTRIBUTE, Theme, ThemeSet},
     tokens::{ColorScheme, ColorSchemeSetting, Direction},
@@ -51,6 +51,10 @@ pub struct LiberoContext {
     pub(crate) system_scheme: Signal<ColorScheme>,
     /// Which way the text runs, as the document root's `dir` says.
     pub(crate) direction: Signal<Direction>,
+    /// The direction chosen and kept, `None` when nothing was chosen.
+    pub(crate) kept_direction: Signal<Option<Direction>>,
+    /// The provider's `direction` prop, what clearing the choice goes back to.
+    pub(crate) start_direction: Option<Direction>,
     pub(crate) layer_order_css: &'static str,
     /// `Rc<str>`, not a `Stylesheet`: every `use_context::<LiberoContext>()`
     /// clones this struct, and only `ThemeStyle` ever reads this field.
@@ -73,6 +77,8 @@ impl LiberoContext {
         scheme_setting: Signal<ColorSchemeSetting>,
         system_scheme: Signal<ColorScheme>,
         direction: Signal<Direction>,
+        kept_direction: Signal<Option<Direction>>,
+        start_direction: Option<Direction>,
         theme_css: Signal<Rc<str>>,
         stylesheet_registry_version: Signal<u64>,
     ) -> Self {
@@ -85,6 +91,8 @@ impl LiberoContext {
             scheme_setting,
             system_scheme,
             direction,
+            kept_direction,
+            start_direction,
             layer_order_css: CssLayer::order_css(),
             theme_css,
             stylesheet_registry: StylesheetRegistry::new(),
@@ -209,6 +217,21 @@ impl LiberoContext {
         stored.set(direction);
         apply_direction(direction);
         store_direction(direction);
+        let mut kept = self.kept_direction;
+        kept.set(Some(direction));
+    }
+
+    /// Drops the kept choice: back to the provider's `direction`, or no root `dir`.
+    pub(crate) fn clear_direction(&self) {
+        let mut stored = self.direction;
+        stored.set(self.start_direction.unwrap_or_default());
+        match self.start_direction {
+            Some(direction) => apply_direction(direction),
+            None => clear_root_direction(),
+        }
+        forget_direction();
+        let mut kept = self.kept_direction;
+        kept.set(None);
     }
 
     /// Swaps the whole set - what a theme picker does.
@@ -353,7 +376,9 @@ pub fn LiberoProvider(
     let theme_set = use_signal(|| themes);
     // Read and set before the first render where the root is in reach (the
     // web), so the first layout already runs the kept way.
-    let chosen_direction = use_hook(|| stored_direction().or(direction));
+    let kept_direction = use_signal(stored_direction);
+    let start_direction = use_hook(|| direction);
+    let chosen_direction = use_hook(|| kept_direction.peek().or(start_direction));
     let direction_set = use_hook(|| chosen_direction.is_some_and(set_root_direction));
     let direction_signal = use_signal(|| chosen_direction.unwrap_or_default());
 
@@ -368,6 +393,8 @@ pub fn LiberoProvider(
             scheme_setting,
             system_scheme,
             direction_signal,
+            kept_direction,
+            start_direction,
             theme_css,
             stylesheet_registry_version,
         )

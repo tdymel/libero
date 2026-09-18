@@ -45,6 +45,14 @@ fn StubbedPage() -> Element {
                 RepoButton { id: "tonal", repo: "example/repo", variant: "tonal" }
                 RepoButton { id: "filled", repo: "example/repo", variant: "filled" }
             }
+            // Todo 852: a light custom colour, palette and literal, on every variant.
+            for color in ["warning", "#ffe066"] {
+                Flex { direction: "row", gap: "md",
+                    for variant in ["outlined", "tonal", "elevated", "standard", "filled"] {
+                        RepoButton { key: "{color}-{variant}", repo: "example/repo", variant, color }
+                    }
+                }
+            }
         }
     }
 }

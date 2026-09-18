@@ -8,7 +8,8 @@ use dioxus::prelude::*;
 use super::{
     DateRange,
     calendar::{Calendar, DateLevel, Selection, first_of_month},
-    duration::{DurationClock, bounds},
+    date_field::refusal_message,
+    duration::{DurationClock, bounds, duration_refusal},
     flows::{DateTimeFlow, DateTimeRangeFlow},
     picker_field::{FieldValue, Formats},
     time_picker::Clock,
@@ -144,6 +145,20 @@ pub(super) trait Sealed: FieldValue {
     fn show_bound(bound: <Self as DateValue>::Bound, formats: &Formats) -> String
     where
         Self: DateValue;
+
+    /// The error for a value `accepts` refused, naming the bounds it set.
+    fn refusal(
+        self,
+        refusal: Refusal,
+        min: Option<<Self as DateValue>::Bound>,
+        max: Option<<Self as DateValue>::Bound>,
+        formats: &Formats,
+    ) -> String
+    where
+        Self: DateValue,
+    {
+        refusal_message::<Self>(refusal, min, max, formats)
+    }
 
     /// Whether a pick leaves nothing more to pick, so a field may close its
     /// dropdown.
@@ -361,6 +376,16 @@ impl Sealed for TimeDelta {
 
     fn show_bound(bound: TimeDelta, formats: &Formats) -> String {
         bound.show(formats)
+    }
+
+    fn refusal(
+        self,
+        _: Refusal,
+        min: Option<TimeDelta>,
+        max: Option<TimeDelta>,
+        formats: &Formats,
+    ) -> String {
+        duration_refusal(self, min, max, formats)
     }
 
     fn closes(_: Option<Self>) -> bool {

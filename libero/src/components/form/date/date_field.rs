@@ -205,7 +205,7 @@ pub(super) fn date_field<V: DateValue>(
         move |value: V| {
             value
                 .accepts(&picker)
-                .map_err(|refusal| refusal_message::<V>(refusal, picker.min, picker.max, &bounds))
+                .map_err(|refusal| value.refusal(refusal, picker.min, picker.max, &bounds))
         },
         // Only the props `V` reads, so the picker has nothing to warn about.
         move |args: DropdownArgs<V>| {
@@ -236,7 +236,7 @@ pub(super) fn date_field<V: DateValue>(
 
 /// The error for a value the field refuses, naming the bounds it set in the
 /// field's own format.
-fn refusal_message<V: DateValue>(
+pub(super) fn refusal_message<V: DateValue>(
     refusal: Refusal,
     min: Option<V::Bound>,
     max: Option<V::Bound>,

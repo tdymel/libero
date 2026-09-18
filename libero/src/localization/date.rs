@@ -11,11 +11,15 @@
 ///   `weekdays_min`, `am`, `pm`.
 /// - **Labels** a screen reader or a sighted reader gets: the paging buttons
 ///   (`previous_month` to `next_days`), the errors (`invalid_date` to
-///   `unavailable`), the switch segments
-///   (`date_label` to `end_label`), the switches themselves, the range steps
-///   (`dates_label` to `range_steps_label`), the `TimePicker` columns and a
-///   duration's label and units (`duration_label` to `seconds_short`).
+///   `unavailable`, and a duration's `invalid_duration` to `duration_at_most`), the
+///   calendar/clock switch, the range steps (`dates_label` to
+///   `range_steps_label`), the `TimePicker` columns and a duration's label and
+///   units (`duration_label` to `seconds_value`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(
+    unpredictable_function_pointer_comparisons,
+    reason = "compares by address; a miss on a copied closure only re-renders"
+)]
 pub struct DateLocale {
     // Names.
     /// `January` to `December`. `MMMM` in a format, and what a typed month
@@ -61,16 +65,17 @@ pub struct DateLocale {
     pub between: &'static str,
     /// The error for a day `exclude_date` refuses.
     pub unavailable: &'static str,
+    /// The error a duration field shows for text it cannot read.
+    pub invalid_duration: &'static str,
+    /// The error for a duration below `min`: `{min}` as the field shows it.
+    pub duration_at_least: &'static str,
+    /// The error for a duration above `max`: `{max}`.
+    pub duration_at_most: &'static str,
     /// The segments that switch a dropdown between its calendar and its clock.
     pub date_label: &'static str,
     pub time_label: &'static str,
-    /// The segments that switch a range dropdown between its two ends.
-    pub start_label: &'static str,
-    pub end_label: &'static str,
     /// Names the calendar/clock switch itself.
     pub part_switch_label: &'static str,
-    /// Names the start/end switch itself.
-    pub side_switch_label: &'static str,
     /// The steps of a date-time range dropdown: its days, then the start's
     /// time, then the end's. Each tab shows its value once there is one.
     pub dates_label: &'static str,
@@ -88,6 +93,53 @@ pub struct DateLocale {
     pub hours_short: &'static str,
     pub minutes_short: &'static str,
     pub seconds_short: &'static str,
+    /// A duration column's value with its unit, as a screen reader says it: `2 hours`.
+    /// A fn rather than a template, for a language's plural forms.
+    pub hours_value: fn(u32) -> String,
+    pub minutes_value: fn(u32) -> String,
+    pub seconds_value: fn(u32) -> String,
+}
+
+fn english_hours(n: u32) -> String {
+    match n {
+        1 => "1 hour".to_string(),
+        n => format!("{n} hours"),
+    }
+}
+
+fn english_minutes(n: u32) -> String {
+    match n {
+        1 => "1 minute".to_string(),
+        n => format!("{n} minutes"),
+    }
+}
+
+fn english_seconds(n: u32) -> String {
+    match n {
+        1 => "1 second".to_string(),
+        n => format!("{n} seconds"),
+    }
+}
+
+fn german_hours(n: u32) -> String {
+    match n {
+        1 => "1 Stunde".to_string(),
+        n => format!("{n} Stunden"),
+    }
+}
+
+fn german_minutes(n: u32) -> String {
+    match n {
+        1 => "1 Minute".to_string(),
+        n => format!("{n} Minuten"),
+    }
+}
+
+fn german_seconds(n: u32) -> String {
+    match n {
+        1 => "1 Sekunde".to_string(),
+        n => format!("{n} Sekunden"),
+    }
 }
 
 impl DateLocale {
@@ -135,12 +187,12 @@ impl DateLocale {
         on_or_before: "Must be on or before {max}",
         between: "Must be between {min} and {max}",
         unavailable: "That date is not available",
+        invalid_duration: "Not a valid duration",
+        duration_at_least: "Must be at least {min}",
+        duration_at_most: "Must be at most {max}",
         date_label: "Date",
         time_label: "Time",
-        start_label: "Start",
-        end_label: "End",
         part_switch_label: "Date or time",
-        side_switch_label: "Range end",
         dates_label: "Dates",
         start_time_label: "Start time",
         end_time_label: "End time",
@@ -152,6 +204,9 @@ impl DateLocale {
         hours_short: "h",
         minutes_short: "min",
         seconds_short: "s",
+        hours_value: english_hours,
+        minutes_value: english_minutes,
+        seconds_value: english_seconds,
     };
 
     pub const GERMAN: Self = Self {
@@ -200,12 +255,12 @@ impl DateLocale {
         on_or_before: "Spätestens {max}",
         between: "Muss zwischen {min} und {max} liegen",
         unavailable: "Dieses Datum ist nicht verfügbar",
+        invalid_duration: "Keine gültige Dauer",
+        duration_at_least: "Mindestens {min}",
+        duration_at_most: "Höchstens {max}",
         date_label: "Datum",
         time_label: "Uhrzeit",
-        start_label: "Beginn",
-        end_label: "Ende",
         part_switch_label: "Datum oder Uhrzeit",
-        side_switch_label: "Ende des Zeitraums",
         dates_label: "Zeitraum",
         start_time_label: "Startzeit",
         end_time_label: "Endzeit",
@@ -217,5 +272,8 @@ impl DateLocale {
         hours_short: "Std.",
         minutes_short: "Min.",
         seconds_short: "Sek.",
+        hours_value: german_hours,
+        minutes_value: german_minutes,
+        seconds_value: german_seconds,
     };
 }

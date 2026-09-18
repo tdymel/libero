@@ -597,7 +597,7 @@ fn a_duration_shows_its_units_and_posts_iso_8601() {
     assert!(html.contains("name=\"rest\" value=\"PT2H15M30S\""));
     // A spinbutton per part, the hours up to `max`, the minutes at the step.
     assert_eq!(html.matches("role=\"spinbutton\"").count(), 3);
-    for text in ["02", "15", "30"] {
+    for text in ["2 hours", "15 minutes", "30 seconds"] {
         assert!(
             html.contains(&format!("aria-valuetext=\"{text}\"")),
             "{text}: {html}"

@@ -140,7 +140,7 @@ mod tests {
     use super::*;
 
     /// Every template with a hole, in one order for every language.
-    fn templates(words: &Localization) -> [&'static str; 28] {
+    fn templates(words: &Localization) -> [&'static str; 30] {
         [
             words.common.remove,
             words.chips.added,
@@ -170,6 +170,8 @@ mod tests {
             words.date.on_or_after,
             words.date.on_or_before,
             words.date.between,
+            words.date.duration_at_least,
+            words.date.duration_at_most,
         ]
     }
 

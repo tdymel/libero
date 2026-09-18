@@ -28,7 +28,7 @@ const SHIELD_STORAGE: &str = r#"(() => {
     Object.defineProperty(window, 'localStorage', { configurable: true, value: {
         getItem: k => items.has(k) ? items.get(k) : null,
         setItem: (k, v) => { items.set(k, String(v)); window.__stored.push(k + '=' + v); },
-        removeItem: k => items.delete(k),
+        removeItem: k => { items.delete(k); window.__stored.push('-' + k); },
     }});
 })()"#;
 
@@ -148,6 +148,49 @@ fn each_press_turns_the_direction_and_renames_the_button() {
         fixture
             .console
             .assert_clean("turning the direction")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 853: `clear` drops the kept choice and the root's `dir`, as if none was made.
+#[test]
+fn clearing_drops_the_choice_and_the_roots_dir() {
+    block_on(async {
+        let fixture = Fixture::open("/direction-toggle", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        page.evaluate(SHIELD_STORAGE).await.unwrap();
+        let kept_is =
+            |kept: &str| format!("document.querySelector('#kept').textContent === '{kept}'");
+
+        wait::for_js_true(page, &kept_is("none"), "nothing kept at rest")
+            .await
+            .unwrap();
+        pointer::click(page, BUTTON).await.unwrap();
+        wait_for_dir(page, "rtl").await;
+        wait::for_js_true(page, &kept_is("rtl"), "the press kept")
+            .await
+            .unwrap();
+
+        pointer::click(page, "#clear").await.unwrap();
+        wait::for_js_true(page, &kept_is("none"), "the choice dropped")
+            .await
+            .unwrap();
+        let (has_dir, stored): (bool, Vec<String>) = page
+            .evaluate("[document.documentElement.hasAttribute('dir'), window.__stored]")
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert!(!has_dir, "the root kept a `dir`");
+        assert_eq!(stored, ["lsx-direction=rtl", "-lsx-direction"]);
+        wait_for_name(page, "Switch to right-to-left text").await;
+
+        fixture
+            .console
+            .assert_clean("clearing the direction")
             .unwrap();
         fixture.close().await.unwrap();
     });

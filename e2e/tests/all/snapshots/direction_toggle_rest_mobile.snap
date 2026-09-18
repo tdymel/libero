@@ -6,3 +6,7 @@ expression: tree
 button "Switch to right-to-left text"
 paragraph
   StaticText "Page text"
+button "Clear"
+  StaticText "Clear"
+paragraph
+  StaticText "none"

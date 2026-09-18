@@ -19,7 +19,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_element, use_localization, use_theme},
-    localization::DateLocale,
+    localization::{DateLocale, fill},
     platform::ElementApi,
     sx::Sx,
     theme::Size,
@@ -183,6 +183,26 @@ fn read_duration(text: &str, names: &DateLocale) -> Result<TimeDelta, Unreadable
     }
 }
 
+/// The error for a span outside `min` and `max`, naming the bound it missed:
+/// a duration always has both, and "between" would name one never set.
+pub(super) fn duration_refusal(
+    span: TimeDelta,
+    min: Option<TimeDelta>,
+    max: Option<TimeDelta>,
+    formats: &Formats,
+) -> String {
+    let names = formats.names;
+    match (min, max) {
+        (Some(min), _) if span < min => {
+            fill(names.duration_at_least, &[("min", &min.show(formats))])
+        }
+        (_, Some(max)) if span > max => {
+            fill(names.duration_at_most, &[("max", &max.show(formats))])
+        }
+        _ => names.invalid_duration.to_string(),
+    }
+}
+
 /// ISO 8601: `PT1H30M`, `PT0S` for none.
 fn iso_duration(span: TimeDelta) -> String {
     let sign = if span < TimeDelta::zero() { "-" } else { "" };
@@ -219,6 +239,10 @@ impl FieldValue for TimeDelta {
 
     fn dialog_label(names: &DateLocale) -> &'static str {
         names.duration_label
+    }
+
+    fn unreadable(names: &DateLocale) -> &'static str {
+        names.invalid_duration
     }
 }
 
@@ -312,6 +336,7 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
     let column = |name: &'static str,
                   label: &str,
                   unit: &str,
+                  spoken: fn(u32) -> String,
                   options: Vec<SpinOption>,
                   at: SpinAt,
                   shown: i64,
@@ -324,6 +349,7 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
                 options,
                 at,
                 text: if value.is_some() { NUMBERS[shown as usize].as_str() } else { "--" },
+                valuetext: spoken(shown as u32),
                 wrap,
                 page,
                 focusable,
@@ -357,6 +383,7 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
             COLUMNS[2],
             names.seconds_label,
             names.seconds_short,
+            names.seconds_value,
             options,
             place(seconds, true),
             seconds,
@@ -368,8 +395,8 @@ pub(super) fn DurationClock(props: DurationClockProps) -> Element {
     // without carrying into the hour.
     let body = rsx! {
         div { "data-slot": "columns",
-            {column(COLUMNS[0], names.hours_label, names.hours_short, hour_options, place(hours, true), hours, false, 10)}
-            {column(COLUMNS[1], names.minutes_label, names.minutes_short, minute_options, place(minutes / step, minutes % step == 0), minutes, true, (15 / step).max(1) as usize)}
+            {column(COLUMNS[0], names.hours_label, names.hours_short, names.hours_value, hour_options, place(hours, true), hours, false, 10)}
+            {column(COLUMNS[1], names.minutes_label, names.minutes_short, names.minutes_value, minute_options, place(minutes / step, minutes % step == 0), minutes, true, (15 / step).max(1) as usize)}
             {seconds_column}
         }
     };
@@ -460,6 +487,42 @@ mod tests {
         assert_eq!(iso_duration(of(0, 0, 15)), "PT15S");
         assert_eq!(iso_duration(of(100, 0, 1)), "PT100H1S");
         assert_eq!(iso_duration(TimeDelta::zero()), "PT0S");
+    }
+
+    /// Todo 855: a duration's own words, naming the bound it missed.
+    #[test]
+    fn a_refusal_names_the_bound_it_missed() {
+        let formats = |names| Formats {
+            date: String::new(),
+            time: String::new(),
+            names,
+            range_separator: " - ",
+            level: super::super::DateLevel::Day,
+        };
+        let (min, max) = bounds(Some(of(0, 15, 0)), None);
+        let refused = |span, names| duration_refusal(span, Some(min), Some(max), &formats(names));
+        assert_eq!(refused(of(0, 5, 0), EN), "Must be at least 15 min");
+        assert_eq!(
+            refused(of(120, 0, 0), EN),
+            "Must be at most 99 h 59 min 59 s"
+        );
+        assert_eq!(refused(of(0, 5, 0), DE), "Mindestens 15 Min.");
+    }
+
+    /// Todo 856: each spinbutton says its value with the unit.
+    #[test]
+    fn the_columns_say_their_unit() {
+        let html = dioxus_ssr::render_element(rsx! {
+            crate::LiberoProvider {
+                super::super::DatePicker::<TimeDelta> { value: of(1, 30, 0), with_seconds: true }
+            }
+        });
+        for valuetext in ["1 hour", "30 minutes", "0 seconds"] {
+            assert!(
+                html.contains(&format!(r#"aria-valuetext="{valuetext}""#)),
+                "{valuetext}: {html}"
+            );
+        }
     }
 
     #[test]

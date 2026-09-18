@@ -125,6 +125,8 @@ pub(super) struct SpinColumnProps {
     /// What the column shows: its option's text, a value between the options,
     /// or `--`.
     pub text: &'static str,
+    /// `aria-valuetext` with its unit (`2 hours`); `text` without one.
+    pub valuetext: Option<String>,
     /// Steps past either end come round to the other.
     pub wrap: bool,
     /// The steps Page Up and Page Down take.
@@ -150,6 +152,7 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
         options,
         at,
         text,
+        valuetext,
         wrap,
         page,
         focusable,
@@ -315,7 +318,7 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
             tabindex: if focusable { "0" } else { "-1" },
             "aria-label": label,
             "aria-valuenow": now,
-            "aria-valuetext": (now.is_some()).then_some(text),
+            "aria-valuetext": now.is_some().then(|| valuetext.unwrap_or_else(|| text.to_string())),
             "aria-valuemin": numbers.iter().min().copied(),
             "aria-valuemax": numbers.iter().max().copied(),
             onmounted: handle.mount(),

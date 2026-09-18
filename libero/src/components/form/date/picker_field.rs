@@ -85,6 +85,10 @@ pub trait FieldValue: Copy + PartialEq + 'static {
     fn dialog_label(names: &DateLocale) -> &'static str {
         names.date_label
     }
+    /// The error for text `read` cannot read.
+    fn unreadable(names: &DateLocale) -> &'static str {
+        names.invalid_date
+    }
 }
 
 impl FieldValue for NaiveDate {
@@ -331,8 +335,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
                 emit(None);
                 return None;
             }
-            let read =
-                V::read(&text, &formats, value, today).map_err(|_| names.invalid_date.to_string());
+            let read = V::read(&text, &formats, value, today)
+                .map_err(|_| V::unreadable(names).to_string());
             match read.and_then(|next| accepts(next).map(|()| next)) {
                 Ok(next) => {
                     draft.set(None);

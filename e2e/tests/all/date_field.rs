@@ -307,7 +307,12 @@ fn a_typed_duration_reads_its_units_and_refuses_the_bounds() {
             )
             .await;
         }
-        for text in ["13 h", "5 min"] {
+        // Todo 855: a duration's own words, naming the bound it missed.
+        for (text, error) in [
+            ("13 h", "Must be at most 12 h"),
+            ("5 min", "Must be at least 15 min"),
+            ("soon", "Not a valid duration"),
+        ] {
             page.evaluate(format!("document.querySelector({INPUT:?}).select()"))
                 .await
                 .unwrap();
@@ -319,9 +324,9 @@ fn a_typed_duration_reads_its_units_and_refuses_the_bounds() {
                     "(() => {{ const input = document.querySelector({INPUT:?}); \
                      const ids = (input.getAttribute('aria-describedby') || '').split(' '); \
                      return input.getAttribute('aria-invalid') === 'true' && ids.some(id => \
-                       document.getElementById(id)?.textContent.trim() === 'Must be between 15 min and 12 h'); }})()"
+                       document.getElementById(id)?.textContent.trim() === {error:?}); }})()"
                 ),
-                &format!("{text:?} refused with both bounds"),
+                &format!("{text:?} refused as {error:?}"),
             )
             .await;
         }

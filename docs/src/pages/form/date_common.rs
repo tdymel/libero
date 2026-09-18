@@ -23,6 +23,14 @@ pub fn status_of(values: &DemoValues) -> FieldStatus {
     }
 }
 
+/// The label and description for the picked value kind: a duration is no moment.
+pub fn captions_of(values: &DemoValues) -> (&'static str, &'static str) {
+    match values.str("value").as_str() {
+        "duration" => ("How long", "Hours and minutes it takes."),
+        _ => ("When", "Your local time."),
+    }
+}
+
 /// `label` and friends, the way every field page has them.
 pub fn field_controls() -> Vec<Control> {
     vec![
@@ -42,11 +50,11 @@ pub fn field_controls() -> Vec<Control> {
         Control::switch("label")
             .default("true")
             .code(|_, values| match is_on(values, "label") {
-                true => vec![r#"label: "When""#.to_string()],
-                false => vec![r#"aria_label: "When""#.to_string()],
+                true => vec![format!("label: {:?}", captions_of(values).0)],
+                false => vec![format!("aria_label: {:?}", captions_of(values).0)],
             }),
         Control::switch("description").code(|_, values| match is_on(values, "description") {
-            true => vec![r#"description: "Your local time.""#.to_string()],
+            true => vec![format!("description: {:?}", captions_of(values).1)],
             false => vec![],
         }),
         Control::switch("helper").code(|_, values| match is_on(values, "helper") {
