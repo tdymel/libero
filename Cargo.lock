@@ -2406,7 +2406,6 @@ dependencies = [
  "dioxus",
  "dioxus-native",
  "libero",
- "web-sys",
 ]
 
 [[package]]
@@ -4364,11 +4363,13 @@ dependencies = [
  "dioxus-native-dom",
  "dioxus-ssr",
  "fast_qr",
+ "futures-channel",
  "futures-core",
  "js-sys",
  "libero-macros",
  "regex",
  "rfd",
+ "serde_json",
  "stylo",
  "wasm-bindgen",
  "wasm-bindgen-futures",

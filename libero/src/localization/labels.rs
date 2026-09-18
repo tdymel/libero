@@ -494,6 +494,72 @@ impl ColorSchemeButtonLabels {
     };
 }
 
+/// A `RepoButton`'s name: the host's, plus the star count once one shows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(
+    unpredictable_function_pointer_comparisons,
+    reason = "compares by address; a miss on a copied closure only re-renders"
+)]
+pub struct RepoButtonLabels {
+    /// The count as heard after the host's name: the exact count, for the
+    /// plural, and the shortened one on screen (`1.2k`). A fn, for plural forms.
+    ///
+    /// ```
+    /// use libero::localization::RepoButtonLabels;
+    ///
+    /// assert_eq!((RepoButtonLabels::ENGLISH.stars)(1_234, "1.2k"), "1.2k stars");
+    /// assert_eq!((RepoButtonLabels::GERMAN.stars)(1, "1"), "1 Stern");
+    /// ```
+    pub stars: fn(u64, &str) -> String,
+}
+
+/// `RepoButtonLabels::ENGLISH.stars`. A named fn, so every copy compares equal.
+fn english_stars(count: u64, shown: &str) -> String {
+    match count {
+        1 => format!("{shown} star"),
+        _ => format!("{shown} stars"),
+    }
+}
+
+/// `RepoButtonLabels::GERMAN.stars`.
+fn german_stars(count: u64, shown: &str) -> String {
+    match count {
+        1 => format!("{shown} Stern"),
+        _ => format!("{shown} Sterne"),
+    }
+}
+
+impl RepoButtonLabels {
+    pub const ENGLISH: Self = Self {
+        stars: english_stars,
+    };
+
+    pub const GERMAN: Self = Self {
+        stars: german_stars,
+    };
+}
+
+/// A `DirectionToggle`'s name, which says what a press does.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DirectionToggleLabels {
+    /// Names the button while the text runs left to right.
+    pub to_rtl: &'static str,
+    /// Names the button while the text runs right to left.
+    pub to_ltr: &'static str,
+}
+
+impl DirectionToggleLabels {
+    pub const ENGLISH: Self = Self {
+        to_rtl: "Switch to right-to-left text",
+        to_ltr: "Switch to left-to-right text",
+    };
+
+    pub const GERMAN: Self = Self {
+        to_rtl: "Zu Text von rechts nach links wechseln",
+        to_ltr: "Zu Text von links nach rechts wechseln",
+    };
+}
+
 /// Every string a `Spotlight` says to a reader.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SpotlightLabels {

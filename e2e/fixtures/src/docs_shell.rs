@@ -1,4 +1,4 @@
-//! The docs shell's star pill and heading focus, from the docs' own files.
+//! The docs shell's heading focus and scroll, from the docs' own files.
 
 use dioxus::prelude::*;
 use libero::{
@@ -6,32 +6,15 @@ use libero::{
     hooks::use_element,
 };
 
-#[path = "../../../docs/src/github_stars.rs"]
-mod github_stars;
 #[path = "../../../docs/src/heading_focus.rs"]
 mod heading_focus;
 
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
-    ("/docs-shell/stars", || rsx! { StarsPage {} }),
     ("/docs-shell/heading", || rsx! { HeadingPage {} }),
     ("/docs-shell/scroll", || rsx! { ScrollPage {} }),
 ];
-
-/// The link mounts on a press, so a test can mock `fetch` before it asks.
-#[component]
-fn StarsPage() -> Element {
-    let mut mounted = use_signal(|| false);
-    rsx! {
-        Button { id: "mount", onclick: move |_| mounted.toggle(), "Mount" }
-        if mounted() {
-            github_stars::GitHubLink { to: "https://github.com/example/repo",
-                span { display: "inline-flex", width: "18px", height: "18px", "G" }
-            }
-        }
-    }
-}
 
 /// Two "pages" behind one signal: the hook only needs a value that changes.
 #[component]

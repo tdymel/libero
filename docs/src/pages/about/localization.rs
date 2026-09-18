@@ -4,7 +4,9 @@ use dioxus::prelude::*;
 use libero::{
     chrono::{NaiveDate, NaiveDateTime, NaiveTime},
     components::{Code, CodeBlock, DateField, DayPicker, Flex, Table, Text, column},
+    hooks::use_direction,
     sx::sx,
+    theme::Direction,
     use_formats_handle, use_localization_handle,
 };
 
@@ -84,13 +86,13 @@ fn option_of<T: PartialEq + 'static>(choices: &[Choice<T>; 2], current: &T) -> S
 pub fn LocalizationPage() -> Element {
     let localization = use_localization_handle();
     let formats = use_formats_handle();
-    let rtl = try_use_context::<crate::Rtl>();
+    let direction = use_direction();
     // The controls start at what the site shows.
     let site = use_hook(|| {
         (
             option_of(&LANGUAGES, localization.get()),
             option_of(&FORMATS, formats.get()),
-            rtl.is_some_and(|rtl| (rtl.0)()),
+            direction.is_rtl(),
         )
     });
 
@@ -206,27 +208,24 @@ fn LocalizationPreview(values: DemoValues) -> Element {
     let rtl = values.str("direction") == "rtl";
     let localization = use_localization_handle();
     let formats = use_formats_handle();
-    let direction = try_use_context::<crate::Rtl>().map(|rtl| rtl.0);
-    let site = use_hook(|| {
-        (
-            localization.get(),
-            formats.get(),
-            direction.is_some_and(|direction| direction()),
-        )
-    });
-    use_effect(use_reactive!(|language, conventions, rtl| {
-        localization.set(language);
-        formats.set(conventions);
-        if let Some(mut direction) = direction
-            && *direction.peek() != rtl
-        {
-            direction.set(rtl);
-        }
-    }));
+    let direction = use_direction();
+    let site = use_hook(|| (localization.get(), formats.get(), direction.get()));
+    let turn_to = if rtl { Direction::Rtl } else { Direction::Ltr };
+    {
+        let direction = direction.clone();
+        use_effect(use_reactive!(|language, conventions, turn_to| {
+            localization.set(language);
+            formats.set(conventions);
+            if direction.get() != turn_to {
+                direction.set(turn_to);
+            }
+        }));
+    }
     use_drop(move || {
         localization.set(site.0);
         formats.set(site.1);
-        if let Some(mut direction) = direction {
+        // Only when turned: a set is kept, and a visit alone should keep nothing.
+        if direction.get() != site.2 {
             direction.set(site.2);
         }
     });

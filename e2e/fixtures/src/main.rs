@@ -46,6 +46,7 @@ mod common;
 mod data_list;
 mod date_field;
 mod dialog;
+mod direction_toggle;
 mod divider;
 mod docs_shell;
 mod drawer;
@@ -93,6 +94,7 @@ mod progress_bar;
 mod qr_code;
 mod radio_group;
 mod range_slider;
+mod repo_button;
 mod scroll_area;
 mod scroller;
 mod segmented_control;
@@ -145,6 +147,7 @@ const FIXTURES: &[Routes] = &[
     data_list::ROUTES,
     date_field::ROUTES,
     dialog::ROUTES,
+    direction_toggle::ROUTES,
     divider::ROUTES,
     docs_shell::ROUTES,
     drawer::ROUTES,
@@ -192,6 +195,7 @@ const FIXTURES: &[Routes] = &[
     qr_code::ROUTES,
     radio_group::ROUTES,
     range_slider::ROUTES,
+    repo_button::ROUTES,
     scroll_area::ROUTES,
     scroller::ROUTES,
     segmented_control::ROUTES,

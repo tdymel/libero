@@ -26,6 +26,8 @@ libero-macros = { path = "../libero-macros", version = "0.1.0" }
 # on the web today comes from JS `Date`, so chrono pulls in no second `js-sys`
 # path. Native turns `clock` on below for `Local`.
 chrono = { version = "0.4", default-features = false, features = ["std"] }
+# `RepoButton` reads a host's JSON reply. Already in every graph through `dioxus-document`.
+serde_json = "1"
 
 # Everything web-specific is wasm32-only, so a native build (`cargo test`, or
 # any future non-web renderer) compiles without it and the platform-backed
@@ -73,6 +75,8 @@ arboard = { version = "3.6", optional = true, default-features = false }
 rfd = { version = "0.17", optional = true, default-features = false, features = ["xdg-portal"] }
 # Only to name `NativeFileData::byte_stream`'s return type for a picked file.
 futures-core = { version = "0.3", optional = true }
+# Turns Blitz's callback-style fetch into a future. Already in dioxus's tree.
+futures-channel = { version = "0.3", optional = true }
 
 # Render-to-string, for the component tests in `tests/` - the same dioxus rev
 # this crate builds against.
@@ -85,7 +89,7 @@ futures-core = "0.3"
 # Reach elements through Blitz directly when running under `dioxus-native`.
 # Nothing forces it on: without it `platform::backend` falls back to dioxus's
 # portable mounted handle, which cannot query a subtree or report focus.
-native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:style", "dep:arboard", "dep:rfd", "dep:futures-core"]
+native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:style", "dep:arboard", "dep:rfd", "dep:futures-core", "dep:futures-channel"]
 default = [
     "code-lang-rust",
     "code-lang-bash",

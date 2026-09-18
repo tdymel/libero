@@ -247,6 +247,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         pagination,
         // Chrome only - read by the component, never a var.
         color_scheme_button: _,
+        repo_button: _,
+        direction_toggle: _,
         anchor,
         file_field,
         pin_field,

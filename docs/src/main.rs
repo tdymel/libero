@@ -6,9 +6,9 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, Box, Burger, Button, ColorSchemeButton, Container, Flex, Header, Image,
-        Kbd, Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_scroll_area,
-        use_spotlight,
+        ActionIcon, Anchor, Box, Burger, Button, ColorSchemeButton, Container, DirectionToggle,
+        Flex, Header, Image, Kbd, Notifications, RepoButton, ScrollArea, SpotlightOptions, Title,
+        spotlight_filter, use_scroll_area, use_spotlight,
     },
     hooks::use_element,
     localization::Formats,
@@ -19,7 +19,6 @@ use libero::{
 
 mod components;
 mod exports;
-mod github_stars;
 mod heading_focus;
 mod icons;
 #[cfg(test)]
@@ -29,12 +28,13 @@ mod pages;
 #[cfg(test)]
 mod snippets;
 
-use icons::{GitHubIcon, SearchIcon, TextDirectionIcon};
+use icons::SearchIcon;
 use nav::DocsNav;
 // A glob, so a new page never edits this file's import list.
 use pages::*;
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
+const REPO: &str = "tdymel/libero";
 const GITHUB: &str = "https://github.com/tdymel/libero";
 /// A 16:9 landscape, for docs examples where the logo's square shape hides
 /// what the example is about.
@@ -140,6 +140,10 @@ pub(crate) enum Route {
     ButtonPage {},
     #[route("/buttons/color-scheme-button")]
     ColorSchemeButtonPage {},
+    #[route("/buttons/direction-toggle")]
+    DirectionTogglePage {},
+    #[route("/buttons/repo-button")]
+    RepoButtonPage {},
 
     #[route("/data-display/accordion")]
     AccordionPage {},
@@ -325,65 +329,15 @@ pub(crate) enum Route {
     TitlePage {},
 }
 
-/// The docs' reading direction, `true` for right to left (the header's toggle).
-#[derive(Clone, Copy)]
-struct Rtl(Signal<bool>);
-
-/// Where the direction is kept, as `ColorSchemeButton` keeps the scheme. Blitz
-/// has no storage, so there it lives for the session.
-const DIR_STORAGE_KEY: &str = "libero-docs-dir";
-const HAS_STORAGE: bool = !cfg!(any(feature = "native", feature = "native-cpu"));
-/// Plain web reads it before the first render. A WebView has no `web-sys`, and
-/// hydration must first match the server's LTR.
-const SYNC_STORAGE: bool = cfg!(all(target_arch = "wasm32", not(feature = "fullstack")));
-
 #[component]
 fn App() -> Element {
-    let rtl = use_context_provider(|| Rtl(Signal::new(SYNC_STORAGE && stored_rtl()))).0;
-    use_hook(move || {
-        if HAS_STORAGE && !SYNC_STORAGE {
-            spawn(async move {
-                let js = format!("return localStorage.getItem('{DIR_STORAGE_KEY}');");
-                if let Ok(Some(dir)) = document::eval(&js).join::<Option<String>>().await {
-                    let mut rtl = rtl;
-                    rtl.set(dir == "rtl");
-                }
-            });
-        }
-    });
-
     rsx! {
         document::Title { "Libero" }
         document::Link { rel: "icon", href: LOGO }
-        // Round the provider, so its portal outlet (menus, Spotlight) flips too.
-        div { display: "contents", dir: if rtl() { "rtl" } else { "ltr" },
-            LiberoProvider { formats: &Formats::GERMAN,
-                Router::<Route> {}
-                Notifications {}
-            }
+        LiberoProvider { formats: &Formats::GERMAN,
+            Router::<Route> {}
+            Notifications {}
         }
-    }
-}
-
-/// Whether `localStorage` says right to left, read synchronously.
-fn stored_rtl() -> bool {
-    #[cfg(target_arch = "wasm32")]
-    return web_sys::window()
-        .and_then(|window| window.local_storage().ok().flatten())
-        .and_then(|storage| storage.get_item(DIR_STORAGE_KEY).ok().flatten())
-        .is_some_and(|dir| dir == "rtl");
-    #[cfg(not(target_arch = "wasm32"))]
-    false
-}
-
-/// Flips the app's direction and keeps it where the platform can.
-fn toggle_direction(mut rtl: Signal<bool>) {
-    rtl.toggle();
-    if HAS_STORAGE {
-        let dir = if rtl() { "rtl" } else { "ltr" };
-        document::eval(&format!(
-            "localStorage.setItem('{DIR_STORAGE_KEY}', '{dir}');"
-        ));
     }
 }
 
@@ -392,7 +346,6 @@ fn AppShell() -> Element {
     let mut open = use_signal(|| false);
     let burger = use_element();
     let content = use_element();
-    let rtl = use_context::<Rtl>().0;
     // The home page is full width: the nav is a drawer at every width there.
     let home = use_route::<Route>() == Route::Home {};
     // The docs search: every page, Ctrl/Cmd+K from anywhere.
@@ -573,20 +526,9 @@ fn AppShell() -> Element {
                         "Ctrl K"
                     }
                 }
-                github_stars::GitHubLink { to: GITHUB,
-                    span { display: "inline-flex", width: "18px", height: "18px", GitHubIcon {} }
-                }
-                // Lets a reviewer check any component right to left. A fixed
-                // name; the state is `aria-pressed`.
-                ActionIcon {
-                    aria_label: "Right to left",
-                    selected: rtl(),
-                    onclick: move |_| toggle_direction(rtl),
-                    variant: "outlined",
-                    color: "muted",
-                    size: "lg",
-                    span { display: "inline-flex", width: "18px", height: "18px", TextDirectionIcon {} }
-                }
+                RepoButton { repo: REPO, size: "lg" }
+                // Lets a reviewer check any component right to left.
+                DirectionToggle { size: "lg" }
                 // In the header rather than on a page: its job is to let a
                 // reviewer check any component in every scheme and palette,
                 // from wherever they are. `lg`, to match the search beside it.

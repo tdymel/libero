@@ -194,6 +194,8 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ButtonPage {}, "Button"),
                 page(Route::ActionIconPage {}, "ActionIcon"),
                 page(Route::ColorSchemeButtonPage {}, "ColorSchemeButton"),
+                page(Route::DirectionTogglePage {}, "DirectionToggle"),
+                page(Route::RepoButtonPage {}, "RepoButton"),
             ],
         ),
         // Fields built on `use_field`. A component moves here when it is

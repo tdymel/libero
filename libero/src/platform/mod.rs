@@ -15,6 +15,7 @@ mod click;
 mod clipboard;
 mod clock;
 mod color_scheme;
+mod direction;
 mod document;
 mod element;
 mod error;
@@ -22,12 +23,14 @@ mod eye_dropper;
 mod file_dialog;
 mod focus;
 mod form;
+mod http;
 mod keyboard;
 mod motion;
 mod regex;
 mod resize;
 mod scroll;
 mod select;
+mod session;
 mod task;
 mod timer;
 mod transition;
@@ -36,6 +39,9 @@ pub(crate) use click::{DoublePress, follow_pointer, nested_interactive, padding_
 pub(crate) use clipboard::clipboard;
 pub use clock::{ClockApi, clock};
 pub use color_scheme::{ColorSchemeApi, ColorSchemeSubscription, color_scheme};
+pub(crate) use direction::{
+    apply_direction, set_root_direction, store_direction, stored_direction,
+};
 pub use document::{DocumentApi, document};
 pub(crate) use element::{
     ContentSubscription, SCROLL_MARGIN_VAR, is_rtl, on_content_change, on_form_reset,
@@ -49,6 +55,7 @@ pub(crate) use focus::{
     focus_pressed, focus_selectors, focus_visible, silent_focus,
 };
 pub(crate) use form::{submit_event, submit_listeners};
+pub(crate) use http::fetch_text;
 pub(crate) use keyboard::arrow_target;
 pub(crate) use keyboard::key_taken;
 pub(crate) use keyboard::logical_key;
@@ -60,6 +67,7 @@ pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub(crate) use resize::{is_measured_resize, on_resize};
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
 pub(crate) use select::opens_select_picker;
+pub(crate) use session::{session_get, session_set};
 pub(crate) use task::{next_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};
 pub(crate) use transition::transition_property;

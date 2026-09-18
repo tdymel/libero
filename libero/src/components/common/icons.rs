@@ -351,6 +351,58 @@ pub(crate) fn MoonIcon() -> Element {
     }
 }
 
+/// `RepoButton`'s GitHub mark.
+#[component]
+pub(crate) fn GitHubIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 16 16",
+            fill: "currentColor",
+            "aria-hidden": "true",
+            path {
+                d: "M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
+            }
+        }
+    }
+}
+
+/// `RepoButton`'s GitLab mark (Simple Icons, CC0).
+#[component]
+pub(crate) fn GitLabIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "currentColor",
+            "aria-hidden": "true",
+            path {
+                d: "m23.6004 9.5927-.0337-.0862L20.3.9814a.851.851 0 0 0-.3362-.405.8748.8748 0 0 0-.9997.0539.8748.8748 0 0 0-.29.4399l-2.2055 6.748H7.5375l-2.2057-6.748a.8573.8573 0 0 0-.29-.4412.8748.8748 0 0 0-.9997-.0537.8585.8585 0 0 0-.3362.4049L.4332 9.5015l-.0325.0862a6.0657 6.0657 0 0 0 2.0119 7.0105l.0113.0087.03.0213 4.976 3.7264 2.462 1.8633 1.4995 1.1321a1.0085 1.0085 0 0 0 1.2197 0l1.4995-1.1321 2.4619-1.8633 5.006-3.7489.0125-.01a6.0682 6.0682 0 0 0 2.0094-7.003z"
+            }
+        }
+    }
+}
+
+/// `DirectionToggle`: a pilcrow over an arrow pointing where a press turns
+/// the text, left for right to left.
+#[component]
+pub(crate) fn TextDirectionIcon(to_rtl: bool) -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M11 3v11" }
+            path { d: "M15 3v11" }
+            path { d: "M18 3h-7.5a4 4 0 0 0 0 8h.5" }
+            path { d: "M20 19H4" }
+            path { d: if to_rtl { "M7 16l-3 3 3 3" } else { "M17 16l3 3-3 3" } }
+        }
+    }
+}
+
 /// `ColorField`'s eyedropper button: a pipette, tip at the bottom left.
 #[component]
 pub(crate) fn EyeDropperIcon() -> Element {

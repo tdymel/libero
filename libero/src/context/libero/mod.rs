@@ -10,9 +10,12 @@ use super::{ModalHost, PortalHost, PortalOutlet, WindowHost};
 use crate::{
     css::Stylesheet,
     localization::{Formats, Localization},
-    platform::{backend, color_scheme, document, focus_selectors},
+    platform::{
+        apply_direction, backend, color_scheme, document, focus_selectors, set_root_direction,
+        store_direction, stored_direction,
+    },
     theme::{THEME_ATTRIBUTE, Theme, ThemeSet},
-    tokens::{ColorScheme, ColorSchemeSetting},
+    tokens::{ColorScheme, ColorSchemeSetting, Direction},
     utils::warn,
 };
 
@@ -46,6 +49,8 @@ pub struct LiberoContext {
     /// What the platform is set to. `Light` where this build cannot tell -
     /// see [`color_scheme`](crate::platform::color_scheme).
     pub(crate) system_scheme: Signal<ColorScheme>,
+    /// Which way the text runs, as the document root's `dir` says.
+    pub(crate) direction: Signal<Direction>,
     pub(crate) layer_order_css: &'static str,
     /// `Rc<str>`, not a `Stylesheet`: every `use_context::<LiberoContext>()`
     /// clones this struct, and only `ThemeStyle` ever reads this field.
@@ -67,6 +72,7 @@ impl LiberoContext {
         active: Signal<&'static str>,
         scheme_setting: Signal<ColorSchemeSetting>,
         system_scheme: Signal<ColorScheme>,
+        direction: Signal<Direction>,
         theme_css: Signal<Rc<str>>,
         stylesheet_registry_version: Signal<u64>,
     ) -> Self {
@@ -78,6 +84,7 @@ impl LiberoContext {
             active,
             scheme_setting,
             system_scheme,
+            direction,
             layer_order_css: CssLayer::order_css(),
             theme_css,
             stylesheet_registry: StylesheetRegistry::new(),
@@ -196,6 +203,14 @@ impl LiberoContext {
         current.set(theme);
     }
 
+    /// Turns the app's text, on the document root, and keeps the choice.
+    pub(crate) fn set_direction(&self, direction: Direction) {
+        let mut stored = self.direction;
+        stored.set(direction);
+        apply_direction(direction);
+        store_direction(direction);
+    }
+
     /// Swaps the whole set - what a theme picker does.
     ///
     /// The sheet is rebuilt, because the pair it carries is this set's pair:
@@ -297,6 +312,12 @@ pub fn LiberoProvider(
     /// ```
     #[props(default = &Formats::AMERICAN)]
     formats: &'static Formats,
+    /// The text direction to start in, set as the document root's `dir`. A
+    /// choice made through [`use_direction`](crate::hooks::use_direction) is
+    /// kept on the web and wins over it on the next visit. Unset, and with
+    /// nothing kept, the root's `dir` is left as the page has it.
+    #[props(default, into)]
+    direction: Option<Direction>,
     children: Element,
 ) -> Element {
     let themes = use_hook(|| themes.clone());
@@ -329,6 +350,11 @@ pub fn LiberoProvider(
         move || Rc::<str>::from(Stylesheet::from(&themes).as_str())
     });
     let theme_set = use_signal(|| themes);
+    // Read and set before the first render where the root is in reach (the
+    // web), so the first layout already runs the kept way.
+    let chosen_direction = use_hook(|| stored_direction().or(direction));
+    let direction_set = use_hook(|| chosen_direction.is_some_and(set_root_direction));
+    let direction_signal = use_signal(|| chosen_direction.unwrap_or_default());
 
     let stylesheet_registry_version = use_signal(|| 0u64);
     let context = use_context_provider(|| {
@@ -340,9 +366,16 @@ pub fn LiberoProvider(
             active,
             scheme_setting,
             system_scheme,
+            direction_signal,
             theme_css,
             stylesheet_registry_version,
         )
+    });
+    // Elsewhere after mount: Blitz reaches its root through an element the provider renders.
+    use_effect(move || {
+        if let Some(direction) = chosen_direction.filter(|_| !direction_set) {
+            apply_direction(direction);
+        }
     });
 
     // The platform can change its mind while the app is running, and while

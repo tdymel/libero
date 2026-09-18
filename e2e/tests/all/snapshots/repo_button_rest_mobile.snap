@@ -1,0 +1,11 @@
+---
+source: e2e/src/suite.rs
+description: repo_button at mobile (rest)
+expression: tree
+---
+link "GitHub, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"
+link "GitHub, 1.2k stars (opens in a new tab)"
+  StaticText "1.2k"

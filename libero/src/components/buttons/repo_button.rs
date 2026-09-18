@@ -1,0 +1,312 @@
+use dioxus::prelude::*;
+
+use crate::{
+    components::{
+        HtmlTag, Input, States, Variant,
+        buttons::ActionIcon,
+        common::{GitHubIcon, GitLabIcon, base_props},
+        layout::use_box,
+    },
+    hooks::{use_cache, use_formats, use_localization, use_theme},
+    platform,
+    sx::{StaticSx, ThemeAwareValue, sx},
+    theme::{ACTION_ICON_SIZE, Color},
+    tokens::NamedColorCss,
+};
+
+/// Where a repository lives. A new host is one value here plus its arms below:
+/// a page, an API URL and the reply's count field.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
+pub enum RepoHost {
+    #[default]
+    GitHub,
+    GitLab,
+}
+
+impl RepoHost {
+    /// The host's brand name, the start of the button's accessible name.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::GitHub => "GitHub",
+            Self::GitLab => "GitLab",
+        }
+    }
+
+    /// The repository's page, where the button leads.
+    pub fn page_url(self, repo: &str) -> String {
+        match self {
+            Self::GitHub => format!("https://github.com/{repo}"),
+            Self::GitLab => format!("https://gitlab.com/{repo}"),
+        }
+    }
+
+    /// The public, unauthenticated endpoint that knows the star count.
+    fn api_url(self, repo: &str) -> String {
+        match self {
+            Self::GitHub => format!("https://api.github.com/repos/{repo}"),
+            // GitLab names a project by its path, URL-encoded.
+            Self::GitLab => format!(
+                "https://gitlab.com/api/v4/projects/{}",
+                repo.replace('/', "%2F")
+            ),
+        }
+    }
+
+    /// The field of [`api_url`](Self::api_url)'s JSON that holds the count.
+    fn stars_field(self) -> &'static str {
+        match self {
+            Self::GitHub => "stargazers_count",
+            Self::GitLab => "star_count",
+        }
+    }
+}
+
+/// Where a count is kept for the session, by API URL. Unauthenticated calls
+/// are rate limited (GitHub: 60 an hour), so a remount or reload never asks twice.
+fn stars_key(api: &str) -> String {
+    format!("libero-repo-stars:{api}")
+}
+
+fn cached_stars(api: &str) -> Option<u64> {
+    platform::session_get(&stars_key(api))?.parse().ok()
+}
+
+/// The count in a host's JSON reply.
+fn parse_stars(body: &str, field: &str) -> Option<u64> {
+    serde_json::from_str::<serde_json::Value>(body)
+        .ok()?
+        .get(field)?
+        .as_u64()
+}
+
+/// `999`, `1.2k`, `12k`, `1.2M`, with the locale's decimal separator. Rounds
+/// down, so a count never shows more than it is.
+fn compact_count(count: u64, separator: &str) -> String {
+    let scaled = |unit: u64, suffix: &str| {
+        let tenths = count * 10 / unit;
+        if tenths >= 100 || tenths.is_multiple_of(10) {
+            format!("{}{suffix}", tenths / 10)
+        } else {
+            format!("{}{separator}{}{suffix}", tenths / 10, tenths % 10)
+        }
+    };
+    match count {
+        0..1_000 => count.to_string(),
+        1_000..1_000_000 => scaled(1_000, "k"),
+        _ => scaled(1_000_000, "M"),
+    }
+}
+
+/// Half the button, from its size rather than its width, which a pill grows.
+static GLYPH_SX: StaticSx = StaticSx::new(|| {
+    let side = format!("calc({} * 0.5)", ACTION_ICON_SIZE.overridable());
+    sx().display("inline-flex")
+        .flex_shrink("0")
+        .width(side.clone())
+        .height(side)
+});
+
+/// With a count, the square grows into a pill: icon, then number. On a
+/// wrapper, so the caller's `class`, `sx` and attributes reach the link untouched.
+static STARS_SX: StaticSx = StaticSx::new(|| {
+    sx().display("contents").when(
+        "stars",
+        sx().selector(
+            "& > a",
+            sx().width("auto")
+                .padding_inline("sm")
+                .gap("xs")
+                .font_size("sm")
+                .text_decoration("none"),
+        ),
+    )
+});
+
+/// Text needs 4.5:1, which the muted glyph colour (3:1, enough for an icon)
+/// misses on the page and on a tonal tint. A filled button's contrast colour passes.
+static COUNT_SX: StaticSx =
+    StaticSx::new(|| sx().when("ink", sx().color(NamedColorCss::INK.value())));
+
+base_props! {
+    pub struct RepoButtonProps {
+        /// `owner/repo`, as in the repository's URL. GitLab takes nested
+        /// groups too: `group/subgroup/repo`.
+        repo: String,
+        /// Unset, GitHub.
+        #[props(default)]
+        host: RepoHost,
+        /// Unset, the theme's
+        /// [`RepoButtonDefaults::variant`](crate::theme::RepoButtonDefaults).
+        #[props(default, into)]
+        variant: Input<Variant>,
+        /// Unset, the theme's
+        /// [`RepoButtonDefaults::color`](crate::theme::RepoButtonDefaults).
+        #[props(default, into)]
+        color: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        radius: Input<ThemeAwareValue>,
+    }
+}
+
+/// A link to a repository that shows its star count beside the host's icon.
+/// The count is fetched once per mount and kept for the session; until it
+/// lands, when it is 0, or when the host does not answer, the icon stands
+/// alone. It opens in a new tab, and its name says so.
+///
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{RepoButton, RepoHost};
+/// # fn app() -> Element {
+/// rsx! {
+///     RepoButton { repo: "tdymel/libero" }
+///     RepoButton { repo: "gitlab-org/gitlab", host: RepoHost::GitLab }
+/// }
+/// # }
+/// ```
+///
+/// Native builds fetch through dioxus-native's network provider, so the
+/// count needs its `net` feature there.
+#[component]
+pub fn RepoButton(props: RepoButtonProps) -> Element {
+    let theme = use_theme();
+    let localization = use_localization();
+    let separator = use_formats().decimal_separator;
+    let host = props.host;
+    let api = host.api_url(&props.repo);
+
+    // Bumped when a count lands, so the render reads the cache again.
+    let mut landed = use_signal(|| 0u32);
+    use_cache(api.clone(), |api| {
+        if cached_stars(api).is_some() {
+            return;
+        }
+        let fetched = platform::fetch_text(api);
+        let api = api.clone();
+        spawn(async move {
+            let Some(count) = fetched
+                .await
+                .and_then(|body| parse_stars(&body, host.stars_field()))
+            else {
+                return;
+            };
+            platform::session_set(&stars_key(&api), &count.to_string());
+            landed += 1;
+        });
+    });
+    landed.read();
+    let count = cached_stars(&api).filter(|&count| count > 0);
+
+    let new_tab = localization.anchor.new_tab;
+    let aria_label = match count {
+        Some(count) => format!(
+            "{}, {} {new_tab}",
+            host.name(),
+            (localization.repo_button.stars)(count, &compact_count(count, separator))
+        ),
+        None => format!("{} {new_tab}", host.name()),
+    };
+    let variant = props.variant.copied_or(theme.repo_button.variant);
+    let color = props
+        .color
+        .into_option()
+        .unwrap_or_else(|| theme.repo_button.color.into());
+    let ink = variant != Variant::Filled && color == ThemeAwareValue::from(Color::Muted);
+    let glyph = use_box().framework_sx(&GLYPH_SX).prepare().render(
+        HtmlTag::Span,
+        Vec::new(),
+        match host {
+            RepoHost::GitHub => rsx! { GitHubIcon {} },
+            RepoHost::GitLab => rsx! { GitLabIcon {} },
+        },
+    );
+    let count_states: Input<States> = States::new().with("ink", ink).into();
+    let count_box = use_box()
+        .framework_sx(&COUNT_SX)
+        .states(&count_states)
+        .prepare();
+    // Not heard: the link's `aria-label` replaces its content in the name.
+    let count_text = count.map(|count| {
+        let shown = compact_count(count, separator);
+        count_box.render(HtmlTag::Span, Vec::new(), rsx! { "{shown}" })
+    });
+    let wrapper_states: Input<States> = States::new().with("stars", count.is_some()).into();
+    let wrapper = use_box()
+        .framework_sx(&STARS_SX)
+        .states(&wrapper_states)
+        .prepare();
+
+    wrapper.render(
+        HtmlTag::Span,
+        Vec::new(),
+        rsx! {
+            ActionIcon {
+                aria_label,
+                to: host.page_url(&props.repo),
+                target: "_blank",
+                variant: Input::Value(variant),
+                color,
+                size: props.size.clone(),
+                radius: props.radius.clone(),
+                class: props.class.clone(),
+                sx: props.sx.clone(),
+                states: props.states.clone(),
+                attributes: props.attributes.clone(),
+                {glyph}
+                {count_text}
+            }
+        },
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compact_count_steps_through_units() {
+        let cases = [
+            (0, "0"),
+            (999, "999"),
+            (1_000, "1k"),
+            (1_234, "1.2k"),
+            (9_999, "9.9k"),
+            (12_345, "12k"),
+            (999_999, "999k"),
+            (1_250_000, "1.2M"),
+        ];
+        for (count, expected) in cases {
+            assert_eq!(compact_count(count, "."), expected, "{count}");
+        }
+        assert_eq!(compact_count(1_234, ","), "1,2k");
+    }
+
+    #[test]
+    fn each_host_names_its_endpoint_and_field() {
+        assert_eq!(
+            RepoHost::GitHub.api_url("a/b"),
+            "https://api.github.com/repos/a/b"
+        );
+        assert_eq!(
+            RepoHost::GitLab.api_url("group/sub/b"),
+            "https://gitlab.com/api/v4/projects/group%2Fsub%2Fb"
+        );
+        assert_eq!(
+            parse_stars(
+                r#"{"stargazers_count": 12}"#,
+                RepoHost::GitHub.stars_field()
+            ),
+            Some(12)
+        );
+        assert_eq!(
+            parse_stars(r#"{"star_count": 3}"#, RepoHost::GitLab.stars_field()),
+            Some(3)
+        );
+        assert_eq!(
+            parse_stars(r#"{"message": "Not Found"}"#, "star_count"),
+            None
+        );
+        assert_eq!(parse_stars("<html>", "star_count"), None);
+    }
+}

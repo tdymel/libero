@@ -7,6 +7,7 @@ mod color_scheme;
 mod color_shade;
 mod color_value;
 mod css_var;
+mod direction;
 mod hex_color;
 mod responsive;
 mod size;
@@ -21,6 +22,7 @@ pub(crate) use color_shade::ShadeRamp;
 pub use color_value::ColorValue;
 pub(crate) use color_value::{HOVER_TINT_SHADE, SELECTED_TINT_SHADE};
 pub use css_var::{ColorCss, CssVar, NamedColorCss, SizeCss};
+pub use direction::Direction;
 pub use hex_color::HexColor;
 #[cfg_attr(not(test), allow(unused_imports))]
 pub(crate) use hex_color::{Ends, TEXT_CONTRAST};

@@ -41,6 +41,8 @@ fetch only the file you need.
 - [Button](button.md): A clickable action, a toggle, or a router-aware link.
 - [ActionIcon](action_icon.md): An icon-only button, rendered as a `button` or a link, with a required `aria_label`.
 - [ColorSchemeButton](color_scheme_button.md): An icon button that steps the colour scheme through system, dark and light, with an optional theme picker beside it.
+- [DirectionToggle](direction_toggle.md): An icon button that turns the app's text between left to right and right to left.
+- [RepoButton](repo_button.md): A link to a GitHub or GitLab repository with its star count beside the host's icon.
 
 ## Form
 

@@ -90,26 +90,6 @@ pub fn GitHubIcon() -> Element {
     }
 }
 
-/// A pilcrow over a leftward arrow: text running right to left.
-#[component]
-pub fn TextDirectionIcon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            path { d: "M11 3v11" }
-            path { d: "M15 3v11" }
-            path { d: "M18 3h-7.5a4 4 0 0 0 0 8h.5" }
-            path { d: "M20 19H4" }
-            path { d: "M7 16l-3 3 3 3" }
-        }
-    }
-}
-
 #[component]
 pub fn MarkdownIcon() -> Element {
     rsx! {

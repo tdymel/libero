@@ -26,6 +26,7 @@ mod container;
 mod data_list;
 mod date;
 mod dialog;
+mod direction_toggle;
 mod divider;
 mod drawer;
 mod field;
@@ -64,6 +65,7 @@ mod popover;
 mod progress_bar;
 mod qr_code;
 mod radio;
+mod repo_button;
 mod ripple;
 mod scroll_area;
 mod scroller;
@@ -171,6 +173,7 @@ pub use date::{
     DatePickerSizeLevel, TimePickerDefaults, TimePickerVariant,
 };
 pub use dialog::{DIALOG_SIZE, DialogDefaults};
+pub use direction_toggle::DirectionToggleDefaults;
 pub use divider::{DIVIDER_LINE, DIVIDER_SPACING, DIVIDER_THICKNESS, DividerDefaults};
 pub use drawer::{DRAWER_SIZE, DrawerDefaults};
 pub use field::{
@@ -260,6 +263,7 @@ pub use progress_bar::{
 };
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};
 pub use radio::{RADIO_CIRCLE, RADIO_CIRCLE_SIZE, RadioDefaults};
+pub use repo_button::RepoButtonDefaults;
 pub use ripple::{RIPPLE_ANIMATION, RIPPLE_CLIP_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
 pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
 pub use scroller::{
