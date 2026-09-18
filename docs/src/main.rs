@@ -604,7 +604,10 @@ fn AppShell() -> Element {
                 align: "stretch",
                 // Nav and page side by side at every width.
                 wrap: false,
-                sx: sx().height(format!("calc(100vh - {})", HEADER_HEIGHT_VAR.value())),
+                // The drawer's containing block.
+                sx: sx()
+                    .position("relative")
+                    .height(format!("calc(100vh - {})", HEADER_HEIGHT_VAR.value())),
                 DocsNav { open, burger, drawer: home }
                 ScrollArea {
                     handle: area,

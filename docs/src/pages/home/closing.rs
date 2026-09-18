@@ -1,6 +1,10 @@
 use dioxus::prelude::*;
-use libero::components::{Anchor, Button, Divider, Flex, Text, Title};
+use libero::{
+    components::{Anchor, Button, CodeBlock, Divider, Flex, Text, Title},
+    sx::sx,
+};
 
+use super::tint;
 use crate::{GITHUB, Route};
 
 /// The way in once more, and the page's footer line.
@@ -8,9 +12,32 @@ use crate::{GITHUB, Route};
 pub fn Closing() -> Element {
     rsx! {
         section { "aria-labelledby": "closing-title",
-            Flex { direction: "column", gap: "lg", align: "center",
+            Flex {
+                direction: "column",
+                gap: "lg",
+                align: "center",
+                sx: sx()
+                    .padding("48px 24px")
+                    .border_radius("xl")
+                    .text_align("center")
+                    .background(format!(
+                        "linear-gradient(135deg, {} 0%, {} 100%)",
+                        tint(22),
+                        tint(6),
+                    )),
                 Title { size: "xl", component: "h2", id: "closing-title", "Ready when you are" }
-                Button { to: Route::GettingStarted {}, size: "lg", "Get started" }
+                Text { size: "lg", "One line in your terminal, then the first component." }
+                CodeBlock {
+                    source: "cargo add libero",
+                    language: "shell",
+                    header: false,
+                    line_numbers: false,
+                    sx: sx().width("100%").max_width("320px").text_align("start"),
+                }
+                Flex { direction: "row", gap: "md", wrap: "wrap", justify: "center",
+                    Button { to: Route::GettingStarted {}, size: "lg", "Get started" }
+                    Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", "Browse components" }
+                }
             }
         }
         footer {

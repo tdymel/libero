@@ -9,13 +9,13 @@ use libero::{
     hooks::ElementHandle,
     platform::ElementApi,
     sx::{Sx, sx},
-    theme::{ColorCss, ColorShade, HEADER_HEIGHT_VAR, SIDEBAR_SIZE, Size},
+    theme::{ColorCss, ColorShade, SIDEBAR_SIZE, Size},
 };
 
 use crate::Route;
 
 // One `Sidebar`, one responsive `sx` - no second drawer, no viewport
-// detection. Below the `Sm` breakpoint it's a fixed, off-canvas panel
+// detection. Below the `Sm` breakpoint it's an absolute, off-canvas panel
 // toggled by `open` (slides via `transform`, `visibility` hidden when
 // closed so its links drop out of tab order/the a11y tree instead of just
 // being invisible); at `Sm` and up it's back to the persistent sticky
@@ -25,8 +25,6 @@ use crate::Route;
 // With `drawer` (the full-width home page) it stays off-canvas at every width,
 // only narrower from `Sm` up.
 fn nav_responsive_sx(open: bool, drawer: bool) -> Sx {
-    // The banner's published height, whatever size it renders at.
-    let header_height = HEADER_HEIGHT_VAR.value();
     // `visibility` shouldn't flip to hidden until the slide-out finishes,
     // or the panel would vanish mid-animation instead of sliding away;
     // opening has no such concern, so only closing gets the delay.
@@ -38,17 +36,18 @@ fn nav_responsive_sx(open: bool, drawer: bool) -> Sx {
 
     // "ColorSchemeButton", the longest label, needs 4px past `Sm` to stay on one row.
     let width = format!("calc({} + 8px)", SIDEBAR_SIZE.value(Size::Sm));
+    // Absolute in the row below the header, not fixed at the header's height:
+    // Blitz lays a fixed box out like an absolute one, which put it a header lower.
     let base = sx()
-        .position("fixed")
-        .top(header_height.clone())
-        .height(format!("calc(100vh - {header_height})"))
+        .position("absolute")
+        .top("0")
+        .height("100%")
         .width("100%")
         // `Sidebar`'s own base has no background - fine sitting adjacent to
         // content in normal flow (desktop), but this mode overlaps the main
         // content, which would otherwise show through underneath it.
         .background("surface")
-        // `position: fixed` alone only creates a stacking context - without
-        // an explicit z-index it's `auto`, which paints below anything else
+        // Positioned alone, without an explicit z-index it's `auto`, which paints below anything else
         // on the page that happens to have a real (even low, even `0`)
         // z-index, letting that content's hit-testing win instead. Well
         // under `Modal`'s own range (starts at 1000) so an actual modal

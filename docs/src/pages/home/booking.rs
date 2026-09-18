@@ -81,9 +81,10 @@ pub fn BookingCard() -> Element {
 
     rsx! {
         Paper {
-            shadow: "sm",
+            shadow: "lg",
+            radius: "lg",
             sx: sx().padding("lg").width("100%").max_width("440px"),
-            Title { size: "md", component: "h2", id: "booking-title", "Book a table" }
+            Title { size: "md", component: "h3", id: "booking-title", "Book a table" }
             Tabs {
                 value: tab(),
                 onchange: move |next| tab.set(next),
