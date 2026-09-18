@@ -36,6 +36,7 @@ mod overlays;
 mod paper;
 mod pointer;
 mod popover;
+mod qr_code;
 mod repo_button;
 mod scroll;
 mod scroll_area;

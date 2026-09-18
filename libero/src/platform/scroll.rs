@@ -1,7 +1,30 @@
 use dioxus::html::geometry::WheelDelta;
-use dioxus::prelude::WheelData;
+use dioxus::prelude::{ScrollData, WheelData};
 
 use super::backend;
+
+const NATIVE: bool = cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
+/// A scroll event's range per axis, `(max_x, max_y)` in px. Blitz reports the
+/// range itself as `scroll_width`/`scroll_height`, the web the content's size.
+pub(crate) fn scroll_range(data: &ScrollData) -> (f64, f64) {
+    let (width, height) = (data.scroll_width() as f64, data.scroll_height() as f64);
+    let (max_x, max_y) = match NATIVE {
+        true => (width, height),
+        false => (
+            width - data.client_width() as f64,
+            height - data.client_height() as f64,
+        ),
+    };
+    (max_x.max(0.0), max_y.max(0.0))
+}
+
+/// Whether a scroll container clips its z-indexed descendants. Blitz paints
+/// them with the nearest stacking context, past any clip in between, so a
+/// scroller has to be a stacking context itself there.
+pub(crate) fn clips_z_indexed() -> bool {
+    !NATIVE
+}
 
 /// A wheel's vertical travel in the web's sign, positive down the page, with
 /// lines and pages counted as `line` pixels and `page` lines. Blitz reports
@@ -12,11 +35,7 @@ pub(crate) fn wheel_travel_y(data: &WheelData, line: f64, page: f64) -> f64 {
         WheelDelta::Lines(delta) => delta.y * line,
         WheelDelta::Pages(delta) => delta.y * line * page,
     };
-    if cfg!(all(not(target_arch = "wasm32"), feature = "native")) {
-        -travel
-    } else {
-        travel
-    }
+    if NATIVE { -travel } else { travel }
 }
 
 /// A live scroll subscription. **Dropping it unsubscribes** - that is the whole

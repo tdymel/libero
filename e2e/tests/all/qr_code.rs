@@ -10,23 +10,24 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// The modules' fill resolves from the theme's CSS variables, and a scanner
-/// needs the contrast between them.
+/// The modules take the theme's foreground through `currentColor`, the quiet
+/// zone the root's background, and a scanner needs the contrast between them.
 #[test]
 fn the_modules_are_painted_dark_on_light() {
     block_on(async {
         let fixture = Fixture::open("/qr-code", Viewport::Desktop).await.unwrap();
         wait::for_visible(&fixture.page, "#qr svg").await.unwrap();
-        let fills: Vec<String> = fixture
+        let colours: Vec<String> = fixture
             .page
             .evaluate(
-                "['rect', 'path'].map(t => getComputedStyle(document.querySelector('#qr svg ' + t)).fill)",
+                "[getComputedStyle(document.querySelector('#qr')).backgroundColor, \
+                 getComputedStyle(document.querySelector('#qr svg path')).fill]",
             )
             .await
             .unwrap()
             .into_value()
             .unwrap();
-        assert_eq!(fills, ["rgb(255, 255, 255)", "rgb(0, 0, 0)"]);
+        assert_eq!(colours, ["rgb(255, 255, 255)", "rgb(0, 0, 0)"]);
         fixture.close().await.unwrap();
     });
 }

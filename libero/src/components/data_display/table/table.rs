@@ -278,9 +278,18 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 vec![attr("id", spec.id)],
                 rsx! { "{spec.text}" },
             );
-            rsx! {
-                {caption}
-                {table}
+            // One box, as the web's table with its caption, so a flex row
+            // does not set them side by side.
+            match props.scroll {
+                true => rsx! {
+                    {caption}
+                    {table}
+                },
+                false => {
+                    return rsx! {
+                        div { {caption} {table} }
+                    };
+                }
             }
         }
         None => table,

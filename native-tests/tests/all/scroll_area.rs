@@ -5,7 +5,9 @@ use std::time::Duration;
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Button, Container, Flex, ScrollArea, Sidebar, Virtualize},
+    components::{
+        Box, Button, Container, Flex, ScrollArea, ScrollPositionEvent, Sidebar, Virtualize,
+    },
     sx::sx,
 };
 use native_tests::{Page, mount};
@@ -272,10 +274,55 @@ fn a_wheel_over_the_nav_scrolls_it_alone() {
     assert_eq!((preview, area, window), (0.0, 0.0, 0.0), "{}", page.tree());
 }
 
+fn raised_row() -> Element {
+    let mut percent = use_signal(|| 0.0);
+    rsx! {
+        div { height: "40px" }
+        div { height: "60px",
+            ScrollArea {
+                id: "area",
+                onscroll: move |event: ScrollPositionEvent| {
+                    let (ScrollPositionEvent::Start(_, y)
+                    | ScrollPositionEvent::Change(_, y)
+                    | ScrollPositionEvent::End(_, y)) = event;
+                    percent.set(y);
+                },
+                div { height: "30px" }
+                div { id: "raised", position: "relative", z_index: "1", height: "20px", background: "red" }
+                div { height: "200px" }
+            }
+        }
+        p { id: "percent", "{percent}" }
+    }
+}
+
+/// Blitz paints a z-indexed box with its stacking context, past the clip of a
+/// scroller that is none; the area is one natively.
+#[test]
+fn a_z_indexed_row_scrolled_out_is_clipped() {
+    let mut page = mount(raised_row);
+    page.wait(Duration::from_millis(50));
+    page.hover("#raised");
+    page.wheel("#raised", 45.0);
+    // The row now spans 25..45, the area starts at 40.
+    assert_eq!(page.painted_pixel(20, 30), "rgb(255, 255, 255)");
+    assert_eq!(page.painted_pixel(20, 42), "rgb(255, 0, 0)");
+}
+
+/// Blitz's `scroll_height` is the range, not the content: the bottom is 100%.
+#[test]
+fn the_bottom_reports_a_hundred_percent() {
+    let mut page = mount(raised_row);
+    page.wait(Duration::from_millis(50));
+    page.hover("#raised");
+    page.wheel("#raised", 1000.0);
+    assert_eq!(page.text("#percent"), "100");
+}
+
 fn wide_rtl() -> Element {
     rsx! {
         div { dir: "rtl", width: "300px", height: "120px",
-            ScrollArea { id: "area", "aria-label": "Wide",
+            ScrollArea { id: "area", "aria-label": "Wide", scrollbars: "horizontal",
                 div { id: "wide", width: "600px", height: "20px", "Start" }
             }
         }

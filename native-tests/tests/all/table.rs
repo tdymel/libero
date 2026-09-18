@@ -90,11 +90,14 @@ fn a_row_line_is_one_thin_theme_line() {
 #[test]
 fn the_caption_shows_above_the_table_and_names_it() {
     fn app() -> Element {
+        // In a flex row, as on a docs demo stage: the caption still sits above.
         rsx! {
-            Table {
-                caption: "People",
-                data: vec![Person { name: "Ada", age: 36 }],
-                columns: vec![column("Name").value(|p: &Person| p.name.to_string())],
+            div { display: "flex",
+                Table {
+                    caption: "People",
+                    data: vec![Person { name: "Ada", age: 36 }],
+                    columns: vec![column("Name").value(|p: &Person| p.name.to_string())],
+                }
             }
         }
     }

@@ -13,7 +13,9 @@ use crate::{
         layout::use_box,
     },
     hooks::{ElementHandle, use_content_changes, use_element, use_resize_fallback, use_theme},
-    platform::{Dimensions, ElementApi, PlatformError, when_laid_out},
+    platform::{
+        Dimensions, ElementApi, PlatformError, clips_z_indexed, scroll_range, when_laid_out,
+    },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
     utils::warn,
@@ -87,6 +89,11 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
             SCROLL_AREA_THUMB_VAR.value_or(ColorCss::MUTED.value(ColorShade::S6))
         ))
         .when("visible-hidden", sx().scrollbar_width("none"));
+    // A stacking context of its own, so it clips a z-indexed row natively too.
+    let base = match clips_z_indexed() {
+        true => base,
+        false => base.position("relative").z_index("0"),
+    };
 
     ScrollbarSize::ALL.iter().fold(base, |acc, &size| {
         let token = size.state_name();
@@ -230,8 +237,7 @@ base_props! {
 /// Position as a percent of each axis's scrollable range, plus that range
 /// in px - `(x%, y%, max_x, max_y)`.
 fn scroll_metrics(data: &ScrollData) -> (f64, f64, f64, f64) {
-    let max_x = (data.scroll_width() - data.client_width()).max(0) as f64;
-    let max_y = (data.scroll_height() - data.client_height()).max(0) as f64;
+    let (max_x, max_y) = scroll_range(data);
     let percent = |offset: f64, max: f64| if max > 0.0 { offset / max * 100.0 } else { 0.0 };
 
     (

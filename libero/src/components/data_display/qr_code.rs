@@ -33,6 +33,8 @@ const QR_CODE_MARGIN: usize = 4;
 static QR_CODE_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
         .width("100%")
+        .color(QR_CODE_FOREGROUND.value())
+        .background(QR_CODE_BACKGROUND.value())
         .selector("& svg", sx().display("block").width("100%").height("100%"))
 });
 
@@ -53,10 +55,11 @@ fn generate_svg(data: String, robustness: QrRobustness) -> Option<String> {
         .build()
         .ok()
         .map(|qrcode| {
+            // Colours come from the root: Blitz's svg renderer resolves no `var()`.
             SvgBuilder::default()
                 .margin(QR_CODE_MARGIN)
-                .module_color(QR_CODE_FOREGROUND.value())
-                .background_color(QR_CODE_BACKGROUND.value())
+                .module_color("currentColor")
+                .background_color("none")
                 .to_str(&qrcode)
         })
 }
