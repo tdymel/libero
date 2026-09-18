@@ -7,7 +7,11 @@
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
+use e2e::{
+    Fixture, Suite, Viewport,
+    passes::{keyboard, pointer},
+    wait,
+};
 
 pub const TRIGGER: &str = "[role=combobox]";
 const LISTBOX: &str = "[role=listbox]";
@@ -178,5 +182,63 @@ fn it_honours_the_combobox_contract() {
                 .unwrap();
             fixture.close().await.unwrap();
         }
+    });
+}
+
+/// Todo 876: a pick writes the selection before `onchange`. A caller that
+/// refuses it keeps the old rows, in the posted values and in `aria-selected`;
+/// one it takes moves both.
+#[test]
+fn a_refused_pick_keeps_the_old_selection() {
+    const ROUTE: &str = "/multi-select/refused";
+    const POSTED: &str = "document.querySelectorAll('input[name=fruit]').length";
+    const SELECTED: &str = "[...document.querySelectorAll('[role=option][aria-selected=true]')].map((o) => o.textContent.trim()).join(',')";
+    block_on(async {
+        let fixture = Fixture::open(ROUTE, Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        let read = async |js: &str| -> String {
+            page.evaluate(format!("String({js})"))
+                .await
+                .unwrap()
+                .into_value()
+                .unwrap()
+        };
+        let pick = async |label: &str| {
+            page.evaluate(format!(
+                "document.querySelector('[data-e2e=pick]')?.removeAttribute('data-e2e'); \
+                 [...document.querySelectorAll('[role=option]')].find((o) => o.textContent.trim() === {label:?}).setAttribute('data-e2e', 'pick')"
+            ))
+            .await
+            .unwrap();
+            pointer::click(page, "[data-e2e=pick]").await.unwrap();
+            // Longer than any follow-up pass: a late reset would land by now.
+            tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+        };
+
+        pointer::click(page, TRIGGER).await.unwrap();
+        wait::for_visible(page, "[role=option]").await.unwrap();
+
+        pick("Apple").await;
+        assert_eq!(
+            read(SELECTED).await,
+            "Cherry",
+            "a refused pick keeps aria-selected"
+        );
+        assert_eq!(
+            read(POSTED).await,
+            "1",
+            "a refused pick posts the old values"
+        );
+
+        pick("Banana").await;
+        assert_eq!(
+            read(SELECTED).await,
+            "Banana,Cherry",
+            "a taken pick moves aria-selected"
+        );
+        assert_eq!(read(POSTED).await, "2", "a taken pick posts the new values");
+
+        fixture.console.assert_clean(ROUTE).unwrap();
+        fixture.close().await.unwrap();
     });
 }

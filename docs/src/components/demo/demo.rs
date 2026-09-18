@@ -143,9 +143,14 @@ pub fn indent(code: &str) -> String {
     code.lines().map(|line| format!("    {line}\n")).collect()
 }
 
-/// Roughly what one segment of an `sm` `SegmentedControl` needs for the
-/// labels we use - `Elevated` measures ~93px, shorter ones less.
+/// The narrowest segment of an `sm` `SegmentedControl` we plan for.
 const SEGMENT_WIDTH: usize = 88;
+
+/// A segment's width estimate: this much per character at the `sm` font size
+/// (14px), plus its padding and border. Measured: `Standard` 92px, `Bottom
+/// start` 117.5px.
+const SEGMENT_CHAR_WIDTH: f32 = 7.5;
+const SEGMENT_PADDING: f32 = 30.0;
 
 /// Everything the panel spends on padding, either side of a control.
 const PANEL_PADDING: usize = 48;
@@ -161,12 +166,21 @@ const WIDE_PANEL_CONTROL: usize = 512 - PANEL_PADDING;
 /// than its labels ellipsizes them: five options in the 308px a 390px phone
 /// leaves showed four of five labels truncated. More than three options
 /// therefore fall back to a select until the card is wide enough, and a set
-/// too wide for even the side column never gets the segments at all.
-fn segments_need(options: usize) -> Option<usize> {
+/// too wide for even the side column never gets the segments at all. Every
+/// segment is as wide as the longest label needs.
+fn segments_need(control: &Control) -> Option<usize> {
+    let options = control.options.len();
     if options <= 3 {
         return None;
     }
-    let needed = options * SEGMENT_WIDTH;
+    let longest = control
+        .options
+        .iter()
+        .map(|option| control.label_of(option).chars().count())
+        .max()
+        .unwrap_or(0);
+    let segment = (longest as f32 * SEGMENT_CHAR_WIDTH + SEGMENT_PADDING).ceil() as usize;
+    let needed = options * SEGMENT_WIDTH.max(segment);
     Some(if needed > WIDE_PANEL_CONTROL {
         // Wider than the panel ever gets: a width no card reaches.
         99_999
@@ -492,8 +506,8 @@ pub fn Demo(
                                     // order and the accessibility tree, which
                                     // is what a JS width check would cost us a
                                     // hook and a resize observer for.
-                                    ControlKind::Toggle if segments_need(control.options.len()).is_some() => {
-                                        let needed = segments_need(control.options.len()).unwrap_or_default();
+                                    ControlKind::Toggle if segments_need(control).is_some() => {
+                                        let needed = segments_need(control).unwrap_or_default();
                                         rsx! {
                                             Box {
                                                 sx: card_query(sx().display("none"), needed, sx().display("block")),
@@ -554,6 +568,26 @@ pub fn Demo(
 
 #[cfg(test)]
 mod tests {
+    use super::{Control, segments_need};
+
+    /// Todo 866: the longest label sizes every segment, so four placements
+    /// never fit the side column, while short labels keep the 88px floor.
+    #[test]
+    fn the_longest_label_sizes_the_segments() {
+        let placement = Control::toggle("placement", ["a", "b", "c", "d"]).labels([
+            "Top end",
+            "Top start",
+            "Bottom end",
+            "Bottom start",
+        ]);
+        assert_eq!(segments_need(&placement), Some(99_999));
+        let variant = Control::toggle("variant", ["f", "t", "e", "o", "s"])
+            .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"]);
+        assert_eq!(segments_need(&variant), Some(5 * 90 + 48));
+        let sizes = Control::toggle("size", ["xs", "sm", "md", "lg", "xl"]);
+        assert_eq!(segments_need(&sizes), Some(5 * 88 + 48));
+    }
+
     /// WCAG 2.5.3: a control's accessible name must contain its visible caption.
     #[test]
     fn controls_are_named_by_their_caption() {

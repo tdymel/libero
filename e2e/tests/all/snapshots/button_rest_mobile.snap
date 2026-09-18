@@ -19,6 +19,12 @@ button "Elevated"
   StaticText "Elevated"
 button "Filled"
   StaticText "Filled"
+button "Yellow"
+  StaticText "Yellow"
+button "Navy"
+  StaticText "Navy"
+button "Gold"
+  StaticText "Gold"
 link "Disabled link" [disabled]
   StaticText "Disabled link"
 form

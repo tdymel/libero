@@ -165,10 +165,14 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     let posted = current.iter().map(Options::value).collect::<Vec<_>>();
     let rules = props.validate.check(&current);
     let value_labels = held.iter().map(Options::label).collect::<Vec<_>>();
-    let picked = use_picked(Picked {
+    let rendered = Picked {
         selected,
         form_values: posted,
-    });
+    };
+    let picked = use_picked(rendered.clone());
+    // The props' selection as of the last render, for `onpick`'s refusal check.
+    let mut latest = use_hook(|| CopyValue::new(rendered.clone()));
+    latest.set(rendered);
     let (pick_change, clear_change) = (onchange.clone(), onchange);
     let onpick = use_callback(move |index: usize| {
         let (Some(onchange), Some(value)) = (&pick_change, values.get(index)) else {
@@ -181,7 +185,20 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             }
             None => next.push(value.clone()),
         }
+        // As `Select` does: `use_picked`'s own write lands a pass later and
+        // re-ran `SelectCore` on every pick (todo 876).
+        let mut picked = picked;
+        picked.set(Picked {
+            selected: values.iter().map(|row| next.contains(row)).collect(),
+            form_values: next.iter().map(Options::value).collect(),
+        });
         onchange(next);
+        // A caller that kept the old selection left `latest` behind: the props win.
+        spawn(async move {
+            if *picked.peek() != *latest.peek() {
+                picked.set(latest.cloned());
+            }
+        });
     });
     let onclear = use_callback(move |_: ()| {
         if let Some(onchange) = &clear_change {

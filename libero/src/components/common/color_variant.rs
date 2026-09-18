@@ -1,5 +1,7 @@
 use crate::sx::{ColorRole, ThemeAwareValue};
-use crate::tokens::{Color, ColorShade, ColorValue, HOVER_TINT_SHADE, SELECTED_TINT_SHADE};
+use crate::tokens::{
+    Color, ColorShade, ColorValue, HOVER_TINT_SHADE, HexColor, SELECTED_TINT_SHADE,
+};
 
 // A bare color name carries no shade, so it takes this over the sx
 // pipeline's generic default.
@@ -43,6 +45,28 @@ pub(crate) fn contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> 
         ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => Some(
             ThemeAwareValue::ColorValue(ColorValue::Contrast(*color, *shade)),
         ),
+        _ => None,
+    }
+}
+
+/// Black or white text for a literal fill, whichever clears 4.5:1 (one always
+/// does). A colour Rust cannot parse asks the browser's `contrast-color()`;
+/// where that is unsupported, the label keeps inheriting as before.
+pub(crate) fn literal_contrast(base: &ThemeAwareValue) -> Option<String> {
+    match base {
+        ThemeAwareValue::RawColor(_, fill) => {
+            let (black, white) = (HexColor::new(0x00_00_00), HexColor::new(0xFF_FF_FF));
+            Some(
+                match fill.contrast_ratio(black) >= fill.contrast_ratio(white) {
+                    true => black,
+                    false => white,
+                }
+                .to_string(),
+            )
+        }
+        ThemeAwareValue::String(_) | ThemeAwareValue::CssVar(_) => {
+            Some(format!("contrast-color({})", base.resolve(None)?))
+        }
         _ => None,
     }
 }
@@ -147,6 +171,20 @@ mod tests {
         assert_eq!(contrast_color(&literal), None);
         assert_eq!(hover_color(&literal, true), None);
         assert_eq!(hover_color(&literal, false), None);
+    }
+
+    #[test]
+    fn a_literal_fill_gets_the_readable_end() {
+        let ink = |value: &str| literal_contrast(&ThemeAwareValue::from(value));
+        assert_eq!(ink("#ffeb3b").as_deref(), Some("#000000"));
+        assert_eq!(ink("#123456").as_deref(), Some("#FFFFFF"));
+        // `#777` reads 4.48:1 against white but 4.69:1 against black.
+        assert_eq!(ink("#777777").as_deref(), Some("#000000"));
+        assert_eq!(
+            ink("rebeccapurple").as_deref(),
+            Some("contrast-color(rebeccapurple)")
+        );
+        assert_eq!(ink("error"), None);
     }
 
     /// On the fill ramp, not the brand one: the resting background is

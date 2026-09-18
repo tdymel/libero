@@ -38,6 +38,35 @@ fn it_meets_the_baseline() {
         .run();
 }
 
+/// Todo 877: a literal fill publishes no palette contrast, so the label takes
+/// black or white from the fill; a named colour asks `contrast-color()`.
+#[test]
+fn a_literal_fill_gets_a_readable_label() {
+    block_on(async {
+        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
+        let colors: Vec<String> = fixture
+            .page
+            .evaluate(
+                "['#literal-filled', '#literal-tonal', '#literal-named']\
+                 .map(s => getComputedStyle(document.querySelector(s)).color)\
+                 .concat([String(CSS.supports('color', 'contrast-color(red)'))])",
+            )
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        assert_eq!(
+            colors[..2],
+            ["rgb(0, 0, 0)", "rgb(255, 255, 255)"],
+            "{colors:?}"
+        );
+        if colors[3] == "true" {
+            assert_eq!(colors[2], "rgb(0, 0, 0)", "{colors:?}");
+        }
+        fixture.close().await.unwrap();
+    });
+}
+
 fn presses(which: &str) -> String {
     format!("document.querySelector('#presses').dataset.{which}")
 }

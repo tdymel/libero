@@ -281,6 +281,15 @@ fn an_analog_pick_takes_the_hour_then_the_minute() {
             expect_mark(page, "11:30:00", "30", at).await;
             click_mark(page, "45").await;
             expect_mark(page, "11:45:00", "45", at).await;
+            // The minute face says its unit, as a duration's column does (878).
+            wait::for_js_true(
+                page,
+                "document.querySelector('#analog [data-slot=face]')\
+                 .getAttribute('aria-valuetext') === '45 minutes'",
+                "the minute face reads 45 minutes",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
 
             fixture
                 .console

@@ -27,7 +27,7 @@ pub fn AlertPage() -> Element {
             properties: vec![props("Alert", vec![
                 prop("title", "String")
                     .doc("The heading and the alert's accessible name. Text only."),
-                prop("icon", "Element")
+                prop("icon", "Option<Element>")
                     .doc("A leading icon of your own, hidden from screen readers."),
                 prop("color", "ThemeAwareValue")
                     .default("info")

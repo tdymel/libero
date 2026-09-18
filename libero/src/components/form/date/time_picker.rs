@@ -851,22 +851,31 @@ impl ClockView {
                 }
             }
         });
+        // Minutes and seconds say their unit, as a duration's columns do; an hour
+        // of the day reads as itself, with its half on a twelve-hour clock.
         let (face_label, face_text, face_now, face_max) = match hand() {
             Hand::Hour => (
                 names.hours_label,
-                hour_text,
+                value.map(|_| match twelve {
+                    true => format!(
+                        "{} {}",
+                        hour_text.trim_start_matches('0'),
+                        if pm { names.pm } else { names.am }
+                    ),
+                    false => hour_text.to_string(),
+                }),
                 value.map(|value| value.hour()),
                 23,
             ),
             Hand::Minute => (
                 names.minutes_label,
-                minute_text,
+                value.map(|value| (names.minutes_value)(value.minute())),
                 value.map(|value| value.minute()),
                 59,
             ),
             Hand::Second => (
                 names.seconds_label,
-                second_text,
+                value.map(|value| (names.seconds_value)(value.second())),
                 value.map(|value| value.second()),
                 59,
             ),

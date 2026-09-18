@@ -36,6 +36,10 @@ fn ButtonPage() -> Element {
             Button { id: "standard-error", variant: "standard", color: "error", "Standard" }
             Button { id: "elevated", variant: "elevated", color: "secondary", "Elevated" }
             Button { id: "filled-muted", color: "muted", "Filled" }
+            // Todo 877: a literal fill's label is black or white, not the page text.
+            Button { id: "literal-filled", color: "#ffeb3b", "Yellow" }
+            Button { id: "literal-tonal", variant: "tonal", color: "#123456", "Navy" }
+            Button { id: "literal-named", color: "gold", "Gold" }
             Button { id: "disabled-link", to: "/button/landing", disabled: true, "Disabled link" }
             form { id: "form", "data-submits": "{submits}", onsubmit: move |event| { event.prevent_default(); submits += 1; },
                 input { id: "field", aria_label: "Field" }

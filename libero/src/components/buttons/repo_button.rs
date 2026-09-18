@@ -8,9 +8,9 @@ use crate::{
     },
     hooks::{use_cache, use_formats, use_localization, use_theme},
     platform,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ACTION_ICON_SIZE, Color},
-    tokens::{HexColor, NamedColorCss},
+    tokens::NamedColorCss,
 };
 
 /// Where a repository lives. A new host is one value here plus its arms below:
@@ -121,17 +121,8 @@ static STARS_SX: StaticSx = StaticSx::new(|| {
     )
 });
 
-/// Black or white, whichever reads better on `fill`: one of them always clears 4.5:1.
-fn readable_on(fill: HexColor) -> String {
-    let (black, white) = (HexColor::new(0x00_00_00), HexColor::new(0xFF_FF_FF));
-    match fill.contrast_ratio(black) >= fill.contrast_ratio(white) {
-        true => black.to_string(),
-        false => white.to_string(),
-    }
-}
-
 /// Text needs 4.5:1, which an unfilled label (3:1 is enough for an icon) and
-/// the muted tonal one can miss. A filled or tonal palette label passes.
+/// the muted tonal one can miss. A filled or tonal label passes.
 static COUNT_SX: StaticSx =
     StaticSx::new(|| sx().when("ink", sx().color(NamedColorCss::INK.value())));
 
@@ -221,26 +212,12 @@ pub fn RepoButton(props: RepoButtonProps) -> Element {
         .into_option()
         .unwrap_or_else(|| theme.repo_button.color.into());
     // A tonal palette colour's label passes; an unfilled one's may not (`warning`
-    // is 3.27:1), nor may any label on an unknown fill.
+    // is 3.27:1). A literal fill's label is the button's own readable contrast.
     let ink = match variant {
         Variant::Filled => false,
-        Variant::Tonal => {
-            color == ThemeAwareValue::from(Color::Muted)
-                || matches!(
-                    color,
-                    ThemeAwareValue::String(_) | ThemeAwareValue::CssVar(_)
-                )
-        }
+        Variant::Tonal => color == ThemeAwareValue::from(Color::Muted),
         _ => true,
     };
-    // A literal fills a tonal or filled button, whose count takes black or white.
-    let on_literal = match (&color, variant) {
-        (ThemeAwareValue::RawColor(_, hex), Variant::Filled | Variant::Tonal) => {
-            Some(readable_on(*hex))
-        }
-        _ => None,
-    };
-    let count_sx: Input<Sx> = on_literal.map_or(Input::None, |ink| Input::Value(sx().color(ink)));
     let glyph = use_box().framework_sx(&GLYPH_SX).prepare().render(
         HtmlTag::Span,
         Vec::new(),
@@ -252,7 +229,6 @@ pub fn RepoButton(props: RepoButtonProps) -> Element {
     let count_states: Input<States> = States::new().with("ink", ink).into();
     let count_box = use_box()
         .framework_sx(&COUNT_SX)
-        .sx(&count_sx)
         .states(&count_states)
         .prepare();
     // Not heard: the link's `aria-label` replaces its content in the name.

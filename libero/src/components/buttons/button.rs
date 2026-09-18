@@ -7,7 +7,7 @@ use crate::{
             BUTTON_HOVER_VAR, BUTTON_ON_CONTAINER_VAR, BUTTON_ON_STATE_VAR, BUTTON_SELECTED_VAR,
             BUTTON_VARS, HtmlTag, Input, States, Variant, base_color, base_props, contrast_color,
             disabled_look_sx, fill_color, focus_ring_sx, input_from_str, interactive_variant_sx,
-            text_color, variables, variant_colors, variant_selected_sx,
+            literal_contrast, text_color, variables, variant_colors, variant_selected_sx,
         },
         feedback::Loader,
         layout::{render_anchor, use_box},
@@ -161,7 +161,12 @@ pub(crate) fn button_variables(
     variables()
         .with(BUTTON_COLOR_VAR, text_color(base))
         .with(BUTTON_FILL_VAR, fill_color(base))
-        .with(BUTTON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
+        .with(
+            BUTTON_CONTRAST_VAR,
+            contrast
+                .and_then(|c| c.resolve(None))
+                .or_else(|| literal_contrast(base)),
+        )
         .with(BUTTON_HOVER_VAR, colors.hover)
         .with(BUTTON_SELECTED_VAR, selected)
         .with(BUTTON_ON_STATE_VAR, colors.on_state)
@@ -415,14 +420,17 @@ mod tests {
         )));
     }
 
-    /// No computable contrast, so the var stays unset and the class's own
-    /// fallback applies.
+    /// A literal fill publishes black or white, not the page's text colour; an
+    /// unparseable one leaves the pick to the browser.
     #[test]
-    fn an_unparseable_color_emits_no_contrast() {
-        let base = ThemeAwareValue::String("gold".to_string());
-        let variables = button_variables(Variant::Filled, &base, false);
-
-        assert!(!variables.contains(BUTTON_CONTRAST_VAR.name()));
+    fn a_literal_color_publishes_a_readable_contrast() {
+        for (color, contrast) in [("#ffeb3b", "#000000"), ("gold", "contrast-color(gold)")] {
+            let variables = button_variables(Variant::Filled, &ThemeAwareValue::from(color), false);
+            assert!(
+                variables.contains(&format!("{}:{contrast};", BUTTON_CONTRAST_VAR.name())),
+                "{color}: {variables}"
+            );
+        }
     }
 
     #[test]

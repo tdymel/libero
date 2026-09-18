@@ -225,16 +225,17 @@ fn items_code(values: &DemoValues) -> String {
     }
 }
 
-/// Names the snippet's placeholders up front, so the pseudo-code is marked as such.
+/// Names the snippet's placeholders up front, one short line each so the print
+/// never overflows.
 fn placeholder_header(values: &DemoValues, code: &str) -> String {
-    let mut names = vec!["`photos` is your own list, each with a `url` and an `alt`".to_string()];
+    let mut lines = vec!["// `photos`: your list, each with a `url` and an `alt`."];
     if values.str("bar") != "none" {
-        names.push("`caption(p)` your bar's content".to_string());
+        lines.push("// `caption(p)`: your bar's content.");
     }
     if values.str("link") == "true" {
-        names.push("`Route::Photo { id }` your route".to_string());
+        lines.push("// `Route::Photo { id }`: your route.");
     }
-    format!("// Placeholders: {}.\n{code}", names.join("; "))
+    format!("{}\n{code}", lines.join("\n"))
 }
 
 #[component]

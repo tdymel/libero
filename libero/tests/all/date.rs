@@ -49,6 +49,27 @@ fn a_time_picker_draws_a_spinbutton_per_part_and_posts_the_time() {
 }
 
 #[test]
+fn the_analog_face_reads_an_hour_with_its_half() {
+    fn app() -> Element {
+        let value = NaiveTime::from_hms_opt(15, 20, 0);
+        rsx! {
+            LiberoProvider {
+                TimePicker { value, onchange: move |_| {}, variant: "analog", twelve_hour: true }
+                TimePicker { value, onchange: move |_| {}, variant: "analog", twelve_hour: false }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    for text in ["3 PM", "15"] {
+        assert!(
+            html.contains(&format!("aria-valuetext=\"{text}\"")),
+            "{text}: {html}"
+        );
+    }
+}
+
+#[test]
 fn a_half_of_the_day_outside_min_and_max_is_disabled_on_both_faces() {
     fn app() -> Element {
         let (value, min) = (

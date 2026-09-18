@@ -5,7 +5,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Badge, Flex, Options, Pagination, ScrollArea, Select, TextField, Virtualize,
+    Badge, Flex, MultiSelect, Options, Pagination, ScrollArea, Select, TextField, Virtualize,
 };
 
 use crate::Routes;
@@ -14,6 +14,7 @@ pub const ROUTES: Routes = &[
     ("/perf/probe", || rsx! { ProbePage {} }),
     ("/perf/typing", || rsx! { TypingPage {} }),
     ("/perf/select", || rsx! { SelectPage {} }),
+    ("/perf/multi-select", || rsx! { MultiSelectPage {} }),
     ("/perf/pagination", || rsx! { PaginationPage {} }),
     ("/perf/scroll", || rsx! { ScrollPage {} }),
 ];
@@ -178,6 +179,18 @@ fn SelectPage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             Select::<Fruit> { label: "Fruit", placeholder: "Pick a fruit", value: value(), onchange }
+            span { id: "picked", "data-picked": "{value:?}" }
+        }
+    }
+}
+
+#[component]
+fn MultiSelectPage() -> Element {
+    let mut value = use_signal(Vec::<Fruit>::new);
+    let onchange = use_callback(move |next: Vec<Fruit>| value.set(next));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            MultiSelect::<Fruit> { label: "Fruits", placeholder: "Pick fruits", value: value(), onchange }
             span { id: "picked", "data-picked": "{value:?}" }
         }
     }

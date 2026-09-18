@@ -5,8 +5,8 @@ use crate::{
         common::{HtmlTag, Input, States, Variables, Variant, base_props, variables},
         common::{
             VariantVars, base_color, borderless_on_state_sx, contrast_color, disabled_look_sx,
-            fill_color, focus_ring_sx, interactive_variant_sx, names_itself, text_color,
-            use_name_warning, variant_colors, variant_selected_sx,
+            fill_color, focus_ring_sx, interactive_variant_sx, literal_contrast, names_itself,
+            text_color, use_name_warning, variant_colors, variant_selected_sx,
         },
         feedback::Loader,
         layout::{InternalAnchor, use_box},
@@ -166,7 +166,9 @@ fn action_icon_variables(
         .with(ACTION_ICON_FILL_VAR, fill_color(&base))
         .with(
             ACTION_ICON_CONTRAST_VAR,
-            contrast.and_then(|c| c.resolve(None)),
+            contrast
+                .and_then(|c| c.resolve(None))
+                .or_else(|| literal_contrast(&base)),
         )
         .with(ACTION_ICON_HOVER_VAR, colors.hover)
         .with(ACTION_ICON_ON_STATE_VAR, colors.on_state)

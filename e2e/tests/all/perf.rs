@@ -206,6 +206,60 @@ fn a_select_pick_stays_in_budget() {
     });
 }
 
+/// Picking a row of an open multi-select (todo 876), which stays open.
+#[test]
+fn a_multi_select_pick_stays_in_budget() {
+    block_on(async {
+        let fixture = open("/perf/multi-select").await;
+        let page = &fixture.page;
+        pointer::click(page, "[role=combobox]").await.unwrap();
+        wait::for_visible(page, "[role=option]").await.unwrap();
+        settled(page, "opening the multi-select").await;
+        reset(page).await;
+        page.evaluate(
+            "[...document.querySelectorAll('[role=option]')].find((o) => o.textContent.trim() === 'Cherry').setAttribute('data-e2e', 'cherry')",
+        )
+        .await
+        .unwrap();
+        pointer::click(page, "[data-e2e=cherry]").await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.getElementById('picked').dataset.picked === '[Cherry]'",
+            "the pick",
+        )
+        .await
+        .unwrap();
+        let picked = settled(page, "picking").await;
+        // One pass: before the pick wrote `picked` itself, every scope here ran twice.
+        assert_within(
+            &picked,
+            &[
+                ("MultiSelectPage", 1),
+                ("Flex", 1),
+                ("MultiSelect", 1),
+                ("SelectCore", 1),
+                ("Chip", 1),
+                ("ActionIcon", 1),
+                ("CloseIcon", 1),
+                ("VisuallyHidden", 2),
+                ("ComboboxCore", 1),
+                ("ComboboxPopup", 2),
+                ("ComboboxDropdown", 1),
+                ("ComboboxRow", 5),
+                ("ComboboxOption", 5),
+                ("ScrollArea", 1),
+                ("ScrollAreaContent", 1),
+                ("Fragment", 2),
+                ("PortalOutlet", 2),
+                ("StyleOutlet", 1),
+            ],
+            "a multi-select pick",
+        );
+        fixture.console.assert_clean("picking").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Three page changes.
 #[test]
 fn paging_stays_in_budget() {

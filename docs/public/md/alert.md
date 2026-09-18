@@ -70,7 +70,7 @@ sensible in `onclose`.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `title` | `String` | - | The heading and the alert's accessible name. Text only. |
-| `icon` | `Element` | - | A leading icon of your own, hidden from screen readers. |
+| `icon` | `Option<Element>` | - | A leading icon of your own, hidden from screen readers. |
 | `color` | `ThemeAwareValue` | `info` | The tint. A theme color name or any CSS color. `error` and `warning` make the role `alert`, the rest `status`. |
 | `variant` | `Variant` | `tonal` | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. |
 | `radius` | `Size` | `md` | Corner radius. A size step or any CSS length. |
