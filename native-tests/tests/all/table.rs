@@ -85,6 +85,46 @@ fn a_row_line_is_one_thin_theme_line() {
     );
 }
 
+/// Todo 850: Blitz lays out no `<caption>`, so natively it is a div before the
+/// table that names it, in the web caption's look.
+#[test]
+fn the_caption_shows_above_the_table_and_names_it() {
+    fn app() -> Element {
+        rsx! {
+            Table {
+                caption: "People",
+                data: vec![Person { name: "Ada", age: 36 }],
+                columns: vec![column("Name").value(|p: &Person| p.name.to_string())],
+            }
+        }
+    }
+    let page = mount(app);
+    let id = page
+        .attr("table", "aria-labelledby")
+        .unwrap_or_else(|| panic!("the table is unnamed: {}", page.tree()));
+    let selector = format!("div#{id}");
+    assert_eq!(page.text(&selector), "People");
+    let (_, top, _, height) = page.rect(&selector);
+    assert!(height > 0.0, "the caption has no height");
+    let header = page.rect("thead th").1;
+    assert!(
+        top + height <= header,
+        "the caption ({top} + {height}) is not above the header ({header})"
+    );
+    assert_eq!(page.computed(&selector, "font-weight"), "600");
+    assert_eq!(page.computed(&selector, "text-align"), "start");
+    assert_eq!(page.computed(&selector, "padding-top"), "10px");
+    assert_eq!(page.computed(&selector, "padding-left"), "12px");
+    assert_eq!(
+        page.computed(&selector, "font-size"),
+        page.computed("table", "font-size")
+    );
+    assert_eq!(
+        page.computed(&selector, "color"),
+        page.computed("table", "color")
+    );
+}
+
 #[test]
 fn the_painted_arrow_turns_too() {
     let mut page = mount(app);

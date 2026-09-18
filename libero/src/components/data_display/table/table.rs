@@ -7,8 +7,9 @@ use crate::{
         layout::use_box,
     },
     hooks::use_id,
+    platform::lays_out_captions,
     sx::{StaticSx, Sx, sx},
-    theme::TableDefaults,
+    theme::{TABLE_FONT_SIZE, TableDefaults},
 };
 
 use super::{
@@ -31,12 +32,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         .selector("& thead th", sx().font_weight("600"))
         // A row header is semantics, not a look: it reads like its row.
         .selector("& tbody th", sx().font_weight("inherit"))
-        .selector(
-            "& caption",
-            sx().text_align("start")
-                .font_weight("600")
-                .padding(TableDefaults::padding()),
-        )
+        .selector("& caption", caption_sx())
         .selector(
             "& th[data-align=\"center\"], & td[data-align=\"center\"]",
             sx().text_align("center"),
@@ -99,6 +95,17 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             sx().justify_content("end"),
         )
 });
+
+fn caption_sx() -> Sx {
+    sx().text_align("start")
+        .font_weight("600")
+        .padding(TableDefaults::padding())
+}
+
+/// The caption drawn before the table where Blitz skips `<caption>`, with the
+/// table's font size the web caption inherits.
+static TABLE_CAPTION_SX: StaticSx =
+    StaticSx::new(|| caption_sx().font_size(TABLE_FONT_SIZE.value()));
 
 static TABLE_SCROLL_SX: StaticSx = StaticSx::new(|| sx().overflow_x("auto").max_width("100%"));
 
@@ -179,6 +186,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
          name.",
     );
     let scroll = use_box().framework_sx(&TABLE_SCROLL_SX).prepare();
+    let caption_box = use_box().framework_sx(&TABLE_CAPTION_SX).prepare();
 
     let headers: Vec<HeaderSpec> = props
         .columns
@@ -220,7 +228,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         })
         .collect();
 
-    let caption = props.caption.map(|text| CaptionSpec {
+    let mut caption = props.caption.map(|text| CaptionSpec {
         text,
         id: caption_id(),
     });
@@ -237,6 +245,19 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         None => Vec::new(),
     };
 
+    // Blitz skips a `<caption>`: there it is a div before the table, naming it.
+    let mut attributes = props.attributes;
+    let before = if lays_out_captions() {
+        None
+    } else {
+        caption.take()
+    };
+    if let Some(spec) = &before
+        && !names_itself(&attributes)
+    {
+        attributes.push(attr("aria-labelledby", spec.id.clone()));
+    }
+
     let table = use_box()
         .framework_sx(&TABLE_SX)
         .class(&props.class)
@@ -245,9 +266,23 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .prepare()
         .render(
             HtmlTag::Table,
-            props.attributes,
+            attributes,
             render_body(caption, headers, rows, props.empty, active, sort),
         );
+    let table = match before {
+        Some(spec) => {
+            let caption = caption_box.render(
+                HtmlTag::Div,
+                vec![attr("id", spec.id)],
+                rsx! { "{spec.text}" },
+            );
+            rsx! {
+                {caption}
+                {table}
+            }
+        }
+        None => table,
+    };
     if !props.scroll {
         return table;
     }

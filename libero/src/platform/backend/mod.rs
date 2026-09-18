@@ -181,6 +181,10 @@ pub(crate) fn PortalEntry(children: Element, idle: bool) -> Element {
 pub(crate) const OPENS_SELECT_PICKER: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz skips a `<caption>`; see [`lays_out_captions`](crate::platform::lays_out_captions).
+pub(crate) const LAYS_OUT_CAPTIONS: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     #[cfg(target_arch = "wasm32")]
     return web::document();

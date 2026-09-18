@@ -15,7 +15,7 @@ use crate::{
     },
     css::Stylesheet,
     hooks::{use_css, use_id},
-    platform::document,
+    platform::{document, when_laid_out},
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -83,6 +83,34 @@ fn set_publishing(id: &str, publishes: bool) {
     });
     if let Some(document) = document() {
         document.set_root_attribute(PUBLISHER_ATTRIBUTE, top.as_deref());
+    }
+}
+
+/// One Header's place on the root: whether it publishes, and should.
+struct Published {
+    id: String,
+    on: Cell<bool>,
+    wanted: Cell<bool>,
+}
+
+/// No document (SSR, headless): nothing to publish on, and nothing to leak.
+/// Natively there is none until the provider's outlet mounts, so it retries then.
+fn publish(published: &Rc<Published>, retry: bool) {
+    let wanted = published.wanted.get();
+    if published.on.get() == wanted {
+        return;
+    }
+    if document().is_some() {
+        published.on.set(wanted);
+        set_publishing(&published.id, wanted);
+    } else if retry {
+        // Weak: an unmounted Header must not publish.
+        let published = Rc::downgrade(published);
+        when_laid_out(move || {
+            if let Some(published) = published.upgrade() {
+                publish(&published, false);
+            }
+        });
     }
 }
 
@@ -198,26 +226,29 @@ pub fn Header(props: HeaderProps) -> Element {
     // An opted-in sticky or fixed Header publishes its height on `:root`, the
     // last one mounted winning. The size's own CSS, so nothing is measured.
     let id = use_id();
-    let published = use_hook(|| Rc::new((id.peek().clone(), Cell::new(false))));
+    let published = use_hook(|| {
+        Rc::new(Published {
+            id: id.peek().clone(),
+            on: Cell::new(false),
+            wanted: Cell::new(false),
+        })
+    });
     let publishes = props.publish_height && position != HeaderPosition::Static;
     let height = props
         .size
         .resolve(Some(HEADER_HEIGHT))
         .unwrap_or_else(|| HEADER_HEIGHT.value(Size::Md));
     use_css(
-        publishes.then(|| Stylesheet::from(publish_css(&published.0, &height).as_str())),
+        publishes.then(|| Stylesheet::from(publish_css(&published.id, &height).as_str())),
         CssLayer::Framework,
     );
-    // No document (SSR, headless): nothing to publish on, and nothing to leak.
-    if published.1.get() != publishes && document().is_some() {
-        published.1.set(publishes);
-        set_publishing(&published.0, publishes);
-    }
+    published.wanted.set(publishes);
+    publish(&published, true);
     use_drop({
         let published = published.clone();
         move || {
-            if published.1.get() {
-                set_publishing(&published.0, false);
+            if published.on.get() {
+                set_publishing(&published.id, false);
             }
         }
     });

@@ -396,7 +396,9 @@ pub fn DocsNav(
                 direction: "column",
                 gap: "sm",
                 Tree {
-                    key: "{reveals}",
+                    // Remounts between drawer and column too: Blitz kept the
+                    // drawer's text layout, one letter per line (838).
+                    key: "{reveals}-{drawer}",
                     aria_label: "Documentation pages",
                     size: "xs",
                     // Both zeroed off-scale, so they go through `sx` rather
