@@ -1,11 +1,12 @@
 //! The layering, checked on the source files with archunit (todos 178, 359, 820).
 //! Read `.agents/brain/codebase/architecture.md` for the why; this file is the what.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use archunit::{
-    Graph, ProjectedEdge, SourceOptions, assert_passes, extract_graph, locate_project, pattern,
-    project_cycles, project_layers, slice_by_regex,
+    Edge, Graph, ImportKind, ProjectedEdge, SliceProjection, SourceOptions, assert_passes,
+    extract_dependencies, extract_graph, locate_project, pattern, project_cycles, project_layers,
+    slice_by_regex,
 };
 
 /// Top to bottom: a layer may use any layer below it, never one above.
@@ -53,28 +54,29 @@ const DOCS_CRATES: [(&str, &str); 4] = [
     ),
 ];
 
-/// Category edges that close a cycle, each allowed from the named files only.
-/// The item they import is public, so moving it is an API change (todo texts).
-/// Categories follow the docs groups, not a layering: the layering todo empties this.
-const KNOWN_CYCLES: [(&str, &str, &[&str]); 3] = [
-    // `ColorSchemeButton` opens a `Menu`.
-    (
-        "buttons",
-        "overlay",
-        &["libero/src/components/buttons/color_scheme_button.rs"],
-    ),
-    // `Alert`'s close is an `ActionIcon`; buttons show feedback's `Loader`.
-    (
-        "feedback",
-        "buttons",
-        &["libero/src/components/feedback/alert.rs"],
-    ),
-    // `AvatarGroup` names its avatars in a `Tooltip`; `Lightbox` is a `Carousel`.
-    (
-        "data_display",
-        "overlay",
-        &["libero/src/components/data_display/avatar/group.rs"],
-    ),
+/// The component units, top to bottom: a unit may use its own tier and any below.
+/// Within a tier only the cycle check applies (todo 875). A unit is a category
+/// directory, or `base` for `BASE_FILES`.
+const CATEGORY_TIERS: [(&str, &[&str]); 5] = [
+    // Composites of the tiers below: `ColorSchemeButton` opens a `Menu`.
+    ("composite", &["buttons", "navigation", "form"]),
+    // `Lightbox` is a `Carousel`; `Dialog` has a `Title`.
+    ("overlay", &["overlay"]),
+    ("content", &["typography", "feedback", "data_display"]),
+    // What every category may render: `Box`, `VisuallyHidden` and `BASE_FILES`.
+    ("base", &["layout", "accessibility", "base"]),
+    ("common", &["common"]),
+];
+
+/// The base tier's files. They stay in their docs group's folder (722 q2), so
+/// the tier is declared by file.
+const BASE_FILES: [&str; 5] = [
+    "libero/src/components/buttons/action_icon.rs",
+    "libero/src/components/buttons/button.rs",
+    "libero/src/components/feedback/loader.rs",
+    "libero/src/components/overlay/tooltip.rs",
+    // `Tooltip`'s pointer delays, shared with `HoverCard`.
+    "libero/src/components/overlay/hover_intent.rs",
 ];
 
 const CATEGORY: &str = r"^libero/src/components/([a-z_]+)/";
@@ -158,7 +160,7 @@ fn docs_uses_libero_through_its_root_and_known_crates() {
     );
 }
 
-/// The flat `components::X` re-exports hide the category from the cycle check below.
+/// The flat `components::X` re-exports hide the category from the tier checks below.
 #[test]
 fn components_import_from_the_category_not_the_flat_re_export() {
     let categories = slice_by_regex(CATEGORY).unwrap();
@@ -176,41 +178,116 @@ fn components_import_from_the_category_not_the_flat_re_export() {
     );
 }
 
-#[test]
-fn component_categories_have_no_cycles() {
-    let graph = graph();
-    let categories = slice_by_regex(CATEGORY).unwrap();
-    let mut edges: Vec<ProjectedEdge> = categories.project(&graph);
-    for edge in &mut edges {
-        edge.cumulated_edges.retain(|raw| {
-            !raw.external
-                && !is_test_file(&raw.source)
-                && categories.label_for(&raw.target).is_some()
-        });
+/// A component file's unit: `base` for `BASE_FILES`, its category otherwise.
+fn unit_of(categories: &SliceProjection, file: &str) -> Option<String> {
+    if BASE_FILES.contains(&file) {
+        return Some("base".to_owned());
     }
-    let mut stale = Vec::new();
-    for (from, to, files) in KNOWN_CYCLES {
-        let Some(edge) = edges
-            .iter_mut()
-            .find(|edge| edge.source_label == from && edge.target_label == to)
-        else {
-            stale.push(format!("{from} -> {to}"));
+    categories.label_for(file)
+}
+
+/// The unit-to-unit edges, production files only. A `components::<category>::X`
+/// import lands on the category's `mod.rs`; it is followed to the file whose
+/// `pub use` gives `X`, so a base file's item counts as `base`.
+fn category_edges() -> Vec<ProjectedEdge> {
+    let categories = slice_by_regex(CATEGORY).unwrap();
+    let references = extract_dependencies(&locate_project().unwrap(), SourceOptions::new())
+        .unwrap()
+        .references()
+        .to_vec();
+    let reexports: BTreeMap<(&str, &str), &str> = references
+        .iter()
+        .filter(|reference| reference.kind() == ImportKind::PubUse)
+        .filter_map(|reference| {
+            let item = reference.referenced_path().rsplit("::").next()?;
+            Some(((reference.source(), item), reference.internal_target()?))
+        })
+        .collect();
+    let mut grouped: BTreeMap<(String, String), Vec<Edge>> = BTreeMap::new();
+    for reference in &references {
+        let (source, Some(mut target)) = (reference.source(), reference.internal_target()) else {
             continue;
         };
-        for file in files {
-            if !edge.cumulated_edges.iter().any(|raw| raw.source == *file) {
-                stale.push(format!("{from} -> {to} from {file}"));
+        if is_test_file(source) {
+            continue;
+        }
+        if let Some(category) = target
+            .strip_suffix("/mod.rs")
+            .and_then(|dir| dir.strip_prefix("libero/src/components/"))
+        {
+            let path = reference.referenced_path();
+            let item = path
+                .split("::")
+                .skip_while(|segment| *segment != category)
+                .nth(1)
+                .or_else(|| path.split("::").next());
+            if let Some(file) = item.and_then(|item| reexports.get(&(target, item))) {
+                target = file;
             }
         }
-        edge.cumulated_edges
-            .retain(|raw| !files.contains(&raw.source.as_str()));
+        let (Some(from), Some(to)) = (unit_of(&categories, source), unit_of(&categories, target))
+        else {
+            continue;
+        };
+        if from != to {
+            grouped.entry((from, to)).or_default().push(Edge::new(
+                source,
+                target,
+                false,
+                [reference.kind()],
+            ));
+        }
     }
-    assert!(
-        stale.is_empty(),
-        "fixed, drop from `KNOWN_CYCLES`: {stale:?}"
-    );
-    edges.retain(|edge| !edge.cumulated_edges.is_empty());
+    grouped
+        .into_iter()
+        .map(|((from, to), edges)| ProjectedEdge::new(from, to, edges))
+        .collect()
+}
 
+fn tier_of(category: &str) -> Option<usize> {
+    CATEGORY_TIERS
+        .iter()
+        .position(|(_, members)| members.contains(&category))
+}
+
+#[test]
+fn every_component_category_has_a_tier() {
+    let components = concat!(env!("CARGO_MANIFEST_DIR"), "/src/components");
+    let untiered: Vec<String> = std::fs::read_dir(components)
+        .unwrap()
+        .map(|entry| entry.unwrap())
+        .filter(|entry| entry.file_type().unwrap().is_dir())
+        .map(|entry| entry.file_name().into_string().unwrap())
+        .filter(|name| tier_of(name).is_none())
+        .collect();
+    assert!(untiered.is_empty(), "add to `CATEGORY_TIERS`: {untiered:?}");
+}
+
+#[test]
+fn no_component_category_uses_a_tier_above_it() {
+    // `CATEGORY_TIERS` runs top to bottom, so a lower index is a higher tier.
+    let upward: Vec<String> = category_edges()
+        .iter()
+        .filter(|edge| tier_of(&edge.target_label) < tier_of(&edge.source_label))
+        .map(|edge| {
+            let files: BTreeSet<&str> = edge
+                .cumulated_edges
+                .iter()
+                .map(|raw| raw.source.as_str())
+                .collect();
+            format!("{} -> {} {files:?}", edge.source_label, edge.target_label)
+        })
+        .collect();
+    assert!(
+        upward.is_empty(),
+        "move the shared item down to `BASE_FILES` or `components/common`:\n  {}",
+        upward.join("\n  ")
+    );
+}
+
+#[test]
+fn component_categories_have_no_cycles() {
+    let edges = category_edges();
     let cycles: Vec<String> = project_cycles(&edges)
         .iter()
         .map(|cycle| {
@@ -230,7 +307,7 @@ fn component_categories_have_no_cycles() {
         .collect();
     assert!(
         cycles.is_empty(),
-        "move the shared item down to `components/common`:\n  {}",
+        "move the shared item down to `BASE_FILES` or `components/common`:\n  {}",
         cycles.join("\n\n  ")
     );
 }
