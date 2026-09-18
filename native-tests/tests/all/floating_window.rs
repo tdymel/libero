@@ -145,6 +145,23 @@ fn f6_moves_focus_between_the_window_and_the_page() {
     }
 }
 
+/// The watch measures the window natively, so a drag past the right edge
+/// stops with the window inside the viewport (todo 788).
+#[test]
+fn a_drag_past_the_edge_keeps_it_in_the_viewport() {
+    let mut page = mount(app);
+    open(&mut page);
+    page.wait(Duration::from_millis(100));
+    page.drag(HANDLE, 900.0, 0.0);
+    settle(&mut page);
+    let (x, _, width, _) = page.rect(DIALOG);
+    assert!(
+        x + width <= f64::from(native_tests::VIEWPORT.0) + 1.0,
+        "the window ends at {}",
+        x + width
+    );
+}
+
 /// `Float` places the window by a translate, which Blitz's client rect leaves
 /// out; libero's `client_offset` maps it back in (todo 734).
 #[test]

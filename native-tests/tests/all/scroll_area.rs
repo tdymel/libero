@@ -160,9 +160,8 @@ fn Lines() -> Element {
 }
 
 /// Todo 681: the web re-checks on a `MutationObserver`; Blitz reports no
-/// mutation to user code, so a change inside a child component goes unseen.
+/// mutation, so the platform watches the area's scroll size (todo 788).
 #[test]
-#[ignore = "needs Blitz: no mutation callback, so a change inside a child is not re-checked"]
 fn a_change_inside_a_child_component_re_checks_the_tab_stop() {
     let mut page = mount(nested);
     page.wait(Duration::from_millis(50));
@@ -237,9 +236,8 @@ fn a_wheel_outside_a_nested_area_scrolls_the_page_alone() {
 
 /// Todo 717: the web latches a wheel to the scroller it began over, so the
 /// preview moving under a still pointer does not take the rest of the turn.
-/// Blitz scrolls whatever is hovered at each tick, then chains the rest up.
+/// Blitz starts each tick at the hovered node; the platform latches (todo 789).
 #[test]
-#[ignore = "needs Blitz: no wheel latching, each tick scrolls what is hovered now"]
 fn a_wheel_keeps_scrolling_the_page_as_a_nested_area_passes_under_it() {
     let mut page = mount(preview_in_page);
     page.wait(Duration::from_millis(50));
@@ -274,9 +272,31 @@ fn a_wheel_over_the_nav_scrolls_it_alone() {
     assert_eq!((preview, area, window), (0.0, 0.0, 0.0), "{}", page.tree());
 }
 
-/// Blitz sends no `resize` (measured, [[codebase/platform/blitz-platform-gaps]]).
+fn wide_rtl() -> Element {
+    rsx! {
+        div { dir: "rtl", width: "300px", height: "120px",
+            ScrollArea { id: "area", "aria-label": "Wide",
+                div { id: "wide", width: "600px", height: "20px", "Start" }
+            }
+        }
+    }
+}
+
+/// Todo 707: Blitz lays the content out from the right, overflowing to the
+/// left, but clamps `scrollLeft` at 0, so that overflow is out of reach.
 #[test]
-#[ignore = "needs Blitz: no resize event reaches ScrollArea's onresize"]
+#[ignore = "needs Blitz: RTL scroll origin, no scrolling into negative overflow (todo 707)"]
+fn under_rtl_a_wheel_reaches_the_overflow_on_the_left() {
+    let mut page = mount(wide_rtl);
+    page.wait(Duration::from_millis(50));
+    let before = page.rect("#wide").0;
+    page.hover("#wide");
+    page.wheel_x("#wide", -120.0);
+    assert_eq!(page.rect("#wide").0, before + 120.0);
+}
+
+/// Blitz sends no `resize`; the platform's watch measures the pane (todo 788).
+#[test]
 fn a_taller_pane_renders_rows_to_its_new_bottom() {
     let mut page = mount(app);
     page.wait(Duration::from_millis(50));

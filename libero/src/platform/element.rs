@@ -9,8 +9,10 @@ pub(crate) trait ContentSubscription {}
 
 /// Calls `callback` after `mounted`'s subtree changed: a node added or
 /// removed, text edited, or an attribute that makes a node focusable or not.
-/// **Only the web can watch** (a `MutationObserver`); elsewhere `None`, and the
-/// caller keeps its own re-checks.
+/// The web watches with a `MutationObserver`; Blitz only sees a change that
+/// moves the subtree's scroll size (a `display: contents` node: its parent's),
+/// within half a second. Elsewhere `None`, and the caller keeps its own
+/// re-checks.
 pub(crate) fn on_content_change(
     mounted: &Rc<MountedData>,
     callback: Box<dyn Fn()>,
@@ -33,6 +35,11 @@ pub(crate) fn on_form_reset(
 pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
     backend::is_rtl(mounted)
 }
+
+/// Blitz's [`ElementApi::scroll_into_view`] reads this custom property, one
+/// `px` or `rem` length, in place of `scroll-margin`, which servo's stylo does
+/// not parse. Set it beside `scroll-margin`.
+pub(crate) const SCROLL_MARGIN_VAR: &str = "--lsx-scroll-margin";
 
 /// An element's rendered pixel size.
 #[derive(Clone, Copy, Debug, PartialEq)]

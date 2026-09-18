@@ -14,9 +14,9 @@ use crate::{
     },
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id,
-        use_localization, use_theme,
+        use_localization, use_resize_fallback, use_theme,
     },
-    platform::{ElementApi, next_task, scroll, when_laid_out},
+    platform::{ElementApi, is_measured_resize, next_task, scroll, when_laid_out},
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size},
 };
@@ -493,7 +493,8 @@ pub fn Scroller(props: ScrollerProps) -> Element {
 
     // Blitz sends the strip no `resize` or `scroll` (todos 659, 677): measure
     // once laid out, on new content and on every scroll the platform reports,
-    // until a `resize` shows the element events arrive.
+    // until a real `resize` shows the element events arrive. Blitz's measured
+    // resizes come from `use_resize_fallback` below.
     let reported = use_signal(|| 0u64);
     let mut platform_scroll = use_hook(|| {
         CopyValue::new(scroll().map(|api| {
@@ -515,12 +516,15 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     // `ResizeObserver` delivers an initial observation, so this is also the
     // mount-time measurement - before any scroll, nothing else says whether
     // the strip overflows at all.
-    let resized = move |_: Event<ResizeData>| {
-        if platform_scroll.peek().is_some() {
+    // A measured resize (Blitz) says nothing about the strip's own events.
+    let resized = move |event: Event<ResizeData>| {
+        if platform_scroll.peek().is_some() && !is_measured_resize(&event.data()) {
             platform_scroll.set(None);
         }
         measure();
     };
+    let strip_content = use_element();
+    use_resize_fallback(strip_content, resized);
 
     // Mouse drag-to-pan. Deliberately **not** given `drag_handle_sx()`: that
     // is `touch-action: none`, and it would take away the native touch scroll
@@ -599,6 +603,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     let content = use_box()
         .framework_sx(&SCROLLER_CONTENT_SX)
         .prepare()
+        .element(&strip_content)
         .event("onresize", resized)
         .render(HtmlTag::Div, Vec::new(), props.children)?;
 

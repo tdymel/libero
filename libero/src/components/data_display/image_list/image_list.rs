@@ -85,9 +85,10 @@ fn snap_cols(cols: u8) -> u8 {
     snapped
 }
 
-/// A quilted cell's height, from its own width (`100cqi`, the `<li>` is the
-/// container): MUI's `rowHeight * rows + gap * (rows - 1)`, with the row height
-/// being an ordinary cell's width over `ratio`.
+/// A quilted cell's height, from its own width (`100%` in a `padding-top`,
+/// which resolves against the `<li>`'s width; Blitz has no `cqi`): MUI's
+/// `rowHeight * rows + gap * (rows - 1)`, with the row height being an
+/// ordinary cell's width over `ratio`.
 ///
 /// An aspect ratio per cell cannot carry the gap terms: a 2x1 cell's ratio
 /// asked for `w + g/2` and `1fr` gave every row that (todo 451). The zone's
@@ -98,11 +99,20 @@ fn quilt_height(ratio: f32, columns: u8, default_columns: u8, rows: u8) -> Strin
     let rows = rows.max(1);
     let gap = GRID_ZONE_GAP.value();
     format!(
-        "calc({rows} * (100cqi - {} * {gap}) / {} + {} * {gap})",
+        "calc({rows} * (100% - {} * {gap}) / {} + {} * {gap})",
         widths - 1.0,
         widths * ratio,
         rows - 1
     )
+}
+
+/// Holds a quilted cell's first row open at [`quilt_height`]: a percentage
+/// padding resolves against the grid area's width, the cell's.
+fn quilt_strut_sx() -> Sx {
+    sx().content("\"\"")
+        .grid_row("1")
+        .grid_column("1")
+        .padding_top(QUILT_HEIGHT_VAR.value())
 }
 
 /// The span one cell takes when `cols` cells share a row.
@@ -214,12 +224,11 @@ fn media_base() -> Sx {
                 .height("100%")
                 .selector("& > *", sx().height("100%").object_fit("cover")),
         )
-        // After the ratio box, which it overrides: the cell's height is
-        // `quilt_height`, and `height: 100%` still fills a row `1fr` grew.
+        // After the ratio box, which it overrides: the cell's `::before` sizes
+        // the row, and `height: 100%` fills it, or a row `1fr` grew.
         .when(
             ImageListVariant::Quilted.state_name(),
-            sx().aspect_ratio("auto")
-                .min_height(QUILT_HEIGHT_VAR.value()),
+            sx().aspect_ratio("auto"),
         )
         .when(
             // The whole point of the variant: a cell keeps the picture's own
@@ -498,14 +507,13 @@ pub fn ImageList(props: ImageListProps) -> Element {
         let cell_sx: Input<Sx> = match (quilted, item.span) {
             (false, None) => ordinary_cell_sx.clone(),
             (false, Some(_)) => Input::Static(&IMAGE_LIST_CELL_SX),
-            // The track sizes the `<li>`, so containment costs it nothing. A
-            // spanning cell's width relative to an ordinary one moves with
+            // A spanning cell's width relative to an ordinary one moves with
             // `cols`, so its height is re-published at each breakpoint.
             (true, _) => Input::Value(
                 spans.breakpoints().fold(
                     Sx::clone(&IMAGE_LIST_CELL_SX)
-                        .container_type("inline-size")
                         .var(QUILT_HEIGHT_VAR, height_at(None))
+                        .selector("&::before", quilt_strut_sx())
                         .and(span_breakpoints(cell_spans)),
                     |cell, (size, _)| {
                         cell.breakpoint(size, sx().var(QUILT_HEIGHT_VAR, height_at(Some(size))))
@@ -598,7 +606,7 @@ mod tests {
         // Three columns, so an ordinary cell spans four tracks.
         assert_eq!(
             quilt_height(1.5, 4, 4, 1),
-            format!("calc(1 * (100cqi - 0 * {gap}) / 1.5 + 0 * {gap})")
+            format!("calc(1 * (100% - 0 * {gap}) / 1.5 + 0 * {gap})")
         );
     }
 
@@ -609,11 +617,11 @@ mod tests {
         let gap = GRID_ZONE_GAP.value();
         assert_eq!(
             quilt_height(1.0, 8, 4, 2),
-            format!("calc(2 * (100cqi - 1 * {gap}) / 2 + 1 * {gap})")
+            format!("calc(2 * (100% - 1 * {gap}) / 2 + 1 * {gap})")
         );
         assert_eq!(
             quilt_height(1.0, 4, 4, 2),
-            format!("calc(2 * (100cqi - 0 * {gap}) / 1 + 1 * {gap})")
+            format!("calc(2 * (100% - 0 * {gap}) / 1 + 1 * {gap})")
         );
     }
 

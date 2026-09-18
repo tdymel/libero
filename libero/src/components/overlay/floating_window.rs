@@ -507,6 +507,14 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         None => (None, None),
     };
 
+    let resized = move |event: Event<ResizeData>| {
+        if let Ok(size) = event.get_border_box_size() {
+            measured.set(Some((size.width, size.height)));
+        }
+        read_bounds(root, bounds);
+    };
+    crate::hooks::use_resize_fallback(root, resized);
+
     let window = use_box()
         .framework_sx(&WINDOW_SX)
         .sx(&user_sx)
@@ -541,12 +549,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         .event("onpointercancel", move |event: Event<PointerData>| {
             geometry.onpointercancel(event)
         })
-        .event("onresize", move |event: Event<ResizeData>| {
-            if let Ok(size) = event.get_border_box_size() {
-                measured.set(Some((size.width, size.height)));
-            }
-            read_bounds(root, bounds);
-        })
+        .event("onresize", resized)
         .render(
             HtmlTag::Div,
             Vec::new(),

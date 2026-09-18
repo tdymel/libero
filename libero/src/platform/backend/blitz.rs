@@ -13,16 +13,19 @@ use style::properties::PropertyId;
 
 mod activate;
 mod focus;
+mod resize;
+mod wheel;
 
 pub(super) use activate::focus_selectors;
 pub(super) use focus::{press_kept_focus, silent_focus};
+pub(super) use resize::{on_content_change, on_resize};
 
 use super::{INTERACTIVE, origin::Origin};
 use crate::{
     platform::{
         ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi, KeyChord,
-        KeySubscription, KeyboardApi, PlatformError, Read, ScrollApi, ScrollSubscription,
-        TimerSubscription,
+        KeySubscription, KeyboardApi, PlatformError, Read, SCROLL_MARGIN_VAR, ScrollApi,
+        ScrollSubscription, TimerSubscription,
         keyboard::{takes_arrows, takes_typing},
         warn_reserved_chord,
     },
@@ -139,6 +142,7 @@ struct Doc {
     /// the subscribing scope, callback. Called by [`Listener`]'s `onkeydown`.
     key_callbacks: RefCell<Vec<KeyCallback>>,
     focus: focus::Watch,
+    resize: resize::Watch,
 }
 
 /// A mounted [`Outlet`]: `flushes` is bumped to remount its flush element,
@@ -169,6 +173,7 @@ impl Doc {
             show_retry: RefCell::new(None),
             key_callbacks: RefCell::new(Vec::new()),
             focus: focus::Watch::default(),
+            resize: resize::Watch::default(),
         }
     }
 
@@ -309,6 +314,7 @@ pub(super) fn Listener(children: Element) -> Element {
                 if BLANK_PRESS.take() {
                     refocus_wrapper();
                 }
+                resize::pressed();
             },
             onkeydown: |event| {
                 forget_press();
@@ -319,7 +325,10 @@ pub(super) fn Listener(children: Element) -> Element {
                 tab_from_start(&event);
                 activate::key_down(&event);
             },
-            onkeyup: |event| activate::key_up(&event),
+            onkeyup: |event| {
+                activate::key_up(&event);
+                resize::pressed();
+            },
             onpointermove: move |event| {
                 // Before the hover restyle this move asked for: see `heal_dirty_bits`.
                 heal_now();
@@ -328,9 +337,13 @@ pub(super) fn Listener(children: Element) -> Element {
             onpointerup: move |event| {
                 followed(&event, true);
                 focus::released();
+                resize::pressed();
             },
             // A wheel bubbles where its scroll does not: see `BlitzScroll`.
-            onwheel: |_| notify_scroll(),
+            onwheel: |event| {
+                wheel::wheeled(&event);
+                notify_scroll();
+            },
             {children}
         }
     }
@@ -1189,6 +1202,7 @@ pub(super) fn Outlet() -> Element {
                     }
                     run_deferred(doc);
                     focus::check(doc);
+                    resize::check(doc);
                     if let Some(anchor) = doc.anchor() {
                         activate::sync_marks(&mut anchor.doc_mut());
                         heal_dirty_bits(&anchor.doc_mut());
@@ -2029,13 +2043,15 @@ fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f6
 }
 
 /// `WebElement::scroll_into_view`'s walk: the nearest ancestor that overflows
-/// with `overflow-y: auto | scroll`, and how far it scrolls. No
-/// `scroll-margin`: servo's stylo does not parse it.
+/// with `overflow-y: auto | scroll`, and how far it scrolls. Servo's stylo
+/// does not parse `scroll-margin`: [`SCROLL_MARGIN_VAR`] stands in.
 fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(NodeId, f64)> {
     let (_, y, width, height) = client_rect(doc, node_id)?;
     if width == 0.0 && height == 0.0 {
         return None;
     }
+    let margin = scroll_margin(doc, node_id);
+    let (y, height) = (y - margin, height + 2.0 * margin);
     let mut ancestor = doc.get_node(node_id)?.parent;
     let scroller = loop {
         let node = doc.get_node(ancestor?)?;
@@ -2059,4 +2075,18 @@ fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(NodeId, f64)> {
     let delta =
         super::nearest_scroll(y, y + height, view_top, view_top + f64::from(client_height))?;
     Some((scroller.id, delta))
+}
+
+/// [`SCROLL_MARGIN_VAR`] in px: a `px` length, or `rem` of the root's font
+/// size. `0` for anything else.
+fn scroll_margin(doc: &BaseDocument, node_id: NodeId) -> f64 {
+    let value = resolved_style_value(doc, node_id, SCROLL_MARGIN_VAR);
+    let value = value.trim();
+    let px = |value: &str| value.trim().parse::<f64>().ok();
+    if let Some(rem) = value.strip_suffix("rem") {
+        let root = resolved_style_value(doc, doc.root_element().id, "font-size");
+        let root = root.strip_suffix("px").and_then(px).unwrap_or(16.0);
+        return px(rem).map_or(0.0, |rem| rem * root);
+    }
+    value.strip_suffix("px").and_then(px).unwrap_or(0.0)
 }

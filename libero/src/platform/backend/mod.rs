@@ -16,7 +16,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::{
     Callback, Element, Event, FocusData, KeyboardData, MountedData, MouseData, PointerData,
-    TransitionData,
+    ResizeData, TransitionData,
 };
 
 use super::{
@@ -55,19 +55,36 @@ pub(crate) fn element(mounted: &Rc<MountedData>) -> Box<dyn ElementApi> {
     Box::new(mounted::MountedElement(mounted.clone()))
 }
 
-/// Only the web has a `MutationObserver`. Blitz reports no mutation to user
-/// code, and a per-frame subtree walk would cost more than the re-checks it
-/// saves - see [`on_content_change`](crate::platform::on_content_change).
+/// The web has a `MutationObserver`. Blitz reports no mutation to user code,
+/// so it watches the subtree's scroll size instead - see
+/// [`on_content_change`](crate::platform::on_content_change).
 pub(crate) fn on_content_change(
     mounted: &Rc<MountedData>,
     callback: Box<dyn Fn()>,
 ) -> Option<Box<dyn ContentSubscription>> {
-    #[cfg(not(target_arch = "wasm32"))]
-    let _ = (mounted, callback);
     #[cfg(target_arch = "wasm32")]
     return web::on_content_change(mounted, callback);
-    #[cfg(not(target_arch = "wasm32"))]
-    return None;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::on_content_change(mounted, callback);
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    {
+        let _ = (mounted, callback);
+        None
+    }
+}
+
+/// Only Blitz: every other renderer fires `onresize` itself.
+pub(crate) fn on_resize(
+    mounted: &Rc<MountedData>,
+    callback: Box<dyn Fn(Event<ResizeData>)>,
+) -> Option<Box<dyn ContentSubscription>> {
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return blitz::on_resize(mounted, callback);
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    {
+        let _ = (mounted, callback);
+        None
+    }
 }
 
 /// Only the web: Blitz fires no native `submit` or `reset` for a raw `<form>`,

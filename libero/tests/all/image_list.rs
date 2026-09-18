@@ -211,15 +211,15 @@ fn a_quilted_cell_spans_rows_and_adds_up_its_gaps() {
     // `style`: two rows plus one gap for the 2x2, one row for the 2x1, and
     // both take one column gap off their width.
     assert!(
-        css.contains("container-type:inline-size"),
-        "a cell is the container its height is measured against"
+        css.contains("padding-top:var(--lsx-image-list-quilt-height)"),
+        "a strut's padding, a share of the cell's width, sets its height"
     );
     assert!(
-        css.contains("--lsx-image-list-quilt-height:calc(2*(100cqi-1*"),
+        css.contains("--lsx-image-list-quilt-height:calc(2*(100%-1*"),
         "a 2x2 cell is two rows and a gap"
     );
     assert!(
-        css.contains("--lsx-image-list-quilt-height:calc(1*(100cqi-1*"),
+        css.contains("--lsx-image-list-quilt-height:calc(1*(100%-1*"),
         "a 2x1 cell is one row"
     );
 }
@@ -522,7 +522,7 @@ fn a_quilted_cell_rescales_its_height_per_breakpoint() {
     }
     let css = render(app).replace(char::is_whitespace, "");
 
-    let height = |widths: &str| format!("--lsx-image-list-quilt-height:calc(1*(100cqi-{widths}*");
+    let height = |widths: &str| format!("--lsx-image-list-quilt-height:calc(1*(100%-{widths}*");
 
     assert!(css.contains(&height("-0.5")), "{css}");
     assert!(media_block(&css, "48rem").contains(&height("0")));

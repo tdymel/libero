@@ -11,7 +11,7 @@ use crate::{
         common::{base_props, input_from_str, names_itself, variables},
         layout::use_box,
     },
-    hooks::{ElementHandle, use_content_changes, use_element, use_theme},
+    hooks::{ElementHandle, use_content_changes, use_element, use_resize_fallback, use_theme},
     platform::{Dimensions, ElementApi, PlatformError, when_laid_out},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
@@ -518,6 +518,18 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             .iter()
             .any(Option::is_some);
 
+    // `ResizeObserver` reports once on observe: the mount-time check.
+    let resized = move |event: Event<ResizeData>| {
+        check_stop();
+        if virtualized || onresize.is_some() {
+            measure();
+        }
+        if let Some(onresize) = &onresize {
+            onresize.call(event);
+        }
+    };
+    use_resize_fallback(root, resized);
+
     use_box()
         .framework_sx(
             props
@@ -536,16 +548,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .attr_default("role", tab_stop.then_some("region"))
         .event("onscroll", tracks_scroll.then_some(onscroll))
         .event("onscrollend", onscroll_prop.then_some(onscrollend))
-        // `ResizeObserver` reports once on observe: the mount-time check.
-        .event("onresize", move |event: Event<ResizeData>| {
-            check_stop();
-            if virtualized || onresize.is_some() {
-                measure();
-            }
-            if let Some(onresize) = &onresize {
-                onresize.call(event);
-            }
-        })
+        .event("onresize", resized)
         .render(HtmlTag::Div, attributes, body)
 }
 

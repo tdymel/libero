@@ -13,7 +13,7 @@ use crate::{
     hooks::{
         ElementHandle, use_cache, use_element, use_id, use_localization, use_root_id, use_theme,
     },
-    platform::{ElementApi, prefers_reduced_motion},
+    platform::{ElementApi, SCROLL_MARGIN_VAR, prefers_reduced_motion},
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss, TEXT_FONT_SIZE},
 };
@@ -70,8 +70,9 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         // A long unbreakable label wraps instead of widening the page (1.4.10).
         .with("overflow-wrap", "anywhere")
         // Keeps `scroll_into_view`'s `Nearest` off the container's edge.
-        // Affects where a scroll lands, never whether one happens.
+        // Affects where a scroll lands, never whether one happens. Blitz reads the var.
         .scroll_margin("8rem")
+        .with(SCROLL_MARGIN_VAR, "8rem")
         // Inset: a full-width link in a scrolling sidebar would clip an outset ring.
         .focus_visible(inset_focus_ring_sx("-2px"))
         // Hover is neutral grey, not `color`: it shouldn't preview the

@@ -25,6 +25,7 @@ mod form;
 mod keyboard;
 mod motion;
 mod regex;
+mod resize;
 mod scroll;
 mod select;
 mod task;
@@ -36,7 +37,9 @@ pub(crate) use clipboard::clipboard;
 pub use clock::{ClockApi, clock};
 pub use color_scheme::{ColorSchemeApi, ColorSchemeSubscription, color_scheme};
 pub use document::{DocumentApi, document};
-pub(crate) use element::{ContentSubscription, is_rtl, on_content_change, on_form_reset};
+pub(crate) use element::{
+    ContentSubscription, SCROLL_MARGIN_VAR, is_rtl, on_content_change, on_form_reset,
+};
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;
 pub(crate) use eye_dropper::eye_dropper;
@@ -54,6 +57,7 @@ pub(crate) use keyboard::warn_reserved_chord;
 pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};
 pub(crate) use motion::prefers_reduced_motion;
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
+pub(crate) use resize::{is_measured_resize, on_resize};
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
 pub(crate) use select::opens_select_picker;
 pub(crate) use task::{next_task, when_free, when_laid_out};

@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::platform::{
     ContentSubscription, Dimensions, ElementApi, PlatformError, Read, backend, is_rtl,
-    on_content_change, on_form_reset,
+    on_content_change, on_form_reset, on_resize,
 };
 
 /// A handle to one of this component's own elements, and the only way to reach
@@ -133,6 +133,40 @@ pub(crate) fn use_content_changes(element: ElementHandle, enabled: bool) -> Read
         *slot.borrow_mut() = watching;
     }));
     changes.into()
+}
+
+/// Runs `onresize` where the renderer fires no `resize` (Blitz), from sizes it
+/// measures itself; elsewhere it does nothing. Give the element the same
+/// handler with `.event("onresize", ..)`.
+pub(crate) fn use_resize_fallback(
+    element: ElementHandle,
+    onresize: impl FnMut(Event<ResizeData>) + 'static,
+) {
+    type Handler = Rc<RefCell<Box<dyn FnMut(Event<ResizeData>)>>>;
+    // This render's handler: props it captured may have changed.
+    let handler: Handler = use_hook(|| {
+        let noop: Box<dyn FnMut(Event<ResizeData>)> = Box::new(|_| {});
+        Rc::new(RefCell::new(noop))
+    });
+    *handler.borrow_mut() = Box::new(onresize);
+    let slot: Rc<RefCell<Option<Box<dyn ContentSubscription>>>> =
+        use_hook(|| Rc::new(RefCell::new(None)));
+    use_drop({
+        let slot = slot.clone();
+        move || drop(slot.borrow_mut().take())
+    });
+    use_effect(move || {
+        let _ = element.mount_token();
+        slot.borrow_mut().take();
+        let handler = handler.clone();
+        let watching = element.mounted().and_then(|mounted| {
+            on_resize(
+                &mounted,
+                Box::new(move |event| (handler.borrow_mut())(event)),
+            )
+        });
+        *slot.borrow_mut() = watching;
+    });
 }
 
 /// The DOM `<form>` that owns `element`, while `enabled`: `Some` with the

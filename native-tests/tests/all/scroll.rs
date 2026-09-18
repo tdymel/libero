@@ -216,9 +216,9 @@ fn an_active_nav_link_scrolls_its_sidebar_on_mount() {
         .borrow()
         .get_client_bounding_rect(page.node("#here"))
         .unwrap();
-    // Its bottom meets the box's. Pins a gap: servo's stylo has no
-    // `scroll-margin`, so the web's 8rem clearance is lost natively.
-    assert_eq!(page.scroll_top(BOX), 1000.0 + link.height - 400.0);
+    // Its bottom stops 8rem above the box's, as the web's `scroll-margin`
+    // leaves it; servo's stylo has none, libero's var stands in (todo 789).
+    assert_eq!(page.scroll_top(BOX), 1000.0 + link.height + 128.0 - 400.0);
 }
 
 fn menu_in_a_scroller() -> Element {

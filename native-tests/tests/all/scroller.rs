@@ -150,10 +150,9 @@ fn growing_inside() -> Element {
     }
 }
 
-/// Pins a gap: a change inside a child component renders nothing of the
-/// strip's, and Blitz reports neither a resize nor a mutation.
+/// A change inside a child component renders nothing of the strip's; the
+/// platform's resize watch measures it after the click (todo 788).
 #[test]
-#[ignore = "needs Blitz: no resize event"]
 fn a_strip_that_grows_inside_a_child_offers_its_forward_control() {
     let mut page = mount(growing_inside);
     page.wait(Duration::from_millis(50));
@@ -161,5 +160,26 @@ fn a_strip_that_grows_inside_a_child_offers_its_forward_control() {
 
     page.click("#more");
     page.wait(Duration::from_millis(50));
+    assert_eq!(disabled(&page, FORWARD), "false", "{}", page.tree());
+}
+
+fn full_width() -> Element {
+    rsx! {
+        Scroller { aria_label: "Tags",
+            div { style: "width: 900px;", "Wide" }
+        }
+    }
+}
+
+/// A window resize renders nothing: the watch's poll sees the strip narrow
+/// (todo 788).
+#[test]
+fn a_narrowed_window_offers_the_forward_control() {
+    let mut page = mount(full_width);
+    page.wait(Duration::from_millis(50));
+    assert_eq!(disabled(&page, FORWARD), "true", "{}", page.tree());
+
+    page.resize(600, 768);
+    page.wait(Duration::from_millis(600));
     assert_eq!(disabled(&page, FORWARD), "false", "{}", page.tree());
 }

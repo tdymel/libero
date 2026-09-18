@@ -64,8 +64,8 @@ fn assert_quilt(page: &Page, width: &str) {
     }
 }
 
-/// A quilted cell's height is `100cqi` arithmetic; Blitz drops the declaration
-/// and the cell takes its content's height (0 for these empty cells).
+/// Blitz drops a `cqi` length. `quilted` sizes its cells with a percentage
+/// padding instead (todo 788), so this only pins the gap.
 #[test]
 #[ignore = "needs Blitz: container query units (cqi)"]
 fn a_cqi_length_resolves_against_its_container() {
@@ -81,14 +81,12 @@ fn a_cqi_length_resolves_against_its_container() {
 }
 
 #[test]
-#[ignore = "needs Blitz: container query units (cqi)"]
 fn quilted_cells_add_up_their_gaps_at_600px() {
     let page = mount(|| quilt("600px"));
     assert_quilt(&page, "600px");
 }
 
 #[test]
-#[ignore = "needs Blitz: container query units (cqi)"]
 fn quilted_cells_add_up_their_gaps_at_350px() {
     let page = mount(|| quilt("350px"));
     assert_quilt(&page, "350px");
