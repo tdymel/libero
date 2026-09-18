@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use dioxus::prelude::*;
 
 use crate::{
@@ -14,7 +12,7 @@ use crate::{
 };
 
 use super::{
-    tree::toggle_expanded,
+    tree::Expansion,
     tree_node::{ErasedRenderNode, TreeNodeErased, TreeNodeRenderArgsErased},
 };
 
@@ -66,7 +64,7 @@ pub(super) struct TreeRowProps {
     pub node: TreeNodeErased,
     pub size: Size,
     pub depth: usize,
-    pub expanded: Signal<HashSet<String>>,
+    pub expansion: Expansion,
     /// Where the roving tab stop is, relative to this row: `Some(&[])` is this
     /// row, `Some([i, ..])` is inside its child `i`. A path and not an id, so
     /// that a repeated id still makes exactly one tab stop. It is `None` on
@@ -78,7 +76,6 @@ pub(super) struct TreeRowProps {
     pub current: Option<Vec<usize>>,
     pub active_id: Signal<Option<String>>,
     pub render_node: ErasedRenderNode,
-    pub onexpandedchange: Option<EventHandler<HashSet<String>>>,
     /// Under a disabled branch: the row acts disabled, as `TREE_ROW_SX`'s
     /// subtree-wide `pointer-events: none` already makes it for the mouse.
     #[props(default)]
@@ -89,7 +86,7 @@ pub(super) struct TreeRowProps {
 pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     let node = &props.node;
     let has_children = node.has_children();
-    let is_expanded = has_children.then(|| props.expanded.read().contains(&node.id));
+    let is_expanded = has_children.then(|| props.expansion.open.read().contains(&node.id));
     let disabled = node.disabled || props.ancestor_disabled;
     let is_roving_active = props.active.as_deref().is_some_and(<[usize]>::is_empty);
     // The `<li>` carries the roving tabindex; `render_node`'s content is
@@ -121,9 +118,8 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     });
 
     let mut active_id = props.active_id;
-    let expanded = props.expanded;
+    let expansion = props.expansion;
     let id = node.id.clone();
-    let onexpandedchange = props.onexpandedchange;
 
     let onclick = move |_: Event<MouseData>| {
         if disabled {
@@ -131,7 +127,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         }
         active_id.set(Some(id.clone()));
         if has_children {
-            toggle_expanded(&id, expanded, onexpandedchange);
+            expansion.toggle(&id);
         }
     };
 
@@ -165,12 +161,11 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
                             node: child.clone(),
                             size: props.size,
                             depth: props.depth + 1,
-                            expanded: props.expanded,
+                            expansion: props.expansion,
                             active: child_active(props.active.as_deref(), index),
                             current: child_active(props.current.as_deref(), index),
                             active_id: props.active_id,
                             render_node: props.render_node.clone(),
-                            onexpandedchange: props.onexpandedchange,
                             ancestor_disabled: disabled,
                         }
                     }

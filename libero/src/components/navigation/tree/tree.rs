@@ -163,21 +163,34 @@ fn typeahead_target(order: &[VisibleNode], current: &str, query: &str) -> Option
     .map(|index| order[index].id.to_string())
 }
 
-// The one state mutation `Tree` makes on its own behalf, shared between a
-// branch row's click and the keyboard handling. Never touches selection -
-// that belongs to `render_node`.
-pub(super) fn toggle_expanded(
-    id: &str,
-    mut expanded: Signal<HashSet<String>>,
-    onexpandedchange: Option<EventHandler<HashSet<String>>>,
-) {
-    let mut next = expanded.read().clone();
-    if !next.remove(id) {
-        next.insert(id.to_string());
+/// The open branches, shared by every row. Controlled, a change only asks
+/// through `onchange`; the set moves when the caller's `expanded` does.
+#[derive(Clone, Copy, PartialEq)]
+pub(super) struct Expansion {
+    pub open: Signal<HashSet<String>>,
+    controlled: bool,
+    onchange: Option<EventHandler<HashSet<String>>>,
+}
+
+impl Expansion {
+    // The one state mutation `Tree` makes on its own behalf, shared between a
+    // branch row's click and the keyboard handling. Never touches selection -
+    // that belongs to `render_node`.
+    pub fn toggle(self, id: &str) {
+        let mut next = self.open.read().clone();
+        if !next.remove(id) {
+            next.insert(id.to_string());
+        }
+        self.set(next);
     }
-    expanded.set(next.clone());
-    if let Some(onexpandedchange) = onexpandedchange {
-        onexpandedchange.call(next);
+
+    fn set(mut self, next: HashSet<String>) {
+        if !self.controlled {
+            self.open.set(next.clone());
+        }
+        if let Some(onchange) = self.onchange {
+            onchange.call(next);
+        }
     }
 }
 
@@ -196,22 +209,14 @@ fn closed_siblings<'a>(
 }
 
 /// One write and one `onexpandedchange` for the lot, not one per branch.
-fn expand_siblings(
-    order: &[VisibleNode],
-    node: &VisibleNode,
-    mut expanded: Signal<HashSet<String>>,
-    onexpandedchange: Option<EventHandler<HashSet<String>>>,
-) {
-    let closed = closed_siblings(order, node, &expanded.read());
+fn expand_siblings(order: &[VisibleNode], node: &VisibleNode, expansion: Expansion) {
+    let closed = closed_siblings(order, node, &expansion.open.read());
     if closed.is_empty() {
         return;
     }
-    let mut next = expanded.read().clone();
+    let mut next = expansion.open.read().clone();
     next.extend(closed.into_iter().map(str::to_string));
-    expanded.set(next.clone());
-    if let Some(onexpandedchange) = onexpandedchange {
-        onexpandedchange.call(next);
-    }
+    expansion.set(next);
 }
 
 // A leaf's real link/button is kept out of the tab order (see
@@ -262,9 +267,14 @@ base_props! {
         /// default branches and `NavLink` leaves.
         #[props(default = Callback::new(super::tree_node::default_tree_render))]
         render_node: Callback<TreeNodeRenderArgs<T>, Element>,
-        /// Seeds `Tree`'s internal state once. Not a controlled prop.
+        /// Seeds `Tree`'s internal state once. Ignored when `expanded` is set.
         #[props(default)]
         default_expanded: HashSet<String>,
+        /// The ids of the open branches. Set it and the tree follows, asking
+        /// for every change through `onexpandedchange`; leave it unset and the
+        /// tree keeps its own, seeded by `default_expanded`.
+        #[props(default)]
+        expanded: Option<HashSet<String>>,
         /// The id of the node where the user is - a nav's current page. Tab
         /// into the tree lands on it rather than on the first row, until the
         /// arrow keys move on; when it changes, the tab stop follows it. Inside
@@ -273,12 +283,35 @@ base_props! {
         /// `aria-selected="false"`.
         #[props(default, into)]
         current: Option<String>,
-        /// Notification only - it doesn't drive rendering.
+        /// Called with the whole new set of open ids, ready to store. Without
+        /// `expanded` a notification only.
         #[props(default)]
         onexpandedchange: Option<EventHandler<HashSet<String>>>,
     }
 }
 
+/// A WAI-ARIA tree of expandable branches. It keeps its open branches itself,
+/// or follows a controlled `expanded`:
+///
+/// ```no_run
+/// # use std::collections::HashSet;
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Tree, TreeNode};
+/// # fn app() -> Element {
+/// let data = vec![TreeNode::new("src", "src".to_string())
+///     .children(vec![TreeNode::new("main", "main.rs".to_string())])];
+/// let mut open = use_signal(|| HashSet::from(["src".to_string()]));
+/// rsx! {
+///     Tree {
+///         aria_label: "Files",
+///         data,
+///         expanded: open(),
+///         onexpandedchange: move |next| open.set(next),
+///     }
+/// }
+/// # }
+/// ```
+///
 /// Generic shim: erases `props.data`/`render_node` once, then hands off to the
 /// non-generic `TreeCore`. Only this conversion monomorphizes per `T`; the
 /// tree machinery compiles once.
@@ -333,6 +366,7 @@ pub fn Tree<T: TreeValue>(props: TreeProps<T>) -> Element {
             data: erased_data,
             render_node: erased_render_node,
             default_expanded: props.default_expanded,
+            expanded: props.expanded,
             current: props.current,
             onexpandedchange: props.onexpandedchange,
         }
@@ -363,6 +397,8 @@ base_props! {
         #[props(default)]
         default_expanded: HashSet<String>,
         #[props(default)]
+        expanded: Option<HashSet<String>>,
+        #[props(default)]
         current: Option<String>,
         #[props(default)]
         onexpandedchange: Option<EventHandler<HashSet<String>>>,
@@ -375,7 +411,26 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     let theme = use_theme();
     let root = use_element();
     let mut active_id = use_signal(|| None::<String>);
-    let expanded = use_signal(|| props.default_expanded.clone());
+    let mut expanded = use_signal(|| {
+        props
+            .expanded
+            .clone()
+            .unwrap_or_else(|| props.default_expanded.clone())
+    });
+    // Guarded render-time write, as `List` does, so an unchanged set wakes no row.
+    if let Some(controlled) = &props.expanded
+        && *expanded.peek() != *controlled
+    {
+        expanded.set(controlled.clone());
+    }
+    if props.expanded.is_some() && props.onexpandedchange.is_none() {
+        warn("Tree: a controlled `expanded` without `onexpandedchange` never opens or closes.");
+    }
+    let expansion = Expansion {
+        open: expanded,
+        controlled: props.expanded.is_some(),
+        onchange: props.onexpandedchange,
+    };
 
     let size = props.size.copied_or(theme.tree.size);
 
@@ -438,7 +493,6 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         }
     }));
 
-    let onexpandedchange = props.onexpandedchange;
     let data_for_keydown = props.data.clone();
     let mut active_id_for_keydown = active_id;
     let resolved_active_for_keydown = resolved_active.clone();
@@ -498,7 +552,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                 };
                 event.prevent_default();
                 match step {
-                    Horizontal::Toggle => toggle_expanded(&current, expanded, onexpandedchange),
+                    Horizontal::Toggle => expansion.toggle(&current),
                     Horizontal::Go(target) => go_to(target),
                     Horizontal::Stay => {}
                 }
@@ -507,7 +561,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                 if !node.disabled {
                     event.prevent_default();
                     if node.has_children {
-                        toggle_expanded(&current, expanded, onexpandedchange);
+                        expansion.toggle(&current);
                     } else {
                         click_tree_item(&root, &current);
                     }
@@ -515,7 +569,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             }
             Key::Character(ref c) if c == "*" && !has_shortcut_modifier(&event) => {
                 event.prevent_default();
-                expand_siblings(&order, node, expanded, onexpandedchange);
+                expand_siblings(&order, node, expansion);
             }
             Key::Character(ref c) if c == " " && has_shortcut_modifier(&event) => {}
             // A space mid-query is part of "new folder", not an activation.
@@ -529,7 +583,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                 if !node.disabled {
                     event.prevent_default();
                     if node.has_children {
-                        toggle_expanded(&current, expanded, onexpandedchange);
+                        expansion.toggle(&current);
                     } else {
                         click_tree_item(&root, &current);
                     }
@@ -579,12 +633,11 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     node: node.clone(),
                     size,
                     depth: 0,
-                    expanded,
+                    expansion,
                     active: child_active(active_path.as_deref(), index),
                     current: child_active(current_path.as_deref(), index),
                     active_id,
                     render_node: props.render_node.clone(),
-                    onexpandedchange: props.onexpandedchange,
                 }
             }
         }

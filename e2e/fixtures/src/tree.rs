@@ -1,5 +1,7 @@
 //! `Tree`.
 
+use std::collections::HashSet;
+
 use dioxus::prelude::*;
 use libero::components::{Flex, NavLink, Tree, TreeItem, TreeNode, TreeNodeRenderArgs};
 
@@ -11,7 +13,49 @@ pub const ROUTES: Routes = &[
     ("/tree/links/arrived", || rsx! { "arrived" }),
     ("/tree/delete", || rsx! { DeleteTreePage {} }),
     ("/tree/default", || rsx! { DefaultTreePage {} }),
+    ("/tree/controlled", || rsx! { ControlledTreePage {} }),
 ];
+
+/// Todo 770: a controlled `expanded`. "o" opens `docs` from outside, as the docs
+/// nav reveals the current page; the second tree records requests and keeps
+/// its set, so a key there can only ask.
+#[component]
+fn ControlledTreePage() -> Element {
+    let data = || {
+        vec![
+            TreeNode::new("src", "src").children(vec![TreeNode::new("src/lib.rs", "lib.rs")]),
+            TreeNode::new("docs", "docs")
+                .children(vec![TreeNode::new("docs/index.md", "index.md")]),
+        ]
+    };
+    let mut open = use_signal(HashSet::<String>::new);
+    let mut requests = use_signal(|| 0);
+
+    rsx! {
+        div {
+            onkeydown: move |event: KeyboardEvent| {
+                if event.key() == Key::Character("o".into()) {
+                    open.write().insert("docs".to_string());
+                }
+            },
+            Tree {
+                id: "stored",
+                aria_label: "Stored",
+                data: data(),
+                expanded: open(),
+                onexpandedchange: move |next| open.set(next),
+            }
+        }
+        Tree {
+            id: "fixed",
+            aria_label: "Fixed",
+            data: data(),
+            expanded: HashSet::new(),
+            onexpandedchange: move |_| requests += 1,
+        }
+        span { id: "requests", "data-requests": "{requests}" }
+    }
+}
 
 /// The default row render, the one that draws the chevron.
 #[component]

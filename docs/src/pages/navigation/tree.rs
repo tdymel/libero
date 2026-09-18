@@ -1,10 +1,13 @@
+use std::collections::HashSet;
+
 use crate::components::{
     Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, or_unset, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Code, Flex, Icon, Kbd, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs,
+        Button, Code, Flex, Icon, Kbd, Text, Tree, TreeItem, TreeLabel, TreeNode,
+        TreeNodeRenderArgs,
     },
     sx::sx,
     use_theme,
@@ -109,12 +112,13 @@ fn file_icon(entry: &FileEntry) -> Element {
     }
 }
 
-/// The data, the seeded expansion and the row renderer are the demo's fixture,
-/// not controls, but the code block has to print them.
-const FIXED: [&str; 4] = [
+/// The data, the controlled expansion and the row renderer are the demo's
+/// fixture, not controls, but the code block has to print them.
+const FIXED: [&str; 5] = [
     r#"aria_label: "Project files""#,
     "data: file_tree()",
-    r#"default_expanded: ["src", "src/components"].map(str::to_string).into()"#,
+    "expanded: expanded()",
+    "onexpandedchange: move |next| expanded.set(next)",
     r#"render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
         let id = args.id.clone();
         rsx! {
@@ -127,19 +131,32 @@ const FIXED: [&str; 4] = [
     }"#,
 ];
 
-/// Selection is the page's state, not `Tree`'s, so the readout is part of the
-/// example rather than something the component provides.
+/// The expansion and the selection are the page's state, not `Tree`'s, so the
+/// buttons and the readout are part of the example.
 fn wrap_selection(_: &DemoValues, code: &str) -> String {
     format!(
-        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\").max_width(\"320px\"),\n{}    if let Some(selected) = selected() {{\n        Text {{ \"Selected: \" Code {{ source: \"{{selected}}\" }} }}\n    }}\n}}",
+        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\").max_width(\"320px\"),\n{EXPAND_BUTTONS}{}    if let Some(selected) = selected() {{\n        Text {{ \"Selected: \" Code {{ source: \"{{selected}}\" }} }}\n    }}\n}}",
         indent(code)
     )
+}
+
+// snippet: ignore - a fragment of the Demo's code block, compiled there
+const EXPAND_BUTTONS: &str = r#"    Flex { direction: "row", gap: "xs",
+        Button { size: "xs", onclick: move |_| expanded.set(folders()), "Expand all" }
+        Button { size: "xs", onclick: move |_| expanded.set(HashSet::new()), "Collapse all" }
+    }
+"#;
+
+/// Every branch of `file_tree()`.
+fn folders() -> HashSet<String> {
+    HashSet::from(["src", "src/components"].map(str::to_string))
 }
 
 #[component]
 pub fn TreePage() -> Element {
     let theme = use_theme();
     let mut selected = use_signal(|| None::<String>);
+    let mut expanded = use_signal(folders);
 
     rsx! {
         DocPage {
@@ -156,12 +173,15 @@ pub fn TreePage() -> Element {
                     prop("render_node", "Callback<TreeNodeRenderArgs<T>, Element>")
                         .default("default_tree_render")
                         .doc("Each visible row's content. A custom one can still call the default for some rows."),
-                    prop("default_expanded", "HashSet<String>").doc("The ids expanded at first. Read once."),
+                    prop("default_expanded", "HashSet<String>").doc("The ids expanded at first. Read once, and ignored when `expanded` is set."),
+                    prop("expanded", "HashSet<String>").doc(
+                        "The expanded ids, controlled. The tree follows it and asks for every change through `onexpandedchange`. Unset, the tree keeps its own.",
+                    ),
                     prop("current", "String").doc(
                         "The id of the node the user is on, such as a nav's current page. Tab into the tree lands on it, or on its collapsed branch. Its row carries `aria-current`.",
                     ),
                     prop("onexpandedchange", "EventHandler<HashSet<String>>")
-                        .doc("Called with the expanded ids when they change. It does not control them."),
+                        .doc("Called with the whole new set of expanded ids. Store it when `expanded` is set; without `expanded` it only notifies."),
                 ]),
                 props("TreeNode<T>", vec![
                     prop("id", "String").default("required").doc("The node's unique id."),
@@ -195,9 +215,13 @@ pub fn TreePage() -> Element {
                     Code { source: "TreeLabel" }
                     ", whose text feeds typeahead and the default row. "
                     Code { source: "String" }
-                    " already does. The tree keeps its own expanded state, and "
+                    " already does. The tree keeps its own expanded state, seeded by "
                     Code { source: "default_expanded" }
-                    " seeds it."
+                    ", or follows a controlled "
+                    Code { source: "expanded" }
+                    " paired with "
+                    Code { source: "onexpandedchange" }
+                    ", as here."
                 }
                 Text {
                     Code { source: "Tree" }
@@ -218,7 +242,10 @@ pub fn TreePage() -> Element {
             // snippet: item impl TreeLabel for FileEntry { fn tree_label(&self) -> String { self.name.to_string() } }
             // snippet: item fn file_tree() -> Vec<TreeNode<FileEntry>> { Vec::new() }
             // snippet: item fn file_icon(_: &FileEntry) -> Element { rsx! {} }
+            // snippet: item use std::collections::HashSet;
+            // snippet: item fn folders() -> HashSet<String> { HashSet::new() }
             // snippet: let mut selected = use_signal(|| None::<String>);
+            // snippet: let mut expanded = use_signal(folders);
             Demo {
                 component: "Tree",
                 children_text: "",
@@ -234,12 +261,15 @@ pub fn TreePage() -> Element {
                         // Pinned, so the selection readout does not reflow the
                         // preview under the pointer.
                         sx: sx().width("100%").max_width("320px"),
+                        Flex { direction: "row", gap: "xs",
+                            Button { size: "xs", onclick: move |_| expanded.set(folders()), "Expand all" }
+                            Button { size: "xs", onclick: move |_| expanded.set(HashSet::new()), "Collapse all" }
+                        }
                         Tree {
                             aria_label: "Project files",
                             data: file_tree(),
-                            default_expanded: ["src", "src/components"]
-                                .map(str::to_string)
-                                .into(),
+                            expanded: expanded(),
+                            onexpandedchange: move |next| expanded.set(next),
                             size: or_unset(values.str("size")),
                             render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
                                 let id = args.id.clone();

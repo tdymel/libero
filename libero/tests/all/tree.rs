@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use crate::common::{attributes_of, body, render};
 
 use dioxus::prelude::*;
@@ -231,4 +233,32 @@ fn a_disabled_branch_disables_its_children() {
     assert!(body.contains(r#"data-probe="a1=true""#), "{body}");
     assert!(body.contains(r#"data-probe="b=false""#), "{body}");
     assert_eq!(body.matches(r#"aria-disabled="true""#).count(), 2, "{body}");
+}
+
+/// Todo 770: a controlled `expanded` wins over `default_expanded`.
+#[test]
+fn a_controlled_expanded_opens_its_branches_only() {
+    fn app() -> Element {
+        let data = vec![
+            TreeNode::new("a", "Alpha".to_string())
+                .children(vec![TreeNode::new("a1", "Child A".to_string())]),
+            TreeNode::new("b", "Beta".to_string())
+                .children(vec![TreeNode::new("b1", "Child B".to_string())]),
+        ];
+        rsx! {
+            LiberoProvider {
+                Tree {
+                    aria_label: "Files",
+                    data,
+                    default_expanded: ["a".to_string()].into(),
+                    expanded: HashSet::from(["b".to_string()]),
+                    onexpandedchange: |_| {},
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    assert!(body.contains("Child B"), "{body}");
+    assert!(!body.contains("Child A"), "{body}");
 }

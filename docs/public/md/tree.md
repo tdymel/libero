@@ -8,8 +8,11 @@ Description: A data-driven, keyboard-navigable tree view over your own node type
 
 A tree view over `Vec<TreeNode<T>>`, where `T` is your own data type. `T`
 implements `TreeLabel`, whose text feeds typeahead and the default row.
-`String` already does. The tree keeps its own expanded state, and
-`default_expanded` seeds it.
+`String` already does. The tree keeps its own expanded state, seeded by
+`default_expanded`, or follows a controlled `expanded` paired with
+`onexpandedchange`. Controlled, a key or click only asks: the branch opens
+once you store the new set, and you can open one from outside, as this site's
+sidebar opens the current page's section.
 
 `Tree` has no selection. `render_node` decides what a row does, and gets the
 row's live `expanded` state. `TreeItem` makes a row a button that picks up the
@@ -23,8 +26,10 @@ per-level indent together. Set them apart through `sx`.
 ## Usage
 
 ```rust
+use std::collections::HashSet;
+
 use dioxus::prelude::*;
-use libero::components::{Code, Flex, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs};
+use libero::components::{Button, Code, Flex, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs};
 use libero::sx::sx;
 
 #[derive(Clone, PartialEq)]
@@ -53,19 +58,30 @@ fn file_tree() -> Vec<TreeNode<FileEntry>> {
     ]
 }
 
+/// Every branch of `file_tree()`.
+fn folders() -> HashSet<String> {
+    HashSet::from(["src", "src/components"].map(str::to_string))
+}
+
 #[component]
 fn Demo() -> Element {
     let mut selected = use_signal(|| None::<String>);
+    let mut expanded = use_signal(folders);
 
     rsx! {
         Flex {
             direction: "column",
             gap: "sm",
             sx: sx().width("100%").max_width("320px"),
+            Flex { direction: "row", gap: "xs",
+                Button { size: "xs", onclick: move |_| expanded.set(folders()), "Expand all" }
+                Button { size: "xs", onclick: move |_| expanded.set(HashSet::new()), "Collapse all" }
+            }
             Tree {
                 aria_label: "Project files",
                 data: file_tree(),
-                default_expanded: ["src", "src/components"].map(str::to_string).into(),
+                expanded: expanded(),
+                onexpandedchange: move |next| expanded.set(next),
                 render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
                     let id = args.id.clone();
                     rsx! {
@@ -84,7 +100,8 @@ fn Demo() -> Element {
 }
 ```
 
-The selection readout is the example's own state, not part of `Tree`.
+The expansion, the buttons and the selection readout are the example's own
+state, not part of `Tree`.
 
 ## Accessibility
 
@@ -109,9 +126,10 @@ tab stop the arrow keys never reach. `TreeItem` does this for you.
 | `aria_label` | `String` | required | The tree's accessible name. |
 | `data` | `Vec<TreeNode<T>>` | required | The nodes, over your own data type. |
 | `render_node` | `Callback<TreeNodeRenderArgs<T>, Element>` | `default_tree_render` | Each visible row's content. A custom one can still call the default for some rows. |
-| `default_expanded` | `HashSet<String>` | - | The ids expanded at first. Read once. |
+| `default_expanded` | `HashSet<String>` | - | The ids expanded at first. Read once, and ignored when `expanded` is set. |
+| `expanded` | `HashSet<String>` | - | The expanded ids, controlled. The tree follows it and asks for every change through `onexpandedchange`. Unset, the tree keeps its own. |
 | `current` | `String` | - | The id of the node the user is on, such as a nav's current page. Tab into the tree lands on it, or on its collapsed branch. Its row carries `aria-current`. |
-| `onexpandedchange` | `EventHandler<HashSet<String>>` | - | Called with the expanded ids when they change. It does not control them. |
+| `onexpandedchange` | `EventHandler<HashSet<String>>` | - | Called with the whole new set of expanded ids. Store it when `expanded` is set; without `expanded` it only notifies. |
 
 Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.

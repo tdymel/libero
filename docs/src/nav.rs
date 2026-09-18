@@ -370,18 +370,14 @@ pub fn DocsNav(
     let current_path = use_route::<Route>().to_string();
     let group = ancestor_group(&data, &current_path);
 
-    // Mirrors `Tree`'s open sections. Deep-linking to a page opens its section;
-    // after that, expand/collapse is `Tree`'s own business.
+    // `Tree`'s open sections. A page in a closed section (the search reaches
+    // any) opens it; only a new page does, so the reader can close it again.
     let mut expanded = use_signal(|| group.iter().cloned().collect::<HashSet<_>>());
-    // `Tree` has no controlled `expanded`: a page in a closed section (the
-    // search reaches any) remounts it with that section open too.
-    let mut reveals = use_signal(|| 0_u32);
     use_effect(use_reactive!(|group| {
         if let Some(group) = group
             && !expanded.peek().contains(&group)
         {
             expanded.write().insert(group);
-            reveals += 1;
         }
     }));
 
@@ -396,9 +392,9 @@ pub fn DocsNav(
                 direction: "column",
                 gap: "sm",
                 Tree {
-                    // Remounts between drawer and column too: Blitz kept the
+                    // Remounts between drawer and column: Blitz kept the
                     // drawer's text layout, one letter per line (838).
-                    key: "{reveals}-{drawer}",
+                    key: "{drawer}",
                     aria_label: "Documentation pages",
                     size: "xs",
                     // Both zeroed off-scale, so they go through `sx` rather
@@ -420,7 +416,7 @@ pub fn DocsNav(
                         .gap("0")
                         .selector("& ul", sx().gap("0").padding_inline_start("0")),
                     data,
-                    default_expanded: expanded.peek().clone(),
+                    expanded: expanded(),
                     onexpandedchange: move |open: HashSet<String>| expanded.set(open),
                     // The tab stop starts on the current page, not "Guides".
                     current: current_path,

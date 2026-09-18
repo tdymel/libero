@@ -7,8 +7,10 @@
 //! rows changes as they do. `TreeWalk` is the pattern it actually is (todo
 //! 310); this unit runs it, and keeps only what is `Tree`'s own beside it.
 
+use anyhow::{Result, ensure};
 use e2e::archetypes::TreeWalk;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::wait;
 use e2e::{Fixture, Suite, Viewport};
@@ -20,6 +22,12 @@ const STAR: keyboard::Key = keyboard::Key {
     code: "NumpadMultiply",
     vk: 106,
     text: Some("*"),
+};
+const O: keyboard::Key = keyboard::Key {
+    key: "o",
+    code: "KeyO",
+    vk: 79,
+    text: Some("o"),
 };
 const DELETE: keyboard::Key = keyboard::Key {
     key: "Delete",
@@ -177,6 +185,47 @@ fn removing_the_focused_row_keeps_focus_in_the_tree() {
         fixture.close().await.unwrap();
     });
 }
+
+async fn expanded_of<D: Driver>(d: &mut D, tree: &str, id: &str) -> Result<Option<String>> {
+    d.attr(&format!("#{tree} [data-tree-id='{id}']"), "aria-expanded")
+        .await
+}
+
+/// Todo 770: a controlled tree opens what the caller stores, from a key or
+/// from outside without a remount, and only asks when the caller keeps its set.
+async fn controlled<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let src = "#stored [data-tree-id='src']";
+    d.focus(src).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "ArrowRight to open src", async |d| {
+        Ok(expanded_of(d, "stored", "src").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    d.press(O).await?;
+    eventually(d, "the caller to open docs", async |d| {
+        Ok(expanded_of(d, "stored", "docs").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    eventually_focused(d, src, "opening docs from outside").await?;
+
+    d.focus("#fixed [data-tree-id='src']").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "the request", async |d| {
+        Ok(d.attr("#requests", "data-requests").await?.as_deref() == Some("1"))
+    })
+    .await?;
+    ensure!(
+        expanded_of(d, "fixed", "src").await?.as_deref() == Some("false"),
+        "a request the caller did not store opened the branch"
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    a_controlled_tree_follows_its_caller,
+    "/tree/controlled",
+    controlled
+);
 
 #[test]
 fn it_walks_like_a_tree() {
