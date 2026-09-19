@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use dioxus::html::geometry::WheelDelta;
 use dioxus::prelude::{ScrollData, WheelData};
 
@@ -31,6 +33,15 @@ pub(crate) fn clips_z_indexed() -> bool {
 pub(crate) fn snaps_scroll() -> bool {
     !NATIVE
 }
+
+/// Whether a scroll container fires `scrollend`. Blitz does not (todo 949).
+pub(crate) fn fires_scroll_end() -> bool {
+    !NATIVE
+}
+
+/// Where `scrollend` does not fire, how long a scroll stays quiet before it
+/// counts as ended: longer than the gap between two wheel ticks.
+pub(crate) const SCROLL_QUIET: Duration = Duration::from_millis(150);
 
 /// A wheel's vertical travel in the web's sign, positive down the page, with
 /// lines and pages counted as `line` pixels and `page` lines. Blitz reports

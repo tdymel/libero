@@ -1,5 +1,6 @@
 //! `Carousel`: a looping strip opened on slide N shows slide N (todo 925); a
-//! released drag rests on the nearest slide, as the web's scroll snap does.
+//! released drag or a wheel rests on the nearest slide, as the web's scroll
+//! snap does.
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
@@ -31,6 +32,20 @@ fn draggable() -> Element {
             div { style: "width: 400px;",
                 Carousel { aria_label: "Dragged", draggable: true, slides: slides() }
             }
+        }
+    }
+}
+
+fn reporting() -> Element {
+    let mut reported = use_signal(|| None::<usize>);
+    rsx! {
+        div { style: "width: 400px; padding: 16px;",
+            Carousel {
+                aria_label: "Wheeled",
+                slides: slides(),
+                onindexchange: move |index| reported.set(Some(index)),
+            }
+            span { id: "reported", "{reported:?}" }
         }
     }
 }
@@ -107,6 +122,28 @@ fn a_released_drag_rests_on_the_nearest_slide() {
     assert!(
         off.abs() < 1.0,
         "a short drag left slide 2 {off}px off the track:\n{}",
+        page.tree()
+    );
+}
+
+/// Blitz fires no `scrollend` (todo 949): a wheeled strip stayed between two
+/// slides and never told `onindexchange`.
+#[test]
+fn a_wheeled_strip_rests_on_a_slide_and_reports_it() {
+    let mut page = mount(reporting);
+    page.hover(TRACK);
+    page.wheel_x(TRACK, 250.0);
+    assert!(
+        page.wait_for(|page| page.text("#reported") == "Some(1)"),
+        "the wheel reported {}:\n{}",
+        page.text("#reported"),
+        page.tree()
+    );
+    assert_eq!(page.text(CURRENT), "Slide 2");
+    let off = offset(&mut page);
+    assert!(
+        off.abs() < 1.0,
+        "a wheel past half a slide left slide 2 {off}px off the track:\n{}",
         page.tree()
     );
 }

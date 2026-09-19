@@ -22,7 +22,7 @@ pub(super) fn pressed(event: &Event<PointerData>) {
     PRESSED_AT.set(Some((point.x, point.y)));
 }
 
-fn is_inert(doc: &BaseDocument, node_id: NodeId) -> bool {
+pub(super) fn is_inert(doc: &BaseDocument, node_id: NodeId) -> bool {
     ancestors(doc, node_id).any(|id| {
         doc.get_node(id)
             .and_then(|node| node.element_data())

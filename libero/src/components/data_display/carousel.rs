@@ -1491,6 +1491,12 @@ fn carousel_track(
             return;
         }
         let raw = nav.raw_at(x, y);
+        // No scroll snap natively: go to the nearest slide, as a released drag does.
+        if !snaps_scroll() {
+            let real = nav.real_for(raw);
+            when_free(move || nav.go_to(real));
+            return;
+        }
         let next = nav.real_for(raw);
         current.set(next);
         if next != *settled.peek() {

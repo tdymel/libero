@@ -14,7 +14,8 @@ use crate::{
     },
     hooks::{ElementHandle, use_content_changes, use_element, use_resize_fallback, use_theme},
     platform::{
-        Dimensions, ElementApi, PlatformError, clips_z_indexed, scroll_range, when_laid_out,
+        Dimensions, ElementApi, PlatformError, SCROLL_QUIET, TimerSubscription, clips_z_indexed,
+        fires_scroll_end, scroll_range, timer, when_laid_out,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
@@ -438,6 +439,23 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let onleftreached = props.onleftreached;
     let onrightreached = props.onrightreached;
 
+    let mut ended = move |(x_pct, y_pct): (f64, f64)| {
+        if is_scrolling() {
+            is_scrolling.set(false);
+            scrolled(ScrollPositionEvent::End(x_pct, y_pct));
+        }
+    };
+    // No `scrollend` natively: a quiet spell after the last scroll ends it.
+    let mut quiet = use_signal(|| 0u64);
+    let mut quiet_wait = use_hook(|| CopyValue::new(None::<Box<dyn TimerSubscription>>));
+    let mut last_at = use_hook(|| CopyValue::new((0.0, 0.0)));
+    use_effect(move || {
+        if quiet() > 0 {
+            // A task: what `onscroll` reads must not subscribe this effect.
+            spawn(async move { ended(*last_at.peek()) });
+        }
+    });
+
     let onscroll = move |event: Event<ScrollData>| {
         let data = event.data();
         let (x_pct, y_pct, max_x, max_y) = scroll_metrics(&data);
@@ -445,6 +463,18 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             offset: data.scroll_top(),
             viewport: data.client_height() as f64,
         }));
+        if onscroll_prop && !fires_scroll_end() {
+            last_at.set((x_pct, y_pct)); // Replacing the wait drops the one before, which cancels it.
+            quiet_wait.set(timer().map(|timer| {
+                timer.after(
+                    SCROLL_QUIET,
+                    Box::new(move || {
+                        let next = *quiet.peek() + 1;
+                        quiet.set(next);
+                    }),
+                )
+            }));
+        }
 
         if is_scrolling() {
             scrolled(ScrollPositionEvent::Change(x_pct, y_pct));
@@ -487,11 +517,8 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     };
 
     let onscrollend = move |event: Event<ScrollData>| {
-        if is_scrolling() {
-            is_scrolling.set(false);
-            let (x_pct, y_pct, ..) = scroll_metrics(&event.data());
-            scrolled(ScrollPositionEvent::End(x_pct, y_pct));
-        }
+        let (x_pct, y_pct, ..) = scroll_metrics(&event.data());
+        ended((x_pct, y_pct));
     };
 
     let onresize = props.onresize;

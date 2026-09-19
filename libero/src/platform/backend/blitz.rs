@@ -23,6 +23,7 @@ mod max_length;
 mod placeholder;
 mod redraw;
 mod refused;
+mod removed;
 mod resize;
 mod stale_text;
 mod sticky;
@@ -370,6 +371,7 @@ pub(super) fn Listener(children: Element) -> Element {
                 max_length::key_down(&event);
                 keyed(&event);
                 tab_from_start(&event);
+                removed::keyed(&event);
                 refused::tab(&event);
                 activate::key_down(&event);
                 baked::check_soon();
@@ -987,6 +989,7 @@ fn pressed(event: &Event<PointerData>) {
         HIT.set(Some(hit));
         // The wrapper is no press target: Blitz sends such a press's focus to `<html>`.
         let target = focusable_ancestor(&doc, hit).filter(|&target| Some(target) != wrapper);
+        removed::record(&doc, target);
         Some(target.map(|target| (doc.get_focussed_node_id(), target)))
     });
     let blank = matches!(press, Some(None));
@@ -1276,6 +1279,7 @@ pub(super) fn Outlet() -> Element {
                     }
                     redraw::quiet(|| {
                         run_deferred(doc);
+                        removed::check(doc);
                         focus::check(doc);
                         resize::check(doc);
                         if let Some(anchor) = doc.anchor() {
