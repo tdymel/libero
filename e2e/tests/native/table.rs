@@ -146,6 +146,28 @@ fn a_wide_scroll_table_scrolls_to_its_last_column() {
     );
 }
 
+/// Todo 734: Blitz's UA sheet centres a button's content, so a sortable header
+/// sat mid-cell while its column's cells start at the edge.
+#[test]
+fn a_sortable_header_starts_at_its_cells_edge() {
+    fn app() -> Element {
+        rsx! {
+            Table {
+                data: vec![Person { name: "Ada", age: 36 }],
+                columns: vec![column("Name").value(|p: &Person| p.name.to_string()).sortable()],
+            }
+        }
+    }
+    let page = mount(app);
+    let (x, _, width, _) = page.rect(BUTTON);
+    let arrow = page.rect(ARROW).0;
+    assert!(
+        arrow < x + width / 4.0,
+        "the header's arrow is at {arrow}, its button spans {x}..{}",
+        x + width
+    );
+}
+
 #[test]
 fn the_painted_arrow_turns_too() {
     let mut page = mount(app);

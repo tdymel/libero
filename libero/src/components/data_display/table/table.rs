@@ -52,8 +52,10 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
     .selector("& th[data-sortable]", sx().padding("0"))
     .selector(
         "& th button",
+        // Blitz's UA sheet centres a button's content: start it, as its cells.
         sx().display("flex")
             .align_items("center")
+            .justify_content("flex-start")
             .gap("4px")
             .width("100%")
             .padding(TableDefaults::padding())

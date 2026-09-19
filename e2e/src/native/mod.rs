@@ -361,6 +361,18 @@ impl Page {
         self.settle();
     }
 
+    /// Zooms the page, as the shell's Ctrl+= does: CSS pixels grow, so the
+    /// layout viewport shrinks to [`VIEWPORT`] / `zoom`.
+    pub fn set_zoom(&mut self, zoom: f32) {
+        {
+            let mut doc = self.doc.inner.borrow_mut();
+            let mut port = doc.viewport().clone();
+            port.set_zoom(zoom);
+            doc.set_viewport(port);
+        }
+        self.settle();
+    }
+
     /// Resizes the window, as the shell does on a resize event. `painted_*`
     /// still rasterise [`VIEWPORT`].
     pub fn resize(&mut self, width: u32, height: u32) {
