@@ -5,7 +5,7 @@
 use std::time::Duration;
 
 use dioxus::prelude::*;
-use libero::components::{Button, Options, Stepper};
+use libero::components::{Button, Flex, Options, Stepper, Text};
 use native_tests::{Key, Page, mount};
 
 #[derive(Clone, Copy, PartialEq, Options)]
@@ -129,6 +129,49 @@ fn a_narrow_box_keeps_side_labels_natively() {
     let page = mount(|| side_at("320px"));
     assert_eq!(page.computed("#stepper", "container-type"), "");
     assert_eq!(page.computed(&header(0), "flex-direction"), "row");
+}
+
+/// Two steps: the width at which the text went stale in the harness.
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Pair {
+    Account,
+    Shipping,
+}
+
+/// The docs demo: the preview beside the control panel, the Stepper in a
+/// `flex-start` column, its label position switched by a control.
+fn switchable() -> Element {
+    let mut below = use_signal(|| false);
+    rsx! {
+        button { id: "below", onclick: move |_| below.toggle(), "Below" }
+        div { style: "display: flex; flex-wrap: wrap; width: 900px;",
+            div { style: "flex: 1; min-width: 240px; padding: 24px; display: flex; align-items: center; justify-content: safe center; overflow-x: auto;",
+                div { style: "display: flex; flex-direction: column; align-items: flex-start; gap: 16px; width: 100%;",
+                    Stepper {
+                        value: Some(Pair::Account),
+                        label_position: if below() { "below" } else { "side" },
+                        panel: |_: Pair| rsx! {
+                            Flex { gap: "sm", align: "flex-start",
+                                Text { id: "who", "Who is ordering?" }
+                                Button { "Continue" }
+                            }
+                        },
+                    }
+                }
+            }
+            div { style: "flex: 1; min-width: 400px; height: 300px;" }
+        }
+    }
+}
+
+/// The re-layout kept the text's min-content layout, broken per word in a
+/// one-line box; libero re-lays such text once laid out (todos 887, 888).
+#[test]
+fn switching_labels_below_keeps_the_content_text_on_one_line() {
+    let mut page = mount(switchable);
+    page.click("#below");
+    page.wait(Duration::from_millis(50));
+    assert_eq!(page.wrapped_text("#who"), Vec::<String>::new());
 }
 
 #[test]

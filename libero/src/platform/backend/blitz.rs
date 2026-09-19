@@ -17,6 +17,7 @@ mod focus;
 mod placeholder;
 mod redraw;
 mod resize;
+mod stale_text;
 mod wheel;
 
 pub(super) use activate::focus_selectors;

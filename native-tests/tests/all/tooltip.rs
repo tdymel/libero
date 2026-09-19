@@ -132,6 +132,48 @@ fn escape_closes_it_under_the_pointer() {
     );
 }
 
+/// Blitz hit-tests no inline box in a padded block unless it is z-indexed, so
+/// the wrapper is natively (todo 889).
+#[test]
+fn hover_opens_it_inside_a_padded_block() {
+    fn padded() -> Element {
+        rsx! {
+            div { padding: "40px",
+                "Text before "
+                Tooltip {
+                    label: rsx! { "Saves the draft" },
+                    label_id: "save-tip",
+                    open_delay: 10,
+                    Button { id: "save", "Save" }
+                }
+            }
+        }
+    }
+    let mut page = mount(padded);
+    page.hover(TRIGGER);
+    page.wait(Duration::from_millis(100));
+    assert!(page.exists(OPEN), "hovering did not open it");
+}
+
+/// That `z-index` paints past a plain scroller's clip; a stacking-context
+/// scroller still clips the trigger (todo 881, the docs Platform page).
+#[test]
+fn a_stacking_scroller_clips_the_trigger() {
+    fn scrolled() -> Element {
+        rsx! {
+            div { style: "height: 80px; width: 200px; overflow-y: auto; position: relative; z-index: 0;",
+                div { style: "height: 120px;" }
+                Tooltip { label: rsx! { "Saves the draft" }, Button { id: "save", "Save" } }
+            }
+        }
+    }
+    let page = mount(scrolled);
+    let (x, y, w, h) = page.rect(TRIGGER);
+    assert!(y > 80.0, "the trigger is inside the frame at {y}");
+    let centre = ((x + w / 2.0) as u32, (y + h / 2.0) as u32);
+    assert_eq!(page.painted_pixel(centre.0, centre.1), "rgb(255, 255, 255)");
+}
+
 /// Blitz fires no `focusin` for Tab; the silent-focus check opens it (N6).
 #[test]
 fn tab_focus_opens_it() {

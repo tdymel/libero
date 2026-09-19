@@ -40,7 +40,9 @@ mod transition;
 
 // The renderer seams everything above `platform` reaches `backend` through (todo 820).
 pub(crate) use backend::{Listener, Outlet, PortalEntry, PortalRoot, SheetWatch, element};
-pub(crate) use click::{DoublePress, follow_pointer, nested_interactive, padding_press};
+pub(crate) use click::{
+    DoublePress, follow_pointer, hits_inline_boxes, nested_interactive, padding_press,
+};
 pub(crate) use clipboard::clipboard;
 pub use clock::{ClockApi, clock};
 pub use color_scheme::{ColorSchemeApi, ColorSchemeSubscription, color_scheme};

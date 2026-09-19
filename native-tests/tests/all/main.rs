@@ -2,6 +2,7 @@
 //! one component; run one with `cargo test -p native-tests --test all switch::`.
 
 mod accordion;
+mod anchor;
 mod button;
 mod carousel;
 mod choice;
@@ -49,6 +50,7 @@ mod slider;
 mod splitter;
 mod spotlight;
 mod stale_colors;
+mod stale_text;
 mod stepper;
 mod switch;
 mod table;

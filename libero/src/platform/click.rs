@@ -20,6 +20,13 @@ pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bo
     super::backend::nested_interactive(event, boundary)
 }
 
+/// Whether an inline box in a block with padding takes the pointer. Blitz's hit
+/// test never reaches one there unless it is positioned with a positive
+/// `z-index`, which it enters from the stacking context instead (todo 889).
+pub(crate) fn hits_inline_boxes() -> bool {
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"))
+}
+
 /// Where `set_pointer_capture` failed, hands `capture`'s drag the moves and the
 /// release of `event`'s pointer that land outside it, until that release.
 /// Only Blitz does, from `LiberoProvider`'s wrapper; elsewhere a no-op.

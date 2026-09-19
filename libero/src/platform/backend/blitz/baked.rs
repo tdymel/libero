@@ -6,7 +6,7 @@
 //! gained or lost `:hover`, both before the restyle. Every other state change
 //! (focus, `:checked`, an attribute) is caught after it painted: shortly after
 //! each press, key or render (see `redraw`), [`check`] rebuilds each box whose
-//! colour moved on.
+//! colour moved on. The same pass re-lays text left stale (`stale_text`).
 
 use std::{
     cell::{Cell, RefCell},
@@ -28,6 +28,9 @@ pub(super) struct Watch {
     svgs: RefCell<HashMap<NodeId, Option<AbsoluteColor>>>,
     armed: Cell<bool>,
     waits: Cell<u32>,
+    /// Text re-laid since the last press, key or render, by content width: each
+    /// once per width, so a re-layout that breaks it again cannot loop.
+    healed: RefCell<HashMap<NodeId, u32>>,
 }
 
 /// How many polls [`check`] waits out a pending restyle, which crates.io
@@ -94,10 +97,20 @@ pub(super) fn check_soon() {
     let Some(state) = doc() else {
         return;
     };
+    state.baked.healed.borrow_mut().clear();
     if state.baked.armed.replace(true) {
         return;
     }
     when_laid_out(Box::new(check));
+}
+
+/// [`check`] again after a stale-text re-layout, keeping what it healed.
+fn recheck() {
+    if let Some(state) = doc()
+        && !state.baked.armed.replace(true)
+    {
+        when_laid_out(Box::new(check));
+    }
 }
 
 /// Rebuilds each box that painted another colour than its element computes:
@@ -160,10 +173,36 @@ fn check() {
             }
         });
         *svgs = seen;
-        stale
+        (stale, super::stale_text::stale(&doc))
     };
-    if !stale.is_empty() {
-        run_or_defer(&anchor, move |doc| rebuild(doc, stale, false));
+    let (stale, text) = stale;
+    let mut healed = state.baked.healed.borrow_mut();
+    let (text, again): (Vec<_>, Vec<_>) = text
+        .into_iter()
+        .partition(|(id, width)| healed.get(id) != Some(width));
+    healed.extend(text.iter().copied());
+    drop(healed);
+    if cfg!(debug_assertions) && !again.is_empty() {
+        warn_once("libero: Blitz broke text again after a re-layout; left as is");
+    }
+    let text: Vec<NodeId> = text.into_iter().map(|(id, _)| id).collect();
+    if !stale.is_empty() || !text.is_empty() {
+        run_or_defer(&anchor, move |doc| {
+            rebuild(doc, stale, false);
+            if !text.is_empty() {
+                super::stale_text::relayout(doc, text);
+                recheck();
+            }
+        });
+    }
+}
+
+fn warn_once(message: &str) {
+    thread_local! {
+        static WARNED: Cell<bool> = const { Cell::new(false) };
+    }
+    if !WARNED.replace(true) {
+        crate::utils::warn(message);
     }
 }
 

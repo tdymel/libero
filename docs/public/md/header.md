@@ -18,7 +18,9 @@ banner only. With more than one, the last mounted wins.
 
 ## Usage
 
-Inside a scrolling frame, so the positions differ:
+Inside a scrolling frame, so the positions differ. The frame is a stacking
+context (`position` plus `z-index`), so a native window clips the header to it
+too:
 
 ```rust
 use dioxus::prelude::*;
@@ -30,6 +32,7 @@ fn Demo() -> Element {
     rsx! {
         Box {
             sx: sx().height("200px").width("100%").overflow_y("auto")
+                .position("relative").z_index("0")
                 .border("1px solid var(--lsx-muted-3)"),
             Header { color: "primary", "Libero" }
             Box {

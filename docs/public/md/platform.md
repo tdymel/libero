@@ -37,3 +37,11 @@ callback learns into a signal.
 Element reads such as `dimensions()` are futures. Start one in an event handler
 and await it in a `spawn`. A renderer that can't serve one answers
 `PlatformError::Unsupported`.
+
+## Clipping in a native window
+
+Natively, a box with a `z-index` paints past the clip of an `overflow` box
+around it, unless that box is a stacking context. Libero's own scrollers are
+one. Give yours `position: relative; z-index: 0`, or use `ScrollArea`. This
+covers a sticky `Header`, and a `Tooltip` or `HoverCard` trigger, which natively
+carries a `z-index` so the pointer reaches it.

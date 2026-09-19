@@ -54,14 +54,22 @@ pub(crate) fn wants_new_tab_hint(target: Option<&str>, new_tab_hint: bool) -> bo
 }
 
 /// Todo 579: the icon plus a hidden "(opens in a new tab)", after a link's text.
+/// `in_text`: the link lays out inline, not as a flex row such as `Chip`'s.
 #[component]
-pub(crate) fn NewTabHint() -> Element {
+pub(crate) fn NewTabHint(#[props(default)] in_text: bool) -> Element {
     let class = use_css(Some(&NEW_TAB_HINT_SX), CssLayer::Framework);
     let new_tab = use_localization().anchor.new_tab;
 
-    // The no-break space keeps the icon on the last word's line.
+    // The no-break space keeps the icon on the last word's line. In text it goes
+    // before the span: Blitz drops it at the start of an inline element (891).
+    let (before, inside) = if in_text {
+        ("\u{a0}", "")
+    } else {
+        ("", "\u{a0}")
+    };
     rsx! {
-        span { class, "data-anchor-new-tab": "", "aria-hidden": "true", "\u{a0}", ExternalLinkIcon {} }
+        {before}
+        span { class, "data-anchor-new-tab": "", "aria-hidden": "true", {inside}, ExternalLinkIcon {} }
         VisuallyHidden { " {new_tab}" }
     }
 }
@@ -115,7 +123,7 @@ pub fn Anchor(props: AnchorProps) -> Element {
     let children = match wants_new_tab_hint(props.target.as_deref(), props.new_tab_hint) {
         true => rsx! {
             {props.children}
-            NewTabHint {}
+            NewTabHint { in_text: true }
         },
         false => props.children,
     };

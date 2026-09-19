@@ -90,6 +90,28 @@ fn right_in_an_open_menu_opens_the_next_one() {
     assert_eq!(page.query_all(MENU).len(), 1);
 }
 
+/// The docs demo: a column under a centring flex box.
+fn centred() -> Element {
+    rsx! {
+        div { style: "display: flex; justify-content: safe center; align-items: center; width: 600px; padding: 24px;",
+            div { style: "display: flex; flex-direction: column; gap: 16px;", {app()} }
+        }
+    }
+}
+
+/// Opening a menu re-laid the bar, and Blitz kept the other labels' min-content
+/// text layout: "Edit" painted per glyph in its one-line box (todo 886).
+#[test]
+fn opening_a_menu_leaves_the_other_labels_on_one_line() {
+    let mut page = mount(centred);
+    page.click(&trigger(0));
+    page.advance(0.5);
+    page.hover(&trigger(1));
+    page.advance(0.5);
+    assert!(expanded(&page, 1), "{}", page.tree());
+    assert_eq!(page.wrapped_text("[role=menubar]"), Vec::<String>::new());
+}
+
 #[test]
 fn hovering_another_trigger_switches_the_open_menu() {
     let mut page = mount(app);

@@ -112,6 +112,30 @@ pub fn PlatformPage() -> Element {
                     "."
                 }
             }
+
+            DocSection {
+                title: "Clipping in a native window",
+                Text {
+                    "Natively, a box with a "
+                    Code { source: "z-index" }
+                    " paints past the clip of an "
+                    Code { source: "overflow" }
+                    " box around it, unless that box is a stacking context. "
+                    "Libero's own scrollers are one. Give yours "
+                    Code { source: "position: relative; z-index: 0" }
+                    ", or use "
+                    Code { source: "ScrollArea" }
+                    ". This covers a sticky "
+                    Code { source: "Header" }
+                    ", and a "
+                    Code { source: "Tooltip" }
+                    " or "
+                    Code { source: "HoverCard" }
+                    " trigger, which natively carries a "
+                    Code { source: "z-index" }
+                    " so the pointer reaches it."
+                }
+            }
         }
     }
 }

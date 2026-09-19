@@ -450,14 +450,18 @@ impl Page {
         let mut wrapped = Vec::new();
         while let Some(id) = stack.pop() {
             let node = doc.get_node(id).expect("a matched node");
-            let lines = node
-                .element_data()
-                .and_then(|data| data.inline_layout_data.as_ref())
-                .map_or(0, |text| text.layout.len());
-            if lines > 1 {
-                wrapped.push(format!("{:?} in {lines} lines", node.text_content()));
+            let inline = node
+                .data
+                .downcast_element()
+                .and_then(|data| data.inline_layout_data.as_ref());
+            if let Some(inline) = inline.filter(|inline| inline.layout.len() > 1) {
+                let lines = inline.layout.len();
+                wrapped.push(format!("{:?} in {lines} lines", inline.text));
             }
-            stack.extend(node.children.iter().copied());
+            // Layout children too: a flex item's text sits in an anonymous block.
+            let layout = node.layout_children.borrow();
+            let children = layout.as_deref().unwrap_or(&node.children);
+            stack.extend(children.iter().copied());
         }
         wrapped
     }
@@ -605,6 +609,20 @@ impl Page {
                 [0, 1, 2, 3].map(|i| buffer[at + i])
             })
             .collect()
+    }
+
+    /// The whole viewport rasterised as a binary PPM, for looking at a failure.
+    pub fn save_ppm(&self, path: &str) {
+        let (width, height) = VIEWPORT;
+        let mut doc = self.doc.inner.borrow_mut();
+        let buffer = anyrender::render_to_buffer::<VelloCpuImageRenderer, _>(
+            |scene| blitz_paint::paint_scene(scene, &mut doc, 1.0, width, height, 0, 0),
+            width,
+            height,
+        );
+        let mut out = format!("P6\n{width} {height}\n255\n").into_bytes();
+        out.extend(buffer.chunks(4).flat_map(|px| [px[0], px[1], px[2]]));
+        std::fs::write(path, out).expect("writable path");
     }
 
     /// The colour Blitz paints the first match's text with, as `rgb(..)`. Not

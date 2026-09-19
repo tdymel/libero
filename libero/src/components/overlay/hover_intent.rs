@@ -3,7 +3,7 @@ use std::time::Duration;
 use dioxus::prelude::*;
 
 use crate::{
-    platform::{TimerSubscription, timer},
+    platform::{TimerSubscription, hits_inline_boxes, timer},
     sx::{StaticSx, sx},
 };
 
@@ -11,9 +11,15 @@ use crate::{
 /// flex or grid parent's `align-items: stretch` cannot widen it past the
 /// trigger and anchor the box to the container instead.
 pub(super) static TRIGGER_WRAPPER_SX: StaticSx = StaticSx::new(|| {
-    sx().display("inline-block")
+    let base = sx()
+        .display("inline-block")
         .width("max-content")
-        .max_width("100%")
+        .max_width("100%");
+    // Blitz reaches an inline box in a padded block only as a z-indexed one.
+    match hits_inline_boxes() {
+        true => base,
+        false => base.position("relative").z_index("1"),
+    }
 });
 
 /// Whether the pointer rests on a trigger, applied after the open and close
