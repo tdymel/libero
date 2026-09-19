@@ -104,6 +104,8 @@ jobs:
           components: clippy
           cache-key: native
       - run: cargo clippy -p e2e --features native --all-targets -- -D warnings
+      # Both test binaries in one cargo run, so they build side by side (the gate's `native-build`).
+      - run: cargo test -p e2e --features native --test native --test all --no-run
       # The Blitz-only tests: paint, stylo, Blitz's event order.
       - run: cargo test -p e2e --features native --test native
       # The shared e2e scenarios on the Blitz backend (822).
