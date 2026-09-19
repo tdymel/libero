@@ -347,7 +347,7 @@ mod native {
 
     /// A fixture route mounted in a windowless Blitz document.
     pub struct Native {
-        pub page: native_tests::Page,
+        pub page: crate::native::Page,
     }
 
     impl Native {
@@ -355,13 +355,13 @@ mod native {
             let page =
                 e2e_fixtures::route(route).unwrap_or_else(|| panic!("no fixture at {route}"));
             Self {
-                page: native_tests::mount(page),
+                page: crate::native::mount(page),
             }
         }
     }
 
-    fn native_key(key: keyboard::Key) -> Result<native_tests::Key> {
-        native_tests::Key::from_str(key.key)
+    fn native_key(key: keyboard::Key) -> Result<crate::native::Key> {
+        crate::native::Key::from_str(key.key)
             .map_err(|_| anyhow!("no dioxus key named {:?}", key.key))
     }
 
@@ -392,7 +392,7 @@ mod native {
         }
 
         async fn viewport(&mut self) -> Result<(f64, f64)> {
-            let (width, height) = native_tests::VIEWPORT;
+            let (width, height) = crate::native::VIEWPORT;
             Ok((f64::from(width), f64::from(height)))
         }
 
@@ -404,20 +404,20 @@ mod native {
 
         async fn press_shift(&mut self, key: keyboard::Key) -> Result<()> {
             let key = native_key(key)?;
-            self.page.press_with(key, native_tests::Modifiers::SHIFT);
+            self.page.press_with(key, crate::native::Modifiers::SHIFT);
             Ok(())
         }
 
         async fn press_ctrl(&mut self, key: keyboard::Key) -> Result<()> {
             let key = native_key(key)?;
-            self.page.press_with(key, native_tests::Modifiers::CONTROL);
+            self.page.press_with(key, crate::native::Modifiers::CONTROL);
             Ok(())
         }
 
         async fn type_text(&mut self, text: &str) -> Result<()> {
             for ch in text.chars() {
                 self.page
-                    .press(native_tests::Key::Character(ch.to_string()));
+                    .press(crate::native::Key::Character(ch.to_string()));
             }
             Ok(())
         }

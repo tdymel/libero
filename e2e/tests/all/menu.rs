@@ -96,6 +96,20 @@ e2e::scenario!(
     "/menu-submenu-reopen",
     enter_opens_and_escape_closes
 );
+/// `use_dismiss` (todo 46): focus moving from the trigger into the list keeps
+/// it open.
+async fn a_click_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    expanded(d, true).await?;
+    eventually_focused(d, "[role=menuitem]", "a click on the trigger").await?;
+    expanded(d, true).await
+}
+
+e2e::scenario!(
+    a_click_opens_it_and_focus_moving_into_the_list_keeps_it_open,
+    "/menu-submenu-reopen",
+    a_click_opens
+);
 e2e::scenario!(
     a_click_outside_closes_it_and_leaves_focus_where_it_went,
     "/menu-submenu-reopen",

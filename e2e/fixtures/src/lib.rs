@@ -61,6 +61,7 @@ mod floating_window;
 mod flows;
 mod focus_contrast;
 mod focus_return;
+mod focus_start;
 mod focus_trap;
 mod form;
 mod grid_zone;
@@ -163,6 +164,7 @@ const FIXTURES: &[Routes] = &[
     flows::ROUTES,
     focus_contrast::ROUTES,
     focus_return::ROUTES,
+    focus_start::ROUTES,
     focus_trap::ROUTES,
     form::ROUTES,
     grid_zone::ROUTES,

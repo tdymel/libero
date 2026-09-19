@@ -16,6 +16,8 @@ pub mod browser;
 pub mod clock;
 pub mod driver;
 pub mod journal;
+#[cfg(feature = "native")]
+pub mod native;
 pub mod passes;
 pub mod suite;
 pub mod sweep;

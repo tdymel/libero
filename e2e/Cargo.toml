@@ -30,11 +30,54 @@ insta = "1.48"
 # `curl`: a harness that fails when a system binary is missing fails for a
 # reason that has nothing to do with the code under test.
 zip = { version = "2", default-features = false, features = ["deflate"] }
-# The native backend (todo 822): the same fixture pages mounted in Blitz by
-# `native-tests`' `Page`. A feature, so the browser tier builds no Blitz:
-# `cargo test -p e2e --features native --test all -- ::native`.
-native-tests = { path = "../native-tests", optional = true }
+# The native backend (todo 822): the fixture pages, or a test's own app,
+# mounted in a windowless Blitz document by `native::Page`. A feature, so the
+# browser tier builds no Blitz: `cargo test -p e2e --features native --test all
+# -- ::native` for the scenarios, `--test native` for the Blitz-only tests.
 e2e-fixtures = { path = "fixtures", optional = true }
+dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "mounted", "router", "logger"], optional = true }
+libero = { path = "../libero", default-features = false, features = ["native"], optional = true }
+# The windowless half of dioxus-native: no winit, no renderer. The `blitz-*`
+# versions match dioxus-native's, so this is the same Blitz the native docs run.
+dioxus-native-dom = { git = "https://github.com/DioxusLabs/dioxus", optional = true }
+blitz-dom = { version = "0.3.0-beta.2", default-features = false, optional = true }
+# Only for `HtmlProvider`: without it every `<style dangerous_inner_html>`
+# arrives empty and libero renders unstyled.
+blitz-html = { version = "0.3.0-beta.2", default-features = false, optional = true }
+blitz-traits = { version = "0.3.0-beta.2", optional = true }
+# `Page::computed`: stylo's resolved values. The version blitz-dom uses.
+style = { package = "stylo", version = "0.20", optional = true }
+# What Blitz paints, not what stylo computed: `Page::painted_*` records the
+# scene the shell would draw; `svg` rasterises inline svgs too (todo 882).
+blitz-paint = { version = "0.3.0-beta.2", default-features = false, features = ["svg"], optional = true }
+anyrender = { version = "0.13", optional = true }
+# `Page::painted_pixel` rasterises that scene with the shell's CPU renderer.
+anyrender_vello_cpu = { version = "0.17", default-features = false, optional = true }
+kurbo = { version = "0.13", optional = true }
+peniko = { version = "0.6", optional = true }
+# `Page` fails a test on a `dioxus_signals` warning.
+tracing = { version = "0.1", optional = true }
 
 [features]
-native = ["dep:native-tests", "dep:e2e-fixtures"]
+native = [
+    "dep:e2e-fixtures",
+    "dep:dioxus",
+    "dep:libero",
+    "dep:dioxus-native-dom",
+    "dep:blitz-dom",
+    "dep:blitz-html",
+    "dep:blitz-traits",
+    "dep:style",
+    "dep:blitz-paint",
+    "dep:anyrender",
+    "dep:anyrender_vello_cpu",
+    "dep:kurbo",
+    "dep:peniko",
+    "dep:tracing",
+]
+
+# Blitz-only tests (paint, stylo, Blitz's event order), one binary as `all` is.
+[[test]]
+name = "native"
+path = "tests/native/main.rs"
+required-features = ["native"]

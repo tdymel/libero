@@ -39,7 +39,7 @@ jobs:
         with:
           components: clippy
           cache-key: clippy
-      - run: cargo clippy --workspace --all-targets --exclude e2e --exclude native-tests -- -D warnings
+      - run: cargo clippy --workspace --all-targets --exclude e2e -- -D warnings
       # e2e with `native` (driver::Native, the scenarios' native arms) is the `native` job's.
       - run: cargo clippy -p e2e --all-targets -- -D warnings
 
@@ -103,8 +103,9 @@ jobs:
         with:
           components: clippy
           cache-key: native
-      - run: cargo clippy -p native-tests -p e2e --features e2e/native --all-targets -- -D warnings
-      - run: cargo test -p native-tests
+      - run: cargo clippy -p e2e --features native --all-targets -- -D warnings
+      # The Blitz-only tests: paint, stylo, Blitz's event order.
+      - run: cargo test -p e2e --features native --test native
       # The shared e2e scenarios on the Blitz backend (822).
       - run: xvfb-run -a -s "-screen 0 1280x800x24" cargo test -p e2e --features native --test all -- ::native
 

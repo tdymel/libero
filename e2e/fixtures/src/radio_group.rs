@@ -1,13 +1,14 @@
 //! `RadioGroup`, for the `RadioSet` archetype.
 
 use dioxus::prelude::*;
-use libero::components::{FieldStatus, Flex, OptionList, Options, Radio, RadioGroup};
+use libero::components::{FieldStatus, Flex, OptionList, Options, Radio, RadioGroup, Text};
 
 use crate::{Routes, common::Between};
 
 pub const ROUTES: Routes = &[
     ("/radio-group", || rsx! { RadioGroupPage {} }),
     ("/radio-group/field", || rsx! { RadioGroupFieldPage {} }),
+    ("/radio-group/echo", || rsx! { RadioGroupEchoPage {} }),
     ("/radio-group/empty", || rsx! { RadioGroupEmptyPage {} }),
     (
         "/radio-group/readonly",
@@ -41,11 +42,31 @@ fn RadioGroupReadonlyPage() -> Element {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Options)]
+#[derive(Clone, Copy, PartialEq, Debug, Options)]
 enum Plan {
     Free,
     Pro,
     Team,
+}
+
+/// `RadioGroupPage` with the pick echoed in `#picked`, for the shared
+/// web/native scenarios.
+#[component]
+fn RadioGroupEchoPage() -> Element {
+    let mut plan = use_signal(|| Some(Plan::Pro));
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Between {
+                RadioGroup {
+                    label: "Plan",
+                    value: plan(),
+                    onchange: move |next| plan.set(Some(next)),
+                }
+            }
+            Text { id: "picked", "{plan:?}" }
+        }
+    }
 }
 
 /// Starts on the **second** option, so "Tab enters at the checked radio" can

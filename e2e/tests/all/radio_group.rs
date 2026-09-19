@@ -5,8 +5,10 @@
 //! archetype asserts. APG's radio group has no Home or End, and its arrows
 //! select as they move. See `archetypes/radio_set.rs`.
 
+use anyhow::Result;
 use e2e::archetypes::RadioSet;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually_focused, eventually_text};
 use e2e::passes::target_size::MINIMUM;
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard};
@@ -312,3 +314,47 @@ fn the_checked_dot_shows_in_forced_colours() {
         fixture.close().await.unwrap();
     });
 }
+
+fn radio(n: usize) -> String {
+    format!("[role=radiogroup] > div:nth-of-type({n}) input[type=radio]")
+}
+
+async fn tab_enters_at_the_checked<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#before").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, &radio(2), "Tab").await
+}
+
+async fn the_arrows_move_and_select<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(&radio(2)).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_text(d, "#picked", "Some(Team)", "ArrowDown").await?;
+    eventually_focused(d, &radio(3), "ArrowDown").await?;
+    // APG: the arrows wrap.
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_text(d, "#picked", "Some(Free)", "ArrowDown from the last").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    eventually_text(d, "#picked", "Some(Team)", "ArrowUp from the first").await
+}
+
+async fn a_label_click_selects<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("[role=radiogroup] > div:first-of-type label")
+        .await?;
+    eventually_text(d, "#picked", "Some(Free)", "a click on Free's label").await
+}
+
+e2e::scenario!(
+    tab_enters_a_radio_group_at_the_checked_radio,
+    "/radio-group/echo",
+    tab_enters_at_the_checked
+);
+e2e::scenario!(
+    the_arrows_move_and_select_in_a_radio_group,
+    "/radio-group/echo",
+    the_arrows_move_and_select
+);
+e2e::scenario!(
+    a_click_on_an_option_label_selects_it,
+    "/radio-group/echo",
+    a_label_click_selects
+);

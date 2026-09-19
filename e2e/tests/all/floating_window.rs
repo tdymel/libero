@@ -53,6 +53,7 @@ use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, Rect, eventually, eventually_focused};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, passes::focus, passes::keyboard, passes::pointer, wait};
 
@@ -731,3 +732,231 @@ async fn activate(page: &Page, selector: &str) {
 async fn wait_for(page: &Page, js: &str, what: &str) {
     wait::for_js_true(page, js, what).await.unwrap();
 }
+
+// Shared web/native scenarios (822). Geometry is read off the drawn rect.
+
+fn near(a: f64, b: f64) -> bool {
+    (a - b).abs() <= 1.0
+}
+
+fn rect_line(r: Rect) -> String {
+    format!(
+        "{} {} {} {}",
+        r.x.round(),
+        r.y.round(),
+        r.width.round(),
+        r.height.round()
+    )
+}
+
+async fn opened<D: Driver>(d: &mut D) -> Result<Rect> {
+    d.focus(TRIGGER).await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "Enter to open it", async |d| d.exists(DIALOG).await).await?;
+    d.rect(DIALOG).await
+}
+
+/// Waits for `report` to read the drawn rect, and returns that rect.
+async fn reported<D: Driver>(d: &mut D, report: &str, what: &str) -> Result<Rect> {
+    eventually(d, &format!("{what} reported in {report}"), async |d| {
+        let drawn = rect_line(d.rect(DIALOG).await?);
+        Ok(d.text(report).await? == drawn)
+    })
+    .await?;
+    d.rect(DIALOG).await
+}
+
+async fn enter_and_escape<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    opened(d).await?;
+    eventually_focused(d, &format!("{DIALOG}, {DIALOG} *"), "Enter").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to close it", async |d| {
+        Ok(!d.exists(DIALOG).await?)
+    })
+    .await?;
+    eventually_focused(d, TRIGGER, "Escape").await
+}
+
+async fn f6_round_trips<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    opened(d).await?;
+    for inside in [DIALOG, "#window-done", HANDLE] {
+        d.focus(inside).await?;
+        d.press(F6).await?;
+        eventually_focused(d, TRIGGER, &format!("F6 from {inside}")).await?;
+        d.press(F6).await?;
+        eventually_focused(d, DIALOG, "F6 from the page").await?;
+    }
+    Ok(())
+}
+
+async fn a_drag_past_the_edge<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    opened(d).await?;
+    let (width, _) = d.viewport().await?;
+    d.drag(HANDLE, 900.0, 0.0).await?;
+    eventually(d, "the window to stay inside the viewport", async |d| {
+        let r = d.rect(DIALOG).await?;
+        Ok(r.x + r.width <= width + 1.0)
+    })
+    .await
+}
+
+async fn arrows_on_the_title_bar<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let before = opened(d).await?;
+    d.focus(HANDLE).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually(d, "a step right and down", async |d| {
+        let r = d.rect(DIALOG).await?;
+        Ok(near(r.x, before.x + STEP) && near(r.y, before.y + STEP))
+    })
+    .await?;
+    let after = reported(d, MOVE_REPORT, "the move").await?;
+    assert!(
+        near(after.width, before.width) && near(after.height, before.height),
+        "the move resized it: {before:?} to {after:?}"
+    );
+    Ok(())
+}
+
+async fn the_separator_clamps<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let before = opened(d).await?;
+    d.focus(SEPARATOR).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "a step wider", async |d| {
+        Ok(near(d.rect(DIALOG).await?.width, before.width + STEP))
+    })
+    .await?;
+    reported(d, RESIZE_REPORT, "the step").await?;
+    for (key, name, (width, height)) in [(keyboard::HOME, "Home", MIN), (keyboard::END, "End", MAX)]
+    {
+        d.press(key).await?;
+        eventually(d, &format!("{name} to reach {width}x{height}"), async |d| {
+            let r = d.rect(DIALOG).await?;
+            Ok(near(r.width, width) && near(r.height, height))
+        })
+        .await?;
+        reported(d, RESIZE_REPORT, name).await?;
+        assert_eq!(
+            d.attr(SEPARATOR, "aria-valuenow").await?,
+            Some(width.to_string())
+        );
+        assert_eq!(
+            d.attr(SEPARATOR, "aria-valuetext").await?,
+            Some(format!("{width} by {height} pixels"))
+        );
+    }
+    assert_eq!(
+        d.attr(SEPARATOR, "aria-valuemin").await?,
+        Some(MIN.0.to_string())
+    );
+    assert_eq!(
+        d.attr(SEPARATOR, "aria-valuemax").await?,
+        Some(MAX.0.to_string())
+    );
+    Ok(())
+}
+
+async fn the_menu_resizes_and_resets<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let first = opened(d).await?;
+    d.focus(MENU).await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "the title-bar menu", async |d| {
+        d.exists("[role=menu]").await
+    })
+    .await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_focused(d, "[aria-label=Shorter]", "Resize").await?;
+    let showing = d.rect(DIALOG).await?;
+    d.focus("[aria-label=Wider]").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "Wider to add a step", async |d| {
+        Ok(near(d.rect(DIALOG).await?.width, showing.width + STEP))
+    })
+    .await?;
+    reported(d, RESIZE_REPORT, "the Wider button").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to hide the step buttons", async |d| {
+        Ok(!d.exists("[data-window-steps]").await?)
+    })
+    .await?;
+    assert!(
+        d.exists(DIALOG).await?,
+        "Escape on the step buttons closed the window"
+    );
+    eventually_focused(d, MENU, "Escape on the step buttons").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "the title-bar menu", async |d| {
+        d.exists("[role=menu]").await
+    })
+    .await?;
+    d.press(keyboard::END).await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "Reset to restore the opened size", async |d| {
+        let r = d.rect(DIALOG).await?;
+        Ok(near(r.width, first.width) && near(r.height, first.height))
+    })
+    .await
+}
+
+async fn a_title_bar_drag<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let before = opened(d).await?;
+    d.drag(HANDLE, 30.0, 20.0).await?;
+    eventually(d, "the drag to move it by (30, 20)", async |d| {
+        let r = d.rect(DIALOG).await?;
+        Ok(near(r.x, before.x + 30.0) && near(r.y, before.y + 20.0))
+    })
+    .await?;
+    reported(d, MOVE_REPORT, "the drag").await?;
+    Ok(())
+}
+
+async fn drags_leave_the_handle_focused<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    opened(d).await?;
+    for handle in [SEPARATOR, HANDLE] {
+        d.drag(handle, 20.0, 20.0).await?;
+        eventually_focused(d, handle, &format!("dragging {handle}")).await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    enter_opens_it_with_focus_inside_and_escape_hands_it_back,
+    "/floating-window",
+    enter_and_escape
+);
+e2e::scenario!(
+    f6_moves_focus_between_the_window_and_the_page,
+    "/floating-window",
+    f6_round_trips
+);
+e2e::scenario!(
+    a_drag_past_the_edge_keeps_it_in_the_viewport,
+    "/floating-window",
+    a_drag_past_the_edge
+);
+e2e::scenario!(
+    an_arrow_on_the_title_bar_moves_it_by_a_step,
+    "/floating-window",
+    arrows_on_the_title_bar
+);
+e2e::scenario!(
+    the_separator_resizes_it_and_clamps_to_the_callers_bounds,
+    "/floating-window",
+    the_separator_clamps
+);
+e2e::scenario!(
+    the_title_bar_menu_resizes_and_resets,
+    "/floating-window",
+    the_menu_resizes_and_resets
+);
+e2e::scenario!(
+    a_title_bar_drag_moves_it_with_the_pointer,
+    "/floating-window",
+    a_title_bar_drag
+);
+e2e::scenario!(
+    drags_leave_their_handle_focused,
+    "/floating-window",
+    drags_leave_the_handle_focused
+);

@@ -4,7 +4,9 @@
 //!
 //! `/color-picker` starts at `#1c7ed6`: saturation 87%, brightness 84%.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -55,34 +57,6 @@ fn the_picked_swatch_is_pressed_and_checked() {
         .unwrap();
 
         fixture.console.assert_clean("the swatches").unwrap();
-        fixture.close().await.unwrap();
-    });
-}
-
-#[test]
-fn the_arrows_move_the_pad_on_both_axes() {
-    block_on(async {
-        let fixture = Fixture::open("/color-picker", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        keyboard::tab_to(page, THUMB, 10).await.unwrap();
-        expect(page, "87,84", "the starting colour").await;
-
-        keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
-        expect(page, "88,84", "ArrowRight to raise the saturation only").await;
-        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
-        expect(page, "88,85", "ArrowUp to raise the brightness only").await;
-        keyboard::press(page, keyboard::ARROW_LEFT).await.unwrap();
-        expect(page, "87,85", "ArrowLeft to lower the saturation only").await;
-        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
-        expect(page, "87,84", "ArrowDown to lower the brightness only").await;
-        keyboard::press_shift(page, keyboard::ARROW_DOWN)
-            .await
-            .unwrap();
-        expect(page, "87,74", "Shift+ArrowDown to step ten").await;
-
-        fixture.console.assert_clean("the pad keys").unwrap();
         fixture.close().await.unwrap();
     });
 }
@@ -290,3 +264,110 @@ async fn pad_points(
     };
     (point(from), point(to))
 }
+
+const HUE: &str = "[role=slider][aria-label=Hue]";
+
+/// `(saturation, brightness)` from the pad thumb's ARIA.
+async fn pad<D: Driver>(d: &mut D) -> Result<(i32, i32)> {
+    let now = d.attr(THUMB, "aria-valuenow").await?.unwrap_or_default();
+    let text = d.attr(THUMB, "aria-valuetext").await?.unwrap_or_default();
+    let brightness = text
+        .split("brightness ")
+        .nth(1)
+        .and_then(|rest| rest.split('%').next())
+        .unwrap_or_default();
+    Ok((now.parse().unwrap_or(-1), brightness.parse().unwrap_or(-1)))
+}
+
+async fn pad_at<D: Driver>(d: &mut D, want: (i32, i32), after: &str) -> Result<()> {
+    eventually(
+        d,
+        &format!("the pad at {want:?} after {after}"),
+        async |d| Ok(pad(d).await? == want),
+    )
+    .await
+}
+
+async fn the_arrows_move_the_pad<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(THUMB).await?;
+    pad_at(d, (87, 84), "focus").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    pad_at(d, (88, 84), "ArrowRight").await?;
+    d.press(keyboard::ARROW_UP).await?;
+    pad_at(d, (88, 85), "ArrowUp").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    pad_at(d, (87, 85), "ArrowLeft").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    pad_at(d, (87, 84), "ArrowDown").await?;
+    d.press_shift(keyboard::ARROW_DOWN).await?;
+    pad_at(d, (87, 74), "Shift+ArrowDown").await
+}
+
+/// Left and down from the thumb: less saturated, darker.
+async fn a_drag_moves_both_axes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#before").await?;
+    d.drag(THUMB, -40.0, 40.0).await?;
+    eventually(d, "the drag to lower both axes", async |d| {
+        let (s, b) = pad(d).await?;
+        Ok(s < 87 && b < 84)
+    })
+    .await?;
+    eventually_focused(d, THUMB, "the drag").await
+}
+
+async fn the_arrows_step_the_hue<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let before = d.attr(HUE, "aria-valuenow").await?;
+    d.focus(HUE).await?;
+    d.press_shift(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "Shift+ArrowRight to step the hue", async |d| {
+        Ok(d.attr(HUE, "aria-valuenow").await? != before && d.text("#color").await? != "#1c7ed6")
+    })
+    .await
+}
+
+async fn a_swatch_click_picks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const GREEN: &str = "[aria-label='#40c057']";
+    d.click(GREEN).await?;
+    eventually(d, "a click to press the green swatch", async |d| {
+        Ok(d.attr(GREEN, "aria-pressed").await?.as_deref() == Some("true"))
+    })
+    .await
+}
+
+async fn a_typed_colour_commits<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const INPUT: &str = "input[data-controlled]";
+    d.click(INPUT).await?;
+    d.press(keyboard::END).await?;
+    for _ in 0..10 {
+        d.press(keyboard::BACKSPACE).await?;
+    }
+    d.type_text("#228be6").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, "#readout", "#228be6ff", "Enter").await
+}
+
+e2e::scenario!(
+    the_arrows_move_the_pad_on_both_axes,
+    "/color-picker",
+    the_arrows_move_the_pad
+);
+e2e::scenario!(
+    a_drag_on_the_pad_moves_both_axes_and_focuses_the_thumb,
+    "/color-picker",
+    a_drag_moves_both_axes
+);
+e2e::scenario!(
+    the_arrows_step_the_hue,
+    "/color-picker",
+    the_arrows_step_the_hue
+);
+e2e::scenario!(
+    a_click_on_a_swatch_picks_its_colour,
+    "/color-picker-swatches",
+    a_swatch_click_picks
+);
+e2e::scenario!(
+    a_typed_colour_commits_on_enter,
+    "/color-field/alpha",
+    a_typed_colour_commits
+);

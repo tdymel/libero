@@ -1,6 +1,8 @@
 //! `Checkbox`: APG's checkbox pattern, in every variant its docs page shows.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard::{self, ENTER, SPACE};
 use e2e::passes::pointer;
 use e2e::suite::Step;
@@ -158,3 +160,34 @@ fn a_click_on_the_box_focuses_the_input() {
         fixture.close().await.unwrap();
     });
 }
+
+async fn emits<D: Driver>(d: &mut D, expected: &str, after: &str) -> Result<()> {
+    eventually(d, &format!("{expected} emitted after {after}"), async |d| {
+        Ok(d.attr("[data-emitted]", "data-emitted").await?.as_deref() == Some(expected))
+    })
+    .await
+}
+
+async fn a_box_click_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const BOX: &str = "#terms + [aria-hidden=true]";
+    d.click(BOX).await?;
+    emits(d, "terms:true", "a click on the box").await?;
+    d.click(BOX).await?;
+    emits(d, "terms:false", "a second click").await
+}
+
+async fn space_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#terms").await?;
+    eventually_focused(d, "#terms", "focus").await?;
+    d.press(SPACE).await?;
+    emits(d, "terms:true", "Space").await?;
+    d.press(SPACE).await?;
+    emits(d, "terms:false", "a second Space").await
+}
+
+e2e::scenario!(
+    a_click_on_the_box_toggles_a_checkbox,
+    "/checkbox",
+    a_box_click_toggles
+);
+e2e::scenario!(space_toggles_a_focused_checkbox, "/checkbox", space_toggles);

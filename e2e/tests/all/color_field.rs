@@ -3,7 +3,9 @@
 //! `/color-field/swatches` holds only the swatches; `/color-field/keep-text`
 //! has `fix_on_blur: false` and no dropdown.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Viewport, wait};
 
@@ -230,3 +232,26 @@ async fn expect(page: &chromiumoxide::Page, check: &str, what: &str) {
         panic!("{what}: {error}; focus={focus}");
     }
 }
+
+async fn arrow_down_enters_and_escape_returns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const INPUT: &str = "input[data-controlled]";
+    d.click(INPUT).await?;
+    eventually(d, "a click to open the dialog", async |d| {
+        d.exists("[role=dialog]").await
+    })
+    .await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_focused(d, "[role=dialog] *", "ArrowDown").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to close the dialog", async |d| {
+        Ok(d.attr(INPUT, "aria-expanded").await?.as_deref() == Some("false"))
+    })
+    .await?;
+    eventually_focused(d, INPUT, "Escape").await
+}
+
+e2e::scenario!(
+    arrow_down_enters_the_colour_dialog_and_escape_returns,
+    "/color-field/alpha",
+    arrow_down_enters_and_escape_returns
+);

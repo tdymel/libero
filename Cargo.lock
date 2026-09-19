@@ -2579,14 +2579,26 @@ name = "e2e"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "anyrender",
+ "anyrender_vello_cpu",
+ "blitz-dom",
+ "blitz-html",
+ "blitz-paint",
+ "blitz-traits",
  "chromiumoxide",
+ "dioxus",
+ "dioxus-native-dom",
  "e2e-fixtures",
  "futures",
  "insta",
- "native-tests",
+ "kurbo",
+ "libero",
+ "peniko",
  "serde",
  "serde_json",
+ "stylo",
  "tokio",
+ "tracing",
  "zip",
 ]
 
@@ -4889,25 +4901,6 @@ dependencies = [
  "spirv",
  "thiserror 2.0.21",
  "unicode-ident",
-]
-
-[[package]]
-name = "native-tests"
-version = "0.1.0"
-dependencies = [
- "anyrender",
- "anyrender_vello_cpu",
- "blitz-dom",
- "blitz-html",
- "blitz-paint",
- "blitz-traits",
- "dioxus",
- "dioxus-native-dom",
- "kurbo",
- "libero",
- "peniko",
- "stylo",
- "tracing",
 ]
 
 [[package]]

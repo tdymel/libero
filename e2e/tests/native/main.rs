@@ -1,0 +1,51 @@
+//! The Blitz-only tests (paint, stylo, Blitz's event order), one binary as
+//! `tests/all` is. A unit mounts one app in `e2e::native::Page`; run one with
+//! `cargo test -p e2e --features native --test native switch::`.
+
+mod anchor;
+mod button;
+mod choice;
+mod code_block;
+mod color_scheme;
+mod combobox;
+mod date;
+mod direction_toggle;
+mod docs_shell;
+mod element_api;
+mod focus_events;
+mod focus_return;
+mod focus_ring;
+mod form;
+mod header;
+mod hit;
+mod home;
+mod image_list;
+mod keyboard;
+mod lightbox;
+mod menubar;
+mod nav_link;
+mod notifications;
+mod overlays;
+mod paper;
+mod placeholder;
+mod pointer;
+mod popover;
+mod qr_code;
+mod repo_button;
+mod scroll;
+mod scroll_area;
+mod scroll_size;
+mod scroller;
+mod segmented_control;
+mod select;
+mod slider;
+mod spotlight;
+mod stale_colors;
+mod stale_text;
+mod stepper;
+mod switch;
+mod table;
+mod theme_toggle;
+mod tooltip;
+mod transitions;
+mod tree;
