@@ -48,6 +48,8 @@ pub trait Driver {
     async fn viewport(&mut self) -> Result<(f64, f64)>;
     async fn press(&mut self, key: Key) -> Result<()>;
     async fn press_shift(&mut self, key: Key) -> Result<()>;
+    /// A chord with Ctrl held; give `key` no `text`.
+    async fn press_ctrl(&mut self, key: Key) -> Result<()>;
     async fn type_text(&mut self, text: &str) -> Result<()>;
     /// Presses at the first match's centre, moves by `(dx, dy)` in steps, releases.
     async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()>;
@@ -249,6 +251,10 @@ mod web {
             keyboard::press_shift(&self.fixture.page, key).await
         }
 
+        async fn press_ctrl(&mut self, key: keyboard::Key) -> Result<()> {
+            keyboard::press_with(&self.fixture.page, key, keyboard::CTRL).await
+        }
+
         async fn type_text(&mut self, text: &str) -> Result<()> {
             keyboard::type_text(&self.fixture.page, text).await
         }
@@ -399,6 +405,12 @@ mod native {
         async fn press_shift(&mut self, key: keyboard::Key) -> Result<()> {
             let key = native_key(key)?;
             self.page.press_with(key, native_tests::Modifiers::SHIFT);
+            Ok(())
+        }
+
+        async fn press_ctrl(&mut self, key: keyboard::Key) -> Result<()> {
+            let key = native_key(key)?;
+            self.page.press_with(key, native_tests::Modifiers::CONTROL);
             Ok(())
         }
 

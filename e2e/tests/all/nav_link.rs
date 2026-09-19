@@ -3,9 +3,34 @@
 //! `nearest` arithmetic into a function Blitz shares). Plus the baseline of
 //! `NavLink`, `Anchor` and `Burger` (todo 449).
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
+
+async fn the_toggle_shows_nested<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const TOGGLE: &str = "#docs + button";
+    assert_eq!(
+        d.attr(TOGGLE, "aria-expanded").await?.as_deref(),
+        Some("false")
+    );
+    d.click(TOGGLE).await?;
+    eventually(d, "aria-expanded true", async |d| {
+        Ok(d.attr(TOGGLE, "aria-expanded").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    eventually(d, "the nested link to show", async |d| {
+        Ok(d.rect("#install").await?.height > 0.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_click_on_the_toggle_shows_the_nested_links,
+    "/nav-link/states",
+    the_toggle_shows_nested
+);
 
 /// The link's bottom plus its 8rem margin meets the sidebar's bottom.
 const SHOWN_NEAREST: &str = "(() => { \

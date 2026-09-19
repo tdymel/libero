@@ -22,7 +22,6 @@ mod focus_start;
 mod form;
 mod hit;
 mod home;
-mod hover_card;
 mod image_list;
 mod keyboard;
 mod lightbox;

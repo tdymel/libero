@@ -1,32 +1,11 @@
-//! `Spotlight`: Ctrl+K opens the palette from wherever focus is, and a
-//! narrowed list keeps its labels whole.
+//! `Spotlight`'s narrowed list keeps its labels whole in Blitz's layout.
+//! Ctrl+K is e2e's shared scenario (`spotlight::`).
 
 use dioxus::prelude::*;
 use libero::components::{
     Button, SpotlightAction, SpotlightOptions, spotlight_filter, use_spotlight,
 };
 use native_tests::{Key, Modifiers, mount};
-
-const PALETTE: &str = "[role=dialog]";
-
-fn app() -> Element {
-    let all = use_hook(|| {
-        vec![
-            SpotlightAction::new("Home"),
-            SpotlightAction::new("Changelog"),
-        ]
-    });
-    let _spotlight = use_spotlight(SpotlightOptions {
-        actions: Some(Callback::new(move |query: String| {
-            spotlight_filter(&query, &all)
-        })),
-        aria_label: Some("Command palette".into()),
-        ..Default::default()
-    });
-    rsx! {
-        Button { id: "page", "Page" }
-    }
-}
 
 // Two rows keep their place when "G" drops the others: their labels are the ones that broke.
 fn narrowing() -> Element {
@@ -66,16 +45,4 @@ fn a_narrowed_list_keeps_each_label_on_one_line() {
     page.press_before_layout(Key::Character("G".into()));
     assert!(page.exists("[role=option]"), "no rows:\n{}", page.tree());
     assert_eq!(page.wrapped_text("[role=option]"), Vec::<String>::new());
-}
-
-#[test]
-fn ctrl_k_opens_the_palette() {
-    let mut page = mount(app);
-    page.focus("#page");
-    page.press_with(Key::Character("k".into()), Modifiers::CONTROL);
-    assert!(
-        page.exists(PALETTE),
-        "Ctrl+K did not open it:\n{}",
-        page.tree()
-    );
 }

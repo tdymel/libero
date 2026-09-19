@@ -2,8 +2,8 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Checkbox, Flex},
-    hooks::use_focus_return,
+    components::{Button, Checkbox, Dialog, Flex},
+    hooks::{ModalScope, use_focus_return, use_modal},
 };
 
 use crate::Routes;
@@ -11,7 +11,34 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/focus-return", || rsx! { FiltersPage {} }),
     ("/focus-return/mounted", || rsx! { MountedPage {} }),
+    ("/focus-return/modal", || rsx! { ModalPage {} }),
 ];
+
+/// A modal behind a click, focus parked on `#elsewhere` first (todo 262(a)).
+#[component]
+fn ModalPage() -> Element {
+    let prompt = use_modal(|s: ModalScope<()>| {
+        rsx! {
+            Dialog {
+                title: "Unsaved changes",
+                Button { onclick: move |_| s.close(), "Keep editing" }
+            }
+        }
+    });
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            button { id: "elsewhere", "Elsewhere" }
+            Button {
+                id: "open-modal",
+                onclick: move |_| {
+                    prompt.open();
+                },
+                "Close editor"
+            }
+        }
+    }
+}
 
 /// The `remember(event)` arm: the trigger is named once from `onmounted`.
 #[component]

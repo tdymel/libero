@@ -1,8 +1,53 @@
 //! `use_focus_return`: the panel from its docs page hands focus back.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::keyboard::{self, ENTER, ESCAPE, TAB};
 use e2e::{Fixture, Viewport, wait};
+
+const TRIGGER: &str = "#open-modal";
+const DIALOG: &str = "[role=dialog]";
+
+/// Escape closes the modal, and focus lands back on its trigger.
+async fn escape_returns_to_the_trigger<D: Driver>(d: &mut D, opened_by: &str) -> Result<()> {
+    eventually(d, &format!("{opened_by} to open it"), async |d| {
+        d.exists(DIALOG).await
+    })
+    .await?;
+    d.press(ESCAPE).await?;
+    eventually(d, "Escape to close it", async |d| {
+        Ok(!d.exists(DIALOG).await?)
+    })
+    .await?;
+    eventually_focused(d, TRIGGER, "Escape").await
+}
+
+async fn click_opened<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    // Focus elsewhere first, so a stale snapshot has somewhere wrong to go.
+    d.click("#elsewhere").await?;
+    eventually_focused(d, "#elsewhere", "a click").await?;
+    d.click(TRIGGER).await?;
+    escape_returns_to_the_trigger(d, "a click").await
+}
+
+async fn key_opened<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#elsewhere").await?;
+    d.focus(TRIGGER).await?;
+    d.press(ENTER).await?;
+    escape_returns_to_the_trigger(d, "Enter").await
+}
+
+e2e::scenario!(
+    a_modal_opened_by_click_returns_focus_to_its_trigger,
+    "/focus-return/modal",
+    click_opened
+);
+e2e::scenario!(
+    a_modal_opened_by_keyboard_still_returns_focus_to_its_trigger,
+    "/focus-return/modal",
+    key_opened
+);
 
 async fn focused(page: &chromiumoxide::Page) -> String {
     page.evaluate("document.activeElement?.id ?? ''")

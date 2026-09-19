@@ -4,8 +4,24 @@
 use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually_focused};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Viewport, wait};
+
+/// Arrow Down enters the picker on the typed day, not on the grid cell the
+/// month shown before held.
+async fn arrow_down_enters_on_the_typed_day<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("input[role=combobox]").await?;
+    d.type_text("October 3, 2026").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_focused(d, "[data-date='2026-10-03']", "typing a day, ArrowDown").await
+}
+
+e2e::scenario!(
+    arrow_down_after_typing_enters_on_the_typed_day,
+    "/home-booking",
+    arrow_down_enters_on_the_typed_day
+);
 
 const TAB_BOOK: &str = "[role=tab][aria-selected=true]";
 const NAME: &str = "input[name=name]";

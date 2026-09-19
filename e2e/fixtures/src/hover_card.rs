@@ -1,10 +1,10 @@
 //! `HoverCard`.
 
 use dioxus::prelude::*;
-use libero::components::{Button, ColorCode, ColorField, Flex, HoverCard, Text};
+use libero::components::{Button, ColorCode, ColorField, Flex, HoverCard, Select, Text};
 use libero::hooks::Side;
 
-use crate::Routes;
+use crate::{Routes, common::Fruit};
 
 pub const ROUTES: Routes = &[
     ("/hover-card", || rsx! { HoverCardPage {} }),
@@ -15,7 +15,27 @@ pub const ROUTES: Routes = &[
     ("/hover-card-disable", || rsx! { DisableWhileOpenPage {} }),
     ("/hover-card-text", || rsx! { TextTriggerPage {} }),
     ("/hover-card-sides", || rsx! { SidesPage {} }),
+    ("/hover-card-select", || rsx! { SelectInCardPage {} }),
 ];
+
+/// A `Select` in the card, whose open list is a layer of its own (todo 348).
+#[component]
+fn SelectInCardPage() -> Element {
+    let mut value = use_signal(|| Some(Fruit::Apple));
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            HoverCard {
+                aria_label: "Ada Lovelace",
+                open_delay: 10,
+                close_delay: 10,
+                content: rsx! {
+                    Select { label: "Fruit", value: value(), onchange: move |next| value.set(next) }
+                },
+                Button { id: "trigger", "Ada Lovelace" }
+            }
+        }
+    }
+}
 
 /// A plain-text trigger, which no keyboard can focus (todo 523).
 #[component]

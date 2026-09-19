@@ -3,11 +3,70 @@
 //! focus. The card is portaled to the end of the document, so Tab has to be
 //! carried into it and back out past the trigger (todo 406).
 
+use anyhow::Result;
 use e2e::browser::block_on;
 use e2e::clock::HELD_CLOCK;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
+
+async fn shown<D: Driver>(d: &mut D, selector: &str, open: bool, after: &str) -> Result<()> {
+    let what = format!(
+        "{selector} {} after {after}",
+        if open { "open" } else { "closed" }
+    );
+    eventually(d, &what, async |d| Ok(d.exists(selector).await? == open)).await
+}
+
+async fn escape_on_the_trigger<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#trigger").await?;
+    d.hover("#trigger").await?;
+    shown(d, "[role=dialog]", true, "focus and hover").await?;
+    d.press(keyboard::ESCAPE).await?;
+    shown(d, "[role=dialog]", false, "Escape").await
+}
+
+async fn escape_with_focus_elsewhere<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#before").await?;
+    d.hover("#trigger").await?;
+    shown(d, "[role=dialog]", true, "hover").await?;
+    d.press(keyboard::ESCAPE).await?;
+    shown(d, "[role=dialog]", false, "Escape").await?;
+    eventually_focused(d, "#before", "Escape").await
+}
+
+async fn escape_closes_the_list_first<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.hover("#trigger").await?;
+    shown(d, "[role=dialog]", true, "hover").await?;
+    d.focus("[role=dialog] [role=combobox]").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    shown(d, "[role=listbox]", true, "ArrowDown").await?;
+    d.press(keyboard::ESCAPE).await?;
+    shown(d, "[role=listbox]", false, "Escape").await?;
+    assert!(
+        d.exists("[role=dialog]").await?,
+        "Escape closed the card with the list"
+    );
+    d.press(keyboard::ESCAPE).await?;
+    shown(d, "[role=dialog]", false, "the second Escape").await
+}
+
+e2e::scenario!(
+    escape_on_the_trigger_closes_a_pointer_opened_card,
+    "/hover-card",
+    escape_on_the_trigger
+);
+e2e::scenario!(
+    escape_closes_a_pointer_opened_card_with_focus_elsewhere,
+    "/hover-card",
+    escape_with_focus_elsewhere
+);
+e2e::scenario!(
+    escape_closes_a_select_list_in_the_card_before_the_card,
+    "/hover-card-select",
+    escape_closes_the_list_first
+);
 
 const TRIGGER: &str = "#trigger";
 const CARD: &str = "[role=dialog]";

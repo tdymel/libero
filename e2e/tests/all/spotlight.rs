@@ -14,8 +14,10 @@
 //! The search box's keys (the arrows wrap, Enter runs the highlighted row) and
 //! the Ctrl/Cmd+K hotkey are driven below with real key presses (todo 406).
 
+use anyhow::Result;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::{focus, keyboard::Key};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
@@ -33,6 +35,17 @@ const K: Key = Key {
     vk: 75,
     text: None,
 };
+
+async fn ctrl_k_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(TRIGGER).await?;
+    d.press_ctrl(K).await?;
+    eventually(d, "Ctrl+K to open the palette", async |d| {
+        d.exists(DIALOG).await
+    })
+    .await
+}
+
+e2e::scenario!(ctrl_k_opens_the_palette, "/spotlight", ctrl_k_opens);
 
 #[test]
 fn it_meets_the_baseline() {
