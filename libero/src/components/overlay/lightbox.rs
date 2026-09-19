@@ -7,9 +7,9 @@ use crate::{
         accessibility::{Announcer, use_announcer},
         buttons::ActionIcon,
         common::{
-            CloseIcon, Input, MinusIcon, PlusIcon, States, Variables, has_shortcut_modifier,
-            inset_focus_ring_sx, ring_overlay, ring_overlay_sx, states, use_name_warning,
-            variables,
+            CloseIcon, Input, MinusIcon, PlusIcon, SVG_FIT, States, Variables,
+            has_shortcut_modifier, inset_focus_ring_sx, ring_overlay, ring_overlay_sx, states,
+            svg_fit, svg_fit_sx, svg_fit_variables, use_name_warning, variables,
         },
         data_display::{Carousel, CarouselJump, CarouselQuietWhenFits},
         layout::Box,
@@ -133,6 +133,12 @@ static LIGHTBOX_FRAME_SX: StaticSx = StaticSx::new(|| {
             "& > :focus-visible ~ [data-ring]",
             inset_focus_ring_sx("-2px"),
         )
+        .when(
+            SVG_FIT,
+            sx().display("flex")
+                .align_items("center")
+                .justify_content("center"),
+        )
 });
 
 static LIGHTBOX_IMAGE_SX: StaticSx = StaticSx::new(|| {
@@ -154,6 +160,15 @@ static LIGHTBOX_IMAGE_SX: StaticSx = StaticSx::new(|| {
         .when("zoomed", drag_handle_sx().cursor("grab"))
         // A drag is the pointer's own position: easing towards it lags.
         .when("dragging", sx().cursor("grabbing").transition("none"))
+        // Natively the box is the picture itself, centred by the frame: Blitz's
+        // SVG `contain` then leaves no letterbox to misplace when zoomed (todo 920).
+        .when(
+            SVG_FIT,
+            sx().width("auto")
+                .height("auto")
+                .max_width("100%")
+                .max_height("100%"),
+        )
 });
 
 // The zoom buttons and the close button, laid out like `Dialog`'s own header.
@@ -215,6 +230,7 @@ static LIGHTBOX_THUMBNAIL_IMAGE_SX: StaticSx = StaticSx::new(|| {
         .width("100%")
         .height("100%")
         .object_fit("cover")
+        .when(SVG_FIT, svg_fit_sx())
 });
 
 /// What a zoom is bounded by: the frame, and the picture as it is shown in it.
@@ -668,11 +684,14 @@ fn lightbox_slide(
 
     let is_current = i == current;
     let zoomed = is_current && active.is_zoomed();
+    let fitted = svg_fit(&item.src);
+    let frame_states: Input<States> = states().with(SVG_FIT, fitted).into();
     let image_states: Input<States> = states()
         .with("zoomable", zoomable && !zoomed)
         .with("swipe", swipe && !zoomed)
         .with("zoomed", zoomed)
         .with("dragging", is_current && gesture().is_some())
+        .with(SVG_FIT, fitted)
         .into();
     let transform = match (is_current, swiping) {
         (false, _) => None,
@@ -690,8 +709,44 @@ fn lightbox_slide(
     // element that has loaded before, whatever `loading` says (todo 227).
     // `Carousel` keys its slide wrappers by position, so the strip and its
     // scroll stay put and only what is inside a wrapper is replaced.
+    // The wheel and the double-click are the frame's: natively a shrunk SVG
+    // leaves some of it round the picture (todo 920).
     rsx! {
-        Box { key: "{item.src}", framework_sx: &LIGHTBOX_FRAME_SX, "data-lightbox-frame": i,
+        Box {
+            key: "{item.src}",
+            framework_sx: &LIGHTBOX_FRAME_SX,
+            states: frame_states,
+            "data-lightbox-frame": i,
+            onwheel: move |event: Event<WheelData>| {
+                if !zoomable || i != *index.peek() {
+                    return;
+                }
+                event.prevent_default();
+                let closer = platform::wheel_travel_y(&event.data(), 1.0, 1.0) > 0.0;
+                let client = event.client_coordinates();
+                zoom_about(
+                    root,
+                    image,
+                    zooming,
+                    i,
+                    Some(DragPoint { x: client.x, y: client.y }),
+                    move |scale| wheel_step(scale, closer, max_zoom),
+                );
+            },
+            ondoubleclick: move |event: Event<MouseData>| {
+                if !zoomable || i != *index.peek() {
+                    return;
+                }
+                let client = event.client_coordinates();
+                zoom_about(
+                    root,
+                    image,
+                    zooming,
+                    i,
+                    Some(DragPoint { x: client.x, y: client.y }),
+                    move |scale| zooming.step_scale(scale),
+                );
+            },
             Box {
                 component: "img",
                 framework_sx: &LIGHTBOX_IMAGE_SX,
@@ -756,36 +811,6 @@ fn lightbox_slide(
                     }
                     event.prevent_default();
                 },
-                onwheel: move |event: Event<WheelData>| {
-                    if !zoomable || i != *index.peek() {
-                        return;
-                    }
-                    event.prevent_default();
-                    let closer = platform::wheel_travel_y(&event.data(), 1.0, 1.0) > 0.0;
-                    let client = event.client_coordinates();
-                    zoom_about(
-                        root,
-                        image,
-                        zooming,
-                        i,
-                        Some(DragPoint { x: client.x, y: client.y }),
-                        move |scale| wheel_step(scale, closer, max_zoom),
-                    );
-                },
-                ondoubleclick: move |event: Event<MouseData>| {
-                    if !zoomable || i != *index.peek() {
-                        return;
-                    }
-                    let client = event.client_coordinates();
-                    zoom_about(
-                        root,
-                        image,
-                        zooming,
-                        i,
-                        Some(DragPoint { x: client.x, y: client.y }),
-                        move |scale| zooming.step_scale(scale),
-                    );
-                },
                 // Panning without a drag: a click centres the spot clicked.
                 onclick: move |event: Event<MouseData>| {
                     if !zoomable || i != *index.peek() || *dragged.peek() || !zooming.held().is_zoomed() {
@@ -848,6 +873,13 @@ fn lightbox_thumbnails(
         .map(|(i, item)| {
             let is_current = i == current;
             let thumbnail_states: Input<States> = states().with("current", is_current).into();
+            let src = item
+                .thumbnail_src
+                .clone()
+                .unwrap_or_else(|| item.src.clone());
+            let image_states: Input<States> = states().with(SVG_FIT, svg_fit(&src)).into();
+            let image_variables: Input<Variables> =
+                svg_fit_variables(variables(), &src, "cover").into();
             rsx! {
                 Box {
                     component: "button",
@@ -878,7 +910,9 @@ fn lightbox_thumbnails(
                     Box {
                         component: "img",
                         framework_sx: &LIGHTBOX_THUMBNAIL_IMAGE_SX,
-                        src: item.thumbnail_src.clone().unwrap_or_else(|| item.src.clone()),
+                        states: image_states,
+                        variables: image_variables,
+                        src,
                         alt: "",
                         draggable: "false",
                     }

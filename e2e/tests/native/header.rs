@@ -2,8 +2,8 @@
 //! so the platform moves it to its scroller's top edge (todo 907).
 
 use dioxus::prelude::*;
+use e2e::native::{Page, mount};
 use libero::{components::Header, sx::sx};
-use native_tests::{Page, mount};
 
 fn page_banner() -> Element {
     rsx! {

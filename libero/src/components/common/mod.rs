@@ -13,6 +13,7 @@ mod orientation;
 mod polymorphic;
 mod rail;
 mod style_attributes;
+mod svg_fit;
 mod util;
 mod variant;
 mod variant_chrome;
@@ -50,6 +51,7 @@ pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attributes};
 pub(crate) use rail::{Rail, RailInset};
 pub(crate) use style_attributes::{ABSENT, StyleAttributes, use_style_attributes};
+pub(crate) use svg_fit::{SVG_FIT, svg_fit, svg_fit_sx, svg_fit_variables};
 pub(crate) use util::{
     NavigationChord, attr, borderless_on_state_sx, css_string, disabled_look_sx, focus_ring_sx,
     forced_on_sx, has_shortcut_modifier, inset_focus_ring_sx, navigation_chord, on_ring_sx,

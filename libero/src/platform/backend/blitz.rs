@@ -4,7 +4,11 @@ use std::{
     time::Duration,
 };
 
-use blitz_dom::{BaseDocument, QualName, local_name, ns};
+use blitz_dom::{
+    BaseDocument, QualName, local_name,
+    node::{ImageData, SpecialElementData},
+    ns,
+};
 use blitz_traits::shell;
 use dioxus::core::Runtime;
 use dioxus::prelude::*;
@@ -1890,14 +1894,22 @@ impl ElementApi for BlitzElement {
         })
     }
 
-    /// Only a raster picture carries its size; a decoded SVG answers
-    /// `NotFound`, as does an image still loading.
+    /// An SVG answers its CSS intrinsic size, as the web's `naturalWidth` does
+    /// (todo 920); an image still loading answers `NotFound`.
     fn natural_size(&self) -> Read<Dimensions> {
         self.read(|doc, node_id| {
-            let image = doc.get_node(node_id)?.element_data()?.raster_image_data()?;
+            let element = doc.get_node(node_id)?.element_data()?;
+            let SpecialElementData::Image(image) = &element.special_data else {
+                return None;
+            };
+            let (width, height) = match &**image {
+                ImageData::Raster(raster) => (raster.width as f32, raster.height as f32),
+                ImageData::Svg(svg) => svg.intrinsic_size(),
+                ImageData::None => return None,
+            };
             Some(Dimensions {
-                width: image.width as f64,
-                height: image.height as f64,
+                width: f64::from(width),
+                height: f64::from(height),
             })
         })
     }

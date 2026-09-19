@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            ClassList, HtmlTag, Input, States, Variables, base_props, focus_ring_sx,
-            input_from_str, states, variables,
+            ClassList, HtmlTag, Input, SVG_FIT, States, Variables, base_props, focus_ring_sx,
+            input_from_str, states, svg_fit, svg_fit_sx, svg_fit_variables, variables,
         },
         layout::use_box,
     },
@@ -48,7 +48,19 @@ static IMAGE_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("fit-cover", sx().object_fit("cover"))
         .when("fit-none", sx().object_fit("none"))
         .when("fit-scale-down", sx().object_fit("scale-down"))
+        .when(SVG_FIT, svg_fit_sx())
 });
+
+/// `fit` as the `background-size` an SVG is drawn in natively. `scale-down` is
+/// `contain` there: a background cannot stop at its natural size.
+fn background_size(fit: ImageFit) -> &'static str {
+    match fit {
+        ImageFit::Fill => "100% 100%",
+        ImageFit::Contain | ImageFit::ScaleDown => "contain",
+        ImageFit::Cover => "cover",
+        ImageFit::None => "auto",
+    }
+}
 
 static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
@@ -158,7 +170,12 @@ pub fn Image(props: ImageProps) -> Element {
     };
 
     let fit = props.fit.copied_or(use_theme().image.fit);
-    let variables: Input<Variables> = image_variables(props.radius.as_ref().copied()).into();
+    let variables: Input<Variables> = svg_fit_variables(
+        image_variables(props.radius.as_ref().copied()),
+        &src,
+        background_size(fit),
+    )
+    .into();
 
     let on_error_src = props.src.clone();
 
@@ -174,23 +191,18 @@ pub fn Image(props: ImageProps) -> Element {
     // `ZoomButton`, which takes the caller's styling, when it can.
     let no_class = Input::None;
     let no_sx = Input::None;
-    let (class, user_sx, img_states): (_, _, Input<States>) = match zoomable {
-        true => (
-            &no_class,
-            &no_sx,
-            states().with(fit.state_name(), true).into(),
-        ),
+    let (class, user_sx, img_states) = match zoomable {
+        true => (&no_class, &no_sx, states()),
         false => (
             &props.class,
             &props.sx,
-            props
-                .states
-                .clone()
-                .unwrap_or_default()
-                .with(fit.state_name(), true)
-                .into(),
+            props.states.clone().unwrap_or_default(),
         ),
     };
+    let img_states: Input<States> = img_states
+        .with(fit.state_name(), true)
+        .with(SVG_FIT, svg_fit(&src))
+        .into();
     let image = use_box()
         .framework_sx(&IMAGE_BASE_SX)
         .class(class)

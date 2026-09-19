@@ -39,6 +39,7 @@ use blitz_traits::{
         KeyState, MouseEventButton, MouseEventButtons, Point, PointerCoords, PointerDetails,
         UiEvent,
     },
+    net::{Bytes, NetHandler, NetProvider, Request},
     shell::{ShellProvider, Viewport},
 };
 use dioxus::prelude::*;
@@ -81,6 +82,7 @@ pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
         DocumentConfig {
             viewport: Some(viewport(scheme)),
             html_parser_provider: Some(Arc::new(blitz_html::HtmlProvider)),
+            net_provider: Some(Arc::new(DataUrls)),
             ..Default::default()
         },
     );
@@ -105,6 +107,46 @@ impl ShellProvider for Redraws {
     fn request_redraw(&self) {
         self.0.fetch_add(1, Ordering::Relaxed);
     }
+}
+
+/// The network: only `data:` URLs, answered at once, so a test's pictures load
+/// (`data:image/svg+xml,<svg ...>`, percent-escapes allowed; no base64).
+struct DataUrls;
+
+impl NetProvider for DataUrls {
+    fn fetch(&self, _doc_id: usize, request: Request, handler: Box<dyn NetHandler>) {
+        let url = request.url.as_str();
+        let Some((_, payload)) = url
+            .strip_prefix("data:")
+            .and_then(|rest| rest.split_once(','))
+        else {
+            return;
+        };
+        handler.bytes(url.to_string(), Bytes::from(percent_decode(payload)));
+    }
+}
+
+fn percent_decode(text: &str) -> Vec<u8> {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        let escaped = (bytes[i] == b'%')
+            .then(|| text.get(i + 1..i + 3))
+            .flatten()
+            .and_then(|hex| u8::from_str_radix(hex, 16).ok());
+        match escaped {
+            Some(byte) => {
+                out.push(byte);
+                i += 3;
+            }
+            None => {
+                out.push(bytes[i]);
+                i += 1;
+            }
+        }
+    }
+    out
 }
 
 /// A painted colour in `computed`'s notation, so the two compare.

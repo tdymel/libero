@@ -3,11 +3,11 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            HtmlTag, Input, PersonIcon, States, Variables, Variant, VariantVars, base_color,
-            base_props, contrast_color, fill_color, text_color, variables, variant_chrome_sx,
-            variant_colors,
+            HtmlTag, Input, PersonIcon, SVG_FIT, States, Variables, Variant, VariantVars,
+            base_color, base_props, contrast_color, fill_color, svg_fit, svg_fit_sx,
+            svg_fit_variables, text_color, variables, variant_chrome_sx, variant_colors,
         },
-        layout::use_box,
+        layout::{Box, use_box},
     },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -100,6 +100,8 @@ pub(super) fn avatar_sx() -> Sx {
 }
 
 static AVATAR_BASE_SX: StaticSx = StaticSx::new(avatar_sx);
+
+static AVATAR_IMAGE_SX: StaticSx = StaticSx::new(|| sx().when(SVG_FIT, svg_fit_sx()));
 
 /// The colour set the variant chrome reads, plus the radius override. Takes
 /// resolved values rather than the props struct, because the group's overflow
@@ -197,8 +199,15 @@ pub fn Avatar(props: AvatarProps) -> Element {
     let content = match (src, failed) {
         (Some(src), false) => {
             let errored = src.clone();
+            let image_states: Input<States> = States::default().with(SVG_FIT, svg_fit(&src)).into();
+            let image_variables: Input<Variables> =
+                svg_fit_variables(Variables::new(), &src, "cover").into();
             rsx! {
-                img {
+                Box {
+                    component: "img",
+                    framework_sx: &AVATAR_IMAGE_SX,
+                    states: image_states,
+                    variables: image_variables,
                     src,
                     // The root is the `role="img"`, so the picture inside it
                     // is presentational rather than a second image.

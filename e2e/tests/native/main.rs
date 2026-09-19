@@ -43,6 +43,7 @@ mod spotlight;
 mod stale_colors;
 mod stale_text;
 mod stepper;
+mod svg_fit;
 mod switch;
 mod table;
 mod theme_toggle;

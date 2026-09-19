@@ -189,6 +189,10 @@ pub(crate) const LAYS_OUT_CAPTIONS: bool =
 pub(crate) const DRAWS_BACKDROP_FILTER: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz draws every SVG `<img>` `contain`; see [`fits_svg_images`](crate::platform::fits_svg_images).
+pub(crate) const FITS_SVG_IMAGES: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 /// Blitz draws no `placeholder`; see [`draws_placeholders`](crate::platform::draws_placeholders).
 pub(crate) const DRAWS_PLACEHOLDERS: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));

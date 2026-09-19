@@ -71,7 +71,7 @@ pub(crate) use keyboard::typing_target;
 pub(crate) use keyboard::warn_reserved_chord;
 pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};
 pub(crate) use motion::prefers_reduced_motion;
-pub(crate) use paint::draws_backdrop_filter;
+pub(crate) use paint::{draws_backdrop_filter, fits_svg_images};
 pub(crate) use placeholder::{
     PLACEHOLDER_ATTR, PLACEHOLDER_CELL_ATTR, PLACEHOLDER_SHOWN_ATTR, draws_placeholders,
     placeholder_drawn,

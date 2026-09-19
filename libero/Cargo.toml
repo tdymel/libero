@@ -60,7 +60,8 @@ chrono = { version = "0.4", default-features = false, features = ["std", "clock"
 dioxus-native-dom = { git = "https://github.com/DioxusLabs/dioxus", optional = true }
 # `NodeHandle` hands back a `BaseDocument`, which `dioxus-native-dom` does not
 # re-export. Same crates.io version as dioxus-native's, so cargo keeps one copy.
-blitz-dom = { version = "0.3.0-beta.2", optional = true, default-features = false }
+# `svg` (on in dioxus-native's too): `natural_size` reads an SVG picture's size.
+blitz-dom = { version = "0.3.0-beta.2", optional = true, default-features = false, features = ["svg"] }
 blitz-traits = { version = "0.3.0-beta.2", optional = true }
 # Only to name `ShellProvider::set_cursor`'s argument; blitz-traits' own copy.
 cursor-icon = { version = "1.2", optional = true }
