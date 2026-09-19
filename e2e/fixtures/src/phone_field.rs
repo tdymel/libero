@@ -17,7 +17,26 @@ pub const ROUTES: Routes = &[
         || rsx! { PhoneFieldReadonlyPage {} },
     ),
     ("/phone-field/german", || rsx! { PhoneFieldGermanPage {} }),
+    ("/phone-field/echo", || rsx! { PhoneFieldEchoPage {} }),
 ];
+
+/// Germany, the E.164 value echoed in `#echo`, for the shared web/native scenarios.
+#[component]
+fn PhoneFieldEchoPage() -> Element {
+    let mut value = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            PhoneField {
+                label: "Phone",
+                country: "DE",
+                value: value(),
+                oninput: move |next: String| value.set(next),
+            }
+            Text { id: "echo", "{value}" }
+        }
+    }
+}
 
 /// The German country names, which sort elsewhere than the English ones.
 #[component]

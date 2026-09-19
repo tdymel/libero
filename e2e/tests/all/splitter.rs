@@ -3,12 +3,93 @@
 //! `use_drag` cancels the pointerdown, and with it the browser's own focus, so
 //! the hook focuses the pressed divider itself (todo 439c).
 
+use anyhow::{Context, Result};
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const DIVIDER: &str = "[role=separator]";
 const VALUE_NOW: &str = "document.querySelector('[role=separator]').getAttribute('aria-valuenow')";
+
+async fn value<D: Driver>(d: &mut D) -> Result<f64> {
+    let now = d
+        .attr(DIVIDER, "aria-valuenow")
+        .await?
+        .context("no aria-valuenow")?;
+    Ok(now.parse()?)
+}
+
+/// Waits until the divider's value passes `holds`, naming `what`.
+async fn moved<D: Driver>(d: &mut D, what: &str, holds: impl Fn(f64) -> bool) -> Result<f64> {
+    eventually(d, what, async |d| Ok(holds(value(d).await?))).await?;
+    value(d).await
+}
+
+async fn a_drag_leaves_it_focused<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#before").await?;
+    let start = value(d).await?;
+    d.drag(DIVIDER, 40.0, 0.0).await?;
+    let dragged = moved(d, "the drag to move it right", |v| v > start + 5.0).await?;
+    eventually_focused(d, DIVIDER, "a drag").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    moved(d, "ArrowRight to move it", |v| v > dragged).await?;
+    Ok(())
+}
+
+async fn a_double_click_collapses<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.double_click(DIVIDER).await?;
+    moved(d, "a double-click to collapse pane A", |v| v == 10.0).await?;
+    d.double_click(DIVIDER).await?;
+    moved(d, "a second double-click to restore it", |v| v == 50.0).await?;
+    Ok(())
+}
+
+async fn rtl_rightwards_shrinks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(DIVIDER).await?;
+    let start = value(d).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    let pressed = moved(d, "ArrowRight to shrink pane A", |v| v < start).await?;
+    d.drag(DIVIDER, 40.0, 0.0).await?;
+    moved(d, "a rightward drag to shrink pane A", |v| {
+        v < pressed - 5.0
+    })
+    .await?;
+    Ok(())
+}
+
+async fn the_keys_move_it<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(DIVIDER).await?;
+    let start = value(d).await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    moved(d, "ArrowLeft to move it", |v| v < start).await?;
+    d.press(keyboard::HOME).await?;
+    let min = moved(d, "Home to reach the floor", |v| v <= 10.0).await?;
+    d.press(keyboard::END).await?;
+    moved(d, "End to move it past Home", |v| v > min).await?;
+    Ok(())
+}
+
+e2e::scenario!(
+    a_drag_moves_the_divider_and_leaves_it_focused,
+    "/splitter",
+    a_drag_leaves_it_focused
+);
+e2e::scenario!(
+    a_double_click_collapses_pane_a_and_restores_it,
+    "/splitter",
+    a_double_click_collapses
+);
+e2e::scenario!(
+    under_rtl_rightwards_shrinks_pane_a,
+    "/splitter/rtl",
+    rtl_rightwards_shrinks
+);
+e2e::scenario!(
+    the_arrows_and_home_end_move_a_focused_divider,
+    "/splitter",
+    the_keys_move_it
+);
 
 #[test]
 fn it_meets_the_baseline() {

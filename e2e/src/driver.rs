@@ -40,6 +40,8 @@ pub trait Driver {
     async fn click(&mut self, selector: &str) -> Result<()>;
     /// Moves the pointer onto the first match's centre, pressing nothing.
     async fn hover(&mut self, selector: &str) -> Result<()>;
+    /// Two clicks at the first match's centre, the second a `dblclick`.
+    async fn double_click(&mut self, selector: &str) -> Result<()>;
     /// A click at a viewport point, e.g. on a backdrop.
     async fn click_at(&mut self, x: f64, y: f64) -> Result<()>;
     /// The viewport's `(width, height)` in CSS px.
@@ -107,6 +109,29 @@ pub async fn eventually_focused<D: Driver>(d: &mut D, selector: &str, during: &s
             "{:?}: after {during}, focus is on {}, not {selector}",
             d.platform(),
             d.focus_owner().await?
+        );
+    }
+    Ok(())
+}
+
+/// `selector`'s text reads `expected`, or fails naming what it reads.
+pub async fn eventually_text<D: Driver>(
+    d: &mut D,
+    selector: &str,
+    expected: &str,
+    during: &str,
+) -> Result<()> {
+    let settled = eventually(
+        d,
+        &format!("{selector} to read {expected:?} after {during}"),
+        async |d| Ok(d.text(selector).await? == expected),
+    )
+    .await;
+    if settled.is_err() {
+        bail!(
+            "{:?}: after {during}, {selector} reads {:?}, not {expected:?}",
+            d.platform(),
+            d.text(selector).await?
         );
     }
     Ok(())
@@ -202,6 +227,10 @@ mod web {
 
         async fn hover(&mut self, selector: &str) -> Result<()> {
             pointer::hover(&self.fixture.page, selector).await
+        }
+
+        async fn double_click(&mut self, selector: &str) -> Result<()> {
+            pointer::double_click(&self.fixture.page, selector).await
         }
 
         async fn click_at(&mut self, x: f64, y: f64) -> Result<()> {
@@ -342,6 +371,12 @@ mod native {
 
         async fn hover(&mut self, selector: &str) -> Result<()> {
             self.page.hover(selector);
+            Ok(())
+        }
+
+        async fn double_click(&mut self, selector: &str) -> Result<()> {
+            self.page.click(selector);
+            self.page.click(selector);
             Ok(())
         }
 

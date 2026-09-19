@@ -1,5 +1,5 @@
-//! `Table`'s sort arrow turns by a state-driven `transform` when the sort
-//! flips to descending.
+//! `Table` as Blitz lays it out and paints it: the row line, the div caption,
+//! the painted arrow. The computed arrow turn is e2e's (`table::`).
 
 use dioxus::prelude::*;
 use libero::components::{Table, column};
@@ -11,7 +11,6 @@ struct Person {
     age: u32,
 }
 
-const HEADER: &str = "th[data-sortable]";
 const BUTTON: &str = "th[data-sortable] button";
 const ARROW: &str = "th[data-sortable] svg";
 
@@ -35,28 +34,6 @@ fn app() -> Element {
             ],
         }
     }
-}
-
-#[test]
-fn the_arrow_turns_when_the_sort_flips() {
-    let mut page = mount(app);
-    page.click(BUTTON);
-    page.advance(1.0);
-    assert_eq!(
-        page.attr(HEADER, "aria-sort").as_deref(),
-        Some("ascending"),
-        "{}",
-        page.tree()
-    );
-    let ascending = page.computed(ARROW, "transform");
-    page.click(BUTTON);
-    page.advance(1.0);
-    assert_eq!(
-        page.attr(HEADER, "aria-sort").as_deref(),
-        Some("descending")
-    );
-    let descending = page.computed(ARROW, "transform");
-    assert_ne!(ascending, descending, "the arrow stayed at {ascending}");
 }
 
 /// Todo 772: Blitz's collapsing model painted a 3px black grid from the first

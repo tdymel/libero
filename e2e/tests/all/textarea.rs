@@ -4,9 +4,23 @@
 //! `/textarea/counter`: a controlled textarea, then one owning its own text,
 //! both `maxlength="20"`.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually_text};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, wait};
+
+async fn typing_reaches_the_value<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("textarea").await?;
+    d.type_text("hi").await?;
+    eventually_text(d, "#echo", "hi", "typing hi").await
+}
+
+e2e::scenario!(
+    typing_into_a_textarea_reaches_its_value,
+    "/textarea/echo",
+    typing_reaches_the_value
+);
 
 /// The counter and the status text of the field around textarea `index`.
 fn counter_reads(index: usize, count: &str, spoken: &str) -> String {

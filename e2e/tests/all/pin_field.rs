@@ -2,13 +2,33 @@
 //! first cell (todo 483); modifier chords are the browser's (todo 509); what a
 //! cell shows is the pin, however the character arrived (todo 449).
 
+use anyhow::Result;
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::input::InsertTextParams;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually_focused, eventually_text};
 use e2e::passes::keyboard;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const CELL: &str = "[role=group] input";
+
+async fn one_digit_per_cell<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(CELL).await?;
+    d.type_text("12").await?;
+    eventually_text(d, "#echo", "12", "typing 12").await?;
+    eventually_focused(d, "[data-pin-index='2']", "two digits").await?;
+    // The first press only moves back from the empty third cell.
+    d.press(keyboard::BACKSPACE).await?;
+    d.press(keyboard::BACKSPACE).await?;
+    eventually_text(d, "#echo", "1", "two Backspaces").await?;
+    eventually_focused(d, "[data-pin-index='0']", "two Backspaces").await
+}
+
+e2e::scenario!(
+    a_pin_field_takes_one_digit_per_cell_and_moves_on,
+    "/pin-field/echo",
+    one_digit_per_cell
+);
 
 /// Todo 507: every cell is named, so axe `label` holds.
 #[test]

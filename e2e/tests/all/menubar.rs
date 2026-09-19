@@ -5,8 +5,10 @@
 //! it opens is a dismissible popup whose Escape returns focus to its trigger.
 //! Neither contract knows about the other, which is the composition working.
 
+use anyhow::Result;
 use e2e::archetypes::{Orientation, Overlay, RovingTabindex};
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -14,6 +16,92 @@ use e2e::{Fixture, Suite, Viewport, wait};
 pub const TRIGGERS: &str = "[role=menubar] [data-menubar-index]";
 const FIRST: &str = "[role=menubar] [data-menubar-index=\"0\"]";
 const MENU: &str = "[role=menu]";
+
+fn trigger(index: usize) -> String {
+    format!("[role=menubar] [data-menubar-index=\"{index}\"]")
+}
+
+/// Menu `index` is the one open menu.
+async fn only_open<D: Driver>(d: &mut D, index: usize, after: &str) -> Result<()> {
+    let open = format!("{}[aria-expanded=true]", trigger(index));
+    let other = format!("{TRIGGERS}[aria-expanded=true]:not([data-menubar-index=\"{index}\"])");
+    eventually(
+        d,
+        &format!("only menu {index} open after {after}"),
+        async |d| Ok(d.exists(&open).await? && !d.exists(&other).await? && d.exists(MENU).await?),
+    )
+    .await
+}
+
+async fn the_arrows_rove<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(&trigger(0)).await?;
+    for (key, name, to) in [
+        (keyboard::ARROW_RIGHT, "ArrowRight", 1),
+        (keyboard::ARROW_RIGHT, "ArrowRight", 2),
+        (keyboard::ARROW_RIGHT, "ArrowRight", 3),
+        (keyboard::ARROW_RIGHT, "ArrowRight", 0),
+        (keyboard::ARROW_LEFT, "ArrowLeft", 3),
+        (keyboard::HOME, "Home", 0),
+        (keyboard::END, "End", 3),
+    ] {
+        d.press(key).await?;
+        eventually_focused(d, &trigger(to), name).await?;
+    }
+    assert!(!d.exists(MENU).await?, "roving opened a menu");
+    Ok(())
+}
+
+async fn arrow_down_opens_and_escape_returns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(&trigger(1)).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    only_open(d, 1, "ArrowDown").await?;
+    eventually_focused(d, "[role=menuitem]", "ArrowDown").await?;
+    d.press(keyboard::ESCAPE).await?;
+    eventually(d, "Escape to close it", async |d| {
+        Ok(!d.exists(MENU).await?)
+    })
+    .await?;
+    eventually_focused(d, &trigger(1), "Escape").await
+}
+
+async fn right_opens_the_next<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(&trigger(0)).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    only_open(d, 0, "ArrowDown").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    only_open(d, 1, "ArrowRight").await
+}
+
+async fn hovering_switches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(&trigger(0)).await?;
+    only_open(d, 0, "a click").await?;
+    for index in [1, 0, 3] {
+        d.hover(&trigger(index)).await?;
+        only_open(d, index, &format!("hovering {index}")).await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    the_arrows_rove_along_the_bar_and_wrap,
+    "/menubar-docs",
+    the_arrows_rove
+);
+e2e::scenario!(
+    arrow_down_opens_a_menu_and_escape_hands_focus_back,
+    "/menubar-docs",
+    arrow_down_opens_and_escape_returns
+);
+e2e::scenario!(
+    right_in_an_open_menu_opens_the_next_one,
+    "/menubar-docs",
+    right_opens_the_next
+);
+e2e::scenario!(
+    hovering_another_trigger_switches_the_open_menu,
+    "/menubar-docs",
+    hovering_switches
+);
 
 #[test]
 fn it_meets_the_baseline() {
@@ -141,10 +229,6 @@ fn shortcut_chords_pass_through() {
         fixture.close().await.unwrap();
         outcome.unwrap();
     });
-}
-
-fn trigger(index: usize) -> String {
-    format!("[role=menubar] [data-menubar-index=\"{index}\"]")
 }
 
 /// Which triggers read `aria-expanded="true"`, as "0 1 2 3" flags.

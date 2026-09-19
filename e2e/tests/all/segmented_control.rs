@@ -4,8 +4,10 @@
 //! to assistive technology and to the keyboard - not a tab strip, whatever it
 //! looks like.
 
+use anyhow::Result;
 use e2e::archetypes::RadioSet;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually_focused, eventually_text};
 use e2e::suite::Step;
 use e2e::{
     Fixture, Suite, Viewport,
@@ -14,6 +16,83 @@ use e2e::{
 
 pub const RADIOS: &str = "[role=radiogroup] input[type=radio]";
 const CHECKED: &str = "[role=radiogroup] input[type=radio]:checked";
+
+/// The checked segment's label, not `:checked`: natively that did not follow
+/// ArrowRight.
+async fn selected<D: Driver>(d: &mut D, expected: &str, after: &str) -> Result<()> {
+    let label = "[role=radiogroup] label[data-state~=checked]";
+    eventually_text(d, label, expected, after).await
+}
+
+async fn a_label_click_selects<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    selected(d, "Center", "mounting").await?;
+    d.click("input[type=radio] + label").await?;
+    selected(d, "Left", "a click on Left's label").await
+}
+
+async fn the_arrows_move_focus_and_wrap<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("input[aria-label=Center]").await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    selected(d, "Right", "ArrowRight").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    selected(d, "Left", "two ArrowLefts").await?;
+    eventually_focused(d, "input[aria-label=Left]", "two ArrowLefts").await?;
+    d.press(keyboard::ARROW_LEFT).await?;
+    selected(d, "Right", "ArrowLeft from Left").await?;
+    eventually_focused(d, "input[aria-label=Right]", "ArrowLeft from Left").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    selected(d, "Left", "ArrowDown from Right").await
+}
+
+async fn enter_picks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("input[aria-label=Left]").await?;
+    d.press(keyboard::ENTER).await?;
+    selected(d, "Left", "Enter on Left").await
+}
+
+async fn enter_submits_in_a_form<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("input[aria-label=Left]").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, "#submits", "Submits 1", "Enter on Left").await?;
+    selected(d, "Center", "Enter in a form").await
+}
+
+async fn one_tab_stop<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#before").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "input[aria-label=Center]", "Tab").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#after", "the second Tab").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, "input[aria-label=Center]", "Shift+Tab").await
+}
+
+e2e::scenario!(
+    a_click_on_a_segment_label_selects_it,
+    "/segmented-control",
+    a_label_click_selects
+);
+e2e::scenario!(
+    the_arrows_move_focus_with_the_selection_and_wrap,
+    "/segmented-control",
+    the_arrows_move_focus_and_wrap
+);
+e2e::scenario!(
+    enter_picks_the_focused_segment,
+    "/segmented-control",
+    enter_picks
+);
+e2e::scenario!(
+    enter_in_a_form_submits_and_picks_nothing,
+    "/segmented-control/form",
+    enter_submits_in_a_form
+);
+e2e::scenario!(
+    tab_enters_on_the_checked_segment_and_leaves_with_the_next_tab,
+    "/segmented-control",
+    one_tab_stop
+);
 /// What the "right" state waits on: the last segment's label, checked. Not
 /// `CHECKED`, since the radio is visually hidden and never counts as visible,
 /// and not any checked label, since the middle one is checked at rest.

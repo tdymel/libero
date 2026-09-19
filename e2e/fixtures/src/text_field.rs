@@ -4,7 +4,7 @@
 
 use dioxus::prelude::*;
 use libero::components::{
-    Fieldset, Flex, Form, PasswordField, Rule, TextField, Textarea, not_empty,
+    Fieldset, Flex, Form, PasswordField, Rule, Text, TextField, Textarea, not_empty,
 };
 
 use crate::Routes;
@@ -12,7 +12,34 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/text-field", || rsx! { TextFieldPage {} }),
     ("/text-field/form", || rsx! { PasswordFormPage {} }),
+    ("/text-field/echo", || rsx! { TextFieldEchoPage {} }),
+    ("/text-field/password-echo", || rsx! { PasswordEchoPage {} }),
 ];
+
+/// The typed value echoed in `#echo`, for the shared web/native scenarios.
+#[component]
+fn TextFieldEchoPage() -> Element {
+    let mut value = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TextField { label: "Name", value: value(), oninput: move |next| value.set(next) }
+            Text { id: "echo", "{value}" }
+        }
+    }
+}
+
+#[component]
+fn PasswordEchoPage() -> Element {
+    let mut value = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            PasswordField { label: "Password", value: value(), oninput: move |next| value.set(next) }
+            Text { id: "echo", "{value}" }
+        }
+    }
+}
 
 #[component]
 fn TextFieldPage() -> Element {

@@ -4,8 +4,44 @@
 use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text};
 use e2e::passes::{contrast, focus, keyboard};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
+
+async fn typing_reaches_the_value<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("input").await?;
+    eventually_focused(d, "input", "a click").await?;
+    d.type_text("Ada").await?;
+    eventually_text(d, "#echo", "Ada", "typing Ada").await?;
+    d.press(keyboard::BACKSPACE).await?;
+    eventually_text(d, "#echo", "Ad", "Backspace").await
+}
+
+async fn the_reveal_shows_it<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const REVEAL: &str = "button[aria-label='Show password']";
+    d.click("input").await?;
+    d.type_text("pw").await?;
+    eventually_text(d, "#echo", "pw", "typing pw").await?;
+    assert_eq!(d.attr("input", "type").await?.as_deref(), Some("password"));
+    d.click(REVEAL).await?;
+    eventually(d, "the input to turn to text", async |d| {
+        Ok(d.attr("input", "type").await?.as_deref() == Some("text"))
+    })
+    .await?;
+    assert!(d.exists(&format!("{REVEAL}[aria-pressed='true']")).await?);
+    Ok(())
+}
+
+e2e::scenario!(
+    typing_into_a_text_field_reaches_its_value,
+    "/text-field/echo",
+    typing_reaches_the_value
+);
+e2e::scenario!(
+    the_reveal_button_shows_a_password,
+    "/text-field/password-echo",
+    the_reveal_shows_it
+);
 
 /// The caller's description first, then the captions in order; a rule's
 /// message shows on blur and goes once the text passes it.

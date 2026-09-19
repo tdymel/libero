@@ -6,12 +6,61 @@
 use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_text};
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const INPUT: &str = "#quantity";
 const PLUS: &str = "button[aria-label=Increase]";
 const MINUS: &str = "button[aria-label=Decrease]";
+const SPIN: &str = "input[role=spinbutton]";
+
+async fn the_steppers_step<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(PLUS).await?;
+    eventually_text(d, "#echo", "4", "one Increase").await?;
+    d.click(PLUS).await?;
+    eventually_text(d, "#echo", "5", "two Increases").await?;
+    eventually(d, "aria-valuenow 5", async |d| {
+        Ok(d.attr(SPIN, "aria-valuenow").await?.as_deref() == Some("5"))
+    })
+    .await?;
+    d.click(MINUS).await?;
+    eventually_text(d, "#echo", "4", "Decrease").await
+}
+
+async fn the_arrows_step<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(SPIN).await?;
+    d.press(keyboard::ARROW_UP).await?;
+    eventually_text(d, "#echo", "4", "ArrowUp").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually_text(d, "#echo", "2", "two ArrowDowns").await
+}
+
+async fn typing_commits<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(SPIN).await?;
+    d.press(keyboard::END).await?;
+    d.press(keyboard::BACKSPACE).await?;
+    d.type_text("42").await?;
+    d.press(keyboard::ENTER).await?;
+    eventually_text(d, "#echo", "42", "typing 42, Enter").await
+}
+
+e2e::scenario!(
+    the_steppers_step_a_number_field,
+    "/number-field/echo",
+    the_steppers_step
+);
+e2e::scenario!(
+    the_arrows_step_a_focused_number_field,
+    "/number-field/echo",
+    the_arrows_step
+);
+e2e::scenario!(
+    typing_a_number_commits_it,
+    "/number-field/echo",
+    typing_commits
+);
 
 #[test]
 fn the_steppers_and_the_arrows_step_from_the_current_value() {

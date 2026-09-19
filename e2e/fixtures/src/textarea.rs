@@ -2,7 +2,7 @@
 //! own text (todo 584), and one in a `Form` that resets (todo 679).
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Form, Textarea, use_form};
+use libero::components::{Button, Flex, Form, Text, Textarea, use_form};
 
 use crate::Routes;
 
@@ -10,7 +10,21 @@ pub const ROUTES: Routes = &[
     ("/textarea/counter", || rsx! { CounterPage {} }),
     ("/textarea/reset", || rsx! { ResetPage {} }),
     ("/textarea/raw-reset", || rsx! { RawResetPage {} }),
+    ("/textarea/echo", || rsx! { EchoPage {} }),
 ];
+
+/// The typed value echoed in `#echo`, for the shared web/native scenarios.
+#[component]
+fn EchoPage() -> Element {
+    let mut value = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Textarea { label: "Note", value: value(), oninput: move |next| value.set(next) }
+            Text { id: "echo", "{value}" }
+        }
+    }
+}
 
 /// Todo 685: a raw `<form>`, no libero `Form`, reset by its own button.
 #[component]

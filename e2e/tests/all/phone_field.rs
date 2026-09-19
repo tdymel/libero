@@ -1,13 +1,27 @@
 //! `PhoneField`: the country picker, its searchable list and the `tel` input.
 
+use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually_text};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, ax, passes::keyboard, passes::pointer, wait};
 
 const PICKER: &str = "button[aria-haspopup=listbox]";
 const SEARCH: &str = "input[role=combobox]";
 const TEL: &str = "input[type=tel]";
+
+async fn typing_reaches_e164<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TEL).await?;
+    d.type_text("301234").await?;
+    eventually_text(d, "#echo", "+49301234", "typing 301234").await
+}
+
+e2e::scenario!(
+    typing_a_phone_number_reaches_its_e164_value,
+    "/phone-field/echo",
+    typing_reaches_e164
+);
 
 #[test]
 fn it_meets_the_baseline() {

@@ -1,9 +1,11 @@
 //! `Stepper`: a "Continue" inside the current step's content moves the step
 //! on, and focus returns to the step the user is now on (todo 406).
 
+use anyhow::Result;
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -13,6 +15,68 @@ const ROUTES: [&str; 2] = ["/stepper", "/stepper-vertical"];
 fn header(index: usize) -> String {
     format!("#stepper-step-{index}")
 }
+
+async fn current<D: Driver>(d: &mut D, index: usize, after: &str) -> Result<()> {
+    let step = header(index);
+    eventually(d, &format!("{step} current after {after}"), async |d| {
+        Ok(d.attr(&step, "aria-current").await?.as_deref() == Some("step"))
+    })
+    .await
+}
+
+async fn enter_on_continue_returns_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for (button, landing) in [("#next-0", 1), ("#next-1", 2), ("#finish", 2)] {
+        d.focus(button).await?;
+        d.press(keyboard::ENTER).await?;
+        eventually_focused(d, &header(landing), &format!("Enter on {button}")).await?;
+        if button == "#next-0" {
+            current(d, 1, "Enter on #next-0").await?;
+        }
+    }
+    Ok(())
+}
+
+async fn a_click_on_continue_returns_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#next-0").await?;
+    eventually_focused(d, &header(1), "a click on #next-0").await
+}
+
+async fn a_done_header_click_moves_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#next-0").await?;
+    eventually(d, "the second step", async |d| d.exists("#next-1").await).await?;
+    d.click(&header(0)).await?;
+    current(d, 0, "a click on the first header").await?;
+    eventually(d, "the first step's content", async |d| {
+        d.exists("#next-0").await
+    })
+    .await
+}
+
+e2e::scenario!(
+    moving_on_returns_focus_to_the_current_step_horizontally,
+    "/stepper",
+    enter_on_continue_returns_focus
+);
+e2e::scenario!(
+    moving_on_returns_focus_to_the_current_step_vertically,
+    "/stepper-vertical",
+    enter_on_continue_returns_focus
+);
+e2e::scenario!(
+    a_clicked_continue_returns_focus_horizontally,
+    "/stepper",
+    a_click_on_continue_returns_focus
+);
+e2e::scenario!(
+    a_clicked_continue_returns_focus_vertically,
+    "/stepper-vertical",
+    a_click_on_continue_returns_focus
+);
+e2e::scenario!(
+    a_click_on_a_done_step_header_moves_back_there,
+    "/stepper",
+    a_done_header_click_moves_back
+);
 
 fn suite(name: &'static str, route: &'static str) -> Suite {
     Suite::new(name, route)

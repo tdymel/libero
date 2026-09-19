@@ -1,12 +1,10 @@
-//! `Menubar`: one tab stop that roves with Left, Right, Home and End, a
-//! disabled menu included; ArrowDown opens a menu, Escape closes it back onto
-//! its trigger, and the pointer switches between open menus.
+//! `Menubar` in Blitz's layout: opening a menu re-lays the bar. Roving,
+//! ArrowDown, Escape and hover switching are e2e's shared scenarios
+//! (`menubar::`).
 
 use dioxus::prelude::*;
 use libero::components::{MenuEntry, MenuItem, Menubar, MenubarMenu};
-use native_tests::{Key, Page, mount};
-
-const MENU: &str = "[role=menu]";
+use native_tests::{Page, mount};
 
 fn trigger(index: usize) -> String {
     format!("[role=menubar] [data-menubar-index=\"{index}\"]")
@@ -32,64 +30,6 @@ fn expanded(page: &Page, index: usize) -> bool {
         .is_some_and(|v| v == "true")
 }
 
-#[test]
-fn the_arrows_rove_along_the_bar_and_wrap() {
-    let mut page = mount(app);
-    page.focus(&trigger(0));
-    for (key, to) in [
-        (Key::ArrowRight, 1),
-        (Key::ArrowRight, 2),
-        (Key::ArrowRight, 3),
-        (Key::ArrowRight, 0),
-        (Key::ArrowLeft, 3),
-        (Key::Home, 0),
-        (Key::End, 3),
-    ] {
-        page.press(key.clone());
-        assert!(
-            page.is_focused(&trigger(to)),
-            "{key:?}: focus is on {}",
-            page.focus_owner()
-        );
-    }
-    assert!(!page.exists(MENU), "roving opened a menu");
-}
-
-#[test]
-fn arrow_down_opens_a_menu_and_escape_hands_focus_back() {
-    let mut page = mount(app);
-    page.focus(&trigger(1));
-    page.press(Key::ArrowDown);
-    assert!(
-        expanded(&page, 1),
-        "ArrowDown did not open it:\n{}",
-        page.tree()
-    );
-    assert!(
-        page.is_focused("[role=menuitem]"),
-        "focus is on {}",
-        page.focus_owner()
-    );
-
-    page.press(Key::Escape);
-    assert!(!page.exists(MENU), "Escape left it open");
-    assert!(
-        page.is_focused(&trigger(1)),
-        "focus is on {}",
-        page.focus_owner()
-    );
-}
-
-#[test]
-fn right_in_an_open_menu_opens_the_next_one() {
-    let mut page = mount(app);
-    page.focus(&trigger(0));
-    page.press(Key::ArrowDown);
-    page.press(Key::ArrowRight);
-    assert!(expanded(&page, 1) && !expanded(&page, 0), "{}", page.tree());
-    assert_eq!(page.query_all(MENU).len(), 1);
-}
-
 /// The docs demo: a column under a centring flex box.
 fn centred() -> Element {
     rsx! {
@@ -110,24 +50,4 @@ fn opening_a_menu_leaves_the_other_labels_on_one_line() {
     page.advance(0.5);
     assert!(expanded(&page, 1), "{}", page.tree());
     assert_eq!(page.wrapped_text("[role=menubar]"), Vec::<String>::new());
-}
-
-#[test]
-fn hovering_another_trigger_switches_the_open_menu() {
-    let mut page = mount(app);
-    page.click(&trigger(0));
-    assert!(
-        expanded(&page, 0),
-        "a click did not open it:\n{}",
-        page.tree()
-    );
-    for index in [1, 0, 3] {
-        page.hover(&trigger(index));
-        assert!(
-            expanded(&page, index),
-            "hovering {index} left it closed:\n{}",
-            page.tree()
-        );
-        assert_eq!(page.query_all(MENU).len(), 1);
-    }
 }

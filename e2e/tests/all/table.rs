@@ -4,10 +4,41 @@
 use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, linger};
 use e2e::passes::{focus, keyboard};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const SORT: &str = "th[data-sortable] button";
+
+async fn sorted<D: Driver>(d: &mut D, expected: &str) -> Result<()> {
+    eventually(d, &format!("aria-sort {expected}"), async |d| {
+        Ok(d.attr("th[data-sortable]", "aria-sort").await?.as_deref() == Some(expected))
+    })
+    .await
+}
+
+async fn the_arrow_turns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const ARROW: &str = "th[data-sortable] svg";
+    d.click(SORT).await?;
+    sorted(d, "ascending").await?;
+    // Past the turn's transition.
+    linger(d, 30).await;
+    let ascending = d.style(ARROW, "transform").await?;
+    d.click(SORT).await?;
+    sorted(d, "descending").await?;
+    eventually(
+        d,
+        &format!("the arrow to turn from {ascending}"),
+        async |d| Ok(d.style(ARROW, "transform").await? != ascending),
+    )
+    .await
+}
+
+e2e::scenario!(
+    the_arrow_turns_when_the_sort_flips,
+    "/table",
+    the_arrow_turns
+);
 
 #[test]
 fn it_meets_the_baseline() {

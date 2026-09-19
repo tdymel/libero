@@ -1,11 +1,32 @@
 //! `NumberField` with its steppers, and one field per state its docs page shows.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, NumberField};
+use libero::components::{Flex, NumberField, Text};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/number-field", || rsx! { NumberFieldPage {} })];
+pub const ROUTES: Routes = &[
+    ("/number-field", || rsx! { NumberFieldPage {} }),
+    ("/number-field/echo", || rsx! { NumberFieldEchoPage {} }),
+];
+
+/// Starts on 3, the value echoed in `#echo`, for the shared web/native scenarios.
+#[component]
+fn NumberFieldEchoPage() -> Element {
+    let mut value = use_signal(|| Some(3i32));
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            NumberField {
+                label: "Quantity",
+                steppers: true,
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+            Text { id: "echo", {value().map(|v| v.to_string()).unwrap_or_default()} }
+        }
+    }
+}
 
 /// Starts on 3, so both steppers have somewhere to go. The ranged field starts
 /// mid-range with a floor of two digits; `#held` shows what its caller holds.
