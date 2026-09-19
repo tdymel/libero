@@ -18,8 +18,10 @@ fn RefusedPage() -> Element {
         div { id: "card", tabindex: "-1", padding: "8px",
             Button { id: "off-in-card", disabled: true, onclick: move |_| clicks += 1, "Off in a card" }
         }
-        div { id: "asleep", inert: true,
-            Button { id: "asleep-button", onclick: move |_| clicks += 1, "Asleep" }
+        div { id: "sleep-card", tabindex: "-1", padding: "8px",
+            div { id: "asleep", inert: true,
+                Button { id: "asleep-button", onclick: move |_| clicks += 1, "Asleep" }
+            }
         }
         Button { id: "last", "Last" }
         span { id: "clicks", "{clicks}" }

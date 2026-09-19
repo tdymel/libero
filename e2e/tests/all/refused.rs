@@ -23,9 +23,12 @@ async fn an_inert_button<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
         d.text("#clicks").await? == "0",
         "an inert button's handler ran"
     );
+    // Chromium focuses the holder above the inert box, not nothing.
+    let owner = d.focused_id().await?;
     ensure!(
-        !d.is_focused("#asleep-button").await?,
-        "the inert button took focus"
+        owner == "sleep-card",
+        "{:?}: focus on {owner:?}",
+        d.platform()
     );
     Ok(())
 }
