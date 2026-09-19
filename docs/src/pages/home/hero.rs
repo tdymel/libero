@@ -44,7 +44,8 @@ pub fn Hero() -> Element {
                     ),
                 Flex { direction: "column", gap: "lg", sx: sx().min_width("0").breakpoint(Size::Md, sx().flex("1 1 0")),
                     Flex { direction: "row", gap: "sm", wrap: "wrap",
-                        Badge { variant: "outlined", color: "muted", "Pre-release" }
+                        // The tint under it takes the grey and the text role 6 under 4.5:1 (899).
+                        Badge { variant: "outlined", color: "primary.8", "Pre-release" }
                         Badge { variant: "tonal", "Rust" }
                         Badge { variant: "tonal", "Dioxus" }
                     }
@@ -69,12 +70,13 @@ pub fn Hero() -> Element {
                     }
                     Flex { direction: "row", gap: "md", wrap: "wrap",
                         Button { to: Route::GettingStarted {}, size: "lg", "Get started" }
-                        Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", "Browse components" }
+                        Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", color: "primary.8", "Browse components" }
                         Button {
                             to: GITHUB,
                             target: "_blank",
                             size: "lg",
                             variant: "standard",
+                            color: "primary.8",
                             aria_label: format!("GitHub {}", localization.anchor.new_tab),
                             "GitHub"
                         }

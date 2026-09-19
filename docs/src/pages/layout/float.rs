@@ -6,7 +6,7 @@ use libero::{
     use_theme,
 };
 
-const CHILD: &str = r#"Box { sx: sx().padding("4px 8px").background("primary"), "Badge" }"#;
+const CHILD: &str = r#"Box { sx: sx().padding("4px 8px").background("primary").color("primary-contrast"), "Badge" }"#;
 
 /// A float positions against the nearest `position: relative` ancestor, so
 /// the preview has to be one - and the code block has to say so.
@@ -114,7 +114,10 @@ pub fn FloatPage() -> Element {
                             offset_x: or_unset(values.str("offset_x")),
                             offset_y: or_unset(values.str("offset_y")),
                             fixed: values.str("fixed") == "true",
-                            Box { sx: sx().padding("4px 8px").background("primary"), "Badge" }
+                            Box {
+                                sx: sx().padding("4px 8px").background("primary").color("primary-contrast"),
+                                "Badge"
+                            }
                         }
                     }
                 },

@@ -48,7 +48,13 @@ pub fn PhilosophyPage() -> Element {
                         Alert { title: "A known limit", icon: rsx! { InfoIcon {} },
                             Text {
                                 "Windows High Contrast mode is supported only in part. The "
-                                Anchor { to: crate::Route::AccessibilityPage {}, "Accessibility" }
+                                // The page's link colour falls short on the tint; the alert's text reads.
+                                Anchor {
+                                    to: crate::Route::AccessibilityPage {},
+                                    underline: "always",
+                                    sx: sx().color("inherit"),
+                                    "Accessibility"
+                                }
                                 " page says what holds."
                             }
                         }

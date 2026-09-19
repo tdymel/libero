@@ -36,7 +36,7 @@ impl CodeBlockDefaults {
         background: "var(--lsx-muted-1)",
         border: "var(--lsx-muted-4)",
         muted_text: "var(--lsx-muted-7)",
-        // Held to 1.4.11, not 1.4.3: a line number cites a line (todo 241).
+        // Rebased to 241's 4.27:1 where the dimmed role falls short (899).
         line_number: "var(--lsx-text-dimmed)",
         copy_hover_background: "var(--lsx-muted-3)",
         copy_hover_text: "var(--lsx-ink)",
@@ -64,10 +64,10 @@ mod tests {
     use super::*;
     use crate::css::Stylesheet;
     use crate::theme::{
-        CODE_TOK_ATTRIBUTE, CODE_TOK_COMMENT, CODE_TOK_CONSTANT, CODE_TOK_FUNCTION,
-        CODE_TOK_HEADING, CODE_TOK_KEYWORD, CODE_TOK_NUMBER, CODE_TOK_STRING, CODE_TOK_TAG,
-        CODE_TOK_TYPE, KBD_BACKGROUND, KBD_COLOR, TOOLTIP_BACKGROUND, TOOLTIP_COLOR, Theme,
-        ThemeSet,
+        ANCHOR_CODE_COLOR, CODE_TOK_ATTRIBUTE, CODE_TOK_COMMENT, CODE_TOK_CONSTANT,
+        CODE_TOK_FUNCTION, CODE_TOK_HEADING, CODE_TOK_KEYWORD, CODE_TOK_NUMBER, CODE_TOK_STRING,
+        CODE_TOK_TAG, CODE_TOK_TYPE, KBD_BACKGROUND, KBD_COLOR, TOOLTIP_BACKGROUND, TOOLTIP_COLOR,
+        Theme, ThemeSet,
     };
     use crate::tokens::HexColor;
 
@@ -121,13 +121,12 @@ mod tests {
             &CODE_BLOCK_MUTED_TEXT,
             4.5,
         ));
-        // A line number is held to 1.4.11 rather than 1.4.3 (todo 241): it is
-        // a way to cite a line, not text the reader is meant to read through.
+        short.extend(on(&inline, "link in code", &ANCHOR_CODE_COLOR, 4.5));
         short.extend(on(
             &CODE_BLOCK_BACKGROUND,
             "line number",
             &CODE_BLOCK_LINE_NUMBER,
-            3.0,
+            4.27,
         ));
         short.extend(on(
             &CODE_BLOCK_COPY_HOVER_BACKGROUND,

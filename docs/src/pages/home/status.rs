@@ -1,5 +1,8 @@
 use dioxus::prelude::*;
-use libero::components::{Alert, Anchor, Text};
+use libero::{
+    components::{Alert, Anchor, Text},
+    sx::sx,
+};
 
 use crate::GITHUB;
 
@@ -11,7 +14,14 @@ pub fn Status() -> Element {
             Text {
                 "Libero has not reached 1.0, and its APIs can still change between releases. "
                 "Progress and open issues are on "
-                Anchor { to: GITHUB, target: "_blank", "GitHub" }
+                // The page's link colour falls short on the tint; the alert's text reads.
+                Anchor {
+                    to: GITHUB,
+                    target: "_blank",
+                    underline: "always",
+                    sx: sx().color("inherit"),
+                    "GitHub"
+                }
                 "."
             }
         }

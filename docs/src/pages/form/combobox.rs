@@ -47,6 +47,7 @@ use_drop(move || pending.set(None));
 // snippet: after FRUIT_ENUM, FETCHING_SEARCH, FETCHING_STATE
 const FETCHING_TRIGGER: &str = r#"TextField {
     sx: sx().width("280px"),
+    label: "Fruit",
     placeholder: "Type a fruit",
     value: text(),
     attributes: suggestions.a11y_attributes(),
@@ -83,6 +84,8 @@ enum Fruit {
 // snippet: after FRUIT_ENUM
 const SELECT_STATE: &str = r#"let fruit = use_combobox();
 let mut picked = use_signal(|| None::<Fruit>);
+// A `combobox` role takes no name from its content, so the label names it.
+let label = format!("{}-label", fruit.id());
 
 "#;
 
@@ -99,10 +102,15 @@ let matches: Vec<Fruit> = Fruit::options()
 "#;
 
 // snippet: after FRUIT_ENUM, SELECT_STATE
-const SELECT_TRIGGER: &str = r#"Button {
+const SELECT_TRIGGER: &str = r#"Text { id: "{label}", size: "sm", "Fruit" }
+Button {
     variant: "outlined",
     sx: sx().width("280px"),
-    attributes: fruit.a11y_attributes(),
+    attributes: [
+        fruit.a11y_attributes(),
+        vec![Attribute::new("aria-labelledby", label, None, false)],
+    ]
+    .concat(),
     onclick: move |_| fruit.toggle(),
     match picked() {
         Some(fruit) => rsx! { "{fruit.label()}" },
@@ -113,6 +121,7 @@ const SELECT_TRIGGER: &str = r#"Button {
 // snippet: after FRUIT_ENUM, SUGGESTIONS_STATE
 const SUGGESTIONS_TRIGGER: &str = r#"TextField {
     sx: sx().width("280px"),
+    label: "Fruit",
     placeholder: "Type a fruit",
     value: text(),
     attributes: suggestions.a11y_attributes(),
@@ -161,7 +170,7 @@ const RICH_ROW: &str = r#"        Text { component: "span", size: "xl", "{o.valu
             Text {
                 component: "span",
                 size: "xs",
-                sx: sx().color("muted.6"),
+                sx: sx().color("text-dimmed"),
                 "{o.value.note()}"
             }
         }"#;
@@ -285,7 +294,7 @@ fn RowContent(fruit: Fruit, rich: bool) -> Element {
                 Text {
                     component: "span",
                     size: "xs",
-                    sx: sx().color("muted.6"),
+                    sx: sx().color("text-dimmed"),
                     "{fruit.note()}"
                 }
             }
@@ -303,6 +312,8 @@ fn SelectDemo(values: DemoValues) -> Element {
     let rich = values.str("option") == "true";
     let disabled = values.str("disabled") == "true";
 
+    // A `combobox` role takes no name from its content, so the label names it.
+    let label = format!("{}-label", fruit.id());
     rsx! {
         Flex {
             direction: "column",
@@ -324,11 +335,16 @@ fn SelectDemo(values: DemoValues) -> Element {
                         RowContent { fruit: o.value, rich }
                     }
                 },
+                Text { id: "{label}", size: "sm", "Fruit" }
                 Button {
                     variant: "outlined",
                     sx: sx().width("280px"),
                     disabled,
-                    attributes: fruit.a11y_attributes(),
+                    attributes: [
+                        fruit.a11y_attributes(),
+                        vec![Attribute::new("aria-labelledby", label, None, false)],
+                    ]
+                    .concat(),
                     onclick: move |_| fruit.toggle(),
                     match picked() {
                         Some(fruit) => rsx! { "{fruit.label()}" },
@@ -338,7 +354,7 @@ fn SelectDemo(values: DemoValues) -> Element {
             }
             Text {
                 size: "sm",
-                sx: sx().color("muted.6"),
+                sx: sx().color("text-dimmed"),
                 match picked() {
                     Some(fruit) => rsx! { "Picked: {fruit.label()}" },
                     None => rsx! { "Nothing picked yet" },
@@ -392,6 +408,7 @@ fn FetchingDemo(values: DemoValues) -> Element {
             },
             TextField {
                 sx: sx().width("280px"),
+                label: "Fruit",
                 placeholder: "Type a fruit",
                 value: text(),
                 disabled,
@@ -450,6 +467,7 @@ fn SuggestionsDemo(values: DemoValues) -> Element {
             },
             TextField {
                 sx: sx().width("280px"),
+                label: "Fruit",
                 placeholder: "Type a fruit",
                 value: text(),
                 disabled,
@@ -565,6 +583,15 @@ pub fn ComboboxPage() -> Element {
                     "enclosing "
                     Code { source: "Modal" }
                     " stops hearing Escape while the list stays open."
+                }
+                Text {
+                    "The trigger becomes a "
+                    Code { source: "combobox" }
+                    ", which takes no name from its content: point a button trigger's "
+                    Code { source: "aria-labelledby" }
+                    " at a visible label, and give a text field a "
+                    Code { source: "label" }
+                    "."
                 }
             }
         }

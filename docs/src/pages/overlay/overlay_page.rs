@@ -1,9 +1,12 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Input, Overlay, Text},
+    components::{Box, Code, Input, Overlay, Paper, Text},
     sx::sx,
 };
+
+/// On its own surface, so it reads at every dim.
+const LOADING: &str = r#"Paper { sx: sx().padding("8px 16px"), "Loading..." }"#;
 
 #[component]
 pub fn OverlayPage() -> Element {
@@ -43,7 +46,8 @@ pub fn OverlayPage() -> Element {
             },
             Demo {
                 component: "Overlay",
-                children_text: "Loading...",
+                children_text: "",
+                children_code: LOADING.to_string(),
                 controls: vec![
                     Control::slider("opacity", ["0.2", "0.4", "0.6", "0.8"]).default("0.6"),
                     Control::slider("blur", ["auto", "2px", "4px", "8px"]),
@@ -64,7 +68,7 @@ pub fn OverlayPage() -> Element {
                                 blur => Input::from(blur),
                             },
                             sx: sx().position("absolute"),
-                            "Loading..."
+                            Paper { sx: sx().padding("8px 16px"), "Loading..." }
                         }
                     }
                 },

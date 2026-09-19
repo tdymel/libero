@@ -36,7 +36,8 @@ pub fn Closing() -> Element {
                 }
                 Flex { direction: "row", gap: "md", wrap: "wrap", justify: "center",
                     Button { to: Route::GettingStarted {}, size: "lg", "Get started" }
-                    Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", "Browse components" }
+                    // Text role 8: role 6 misses 4.5:1 on the tint (899).
+                    Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", color: "primary.8", "Browse components" }
                 }
             }
         }

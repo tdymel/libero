@@ -72,7 +72,8 @@ pub fn Philosophy() -> Element {
                         }
                     }
                 }
-                Anchor { to: Route::PhilosophyPage {}, "Read the philosophy" }
+                // Text role 8: role 6 misses 4.5:1 on the tint (899).
+                Anchor { to: Route::PhilosophyPage {}, sx: sx().color("primary.8"), "Read the philosophy" }
             }
         }
     }

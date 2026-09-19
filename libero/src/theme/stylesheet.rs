@@ -3,14 +3,14 @@ use crate::css::{CssDeclaration, CssScope, Stylesheet, ToCssDeclarations};
 use crate::tokens::{Ends, HOVER_TINT_SHADE, SELECTED_TINT_SHADE, ShadeRamp, TEXT_CONTRAST};
 
 use super::{
-    CODE_BLOCK_BACKGROUND, CODE_BLOCK_COPY_HOVER_BACKGROUND, CODE_BLOCK_COPY_HOVER_TEXT,
-    CODE_BLOCK_LINE_NUMBER, CODE_BLOCK_MUTED_TEXT, CODE_TOK_ATTRIBUTE, CODE_TOK_COMMENT,
-    CODE_TOK_CONSTANT, CODE_TOK_FUNCTION, CODE_TOK_HEADING, CODE_TOK_KEYWORD, CODE_TOK_NUMBER,
-    CODE_TOK_STRING, CODE_TOK_TAG, CODE_TOK_TYPE, Color, ColorShade, ColorValue, CssVar, HexColor,
-    INDICATOR_KEYFRAMES, KBD_BACKGROUND, KBD_COLOR, LOADER_KEYFRAMES, MARQUEE_KEYFRAMES,
-    NOTIFICATION_KEYFRAMES, NamedColorCss, PROGRESS_BAR_KEYFRAMES, RIPPLE_KEYFRAMES,
-    SKELETON_KEYFRAMES, Size, SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT,
-    TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, TOOLTIP_KEYFRAMES, Theme, ThemeSet,
+    ANCHOR_CODE_COLOR, CODE_BLOCK_BACKGROUND, CODE_BLOCK_COPY_HOVER_BACKGROUND,
+    CODE_BLOCK_COPY_HOVER_TEXT, CODE_BLOCK_LINE_NUMBER, CODE_BLOCK_MUTED_TEXT, CODE_TOK_ATTRIBUTE,
+    CODE_TOK_COMMENT, CODE_TOK_CONSTANT, CODE_TOK_FUNCTION, CODE_TOK_HEADING, CODE_TOK_KEYWORD,
+    CODE_TOK_NUMBER, CODE_TOK_STRING, CODE_TOK_TAG, CODE_TOK_TYPE, Color, ColorShade, ColorValue,
+    CssVar, HexColor, INDICATOR_KEYFRAMES, KBD_BACKGROUND, KBD_COLOR, LOADER_KEYFRAMES,
+    MARQUEE_KEYFRAMES, NOTIFICATION_KEYFRAMES, NamedColorCss, PROGRESS_BAR_KEYFRAMES,
+    RIPPLE_KEYFRAMES, SKELETON_KEYFRAMES, Size, SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE,
+    TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, TOOLTIP_KEYFRAMES, Theme, ThemeSet,
 };
 
 const SHADES: [ColorShade; 9] = [
@@ -416,7 +416,8 @@ fn rebase_text_on_derived_surfaces(declarations: &mut [CssDeclaration], ends: En
     let kbd = [KBD_BACKGROUND.name().to_string()];
     let hover = [CODE_BLOCK_COPY_HOVER_BACKGROUND.name().to_string()];
 
-    let texts: [(CssVar, &[String], f32); 14] = [
+    let texts: [(CssVar, &[String], f32); 15] = [
+        (ANCHOR_CODE_COLOR, &code[1..], TEXT_CONTRAST),
         (CODE_TOK_KEYWORD, &code, TEXT_CONTRAST),
         (CODE_TOK_STRING, &code, TEXT_CONTRAST),
         (CODE_TOK_COMMENT, &code, TEXT_CONTRAST),
@@ -428,8 +429,8 @@ fn rebase_text_on_derived_surfaces(declarations: &mut [CssDeclaration], ends: En
         (CODE_TOK_ATTRIBUTE, &code, TEXT_CONTRAST),
         (CODE_TOK_HEADING, &code, TEXT_CONTRAST),
         (CODE_BLOCK_MUTED_TEXT, &code[..1], TEXT_CONTRAST),
-        // 1.4.11, not 1.4.3: a line number cites a line (todo 241).
-        (CODE_BLOCK_LINE_NUMBER, &code[..1], 3.0),
+        // 241's approved 4.27:1; the 3:1 floor let palettes drift below it (899).
+        (CODE_BLOCK_LINE_NUMBER, &code[..1], 4.27),
         (KBD_COLOR, &kbd, TEXT_CONTRAST),
         // The copy button's icon, a graphic: 1.4.11.
         (CODE_BLOCK_COPY_HOVER_TEXT, &hover, 3.0),

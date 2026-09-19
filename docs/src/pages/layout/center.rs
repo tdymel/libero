@@ -7,7 +7,7 @@ use libero::{
 
 /// The child is the fixture - `inline` is the only prop - so the code block
 /// prints it verbatim.
-const CHILD: &str = r#"Box { sx: sx().padding("8px 16px").background("primary"), "Centered" }"#;
+const CHILD: &str = r#"Box { sx: sx().padding("8px 16px").background("primary").color("primary-contrast"), "Centered" }"#;
 
 /// No width of its own: filling the parent - or not - is what `inline`
 /// decides, so the wrapper below is what supplies the width.
@@ -58,7 +58,10 @@ pub fn CenterPage() -> Element {
                             inline: (values.str("inline") == "true").then_some(true),
                             sx: sx().height("120px").background("primary.1"),
                             Box {
-                                sx: sx().padding("8px 16px").background("primary"),
+                                sx: sx()
+                                    .padding("8px 16px")
+                                    .background("primary")
+                                    .color("primary-contrast"),
                                 "Centered"
                             }
                         }

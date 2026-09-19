@@ -1,9 +1,11 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::str_enum::str_enum;
-use crate::sx::Sx;
+use crate::sx::{Sx, sx};
 use crate::theme::{Color, ColorShade, ColorValue, CssVar, Size, TextDefaults};
 
 pub const ANCHOR_COLOR: CssVar = CssVar::new("--lsx-anchor-color");
+/// The link colour on inline `Code`'s fill, which the stylesheet rebases (todo 899).
+pub(crate) const ANCHOR_CODE_COLOR: CssVar = CssVar::new("--lsx-anchor-code-color");
 
 str_enum! {
     /// When an `Anchor` draws its underline.
@@ -33,7 +35,9 @@ impl AnchorDefaults {
     /// Text's own sizing (an `Anchor` is a `Text` that happens to link),
     /// plus the link color.
     pub fn theme_vars() -> Sx {
-        TextDefaults::theme_vars().color(ANCHOR_COLOR.value())
+        TextDefaults::theme_vars()
+            .color(ANCHOR_COLOR.value())
+            .selector("& code", sx().color(ANCHOR_CODE_COLOR.value()))
     }
 }
 
@@ -42,6 +46,10 @@ impl ToCssDeclarations for AnchorDefaults {
         // A link is text, so the colour resolves through the text ramp -
         // `blue.6` is 3.56:1 on paper and every `Anchor` on the site was set
         // in it (todo 239).
-        vec![ANCHOR_COLOR.declare(ColorValue::Text(self.color, ColorShade::DEFAULT).value())]
+        let color = ColorValue::Text(self.color, ColorShade::DEFAULT).value();
+        vec![
+            ANCHOR_COLOR.declare(color.clone()),
+            ANCHOR_CODE_COLOR.declare(color),
+        ]
     }
 }

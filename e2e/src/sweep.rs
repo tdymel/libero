@@ -42,7 +42,7 @@ const FAMILIES: &[(&str, &str)] = &[
     ),
     (
         "text-contrast-undetermined",
-        "text axe could not measure: over an image, a gradient or a pseudo-element",
+        "text neither axe nor the sweep could measure: over an image or a gradient it cannot read, or covered",
     ),
     (
         "boundary-contrast",
@@ -349,6 +349,12 @@ struct TextReading {
 
 /// Colour helpers shared by the sweep's own contrast readings.
 const COLOUR: &str = r#"const parse = c => {
+    // A `color-mix()` computes to `color(srgb r g b / a)`, channels 0..1.
+    const srgb = c && c.match(/^color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)(?: \/ ([\d.e-]+))?\)$/);
+    if (srgb) {
+        const [r, g, b] = srgb.slice(1, 4).map(v => Math.min(255, Math.max(0, v * 255)));
+        return { r, g, b, a: srgb[4] === undefined ? 1 : +srgb[4] };
+    }
     if (!c || !c.startsWith('rgb')) return null;
     const [r, g, b, a = 1] = c.match(/[\d.]+/g).map(Number);
     return { r, g, b, a };
@@ -370,42 +376,154 @@ const ratio = (a, b) => {
 const rgb = c => `rgb(${Math.round(c.r)}, ${Math.round(c.g)}, ${Math.round(c.b)})`;
 const WHITE = { r: 255, g: 255, b: 255, a: 1 };"#;
 
+/// `gradientAt(image, box, x, y)`: the colour one `linear-gradient()` paints at
+/// a point of `box`, or `null` for anything else (several layers, corners, an image).
+const GRADIENT: &str = r#"const gradientAt = (image, box, x, y) => {
+    const m = image.match(/^linear-gradient\((.*)\)$/);
+    if (!m || /gradient\(/.test(m[1]) || /url\(/.test(m[1])) return null;
+    const parts = m[1].split(/,(?![^(]*\))/).map(p => p.trim());
+    const sides = { 'to top': 0, 'to right': 90, 'to bottom': 180, 'to left': 270 };
+    let angle = 180;
+    if (/deg$/.test(parts[0])) angle = parseFloat(parts.shift());
+    else if (parts[0] in sides) angle = sides[parts.shift()];
+    else if (parts[0].startsWith('to ')) return null;
+    const rad = angle * Math.PI / 180;
+    const len = Math.abs(box.width * Math.sin(rad)) + Math.abs(box.height * Math.cos(rad));
+    const stops = [];
+    for (const part of parts) {
+        const c = part.match(/^((?:rgba?|color)\([^)]*\))\s*(.*)$/);
+        const colour = c && parse(c[1]);
+        if (!colour) return null;
+        const at = c[2].split(/\s+/).filter(Boolean)
+            .map(v => v.endsWith('%') ? parseFloat(v) / 100 : v.endsWith('px') ? parseFloat(v) / len : NaN);
+        if (at.some(isNaN)) return null;
+        if (!at.length) stops.push({ colour, at: null });
+        for (const a of at) stops.push({ colour, at: a });
+    }
+    if (stops.length < 2) return null;
+    // CSS's fix-ups: ends at 0 and 1, never backwards, gaps spread evenly.
+    if (stops[0].at === null) stops[0].at = 0;
+    if (stops[stops.length - 1].at === null) stops[stops.length - 1].at = 1;
+    let furthest = -Infinity;
+    for (const s of stops) if (s.at !== null) furthest = s.at = Math.max(s.at, furthest);
+    for (let i = 1; i < stops.length; i++) {
+        if (stops[i].at !== null) continue;
+        let j = i;
+        while (stops[j].at === null) j++;
+        const [from, to] = [stops[i - 1].at, stops[j].at];
+        for (let k = i; k < j; k++) stops[k].at = from + (to - from) * (k - i + 1) / (j - i + 1);
+    }
+    const t = ((x - box.left - box.width / 2) * Math.sin(rad)
+        - (y - box.top - box.height / 2) * Math.cos(rad)) / len + 0.5;
+    if (t <= stops[0].at) return stops[0].colour;
+    for (let i = 1; i < stops.length; i++) {
+        if (t > stops[i].at) continue;
+        const [p, q] = [stops[i - 1].colour, stops[i].colour];
+        const f = stops[i].at > stops[i - 1].at ? (t - stops[i - 1].at) / (stops[i].at - stops[i - 1].at) : 1;
+        // Premultiplied, as CSS blends: a fade to transparent does not darken.
+        const a = p.a + (q.a - p.a) * f;
+        const mix = k => a > 0 ? (p[k] * p.a + (q[k] * q.a - p[k] * p.a) * f) / a : 0;
+        return { r: mix('r'), g: mix('g'), b: mix('b'), a };
+    }
+    return stops[stops.length - 1].colour;
+};
+// Where `e`'s background image is drawn: its box unless sized. `null` where
+// that cannot be read, `tile.repeat` false for a single sized tile.
+const tileOf = (e, s) => {
+    const b = e.getBoundingClientRect();
+    if (s.backgroundSize === 'auto' || s.backgroundSize === 'auto auto') return { box: b, repeat: true };
+    const size = s.backgroundSize.split(' '), pos = s.backgroundPosition.split(' ');
+    if (size.length !== 2 || pos.length !== 2 || s.backgroundRepeat !== 'no-repeat') return null;
+    const len = (v, whole) => v.endsWith('px') ? parseFloat(v) : v.endsWith('%') ? whole * parseFloat(v) / 100 : NaN;
+    const [w, h] = [len(size[0], b.width), len(size[1], b.height)];
+    const at = (v, whole, t) => v.endsWith('px') ? parseFloat(v) : v.endsWith('%') ? (whole - t) * parseFloat(v) / 100 : NaN;
+    const [x, y] = [at(pos[0], b.width, w), at(pos[1], b.height, h)];
+    if ([w, h, x, y].some(isNaN)) return null;
+    return { box: { left: b.left + x, top: b.top + y, width: w, height: h }, repeat: false };
+};"#;
+
 /// Text contrast for nodes axe could not decide: the text colour against the
-/// flat backgrounds `elementsFromPoint` stacks under the first line's centre.
-/// `None` where a gradient or an image lies under it, or the text is covered.
+/// backgrounds `elementsFromPoint` stacks under three points of the first line,
+/// scrolled into view first; a linear gradient counts at each point. `None` where
+/// an image lies under it, or the text is covered.
 async fn text_contrast(page: &Page, nodes: &[&contrast::Node]) -> Result<Vec<Option<TextReading>>> {
     if nodes.is_empty() {
         return Ok(Vec::new());
     }
     let targets: Vec<&str> = nodes.iter().map(|n| n.target.as_str()).collect();
     let script = format!(
-        r#"(() => {{ {COLOUR}
-            return {targets}.map(target => {{
+        r#"(() => {{ {COLOUR} {GRADIENT}
+            // The later checks see the scrollers as they were.
+            const scrolled = [...document.querySelectorAll('*')]
+                .filter(e => e.scrollHeight > e.clientHeight || e.scrollWidth > e.clientWidth)
+                .map(e => [e, e.scrollTop, e.scrollLeft]);
+            const [pageX, pageY] = [scrollX, scrollY];
+            const readings = {targets}.map(target => {{
                 let el;
                 try {{ el = document.querySelector(target); }} catch (e) {{ return null; }}
                 if (!el) return null;
-                const range = document.createRange();
-                range.selectNodeContents(el);
-                const r = [...range.getClientRects()].find(r => r.width > 0 && r.height > 0)
-                    || el.getBoundingClientRect();
-                if (r.width <= 0 || r.height <= 0) return null;
-                const stack = document.elementsFromPoint(r.x + r.width / 2, r.y + r.height / 2);
-                const top = stack.findIndex(e => e === el || el.contains(e));
-                // Something other than the text itself on top: covered, not measurable.
-                if (top !== 0) return null;
-                const layers = [];
-                for (const e of stack) {{
-                    const s = getComputedStyle(e);
-                    if (s.backgroundImage !== 'none') return null;
-                    const c = parse(s.backgroundColor);
-                    if (c && c.a > 0) {{ layers.push(c); if (c.a >= 1) break; }}
+                // The first line, cut to what its clipping ancestors show: a line wider
+                // than its scroller is aimed at the part it shows.
+                const shown = () => {{
+                    const range = document.createRange();
+                    range.selectNodeContents(el);
+                    const r = [...range.getClientRects()].find(r => r.width > 0 && r.height > 0)
+                        || el.getBoundingClientRect();
+                    let [x0, x1, y0, y1] = [r.left, r.right, r.top, r.bottom];
+                    for (let at = el.parentElement; at; at = at.parentElement) {{
+                        if (getComputedStyle(at).overflow === 'visible') continue;
+                        const c = at.getBoundingClientRect();
+                        [x0, x1, y0, y1] = [Math.max(x0, c.left), Math.min(x1, c.right),
+                            Math.max(y0, c.top), Math.min(y1, c.bottom)];
+                    }}
+                    return x1 > x0 && y1 - y0 >= r.height / 2 ? [x0, x1, y0, y1] : null;
+                }};
+                // Text past an inner scroller's fold is clipped, and axe calls it
+                // "overlapped". Scrolled only then: a scroll disturbs the later checks.
+                let line = shown();
+                if (!line) {{
+                    el.scrollIntoView({{ block: 'center', inline: 'nearest', behavior: 'instant' }});
+                    line = shown();
                 }}
-                const bg = layers.reverse().reduce((base, layer) => over(layer, base), WHITE);
+                if (!line) return null;
+                const [x0, x1, y0, y1] = line;
+                // What lies under (x, y), flattened; null where an image or the unknown does.
+                const backdrop = (x, y) => {{
+                    const stack = document.elementsFromPoint(x, y);
+                    // Something other than the text itself on top: covered, not measurable.
+                    if (stack.findIndex(e => e === el || el.contains(e)) !== 0) return null;
+                    const layers = [];
+                    for (const e of stack) {{
+                        if (['IMG', 'VIDEO', 'CANVAS', 'PICTURE', 'IFRAME'].includes(e.tagName)) return null;
+                        const s = getComputedStyle(e);
+                        if (s.backgroundImage !== 'none') {{
+                            const tile = tileOf(e, s);
+                            if (!tile) return null;
+                            const {{ left, top, width, height }} = tile.box;
+                            const inside = x >= left && x < left + width && y >= top && y < top + height;
+                            if (inside || tile.repeat) {{
+                                const c = gradientAt(s.backgroundImage, tile.box, x, y);
+                                if (!c) return null;
+                                if (c.a > 0) layers.push(c);
+                                if (c.a >= 1) break;
+                            }}
+                        }}
+                        const c = parse(s.backgroundColor);
+                        if (c && c.a > 0) {{ layers.push(c); if (c.a >= 1) break; }}
+                    }}
+                    return layers.reverse().reduce((base, layer) => over(layer, base), WHITE);
+                }};
                 const s = getComputedStyle(el);
-                let fg = parse(s.color);
-                if (!fg) return null;
-                for (let at = el; at; at = at.parentElement) fg.a *= +getComputedStyle(at).opacity;
-                fg = over(fg, bg);
+                const text = parse(s.color);
+                if (!text) return null;
+                for (let at = el; at; at = at.parentElement) text.a *= +getComputedStyle(at).opacity;
+                // A quarter, the middle and three quarters along the line: a gradient
+                // changes under it. The worst of the three counts.
+                const y = (y0 + y1) / 2;
+                const bgs = [0.25, 0.5, 0.75].map(f => backdrop(x0 + (x1 - x0) * f, y));
+                if (bgs.some(bg => !bg)) return null;
+                const [fg, bg] = bgs.map(bg => [over(text, bg), bg])
+                    .reduce((a, b) => ratio(...a) <= ratio(...b) ? a : b);
                 const size = parseFloat(s.fontSize), bold = parseInt(s.fontWeight) >= 700;
                 return {{
                     ratio: ratio(fg, bg),
@@ -416,6 +534,9 @@ async fn text_contrast(page: &Page, nodes: &[&contrast::Node]) -> Result<Vec<Opt
                     weight: s.fontWeight,
                 }};
             }});
+            for (const [e, top, left] of scrolled) e.scrollTo({{ top, left, behavior: 'instant' }});
+            scrollTo({{ top: pageY, left: pageX, behavior: 'instant' }});
+            return readings;
         }})()"#,
         targets = serde_json::to_string(&targets)?,
     );
