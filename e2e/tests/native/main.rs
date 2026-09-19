@@ -23,6 +23,7 @@ mod form;
 mod header;
 mod hit;
 mod home;
+mod image;
 mod image_list;
 mod inline_spaces;
 mod keyboard;

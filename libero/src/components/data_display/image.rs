@@ -3,16 +3,18 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            ClassList, HtmlTag, Input, SVG_FIT, States, Variables, base_props, focus_ring_sx,
-            input_from_str, states, svg_fit, svg_fit_sx, svg_fit_variables, variables,
+            ClassList, HtmlTag, Input, SVG_FIT, States, Variables, base_props, css_string,
+            focus_ring_sx, input_from_str, states, svg_fit, svg_fit_sx, svg_fit_variables,
+            variables,
         },
         layout::use_box,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox, use_localization, use_theme},
     localization::{ImageLabels, fill},
+    platform,
     str_enum::str_enum,
     sx::{StaticSx, Sx, sx},
-    theme::{IMAGE_RADIUS, ImageDefaults, Size, SizeCss},
+    theme::{CssVar, IMAGE_RADIUS, ImageDefaults, Size, SizeCss},
     utils::warn,
 };
 
@@ -49,7 +51,39 @@ static IMAGE_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("fit-none", sx().object_fit("none"))
         .when("fit-scale-down", sx().object_fit("scale-down"))
         .when(SVG_FIT, svg_fit_sx())
+        // After `SVG_FIT`: its `!important` background yields to this list.
+        .when(
+            FALLBACK_UNDER,
+            sx().background_image(format!("{} !important", FALLBACK_LAYERS.value()))
+                .background_size(format!("{} !important", FALLBACK_SIZE.value()))
+                .background_position("center !important")
+                .background_repeat("no-repeat !important"),
+        )
 });
+
+/// `fallback_src` painted as the `<img>`'s background, for a renderer that
+/// fires no `error`: it shows where the picture fails to load (todo 935).
+const FALLBACK_UNDER: &str = "fallback-under";
+const FALLBACK_LAYERS: CssVar = CssVar::new("--lsx-image-fallback-layers");
+const FALLBACK_SIZE: CssVar = CssVar::new("--lsx-image-fallback-size");
+
+/// The background layers: an SVG `src` already drawn as the background
+/// ([`svg_fit`]) stays on top of the fallback.
+fn fallback_under_variables(
+    variables: Variables,
+    src: &str,
+    fallback: &str,
+    fit: ImageFit,
+) -> Variables {
+    let fallback = format!("url({})", css_string(fallback));
+    let layers = match svg_fit(src) {
+        true => format!("url({}), {fallback}", css_string(src)),
+        false => fallback,
+    };
+    variables
+        .with(FALLBACK_LAYERS, layers)
+        .with(FALLBACK_SIZE, background_size(fit).to_string())
+}
 
 /// `fit` as the `background-size` an SVG is drawn in natively. `scale-down` is
 /// `contain` there: a background cannot stop at its natural size.
@@ -170,12 +204,19 @@ pub fn Image(props: ImageProps) -> Element {
     };
 
     let fit = props.fit.copied_or(use_theme().image.fit);
-    let variables: Input<Variables> = svg_fit_variables(
+    let fallback_under = props
+        .fallback_src
+        .as_deref()
+        .filter(|fallback| !platform::fires_image_errors() && !fallback.is_empty());
+    let mut variables = svg_fit_variables(
         image_variables(props.radius.as_ref().copied()),
         &src,
         background_size(fit),
-    )
-    .into();
+    );
+    if let Some(fallback) = fallback_under {
+        variables = fallback_under_variables(variables, &src, fallback, fit);
+    }
+    let variables: Input<Variables> = variables.into();
 
     let on_error_src = props.src.clone();
 
@@ -202,6 +243,7 @@ pub fn Image(props: ImageProps) -> Element {
     let img_states: Input<States> = img_states
         .with(fit.state_name(), true)
         .with(SVG_FIT, svg_fit(&src))
+        .with(FALLBACK_UNDER, fallback_under.is_some())
         .into();
     let image = use_box()
         .framework_sx(&IMAGE_BASE_SX)
