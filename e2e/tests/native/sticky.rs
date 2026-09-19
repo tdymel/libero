@@ -2,7 +2,7 @@
 //! one out as `relative`, so the platform moves it (todo 927).
 
 use dioxus::prelude::*;
-use e2e::native::{Page, mount};
+use e2e::native::{Page, VIEWPORT, mount};
 
 fn top(page: &Page, selector: &str) -> f64 {
     page.rect(selector).1
@@ -78,4 +78,125 @@ fn a_box_as_tall_as_its_parent_stays_put() {
     scroll_page(&mut page, 200.0);
     page.wait_for(|page| top(page, "#nav") == -160.0);
     assert_eq!(top(&page, "#nav"), -160.0, "{}", page.tree());
+}
+
+fn left(page: &Page, selector: &str) -> f64 {
+    page.rect(selector).0
+}
+
+/// A 200px-square scroller around `content`, for the other edges (933).
+fn scroller(content: Element, row: bool) -> Element {
+    rsx! {
+        div {
+            id: "scroller",
+            display: if row { "flex" } else { "block" },
+            width: "200px",
+            height: "200px",
+            overflow: "auto",
+            {content}
+        }
+    }
+}
+
+fn relative_tops() -> Element {
+    scroller(
+        rsx! {
+            div { height: "40px" }
+            div { id: "percent", position: "sticky", top: "10%", height: "20px", "Percent" }
+            div { id: "em", position: "sticky", top: "2em", font_size: "10px", height: "20px", "Em" }
+            div { id: "content", height: "1000px", "Content" }
+        },
+        false,
+    )
+}
+
+/// `%` refers to the scroller's window (200px), `em` to the box's font size.
+#[test]
+fn a_percent_or_em_top_holds_there() {
+    let mut page = mount(relative_tops);
+    let origin = top(&page, "#scroller");
+    assert_eq!(top(&page, "#percent") - origin, 40.0, "{}", page.tree());
+    page.hover("#content");
+    page.wheel("#content", 300.0);
+    page.wait_for(|page| top(page, "#percent") - origin == 20.0);
+    assert_eq!(top(&page, "#percent") - origin, 20.0, "{}", page.tree());
+    assert_eq!(top(&page, "#em") - origin, 20.0, "{}", page.tree());
+}
+
+fn footer() -> Element {
+    scroller(
+        rsx! {
+            div { id: "content", height: "1000px", "Content" }
+            div { id: "footer", position: "sticky", bottom: "10px", height: "20px", "Footer" }
+            div { height: "100px" }
+        },
+        false,
+    )
+}
+
+/// A `bottom` box below the window is held at its bottom edge, and goes back
+/// to its place once scrolled to.
+#[test]
+fn a_bottom_box_holds_at_the_bottom_until_reached() {
+    let mut page = mount(footer);
+    let origin = top(&page, "#scroller");
+    page.wait_for(|page| top(page, "#footer") - origin == 170.0);
+    assert_eq!(top(&page, "#footer") - origin, 170.0, "{}", page.tree());
+    page.hover("#content");
+    page.wheel("#content", 2000.0);
+    // Scrolled to the end (920): in flow at 1000.
+    page.wait_for(|page| top(page, "#footer") - origin == 80.0);
+    assert_eq!(top(&page, "#footer") - origin, 80.0, "{}", page.tree());
+}
+
+fn page_footer() -> Element {
+    rsx! {
+        div { id: "content", height: "3000px", "Content" }
+        div { id: "footer", position: "sticky", bottom: "0", height: "20px", "Footer" }
+    }
+}
+
+/// Without a scroller the viewport holds it.
+#[test]
+fn a_bottom_box_holds_at_the_viewport_bottom() {
+    let mut page = mount(page_footer);
+    let bottom = f64::from(VIEWPORT.1) - 20.0;
+    page.wait_for(|page| top(page, "#footer") == bottom);
+    assert_eq!(top(&page, "#footer"), bottom, "{}", page.tree());
+}
+
+/// Blitz reports no window resize, so the box follows only at the next
+/// flush or scroll (933).
+#[test]
+#[ignore = "Blitz reports no window resize"]
+fn a_bottom_box_follows_a_window_resize() {
+    let mut page = mount(page_footer);
+    page.resize(800, 400);
+    page.wait_for(|page| top(page, "#footer") == 380.0);
+    assert_eq!(top(&page, "#footer"), 380.0, "{}", page.tree());
+}
+
+fn row() -> Element {
+    scroller(
+        rsx! {
+            div { id: "start", position: "sticky", left: "0", width: "20px", flex_shrink: "0", "S" }
+            div { id: "content", width: "1000px", flex_shrink: "0", "Content" }
+            div { id: "end", position: "sticky", right: "10%", width: "20px", flex_shrink: "0", "E" }
+        },
+        true,
+    )
+}
+
+/// `left` and `right` hold a box sideways, the same way.
+#[test]
+fn left_and_right_boxes_hold_sideways() {
+    let mut page = mount(row);
+    let origin = left(&page, "#scroller");
+    page.wait_for(|page| left(page, "#end") - origin == 160.0);
+    assert_eq!(left(&page, "#end") - origin, 160.0, "{}", page.tree());
+    page.hover("#content");
+    page.wheel_x("#content", 300.0);
+    page.wait_for(|page| left(page, "#start") - origin == 0.0);
+    assert_eq!(left(&page, "#start") - origin, 0.0, "{}", page.tree());
+    assert_eq!(left(&page, "#end") - origin, 160.0, "{}", page.tree());
 }

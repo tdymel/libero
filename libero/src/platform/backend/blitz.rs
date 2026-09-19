@@ -1269,7 +1269,8 @@ pub(super) fn Outlet() -> Element {
                             redraw::watch(doc, &mut anchor.doc_mut());
                             activate::sync_marks(&mut anchor.doc_mut());
                             placeholder::sync(&mut anchor.doc_mut());
-                            sticky::sync(&mut anchor.doc_mut());
+                            // After layout: a `bottom` box moves before any scroll.
+                            sticky::sync_soon();
                             heal_dirty_bits(&anchor.doc_mut());
                             heal_while_animating(doc);
                             // Last: after every focus move this flush made.
