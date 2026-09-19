@@ -16,6 +16,7 @@ mod date;
 mod direction_toggle;
 mod docs_shell;
 mod element_api;
+mod file_field;
 mod focus_events;
 mod focus_return;
 mod focus_ring;

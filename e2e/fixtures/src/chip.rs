@@ -74,14 +74,15 @@ fn ChipTrailingPage(control: bool) -> Element {
 /// colours (todo 646), beside an unselected one.
 #[component]
 fn ChipRemovablePage() -> Element {
+    let mut emitted = use_signal(String::new);
     rsx! {
-        Flex { direction: "row", gap: "md",
+        Flex { direction: "row", gap: "md", "data-emitted": emitted(),
             Chip {
                 id: "removable",
                 checked: true,
-                onchange: move |_| {},
+                onchange: move |next| emitted.set(format!("removable:{next}")),
                 trailing: rsx! {
-                    ActionIcon { id: "remove", aria_label: "Remove wasm", size: "xs", onclick: move |_| {},
+                    ActionIcon { id: "remove", aria_label: "Remove wasm", size: "xs", onclick: move |_| emitted.set("remove".into()),
                         svg { view_box: "0 0 24 24", path { d: "M6 6l12 12M18 6L6 18", stroke: "currentColor" } }
                     }
                 },

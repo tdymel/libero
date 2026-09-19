@@ -11,3 +11,7 @@ LabelText
   StaticText "Remark"
 textbox "Remark"
 status [atomic] [live=polite]
+LabelText
+  StaticText "Code"
+textbox "Code"
+paragraph

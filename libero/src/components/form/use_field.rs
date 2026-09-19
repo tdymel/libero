@@ -906,6 +906,23 @@ impl Activation {
         }
     }
 
+    /// A click on the control's own padding that neither the label nor the
+    /// input took - both cancel theirs. Blitz places a label's `::after`
+    /// against the label, not the positioned root (todo 941).
+    pub(crate) fn padding_click(
+        &self,
+        boundary: &'static str,
+    ) -> impl FnMut(Event<MouseData>) + 'static {
+        let activation = self.clone();
+        move |event| {
+            if !event.default_action_enabled() || nested_interactive(&event, boundary) {
+                return;
+            }
+            (activation.activate)();
+            activation.focus();
+        }
+    }
+
     /// The input's half: attaches the element, and takes Space and whatever
     /// click still reaches it.
     pub(crate) fn wire(&self, control: BoxStyle) -> BoxStyle {

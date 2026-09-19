@@ -10,8 +10,10 @@
 //! battery, then hand-written tests only for what this component uniquely
 //! promises.
 
+use anyhow::{Result, ensure};
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, linger};
 use e2e::passes::{contrast, dismissal, keyboard, live_region};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -209,3 +211,42 @@ pub fn editable_combobox_typing(route: &str, query: &str) {
         fixture.close().await.unwrap();
     });
 }
+
+/// Home and End while typing leave the options alone, and a query matching
+/// nothing is drawn and said, on every platform. The caret itself is read on
+/// the web only, above.
+async fn typing_keeps_the_list_honest<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(TRIGGER).await?;
+    d.type_text("e").await?;
+    eventually(d, "the list to open", async |d| d.exists(LISTBOX).await).await?;
+    for key in [keyboard::HOME, keyboard::END] {
+        d.press(key).await?;
+        linger(d, 2).await;
+        let active = d.attr(TRIGGER, "aria-activedescendant").await?;
+        ensure!(
+            active.is_none(),
+            "{:?}: a key highlighted {active:?}",
+            d.platform()
+        );
+    }
+    d.type_text("zzz").await?;
+    eventually(d, "No results, shown and said", async |d| {
+        Ok(d.exists("[data-slot='nothing-found']").await?
+            && d.text(STATUS).await?.contains("No results"))
+    })
+    .await?;
+    let expanded = d.attr(TRIGGER, "aria-expanded").await?;
+    let controls = d.attr(TRIGGER, "aria-controls").await?;
+    ensure!(
+        expanded.as_deref() == Some("true") && controls.is_none(),
+        "{:?}: nothing found wired as {expanded:?} {controls:?}",
+        d.platform()
+    );
+    Ok(())
+}
+
+e2e::scenario!(
+    typing_keeps_the_list_honest_on_every_platform,
+    "/autocomplete",
+    typing_keeps_the_list_honest
+);

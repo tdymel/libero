@@ -6,8 +6,8 @@
 
 use anyhow::Result;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually_text};
-use e2e::passes::keyboard;
+use e2e::driver::{Driver, eventually_text, linger};
+use e2e::passes::keyboard::{self, BACKSPACE, ENTER};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 async fn typing_reaches_the_value<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -20,6 +20,31 @@ e2e::scenario!(
     typing_into_a_textarea_reaches_its_value,
     "/textarea/echo",
     typing_reaches_the_value
+);
+
+/// Todo 942: Blitz's editor ignored `maxlength`, so natively the count ran to
+/// 23/20. A textarea's Enter is a character too; a freed one can be typed again.
+async fn typing_stops_at_maxlength<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("textarea").await?;
+    d.type_text("0123456789012345678xyz").await?;
+    eventually_text(d, "[data-slot=counter]", "20/20", "typing past the limit").await?;
+    d.press(ENTER).await?;
+    linger(d, 3).await;
+    eventually_text(d, "[data-slot=counter]", "20/20", "Enter at the limit").await?;
+    d.press(BACKSPACE).await?;
+    eventually_text(d, "[data-slot=counter]", "19/20", "a Backspace").await?;
+    d.type_text("!?").await?;
+    eventually_text(d, "[data-slot=counter]", "20/20", "a freed character").await?;
+
+    d.click("input").await?;
+    d.type_text("abcdef").await?;
+    eventually_text(d, "#code", "abcd", "typing past a text field's limit").await
+}
+
+e2e::scenario!(
+    typing_stops_at_maxlength_on_every_platform,
+    "/textarea/counter",
+    typing_stops_at_maxlength
 );
 
 /// The counter and the status text of the field around textarea `index`.

@@ -2,7 +2,7 @@
 //! own text (todo 584), and one in a `Form` that resets (todo 679).
 
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, Form, Text, Textarea, use_form};
+use libero::components::{Button, Flex, Form, Text, TextField, Textarea, use_form};
 
 use crate::Routes;
 
@@ -47,6 +47,7 @@ fn RawResetPage() -> Element {
 #[component]
 fn CounterPage() -> Element {
     let mut note = use_signal(String::new);
+    let mut code = use_signal(String::new);
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
@@ -58,6 +59,9 @@ fn CounterPage() -> Element {
                 oninput: move |next| note.set(next),
             }
             Textarea { label: "Remark", counter: true, maxlength: "20" }
+            // Todo 942: Blitz's editor ignores `maxlength` on an input too.
+            TextField { label: "Code", maxlength: "4", value: code(), oninput: move |next| code.set(next) }
+            Text { id: "code", "{code}" }
         }
     }
 }

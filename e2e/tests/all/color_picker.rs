@@ -61,31 +61,46 @@ fn the_picked_swatch_is_pressed_and_checked() {
     });
 }
 
+/// `saturation,brightness` in whole percent, from the thumb's own ARIA.
+async fn pad_reading<D: Driver>(d: &mut D) -> Result<String> {
+    let now = d.attr(THUMB, "aria-valuenow").await?.unwrap_or_default();
+    let text = d.attr(THUMB, "aria-valuetext").await?.unwrap_or_default();
+    let brightness = text
+        .split("brightness ")
+        .nth(1)
+        .and_then(|rest| rest.split('%').next())
+        .unwrap_or_default()
+        .to_string();
+    Ok(format!("{now},{brightness}"))
+}
+
+async fn reads<D: Driver>(d: &mut D, expected: &str, during: &str) -> Result<()> {
+    eventually(d, &format!("{expected} after {during}"), async |d| {
+        Ok(pad_reading(d).await? == expected)
+    })
+    .await
+}
+
 /// The APG slider keys: Home/End take the saturation, the thumb's
 /// `aria-valuenow`, to its ends; Page Up/Down step the brightness ten.
-#[test]
-fn home_end_and_the_page_keys_move_the_pad() {
-    block_on(async {
-        let fixture = Fixture::open("/color-picker", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        keyboard::tab_to(page, THUMB, 10).await.unwrap();
-        expect(page, "87,84", "the starting colour").await;
-
-        keyboard::press(page, keyboard::PAGE_DOWN).await.unwrap();
-        expect(page, "87,74", "PageDown to lower the brightness ten").await;
-        keyboard::press(page, keyboard::PAGE_UP).await.unwrap();
-        expect(page, "87,84", "PageUp to raise it ten").await;
-        keyboard::press(page, keyboard::END).await.unwrap();
-        expect(page, "100,84", "End to full saturation").await;
-        keyboard::press(page, keyboard::HOME).await.unwrap();
-        expect(page, "0,84", "Home to no saturation").await;
-
-        fixture.console.assert_clean("the pad's page keys").unwrap();
-        fixture.close().await.unwrap();
-    });
+async fn the_page_keys_move_the_pad<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(THUMB).await?;
+    reads(d, "87,84", "the starting colour").await?;
+    d.press(keyboard::PAGE_DOWN).await?;
+    reads(d, "87,74", "PageDown").await?;
+    d.press(keyboard::PAGE_UP).await?;
+    reads(d, "87,84", "PageUp").await?;
+    d.press(keyboard::END).await?;
+    reads(d, "100,84", "End").await?;
+    d.press(keyboard::HOME).await?;
+    reads(d, "0,84", "Home").await
 }
+
+e2e::scenario!(
+    home_end_and_the_page_keys_move_the_pad,
+    "/color-picker",
+    the_page_keys_move_the_pad
+);
 
 /// Alt+ArrowLeft is Back: neither the pad nor the hue thumb swallows a
 /// browser chord (todo 562).
@@ -235,12 +250,6 @@ fn the_saturation_thumb_parts_from_the_pad() {
 
 async fn reading(page: &chromiumoxide::Page) -> String {
     page.evaluate(READING).await.unwrap().into_value().unwrap()
-}
-
-async fn expect(page: &chromiumoxide::Page, want: &str, what: &str) {
-    if let Err(e) = wait::for_js_true(page, &format!("{READING} === {want:?}"), what).await {
-        panic!("{e}; reading {}", reading(page).await);
-    }
 }
 
 /// Two points on the pad, each as a fraction of its width and height.

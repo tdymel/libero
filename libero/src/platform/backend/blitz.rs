@@ -18,6 +18,7 @@ use style::properties::PropertyId;
 mod activate;
 mod baked;
 mod focus;
+mod max_length;
 mod placeholder;
 mod redraw;
 mod refused;
@@ -364,6 +365,7 @@ pub(super) fn Listener(children: Element) -> Element {
                 BLANK_PRESS.set(false);
                 focus::forget_kept();
                 focus::keyed(&event);
+                max_length::key_down(&event);
                 keyed(&event);
                 tab_from_start(&event);
                 refused::tab(&event);

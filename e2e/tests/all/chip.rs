@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually};
+use e2e::driver::{Driver, eventually, eventually_focused, linger};
 use e2e::passes::keyboard::{self, ENTER, SPACE};
 use e2e::passes::pointer::{self, Point};
 use e2e::suite::Step;
@@ -87,7 +87,37 @@ e2e::scenario!(
     "/chip",
     a_click_on_the_label_toggles
 );
+/// Todo 941: Blitz placed the label's `::after` hit area against the label, so
+/// the pill's padding took no click natively.
+async fn the_padding_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let pill = d.rect("#css").await?;
+    let middle = pill.y + pill.height / 2.0;
+    d.click_at(pill.x + 3.0, middle).await?;
+    emits(d, "css:true").await?;
+    eventually_focused(d, "#css > input", "a click on the padding").await?;
+    d.click_at(pill.x + pill.width - 3.0, middle).await?;
+    emits(d, "css:false").await
+}
+
+/// The remove x is a control of its own: the padding's click leaves it alone.
+async fn the_remove_x_does_not_toggle<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("#remove").await?;
+    emits(d, "remove").await?;
+    linger(d, 3).await;
+    emits(d, "remove").await
+}
+
 e2e::scenario!(space_toggles_the_focused_chip, "/chip", space_toggles);
+e2e::scenario!(
+    the_remove_x_leaves_the_chip_as_it_is,
+    "/chip/removable",
+    the_remove_x_does_not_toggle
+);
+e2e::scenario!(
+    a_click_on_the_pills_padding_toggles_it,
+    "/chip",
+    the_padding_toggles
+);
 
 /// Todo 491: a selected chip showed only a faint tint.
 #[test]

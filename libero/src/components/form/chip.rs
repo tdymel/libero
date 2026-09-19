@@ -438,11 +438,17 @@ pub fn Chip(props: ChipProps) -> Element {
 
     // The trailing slot sits beside the label, not in it: a `<label>` would
     // take a button's click for the checkbox.
-    root.attr("aria-disabled", disabled).render(
-        HtmlTag::Span,
-        props.attributes,
-        vec![input, label, trailing, ring_overlay()],
-    )
+    // The pill's padding, which the label's `::after` covers on the web only.
+    root.attr("aria-disabled", disabled)
+        .event(
+            "onclick",
+            activation.padding_click("span[data-state~=\"selectable\"]"),
+        )
+        .render(
+            HtmlTag::Span,
+            props.attributes,
+            vec![input, label, trailing, ring_overlay()],
+        )
 }
 
 /// What an `onclick`/`to` chip's `trailing` may not hold: a control of its own.
