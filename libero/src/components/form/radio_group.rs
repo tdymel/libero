@@ -289,6 +289,12 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
                 });
             }
         })
+        // Blitz fires no `focusin` for a click's move; its click comes first.
+        .event("onclick", move |_: MouseEvent| {
+            if readonly && !disabled {
+                focus_option(&root, tab_stop);
+            }
+        })
         .render(HtmlTag::Div, props.attributes, options.collect::<Vec<_>>());
 
     field.render(group)

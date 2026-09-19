@@ -193,32 +193,23 @@ fn a_readonly_group_meets_the_baseline() {
 
 /// Todo 746: a click on another option of a read-only group leaves focus on
 /// the checked one, the group's one tab stop, so Tab does not stop twice.
-#[test]
-fn a_readonly_click_keeps_focus_on_the_checked_option() {
-    use e2e::passes::pointer;
-    use e2e::wait;
-    block_on(async {
-        let fixture = Fixture::open("/radio-group/readonly", Viewport::Desktop)
-            .await
-            .unwrap();
-        let page = &fixture.page;
-        for row in [
-            "[role=radiogroup] > div:first-child",
-            "[role=radiogroup] > div:last-child",
-        ] {
-            pointer::click(page, row).await.unwrap();
-            wait::for_js_true(
-                page,
-                &format!("document.activeElement === document.querySelector({CHECKED:?})"),
-                &format!("focus on the checked option after a click on {row}"),
-            )
-            .await
-            .unwrap();
-        }
-        fixture.console.assert_clean("read-only clicks").unwrap();
-        fixture.close().await.unwrap();
-    });
+/// Blitz fires no `focusin` for a click's move (todo 734).
+async fn a_readonly_click_keeps_focus<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for row in [
+        "[role=radiogroup] > div:first-child",
+        "[role=radiogroup] > div:last-child",
+    ] {
+        d.click(row).await?;
+        eventually_focused(d, &radio(2), &format!("a click on {row}")).await?;
+    }
+    Ok(())
 }
+
+e2e::scenario!(
+    a_readonly_click_keeps_focus_on_the_checked_option,
+    "/radio-group/readonly",
+    a_readonly_click_keeps_focus
+);
 
 /// The rows really are undersized, so the spacing exception is load-bearing.
 ///
