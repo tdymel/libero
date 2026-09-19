@@ -76,6 +76,12 @@ async fn leaves_from_focused_unselected<D: Driver>(d: &mut D, _route: &str) -> R
 async fn shift_tab_from_disabled<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("[role=tab][aria-disabled=true]").await?;
     selected_is(d, "Account", "a click on the disabled Billing").await?;
+    eventually_focused(
+        d,
+        "[role=tab][aria-disabled=true]",
+        "a click on the disabled Billing",
+    )
+    .await?;
     d.press_shift(keyboard::TAB).await?;
     leaves_the_strip(d, "Shift+Tab").await
 }

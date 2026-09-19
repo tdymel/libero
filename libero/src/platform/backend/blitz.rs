@@ -1133,10 +1133,18 @@ fn followed(event: &Event<PointerData>, up: bool) {
     }
 }
 
+/// The web's click focus: Blitz's `is_focussable` is the Tab walk's, so it
+/// skips a `tabindex="-1"` node a press still focuses (a roving tab, a dialog).
 fn focusable_ancestor(doc: &BaseDocument, mut node_id: NodeId) -> Option<NodeId> {
     loop {
         let node = doc.get_node(node_id)?;
-        if node.is_focussable() {
+        let negative = node.element_data().is_some_and(|element| {
+            element.attr(local_name!("disabled")).is_none()
+                && element
+                    .attr(local_name!("tabindex"))
+                    .is_some_and(|index| index.trim().parse::<i32>().is_ok())
+        });
+        if node.is_focussable() || negative {
             return Some(node_id);
         }
         node_id = node.parent?;

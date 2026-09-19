@@ -4,11 +4,13 @@
 
 mod anchor;
 mod button;
+mod carousel;
 mod choice;
 mod code;
 mod code_block;
 mod color_scheme;
 mod combobox;
+mod copy_button;
 mod date;
 mod direction_toggle;
 mod docs_shell;
