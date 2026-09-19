@@ -345,8 +345,8 @@ pub(super) fn Listener(children: Element) -> Element {
                     if let Some((before, target)) = moving {
                         activate::focus_pressed(before, target);
                     }
-                } else if let Some((_, target)) = moving {
-                    activate::clicked(target);
+                } else if let Some((before, target)) = moving {
+                    activate::clicked(before, target);
                 }
                 forget_press();
                 focus::clicked();

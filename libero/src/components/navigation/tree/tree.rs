@@ -10,7 +10,7 @@ use crate::{
     hooks::{
         ElementHandle, TYPEAHEAD_RESET, typeahead_match, use_element, use_theme, use_typeahead,
     },
-    platform::{ElementApi, logical_key},
+    platform::{ElementApi, logical_key, when_free},
     theme::Size,
     utils::warn,
 };
@@ -604,13 +604,18 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     };
 
     // A click on a row's own link or button leaves focus there, out of the
-    // keys' reach; the row the click made active takes it back.
+    // keys' reach; the row the click made active takes it back. Checked from a
+    // task, as Blitz focuses the clicked control only after the click's handlers.
     let onclick = move |_: Event<MouseData>| {
-        if let Some(id) = active_id.peek().clone()
-            && row_control_focused(&root, &id)
-        {
-            focus_tree_item(&root, &id);
-        }
+        spawn(async move {
+            when_free(move || {
+                if let Some(id) = active_id.peek().clone()
+                    && row_control_focused(&root, &id)
+                {
+                    focus_tree_item(&root, &id);
+                }
+            });
+        });
     };
 
     let root_sx = props.sx.into_option().unwrap_or_default();

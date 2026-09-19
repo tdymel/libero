@@ -298,17 +298,22 @@ pub(super) fn focus_pressed(before: Option<NodeId>, target: NodeId) {
 }
 
 /// A click on `target` has bubbled out. Blitz's default action clears focus
-/// for anything but a box, a `summary` or a field; the web focuses it. Only
-/// while focus is still cleared: an effect may have moved it since.
-pub(super) fn clicked(target: NodeId) {
+/// for anything but a box, a `summary` or a field, and leaves it alone for a
+/// link; the web focuses it. Only while focus is still cleared, or unmoved
+/// since the press (`before`) for a link: an effect may have moved it since.
+pub(super) fn clicked(before: Option<NodeId>, target: NodeId) {
     let Some(anchor) = anchor() else {
         return;
     };
     defer(&anchor, move |doc| {
-        let present = doc
-            .get_node(target)
-            .is_some_and(|node| node.flags.is_in_document());
-        if present && cleared(doc) {
+        let Some(node) = doc.get_node(target) else {
+            return;
+        };
+        let link = node.element_data().is_some_and(|element| {
+            *element.name.local == *"a" && element.attr(local_name!("href")).is_some()
+        });
+        let unmoved = link && doc.get_focussed_node_id() == before;
+        if node.flags.is_in_document() && (cleared(doc) || unmoved) {
             focus::watch(doc);
             doc.set_focus_to(target);
         }

@@ -130,6 +130,35 @@ fn a_modal_is_centred_in_a_scrolled_document() {
     );
 }
 
+/// Blitz scrolls the viewport whatever `overflow` says, so a wheel over the
+/// backdrop scrolled the page the scroll lock should hold. A scroller in the
+/// dialog still takes the wheel.
+#[test]
+fn a_wheel_under_a_modal_leaves_the_page_but_scrolls_the_dialog() {
+    fn tall() -> Element {
+        let dialog = use_modal(|_: ModalScope<()>| {
+            rsx! {
+                div { role: "dialog", pointer_events: "auto",
+                    div { id: "body", height: "100px", overflow_y: "auto",
+                        div { height: "600px", "Long" }
+                    }
+                }
+            }
+        });
+        rsx! {
+            Button { id: "open", onclick: move |_| { dialog.open(); }, "Open" }
+            div { height: "3000px" }
+        }
+    }
+    let mut page = mount(tall);
+    page.click("#open");
+    page.wheel_at(10.0, 500.0, 300.0);
+    assert_eq!(page.viewport_scroll(), (0.0, 0.0), "the page scrolled");
+    page.hover("#body");
+    page.wheel("#body", 200.0);
+    assert_eq!(page.scroll_top("#body"), 200.0, "{}", page.tree());
+}
+
 #[test]
 fn a_click_reaches_a_button_in_a_modal() {
     let mut page = open_modal();

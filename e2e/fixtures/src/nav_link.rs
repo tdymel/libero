@@ -68,7 +68,7 @@ fn NavStatesPage() -> Element {
                 "aria-controls": "burger-panel",
                 onclick: move |_| open.toggle(),
             }
-            Paper { id: "burger-panel", hidden: !open(), "Panel" }
+            Paper { id: "burger-panel", hidden: (!open()).then_some(true), "Panel" }
         }
     }
 }

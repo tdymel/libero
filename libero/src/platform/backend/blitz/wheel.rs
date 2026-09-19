@@ -57,11 +57,14 @@ pub(super) fn wheeled(event: &Event<WheelData>) {
             && latch.y == point.y
             && now.duration_since(latch.at).as_millis() < PAUSE_MS
     });
-    let start = {
+    let (start, locked) = {
         let Some(doc) = anchor.try_doc() else {
             return;
         };
-        chain_start(&doc, doc.get_hover_node_id(), dx, dy)
+        (
+            chain_start(&doc, doc.get_hover_node_id(), dx, dy),
+            viewport_locked(&doc, dy != 0.0),
+        )
     };
     let scroller = match latched {
         Some(latch) if latch.scroller != start && present(&anchor, latch.scroller) => {
@@ -69,12 +72,18 @@ pub(super) fn wheeled(event: &Event<WheelData>) {
             let mut doc = anchor.doc_mut();
             match latch.scroller {
                 Some(node) => doc.scroll_node_by(node, -dx, -dy, |_| {}),
-                None => doc.scroll_viewport_by(-dx, -dy),
+                None if !locked => doc.scroll_viewport_by(-dx, -dy),
+                None => {}
             }
             drop(doc);
             latch.scroller
         }
-        _ => start,
+        _ => {
+            if start.is_none() && locked {
+                event.prevent_default();
+            }
+            start
+        }
     };
     LATCH.set(Some(Latch {
         scroller,
@@ -99,6 +108,26 @@ fn present(anchor: &dioxus_native_dom::NodeHandle, scroller: Scroller) -> bool {
 fn chain_start(doc: &BaseDocument, hover: Option<NodeId>, dx: f64, dy: f64) -> Scroller {
     let hover = hover?;
     ancestors(doc, hover).find(|&id| can_scroll(doc, id, dx, dy))
+}
+
+/// The viewport's `overflow` on that axis is `hidden` or `clip`, as CSS
+/// propagates it: `<html>`'s, else `<body>`'s (a `Modal`'s scroll lock). Blitz
+/// scrolls the viewport whatever it says.
+fn viewport_locked(doc: &BaseDocument, vertical: bool) -> bool {
+    let axis = if vertical { "overflow-y" } else { "overflow-x" };
+    let root = doc.root_element();
+    let mut used = resolved_style_value(doc, root.id, axis);
+    if used == "visible" {
+        let body = root.children.iter().copied().find(|&id| {
+            doc.get_node(id)
+                .and_then(|node| node.element_data())
+                .is_some_and(|element| &*element.name.local == "body")
+        });
+        if let Some(body) = body {
+            used = resolved_style_value(doc, body, axis);
+        }
+    }
+    matches!(used.as_str(), "hidden" | "clip")
 }
 
 fn can_scroll(doc: &BaseDocument, id: NodeId, dx: f64, dy: f64) -> bool {
