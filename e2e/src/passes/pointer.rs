@@ -114,7 +114,11 @@ pub async fn move_to(page: &Page, at: Point) -> Result<()> {
 
 /// Click an element at its centre.
 pub async fn click(page: &Page, selector: &str) -> Result<()> {
-    let at = centre_of(page, selector).await?;
+    click_at(page, centre_of(page, selector).await?).await
+}
+
+/// A primary click at a viewport point.
+pub async fn click_at(page: &Page, at: Point) -> Result<()> {
     mouse(page, DispatchMouseEventType::MouseMoved, at, 0).await?;
     mouse(page, DispatchMouseEventType::MousePressed, at, 1).await?;
     mouse(page, DispatchMouseEventType::MouseReleased, at, 0).await?;

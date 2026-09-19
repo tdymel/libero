@@ -44,8 +44,8 @@ fn ModalPage() -> Element {
                 title: "Unsaved changes",
                 size: "sm",
                 Text { id: "modal-text", "notes.md has changes you have not saved." }
-                Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
-                Button { variant: "filled", onclick: move |_| s.close(), "Discard" }
+                Button { id: "keep", variant: "text", onclick: move |_| s.close(), "Keep editing" }
+                Button { id: "discard", variant: "filled", onclick: move |_| s.close(), "Discard" }
             }
         }
     });

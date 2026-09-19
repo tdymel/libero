@@ -104,7 +104,11 @@ fn broken_too_narrow(node: &Node, scale: f32) -> bool {
     let width = node.unrounded_layout().content_box_width() * scale;
     let lines: Vec<_> = inline.layout.lines().collect();
     lines.windows(2).any(|pair| {
-        let explicit = inline.text[pair[0].text_range()].ends_with('\n');
+        // An empty line's range is `usize::MAX..`, past the text.
+        let explicit = inline
+            .text
+            .get(pair[0].text_range())
+            .is_some_and(|text| text.ends_with('\n'));
         let (first, next) = (pair[0].metrics(), pair[1].metrics());
         // A quarter pixel of slack for rounding.
         !explicit && first.advance + next.advance - next.trailing_whitespace + scale / 4.0 <= width

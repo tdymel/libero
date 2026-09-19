@@ -9,8 +9,10 @@
 //! everywhere else: nothing looks wrong on screen when focus falls back to
 //! `<body>`, and the keyboard user is simply dumped at the top of the document.
 
+use anyhow::{Result, ensure};
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::suite::Step;
 use e2e::wait;
 use e2e::{
@@ -20,6 +22,90 @@ use e2e::{
 
 const TRIGGER: &str = "#open-modal";
 const DIALOG: &str = "[role=dialog]";
+const INSIDE: &str = "[role=dialog], [role=dialog] *";
+
+/// Clicks `trigger` until a dialog shows.
+pub async fn open<D: Driver>(d: &mut D, trigger: &str) -> Result<()> {
+    d.click(trigger).await?;
+    eventually(
+        d,
+        &format!("a click on {trigger} to open a dialog"),
+        async |d| d.exists(DIALOG).await,
+    )
+    .await
+}
+
+async fn assert_inside<D: Driver>(d: &mut D, step: &str) -> Result<()> {
+    eventually_focused(d, INSIDE, step).await
+}
+
+/// Opening moves focus in; Tab and Shift+Tab stay inside.
+pub async fn tab_stays_inside<D: Driver>(d: &mut D, trigger: &str) -> Result<()> {
+    open(d, trigger).await?;
+    assert_inside(d, "opening").await?;
+    for step in 0..4 {
+        d.press(keyboard::TAB).await?;
+        assert_inside(d, &format!("Tab {step}")).await?;
+    }
+    for step in 0..4 {
+        d.press_shift(keyboard::TAB).await?;
+        assert_inside(d, &format!("Shift+Tab {step}")).await?;
+    }
+    Ok(())
+}
+
+/// A click on the top left corner, backdrop for a centred dialog and an end
+/// drawer, closes it and hands focus back to `trigger`.
+pub async fn a_backdrop_click_closes<D: Driver>(d: &mut D, trigger: &str) -> Result<()> {
+    open(d, trigger).await?;
+    assert_inside(d, "opening").await?;
+    d.click_at(4.0, 4.0).await?;
+    closed_with_focus_on(d, trigger, "a backdrop click").await
+}
+
+pub async fn closed_with_focus_on<D: Driver>(d: &mut D, trigger: &str, after: &str) -> Result<()> {
+    eventually(d, &format!("{after} to close the dialog"), async |d| {
+        Ok(!d.exists(DIALOG).await?)
+    })
+    .await?;
+    eventually_focused(d, trigger, after).await
+}
+
+async fn modal_traps_tab<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    tab_stays_inside(d, TRIGGER).await
+}
+
+async fn modal_tab_cycles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    open(d, TRIGGER).await?;
+    assert_inside(d, "opening").await?;
+    d.focus("#keep").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, "#discard", "Tab from Keep editing").await?;
+    d.press(keyboard::TAB).await?;
+    assert_inside(d, "Tab from Discard").await?;
+    ensure!(!d.is_focused("#discard").await?, "Tab did not wrap");
+    Ok(())
+}
+
+async fn modal_backdrop_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    a_backdrop_click_closes(d, TRIGGER).await
+}
+
+e2e::scenario!(
+    a_modal_moves_focus_in_and_traps_tab,
+    "/modal",
+    modal_traps_tab
+);
+e2e::scenario!(
+    tab_cycles_through_every_button_in_a_modal,
+    "/modal",
+    modal_tab_cycles
+);
+e2e::scenario!(
+    a_backdrop_click_closes_a_modal,
+    "/modal",
+    modal_backdrop_closes
+);
 
 #[test]
 fn it_meets_the_baseline() {

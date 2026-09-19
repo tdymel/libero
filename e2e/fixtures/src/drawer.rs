@@ -23,7 +23,7 @@ fn DrawerPage() -> Element {
             rsx! {
                 Title { size: "lg", "Navigation" }
                 Anchor { to: "/", "Home" }
-                Button { variant: "text", onclick: move |_| s.close(), "Close" }
+                Button { id: "drawer-close", variant: "text", onclick: move |_| s.close(), "Close" }
             }
         },
     );

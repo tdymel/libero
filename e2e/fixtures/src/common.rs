@@ -18,7 +18,7 @@ pub fn Between(children: Element) -> Element {
 }
 
 /// The options of `Select` and `MultiSelect`.
-#[derive(Clone, Copy, PartialEq, Options)]
+#[derive(Clone, Copy, PartialEq, Debug, Options)]
 pub enum Fruit {
     Apple,
     Banana,

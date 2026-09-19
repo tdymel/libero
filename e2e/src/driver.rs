@@ -22,6 +22,15 @@ pub enum Platform {
     Native,
 }
 
+/// A `getBoundingClientRect()` in CSS px.
+#[derive(Clone, Copy, Debug, Default, PartialEq, serde::Deserialize)]
+pub struct Rect {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
 /// What a scenario may do and read. Every read is of the settled page on
 /// Blitz; on the web it is a snapshot, so assert through [`eventually`].
 // Driven by one thread's `block_on`, so the futures need no `Send` bound.
@@ -29,6 +38,10 @@ pub enum Platform {
 pub trait Driver {
     fn platform(&self) -> Platform;
     async fn click(&mut self, selector: &str) -> Result<()>;
+    /// A click at a viewport point, e.g. on a backdrop.
+    async fn click_at(&mut self, x: f64, y: f64) -> Result<()>;
+    /// The viewport's `(width, height)` in CSS px.
+    async fn viewport(&mut self) -> Result<(f64, f64)>;
     async fn press(&mut self, key: Key) -> Result<()>;
     async fn press_shift(&mut self, key: Key) -> Result<()>;
     async fn type_text(&mut self, text: &str) -> Result<()>;
@@ -37,6 +50,12 @@ pub trait Driver {
     async fn focus(&mut self, selector: &str) -> Result<()>;
     async fn text(&mut self, selector: &str) -> Result<String>;
     async fn attr(&mut self, selector: &str, name: &str) -> Result<Option<String>>;
+    async fn exists(&mut self, selector: &str) -> Result<bool>;
+    /// The first match's bounding rect.
+    async fn rect(&mut self, selector: &str) -> Result<Rect>;
+    /// The first match's computed `property`, as `getComputedStyle` reads it.
+    async fn style(&mut self, selector: &str, property: &str) -> Result<String>;
+    /// Focus is on any match of `selector`.
     async fn is_focused(&mut self, selector: &str) -> Result<bool>;
     /// The focused element's `id`, empty when it has none.
     async fn focused_id(&mut self) -> Result<String>;
@@ -62,6 +81,13 @@ pub async fn eventually<D: Driver>(
         if started.elapsed() > d.budget() {
             bail!("{:?}: gave up waiting for {what}", d.platform());
         }
+        d.idle().await;
+    }
+}
+
+/// Lets `rounds` idle steps pass, for a check that something did *not* happen.
+pub async fn linger<D: Driver>(d: &mut D, rounds: usize) {
+    for _ in 0..rounds {
         d.idle().await;
     }
 }
@@ -125,7 +151,7 @@ mod web {
 
     use anyhow::Result;
 
-    use super::{Driver, Platform};
+    use super::{Driver, Platform, Rect};
     use crate::passes::{focus, keyboard, pointer};
     use crate::{Fixture, Viewport};
 
@@ -172,6 +198,14 @@ mod web {
             pointer::click(&self.fixture.page, selector).await
         }
 
+        async fn click_at(&mut self, x: f64, y: f64) -> Result<()> {
+            pointer::click_at(&self.fixture.page, pointer::Point { x, y }).await
+        }
+
+        async fn viewport(&mut self) -> Result<(f64, f64)> {
+            self.json("[innerWidth, innerHeight]").await
+        }
+
         async fn press(&mut self, key: keyboard::Key) -> Result<()> {
             keyboard::press(&self.fixture.page, key).await
         }
@@ -212,9 +246,29 @@ mod web {
                 .await
         }
 
-        async fn is_focused(&mut self, selector: &str) -> Result<bool> {
-            self.json(&format!("document.activeElement === {}", element(selector)))
+        async fn exists(&mut self, selector: &str) -> Result<bool> {
+            self.json(&format!("{} !== null", element(selector))).await
+        }
+
+        async fn rect(&mut self, selector: &str) -> Result<Rect> {
+            self.json(&format!("{}.getBoundingClientRect()", element(selector)))
                 .await
+        }
+
+        async fn style(&mut self, selector: &str, property: &str) -> Result<String> {
+            self.json(&format!(
+                "getComputedStyle({}).getPropertyValue({property:?})",
+                element(selector)
+            ))
+            .await
+        }
+
+        async fn is_focused(&mut self, selector: &str) -> Result<bool> {
+            // Any match, as Blitz's reads it.
+            self.json(&format!(
+                "document.activeElement?.matches({selector:?}) ?? false"
+            ))
+            .await
         }
 
         async fn focused_id(&mut self) -> Result<String> {
@@ -247,7 +301,7 @@ mod native {
 
     use anyhow::{Result, anyhow};
 
-    use super::{Driver, Platform};
+    use super::{Driver, Platform, Rect};
     use crate::passes::keyboard;
 
     /// A fixture route mounted in a windowless Blitz document.
@@ -278,6 +332,16 @@ mod native {
         async fn click(&mut self, selector: &str) -> Result<()> {
             self.page.click(selector);
             Ok(())
+        }
+
+        async fn click_at(&mut self, x: f64, y: f64) -> Result<()> {
+            self.page.click_at(x as f32, y as f32);
+            Ok(())
+        }
+
+        async fn viewport(&mut self) -> Result<(f64, f64)> {
+            let (width, height) = native_tests::VIEWPORT;
+            Ok((f64::from(width), f64::from(height)))
         }
 
         async fn press(&mut self, key: keyboard::Key) -> Result<()> {
@@ -318,6 +382,24 @@ mod native {
             Ok(self.page.attr(selector, name))
         }
 
+        async fn exists(&mut self, selector: &str) -> Result<bool> {
+            Ok(self.page.exists(selector))
+        }
+
+        async fn rect(&mut self, selector: &str) -> Result<Rect> {
+            let (x, y, width, height) = self.page.rect(selector);
+            Ok(Rect {
+                x,
+                y,
+                width,
+                height,
+            })
+        }
+
+        async fn style(&mut self, selector: &str, property: &str) -> Result<String> {
+            Ok(self.page.computed(selector, property))
+        }
+
         async fn is_focused(&mut self, selector: &str) -> Result<bool> {
             Ok(self.page.is_focused(selector))
         }
@@ -334,8 +416,10 @@ mod native {
             Ok(self.page.focus_owner())
         }
 
+        /// Real time for libero's timers, the same span on the animation clock.
         async fn idle(&mut self) {
             self.page.wait(Duration::from_millis(20));
+            self.page.advance(0.02);
         }
 
         fn budget(&self) -> Duration {

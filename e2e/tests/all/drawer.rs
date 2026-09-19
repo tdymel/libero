@@ -4,8 +4,12 @@
 //! fixture's short body box, where the scroll lock's phantom clip did not
 //! reach. `contrast_covers` makes that an assertion rather than luck.
 
+use anyhow::Result;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
+
+use crate::modal;
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard};
 
@@ -25,6 +29,39 @@ fn it_meets_the_baseline() {
         )
         .run();
 }
+
+async fn traps_tab<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    modal::tab_stays_inside(d, TRIGGER).await
+}
+
+async fn backdrop_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    modal::a_backdrop_click_closes(d, TRIGGER).await
+}
+
+async fn close_button_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    modal::open(d, TRIGGER).await?;
+    d.click("#drawer-close").await?;
+    modal::closed_with_focus_on(d, TRIGGER, "the drawer's Close").await
+}
+
+async fn hugs_the_end<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    modal::open(d, TRIGGER).await?;
+    let (vw, vh) = d.viewport().await?;
+    eventually(d, "the drawer to dock at the right edge", async |d| {
+        let r = d.rect(DIALOG).await?;
+        Ok((r.x + r.width - vw).abs() <= 1.0 && r.y.abs() <= 1.0 && (r.height - vh).abs() <= 1.0)
+    })
+    .await
+}
+
+e2e::scenario!(a_drawer_moves_focus_in_and_traps_tab, "/drawer", traps_tab);
+e2e::scenario!(a_backdrop_click_closes_a_drawer, "/drawer", backdrop_closes);
+e2e::scenario!(
+    a_button_in_a_drawer_closes_it_and_focus_returns,
+    "/drawer",
+    close_button_closes
+);
+e2e::scenario!(a_right_drawer_hugs_the_right_edge, "/drawer", hugs_the_end);
 
 #[test]
 fn it_honours_the_overlay_contract() {

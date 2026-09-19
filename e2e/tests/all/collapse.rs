@@ -5,7 +5,9 @@
 //! replaces ran on `Autocomplete`, where nothing animates, so it could not
 //! fail for what it named (review 7, E9).
 
+use anyhow::{Result, ensure};
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::keyboard::{self, TAB};
 use e2e::passes::{motion, pointer};
 use e2e::suite::Step;
@@ -67,6 +69,36 @@ fn reduced_motion_switches_its_transitions_off() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Open, it grows to its content; closed, `keep_mounted: false` unmounts the
+/// content once the exit ends.
+async fn opens_and_unmounts<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    ensure!(!d.exists(CONTENT).await?, "closed, it rendered its content");
+    d.click(TOGGLE).await?;
+    eventually(
+        d,
+        "the open collapse to reach its content's height",
+        async |d| {
+            if !d.exists(CONTENT).await? {
+                return Ok(false);
+            }
+            let content = d.rect(CONTENT).await?.height;
+            Ok(content > 0.0 && (d.rect(ROOT).await?.height - content).abs() <= 1.0)
+        },
+    )
+    .await?;
+    d.click(TOGGLE).await?;
+    eventually(d, "the closed collapse to unmount its content", async |d| {
+        Ok(!d.exists(CONTENT).await?)
+    })
+    .await
+}
+
+e2e::scenario!(
+    it_opens_to_its_content_and_unmounts_it_once_closed,
+    "/collapse",
+    opens_and_unmounts
+);
 
 /// The focused element's id.
 async fn focused(page: &chromiumoxide::Page) -> String {

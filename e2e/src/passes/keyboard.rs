@@ -104,6 +104,12 @@ pub const ARROW_DOWN: Key = Key {
     vk: 40,
     text: None,
 };
+pub const BACKSPACE: Key = Key {
+    key: "Backspace",
+    code: "Backspace",
+    vk: 8,
+    text: None,
+};
 
 /// CDP modifier bits, for [`press_with`].
 pub const ALT: i64 = 1;

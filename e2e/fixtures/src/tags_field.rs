@@ -4,14 +4,37 @@
 //! all, which is another pattern.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, TagsField};
+use libero::components::{Flex, TagsField, Text};
 
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/tags-field", || rsx! { TagsFieldPage {} }),
     ("/tags-field/cursor", || rsx! { TagsCursorPage {} }),
+    ("/tags-field/echo", || rsx! { TagsEchoPage {} }),
 ];
+
+/// The `/tags-field` field with its value echoed in `#echo`, for the shared
+/// web/native scenarios.
+#[component]
+fn TagsEchoPage() -> Element {
+    let mut topics = use_signal(|| vec!["rust".to_string()]);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            TagsField {
+                label: "Topics",
+                suggestions: ["rust", "dioxus", "wasm", "css", "html"]
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>(),
+                value: topics(),
+                onchange: move |next| topics.set(next),
+            }
+            Text { id: "echo", "{topics:?}" }
+        }
+    }
+}
 
 /// A tag already held, and five suggestions of which one is that tag - so the
 /// list shows four rows, and "anything already held drops out of the list" is

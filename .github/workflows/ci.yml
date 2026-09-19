@@ -40,6 +40,7 @@ jobs:
           components: clippy
           cache-key: clippy
       - run: cargo clippy --workspace --all-targets --exclude e2e --exclude native-tests -- -D warnings
+      # e2e with `native` (driver::Native, the scenarios' native arms) is the `native` job's.
       - run: cargo clippy -p e2e --all-targets -- -D warnings
 
   # The libero configurations the gate does not build.
@@ -97,13 +98,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Blitz's font stack links fontconfig.
-      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev fonts-dejavu-core
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libfontconfig1-dev fonts-dejavu-core xvfb
       - uses: ./.github/actions/setup
         with:
           components: clippy
           cache-key: native
-      - run: cargo clippy -p native-tests --all-targets -- -D warnings
+      - run: cargo clippy -p native-tests -p e2e --features e2e/native --all-targets -- -D warnings
       - run: cargo test -p native-tests
+      # The shared e2e scenarios on the Blitz backend (822).
+      - run: xvfb-run -a -s "-screen 0 1280x800x24" cargo test -p e2e --features native --test all -- ::native
 
   e2e:
     runs-on: ubuntu-latest

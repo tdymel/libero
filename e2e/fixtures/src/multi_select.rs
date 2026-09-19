@@ -2,7 +2,7 @@
 //! reason as `Select`.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, MultiSelect};
+use libero::components::{Flex, MultiSelect, Text};
 
 use crate::{Routes, common::Fruit};
 
@@ -13,7 +13,25 @@ pub const ROUTES: Routes = &[
         "/multi-select/refused",
         || rsx! { MultiSelectRefusedPage {} },
     ),
+    ("/multi-select/echo", || rsx! { MultiSelectEchoPage {} }),
 ];
+
+/// Cherry held, the value echoed in `#echo`, for the shared web/native scenarios.
+#[component]
+fn MultiSelectEchoPage() -> Element {
+    let mut value = use_signal(|| vec![Fruit::Cherry]);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            MultiSelect {
+                label: "Fruit",
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+            Text { id: "echo", "{value:?}" }
+        }
+    }
+}
 
 /// One chip already held, so the trigger draws the chip and its remove control
 /// at rest - the part of this component that is neither a field nor a list.

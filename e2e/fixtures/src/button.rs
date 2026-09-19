@@ -70,7 +70,7 @@ fn ButtonPage() -> Element {
                 icon: rsx! { svg { id: "with-icon-glyph", width: "16", height: "16", view_box: "0 0 24 24",
                     circle { cx: "12", cy: "12", r: "8" }
                 } },
-                "Save"
+                span { id: "with-icon-text", "Save" }
             }
             for variant in ["filled", "tonal", "elevated", "outlined", "standard"] {
                 Flex { gap: "sm",

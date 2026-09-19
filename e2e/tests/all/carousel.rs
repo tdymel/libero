@@ -28,10 +28,11 @@
 //! and `Carousel` moves the strip with a smooth scroll, which is unreliable in
 //! a background page at 390px (`codebase/e2e-harness`).
 
-use anyhow::{Result, bail};
+use anyhow::{Result, bail, ensure};
 use chromiumoxide::Page;
 use e2e::archetypes::reset_tab_position;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, linger};
 use e2e::passes::keyboard;
 use e2e::passes::motion;
 use e2e::passes::pointer;
@@ -136,6 +137,55 @@ const TAB_BUDGET: usize = 10;
 /// what a screen reader is read.
 const INDEX: &str = "[...document.querySelectorAll('[aria-roledescription=slide]')]\
                      .findIndex(el => el.hasAttribute('data-current'))";
+
+const FIRST_CURRENT: &str = "[aria-roledescription=slide]:nth-of-type(1)[data-current]";
+
+async fn an_arrow_on_the_track_moves<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(TRACK).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "ArrowRight on the track to reach slide 2", async |d| {
+        d.exists(SECOND_CURRENT).await
+    })
+    .await
+}
+
+/// An arrow in a field inside a slide stays the field's (`typing_target`,
+/// `arrow_target`): the first slide is still the current one.
+async fn an_arrow_in_a_field_stays<D: Driver>(d: &mut D, field: &str) -> Result<()> {
+    d.focus(field).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    linger(d, 10).await;
+    ensure!(
+        d.exists(FIRST_CURRENT).await?,
+        "{:?}: the carousel took the arrow pressed in {field}",
+        d.platform()
+    );
+    Ok(())
+}
+
+async fn an_arrow_in_the_text_field_stays<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    an_arrow_in_a_field_stays(d, TEXT).await
+}
+
+async fn an_arrow_on_the_range_stays<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    an_arrow_in_a_field_stays(d, RANGE).await
+}
+
+e2e::scenario!(
+    an_arrow_on_the_track_moves_to_the_next_slide,
+    "/carousel",
+    an_arrow_on_the_track_moves
+);
+e2e::scenario!(
+    an_arrow_in_a_text_field_stays_in_the_field,
+    "/carousel",
+    an_arrow_in_the_text_field_stays
+);
+e2e::scenario!(
+    an_arrow_on_a_range_stays_on_the_range,
+    "/carousel",
+    an_arrow_on_the_range_stays
+);
 
 /// Every control in the slide keeps the keys that are its own, and none of
 /// them moves the strip - and a plain button, which no arm covers, does.

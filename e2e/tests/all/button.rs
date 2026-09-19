@@ -1,7 +1,9 @@
 //! `Button`: a busy button swallows keyboard activation, every mode shows a
 //! ring on Tab, and link mode navigates through the router (todo 406).
 
+use anyhow::{Result, ensure};
 use e2e::browser::block_on;
+use e2e::driver::Driver;
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -121,47 +123,56 @@ fn a_loading_button_swallows_enter_and_space() {
     });
 }
 
-/// `[failure, ...]` of the element-children layout; empty when it holds.
-const ELEMENT_CHILDREN: &str = "(() => {
-    const box = id => document.getElementById(id).getBoundingClientRect();
-    const out = [];
-    const [search, icon, kbd] = [box('search-like'), box('search-icon'), box('search-kbd')];
-    const pad = parseFloat(getComputedStyle(document.getElementById('search-like')).paddingRight);
-    if (Math.abs(search.right - pad - 1 - kbd.right) > 1) out.push(['kbd not at the end', kbd.right, search.right]);
-    if (icon.left - search.left > 24) out.push(['icon not at the start', icon.left, search.left]);
-    const [swatch, fill] = [box('swatch'), box('swatch-fill')];
-    if (fill.width < swatch.width - 2 || fill.height < swatch.height - 2)
-        out.push(['swatch fill collapsed', fill.width, fill.height, swatch.width, swatch.height]);
-    const [withIcon, glyph] = [document.getElementById('with-icon'), box('with-icon-glyph')];
-    const text = document.createRange();
-    text.selectNodeContents([...withIcon.childNodes].find(n => n.nodeType === 3 && n.textContent.trim()));
-    const label = text.getBoundingClientRect();
-    const gap = label.left - glyph.right;
-    if (glyph.width < 15 || gap < 2) out.push(['icon squeezed or touching', glyph.width, gap]);
-    const [mid, textMid] = [(glyph.top + glyph.bottom) / 2, (label.top + label.bottom) / 2];
-    if (Math.abs(mid - textMid) > 2) out.push(['icon off the text centre', mid, textMid]);
-    return out;
-})()";
-
 /// Todo 662: element children are the button's own flex items, so a caller's
 /// gap, auto margin and percentage sizes reach them with no sx of its own.
 /// 481's label span broke the docs search field and every docs colour swatch
 /// (d1dc0f03). The `icon` prop keeps a gap and centres on the text.
-#[test]
-fn element_children_keep_the_callers_flex_layout() {
-    block_on(async {
-        let fixture = Fixture::open("/button", Viewport::Desktop).await.unwrap();
-        let failures: Vec<serde_json::Value> = fixture
-            .page
-            .evaluate(ELEMENT_CHILDREN)
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
-        assert!(failures.is_empty(), "{failures:?}");
-        fixture.close().await.unwrap();
-    });
+async fn element_children_layout<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let search = d.rect("#search-like").await?;
+    let pad: f64 = d
+        .style("#search-like", "padding-right")
+        .await?
+        .trim_end_matches("px")
+        .parse()?;
+    let kbd = d.rect("#search-kbd").await?;
+    let icon = d.rect("#search-icon").await?;
+    let search_end = search.x + search.width - pad - 1.0;
+    ensure!(
+        (search_end - (kbd.x + kbd.width)).abs() <= 1.0,
+        "kbd not at the end: {kbd:?} in {search:?}"
+    );
+    ensure!(
+        icon.x - search.x <= 24.0,
+        "icon not at the start: {icon:?} in {search:?}"
+    );
+
+    let swatch = d.rect("#swatch").await?;
+    let fill = d.rect("#swatch-fill").await?;
+    ensure!(
+        fill.width >= swatch.width - 2.0 && fill.height >= swatch.height - 2.0,
+        "swatch fill collapsed: {fill:?} in {swatch:?}"
+    );
+
+    let glyph = d.rect("#with-icon-glyph").await?;
+    let label = d.rect("#with-icon-text").await?;
+    let gap = label.x - (glyph.x + glyph.width);
+    ensure!(
+        glyph.width >= 15.0 && gap >= 2.0,
+        "icon squeezed or touching: {glyph:?}, gap {gap}"
+    );
+    let (mid, text_mid) = (glyph.y + glyph.height / 2.0, label.y + label.height / 2.0);
+    ensure!(
+        (mid - text_mid).abs() <= 2.0,
+        "icon off the text centre: {mid} vs {text_mid}"
+    );
+    Ok(())
 }
+
+e2e::scenario!(
+    element_children_keep_the_callers_flex_layout,
+    "/button",
+    element_children_layout
+);
 
 /// The label against the background as painted, `null` while either is
 /// translucent (the resting unfilled variants, or a transition under way).
