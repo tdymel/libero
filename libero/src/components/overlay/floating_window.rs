@@ -11,7 +11,7 @@ use crate::{
         buttons::{ActionIcon, Button},
         common::{
             ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CloseIcon, HtmlTag,
-            Input, Variables, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx, variables,
+            Input, focus_ring_sx, has_shortcut_modifier, inset_focus_ring_sx,
         },
         layout::{Float, Placement, paper_sx, use_box},
         overlay::{Menu, MenuEntry, MenuItem, use_menu},
@@ -25,7 +25,7 @@ use crate::{
     localization::{FloatingWindowLabels, fill},
     platform::{ElementApi, KeyChord, KeySubscription, PlatformError, keyboard},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CssVar, PAPER_BORDER_COLOR, Size, SizeCss},
+    theme::{PAPER_BORDER_COLOR, Size, SizeCss},
 };
 
 /// A window's position and size in viewport pixels, handed to
@@ -65,10 +65,6 @@ pub struct FloatingWindowOptions {
 
 static NEXT_WINDOW_ID: AtomicU64 = AtomicU64::new(0);
 
-// Per instance and unbounded, so they ride in `Variables`, never in a class.
-const WINDOW_WIDTH: CssVar = CssVar::new("--lsx-floating-window-width");
-const WINDOW_HEIGHT: CssVar = CssVar::new("--lsx-floating-window-height");
-
 // A window is a `Paper`: background, border, radius, shadow and the focus
 // contrast all come from `paper_sx()`. The parts are keyed by data attributes
 // under the one class, the `Accordion` arrangement.
@@ -78,10 +74,8 @@ static WINDOW_SX: StaticSx = StaticSx::new(|| {
         .position("relative")
         .display("flex")
         .flex_direction("column")
-        .width(WINDOW_WIDTH.value_or("auto"))
-        .height(WINDOW_HEIGHT.value_or("auto"))
         // The cap when the caller's `sx` sets no max. A caller's max replaces
-        // these, so the `Float` wrapper and the width variable cap it again.
+        // these, so the `Float` wrapper and the resized width cap it again.
         .max_width("100dvw")
         .max_height("100dvh")
         .overflow("hidden")
@@ -490,20 +484,12 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         ),
     };
 
-    // A resized width is capped at the viewport here, because a `max_width` in
-    // the caller's `sx` replaces the window's own cap. The height needs no
-    // `min`: the wrapper is a column flexbox capped at `100dvh`, and the window
-    // shrinks into it.
-    let window_variables: Input<Variables> = variables()
-        .with(
-            WINDOW_WIDTH,
-            size().map(|(width, _)| format!("min({width}px, 100dvw)")),
-        )
-        .with(
-            WINDOW_HEIGHT,
-            size().map(|(_, height)| format!("{height}px")),
-        )
-        .into();
+    // Inline, so a resize beats a `width`/`height` in the caller's `sx`, which
+    // stays the initial size (todo 922). The width is capped at the viewport
+    // here, because a caller's `max_width` replaces the window's own cap; the
+    // height shrinks into the wrapper's column flexbox, capped at `100dvh`.
+    let resized_style =
+        size().map(|(width, height)| format!("width:min({width}px, 100dvw);height:{height}px;"));
 
     // The separator's value comes from this render's own request, clamped as
     // the CSS will clamp it; only an auto-sized window waits for `onresize`.
@@ -531,7 +517,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     let window = use_box()
         .framework_sx(&WINDOW_SX)
         .sx(&user_sx)
-        .variables(&window_variables)
+        .style(resized_style)
         .states(
             &crate::components::common::States::default()
                 .active(defaults.radius.radius_state_name())

@@ -167,8 +167,9 @@ pub fn TimelinePage() -> Element {
                     // the first option, so it is the default, and
                     // `generate_code` omits a control at its default - the
                     // block prints no `color:` line there, exactly as the
-                    // unset state did.
-                    Control::color("color"),
+                    // unset state did. Hidden with no `active`: nothing is
+                    // drawn in the accent then.
+                    Control::color("color").hidden_when(|values| values.str("active") == "none"),
                     Control::slider("bullet_size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])

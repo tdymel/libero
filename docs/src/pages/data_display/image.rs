@@ -57,11 +57,11 @@ pub fn ImagePage() -> Element {
                     "An "
                     Code { source: "<img>" }
                     " with a fallback source for when it fails to load, rounded corners and "
-                    "an optional click-to-zoom overlay. It fills its box, so size the box for "
+                    "an optional click-to-zoom overlay. It fills its box, so size the box. "
                     Code { source: "fit" }
                     " maps straight onto "
                     Code { source: "object-fit" }
-                    "; "
+                    ", and "
                     Code { source: "radius" }
                     " takes a step on the radius scale."
                 }

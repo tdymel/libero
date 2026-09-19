@@ -6,7 +6,7 @@ use libero::{
 };
 
 const DATA: &str = "https://github.com/tdymel/libero";
-const LABEL: &str = "QR code linking to the libero GitHub repository";
+const LABEL: &str = "The libero repository on GitHub";
 
 #[component]
 pub fn QrCodePage() -> Element {

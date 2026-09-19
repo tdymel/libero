@@ -920,6 +920,50 @@ async fn drags_leave_the_handle_focused<D: Driver>(d: &mut D, _route: &str) -> R
     Ok(())
 }
 
+/// Todo 922: the caller's `sx` `width`/`height` is the initial size only; the
+/// keyboard and the pointer resize past it, and Reset brings it back.
+async fn a_resize_beats_the_callers_size<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let first = opened(d).await?;
+    assert!(
+        near(first.width, 400.0) && near(first.height, 200.0),
+        "the caller's sx size is not the initial size: {first:?}"
+    );
+    d.focus(SEPARATOR).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually(d, "the keyboard to add a step each way", async |d| {
+        let r = d.rect(DIALOG).await?;
+        Ok(near(r.width, 400.0 + STEP) && near(r.height, 200.0 + STEP))
+    })
+    .await?;
+    let keyed = reported(d, RESIZE_REPORT, "the keyboard resize").await?;
+    d.drag(SEPARATOR, 30.0, 20.0).await?;
+    eventually(d, "the pointer to add (30, 20)", async |d| {
+        let r = d.rect(DIALOG).await?;
+        Ok(near(r.width, keyed.width + 30.0) && near(r.height, keyed.height + 20.0))
+    })
+    .await?;
+    reported(d, RESIZE_REPORT, "the pointer resize").await?;
+    d.focus(MENU).await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "the title-bar menu", async |d| {
+        d.exists("[role=menu]").await
+    })
+    .await?;
+    d.press(keyboard::END).await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "Reset to restore the caller's size", async |d| {
+        let r = d.rect(DIALOG).await?;
+        Ok(near(r.width, 400.0) && near(r.height, 200.0))
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_resize_wins_over_the_callers_sx_size,
+    "/floating-window-sized",
+    a_resize_beats_the_callers_size
+);
 e2e::scenario!(
     enter_opens_it_with_focus_inside_and_escape_hands_it_back,
     "/floating-window",

@@ -12,7 +12,32 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/floating-window", || rsx! { FloatingWindowPage {} }),
     ("/floating-window-pair", || rsx! { WindowPairPage {} }),
+    ("/floating-window-sized", || rsx! { SizedWindowPage {} }),
 ];
+
+/// A caller's `sx` size is only the initial size: a resize wins over it (todo 922).
+#[component]
+fn SizedWindowPage() -> Element {
+    let mut resized = use_signal(String::new);
+    let record_resize = use_callback(move |rect: WindowRect| resized.set(rect_text(rect)));
+    let window = use_floating_window(
+        FloatingWindowOptions {
+            title: Some("Sized".into()),
+            resizable: true,
+            sx: sx().width("400px").height("200px").into(),
+            onresize: Some(record_resize),
+            ..Default::default()
+        },
+        |_| rsx! { Text { "A window the caller sized." } },
+    );
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "open-window", variant: "outlined", onclick: move |_| window.open(), "Sized" }
+            div { id: "resize-report", "{resized}" }
+        }
+    }
+}
 
 /// Two windows over one page: stacking, one Escape per window, focus return
 /// from each, a close from the page, and a long title at 320px.

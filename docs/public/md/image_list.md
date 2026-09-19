@@ -106,9 +106,9 @@ over the tile, so the link's name is the image's `alt`. A decorative image
 leaves the link unnamed. The bar sits above the link, so a control in it still
 works.
 
-The scrim is a gradient. White text on it runs from 9.3:1 at the bottom edge to
-1.8:1 near the top, so check a second line over a bright picture. A `below` bar
-has no scrim and always reads.
+The scrim never drops below 60% black, so the bar's white text holds at least
+5.7:1 even over a white picture. Text you dim yourself can still fall short. A
+`below` bar has no scrim and always reads.
 
 ## Props
 
@@ -144,7 +144,7 @@ A builder, like `Table::column()`.
 |---|---|---|
 | `new(content)` | `Element` | The strip's content, laid out as a flex row. Give a text block `flex: 1 1 auto; min-width: 0` and a `<button>` `color: inherit`. |
 | `position(position)` | `BarPosition` | `bottom`, `top` or `below`, for this cell. |
-| `scrim(on)` | `bool` | The gradient behind an overlay bar and its light text color. Off leaves a bare transparent strip. A `below` bar has none. |
+| `scrim(on)` | `bool` | The dark gradient behind an overlay bar and its light text color. Off leaves a bare transparent strip. A `below` bar has none. |
 
 `ImageItem` holds `Element`s, so the list re-renders whenever its parent does.
 
@@ -159,7 +159,7 @@ A builder, like `Table::column()`.
 | `gap` | `Size` | `Size::Xs` | |
 | `radius` | `Size` | `Size::Sm` | |
 | `bar_position` | `BarPosition` | `Bottom` | Used by any bar that names none. |
-| `bar_background` | `&'static str` | a black-to-transparent gradient | The scrim behind a `bottom` bar. |
+| `bar_background` | `&'static str` | a gradient from 72% to 60% black | The scrim behind a `bottom` bar. |
 | `bar_background_top` | `&'static str` | the same, reversed | The scrim behind a `top` bar. |
 | `bar_color` | `&'static str` | `"#fff"` | Bar text, on either scrim. |
 | `bar_padding` | `Size` | `Size::Sm` | The bar's inset. |

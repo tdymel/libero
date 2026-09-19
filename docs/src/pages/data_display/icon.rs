@@ -58,8 +58,10 @@ pub fn IconPage() -> Element {
                     // to, so that swatch prints nothing.
                     Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    // `standard` draws no box, so there is no corner to round.
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                        .default("sm"),
+                        .default("sm")
+                        .hidden_when(|values| values.str("variant") == "standard"),
                     Control::toggle("component", ["span", "div"]).labels(["Span", "Div"]),
                 ],
                 render: move |values: DemoValues| rsx! {

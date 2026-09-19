@@ -21,7 +21,7 @@ fn Demo() -> Element {
     rsx! {
         QrCode {
             data: "https://github.com/tdymel/libero",
-            aria_label: "QR code linking to the libero GitHub repository",
+            aria_label: "The libero repository on GitHub",
             sx: sx().width("160px"),
         }
     }

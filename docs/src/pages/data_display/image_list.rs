@@ -283,7 +283,7 @@ pub fn ImageListPage() -> Element {
                         .doc("`bottom`, `top` or `below`, for this cell."),
                     prop("scrim(on)", "bool")
                         .default("true")
-                        .doc("The gradient behind an overlay bar and its light text color. Off leaves a bare transparent strip. A `below` bar has none."),
+                        .doc("The dark gradient behind an overlay bar and its light text color. Off leaves a bare transparent strip. A `below` bar has none."),
                 ]),
             ],
             lead: rsx! {
@@ -411,9 +411,9 @@ pub fn ImageListPage() -> Element {
                     "link, so a control in it still works."
                 }
                 Text {
-                    "The scrim is a gradient. White text on it runs from 9.3:1 at the bottom "
-                    "edge to 1.8:1 near the top, so check a second line over a bright "
-                    "picture. A "
+                    "The scrim never drops below 60% black, so the bar's white text holds "
+                    "at least 5.7:1 even over a white picture. Text you dim yourself can "
+                    "still fall short. A "
                     Code { source: "below" }
                     " bar has no scrim and always reads."
                 }

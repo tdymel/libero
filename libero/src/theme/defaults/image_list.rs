@@ -74,8 +74,9 @@ impl ImageListDefaults {
         gap: Size::Xs,
         radius: Size::Sm,
         bar_position: BarPosition::Bottom,
-        bar_background: "linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.36) 70%, transparent)",
-        bar_background_top: "linear-gradient(to bottom, rgba(0,0,0,0.72), rgba(0,0,0,0.36) 70%, transparent)",
+        // Never under 60% black: white text holds 4.5:1 over a pure-white photo (todo 929).
+        bar_background: "linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.6))",
+        bar_background_top: "linear-gradient(to bottom, rgba(0,0,0,0.72), rgba(0,0,0,0.6))",
         bar_color: "#fff",
         bar_padding: Size::Sm,
     };
@@ -100,5 +101,34 @@ impl ToCssDeclarations for ImageListDefaults {
             IMAGE_LIST_BAR_COLOR.declare(self.bar_color),
             IMAGE_LIST_BAR_PADDING.declare(SizeCss::SPACING.value(self.bar_padding)),
         ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::HexColor;
+
+    /// Every stop of both scrims, composited over pure white, keeps the bar's
+    /// white text at 4.5:1 - the worst photo the sweep cannot see (todo 929).
+    #[test]
+    fn the_scrim_holds_white_text_over_a_white_photo() {
+        let defaults = ImageListDefaults::DEFAULT;
+        assert_eq!(defaults.bar_color, "#fff");
+        for scrim in [defaults.bar_background, defaults.bar_background_top] {
+            assert!(!scrim.contains("transparent"), "{scrim} fades out");
+            let alphas: Vec<f32> = scrim
+                .split("rgba(0,0,0,")
+                .skip(1)
+                .map(|rest| rest.split(')').next().unwrap().parse().unwrap())
+                .collect();
+            assert!(!alphas.is_empty(), "{scrim} has no black stop");
+            for alpha in alphas {
+                let grey = (255.0 * (1.0 - alpha)).round() as u32;
+                let ratio =
+                    HexColor::new(0xFF_FF_FF).contrast_ratio(HexColor::new(grey * 0x01_01_01));
+                assert!(ratio >= 4.5, "{scrim}: {alpha} black gives {ratio:.2}:1");
+            }
+        }
     }
 }

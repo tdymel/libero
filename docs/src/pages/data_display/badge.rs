@@ -58,7 +58,10 @@ pub fn BadgePage() -> Element {
                     // so that swatch prints nothing.
                     Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("xxl"),
+                    // `standard` draws no box, so there is no corner to round.
+                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("xxl")
+                        .hidden_when(|values| values.str("variant") == "standard"),
                     Control::switch("circle"),
                     // The child, not a prop - `circle` only reads with a one-
                     // or two-character label, so the demo has to be able to
