@@ -195,6 +195,12 @@ base_props! {
         selected: Option<bool>,
         #[props(default)]
         disabled: Option<bool>,
+        /// With `disabled`: keeps the button in the Tab order. It renders
+        /// `aria-disabled` instead of `disabled`, looks disabled and swallows
+        /// presses - for a control that disables under the focus, such as a
+        /// stepper at its end.
+        #[props(default)]
+        focusable_when_disabled: Option<bool>,
         /// Overlays a `Loader` on the label and swallows clicks, while leaving
         /// the button focusable - a busy control is still one the reader can
         /// find. Renders `aria-busy` and `aria-disabled` rather than native
@@ -233,6 +239,7 @@ pub fn Button(props: ButtonProps) -> Element {
     let selected = props.selected.unwrap_or(false);
     let is_link = props.to.as_ref().is_some();
     let loading = props.loading.unwrap_or(false) && !is_link;
+    let soft_disabled = disabled && props.focusable_when_disabled.unwrap_or(false);
 
     if is_link && props.loading == Some(true) {
         warn("Button: `loading` is ignored on a link - an `<a>` has nothing to wait for.");
@@ -293,7 +300,7 @@ pub fn Button(props: ButtonProps) -> Element {
         // `prevent_default` as well as returning: a busy `type="submit"`
         // would otherwise still submit its form, by click or by Enter in a
         // field, since implicit submission is a synthetic click here.
-        if loading {
+        if loading || soft_disabled {
             event.prevent_default();
             return;
         }
@@ -334,7 +341,7 @@ pub fn Button(props: ButtonProps) -> Element {
             return boxed
                 .attr_default("role", "link")
                 .attr("aria-disabled", "true")
-                .attr("tabindex", "-1")
+                .attr("tabindex", if soft_disabled { "0" } else { "-1" })
                 .render(HtmlTag::A, props.attributes, label);
         }
 
@@ -366,9 +373,12 @@ pub fn Button(props: ButtonProps) -> Element {
     // `submit` or `reset` still gets it.
     boxed
         .event("onclick", handle_click)
-        .attr("disabled", disabled)
+        .attr("disabled", disabled && !soft_disabled)
         .attr("aria-busy", loading.then_some("true"))
-        .attr("aria-disabled", loading.then_some("true"))
+        .attr(
+            "aria-disabled",
+            (loading || soft_disabled).then_some("true"),
+        )
         .attr_default("type", "button")
         .attr_default(
             "aria-pressed",

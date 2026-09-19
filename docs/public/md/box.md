@@ -11,6 +11,10 @@ attributes like `href` or `src` pass through to it. `Box` has no look of its
 own. Everything visible comes from `sx` and `states`, see
 [styling.md](styling.md).
 
+Reach for `Box` when an element needs `sx` or `states`, or when the tag is
+decided at runtime: it renders any tag via `component`. Markup that needs
+neither stays a plain Dioxus element.
+
 ## Usage
 
 ```rust

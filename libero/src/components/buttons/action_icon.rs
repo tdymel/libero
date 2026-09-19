@@ -17,7 +17,7 @@ use crate::{
     utils::warn,
 };
 
-pub(crate) const ACTION_ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-action-icon-color");
+const ACTION_ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-action-icon-color");
 const ACTION_ICON_FILL_VAR: CssVar = CssVar::new("--lsx-action-icon-fill");
 const ACTION_ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-action-icon-contrast");
 const ACTION_ICON_HOVER_VAR: CssVar = CssVar::new("--lsx-action-icon-hover");
@@ -197,6 +197,9 @@ base_props! {
         aria_label: String,
         #[props(default)]
         disabled: Option<bool>,
+        /// With `disabled`: keeps the button in the Tab order, as on `Button`.
+        #[props(default)]
+        focusable_when_disabled: Option<bool>,
         /// Toggle button: renders `aria-pressed`, and the selected look when a
         /// `variant` or `color` turns the chrome on. `None` leaves it a plain
         /// action.
@@ -231,9 +234,10 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
     let selected = props.selected.unwrap_or(false);
     let is_link = props.to.as_ref().is_some();
     let loading = props.loading.unwrap_or(false) && !is_link;
+    let soft_disabled = disabled && props.focusable_when_disabled.unwrap_or(false);
 
     if is_link && props.loading == Some(true) {
-        warn("ActionIcon: `loading` is ignored on a link - an `<a>` has nothing to wait for.");
+        warn("ActionIcon:`loading` is ignored on a link - an `<a>` has nothing to wait for.");
     }
     if selectable && is_link {
         warn(
@@ -270,7 +274,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
     let handle_click = move |event: Event<MouseData>| {
         // `prevent_default` as well as returning, as on `Button`: a busy
         // `type="submit"` would otherwise still submit its form.
-        if loading {
+        if loading || soft_disabled {
             event.prevent_default();
             return;
         }
@@ -301,7 +305,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
                 .attr_default("role", "link")
                 .attr("aria-label", props.aria_label)
                 .attr("aria-disabled", "true")
-                .attr("tabindex", "-1")
+                .attr("tabindex", if soft_disabled { "0" } else { "-1" })
                 .render(HtmlTag::A, props.attributes, props.children);
         }
 
@@ -335,9 +339,12 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
     boxed
         .event("onclick", handle_click)
         .attr("aria-label", props.aria_label)
-        .attr("disabled", disabled)
+        .attr("disabled", disabled && !soft_disabled)
         .attr("aria-busy", loading.then_some("true"))
-        .attr("aria-disabled", loading.then_some("true"))
+        .attr(
+            "aria-disabled",
+            (loading || soft_disabled).then_some("true"),
+        )
         .attr_default("type", "button")
         .attr_default(
             "aria-pressed",
@@ -363,6 +370,7 @@ mod tests {
             radius: Input::None,
             aria_label: "test".to_string(),
             disabled: None,
+            focusable_when_disabled: None,
             selected: None,
             loading: None,
             onclick: None,

@@ -58,7 +58,7 @@ const DOCS_CRATES: [(&str, &str); 4] = [
 /// Within a tier only the cycle check applies (todo 875). A unit is a category
 /// directory, or `base` for `BASE_FILES`.
 const CATEGORY_TIERS: [(&str, &[&str]); 5] = [
-    // Composites of the tiers below: `ColorSchemeButton` opens a `Menu`.
+    // Composites of the tiers below: `ThemeToggle` opens a `Menu`.
     ("composite", &["buttons", "navigation", "form"]),
     // `Lightbox` is a `Carousel`; `Dialog` has a `Title`.
     ("overlay", &["overlay"]),
@@ -70,9 +70,11 @@ const CATEGORY_TIERS: [(&str, &[&str]); 5] = [
 
 /// The base tier's files. They stay in their docs group's folder (722 q2), so
 /// the tier is declared by file.
-const BASE_FILES: [&str; 5] = [
+const BASE_FILES: [&str; 6] = [
     "libero/src/components/buttons/action_icon.rs",
     "libero/src/components/buttons/button.rs",
+    // `CodeBlock`'s copy control.
+    "libero/src/components/buttons/copy_button.rs",
     "libero/src/components/feedback/loader.rs",
     "libero/src/components/overlay/tooltip.rs",
     // `Tooltip`'s pointer delays, shared with `HoverCard`.

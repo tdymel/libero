@@ -126,9 +126,10 @@ fn the_toolbar_zooms_and_opens_fitted() {
         button_named(&buttons, "Zoom out").unwrap()["aria-disabled"],
         "true"
     );
-    assert_eq!(
-        button_named(&buttons, "Zoom in").unwrap()["aria-disabled"],
-        "false"
+    assert!(
+        !button_named(&buttons, "Zoom in")
+            .unwrap()
+            .contains_key("aria-disabled")
     );
     assert!(
         button_named(&buttons, "Close")

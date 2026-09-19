@@ -1,7 +1,7 @@
 use crate::theme::{Color, Variant};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ColorSchemeButtonDefaults {
+pub struct ThemeToggleDefaults {
     /// `Outlined`, so it reads as a control with a box of its own rather
     /// than a bare glyph in a header.
     pub variant: Variant,
@@ -10,7 +10,7 @@ pub struct ColorSchemeButtonDefaults {
     pub color: Color,
 }
 
-impl ColorSchemeButtonDefaults {
+impl ThemeToggleDefaults {
     pub const DEFAULT: Self = Self {
         variant: Variant::Outlined,
         color: Color::Muted,

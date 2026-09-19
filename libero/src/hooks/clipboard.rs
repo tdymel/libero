@@ -57,6 +57,8 @@ impl Clipboard {
     }
 }
 
+/// A [`Clipboard`] for this component. [`CopyButton`](crate::components::CopyButton)
+/// is the ready-made control built on it.
 pub fn use_clipboard() -> Clipboard {
     Clipboard {
         copied: use_signal(|| false),

@@ -32,6 +32,30 @@ fn loading_keeps_the_label_and_marks_the_button_busy() {
     assert!(html.contains(r#"aria-hidden="true""#), "{html}");
 }
 
+/// Todo 869: disabled but focusable - `aria-disabled` rather than `disabled`,
+/// with the disabled look.
+#[test]
+fn a_focusable_disabled_button_stays_in_the_tab_order() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Button { disabled: true, focusable_when_disabled: true, "Next" } }
+        }
+    }
+
+    let html = body(&render(app));
+    let attributes = attributes_of(&html, "button");
+
+    assert!(!attributes.contains_key("disabled"), "{attributes:?}");
+    assert_eq!(attributes["aria-disabled"], "true", "{attributes:?}");
+    assert!(!attributes.contains_key("aria-busy"), "{attributes:?}");
+    assert!(
+        attributes["data-state"]
+            .split(' ')
+            .any(|token| token == "disabled"),
+        "{attributes:?}"
+    );
+}
+
 /// Off, the button is exactly what it was: no wrapper, no loader, no ARIA.
 #[test]
 fn not_loading_renders_the_children_bare() {

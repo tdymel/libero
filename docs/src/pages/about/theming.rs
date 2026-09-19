@@ -107,20 +107,6 @@ const THEME_SET: &str = r#"LiberoProvider {
     Router::<Route> {}
 }"#;
 
-// snippet: ignore - the icons are the docs site's own
-const SCHEME_TOGGLE: &str = r#"let scheme = use_color_scheme();
-
-rsx! {
-    ActionIcon {
-        aria_label: match scheme.resolved() {
-            ColorScheme::Dark => "Switch to the light theme",
-            ColorScheme::Light => "Switch to the dark theme",
-        },
-        onclick: move |_| scheme.toggle(),
-        if scheme.resolved() == ColorScheme::Dark { SunIcon {} } else { MoonIcon {} }
-    }
-}"#;
-
 const READING_THE_THEME: &str = r#"let theme = use_theme();
 let gap = theme.spacing.get(Size::Md);"#;
 
@@ -225,12 +211,9 @@ pub fn ThemingPage() -> Element {
                 }
                 CodeBlock { source: THEME_SET, language: "rust" }
                 Text {
-                    Code { source: "ColorSchemeButton" }
-                    " is a ready-made switch. For your own, use "
-                    Code { source: "use_color_scheme()" }
-                    "."
+                    Code { source: "ThemeToggle" }
+                    " is a ready-made switch."
                 }
-                CodeBlock { source: SCHEME_TOGGLE, language: "rust" }
             }
 
             DocSection {

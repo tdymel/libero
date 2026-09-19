@@ -44,9 +44,9 @@ mod code;
 mod collapse;
 mod color_field;
 mod color_picker;
-mod color_scheme_button;
 mod combobox;
 mod common;
+mod copy_button;
 mod data_list;
 mod dialog;
 mod direction_toggle;
@@ -113,6 +113,7 @@ mod tabs;
 mod tags_field;
 mod text_field;
 mod textarea;
+mod theme_toggle;
 mod time_picker;
 mod timeline;
 mod tooltip;
@@ -145,8 +146,8 @@ const FIXTURES: &[Routes] = &[
     collapse::ROUTES,
     color_field::ROUTES,
     color_picker::ROUTES,
-    color_scheme_button::ROUTES,
     combobox::ROUTES,
+    copy_button::ROUTES,
     data_list::ROUTES,
     chrono_field::ROUTES,
     dialog::ROUTES,
@@ -214,6 +215,7 @@ const FIXTURES: &[Routes] = &[
     tags_field::ROUTES,
     text_field::ROUTES,
     textarea::ROUTES,
+    theme_toggle::ROUTES,
     time_picker::ROUTES,
     timeline::ROUTES,
     tooltip::ROUTES,

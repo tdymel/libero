@@ -100,10 +100,7 @@ fn the_zoom_buttons_step_and_disable_at_their_limits() {
         transform.starts_with("scale(1.25)"),
         "not zoomed in: {transform}"
     );
-    assert_eq!(
-        page.attr(ZOOM_OUT, "aria-disabled").as_deref(),
-        Some("false")
-    );
+    assert_eq!(page.attr(ZOOM_OUT, "aria-disabled"), None);
 
     page.focus(ZOOM_IN);
     for _ in 0..10 {

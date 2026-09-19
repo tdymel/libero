@@ -1,8 +1,8 @@
-# ColorSchemeButton
+# ThemeToggle
 
 Crate: `libero`
-Import: `use libero::components::ColorSchemeButton;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/color_scheme_button.rs>
+Import: `use libero::components::ThemeToggle;`
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/buttons/theme_toggle.rs>
 Index: [index.md](index.md) lists every other page
 Description: An icon button that steps the colour scheme through system, dark and light, with an optional theme picker beside it.
 
@@ -13,22 +13,23 @@ for dark, a half-filled disc for following the system.
 
 While it follows the system, a change of the OS setting applies at once. A
 picked scheme stays until the next press. For your own control, such as a menu
-of all three choices, build on `use_color_scheme()` (see [Theming](theming.md)).
+of all three choices, build on `use_color_scheme()`: it reads the setting and
+what it resolves to, and `set`, `toggle` and `cycle` change it.
 
 With `themes` set, a second button beside it opens a menu of theme sets. This
-site's header uses `ColorSchemeButton { themes: ThemeSet::CATALOGUE }`. The
+site's header uses `ThemeToggle { themes: ThemeSet::CATALOGUE }`. The
 button names come from the [localization](localization.md).
 
 ## Usage
 
 ```rust
 use dioxus::prelude::*;
-use libero::{components::ColorSchemeButton, theme::ThemeSet};
+use libero::{components::ThemeToggle, theme::ThemeSet};
 
 #[component]
 fn Demo() -> Element {
     rsx! {
-        ColorSchemeButton { size: "md", themes: ThemeSet::CATALOGUE }
+        ThemeToggle { size: "md", themes: ThemeSet::CATALOGUE }
     }
 }
 ```
@@ -45,19 +46,19 @@ fn Demo() -> Element {
 | `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the three built-in button names. Gets the setting a press moves to and returns what the press does. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 
-Like every component, `ColorSchemeButton` also takes the shared props `sx`,
+Like every component, `ThemeToggle` also takes the shared props `sx`,
 `class`, `style`, `states`, and any extra HTML attributes.
 
 ## Theme defaults
 
-`ColorSchemeButtonDefaults` on the theme, as `color_scheme_button`.
+`ThemeToggleDefaults` on the theme, as `theme_toggle`.
 
 | Field | Type | Description |
 |---|---|---|
 | `variant` | `Variant` | Default `variant` when the prop is omitted (`outlined`). |
 | `color` | `Color` | Default `color` when the prop is omitted (`muted`). |
 
-The names are `ColorSchemeButtonLabels` in the localization: `to_light`,
+The names are `ThemeToggleLabels` in the localization: `to_light`,
 `to_dark`, `to_system` (the toggle's names), `group`, `picker` and `themes`
 (the picker's).
 

@@ -1,4 +1,4 @@
-//! `ColorSchemeButton`: every press moves the scheme one step round the cycle,
+//! `ThemeToggle`: every press moves the scheme one step round the cycle,
 //! and the name always says where the next press goes (todo 406).
 
 use chromiumoxide::Page;
@@ -14,7 +14,7 @@ const BUTTON: &str = "#scheme";
 /// other units' pages from that (see `SHIELD_STORAGE`).
 #[test]
 fn it_meets_the_baseline() {
-    Suite::new("color_scheme_button", "/color-scheme-button")
+    Suite::new("theme_toggle", "/theme-toggle")
         .focusable(BUTTON)
         .targets(BUTTON)
         .dark_snapshot("the label names the next scheme, which follows the platform's")
@@ -29,7 +29,7 @@ const CHEVRON: &str = "#split > div > button";
 /// persists.
 #[test]
 fn the_split_button_meets_the_baseline() {
-    Suite::new("color_scheme_button_themes", "/color-scheme-button/themes")
+    Suite::new("theme_toggle_themes", "/theme-toggle/themes")
         .focusable(TOGGLE)
         .focusable(CHEVRON)
         .targets(TOGGLE)
@@ -47,7 +47,7 @@ fn the_split_button_meets_the_baseline() {
 #[test]
 fn escape_returns_focus_to_the_chevron() {
     block_on(async {
-        let fixture = Fixture::open("/color-scheme-button/themes", Viewport::Desktop)
+        let fixture = Fixture::open("/theme-toggle/themes", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -130,7 +130,7 @@ async fn text_colour(page: &Page) -> String {
 #[test]
 fn each_press_steps_the_cycle_and_renames_the_button() {
     block_on(async {
-        let fixture = Fixture::open("/color-scheme-button", Viewport::Desktop)
+        let fixture = Fixture::open("/theme-toggle", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;

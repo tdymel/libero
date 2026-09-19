@@ -6,8 +6,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, Box, Burger, Button, ColorSchemeButton, Container, DirectionToggle,
-        Flex, Header, Image, Kbd, Notifications, RepoButton, ScrollArea, SpotlightOptions, Title,
+        ActionIcon, Anchor, Box, Burger, Button, Container, DirectionToggle, Flex, Header, Image,
+        Kbd, Notifications, RepoButton, ScrollArea, SpotlightOptions, ThemeToggle, Title,
         spotlight_filter, use_scroll_area, use_spotlight,
     },
     hooks::use_element,
@@ -85,8 +85,6 @@ pub(crate) enum Route {
     UseFocusReturnPage {},
     #[route("/hooks/use-drag")]
     UseDragPage {},
-    #[route("/hooks/use-clipboard")]
-    UseClipboardPage {},
     #[route("/hooks/use-theme-set")]
     UseThemeSetPage {},
     #[route("/hooks/use-stylesheet")]
@@ -96,12 +94,14 @@ pub(crate) enum Route {
     ActionIconPage {},
     #[route("/buttons/button")]
     ButtonPage {},
-    #[route("/buttons/color-scheme-button")]
-    ColorSchemeButtonPage {},
+    #[route("/buttons/copy-button")]
+    CopyButtonPage {},
     #[route("/buttons/direction-toggle")]
     DirectionTogglePage {},
     #[route("/buttons/repo-button")]
     RepoButtonPage {},
+    #[route("/buttons/theme-toggle")]
+    ThemeTogglePage {},
 
     #[route("/data-display/accordion")]
     AccordionPage {},
@@ -488,7 +488,7 @@ fn AppShell() -> Element {
                 // In the header rather than on a page: its job is to let a
                 // reviewer check any component in every scheme and palette,
                 // from wherever they are. `lg`, to match the search beside it.
-                ColorSchemeButton { size: "lg", themes: ThemeSet::CATALOGUE }
+                ThemeToggle { size: "lg", themes: ThemeSet::CATALOGUE }
             }
             // This row itself never scrolls - the nav scrolls its own
             // content internally (`Sidebar` does), and only the rest of the

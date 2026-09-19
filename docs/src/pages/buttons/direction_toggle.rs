@@ -57,6 +57,8 @@ pub fn DirectionTogglePage() -> Element {
                     // swatch prints nothing.
                     Control::color("color").default("muted"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("sm"),
                     Control::switch("disabled"),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -67,6 +69,7 @@ pub fn DirectionTogglePage() -> Element {
                             color => Input::from(color),
                         },
                         size: values.str("size"),
+                        radius: values.str("radius"),
                         disabled: values.str("disabled") == "true",
                     }
                 },

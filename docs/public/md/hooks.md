@@ -18,10 +18,8 @@ belong to.
 | `use_element` | A handle to one of your component's elements, to focus, scroll or measure it. | [use_element](use_element.md) |
 | `use_focus_return` | Puts focus back on the trigger when a panel closes. | [use_focus_return](use_focus_return.md) |
 | `use_drag` | Pointer capture and deltas for a drag. | [use_drag](use_drag.md) |
-| `use_clipboard` | Copies text and reports whether the write worked. | [use_clipboard](use_clipboard.md) |
 | `use_theme` | The active theme, for values CSS cannot carry. | [Theming](theming.md) |
 | `use_theme_set` | Reads and swaps the active theme set. | [use_theme_set](use_theme_set.md) |
-| `use_color_scheme` | Reads and sets light or dark. | [Theming](theming.md) |
 | `use_localization` | The words libero's components say, in the active language. | [Localization](localization.md) |
 | `use_localization_handle` | Switches the language at runtime. | [Localization](localization.md) |
 | `use_formats` | The active date, time and number formats. | [Localization](localization.md) |

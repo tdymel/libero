@@ -1,4 +1,4 @@
-//! `ColorSchemeButton`'s rendered contract: the glyph and the name say where a
+//! `ThemeToggle`'s rendered contract: the glyph and the name say where a
 //! press goes, the name comes from the localization, and `themes` adds a
 //! picker beside the toggle.
 
@@ -7,9 +7,9 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::ColorSchemeButton,
+    components::ThemeToggle,
     hooks::use_color_scheme,
-    localization::{ColorSchemeButtonLabels, Localization},
+    localization::{Localization, ThemeToggleLabels},
     theme::{ColorSchemeSetting, ThemeSet},
 };
 
@@ -37,7 +37,7 @@ fn Press() -> Element {
 
 fn pressed(times: usize) -> String {
     fn app() -> Element {
-        rsx! { LiberoProvider { ColorSchemeButton {} Press {} } }
+        rsx! { LiberoProvider { ThemeToggle {} Press {} } }
     }
     PRESSES.set(times);
     body(&render(app))
@@ -77,7 +77,7 @@ fn without_themes_it_is_the_toggle_alone() {
 #[test]
 fn themes_add_a_picker_beside_the_toggle() {
     fn app() -> Element {
-        rsx! { LiberoProvider { ColorSchemeButton { themes: ThemeSet::CATALOGUE } } }
+        rsx! { LiberoProvider { ThemeToggle { themes: ThemeSet::CATALOGUE } } }
     }
 
     let html = body(&render(app));
@@ -92,10 +92,10 @@ fn themes_add_a_picker_beside_the_toggle() {
 }
 
 static GERMAN: Localization = Localization {
-    color_scheme_button: ColorSchemeButtonLabels {
+    theme_toggle: ThemeToggleLabels {
         to_light: "Helles Design",
         to_dark: "Dunkles Design",
-        ..ColorSchemeButtonLabels::ENGLISH
+        ..ThemeToggleLabels::ENGLISH
     },
     ..Localization::ENGLISH
 };
@@ -106,7 +106,7 @@ fn the_name_comes_from_the_localization() {
     fn app() -> Element {
         rsx! {
             LiberoProvider { localization: &GERMAN,
-                ColorSchemeButton {}
+                ThemeToggle {}
             }
         }
     }
@@ -126,7 +126,7 @@ fn a_label_callback_replaces_the_localization_s_names() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                ColorSchemeButton {
+                ThemeToggle {
                     label: move |next: ColorSchemeSetting| format!("to {next:?}"),
                 }
             }

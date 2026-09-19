@@ -297,7 +297,7 @@ pub(crate) fn UploadIcon() -> Element {
     }
 }
 
-/// `ColorSchemeButton` when a press hands the choice back to the platform: a
+/// `ThemeToggle` when a press hands the choice back to the platform: a
 /// disc half filled, the usual "automatic" mark.
 #[component]
 pub(crate) fn SystemSchemeIcon() -> Element {
@@ -316,7 +316,7 @@ pub(crate) fn SystemSchemeIcon() -> Element {
     }
 }
 
-/// `ColorSchemeButton` when a press switches to light.
+/// `ThemeToggle` when a press switches to light.
 #[component]
 pub(crate) fn SunIcon() -> Element {
     rsx! {
@@ -334,7 +334,7 @@ pub(crate) fn SunIcon() -> Element {
     }
 }
 
-/// `ColorSchemeButton` when a press switches to dark.
+/// `ThemeToggle` when a press switches to dark.
 #[component]
 pub(crate) fn MoonIcon() -> Element {
     rsx! {

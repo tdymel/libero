@@ -50,13 +50,13 @@ static SPLIT_SX: StaticSx = StaticSx::new(|| {
 });
 
 base_props! {
-    pub struct ColorSchemeButtonProps {
+    pub struct ThemeToggleProps {
         /// Unset, the theme's
-        /// [`ColorSchemeButtonDefaults::variant`](crate::theme::ColorSchemeButtonDefaults).
+        /// [`ThemeToggleDefaults::variant`](crate::theme::ThemeToggleDefaults).
         #[props(default, into)]
         variant: Input<Variant>,
         /// Unset, the theme's
-        /// [`ColorSchemeButtonDefaults::color`](crate::theme::ColorSchemeButtonDefaults).
+        /// [`ThemeToggleDefaults::color`](crate::theme::ThemeToggleDefaults).
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -86,9 +86,9 @@ base_props! {
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
-/// # use libero::components::ColorSchemeButton;
+/// # use libero::components::ThemeToggle;
 /// # fn app() -> Element {
-/// rsx! { ColorSchemeButton {} }
+/// rsx! { ThemeToggle {} }
 /// # }
 /// ```
 ///
@@ -100,18 +100,18 @@ base_props! {
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
-/// # use libero::{components::ColorSchemeButton, theme::ThemeSet};
+/// # use libero::{components::ThemeToggle, theme::ThemeSet};
 /// # fn app() -> Element {
-/// rsx! { ColorSchemeButton { themes: ThemeSet::CATALOGUE } }
+/// rsx! { ThemeToggle { themes: ThemeSet::CATALOGUE } }
 /// # }
 /// ```
 #[component]
-pub fn ColorSchemeButton(props: ColorSchemeButtonProps) -> Element {
+pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
     let theme = use_theme();
     let scheme = use_color_scheme();
     let theme_set = use_theme_set();
     let menu = use_menu();
-    let labels = use_localization().color_scheme_button;
+    let labels = use_localization().theme_toggle;
 
     let next = scheme.next_in_cycle();
     let aria_label = match props.label {
@@ -123,11 +123,11 @@ pub fn ColorSchemeButton(props: ColorSchemeButtonProps) -> Element {
         }
         .to_string(),
     };
-    let variant = Input::Value(props.variant.copied_or(theme.color_scheme_button.variant));
+    let variant = Input::Value(props.variant.copied_or(theme.theme_toggle.variant));
     let color = props
         .color
         .into_option()
-        .unwrap_or_else(|| theme.color_scheme_button.color.into());
+        .unwrap_or_else(|| theme.theme_toggle.color.into());
 
     let glyph = use_box().framework_sx(&GLYPH_SX).prepare().render(
         HtmlTag::Span,

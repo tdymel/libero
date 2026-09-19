@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Box, Code, CodeBlock, ColorSchemeButton, Flex, Paper, Text},
+    components::{Anchor, Box, Code, CodeBlock, Flex, Paper, Text, ThemeToggle},
     hooks::use_theme_set,
     sx::sx,
     theme::{Size, ThemeSet},
@@ -64,7 +64,7 @@ pub fn Theming() -> Element {
                                 "header, and the whole site follows."
                             }
                             Flex { direction: "row", gap: "md", align: "center", wrap: "wrap",
-                                ColorSchemeButton { size: "lg", themes: ThemeSet::CATALOGUE }
+                                ThemeToggle { size: "lg", themes: ThemeSet::CATALOGUE }
                                 Text { "Showing "
                                     Code { source: themes.name() }
                                 }

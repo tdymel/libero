@@ -19,7 +19,6 @@ mod code_block;
 mod collapse;
 mod color_field;
 mod color_picker;
-mod color_scheme_button;
 mod color_swatch;
 mod combobox;
 mod container;
@@ -84,6 +83,7 @@ mod tags_field;
 mod text;
 mod text_field;
 mod textarea;
+mod theme_toggle;
 mod timeline;
 mod title;
 mod tooltip;
@@ -157,7 +157,6 @@ pub use color_picker::{
     COLOR_PICKER_WIDTH, COLOR_PICKER_WIDTH_SIZE, ColorFormat, ColorPickerDefaults,
     ColorPickerSizeLevel,
 };
-pub use color_scheme_button::ColorSchemeButtonDefaults;
 pub use color_swatch::{
     COLOR_SWATCH_RADIUS, COLOR_SWATCH_SIZE, COLOR_SWATCH_SIZE_SIZE, ColorSwatchDefaults,
 };
@@ -316,6 +315,7 @@ pub use text::{
 };
 pub use text_field::TextFieldDefaults;
 pub use textarea::TextareaDefaults;
+pub use theme_toggle::ThemeToggleDefaults;
 pub use timeline::{
     TIMELINE_BULLET, TIMELINE_BULLET_BACKGROUND, TIMELINE_BULLET_BACKGROUND_DEFAULT,
     TIMELINE_BULLET_SIZE, TIMELINE_COLOR, TIMELINE_CONNECTOR, TIMELINE_GAP, TIMELINE_LINE_COLOR,

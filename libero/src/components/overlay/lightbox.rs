@@ -5,11 +5,11 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         accessibility::{Announcer, use_announcer},
-        buttons::{ACTION_ICON_COLOR_VAR, ActionIcon},
+        buttons::ActionIcon,
         common::{
-            CloseIcon, Input, MinusIcon, PlusIcon, States, Variables, disabled_look_sx,
-            has_shortcut_modifier, inset_focus_ring_sx, ring_overlay, ring_overlay_sx, states,
-            use_name_warning, variables,
+            CloseIcon, Input, MinusIcon, PlusIcon, States, Variables, has_shortcut_modifier,
+            inset_focus_ring_sx, ring_overlay, ring_overlay_sx, states, use_name_warning,
+            variables,
         },
         data_display::{Carousel, CarouselJump, CarouselQuietWhenFits},
         layout::Box,
@@ -167,18 +167,6 @@ static LIGHTBOX_TOOLBAR_SX: StaticSx = StaticSx::new(|| {
         .justify_content("flex-end")
         .gap("sm")
         .margin_bottom("md")
-});
-
-// A zoom button at its limit keeps its tab stop, so it is `aria-disabled`, which
-// `ActionIcon`'s own disabled look and hover skip do not read.
-static LIGHTBOX_ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
-    sx().selector("&[aria-disabled=\"true\"]", disabled_look_sx("not-allowed"))
-        // The `standard` variant's rest chrome, over its hover.
-        .selector(
-            "&[aria-disabled=\"true\"]:hover",
-            sx().background("transparent")
-                .color(ACTION_ICON_COLOR_VAR.value()),
-        )
 });
 
 // The one real text in the viewer, so it stays selectable.
@@ -1123,20 +1111,21 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                         variant: "standard",
                         color: "muted",
                         size: "sm",
-                        sx: &LIGHTBOX_ZOOM_BUTTON_SX,
                         aria_label: localization.lightbox.zoom_out,
-                        "aria-disabled": at_fit.to_string(),
-                        onclick: move |_: MouseEvent| if !at_fit { zoom_by(true) },
+                        // At its limit it keeps its tab stop.
+                        disabled: at_fit,
+                        focusable_when_disabled: true,
+                        onclick: move |_: MouseEvent| zoom_by(true),
                         MinusIcon {}
                     }
                     ActionIcon {
                         variant: "standard",
                         color: "muted",
                         size: "sm",
-                        sx: &LIGHTBOX_ZOOM_BUTTON_SX,
                         aria_label: localization.lightbox.zoom_in,
-                        "aria-disabled": at_max.to_string(),
-                        onclick: move |_: MouseEvent| if !at_max { zoom_by(false) },
+                        disabled: at_max,
+                        focusable_when_disabled: true,
+                        onclick: move |_: MouseEvent| zoom_by(false),
                         PlusIcon {}
                     }
                 }

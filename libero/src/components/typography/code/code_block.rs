@@ -8,17 +8,11 @@ use crate::{
     CssLayer,
     components::{
         accessibility::VisuallyHidden,
-        buttons::ActionIcon,
-        common::{
-            CopiedIcon, CopyFailedIcon, CopyIcon, HtmlTag, Input, States, Variables, base_props,
-            inset_focus_ring_sx, variables,
-        },
+        buttons::CopyButton,
+        common::{HtmlTag, Input, States, Variables, base_props, inset_focus_ring_sx, variables},
         layout::{Box, use_box},
     },
-    hooks::{
-        Clipboard, use_clipboard, use_css, use_element, use_localization, use_silent_focus_out,
-        use_theme,
-    },
+    hooks::{use_css, use_element, use_localization, use_theme},
     localization::{CodeBlockLabels, fill},
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
@@ -61,7 +55,8 @@ static CODE_BLOCK_HEADER_SX: StaticSx = StaticSx::new(|| {
         .color(CODE_BLOCK_MUTED_TEXT.value())
 });
 
-// Only what differs from `ActionIcon`'s own base styling.
+// Only what differs from `ActionIcon`'s own base styling. No `variant`/`color`
+// on the `CopyButton`, so these fully control the look.
 static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().border_radius("6px")
         .padding("5px")
@@ -398,62 +393,6 @@ fn code_lines(
 }
 
 #[component]
-fn CopyButton(source: String, floating: bool) -> Element {
-    let mut clipboard: Clipboard = use_clipboard();
-    let labels = use_localization().code_block;
-    // No `variant`/`color`, so `ActionIcon` adds no background of its own and
-    // these fully control the look. Passed as `Input::Static`, so the CSS is
-    // built once for the process rather than per copy button.
-    let button_sx: &'static StaticSx = if floating {
-        &CODE_COPY_BUTTON_FLOATING_SX
-    } else {
-        &CODE_COPY_BUTTON_SX
-    };
-    // Blitz's Tab fires no `blur`: the same reset, from the silent move.
-    let silent = use_silent_focus_out(move || {
-        let mut clipboard = clipboard;
-        clipboard.reset();
-    });
-
-    rsx! {
-        ActionIcon {
-            aria_label: labels.copy,
-            sx: button_sx,
-            // Reset first, so a second copy empties the status and fills it
-            // again rather than leaving the same text a reader skips.
-            onclick: move |_| {
-                clipboard.reset();
-                clipboard.copy(source.clone());
-            },
-            onmouseleave: move |_| clipboard.reset(),
-            // A keyboard or touch user never leaves with a mouse.
-            onblur: move |_| clipboard.reset(),
-            onmounted: move |event| {
-                if let Some(silent) = silent {
-                    silent.mount()(event);
-                }
-            },
-            if clipboard.copied() {
-                CopiedIcon {}
-            } else if clipboard.failed() {
-                CopyFailedIcon {}
-            } else {
-                CopyIcon {}
-            }
-        }
-        // Always mounted, so a reader is already watching it when the text
-        // arrives - the check icon alone says nothing.
-        VisuallyHidden { role: "status",
-            if clipboard.copied() {
-                {labels.copied}
-            } else if clipboard.failed() {
-                {labels.copy_failed}
-            }
-        }
-    }
-}
-
-#[component]
 pub fn CodeBlock(props: CodeBlockProps) -> Element {
     use_token_theme();
     let theme = use_theme();
@@ -595,11 +534,19 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
                 div { class: header_class,
                     span { {label} }
                     if let Some(copy_source) = copy_source.clone() {
-                        CopyButton { source: copy_source, floating: false }
+                        CopyButton {
+                            value: copy_source,
+                            aria_label: labels.copy,
+                            sx: &CODE_COPY_BUTTON_SX,
+                        }
                     }
                 }
             } else if let Some(copy_source) = copy_source.clone() {
-                CopyButton { source: copy_source, floating: true }
+                CopyButton {
+                    value: copy_source,
+                    aria_label: labels.copy,
+                    sx: &CODE_COPY_BUTTON_FLOATING_SX,
+                }
             }
             {scroll_box.render(HtmlTag::Div, Vec::new(), code)}
         },

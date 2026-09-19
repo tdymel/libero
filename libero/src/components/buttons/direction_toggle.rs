@@ -11,7 +11,7 @@ use crate::{
     tokens::Direction,
 };
 
-/// The glyph's box, `ColorSchemeButton`'s share of the button.
+/// The glyph's box, `ThemeToggle`'s share of the button.
 static GLYPH_SX: StaticSx =
     StaticSx::new(|| sx().display("inline-flex").width("55%").height("55%"));
 

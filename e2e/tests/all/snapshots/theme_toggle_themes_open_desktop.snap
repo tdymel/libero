@@ -1,6 +1,6 @@
 ---
 source: e2e/src/suite.rs
-description: color_scheme_button_themes at mobile (open)
+description: theme_toggle_themes at desktop (open)
 expression: tree
 ---
 group "Theme"

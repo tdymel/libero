@@ -50,6 +50,7 @@ drawn later takes the overlap.
 | `aria_label` | `String` | required | The button's accessible name. |
 | `selected` | `bool` | - | Makes it a toggle button. The selected look shows once `variant` or `color` is set. Leave it unset for a plain action. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
+| `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. It renders `aria-disabled` rather than `disabled` and ignores presses. |
 | `loading` | `bool` | `false` | Shows a `Loader` over the icon and ignores clicks. The button stays focusable. Ignored on a link. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. |

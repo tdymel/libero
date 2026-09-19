@@ -1,11 +1,11 @@
-//! `ColorSchemeButton`'s theme picker at the end of the docs header (todo
+//! `ThemeToggle`'s theme picker at the end of the docs header (todo
 //! 625): the menu opens inside the viewport.
 
 use std::time::Duration;
 
 use dioxus::prelude::*;
 use libero::{
-    components::{ColorSchemeButton, Flex, Header, ScrollArea},
+    components::{Flex, Header, ScrollArea, ThemeToggle},
     theme::ThemeSet,
 };
 use native_tests::{Page, VIEWPORT, mount};
@@ -19,7 +19,7 @@ fn app() -> Element {
         Flex { direction: "column", sx: libero::sx::sx().gap("0"),
             Header {
                 span { margin_right: "auto", "Libero" }
-                ColorSchemeButton { size: "lg", themes: ThemeSet::CATALOGUE }
+                ThemeToggle { size: "lg", themes: ThemeSet::CATALOGUE }
             }
             Flex { direction: "row", sx: libero::sx::sx().height("calc(100vh - 60px)"),
                 ScrollArea { sx: libero::sx::sx().flex("1").min_height("0").min_width("0"),

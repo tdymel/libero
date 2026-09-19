@@ -61,6 +61,7 @@ fn Demo() -> Element {
 | `full_width` | `bool` | `false` | Stretches the button to fill its container. |
 | `selected` | `bool` | - | Makes it a toggle button with the selected look. Leave it unset for a plain action. |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
+| `focusable_when_disabled` | `bool` | `false` | With `disabled`: keeps the button in the Tab order. It renders `aria-disabled` rather than `disabled` and ignores presses. |
 | `loading` | `bool` | `false` | Shows a `Loader` over the label and ignores clicks. The button stays focusable and keeps its width. Ignored on a link. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler. Not called on a link. |
 | `to` | `NavigationTarget` | - | Renders a link instead of a `<button>`. Takes a path, a URL or a typed route (`Route::Foo {}`). |

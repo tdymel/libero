@@ -40,9 +40,10 @@ fetch only the file you need.
 
 - [Button](button.md): A clickable action, a toggle, or a router-aware link.
 - [ActionIcon](action_icon.md): An icon-only button, rendered as a `button` or a link, with a required `aria_label`.
-- [ColorSchemeButton](color_scheme_button.md): An icon button that steps the colour scheme through system, dark and light, with an optional theme picker beside it.
+- [CopyButton](copy_button.md): An icon button that copies a value to the clipboard and confirms it with a check and a spoken "Copied".
 - [DirectionToggle](direction_toggle.md): An icon button that turns the app's text between left to right and right to left.
 - [RepoButton](repo_button.md): A link to a GitHub or GitLab repository with its star count beside the host's icon.
+- [ThemeToggle](theme_toggle.md): An icon button that steps the colour scheme through system, dark and light, with an optional theme picker beside it.
 
 ## Form
 
@@ -148,7 +149,6 @@ fetch only the file you need.
 - [use_element](use_element.md): A handle to one of your component's own elements, to focus, scroll and measure it on every renderer.
 - [use_focus_return](use_focus_return.md): Puts focus back on the element that opened a panel or popup once it closes, with fallbacks for a trigger that is gone.
 - [use_drag](use_drag.md): Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.
-- [use_clipboard](use_clipboard.md): Writes text to the system clipboard and reports whether the write worked.
 - [use_theme_set](use_theme_set.md): Reads and swaps the active theme set, which a theme picker is built on.
 - [use_stylesheet](use_stylesheet.md): Registers a stylesheet of your own above every libero layer and returns its class.
 

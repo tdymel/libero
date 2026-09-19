@@ -55,3 +55,28 @@ fn a_selected_action_icon_says_pressed() {
     assert!(!checked(tags[1]), "{}", tags[1]);
     assert!(!tags[2].contains("aria-pressed"), "{}", tags[2]);
 }
+
+/// Todo 869: `focusable_when_disabled` keeps the tab stop - `aria-disabled`
+/// rather than `disabled` - and the disabled look.
+#[test]
+fn a_focusable_disabled_action_icon_stays_in_the_tab_order() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ActionIcon { aria_label: "Next", disabled: true, focusable_when_disabled: true, ">" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let attributes = attributes_of(&html, "button");
+
+    assert!(!attributes.contains_key("disabled"), "{html}");
+    assert_eq!(attributes["aria-disabled"], "true");
+    assert!(
+        attributes["data-state"]
+            .split(' ')
+            .any(|token| token == "disabled"),
+        "{html}"
+    );
+}

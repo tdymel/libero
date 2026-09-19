@@ -5,6 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         accessibility::VisuallyHidden,
+        buttons::ActionIcon,
         common::{
             ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, HtmlTag, Input,
             Orientation, PauseIcon, PlayIcon, States, Variables, base_props, focus_ring_sx,
@@ -189,8 +190,8 @@ static CAROUSEL_CONTROL_SX: StaticSx = StaticSx::new(|| {
             sx().rtl(sx().selector("& > svg", sx().transform("scaleX(-1)"))),
         )
         .hover(sx().background(CAROUSEL_CONTROL_HOVER_BACKGROUND.value()))
-        // Disabled by `aria-disabled`, not `disabled`: the button keeps its
-        // tab stop so focus is never dropped at either end.
+        // `ActionIcon`'s `focusable_when_disabled`: the button keeps its tab
+        // stop so focus is never dropped at either end.
         .when(
             "disabled",
             sx().opacity("0.4")
@@ -1626,7 +1627,7 @@ fn CarouselControls(view: CarouselView) -> Element {
     }
 }
 
-/// One control. Disabled by `aria-disabled` at its end, so it keeps its tab stop.
+/// One control. Focusable when disabled at its end, so it keeps its tab stop.
 #[component]
 fn CarouselControl(view: CarouselView, forward: bool, disabled: Memo<bool>) -> Element {
     let CarouselView {
@@ -1641,27 +1642,21 @@ fn CarouselControl(view: CarouselView, forward: bool, disabled: Memo<bool>) -> E
     let orientation = setup.orientation;
     let current = nav.current;
     let looping = nav.clones > 0;
-    let disabled = disabled();
-    let control_states: Input<States> = states()
-        .with(orientation.state_name(), true)
-        .with("disabled", disabled)
-        .into();
+    let control_states: Input<States> = states().with(orientation.state_name(), true).into();
 
     rsx! {
-        Box {
-            component: "button",
-            r#type: "button",
-            framework_sx: &CAROUSEL_CONTROL_SX,
+        ActionIcon {
+            sx: &CAROUSEL_CONTROL_SX,
             states: control_states,
             aria_controls: track_id(),
-            aria_disabled: disabled.to_string(),
+            disabled: disabled(),
+            focusable_when_disabled: true,
             aria_label: if forward { labels.next } else { labels.previous },
             onclick: move |_| {
                 let index = *current.peek();
                 match (forward, looping) {
                     (false, true) if index == 0 => nav.go_to(count.saturating_sub(1)),
                     (true, true) if index >= count.saturating_sub(1) => nav.go_to(0),
-                    _ if disabled => {}
                     (false, _) => nav.go_to(index.saturating_sub(1)),
                     (true, _) => nav.go_to(index + 1),
                 }

@@ -1,6 +1,6 @@
 ---
 source: e2e/src/suite.rs
-description: color_scheme_button at desktop (rest)
+description: theme_toggle at mobile (rest)
 expression: tree
 ---
 button "Switch to the dark theme"

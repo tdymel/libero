@@ -84,23 +84,7 @@ LiberoProvider {
 }
 ```
 
-[`ColorSchemeButton`](color_scheme_button.md) is a ready-made switch. For your
-own, use `use_color_scheme()`.
-
-```rust,ignore
-let scheme = use_color_scheme();
-
-rsx! {
-    ActionIcon {
-        aria_label: match scheme.resolved() {
-            ColorScheme::Dark => "Switch to the light theme",
-            ColorScheme::Light => "Switch to the dark theme",
-        },
-        onclick: move |_| scheme.toggle(),
-        if scheme.resolved() == ColorScheme::Dark { SunIcon {} } else { MoonIcon {} }
-    }
-}
-```
+[`ThemeToggle`](theme_toggle.md) is a ready-made switch.
 
 On the web the choice is kept in `localStorage`. To restore it before the first
 paint, paste `libero::theme::COLOR_SCHEME_RESTORE_SCRIPT` into the head of your

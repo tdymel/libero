@@ -100,11 +100,11 @@ static WORDS: Localization = Localization {
 
 The groups live in `libero::localization`, each with an `ENGLISH` and a `GERMAN`
 const: `CommonLabels`, `DateLocale`, `PaginationLabels`, `AvatarLabels`,
-`BurgerLabels`, `AnchorLabels`, `PinFieldLabels`, `ColorSchemeButtonLabels`,
+`BurgerLabels`, `AnchorLabels`, `PinFieldLabels`, `ThemeToggleLabels`,
 `RepoButtonLabels`, `DirectionToggleLabels`, `SpotlightLabels`, `CarouselLabels`, `NavLinkLabels`, `LightboxLabels`,
 `FloatingWindowLabels`, `NotificationsLabels`, `ScrollerLabels`,
 `StepperLabels`, `MarqueeLabels`, `ChipsLabels`, `ComboboxLabels`,
-`TagsFieldLabels`, `ImageLabels`, `CodeBlockLabels`, `ColorLabels`,
+`TagsFieldLabels`, `ImageLabels`, `CodeBlockLabels`, `CopyButtonLabels`, `ColorLabels`,
 `PhoneFieldLabels`, `PasswordFieldLabels`, `NumberFieldLabels`,
 `FileFieldLabels`, `TextareaLabels`, `SliderLabels` and `MenuLabels`.
 `DateLocale` holds the month and weekday names and every date and time

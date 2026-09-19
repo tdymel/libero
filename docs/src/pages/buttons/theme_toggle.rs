@@ -1,18 +1,18 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, ColorSchemeButton, Input, Text},
+    components::{Code, Input, Text, ThemeToggle},
     theme::ThemeSet,
 };
 
 #[component]
-pub fn ColorSchemeButtonPage() -> Element {
+pub fn ThemeTogglePage() -> Element {
     rsx! {
         DocPage {
-            title: "ColorSchemeButton",
-            source: "libero/src/components/buttons/color_scheme_button.rs",
-            markdown: "/md/color_scheme_button.md",
-            properties: vec![props("ColorSchemeButton", vec![
+            title: "ThemeToggle",
+            source: "libero/src/components/buttons/theme_toggle.rs",
+            markdown: "/md/theme_toggle.md",
+            properties: vec![props("ThemeToggle", vec![
                 prop("variant", "Variant")
                     .default("outlined")
                     .doc("Visual style, as on `ActionIcon`."),
@@ -45,19 +45,25 @@ pub fn ColorSchemeButtonPage() -> Element {
                     "A picked scheme stays until the next press. For your own control, such "
                     "as a menu of all three choices, build on "
                     Code { source: "use_color_scheme()" }
-                    "."
+                    ": it reads the setting and what it resolves to, and "
+                    Code { source: "set" }
+                    ", "
+                    Code { source: "toggle" }
+                    " and "
+                    Code { source: "cycle" }
+                    " change it."
                 }
                 Text {
                     "With "
                     Code { source: "themes" }
                     " set, a second button beside it opens a menu of theme sets. This site's "
                     "header uses "
-                    Code { source: "ColorSchemeButton {{ themes: ThemeSet::CATALOGUE }}" }
+                    Code { source: "ThemeToggle {{ themes: ThemeSet::CATALOGUE }}" }
                     "."
                 }
             },
             Demo {
-                component: "ColorSchemeButton",
+                component: "ThemeToggle",
                 children_text: "",
                 controls: vec![
                     Control::toggle(
@@ -79,7 +85,7 @@ pub fn ColorSchemeButtonPage() -> Element {
                     }),
                 ],
                 render: move |values: DemoValues| rsx! {
-                    ColorSchemeButton {
+                    ThemeToggle {
                         variant: values.str("variant"),
                         color: match values.str("color").as_str() {
                             "muted" => Input::None,

@@ -126,13 +126,36 @@ impl ImageLabels {
     };
 }
 
-/// A `CodeBlock`'s copy button and header.
+/// What a `CopyButton` is named and announces.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct CodeBlockLabels {
+pub struct CopyButtonLabels {
+    /// The button's name, unless its `aria_label` replaces it.
     pub copy: &'static str,
     /// Announced once the copy landed.
     pub copied: &'static str,
     pub copy_failed: &'static str,
+}
+
+impl CopyButtonLabels {
+    pub const ENGLISH: Self = Self {
+        copy: "Copy",
+        copied: "Copied",
+        copy_failed: "Copy failed",
+    };
+
+    pub const GERMAN: Self = Self {
+        copy: "Kopieren",
+        copied: "Kopiert",
+        copy_failed: "Kopieren fehlgeschlagen",
+    };
+}
+
+/// A `CodeBlock`'s copy button and header. The copy announcements are
+/// [`CopyButtonLabels`]'.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CodeBlockLabels {
+    /// The copy button's name.
+    pub copy: &'static str,
     /// Read before a `diff` line that starts with `+`; the `+` is drawing only.
     pub added: &'static str,
     /// Read before a `diff` line that starts with `-`.
@@ -148,8 +171,6 @@ pub struct CodeBlockLabels {
 impl CodeBlockLabels {
     pub const ENGLISH: Self = Self {
         copy: "Copy code",
-        copied: "Copied",
-        copy_failed: "Copy failed",
         added: "Added",
         removed: "Removed",
         code: "Code",
@@ -159,8 +180,6 @@ impl CodeBlockLabels {
 
     pub const GERMAN: Self = Self {
         copy: "Code kopieren",
-        copied: "Kopiert",
-        copy_failed: "Kopieren fehlgeschlagen",
         added: "Hinzugefügt",
         removed: "Entfernt",
         code: "Code",
@@ -452,10 +471,10 @@ impl PinFieldLabels {
     };
 }
 
-/// What a `ColorSchemeButton` announces itself with. The three `to_*` name
+/// What a `ThemeToggle` announces itself with. The three `to_*` name
 /// what a press *does*, as the glyph beside them shows it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ColorSchemeButtonLabels {
+pub struct ThemeToggleLabels {
     /// Names the button when a press pins the light scheme.
     pub to_light: &'static str,
     /// Names the button when a press pins the dark scheme.
@@ -470,7 +489,7 @@ pub struct ColorSchemeButtonLabels {
     pub themes: &'static str,
 }
 
-impl ColorSchemeButtonLabels {
+impl ThemeToggleLabels {
     pub const ENGLISH: Self = Self {
         to_light: "Switch to the light theme",
         to_dark: "Switch to the dark theme",

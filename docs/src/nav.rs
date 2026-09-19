@@ -202,9 +202,10 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             vec![
                 page(Route::ButtonPage {}, "Button"),
                 page(Route::ActionIconPage {}, "ActionIcon"),
-                page(Route::ColorSchemeButtonPage {}, "ColorSchemeButton"),
+                page(Route::CopyButtonPage {}, "CopyButton"),
                 page(Route::DirectionTogglePage {}, "DirectionToggle"),
                 page(Route::RepoButtonPage {}, "RepoButton"),
+                page(Route::ThemeTogglePage {}, "ThemeToggle"),
             ],
         ),
         // Fields built on `use_field`. A component moves here when it is
@@ -344,7 +345,6 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseElementPage {}, "use_element"),
                 page(Route::UseFocusReturnPage {}, "use_focus_return"),
                 page(Route::UseDragPage {}, "use_drag"),
-                page(Route::UseClipboardPage {}, "use_clipboard"),
                 page(Route::UseThemeSetPage {}, "use_theme_set"),
                 page(Route::UseStylesheetPage {}, "use_stylesheet"),
             ],

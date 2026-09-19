@@ -61,6 +61,8 @@ pub fn RepoButtonPage() -> Element {
                     // swatch prints nothing.
                     Control::color("color").default("muted"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("sm"),
                 ],
                 render: move |values: DemoValues| {
                     let (repo, host) = match values.str("host").as_str() {
@@ -77,6 +79,7 @@ pub fn RepoButtonPage() -> Element {
                                 color => Input::from(color),
                             },
                             size: values.str("size"),
+                            radius: values.str("radius"),
                         }
                     }
                 },

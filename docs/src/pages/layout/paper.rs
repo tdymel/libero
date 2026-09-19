@@ -1,7 +1,9 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Input, Paper, Text, Title},
+    components::{Box, Code, Input, Paper, Text, Title},
     sx::sx,
     theme::Size,
     use_theme,
@@ -19,6 +21,21 @@ const PADDING: &str = r#"sx: sx().padding("lg")"#;
 
 // snippet: in Paper { .. }
 const NO_SHADOW: &str = r#"sx: sx().padding("lg").box_shadow("none")"#;
+
+/// Sharp stripes behind the glass, so the blur has something to show.
+const STRIPES: &str =
+    "repeating-linear-gradient(45deg, var(--lsx-primary-fill-6) 0 12px, transparent 12px 24px)";
+
+/// Glass prints the striped `Box` it sits on; off, the bare `Paper`.
+fn wrap_backdrop(values: &DemoValues, code: &str) -> String {
+    match values.str("glass") == "true" {
+        true => format!(
+            "Box {{\n    sx: sx().padding(\"xl\").background({STRIPES:?}),\n{}}}",
+            indent(code)
+        ),
+        false => code.to_string(),
+    }
+}
 
 #[component]
 pub fn PaperPage() -> Element {
@@ -110,12 +127,13 @@ pub fn PaperPage() -> Element {
                         false => values.str("shadow").into(),
                     };
 
-                    rsx! {
+                    let glass = values.str("glass") == "true";
+                    let paper = rsx! {
                         Paper {
                             radius: values.str("radius"),
                             shadow,
                             bordered: values.str("bordered") == "true",
-                            glass: values.str("glass") == "true",
+                            glass,
                             component: values.str("component"),
                             sx,
                             // `md` is an h4 by size, and the preview sits
@@ -125,8 +143,18 @@ pub fn PaperPage() -> Element {
                             Title { size: "md", component: "h2", "Invoice #4021" }
                             Text { "Due 30 September." }
                         }
+                    };
+                    let backdrop = libero::sx::sx().padding("xl").background(STRIPES);
+
+                    rsx! {
+                        if glass {
+                            Box { sx: backdrop, {paper} }
+                        } else {
+                            {paper}
+                        }
                     }
                 },
+                wrap: Wrap(wrap_backdrop),
             }
             DocSection { title: "Accessibility",
                 Text {

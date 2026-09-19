@@ -64,6 +64,17 @@ pub fn BoxPage() -> Element {
                     Code { source: "states" }
                     "."
                 }
+                Text {
+                    "Reach for "
+                    Code { source: "Box" }
+                    " when an element needs "
+                    Code { source: "sx" }
+                    " or "
+                    Code { source: "states" }
+                    ", or when the tag is decided at runtime: it renders any tag via "
+                    Code { source: "component" }
+                    ". Markup that needs neither stays a plain Dioxus element."
+                }
             },
             Demo {
                 component: "Box",

@@ -447,8 +447,12 @@ async fn zoom_buttons(page: &Page) -> Result<()> {
     const ZOOM_OUT: &str = "[role=dialog] button[aria-label='Zoom out']";
     const STYLE: &str =
         "document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img').style.cssText";
+    // Enabled drops the attribute rather than writing `false`.
     let disabled = |selector: &str, value: bool| {
-        format!("document.querySelector({selector:?})?.getAttribute('aria-disabled') === '{value}'")
+        let expected = if value { "'true'" } else { "null" };
+        format!(
+            "document.querySelector({selector:?})?.getAttribute('aria-disabled') === {expected}"
+        )
     };
     let wait_style = async |check: String, what: &str| -> Result<()> {
         if wait::for_js_true(page, &check, what).await.is_err() {

@@ -37,6 +37,9 @@ pub fn ActionIconPage() -> Element {
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables and dims the button."),
+                prop("focusable_when_disabled", "bool")
+                    .default("false")
+                    .doc("With `disabled`: keeps the button in the Tab order. It renders `aria-disabled` rather than `disabled` and ignores presses."),
                 prop("loading", "bool")
                     .default("false")
                     .doc("Shows a `Loader` over the icon and ignores clicks. The button stays focusable. Ignored on a link."),
@@ -93,6 +96,8 @@ pub fn ActionIconPage() -> Element {
                             value => vec![format!("selected: {value}")],
                         }),
                     Control::switch("disabled"),
+                    Control::switch("focusable_when_disabled")
+                        .hidden_when(|values| values.str("disabled") != "true"),
                     // An `<a>` has nothing to wait for: ignored, with a warning.
                     Control::switch("loading").hidden_when(is_link),
                     // `to` and `target` together, since the preview's link
@@ -121,6 +126,7 @@ pub fn ActionIconPage() -> Element {
                             _ => None,
                         },
                         disabled: values.str("disabled") == "true",
+                        focusable_when_disabled: values.str("focusable_when_disabled") == "true",
                         loading: values.str("loading") == "true" && !is_link(&values),
                         to: match values.str("link").as_str() {
                             "true" => Input::from("https://dioxuslabs.com"),

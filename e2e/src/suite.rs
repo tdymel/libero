@@ -264,7 +264,7 @@ impl Suite {
     }
 
     /// Give the dark run baselines of its own (`<name>_<state>_<viewport>_dark`),
-    /// for a unit whose tree names the scheme, like `ColorSchemeButton`'s
+    /// for a unit whose tree names the scheme, like `ThemeToggle`'s
     /// label. By default the dark tree must equal the light one. The reason
     /// is required, as for [`Suite::no_contrast_coverage`].
     pub fn dark_snapshot(mut self, why: &'static str) -> Self {

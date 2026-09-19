@@ -43,11 +43,6 @@ fn hooks() -> Vec<HookRow> {
             Route::UseDragPage {},
         ),
         row(
-            "use_clipboard",
-            "Copies text and reports whether the write worked.",
-            Route::UseClipboardPage {},
-        ),
-        row(
             "use_theme",
             "The active theme, for values CSS cannot carry.",
             Route::ThemingPage {},
@@ -56,11 +51,6 @@ fn hooks() -> Vec<HookRow> {
             "use_theme_set",
             "Reads and swaps the active theme set.",
             Route::UseThemeSetPage {},
-        ),
-        row(
-            "use_color_scheme",
-            "Reads and sets light or dark.",
-            Route::ThemingPage {},
         ),
         row(
             "use_localization",

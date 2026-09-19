@@ -8,7 +8,7 @@ use crate::{
 /// The app's colour scheme: what it is set to, what that resolves to, and how
 /// to change it.
 ///
-/// [`ColorSchemeButton`](crate::components::ColorSchemeButton) is the
+/// [`ThemeToggle`](crate::components::ThemeToggle) is the
 /// ready-made switch built on it. Anything else - a `Switch`, or a
 /// `SegmentedControl` that offers "follow the system" - is built here.
 ///
