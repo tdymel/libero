@@ -26,15 +26,6 @@ pub(crate) fn clips_z_indexed() -> bool {
     !NATIVE
 }
 
-/// Marks a `position: sticky` box the platform sticks itself: Blitz lays one
-/// out as `relative`, so it is moved by a `transform` as its scroller scrolls.
-pub(crate) const STICKY_ATTR: &str = "data-lsx-sticky";
-
-/// Whether the renderer sticks a `position: sticky` box to its scroller's top.
-pub(crate) fn sticks() -> bool {
-    !NATIVE
-}
-
 /// A wheel's vertical travel in the web's sign, positive down the page, with
 /// lines and pages counted as `line` pixels and `page` lines. Blitz reports
 /// the finger's sign (todo 844).

@@ -80,8 +80,8 @@ pub(crate) use placeholder::{
 };
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub(crate) use resize::{is_measured_resize, on_resize};
-pub(crate) use scroll::{STICKY_ATTR, clips_z_indexed, scroll_range, sticks, wheel_travel_y};
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
+pub(crate) use scroll::{clips_z_indexed, scroll_range, wheel_travel_y};
 pub(crate) use select::opens_select_picker;
 pub(crate) use session::{session_get, session_set};
 pub(crate) use table::lays_out_captions;

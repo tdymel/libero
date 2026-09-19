@@ -111,6 +111,8 @@ pub fn page_actions() -> Vec<SpotlightAction> {
                     navigator().push(route);
                 }
             });
+            // The section is a keyword too: "Accessibility" finds its "Overview".
+            action.keywords = group.map(str::to_string).into_iter().collect();
             action.group = group.map(str::to_string);
             action
         })
@@ -508,5 +510,26 @@ pub fn DocsNav(
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use libero::components::spotlight_filter;
+
+    use super::*;
+
+    #[test]
+    fn a_section_name_finds_its_overview() {
+        // `onclick` makes a `Callback`, which needs a runtime.
+        let dom = VirtualDom::new(VNode::empty);
+        let actions = dom.in_scope(ScopeId::ROOT, page_actions);
+        let hits = spotlight_filter("Accessibility", &actions);
+        let hit = |label: &str| {
+            hits.iter().any(|action| {
+                action.label == label && action.group.as_deref() == Some("Accessibility")
+            })
+        };
+        assert!(hit("Overview") && hit("FocusTrap"));
     }
 }

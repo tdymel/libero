@@ -1,14 +1,15 @@
-//! Blitz lays `position: sticky` out as `relative` (stylo_taffy). A box marked
-//! [`STICKY_ATTR`] is moved by a `transform` instead, kept in its containing
-//! block, at each flush and after each scroll. Only a `top` edge sticks.
+//! Blitz lays `position: sticky` out as `relative` (stylo_taffy). Every box
+//! whose computed `position` is sticky is moved by a `transform` instead, kept
+//! in its containing block, at each flush and after each scroll. Only a `top`
+//! edge sticks.
 
 use std::cell::Cell;
 
 use blitz_dom::{BaseDocument, QualName, ns};
 use dioxus_native_dom::NodeId;
+use style::computed_values::position::T as Position;
 
 use super::{anchor, resolved_style_value, run_or_defer, when_laid_out};
-use crate::platform::STICKY_ATTR;
 
 /// The shift last written, in px, so an unchanged one writes nothing.
 const SHIFT_ATTR: &str = "data-lsx-sticky-shift";
@@ -30,22 +31,33 @@ pub(super) fn sync_soon() {
     }));
 }
 
-/// Moves each marked box to where its scroller's top edge holds it.
+/// Moves each sticky box to where its scroller's top edge holds it.
 pub(super) fn sync(doc: &mut BaseDocument) {
-    let Ok(boxes) = doc.query_selector_all(&format!("[{STICKY_ATTR}]")) else {
-        return;
+    let written = |node: &blitz_dom::Node| {
+        node.element_data()?
+            .attrs
+            .iter()
+            .find(|attr| &*attr.name.local == SHIFT_ATTR)
+            .and_then(|attr| attr.value.parse::<f32>().ok())
     };
+    // A box no longer sticky (a breakpoint changed) is moved back too.
+    let mut boxes = Vec::new();
+    doc.visit(|id, node| {
+        let sticky = node
+            .primary_styles()
+            .is_some_and(|styles| styles.clone_position() == Position::Sticky);
+        if sticky || written(node).is_some_and(|shift| shift != 0.0) {
+            boxes.push((id, sticky));
+        }
+    });
     let changes: Vec<(NodeId, f32)> = boxes
         .into_iter()
-        .filter_map(|id| {
-            let shift = shift(doc, id)?;
-            let element = doc.get_node(id)?.element_data()?;
-            let written = element
-                .attrs
-                .iter()
-                .find(|attr| &*attr.name.local == SHIFT_ATTR)
-                .and_then(|attr| attr.value.parse::<f32>().ok())
-                .unwrap_or(0.0);
+        .filter_map(|(id, sticky)| {
+            let shift = match sticky {
+                true => shift(doc, id)?,
+                false => 0.0,
+            };
+            let written = written(doc.get_node(id)?).unwrap_or(0.0);
             // A re-render may have replaced the inline style under the mark.
             let lost = written != 0.0 && resolved_style_value(doc, id, "transform") == "none";
             (shift != written || lost).then_some((id, shift))
