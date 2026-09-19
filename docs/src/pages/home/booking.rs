@@ -1,5 +1,5 @@
 //! The home page's live card: a booking form and the bookings it made, in two
-//! tabs. Only dioxus and libero, so the e2e fixture renders this same file.
+//! tabs. The e2e fixture keeps its own copy (`e2e/fixtures/src/home.rs`, todo 940).
 
 use dioxus::prelude::*;
 use libero::{

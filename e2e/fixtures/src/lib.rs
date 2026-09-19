@@ -67,7 +67,7 @@ mod form;
 mod grid_zone;
 mod header;
 mod hit_area;
-mod home;
+pub mod home;
 mod hover_card;
 mod icon;
 mod image;

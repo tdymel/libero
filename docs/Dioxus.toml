@@ -6,8 +6,9 @@ public_dir = "public"
 
 [web]
 # Emits brotli siblings (`.br`, no gzip) for the wasm and assets in release
-# builds: the main wasm is 6.83 MB raw against 1.59 MB brotli (2026-09-28).
-# One bundle: `dx --wasm-split` fails on this app ("Failed to find data symbol").
+# builds: the main wasm is 7.19 MB raw against 1.69 MB brotli (2026-09-28).
+# One bundle: `dx --wasm-split` builds without fat LTO (938), but the app has no
+# split points yet, so it emits a single 294-byte chunk.
 # The host must be configured to serve them - `serve_dist.py` is the local
 # equivalent.
 pre_compress = true

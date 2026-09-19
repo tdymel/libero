@@ -549,12 +549,17 @@ mod tests {
 
     #[test]
     fn sx_font_size_size_resolves_to_the_theme_scale() {
-        let stylesheet =
-            Stylesheet::from(&sx().font_size(Size::Sm).when("big", sx().font_size("xl")));
+        let stylesheet = Stylesheet::from(
+            &sx()
+                .font_size(Size::Sm)
+                .when("big", sx().font_size("xl"))
+                .when("raw", sx().font_size("1.25rem")),
+        );
         let css = stylesheet.as_str();
 
         assert!(css.contains("font-size:var(--lsx-font-size-sm);"), "{css}");
         assert!(css.contains("font-size:var(--lsx-font-size-xl);"), "{css}");
+        assert!(css.contains("font-size:1.25rem;"), "{css}");
     }
 
     #[test]

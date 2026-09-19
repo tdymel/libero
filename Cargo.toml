@@ -29,7 +29,7 @@ debug = false
 [profile.dev.package."*"]
 opt-level = 3
 
-# `release` is tuned for wasm bundle size ("z" + fat LTO), which is the wrong
+# `release` is tuned for wasm bundle size (opt-level "z"), which is the wrong
 # trade for a native window. Native release builds use this instead.
 [profile.native]
 inherits = "release"
@@ -39,6 +39,5 @@ codegen-units = 16
 
 [profile.release]
 opt-level = "z"
-lto = true
 codegen-units = 1
 strip = true

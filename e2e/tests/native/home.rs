@@ -1,10 +1,8 @@
-//! The docs home page's booking card, from the docs' own source (todo 773).
-
-#[path = "../../../docs/src/pages/home/booking.rs"]
-mod booking;
+//! The docs home page's booking card, from the fixture's copy (todos 773, 940).
 
 use dioxus::prelude::*;
 use e2e::native::{Key, Page, mount};
+use e2e_fixtures::home::BookingCard;
 use libero::components::Notifications;
 
 const DAY: &str = "input[role=combobox]";
@@ -16,7 +14,7 @@ const SUMMARY: &str = "[role=alert]";
 fn app() -> Element {
     rsx! {
         div { height: "500px" }
-        booking::BookingCard {}
+        BookingCard {}
         div { height: "1000px" }
         Notifications {}
     }
