@@ -1813,8 +1813,15 @@ impl BlitzElement {
 
 impl ElementApi for BlitzElement {
     fn focus(&self) -> Result<(), PlatformError> {
+        let wrapper = self::doc().and_then(|doc| doc.wrapper_id());
         let node_id = self.node_id;
         self.command(move |doc| {
+            // `<html>` is what `active_element` names the wrapper: focus there
+            // is above it, out of every key's reach.
+            let node_id = match wrapper {
+                Some(wrapper) if node_id == doc.root_element().id => wrapper,
+                _ => node_id,
+            };
             // Blitz focuses what isn't rendered too (todo 862).
             if !is_rendered(doc, node_id) {
                 return;

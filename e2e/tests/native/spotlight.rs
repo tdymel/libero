@@ -46,3 +46,34 @@ fn a_narrowed_list_keeps_each_label_on_one_line() {
     assert!(page.exists("[role=option]"), "no rows:\n{}", page.tree());
     assert_eq!(page.wrapped_text("[role=option]"), Vec::<String>::new());
 }
+
+/// With nothing focused, closing handed focus to `<html>`, above the wrapper
+/// every key subscription listens on: Ctrl+K never opened it again.
+#[test]
+fn ctrl_k_reopens_the_palette_opened_with_nothing_focused() {
+    let mut page = mount(narrowing);
+    for close in [Key::Escape, Key::Character("k".into())] {
+        page.press_with(Key::Character("k".into()), Modifiers::CONTROL);
+        assert!(
+            page.wait_for(|page| page.exists("[role=dialog]")),
+            "focus on {}",
+            page.focus_owner()
+        );
+        let modifiers = match close {
+            Key::Escape => Modifiers::empty(),
+            _ => Modifiers::CONTROL,
+        };
+        page.press_with(close, modifiers);
+        assert!(
+            page.wait_for(|page| !page.exists("[role=dialog]")),
+            "{}",
+            page.tree()
+        );
+    }
+    page.press_with(Key::Character("k".into()), Modifiers::CONTROL);
+    assert!(
+        page.wait_for(|page| page.exists("[role=dialog]")),
+        "focus on {}",
+        page.focus_owner()
+    );
+}
