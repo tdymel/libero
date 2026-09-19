@@ -39,6 +39,7 @@ mod carousel;
 mod cascader;
 mod checkbox;
 mod chip;
+mod chrono_field;
 mod code;
 mod collapse;
 mod color_field;
@@ -47,7 +48,6 @@ mod color_scheme_button;
 mod combobox;
 mod common;
 mod data_list;
-mod date_field;
 mod dialog;
 mod direction_toggle;
 mod divider;
@@ -148,7 +148,7 @@ const FIXTURES: &[Routes] = &[
     color_scheme_button::ROUTES,
     combobox::ROUTES,
     data_list::ROUTES,
-    date_field::ROUTES,
+    chrono_field::ROUTES,
     dialog::ROUTES,
     direction_toggle::ROUTES,
     divider::ROUTES,

@@ -1,4 +1,4 @@
-//! The pickers for one value type each - what `DatePicker` draws, under a
+//! The pickers for one value type each - what `ChronoPicker` draws, under a
 //! name and with only the props that type uses.
 
 use dioxus::prelude::*;
@@ -14,10 +14,10 @@ use super::{
 use crate::{components::common::Input, hooks::use_theme};
 
 date_props! {
-    picker DayPickerProps(NaiveDate, NaiveDate): limits, exclude_date, allow_deselect, columns, calendar, today
+    picker DatePickerProps(NaiveDate, NaiveDate): limits, exclude_date, allow_deselect, columns, calendar, today
 }
 
-/// A month of days to pick one from, and what `DatePicker` draws for a
+/// A month of days to pick one from, and what `ChronoPicker` draws for a
 /// `NaiveDate`.
 ///
 /// Controlled: it renders `value` and asks for a new one through `onchange`.
@@ -28,7 +28,7 @@ date_props! {
 /// week, Home and End to the week's ends, Page Up and Page Down a month, with
 /// Shift a year. Enter and Space pick.
 #[component]
-pub fn DayPicker(props: DayPickerProps) -> Element {
+pub fn DatePicker(props: DatePickerProps) -> Element {
     let theme = use_theme();
     NaiveDate::picker(PickerArgs {
         value: props.value,
@@ -88,7 +88,7 @@ date_props! {
     picker MonthPickerProps(NaiveDate, NaiveDate): limits, today
 }
 
-/// The months of a year to pick one from, and `DatePicker` at `DateLevel::Month`. The heading climbs to a decade of years.
+/// The months of a year to pick one from, and `ChronoPicker` at `DateLevel::Month`. The heading climbs to a decade of years.
 /// A month is held as its first day.
 #[component]
 pub fn MonthPicker(props: MonthPickerProps) -> Element {
@@ -116,7 +116,7 @@ date_props! {
     picker YearPickerProps(NaiveDate, NaiveDate): limits, today
 }
 
-/// A decade of years to pick one from, and `DatePicker` at `DateLevel::Year`. A year is held as its January 1.
+/// A decade of years to pick one from, and `ChronoPicker` at `DateLevel::Year`. A year is held as its January 1.
 #[component]
 pub fn YearPicker(props: YearPickerProps) -> Element {
     NaiveDate::picker(PickerArgs {

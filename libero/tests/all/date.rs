@@ -11,7 +11,7 @@ use libero::{
     LiberoProvider,
     chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Weekday},
     components::{
-        DateField, DateLevel, DatePicker, DateRange, DateRangePicker, DayField, DayPicker,
+        ChronoField, ChronoPicker, DateField, DateLevel, DatePicker, DateRange, DateRangePicker,
         MonthPicker, SegmentedControl, TimePicker, YearPicker,
     },
     localization::Formats,
@@ -177,7 +177,7 @@ fn a_day_button_is_named_by_its_full_date() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 18), onchange: move |_| {} }
+                DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, 18), onchange: move |_| {} }
             }
         }
     }
@@ -221,7 +221,7 @@ fn a_picker_draws_six_weeks_from_the_first_weekday() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, name: "day" }
+                DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, name: "day" }
             }
         }
     }
@@ -255,7 +255,7 @@ fn a_monday_first_locale_starts_the_grid_and_the_headers_on_monday() {
     fn app() -> Element {
         rsx! {
             LiberoProvider { formats: &MONDAY,
-                DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} }
+                DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} }
             }
         }
     }
@@ -278,7 +278,7 @@ fn days_outside_min_and_max_are_disabled() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                DayPicker {
+                DatePicker {
                     value: NaiveDate::from_ymd_opt(2026, 9, 14),
                     min: NaiveDate::from_ymd_opt(2026, 9, 10),
                     max: NaiveDate::from_ymd_opt(2026, 9, 20),
@@ -315,7 +315,7 @@ fn the_tab_stop_skips_disabled_days() {
     fn min_after_the_first() -> Element {
         rsx! {
             LiberoProvider {
-                DayPicker {
+                DatePicker {
                     value: None,
                     min: NaiveDate::from_ymd_opt(2026, 9, 10),
                     today: NaiveDate::from_ymd_opt(2026, 9, 1),
@@ -327,7 +327,7 @@ fn the_tab_stop_skips_disabled_days() {
     fn weekend_today() -> Element {
         rsx! {
             LiberoProvider {
-                DayPicker {
+                DatePicker {
                     value: None,
                     // A Saturday.
                     today: NaiveDate::from_ymd_opt(2026, 9, 19),
@@ -340,7 +340,7 @@ fn the_tab_stop_skips_disabled_days() {
     fn weekend_at_the_month_end() -> Element {
         rsx! {
             LiberoProvider {
-                DayPicker {
+                DatePicker {
                     value: None,
                     // A Saturday; the Monday after is in June.
                     today: NaiveDate::from_ymd_opt(2026, 5, 30),
@@ -353,7 +353,7 @@ fn the_tab_stop_skips_disabled_days() {
     fn mini_weekend() -> Element {
         rsx! {
             LiberoProvider {
-                DayPicker {
+                DatePicker {
                     value: NaiveDate::from_ymd_opt(2026, 9, 19),
                     exclude_date: move |day: NaiveDate| day.weekday().num_days_from_monday() >= 5,
                     calendar: "mini",
@@ -402,7 +402,7 @@ fn today_is_the_one_cell_with_aria_current_date() {
     fn day() -> Element {
         rsx! {
             LiberoProvider {
-                DayPicker {
+                DatePicker {
                     value: None,
                     today: NaiveDate::from_ymd_opt(2026, 3, 18),
                     onchange: move |_| {},
@@ -455,8 +455,8 @@ fn a_field_shows_its_format_and_posts_iso() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                DayField { value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {}, name: "arrival" }
-                DayField {
+                DateField { value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {}, name: "arrival" }
+                DateField {
                     value: NaiveDate::from_ymd_opt(2026, 9, 4),
                     onchange: move |_| {},
                     format: "DD.MM.YYYY",
@@ -480,7 +480,7 @@ fn a_closed_field_is_a_combobox_over_a_dialog() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                DayField { id: "due", value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {} }
+                DateField { id: "due", value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {} }
             }
         }
     }
@@ -551,10 +551,10 @@ fn one_field_takes_its_format_and_posting_from_the_value_type() {
         };
         rsx! {
             LiberoProvider {
-                DateField::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {}, name: "day" }
-                DateField::<NaiveTime> { value: NaiveTime::from_hms_opt(13, 5, 0), onchange: move |_| {}, name: "time" }
+                ChronoField::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {}, name: "day" }
+                ChronoField::<NaiveTime> { value: NaiveTime::from_hms_opt(13, 5, 0), onchange: move |_| {}, name: "time" }
                 // `value` goes through `SuperInto`, so it never names `V`: a turbofish does.
-                DateField::<DateRange<NaiveDateTime>> {
+                ChronoField::<DateRange<NaiveDateTime>> {
                     value: moment(14, 9).map(|start| DateRange::new(start, moment(16, 17))),
                     onchange: move |_| {},
                     name: "stay",
@@ -583,11 +583,11 @@ fn one_picker_draws_what_the_value_type_calls_for() {
         };
         rsx! {
             LiberoProvider {
-                DatePicker::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, name: "day", class: "day-picker" }
-                DatePicker::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, level: DateLevel::Month, name: "month" }
-                DatePicker::<NaiveTime> { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, name: "time", id: "clock" }
-                DatePicker::<NaiveDateTime> { value: moment(14, 9), onchange: move |_| {}, name: "moment", class: "flow" }
-                DatePicker::<DateRange<NaiveDate>> {
+                ChronoPicker::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, name: "day", class: "day-picker" }
+                ChronoPicker::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, level: DateLevel::Month, name: "month" }
+                ChronoPicker::<NaiveTime> { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, name: "time", id: "clock" }
+                ChronoPicker::<NaiveDateTime> { value: moment(14, 9), onchange: move |_| {}, name: "moment", class: "flow" }
+                ChronoPicker::<DateRange<NaiveDate>> {
                     value: NaiveDate::from_ymd_opt(2026, 9, 14).map(|start| DateRange::new(start, NaiveDate::from_ymd_opt(2026, 9, 18))),
                     onchange: move |_| {},
                     name: "stay",
@@ -617,9 +617,9 @@ fn a_duration_shows_its_units_and_posts_iso_8601() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                DateField::<TimeDelta> { value: TimeDelta::try_minutes(90), onchange: move |_| {}, name: "length",
+                ChronoField::<TimeDelta> { value: TimeDelta::try_minutes(90), onchange: move |_| {}, name: "length",
                     min: TimeDelta::try_minutes(15), max: TimeDelta::try_hours(12), step: 15, with_seconds: true, label: "Length" }
-                DatePicker::<TimeDelta> {
+                ChronoPicker::<TimeDelta> {
                     value: TimeDelta::try_seconds(2 * 3600 + 15 * 60 + 30),
                     onchange: move |_| {},
                     with_seconds: true,
@@ -657,7 +657,7 @@ fn a_picker_follows_a_level_change_in_the_same_scope() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                DatePicker::<NaiveDate> {
+                ChronoPicker::<NaiveDate> {
                     value: NaiveDate::from_ymd_opt(2026, 9, 14),
                     onchange: move |_| {},
                     level: LEVEL.with(Cell::get),
@@ -690,7 +690,7 @@ fn a_mini_calendar_draws_one_row_of_days_and_posts_the_day() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                DayPicker {
+                DatePicker {
                     value: NaiveDate::from_ymd_opt(2026, 9, 14),
                     onchange: move |_| {},
                     calendar: "mini",
@@ -720,14 +720,14 @@ fn a_mini_calendar_cannot_page_past_its_limits() {
     fn open() -> Element {
         rsx! {
             LiberoProvider {
-                DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, calendar: "mini" }
+                DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, calendar: "mini" }
             }
         }
     }
     fn limited() -> Element {
         rsx! {
             LiberoProvider {
-                DayPicker {
+                DatePicker {
                     value: NaiveDate::from_ymd_opt(2026, 9, 14),
                     onchange: move |_| {},
                     calendar: "mini",
@@ -753,7 +753,7 @@ fn a_picker_follows_a_calendar_change_in_the_same_scope() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                DatePicker::<NaiveDate> {
+                ChronoPicker::<NaiveDate> {
                     value: NaiveDate::from_ymd_opt(2026, 9, 14),
                     onchange: move |_| {},
                     calendar: CALENDAR.with(Cell::get).as_str(),
@@ -808,7 +808,7 @@ fn a_picker_follows_a_new_exclude_date_rule_in_the_same_scope() {
         let first = FIRST_EXCLUDED_WEEKDAY.with(Cell::get);
         rsx! {
             LiberoProvider {
-                DayPicker {
+                DatePicker {
                     value: NaiveDate::from_ymd_opt(2026, 9, 14),
                     onchange: move |_| {},
                     exclude_date: move |day: NaiveDate| day.weekday().num_days_from_monday() >= first,

@@ -157,10 +157,10 @@ pub(crate) enum Route {
     ColorPickerPage {},
     #[route("/form/combobox")]
     ComboboxPage {},
-    #[route("/form/date-field")]
-    DateFieldPage {},
-    #[route("/form/date-picker")]
-    DatePickerPage {},
+    #[route("/form/chrono-field")]
+    ChronoFieldPage {},
+    #[route("/form/chrono-picker")]
+    ChronoPickerPage {},
     #[route("/form/fieldset")]
     FieldsetPage {},
     #[route("/form/file-field")]

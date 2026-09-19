@@ -6,7 +6,7 @@ use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use dioxus::prelude::*;
 
 use super::{
-    DateRange, DayPicker,
+    DatePicker, DateRange,
     calendar::{Calendar, Selection},
     parse_time::MIDNIGHT,
     picker_field::FieldValue,
@@ -272,7 +272,7 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
 
     let picker = match part() {
         Part::Date => rsx! {
-            DayPicker {
+            DatePicker {
                 value: date,
                 min: props.min.map(|min| min.date()),
                 max: props.max.map(|max| max.date()),
@@ -422,9 +422,12 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
         }
     });
 
-    let picker = match step() {
+    // Each step keyed apart: a fresh end clock starts on the hour.
+    let shown = step();
+    let picker = match shown {
         Step::Dates => rsx! {
             Calendar {
+                key: "{shown:?}",
                 selection: Selection::Range(value.map(|range| {
                     DateRange::new(range.start.date(), range.end.map(|end| end.date()))
                 })),
@@ -450,6 +453,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
             });
             rsx! {
                 Clock {
+                    key: "{shown:?}",
                     value: start_time,
                     onchange,
                     oncomplete: move |()| next_step(Step::End),
@@ -487,6 +491,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
             });
             rsx! {
                 Clock {
+                    key: "{shown:?}",
                     value: end_time,
                     onchange,
                     variant: props.variant,

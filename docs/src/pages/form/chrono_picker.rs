@@ -5,7 +5,7 @@ use super::date_common::{
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use libero::components::{Code, DateLevel, DatePicker, DateRange, Flex, Kbd, Text};
+use libero::components::{ChronoPicker, Code, DateLevel, DateRange, Flex, Kbd, Text};
 
 const KINDS: [&str; 7] = [
     "date",
@@ -28,14 +28,14 @@ fn moment(day: u32, hour: u32) -> Option<NaiveDateTime> {
 }
 
 #[component]
-pub fn DatePickerPage() -> Element {
+pub fn ChronoPickerPage() -> Element {
     rsx! {
         DocPage {
-            title: "DatePicker",
-            source: "libero/src/components/form/date/date_picker.rs",
-            markdown: "/md/date_picker.md",
+            title: "ChronoPicker",
+            source: "libero/src/components/form/date/chrono_picker.rs",
+            markdown: "/md/chrono_picker.md",
             properties: vec![
-                props("DatePicker<V: DateValue>", vec![
+                props("ChronoPicker<V: DateValue>", vec![
                     prop("value", "Option<V>").doc("The picked value. Its type picks what the picker draws. Pair it with `onchange`."),
                     prop("onchange", "EventHandler<Option<V>>").doc("Called with the value to hold next."),
                     prop("level", "DateLevel").default("Day").doc("Picks a `NaiveDate` as a day, a month (its first day) or a year (its January 1). Ignored for other values."),
@@ -82,10 +82,10 @@ pub fn DatePickerPage() -> Element {
                     ", and the first weekday and heading format from the provider's "
                     Code { source: "Formats" }
                     ". As on "
-                    Code { source: "DateField" }
+                    Code { source: "ChronoField" }
                     ", a typed handler or a turbofish names the value type. For one value type "
                     "there are "
-                    Code { source: "DayPicker" }
+                    Code { source: "DatePicker" }
                     ", "
                     Code { source: "MonthPicker" }
                     ", "
@@ -106,7 +106,7 @@ pub fn DatePickerPage() -> Element {
             // snippet: let mut date_range = use_signal(|| None::<DateRange<NaiveDate>>);
             // snippet: let mut date_time_range = use_signal(|| None::<DateRange<NaiveDateTime>>);
             Demo {
-                component: "DatePicker",
+                component: "ChronoPicker",
                 children_text: "",
                 controls: [vec![
                     Control::select("value", KINDS).default("date").code(|_, values| {
@@ -155,7 +155,7 @@ pub fn DatePickerPage() -> Element {
                     }),
                 ], calendar_controls(), shared_controls()].concat(),
                 render: move |values: DemoValues| rsx! {
-                    DatePickerDemo { values }
+                    ChronoPickerDemo { values }
                 },
             }
 
@@ -205,7 +205,7 @@ pub fn DatePickerPage() -> Element {
 
 /// One signal per value type, so switching types keeps what was picked.
 #[component]
-fn DatePickerDemo(values: DemoValues) -> Element {
+fn ChronoPickerDemo(values: DemoValues) -> Element {
     let mut date = use_signal(|| day(14));
     let mut month = use_signal(|| day(1));
     let mut year = use_signal(|| NaiveDate::from_ymd_opt(2026, 1, 1));
@@ -233,7 +233,7 @@ fn DatePickerDemo(values: DemoValues) -> Element {
     let (picker, readout) = match values.str("value").as_str() {
         "month" => (
             rsx! {
-                DatePicker {
+                ChronoPicker {
                     value: month(), onchange: move |next| month.set(next), level: DateLevel::Month,
                     min: min_day, max: max_day, today, size,
                 }
@@ -242,7 +242,7 @@ fn DatePickerDemo(values: DemoValues) -> Element {
         ),
         "year" => (
             rsx! {
-                DatePicker {
+                ChronoPicker {
                     value: year(), onchange: move |next| year.set(next), level: DateLevel::Year,
                     min: min_day, max: max_day, today, size,
                 }
@@ -251,7 +251,7 @@ fn DatePickerDemo(values: DemoValues) -> Element {
         ),
         "time" => (
             rsx! {
-                DatePicker {
+                ChronoPicker {
                     value: time(), onchange: move |next| time.set(next),
                     min: min_time, max: max_time, variant, with_seconds, step, twelve_hour, size,
                 }
@@ -260,7 +260,7 @@ fn DatePickerDemo(values: DemoValues) -> Element {
         ),
         "date-time" => (
             rsx! {
-                DatePicker {
+                ChronoPicker {
                     value: date_time(), onchange: move |next| date_time.set(next),
                     min: min_moment, max: max_moment, exclude_date, today, calendar, days,
                     variant, with_seconds, step, twelve_hour, size,
@@ -270,7 +270,7 @@ fn DatePickerDemo(values: DemoValues) -> Element {
         ),
         "date-range" => (
             rsx! {
-                DatePicker {
+                ChronoPicker {
                     value: date_range(), onchange: move |next| date_range.set(next),
                     min: min_day, max: max_day, exclude_date, columns, today, size,
                 }
@@ -279,7 +279,7 @@ fn DatePickerDemo(values: DemoValues) -> Element {
         ),
         "date-time-range" => (
             rsx! {
-                DatePicker {
+                ChronoPicker {
                     value: date_time_range(), onchange: move |next| date_time_range.set(next),
                     min: min_moment, max: max_moment, exclude_date, today,
                     variant, with_seconds, step, twelve_hour, size,
@@ -289,7 +289,7 @@ fn DatePickerDemo(values: DemoValues) -> Element {
         ),
         _ => (
             rsx! {
-                DatePicker {
+                ChronoPicker {
                     value: date(), onchange: move |next| date.set(next),
                     min: min_day, max: max_day, allow_deselect, exclude_date, columns, calendar, days, today, size,
                 }

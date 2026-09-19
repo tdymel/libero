@@ -26,7 +26,7 @@ pub fn Stats() -> Element {
                     .list_style("none")
                     .margin("0")
                     .padding("0"),
-                Stat { value: components, label: "components, from Button to DatePicker" }
+                Stat { value: components, label: "components, from Button to ChronoPicker" }
                 Stat { value: palettes, label: "palettes, each light and dark" }
                 Stat { value: "2", label: "targets from one codebase: web and native" }
                 Stat { value: "AA", label: "WCAG 2.2, the accessibility target" }

@@ -176,7 +176,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
 
     let labels = use_localization().color;
     // Typed text that is no color, found on Enter or on a blur that keeps it;
-    // cleared by the next keystroke, as `DateField` does.
+    // cleared by the next keystroke, as `ChronoField` does.
     let mut rejected = use_signal(|| false);
     let announcer = use_announcer();
     // A color from the dropdown or the eyedropper drops the draft, and the error with it.

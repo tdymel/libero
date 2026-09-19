@@ -1,10 +1,10 @@
-//! `DatePicker`'s day grid, `DateRangePicker`'s two, and `MonthPicker`'s
+//! `ChronoPicker`'s day grid, `DateRangePicker`'s two, and `MonthPicker`'s
 //! month and year grids.
 
 use dioxus::prelude::*;
 use libero::{
     chrono::NaiveDate,
-    components::{Button, DatePicker, DateRange, DateRangePicker, Flex, MonthPicker},
+    components::{Button, ChronoPicker, DateRange, DateRangePicker, Flex, MonthPicker},
 };
 
 use crate::Routes;
@@ -21,7 +21,7 @@ pub const ROUTES: Routes = &[
 #[component]
 fn LimitedPage() -> Element {
     rsx! {
-        DatePicker::<NaiveDate> {
+        ChronoPicker::<NaiveDate> {
             value: NaiveDate::from_ymd_opt(2026, 3, 18),
             today: NaiveDate::from_ymd_opt(2026, 3, 18),
             min: NaiveDate::from_ymd_opt(2026, 3, 10),
@@ -37,7 +37,7 @@ fn MiniPage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             Button { id: "before", "Before" }
-            DatePicker {
+            ChronoPicker {
                 value: day(),
                 today: NaiveDate::from_ymd_opt(2026, 3, 18),
                 calendar: "mini",
@@ -75,7 +75,7 @@ fn CalendarPage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             Button { id: "before", "Before" }
-            DatePicker {
+            ChronoPicker {
                 value: day(),
                 today: NaiveDate::from_ymd_opt(2026, 3, 18),
                 onchange: move |next: Option<NaiveDate>| day.set(next),

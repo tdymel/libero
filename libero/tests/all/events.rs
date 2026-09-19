@@ -3038,7 +3038,7 @@ mod combobox_refusal {
     use super::*;
     use libero::components::{
         Autocomplete, Cascader, CascaderOption, Combobox, ComboboxOption, ComboboxOptionArgs,
-        DayField, Select, use_combobox,
+        DateField, Select, use_combobox,
     };
 
     thread_local! {
@@ -3398,7 +3398,7 @@ mod combobox_refusal {
     fn due(readonly: bool) -> Element {
         rsx! {
             LiberoProvider {
-                DayField {
+                DateField {
                     label: "Due",
                     readonly: readonly && locked(),
                     disabled: !readonly && locked(),
@@ -3443,8 +3443,8 @@ mod combobox_refusal {
     #[test]
     fn a_picker_field_locked_while_open_claims_no_dialog() {
         let cases: [Case; 4] = [
-            ("DayField disabled", || due(false)),
-            ("DayField readonly", || due(true)),
+            ("DateField disabled", || due(false)),
+            ("DateField readonly", || due(true)),
             ("ColorField disabled", || accent(false)),
             ("ColorField readonly", || accent(true)),
         ];
@@ -3466,7 +3466,7 @@ mod combobox_refusal {
 mod range_close_on_change {
     use super::*;
     use chrono::NaiveDate;
-    use libero::components::{DateField, DateRange};
+    use libero::components::{ChronoField, DateRange};
     use std::collections::HashMap;
 
     thread_local! {
@@ -3523,7 +3523,7 @@ mod range_close_on_change {
         let mut value = use_signal(|| None::<DateRange<NaiveDate>>);
         rsx! {
             LiberoProvider {
-                DateField::<DateRange<NaiveDate>> {
+                ChronoField::<DateRange<NaiveDate>> {
                     label: "Trip",
                     today: NaiveDate::from_ymd_opt(2026, 9, 1).unwrap(),
                     close_on_change: CLOSE.with(|cell| cell.get()),

@@ -1,7 +1,7 @@
 //! The engine every date and time field shares: a text input read on blur or
 //! Enter, a dropdown holding a picker, and a hidden input posting ISO 8601.
-//! Generic over the value, but private - `DateField` and the typed fields
-//! reach it through `date_field::date_field`.
+//! Generic over the value, but private - `ChronoField` and the typed fields
+//! reach it through `chrono_field::chrono_field`.
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
 use dioxus::prelude::*;

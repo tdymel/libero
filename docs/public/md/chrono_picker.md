@@ -1,8 +1,8 @@
-# DatePicker
+# ChronoPicker
 
 Crate: `libero`
-Import: `use libero::{chrono::{NaiveDate, NaiveTime}, components::{DateLevel, DatePicker, DateRange}};`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/date/date_picker.rs>
+Import: `use libero::{chrono::{NaiveDate, NaiveTime}, components::{DateLevel, ChronoPicker, DateRange}};`
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/date/chrono_picker.rs>
 Index: [index.md](index.md) lists every other page
 Description: One picker for every date and time value, from days, months and years to times, date-times and ranges of them.
 
@@ -14,8 +14,8 @@ year picker, and `calendar: "mini"` into one row of days.
 
 It opens on the value's month, else today's. Names come from the localization's
 `DateLocale`, and the first weekday and heading format from the provider's
-`Formats`. As on [DateField](date_field.md), a typed handler or a turbofish
-names the value type. For one value type there are `DayPicker`, `MonthPicker`,
+`Formats`. As on [ChronoField](chrono_field.md), a typed handler or a turbofish
+names the value type. For one value type there are `DatePicker`, `MonthPicker`,
 `YearPicker`, `TimePicker` and `DateRangePicker`, with only the props that type
 uses and no turbofish.
 
@@ -23,7 +23,7 @@ uses and no turbofish.
 
 ```rust
 use dioxus::prelude::*;
-use libero::{chrono::NaiveDate, components::{DateLevel, DatePicker}};
+use libero::{chrono::NaiveDate, components::{DateLevel, ChronoPicker}};
 
 #[component]
 fn Demo() -> Element {
@@ -31,13 +31,13 @@ fn Demo() -> Element {
     let mut month = use_signal(|| None::<NaiveDate>);
 
     rsx! {
-        DatePicker {
+        ChronoPicker {
             value: day(),
             onchange: move |next| day.set(next),
             min: NaiveDate::from_ymd_opt(2026, 9, 5),
             name: "arrival",
         }
-        DatePicker {
+        ChronoPicker {
             value: month(),
             onchange: move |next| month.set(next),
             level: DateLevel::Month,
@@ -46,9 +46,9 @@ fn Demo() -> Element {
 }
 ```
 
-As with `DateField`, a typed `value` alone does not name `V`. A handler that
+As with `ChronoField`, a typed `value` alone does not name `V`. A handler that
 stores into a typed signal does, and so does a turbofish such as
-`DatePicker::<NaiveTime> { name: "at" }`.
+`ChronoPicker::<NaiveTime> { name: "at" }`.
 
 The picker keeps the month it shows as its own state. It opens on `value`'s
 month, else today's. Today comes from the platform clock after mount on the
@@ -101,7 +101,7 @@ the end may be on different days.
 
 ## Props
 
-### `DatePicker<V: DateValue>`
+### `ChronoPicker<V: DateValue>`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|

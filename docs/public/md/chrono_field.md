@@ -1,12 +1,12 @@
-# DateField
+# ChronoField
 
 Crate: `libero`
-Import: `use libero::{chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta}, components::{DateField, DateRange}};`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/date/date_field.rs>
+Import: `use libero::{chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta}, components::{ChronoField, DateRange}};`
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/date/chrono_field.rs>
 Index: [index.md](index.md) lists every other page
-Description: A text field for every date and time value, typed leniently, with the matching `DatePicker` in a dropdown.
+Description: A text field for every date and time value, typed leniently, with the matching `ChronoPicker` in a dropdown.
 
-A text field for every date and time value, with a [DatePicker](date_picker.md)
+A text field for every date and time value, with a [ChronoPicker](chrono_picker.md)
 in a dropdown. The value's type picks what the dropdown shows: `NaiveDate` a
 calendar, `NaiveTime` a clock, `NaiveDateTime` both, a `DateRange` of either
 picks two, and `TimeDelta` is a duration. `level` makes a `NaiveDate` field a
@@ -24,22 +24,22 @@ The language of names, labels and errors comes from the provider's
 its `Formats`, `Formats::AMERICAN` by default or `Formats::GERMAN`.
 
 A typed value alone does not name the type. A handler that stores into a typed
-signal does, or a turbofish such as `DateField::<NaiveTime> { .. }`. For one
-value type there are `DayField`, `TimeField`, `DateTimeField`, `DateRangeField`
+signal does, or a turbofish such as `ChronoField::<NaiveTime> { .. }`. For one
+value type there are `DateField`, `TimeField`, `DateTimeField`, `DateRangeField`
 and `DateTimeRangeField`, with only the props that type uses and no turbofish.
 
 ## Usage
 
 ```rust
 use dioxus::prelude::*;
-use libero::{chrono::NaiveDate, components::DateField};
+use libero::{chrono::NaiveDate, components::ChronoField};
 
 #[component]
 fn Demo() -> Element {
     let mut day = use_signal(|| None::<NaiveDate>);
 
     rsx! {
-        DateField {
+        ChronoField {
             label: "Arrival",
             value: day(),
             onchange: move |next| day.set(next),
@@ -54,14 +54,14 @@ A month field:
 
 ```rust
 use dioxus::prelude::*;
-use libero::{chrono::NaiveDate, components::{DateField, DateLevel}};
+use libero::{chrono::NaiveDate, components::{ChronoField, DateLevel}};
 
 #[component]
 fn Demo() -> Element {
     let mut month = use_signal(|| None::<NaiveDate>);
 
     rsx! {
-        DateField {
+        ChronoField {
             label: "Billing month",
             level: DateLevel::Month,
             value: month(),
@@ -88,14 +88,14 @@ hears each column's value with its unit, `2 hours`.
 
 ```rust
 use dioxus::prelude::*;
-use libero::{chrono::TimeDelta, components::DateField};
+use libero::{chrono::TimeDelta, components::ChronoField};
 
 #[component]
 fn Demo() -> Element {
     let mut length = use_signal(|| TimeDelta::try_minutes(90));
 
     rsx! {
-        DateField {
+        ChronoField {
             label: "Length",
             value: length(),
             onchange: move |next| length.set(next),
@@ -111,13 +111,13 @@ fn Demo() -> Element {
 
 Focus opens the dropdown and stays in the text, so you can type at once. `↓`
 moves focus into the picker, onto the picked day or the clock, where the
-[DatePicker](date_picker.md) keys apply. Escape goes back to the text, and so
+[ChronoPicker](chrono_picker.md) keys apply. Escape goes back to the text, and so
 does a pick that closes the dropdown. Focus leaving both the text and the
 dropdown closes it. A mouse click in the dropdown leaves focus in the text.
 
 ## Props
 
-### `DateField<V: DateValue>`
+### `ChronoField<V: DateValue>`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|

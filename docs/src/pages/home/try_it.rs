@@ -17,9 +17,9 @@ const PARTS: [(&str, &str, Route); 7] = [
     ),
     ("TextField", "the name", Route::TextFieldPage {}),
     (
-        "DayField",
+        "DateField",
         "the day, typed or picked",
-        Route::DateFieldPage {},
+        Route::ChronoFieldPage {},
     ),
     ("Select", "the guests, over an enum", Route::SelectPage {}),
     ("Switch", "the terrace", Route::SwitchPage {}),

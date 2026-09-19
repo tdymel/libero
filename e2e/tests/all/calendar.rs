@@ -1,4 +1,4 @@
-//! `DatePicker`'s day grid: the arrows, Home/End and PageUp/PageDown, and a
+//! `ChronoPicker`'s day grid: the arrows, Home/End and PageUp/PageDown, and a
 //! month change that keeps focus in the grid (todo 406).
 //!
 //! `/calendar` picks Wednesday 2026-03-18, which is also `today`, so the grid

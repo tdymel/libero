@@ -1,4 +1,4 @@
-//! `ColorField` and `DateField`: a text input whose dropdown is a named,
+//! `ColorField` and `ChronoField`: a text input whose dropdown is a named,
 //! non-modal `role="dialog"` (APG Date Picker Combobox). Focus or a click opens
 //! it and leaves focus in the input, so typing still works; Arrow Down moves
 //! focus inside; Escape closes it and puts focus back on the input.
@@ -16,7 +16,7 @@ const ENTERED: &str = "[role=dialog]:focus-within";
 
 const FIELDS: [(&str, &str); 2] = [
     ("/color-field", "#color-field"),
-    ("/date-field", "#date-field"),
+    ("/chrono-field", "#chrono-field"),
 ];
 
 #[test]
@@ -36,12 +36,12 @@ fn the_color_field_meets_the_baseline() {
 
 #[test]
 fn the_date_field_meets_the_baseline() {
-    Suite::new("date_field", "/date-field")
-        .focusable("#date-field")
+    Suite::new("chrono_field", "/chrono-field")
+        .focusable("#chrono-field")
         .state(
             "open",
             &[
-                Step::TabTo("#date-field"),
+                Step::TabTo("#chrono-field"),
                 Step::Press(keyboard::ARROW_DOWN),
             ],
             ENTERED,

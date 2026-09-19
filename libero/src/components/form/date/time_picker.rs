@@ -253,7 +253,7 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
 }
 
 /// What `TimePicker` draws, with every option resolved. Its props are plain,
-/// so `DatePicker` can hand on the caller's attributes.
+/// so `ChronoPicker` can hand on the caller's attributes.
 #[derive(Props, Clone, PartialEq)]
 pub(super) struct ClockProps {
     value: Option<NaiveTime>,

@@ -2,7 +2,7 @@ use chrono::NaiveDate;
 use dioxus::prelude::*;
 
 use super::{
-    DatePicker,
+    ChronoPicker,
     calendar::DateLevel,
     date_value::{DateValue, PickerOptions, Refusal, use_ignored_props_warning, used},
     fields::time_format,
@@ -18,10 +18,10 @@ use crate::{
 };
 
 date_props! {
-    field DateFieldProps<V: DateValue>(V, V::Bound): format, time_format, limits, exclude_date, today, clock, calendar, columns, close_on_change, level
+    field ChronoFieldProps<V: DateValue>(V, V::Bound): format, time_format, limits, exclude_date, today, clock, calendar, columns, close_on_change, level
 }
 
-/// One text field for every date and time value, with the [`DatePicker`](super::DatePicker)
+/// One text field for every date and time value, with the [`ChronoPicker`](super::ChronoPicker)
 /// its type calls for in a dropdown.
 ///
 /// Controlled: it renders `value` and asks for a new one through `onchange`.
@@ -42,11 +42,11 @@ date_props! {
 /// ```no_run
 /// # use chrono::NaiveDate;
 /// # use dioxus::prelude::*;
-/// # use libero::components::{DateField, DateLevel};
+/// # use libero::components::{ChronoField, DateLevel};
 /// # fn app() -> Element {
 /// let mut month = use_signal(|| NaiveDate::from_ymd_opt(2026, 9, 1));
 /// rsx! {
-///     DateField::<NaiveDate> {
+///     ChronoField::<NaiveDate> {
 ///         label: "Billing month",
 ///         level: DateLevel::Month,
 ///         value: month(),
@@ -64,12 +64,12 @@ date_props! {
 /// `NaiveDate`. A month or year field also ignores `exclude_date`, `columns`,
 /// `calendar` and `days`.
 #[component]
-pub fn DateField<V: DateValue>(props: DateFieldProps<V>) -> Element {
+pub fn ChronoField<V: DateValue>(props: ChronoFieldProps<V>) -> Element {
     let level = used::<V, _>("level", props.level)
         .flatten()
         .unwrap_or(DateLevel::Day);
     use_ignored_props_warning::<V>(
-        "DateField",
+        "ChronoField",
         &[
             ("format", props.format.is_some()),
             ("time_format", props.time_format.is_some()),
@@ -108,11 +108,11 @@ pub fn DateField<V: DateValue>(props: DateFieldProps<V>) -> Element {
         days: props.days,
         level,
     };
-    date_field(picker_field!(props, props.today), options)
+    chrono_field(picker_field!(props, props.today), options)
 }
 
 /// What a field's text and dropdown are drawn from, besides the props every
-/// field shares. `DateField` fills all of it; a typed field fills what its
+/// field shares. `ChronoField` fills all of it; a typed field fills what its
 /// value type uses and leaves the rest unset.
 pub(super) struct FieldOptions<B: 'static> {
     pub format: Option<String>,
@@ -155,7 +155,7 @@ impl<B> Default for FieldOptions<B> {
 /// The one path from a field's props to its text and its dropdown, so every
 /// field hands the picker the same props. Calls hooks: only from a component
 /// body.
-pub(super) fn date_field<V: DateValue>(
+pub(super) fn chrono_field<V: DateValue>(
     field: PickerField<'_, V>,
     options: FieldOptions<V::Bound>,
 ) -> Element {
@@ -210,7 +210,7 @@ pub(super) fn date_field<V: DateValue>(
         // Only the props `V` reads, so the picker has nothing to warn about.
         move |args: DropdownArgs<V>| {
             rsx! {
-                DatePicker::<V> {
+                ChronoPicker::<V> {
                     value: args.value,
                     onchange: move |next: Option<V>| {
                         args.pick.call((next, close && V::closes(next)));
@@ -264,7 +264,7 @@ mod tests {
         LiberoProvider,
         components::{
             common::Input,
-            form::date::{DateField, DateLevel, DatePicker, date_value::Sealed},
+            form::date::{ChronoField, ChronoPicker, DateLevel, date_value::Sealed},
         },
         localization::DateLocale,
         theme::CalendarVariant,
@@ -283,7 +283,7 @@ mod tests {
         let warnings = warnings_of(|| {
             rsx! {
                 LiberoProvider {
-                    DateField::<NaiveTime> { exclude_date: |_: NaiveDate| false }
+                    ChronoField::<NaiveTime> { exclude_date: |_: NaiveDate| false }
                 }
             }
         });
@@ -296,7 +296,7 @@ mod tests {
         let warnings = warnings_of(|| {
             rsx! {
                 LiberoProvider {
-                    DateField::<NaiveDate> {
+                    ChronoField::<NaiveDate> {
                         format: "YYYY-MM-DD",
                         exclude_date: |_: NaiveDate| false,
                         today: NaiveDate::from_ymd_opt(2026, 9, 25).unwrap(),
@@ -316,7 +316,7 @@ mod tests {
         let warnings = warnings_of(|| {
             rsx! {
                 LiberoProvider {
-                    DateField::<NaiveDate> {
+                    ChronoField::<NaiveDate> {
                         level: DateLevel::Month,
                         value: NaiveDate::from_ymd_opt(2026, 9, 1),
                         columns: 2,
@@ -329,7 +329,7 @@ mod tests {
 
         let html = dioxus_ssr::render_element(rsx! {
             LiberoProvider {
-                DateField::<NaiveDate> { level: DateLevel::Year, value: NaiveDate::from_ymd_opt(2026, 1, 1) }
+                ChronoField::<NaiveDate> { level: DateLevel::Year, value: NaiveDate::from_ymd_opt(2026, 1, 1) }
             }
         });
         assert!(html.contains(r#"value="2026""#), "{html}");
@@ -398,7 +398,7 @@ mod tests {
         let warnings = warnings_of(|| {
             rsx! {
                 LiberoProvider {
-                    DateField::<NaiveTime> { level: DateLevel::Month }
+                    ChronoField::<NaiveTime> { level: DateLevel::Month }
                 }
             }
         });
@@ -411,7 +411,7 @@ mod tests {
         let warnings = warnings_of(|| {
             rsx! {
                 LiberoProvider {
-                    DatePicker::<NaiveDate> { level: DateLevel::Month, columns: 2 }
+                    ChronoPicker::<NaiveDate> { level: DateLevel::Month, columns: 2 }
                 }
             }
         });

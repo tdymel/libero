@@ -109,6 +109,22 @@ fn typing_goes_on(options: &[SpinOption], text: &str, picked: usize) -> bool {
     })
 }
 
+/// The travel left over and the step a wheel event takes: a notch is one step
+/// however far it reports, a trackpad's small deltas add up to one.
+fn wheel_steps(held: f64, travel: f64) -> (f64, isize) {
+    // A turn back drops what was held the other way.
+    let total = if held * travel < 0.0 {
+        travel
+    } else {
+        held + travel
+    };
+    match total.abs() >= WHEEL_STEP {
+        // Down the page brings the value below up: the next one.
+        true => (0.0, total.signum() as isize),
+        false => (total, 0),
+    }
+}
+
 /// A number for `aria-valuenow`: the text's, else the option's place.
 fn number(text: &str, index: usize) -> i64 {
     text.parse().unwrap_or(index as i64)
@@ -235,12 +251,10 @@ pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
     let onwheel = move |event: Event<WheelData>| {
         event.prevent_default();
         let travel = platform::wheel_travel_y(&event.data(), WHEEL_STEP, page as f64);
-        let total = *wheel.peek() + travel;
-        // Down the page brings the value below up: the next one.
-        let steps = (total / WHEEL_STEP).trunc();
-        wheel.set(total - steps * WHEEL_STEP);
-        if steps != 0.0 {
-            pick(stepped(&options_for_wheel, at, steps as isize, wrap));
+        let (total, delta) = wheel_steps(*wheel.peek(), travel);
+        wheel.set(total);
+        if delta != 0 {
+            pick(stepped(&options_for_wheel, at, delta, wrap));
         }
     };
 
@@ -386,6 +400,15 @@ mod tests {
         // No value yet: the first step lands on the start either way.
         assert_eq!(stepped(&minutes, SpinAt::Empty(6), 1, true), Some(6));
         assert_eq!(stepped(&minutes, SpinAt::Empty(6), -1, true), Some(6));
+    }
+
+    #[test]
+    fn a_wheel_notch_takes_one_step_and_small_deltas_add_up() {
+        assert_eq!(wheel_steps(0.0, 100.0), (0.0, 1));
+        assert_eq!(wheel_steps(0.0, -360.0), (0.0, -1));
+        assert_eq!(wheel_steps(0.0, 15.0), (15.0, 0));
+        assert_eq!(wheel_steps(30.0, 15.0), (0.0, 1));
+        assert_eq!(wheel_steps(30.0, -15.0), (-15.0, 0));
     }
 
     #[test]

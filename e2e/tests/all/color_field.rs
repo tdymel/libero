@@ -68,7 +68,7 @@ fn tab_past_the_dropdown_moves_on_from_the_field() {
 }
 
 /// Todo 706: a blur of the text input closes the dropdown, as natively and in
-/// `DateField` (the wrapper's `focusout` since 8eea95fa).
+/// `ChronoField` (the wrapper's `focusout` since 8eea95fa).
 #[test]
 fn a_blur_of_the_text_input_closes_the_dropdown() {
     block_on(async {

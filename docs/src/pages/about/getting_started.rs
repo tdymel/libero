@@ -196,15 +196,6 @@ fn WebPanel() -> Element {
                     Code { source: "code-lang-*" }
                     " grammars your pages highlight."
                 }
-                ListItem {
-                    "Dioxus's experimental "
-                    Code { source: "wasm-split" }
-                    " feature fetches each route's code on its first visit. With it on, always pass "
-                    Code { source: "--wasm-split" }
-                    " to "
-                    Code { source: "dx" }
-                    ", or the app fails to load."
-                }
             }
             CodeBlock { source: WEB_PROFILE, language: "toml" }
             CodeBlock { source: WEB_DIOXUS, language: "toml" }

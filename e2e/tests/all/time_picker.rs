@@ -57,8 +57,13 @@ fn a_digital_column_turns_by_keys_presses_wheel_and_drag() {
                 .unwrap();
             value("10:55:00", "a press on the hour below").await;
 
+            // One notch is one step, however far it reports (todo 914).
             wheel(page, MINUTES, 100.0).await;
-            value("10:05:00", "a wheel down to turn two steps").await;
+            value("10:00:00", "a wheel notch down to turn one step").await;
+            for _ in 0..3 {
+                wheel(page, MINUTES, 15.0).await;
+            }
+            value("10:05:00", "small trackpad deltas to add up to one step").await;
 
             let from = pointer::centre_of(page, MINUTES).await.unwrap();
             let to = pointer::Point {

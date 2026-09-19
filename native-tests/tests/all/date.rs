@@ -1,4 +1,4 @@
-//! Dates and times: `DateField`, `DatePicker`, `TimeField`, `TimePicker`, and
+//! Dates and times: `ChronoField`, `ChronoPicker`, `TimeField`, `TimePicker`, and
 //! a `TimeDelta` duration.
 //! `today` is pinned wherever a grid is drawn.
 
@@ -8,8 +8,8 @@ use blitz_traits::events::{
 };
 use dioxus::prelude::*;
 use libero::{
-    chrono::{NaiveDate, NaiveTime, TimeDelta},
-    components::{DateField, DateLevel, DatePicker, TimeField, TimePicker},
+    chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta},
+    components::{ChronoField, ChronoPicker, DateLevel, DateRange, TimeField, TimePicker},
 };
 use native_tests::{Key, Modifiers, Page, mount};
 
@@ -34,10 +34,10 @@ fn day(y: i32, m: u32, d: u32) -> Option<NaiveDate> {
     NaiveDate::from_ymd_opt(y, m, d)
 }
 
-fn date_field() -> Element {
+fn chrono_field() -> Element {
     let mut value = use_signal(|| day(2026, 9, 25));
     rsx! {
-        DateField::<NaiveDate> {
+        ChronoField::<NaiveDate> {
             label: "Arrival",
             today: day(2026, 9, 18),
             value: value(),
@@ -49,7 +49,7 @@ fn date_field() -> Element {
 
 #[test]
 fn a_typed_date_commits_on_enter() {
-    let mut page = mount(date_field);
+    let mut page = mount(chrono_field);
     page.click(INPUT);
     clear(&mut page);
     typing(&mut page, "October 3, 2026");
@@ -59,7 +59,7 @@ fn a_typed_date_commits_on_enter() {
 
 #[test]
 fn a_click_opens_the_date_dialog_and_leaves_focus_in_the_input() {
-    let mut page = mount(date_field);
+    let mut page = mount(chrono_field);
     page.click(INPUT);
     assert!(page.exists(DIALOG), "{}", page.tree());
     assert!(page.is_focused(INPUT), "{}", page.focus_owner());
@@ -67,10 +67,10 @@ fn a_click_opens_the_date_dialog_and_leaves_focus_in_the_input() {
 
 /// Buttons around it: a Tab from the input would otherwise enter the portaled
 /// dialog, and a Tab from nothing focused never reaches `LiberoProvider`.
-fn tabbed_date_field() -> Element {
+fn tabbed_chrono_field() -> Element {
     rsx! {
         button { id: "before", "Before" }
-        {date_field()}
+        {chrono_field()}
         button { id: "after", "After" }
     }
 }
@@ -79,7 +79,7 @@ fn tabbed_date_field() -> Element {
 /// silent move stands in.
 #[test]
 fn tab_opens_the_date_dialog() {
-    let mut page = mount(tabbed_date_field);
+    let mut page = mount(tabbed_chrono_field);
     page.click("#before");
     page.tab();
     assert!(page.exists(DIALOG), "{}", page.tree());
@@ -88,7 +88,7 @@ fn tab_opens_the_date_dialog() {
 /// And for `blur`: Tab out commits the typed text and closes the dialog.
 #[test]
 fn tab_out_of_the_date_field_commits_and_closes() {
-    let mut page = mount(tabbed_date_field);
+    let mut page = mount(tabbed_chrono_field);
     page.click(INPUT);
     clear(&mut page);
     typing(&mut page, "October 3, 2026");
@@ -104,7 +104,7 @@ fn tab_out_of_the_date_field_commits_and_closes() {
 
 #[test]
 fn the_keys_pick_a_day_in_the_date_dialog() {
-    let mut page = mount(date_field);
+    let mut page = mount(chrono_field);
     page.click(INPUT);
     page.press(Key::ArrowDown);
     assert!(
@@ -121,7 +121,7 @@ fn the_keys_pick_a_day_in_the_date_dialog() {
 
 #[test]
 fn escape_closes_the_date_dialog_and_returns_to_the_input() {
-    let mut page = mount(date_field);
+    let mut page = mount(chrono_field);
     page.click(INPUT);
     page.press(Key::ArrowDown);
     page.press(Key::Escape);
@@ -136,7 +136,7 @@ fn escape_closes_the_date_dialog_and_returns_to_the_input() {
 
 #[test]
 fn a_click_on_a_day_in_the_date_dialog_picks_it() {
-    let mut page = mount(date_field);
+    let mut page = mount(chrono_field);
     page.click(INPUT);
     page.click("[data-date='2026-09-10']");
     assert_eq!(page.text("#echo"), "2026-09-10", "{}", page.tree());
@@ -145,7 +145,7 @@ fn a_click_on_a_day_in_the_date_dialog_picks_it() {
 fn month_field() -> Element {
     let mut value = use_signal(|| day(2026, 3, 1));
     rsx! {
-        DateField::<NaiveDate> {
+        ChronoField::<NaiveDate> {
             label: "Billing month",
             level: DateLevel::Month,
             today: day(2026, 3, 18),
@@ -174,7 +174,7 @@ fn the_keys_pick_a_month_in_a_month_field() {
 fn picker() -> Element {
     let mut value = use_signal(|| day(2026, 9, 25));
     rsx! {
-        DatePicker::<NaiveDate> {
+        ChronoPicker::<NaiveDate> {
             today: day(2026, 9, 18),
             value: value(),
             onchange: move |next| value.set(next),
@@ -307,7 +307,8 @@ fn the_keys_turn_a_digital_column() {
 }
 
 /// A drag down past the column's edge turns it back (todo 845: the moves
-/// follow the pointer), and a wheel down turns it forward, as on the web (844).
+/// follow the pointer), and a wheel down turns it forward, as on the web (844),
+/// one step a notch (914).
 #[test]
 fn a_drag_or_a_wheel_turns_a_digital_column() {
     let mut page = mount(digital);
@@ -315,13 +316,13 @@ fn a_drag_or_a_wheel_turns_a_digital_column() {
     assert_eq!(page.text("#echo"), "09:15:00", "{}", page.tree());
     page.hover(HOURS);
     page.wheel(HOURS, 80.0);
-    assert_eq!(page.text("#echo"), "11:15:00", "{}", page.tree());
+    assert_eq!(page.text("#echo"), "10:15:00", "{}", page.tree());
 }
 
 fn duration_field() -> Element {
     let mut value = use_signal(|| TimeDelta::try_minutes(90));
     rsx! {
-        DateField::<TimeDelta> {
+        ChronoField::<TimeDelta> {
             label: "Length",
             value: value(),
             onchange: move |next| value.set(next),
@@ -345,7 +346,7 @@ fn a_typed_duration_commits_on_enter() {
 fn duration() -> Element {
     let mut value = use_signal(|| TimeDelta::try_minutes(90));
     rsx! {
-        DatePicker::<TimeDelta> {
+        ChronoPicker::<TimeDelta> {
             step: 15,
             value: value(),
             onchange: move |next| value.set(next),
@@ -371,7 +372,7 @@ fn the_keys_turn_a_duration_column() {
     assert!(page.is_focused(MINUTES), "{}", page.focus_owner());
     page.hover(MINUTES);
     page.wheel(MINUTES, 80.0);
-    assert_eq!(page.text("#echo"), "153000", "{}", page.tree());
+    assert_eq!(page.text("#echo"), "152100", "{}", page.tree());
 }
 
 fn analog() -> Element {
@@ -441,4 +442,45 @@ fn an_analog_click_takes_the_hour_then_the_minute() {
     assert_eq!(page.text("#echo"), "11:30:00", "{}", page.tree());
     click_mark(&mut page, "45");
     assert_eq!(page.text("#echo"), "11:45:00", "{}", page.tree());
+}
+
+fn analog_range() -> Element {
+    let mut value = use_signal(|| None::<DateRange<NaiveDateTime>>);
+    rsx! {
+        ChronoPicker::<DateRange<NaiveDateTime>> {
+            variant: "analog",
+            twelve_hour: false,
+            today: NaiveDate::from_ymd_opt(2026, 3, 18),
+            value: value(),
+            onchange: move |next| value.set(next),
+        }
+        span { id: "echo", {value().map(|range| range.to_string()).unwrap_or_default()} }
+    }
+}
+
+/// Todo 913: once the start's hour and minute are picked, the end's clock
+/// starts on the hour, as the start's did.
+#[test]
+fn a_date_time_range_end_clock_starts_on_the_hour() {
+    let mut page = mount(analog_range);
+    page.click("[data-date='2026-03-12']");
+    page.click("[data-date='2026-03-14']");
+    let face = "[data-slot='face']";
+    assert_eq!(page.attr(face, "aria-label").as_deref(), Some("Hours"));
+    click_mark(&mut page, "9");
+    click_mark(&mut page, "30");
+    assert_eq!(
+        page.attr(face, "aria-label").as_deref(),
+        Some("Hours"),
+        "{}",
+        page.tree()
+    );
+    click_mark(&mut page, "17");
+    click_mark(&mut page, "45");
+    assert_eq!(
+        page.text("#echo"),
+        "2026-03-12T09:30:00/2026-03-14T17:45:00",
+        "{}",
+        page.tree()
+    );
 }

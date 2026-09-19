@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use libero::{
     chrono::NaiveDate,
     components::{
-        Button, DayField, Fields, Form, Options, Paper, Rule, Select, Switch, Table, Tabs,
+        Button, DateField, Fields, Form, Options, Paper, Rule, Select, Switch, Table, Tabs,
         TextField, Title, column, not_empty, use_form, use_notifications,
     },
     sx::sx,
@@ -116,7 +116,7 @@ pub fn BookingCard() -> Element {
                                 name: Booking::FIELDS.name(),
                                 validate: not_empty.error("Enter a name."),
                             }
-                            DayField {
+                            DateField {
                                 label: "Day",
                                 name: Booking::FIELDS.day(),
                                 validate: not_empty.error("Pick a day."),

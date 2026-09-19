@@ -3,7 +3,7 @@
 use dioxus::prelude::*;
 use libero::{
     chrono::{NaiveDate, NaiveDateTime, NaiveTime},
-    components::{DatePicker, DateRange, Flex, TimePicker},
+    components::{ChronoPicker, DateRange, Flex, TimePicker},
 };
 
 use crate::Routes;
@@ -24,7 +24,7 @@ fn RangePage() -> Element {
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "360px",
-            DatePicker::<DateRange<NaiveDateTime>> {
+            ChronoPicker::<DateRange<NaiveDateTime>> {
                 variant: "digital",
                 twelve_hour: false,
                 today: NaiveDate::from_ymd_opt(2026, 3, 18),
@@ -107,7 +107,7 @@ fn DateTimePage() -> Element {
     let shown = moment().map(|value| value.to_string()).unwrap_or_default();
 
     rsx! {
-        DatePicker::<NaiveDateTime> {
+        ChronoPicker::<NaiveDateTime> {
             variant: "digital",
             twelve_hour: false,
             value: moment(),

@@ -1,7 +1,7 @@
-//! `DateField` at month level (todo 26): typed `9/2026` reads as the month's
+//! `ChronoField` at month level (todo 26): typed `9/2026` reads as the month's
 //! first day, and the dropdown opens on the month grid.
 //!
-//! `/date-field/month` holds March 2026, `today` pinned to 2026-03-18.
+//! `/chrono-field/month` holds March 2026, `today` pinned to 2026-03-18.
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
@@ -13,7 +13,7 @@ const INPUT: &str = "input[data-controlled]";
 #[test]
 fn a_typed_month_is_held_as_its_first_day() {
     block_on(async {
-        let fixture = Fixture::open("/date-field/month", Viewport::Desktop)
+        let fixture = Fixture::open("/chrono-field/month", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -47,7 +47,7 @@ fn a_typed_month_is_held_as_its_first_day() {
 #[test]
 fn the_dropdown_opens_on_the_month_grid() {
     block_on(async {
-        let fixture = Fixture::open("/date-field/month", Viewport::Desktop)
+        let fixture = Fixture::open("/chrono-field/month", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -93,7 +93,7 @@ fn the_dropdown_opens_on_the_month_grid() {
 #[test]
 fn tab_past_the_dropdown_moves_on_from_the_field() {
     block_on(async {
-        let fixture = Fixture::open("/date-field/day", Viewport::Desktop)
+        let fixture = Fixture::open("/chrono-field/day", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -140,7 +140,7 @@ fn tab_past_the_dropdown_moves_on_from_the_field() {
 #[test]
 fn tab_past_the_clock_face_moves_on_from_the_field() {
     block_on(async {
-        let fixture = Fixture::open("/date-field/moment", Viewport::Desktop)
+        let fixture = Fixture::open("/chrono-field/moment", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -178,11 +178,11 @@ fn tab_past_the_clock_face_moves_on_from_the_field() {
 }
 
 /// Todo 536: the error says why text was refused, and describes the input.
-/// `/date-field/day` has `min` March 5, 2026 and weekends excluded.
+/// `/chrono-field/day` has `min` March 5, 2026 and weekends excluded.
 #[test]
 fn a_refused_date_says_which_rule_it_broke() {
     block_on(async {
-        let fixture = Fixture::open("/date-field/day", Viewport::Desktop)
+        let fixture = Fixture::open("/chrono-field/day", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -224,7 +224,7 @@ fn a_refused_date_says_which_rule_it_broke() {
 #[test]
 fn a_digital_column_is_a_named_spinbutton() {
     block_on(async {
-        let fixture = Fixture::open("/date-field/digital", Viewport::Desktop)
+        let fixture = Fixture::open("/chrono-field/digital", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -247,11 +247,11 @@ fn a_digital_column_is_a_named_spinbutton() {
     });
 }
 
-/// Todo 818: `/date-field/duration` holds 1 h 30 min, 15 min to 12 h, minutes
+/// Todo 818: `/chrono-field/duration` holds 1 h 30 min, 15 min to 12 h, minutes
 /// at 15, seconds shown.
 #[test]
 fn the_duration_field_meets_the_baseline() {
-    Suite::new("duration_field", "/date-field/duration")
+    Suite::new("duration_field", "/chrono-field/duration")
         .focusable(INPUT)
         .state(
             "open",
@@ -266,7 +266,7 @@ fn the_duration_field_meets_the_baseline() {
 #[test]
 fn a_typed_duration_reads_its_units_and_refuses_the_bounds() {
     block_on(async {
-        let fixture = Fixture::open("/date-field/duration", Viewport::Desktop)
+        let fixture = Fixture::open("/chrono-field/duration", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;
@@ -342,7 +342,7 @@ fn a_typed_duration_reads_its_units_and_refuses_the_bounds() {
 #[test]
 fn a_duration_column_wraps_without_carrying() {
     block_on(async {
-        let fixture = Fixture::open("/date-field/duration", Viewport::Desktop)
+        let fixture = Fixture::open("/chrono-field/duration", Viewport::Desktop)
             .await
             .unwrap();
         let page = &fixture.page;

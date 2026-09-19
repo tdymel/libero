@@ -5,8 +5,8 @@ use dioxus::prelude::*;
 use libero::{
     chrono::{NaiveDate, NaiveTime},
     components::{
-        Autocomplete, Cascader, CascaderOption, ColorCode, ColorField, DateField, FileField, Files,
-        Flex, MultiSelect, NativeSelect, NumberField, PhoneField, PinField, Select,
+        Autocomplete, Cascader, CascaderOption, ChronoField, ColorCode, ColorField, FileField,
+        Files, Flex, MultiSelect, NativeSelect, NumberField, PhoneField, PinField, Select,
         SliderChangeEvent, TagsField, TextField, Textarea, TimeField,
     },
 };
@@ -107,7 +107,7 @@ fn FieldFramePage() -> Element {
                 }
             }
             div { "data-case": "date",
-                DateField {
+                ChronoField {
                     label: "Arrival",
                     value: day(),
                     onchange: move |next| day.set(next),

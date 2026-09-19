@@ -7,7 +7,7 @@ use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, pr
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use libero::components::{
-    Code, DateField, DateLevel, DateRange, Flex, Kbd, Rule, Text, Validators, not_empty,
+    ChronoField, Code, DateLevel, DateRange, Flex, Kbd, Rule, Text, Validators, not_empty,
 };
 use libero::{use_formats_handle, use_localization_handle};
 
@@ -60,14 +60,14 @@ fn moment(day: u32, hour: u32) -> Option<NaiveDateTime> {
 }
 
 #[component]
-pub fn DateFieldPage() -> Element {
+pub fn ChronoFieldPage() -> Element {
     rsx! {
         DocPage {
-            title: "DateField",
-            source: "libero/src/components/form/date/date_field.rs",
-            markdown: "/md/date_field.md",
+            title: "ChronoField",
+            source: "libero/src/components/form/date/chrono_field.rs",
+            markdown: "/md/chrono_field.md",
             properties: vec![
-                props("DateField<V: DateValue>", vec![
+                props("ChronoField<V: DateValue>", vec![
                     prop("size", "Size").default("md").doc("Control height, font size and the dropdown's picker."),
                     prop("radius", "Size").default("sm").doc("Corner radius of the frame."),
                     prop("value", "Option<V>").doc("The value. `None` is the empty field. Its type picks the dropdown. Pair it with `onchange`."),
@@ -107,7 +107,7 @@ pub fn DateFieldPage() -> Element {
             lead: rsx! {
                 Text {
                     "A text field for every date and time value, with a "
-                    Code { source: "DatePicker" }
+                    Code { source: "ChronoPicker" }
                     " in a dropdown. The value's type picks what the dropdown shows: "
                     Code { source: "NaiveDate" }
                     " a calendar, "
@@ -156,9 +156,9 @@ pub fn DateFieldPage() -> Element {
                     Code { source: "value" }
                     " alone does not name the type. A handler that stores into a typed signal "
                     "does, or a turbofish such as "
-                    Code { source: "DateField::<NaiveTime> {{ .. }}" }
+                    Code { source: "ChronoField::<NaiveTime> {{ .. }}" }
                     ". For one value type there are "
-                    Code { source: "DayField" }
+                    Code { source: "DateField" }
                     ", "
                     Code { source: "TimeField" }
                     ", "
@@ -180,7 +180,7 @@ pub fn DateFieldPage() -> Element {
             // snippet: let mut date_time_range = use_signal(|| None::<DateRange<NaiveDateTime>>);
             // snippet: let mut duration = use_signal(|| None::<TimeDelta>);
             Demo {
-                component: "DateField",
+                component: "ChronoField",
                 children_text: "",
                 wrap: Wrap(|values: &DemoValues, source: &str| match root_of(values) {
                     Some(root) => format!("// Given to the root: `LiberoProvider {{ {root}, .. }}`.\n{source}"),
@@ -263,7 +263,7 @@ pub fn DateFieldPage() -> Element {
                     [controls, calendar_controls(), shared_controls(), field_controls()].concat()
                 },
                 render: move |values: DemoValues| rsx! {
-                    DateFieldDemo { values }
+                    ChronoFieldDemo { values }
                 },
             }
             DocSection {
@@ -314,7 +314,7 @@ pub fn DateFieldPage() -> Element {
                 Text {
                     "Focus opens the dropdown and stays in the text, so you can type at once. "
                     Kbd { "↓" } " moves focus into the picker, onto the picked day or the clock, where the "
-                    Code { source: "DatePicker" }
+                    Code { source: "ChronoPicker" }
                     " keys apply. "
                     Kbd { "Escape" } " goes back to the text, and so does a pick that closes the dropdown. "
                     "Focus leaving both the text and the dropdown closes it. A mouse click in the dropdown leaves focus in the text."
@@ -326,7 +326,7 @@ pub fn DateFieldPage() -> Element {
 
 /// One signal per value type, so switching types keeps what was picked.
 #[component]
-fn DateFieldDemo(values: DemoValues) -> Element {
+fn ChronoFieldDemo(values: DemoValues) -> Element {
     let mut date = use_signal(|| day(14));
     let mut month = use_signal(|| day(1));
     let mut year = use_signal(|| NaiveDate::from_ymd_opt(2026, 1, 1));
@@ -382,7 +382,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
     let (field, readout) = match values.str("value").as_str() {
         "month" => (
             rsx! {
-                DateField {
+                ChronoField {
                     value: month(), onchange: move |next| month.set(next), level: DateLevel::Month,
                     min: min_day, max: max_day, today, close_on_change,
                     validate: rules(validate),
@@ -393,7 +393,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
         ),
         "year" => (
             rsx! {
-                DateField {
+                ChronoField {
                     value: year(), onchange: move |next| year.set(next), level: DateLevel::Year,
                     min: min_day, max: max_day, today, close_on_change,
                     validate: rules(validate),
@@ -404,7 +404,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
         ),
         "time" => (
             rsx! {
-                DateField {
+                ChronoField {
                     value: time(), onchange: move |next| time.set(next),
                     min: min_time, max: max_time, time_format, variant, with_seconds, step, twelve_hour,
                     validate: rules(validate),
@@ -415,7 +415,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
         ),
         "date-time" => (
             rsx! {
-                DateField {
+                ChronoField {
                     value: date_time(), onchange: move |next| date_time.set(next),
                     min: min_moment, max: max_moment, format, time_format, variant, exclude_date, today,
                     with_seconds, step, twelve_hour, close_on_change, calendar, days,
@@ -427,7 +427,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
         ),
         "date-range" => (
             rsx! {
-                DateField {
+                ChronoField {
                     value: date_range(), onchange: move |next| date_range.set(next),
                     min: min_day, max: max_day, format, exclude_date, columns, today, close_on_change,
                     validate: rules(validate),
@@ -438,7 +438,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
         ),
         "date-time-range" => (
             rsx! {
-                DateField {
+                ChronoField {
                     value: date_time_range(), onchange: move |next| date_time_range.set(next),
                     min: min_moment, max: max_moment, format, time_format, variant, exclude_date, today,
                     with_seconds, step, twelve_hour, close_on_change,
@@ -450,7 +450,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
         ),
         "duration" => (
             rsx! {
-                DateField {
+                ChronoField {
                     value: duration(), onchange: move |next| duration.set(next),
                     min: min_duration, max: max_duration, with_seconds, step,
                     validate: rules(validate),
@@ -461,7 +461,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
         ),
         _ => (
             rsx! {
-                DateField {
+                ChronoField {
                     value: date(), onchange: move |next| date.set(next),
                     min: min_day, max: max_day, format, exclude_date, today, close_on_change, calendar, days,
                     validate: rules(validate),

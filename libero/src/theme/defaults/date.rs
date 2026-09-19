@@ -11,8 +11,8 @@ pub const DATE_PICKER_DAY: CssVar = CssVar::new("--lsx-date-picker-day");
 pub const DATE_PICKER_FONT_SIZE: CssVar = CssVar::new("--lsx-date-picker-font-size");
 
 /// The view a calendar shows: days of a month, months of a year, years of a
-/// decade. `DatePicker`'s `level` picks the lowest one - the one a pick lands
-/// on; `DateField`'s the one its text reads.
+/// decade. `ChronoPicker`'s `level` picks the lowest one - the one a pick lands
+/// on; `ChronoField`'s the one its text reads.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DateLevel {
     Day,
@@ -66,6 +66,9 @@ pub struct DatePickerSizeLevel {
     pub font_size: &'static str,
 }
 
+/// Styles the whole date and time family of pickers: `ChronoPicker`,
+/// `DatePicker`, `MonthPicker`, `YearPicker`, `DateRangePicker`, the clocks'
+/// sizes and the fields' dropdowns.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DatePickerDefaults {
     pub size: Size,
@@ -134,9 +137,10 @@ impl ToCssDeclarations for DatePickerDefaults {
     }
 }
 
-/// What `DateField` does not share with every other field. The frame's
-/// numbers live on `FieldDefaults` and the dropdown's calendar on
-/// `DatePickerDefaults`.
+/// Styles the whole date and time family of fields: `ChronoField`,
+/// `DateField`, `TimeField`, `DateTimeField` and the range fields. Holds what
+/// they do not share with every other field. The frame's numbers live on
+/// `FieldDefaults` and the dropdown's calendar on `DatePickerDefaults`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DateFieldDefaults {
     pub size: Size,

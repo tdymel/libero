@@ -1,10 +1,10 @@
-//! Fields whose dropdown is a `role="dialog"`: `ColorField` and `DateField`.
+//! Fields whose dropdown is a `role="dialog"`: `ColorField` and `ChronoField`.
 //! One field per page, so `[role=dialog]` is unambiguous.
 
 use dioxus::prelude::*;
 use libero::{
     chrono::NaiveDate,
-    components::{ColorCode, ColorField, DateField, DateRange, Flex, SliderChangeEvent},
+    components::{ChronoField, ColorCode, ColorField, DateRange, Flex, SliderChangeEvent},
     localization::Formats,
     use_formats_handle,
 };
@@ -13,7 +13,7 @@ use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/color-field", || rsx! { ColorFieldPage {} }),
-    ("/date-field", || rsx! { DateFieldPage {} }),
+    ("/chrono-field", || rsx! { ChronoFieldPage {} }),
     ("/date-range-field", || rsx! { DateRangeFieldPage {} }),
 ];
 
@@ -47,13 +47,13 @@ fn ColorFieldPage() -> Element {
 /// `today` pinned outside the held month, so the baseline snapshot never
 /// depends on the clock (todo 658).
 #[component]
-fn DateFieldPage() -> Element {
+fn ChronoFieldPage() -> Element {
     let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 9, 25));
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            DateField {
-                id: "date-field",
+            ChronoField {
+                id: "chrono-field",
                 label: "Arrival",
                 today: NaiveDate::from_ymd_opt(2026, 3, 18),
                 value: day(),
@@ -71,7 +71,7 @@ fn DateRangeFieldPage() -> Element {
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            DateField {
+            ChronoField {
                 id: "date-range-field",
                 label: "Stay",
                 name: "stay",

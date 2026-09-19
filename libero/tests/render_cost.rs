@@ -786,13 +786,13 @@ fn render_cost_per_component() {
         // Closed: the dropdown's picker is not rendered until it opens.
         "ColorField" let oninput = |_: SliderChangeEvent<ColorCode>| {}; { ColorField { value: ColorCode::hex(0x228be6), oninput } }
         // 42 day buttons, each with its own click handler.
-        "DayPicker" let onchange = |_: Option<NaiveDate>| {}; { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange } }
+        "DatePicker" let onchange = |_: Option<NaiveDate>| {}; { DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange } }
         // Seven days in one row, each with a month label.
-        "DayPicker pick" let onchange = |_: Option<NaiveDate>| {}; { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, if flip() { 15 } else { 14 }), onchange } }
-        "DayPicker page" let onchange = |_: Option<NaiveDate>| {}; { DayPicker { value: NaiveDate::from_ymd_opt(2026, if flip() { 10 } else { 9 }, 14), onchange } }
-        "DayPicker-mini" let onchange = |_: Option<NaiveDate>| {}; { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange, calendar: "mini" } }
+        "DatePicker pick" let onchange = |_: Option<NaiveDate>| {}; { DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, if flip() { 15 } else { 14 }), onchange } }
+        "DatePicker page" let onchange = |_: Option<NaiveDate>| {}; { DatePicker { value: NaiveDate::from_ymd_opt(2026, if flip() { 10 } else { 9 }, 14), onchange } }
+        "DatePicker-mini" let onchange = |_: Option<NaiveDate>| {}; { DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange, calendar: "mini" } }
         // Closed: the dropdown's picker is not rendered until it opens.
-        "DayField" let onchange = |_: Option<NaiveDate>| {}; { DayField { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange } }
+        "DateField" let onchange = |_: Option<NaiveDate>| {}; { DateField { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange } }
         "TimePicker" let onchange = |_: Option<NaiveTime>| {}; { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange, variant: "digital" } }
         "TimePicker pick" let onchange = |_: Option<NaiveTime>| {}; { TimePicker { value: NaiveTime::from_hms_opt(9, if flip() { 35 } else { 30 }, 0), onchange, variant: "digital" } }
         "TimePicker-analog" let onchange = |_: Option<NaiveTime>| {}; { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange, variant: "analog" } }

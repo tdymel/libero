@@ -71,8 +71,8 @@ fetch only the file you need.
 - [RangeSlider](range_slider.md): Two thumbs on one track, for a span instead of a point, over the same values as `Slider`.
 - [ColorField](color_field.md): A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
 - [ColorPicker](color_picker.md): A saturation panel and a hue slider, with an optional alpha slider and preset swatches, over one `ColorCode`. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
-- [DateField](date_field.md): A text field for every date and time value, typed leniently, with the matching `DatePicker` in a dropdown.
-- [DatePicker](date_picker.md): One picker for every date and time value, from days, months and years to times, date-times and ranges of them.
+- [ChronoField](chrono_field.md): A text field for every date and time value, typed leniently, with the matching `ChronoPicker` in a dropdown.
+- [ChronoPicker](chrono_picker.md): One picker for every date and time value, from days, months and years to times, date-times and ranges of them.
 - [FileField](file_field.md): Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.
 
 ## Navigation

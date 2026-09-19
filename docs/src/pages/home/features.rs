@@ -29,7 +29,7 @@ const SX_BUTTON: &str = r#"Button {
 /// The heavy components, by name, each linking to its page.
 const HEAVY: [(&str, Route); 8] = [
     ("Combobox", Route::ComboboxPage {}),
-    ("DatePicker", Route::DatePickerPage {}),
+    ("ChronoPicker", Route::ChronoPickerPage {}),
     ("Form", Route::FormPage {}),
     ("Spotlight", Route::SpotlightPage {}),
     ("Notifications", Route::NotificationsPage {}),

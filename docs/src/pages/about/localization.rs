@@ -3,7 +3,7 @@ use crate::pages::form::date_locales::{Choice, FORMATS, LANGUAGES, options, pick
 use dioxus::prelude::*;
 use libero::{
     chrono::{NaiveDate, NaiveDateTime, NaiveTime},
-    components::{Code, CodeBlock, DateField, DayPicker, Flex, Table, Text, column},
+    components::{ChronoField, Code, CodeBlock, DatePicker, Flex, Table, Text, column},
     hooks::use_direction,
     sx::sx,
     theme::Direction,
@@ -240,8 +240,8 @@ fn LocalizationPreview(values: DemoValues) -> Element {
     });
     rsx! {
         Flex { gap: "md", wrap: "wrap", align: "start", justify: "center",
-            DayPicker { value: day(), onchange: move |next| day.set(next) }
-            DateField::<NaiveDateTime> {
+            DatePicker { value: day(), onchange: move |next| day.set(next) }
+            ChronoField::<NaiveDateTime> {
                 value: moment(),
                 onchange: move |next| moment.set(next),
                 label: "When",

@@ -1,5 +1,5 @@
 //! One trait over every date and time value. The value's type picks what is
-//! drawn, so `DatePicker` and `DateField` are one component each for all of
+//! drawn, so `ChronoPicker` and `ChronoField` are one component each for all of
 //! them, and the typed pickers are the same drawing under a name.
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 use super::{
     DateRange,
     calendar::{Calendar, DateLevel, Selection, first_of_month},
-    date_field::refusal_message,
+    chrono_field::refusal_message,
     duration::{DurationClock, bounds, duration_refusal},
     flows::{DateTimeFlow, DateTimeRangeFlow},
     picker_field::{FieldValue, Formats},
@@ -74,7 +74,7 @@ pub struct PickerArgs<V: DateValue> {
     pub attributes: Vec<Attribute>,
 }
 
-/// A value [`DatePicker`](super::DatePicker) and [`DateField`](super::DateField)
+/// A value [`ChronoPicker`](super::ChronoPicker) and [`ChronoField`](super::ChronoField)
 /// can hold: `NaiveDate`, `NaiveTime`, `NaiveDateTime`, a `DateRange` of days
 /// or of date-times, and a `TimeDelta` duration. Sealed: the six are all there
 /// is.

@@ -49,9 +49,6 @@ What keeps the download small:
 - `pre_compress` in `Dioxus.toml` writes a brotli copy of the wasm and every
   asset beside it. Your host has to serve the `.br` files.
 - Only the `code-lang-*` grammars your pages highlight.
-- Dioxus's experimental `wasm-split` feature fetches each route's code on its
-  first visit. With it on, always pass `--wasm-split` to `dx`, or the app fails
-  to load.
 
 ```toml
 [profile.release]

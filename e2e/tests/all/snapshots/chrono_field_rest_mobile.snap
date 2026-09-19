@@ -1,6 +1,6 @@
 ---
 source: e2e/src/suite.rs
-description: date_field at mobile (rest)
+description: chrono_field at mobile (rest)
 expression: tree
 ---
 LabelText
@@ -161,4 +161,4 @@ dialog "Date"
       gridcell "October 10, 2026" [selected=false]
         button "October 10, 2026"
           StaticText "10"
---> aria-controls [id="date-field-dialog"] (rendered above)
+--> aria-controls [id="chrono-field-dialog"] (rendered above)

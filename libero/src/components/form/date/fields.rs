@@ -1,6 +1,6 @@
 //! The typed date and time fields: each names its own value type and fills
 //! the part of [`FieldOptions`] that type uses, then draws through the same
-//! path as `DateField`.
+//! path as `ChronoField`.
 
 use dioxus::prelude::*;
 
@@ -8,7 +8,7 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
 use super::{
     DateRange,
-    date_field::{FieldOptions, date_field},
+    chrono_field::{FieldOptions, chrono_field},
     format::{Token, WeekdayWidth, tokens, uses_twelve_hours},
     picker_field::picker_field,
     props::date_props,
@@ -130,17 +130,17 @@ fn token_text(token: &Token) -> String {
 }
 
 date_props! {
-    field DayFieldProps(NaiveDate, NaiveDate): format, limits, exclude_date, today, calendar, close_on_change
+    field DateFieldProps(NaiveDate, NaiveDate): format, limits, exclude_date, today, calendar, close_on_change
 }
 
-/// A text field holding a day, with a `DayPicker` in a dropdown.
+/// A text field holding a day, with a `DatePicker` in a dropdown.
 ///
 /// Controlled: it renders `value` and asks for a new one through `onchange`.
 /// Typed text stays as typed until the field blurs or Enter is pressed; then
 /// it is read leniently against `format`. Text that is not an accepted day
 /// stays, and the field shows an error.
 #[component]
-pub fn DayField(props: DayFieldProps) -> Element {
+pub fn DateField(props: DateFieldProps) -> Element {
     let options = FieldOptions {
         format: props.format.clone(),
         min: props.min,
@@ -151,7 +151,7 @@ pub fn DayField(props: DayFieldProps) -> Element {
         days: props.days,
         ..FieldOptions::default()
     };
-    date_field::<NaiveDate>(picker_field!(props, props.today), options)
+    chrono_field::<NaiveDate>(picker_field!(props, props.today), options)
 }
 
 date_props! {
@@ -171,7 +171,7 @@ pub fn TimeField(props: TimeFieldProps) -> Element {
         twelve_hour: props.twelve_hour,
         ..FieldOptions::default()
     };
-    date_field::<NaiveTime>(picker_field!(props, None), options)
+    chrono_field::<NaiveTime>(picker_field!(props, None), options)
 }
 
 date_props! {
@@ -197,7 +197,7 @@ pub fn DateTimeField(props: DateTimeFieldProps) -> Element {
         days: props.days,
         ..FieldOptions::default()
     };
-    date_field::<NaiveDateTime>(picker_field!(props, props.today), options)
+    chrono_field::<NaiveDateTime>(picker_field!(props, props.today), options)
 }
 
 date_props! {
@@ -219,7 +219,7 @@ pub fn DateRangeField(props: DateRangeFieldProps) -> Element {
         close_on_change: props.close_on_change,
         ..FieldOptions::default()
     };
-    date_field::<DateRange<NaiveDate>>(picker_field!(props, props.today), options)
+    chrono_field::<DateRange<NaiveDate>>(picker_field!(props, props.today), options)
 }
 
 date_props! {
@@ -243,7 +243,7 @@ pub fn DateTimeRangeField(props: DateTimeRangeFieldProps) -> Element {
         twelve_hour: props.twelve_hour,
         ..FieldOptions::default()
     };
-    date_field::<DateRange<NaiveDateTime>>(picker_field!(props, props.today), options)
+    chrono_field::<DateRange<NaiveDateTime>>(picker_field!(props, props.today), options)
 }
 
 #[cfg(test)]

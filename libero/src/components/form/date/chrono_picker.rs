@@ -12,7 +12,7 @@ use crate::{
 };
 
 date_props! {
-    picker DatePickerProps<V: DateValue>(V, V::Bound): limits, exclude_date, allow_deselect, columns, level, calendar, today, clock
+    picker ChronoPickerProps<V: DateValue>(V, V::Bound): limits, exclude_date, allow_deselect, columns, level, calendar, today, clock
 }
 
 /// One picker for every date and time value - the value's type picks what it
@@ -33,12 +33,12 @@ date_props! {
 /// picker also ignores `exclude_date`, `columns`, `calendar`, `days` and
 /// `allow_deselect`.
 #[component]
-pub fn DatePicker<V: DateValue>(props: DatePickerProps<V>) -> Element {
+pub fn ChronoPicker<V: DateValue>(props: ChronoPickerProps<V>) -> Element {
     let theme = use_theme();
     let time_format = use_formats().time;
     let level = props.level.unwrap_or(DateLevel::Day);
     use_ignored_props_warning::<V>(
-        "DatePicker",
+        "ChronoPicker",
         &[
             ("exclude_date", props.exclude_date.is_some()),
             ("allow_deselect", props.allow_deselect.is_some()),

@@ -1,21 +1,21 @@
-//! `DateField` at month level, at day level between two buttons, as a
+//! `ChronoField` at month level, at day level between two buttons, as a
 //! date-time field, on the digital columns and as a duration.
 
 use dioxus::prelude::*;
 use libero::{
     chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta, Weekday},
-    components::{Button, DateField, DateLevel, Flex, Input, Text},
+    components::{Button, ChronoField, DateLevel, Flex, Input, Text},
     theme::TimePickerVariant,
 };
 
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
-    ("/date-field/month", || rsx! { MonthFieldPage {} }),
-    ("/date-field/day", || rsx! { DayFieldPage {} }),
-    ("/date-field/moment", || rsx! { MomentFieldPage {} }),
-    ("/date-field/digital", || rsx! { DigitalFieldPage {} }),
-    ("/date-field/duration", || rsx! { DurationFieldPage {} }),
+    ("/chrono-field/month", || rsx! { MonthFieldPage {} }),
+    ("/chrono-field/day", || rsx! { DateFieldPage {} }),
+    ("/chrono-field/moment", || rsx! { MomentFieldPage {} }),
+    ("/chrono-field/digital", || rsx! { DigitalFieldPage {} }),
+    ("/chrono-field/duration", || rsx! { DurationFieldPage {} }),
 ];
 
 /// A duration of 1 h 30 min held, 15 min to 12 h, minutes at 15 and seconds
@@ -26,7 +26,7 @@ fn DurationFieldPage() -> Element {
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            DateField::<TimeDelta> {
+            ChronoField::<TimeDelta> {
                 label: "Length",
                 min: TimeDelta::try_minutes(15),
                 max: TimeDelta::try_hours(12),
@@ -48,7 +48,7 @@ fn DigitalFieldPage() -> Element {
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            DateField::<NaiveTime> {
+            ChronoField::<NaiveTime> {
                 label: "Alarm",
                 variant: Input::Value(TimePickerVariant::Digital),
                 value: time(),
@@ -67,7 +67,7 @@ fn MonthFieldPage() -> Element {
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            DateField::<NaiveDate> {
+            ChronoField::<NaiveDate> {
                 label: "Billing month",
                 level: DateLevel::Month,
                 today: NaiveDate::from_ymd_opt(2026, 3, 18),
@@ -82,13 +82,13 @@ fn MonthFieldPage() -> Element {
 /// 2026-03-18 held, `today` pinned to it, days before March 5 and weekends
 /// disabled. A button on either side, for Tab order out of the dropdown.
 #[component]
-fn DayFieldPage() -> Element {
+fn DateFieldPage() -> Element {
     let mut day = use_signal(|| NaiveDate::from_ymd_opt(2026, 3, 18));
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             Button { id: "before", "Before" }
-            DateField::<NaiveDate> {
+            ChronoField::<NaiveDate> {
                 label: "Due date",
                 today: NaiveDate::from_ymd_opt(2026, 3, 18),
                 min: NaiveDate::from_ymd_opt(2026, 3, 5),
@@ -112,7 +112,7 @@ fn MomentFieldPage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             Button { id: "before", "Before" }
-            DateField::<NaiveDateTime> {
+            ChronoField::<NaiveDateTime> {
                 label: "Starts at",
                 today: NaiveDate::from_ymd_opt(2026, 3, 18),
                 value: moment(),

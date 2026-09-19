@@ -246,7 +246,7 @@ impl FieldValue for TimeDelta {
     }
 }
 
-/// What `DatePicker::<TimeDelta>` draws, with every option resolved.
+/// What `ChronoPicker::<TimeDelta>` draws, with every option resolved.
 #[derive(Props, Clone, PartialEq)]
 pub(super) struct DurationClockProps {
     value: Option<TimeDelta>,
@@ -514,7 +514,7 @@ mod tests {
     fn the_columns_say_their_unit() {
         let html = dioxus_ssr::render_element(rsx! {
             crate::LiberoProvider {
-                super::super::DatePicker::<TimeDelta> { value: of(1, 30, 0), with_seconds: true }
+                super::super::ChronoPicker::<TimeDelta> { value: of(1, 30, 0), with_seconds: true }
             }
         });
         for valuetext in ["1 hour", "30 minutes", "0 seconds"] {

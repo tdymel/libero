@@ -1,4 +1,4 @@
-//! What the DateField and DatePicker demos share: the caption and state
+//! What the ChronoField and ChronoPicker demos share: the caption and state
 //! controls of a field, the controls both demos have, and reading them back.
 
 use crate::components::{Control, DemoValues};

@@ -4,7 +4,7 @@
 //! part `chrono` cannot do for a UI: theme-named formatting, lenient reading
 //! of typed text, and the components.
 //!
-//! `DatePicker` and `DateField` hold every value type; the typed pickers and
+//! `ChronoPicker` and `ChronoField` hold every value type; the typed pickers and
 //! fields are the same components for one value type each.
 
 // A pub type in a private module shows up in rustdoc but cannot be named.
@@ -27,9 +27,9 @@ mod today;
 // The deny above overrides the crate's `allow`, so the modules whose `Props`
 // derive leaks builders allow it again (todo 450).
 #[allow(unnameable_types)]
-mod date_field;
+mod chrono_field;
 #[allow(unnameable_types)]
-mod date_picker;
+mod chrono_picker;
 #[allow(unnameable_types)]
 mod duration;
 #[allow(unnameable_types)]
@@ -40,15 +40,15 @@ mod pickers;
 mod time_picker;
 
 pub use calendar::DateLevel;
-pub use date_field::{DateField, DateFieldProps};
-pub use date_picker::{DatePicker, DatePickerProps};
+pub use chrono_field::{ChronoField, ChronoFieldProps};
+pub use chrono_picker::{ChronoPicker, ChronoPickerProps};
 pub use date_value::DateValue;
 pub use fields::{
-    DateRangeField, DateRangeFieldProps, DateTimeField, DateTimeFieldProps, DateTimeRangeField,
-    DateTimeRangeFieldProps, DayField, DayFieldProps, TimeField, TimeFieldProps,
+    DateField, DateFieldProps, DateRangeField, DateRangeFieldProps, DateTimeField,
+    DateTimeFieldProps, DateTimeRangeField, DateTimeRangeFieldProps, TimeField, TimeFieldProps,
 };
 pub use pickers::{
-    DateRangePicker, DateRangePickerProps, DayPicker, DayPickerProps, MonthPicker,
+    DatePicker, DatePickerProps, DateRangePicker, DateRangePickerProps, MonthPicker,
     MonthPickerProps, YearPicker, YearPickerProps,
 };
 pub use range::{DateRange, ParseRangeError};
