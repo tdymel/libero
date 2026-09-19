@@ -1,11 +1,12 @@
-//! `Tooltip`: a portaled bubble opened by hover and keyboard focus, placed on
-//! its side of the trigger, closed by leaving and by Escape (SC 1.4.13).
+//! `Tooltip` under Blitz's hit-testing and paint: the bubble and its bridge
+//! take presses, a padded block's trigger hovers, a stacking scroller clips.
+//! Hover, placement, Escape and Tab focus are e2e's shared scenarios.
 
 use std::time::Duration;
 
 use dioxus::prelude::*;
 use libero::components::{Button, Tooltip};
-use native_tests::{Key, Page, mount};
+use native_tests::mount;
 
 const TRIGGER: &str = "#save";
 const OPEN: &str = "#save-tip:not([hidden])";
@@ -29,35 +30,6 @@ fn app() -> Element {
         div { height: "200px" }
         p { id: "away", "Away" }
     }
-}
-
-fn hover_open() -> Page {
-    let mut page = mount(app);
-    assert!(!page.exists(OPEN), "open at rest");
-    page.hover(TRIGGER);
-    page.wait(Duration::from_millis(100));
-    assert!(
-        page.exists(OPEN),
-        "hovering did not open it:\n{}",
-        page.tree()
-    );
-    page
-}
-
-#[test]
-fn hover_opens_it_below_the_trigger_and_leaving_closes_it() {
-    let mut page = hover_open();
-    let (tx, ty, tw, th) = page.rect(TRIGGER);
-    let (bx, by, bw, _) = page.rect(OPEN);
-    let gap = by - (ty + th);
-    assert!(
-        (0.0..=16.0).contains(&gap) && ((bx + bw / 2.0) - (tx + tw / 2.0)).abs() <= 2.0,
-        "trigger at ({tx}, {ty}) {tw}x{th}, bubble at ({bx}, {by}) w {bw}"
-    );
-
-    page.hover("#away");
-    page.wait(Duration::from_millis(100));
-    assert!(!page.exists(OPEN), "leaving did not close it");
 }
 
 /// Todo 787: parley clamps a hit below a box's last line to that line, so a
@@ -110,28 +82,6 @@ fn the_bubble_takes_presses_only_over_itself_and_its_bridge() {
     }
 }
 
-#[test]
-fn the_pointer_can_rest_on_the_bubble() {
-    let mut page = hover_open();
-    assert!(page.hits(OPEN), "the bubble takes no hit");
-    page.hover(OPEN);
-    page.wait(Duration::from_millis(100));
-    assert!(page.exists(OPEN), "moving onto the bubble closed it");
-}
-
-#[test]
-fn escape_closes_it_under_the_pointer() {
-    let mut page = hover_open();
-    page.focus("#before");
-    page.press(Key::Escape);
-    assert!(!page.exists(OPEN), "Escape did not close it");
-    assert!(
-        page.is_focused("#before"),
-        "focus moved to {}",
-        page.focus_owner()
-    );
-}
-
 /// Blitz hit-tests no inline box in a padded block unless it is z-indexed, so
 /// the wrapper is natively (todo 889).
 #[test]
@@ -172,18 +122,4 @@ fn a_stacking_scroller_clips_the_trigger() {
     assert!(y > 80.0, "the trigger is inside the frame at {y}");
     let centre = ((x + w / 2.0) as u32, (y + h / 2.0) as u32);
     assert_eq!(page.painted_pixel(centre.0, centre.1), "rgb(255, 255, 255)");
-}
-
-/// Blitz fires no `focusin` for Tab; the silent-focus check opens it (N6).
-#[test]
-fn tab_focus_opens_it() {
-    let mut page = mount(app);
-    page.focus("#before");
-    page.tab();
-    assert!(
-        page.is_focused(TRIGGER),
-        "Tab went to {}",
-        page.focus_owner()
-    );
-    assert!(page.exists(OPEN), "Tab focus did not open it");
 }

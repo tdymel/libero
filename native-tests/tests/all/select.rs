@@ -1,5 +1,6 @@
-//! `Select` is a listbox libero draws itself. `NativeSelect` is a real
-//! `<select>` on the web; natively, where that opens no picker, the same listbox.
+//! `NativeSelect` is a real `<select>` on the web; natively, where that opens
+//! no picker, libero's listbox. `Select`'s keys and clicks are e2e's shared
+//! scenarios (`select::`).
 
 use dioxus::prelude::*;
 use libero::components::{NativeSelect, Options, Select};
@@ -19,18 +20,6 @@ fn native() -> Element {
             label: "Fruit",
             value: value(),
             onchange: move |next: Fruit| value.set(Some(next)),
-        }
-        span { id: "picked", "{value:?}" }
-    }
-}
-
-fn listbox() -> Element {
-    let mut value = use_signal(|| Some(Fruit::Apple));
-    rsx! {
-        Select {
-            label: "Fruit",
-            value: value(),
-            onchange: move |next| value.set(next),
         }
         span { id: "picked", "{value:?}" }
     }
@@ -108,24 +97,4 @@ fn a_native_select_keeps_its_option_label() {
     assert_eq!(page.text("[role=combobox]"), "Cherry!", "{}", page.tree());
     page.click("[role=combobox]");
     assert_eq!(page.text("[role=option]"), "Apple!", "{}", page.tree());
-}
-
-#[test]
-fn a_click_on_a_select_option_picks_it() {
-    let mut page = mount(listbox);
-    page.click("[role=combobox]");
-    assert!(page.exists("[role=listbox]"), "{}", page.tree());
-    page.click("[role=option]:nth-child(3)");
-    assert_eq!(page.text("#picked"), "Some(Cherry)", "{}", page.tree());
-}
-
-#[test]
-fn the_keyboard_picks_a_select_option() {
-    let mut page = mount(listbox);
-    page.focus("[role=combobox]");
-    page.press(Key::ArrowDown);
-    assert!(page.exists("[role=listbox]"), "{}", page.tree());
-    page.press(Key::ArrowDown);
-    page.press(Key::Enter);
-    assert_eq!(page.text("#picked"), "Some(Banana)", "{}", page.tree());
 }

@@ -1,7 +1,9 @@
 //! `Select`: the combobox archetype.
 
+use anyhow::Result;
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::suite::Step;
 use e2e::{
     Fixture, Suite, Viewport, ax,
@@ -13,6 +15,42 @@ pub const TRIGGER: &str = "[role=combobox]";
 const LISTBOX: &str = "[role=listbox]";
 const SEARCH: &str = "input[role=combobox]";
 const OPTION_COUNT: usize = 5;
+
+async fn picked<D: Driver>(d: &mut D, expected: &str, after: &str) -> Result<()> {
+    eventually(
+        d,
+        &format!("{after}: #picked to read {expected}"),
+        async |d| Ok(d.text("#picked").await? == expected),
+    )
+    .await
+}
+
+async fn a_click_picks<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    eventually(d, "the listbox", async |d| d.exists(LISTBOX).await).await?;
+    d.click("[role=option]:nth-child(3)").await?;
+    picked(d, "Some(Cherry)", "a click on Cherry").await
+}
+
+async fn the_keys_pick<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(TRIGGER).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    eventually(d, "the listbox", async |d| d.exists(LISTBOX).await).await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    d.press(keyboard::ENTER).await?;
+    picked(d, "Some(Banana)", "ArrowDown, Enter").await
+}
+
+e2e::scenario!(
+    a_click_on_a_select_option_picks_it,
+    "/select/echo",
+    a_click_picks
+);
+e2e::scenario!(
+    the_keyboard_picks_a_select_option,
+    "/select/echo",
+    the_keys_pick
+);
 
 #[test]
 fn it_meets_the_baseline() {

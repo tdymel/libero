@@ -1,5 +1,6 @@
-//! `Slider` under a pointer drag. A drag from the thumb and one leaving the
-//! slider are in `pointer.rs`.
+//! `Slider` under Blitz's pointer: a fast drag, the bubble over the hit area,
+//! no text selection. A drag from the thumb and one leaving the slider are in
+//! `pointer.rs`; the track drag and End are e2e's shared scenarios.
 
 use dioxus::prelude::*;
 use libero::{
@@ -7,7 +8,7 @@ use libero::{
     sx::sx,
     theme::Size,
 };
-use native_tests::{Key, Page, mount};
+use native_tests::{Page, mount};
 
 const THUMB: &str = "[role=slider]";
 const TRACK: &str = "[data-state~=size-md] > [data-state~=size-md] > div";
@@ -22,23 +23,6 @@ fn app() -> Element {
             sx: sx().width("400px"),
         }
     }
-}
-
-#[test]
-fn pressing_the_track_centre_and_dragging_right_follows_the_pointer() {
-    let mut page = mount(app);
-    assert_eq!(page.attr(THUMB, "aria-valuenow").as_deref(), Some("0"));
-    // The 400px track's centre is 50; a quarter of it further is 75.
-    page.drag(TRACK, 100.0, 0.0);
-    let now: f64 = page
-        .attr(THUMB, "aria-valuenow")
-        .and_then(|v| v.parse().ok())
-        .unwrap_or_default();
-    assert!(
-        (now - 75.0).abs() < 2.0,
-        "the value is {now}\n{}",
-        page.tree()
-    );
 }
 
 /// The thumb sits under the pointer while the drag is on, with no transition
@@ -191,30 +175,4 @@ fn a_drag_over_text_selects_none_of_it() {
         page.release_at(ex, ey);
         assert_eq!(rows(&page), 0, "a drag towards {text} selected it");
     }
-}
-
-/// The thumb's anchor is placed by `left` and centred by margins.
-#[test]
-fn the_thumb_moves_with_the_value() {
-    let mut page = mount(app);
-    let x = |page: &Page| {
-        let thumb = page.node(THUMB);
-        page.doc
-            .inner
-            .borrow()
-            .get_client_bounding_rect(thumb)
-            .map(|r| r.x)
-    };
-    let at_zero = x(&page);
-    page.focus(THUMB);
-    page.press(Key::End);
-    page.advance(1.0);
-    assert_eq!(page.attr(THUMB, "aria-valuenow").as_deref(), Some("100"));
-    let at_end = x(&page);
-    assert!(
-        at_end
-            .zip(at_zero)
-            .is_some_and(|(end, zero)| end - zero > 300.0),
-        "the thumb went from {at_zero:?} to {at_end:?}"
-    );
 }

@@ -50,7 +50,6 @@ mod stale_text;
 mod stepper;
 mod switch;
 mod table;
-mod tabs;
 mod text_field;
 mod tooltip;
 mod transitions;

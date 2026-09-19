@@ -1,14 +1,33 @@
 //! `Slider`.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, Slider, SliderChangeEvent, SliderValue, Text};
+use libero::{
+    components::{Flex, Slider, SliderChangeEvent, SliderValue, Text},
+    sx::sx,
+};
 
 use crate::Routes;
 
 pub const ROUTES: Routes = &[
     ("/slider", || rsx! { SliderPage {} }),
     ("/slider/states", || rsx! { SliderStatesPage {} }),
+    ("/slider/drag", || rsx! { SliderDragPage {} }),
 ];
+
+/// A 400px slider at 0, for the shared web/native drag scenarios.
+#[component]
+fn SliderDragPage() -> Element {
+    let mut value = use_signal(|| 0.0f64);
+
+    rsx! {
+        Slider {
+            aria_label: "Volume",
+            value: Some(value()),
+            oninput: move |e: SliderChangeEvent<f64>| value.set(e.value()),
+            sx: sx().width("400px"),
+        }
+    }
+}
 
 /// The one fixture that exists for the pointer pass. Nothing else in the suite
 /// reaches a drag, and the thumb is also the sharpest case for target size.

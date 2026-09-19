@@ -1,7 +1,9 @@
 //! `use_popover` with `PopoverOptions::dismiss` (todo 522): Escape anywhere
 //! and a press outside close the box; Escape hands focus to the trigger.
 
+use anyhow::{Result, bail};
 use e2e::browser::block_on;
+use e2e::driver::{Driver, Rect, eventually};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -12,6 +14,92 @@ const BOX_TEXT: &str = "#box-text";
 const IN_BOX: &str = "#in-box";
 const BLANK: &str = "#blank";
 const AFTER: &str = "#after";
+
+// Placement, on `/popover/place/*`: a 220px `#anchor`, a 150x60 `#floating`, 8px gap.
+const ANCHOR: &str = "#anchor";
+const FLOATING: &str = "#floating";
+const GAP: f64 = 8.0;
+
+fn close_to(a: f64, b: f64) -> bool {
+    (a - b).abs() <= 1.0
+}
+
+/// Opens the box, then waits until `holds(anchor, box)`.
+async fn placed<D: Driver>(
+    d: &mut D,
+    what: &str,
+    holds: impl Fn(Rect, Rect, (f64, f64)) -> bool,
+) -> Result<()> {
+    d.click(ANCHOR).await?;
+    let viewport = d.viewport().await?;
+    let settled = eventually(d, what, async |d| {
+        if !d.exists(FLOATING).await? {
+            return Ok(false);
+        }
+        Ok(holds(
+            d.rect(ANCHOR).await?,
+            d.rect(FLOATING).await?,
+            viewport,
+        ))
+    })
+    .await;
+    if settled.is_err() && d.exists(FLOATING).await? {
+        let (a, f) = (d.rect(ANCHOR).await?, d.rect(FLOATING).await?);
+        bail!("{:?}: {what}: anchor {a:?}, box {f:?}", d.platform());
+    }
+    settled
+}
+
+async fn lands_below<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    placed(d, "the box below the anchor at its start", |a, f, _| {
+        close_to(f.x, a.x) && close_to(f.y, a.y + a.height + GAP)
+    })
+    .await
+}
+
+async fn flips_above<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    placed(
+        d,
+        "the box above an anchor at the viewport bottom",
+        |a, f, _| close_to(f.y + f.height + GAP, a.y),
+    )
+    .await
+}
+
+async fn shifts_inside<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    placed(d, "the box inside the viewport", |_, f, (vw, _)| {
+        f.x >= 0.0 && f.x + f.width <= vw
+    })
+    .await
+}
+
+async fn matches_width<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    placed(d, "the box as wide as the anchor", |a, f, _| {
+        close_to(f.width, a.width)
+    })
+    .await
+}
+
+e2e::scenario!(
+    it_lands_below_the_anchor_at_its_start,
+    "/popover/place/below",
+    lands_below
+);
+e2e::scenario!(
+    it_flips_above_an_anchor_at_the_viewport_bottom,
+    "/popover/place/flip",
+    flips_above
+);
+e2e::scenario!(
+    it_shifts_back_inside_the_viewport,
+    "/popover/place/shift",
+    shifts_inside
+);
+e2e::scenario!(
+    a_matched_width_is_the_anchors,
+    "/popover/place/match",
+    matches_width
+);
 
 #[test]
 fn it_meets_the_baseline() {

@@ -10,7 +10,30 @@ pub const ROUTES: Routes = &[
     ("/tooltip-wrapped", || rsx! { TooltipWrappedPage {} }),
     ("/tooltip-edge", || rsx! { TooltipEdgePage {} }),
     ("/tooltip-start", || rsx! { TooltipStartPage {} }),
+    ("/tooltip/quick", || rsx! { TooltipQuickPage {} }),
 ];
+
+/// 10 ms delays, a bottom bubble 200px off the left edge so it centres
+/// without clamping, and `#away` to hover off to.
+#[component]
+fn TooltipQuickPage() -> Element {
+    rsx! {
+        Button { id: "before", "Before" }
+        div { height: "40px" }
+        div { margin_left: "200px",
+            Tooltip {
+                label: rsx! { "Saves the draft" },
+                label_id: "save-tip",
+                side: "bottom",
+                open_delay: 10,
+                close_delay: 10,
+                Button { id: "save", "aria-describedby": "save-tip", "Save" }
+            }
+        }
+        div { height: "200px" }
+        p { id: "away", "Away" }
+    }
+}
 
 /// A `Tooltip` on a direct-child trigger, between two buttons so Tab has
 /// somewhere to come from and to go to. `bottom`, so the test knows where the

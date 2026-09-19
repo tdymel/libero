@@ -38,6 +38,8 @@ pub struct Rect {
 pub trait Driver {
     fn platform(&self) -> Platform;
     async fn click(&mut self, selector: &str) -> Result<()>;
+    /// Moves the pointer onto the first match's centre, pressing nothing.
+    async fn hover(&mut self, selector: &str) -> Result<()>;
     /// A click at a viewport point, e.g. on a backdrop.
     async fn click_at(&mut self, x: f64, y: f64) -> Result<()>;
     /// The viewport's `(width, height)` in CSS px.
@@ -198,6 +200,10 @@ mod web {
             pointer::click(&self.fixture.page, selector).await
         }
 
+        async fn hover(&mut self, selector: &str) -> Result<()> {
+            pointer::hover(&self.fixture.page, selector).await
+        }
+
         async fn click_at(&mut self, x: f64, y: f64) -> Result<()> {
             pointer::click_at(&self.fixture.page, pointer::Point { x, y }).await
         }
@@ -331,6 +337,11 @@ mod native {
 
         async fn click(&mut self, selector: &str) -> Result<()> {
             self.page.click(selector);
+            Ok(())
+        }
+
+        async fn hover(&mut self, selector: &str) -> Result<()> {
+            self.page.hover(selector);
             Ok(())
         }
 

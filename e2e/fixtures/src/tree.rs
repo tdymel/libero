@@ -14,7 +14,51 @@ pub const ROUTES: Routes = &[
     ("/tree/delete", || rsx! { DeleteTreePage {} }),
     ("/tree/default", || rsx! { DefaultTreePage {} }),
     ("/tree/controlled", || rsx! { ControlledTreePage {} }),
+    ("/tree/chevron", || rsx! { ChevronTreePage {} }),
+    ("/tree/activate", || rsx! { ActivateTreePage {} }),
 ];
+
+/// One branch, one leaf: the branch's chevron turns as it expands.
+#[component]
+fn ChevronTreePage() -> Element {
+    let data = vec![
+        TreeNode::new("src", "src").children(vec![TreeNode::new("src/lib.rs", "lib.rs")]),
+        TreeNode::new("README.md", "README.md"),
+    ];
+    rsx! {
+        Tree { aria_label: "Files", data }
+    }
+}
+
+/// Leaves that render a link whose click `#activated` records (todo 4).
+#[component]
+fn ActivateTreePage() -> Element {
+    let mut activated = use_signal(|| String::from("none"));
+    let data = vec![
+        TreeNode::new("here", "Here"),
+        TreeNode::new("elsewhere", "Elsewhere"),
+    ];
+    rsx! {
+        output { id: "activated", "{activated}" }
+        Tree {
+            aria_label: "Pages",
+            data,
+            render_node: move |args: TreeNodeRenderArgs<&'static str>| {
+                let id = args.id.to_string();
+                rsx! {
+                    a {
+                        tabindex: args.tabindex,
+                        onclick: move |event: MouseEvent| {
+                            event.prevent_default();
+                            activated.set(id.clone());
+                        },
+                        "{args.data}"
+                    }
+                }
+            },
+        }
+    }
+}
 
 /// Todo 770: a controlled `expanded`. "o" opens `docs` from outside, as the docs
 /// nav reveals the current page; the second tree records requests and keeps

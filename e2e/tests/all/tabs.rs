@@ -5,8 +5,10 @@
 //! component it was not written against - `RovingTabindex` was written from
 //! APG, not from this component.
 
+use anyhow::Result;
 use e2e::archetypes::{Orientation, RovingTabindex, reset_tab_position};
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::pointer;
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
@@ -15,6 +17,103 @@ pub const TAB: &str = "[role=tab]";
 /// What the "second" state waits on. Not `TAB`: that is visible at rest, so
 /// waiting on it returned at once and the snapshot raced the re-render.
 const SECOND_SELECTED: &str = "[role=tablist] > [role=tab]:nth-child(2)[aria-selected=true]";
+
+const SELECTED: &str = "[role=tab][aria-selected=true]";
+
+async fn selected_is<D: Driver>(d: &mut D, label: &str, after: &str) -> Result<()> {
+    eventually(d, &format!("{after}: {label} selected"), async |d| {
+        Ok(d.text(SELECTED).await? == label)
+    })
+    .await
+}
+
+/// Automatic activation: the key moves focus and selection together.
+async fn step<D: Driver>(d: &mut D, key: keyboard::Key, label: &str) -> Result<()> {
+    d.press(key).await?;
+    selected_is(d, label, key.key).await?;
+    eventually_focused(d, SELECTED, key.key).await
+}
+
+async fn leaves_the_strip<D: Driver>(d: &mut D, after: &str) -> Result<()> {
+    eventually(d, &format!("{after} to leave the strip"), async |d| {
+        Ok(!d.is_focused(TAB).await?)
+    })
+    .await
+}
+
+async fn arrow_right_moves<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    selected_is(d, "Account", "load").await?;
+    d.focus(SELECTED).await?;
+    step(d, keyboard::ARROW_RIGHT, "Billing").await?;
+    eventually(d, "Billing's panel", async |d| {
+        Ok(d.text("[role=tabpanel]").await?.contains("Billing"))
+    })
+    .await
+}
+
+async fn arrows_wrap_and_jump<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(SELECTED).await?;
+    step(d, keyboard::ARROW_LEFT, "Admin").await?;
+    step(d, keyboard::HOME, "Account").await?;
+    step(d, keyboard::END, "Admin").await?;
+    step(d, keyboard::ARROW_RIGHT, "Account").await
+}
+
+/// Manual mode: Tab leaves from the focused tab, not from the selected one.
+async fn leaves_from_focused_unselected<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(SELECTED).await?;
+    d.press(keyboard::END).await?;
+    eventually_focused(d, "[role=tablist] > [role=tab]:nth-child(3)", "End").await?;
+    selected_is(d, "Account", "End in manual mode").await?;
+    d.press(keyboard::TAB).await?;
+    leaves_the_strip(d, "Tab").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, SELECTED, "Shift+Tab").await
+}
+
+/// A click focuses a disabled tab without selecting it; Shift+Tab then leaves
+/// the strip rather than stopping on the selected tab before it.
+async fn shift_tab_from_disabled<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click("[role=tab][aria-disabled=true]").await?;
+    selected_is(d, "Account", "a click on the disabled Billing").await?;
+    d.press_shift(keyboard::TAB).await?;
+    leaves_the_strip(d, "Shift+Tab").await
+}
+
+async fn tab_out_and_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(SELECTED).await?;
+    step(d, keyboard::ARROW_RIGHT, "Billing").await?;
+    d.press(keyboard::TAB).await?;
+    leaves_the_strip(d, "Tab").await?;
+    d.press_shift(keyboard::TAB).await?;
+    eventually_focused(d, SELECTED, "Shift+Tab").await
+}
+
+e2e::scenario!(
+    arrow_right_moves_focus_and_selection_to_the_next_tab,
+    "/tabs",
+    arrow_right_moves
+);
+e2e::scenario!(
+    arrow_left_wraps_and_home_and_end_jump,
+    "/tabs",
+    arrows_wrap_and_jump
+);
+e2e::scenario!(
+    tab_leaves_the_strip_from_a_focused_unselected_tab,
+    "/tabs-manual",
+    leaves_from_focused_unselected
+);
+e2e::scenario!(
+    shift_tab_leaves_the_strip_from_a_clicked_disabled_tab,
+    "/tabs-disabled",
+    shift_tab_from_disabled
+);
+e2e::scenario!(
+    tab_leaves_the_strip_and_shift_tab_comes_back_to_the_selected_tab,
+    "/tabs",
+    tab_out_and_back
+);
 
 /// Forced colours paint every transparent underline, so each tab looked
 /// selected (todo 500). The selected one must keep a line the others lack.

@@ -16,6 +16,47 @@ use e2e::wait;
 use e2e::{Fixture, Suite, Viewport};
 
 const ROW: &str = "[role=treeitem]";
+const BRANCH: &str = "[role=treeitem][aria-expanded]";
+const CHEVRON: &str = "[role=treeitem][aria-expanded] [data-tree-chevron]";
+const ROVING: &str = "[role=tree] [tabindex='0']";
+
+/// The chevron turns by a state-driven `transform` as its branch expands.
+async fn chevron_turns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let collapsed = d.style(CHEVRON, "transform").await?;
+    d.focus(ROVING).await?;
+    d.press(keyboard::ARROW_RIGHT).await?;
+    eventually(d, "ArrowRight to expand src", async |d| {
+        Ok(d.attr(BRANCH, "aria-expanded").await?.as_deref() == Some("true"))
+    })
+    .await?;
+    eventually(d, &format!("the chevron to leave {collapsed}"), async |d| {
+        Ok(d.style(CHEVRON, "transform").await? != collapsed)
+    })
+    .await
+}
+
+/// Enter on a leaf clicks the link it renders (todo 4).
+async fn enter_clicks_the_link<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus(ROVING).await?;
+    eventually_focused(d, ROW, "focusing the tab stop").await?;
+    d.press(keyboard::ARROW_DOWN).await?;
+    d.press(keyboard::ENTER).await?;
+    eventually(d, "Enter on Elsewhere to click its link", async |d| {
+        Ok(d.text("#activated").await? == "elsewhere")
+    })
+    .await
+}
+
+e2e::scenario!(
+    the_chevron_turns_when_the_branch_expands,
+    "/tree/chevron",
+    chevron_turns
+);
+e2e::scenario!(
+    enter_on_a_leaf_clicks_its_link,
+    "/tree/activate",
+    enter_clicks_the_link
+);
 
 const STAR: keyboard::Key = keyboard::Key {
     key: "*",

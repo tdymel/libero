@@ -3,7 +3,9 @@
 //! viewport edge, escapes an `overflow: hidden` ancestor and closes on Escape
 //! (todo 6).
 
+use anyhow::{Result, ensure};
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused, linger};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -12,6 +14,76 @@ const TRIGGER: &str = "#save";
 const BUBBLE: &str = "#save-tip";
 /// Well outside the tooltip, inside the fixture's padding.
 const AWAY: pointer::Point = pointer::Point { x: 2.0, y: 2.0 };
+
+// On `/tooltip/quick`: 10 ms delays, `#before`, `#away`.
+const OPEN: &str = "#save-tip:not([hidden])";
+
+async fn is_open<D: Driver>(d: &mut D, open: bool, after: &str) -> Result<()> {
+    eventually(d, &format!("{after}: bubble open={open}"), async |d| {
+        Ok(d.exists(OPEN).await? == open)
+    })
+    .await
+}
+
+async fn hover_open<D: Driver>(d: &mut D) -> Result<()> {
+    ensure!(!d.exists(OPEN).await?, "open at rest");
+    d.hover(TRIGGER).await?;
+    is_open(d, true, "hovering the trigger").await
+}
+
+async fn hover_places_and_leaving_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    hover_open(d).await?;
+    let t = d.rect(TRIGGER).await?;
+    let b = d.rect(OPEN).await?;
+    let gap = b.y - (t.y + t.height);
+    ensure!(
+        (0.0..=16.0).contains(&gap) && ((b.x + b.width / 2.0) - (t.x + t.width / 2.0)).abs() <= 2.0,
+        "trigger {t:?}, bubble {b:?}"
+    );
+    d.hover("#away").await?;
+    is_open(d, false, "leaving").await
+}
+
+async fn rests_on_the_bubble<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    hover_open(d).await?;
+    d.hover(OPEN).await?;
+    linger(d, 8).await;
+    ensure!(d.exists(OPEN).await?, "moving onto the bubble closed it");
+    Ok(())
+}
+
+async fn escape_under_the_pointer<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    hover_open(d).await?;
+    d.focus("#before").await?;
+    d.press(keyboard::ESCAPE).await?;
+    is_open(d, false, "Escape").await?;
+    eventually_focused(d, "#before", "Escape").await
+}
+
+/// Blitz fires no `focusin` for Tab; the silent-focus check opens it (N6).
+async fn tab_focus_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#before").await?;
+    d.press(keyboard::TAB).await?;
+    eventually_focused(d, TRIGGER, "Tab from Before").await?;
+    is_open(d, true, "Tab focus").await
+}
+
+e2e::scenario!(
+    hover_opens_it_below_the_trigger_and_leaving_closes_it,
+    "/tooltip/quick",
+    hover_places_and_leaving_closes
+);
+e2e::scenario!(
+    the_pointer_can_rest_on_the_bubble,
+    "/tooltip/quick",
+    rests_on_the_bubble
+);
+e2e::scenario!(
+    escape_closes_it_under_the_pointer,
+    "/tooltip/quick",
+    escape_under_the_pointer
+);
+e2e::scenario!(tab_focus_opens_it, "/tooltip/quick", tab_focus_opens);
 
 #[test]
 fn it_meets_the_baseline() {

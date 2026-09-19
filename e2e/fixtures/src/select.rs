@@ -5,7 +5,7 @@
 //! the wrong one. `/select/field` is the searchable one, with every caption.
 
 use dioxus::prelude::*;
-use libero::components::{FieldStatus, Flex, OptionItem, OptionList, Select};
+use libero::components::{FieldStatus, Flex, OptionItem, OptionList, Select, Text};
 
 use crate::{Routes, common::Fruit};
 
@@ -15,7 +15,25 @@ pub const ROUTES: Routes = &[
     ("/select/readonly", || rsx! { SelectReadonlyPage {} }),
     ("/select/unlabelled", || rsx! { SelectUnlabelledPage {} }),
     ("/select/refused", || rsx! { SelectRefusedPage {} }),
+    ("/select/echo", || rsx! { SelectEchoPage {} }),
 ];
+
+/// Apple picked, the value echoed in `#picked`, for the shared web/native scenarios.
+#[component]
+fn SelectEchoPage() -> Element {
+    let mut value = use_signal(|| Some(Fruit::Apple));
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Select {
+                label: "Fruit",
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+            Text { id: "picked", "{value:?}" }
+        }
+    }
+}
 
 /// Controlled, and the caller refuses `Cherry`: the select must stay on the
 /// old value, form value included (842).

@@ -3,14 +3,73 @@
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button, Flex, Text},
-    hooks::{PopoverOptions, use_element, use_popover},
+    hooks::{Align, PopoverOptions, PopoverWidth, Side, use_element, use_popover},
     sx::sx,
     use_theme,
 };
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/popover", || rsx! { PopoverPage {} })];
+pub const ROUTES: Routes = &[
+    ("/popover", || rsx! { PopoverPage {} }),
+    (
+        "/popover/place/below",
+        || rsx! { PlacedPage { left: "200px", top: "100px" } },
+    ),
+    (
+        "/popover/place/flip",
+        || rsx! { PlacedPage { left: "200px", top: "calc(100vh - 60px)" } },
+    ),
+    (
+        "/popover/place/shift",
+        || rsx! { PlacedPage { left: "calc(100vw - 230px)", top: "100px", align: Align::Center } },
+    ),
+    (
+        "/popover/place/match",
+        || rsx! { PlacedPage { left: "200px", top: "100px", width: PopoverWidth::Match } },
+    ),
+];
+
+/// A 220px anchor placed absolutely, so the page's padding does not move it,
+/// and a 150x60 box 8px off it (`use_popover`'s placement).
+#[component]
+fn PlacedPage(
+    left: &'static str,
+    top: &'static str,
+    #[props(default = Align::Start)] align: Align,
+    #[props(default = PopoverWidth::Auto)] width: PopoverWidth,
+) -> Element {
+    let anchor = use_element();
+    let mut opened = use_signal(|| false);
+    let options = PopoverOptions::new(8.0, 0.0)
+        .side(Side::Bottom)
+        .align(align)
+        .width(width);
+    let popover = use_popover(anchor, opened(), options);
+    let floating = *popover.floating();
+    popover.show(opened().then(|| {
+        rsx! {
+            Box {
+                id: "floating",
+                style: popover.style(),
+                onmounted: floating.mount(),
+                div { width: "150px", height: "60px", "Popover content" }
+            }
+        }
+    }));
+
+    rsx! {
+        div { position: "absolute", left, top,
+            Button {
+                id: "anchor",
+                width: "220px",
+                onmounted: anchor.mount(),
+                onclick: move |_| opened.toggle(),
+                "Anchor"
+            }
+        }
+    }
+}
 
 /// A click-opened box with a control in it, and plain text beside the
 /// trigger for a press that lands on nothing focusable.

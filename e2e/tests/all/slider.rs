@@ -3,14 +3,56 @@
 //! This fixture exists for one reason: it is the only one that exercises the
 //! pointer pass. A template with an unproven pass is not a finished template.
 
+use anyhow::{Result, ensure};
 use e2e::browser::block_on;
-use e2e::passes::pointer;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::target_size::MINIMUM;
+use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const VALUE_NOW: &str = "document.querySelector('[role=slider]').getAttribute('aria-valuenow')";
 
 const THUMB: &str = "[role=slider]";
+
+const TRACK: &str = "[data-state~=size-md] > [data-state~=size-md] > div";
+
+async fn value_now<D: Driver>(d: &mut D) -> Result<f64> {
+    Ok(d.attr(THUMB, "aria-valuenow")
+        .await?
+        .and_then(|v| v.parse().ok())
+        .unwrap_or_default())
+}
+
+/// The 400px track's centre is 50; a quarter of it further is 75.
+async fn centre_drag<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    ensure!(value_now(d).await? == 0.0, "the slider starts off 0");
+    d.drag(TRACK, 100.0, 0.0).await?;
+    eventually(d, "the drag to reach 75", async |d| {
+        Ok((value_now(d).await? - 75.0).abs() < 2.0)
+    })
+    .await
+}
+
+async fn thumb_follows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let at_zero = d.rect(THUMB).await?.x;
+    d.focus(THUMB).await?;
+    d.press(keyboard::END).await?;
+    eventually(d, "End to move the thumb 300px on", async |d| {
+        Ok(value_now(d).await? == 100.0 && d.rect(THUMB).await?.x - at_zero > 300.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    pressing_the_track_centre_and_dragging_right_follows_the_pointer,
+    "/slider/drag",
+    centre_drag
+);
+e2e::scenario!(
+    the_thumb_moves_with_the_value,
+    "/slider/drag",
+    thumb_follows
+);
 
 /// Todo 483: the label focuses the thumb it names by id.
 #[test]

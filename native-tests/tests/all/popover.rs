@@ -1,13 +1,13 @@
-//! `use_popover`: the box lands on its side of the anchor with the gap between,
-//! flips when that side has no room, shifts back inside the viewport, and
-//! `PopoverWidth::Match` takes the anchor's width.
+//! `use_popover` against Blitz's own layout: the portal outlet is in the
+//! document's flow and placed against `<main>`. Placement, flip, shift and
+//! matched width are e2e's shared scenarios (`popover::`).
 
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button},
     hooks::{Align, PopoverOptions, PopoverWidth, Side, use_element, use_popover},
 };
-use native_tests::{Key, Page, VIEWPORT, mount};
+use native_tests::{Key, Page, mount};
 
 const ANCHOR: &str = "#anchor";
 const FLOATING: &str = "#floating";
@@ -85,20 +85,6 @@ fn close_to(a: f64, b: f64) -> bool {
     (a - b).abs() <= 1.0
 }
 
-#[test]
-fn it_lands_below_the_anchor_at_its_start() {
-    let mut page = mount(|| {
-        rsx! { Demo { at: (200.0, 100.0), side: Side::Bottom, align: Align::Start, width: PopoverWidth::Auto } }
-    });
-    open(&mut page);
-    let (ax, ay, _, ah) = page.rect(ANCHOR);
-    let (fx, fy, ..) = page.rect(FLOATING);
-    assert!(
-        close_to(fx, ax) && close_to(fy, ay + ah + GAP),
-        "anchor at ({ax}, {ay}) {ah} tall, box at ({fx}, {fy})"
-    );
-}
-
 /// The outlet is `position: absolute`, and Blitz places it against `<main>`,
 /// which a first child's top margin collapsing through moves down: libero
 /// shifts it back.
@@ -163,43 +149,4 @@ fn it_follows_the_anchor_when_the_document_scrolls_while_open() {
         "anchor bottom {}, box top {fy}",
         ay + ah
     );
-}
-
-#[test]
-fn it_flips_above_an_anchor_at_the_viewport_bottom() {
-    let mut page = mount(|| {
-        rsx! { Demo { at: (200.0, f64::from(VIEWPORT.1) - 60.0), side: Side::Bottom, align: Align::Start, width: PopoverWidth::Auto } }
-    });
-    open(&mut page);
-    let (_, ay, ..) = page.rect(ANCHOR);
-    let (_, fy, _, fh) = page.rect(FLOATING);
-    assert!(
-        close_to(fy + fh + GAP, ay),
-        "anchor top {ay}, box {fy}..{}",
-        fy + fh
-    );
-}
-
-#[test]
-fn it_shifts_back_inside_the_viewport() {
-    let mut page = mount(|| {
-        rsx! { Demo { at: (f64::from(VIEWPORT.0) - 230.0, 100.0), side: Side::Bottom, align: Align::Center, width: PopoverWidth::Auto } }
-    });
-    open(&mut page);
-    let (fx, _, fw, _) = page.rect(FLOATING);
-    assert!(
-        fx >= 0.0 && fx + fw <= f64::from(VIEWPORT.0),
-        "box at {fx}, {fw} wide"
-    );
-}
-
-#[test]
-fn a_matched_width_is_the_anchors() {
-    let mut page = mount(|| {
-        rsx! { Demo { at: (200.0, 100.0), side: Side::Bottom, align: Align::Start, width: PopoverWidth::Match } }
-    });
-    open(&mut page);
-    let (_, _, aw, _) = page.rect(ANCHOR);
-    let (_, _, fw, _) = page.rect(FLOATING);
-    assert!(close_to(fw, aw), "anchor {aw} wide, box {fw}");
 }
