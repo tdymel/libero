@@ -25,7 +25,7 @@ fn in_row(dir: &'static str) -> Element {
     }
 }
 
-/// The pixels along the first code line inside `within`.
+/// The pixels along the code line inside `within`, the code box's middle row.
 fn ink(page: &Page, within: &str) -> Vec<[u8; 4]> {
     let (x, _, w, _) = page.rect(within);
     let (_, y, _, h) = page.rect("#wide code");

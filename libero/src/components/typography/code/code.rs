@@ -7,12 +7,18 @@ use crate::{
         common::{HtmlTag, Input, States, base_props},
         layout::use_box,
     },
+    platform::paints_outer_inline_backgrounds,
     sx::{StaticSx, sx},
     theme::CODE_FONT_FAMILY,
 };
 
 static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
-    sx().display("inline")
+    let base = match paints_outer_inline_backgrounds() {
+        true => sx(),
+        // Blitz fills a token's text from the token span alone.
+        false => sx().selector("& > span", sx().background("inherit")),
+    };
+    base.display("inline")
         .background("muted.2")
         .border_radius("4px")
         .padding("2px 6px")
@@ -28,6 +34,30 @@ static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
 /// Up to this many characters a span stays on one line: about 170px of
 /// monospace at 14px, under a 320px column's width.
 const SHORT_CODE_CHARS: usize = 20;
+
+/// Splits the whitespace off each classed token into bare text (`None`): Blitz
+/// trims the spaces an element starts or ends with, so `let width` read "letwidth".
+fn spaces_outside_spans(line: &[Token]) -> Vec<Token> {
+    let mut pieces = Vec::with_capacity(line.len());
+    for (text, class) in line {
+        let word = text.trim();
+        if class.is_none() || word.is_empty() {
+            pieces.push((text.clone(), None));
+            continue;
+        }
+        let lead = text.len() - text.trim_start().len();
+        let trail = lead + word.len();
+        pieces.extend([
+            (text[..lead].to_string(), None),
+            (word.to_string(), *class),
+            (text[trail..].to_string(), None),
+        ]);
+    }
+    pieces.retain(|(text, _)| !text.is_empty());
+    pieces
+}
+
+type Token = (String, Option<&'static str>);
 
 base_props! {
     pub struct CodeProps {
@@ -69,8 +99,12 @@ pub fn Code(props: CodeProps) -> Element {
         rsx! {
             if let Some(lines) = highlighted.read().clone().flatten() {
                 for line in lines.iter() {
-                    for (text, class) in line.iter() {
-                        span { class: *class, {text.as_str()} }
+                    for (text, class) in spaces_outside_spans(line) {
+                        if class.is_some() {
+                            span { class, {text} }
+                        } else {
+                            {text}
+                        }
                     }
                 }
             } else {

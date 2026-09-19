@@ -5,6 +5,7 @@
 mod anchor;
 mod button;
 mod choice;
+mod code;
 mod code_block;
 mod color_scheme;
 mod combobox;
@@ -32,6 +33,7 @@ mod pointer;
 mod popover;
 mod qr_code;
 mod repo_button;
+mod rtl_text;
 mod scroll;
 mod scroll_area;
 mod scroll_size;

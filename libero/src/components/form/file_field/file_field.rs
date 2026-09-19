@@ -9,8 +9,8 @@ use crate::{
         accessibility::VisuallyHidden,
         buttons::ActionIcon,
         common::{
-            CloseIcon, HtmlTag, Input, States, UploadIcon, focus_ring_sx, input_from_str,
-            navigation_chord, ring_overlay, ring_overlay_sx,
+            CloseIcon, HtmlTag, Input, LogicalTextAlign, States, UploadIcon, focus_ring_sx,
+            input_from_str, navigation_chord, ring_overlay, ring_overlay_sx,
         },
         feedback::Loader,
         form::{
@@ -111,7 +111,7 @@ static FILE_BROWSE_SX: StaticSx = StaticSx::new(|| {
         .flex("1 1 0")
         // Room to aim at beside a full row of chips.
         .min_width("2em")
-        .text_align("start")
+        .text_align_start()
         .cursor("pointer")
         .selector(
             "& [data-placeholder]",

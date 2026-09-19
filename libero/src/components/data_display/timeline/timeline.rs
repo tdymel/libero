@@ -4,8 +4,8 @@ use super::event::TimelineEvent;
 use crate::{
     components::{
         common::{
-            ABSENT, HtmlTag, Input, Rail, RailInset, States, Variables, base_props, input_from_str,
-            variables,
+            ABSENT, HtmlTag, Input, LogicalTextAlign, Rail, RailInset, States, Variables,
+            base_props, input_from_str, variables,
         },
         layout::use_box,
     },
@@ -99,7 +99,7 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
         .when(
             TimelineAlign::End.state_name(),
             sx().padding_right(inset.clone())
-                .text_align("end")
+                .text_align_end()
                 .and(rail.connector_sx(RailInset::End))
                 .rtl(rail_on(RailInset::Start, &inset)),
         );
@@ -117,7 +117,7 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
                 "&:nth-of-type(even)",
                 sx().padding_left("0")
                     .padding_right(centred.clone())
-                    .text_align("end"),
+                    .text_align_end(),
             )
             // Mirrored: the first event's content sits left of the rail.
             .rtl(

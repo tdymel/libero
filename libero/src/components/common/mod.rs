@@ -5,6 +5,7 @@ mod combobox_aria;
 mod combobox_state;
 mod focusable;
 mod icons;
+mod logical_text;
 mod neighbour;
 mod number_value;
 mod option_list;
@@ -38,6 +39,7 @@ pub(crate) use icons::{
     MinusIcon, MoonIcon, PauseIcon, PersonIcon, PlayIcon, PlusIcon, SunIcon, SystemSchemeIcon,
     TextDirectionIcon, UploadIcon,
 };
+pub(crate) use logical_text::LogicalTextAlign;
 pub(crate) use neighbour::neighbour;
 pub use number_value::NumberValue;
 pub use option_list::{OptionItem, OptionList, OptionSource};

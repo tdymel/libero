@@ -5,8 +5,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            CheckIcon, ChevronRightIcon, HtmlTag, Input, States, base_props, disabled_look_sx,
-            has_shortcut_modifier, inset_focus_ring_sx,
+            CheckIcon, ChevronRightIcon, HtmlTag, Input, LogicalTextAlign, States, base_props,
+            disabled_look_sx, has_shortcut_modifier, inset_focus_ring_sx,
         },
         layout::{Divider, paper_sx, use_box},
         typography::Kbd,
@@ -79,7 +79,7 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
                 .font("inherit")
                 .font_size(MENU_ITEM_FONT.value())
                 .color("inherit")
-                .text_align("start")
+                .text_align_start()
                 .white_space("nowrap")
                 .cursor("pointer")
                 .user_select("none"),

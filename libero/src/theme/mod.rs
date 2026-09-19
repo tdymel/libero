@@ -14,6 +14,8 @@ pub use themes::*;
 // the platform what it is set to.
 #[cfg_attr(not(target_arch = "wasm32"), allow(unused_imports))]
 pub(crate) use stylesheet::{DARK_SCHEME_QUERY, THEME_ATTRIBUTE};
+// The provider emits it for a renderer without logical `text-align`.
+pub(crate) use stylesheet::physical_text_align;
 
 // Re-exported from `crate::tokens` (a layer below `sx`), so
 // `libero::theme::Size` stays the public path.

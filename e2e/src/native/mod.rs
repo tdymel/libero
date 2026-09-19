@@ -602,6 +602,26 @@ impl Page {
             .unwrap_or_default()
     }
 
+    /// The text Blitz lays out in the first inline context at or under the match:
+    /// what the reader sees, after Blitz's whitespace handling.
+    pub fn laid_out_text(&self, selector: &str) -> String {
+        let doc = self.doc.inner.borrow();
+        let mut queue = std::collections::VecDeque::from([self.node(selector)]);
+        while let Some(id) = queue.pop_front() {
+            let node = doc.get_node(id).expect("a laid out node");
+            if let Some(inline) = node
+                .data
+                .downcast_element()
+                .and_then(|data| data.inline_layout_data.as_ref())
+            {
+                return inline.text.clone();
+            }
+            let layout = node.layout_children.borrow();
+            queue.extend(layout.as_deref().unwrap_or(&node.children).iter().copied());
+        }
+        panic!("no inline layout at or under {selector:?}")
+    }
+
     /// `getComputedStyle(match).getPropertyValue(property)`: the computed
     /// value, or the used one for layout-dependent properties.
     pub fn computed(&self, selector: &str, property: &str) -> String {

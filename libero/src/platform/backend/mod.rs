@@ -204,6 +204,14 @@ pub(crate) fn placeholder_drawn() {
     blitz::placeholder_drawn();
 }
 
+/// Blitz paints only a text run's innermost element's background; see [`paints_outer_inline_backgrounds`](crate::platform::paints_outer_inline_backgrounds).
+pub(crate) const PAINTS_OUTER_INLINE_BACKGROUNDS: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
+/// Blitz aligns `start` left under `rtl`; see [`aligns_logical_text`](crate::platform::aligns_logical_text).
+pub(crate) const ALIGNS_LOGICAL_TEXT: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     #[cfg(target_arch = "wasm32")]
     return web::document();

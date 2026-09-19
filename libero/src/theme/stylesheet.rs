@@ -158,6 +158,25 @@ fn global_reset_scopes(theme: &Theme, color_scheme: &str) -> Vec<CssScope> {
     ]
 }
 
+/// A physical `text-align` per `dir`, in the base layer, for a renderer that
+/// aligns the initial `start` left under `rtl` (Blitz).
+pub(crate) fn physical_text_align() -> String {
+    let scopes = [("rtl", "right"), ("ltr", "left")]
+        .into_iter()
+        .map(|(dir, side)| {
+            CssScope::new(
+                format!(":where([dir={dir}])"),
+                vec![CssDeclaration::new("text-align", side)],
+            )
+        })
+        .collect();
+    format!(
+        "@layer {}{{{}}}",
+        CssLayer::Base.css_name(),
+        Stylesheet::new(scopes).as_str()
+    )
+}
+
 fn body_scope(theme: &Theme) -> CssScope {
     // Ink and paper have no per-shade contrast var, so it's computed here the
     // way `push_color_declarations` does for palette shades. A theme whose

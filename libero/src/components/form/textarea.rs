@@ -5,7 +5,7 @@ use crate::{
     CssLayer,
     components::{
         accessibility::VisuallyHidden,
-        common::{HtmlTag, Input},
+        common::{HtmlTag, Input, LogicalTextAlign},
         form::{FormScope, field_control_sx, field_props, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
@@ -59,7 +59,7 @@ field_props! {
 }
 
 /// The counter under the control, at its end.
-static COUNTER_SX: StaticSx = StaticSx::new(|| sx().text_align("end"));
+static COUNTER_SX: StaticSx = StaticSx::new(|| sx().text_align_end());
 
 /// The `maxlength` a caller passed among the extra attributes.
 fn max_length(attributes: &[Attribute]) -> Option<usize> {

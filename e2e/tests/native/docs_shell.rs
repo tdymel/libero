@@ -6,7 +6,8 @@ mod heading_focus;
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
-use libero::components::{Button, Flex, Header, ScrollArea, use_scroll_area};
+use libero::components::{Button, Flex, Header, ScrollArea, Title, use_scroll_area};
+use libero::hooks::use_element;
 use libero::sx::sx;
 use libero::theme::HEADER_HEIGHT_VAR;
 
@@ -67,6 +68,38 @@ fn a_wheel_over_the_page_scrolls_the_page_and_leaves_the_header() {
     assert_eq!(page.viewport_scroll(), (0.0, 0.0), "the document scrolled");
     assert_eq!(page.rect("#banner").1, 0.0);
     assert!(page.scroll_top(AREA) > 0.0, "{}", page.tree());
+}
+
+/// A page behind a signal, its heading focused on navigation as `DocPage`'s.
+fn titled() -> Element {
+    let mut page = use_signal(|| "A");
+    let content = use_element();
+    heading_focus::use_heading_focus(page(), content);
+    rsx! {
+        Button { id: "to-b", onclick: move |_| page.set("B"), "Page B" }
+        div { onmounted: content.mount(),
+            main {
+                Title {
+                    id: "title",
+                    tabindex: "-1",
+                    sx: sx().selector("&:focus", sx().outline("none").box_shadow("none")),
+                    "Page {page}"
+                }
+            }
+        }
+    }
+}
+
+/// The docs' heading takes focus after a keyboard navigation without a ring;
+/// `Title`'s ring is a `box-shadow`, so `outline: none` alone left it (both platforms).
+#[test]
+fn a_focused_heading_draws_no_ring() {
+    let mut page = mount(titled);
+    page.focus("#to-b");
+    page.press(Key::Enter);
+    assert!(page.is_focused("#title"), "focus on {}", page.focus_owner());
+    assert_eq!(page.computed("#title", "outline-style"), "none");
+    assert_eq!(page.computed("#title", "box-shadow"), "none");
 }
 
 #[test]

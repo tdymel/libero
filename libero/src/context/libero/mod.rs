@@ -14,7 +14,7 @@ use crate::{
         self, apply_direction, clear_root_direction, color_scheme, document, focus_selectors,
         forget_direction, set_root_direction, store_direction, stored_direction,
     },
-    theme::{THEME_ATTRIBUTE, Theme, ThemeSet},
+    theme::{THEME_ATTRIBUTE, Theme, ThemeSet, physical_text_align},
     tokens::{ColorScheme, ColorSchemeSetting, Direction},
     utils::warn,
 };
@@ -283,9 +283,14 @@ fn ThemeStyle() -> Element {
         }
     });
 
+    let physical = use_hook(|| (!platform::aligns_logical_text()).then(physical_text_align));
+
     rsx! {
         style {
             dangerous_inner_html: "{css}"
+        }
+        if let Some(physical) = physical {
+            style { dangerous_inner_html: "{physical}" }
         }
         {platform::SheetWatch(count)}
     }

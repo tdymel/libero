@@ -36,7 +36,7 @@ zip = { version = "2", default-features = false, features = ["deflate"] }
 # -- ::native` for the scenarios, `--test native` for the Blitz-only tests.
 e2e-fixtures = { path = "fixtures", optional = true }
 dioxus = { git = "https://github.com/DioxusLabs/dioxus", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "mounted", "router", "logger"], optional = true }
-libero = { path = "../libero", default-features = false, features = ["native"], optional = true }
+libero = { path = "../libero", default-features = false, features = ["native", "code-lang-rust"], optional = true }
 # The windowless half of dioxus-native: no winit, no renderer. The `blitz-*`
 # versions match dioxus-native's, so this is the same Blitz the native docs run.
 dioxus-native-dom = { git = "https://github.com/DioxusLabs/dioxus", optional = true }

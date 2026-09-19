@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            ClassList, HtmlTag, Input, States, attr, inset_focus_ring_sx, names_itself,
-            use_name_warning,
+            ClassList, HtmlTag, Input, LogicalTextAlign, States, attr, inset_focus_ring_sx,
+            names_itself, use_name_warning,
         },
         layout::use_box,
     },
@@ -29,7 +29,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         .border_spacing("0")
         .selector(
             "& th, & td",
-            sx().text_align("start").vertical_align("middle"),
+            sx().text_align_start().vertical_align("middle"),
         )
         .selector("& thead th", sx().font_weight("600"))
         // A row header is semantics, not a look: it reads like its row.
@@ -41,7 +41,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& th[data-align=\"end\"], & td[data-align=\"end\"]",
-            sx().text_align("end"),
+            sx().text_align_end(),
         )
         // The button carries the header's padding instead, so the whole
         // padded area is clickable and not just the label. Marked from Rust:
@@ -99,7 +99,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
 });
 
 fn caption_sx() -> Sx {
-    sx().text_align("start")
+    sx().text_align_start()
         .font_weight("600")
         .padding(TableDefaults::padding())
 }

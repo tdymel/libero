@@ -6,8 +6,8 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         common::{
-            CheckIcon, ClassList, CloseIcon, HtmlTag, Input, Orientation, Rail, RailInset, States,
-            Variables, focus_ring_sx, on_ring_sx, use_closing_focus, variables,
+            CheckIcon, ClassList, CloseIcon, HtmlTag, Input, LogicalTextAlign, Orientation, Rail,
+            RailInset, States, Variables, focus_ring_sx, on_ring_sx, use_closing_focus, variables,
         },
         layout::{Collapse, use_box},
     },
@@ -99,7 +99,7 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         .margin("0")
         .font("inherit")
         .color("inherit")
-        .text_align("start")
+        .text_align_start()
         // A long unbreakable word wraps inside the step instead of widening a
         // narrow page (1.4.10).
         .with("overflow-wrap", "anywhere")

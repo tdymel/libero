@@ -100,14 +100,16 @@ fn a_keyboard_copy_is_announced() {
     });
 }
 
-/// Read off `<code>`'s element children rather than its text: the spans **are**
-/// the result. A check on `textContent` would pass against a `Code` that
-/// highlighted nothing at all.
-const SPANS: &str = r#"(() => {
-    const el = document.querySelector('#non-ascii-code');
-    if (!el) return [];
-    return [...el.children].map(c => [c.textContent, c.getAttribute('class')]);
-})()"#;
+/// `<code>`'s pieces, a classed span or bare text each: the spans **are** the
+/// result, which a check on `textContent` would pass without.
+const PIECES: &str = r#"[...(document.querySelector('#ID')?.childNodes ?? [])]
+    .filter(c => (c.nodeType === 1 || c.nodeType === 3) && c.textContent)
+    .map(c => [c.textContent, c.nodeType === 1 ? c.getAttribute('class') : null])"#;
+
+/// The pieces of the `<code>` with this id.
+fn pieces(id: &str) -> String {
+    PIECES.replace("ID", id)
+}
 
 #[test]
 fn a_keyword_after_a_non_ascii_letter_is_highlighted_by_the_browsers_regexp() {
@@ -127,7 +129,7 @@ fn a_keyword_after_a_non_ascii_letter_is_highlighted_by_the_browsers_regexp() {
 
         let spans: Vec<(String, Option<String>)> = fixture
             .page
-            .evaluate(SPANS)
+            .evaluate(pieces("non-ascii-code"))
             .await
             .unwrap()
             .into_value()
@@ -157,11 +159,9 @@ fn a_nested_block_comment_is_one_comment_on_the_web() {
     block_on(async {
         let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
 
-        const NESTED: &str = r#"[...(document.querySelector('#nested-comment-code')?.children ?? [])]
-            .map(c => [c.textContent, c.getAttribute('class')])"#;
         wait::for_js_true(
             &fixture.page,
-            &format!("{NESTED}.length > 0"),
+            "document.querySelector('#nested-comment-code')?.children.length > 0",
             "the highlighter to replace the source with spans",
         )
         .await
@@ -169,7 +169,7 @@ fn a_nested_block_comment_is_one_comment_on_the_web() {
 
         let spans: Vec<(String, Option<String>)> = fixture
             .page
-            .evaluate(NESTED)
+            .evaluate(pieces("nested-comment-code"))
             .await
             .unwrap()
             .into_value()

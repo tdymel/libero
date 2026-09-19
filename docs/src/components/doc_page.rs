@@ -57,11 +57,12 @@ pub fn DocPage(
                     align: "center",
                     gap: "lg",
                     wrap: "wrap",
-                    // Focused after a navigation (`AppShell`), without a ring round the heading.
+                    // Focused after a navigation (`AppShell`), without a ring round the heading:
+                    // `Title` draws its keyboard ring as a `box-shadow`.
                     Title {
                         size: "xxl",
                         tabindex: "-1",
-                        sx: sx().selector("&:focus", sx().outline("none")),
+                        sx: sx().selector("&:focus", sx().outline("none").box_shadow("none")),
                         "{title}"
                     }
                     Flex {

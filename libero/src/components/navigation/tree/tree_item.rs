@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, base_props},
+        common::{HtmlTag, Input, LogicalTextAlign, base_props},
         layout::use_box,
     },
     sx::{StaticSx, sx},
@@ -24,7 +24,7 @@ static TREE_ITEM_SX: StaticSx = StaticSx::new(|| {
         .background("none")
         .color("inherit")
         .font("inherit")
-        .text_align("start")
+        .text_align_start()
         .cursor("pointer")
         // Disabled by its row or by a `Fieldset` (todo 514). A disabled row
         // already dims itself, so only the Fieldset's case dims here.

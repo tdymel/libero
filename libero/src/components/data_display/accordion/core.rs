@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         common::{
-            ChevronDownIcon, ClassList, HtmlTag, Input, States, disabled_look_sx,
+            ChevronDownIcon, ClassList, HtmlTag, Input, LogicalTextAlign, States, disabled_look_sx,
             has_shortcut_modifier, inset_focus_ring_sx, use_closing_focus,
         },
         layout::{Collapse, use_box},
@@ -50,7 +50,7 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
                 .padding(format!("{} {}", ACCORDION_PAD_Y.value(), ACCORDION_PAD_X.value()))
                 .font("inherit")
                 .color("inherit")
-                .text_align("start")
+                .text_align_start()
                 .cursor("pointer"),
         )
         // A long unbreakable word wraps inside the label instead of pushing the
