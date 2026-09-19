@@ -5,23 +5,19 @@ expression: tree
 ---
 LabelText
   StaticText "Topics"
-generic
-  StaticText "rust"
-  button "Remove rust"
-  combobox "Topics" [expanded] [haspopup=listbox]
-    generic
+StaticText "rust"
+button "Remove rust"
+combobox "Topics" [expanded] [haspopup=listbox]
 status [atomic] [live=polite]
 status [atomic] [live=polite]
 status [atomic] [live=polite]
-generic
-  generic
-    listbox "Topics"
-      option "dioxus" [selected]
-        StaticText "dioxus"
-      option "wasm" [selected=false]
-        StaticText "wasm"
-      option "css" [selected=false]
-        StaticText "css"
-      option "html" [selected=false]
-        StaticText "html"
+listbox "Topics"
+  option "dioxus" [selected]
+    StaticText "dioxus"
+  option "wasm" [selected=false]
+    StaticText "wasm"
+  option "css" [selected=false]
+    StaticText "css"
+  option "html" [selected=false]
+    StaticText "html"
 --> aria-controls [id="lsx-N-listbox"] (rendered above)

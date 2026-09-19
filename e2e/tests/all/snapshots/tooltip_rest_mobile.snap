@@ -7,6 +7,5 @@ button "Before"
   StaticText "Before"
 button "Save"
   StaticText "Save"
-  generic
 button "After"
   StaticText "After"

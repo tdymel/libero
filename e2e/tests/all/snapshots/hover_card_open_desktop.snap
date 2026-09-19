@@ -7,14 +7,12 @@ button "Before"
   StaticText "Before"
 button "Ada Lovelace"
   StaticText "Ada Lovelace"
-  generic
 button "After"
   StaticText "After"
-generic
-  dialog "Ada Lovelace"
-    paragraph
-      StaticText "Wrote the first algorithm meant for a machine."
-    button "Profile"
-      StaticText "Profile"
-    button "Follow"
-      StaticText "Follow"
+dialog "Ada Lovelace"
+  paragraph
+    StaticText "Wrote the first algorithm meant for a machine."
+  button "Profile"
+    StaticText "Profile"
+  button "Follow"
+    StaticText "Follow"

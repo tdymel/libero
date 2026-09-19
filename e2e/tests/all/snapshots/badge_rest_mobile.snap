@@ -33,26 +33,19 @@ StaticText "ERROR"
 StaticText "INFO"
 StaticText "SUCCESS"
 StaticText "WARNING"
-generic
-  StaticText "XS"
-  StaticText "SM"
-  StaticText "MD"
-  StaticText "LG"
-  StaticText "XL"
-  StaticText "XXL"
-  StaticText "9"
-generic
-  StaticText "Ctrl"
-generic
-  StaticText "Ctrl"
-generic
-  StaticText "Ctrl"
-generic
-  StaticText "Ctrl"
-generic
-  StaticText "Ctrl"
-generic
-  StaticText "Ctrl"
+StaticText "XS"
+StaticText "SM"
+StaticText "MD"
+StaticText "LG"
+StaticText "XL"
+StaticText "XXL"
+StaticText "9"
+StaticText "Ctrl"
+StaticText "Ctrl"
+StaticText "Ctrl"
+StaticText "Ctrl"
+StaticText "Ctrl"
+StaticText "Ctrl"
 list
   listitem [level=1]
     StaticText "First"
@@ -63,8 +56,8 @@ list
         StaticText "Nested"
 list
   listitem [level=1]
-    ListMarker "1. "
+    ListMarker "1."
     StaticText "Install"
   listitem [level=1]
-    ListMarker "2. "
+    ListMarker "2."
     StaticText "Configure"

@@ -5,7 +5,6 @@ expression: tree
 ---
 LabelText
   StaticText "Fruit"
-generic
-  combobox "Fruit" = Banana [expanded=false] [haspopup=listbox]
-    StaticText "Banana"
+combobox "Fruit" = Banana [expanded=false] [haspopup=listbox]
+  StaticText "Banana"
 status [atomic] [live=polite]

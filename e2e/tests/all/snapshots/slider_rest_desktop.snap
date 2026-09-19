@@ -5,12 +5,8 @@ expression: tree
 ---
 LabelText
   StaticText "Volume"
-generic
-  generic
-    generic
-    slider "Volume" = 40 [valuemax=100] [valuemin=0]
+slider "Volume" = 40 [valuemax=100] [valuemin=0]
 paragraph
   StaticText "40%"
-generic
-  tooltip "40"
-    StaticText "40"
+tooltip "40"
+  StaticText "40"

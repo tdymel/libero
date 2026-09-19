@@ -9,10 +9,8 @@ paragraph
   StaticText "Nothing to focus here"
 button "After"
   StaticText "After"
-generic
-  dialog "Example popover"
-    paragraph
-      StaticText "Popover content"
-    button "Inside"
-      StaticText "Inside"
-      generic
+dialog "Example popover"
+  paragraph
+    StaticText "Popover content"
+  button "Inside"
+    StaticText "Inside"

@@ -3,15 +3,11 @@ source: e2e/src/suite.rs
 description: chip at desktop (ticked)
 expression: tree
 ---
-generic
-  StaticText "Tag"
-generic
-  checkbox "rust" [checked]
-generic
-  checkbox "css" [checked]
-  StaticText "css"
-generic
-  checkbox "html" [checked=false]
+StaticText "Tag"
+checkbox "rust" [checked]
+checkbox "css" [checked]
+StaticText "css"
+checkbox "html" [checked=false]
 generic [disabled]
   checkbox "Unavailable" [checked=false] [disabled]
 button "Action"
@@ -20,11 +16,7 @@ link "Link" [current=page]
   StaticText "Link"
 link "Dead link" [disabled]
   StaticText "Dead link"
-generic
-  checkbox "tonal" [checked=false]
-generic
-  checkbox "elevated" [checked=false]
-generic
-  checkbox "text" [checked=false]
-generic
-  checkbox "small" [checked=false]
+checkbox "tonal" [checked=false]
+checkbox "elevated" [checked=false]
+checkbox "text" [checked=false]
+checkbox "small" [checked=false]

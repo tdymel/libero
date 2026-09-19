@@ -7,12 +7,10 @@ paragraph
   StaticText "Above"
 separator
 separator "Or continue with"
-  generic
-    StaticText "Or continue with"
+  StaticText "Or continue with"
 paragraph
   StaticText "Left"
 separator "Or"
-  generic
-    StaticText "Or"
+  StaticText "Or"
 paragraph
   StaticText "Right"

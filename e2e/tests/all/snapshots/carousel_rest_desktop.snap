@@ -6,28 +6,21 @@ expression: tree
 region "Slide content"
   status [atomic] [live=polite]
     StaticText "Slide 1 of 3"
-  generic
-    group "Slide content"
-      group "1 of 3"
-        LabelText
-          StaticText "Note"
-        generic
-          textbox "Note" = carousel
-            generic
-              StaticText "carousel"
-        generic
-          generic
-            generic
-            slider "Volume" = 40 [valuemax=100] [valuemin=0]
-        slider "Raw range" = 50 [valuemax=100] [valuemin=0] [valuetext=50]
-        radiogroup "Raw choice"
-          radio " A" [checked]
-          radio " B" [checked=false]
-        button "Plain button"
-          StaticText "Plain button"
-    generic
-      button "Previous slide" [disabled]
-      button "Next slide"
+  group "Slide content"
+    group "1 of 3"
+      LabelText
+        StaticText "Note"
+      textbox "Note" = carousel
+        StaticText "carousel"
+      slider "Volume" = 40 [valuemax=100] [valuemin=0]
+      slider "Raw range" = 50 [valuemax=100] [valuemin=0] [valuetext=50]
+      radiogroup "Raw choice"
+        radio "A" [checked]
+        radio "B" [checked=false]
+      button "Plain button"
+        StaticText "Plain button"
+  button "Previous slide" [disabled]
+  button "Next slide"
   group "Choose slide"
     button "Go to slide 1" [current=true]
     button "Go to slide 2"

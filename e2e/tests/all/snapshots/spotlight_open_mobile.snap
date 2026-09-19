@@ -7,33 +7,21 @@ button "Open the palette"
   StaticText "Open the palette"
 paragraph
   StaticText "Or press Ctrl K."
-generic
-  generic
-    generic
-    generic
-      dialog "Command palette" [modal]
-        combobox "Search commands" [expanded] [haspopup=listbox]
-          generic
-        listbox "Command palette"
-          group "Pages"
-            StaticText "Pages"
-            option "Home" [selected=false]
-              generic
-                StaticText "Home"
-              generic
-                StaticText "The start page"
-            option "Changelog" [selected=false]
-              generic
-                StaticText "Changelog"
-          group "Commands"
-            StaticText "Commands"
-            option "New file" [selected=false]
-              generic
-                StaticText "New file"
-              generic
-                generic
-                  StaticText "Ctrl"
-                StaticText "+"
-                generic
-                  StaticText "N"
+dialog "Command palette" [modal]
+  combobox "Search commands" [expanded] [haspopup=listbox]
+  listbox "Command palette"
+    group "Pages"
+      StaticText "Pages"
+      option "Home" [selected=false]
+        StaticText "Home"
+        StaticText "The start page"
+      option "Changelog" [selected=false]
+        StaticText "Changelog"
+    group "Commands"
+      StaticText "Commands"
+      option "New file" [selected=false]
+        StaticText "New file"
+        StaticText "Ctrl"
+        StaticText "+"
+        StaticText "N"
 --> aria-controls [id="lsx-N-listbox"] (rendered above)

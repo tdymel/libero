@@ -6,59 +6,59 @@ expression: tree
 heading "Heading one" [level=1]
   StaticText "Heading one"
 paragraph
-  StaticText "Default "
+  StaticText "Default"
   mark
     StaticText "highlight"
-  StaticText " "
+  StaticText
   mark
     StaticText "primary"
-  StaticText " "
+  StaticText
   mark
     StaticText "secondary"
-  StaticText " "
+  StaticText
   mark
     StaticText "error"
-  StaticText " "
+  StaticText
   mark
     StaticText "info"
-  StaticText " "
+  StaticText
   mark
     StaticText "success"
-  StaticText " "
+  StaticText
   mark
     StaticText "warning"
-  StaticText " "
+  StaticText
   mark
     StaticText "navy"
-  StaticText " "
+  StaticText
   mark
     StaticText "yellow"
-  StaticText " "
+  StaticText
   mark
     StaticText "info.6"
-  StaticText " "
+  StaticText
   mark
     StaticText "error.8"
 paragraph
-  StaticText "Call "
+  StaticText "Call"
   code
     StaticText "let"
-    StaticText " s: &str = "
+    StaticText "s: &str ="
     StaticText ""x""
-    StaticText "; "
+    StaticText ";"
     StaticText "// note"
-  StaticText " inline."
+  StaticText "inline."
 paragraph
-  StaticText "A long name "
+  StaticText "A long name"
   code
     StaticText "a_very_long_identifier_without_any_break_opportunity_in_it"
-  StaticText " wraps."
+  StaticText "wraps."
 figure
   blockquote
     StaticText "Life is like riding a bicycle."
   Figcaption
     StaticText "Albert Einstein"
-    StaticText ", "
+    StaticText ","
     StaticText "Letter to his son Eduard"
 heading "Heading two" [level=2]
   StaticText "Heading two"

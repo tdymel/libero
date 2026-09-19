@@ -3,7 +3,5 @@ source: e2e/src/suite.rs
 description: menu at desktop (rest)
 expression: tree
 ---
-generic
-  button "Actions" [expanded=false] [haspopup=menu]
-    StaticText "Actions"
-    generic
+button "Actions" [expanded=false] [haspopup=menu]
+  StaticText "Actions"

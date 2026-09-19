@@ -5,34 +5,27 @@ expression: tree
 ---
 LabelText
   StaticText "Fruit"
-generic
-  StaticText "Delivered with your next box."
-generic
-  generic [haspopup=listbox]
-    StaticText "Banana"
-  button "Clear"
+StaticText "Delivered with your next box."
+generic [haspopup=listbox]
+  StaticText "Banana"
+button "Clear"
 status [atomic] [live=polite]
-generic
-  StaticText "You can swap it until Friday."
-generic
-  StaticText "Pick a fruit."
-generic
-  generic
-    combobox "Fruit" [expanded] [haspopup=listbox] [invalid] [required]
-      generic
-    listbox "Fruit"
-      group "Orchard"
-        StaticText "Orchard"
-        option "Apple" [selected=false]
-          StaticText "Apple"
-        option "Cherry" [disabled] [selected=false]
-          StaticText "Cherry"
-      group "Other"
-        StaticText "Other"
-        option "Banana" [selected]
-          StaticText "Banana"
-        option "Damson" [selected=false]
-          StaticText "Damson"
-        option "Elderberry" [selected=false]
-          StaticText "Elderberry"
+StaticText "You can swap it until Friday."
+StaticText "Pick a fruit."
+combobox "Fruit" [expanded] [haspopup=listbox] [invalid] [required]
+listbox "Fruit"
+  group "Orchard"
+    StaticText "Orchard"
+    option "Apple" [selected=false]
+      StaticText "Apple"
+    option "Cherry" [disabled] [selected=false]
+      StaticText "Cherry"
+  group "Other"
+    StaticText "Other"
+    option "Banana" [selected]
+      StaticText "Banana"
+    option "Damson" [selected=false]
+      StaticText "Damson"
+    option "Elderberry" [selected=false]
+      StaticText "Elderberry"
 --> aria-controls [id="lsx-N-listbox"] (rendered above)

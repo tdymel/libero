@@ -5,18 +5,15 @@ expression: tree
 ---
 LabelText
   StaticText "Receipt"
-generic
-  group "Receipt"
-    button "Receipt Browse files"
-      StaticText "Browse files"
+group "Receipt"
+  button "Receipt Browse files"
+    StaticText "Browse files"
 status [atomic] [live=polite]
 LabelText
   StaticText "Contract"
-generic
-  group "Contract"
-    button "Contract Pick a file Browse files" [invalid]
-      StaticText "Pick a file"
-      StaticText "Browse files"
+group "Contract"
+  button "Contract Pick a file Browse files" [invalid]
+    StaticText "Pick a file"
+    StaticText "Browse files"
 status [atomic] [live=polite]
-generic
-  StaticText "We cannot read that file."
+StaticText "We cannot read that file."

@@ -5,24 +5,17 @@ expression: tree
 ---
 LabelText
   StaticText "Place"
-generic
-  StaticText "Where the parcel goes."
-generic
-  generic [haspopup=listbox]
+StaticText "Where the parcel goes."
+generic [haspopup=listbox]
 status [atomic] [live=polite]
-generic
-  StaticText "Cities only."
-generic
-  StaticText "Pick a place."
-generic
-  generic
-    combobox "Place" [expanded] [haspopup=listbox] [invalid] [required]
-      generic
-    listbox "Place"
-      option "Europe" [selected]
-        StaticText "Europe"
-      option "Asia" [disabled] [selected=false]
-        StaticText "Asia"
-      option "Oceania" [selected=false]
-        StaticText "Oceania"
+StaticText "Cities only."
+StaticText "Pick a place."
+combobox "Place" [expanded] [haspopup=listbox] [invalid] [required]
+listbox "Place"
+  option "Europe" [selected]
+    StaticText "Europe"
+  option "Asia" [disabled] [selected=false]
+    StaticText "Asia"
+  option "Oceania" [selected=false]
+    StaticText "Oceania"
 --> aria-controls [id="lsx-N-listbox-0"] (rendered above)

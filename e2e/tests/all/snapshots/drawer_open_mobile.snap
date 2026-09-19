@@ -5,16 +5,10 @@ expression: tree
 ---
 button "Open navigation"
   StaticText "Open navigation"
-generic
-  generic
-    generic
-    generic
-      generic
-        dialog "Navigation" [modal]
-          heading "Navigation" [level=3]
-            StaticText "Navigation"
-          link "Home"
-            StaticText "Home"
-          button "Close"
-            StaticText "Close"
-            generic
+dialog "Navigation" [modal]
+  heading "Navigation" [level=3]
+    StaticText "Navigation"
+  link "Home"
+    StaticText "Home"
+  button "Close"
+    StaticText "Close"

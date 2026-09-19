@@ -5,26 +5,13 @@ expression: tree
 ---
 LabelText
   StaticText "Quality"
-generic
-  generic
-    generic
-    slider "Quality" = 1 [valuemax=2] [valuemin=0]
+slider "Quality" = 1 [valuemax=2] [valuemin=0]
 LabelText
   StaticText "Gain"
-generic
-  generic
-    generic
-    slider "Gain" = 50 [valuemax=100] [valuemin=0]
+slider "Gain" = 50 [valuemax=100] [valuemin=0]
 LabelText
   StaticText "Fixed"
-generic
-  generic
-    generic
-    slider "Fixed" = 30 [valuemax=100] [valuemin=0]
-generic
-  generic
-    generic
-    slider "Locked" = 70 [disabled] [valuemax=100] [valuemin=0]
-generic
-  tooltip "Medium"
-    StaticText "Medium"
+slider "Fixed" = 30 [valuemax=100] [valuemin=0]
+slider "Locked" = 70 [disabled] [valuemax=100] [valuemin=0]
+tooltip "Medium"
+  StaticText "Medium"

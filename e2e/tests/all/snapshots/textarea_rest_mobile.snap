@@ -5,13 +5,9 @@ expression: tree
 ---
 LabelText
   StaticText "Note"
-generic
-  textbox "Note"
-    generic
+textbox "Note"
 status [atomic] [live=polite]
 LabelText
   StaticText "Remark"
-generic
-  textbox "Remark"
-    generic
+textbox "Remark"
 status [atomic] [live=polite]

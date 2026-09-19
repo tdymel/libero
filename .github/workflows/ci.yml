@@ -143,6 +143,8 @@ jobs:
         uses: browser-actions/setup-chrome@v1
         with:
           chrome-version: stable
+      # "stable" floats; the version explains an ax snapshot diff that won't reproduce locally.
+      - run: '"${{ steps.chrome.outputs.chrome-path }}" --version'
       # Ubuntu 24.04 blocks the unprivileged user namespaces Chrome's sandbox needs.
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: cargo run -p e2e

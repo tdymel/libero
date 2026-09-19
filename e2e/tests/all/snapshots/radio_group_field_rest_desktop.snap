@@ -7,24 +7,15 @@ button "Before"
   StaticText "Before"
 LabelText
   StaticText "Plan"
-generic
-  StaticText "What your seats cost."
+StaticText "What your seats cost."
 radiogroup "Plan" [invalid] [required]
-  generic
-    radio "Free" [checked=false]
-    generic
-      StaticText "About Free"
-  generic
-    radio "Pro" [checked]
-    generic
-      StaticText "About Pro"
-  generic
-    radio "Team" [checked=false] [disabled]
-    generic
-      StaticText "About Team"
-generic
-  StaticText "You can change it later."
-generic
-  StaticText "Pick a plan to continue."
+  radio "Free" [checked=false]
+  StaticText "About Free"
+  radio "Pro" [checked]
+  StaticText "About Pro"
+  radio "Team" [checked=false] [disabled]
+  StaticText "About Team"
+StaticText "You can change it later."
+StaticText "Pick a plan to continue."
 button "After"
   StaticText "After"

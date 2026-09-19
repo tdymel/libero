@@ -9,32 +9,22 @@ button "Notify assertively"
   StaticText "Notify assertively"
 button "Notify for a while"
   StaticText "Notify for a while"
-generic
-  region "Notifications (F8)"
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
+region "Notifications (F8)"
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]

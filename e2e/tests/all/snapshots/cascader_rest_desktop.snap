@@ -5,7 +5,6 @@ expression: tree
 ---
 LabelText
   StaticText "Place"
-generic
-  combobox "Place" [expanded=false] [haspopup=listbox]
+combobox "Place" [expanded=false] [haspopup=listbox]
 status [atomic] [live=polite]
 paragraph

@@ -3,19 +3,14 @@ source: e2e/src/suite.rs
 description: stepper_vertical at desktop (rest)
 expression: tree
 ---
-generic
-  list
-    listitem [level=1]
-      button "Account" [current=step]
-        StaticText "Account"
-      region "Account"
-        generic
-          button "Continue to shipping"
-            StaticText "Continue to shipping"
-            generic
-    listitem [level=1]
-      generic
-        StaticText "Shipping"
-    listitem [level=1]
-      generic
-        StaticText "Review"
+list
+  listitem [level=1]
+    button "Account" [current=step]
+      StaticText "Account"
+    region "Account"
+      button "Continue to shipping"
+        StaticText "Continue to shipping"
+  listitem [level=1]
+    StaticText "Shipping"
+  listitem [level=1]
+    StaticText "Review"

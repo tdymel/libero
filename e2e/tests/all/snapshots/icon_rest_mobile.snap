@@ -3,9 +3,7 @@ source: e2e/src/suite.rs
 description: icon at mobile (rest)
 expression: tree
 ---
-generic
-  button "Swap colour"
-    StaticText "Swap colour"
-    generic
-  image "Verified"
-    image
+button "Swap colour"
+  StaticText "Swap colour"
+image "Verified"
+  image

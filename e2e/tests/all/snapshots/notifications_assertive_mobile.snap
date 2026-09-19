@@ -9,46 +9,33 @@ button "Notify assertively"
   StaticText "Notify assertively"
 button "Notify for a while"
   StaticText "Notify for a while"
-generic
-  region "Notifications (F8)"
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-        list
-          listitem [level=1]
-            group "Upload failed"
-              generic
-                StaticText "Upload failed"
-              generic
-                StaticText "The file is larger than 10 MB"
-              button "Close"
-      generic [live=polite]
-        list
-          listitem [level=1]
-            group
-              generic
-                StaticText "Saved to your library"
-              button "Close"
+region "Notifications (F8)"
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+    list
+      listitem [level=1]
+        group "Upload failed"
+          StaticText "Upload failed"
+          StaticText "The file is larger than 10 MB"
+          button "Close"
+  generic [live=polite]
+    list
+      listitem [level=1]
+        group
+          StaticText "Saved to your library"
+          button "Close"

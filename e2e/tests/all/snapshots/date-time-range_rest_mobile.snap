@@ -163,5 +163,4 @@ tabpanel "Dates"
       gridcell "April 11, 2026" [selected=false]
         button "April 11, 2026"
           StaticText "11"
-generic
 --> aria-controls [id="lsx-N-panel-0"] (rendered above)

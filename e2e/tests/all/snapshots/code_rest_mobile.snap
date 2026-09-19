@@ -6,83 +6,78 @@ expression: tree
 code
   StaticText "é"
   StaticText "if"
-  StaticText " x; "
+  StaticText "x;"
   StaticText "if"
-  StaticText " y"
-generic
-  StaticText "Rust"
-  button "Copy code"
-  status [atomic] [live=polite]
-  code
-    StaticText "let"
-    StaticText " a = "
-    StaticText "1"
-    StaticText ";"
-    StaticText "let"
-    StaticText " b = "
-    StaticText "2"
-    StaticText ";"
+  StaticText "y"
+StaticText "Rust"
+button "Copy code"
+status [atomic] [live=polite]
 code
-  StaticText "é "
+  StaticText "let"
+  StaticText "a ="
+  StaticText "1"
+  StaticText ";"
+  StaticText "let"
+  StaticText "b ="
+  StaticText "2"
+  StaticText ";"
+code
+  StaticText "é"
   StaticText "/* a /* b */ c */"
-  StaticText " x"
-generic
-  StaticText "Rust"
-  button "Copy code"
-  status [atomic] [live=polite]
+  StaticText "x"
+StaticText "Rust"
+button "Copy code"
+status [atomic] [live=polite]
+code
+  StaticText "fn"
+  StaticText
+  StaticText "greet"
+  StaticText "() {"
+  StaticText "Removed"
+  StaticText
+  StaticText "old"
+  StaticText "();"
+  StaticText "Added"
+  StaticText
+  StaticText "new"
+  StaticText "();"
+  StaticText "}"
+code
+  StaticText "keep"
+  StaticText "Removed"
+  StaticText "old"
+  StaticText "Added"
+  StaticText "new"
+StaticText "Rust"
+button "Copy code"
+status [atomic] [live=polite]
+region "Rust code"
   code
     StaticText "fn"
-    StaticText " "
-    StaticText "greet"
+    StaticText
+    StaticText "main"
     StaticText "() {"
-    StaticText "Removed"
-    StaticText "    "
-    StaticText "old"
-    StaticText "();"
-    StaticText "Added"
-    StaticText "    "
-    StaticText "new"
-    StaticText "();"
+    StaticText
+    StaticText "let"
+    StaticText "s ="
+    StaticText ""a string long enough to scroll the block sideways""
+    StaticText ";"
     StaticText "}"
-generic
-  code
-    StaticText "keep"
-    StaticText "Removed"
-    StaticText "old"
-    StaticText "Added"
-    StaticText "new"
-generic
-  StaticText "Rust"
-  button "Copy code"
-  status [atomic] [live=polite]
-  region "Rust code"
-    code
-      StaticText "fn"
-      StaticText " "
-      StaticText "main"
-      StaticText "() {"
-      StaticText "    "
-      StaticText "let"
-      StaticText " s = "
-      StaticText ""a string long enough to scroll the block sideways""
-      StaticText ";"
-      StaticText "}"
-generic
-  StaticText "Rust"
-  code
-    StaticText "let"
-    StaticText " a = "
-    StaticText "1"
-    StaticText ";"
-    StaticText "let"
-    StaticText " b = "
-    StaticText "2"
-    StaticText ";"
+StaticText "Rust"
+code
+  StaticText "let"
+  StaticText "a ="
+  StaticText "1"
+  StaticText ";"
+  StaticText "let"
+  StaticText "b ="
+  StaticText "2"
+  StaticText ";"
 paragraph
-  StaticText "Add "
+  StaticText "Add"
   code
     StaticText "#[derive(Options)]"
-  StaticText " above it."
+  StaticText "above it."
 paragraph
   code
     StaticText "an_identifier_far_too_long_for_a_three_hundred_twenty_pixel_column"

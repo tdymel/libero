@@ -31,4 +31,3 @@ navigation "Results pages"
       button "Go to next page"
     listitem [level=1]
       button "Go to last page"
-generic

@@ -7,6 +7,5 @@ button "Before"
   StaticText "Before"
 button "Ada Lovelace"
   StaticText "Ada Lovelace"
-  generic
 button "After"
   StaticText "After"

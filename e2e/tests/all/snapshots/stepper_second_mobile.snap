@@ -3,18 +3,15 @@ source: e2e/src/suite.rs
 description: stepper at mobile (second)
 expression: tree
 ---
-generic
-  list
-    listitem [level=1]
-      button "Account, Completed"
-        StaticText "Account, Completed"
-    listitem [level=1]
-      button "Shipping" [current=step]
-        StaticText "Shipping"
-    listitem [level=1]
-      generic
-        StaticText "Review"
-  region "Shipping"
-    button "Continue to review"
-      StaticText "Continue to review"
-      generic
+list
+  listitem [level=1]
+    button "Account, Completed"
+      StaticText "Account, Completed"
+  listitem [level=1]
+    button "Shipping" [current=step]
+      StaticText "Shipping"
+  listitem [level=1]
+    StaticText "Review"
+region "Shipping"
+  button "Continue to review"
+    StaticText "Continue to review"

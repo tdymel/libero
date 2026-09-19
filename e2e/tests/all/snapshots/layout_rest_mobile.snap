@@ -3,31 +3,23 @@ source: e2e/src/suite.rs
 description: layout at mobile (rest)
 expression: tree
 ---
-generic
-  navigation "Sections"
-    list
-      listitem [level=1]
-        ListMarker "• "
-        link "Container"
-          StaticText "Container"
-  button "Toggle" [pressed=false]
-    StaticText "Toggle"
-  region "Container"
-    StaticText "A container keeps its gutters and never runs past a narrow screen."
-  generic
-    StaticText "The first row item"
-    StaticText "The second row item"
-    StaticText "The third row item"
-  generic
-    StaticText "Centred"
-    generic
-      StaticText "New"
-  generic
-    link "Play the video"
-      StaticText "Play the video"
-  complementary "Filters"
-    generic
-      StaticText "Filters"
-  generic
-    generic
-      StaticText "Inner"
+navigation "Sections"
+  list
+    listitem [level=1]
+      ListMarker "•"
+      link "Container"
+        StaticText "Container"
+button "Toggle" [pressed=false]
+  StaticText "Toggle"
+region "Container"
+  StaticText "A container keeps its gutters and never runs past a narrow screen."
+StaticText "The first row item"
+StaticText "The second row item"
+StaticText "The third row item"
+StaticText "Centred"
+StaticText "New"
+link "Play the video"
+  StaticText "Play the video"
+complementary "Filters"
+  StaticText "Filters"
+StaticText "Inner"

@@ -5,12 +5,9 @@ expression: tree
 ---
 LabelText
   StaticText "Mobile"
-generic
-  generic
-    button "Country: Germany, DE +49" [expanded=false] [haspopup=listbox]
-      StaticText "DE"
-      StaticText "+49"
-    status [atomic] [live=polite]
-  textbox "Mobile"
-    generic
+button "Country: Germany, DE +49" [expanded=false] [haspopup=listbox]
+  StaticText "DE"
+  StaticText "+49"
+status [atomic] [live=polite]
+textbox "Mobile"
 paragraph

@@ -6,113 +6,69 @@ expression: tree
 button "Show the notice"
   StaticText "Show the notice"
 status "Card expiring" [atomic] [live=polite]
-  generic
-    StaticText "Card expiring"
-  generic
-    StaticText "Update it before the next invoice."
+  StaticText "Card expiring"
+  StaticText "Update it before the next invoice."
   button "Close"
 alert "Your subscription renews on the first of next month at the annual rate" [atomic] [live=assertive]
-  generic
-    StaticText "Your subscription renews on the first of next month at the annual rate"
-  generic
-    StaticText "Cancel before then to avoid the charge."
+  StaticText "Your subscription renews on the first of next month at the annual rate"
+  StaticText "Cancel before then to avoid the charge."
 status "info filled" [atomic] [live=polite]
-  generic
-    StaticText "info filled"
-  generic
-    StaticText "The message."
+  StaticText "info filled"
+  StaticText "The message."
 status "info tonal" [atomic] [live=polite]
-  generic
-    StaticText "info tonal"
-  generic
-    StaticText "The message."
+  StaticText "info tonal"
+  StaticText "The message."
 status "info outlined" [atomic] [live=polite]
-  generic
-    StaticText "info outlined"
-  generic
-    StaticText "The message."
+  StaticText "info outlined"
+  StaticText "The message."
 status "info elevated" [atomic] [live=polite]
-  generic
-    StaticText "info elevated"
-  generic
-    StaticText "The message."
+  StaticText "info elevated"
+  StaticText "The message."
 status "info standard" [atomic] [live=polite]
-  generic
-    StaticText "info standard"
-  generic
-    StaticText "The message."
+  StaticText "info standard"
+  StaticText "The message."
 status "success filled" [atomic] [live=polite]
-  generic
-    StaticText "success filled"
-  generic
-    StaticText "The message."
+  StaticText "success filled"
+  StaticText "The message."
 status "success tonal" [atomic] [live=polite]
-  generic
-    StaticText "success tonal"
-  generic
-    StaticText "The message."
+  StaticText "success tonal"
+  StaticText "The message."
 status "success outlined" [atomic] [live=polite]
-  generic
-    StaticText "success outlined"
-  generic
-    StaticText "The message."
+  StaticText "success outlined"
+  StaticText "The message."
 status "success elevated" [atomic] [live=polite]
-  generic
-    StaticText "success elevated"
-  generic
-    StaticText "The message."
+  StaticText "success elevated"
+  StaticText "The message."
 status "success standard" [atomic] [live=polite]
-  generic
-    StaticText "success standard"
-  generic
-    StaticText "The message."
+  StaticText "success standard"
+  StaticText "The message."
 alert "warning filled" [atomic] [live=assertive]
-  generic
-    StaticText "warning filled"
-  generic
-    StaticText "The message."
+  StaticText "warning filled"
+  StaticText "The message."
 alert "warning tonal" [atomic] [live=assertive]
-  generic
-    StaticText "warning tonal"
-  generic
-    StaticText "The message."
+  StaticText "warning tonal"
+  StaticText "The message."
 alert "warning outlined" [atomic] [live=assertive]
-  generic
-    StaticText "warning outlined"
-  generic
-    StaticText "The message."
+  StaticText "warning outlined"
+  StaticText "The message."
 alert "warning elevated" [atomic] [live=assertive]
-  generic
-    StaticText "warning elevated"
-  generic
-    StaticText "The message."
+  StaticText "warning elevated"
+  StaticText "The message."
 alert "warning standard" [atomic] [live=assertive]
-  generic
-    StaticText "warning standard"
-  generic
-    StaticText "The message."
+  StaticText "warning standard"
+  StaticText "The message."
 alert "error filled" [atomic] [live=assertive]
-  generic
-    StaticText "error filled"
-  generic
-    StaticText "The message."
+  StaticText "error filled"
+  StaticText "The message."
 alert "error tonal" [atomic] [live=assertive]
-  generic
-    StaticText "error tonal"
-  generic
-    StaticText "The message."
+  StaticText "error tonal"
+  StaticText "The message."
 alert "error outlined" [atomic] [live=assertive]
-  generic
-    StaticText "error outlined"
-  generic
-    StaticText "The message."
+  StaticText "error outlined"
+  StaticText "The message."
 alert "error elevated" [atomic] [live=assertive]
-  generic
-    StaticText "error elevated"
-  generic
-    StaticText "The message."
+  StaticText "error elevated"
+  StaticText "The message."
 alert "error standard" [atomic] [live=assertive]
-  generic
-    StaticText "error standard"
-  generic
-    StaticText "The message."
+  StaticText "error standard"
+  StaticText "The message."

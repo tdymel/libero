@@ -14,51 +14,36 @@ tabpanel "Book"
   form "Book a table"
     LabelText
       StaticText "Name"
-    generic
-      textbox "Name"
-        generic
+    textbox "Name"
     LabelText
       StaticText "Day"
-    generic
-      combobox "Day" [expanded=false] [haspopup=dialog]
-        generic
+    combobox "Day" [expanded=false] [haspopup=dialog]
     status [atomic] [live=polite]
     LabelText
       StaticText "Guests"
-    generic
-      combobox "Guests" = How many? [expanded=false] [haspopup=listbox]
-        StaticText "How many?"
+    combobox "Guests" = How many? [expanded=false] [haspopup=listbox]
+      StaticText "How many?"
     status [atomic] [live=polite]
     switch "On the terrace" [checked=false]
     button "Book"
       StaticText "Book"
-generic
-  region "Notifications (F8)"
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
-    generic
-      generic [live=assertive]
-      generic [live=polite]
+region "Notifications (F8)"
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
+  generic [live=assertive]
+  generic [live=polite]
 --> aria-controls [id="lsx-N-panel-0"] (rendered above)

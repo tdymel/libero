@@ -5,25 +5,21 @@ expression: tree
 ---
 LabelText
   StaticText "Fruit"
-generic
-  generic
-    StaticText "Cherry"
-    button "Remove Cherry"
-  combobox "Fruit" = Cherry [expanded] [haspopup=listbox]
-    StaticText "Cherry"
+StaticText "Cherry"
+button "Remove Cherry"
+combobox "Fruit" = Cherry [expanded] [haspopup=listbox]
+  StaticText "Cherry"
 status [atomic] [live=polite]
 status [atomic] [live=polite]
-generic
-  generic
-    listbox "Fruit" [multiselectable]
-      option "Apple" [selected=false]
-        StaticText "Apple"
-      option "Banana" [selected=false]
-        StaticText "Banana"
-      option "Cherry" [selected]
-        StaticText "Cherry"
-      option "Damson" [selected=false]
-        StaticText "Damson"
-      option "Elderberry" [selected=false]
-        StaticText "Elderberry"
+listbox "Fruit" [multiselectable]
+  option "Apple" [selected=false]
+    StaticText "Apple"
+  option "Banana" [selected=false]
+    StaticText "Banana"
+  option "Cherry" [selected]
+    StaticText "Cherry"
+  option "Damson" [selected=false]
+    StaticText "Damson"
+  option "Elderberry" [selected=false]
+    StaticText "Elderberry"
 --> aria-controls [id="lsx-N-listbox"] (rendered above)

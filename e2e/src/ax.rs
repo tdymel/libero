@@ -191,7 +191,9 @@ fn render(
         .as_ref()
         .and_then(|v| v.value.as_ref())
         .and_then(|v| v.as_str())
-        .unwrap_or("");
+        .unwrap_or("")
+        // Chrome versions disagree on a name's edge whitespace (a label's " A").
+        .trim();
 
     // `value` is a **field** of the node, not one of its `properties`.
     //
@@ -211,6 +213,23 @@ fn render(
         })
         .filter(|v| !v.is_empty());
 
+    let mut states = states(node);
+    if let Some(token) = node.backend_dom_node_id.and_then(|id| current.get(&id)) {
+        states.push(format!("current={token}"));
+        states.sort();
+    }
+
+    // A bare `generic` says nothing to AT, and Chrome versions disagree on
+    // which wrappers they expose (an `overflow: hidden` div), so it is flattened.
+    if role == "generic" && name.is_empty() && value.is_none() && states.is_empty() {
+        for child in node.child_ids.iter().flatten() {
+            if let Some(child) = by_id.get(child) {
+                render(child, by_id, current, depth, out);
+            }
+        }
+        return;
+    }
+
     out.push_str(&"  ".repeat(depth));
     out.push_str(role);
     if !name.is_empty() {
@@ -218,11 +237,6 @@ fn render(
     }
     if let Some(value) = value {
         out.push_str(&format!(" = {value}"));
-    }
-    let mut states = states(node);
-    if let Some(token) = node.backend_dom_node_id.and_then(|id| current.get(&id)) {
-        states.push(format!("current={token}"));
-        states.sort();
     }
     for state in states {
         out.push_str(&format!(" [{state}]"));

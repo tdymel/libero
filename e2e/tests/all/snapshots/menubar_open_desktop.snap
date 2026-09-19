@@ -4,22 +4,18 @@ description: menubar at desktop (open)
 expression: tree
 ---
 menubar "Editor"
-  generic
-    menuitem "File" [expanded] [haspopup=menu]
-      StaticText "File"
-  generic
-    menuitem "Edit" [expanded=false] [haspopup=menu]
-      StaticText "Edit"
-  generic
-    menuitem "View" [expanded=false] [haspopup=menu]
-      StaticText "View"
-generic
-  menu "File"
-    menuitem "New"
-      StaticText "New"
-    menuitem "Open"
-      StaticText "Open"
-    separator
-    menuitem "Save"
-      StaticText "Save"
+  menuitem "File" [expanded] [haspopup=menu]
+    StaticText "File"
+  menuitem "Edit" [expanded=false] [haspopup=menu]
+    StaticText "Edit"
+  menuitem "View" [expanded=false] [haspopup=menu]
+    StaticText "View"
+menu "File"
+  menuitem "New"
+    StaticText "New"
+  menuitem "Open"
+    StaticText "Open"
+  separator
+  menuitem "Save"
+    StaticText "Save"
 --> aria-controls [id="lsx-N-0-menu"] (rendered above)

@@ -6,19 +6,9 @@ expression: tree
 LabelText
   StaticText "Code"
 group "Code" [invalid]
-  generic
-    textbox "Character 1 of 4" [invalid] [required]
-      generic
-  generic
-    textbox "Character 2 of 4" [invalid] [required]
-      generic
-  generic
-    textbox "Character 3 of 4" [invalid] [required]
-      generic
-  generic
-    textbox "Character 4 of 4" [invalid] [required]
-      generic
-generic
-  StaticText "It expires in ten minutes."
-generic
-  StaticText "That code is wrong."
+  textbox "Character 1 of 4" [invalid] [required]
+  textbox "Character 2 of 4" [invalid] [required]
+  textbox "Character 3 of 4" [invalid] [required]
+  textbox "Character 4 of 4" [invalid] [required]
+StaticText "It expires in ten minutes."
+StaticText "That code is wrong."

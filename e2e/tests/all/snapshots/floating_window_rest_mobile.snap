@@ -5,5 +5,3 @@ expression: tree
 ---
 button "Inspector"
   StaticText "Inspector"
-generic
-generic

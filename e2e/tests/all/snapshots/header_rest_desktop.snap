@@ -7,7 +7,6 @@ banner
   navigation "Main"
     button "Home"
       StaticText "Home"
-      generic
 button "Item 0"
   StaticText "Item 0"
 paragraph

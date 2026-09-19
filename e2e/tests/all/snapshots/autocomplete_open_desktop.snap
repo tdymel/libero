@@ -5,23 +5,19 @@ expression: tree
 ---
 LabelText
   StaticText "City"
-generic
-  combobox "City" [expanded] [haspopup=listbox]
-    generic
+combobox "City" [expanded] [haspopup=listbox]
 status [atomic] [live=polite]
-generic
-  generic
-    listbox "City"
-      option "Amsterdam" [selected]
-        StaticText "Amsterdam"
-      option "Berlin" [selected=false]
-        StaticText "Berlin"
-      option "Copenhagen" [selected=false]
-        StaticText "Copenhagen"
-      option "Dublin" [selected=false]
-        StaticText "Dublin"
-      option "Edinburgh" [selected=false]
-        StaticText "Edinburgh"
-      option "Florence" [selected=false]
-        StaticText "Florence"
+listbox "City"
+  option "Amsterdam" [selected]
+    StaticText "Amsterdam"
+  option "Berlin" [selected=false]
+    StaticText "Berlin"
+  option "Copenhagen" [selected=false]
+    StaticText "Copenhagen"
+  option "Dublin" [selected=false]
+    StaticText "Dublin"
+  option "Edinburgh" [selected=false]
+    StaticText "Edinburgh"
+  option "Florence" [selected=false]
+    StaticText "Florence"
 --> aria-controls [id="lsx-N-listbox"] (rendered above)

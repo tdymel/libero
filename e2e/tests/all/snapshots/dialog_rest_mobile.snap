@@ -3,17 +3,15 @@ source: e2e/src/suite.rs
 description: dialog at mobile (rest)
 expression: tree
 ---
-generic
-  link "Skip to content"
-    StaticText "Skip to content"
+link "Skip to content"
+  StaticText "Skip to content"
 dialog "Filters"
   heading "Filters" [level=2]
     StaticText "Filters"
   button "Close"
   paragraph
     StaticText "Narrow the list."
-generic
-  StaticText "Bordered paper"
+StaticText "Bordered paper"
 link "Card link"
   StaticText "Card link"
 paragraph

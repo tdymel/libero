@@ -5,10 +5,7 @@ expression: tree
 ---
 button "Reload"
   StaticText "Reload"
-generic
-  generic
-    paragraph
-      StaticText "AL"
-  generic
-    paragraph
-      StaticText "Ada Lovelace"
+paragraph
+  StaticText "AL"
+paragraph
+  StaticText "Ada Lovelace"

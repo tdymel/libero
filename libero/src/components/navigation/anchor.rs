@@ -60,17 +60,18 @@ pub(crate) fn NewTabHint(#[props(default)] in_text: bool) -> Element {
     let class = use_css(Some(&NEW_TAB_HINT_SX), CssLayer::Framework);
     let new_tab = use_localization().anchor.new_tab;
 
-    // The no-break space keeps the icon on the last word's line. In text it goes
-    // before the span: Blitz drops it at the start of an inline element (891).
-    let (before, inside) = if in_text {
-        ("\u{a0}", "")
+    // The no-break space keeps the icon on the last word's line. Natively in text it
+    // goes before the span, as the name's space: Blitz drops it at an inline element's start (891).
+    let native = cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+    let (before, inside, gap) = if in_text && native {
+        ("\u{a0}", "", "")
     } else {
-        ("", "\u{a0}")
+        ("", "\u{a0}", " ")
     };
     rsx! {
         {before}
         span { class, "data-anchor-new-tab": "", "aria-hidden": "true", {inside}, ExternalLinkIcon {} }
-        VisuallyHidden { " {new_tab}" }
+        VisuallyHidden { "{gap}{new_tab}" }
     }
 }
 

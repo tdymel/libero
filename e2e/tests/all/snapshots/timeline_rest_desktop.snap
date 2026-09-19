@@ -5,85 +5,69 @@ expression: tree
 ---
 list
   listitem [level=1]
-    generic
-      StaticText "Ordered"
+    StaticText "Ordered"
     paragraph
       StaticText "On 12 May"
   listitem [current=step] [level=1]
-    generic
-      StaticText "Packed"
+    StaticText "Packed"
     paragraph
       StaticText "On 12 May"
   listitem [level=1]
-    generic
-      StaticText "Shipped"
+    StaticText "Shipped"
     paragraph
       StaticText "On 12 May"
   listitem [level=1]
-    generic
-      StaticText "Delivered"
+    StaticText "Delivered"
     paragraph
       StaticText "On 12 May"
 list
   listitem [level=1]
-    generic
-      StaticText "Ordered"
+    StaticText "Ordered"
     paragraph
       StaticText "On 12 May"
   listitem [level=1]
-    generic
-      StaticText "Packed"
+    StaticText "Packed"
     paragraph
       StaticText "On 12 May"
   listitem [current=step] [level=1]
-    generic
-      StaticText "Shipped"
+    StaticText "Shipped"
     paragraph
       StaticText "On 12 May"
   listitem [level=1]
-    generic
-      StaticText "Delivered"
+    StaticText "Delivered"
     paragraph
       StaticText "On 12 May"
 list
   listitem [level=1]
-    generic
-      StaticText "Ordered"
+    StaticText "Ordered"
     paragraph
       StaticText "On 12 May"
   listitem [current=step] [level=1]
-    generic
-      StaticText "Packed"
+    StaticText "Packed"
     paragraph
       StaticText "On 12 May"
   listitem [level=1]
-    generic
-      StaticText "Shipped"
+    StaticText "Shipped"
     paragraph
       StaticText "On 12 May"
   listitem [level=1]
-    generic
-      StaticText "Delivered"
+    StaticText "Delivered"
     paragraph
       StaticText "On 12 May"
 list
   listitem [level=1]
-    generic
-      StaticText "Ordered"
+    StaticText "Ordered"
     paragraph
       StaticText "On 12 May"
   listitem [level=1]
-    generic
-      StaticText "Packed"
+    StaticText "Packed"
     paragraph
       StaticText "On 12 May"
   listitem [level=1]
-    generic
-      StaticText "Shipped"
+    StaticText "Shipped"
     paragraph
       StaticText "On 12 May"
   listitem [level=1]
-    generic
-      StaticText "Delivered"
+    StaticText "Delivered"
     paragraph
       StaticText "On 12 May"

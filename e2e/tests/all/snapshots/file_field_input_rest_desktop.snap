@@ -5,9 +5,8 @@ expression: tree
 ---
 LabelText
   StaticText "Attachments"
-generic
-  group "Attachments"
-    button "Attachments Pick files Browse files"
-      StaticText "Pick files"
-      StaticText "Browse files"
+group "Attachments"
+  button "Attachments Pick files Browse files"
+    StaticText "Pick files"
+    StaticText "Browse files"
 status [atomic] [live=polite]

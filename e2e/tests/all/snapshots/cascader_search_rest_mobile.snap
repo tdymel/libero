@@ -5,12 +5,8 @@ expression: tree
 ---
 LabelText
   StaticText "Place"
-generic
-  StaticText "Where the parcel goes."
-generic
-  combobox "Place" [expanded=false] [haspopup=listbox] [invalid] [required]
+StaticText "Where the parcel goes."
+combobox "Place" [expanded=false] [haspopup=listbox] [invalid] [required]
 status [atomic] [live=polite]
-generic
-  StaticText "Cities only."
-generic
-  StaticText "Pick a place."
+StaticText "Cities only."
+StaticText "Pick a place."

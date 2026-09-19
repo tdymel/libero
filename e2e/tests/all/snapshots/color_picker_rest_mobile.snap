@@ -5,11 +5,8 @@ expression: tree
 ---
 button "Before"
   StaticText "Before"
-generic
-  slider "Saturation" = 87 [valuemax=100] [valuemin=0]
-generic
-  generic
-    slider "Hue" = 208 [valuemax=360] [valuemin=0]
+slider "Saturation" = 87 [valuemax=100] [valuemin=0]
+slider "Hue" = 208 [valuemax=360] [valuemin=0]
 paragraph
   StaticText "#1c7ed6"
 button "After"

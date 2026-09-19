@@ -3,22 +3,18 @@ source: e2e/src/suite.rs
 description: menu at mobile (open)
 expression: tree
 ---
-generic
-  button "Actions" [expanded] [haspopup=menu]
-    StaticText "Actions"
-    generic
-generic
-  menu "Actions"
-    group "Edit"
-      generic
-        StaticText "Edit"
-      menuitem "Cut"
-        StaticText "Cut"
-      menuitem "Paste" [disabled]
-        StaticText "Paste"
-    separator
-    menuitem "Save"
-      StaticText "Save"
-    menuitem "Share" [expanded=false] [haspopup=menu]
-      StaticText "Share"
+button "Actions" [expanded] [haspopup=menu]
+  StaticText "Actions"
+menu "Actions"
+  group "Edit"
+    StaticText "Edit"
+    menuitem "Cut"
+      StaticText "Cut"
+    menuitem "Paste" [disabled]
+      StaticText "Paste"
+  separator
+  menuitem "Save"
+    StaticText "Save"
+  menuitem "Share" [expanded=false] [haspopup=menu]
+    StaticText "Share"
 --> aria-controls [id="lsx-N-menu"] (rendered above)

@@ -87,9 +87,12 @@ fn FloatingWindowPage() -> Element {
             ..Default::default()
         },
         |window| {
+            // A set width: a text-sized window follows the machine's fonts into the snapshot.
             rsx! {
-                Text { "Drag the title bar, or focus it and use the arrow keys." }
-                Button { id: "window-done", variant: "text", onclick: move |_| window.close(), "Done" }
+                div { style: "width: 360px; max-width: 100%;",
+                    Text { "Drag the title bar, or focus it and use the arrow keys." }
+                    Button { id: "window-done", variant: "text", onclick: move |_| window.close(), "Done" }
+                }
             }
         },
     );

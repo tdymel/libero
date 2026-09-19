@@ -29,22 +29,16 @@ link "Disabled link" [disabled]
   StaticText "Disabled link"
 form
   textbox "Field"
-    generic
   button "Send" [busy=1] [disabled]
     StaticText "Send"
-    generic
 button "Save every change made to this rather long document title"
   StaticText "Save every change made to this rather long document title"
 button "Search"
-  generic
   StaticText "Search"
-  generic
 button "Blue"
-  generic
 button "Save"
   image
-  generic
-    StaticText "Save"
+  StaticText "Save"
 button "Bold" [pressed=false]
   StaticText "Bold"
 button "Bold" [pressed]

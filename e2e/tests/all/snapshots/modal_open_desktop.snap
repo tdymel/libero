@@ -5,19 +5,13 @@ expression: tree
 ---
 button "Close editor"
   StaticText "Close editor"
-generic
-  generic
-    generic
-    generic
-      dialog "Unsaved changes" [modal]
-        heading "Unsaved changes" [level=2]
-          StaticText "Unsaved changes"
-        button "Close"
-        paragraph
-          StaticText "notes.md has changes you have not saved."
-        button "Keep editing"
-          StaticText "Keep editing"
-          generic
-        button "Discard"
-          StaticText "Discard"
-          generic
+dialog "Unsaved changes" [modal]
+  heading "Unsaved changes" [level=2]
+    StaticText "Unsaved changes"
+  button "Close"
+  paragraph
+    StaticText "notes.md has changes you have not saved."
+  button "Keep editing"
+    StaticText "Keep editing"
+  button "Discard"
+    StaticText "Discard"

@@ -3,8 +3,7 @@ source: e2e/src/suite.rs
 description: time-picker-digital at mobile (rest)
 expression: tree
 ---
-generic
-  spinbutton "Hours" = 9 [valuemax=23] [valuemin=0]
-    StaticText "09"
-  spinbutton "Minutes" = 30 [valuemax=55] [valuemin=0]
-    StaticText "30"
+spinbutton "Hours" = 9 [valuemax=23] [valuemin=0]
+  StaticText "09"
+spinbutton "Minutes" = 30 [valuemax=55] [valuemin=0]
+  StaticText "30"

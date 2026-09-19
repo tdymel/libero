@@ -9,41 +9,33 @@ button "Open the last picture"
   StaticText "Open the last picture"
 button "Swap the gallery"
   StaticText "Swap the gallery"
-generic
-  generic
-    generic
-    generic
-      dialog "Gallery" [modal]
-        button "Zoom out" [disabled]
-        button "Zoom in"
-        button "Close"
-        region "Gallery"
-          status [atomic] [live=polite]
-            StaticText "Slide 1 of 6"
-          generic
-            group "Gallery"
-              group "1 of 6"
-                generic
-                  image "Picture 1"
-            generic
-              button "Previous slide" [disabled]
-              button "Next slide"
-        paragraph
-          StaticText "Picture 1 of the first gallery"
-        status [atomic] [live=polite]
-        region "Thumbnails"
-          generic
-            group "Thumbnails"
-              group "1 of 6"
-                button "Go to slide 1" [current=true]
-              group "2 of 6"
-                button "Go to slide 2"
-              group "3 of 6"
-                button "Go to slide 3"
-              group "4 of 6"
-                button "Go to slide 4"
-              group "5 of 6"
-                button "Go to slide 5"
-              group "6 of 6"
-                button "Go to slide 6"
+dialog "Gallery" [modal]
+  button "Zoom out" [disabled]
+  button "Zoom in"
+  button "Close"
+  region "Gallery"
+    status [atomic] [live=polite]
+      StaticText "Slide 1 of 6"
+    group "Gallery"
+      group "1 of 6"
+        image "Picture 1"
+    button "Previous slide" [disabled]
+    button "Next slide"
+  paragraph
+    StaticText "Picture 1 of the first gallery"
+  status [atomic] [live=polite]
+  region "Thumbnails"
+    group "Thumbnails"
+      group "1 of 6"
+        button "Go to slide 1" [current=true]
+      group "2 of 6"
+        button "Go to slide 2"
+      group "3 of 6"
+        button "Go to slide 3"
+      group "4 of 6"
+        button "Go to slide 4"
+      group "5 of 6"
+        button "Go to slide 5"
+      group "6 of 6"
+        button "Go to slide 6"
 --> aria-controls [id="lsx-N"] (rendered above)

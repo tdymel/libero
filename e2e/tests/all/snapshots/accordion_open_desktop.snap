@@ -3,22 +3,20 @@ source: e2e/src/suite.rs
 description: accordion at desktop (open)
 expression: tree
 ---
-generic
-  heading "Shipping" [level=3]
-    button "Shipping" [expanded]
-      StaticText "Shipping"
-  region "Shipping"
-    generic
-      paragraph
-        StaticText "Shipping is calculated at checkout."
-      button "Continue"
-        StaticText "Continue"
-  heading "Payment" [level=3]
-    button "Payment" [disabled] [expanded=false]
-      StaticText "Payment"
-  heading "Review" [level=3]
-    button "Review" [expanded=false]
-      StaticText "Review"
+heading "Shipping" [level=3]
+  button "Shipping" [expanded]
+    StaticText "Shipping"
+region "Shipping"
+  paragraph
+    StaticText "Shipping is calculated at checkout."
+  button "Continue"
+    StaticText "Continue"
+heading "Payment" [level=3]
+  button "Payment" [disabled] [expanded=false]
+    StaticText "Payment"
+heading "Review" [level=3]
+  button "Review" [expanded=false]
+    StaticText "Review"
 --> aria-controls [id="checkout-region-0"] (rendered above)
 --> aria-controls [id="checkout-region-1"] (not in the accessibility tree)
 --> aria-controls [id="checkout-region-2"] (not in the accessibility tree)

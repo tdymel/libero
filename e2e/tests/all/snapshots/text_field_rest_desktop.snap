@@ -5,60 +5,39 @@ expression: tree
 ---
 LabelText
   StaticText "Username"
-generic
-  StaticText "How other people see you."
-generic
-  textbox "Username" = ada [invalid] [required]
-    generic
-      StaticText "ada"
-generic
-  StaticText "Letters and digits."
-generic
-  StaticText "That name is taken."
-generic
-  StaticText "Shown on your profile."
+StaticText "How other people see you."
+textbox "Username" = ada [invalid] [required]
+  StaticText "ada"
+StaticText "Letters and digits."
+StaticText "That name is taken."
+StaticText "Shown on your profile."
 LabelText
   StaticText "Handle"
-generic
-  StaticText "@"
-  textbox "Handle" = ada
-    generic
-      StaticText "ada"
-  StaticText "3/20"
+StaticText "@"
+textbox "Handle" = ada
+  StaticText "ada"
+StaticText "3/20"
 LabelText
   StaticText "Email"
-generic
-  textbox "Email" [invalid]
-    generic
-generic
-  StaticText "Email needed"
+textbox "Email" [invalid]
+StaticText "Email needed"
 LabelText
   StaticText "Password"
-generic
-  textbox "Password"
-    generic
-  button "Show password" [pressed=false]
-generic
-  StaticText "At least 8 characters."
+textbox "Password"
+button "Show password" [pressed=false]
+StaticText "At least 8 characters."
 LabelText
   StaticText "PIN"
-generic
-  textbox "PIN"
-    generic
-  button "Show password" [pressed=false]
+textbox "PIN"
+button "Show password" [pressed=false]
 group "Locked"
   Legend
     StaticText "Locked"
   LabelText
     StaticText "Old password"
-  generic
-    textbox "Old password" [disabled]
-      generic
-    button "Show password" [disabled] [pressed=false]
+  textbox "Old password" [disabled]
+  button "Show password" [disabled] [pressed=false]
 LabelText
   StaticText "Bio"
-generic
-  textbox "Bio" [required]
-    generic
-generic
-  StaticText "Markdown works."
+textbox "Bio" [required]
+StaticText "Markdown works."
