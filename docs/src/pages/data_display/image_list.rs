@@ -111,7 +111,7 @@ fn caption(index: usize) -> Element {
     rsx! {
         Box { sx: sx().flex("1 1 auto").min_width("0"),
             Box { sx: line.clone().font_weight("500"), "{TITLES[index]}" }
-            Box { sx: line.font_size("0.75rem").opacity("0.72"), "{AUTHORS[index]}" }
+            Box { sx: line.font_size("0.75rem"), "{AUTHORS[index]}" }
         }
         ActionIcon {
             variant: "standard",

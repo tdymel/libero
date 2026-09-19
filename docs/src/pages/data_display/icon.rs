@@ -62,7 +62,6 @@ pub fn IconPage() -> Element {
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm")
                         .hidden_when(|values| values.str("variant") == "standard"),
-                    Control::toggle("component", ["span", "div"]).labels(["Span", "Div"]),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Icon {
@@ -73,7 +72,6 @@ pub fn IconPage() -> Element {
                         },
                         size: values.str("size"),
                         radius: values.str("radius"),
-                        component: values.str("component"),
                         CheckmarkIcon {}
                     }
                 },

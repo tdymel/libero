@@ -32,7 +32,7 @@ fn Demo(photos: Vec<Photo>) -> Element {
                     .bar(ImageBar::new(rsx! {
                         Box { sx: sx().flex("1 1 auto").min_width("0"),
                             Box { sx: sx().font_weight("500"), "{photo.title}" }
-                            Box { sx: sx().font_size("0.75rem").opacity("0.72"), "{photo.author}" }
+                            Box { sx: sx().font_size("0.75rem"), "{photo.author}" }
                         }
                     }))
                 })
