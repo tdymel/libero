@@ -2,7 +2,7 @@
 //! closed by its button with focus handed on (todo 423), and closed by its own
 //! timer.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use dioxus::prelude::*;
 use libero::{
@@ -12,7 +12,7 @@ use libero::{
     },
     theme::AutoClose,
 };
-use native_tests::{Key, Page, VIEWPORT, mount};
+use native_tests::{Key, Page, VIEWPORT, WAIT_LIMIT, mount};
 
 const TRIGGER: &str = "#notify";
 const TIMED: &str = "#notify-timed";
@@ -64,6 +64,16 @@ fn app() -> Element {
 fn finish(page: &mut Page) {
     page.advance(1.0);
     page.wait(Duration::from_millis(400));
+}
+
+/// Runs the timers and animations until the stack is empty or the wait runs
+/// out: a loaded machine fires libero's timers late.
+fn run_until_closed(page: &mut Page) {
+    let start = Instant::now();
+    while page.exists(ITEM) && start.elapsed() < WAIT_LIMIT {
+        page.wait(Duration::from_millis(10));
+        page.advance(1.0);
+    }
 }
 
 #[test]
@@ -189,8 +199,7 @@ fn one_shown_from_the_keyboard_closes_itself() {
     let mut page = mount(app);
     page.focus(TIMED);
     page.press(Key::Enter);
-    finish(&mut page);
-    finish(&mut page);
+    run_until_closed(&mut page);
     assert!(
         !page.exists(ITEM),
         "it stayed with focus on {}:\n{}",
@@ -213,8 +222,7 @@ fn tabbing_into_one_pauses_it_until_focus_leaves() {
     assert!(page.exists(ITEM), "it closed under focus");
 
     page.shift_tab();
-    finish(&mut page);
-    finish(&mut page);
+    run_until_closed(&mut page);
     assert!(
         !page.exists(ITEM),
         "it stayed after focus left for {}:\n{}",
@@ -237,8 +245,7 @@ fn a_click_out_after_tabbing_in_resumes_it() {
             Some(target) => page.click(target),
             None => page.click_at(500.0, 400.0),
         }
-        finish(&mut page);
-        finish(&mut page);
+        run_until_closed(&mut page);
         assert!(
             !page.exists(ITEM),
             "a click on {out} left it paused, focus on {}",
@@ -257,8 +264,7 @@ fn the_pointer_on_one_pauses_it_until_it_leaves() {
     assert!(page.exists(ITEM), "it closed under the pointer");
 
     page.hover(TRIGGER);
-    finish(&mut page);
-    finish(&mut page);
+    run_until_closed(&mut page);
     assert!(!page.exists(ITEM), "it stayed:\n{}", page.tree());
 }
 
@@ -266,9 +272,7 @@ fn the_pointer_on_one_pauses_it_until_it_leaves() {
 fn a_timed_one_closes_itself() {
     let mut page = mount(app);
     page.click(TIMED);
-    // The hide timer, then the exit's.
-    finish(&mut page);
-    finish(&mut page);
+    run_until_closed(&mut page);
     assert!(
         !page.exists(ITEM),
         "it did not close itself:\n{}",

@@ -15,7 +15,7 @@ use crate::{
     },
     css::Stylesheet,
     hooks::{use_css, use_id},
-    platform::{document, draws_backdrop_filter, when_laid_out},
+    platform::{STICKY_ATTR, document, draws_backdrop_filter, sticks, when_laid_out},
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -269,6 +269,7 @@ pub fn Header(props: HeaderProps) -> Element {
         .states(&states)
         .variables(&variables)
         .prepare()
+        .attr(STICKY_ATTR, position == HeaderPosition::Sticky && !sticks())
         .render(HtmlTag::Header, props.attributes, props.children)
 }
 

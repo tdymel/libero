@@ -13,7 +13,7 @@ use crate::{
             ComboboxOption, ComboboxState, PreparedField, clear_button,
             combobox::{COMBOBOX_DROPDOWN_SX, nothing_found_row},
             field_control_sx, field_props, use_combobox, use_field, use_field_frame,
-            use_refocus_on_close,
+            use_refocus_on_close, with_drawn_placeholder,
         },
         layout::{Box, BoxStyle, ScrollArea, use_box},
     },
@@ -217,6 +217,10 @@ static CASCADER_SEARCH_SX: StaticSx = StaticSx::new(|| {
         .border_color("muted.6")
         .selector("::placeholder", sx().color("text-dimmed"))
 });
+
+/// [`CASCADER_SEARCH_SX`]'s padding and bottom border, where a drawn
+/// placeholder sits.
+const SEARCH_INSET: &str = "4px 8px 5px";
 
 field_props! {
     pub(crate) struct CascaderCoreProps {
@@ -454,19 +458,24 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
 
     let descendant = active_descendant(&id, layout, &cursor_now, path_row);
     let header = searchable.then(|| {
-        search_header(
-            search_box,
-            CascaderSearch {
-                element: search,
-                query,
-                cursor,
-                state,
-            },
-            controlled_id.clone(),
-            descendant.clone(),
-            props.search_placeholder.clone().unwrap_or_default(),
-            &field,
-            required,
+        let search_placeholder = props.search_placeholder.clone().unwrap_or_default();
+        with_drawn_placeholder(
+            Some(&search_placeholder),
+            SEARCH_INSET,
+            search_header(
+                search_box,
+                CascaderSearch {
+                    element: search,
+                    query,
+                    cursor,
+                    state,
+                },
+                controlled_id.clone(),
+                descendant.clone(),
+                search_placeholder.clone(),
+                &field,
+                required,
+            ),
         )
     });
 

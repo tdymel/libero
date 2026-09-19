@@ -8,11 +8,11 @@ use crate::{
         layout::{BoxStyle, use_box},
     },
     platform::{
-        PLACEHOLDER_ATTR, PLACEHOLDER_SHOWN_ATTR, draws_placeholders, padding_press,
-        placeholder_drawn,
+        PLACEHOLDER_ATTR, PLACEHOLDER_CELL_ATTR, PLACEHOLDER_SHOWN_ATTR, draws_placeholders,
+        padding_press, placeholder_drawn,
     },
     sx::{StaticSx, Sx, sx},
-    theme::{FIELD_FRAME_GAP, FieldDefaults, PaperDefaults, Size, SizeCss},
+    theme::{FieldDefaults, PaperDefaults, Size, SizeCss},
 };
 
 /// The bordered box a control sits in. Shared by every framed field, so the
@@ -68,29 +68,54 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
                 // it is dimmed text, not a grey (todo 240).
                 .color("text-dimmed"),
         )
-        // Where the renderer draws no placeholder: no width and a margin
-        // taking back the gap, so the control keeps its place, and the text
-        // overflows over the control's own.
+        // A placeholder cell takes the control's place.
+        .selector(
+            format!("& > [{PLACEHOLDER_CELL_ATTR}]"),
+            sx().flex("1 1 auto").min_width("0"),
+        )
+        // The control is no sibling of the ring then, and Blitz, the only
+        // renderer with a cell, rings a focused text control always.
+        .selector(
+            format!("& > [{PLACEHOLDER_CELL_ATTR}]:focus-within ~ [data-ring]"),
+            focus_ring_sx(),
+        )
+        // Blitz places an overlay by its parent box, not the frame.
+        .selector(
+            format!("& > [{PLACEHOLDER_CELL_ATTR}] [data-ring]"),
+            sx().display("none"),
+        )
+});
+
+/// Where the renderer draws no placeholder, a control and its drawn placeholder
+/// share one grid cell: the text is clipped at the control's edges and wraps
+/// with a `Textarea`.
+static PLACEHOLDER_CELL_SX: StaticSx = StaticSx::new(|| {
+    sx().display("grid")
+        .grid_template_columns("minmax(0, 1fr)")
+        .align_items("center")
+        .selector("& > *", sx().grid_area("1 / 1").min_width("0"))
         .selector(
             format!("& > [{PLACEHOLDER_ATTR}]"),
-            sx().flex("0 0 0")
-                .width("0")
-                .margin_inline_end(format!("calc(-1 * {})", FIELD_FRAME_GAP.value()))
-                .align_self("center")
+            sx().overflow("hidden")
                 .white_space("nowrap")
                 .line_height("1.5")
                 .pointer_events("none")
                 .color("text-dimmed")
-                .visibility("hidden"),
+                .visibility("hidden")
+                // Blitz lays inline text out from the left whatever the
+                // direction; the web's placeholder starts at the right.
+                .rtl(sx().text_align("right")),
         )
         .selector(
             format!("& > [{PLACEHOLDER_SHOWN_ATTR}]"),
             sx().visibility("visible"),
         )
-        // A `Textarea`'s first line is at its top, not the frame's middle.
+        // A `Textarea`'s first line is at its top, and its placeholder wraps.
         .selector(
             format!("& > [{PLACEHOLDER_ATTR}][data-multiline]"),
-            sx().align_self("flex-start"),
+            sx().align_self("start")
+                .white_space("pre-wrap")
+                .overflow_wrap("break-word"),
         )
 });
 
@@ -157,16 +182,17 @@ pub(crate) struct FieldFrameBuilder<'a> {
     states: Option<&'a Input<States>>,
     ondrop: Option<Rc<dyn Fn(DragEvent)>>,
     ids: [Option<String>; 2],
-    placeholder: Option<&'a str>,
+    placeholder: Option<Option<&'a str>>,
     multiline: bool,
 }
 
 impl<'a> FieldFrameBuilder<'a> {
     /// The control's `placeholder`, drawn by the frame where the renderer
-    /// draws none (Blitz). Pass what the control's attribute holds.
+    /// draws none (Blitz). Pass what the control's attribute holds, `None`
+    /// too: the control's place in the tree then stays put when one comes.
     #[inline]
     pub fn placeholder(mut self, placeholder: Option<&'a str>) -> Self {
-        self.placeholder = placeholder;
+        self.placeholder = Some(placeholder);
         self
     }
 
@@ -278,8 +304,9 @@ impl<'a> FieldFrameBuilder<'a> {
                 .map(|leading| slot("leading", leading_id, leading)),
             placeholder: self
                 .placeholder
-                .filter(|text| !text.is_empty() && !draws_placeholders())
-                .map(|text| placeholder(text, self.multiline)),
+                .filter(|_| !draws_placeholders())
+                .map(|text| text.map(str::to_string)),
+            multiline: self.multiline,
             trailing: self
                 .trailing
                 .map(|trailing| slot("trailing", trailing_id, trailing)),
@@ -293,17 +320,27 @@ impl<'a> FieldFrameBuilder<'a> {
 pub(crate) struct PreparedFrame {
     frame: BoxStyle,
     leading: Option<Element>,
-    placeholder: Option<Element>,
+    /// `Some` where the frame draws the placeholder: its text, if any.
+    placeholder: Option<Option<String>>,
+    multiline: bool,
     trailing: Option<Element>,
 }
 
 impl PreparedFrame {
     pub fn render(self, control: Element) -> Element {
-        let mut children = Vec::with_capacity(5);
+        let mut children = Vec::with_capacity(4);
         children.extend(self.leading);
-        // Right before the control: the renderer finds it as the next element.
-        children.extend(self.placeholder);
-        children.push(control);
+        children.push(match self.placeholder {
+            Some(text) => rsx! {
+                PlaceholderCell {
+                    text,
+                    multiline: self.multiline,
+                    inset: "0",
+                    control,
+                }
+            },
+            None => control,
+        });
         children.extend(self.trailing);
         children.push(ring_overlay());
 
@@ -347,19 +384,57 @@ pub(crate) fn LiveSlot(content: Signal<Option<Element>>) -> Element {
     content.cloned().unwrap_or_else(|| rsx! {})
 }
 
-/// Hidden until the renderer marks its control empty; the control's own
-/// `placeholder` still names it to assistive tech.
-fn placeholder(text: &str, multiline: bool) -> Element {
+/// `control` with its `placeholder` drawn where the renderer draws none
+/// (Blitz); `inset` is the control's padding and border, as a `margin`.
+pub(crate) fn with_drawn_placeholder(
+    text: Option<&str>,
+    inset: &'static str,
+    control: Element,
+) -> Element {
+    if draws_placeholders() {
+        return control;
+    }
     rsx! {
-        span {
-            // `PLACEHOLDER_ATTR`; `rsx!` takes only a literal name.
-            "data-lsx-placeholder": true,
-            "data-multiline": multiline.then_some(true),
-            "aria-hidden": "true",
-            onmounted: |_| placeholder_drawn(),
-            "{text}"
+        PlaceholderCell {
+            text: text.map(str::to_string),
+            multiline: false,
+            inset,
+            control,
         }
     }
+}
+
+/// The control and, while it has one, its placeholder: hidden until the
+/// renderer marks the control empty. The control's own `placeholder` still
+/// names it to assistive tech.
+#[component]
+fn PlaceholderCell(
+    text: Option<String>,
+    multiline: bool,
+    inset: &'static str,
+    control: Element,
+) -> Element {
+    let cell = use_box().framework_sx(&PLACEHOLDER_CELL_SX).prepare();
+    let text = text.filter(|text| !text.is_empty());
+    cell.attr(PLACEHOLDER_CELL_ATTR, true).render(
+        HtmlTag::Div,
+        Vec::new(),
+        rsx! {
+            if let Some(text) = text {
+                // Right before the control: the renderer finds it as the next element.
+                span {
+                    // `PLACEHOLDER_ATTR`; `rsx!` takes only a literal name.
+                    "data-lsx-placeholder": true,
+                    "data-multiline": multiline.then_some(true),
+                    "aria-hidden": "true",
+                    margin: inset,
+                    onmounted: |_| placeholder_drawn(),
+                    "{text}"
+                }
+            }
+            {control}
+        },
+    )
 }
 
 /// No ring overlay in a slot: a button there draws its own ring, around

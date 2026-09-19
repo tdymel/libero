@@ -2,8 +2,6 @@
 //! re-layout. Focus return and header clicks are e2e's shared scenarios
 //! (`stepper::`).
 
-use std::time::Duration;
-
 use dioxus::prelude::*;
 use libero::components::{Button, Flex, Options, Stepper, Text};
 use native_tests::mount;
@@ -88,6 +86,6 @@ fn switchable() -> Element {
 fn switching_labels_below_keeps_the_content_text_on_one_line() {
     let mut page = mount(switchable);
     page.click("#below");
-    page.wait(Duration::from_millis(50));
+    page.wait_for(|page| page.wrapped_text("#who").is_empty());
     assert_eq!(page.wrapped_text("#who"), Vec::<String>::new());
 }

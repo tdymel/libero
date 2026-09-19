@@ -1,6 +1,6 @@
 //! `KeyboardApi` natively: a press heard as it bubbles out of `LiberoProvider`.
 
-use std::{cell::Cell, rc::Rc, time::Duration};
+use std::{cell::Cell, rc::Rc};
 
 use dioxus::{core::current_scope_id, prelude::*};
 use libero::{
@@ -204,7 +204,7 @@ fn escape_closes_a_card_in_a_modal_before_the_modal() {
     assert!(page.exists("#modal-body"), "the modal did not open");
     page.focus("#inside");
     page.hover("#trigger");
-    page.wait(Duration::from_millis(100));
+    page.wait_for(|page| page.exists(CARD));
     assert!(
         page.exists(CARD),
         "hovering did not open it:\n{}",
@@ -259,7 +259,7 @@ fn modal_over_card() -> Element {
 fn escape_closes_a_modal_over_a_card_before_the_card() {
     let mut page = mount(modal_over_card);
     page.hover("#trigger");
-    page.wait(Duration::from_millis(100));
+    page.wait_for(|page| page.exists(CARD));
     assert!(
         page.exists(CARD),
         "hovering did not open it:\n{}",

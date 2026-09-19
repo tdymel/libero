@@ -19,6 +19,7 @@ mod focus_return;
 mod focus_ring;
 mod focus_start;
 mod form;
+mod header;
 mod hit;
 mod home;
 mod image_list;

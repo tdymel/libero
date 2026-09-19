@@ -46,10 +46,20 @@ fn rows(page: &Page) -> (usize, usize) {
     (first, rows.iter().copied().max().unwrap())
 }
 
+/// Whether rows are drawn and the last one satisfies `fits`: the pane's
+/// measure is a timer, late on a loaded machine.
+fn last_row(page: &Page, fits: impl Fn(usize) -> bool) -> bool {
+    page.query_all(&format!("{PANE} [data-row]"))
+        .into_iter()
+        .filter_map(|id| page.attr_of(id, "data-row")?.parse().ok())
+        .max()
+        .is_some_and(fits)
+}
+
 #[test]
 fn the_window_fits_the_short_pane() {
     let mut page = mount(app);
-    page.wait(Duration::from_millis(50));
+    page.wait_for(|page| last_row(page, |last| last < 29));
     let (_, last) = rows(&page);
     assert!(last < 29, "rows to {last} for a 120px pane");
 }
@@ -346,9 +356,9 @@ fn under_rtl_a_wheel_reaches_the_overflow_on_the_left() {
 #[test]
 fn a_taller_pane_renders_rows_to_its_new_bottom() {
     let mut page = mount(app);
-    page.wait(Duration::from_millis(50));
+    page.wait_for(|page| last_row(page, |last| last < 29));
     page.click("#grow");
-    page.wait(Duration::from_millis(50));
+    page.wait_for(|page| last_row(page, |last| last >= 29));
     let (_, last) = rows(&page);
     assert!(last >= 29, "rows to {last} for a 600px pane");
 }

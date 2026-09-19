@@ -20,7 +20,7 @@ use std::{
         atomic::{AtomicUsize, Ordering},
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use anyrender::{
@@ -57,6 +57,9 @@ pub const VIEWPORT: (u32, u32) = (1024, 768);
 
 // Bounds `settle`, so a render loop fails the test instead of hanging it.
 const MAX_POLLS: usize = 200;
+
+/// How long [`Page::wait_for`] waits for its condition.
+pub const WAIT_LIMIT: Duration = Duration::from_secs(5);
 
 // HTML bool attributes, set by presence whatever their value. Not `checked`:
 // Blitz reads `checked="false"` as unticked, and `reset` writes it.
@@ -264,6 +267,20 @@ impl Page {
     pub fn wait(&mut self, duration: Duration) {
         thread::sleep(duration);
         self.settle();
+    }
+
+    /// Waits in short real-time steps, each settled, until `done` holds: a
+    /// timer's work lands late on a loaded machine. Whether it held within
+    /// [`WAIT_LIMIT`].
+    pub fn wait_for(&mut self, mut done: impl FnMut(&Page) -> bool) -> bool {
+        let until = Instant::now() + WAIT_LIMIT;
+        while !done(self) {
+            if Instant::now() >= until {
+                return false;
+            }
+            self.wait(Duration::from_millis(5));
+        }
+        true
     }
 
     /// Sends one raw event through Blitz's pipeline and settles.

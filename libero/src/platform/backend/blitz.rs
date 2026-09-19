@@ -18,6 +18,7 @@ mod placeholder;
 mod redraw;
 mod resize;
 mod stale_text;
+mod sticky;
 mod wheel;
 
 pub(super) use activate::focus_selectors;
@@ -1256,6 +1257,7 @@ pub(super) fn Outlet() -> Element {
                             redraw::watch(doc, &mut anchor.doc_mut());
                             activate::sync_marks(&mut anchor.doc_mut());
                             placeholder::sync(&mut anchor.doc_mut());
+                            sticky::sync(&mut anchor.doc_mut());
                             heal_dirty_bits(&anchor.doc_mut());
                             heal_while_animating(doc);
                             // Last: after every focus move this flush made.
@@ -1635,6 +1637,7 @@ fn notify_scroll() {
     let Some(doc) = doc() else {
         return;
     };
+    sticky::sync_soon();
     doc.scroll_callbacks.each(|callback| callback());
 }
 

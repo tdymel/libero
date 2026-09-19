@@ -10,6 +10,7 @@ use crate::{
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, PreparedField, clear_button, field_control_sx,
             field_props, use_chip_announcer, use_field, use_field_frame, use_refocus_on_close,
+            with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -139,6 +140,9 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
         .border_color("muted.6")
         .selector("::placeholder", sx().color("text-dimmed"))
 });
+
+/// [`SEARCH_SX`]'s padding and bottom border, where a drawn placeholder sits.
+const SEARCH_INSET: &str = "4px 8px 5px";
 
 /// What the skin needs to draw the selection: which chip the keyboard is on,
 /// and the prefix its ids are built from, so `aria-activedescendant` on the
@@ -453,17 +457,19 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             searching && matches!(attribute.name, "aria-label" | "aria-labelledby")
         });
     let header = searchable.then(|| {
-        select_search_box(
-            search_box.attr(
-                "placeholder",
-                props.search_placeholder.clone().unwrap_or_default(),
+        let search_placeholder = props.search_placeholder.clone().unwrap_or_default();
+        with_drawn_placeholder(
+            Some(&search_placeholder),
+            SEARCH_INSET,
+            select_search_box(
+                search_box.attr("placeholder", search_placeholder.clone()),
+                search,
+                state,
+                query,
+                naming,
+                &field,
+                required,
             ),
-            search,
-            state,
-            query,
-            naming,
-            &field,
-            required,
         )
     });
 

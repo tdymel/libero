@@ -1,8 +1,6 @@
 //! `ThemeToggle`'s theme picker at the end of the docs header (todo
 //! 625): the menu opens inside the viewport.
 
-use std::time::Duration;
-
 use dioxus::prelude::*;
 use libero::{
     components::{Flex, Header, ScrollArea, ThemeToggle},
@@ -30,10 +28,16 @@ fn app() -> Element {
     }
 }
 
-// Before layout: a window's shell polled the opening out before laying the menu out.
+fn inside_the_viewport((x, y, width, height): (f64, f64, f64, f64)) -> bool {
+    let (vw, vh) = (f64::from(VIEWPORT.0), f64::from(VIEWPORT.1));
+    x >= 0.0 && y >= 0.0 && x + width <= vw + 0.5 && y + height <= vh + 0.5
+}
+
+// Before layout: a window's shell polled the opening out before laying the menu
+// out. The placement lands after a measure, a timer.
 fn open(page: &mut Page) {
     page.click_before_layout(TRIGGER);
-    page.wait(Duration::from_millis(50));
+    page.wait_for(|page| page.exists(MENU) && inside_the_viewport(page.rect(MENU)));
     assert!(
         page.exists(MENU),
         "the picker did not open:\n{}",
@@ -48,7 +52,7 @@ fn the_theme_picker_opens_inside_the_viewport() {
     let (x, y, width, height) = page.rect(MENU);
     let (vw, vh) = (f64::from(VIEWPORT.0), f64::from(VIEWPORT.1));
     assert!(
-        x >= 0.0 && y >= 0.0 && x + width <= vw + 0.5 && y + height <= vh + 0.5,
+        inside_the_viewport((x, y, width, height)),
         "menu at ({x}, {y}), {width} x {height}, viewport {vw} x {vh}; trigger at {:?}",
         page.rect(TRIGGER)
     );

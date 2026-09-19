@@ -7,7 +7,7 @@ use crate::{
         common::{ChevronDownIcon, ComboboxState, HtmlTag, Input, use_combobox},
         form::{
             CaretKeys, ComboboxCore, ComboboxOption, FIELD_CONTROL_SX, field_props, use_bound,
-            use_field, use_field_frame,
+            use_field, use_field_frame, with_drawn_placeholder,
         },
         layout::{BoxStyle, use_box},
     },
@@ -76,6 +76,9 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
         .border_color("muted.6")
         .selector("::placeholder", sx().color("text-dimmed"))
 });
+
+/// [`SEARCH_SX`]'s padding and bottom border, where a drawn placeholder sits.
+const SEARCH_INSET: &str = "4px 8px 5px";
 
 /// One row: the caller's flag if there is one, the country's name, its dial
 /// code.
@@ -347,6 +350,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         // exactly what should close the picker.
         .event("onblur", move |_: FocusEvent| state.close())
         .render(HtmlTag::Input, state.a11y_attributes(), ());
+    let search = with_drawn_placeholder(Some(localization.common.search), SEARCH_INSET, search);
 
     let picker = phone_picker(
         picker_box,

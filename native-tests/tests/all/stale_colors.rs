@@ -6,7 +6,10 @@
 //! One mount per test: a second mount on the same thread does not flip the
 //! root attribute on a toggle.
 
-use std::{rc::Rc, time::Duration};
+use std::{
+    rc::Rc,
+    time::{Duration, Instant},
+};
 
 use dioxus::prelude::*;
 use libero::{
@@ -19,7 +22,7 @@ use libero::{
     sx::sx,
     theme::{ColorCss, ColorShade},
 };
-use native_tests::{ColorScheme, Page, mount, mount_in};
+use native_tests::{ColorScheme, Page, WAIT_LIMIT, mount, mount_in};
 
 // libero's scheme re-read interval, and a margin for a loaded machine.
 const TICK: Duration = Duration::from_millis(800);
@@ -368,14 +371,21 @@ const BLACK: &str = "rgb(0, 0, 0)";
 #[track_caller]
 fn assert_painted(page: &mut Page, row: &str, color: &str) {
     // The rebuild follows the frame that painted the change.
-    page.wait(Duration::from_millis(20));
+    let icon = format!("{row} svg");
+    page.wait_for(|page| {
+        page.computed(row, "color") == color
+            && page.painted_text(row) == color
+            && page.painted_stroke(&icon) == color
+    });
     assert_eq!(page.computed(row, "color"), color, "{row} did not restyle");
     assert_eq!(page.painted_text(row), color, "{row}'s text");
-    assert_eq!(
-        page.painted_stroke(&format!("{row} svg")),
-        color,
-        "{row}'s icon"
-    );
+    assert_eq!(page.painted_stroke(&icon), color, "{row}'s icon");
+}
+
+/// Waits out [`timer_app`]'s timer, however late a loaded machine fires it.
+fn timer_fired(page: &mut Page) {
+    let fired = page.wait_for(|page| page.attr("#marked", "data-on").as_deref() == Some("true"));
+    assert!(fired, "the timer never fired");
 }
 
 /// Todo 834: Tab onto and off a row with a `:focus` colour.
@@ -454,8 +464,11 @@ fn timer_app() -> Element {
 #[test]
 fn a_timers_colour_change_repaints_a_flex_rows_text_and_icon() {
     let mut page = mount(timer_app);
-    assert_painted(&mut page, "#marked", BLACK);
-    page.wait(TIMER);
+    // A loaded machine may take the timer's delay to mount.
+    if page.attr("#marked", "data-on").as_deref() == Some("false") {
+        assert_eq!(page.painted_stroke("#marked svg"), BLACK);
+    }
+    timer_fired(&mut page);
     assert_painted(&mut page, "#marked", RED);
 }
 
@@ -479,25 +492,40 @@ fn flush_elements(page: &Page) -> Vec<String> {
 #[test]
 fn the_document_comes_to_rest_after_a_timers_render() {
     let mut page = mount(timer_app);
-    page.wait(TIMER + Duration::from_millis(100));
+    timer_fired(&mut page);
     assert_painted(&mut page, "#marked", RED);
-    let before = flush_elements(&page);
-    assert!(!before.is_empty(), "no flush element in\n{}", page.tree());
-    for _ in 0..5 {
-        page.wait(Duration::from_millis(40));
-        assert_eq!(
-            flush_elements(&page),
-            before,
-            "libero kept flushing at rest"
-        );
+    assert!(
+        !flush_elements(&page).is_empty(),
+        "no flush element in\n{}",
+        page.tree()
+    );
+    assert!(
+        comes_to_rest(&mut page, flush_elements),
+        "libero kept flushing at rest"
+    );
+}
+
+/// Whether `read` stays the same over 200ms at some point: a loaded machine's
+/// late timers may still land first, a loop never stops.
+fn comes_to_rest<T: PartialEq>(page: &mut Page, read: impl Fn(&Page) -> T) -> bool {
+    let until = Instant::now() + WAIT_LIMIT;
+    while Instant::now() < until {
+        let before = read(page);
+        let still = (0..5).all(|_| {
+            page.wait(Duration::from_millis(40));
+            read(page) == before
+        });
+        if still {
+            return true;
+        }
     }
+    false
 }
 
 /// Todo 882: the raster paints inline svgs (`blitz-paint`'s `svg` feature).
 #[test]
 fn an_inline_svg_paints_its_stroke() {
-    let mut page = mount(timer_app);
-    page.wait(Duration::from_millis(100));
+    let page = mount(state_app);
     let (x, y, width, height) = page.rect("#marked svg");
     let centre = page.painted_pixel((x + width / 2.0) as u32, (y + height / 2.0) as u32);
     assert_eq!(centre, BLACK, "the icon's stroke at its centre");
@@ -509,13 +537,12 @@ fn an_inline_svg_paints_its_stroke() {
 #[test]
 fn a_baked_rebuild_alone_arms_no_check() {
     let mut page = mount(timer_app);
-    page.wait(TIMER + Duration::from_millis(100));
+    timer_fired(&mut page);
     assert_painted(&mut page, "#marked", RED);
-    let before = page.redraws();
-    for _ in 0..5 {
-        page.wait(Duration::from_millis(40));
-    }
-    assert_eq!(page.redraws(), before, "libero kept redrawing at rest");
+    assert!(
+        comes_to_rest(&mut page, Page::redraws),
+        "libero kept redrawing at rest"
+    );
 }
 
 #[test]

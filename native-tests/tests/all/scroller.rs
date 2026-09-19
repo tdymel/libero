@@ -1,8 +1,6 @@
 //! `Scroller` natively (todo 659): Blitz sends no `resize` and no `scroll` to
 //! the strip, so its edges come from a laid-out measure and `ScrollApi`.
 
-use std::time::Duration;
-
 use dioxus::prelude::*;
 use libero::components::Scroller;
 use native_tests::{Page, mount};
@@ -28,32 +26,55 @@ fn disabled(page: &Page, control: &str) -> String {
     page.attr(control, "aria-disabled").unwrap_or_default()
 }
 
+/// [`disabled`], once it reads `expected` or the wait runs out: the strip's
+/// measure is a timer, late on a loaded machine.
+fn disabled_once(page: &mut Page, control: &str, expected: &str) -> String {
+    page.wait_for(|page| disabled(page, control) == expected);
+    disabled(page, control)
+}
+
 #[test]
 fn an_overflowing_strip_offers_its_forward_control() {
     let mut page = mount(strip);
-    page.wait(Duration::from_millis(50));
-    assert_eq!(disabled(&page, FORWARD), "false", "{}", page.tree());
+    assert_eq!(
+        disabled_once(&mut page, FORWARD, "false"),
+        "false",
+        "{}",
+        page.tree()
+    );
     assert_eq!(disabled(&page, BACK), "true");
 }
 
 #[test]
 fn a_step_enables_the_back_control() {
     let mut page = mount(strip);
-    page.wait(Duration::from_millis(50));
+    disabled_once(&mut page, FORWARD, "false");
     page.click(FORWARD);
-    page.wait(Duration::from_millis(50));
-    assert_eq!(disabled(&page, BACK), "false", "{}", page.tree());
+    assert_eq!(
+        disabled_once(&mut page, BACK, "false"),
+        "false",
+        "{}",
+        page.tree()
+    );
 }
 
 /// Under RTL the strip starts at its right edge (todo 115).
 #[test]
 fn under_rtl_a_step_enables_the_back_control() {
     let mut page = mount(|| rsx! { div { dir: "rtl", {strip()} } });
-    page.wait(Duration::from_millis(50));
-    assert_eq!(disabled(&page, FORWARD), "false", "{}", page.tree());
+    assert_eq!(
+        disabled_once(&mut page, FORWARD, "false"),
+        "false",
+        "{}",
+        page.tree()
+    );
     page.click(FORWARD);
-    page.wait(Duration::from_millis(50));
-    assert_eq!(disabled(&page, BACK), "false", "{}", page.tree());
+    assert_eq!(
+        disabled_once(&mut page, BACK, "false"),
+        "false",
+        "{}",
+        page.tree()
+    );
 }
 
 fn fitting() -> Element {
@@ -67,8 +88,7 @@ fn fitting() -> Element {
 #[test]
 fn a_strip_that_fits_offers_neither_control() {
     let mut page = mount(fitting);
-    page.wait(Duration::from_millis(50));
-    assert_eq!(disabled(&page, FORWARD), "true");
+    assert_eq!(disabled_once(&mut page, FORWARD, "true"), "true");
     assert_eq!(disabled(&page, BACK), "true");
 }
 
@@ -95,12 +115,15 @@ fn growing() -> Element {
 #[test]
 fn a_strip_that_grows_offers_its_forward_control() {
     let mut page = mount(growing);
-    page.wait(Duration::from_millis(50));
-    assert_eq!(disabled(&page, FORWARD), "true");
+    assert_eq!(disabled_once(&mut page, FORWARD, "true"), "true");
 
     page.click("#more");
-    page.wait(Duration::from_millis(50));
-    assert_eq!(disabled(&page, FORWARD), "false", "{}", page.tree());
+    assert_eq!(
+        disabled_once(&mut page, FORWARD, "false"),
+        "false",
+        "{}",
+        page.tree()
+    );
 }
 
 fn narrowing() -> Element {
@@ -119,12 +142,15 @@ fn narrowing() -> Element {
 #[test]
 fn a_strip_that_narrows_offers_its_forward_control() {
     let mut page = mount(narrowing);
-    page.wait(Duration::from_millis(50));
-    assert_eq!(disabled(&page, FORWARD), "true");
+    assert_eq!(disabled_once(&mut page, FORWARD, "true"), "true");
 
     page.click("#narrow");
-    page.wait(Duration::from_millis(50));
-    assert_eq!(disabled(&page, FORWARD), "false", "{}", page.tree());
+    assert_eq!(
+        disabled_once(&mut page, FORWARD, "false"),
+        "false",
+        "{}",
+        page.tree()
+    );
 }
 
 // Reads the count itself, so a change re-renders it and not the `Scroller`.
@@ -155,12 +181,15 @@ fn growing_inside() -> Element {
 #[test]
 fn a_strip_that_grows_inside_a_child_offers_its_forward_control() {
     let mut page = mount(growing_inside);
-    page.wait(Duration::from_millis(50));
-    assert_eq!(disabled(&page, FORWARD), "true");
+    assert_eq!(disabled_once(&mut page, FORWARD, "true"), "true");
 
     page.click("#more");
-    page.wait(Duration::from_millis(50));
-    assert_eq!(disabled(&page, FORWARD), "false", "{}", page.tree());
+    assert_eq!(
+        disabled_once(&mut page, FORWARD, "false"),
+        "false",
+        "{}",
+        page.tree()
+    );
 }
 
 fn full_width() -> Element {
@@ -176,10 +205,18 @@ fn full_width() -> Element {
 #[test]
 fn a_narrowed_window_offers_the_forward_control() {
     let mut page = mount(full_width);
-    page.wait(Duration::from_millis(50));
-    assert_eq!(disabled(&page, FORWARD), "true", "{}", page.tree());
+    assert_eq!(
+        disabled_once(&mut page, FORWARD, "true"),
+        "true",
+        "{}",
+        page.tree()
+    );
 
     page.resize(600, 768);
-    page.wait(Duration::from_millis(600));
-    assert_eq!(disabled(&page, FORWARD), "false", "{}", page.tree());
+    assert_eq!(
+        disabled_once(&mut page, FORWARD, "false"),
+        "false",
+        "{}",
+        page.tree()
+    );
 }

@@ -4,6 +4,8 @@ use super::backend;
 pub(crate) const PLACEHOLDER_ATTR: &str = "data-lsx-placeholder";
 /// Set on a [`PLACEHOLDER_ATTR`] span while its control holds no text.
 pub(crate) const PLACEHOLDER_SHOWN_ATTR: &str = "data-lsx-placeholder-shown";
+/// The box a control shares with its [`PLACEHOLDER_ATTR`] span.
+pub(crate) const PLACEHOLDER_CELL_ATTR: &str = "data-lsx-placeholder-cell";
 
 /// Whether the renderer draws an input's `placeholder`. Blitz does not, so a
 /// framed field draws its own there.
