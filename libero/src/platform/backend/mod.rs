@@ -193,6 +193,10 @@ pub(crate) const DRAWS_BACKDROP_FILTER: bool =
 pub(crate) const FITS_SVG_IMAGES: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz's `NetHandler` has no failure path; see [`fires_image_errors`](crate::platform::fires_image_errors).
+pub(crate) const FIRES_IMAGE_ERRORS: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 /// Blitz draws no `placeholder`; see [`draws_placeholders`](crate::platform::draws_placeholders).
 pub(crate) const DRAWS_PLACEHOLDERS: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));

@@ -10,6 +10,7 @@ use crate::{
         layout::{Box, use_box},
     },
     hooks::use_theme,
+    platform,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         AVATAR_GROUP_INDEX, AVATAR_GROUP_RING, AVATAR_RADII, AVATAR_RADIUS, AvatarDefaults, CssVar,
@@ -67,6 +68,7 @@ pub(super) fn avatar_sx() -> Sx {
         )
         // The person glyph, which has no size of its own.
         .selector("& > svg", sx().width("60%").height("60%"))
+        .when(LAYERED, sx().position("relative"))
         // Inside a group: a ring in the page colour is what makes two
         // overlapping circles legible, and the index is the paint order.
         .when(
@@ -101,7 +103,13 @@ pub(super) fn avatar_sx() -> Sx {
 
 static AVATAR_BASE_SX: StaticSx = StaticSx::new(avatar_sx);
 
-static AVATAR_IMAGE_SX: StaticSx = StaticSx::new(|| sx().when(SVG_FIT, svg_fit_sx()));
+/// The picture lies over the fallback, for a renderer that fires no `error`.
+const LAYERED: &str = "layered";
+
+static AVATAR_IMAGE_SX: StaticSx = StaticSx::new(|| {
+    sx().when(SVG_FIT, svg_fit_sx())
+        .when(LAYERED, sx().position("absolute").inset("0"))
+});
 
 /// The colour set the variant chrome reads, plus the radius override. Takes
 /// resolved values rather than the props struct, because the group's overflow
@@ -182,6 +190,9 @@ pub fn Avatar(props: AvatarProps) -> Element {
 
     let src = props.src.clone().filter(|src| !src.is_empty());
     let failed = src.is_some() && errored_src.read().as_deref() == src.as_deref();
+    // Without an `error` event the fallback waits under the picture, and shows
+    // where it fails to load (todo 884).
+    let layered = !platform::fires_image_errors() && src.is_some();
 
     let variables: Input<Variables> = avatar_variables(
         props.color.as_ref(),
@@ -194,15 +205,27 @@ pub fn Avatar(props: AvatarProps) -> Element {
         .unwrap_or_default()
         .with(size.state_name(), true)
         .with(variant.state_name(), true)
+        .with(LAYERED, layered)
         .into();
 
+    let fallback = match (props.children, props.initials) {
+        (Some(children), _) => children,
+        (None, Some(initials)) => rsx! { "{initials}" },
+        (None, None) => rsx! { PersonIcon {} },
+    };
     let content = match (src, failed) {
         (Some(src), false) => {
             let errored = src.clone();
-            let image_states: Input<States> = States::default().with(SVG_FIT, svg_fit(&src)).into();
+            let image_states: Input<States> = States::default()
+                .with(SVG_FIT, svg_fit(&src))
+                .with(LAYERED, layered)
+                .into();
             let image_variables: Input<Variables> =
                 svg_fit_variables(Variables::new(), &src, "cover").into();
             rsx! {
+                if layered {
+                    {fallback}
+                }
                 Box {
                     component: "img",
                     framework_sx: &AVATAR_IMAGE_SX,
@@ -216,11 +239,7 @@ pub fn Avatar(props: AvatarProps) -> Element {
                 }
             }
         }
-        _ => match (props.children, props.initials) {
-            (Some(children), _) => children,
-            (None, Some(initials)) => rsx! { "{initials}" },
-            (None, None) => rsx! { PersonIcon {} },
-        },
+        _ => fallback,
     };
 
     // `alt` is the image rule: absent means "use the name", empty means

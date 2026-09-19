@@ -3,8 +3,12 @@
 
 use std::time::Duration;
 
+use blitz_traits::events::{
+    BlitzPointerEvent, BlitzPointerId, MouseEventButton, MouseEventButtons, Point, PointerCoords,
+    PointerDetails, UiEvent,
+};
 use dioxus::prelude::*;
-use e2e::native::{Key, Page, mount};
+use e2e::native::{Key, Modifiers, Page, mount};
 use libero::{
     components::{Avatar, Image},
     hooks::{LightboxItem, LightboxOptions, use_lightbox},
@@ -166,4 +170,48 @@ fn a_double_click_beside_a_shrunk_svg_zooms() {
     page.advance(1.0);
     let transform = page.computed(PICTURE, "transform");
     assert!(transform.starts_with("scale(2)"), "not at 2x: {transform}");
+}
+
+fn finger(x: f32, y: f32, down: bool) -> BlitzPointerEvent {
+    BlitzPointerEvent {
+        id: BlitzPointerId::Finger(1),
+        is_primary: true,
+        coords: PointerCoords {
+            page_x: x,
+            page_y: y,
+            screen_x: x,
+            screen_y: y,
+            client_x: x,
+            client_y: y,
+        },
+        button: MouseEventButton::Main,
+        buttons: if down {
+            MouseEventButtons::Primary
+        } else {
+            MouseEventButtons::empty()
+        },
+        mods: Modifiers::empty(),
+        details: PointerDetails::default(),
+        element: Point { x: 0.0, y: 0.0 },
+        active_pointers: Default::default(),
+    }
+}
+
+/// A swipe down that starts in the frame round a shrunk picture still drags
+/// it (todo 928).
+#[test]
+fn a_swipe_beside_a_shrunk_svg_starts() {
+    let mut page = opened();
+    let frame = "[data-lightbox-frame=\"0\"]";
+    let (x, y, width, height) = page.rect(frame);
+    let (px, py) = ((x + width * 0.3) as f32, (y + height / 2.0) as f32);
+    assert!(page.hits_at(frame, px, py) && !page.hits_at(PICTURE, px, py));
+    page.dispatch(UiEvent::PointerDown(finger(px, py, true)));
+    page.dispatch(UiEvent::PointerMove(finger(px, py + 40.0, true)));
+    let transform = page.computed(PICTURE, "transform");
+    page.dispatch(UiEvent::PointerUp(finger(px, py + 40.0, false)));
+    assert!(
+        transform.contains("40"),
+        "the picture did not follow: {transform:?}"
+    );
 }

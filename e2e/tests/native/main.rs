@@ -3,6 +3,7 @@
 //! `cargo test -p e2e --features native --test native switch::`.
 
 mod anchor;
+mod avatar;
 mod button;
 mod carousel;
 mod choice;

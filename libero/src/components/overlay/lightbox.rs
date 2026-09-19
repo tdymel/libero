@@ -709,8 +709,8 @@ fn lightbox_slide(
     // element that has loaded before, whatever `loading` says (todo 227).
     // `Carousel` keys its slide wrappers by position, so the strip and its
     // scroll stay put and only what is inside a wrapper is replaced.
-    // The wheel and the double-click are the frame's: natively a shrunk SVG
-    // leaves some of it round the picture (todo 920).
+    // The wheel, the double-click and the press are the frame's: natively a
+    // shrunk SVG leaves some of it round the picture (todos 920, 928).
     rsx! {
         Box {
             key: "{item.src}",
@@ -746,6 +746,30 @@ fn lightbox_slide(
                     Some(DragPoint { x: client.x, y: client.y }),
                     move |scale| zooming.step_scale(scale),
                 );
+            },
+            // The drag still captures on the picture, so the moves and the
+            // release land there.
+            onpointerdown: move |event: Event<PointerData>| {
+                if i != *index.peek() {
+                    return;
+                }
+                if *dragged.peek() {
+                    dragged.set(false);
+                }
+                let from = zooming.held();
+                let next = match (from.is_zoomed(), event.data().pointer_type() == "mouse") {
+                    (true, _) => Gesture::Pan {
+                        origin: DragPoint { x: from.x, y: from.y },
+                    },
+                    // A mouse has the arrows and Escape; a swipe is a
+                    // touch gesture.
+                    (false, false) if swipe => Gesture::Swipe {
+                        delta: DragPoint { x: 0.0, y: 0.0 },
+                    },
+                    _ => return,
+                };
+                gesture.set(Some(next));
+                drag.onpointerdown.call(event);
             },
             Box {
                 component: "img",
@@ -823,28 +847,6 @@ fn lightbox_slide(
                 onpointermove: drag.onpointermove,
                 onpointerup: drag.onpointerup,
                 onpointercancel: drag.onpointercancel,
-                onpointerdown: move |event: Event<PointerData>| {
-                    if i != *index.peek() {
-                        return;
-                    }
-                    if *dragged.peek() {
-                        dragged.set(false);
-                    }
-                    let from = zooming.held();
-                    let next = match (from.is_zoomed(), event.data().pointer_type() == "mouse") {
-                        (true, _) => Gesture::Pan {
-                            origin: DragPoint { x: from.x, y: from.y },
-                        },
-                        // A mouse has the arrows and Escape; a swipe is a
-                        // touch gesture.
-                        (false, false) if swipe => Gesture::Swipe {
-                            delta: DragPoint { x: 0.0, y: 0.0 },
-                        },
-                        _ => return,
-                    };
-                    gesture.set(Some(next));
-                    drag.onpointerdown.call(event);
-                },
             }
             {ring_overlay()}
         }
