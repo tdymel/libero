@@ -302,7 +302,7 @@ impl Page {
     }
 
     /// dioxus-native writes a `false` bool attribute as `disabled="false"`,
-    /// which Blitz reads as set: raw `rsx!` must write `flag.then_some(true)`.
+    /// which Blitz reads as set; libero's flush drops it (todo 943).
     fn assert_no_false_flags(&self) {
         if let Some(id) = self.query(FALSE_FLAGS) {
             panic!(

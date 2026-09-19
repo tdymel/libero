@@ -115,10 +115,14 @@ fn relative_tops() -> Element {
 fn a_percent_or_em_top_holds_there() {
     let mut page = mount(relative_tops);
     let origin = top(&page, "#scroller");
+    // The platform's sticky move lands after a timer, at mount too.
+    page.wait_for(|page| top(page, "#percent") - origin == 40.0);
     assert_eq!(top(&page, "#percent") - origin, 40.0, "{}", page.tree());
     page.hover("#content");
     page.wheel("#content", 300.0);
-    page.wait_for(|page| top(page, "#percent") - origin == 20.0);
+    page.wait_for(|page| {
+        top(page, "#percent") - origin == 20.0 && top(page, "#em") - origin == 20.0
+    });
     assert_eq!(top(&page, "#percent") - origin, 20.0, "{}", page.tree());
     assert_eq!(top(&page, "#em") - origin, 20.0, "{}", page.tree());
 }

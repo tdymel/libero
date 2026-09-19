@@ -77,7 +77,10 @@ fn a_banner_leaves_with_its_parent() {
         let (_, y, _, height) = page.rect(selector);
         y + height
     };
-    page.wait_for(|page| top(page, "#first") < -100.0);
+    // The scroll lands first, the sticky move after it: wait for both.
+    page.wait_for(|page| {
+        top(page, "#first") < -100.0 && bottom(page, "#banner") == bottom(page, "#first")
+    });
     assert_eq!(
         bottom(&page, "#banner"),
         bottom(&page, "#first"),

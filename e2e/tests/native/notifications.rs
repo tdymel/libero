@@ -113,7 +113,7 @@ fn enter_on_its_close_button_closes_it() {
     finish(&mut page);
     page.focus(CLOSE);
     page.press(Key::Enter);
-    finish(&mut page);
+    run_until_closed(&mut page);
     assert!(!page.exists(ITEM), "{}", page.tree());
 }
 
@@ -124,7 +124,7 @@ fn a_click_on_its_close_button_closes_it() {
     page.click(TRIGGER);
     finish(&mut page);
     page.click(CLOSE);
-    finish(&mut page);
+    run_until_closed(&mut page);
     assert!(!page.exists(ITEM), "{}", page.tree());
 }
 
@@ -167,7 +167,7 @@ fn closing_a_focused_one_hands_focus_on_and_back_out() {
     page.press(Key::Enter);
     finish(&mut page);
     page.press(Key::Enter);
-    finish(&mut page);
+    run_until_closed(&mut page);
     assert!(!page.exists(ITEM), "{}", page.tree());
     assert!(page.is_focused(SLOW), "focus is on {}", page.focus_owner());
 }

@@ -17,6 +17,7 @@ use style::properties::PropertyId;
 
 mod activate;
 mod baked;
+mod false_flags;
 mod focus;
 mod max_length;
 mod placeholder;
@@ -1279,6 +1280,7 @@ pub(super) fn Outlet() -> Element {
                         resize::check(doc);
                         if let Some(anchor) = doc.anchor() {
                             redraw::watch(doc, &mut anchor.doc_mut());
+                            false_flags::sync(&mut anchor.doc_mut());
                             activate::sync_marks(&mut anchor.doc_mut());
                             placeholder::sync(&mut anchor.doc_mut());
                             // After layout: a `bottom` box moves before any scroll.

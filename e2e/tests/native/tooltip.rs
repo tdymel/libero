@@ -55,7 +55,7 @@ fn the_bubble_takes_presses_only_over_itself_and_its_bridge() {
     for app in [app as fn() -> Element, above] {
         let mut page = mount(app);
         page.hover(TRIGGER);
-        page.wait(Duration::from_millis(100));
+        page.wait_for(|page| page.exists(OPEN));
         let (tx, ty, tw, th) = page.rect(TRIGGER);
         let (bx, by, bw, bh) = page.rect(OPEN);
         let (tx, ty, tw, th) = (tx as f32, ty as f32, tw as f32, th as f32);
