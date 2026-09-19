@@ -136,6 +136,21 @@ fn the_zoom_buttons_step_and_disable_at_their_limits() {
     );
 }
 
+/// Todo 916: a double-click steps to 2x.
+#[test]
+fn a_double_click_zooms_in() {
+    let mut page = mount(app);
+    page.click("#open");
+    settle(&mut page);
+    let (x, y, width, height) = page.rect(PICTURE);
+    let (x, y) = ((x + width / 2.0) as f32, (y + height / 2.0) as f32);
+    page.click_at(x, y);
+    page.click_at(x, y);
+    settle(&mut page);
+    let transform = page.computed(PICTURE, "transform");
+    assert!(transform.starts_with("scale(2)"), "not at 2x: {transform}");
+}
+
 /// A wheel up zooms in, as on the web: Blitz's finger sign is turned round
 /// (todo 844).
 #[test]
@@ -152,25 +167,48 @@ fn a_wheel_up_zooms_in() {
     );
 }
 
-/// Three pictures, so the stage is a `Carousel` that has to scroll.
+/// Three pictures, so the stage is a `Carousel` that has to scroll. `#open-2`
+/// opens on the second.
 fn gallery_app() -> Element {
     let lightbox = use_lightbox(LightboxOptions {
         aria_label: Some("Gallery".into()),
         ..LightboxOptions::default()
     });
+    let gallery = || {
+        (1..=3)
+            .map(|i| {
+                LightboxItem::new(format!("{i}.png"), format!("Picture {i}"))
+                    .caption(format!("Caption {i}"))
+            })
+            .collect::<Vec<_>>()
+    };
     rsx! {
         Button {
             id: "open",
             onclick: move |_| {
-                lightbox.open_with(
-                    (1..=3)
-                        .map(|i| LightboxItem::new(format!("{i}.png"), format!("Picture {i}")))
-                        .collect::<Vec<_>>(),
-                );
+                lightbox.open_with(gallery());
             },
             "Open"
         }
+        Button {
+            id: "open-2",
+            onclick: move |_| {
+                lightbox.open_with((gallery(), 1));
+            },
+            "Open the second"
+        }
     }
+}
+
+/// Todo 916: opened on its second picture, the stage stayed on the first, so
+/// every zoom went to a picture out of sight.
+#[test]
+fn a_gallery_opened_on_a_later_picture_shows_it() {
+    let mut page = mount(gallery_app);
+    // As a window does: the vdom runs dry before the dialog is laid out.
+    page.click_before_layout("#open-2");
+    settle(&mut page);
+    assert_centred(&page, 1);
 }
 
 /// Horizontal offset of `selector`'s centre from the viewport's.
@@ -203,6 +241,29 @@ fn every_picture_comes_to_rest_centred() {
         settle(&mut page);
         assert_centred(&page, index);
     }
+}
+
+/// Todo 916: Blitz hit-tests a zoomed picture past its frame's clip, so the
+/// second press on "Zoom in" panned the picture instead. The caption and the
+/// strip come after the stage and keep theirs.
+#[test]
+fn a_zoomed_picture_leaves_the_presses_round_it_alone() {
+    const ZOOM_IN: &str = "button[aria-label=\"Zoom in\"]";
+    const ZOOMED: &str = "scale(1.5625) translate(0px)";
+    let mut page = mount(gallery_app);
+    page.click("#open");
+    settle(&mut page);
+    for scale in ["scale(1.25) translate(0px)", ZOOMED] {
+        page.click(ZOOM_IN);
+        settle(&mut page);
+        assert_eq!(page.computed(PICTURE, "transform"), scale);
+    }
+    page.click("[role=dialog] p");
+    settle(&mut page);
+    assert_eq!(page.computed(PICTURE, "transform"), ZOOMED);
+    page.click("[aria-label=\"Go to slide 2\"]");
+    settle(&mut page);
+    assert_centred(&page, 1);
 }
 
 #[test]

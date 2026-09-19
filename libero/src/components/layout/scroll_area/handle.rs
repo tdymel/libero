@@ -1,8 +1,9 @@
 use dioxus::prelude::*;
 
+use super::scroll_area::UNLAID_TRIES;
 use crate::{
     hooks::{ElementHandle, use_element},
-    platform::ElementApi,
+    platform::{ElementApi, when_laid_out},
 };
 
 /// Scrolls a [`ScrollArea`](super::ScrollArea) from an event handler.
@@ -79,6 +80,12 @@ fn percent_offset(pct: Option<f64>, max: f64, current: f64) -> f64 {
 /// `ElementApi::dimensions`). Off the web each is a round-trip, so the
 /// awaiting has to happen in a task rather than inline.
 pub(super) fn scroll_to_percent(root: ElementHandle, x: Option<f64>, y: Option<f64>) {
+    scroll_to_percent_tried(root, x, y, UNLAID_TRIES);
+}
+
+/// An area of no size is asked again once laid out: natively one mounted this
+/// frame has no range yet, and the scroll would stay at 0 (todo 916).
+fn scroll_to_percent_tried(root: ElementHandle, x: Option<f64>, y: Option<f64>, tries: u8) {
     if (x.is_none() && y.is_none()) || !root.is_mounted() {
         return;
     }
@@ -94,6 +101,9 @@ pub(super) fn scroll_to_percent(root: ElementHandle, x: Option<f64>, y: Option<f
         else {
             return;
         };
+        if viewport.width <= 0.0 && viewport.height <= 0.0 && tries > 0 {
+            return when_laid_out(move || scroll_to_percent_tried(root, x, y, tries - 1));
+        }
         let x = percent_offset(x, scroll_size.width - viewport.width, inline_x(current_x));
         let _ = root.scroll_to(
             physical_x(x, rtl),

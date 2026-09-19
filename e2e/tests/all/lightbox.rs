@@ -537,6 +537,39 @@ async fn zoom_buttons(page: &Page) -> Result<()> {
     .await
 }
 
+/// Todo 917: a double-click on the picture or round it selects nothing; the
+/// caption, the one real text, still selects.
+#[test]
+fn a_double_click_selects_only_the_caption() {
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
+        double_click_selection(&fixture.page).await.unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+async fn double_click_selection(page: &Page) -> Result<()> {
+    const SELECTED: &str =
+        "getSelection().isCollapsed ? '' : `${getSelection().rangeCount} ${getSelection()}`";
+    pointer::click(page, TRIGGER).await?;
+    wait::for_visible(page, DIALOG).await?;
+    wait_showing(page, 0).await?;
+    // The toolbar row's centre is empty: the dialog's own surface.
+    for target in [PICTURE, "[role=dialog] > div:first-child"] {
+        pointer::double_click(page, target).await?;
+        let selected: String = page.evaluate(SELECTED).await?.into_value()?;
+        if !selected.is_empty() {
+            bail!("a double-click on {target} selected {selected:?}");
+        }
+    }
+    pointer::double_click(page, "[role=dialog] p").await?;
+    let selected: String = page.evaluate(SELECTED).await?.into_value()?;
+    if selected.is_empty() {
+        bail!("a double-click on the caption selected nothing");
+    }
+    Ok(())
+}
+
 /// Todo 421: zoom, pan to the edge, then turn the window into a phone. The pan
 /// has to be clamped to the new, smaller bounds, or the picture leaves its
 /// frame.

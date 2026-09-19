@@ -250,7 +250,7 @@ fn scroll_metrics(data: &ScrollData) -> (f64, f64, f64, f64) {
 
 /// Measurements of no height asked again: Blitz may not have laid out a box
 /// mounted this frame.
-const UNLAID_TRIES: u8 = 3;
+pub(super) const UNLAID_TRIES: u8 = 3;
 
 /// Natively an effect runs before layout, with the document borrowed.
 fn measure_area(root: ElementHandle, mut geometry: Signal<Option<ScrollGeometry>>, tries: u8) {

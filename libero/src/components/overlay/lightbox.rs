@@ -70,8 +70,10 @@ fn safe_padding(side: &str) -> String {
 // On a phone the dialog is the screen: fixed to the whole viewport, no
 // margin, radius or shadow, and a column in which the stage takes whatever
 // the close button, caption and thumbnails leave.
+// A double-click zooms: it selects nothing, the picture included (todo 917).
 static LIGHTBOX_DIALOG_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
+        .user_select("none")
         .max_width(LIGHTBOX_WIDTH.value())
         .padding("sm")
         .media(
@@ -155,8 +157,12 @@ static LIGHTBOX_IMAGE_SX: StaticSx = StaticSx::new(|| {
 });
 
 // The zoom buttons and the close button, laid out like `Dialog`'s own header.
+// Lifted: Blitz hit-tests a zoomed picture past its frame's clip, and the
+// stage comes later, so a press here panned it (todo 916).
 static LIGHTBOX_TOOLBAR_SX: StaticSx = StaticSx::new(|| {
-    sx().display("flex")
+    sx().position("relative")
+        .z_index("1")
+        .display("flex")
         .align_items("center")
         .justify_content("flex-end")
         .gap("sm")
@@ -175,8 +181,13 @@ static LIGHTBOX_ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-static LIGHTBOX_CAPTION_SX: StaticSx =
-    StaticSx::new(|| sx().margin("0").margin_top("sm").text_align("center"));
+// The one real text in the viewer, so it stays selectable.
+static LIGHTBOX_CAPTION_SX: StaticSx = StaticSx::new(|| {
+    sx().margin("0")
+        .margin_top("sm")
+        .text_align("center")
+        .user_select("text")
+});
 
 static LIGHTBOX_THUMBNAILS_SX: StaticSx = StaticSx::new(|| {
     sx().margin_top("sm")
