@@ -41,6 +41,19 @@ pub(crate) fn use_silent_focus_out(onout: impl Fn() + 'static) -> Option<Element
     element
 }
 
+/// Calls `onin` after each silent move that lands in `element`, from inside it
+/// too: its bubbling `focusin`. Never on the web.
+pub(crate) fn use_silent_focus_in(element: ElementHandle, onin: impl Fn() + 'static) {
+    use_silent_focus(move |moved| {
+        if element
+            .mounted()
+            .is_some_and(|mounted| moved.is_in(&mounted))
+        {
+            onin();
+        }
+    });
+}
+
 /// Whether `element` held focus before `moved` and does not after: its `focusout`.
 fn moved_out(moved: &dyn FocusMove, element: &ElementHandle) -> bool {
     element

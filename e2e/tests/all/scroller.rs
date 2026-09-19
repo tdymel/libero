@@ -1,6 +1,8 @@
 //! `Scroller`: a strip of buttons with a step control overlaid at each end.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard, motion, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -78,6 +80,32 @@ fn a_tabbed_item_is_not_left_under_a_control() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 734: Blitz scrolled nothing on Tab and fired no `focusin`, so a tabbed
+/// item stayed out of the strip or under the forward control.
+async fn tab_clears_the_control<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.focus("#before").await?;
+    for _ in 0..10 {
+        d.press(keyboard::TAB).await?;
+        if d.is_focused("#tag-8").await? {
+            break;
+        }
+    }
+    eventually_focused(d, "#tag-8", "Tab along the strip").await?;
+    eventually(d, "tag-8 clear of the forward control", async |d| {
+        let strip = d.rect(STRIP).await?;
+        let tag = d.rect("#tag-8").await?;
+        let forward = d.rect("#strip > button:last-of-type").await?;
+        Ok(tag.x + tag.width <= forward.x + 1.0 && tag.x >= strip.x - 1.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_tabbed_item_clears_the_forward_control,
+    "/scroller",
+    tab_clears_the_control
+);
 
 /// The backward control, then the forward one.
 const BACK: &str = "#strip > button:first-of-type";

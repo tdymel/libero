@@ -26,6 +26,12 @@ pub(crate) fn clips_z_indexed() -> bool {
     !NATIVE
 }
 
+/// Whether a released scroll comes to rest on its `scroll-snap` points. Blitz
+/// has no scroll snap.
+pub(crate) fn snaps_scroll() -> bool {
+    !NATIVE
+}
+
 /// A wheel's vertical travel in the web's sign, positive down the page, with
 /// lines and pages counted as `line` pixels and `page` lines. Blitz reports
 /// the finger's sign (todo 844).

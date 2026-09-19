@@ -1832,7 +1832,7 @@ impl ElementApi for BlitzElement {
             if !is_rendered(doc, node_id) {
                 return;
             }
-            focus::watch(doc);
+            focus::watch_revealing(doc);
             focus::requested(node_id);
             doc.set_focus_to(node_id);
         });
@@ -2109,7 +2109,7 @@ impl ElementApi for BlitzElement {
     fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, PlatformError> {
         let doc = self.anchor.try_doc().ok_or(PlatformError::Unsupported)?;
         let node_id = doc
-            .query_selector_in(self.node_id, selector)
+            .query_selector_in(self.node_id, &activate::focus_selectors(selector))
             .map_err(|_| PlatformError::NotFound)?
             .ok_or(PlatformError::NotFound)?;
         drop(doc);
@@ -2122,7 +2122,7 @@ impl ElementApi for BlitzElement {
     ) -> Result<Vec<Box<dyn ElementApi>>, PlatformError> {
         let doc = self.anchor.try_doc().ok_or(PlatformError::Unsupported)?;
         let nodes = doc
-            .query_selector_all_in(self.node_id, selector)
+            .query_selector_all_in(self.node_id, &activate::focus_selectors(selector))
             .map_err(|_| PlatformError::NotFound)?;
         drop(doc);
         Ok(nodes.into_iter().map(|node_id| self.at(node_id)).collect())
@@ -2253,6 +2253,88 @@ fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(NodeId, f64)> {
     let delta =
         super::nearest_scroll(y, y + height, view_top, view_top + f64::from(client_height))?;
     Some((scroller.id, delta))
+}
+
+/// The web's focus scroll, which Blitz lacks: every scroller round `node_id`,
+/// innermost first, then the viewport, moves just far enough on both axes.
+pub(super) fn reveal(doc: &mut BaseDocument, node_id: NodeId) {
+    let Some((_, _, width, height)) = client_rect(doc, node_id) else {
+        return;
+    };
+    if width == 0.0 && height == 0.0 {
+        return;
+    }
+    let margin = scroll_margin(doc, node_id);
+    let nearest = |start: f64, size: f64, view: f64, view_size: f64| {
+        super::nearest_scroll(
+            start - margin,
+            start + size + margin,
+            view,
+            view + view_size,
+        )
+        .unwrap_or(0.0)
+    };
+    let mut moved = false;
+    let mut ancestor = doc.get_node(node_id).and_then(|node| node.parent);
+    while let Some(id) = ancestor {
+        let Some(node) = doc.get_node(id) else {
+            break;
+        };
+        ancestor = node.parent;
+        let layout = *node.final_layout();
+        let scrolls = |axis: &str, range: f32| {
+            range > 0.0
+                && matches!(
+                    resolved_style_value(doc, id, axis).as_str(),
+                    "auto" | "scroll" | "hidden"
+                )
+        };
+        let x = node.is_element() && scrolls("overflow-x", layout.scroll_width());
+        let y = node.is_element() && scrolls("overflow-y", layout.scroll_height());
+        if !x && !y {
+            continue;
+        }
+        let (Some(target), Some(view)) = (client_rect(doc, node_id), client_rect(doc, id)) else {
+            break;
+        };
+        let (border, bar) = (layout.border, layout.scrollbar_size);
+        let view_width = f64::from(layout.size.width - border.left - border.right - bar.width);
+        let view_height = f64::from(layout.size.height - border.top - border.bottom - bar.height);
+        let dx = match x {
+            true => nearest(
+                target.0,
+                target.2,
+                view.0 + f64::from(border.left),
+                view_width,
+            ),
+            false => 0.0,
+        };
+        let dy = match y {
+            true => nearest(
+                target.1,
+                target.3,
+                view.1 + f64::from(border.top),
+                view_height,
+            ),
+            false => 0.0,
+        };
+        if dx != 0.0 || dy != 0.0 {
+            doc.scroll_node_by(id, -dx, -dy, |_| {});
+            moved = true;
+        }
+    }
+    if let Some((x, y, width, height)) = client_rect(doc, node_id) {
+        let (window, scale) = (doc.viewport().window_size, doc.viewport().scale_f64());
+        let dx = nearest(x, width, 0.0, f64::from(window.0) / scale);
+        let dy = nearest(y, height, 0.0, f64::from(window.1) / scale);
+        if dx != 0.0 || dy != 0.0 {
+            doc.scroll_viewport_by(-dx, -dy);
+            moved = true;
+        }
+    }
+    if moved {
+        notify_scroll();
+    }
 }
 
 /// [`SCROLL_MARGIN_VAR`] in px: a `px` length, or `rem` of the root's font

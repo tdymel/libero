@@ -2,7 +2,7 @@
 //! the painted arrow. The computed arrow turn is e2e's (`table::`).
 
 use dioxus::prelude::*;
-use e2e::native::mount;
+use e2e::native::{Page, mount};
 use libero::components::{Table, column};
 
 #[derive(Clone, PartialEq)]
@@ -102,6 +102,47 @@ fn the_caption_shows_above_the_table_and_names_it() {
     assert_eq!(
         page.computed(&selector, "color"),
         page.computed("table", "color")
+    );
+}
+
+/// Todo 734: Blitz held a `width: 100%` table at its region's width, so the
+/// cells past it overflowed where no scroll reached them.
+#[test]
+fn a_wide_scroll_table_scrolls_to_its_last_column() {
+    fn app() -> Element {
+        let columns = (0..6)
+            .map(|i| column(format!("Column_heading_{i}")).value(|p: &Person| p.name.to_string()))
+            .collect();
+        rsx! {
+            div { id: "frame", width: "300px",
+                Table {
+                    aria_label: "Wide",
+                    scroll: true,
+                    data: vec![Person { name: "Ada", age: 36 }],
+                    columns,
+                }
+            }
+        }
+    }
+    let mut page = mount(app);
+    let region = page.rect("[role=region]");
+    let before = page.rect("thead th:last-child");
+    assert!(
+        before.0 > region.0 + region.2,
+        "the last column starts at {} inside the region {region:?}",
+        before.0
+    );
+    let gap = |page: &Page| {
+        let (x, _, width, _) = page.rect("thead th:last-child");
+        x + width - (region.0 + region.2)
+    };
+    page.hover("[role=region]");
+    page.wheel_x("[role=region]", 2000.0);
+    page.wait_for(|page| gap(page).abs() <= 1.0);
+    let gap = gap(&page);
+    assert!(
+        gap.abs() <= 1.0,
+        "the last column ends {gap}px past the region"
     );
 }
 

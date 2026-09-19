@@ -13,7 +13,7 @@ use crate::{
     },
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id,
-        use_localization, use_resize_fallback, use_theme,
+        use_localization, use_resize_fallback, use_silent_focus_in, use_theme,
     },
     platform::{ElementApi, is_measured_resize, next_task, scroll, when_laid_out},
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
@@ -434,14 +434,9 @@ pub fn Scroller(props: ScrollerProps) -> Element {
 
     // Chromium's focus scroll stops a tabbed item just inside the clip, under
     // a control's fade (2.4.11). Once it has started, this scroll replaces it.
-    let clear_focus = move || {
+    let clear = move |item: Box<dyn ElementApi>| {
         let rtl = viewport.is_rtl();
         spawn(async move {
-            next_task().await;
-            // A pointer focus leaves the strip where the pointer put it.
-            let Ok(item) = viewport.query_selector(":focus-visible") else {
-                return;
-            };
             let control = root
                 .query_selector(":scope > button")
                 .ok()
@@ -483,6 +478,22 @@ pub fn Scroller(props: ScrollerProps) -> Element {
             }
         });
     };
+    let clear_focus = move || {
+        spawn(async move {
+            next_task().await;
+            // A pointer focus leaves the strip where the pointer put it.
+            if let Ok(item) = viewport.query_selector(":focus-visible") {
+                clear(item);
+            }
+        });
+    };
+    // Blitz's Tab fires no `focusin`; its silent move is a key's or a script's,
+    // and arrives outside the document's borrow, after the focus scroll.
+    use_silent_focus_in(viewport, move || {
+        if let Ok(item) = viewport.query_selector(":focus") {
+            clear(item);
+        }
+    });
 
     // Blitz sends the strip no `resize` or `scroll` (todos 659, 677): measure
     // once laid out, on new content and on every scroll the platform reports,

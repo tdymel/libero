@@ -4,7 +4,7 @@
 use anyhow::Result;
 use chromiumoxide::Page;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, linger};
+use e2e::driver::{Driver, eventually, eventually_focused, linger};
 use e2e::passes::{focus, keyboard};
 use e2e::{Fixture, Suite, Viewport, ax, wait};
 
@@ -38,6 +38,32 @@ e2e::scenario!(
     the_arrow_turns_when_the_sort_flips,
     "/table",
     the_arrow_turns
+);
+
+/// Todo 734: Tab scrolls the region to the last header's button. Blitz scrolled
+/// nothing on a focus move, and held the table at the region's width.
+async fn the_tabbed_last_header_shows<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const LAST: &str = "th:last-child button";
+    d.focus("[role=region]").await?;
+    for _ in 0..8 {
+        if d.is_focused(LAST).await? {
+            break;
+        }
+        d.press(keyboard::TAB).await?;
+    }
+    eventually_focused(d, LAST, "Tab").await?;
+    eventually(d, "the region to show the last header", async |d| {
+        let region = d.rect("[role=region]").await?;
+        let last = d.rect(LAST).await?;
+        Ok(last.x + last.width <= region.x + region.width + 1.0 && last.x >= region.x - 1.0)
+    })
+    .await
+}
+
+e2e::scenario!(
+    a_tabbed_header_scrolls_into_its_region,
+    "/table/wide",
+    the_tabbed_last_header_shows
 );
 
 #[test]

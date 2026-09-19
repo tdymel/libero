@@ -82,10 +82,10 @@ pub(crate) use placeholder::{
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub(crate) use resize::{is_measured_resize, on_resize};
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
-pub(crate) use scroll::{clips_z_indexed, scroll_range, wheel_travel_y};
+pub(crate) use scroll::{clips_z_indexed, scroll_range, snaps_scroll, wheel_travel_y};
 pub(crate) use select::opens_select_picker;
 pub(crate) use session::{session_get, session_set};
-pub(crate) use table::lays_out_captions;
+pub(crate) use table::{lays_out_captions, widens_sized_tables};
 pub(crate) use task::{next_task, when_free, when_laid_out};
 pub use timer::{TimerApi, TimerSubscription, timer};
 pub(crate) use transition::transition_property;

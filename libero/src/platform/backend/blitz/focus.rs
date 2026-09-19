@@ -13,7 +13,9 @@ use blitz_dom::BaseDocument;
 use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
-use super::{BlitzElement, Callbacks, Doc, ancestors, anchor, baked, defer, doc, flush_soon};
+use super::{
+    BlitzElement, Callbacks, Doc, ancestors, anchor, baked, defer, doc, flush_soon, reveal,
+};
 use crate::platform::{
     ElementApi, FocusMove, SilentFocusApi, SilentFocusSubscription, focus::OnMove,
 };
@@ -24,6 +26,9 @@ type OnMoves = Callbacks<dyn Fn(&dyn FocusMove)>;
 pub(super) struct Watch {
     /// The focus owner when a silent move may have begun, while a check is armed.
     before: Cell<Option<Option<NodeId>>>,
+    /// The armed move scrolls its target into view, as the web's Tab and
+    /// `focus()` do; a press's focus does not.
+    reveal: Cell<bool>,
     callbacks: OnMoves,
 }
 
@@ -31,6 +36,7 @@ impl Default for Watch {
     fn default() -> Self {
         Self {
             before: Cell::new(None),
+            reveal: Cell::new(false),
             callbacks: Callbacks::new(),
         }
     }
@@ -129,6 +135,14 @@ pub(super) fn watch(document: &BaseDocument) {
     flush_soon();
 }
 
+/// [`watch`] for a move the web scrolls into view: Tab and `focus()`.
+pub(super) fn watch_revealing(document: &BaseDocument) {
+    watch(document);
+    if let Some(doc) = doc() {
+        doc.focus.reveal.set(true);
+    }
+}
+
 /// A Tab reaching [`Listener`](super::Listener): Blitz moves focus after the
 /// dispatch, unless a handler prevented it.
 pub(super) fn keyed(event: &Event<KeyboardData>) {
@@ -136,13 +150,14 @@ pub(super) fn keyed(event: &Event<KeyboardData>) {
         return;
     }
     if let Some(doc) = anchor().as_ref().and_then(|anchor| anchor.try_doc()) {
-        watch(&doc);
+        watch_revealing(&doc);
     }
 }
 
 /// Tells every subscriber when focus is no longer where it was armed.
 pub(super) fn check(doc: &Doc) {
     REQUESTED.set(None);
+    let revealing = doc.focus.reveal.replace(false);
     let Some(before) = doc.focus.before.take() else {
         return;
     };
@@ -156,6 +171,14 @@ pub(super) fn check(doc: &Doc) {
         return;
     }
     baked::check_soon();
+    // Before the subscribers, which measure where it lands. `Outlet`'s mount
+    // runs outside the document's borrow.
+    if let Some(now) = now.filter(|&id| revealing && Some(id) != doc.wrapper_id()) {
+        let mut document = anchor.doc_mut();
+        if now != document.root_element().id {
+            reveal(&mut document, now);
+        }
+    }
     let moved = Moved {
         before,
         now,

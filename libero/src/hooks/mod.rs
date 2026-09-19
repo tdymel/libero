@@ -51,7 +51,7 @@ pub use popover::{
 pub(crate) use portal::{use_portal, use_portal_slot};
 pub(crate) use presence::use_presence;
 pub(crate) use ripple::{clipped_ripple_sx, ripple_sx, use_ripple};
-pub(crate) use silent_focus::use_silent_focus_out;
+pub(crate) use silent_focus::{use_silent_focus_in, use_silent_focus_out};
 pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
 pub use theme::{ThemeSetHandle, use_theme, use_theme_set};

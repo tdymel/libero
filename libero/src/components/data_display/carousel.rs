@@ -24,7 +24,7 @@ use crate::{
     localization::{CarouselLabels, fill},
     platform::{
         ElementApi, TimerSubscription, arrow_target, key_taken, logical_key,
-        prefers_reduced_motion, timer, typing_target,
+        prefers_reduced_motion, snaps_scroll, timer, typing_target, when_free,
     },
     sx::{FORCED_COLORS, REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -1239,6 +1239,7 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
 fn use_carousel_drag(setup: CarouselSetup, state: CarouselState, draggable: bool) -> Drag {
     let track = setup.track;
     let orientation = setup.orientation;
+    let nav = state.nav;
     let mut dragging = state.dragging;
     let mut drag_origin = state.drag_origin;
     // Under RTL a drag to the right heads for the end, as in `Scroller`.
@@ -1275,10 +1276,40 @@ fn use_carousel_drag(setup: CarouselSetup, state: CarouselState, draggable: bool
                 Orientation::Vertical => track.scroll_to(0.0, target),
             }
         }),
-        // No settle of our own: releasing hands the strip back to the
-        // browser, which snaps and fires `onscrollend`.
-        onend: Callback::new(move |()| dragging.set(false)),
+        // Releasing hands the strip back to the browser, which snaps and
+        // fires `onscrollend`. Blitz does neither: the nearest slide is gone to.
+        onend: Callback::new(move |()| {
+            dragging.set(false);
+            if !snaps_scroll() {
+                settle_nearest(nav);
+            }
+        }),
     })
+}
+
+/// Goes to the slide nearest the track's scroll offset.
+fn settle_nearest(nav: Nav) {
+    let element = nav.track.element;
+    let (offset, content, view) = (
+        element.scroll_offset(),
+        element.scroll_size(),
+        element.dimensions(),
+    );
+    spawn(async move {
+        let (Ok((x, y)), Ok(content), Ok(view)) = (offset.await, content.await, view.await) else {
+            return;
+        };
+        let percent = |at: f64, range: f64| match range > 0.0 {
+            true => at / range * 100.0,
+            false => 0.0,
+        };
+        let raw = nav.raw_at(
+            percent(inline_x(x), content.width - view.width),
+            percent(y, content.height - view.height),
+        );
+        // A move reads the track, which a task finds borrowed natively.
+        when_free(move || nav.go_to(nav.real_for(raw)));
+    });
 }
 
 /// The strip: the tail cloned onto the front, the slides, the head cloned onto

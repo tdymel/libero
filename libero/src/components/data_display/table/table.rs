@@ -9,7 +9,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_id,
-    platform::lays_out_captions,
+    platform::{lays_out_captions, widens_sized_tables},
     sx::{StaticSx, Sx, sx},
     theme::{TABLE_FONT_SIZE, TableDefaults},
 };
@@ -21,81 +21,84 @@ use super::{
 };
 
 static TABLE_SX: StaticSx = StaticSx::new(|| {
-    TableDefaults::theme_vars()
-        .width("100%")
-        // Separate, with the row lines on the cells: Blitz's collapsing model paints
-        // one grid from the first cell's top border, a black 3px one here (todo 772).
-        .border_collapse("separate")
-        .border_spacing("0")
-        .selector(
-            "& th, & td",
-            sx().text_align_start().vertical_align("middle"),
-        )
-        .selector("& thead th", sx().font_weight("600"))
-        // A row header is semantics, not a look: it reads like its row.
-        .selector("& tbody th", sx().font_weight("inherit"))
-        .selector("& caption", caption_sx())
-        .selector(
-            "& th[data-align=\"center\"], & td[data-align=\"center\"]",
-            sx().text_align("center"),
-        )
-        .selector(
-            "& th[data-align=\"end\"], & td[data-align=\"end\"]",
-            sx().text_align_end(),
-        )
-        // The button carries the header's padding instead, so the whole
-        // padded area is clickable and not just the label. Marked from Rust:
-        // `th:has(button)` never matches natively.
-        .selector("& th[data-sortable]", sx().padding("0"))
-        .selector(
-            "& th button",
-            sx().display("flex")
-                .align_items("center")
-                .gap("4px")
-                .width("100%")
-                .padding(TableDefaults::padding())
-                .background("none")
-                .border("0")
-                .font("inherit")
-                .color("inherit")
-                .cursor("pointer"),
-        )
-        // The library's ring, not the UA's. Inset, as in `Accordion`: the
-        // button fills its cell edge to edge.
-        .selector("& th button:focus-visible", inset_focus_ring_sx("-2px"))
-        .selector(
-            "& th button svg",
-            sx().width("16px")
-                .height("16px")
-                .flex_shrink("0")
-                .opacity("0")
-                .transition("opacity 150ms, transform 150ms"),
-        )
-        // `aria-sort` sits on the sorted header only, so it doubles as the
-        // styling state: a hint on hover elsewhere, solid once sorted.
-        .selector(
-            "& th[data-sortable]:not([aria-sort]):hover svg, \
+    let vars = TableDefaults::theme_vars();
+    match widens_sized_tables() {
+        true => vars.width("100%"),
+        false => vars.min_width("100%"),
+    }
+    // Separate, with the row lines on the cells: Blitz's collapsing model paints
+    // one grid from the first cell's top border, a black 3px one here (todo 772).
+    .border_collapse("separate")
+    .border_spacing("0")
+    .selector(
+        "& th, & td",
+        sx().text_align_start().vertical_align("middle"),
+    )
+    .selector("& thead th", sx().font_weight("600"))
+    // A row header is semantics, not a look: it reads like its row.
+    .selector("& tbody th", sx().font_weight("inherit"))
+    .selector("& caption", caption_sx())
+    .selector(
+        "& th[data-align=\"center\"], & td[data-align=\"center\"]",
+        sx().text_align("center"),
+    )
+    .selector(
+        "& th[data-align=\"end\"], & td[data-align=\"end\"]",
+        sx().text_align_end(),
+    )
+    // The button carries the header's padding instead, so the whole
+    // padded area is clickable and not just the label. Marked from Rust:
+    // `th:has(button)` never matches natively.
+    .selector("& th[data-sortable]", sx().padding("0"))
+    .selector(
+        "& th button",
+        sx().display("flex")
+            .align_items("center")
+            .gap("4px")
+            .width("100%")
+            .padding(TableDefaults::padding())
+            .background("none")
+            .border("0")
+            .font("inherit")
+            .color("inherit")
+            .cursor("pointer"),
+    )
+    // The library's ring, not the UA's. Inset, as in `Accordion`: the
+    // button fills its cell edge to edge.
+    .selector("& th button:focus-visible", inset_focus_ring_sx("-2px"))
+    .selector(
+        "& th button svg",
+        sx().width("16px")
+            .height("16px")
+            .flex_shrink("0")
+            .opacity("0")
+            .transition("opacity 150ms, transform 150ms"),
+    )
+    // `aria-sort` sits on the sorted header only, so it doubles as the
+    // styling state: a hint on hover elsewhere, solid once sorted.
+    .selector(
+        "& th[data-sortable]:not([aria-sort]):hover svg, \
              & th[data-sortable]:not([aria-sort]):focus-within svg",
-            sx().opacity("0.5"),
-        )
-        .selector(
-            "& th[aria-sort=\"ascending\"] svg, & th[aria-sort=\"descending\"] svg",
-            sx().opacity("1"),
-        )
-        .selector(
-            "& th[aria-sort=\"ascending\"] svg",
-            sx().transform("rotate(180deg)"),
-        )
-        // `text-align` doesn't position flex items, so a sortable header
-        // needs its own justification to match its cells.
-        .selector(
-            "& th[data-align=\"center\"] button",
-            sx().justify_content("center"),
-        )
-        .selector(
-            "& th[data-align=\"end\"] button",
-            sx().justify_content("end"),
-        )
+        sx().opacity("0.5"),
+    )
+    .selector(
+        "& th[aria-sort=\"ascending\"] svg, & th[aria-sort=\"descending\"] svg",
+        sx().opacity("1"),
+    )
+    .selector(
+        "& th[aria-sort=\"ascending\"] svg",
+        sx().transform("rotate(180deg)"),
+    )
+    // `text-align` doesn't position flex items, so a sortable header
+    // needs its own justification to match its cells.
+    .selector(
+        "& th[data-align=\"center\"] button",
+        sx().justify_content("center"),
+    )
+    .selector(
+        "& th[data-align=\"end\"] button",
+        sx().justify_content("end"),
+    )
 });
 
 fn caption_sx() -> Sx {
