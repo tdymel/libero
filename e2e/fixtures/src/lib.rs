@@ -98,6 +98,7 @@ mod progress_bar;
 mod qr_code;
 mod radio_group;
 mod range_slider;
+mod refused;
 mod repo_button;
 mod scroll_area;
 mod scroller;
@@ -201,6 +202,7 @@ const FIXTURES: &[Routes] = &[
     qr_code::ROUTES,
     radio_group::ROUTES,
     range_slider::ROUTES,
+    refused::ROUTES,
     repo_button::ROUTES,
     scroll_area::ROUTES,
     scroller::ROUTES,

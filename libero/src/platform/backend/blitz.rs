@@ -20,6 +20,7 @@ mod baked;
 mod focus;
 mod placeholder;
 mod redraw;
+mod refused;
 mod resize;
 mod stale_text;
 mod sticky;
@@ -334,6 +335,7 @@ pub(super) fn Listener(children: Element) -> Element {
             onpointerdown: move |event| {
                 HELD.set(true);
                 activate::pointer_down(&event);
+                refused::pressed(&event);
                 pressed(&event);
             },
             onmousedown: |event| focus::mouse_pressed(&event),
@@ -364,6 +366,7 @@ pub(super) fn Listener(children: Element) -> Element {
                 focus::keyed(&event);
                 keyed(&event);
                 tab_from_start(&event);
+                refused::tab(&event);
                 activate::key_down(&event);
                 baked::check_soon();
             },
@@ -388,6 +391,7 @@ pub(super) fn Listener(children: Element) -> Element {
                 HELD.set(false);
                 followed(&event, true);
                 focus::released();
+                refused::release(&event);
                 resize::pressed();
                 baked::check_soon();
             },
@@ -1135,7 +1139,9 @@ fn followed(event: &Event<PointerData>, up: bool) {
 
 /// The web's click focus: Blitz's `is_focussable` is the Tab walk's, so it
 /// skips a `tabindex="-1"` node a press still focuses (a roving tab, a dialog).
-fn focusable_ancestor(doc: &BaseDocument, mut node_id: NodeId) -> Option<NodeId> {
+/// A press in a disabled control or under `inert` counts from outside it.
+fn focusable_ancestor(doc: &BaseDocument, node_id: NodeId) -> Option<NodeId> {
+    let mut node_id = refused::press_origin(doc, node_id)?;
     loop {
         let node = doc.get_node(node_id)?;
         let negative = node.element_data().is_some_and(|element| {
