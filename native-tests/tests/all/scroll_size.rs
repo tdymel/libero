@@ -80,3 +80,29 @@ fn a_code_block_that_overflows_a_little_is_a_tab_stop() {
     page.advance(1.0);
     assert!(!page.exists("[role=region]"), "{}", page.tree());
 }
+
+fn scroll_box() -> Element {
+    rsx! {
+        div { id: "box", height: "100px", overflow_y: "auto", padding_top: "20px",
+            div { id: "content", height: "400px" }
+        }
+    }
+}
+
+/// Todo 885: `Page::rect` is the box, as `getBoundingClientRect` is: a
+/// scroller's own scroll moves its content, not itself.
+#[test]
+fn a_scrolled_box_keeps_its_rect() {
+    let mut page = mount(scroll_box);
+    let before = page.rect("#box");
+    let content = page.rect("#content").1;
+    page.hover("#box");
+    page.wheel("#box", 50.0);
+    assert!(page.scroll_top("#box") > 0.0, "the box did not scroll");
+    assert_eq!(page.rect("#box"), before);
+    let moved = content - page.rect("#content").1;
+    assert!(
+        (moved - page.scroll_top("#box")).abs() < 0.5,
+        "the content moved {moved}px"
+    );
+}

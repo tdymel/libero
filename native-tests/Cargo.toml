@@ -24,8 +24,8 @@ blitz-traits = "0.3.0-beta.2"
 # `Page::computed`: stylo's resolved values. The version blitz-dom uses.
 style = { package = "stylo", version = "0.20" }
 # What Blitz paints, not what stylo computed: `Page::painted_*` records the
-# scene the shell would draw.
-blitz-paint = { version = "0.3.0-beta.2", default-features = false }
+# scene the shell would draw; `svg` rasterises inline svgs too (todo 882).
+blitz-paint = { version = "0.3.0-beta.2", default-features = false, features = ["svg"] }
 anyrender = "0.13"
 # `Page::painted_pixel` rasterises that scene with the shell's CPU renderer.
 anyrender_vello_cpu = { version = "0.17", default-features = false }

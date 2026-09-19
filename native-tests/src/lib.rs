@@ -14,7 +14,14 @@
 //! assert!(page.is_focused("#go"));
 //! ```
 
-use std::{sync::Arc, thread, time::Duration};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    },
+    thread,
+    time::Duration,
+};
 
 use anyrender::{
     Paint, Scene,
@@ -32,7 +39,7 @@ use blitz_traits::{
         KeyState, MouseEventButton, MouseEventButtons, Point, PointerCoords, PointerDetails,
         UiEvent,
     },
-    shell::Viewport,
+    shell::{ShellProvider, Viewport},
 };
 use dioxus::prelude::*;
 use dioxus_native_dom::DioxusDocument;
@@ -74,14 +81,27 @@ pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
             ..Default::default()
         },
     );
+    let redraws = Arc::new(Redraws::default());
+    doc.inner.borrow_mut().set_shell_provider(redraws.clone());
     doc.initial_build();
     let mut page = Page {
         doc,
         time: 0.0,
         warnings,
+        redraws,
     };
     page.settle();
     page
+}
+
+/// The shell: counts the redraws the document asks for.
+#[derive(Default)]
+struct Redraws(AtomicUsize);
+
+impl ShellProvider for Redraws {
+    fn request_redraw(&self) {
+        self.0.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 /// A painted colour in `computed`'s notation, so the two compare.
@@ -189,9 +209,15 @@ pub struct Page {
     pub doc: DioxusDocument,
     time: f64,
     warnings: SignalWarnings,
+    redraws: Arc<Redraws>,
 }
 
 impl Page {
+    /// How many redraws the document has asked the shell for: at rest, none.
+    pub fn redraws(&self) -> usize {
+        self.redraws.0.load(Ordering::Relaxed)
+    }
+
     /// Polls the vdom until it has no work left, then restyles and lays out.
     pub fn settle(&mut self) {
         for _ in 0..MAX_POLLS {
@@ -669,6 +695,8 @@ impl Page {
     }
 
     /// The first match's `getBoundingClientRect()`: `(x, y, width, height)`.
+    /// Blitz's also subtracts the node's own scroll offset, added back as
+    /// libero's `client_rect` does (todo 885).
     pub fn rect(&self, selector: &str) -> (f64, f64, f64, f64) {
         let id = self.node(selector);
         let doc = self.doc.inner.borrow();
@@ -678,7 +706,10 @@ impl Page {
         let rect = doc
             .get_client_bounding_rect(id)
             .unwrap_or_else(|| panic!("{selector:?} has no layout box"));
-        (rect.x, rect.y, rect.width, rect.height)
+        let own = doc.get_node(id).map_or((0.0, 0.0), |node| {
+            (node.scroll_offset().x, node.scroll_offset().y)
+        });
+        (rect.x + own.0, rect.y + own.1, rect.width, rect.height)
     }
 
     /// Whether a pointer at the first match's centre hits it or a descendant.

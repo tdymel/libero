@@ -493,6 +493,31 @@ fn the_document_comes_to_rest_after_a_timers_render() {
     }
 }
 
+/// Todo 882: the raster paints inline svgs (`blitz-paint`'s `svg` feature).
+#[test]
+fn an_inline_svg_paints_its_stroke() {
+    let mut page = mount(timer_app);
+    page.wait(Duration::from_millis(100));
+    let (x, y, width, height) = page.rect("#marked svg");
+    let centre = page.painted_pixel((x + width / 2.0) as u32, (y + height / 2.0) as u32);
+    assert_eq!(centre, BLACK, "the icon's stroke at its centre");
+}
+
+/// Todo 893: the baked rebuild a check makes asks for a redraw that arms no
+/// check of its own (`redraw::quiet`). Unguarded, each check found an
+/// anonymous block stale again before its restyle and rebuilt it for ever.
+#[test]
+fn a_baked_rebuild_alone_arms_no_check() {
+    let mut page = mount(timer_app);
+    page.wait(TIMER + Duration::from_millis(100));
+    assert_painted(&mut page, "#marked", RED);
+    let before = page.redraws();
+    for _ in 0..5 {
+        page.wait(Duration::from_millis(40));
+    }
+    assert_eq!(page.redraws(), before, "libero kept redrawing at rest");
+}
+
 #[test]
 fn field_trailing_icons_read_after_a_live_switch_to_dark() {
     let mut page = mount(fields_app);

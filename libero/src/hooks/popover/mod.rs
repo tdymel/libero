@@ -228,6 +228,9 @@ pub fn use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -
 /// `Menu` level's box is read by every level above it, so the root `Menu`
 /// owns them all. Also the library's own entry: it skips the `dismiss` wiring,
 /// which each consumer does with its own `use_dismiss`.
+/// How often an open waits for its box's first layout before it places a 0x0.
+const UNLAID_TRIES: u8 = 3;
+
 pub(crate) fn use_popover_on(
     anchor: ElementHandle,
     floating: ElementHandle,
@@ -247,8 +250,8 @@ pub(crate) fn use_popover_on(
     // listener, so a page full of closed dropdowns listens to nothing.
     let subscription: Rc<RefCell<Option<Box<dyn ScrollSubscription>>>> =
         use_hook(|| Rc::new(RefCell::new(None)));
-    // Whether this open already waited once for the box's first layout.
-    let waited: Rc<Cell<bool>> = use_hook(|| Rc::new(Cell::new(false)));
+    // How often this open waited for the box's first layout.
+    let waited: Rc<Cell<u8>> = use_hook(|| Rc::new(Cell::new(0)));
 
     use_drop({
         let subscription = subscription.clone();
@@ -267,7 +270,7 @@ pub(crate) fn use_popover_on(
         let mounted = floating.mount_token().is_some();
         if !open || !mounted {
             listening.borrow_mut().take();
-            waited.set(false);
+            waited.set(0);
             // A `set` redraws even when unchanged: every opening ran this before
             // its box mounted and redrew the whole consumer for nothing.
             if placed.peek().is_some() {
@@ -316,7 +319,10 @@ pub(crate) fn use_popover_on(
             };
             // Not laid out yet: a native shell can run this before its next
             // layout, and a 0x0 box placed at the anchor's edge overflows it.
-            if floating_size.width == 0.0 && floating_size.height == 0.0 && !waited.replace(true) {
+            // It may poll several times before that layout (todo 896).
+            let tries = waited.get();
+            if floating_size.width == 0.0 && floating_size.height == 0.0 && tries < UNLAID_TRIES {
+                waited.set(tries + 1);
                 when_laid_out(move || {
                     let mut tick = scroll_tick;
                     let next = tick.peek().wrapping_add(1);

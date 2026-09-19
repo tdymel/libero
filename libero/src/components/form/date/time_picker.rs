@@ -502,6 +502,7 @@ impl ClockView {
                            options: Vec<SpinOption>,
                            at: SpinAt,
                            text: &'static str,
+                           valuetext: Option<String>,
                            page: usize| {
             rsx! {
                 SpinColumn {
@@ -510,6 +511,7 @@ impl ClockView {
                     options,
                     at,
                     text: if value.is_some() { text } else { "--" },
+                    valuetext,
                     // Round like a clock's digits; AM and PM just sit apart.
                     wrap: column != Column::Meridiem,
                     page,
@@ -554,7 +556,7 @@ impl ClockView {
             let second = base.second() as usize;
             rsx! {
                 span { "data-slot": "separator", "aria-hidden": "true", ":" }
-                {column(Column::Seconds, names.seconds_label.to_string(), options, place(second, true), TWO_DIGITS[second], 15)}
+                {column(Column::Seconds, names.seconds_label.to_string(), options, place(second, true), TWO_DIGITS[second], Some((names.seconds_value)(second as u32)), 15)}
             }
         });
         let meridiem = twelve.then(|| {
@@ -577,15 +579,16 @@ impl ClockView {
                 options,
                 place(pm as usize, true),
                 text,
+                None,
                 1,
             )
         });
         let minutes_page = (15 / step).max(1) as usize;
         rsx! {
             div { "data-slot": "columns",
-                {column(Column::Hours, names.hours_label.to_string(), hours, place(hour_index, true), hour_text, 3)}
+                {column(Column::Hours, names.hours_label.to_string(), hours, place(hour_index, true), hour_text, None, 3)}
                 span { "data-slot": "separator", "aria-hidden": "true", ":" }
-                {column(Column::Minutes, names.minutes_label.to_string(), minutes, minutes_at, TWO_DIGITS[minute as usize], minutes_page)}
+                {column(Column::Minutes, names.minutes_label.to_string(), minutes, minutes_at, TWO_DIGITS[minute as usize], Some((names.minutes_value)(minute)), minutes_page)}
                 {seconds}
                 {meridiem}
             }

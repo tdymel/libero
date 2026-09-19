@@ -29,9 +29,9 @@ fn a_time_picker_draws_a_spinbutton_per_part_and_posts_the_time() {
     }
     let html = body(&render(app));
 
-    // The default en-US clock: hours, minutes at 15, AM/PM.
+    // The default en-US clock: hours, minutes at 15 with their unit (todo 894), AM/PM.
     assert_eq!(html.matches("role=\"spinbutton\"").count(), 3);
-    for text in ["09", "30", "AM"] {
+    for text in ["09", "30 minutes", "AM"] {
         assert!(
             html.contains(&format!("aria-valuetext=\"{text}\"")),
             "{text}: {html}"
@@ -46,6 +46,25 @@ fn a_time_picker_draws_a_spinbutton_per_part_and_posts_the_time() {
         .collect();
     assert_eq!(neighbours, ["08", "10", "15", "45", "", "PM"]);
     assert!(html.contains("type=\"hidden\" name=\"at\" value=\"09:30:00\""));
+}
+
+/// Todo 894: the digital seconds say their unit, as the analog face does.
+#[test]
+fn a_time_pickers_seconds_say_their_unit() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TimePicker { value: NaiveTime::from_hms_opt(14, 1, 1), onchange: move |_| {}, variant: "digital", with_seconds: true }
+            }
+        }
+    }
+    let html = body(&render(app));
+    for text in ["1 minute", "1 second"] {
+        assert!(
+            html.contains(&format!("aria-valuetext=\"{text}\"")),
+            "{text}: {html}"
+        );
+    }
 }
 
 #[test]

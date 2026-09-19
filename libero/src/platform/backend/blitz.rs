@@ -1414,21 +1414,29 @@ fn heal_dirty_bits(doc: &BaseDocument) -> bool {
 /// How often [`heal_while_animating`] heals.
 const FRAME: Duration = Duration::from_millis(16);
 
+/// Frames with nothing healed before [`heal_while_animating`] stops: an
+/// infinite animation (a spinner) kept it at 60 Hz, about 0.3 ms a frame over
+/// 500 rows in a debug build (todo 892). The next flush restarts it.
+const IDLE_FRAMES: u32 = 30;
+
 /// Each restyle marks an animating node dirty, and a stale bit above it skips
 /// that restyle: a transition stopped at its start (todo 870). So from each
-/// flush on, until the document stops animating, the bits are healed a frame
-/// apart, and once more with a redraw at the end.
+/// flush on, until the document stops animating or nothing needed healing for
+/// [`IDLE_FRAMES`], the bits are healed a frame apart, and once more with a
+/// redraw at the end.
 fn heal_while_animating(state: &Rc<Doc>) {
     let mut ticks = state.animation_ticks.borrow_mut();
     if ticks.is_some() {
         return;
     }
     let weak = Rc::downgrade(state);
+    let idle = Rc::new(Cell::new(0u32));
     *ticks = super::thread::timer().map(|timer| {
         timer.every(
             FRAME,
             Box::new(move || {
                 let weak = weak.clone();
+                let idle = idle.clone();
                 when_free(Box::new(move || {
                     let Some(state) = weak.upgrade() else {
                         return;
@@ -1441,11 +1449,14 @@ fn heal_while_animating(state: &Rc<Doc>) {
                         return;
                     };
                     if heal_dirty_bits(&doc) {
+                        idle.set(0);
                         redraw::quiet(|| doc.shell_provider.request_redraw());
+                    } else {
+                        idle.set(idle.get() + 1);
                     }
                     let animating = doc.is_animating();
                     drop(doc);
-                    if !animating {
+                    if !animating || idle.get() >= IDLE_FRAMES {
                         drop(state.animation_ticks.take());
                     }
                 }));
