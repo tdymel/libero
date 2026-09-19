@@ -140,11 +140,12 @@ jobs:
           key: dx-${{ runner.os }}-${{ steps.dx.outputs.key }}
       - if: steps.dx-cache.outputs.cache-hit != 'true'
         run: cargo install dioxus-cli ${{ steps.dx.outputs.args }} --locked --bin dx
+      # Pinned: the AX snapshots follow Chrome's tree. Bump it in the same commit as the
+      # re-blessed snapshots, see .agents/brain/codebase/testing/e2e-harness.md.
       - id: chrome
         uses: browser-actions/setup-chrome@v1
         with:
-          chrome-version: stable
-      # "stable" floats; the version explains an ax snapshot diff that won't reproduce locally.
+          chrome-version: 152.0.7977.82
       - run: '"${{ steps.chrome.outputs.chrome-path }}" --version'
       # Ubuntu 24.04 blocks the unprivileged user namespaces Chrome's sandbox needs.
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
