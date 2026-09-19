@@ -29,6 +29,7 @@ mod wheel;
 
 pub(super) use activate::focus_selectors;
 pub(super) use focus::{press_kept_focus, silent_focus};
+pub(super) use max_length::fit_pasted;
 pub(super) use placeholder::sync_soon as placeholder_drawn;
 pub(super) use resize::{on_content_change, on_resize};
 
@@ -378,7 +379,10 @@ pub(super) fn Listener(children: Element) -> Element {
                 baked::check_soon();
                 placeholder::sync_soon();
             },
-            oninput: |_| placeholder::sync_now(),
+            oninput: |_| {
+                max_length::input();
+                placeholder::sync_now();
+            },
             onpointermove: move |event| {
                 // A release off the app is never seen here; the next move is.
                 if event.held_buttons().is_empty() {

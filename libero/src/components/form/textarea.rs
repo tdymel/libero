@@ -10,6 +10,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_css, use_element, use_form_owner, use_localization, use_theme},
+    platform::fit_max_length,
     sx::{StaticSx, sx},
 };
 
@@ -183,7 +184,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
     let emit = bound.emit(props.oninput);
     let track = emit.is_some() || limit.is_some();
     let oninput = track.then_some(move |event: FormEvent| {
-        let text = event.value();
+        let text = fit_max_length(event.value());
         typed.set((resets, Some(length(&text))));
         if let Some(emit) = &emit {
             emit(text);

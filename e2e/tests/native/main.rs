@@ -29,6 +29,7 @@ mod image_list;
 mod inline_spaces;
 mod keyboard;
 mod lightbox;
+mod max_length;
 mod menubar;
 mod nav_link;
 mod notifications;

@@ -12,6 +12,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
+    platform::fit_max_length,
 };
 
 field_props! {
@@ -150,7 +151,7 @@ fn TextFieldShell(
         .attr("required", required)
         .event(
             "oninput",
-            oninput.map(|emit| move |event: FormEvent| emit(event.value())),
+            oninput.map(|emit| move |event: FormEvent| emit(fit_max_length(event.value()))),
         );
     let attributes = props.attributes;
     let draw = Rc::new(move || {

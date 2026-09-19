@@ -405,6 +405,13 @@ pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bo
     };
 }
 
+/// Only Blitz needs it: its editor ignores `maxlength` - see
+/// [`fit_max_length`](crate::platform::fit_max_length).
+#[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+pub(crate) fn fit_pasted(value: String) -> String {
+    blitz::fit_pasted(value)
+}
+
 /// Only Blitz needs it: it has no pointer capture, so `blitz::Listener` hands
 /// `capture` the moves and the release that land outside it - see
 /// [`follow_pointer`](crate::platform::follow_pointer).

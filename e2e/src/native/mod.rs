@@ -99,13 +99,23 @@ pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
     page
 }
 
-/// The shell: counts the redraws the document asks for.
+/// The shell: counts the redraws the document asks for, and holds the
+/// clipboard a paste reads ([`Page::set_clipboard`]).
 #[derive(Default)]
-struct Redraws(AtomicUsize);
+struct Redraws(AtomicUsize, std::sync::Mutex<String>);
 
 impl ShellProvider for Redraws {
     fn request_redraw(&self) {
         self.0.fetch_add(1, Ordering::Relaxed);
+    }
+
+    fn get_clipboard_text(&self) -> Result<String, blitz_traits::shell::ClipboardError> {
+        Ok(self.1.lock().unwrap().clone())
+    }
+
+    fn set_clipboard_text(&self, text: String) -> Result<(), blitz_traits::shell::ClipboardError> {
+        *self.1.lock().unwrap() = text;
+        Ok(())
     }
 }
 
@@ -261,6 +271,20 @@ impl Page {
     /// How many redraws the document has asked the shell for: at rest, none.
     pub fn redraws(&self) -> usize {
         self.redraws.0.load(Ordering::Relaxed)
+    }
+
+    /// The text a text control's editor holds: Blitz keeps typing there, off `value`.
+    pub fn editor_text(&self, selector: &str) -> String {
+        let doc = self.doc.inner.borrow();
+        let node = doc.get_node(self.node(selector)).expect("a text control");
+        let element = node.element_data().expect("an element");
+        let input = element.text_input_data().expect("a text control");
+        input.editor.raw_text().to_string()
+    }
+
+    /// What the next Ctrl+V pastes.
+    pub fn set_clipboard(&self, text: &str) {
+        *self.redraws.1.lock().unwrap() = text.to_string();
     }
 
     /// Polls the vdom until it has no work left, then restyles and lays out.
