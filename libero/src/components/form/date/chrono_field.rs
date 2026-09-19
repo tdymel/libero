@@ -181,12 +181,12 @@ pub(super) fn chrono_field<V: DateValue>(
         twelve_hour: options
             .twelve_hour
             .unwrap_or_else(|| uses_twelve_hours(&time)),
-        calendar: options.calendar.copied_or(theme.date_picker.calendar),
-        days: options.days.unwrap_or(theme.date_picker.days),
+        calendar: options.calendar.copied_or(theme.chrono_picker.calendar),
+        days: options.days.unwrap_or(theme.chrono_picker.days),
     };
     let close = options
         .close_on_change
-        .unwrap_or(theme.date_field.close_on_change);
+        .unwrap_or(theme.chrono_field.close_on_change);
     let formats = Formats {
         date: options
             .format

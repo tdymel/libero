@@ -97,12 +97,12 @@ macro_rules! date_props {
     (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] calendar $($rest:ident)*) => {
         $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
             /// A month of days, or one row of days with buttons that page it.
-            /// Defaults to the theme's `DatePickerDefaults::calendar`. Ignored
+            /// Defaults to the theme's `ChronoPickerDefaults::calendar`. Ignored
             /// for times, ranges, months and years.
             #[props(default, into)]
             calendar: $crate::components::common::Input<$crate::theme::CalendarVariant>,
             /// Days in the mini calendar's row. Defaults to the theme's
-            /// `DatePickerDefaults::days`.
+            /// `ChronoPickerDefaults::days`.
             #[props(default)]
             days: Option<usize>,
         ] $($rest)*);
@@ -118,7 +118,7 @@ macro_rules! date_props {
         $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
             /// Picking a day, or the second end of a range of days, closes the
             /// dropdown. Defaults to the theme's
-            /// `DateFieldDefaults::close_on_change`.
+            /// `ChronoFieldDefaults::close_on_change`.
             #[props(default)]
             close_on_change: Option<bool>,
         ] $($rest)*);

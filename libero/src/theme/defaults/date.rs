@@ -3,12 +3,12 @@ use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
 use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
-pub const DATE_PICKER_DAY_SIZE_SIZE: SizeCss = SizeCss::new("--lsx-date-picker-day-size-");
-pub const DATE_PICKER_FONT_SIZE_SIZE: SizeCss = SizeCss::new("--lsx-date-picker-font-size-");
+pub const CHRONO_DAY_SIZE_SIZE: SizeCss = SizeCss::new("--lsx-chrono-day-size-");
+pub const CHRONO_FONT_SIZE_SIZE: SizeCss = SizeCss::new("--lsx-chrono-font-size-");
 
 // The picked level, resolved on the root so every day cell inherits it.
-pub const DATE_PICKER_DAY: CssVar = CssVar::new("--lsx-date-picker-day");
-pub const DATE_PICKER_FONT_SIZE: CssVar = CssVar::new("--lsx-date-picker-font-size");
+pub const CHRONO_DAY: CssVar = CssVar::new("--lsx-chrono-day");
+pub const CHRONO_FONT_SIZE: CssVar = CssVar::new("--lsx-chrono-font-size");
 
 /// The view a calendar shows: days of a month, months of a year, years of a
 /// decade. `ChronoPicker`'s `level` picks the lowest one - the one a pick lands
@@ -60,7 +60,7 @@ impl TimePickerDefaults {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct DatePickerSizeLevel {
+pub struct ChronoSizeLevel {
     /// One day cell, square.
     pub day_size: &'static str,
     pub font_size: &'static str,
@@ -70,42 +70,42 @@ pub struct DatePickerSizeLevel {
 /// `DatePicker`, `MonthPicker`, `YearPicker`, `DateRangePicker`, the clocks'
 /// sizes and the fields' dropdowns.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct DatePickerDefaults {
+pub struct ChronoPickerDefaults {
     pub size: Size,
-    pub sizes: Sizes<DatePickerSizeLevel>,
+    pub sizes: Sizes<ChronoSizeLevel>,
     /// A month of days, or the mini calendar's row.
     pub calendar: CalendarVariant,
     /// Days in the mini calendar's row.
     pub days: usize,
 }
 
-impl DatePickerDefaults {
+impl ChronoPickerDefaults {
     pub const DEFAULT: Self = Self {
         size: Size::Md,
         calendar: CalendarVariant::Full,
         days: 7,
         sizes: Sizes::new(
-            DatePickerSizeLevel {
+            ChronoSizeLevel {
                 day_size: "28px",
                 font_size: "12px",
             },
-            DatePickerSizeLevel {
+            ChronoSizeLevel {
                 day_size: "32px",
                 font_size: "13px",
             },
-            DatePickerSizeLevel {
+            ChronoSizeLevel {
                 day_size: "36px",
                 font_size: "14px",
             },
-            DatePickerSizeLevel {
+            ChronoSizeLevel {
                 day_size: "40px",
                 font_size: "16px",
             },
-            DatePickerSizeLevel {
+            ChronoSizeLevel {
                 day_size: "44px",
                 font_size: "18px",
             },
-            DatePickerSizeLevel {
+            ChronoSizeLevel {
                 day_size: "48px",
                 font_size: "20px",
             },
@@ -113,11 +113,8 @@ impl DatePickerDefaults {
     };
 
     pub fn size_sx(size: Size) -> Sx {
-        sx().var(DATE_PICKER_DAY, DATE_PICKER_DAY_SIZE_SIZE.value(size))
-            .var(
-                DATE_PICKER_FONT_SIZE,
-                DATE_PICKER_FONT_SIZE_SIZE.value(size),
-            )
+        sx().var(CHRONO_DAY, CHRONO_DAY_SIZE_SIZE.value(size))
+            .var(CHRONO_FONT_SIZE, CHRONO_FONT_SIZE_SIZE.value(size))
     }
 
     pub fn theme_vars() -> Sx {
@@ -125,13 +122,13 @@ impl DatePickerDefaults {
     }
 }
 
-impl ToCssDeclarations for DatePickerDefaults {
+impl ToCssDeclarations for ChronoPickerDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         let mut declarations = Vec::new();
         for size in Size::ALL {
             let level = self.sizes.get(size);
-            declarations.push(DATE_PICKER_DAY_SIZE_SIZE.declare(size, level.day_size));
-            declarations.push(DATE_PICKER_FONT_SIZE_SIZE.declare(size, level.font_size));
+            declarations.push(CHRONO_DAY_SIZE_SIZE.declare(size, level.day_size));
+            declarations.push(CHRONO_FONT_SIZE_SIZE.declare(size, level.font_size));
         }
         declarations
     }
@@ -140,9 +137,9 @@ impl ToCssDeclarations for DatePickerDefaults {
 /// Styles the whole date and time family of fields: `ChronoField`,
 /// `DateField`, `TimeField`, `DateTimeField` and the range fields. Holds what
 /// they do not share with every other field. The frame's numbers live on
-/// `FieldDefaults` and the dropdown's calendar on `DatePickerDefaults`.
+/// `FieldDefaults` and the dropdown's calendar on `ChronoPickerDefaults`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct DateFieldDefaults {
+pub struct ChronoFieldDefaults {
     pub size: Size,
     pub radius: Size,
     /// Picking a day, or the second end of a range of days, closes the
@@ -150,7 +147,7 @@ pub struct DateFieldDefaults {
     pub close_on_change: bool,
 }
 
-impl DateFieldDefaults {
+impl ChronoFieldDefaults {
     pub const DEFAULT: Self = Self {
         size: Size::Md,
         radius: Size::Sm,

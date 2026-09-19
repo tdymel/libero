@@ -24,16 +24,13 @@ use crate::{
     localization::DateLocale,
     platform::ElementApi,
     sx::{FORCED_COLORS, StaticSx, Sx, sx},
-    theme::{
-        DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DatePickerDefaults, Size, SizeCss,
-        TimePickerVariant,
-    },
+    theme::{CHRONO_DAY, CHRONO_FONT_SIZE, ChronoPickerDefaults, Size, SizeCss, TimePickerVariant},
 };
 
 input_from_str!(TimePickerVariant);
 
 pub(super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
-    let day = DATE_PICKER_DAY.value();
+    let day = CHRONO_DAY.value();
     let button = sx()
         .display("flex")
         .align_items("center")
@@ -48,12 +45,12 @@ pub(super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         .font_size("inherit")
         .cursor("pointer")
         .hover(sx().background("muted.1"));
-    DatePickerDefaults::theme_vars()
+    ChronoPickerDefaults::theme_vars()
         .display("inline-flex")
         .flex_direction("column")
         .align_items("center")
         .gap("8px")
-        .font_size(DATE_PICKER_FONT_SIZE.value())
+        .font_size(CHRONO_FONT_SIZE.value())
         // A digital clock: `HH:MM`, each number between its faded neighbours.
         .selector(
             "& > [data-slot='columns']",

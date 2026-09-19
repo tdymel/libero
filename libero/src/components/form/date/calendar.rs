@@ -21,9 +21,7 @@ use crate::{
     localization::{DateLocale, Formats},
     platform::{ElementApi, logical_key},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{
-        CalendarVariant, DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DatePickerDefaults, Size, SizeCss,
-    },
+    theme::{CHRONO_DAY, CHRONO_FONT_SIZE, CalendarVariant, ChronoPickerDefaults, Size, SizeCss},
 };
 
 crate::components::common::input_from_str!(CalendarVariant);
@@ -60,7 +58,7 @@ fn add_months(day: NaiveDate, months: i64) -> NaiveDate {
 }
 
 static CALENDAR_SX: StaticSx = StaticSx::new(|| {
-    let day = DATE_PICKER_DAY.value();
+    let day = CHRONO_DAY.value();
     let button = sx()
         .display("flex")
         .align_items("center")
@@ -77,11 +75,11 @@ static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .font_size("inherit")
         .cursor("pointer")
         .hover(sx().background("muted.1"));
-    DatePickerDefaults::theme_vars()
+    ChronoPickerDefaults::theme_vars()
         .display("inline-flex")
         .flex_direction("column")
         .gap("4px")
-        .font_size(DATE_PICKER_FONT_SIZE.value())
+        .font_size(CHRONO_FONT_SIZE.value())
         .selector(
             "& > [data-slot='header']",
             sx().display("flex").align_items("center").gap("4px"),

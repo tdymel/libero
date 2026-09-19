@@ -39,8 +39,8 @@ pub fn DatePicker(props: DatePickerProps) -> Element {
             exclude_date: props.exclude_date,
             allow_deselect: props.allow_deselect.unwrap_or(false),
             columns: props.columns,
-            calendar: props.calendar.copied_or(theme.date_picker.calendar),
-            days: props.days.unwrap_or(theme.date_picker.days),
+            calendar: props.calendar.copied_or(theme.chrono_picker.calendar),
+            days: props.days.unwrap_or(theme.chrono_picker.days),
             ..PickerOptions::default()
         },
         today: props.today,

@@ -265,7 +265,7 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
     let today = use_today(props.today);
     // A time picked with no day and no clock waits here for the day pick.
     let mut pending = use_signal(|| None::<NaiveTime>);
-    let size = props.size.copied_or(use_theme().date_picker.size);
+    let size = props.size.copied_or(use_theme().chrono_picker.size);
     let date = value.map(|value| value.date());
     let time = value.map(|value| value.time()).or(pending());
     let (min_time, max_time) = time_limits(date, props.min, props.max);
@@ -382,7 +382,7 @@ pub(super) struct DateTimeRangeFlowProps {
 pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
     let theme = use_theme();
     let names = &use_localization().date;
-    let size = props.size.copied_or(theme.date_picker.size);
+    let size = props.size.copied_or(theme.chrono_picker.size);
     let mut step = use_signal(|| Step::Dates);
     let (root, mut handoff) = use_handoff();
     let tabs_id = use_id();

@@ -246,7 +246,7 @@ impl Sealed for NaiveDate {
             onchange, options, ..
         } = args;
         let level = options.level;
-        let size = args.size.copied_or(use_theme().date_picker.size);
+        let size = args.size.copied_or(use_theme().chrono_picker.size);
         // A month is held as its first day, a year as its January 1.
         let value = match level {
             DateLevel::Day => args.value,
@@ -505,7 +505,7 @@ impl Sealed for DateRange<NaiveDate> {
 
     fn picker(args: PickerArgs<Self>) -> Element {
         let (value, onchange, options) = (args.value, args.onchange, args.options);
-        let size = args.size.copied_or(use_theme().date_picker.size);
+        let size = args.size.copied_or(use_theme().chrono_picker.size);
         // One identity across renders, as for a single day.
         let onpick = use_callback(move |day: NaiveDate| {
             if let Some(onchange) = &onchange {

@@ -289,7 +289,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
 ) -> Element {
     let theme = use_theme();
     let names = &use_localization().date;
-    let defaults = &theme.date_field;
+    let defaults = &theme.chrono_field;
     let size = field.size.copied_or(defaults.size);
     let radius = field.radius.copied_or(defaults.radius);
     let required = field.required.unwrap_or(false);

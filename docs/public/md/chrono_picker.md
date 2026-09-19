@@ -132,7 +132,7 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 
 ## Theme defaults
 
-`theme.date_picker` and `theme.time_picker` hold the size steps, the default
+`theme.chrono_picker` and `theme.time_picker` hold the size steps, the default
 calendar and its `days`, and the default clock variant and minute `step`. The
 month and weekday names and the button labels come from `Localization::date`, a
 `DateLocale` (see [localization](localization.md)). The provider's `formats`,

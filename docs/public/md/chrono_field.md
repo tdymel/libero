@@ -160,7 +160,7 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 
 ## Theme defaults
 
-`theme.date_field` is a `DateFieldDefaults` with `size`, `radius` and
+`theme.chrono_field` is a `ChronoFieldDefaults` with `size`, `radius` and
 `close_on_change`. Names, labels and errors come from `Localization::date`, a
 `DateLocale` (see [localization](localization.md)). Its weekday arrays are
 Sunday first. The date and time patterns, the first weekday and the range

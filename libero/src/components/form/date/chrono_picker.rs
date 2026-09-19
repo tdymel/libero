@@ -81,8 +81,8 @@ pub fn ChronoPicker<V: DateValue>(props: ChronoPickerProps<V>) -> Element {
             twelve_hour: props
                 .twelve_hour
                 .unwrap_or_else(|| uses_twelve_hours(time_format)),
-            calendar: props.calendar.copied_or(theme.date_picker.calendar),
-            days: props.days.unwrap_or(theme.date_picker.days),
+            calendar: props.calendar.copied_or(theme.chrono_picker.calendar),
+            days: props.days.unwrap_or(theme.chrono_picker.days),
         },
         today: props.today,
         size: props.size,
