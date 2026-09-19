@@ -1,5 +1,5 @@
 //! After a navigation: the new page starts at the top, focus on its heading.
-//! Self-contained: the e2e fixture `docs_shell` and e2e's native `docs_shell` test include it.
+//! The e2e fixture `docs_shell` keeps its own copy (todo 951).
 
 use dioxus::prelude::*;
 use libero::{components::ScrollAreaHandle, hooks::ElementHandle, platform::ElementApi};

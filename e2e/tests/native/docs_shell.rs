@@ -1,11 +1,8 @@
-//! The docs shell's navigation hooks, from the docs' own file (todo 809).
-
-#[path = "../../../docs/src/heading_focus.rs"]
-#[allow(dead_code)]
-mod heading_focus;
+//! The docs shell's navigation hooks, from the fixture's copy (todos 809, 951).
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
+use e2e_fixtures::docs_shell::{use_heading_focus, use_scroll_reset};
 use libero::components::{Button, Flex, Header, ScrollArea, Title, use_scroll_area};
 use libero::hooks::use_element;
 use libero::sx::sx;
@@ -17,7 +14,7 @@ const AREA: &str = "#page-area";
 fn app() -> Element {
     let mut page = use_signal(|| "A");
     let area = use_scroll_area();
-    heading_focus::use_scroll_reset(page(), area);
+    use_scroll_reset(page(), area);
     rsx! {
         Button { id: "to-b", onclick: move |_| page.set("B"), "Page B" }
         div { height: "200px",
@@ -74,7 +71,7 @@ fn a_wheel_over_the_page_scrolls_the_page_and_leaves_the_header() {
 fn titled() -> Element {
     let mut page = use_signal(|| "A");
     let content = use_element();
-    heading_focus::use_heading_focus(page(), content);
+    use_heading_focus(page(), content);
     rsx! {
         Button { id: "to-b", onclick: move |_| page.set("B"), "Page B" }
         div { onmounted: content.mount(),

@@ -51,7 +51,7 @@ mod data_list;
 mod dialog;
 mod direction_toggle;
 mod divider;
-mod docs_shell;
+pub mod docs_shell;
 mod drawer;
 mod elevation;
 mod field_frame;
