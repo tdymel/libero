@@ -1,9 +1,10 @@
 //! Blitz lays `position: sticky` out as `relative` (stylo_taffy). Every box
 //! whose computed `position` is sticky is moved by a `transform` instead, kept
 //! in its containing block, at each flush and after each scroll. All four
-//! edges stick; a percentage refers to the scroller's window.
+//! edges stick; a percentage refers to the scroller's window. Blitz reports
+//! no window resize, so the window size is polled while any box is sticky.
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 
 use blitz_dom::{BaseDocument, QualName, ns};
 use dioxus_native_dom::NodeId;
@@ -11,13 +12,49 @@ use style::computed_values::position::T as Position;
 use style::values::computed::{Length, LengthPercentage, position::Inset};
 use style::values::generics::position::GenericInset;
 
-use super::{anchor, node_is_rtl, resolved_style_value, run_or_defer, when_laid_out};
+use super::{anchor, node_is_rtl, resize::POLL, resolved_style_value, run_or_defer, when_laid_out};
+use crate::platform::{TimerSubscription, backend::thread};
 
 /// The shift last written, `"x y"` in px, so an unchanged one writes nothing.
 const SHIFT_ATTR: &str = "data-lsx-sticky-shift";
 
 thread_local! {
     static ARMED: Cell<bool> = const { Cell::new(false) };
+    static WINDOW: RefCell<Option<Box<dyn TimerSubscription>>> = const { RefCell::new(None) };
+}
+
+/// The window's size and scale, as a resize changes them.
+fn window(doc: &BaseDocument) -> ((u32, u32), f64) {
+    (doc.viewport().window_size, doc.viewport().scale_f64())
+}
+
+/// Starts the window poll while any box is sticky, stops it once none is.
+fn watch_window(doc: &BaseDocument, any: bool) {
+    let dropped = WINDOW.with_borrow_mut(|poll| match (any, poll.is_some()) {
+        (true, false) => {
+            let last = Cell::new(window(doc));
+            *poll = thread::timer().map(|timer| {
+                timer.every(
+                    POLL,
+                    Box::new(move || {
+                        let Some(anchor) = anchor() else {
+                            return;
+                        };
+                        let Some(now) = anchor.try_doc().map(|doc| window(&doc)) else {
+                            return;
+                        };
+                        if last.replace(now) != now {
+                            sync_soon();
+                        }
+                    }),
+                )
+            });
+            None
+        }
+        (false, true) => poll.take(),
+        _ => None,
+    });
+    drop(dropped);
 }
 
 /// Something scrolled: [`sync`] once the scroll is in the tree.
@@ -55,6 +92,7 @@ pub(super) fn sync(doc: &mut BaseDocument) {
             boxes.push((id, sticky));
         }
     });
+    watch_window(doc, boxes.iter().any(|&(_, sticky)| sticky));
     let changes: Vec<(NodeId, [f32; 2])> = boxes
         .into_iter()
         .filter_map(|(id, sticky)| {

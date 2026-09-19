@@ -24,7 +24,7 @@ use crate::platform::{
 
 /// How late a change no press or key preceded is seen at most: a window
 /// resize, a timer's render, a picture that loaded.
-const POLL: Duration = Duration::from_millis(500);
+pub(super) const POLL: Duration = Duration::from_millis(500);
 
 /// After a press or key: past the frame that lays out what it rendered.
 const SETTLE: Duration = Duration::from_millis(30);

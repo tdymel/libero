@@ -165,12 +165,13 @@ fn a_bottom_box_holds_at_the_viewport_bottom() {
     assert_eq!(top(&page, "#footer"), bottom, "{}", page.tree());
 }
 
-/// Blitz reports no window resize, so the box follows only at the next
-/// flush or scroll (933).
+/// Blitz reports no window resize: the window size poll re-places it (934).
 #[test]
-#[ignore = "Blitz reports no window resize"]
 fn a_bottom_box_follows_a_window_resize() {
     let mut page = mount(page_footer);
+    let bottom = f64::from(VIEWPORT.1) - 20.0;
+    page.wait_for(|page| top(page, "#footer") == bottom);
+    assert_eq!(top(&page, "#footer"), bottom, "{}", page.tree());
     page.resize(800, 400);
     page.wait_for(|page| top(page, "#footer") == 380.0);
     assert_eq!(top(&page, "#footer"), 380.0, "{}", page.tree());
