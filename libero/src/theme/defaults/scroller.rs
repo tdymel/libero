@@ -4,16 +4,12 @@ use crate::sx::{Sx, sx};
 use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
 pub const SCROLLER_CONTROL_SIZE: SizeCss = SizeCss::new("--lsx-scroller-control-size-");
-/// The picked step's width, resolved on the root from the `size-*` token, so
-/// the two controls - which carry no size token of their own - inherit it.
+/// Resolved on the root; the two controls inherit it.
 pub const SCROLLER_CONTROL: CssVar = CssVar::new("--lsx-scroller-control");
-/// What the gradient under a control fades from. A per-instance
-/// `fade_color` writes its `-override` twin.
+/// What the gradient under a control fades from; a `fade_color` prop writes the `-override` twin.
 pub const SCROLLER_FADE: CssVar = CssVar::new("--lsx-scroller-fade");
 
-/// `PAPER_BACKGROUND.value()`, spelled as a `const` because `Theme::DEFAULT`
-/// is one - the `TIMELINE_BULLET_BACKGROUND_DEFAULT` precedent, pinned the
-/// same way by `the_fade_is_the_paper_surface`.
+/// `PAPER_BACKGROUND.value()` as a `const`, for `Theme::DEFAULT`.
 pub const SCROLLER_FADE_DEFAULT: &str = "var(--lsx-paper-background)";
 
 str_enum! {
@@ -25,12 +21,12 @@ str_enum! {
         Auto = "auto",
         /// Both always show, dimmed at their own end.
         Always = "always",
-        /// Neither renders. Pair with `onedgechange` for controls of your
-        /// own.
+        /// Neither renders. Pair with `onedgechange` for controls of your own.
         Never = "never",
     }
 }
 
+/// Theme defaults for `Scroller`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ScrollerDefaults {
     pub controls: ScrollerControls,
@@ -39,8 +35,7 @@ pub struct ScrollerDefaults {
     pub control_size: Size,
     /// The width of each control strip, in px.
     pub control_sizes: Sizes<u16>,
-    /// A CSS colour. Defaults to the surface colour, so dark mode is a change
-    /// to `PaperDefaults` and not to this component.
+    /// A CSS colour; the surface colour by default.
     pub fade_color: &'static str,
     /// Mouse drag-to-pan. Touch and trackpad scroll natively either way.
     pub draggable: bool,
@@ -80,8 +75,7 @@ mod tests {
     use super::*;
     use crate::theme::PAPER_BACKGROUND;
 
-    /// The fade has to *be* the surface colour, not a second spelling of
-    /// white, or the control strip shows as a band on anything but white.
+    /// A second spelling of white would show the strip as a band on dark surfaces.
     #[test]
     fn the_fade_is_the_paper_surface() {
         assert_eq!(SCROLLER_FADE_DEFAULT, PAPER_BACKGROUND.value());

@@ -4,13 +4,13 @@ use crate::theme::{Size, SizeCss, Sizes};
 pub const SPLITTER_DIVIDER_SIZE: SizeCss = SizeCss::new("--lsx-splitter-divider-size-");
 pub const SPLITTER_HIT_SIZE: SizeCss = SizeCss::new("--lsx-splitter-hit-size-");
 
+/// Theme defaults for `Splitter`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SplitterDefaults {
     /// Which size level `divider_size` uses when unset.
     pub size: Size,
     pub divider_sizes: Sizes<u8>,
-    /// Invisible hit-target thickness per `divider_size`; 24 meets WCAG 2.5.8
-    /// without leaning on the panes' spacing.
+    /// Invisible hit-target thickness; 24 meets WCAG 2.5.8 on its own.
     pub hit_sizes: Sizes<u8>,
     /// Percent floor applied to both panes.
     pub min_size: f64,

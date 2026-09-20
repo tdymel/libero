@@ -1,5 +1,6 @@
 use crate::theme::{Color, Variant};
 
+/// Theme defaults for `RepoButton`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RepoButtonDefaults {
     /// `Outlined`, the header chrome `ThemeToggle` wears.

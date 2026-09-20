@@ -1,7 +1,7 @@
 use crate::str_enum::str_enum;
 
 str_enum! {
-    /// Which axes show a scrollbar / allow overflow.
+    /// Which axes allow overflow and show a scrollbar.
     #[state_prefix = "axis"]
     pub enum ScrollAxis {
         #[default]
@@ -13,7 +13,7 @@ str_enum! {
 }
 
 str_enum! {
-    /// `Scroll` behaves as `Hover` - nothing here fades on an idle timeout.
+    /// `Scroll` behaves as `Hover`: nothing fades on an idle timeout.
     #[state_prefix = "visible"]
     pub enum ScrollbarVisibility {
         #[default]
@@ -25,7 +25,7 @@ str_enum! {
 }
 
 str_enum! {
-    /// Maps directly to the CSS `scrollbar-width` keyword.
+    /// The CSS `scrollbar-width` keyword.
     #[state_prefix = "size"]
     pub enum ScrollbarSize {
         #[default]
@@ -34,6 +34,7 @@ str_enum! {
     }
 }
 
+/// Theme defaults for `ScrollArea`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ScrollAreaDefaults {
     pub scrollbars: ScrollAxis,

@@ -6,8 +6,7 @@ pub const SLIDER_TRACK_SIZE: SizeCss = SizeCss::new("--lsx-slider-track-size-");
 pub const SLIDER_THUMB_SIZE: SizeCss = SizeCss::new("--lsx-slider-thumb-size-");
 pub const SLIDER_FONT_SIZE: SizeCss = SizeCss::new("--lsx-slider-font-size-");
 
-// The picked level, resolved on the root so the track/thumb/mark children -
-// which carry no `data-state` of their own - can inherit it.
+// Resolved on the root; the track, thumb and marks inherit it.
 pub const SLIDER_TRACK: CssVar = CssVar::new("--lsx-slider-track");
 pub const SLIDER_THUMB: CssVar = CssVar::new("--lsx-slider-thumb");
 
@@ -20,6 +19,7 @@ pub struct SliderSizeLevel {
     pub font_size: &'static str,
 }
 
+/// Theme defaults for `Slider`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SliderDefaults {
     pub size: Size,

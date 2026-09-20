@@ -3,18 +3,16 @@ use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
 use crate::theme::{CssVar, Responsive, Size, SizeCss, responsive};
 
-/// The scrim behind a `Bottom` bar, and behind a `Top` one. Two values rather
-/// than one rotated: a scrim fades *away* from its edge, so the gradient's
-/// direction is part of the value and not a transform of it.
+/// The scrims behind a `Bottom` and a `Top` bar: two values, since the fade's
+/// direction is part of the gradient.
 pub const IMAGE_LIST_BAR_BACKGROUND: CssVar = CssVar::new("--lsx-image-list-bar-background");
 pub const IMAGE_LIST_BAR_BACKGROUND_TOP: CssVar =
     CssVar::new("--lsx-image-list-bar-background-top");
 pub const IMAGE_LIST_BAR_COLOR: CssVar = CssVar::new("--lsx-image-list-bar-color");
-/// A spacing step, resolved here rather than published per size: the bar's
-/// padding is not a prop, so no `data-state` ever picks a different step.
+/// Resolved here, not per size: the bar's padding is not a prop.
 pub const IMAGE_LIST_BAR_PADDING: CssVar = CssVar::new("--lsx-image-list-bar-padding");
 
-/// The cell's corner radius, resolved on the cell from its own `data-state`.
+/// Resolved on the cell from its own `data-state`.
 pub const IMAGE_LIST_RADIUS: CssVar = CssVar::new("--lsx-image-list-radius");
 
 str_enum! {
@@ -24,14 +22,11 @@ str_enum! {
         /// Every cell the same height, from the list's aspect ratio.
         #[default]
         Standard = "standard",
-        /// Cells keep their own height and are packed with no dead space,
-        /// by `GridZone`'s measuring engine.
+        /// Cells keep their own height, packed with no dead space by `GridZone`.
         Masonry = "masonry",
-        /// `standard`, plus `ImageItem::rows`: a cell may take more than one
-        /// row, and the quilt's rows stay equal.
+        /// `standard`, plus `ImageItem::rows`: a cell may span several rows.
         Quilted = "quilted",
-        /// `standard`, with every second cell shortened to 70% and centred for
-        /// an alternating rhythm. Decoration, and it crops.
+        /// `standard`, with every second cell shortened to 70%. Decoration, and it crops.
         Woven = "woven",
     }
 }
@@ -45,17 +40,16 @@ str_enum! {
         Bottom = "bottom",
         /// Over the top of the image, on a scrim.
         Top = "top",
-        /// Under the image, in flow - the only position that is not an
-        /// overlay, and the only one that does not darken the picture.
+        /// Under the image, in flow: no overlay, no darkened picture.
         Below = "below",
     }
 }
 
+/// Theme defaults for `ImageList`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ImageListDefaults {
-    /// Snapped to a divisor of twelve by `ImageList` - a cell is a span of a
-    /// `GridZone`'s twelve tracks. `2` at every width: a theme that wants more
-    /// on a wide screen says `responsive(2).md(3)`.
+    /// Snapped to a divisor of twelve, the `GridZone` track count.
+    /// More on wide screens: `responsive(2).md(3)`.
     pub cols: Responsive<u8>,
     pub variant: ImageListVariant,
     pub gap: Size,
@@ -85,9 +79,7 @@ impl ImageListDefaults {
         sx().var(IMAGE_LIST_RADIUS, SizeCss::RADIUS.value(radius))
     }
 
-    /// Composed into the **cell's** base `Sx`, not the list's: the radius is
-    /// the cell's corner, so the `data-state` token that picks a step rides
-    /// the element that draws it.
+    /// Composed into the **cell's** base `Sx`, not the list's: the cell draws the corner.
     pub fn theme_vars() -> Sx {
         sx().per_radius(Self::radius_sx)
     }
@@ -109,8 +101,7 @@ mod tests {
     use super::*;
     use crate::tokens::HexColor;
 
-    /// Every stop of both scrims, composited over pure white, keeps the bar's
-    /// white text at 4.5:1 - the worst photo the sweep cannot see (todo 929).
+    /// Todo 929: every scrim stop over pure white keeps white text at 4.5:1.
     #[test]
     fn the_scrim_holds_white_text_over_a_white_photo() {
         let defaults = ImageListDefaults::DEFAULT;

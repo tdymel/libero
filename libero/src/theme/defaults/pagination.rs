@@ -10,19 +10,16 @@ pub const PAGINATION_BORDER: CssVar = CssVar::new("--lsx-pagination-border");
 pub const PAGINATION_ACTIVE_BACKGROUND: CssVar = CssVar::new("--lsx-pagination-active-background");
 pub const PAGINATION_ACTIVE_COLOR: CssVar = CssVar::new("--lsx-pagination-active-color");
 
-/// The shade a bare `Color` fills the current page with, matching
-/// `base_color`'s own default so a themed color and a prop-supplied one land on
-/// the same step of the ramp.
+/// Matches `base_color`'s default, so a themed and a prop colour share a step.
 const ACTIVE_SHADE: ColorShade = ColorShade::S6;
 
-/// Geometry and colour. The strings a reader sees live in
-/// [`Localization::pagination`](crate::localization::Localization::pagination).
+/// Theme defaults for `Pagination`, set on [`Theme`](crate::theme::Theme).
+/// Its strings live in [`Localization::pagination`](crate::localization::Localization::pagination).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PaginationDefaults {
     pub size: Size,
     pub radius: Size,
-    /// Fill of the current page. A bare [`Color`] rather than a `ColorValue`,
-    /// the `NavLinkDefaults` shape, so the contrast twin is derivable.
+    /// Fill of the current page; a bare [`Color`], so the contrast twin is derivable.
     pub color: Color,
     pub siblings: u8,
     pub boundaries: u8,
@@ -30,8 +27,7 @@ pub struct PaginationDefaults {
     /// Control box, in px.
     pub control_sizes: Sizes<u16>,
     pub font_sizes: Sizes<u16>,
-    /// `ColorValue`, not a `&'static str`: a raw `"muted.4"` is declared
-    /// verbatim, and a bare palette token is not a CSS colour.
+    /// Not a `&'static str`: a raw `"muted.4"` would be declared verbatim.
     pub border: ColorValue,
 }
 
@@ -54,8 +50,6 @@ impl PaginationDefaults {
             .font_size(PAGINATION_FONT_SIZE.value(size))
     }
 
-    /// The `Kbd` shape: the non-size declarations once, then a per-size block,
-    /// so every `Pagination` on a page shares one recycled class.
     pub fn theme_vars() -> Sx {
         sx().per_size(Self::size_sx)
     }

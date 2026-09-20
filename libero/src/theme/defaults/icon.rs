@@ -3,6 +3,7 @@ use crate::theme::{SizeCss, Sizes, Variant};
 
 pub const ICON_SIZE: SizeCss = SizeCss::new("--lsx-icon-size-");
 
+/// Theme defaults for `Icon`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct IconDefaults {
     /// The chrome an icon takes when a call site names none.

@@ -5,6 +5,7 @@ use crate::theme::{Size, SizeCss, Sizes};
 pub const LIST_GAP: SizeCss = SizeCss::new("--lsx-list-gap-");
 pub const LIST_INDENT: SizeCss = SizeCss::new("--lsx-list-indent-");
 
+/// Theme defaults for `List`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ListDefaults {
     pub size: Size,

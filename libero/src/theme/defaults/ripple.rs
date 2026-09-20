@@ -1,6 +1,5 @@
-/// Two names for one animation. Restarting a CSS animation on an element that
-/// is already running it needs the *name* to change - a class or custom
-/// property does not replay it - so consecutive clicks alternate between these.
+/// Two names for one animation: only a name change replays a running one, so
+/// consecutive clicks alternate.
 pub const RIPPLE_ANIMATION: [&str; 2] = ["lsx-ripple-a", "lsx-ripple-b"];
 pub const RIPPLE_KEYFRAMES: &str = concat!(
     "@keyframes lsx-ripple-a{from{opacity:0.3;transform:translate(-50%, -50%) scale(0);}",
@@ -13,9 +12,8 @@ pub const RIPPLE_KEYFRAMES: &str = concat!(
     "to{clip-path:circle(150% at var(--lsx-ripple-x, 50%) var(--lsx-ripple-y, 50%));opacity:0;}}"
 );
 
-/// The same ripple grown by `clip-path` inside the box, so its host needs no
-/// `overflow: hidden` and can hold a hit area wider than itself (`ActionIcon`).
+/// Grown by `clip-path`, so the host needs no `overflow: hidden` (`ActionIcon`'s hit area).
 pub const RIPPLE_CLIP_ANIMATION: [&str; 2] = ["lsx-ripple-clip-a", "lsx-ripple-clip-b"];
 
-/// `ripple-a` / `ripple-b`, the `data-state` that runs each one.
+/// The `data-state` that runs each one.
 pub const RIPPLE_STATE: [&str; 2] = ["ripple-a", "ripple-b"];

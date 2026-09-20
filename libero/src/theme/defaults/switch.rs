@@ -6,8 +6,7 @@ pub const SWITCH_TRACK_WIDTH: SizeCss = SizeCss::new("--lsx-switch-track-width-"
 pub const SWITCH_TRACK_HEIGHT: SizeCss = SizeCss::new("--lsx-switch-track-height-");
 pub const SWITCH_THUMB_SIZE: SizeCss = SizeCss::new("--lsx-switch-thumb-size-");
 
-// The picked level, resolved on the root so the track/thumb children - which
-// carry no `data-state` of their own - can inherit it.
+// Resolved on the root; the track and thumb inherit it.
 pub const SWITCH_TRACK_W: CssVar = CssVar::new("--lsx-switch-track-w");
 pub const SWITCH_TRACK_H: CssVar = CssVar::new("--lsx-switch-track-h");
 pub const SWITCH_THUMB: CssVar = CssVar::new("--lsx-switch-thumb");
@@ -20,6 +19,7 @@ pub struct SwitchSizeLevel {
     pub thumb_size: &'static str,
 }
 
+/// Theme defaults for `Switch`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SwitchDefaults {
     /// The wrapper a switch takes when a call site names none.

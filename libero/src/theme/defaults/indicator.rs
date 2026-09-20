@@ -7,8 +7,7 @@ pub const INDICATOR_FONT_SIZE: SizeCss = SizeCss::new("--lsx-indicator-font-size
 pub const INDICATOR_RADII: SizeCss = SizeCss::new("--lsx-indicator-radius-");
 
 /// The active step's diameter and label size, republished unsuffixed by
-/// [`IndicatorDefaults::size_sx`] - the `Badge` pattern. The base rule reads
-/// these two and needs to know nothing about which size token is on.
+/// [`IndicatorDefaults::size_sx`], as `Badge` does.
 pub const INDICATOR_BOX: CssVar = CssVar::new("--lsx-indicator-box");
 pub const INDICATOR_FONT: CssVar = CssVar::new("--lsx-indicator-font");
 
@@ -17,10 +16,7 @@ pub const INDICATOR_BORDER_WIDTH: CssVar = CssVar::new("--lsx-indicator-border-w
 pub const INDICATOR_PROCESSING_DURATION: CssVar =
     CssVar::new("--lsx-indicator-processing-duration");
 
-/// The `processing` ping, appended to the stylesheet beside `LOADER_KEYFRAMES`.
-///
-/// One name, unlike `RIPPLE_KEYFRAMES`' two: the ping runs for as long as the
-/// state is on and never has to restart.
+/// The `processing` ping. One name, unlike `RIPPLE_KEYFRAMES`: it never restarts.
 pub const INDICATOR_KEYFRAMES: &str = concat!(
     "@keyframes lsx-indicator-processing{from{opacity:0.6;transform:scale(0);}",
     "to{opacity:0;transform:scale(2.8);}}"
@@ -33,25 +29,24 @@ pub struct IndicatorSizeLevel {
     pub font_size: &'static str,
 }
 
+/// Theme defaults for `Indicator`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct IndicatorDefaults {
     pub size: Size,
-    /// A dot that is not about something the reader should look at is not
-    /// worth drawing, so the default is the error role.
+    /// The error role: a dot is only worth drawing when it needs a look.
     pub color: Color,
     /// The step of [`Self::radii`] a dot takes when a call site names none.
     pub radius: Size,
-    /// Above this a count renders as `{max}+`. A house convention, set once
-    /// here rather than on every call site.
+    /// Above this a count renders as `{max}+`.
     pub max: u32,
     /// The `with_border` ring.
     pub border_width: &'static str,
     pub processing_duration: &'static str,
-    /// px throughout, label included: the box is a fixed px height, and a
-    /// label that followed the reader's text size would outgrow it.
+    /// px throughout, label included: a label that followed the text size would
+    /// outgrow the fixed px box.
     pub sizes: Sizes<IndicatorSizeLevel>,
-    /// The indicator's own radius scale, not the global one, which starts at
-    /// a third of the smallest dot. `xxl` is round at every diameter.
+    /// Its own radius scale: the global one is too big for the smallest dot.
+    /// `xxl` is round at every diameter.
     pub radii: Sizes<&'static str>,
 }
 

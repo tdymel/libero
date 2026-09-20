@@ -7,8 +7,7 @@ pub const MENUBAR_FONT_SIZE: SizeCss = SizeCss::new("--lsx-menubar-font-size-");
 pub const MENUBAR_PADDING_X: SizeCss = SizeCss::new("--lsx-menubar-padding-x-");
 pub const MENUBAR_PADDING_Y: SizeCss = SizeCss::new("--lsx-menubar-padding-y-");
 
-// The picked level, resolved on the bar so the triggers - which carry no size
-// `data-state` of their own - inherit it. `Menu` does the same.
+// Resolved on the bar; the triggers, with no size `data-state`, inherit it.
 pub const MENUBAR_TRIGGER_FONT: CssVar = CssVar::new("--lsx-menubar-trigger-font");
 pub const MENUBAR_TRIGGER_PAD_X: CssVar = CssVar::new("--lsx-menubar-trigger-pad-x");
 pub const MENUBAR_TRIGGER_PAD_Y: CssVar = CssVar::new("--lsx-menubar-trigger-pad-y");
@@ -21,8 +20,8 @@ pub struct MenubarSizeLevel {
     pub padding_y: &'static str,
 }
 
-/// The bar's own row only - its dropdowns are `Menu`s and read
-/// [`MenuDefaults`](super::MenuDefaults).
+/// Theme defaults for `Menubar`, set on [`Theme`](crate::theme::Theme).
+/// The bar's row only: its dropdowns read [`MenuDefaults`](super::MenuDefaults).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MenubarDefaults {
     pub size: Size,
@@ -30,8 +29,7 @@ pub struct MenubarDefaults {
     /// Between two triggers.
     pub gap: &'static str,
     pub sizes: Sizes<MenubarSizeLevel>,
-    /// Whether the arrow keys wrap at the ends - along the bar, and down
-    /// each menu.
+    /// Whether the arrow keys wrap at the ends, along the bar and down each menu.
     pub loop_focus: bool,
 }
 

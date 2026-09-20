@@ -1,9 +1,7 @@
 use crate::theme::Size;
 
-/// What `TextField` does not share with every other field. The frame's
-/// numbers - font size, height, padding, radius scale - live on
-/// `FieldDefaults`, so a `TextField` and a `NativeSelect` line up in one form by
-/// construction rather than by two tables agreeing.
+/// Theme defaults for `TextField`, set on [`Theme`](crate::theme::Theme).
+/// The frame's numbers live on `FieldDefaults`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TextFieldDefaults {
     pub size: Size,

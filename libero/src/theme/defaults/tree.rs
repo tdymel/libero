@@ -1,7 +1,7 @@
 use crate::theme::Size;
 
-/// `Tree` renders through `List`, so it has no size scale of its own - this
-/// only picks which of `List`'s levels it defaults to.
+/// Theme defaults for `Tree`, set on [`Theme`](crate::theme::Theme).
+/// It renders through `List`, so `size` picks one of `List`'s levels.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TreeDefaults {
     pub size: Size,

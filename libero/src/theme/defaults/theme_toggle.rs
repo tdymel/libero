@@ -1,12 +1,11 @@
 use crate::theme::{Color, Variant};
 
+/// Theme defaults for `ThemeToggle`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ThemeToggleDefaults {
-    /// `Outlined`, so it reads as a control with a box of its own rather
-    /// than a bare glyph in a header.
+    /// `Outlined`, so it reads as a control rather than a bare glyph.
     pub variant: Variant,
-    /// `Muted` keeps the border quiet: the accent belongs to the page, not to
-    /// the chrome around it.
+    /// `Muted`: the accent belongs to the page, not to the chrome around it.
     pub color: Color,
 }
 

@@ -8,8 +8,7 @@ pub const TABS_PADDING_Y: SizeCss = SizeCss::new("--lsx-tabs-padding-y-");
 pub const TABS_INDICATOR: SizeCss = SizeCss::new("--lsx-tabs-indicator-");
 pub const TABS_ICON_GAP: SizeCss = SizeCss::new("--lsx-tabs-icon-gap-");
 
-// The picked level, resolved on the tab list so the tab buttons - which carry no
-// size `data-state` of their own - inherit it.
+// Resolved on the tab list; the tab buttons inherit it.
 pub const TABS_PAD_X: CssVar = CssVar::new("--lsx-tabs-pad-x");
 pub const TABS_PAD_Y: CssVar = CssVar::new("--lsx-tabs-pad-y");
 pub const TABS_LINE: CssVar = CssVar::new("--lsx-tabs-line");
@@ -29,6 +28,7 @@ pub struct TabsSizeLevel {
     pub icon_gap: &'static str,
 }
 
+/// Theme defaults for `Tabs`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TabsDefaults {
     pub size: Size,
@@ -89,7 +89,6 @@ impl TabsDefaults {
         hover_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
     };
 
-    // Resolved on the tab list so each tab button inherits them.
     pub fn size_sx(size: Size) -> Sx {
         sx().font_size(TABS_FONT_SIZE.value(size))
             .var(TABS_PAD_X, TABS_PADDING_X.value(size))

@@ -10,15 +10,8 @@ pub const NOTIFICATION_OFFSET: CssVar = CssVar::new("--lsx-notification-offset")
 /// The entry and the exit, as a CSS `<time>`.
 pub const NOTIFICATION_TRANSITION: CssVar = CssVar::new("--lsx-notification-transition");
 
-/// The entry and the exit, appended to the stylesheet beside the other
-/// keyframes. Keyframes rather than a transition, because an entry needs no
-/// "mounted, not yet visible" render to animate from, and no `transitionend`
-/// to finish on - the exit's end is a timer, so reduced motion (no animation
-/// at all) and a renderer without animations end it just the same.
-///
-/// `visibility` interpolates discretely and stays `visible` for the whole run,
-/// so the leaving state's own `visibility: hidden` lands when the fade ends and
-/// takes the notification out of the accessibility tree with it.
+/// Keyframes, not a transition: no "mounted, not yet visible" render, and the exit
+/// ends on a timer. `visibility: hidden` lands with the fade's end, leaving the a11y tree.
 pub const NOTIFICATION_KEYFRAMES: &str = concat!(
     "@keyframes lsx-notification-in{from{opacity:0;transform:translateY(8px);}}",
     "@keyframes lsx-notification-out{from{opacity:1;visibility:visible;}to{opacity:0;visibility:hidden;}}",
@@ -26,12 +19,8 @@ pub const NOTIFICATION_KEYFRAMES: &str = concat!(
 pub const NOTIFICATION_IN: &str = "lsx-notification-in";
 pub const NOTIFICATION_OUT: &str = "lsx-notification-out";
 
-/// When a notification closes on its own.
-///
-/// An enum and not an `Option<u32>`, because a notification's options need
-/// three answers - the host's default, never, or after so long - and an
-/// `Option<Option<u32>>` would spell them as a riddle. The options hold an
-/// `Option<AutoClose>`, where `None` is the host's.
+/// When a notification closes on its own. Options hold an `Option<AutoClose>`,
+/// where `None` is the host's default.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AutoClose {
     /// Stays until it is closed by hand or by `hide`.
@@ -40,27 +29,24 @@ pub enum AutoClose {
     After(u32),
 }
 
+/// Theme defaults for `Notifications`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NotificationsDefaults {
-    /// The stack a notification joins when neither the host nor the
-    /// notification names one.
+    /// The stack a notification joins when neither host nor notification names one.
     pub placement: Placement,
     pub auto_close: AutoClose,
-    /// How many notifications one stack shows at once. The rest wait, in
-    /// order, and appear as the shown ones close.
+    /// Shown at once per stack; the rest queue in order.
     pub limit: usize,
     pub width: &'static str,
     pub gap: Size,
     pub offset: Size,
-    /// Milliseconds. Read in Rust too: it is how long a closing notification
-    /// stays mounted.
+    /// Milliseconds. Also how long a closing notification stays mounted.
     pub transition_duration: u32,
 }
 
 impl NotificationsDefaults {
     pub const DEFAULT: Self = Self {
-        // The corner least likely to cover a page's own header and primary
-        // actions.
+        // The corner least likely to cover a page's header and primary actions.
         placement: Placement::BottomEnd,
         // Above the 5 s floor common guidance gives a short message (todo 576).
         auto_close: AutoClose::After(6000),

@@ -4,20 +4,14 @@ use crate::theme::{ChoiceVariant, CssVar, Size, SizeCss, Sizes};
 
 pub const RADIO_CIRCLE_SIZE: SizeCss = SizeCss::new("--lsx-radio-circle-size-");
 
-/// The picked level, resolved on the control so the circle and the dot inside
-/// it - which carry no `data-state` of their own - can inherit it.
+/// Resolved on the control; the circle and dot inherit it.
 pub const RADIO_CIRCLE: CssVar = CssVar::new("--lsx-radio-circle");
 
-/// What `Radio` does not share with every other field. No `radius`: a radio is
-/// a circle at every size, which is the one thing that tells it apart from a
-/// `Checkbox` at a glance.
-///
-/// The circle uses the same scale as the checkbox box, so a form mixing the
-/// two lines up by construction.
+/// Theme defaults for `Radio`, set on [`Theme`](crate::theme::Theme).
+/// No `radius`: the circle is what tells a radio from a `Checkbox`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RadioDefaults {
-    /// The wrapper a radio, and every radio in a `RadioGroup`, takes when a
-    /// call site names none.
+    /// The wrapper a radio, or a `RadioGroup`'s radios, take when a call site names none.
     pub variant: ChoiceVariant,
     pub size: Size,
     pub sizes: Sizes<&'static str>,

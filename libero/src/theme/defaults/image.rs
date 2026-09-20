@@ -6,7 +6,7 @@ use crate::theme::CssVar;
 pub const IMAGE_RADIUS: CssVar = CssVar::new("--lsx-image-radius");
 
 str_enum! {
-    /// How an `Image` fills its box - maps straight onto `object-fit`.
+    /// How an `Image` fills its box, as `object-fit`.
     #[state_prefix = "fit"]
     pub enum ImageFit {
         Fill = "fill",
@@ -18,10 +18,11 @@ str_enum! {
     }
 }
 
+/// Theme defaults for `Image`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ImageDefaults {
     pub fit: ImageFit,
-    /// CSS length used when an `Image` sets no `radius` of its own.
+    /// CSS length for an `Image` with no `radius` of its own.
     pub radius: &'static str,
 }
 

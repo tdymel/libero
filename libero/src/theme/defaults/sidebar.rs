@@ -5,10 +5,8 @@ use crate::theme::{Size, SizeCss, Sizes};
 pub const SIDEBAR_SIZE: SizeCss = SizeCss::new("--lsx-sidebar-size-");
 
 str_enum! {
-    /// Which edge a `Sidebar` borders and which axis its `size` applies to.
-    /// Descriptive only - an in-flow panel is placed by its parent's layout,
-    /// so this must match the DOM position you give it. Logical: `Start` is
-    /// the right under `dir="rtl"`.
+    /// Which edge a `Sidebar` borders. Descriptive only: it must match the
+    /// panel's DOM position. Logical: `Start` is the right under `dir="rtl"`.
     #[state_prefix = "side"]
     pub enum SidebarSide {
         #[default]
@@ -19,6 +17,7 @@ str_enum! {
     }
 }
 
+/// Theme defaults for `Sidebar`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SidebarDefaults {
     pub size: Size,

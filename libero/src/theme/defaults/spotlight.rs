@@ -9,12 +9,12 @@ pub const SPOTLIGHT_SEARCH_FONT_SIZE: CssVar = CssVar::new("--lsx-spotlight-sear
 pub const SPOTLIGHT_GROUP_COLOR: CssVar = CssVar::new("--lsx-spotlight-group-color");
 pub const SPOTLIGHT_DESCRIPTION_COLOR: CssVar = CssVar::new("--lsx-spotlight-description-color");
 
+/// Theme defaults for `Spotlight`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SpotlightDefaults {
     /// The palette's width, capped by the viewport.
     pub width: &'static str,
-    /// How far below the top of the viewport it opens. A palette sits high,
-    /// where the eye already is, not centred.
+    /// How far below the viewport's top it opens: high, where the eye is.
     pub top_offset: &'static str,
     pub max_list_height: &'static str,
     pub radius: Size,
@@ -33,8 +33,7 @@ impl SpotlightDefaults {
         radius: Size::Md,
         padding: "4px",
         search_font_size: "1.125rem",
-        // Shade 7, not 6: grey.6 on white is below 4.5:1
-        // for text this small.
+        // Shade 7, not 6: grey.6 on white is below 4.5:1 for text this small.
         group_color: ColorValue::Shade(Color::Muted, ColorShade::S7),
         description_color: ColorValue::Shade(Color::Muted, ColorShade::S7),
     };

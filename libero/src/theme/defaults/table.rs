@@ -8,8 +8,8 @@ pub const TABLE_FONT_SIZE: CssVar = CssVar::new("--lsx-table-font-size");
 pub const TABLE_BORDER_COLOR: CssVar = CssVar::new("--lsx-table-border-color");
 pub const TABLE_HOVER: CssVar = CssVar::new("--lsx-table-hover");
 
-/// Flat values, not a `Sizes` scale: `Table` has no `size` prop yet, so a
-/// per-size scale would be six numbers expressing one.
+/// Theme defaults for `Table`, set on [`Theme`](crate::theme::Theme).
+/// Flat values: `Table` has no `size` prop yet.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TableDefaults {
     pub padding_x: u8,

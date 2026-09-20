@@ -4,11 +4,12 @@ use crate::theme::CssVar;
 pub const OVERLAY_OPACITY: CssVar = CssVar::new("--lsx-overlay-opacity");
 pub const OVERLAY_BLUR: CssVar = CssVar::new("--lsx-overlay-blur");
 
+/// Theme defaults for `Overlay`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct OverlayDefaults {
     /// Alpha of the black dim behind the overlay's content.
     pub opacity: f32,
-    /// A `backdrop-filter` value - `"none"` for no blur.
+    /// A `backdrop-filter` value, `"none"` for no blur.
     pub blur: &'static str,
 }
 

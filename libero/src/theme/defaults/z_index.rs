@@ -9,30 +9,22 @@ pub const Z_INDEX_MODAL: CssVar = CssVar::new("--lsx-z-index-modal");
 pub const Z_INDEX_POPOVER: CssVar = CssVar::new("--lsx-z-index-popover");
 pub const Z_INDEX_NOTIFICATION: CssVar = CssVar::new("--lsx-z-index-notification");
 
-/// The library's stacking order in one place, so two components can't tie.
-/// Gaps of 100 leave room to slot a layer in without renumbering.
-///
-/// Plain integers because `ModalHost` computes `modal + n * modal_step` in
-/// Rust; the vars are published too, for a caller's own `sx`.
+/// Theme defaults for the stacking order, set on [`Theme`](crate::theme::Theme).
+/// Plain integers: `ModalHost` computes `modal + n * modal_step` in Rust.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ZIndexDefaults {
     pub header: i32,
     pub float: i32,
-    /// The lowest floating window; each window raised above it adds
-    /// `window_step`, capped below `overlay`.
+    /// The lowest floating window; each raised one adds `window_step`, capped below `overlay`.
     pub window: i32,
     pub window_step: i32,
     pub overlay: i32,
-    /// The first modal's z-index; each one open above it adds `modal_step`,
-    /// capped below `popover`.
+    /// The first modal; each one above adds `modal_step`, capped below `popover`.
     pub modal: i32,
     pub modal_step: i32,
-    /// Above every modal, not below: an anchored popover is portaled to the
-    /// document root, so a dropdown opened *inside* a modal no longer inherits
-    /// its stacking context and would otherwise fall behind it.
+    /// Above every modal: a portaled dropdown opened inside one would fall behind it.
     pub popover: i32,
-    /// Above everything: a notification raised while a modal is open, or
-    /// while a dropdown in it is, still has to be read.
+    /// Above everything, open modals and their dropdowns included.
     pub notification: i32,
 }
 

@@ -20,6 +20,7 @@ pub struct TextSizeLevel {
     pub line_height: &'static str,
 }
 
+/// Theme defaults for `Text`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TextDefaults {
     pub size: Size,
@@ -71,8 +72,6 @@ impl TextDefaults {
         ),
     };
 
-    /// Everything about a `Text` that varies by size. Font-family doesn't,
-    /// hence `TEXT_FONT_FAMILY`.
     pub fn size_sx(size: Size) -> Sx {
         sx().font_size(TEXT_FONT_SIZE.value(size))
             .font_weight(TEXT_FONT_WEIGHT.value(size))
@@ -80,9 +79,6 @@ impl TextDefaults {
             .line_height(TEXT_LINE_HEIGHT.value(size))
     }
 
-    /// Every size at once, each gated behind its own `data-state` selector,
-    /// so all `Text`s share one static class and picking a size never mints
-    /// a new one.
     pub fn theme_vars() -> Sx {
         sx().font_family(TEXT_FONT_FAMILY.value())
             .per_size(Self::size_sx)

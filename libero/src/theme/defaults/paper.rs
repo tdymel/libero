@@ -5,52 +5,37 @@ use crate::theme::{
     SizeCss, gradient_fill_sx, gradient_image,
 };
 
-/// The library's one definition of a surface colour. Anything that paints
-/// itself as a sheet of paper - `Paper`, `Dialog`, and every skeleton or
-/// indicator that has to disappear against one - reads this rather than
-/// spelling `white` again.
+/// The library's one surface colour: anything painted as paper reads this.
 pub const PAPER_BACKGROUND: CssVar = CssVar::new("--lsx-paper-background");
 pub const PAPER_BORDER_COLOR: CssVar = CssVar::new("--lsx-paper-border-color");
-/// What reads against [`PAPER_BACKGROUND`]. Published as `--lsx-focus-contrast`
-/// by [`PaperDefaults::theme_vars`], so a focus ring inside a surface contrasts
-/// against it.
+/// What reads against [`PAPER_BACKGROUND`], published as `--lsx-focus-contrast`
+/// by [`PaperDefaults::theme_vars`].
 pub const PAPER_CONTRAST: CssVar = CssVar::new("--lsx-paper-contrast");
 pub const PAPER_RADIUS: CssVar = CssVar::new("--lsx-paper-radius");
 pub const PAPER_SHADOW: CssVar = CssVar::new("--lsx-paper-shadow");
-/// A `glass` surface's translucent background, [`PAPER_BACKGROUND`] mixed
-/// with transparency.
+/// [`PAPER_BACKGROUND`] mixed with transparency.
 pub const GLASS_BACKGROUND: CssVar = CssVar::new("--lsx-glass-background");
 /// The `backdrop-filter` behind a `glass` surface.
 pub const GLASS_BLUR: CssVar = CssVar::new("--lsx-glass-blur");
 /// `glass_background` as a percentage, for mixing a gradient's stops.
 pub(crate) const GLASS_SHARE: CssVar = CssVar::new("--lsx-glass-share");
 
-/// Users who turned transparency off get opaque surfaces. Not Baseline yet, so
-/// [`FORCED_COLORS`] and the native branch back it up.
+/// Not Baseline yet, so [`FORCED_COLORS`] and the native branch back it up.
 const REDUCED_TRANSPARENCY: &str = "(prefers-reduced-transparency: reduce)";
 
-/// What a surface looks like when nobody says otherwise.
-///
-/// `radius` and `shadow` are steps on the shared `SizeCss::RADIUS`/`SHADOW`
-/// scales rather than a per-size scale of their own - a surface has one of
-/// each, not six.
+/// Theme defaults for `Paper`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PaperDefaults {
     pub radius: Size,
     pub shadow: Size,
-    /// A CSS colour, not a palette token: it is the page's paper, and the
-    /// palette has no shade that means "the surface itself" yet. Adding a
-    /// dark arm later is a change to this value, not to any component.
+    /// A CSS colour: the palette has no "surface itself" shade yet.
     pub background: &'static str,
-    /// What reads against `background`. It is a field rather than something
-    /// derived because `background` is arbitrary CSS: `sx`'s `background()`
-    /// publishes `--lsx-focus-contrast` only when it recognises a named
-    /// colour, and a `var()` reference is opaque to it. Change one and change
-    /// the other.
+    /// What reads against `background`; not derivable from arbitrary CSS.
+    /// Change one and change the other.
     pub contrast: ColorValue,
     pub border_color: ColorValue,
-    /// How much of `background` a `glass` surface keeps, in percent. Keep it
-    /// at 70 or more: text contrast is measured against what shows through.
+    /// Percent of `background` a `glass` surface keeps. Keep it at 70 or more
+    /// for text contrast.
     pub glass_background: u8,
     /// The `backdrop-filter` behind a `glass` surface, e.g. `"blur(12px)"`.
     pub glass_blur: &'static str,
@@ -67,9 +52,7 @@ impl PaperDefaults {
         glass_blur: "blur(12px)",
     };
 
-    /// The card on an inked page: one step off the surface, the way the light
-    /// one is one step off white. `contrast` and `border_color` are already
-    /// theme colours, so only the background is spelled again here.
+    /// The card on an inked page, one step off the surface.
     pub const DARK: Self = Self {
         background: "#25262B",
         ..Self::DEFAULT
@@ -83,13 +66,8 @@ impl PaperDefaults {
         sx().box_shadow(SizeCss::SHADOW.value(shadow))
     }
 
-    /// The surface colour, for a component that paints itself as one without
-    /// being a `Paper` - a field frame, `Button`'s `Elevated` arm. Always take
-    /// this, never `background(PAPER_BACKGROUND.value())` alone: the var is
-    /// opaque to `sx`, so the `--lsx-focus-contrast` that `background("white")`
-    /// used to publish for free has to be declared by hand, or every focus
-    /// ring on the surface falls back to the primary shade. The surface is the
-    /// ring's halo too, as `background()` publishes it.
+    /// The surface colour for non-`Paper` surfaces. Never `background(PAPER_BACKGROUND.value())`
+    /// alone: it would lose `--lsx-focus-contrast` and the ring's halo.
     pub(crate) fn background_sx() -> Sx {
         sx().background(PAPER_BACKGROUND.value())
             .var(
@@ -99,9 +77,7 @@ impl PaperDefaults {
             .var(FOCUS_RING_HALO, PAPER_BACKGROUND.value())
     }
 
-    /// The base declarations name the themed vars, so a surface that sets no
-    /// `radius`/`shadow` carries no `data-state` at all; the folds below only
-    /// come into play once a caller names a step.
+    /// A surface with no `radius`/`shadow` carries no `data-state`; the folds apply once a caller names a step.
     pub fn theme_vars() -> Sx {
         Self::background_sx()
             .border_radius(PAPER_RADIUS.value())
@@ -110,9 +86,7 @@ impl PaperDefaults {
             .per_shadow(Self::shadow_sx)
     }
 
-    /// Translucent plus a backdrop blur, and opaque again wherever the blur
-    /// would hurt: reduced transparency, and forced colours, which keep the
-    /// author's alpha on `Canvas`.
+    /// Translucent plus a blur; opaque under reduced transparency and forced colours.
     pub(crate) fn glass_sx() -> Sx {
         let opaque = sx()
             .background(PAPER_BACKGROUND.value())

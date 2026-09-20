@@ -1,8 +1,7 @@
 use crate::theme::Size;
 
-/// What `Select` and `MultiSelect` do not share with every other field. The
-/// frame's numbers live on `FieldDefaults`, so either lines up with a
-/// `TextField` in one form by construction.
+/// Theme defaults for `Select` and `MultiSelect`, set on [`Theme`](crate::theme::Theme).
+/// The frame's numbers live on `FieldDefaults`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SelectDefaults {
     pub size: Size,

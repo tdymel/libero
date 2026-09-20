@@ -10,6 +10,7 @@ pub const KBD_BACKGROUND: CssVar = CssVar::new("--lsx-kbd-background");
 pub const KBD_BORDER: CssVar = CssVar::new("--lsx-kbd-border");
 pub const KBD_COLOR: CssVar = CssVar::new("--lsx-kbd-color");
 
+/// Theme defaults for `Kbd`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KbdDefaults {
     pub size: Size,
@@ -25,8 +26,7 @@ impl KbdDefaults {
         size: Size::Sm,
         font_sizes: Sizes::new(10, 12, 14, 16, 20, 24),
         font_family: MONO_FONT_FAMILY,
-        // The code block's steps of the `muted` ramp, so a key follows the
-        // palette's page (todo 396).
+        // The code block's `muted` steps, so a key follows the palette (todo 396).
         background: "var(--lsx-muted-1)",
         border: "var(--lsx-muted-4)",
         color: "var(--lsx-muted-7)",
@@ -47,8 +47,7 @@ impl KbdDefaults {
             .border_top(border.clone())
             .border_left(border.clone())
             .border_right(border)
-            // A touch thicker than the other 3 sides - reads as a keycap
-            // with some depth instead of a flat pill.
+            // Thicker, so it reads as a keycap rather than a flat pill.
             .border_bottom(border_bottom)
             .border_radius(SizeCss::RADIUS.value(Size::Sm));
 

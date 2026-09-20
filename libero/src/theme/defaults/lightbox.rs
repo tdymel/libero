@@ -6,29 +6,20 @@ pub const LIGHTBOX_STAGE_HEIGHT: CssVar = CssVar::new("--lsx-lightbox-stage-heig
 pub const LIGHTBOX_THUMBNAIL_SIZE: CssVar = CssVar::new("--lsx-lightbox-thumbnail-size");
 pub const LIGHTBOX_THUMBNAILS_GAP: CssVar = CssVar::new("--lsx-lightbox-thumbnails-gap");
 
-/// No backdrop of its own: a lightbox dims like every other modal, through
-/// `OverlayDefaults` (decided 2026-09-16, [[wont-do]]'s "Modal has no stylable
-/// knobs").
+/// Theme defaults for `Lightbox`, set on [`Theme`](crate::theme::Theme).
+/// Its backdrop comes from `OverlayDefaults`, like every modal's.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LightboxDefaults {
-    /// The dialog's widest extent, a CSS length. Below the `sm` breakpoint,
-    /// or under 30rem tall (a phone on its side), the viewer is full screen
-    /// instead, inside the safe-area insets.
+    /// The dialog's widest extent. Below `sm`, or under 30rem tall, it is full screen.
     pub width: &'static str,
-    /// The stage's height, a CSS length. Fixed, so every slide is the same
-    /// box and a picture is fitted into it rather than sizing it. A picture
-    /// smaller than the stage keeps its natural size. Full screen, the stage
-    /// is the room the close button, caption and thumbnails leave.
+    /// Fixed, so every slide is the same box; a smaller picture keeps its natural size.
     pub stage_height: &'static str,
-    /// One thumbnail's edge, a CSS length. The strip is a `Carousel`, so this
-    /// caps the strip at `thumbnails_per_view` of them rather than sizing
-    /// each directly; a narrower dialog shrinks them.
+    /// Caps the strip at `thumbnails_per_view` thumbnails; a narrower dialog shrinks them.
     pub thumbnail_size: &'static str,
     /// Thumbnails visible at once before the strip scrolls.
     pub thumbnails_per_view: f64,
     pub thumbnails_gap: Size,
-    /// The upper scale bound, `1.0` being the picture as first shown: scaled
-    /// down into the stage, never above its natural size.
+    /// The upper scale bound, `1.0` being the picture as first shown.
     pub max_zoom: f64,
 }
 

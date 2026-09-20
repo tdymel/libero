@@ -3,29 +3,17 @@ use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
 use crate::theme::{Color, CssVar, Size, SizeCss, Sizes};
 
-/// The square edge, one declaration per step. The root resolves the active one
-/// into [`LOADER_SIZE`]; every piece of geometry below is a fraction of that,
-/// so a loader needs exactly one number to be fully specified.
+/// The square edge per step; all geometry is a fraction of the active one.
 pub const LOADER_SIZE_SCALE: SizeCss = SizeCss::new("--lsx-loader-size-");
 
-/// The active step's edge, republished unsuffixed by [`LoaderDefaults::size_sx`],
-/// which is the `Badge`/`ColorSwatch` pattern. The bar and dot children are
-/// sized off it and inherit it, so they need to know nothing about which step
-/// is on.
+/// The active step's edge, republished unsuffixed by [`LoaderDefaults::size_sx`].
 pub const LOADER_SIZE: CssVar = CssVar::new("--lsx-loader-size");
 
-/// The ink. Per instance via `variables()`, never on `:root` - the `Mark`/`Image`
-/// shape. Children inherit it from the root.
+/// The ink, per instance via `variables()`, never on `:root`.
 pub const LOADER_COLOR: CssVar = CssVar::new("--lsx-loader-color");
 
-/// One `@keyframes` per variant, appended to the stylesheet beside
-/// `RIPPLE_KEYFRAMES`.
-///
-/// Each one runs from the shape's *hidden* end to its *visible* end, which is
-/// why the reduced-motion arm in the component cannot simply be
-/// `animation: none` for every variant - see `Loader`'s own comment. Cancelling
-/// an animation leaves the element on its static style, and for `bars` that is
-/// the `from` frame: invisible.
+/// One `@keyframes` per variant, each from the *hidden* end to the *visible* one:
+/// `animation: none` would leave `bars` invisible under reduced motion.
 pub const LOADER_KEYFRAMES: &str = concat!(
     "@keyframes lsx-loader-oval{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}",
     "@keyframes lsx-loader-bars{from{transform:scale(0.6);opacity:0;}",
@@ -47,14 +35,13 @@ str_enum! {
     }
 }
 
+/// Theme defaults for `Loader`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct LoaderDefaults {
     pub variant: LoaderVariant,
     pub size: Size,
     pub color: Color,
-    /// px throughout: a spinner is a glyph at a fixed optical weight, not
-    /// text, so it does not follow a reader's font size the way `Badge`'s
-    /// label does.
+    /// px throughout: a spinner is a glyph, not text, so it ignores the reader's font size.
     pub sizes: Sizes<&'static str>,
 }
 
@@ -70,10 +57,7 @@ impl LoaderDefaults {
         sx().var(LOADER_SIZE, LOADER_SIZE_SCALE.value(size))
     }
 
-    /// No `per_radius`: none of the three shapes has a corner a caller would
-    /// set. A ring and a dot are round by construction and a bar's cap is part
-    /// of the glyph, so a radius prop would have nothing to apply to -
-    /// `Slider`'s pill-track lesson.
+    /// No `per_radius`: no shape has a corner a caller would set.
     pub fn theme_vars() -> Sx {
         sx().per_size(Self::size_sx)
     }

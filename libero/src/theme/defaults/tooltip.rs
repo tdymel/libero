@@ -8,18 +8,18 @@ pub const TOOLTIP_BACKGROUND: CssVar = CssVar::new("--lsx-tooltip-background");
 pub const TOOLTIP_COLOR: CssVar = CssVar::new("--lsx-tooltip-color");
 pub const TOOLTIP_DURATION: CssVar = CssVar::new("--lsx-tooltip-duration");
 
-/// The bubble's fade in. It mounts when it opens, so a keyframe, not a
-/// transition, and it unmounts when it closes, so there is no fade out.
+/// Fade in only: the bubble mounts on open and unmounts on close.
 pub(crate) const TOOLTIP_KEYFRAMES: &str = "@keyframes lsx-tooltip-in{from{opacity:0;}}";
 pub(crate) const TOOLTIP_IN: &str = "lsx-tooltip-in";
 
+/// Theme defaults for `Tooltip`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TooltipDefaults {
     pub side: Side,
     /// Distance between trigger and bubble, bridged so the pointer can cross.
     pub gap: Size,
     pub size: Size,
-    /// Milliseconds before the bubble appears / disappears.
+    /// Milliseconds before the bubble appears and disappears.
     pub open_delay: u32,
     pub close_delay: u32,
     /// Fade duration, in milliseconds.
@@ -38,8 +38,7 @@ impl TooltipDefaults {
         close_delay: 0,
         duration: 150,
         font_sizes: Sizes::new(10, 12, 13, 14, 16, 18),
-        // Drawn against the page, not on it: the `muted` step furthest from
-        // the page, lettered in the page itself (todo 396).
+        // Inverted: the `muted` step furthest from the page, lettered in the page (todo 396).
         background: "var(--lsx-muted-9)",
         color: "var(--lsx-surface)",
     };

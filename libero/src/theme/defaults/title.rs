@@ -14,15 +14,15 @@ pub const TITLE_LINE_HEIGHT: SizeCss = SizeCss::new("--lsx-title-line-height-");
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TitleSizeLevel {
     pub font_weight: &'static str,
-    pub font_size: &'static str, // in rem
+    pub font_size: &'static str,
     pub letter_spacing: &'static str,
     pub line_height: &'static str,
 }
 
+/// Theme defaults for `Title`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TitleDefaults {
-    /// The look only. A bare `Title` stays h1 whatever this says; the tag
-    /// follows `component`, or a `size` the caller passes.
+    /// The look only: a bare `Title` stays h1; the tag follows `component` or a passed `size`.
     pub size: Size,
     pub font_family: &'static str,
     pub sizes: Sizes<TitleSizeLevel>,
@@ -72,8 +72,6 @@ impl TitleDefaults {
         ),
     };
 
-    /// Everything about a `Title` that varies by size. Font-family doesn't,
-    /// hence `TITLE_FONT_FAMILY`.
     pub fn size_sx(size: Size) -> Sx {
         sx().font_size(TITLE_FONT_SIZE.value(size))
             .font_weight(TITLE_FONT_WEIGHT.value(size))
@@ -81,9 +79,6 @@ impl TitleDefaults {
             .line_height(TITLE_LINE_HEIGHT.value(size))
     }
 
-    /// Every size at once, each gated behind its own `data-state` selector,
-    /// so all `Title`s share one static class and picking a size never mints
-    /// a new one.
     pub fn theme_vars() -> Sx {
         sx().font_family(TITLE_FONT_FAMILY.value())
             .per_size(Self::size_sx)

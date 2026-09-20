@@ -8,37 +8,35 @@ pub const MENU_PADDING_X: SizeCss = SizeCss::new("--lsx-menu-padding-x-");
 pub const MENU_LABEL_FONT_SIZE: SizeCss = SizeCss::new("--lsx-menu-label-font-size-");
 pub const MENU_MAX_HEIGHT: CssVar = CssVar::new("--lsx-menu-max-height");
 
-// The picked level, resolved on the menu box so the items - which carry no
-// size `data-state` of their own - inherit it. `Tabs` does the same.
+// Resolved on the menu box; the items, with no size `data-state`, inherit it.
 pub const MENU_ITEM_FONT: CssVar = CssVar::new("--lsx-menu-item-font");
 pub const MENU_ITEM_MIN_HEIGHT: CssVar = CssVar::new("--lsx-menu-item-min-height");
 pub const MENU_ITEM_PAD_X: CssVar = CssVar::new("--lsx-menu-item-pad-x");
 pub const MENU_LABEL_FONT: CssVar = CssVar::new("--lsx-menu-label-font");
 pub const MENU_ITEM_RADIUS: CssVar = CssVar::new("--lsx-menu-item-radius");
 
-/// The menu box's own padding, and so the inset an item nests at - which is
-/// what its corner radius has to be smaller by.
+/// The menu box's padding: the inset an item nests at, and so its radius cut.
 pub const MENU_PADDING: &str = "4px";
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MenuSizeLevel {
     pub font_size: &'static str,
-    /// An item's minimum height - a taller item grows past it.
+    /// An item's minimum height.
     pub item_height: f64,
     pub padding_x: &'static str,
     /// A group's name, above its items.
     pub label_font_size: &'static str,
 }
 
+/// Theme defaults for `Menu`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MenuDefaults {
     pub size: Size,
     pub radius: Size,
     pub max_height: &'static str,
     pub sizes: Sizes<MenuSizeLevel>,
-    /// Milliseconds the pointer has to rest on an item before its submenu
-    /// opens, or before a sibling takes over from an open submenu. Long enough
-    /// to cross a sibling on the way into a submenu without closing it.
+    /// Milliseconds of hover before a submenu opens or a sibling takes over:
+    /// long enough to cross a sibling on the way into a submenu.
     pub submenu_delay: u32,
     /// Whether choosing an item closes the menu.
     pub close_on_select: bool,
@@ -101,9 +99,7 @@ impl MenuDefaults {
             .var(MENU_LABEL_FONT, MENU_LABEL_FONT_SIZE.value(size))
     }
 
-    /// An item nests `MENU_PADDING` inside the box, so its corner has to be
-    /// that much tighter or it crosses the box's own - visibly at `xxl`.
-    /// `max` keeps the small steps at 0 rather than negative.
+    /// `MENU_PADDING` tighter than the box's corner, or it crosses it at `xxl`.
     pub fn radius_sx(radius: Size) -> Sx {
         sx().var(
             MENU_ITEM_RADIUS,

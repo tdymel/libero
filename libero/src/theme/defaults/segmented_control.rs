@@ -1,8 +1,7 @@
 use crate::theme::Variant;
 
-/// What `SegmentedControl` does not borrow from `ButtonDefaults`. Its size
-/// and radius still follow `theme.button`; its chrome is its own, so a
-/// project can theme tonal buttons without changing its segmented controls.
+/// Theme defaults for `SegmentedControl`, set on [`Theme`](crate::theme::Theme).
+/// Size and radius follow `theme.button`; the chrome is its own.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SegmentedControlDefaults {
     /// The chrome a segmented control takes when a call site names none.

@@ -51,15 +51,13 @@ str_enum! {
     }
 }
 
-/// What every popover is placed by: how far it sits off its anchor, and how
-/// close to a viewport edge it may come before it flips or shifts.
-///
-/// Pixels, not a `Size`: `use_popover` does arithmetic with them against
-/// measured rects, so a CSS length would have to be resolved back to a number.
-/// The vars are published anyway, for a caller's own `sx`.
+/// Theme defaults for `Popover`, set on [`Theme`](crate::theme::Theme).
+/// Pixels, not a `Size`: `use_popover` does arithmetic with measured rects.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PopoverDefaults {
+    /// Distance from the anchor.
     pub gap: f64,
+    /// How close to a viewport edge the box may come before it flips or shifts.
     pub padding: f64,
 }
 

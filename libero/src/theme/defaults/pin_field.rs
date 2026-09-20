@@ -6,8 +6,7 @@ use crate::theme::{CssVar, Size};
 pub const PIN_FIELD_GAP: CssVar = CssVar::new("--lsx-pin-field-gap");
 
 str_enum! {
-    /// Which characters a `PinField` cell accepts. Anything else never
-    /// reaches the value - a rejected key is dropped, not shown and removed.
+    /// Which characters a `PinField` cell accepts; a rejected key is dropped.
     #[state_prefix = "kind"]
     pub enum PinKind {
         /// Digits only. Also picks the numeric keypad on a phone.
@@ -28,18 +27,16 @@ impl PinKind {
     }
 }
 
-/// What `PinField` does not share with every other field. The cell's own
-/// numbers are the frame's - a cell is a square of `FIELD_HEIGHT`, so a
-/// `PinField` is exactly as tall as a `TextField` at the same size.
+/// Theme defaults for `PinField`, set on [`Theme`](crate::theme::Theme).
+/// A cell is a square of `FIELD_HEIGHT`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PinFieldDefaults {
-    /// How many cells a `PinField` has when the caller states no `length`.
+    /// Cells when the caller states no `length`.
     pub length: usize,
     pub size: Size,
     pub radius: Size,
-    /// Which characters a cell accepts.
     pub kind: PinKind,
-    /// Horizontal gap between the cells.
+    /// Between the cells.
     pub gap: &'static str,
 }
 

@@ -6,8 +6,7 @@ pub const QR_CODE_BACKGROUND: CssVar = CssVar::new("--lsx-qrcode-background");
 pub const QR_CODE_FOREGROUND: CssVar = CssVar::new("--lsx-qrcode-foreground");
 
 str_enum! {
-    /// QR error-correction level - higher levels tolerate more damage/occlusion
-    /// at the cost of a denser code for the same data.
+    /// QR error-correction level: higher tolerates more damage, at a denser code.
     pub enum QrRobustness {
         Low = "low",
         #[default]
@@ -17,6 +16,7 @@ str_enum! {
     }
 }
 
+/// Theme defaults for `QrCode`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct QrCodeDefaults {
     pub background: &'static str,
