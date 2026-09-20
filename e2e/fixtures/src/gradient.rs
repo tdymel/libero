@@ -27,6 +27,7 @@ fn GradientPage() -> Element {
             }
             Paper { id: "paper", gradient: Gradient::default(), sx: libero::sx::sx().padding("md"),
                 Text { "On the theme's gradient." }
+                Button { id: "in-paper", variant: "standard", "More" }
             }
             Paper { id: "glass", glass: true, gradient: Gradient::default().to("error"),
                 sx: libero::sx::sx().padding("md"),

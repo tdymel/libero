@@ -203,7 +203,7 @@ pub use gradient::{
     GradientDefaults,
 };
 pub(crate) use gradient::{
-    gradient_fill_sx, gradient_hover_sx, gradient_image, gradient_selected_sx,
+    gradient_fill_sx, gradient_hover_sx, gradient_image, gradient_selected_sx, gradient_surface_sx,
     theme_declarations as gradient_theme_declarations,
 };
 pub use grid::{

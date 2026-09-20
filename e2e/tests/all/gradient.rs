@@ -145,6 +145,16 @@ fn glass_mixes_the_stops_down_and_text_clips_to_the_glyphs() {
             style(page, "#in-header", "--lsx-focus-contrast").await,
             style(page, "#header", "--lsx-gradient-contrast").await
         );
+        // So does one inside a gradient Paper (971).
+        assert_ne!(style(page, "#paper", "--lsx-gradient-from").await, "");
+        assert_eq!(
+            style(page, "#in-paper", "--lsx-focus-contrast").await,
+            style(page, "#paper", "--lsx-gradient-contrast").await
+        );
+        assert_eq!(
+            style(page, "#in-paper", "--lsx-focus-ring-halo").await,
+            style(page, "#paper", "--lsx-gradient-from").await
+        );
         assert_eq!(style(page, "#text", "background-clip").await, "text");
         assert_eq!(style(page, "#text", "color").await, "rgba(0, 0, 0, 0)");
         fixture.close().await.unwrap();

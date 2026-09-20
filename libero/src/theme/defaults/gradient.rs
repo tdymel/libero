@@ -1,6 +1,8 @@
 use crate::css::CssDeclaration;
 use crate::sx::{ColorRole, Sx, ThemeAwareValue, sx};
-use crate::theme::{Color, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Theme};
+use crate::theme::{
+    Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, HexColor, NamedColorCss, Theme,
+};
 use crate::tokens::{Ends, ShadeRamp, TEXT_CONTRAST};
 use crate::utils::warn;
 
@@ -141,6 +143,17 @@ pub(crate) fn gradient_fill_sx() -> Sx {
     sx().background_color(GRADIENT_FROM.value())
         .background_image(gradient_image(None))
         .color(GRADIENT_CONTRAST.value())
+}
+
+/// A gradient surface (`Paper`, `Header`): the fill, and rings inside take
+/// the label, which reads on every point of it.
+pub(crate) fn gradient_surface_sx() -> Sx {
+    gradient_fill_sx()
+        .var(
+            CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
+            GRADIENT_CONTRAST.value(),
+        )
+        .var(FOCUS_RING_HALO, GRADIENT_FROM.value())
 }
 
 fn state_layer(percent: u8) -> String {

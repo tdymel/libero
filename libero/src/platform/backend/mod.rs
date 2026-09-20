@@ -35,9 +35,9 @@ mod portal;
 mod thread;
 #[cfg(target_arch = "wasm32")]
 mod web;
-#[cfg(all(target_os = "android", not(feature = "native")))]
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 mod webview;
-#[cfg(all(target_os = "android", not(feature = "native")))]
+#[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
 pub(crate) use webview::clipboard as webview_clipboard;
 
 /// What HTML counts as interactive content, plus anything a caller made
@@ -242,14 +242,8 @@ pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     return web::document();
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::document();
-    #[cfg(all(target_os = "android", not(feature = "native")))]
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::document();
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        not(target_os = "android"),
-        not(feature = "native")
-    ))]
-    return None;
 }
 
 /// The web and Blitz can tell Rust what the platform is set to; only the web
@@ -260,31 +254,19 @@ pub(crate) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     return web::color_scheme();
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::color_scheme();
-    #[cfg(all(target_os = "android", not(feature = "native")))]
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::color_scheme();
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        not(target_os = "android"),
-        not(feature = "native")
-    ))]
-    return None;
 }
 
-/// The web, Blitz and Android's WebView can report a scroll. Elsewhere this is
-/// `None`, the house rule for an absent capability - never an `Unsupported` stub.
+/// The web, Blitz and a WebView can report a scroll. A server gets `None`, the
+/// house rule for an absent capability - never an `Unsupported` stub.
 pub(crate) fn scroll() -> Option<&'static dyn ScrollApi> {
     #[cfg(target_arch = "wasm32")]
     return web::scroll();
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::scroll();
-    #[cfg(all(target_os = "android", not(feature = "native")))]
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::scroll();
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        not(target_os = "android"),
-        not(feature = "native")
-    ))]
-    return None;
 }
 
 /// `scrollIntoView`'s `nearest`, vertically: how far a view spanning
@@ -313,21 +295,14 @@ pub(crate) fn timer() -> Option<&'static dyn TimerApi> {
 }
 
 /// The web listens on the window; Blitz hears a press bubble out of the app to
-/// `blitz::Listener`, Android's WebView at the window over eval. The desktop
-/// WebView and a server have none.
+/// `blitz::Listener`, a WebView at the window over eval. A server has none.
 pub(crate) fn keyboard() -> Option<&'static dyn KeyboardApi> {
     #[cfg(target_arch = "wasm32")]
     return web::keyboard();
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::keyboard();
-    #[cfg(all(target_os = "android", not(feature = "native")))]
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::keyboard();
-    #[cfg(all(
-        not(target_arch = "wasm32"),
-        not(target_os = "android"),
-        not(feature = "native")
-    ))]
-    return None;
 }
 
 /// Only Blitz moves focus without a focus event - see
@@ -574,17 +549,14 @@ pub(crate) fn a11y_media() -> Option<&'static dyn A11yMediaApi> {
     return None;
 }
 
-/// The web and Android's WebView read the media query - see
+/// The web and a WebView read the media query - see
 /// [`prefers_reduced_motion`](crate::platform::prefers_reduced_motion).
 pub(crate) fn prefers_reduced_motion() -> bool {
     #[cfg(target_arch = "wasm32")]
     return web::prefers_reduced_motion();
-    #[cfg(all(target_os = "android", not(feature = "native")))]
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return webview::prefers_reduced_motion();
-    #[cfg(not(any(
-        target_arch = "wasm32",
-        all(target_os = "android", not(feature = "native"))
-    )))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return false;
 }
 

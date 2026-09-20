@@ -18,6 +18,8 @@ image "Verified"
   StaticText "✓"
 paragraph
   StaticText "On the theme's gradient."
+button "More"
+  StaticText "More"
 paragraph
   StaticText "Glass over a gradient."
 paragraph

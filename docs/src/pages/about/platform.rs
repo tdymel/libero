@@ -75,15 +75,9 @@ pub fn PlatformPage() -> Element {
                     ],
                 }
                 Text {
-                    "The web and Blitz answer all of them. Android's WebView has no "
-                    Code { source: "keyboard()" }
-                    ", "
-                    Code { source: "scroll()" }
-                    ", "
-                    Code { source: "document()" }
-                    " or "
-                    Code { source: "color_scheme()" }
-                    " yet, and some element calls there are unsupported."
+                    "The web and Blitz answer all of them. A WebView, on desktop or Android, "
+                    "answers them through the page's scripts, but some element calls there are "
+                    "unsupported."
                 }
             }
 

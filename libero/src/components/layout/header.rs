@@ -19,9 +19,9 @@ use crate::{
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GRADIENT_CONTRAST, GRADIENT_FROM,
-        Gradient, HEADER_HEIGHT, HEADER_HEIGHT_VAR, NamedColorCss, PAPER_BACKGROUND, PaperDefaults,
-        Size, Z_INDEX_HEADER, gradient_fill_sx,
+        ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, Gradient, HEADER_HEIGHT,
+        HEADER_HEIGHT_VAR, NamedColorCss, PAPER_BACKGROUND, PaperDefaults, Size, Z_INDEX_HEADER,
+        gradient_surface_sx,
     },
 };
 
@@ -146,16 +146,7 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .top("0")
         .when("static", sx().position("static"))
         .when("fixed", sx().position("fixed").top("0"))
-        // Rings inside take the label, which reads on every point of the fill.
-        .when(
-            "gradient",
-            gradient_fill_sx()
-                .var(
-                    CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
-                    GRADIENT_CONTRAST.value(),
-                )
-                .var(FOCUS_RING_HALO, GRADIENT_FROM.value()),
-        )
+        .when("gradient", gradient_surface_sx())
         // After `gradient`, which its shorthand would otherwise reset.
         .when(
             "glass",

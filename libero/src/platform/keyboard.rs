@@ -88,12 +88,11 @@ pub trait KeyboardApi {
     ) -> Box<dyn KeySubscription>;
 }
 
-/// `None` where the renderer cannot report a document-level key press: the
-/// desktop WebView and a server.
+/// `None` where the renderer cannot report a document-level key press: a server.
 ///
 /// Natively (Blitz) a press is heard as it bubbles out of `LiberoProvider`, so
 /// a handler that stops its propagation hides it, and nothing is heard while
-/// focus sits on `<html>` or outside the provider. Android's WebView hears it
+/// focus sits on `<html>` or outside the provider. A WebView hears it
 /// at the window, also after the element handlers, and prevents a chord's
 /// default only from the second press its subscription takes.
 pub fn keyboard() -> Option<&'static dyn KeyboardApi> {
@@ -197,7 +196,7 @@ pub(crate) fn takes_typing(tag: &str, input_type: Option<&str>) -> bool {
 }
 
 /// The `input` types [`takes_typing`] does not count, lower case. Also handed
-/// to the Android WebView's listener, which filters in the page's script.
+/// to the WebView's listener, which filters in the page's script.
 pub(crate) const CLICKED_INPUT_TYPES: &[&str] = &[
     "checkbox", "radio", "button", "submit", "reset", "image", "file", "range", "color", "hidden",
 ];

@@ -1,18 +1,19 @@
-//! Android's WebView: the web's engine, but Rust holds no handle on its DOM.
-//! What needs no element handle goes through the page's own script, over
-//! `document::eval` - the same way [`fetch_text`](crate::platform::fetch_text)
-//! does. Elements stay on the [`mounted`](super::mounted) floor.
+//! A WebView (wry: desktop and Android): the web's engine, but Rust holds no
+//! handle on its DOM. What needs no element handle goes through the page's own
+//! script, over `document::eval` - the same way
+//! [`fetch_text`](crate::platform::fetch_text) does. Elements stay on the
+//! [`mounted`](super::mounted) floor.
 //!
-//! Android only: a desktop WebView shares the cfg with a server build, which
-//! has no page to run a script in.
+//! A desktop build shares its cfg with a server build, which has no page to run
+//! a script in, so every accessor first asks [`runs_scripts`].
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 use dioxus::core::{Runtime, ScopeId, Task, spawn_forever};
-use dioxus::document::eval;
+use dioxus::document::{Document, eval};
 use dioxus::prelude::{Key, Modifiers, spawn};
 
 use crate::platform::{
@@ -21,19 +22,56 @@ use crate::platform::{
     clipboard::{ClipboardApi, Write},
     keyboard::{CLICKED_INPUT_TYPES, warn_reserved_chord},
 };
-use crate::tokens::{COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting};
+use crate::tokens::{ColorScheme, ColorSchemeSetting};
 
-/// `None` outside a dioxus runtime: every answer is a script the runtime sends.
+thread_local! {
+    /// [`runs_scripts`]'s answer per document: one thread may serve SSR and liveview.
+    static RUNS_SCRIPTS: RefCell<Vec<(Weak<dyn Document>, bool)>> =
+        const { RefCell::new(Vec::new()) };
+}
+
+/// Whether a page runs the current document's scripts. A server's document,
+/// and the no-op one, drop the script at once, so a send fails; plain SSR has
+/// no document.
+fn runs_scripts() -> bool {
+    // Outside a scope (a drop, a task's wake-up) the root's document answers.
+    let Some(document) = Runtime::try_current().and_then(|runtime| {
+        let scope = runtime.try_current_scope_id().unwrap_or(ScopeId::ROOT);
+        runtime.consume_context::<Rc<dyn Document>>(scope)
+    }) else {
+        return false;
+    };
+    let key = Rc::downgrade(&document);
+    let known = RUNS_SCRIPTS.with_borrow(|known| {
+        known
+            .iter()
+            .find(|(seen, _)| Weak::ptr_eq(seen, &key))
+            .map(|(_, runs)| *runs)
+    });
+    if let Some(runs) = known {
+        return runs;
+    }
+    let runs = document
+        .eval("await dioxus.recv();".to_string())
+        .send(())
+        .is_ok();
+    RUNS_SCRIPTS.with_borrow_mut(|known| {
+        known.retain(|(seen, _)| seen.strong_count() > 0);
+        known.push((key, runs));
+    });
+    runs
+}
+
 pub(super) fn document() -> Option<&'static dyn DocumentApi> {
-    Runtime::try_current().map(|_| &DOCUMENT as &'static dyn DocumentApi)
+    runs_scripts().then_some(&DOCUMENT as &'static dyn DocumentApi)
 }
 
 pub(super) fn scroll() -> Option<&'static dyn ScrollApi> {
-    Runtime::try_current().map(|_| &SCROLL as &'static dyn ScrollApi)
+    runs_scripts().then_some(&SCROLL as &'static dyn ScrollApi)
 }
 
 pub(crate) fn clipboard() -> Option<&'static dyn ClipboardApi> {
-    Runtime::try_current().map(|_| &CLIPBOARD as &'static dyn ClipboardApi)
+    runs_scripts().then_some(&CLIPBOARD as &'static dyn ClipboardApi)
 }
 
 struct WebViewDocument;
@@ -180,11 +218,11 @@ fn watch_media(query: &'static str, answer: impl Fn(bool) + 'static) {
 
 /// `false` until the page first answers, then kept live by a listener.
 pub(super) fn prefers_reduced_motion() -> bool {
+    if !runs_scripts() {
+        return false;
+    }
     if let Some(reduced) = REDUCED_MOTION.get() {
         return reduced;
-    }
-    if Runtime::try_current().is_none() {
-        return false;
     }
     REDUCED_MOTION.set(Some(false));
     watch_media(crate::sx::REDUCED_MOTION, |reduced| {
@@ -194,7 +232,7 @@ pub(super) fn prefers_reduced_motion() -> bool {
 }
 
 pub(super) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
-    Runtime::try_current().map(|_| &COLOR_SCHEME as &'static dyn ColorSchemeApi)
+    runs_scripts().then_some(&COLOR_SCHEME as &'static dyn ColorSchemeApi)
 }
 
 /// The system scheme from the page's media query. The override is kept in a
@@ -228,8 +266,15 @@ fn watch_scheme() {
     });
 }
 
+/// Desktop names no app directory yet, so an override is not kept.
+#[cfg(not(target_os = "android"))]
+fn scheme_file() -> Option<PathBuf> {
+    None
+}
+
 /// The app's own files directory, `None` where it cannot be named. User 0's
 /// path: under a secondary Android user the override lives for the session.
+#[cfg(target_os = "android")]
 fn scheme_file() -> Option<PathBuf> {
     let cmdline = std::fs::read("/proc/self/cmdline").ok()?;
     // The package name, minus a `:process` suffix and the NUL padding.
@@ -239,7 +284,8 @@ fn scheme_file() -> Option<PathBuf> {
         return None;
     }
     Some(PathBuf::from(format!(
-        "/data/data/{package}/files/{COLOR_SCHEME_STORAGE_KEY}"
+        "/data/data/{package}/files/{}",
+        crate::tokens::COLOR_SCHEME_STORAGE_KEY
     )))
 }
 
@@ -283,7 +329,7 @@ impl Drop for WebViewColorSchemeSubscription {
 }
 
 pub(super) fn keyboard() -> Option<&'static dyn KeyboardApi> {
-    Runtime::try_current().map(|_| &KEYBOARD as &'static dyn KeyboardApi)
+    runs_scripts().then_some(&KEYBOARD as &'static dyn KeyboardApi)
 }
 
 /// Key presses at the window, in the bubble phase as on Blitz: a press a
@@ -398,5 +444,43 @@ impl Drop for WebViewKeySubscription {
     fn drop(&mut self) {
         self.task.cancel();
         let _ = self.script.send(());
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use dioxus::document::NoOpDocument;
+    use dioxus::prelude::*;
+
+    use super::*;
+
+    fn app() -> Element {
+        rsx! {}
+    }
+
+    fn answers(dom: &VirtualDom) -> [bool; 5] {
+        dom.in_scope(ScopeId::ROOT, || {
+            [
+                document().is_some(),
+                scroll().is_some(),
+                clipboard().is_some(),
+                color_scheme().is_some(),
+                keyboard().is_some(),
+            ]
+        })
+    }
+
+    #[test]
+    fn plain_ssr_without_a_document_gets_nothing() {
+        assert!(document().is_none());
+        assert_eq!(answers(&VirtualDom::new(app)), [false; 5]);
+    }
+
+    /// Fullstack's server document evaluates through `NoOpDocument`.
+    #[test]
+    fn a_server_document_gets_nothing() {
+        let dom = VirtualDom::new(app).with_root_context(Rc::new(NoOpDocument) as Rc<dyn Document>);
+        assert_eq!(answers(&dom), [false; 5]);
+        assert!(!dom.in_scope(ScopeId::ROOT, prefers_reduced_motion));
     }
 }

@@ -8,7 +8,7 @@ use crate::{
     hooks::use_gradient_style,
     platform::draws_backdrop_filter,
     sx::{StaticSx, Sx, sx},
-    theme::{Gradient, PAPER_BORDER_COLOR, PaperDefaults, Size, gradient_fill_sx},
+    theme::{Gradient, PAPER_BORDER_COLOR, PaperDefaults, Size, gradient_surface_sx},
 };
 
 /// The library's one definition of a surface, as an `Sx` to build on.
@@ -36,7 +36,7 @@ pub fn paper_sx() -> Sx {
             "bordered",
             sx().border(format!("1px solid {}", PAPER_BORDER_COLOR.value())),
         )
-        .when("gradient", gradient_fill_sx())
+        .when("gradient", gradient_surface_sx())
         // After `gradient`, which its shorthand would otherwise reset.
         .when(
             "glass",
@@ -267,6 +267,26 @@ mod tests {
                 "{block}"
             );
         }
+    }
+
+    /// Rings inside a gradient take its label and first stop, as in `Header`.
+    #[test]
+    fn a_gradient_hands_its_label_to_rings_inside() {
+        let css = Stylesheet::from(&paper_sx());
+        let gradient = css
+            .as_str()
+            .split('}')
+            .find(|block| block.contains("gradient") && block.contains("background-image"))
+            .unwrap_or_else(|| panic!("no gradient block: {}", css.as_str()));
+
+        assert!(
+            gradient.contains("--lsx-focus-contrast:var(--lsx-gradient-contrast);"),
+            "{gradient}"
+        );
+        assert!(
+            gradient.contains("--lsx-focus-ring-halo:var(--lsx-gradient-from);"),
+            "{gradient}"
+        );
     }
 
     #[test]
