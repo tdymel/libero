@@ -6,6 +6,7 @@ use crate::theme::{CssVar, Size, SizeCss};
 pub const CONTAINER_SIZE: CssVar = CssVar::new("--lsx-container-size");
 pub const CONTAINER_GUTTERS: CssVar = CssVar::new("--lsx-container-gutters");
 
+/// Theme defaults for `Container`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ContainerDefaults {
     pub size: Size,

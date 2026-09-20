@@ -4,6 +4,7 @@ use crate::theme::{Size, SizeCss, Sizes};
 
 pub const DATA_LIST_GAP: SizeCss = SizeCss::new("--lsx-data-list-gap-");
 
+/// Theme defaults for `DataList`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DataListDefaults {
     pub size: Size,

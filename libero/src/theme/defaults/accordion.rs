@@ -7,8 +7,7 @@ pub const ACCORDION_PADDING_X: SizeCss = SizeCss::new("--lsx-accordion-padding-x
 pub const ACCORDION_PADDING_Y: SizeCss = SizeCss::new("--lsx-accordion-padding-y-");
 pub const ACCORDION_CHEVRON: SizeCss = SizeCss::new("--lsx-accordion-chevron-");
 
-// The picked level, resolved on the root so the triggers and panel bodies -
-// which carry no size `data-state` of their own - inherit it.
+// The picked level, resolved on the root so the triggers and panel bodies inherit it.
 pub const ACCORDION_PAD_X: CssVar = CssVar::new("--lsx-accordion-pad-x");
 pub const ACCORDION_PAD_Y: CssVar = CssVar::new("--lsx-accordion-pad-y");
 pub const ACCORDION_CHEVRON_SIZE: CssVar = CssVar::new("--lsx-accordion-chevron");
@@ -26,6 +25,7 @@ pub struct AccordionSizeLevel {
     pub chevron: &'static str,
 }
 
+/// Theme defaults for `Accordion`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AccordionDefaults {
     pub size: Size,
@@ -33,8 +33,7 @@ pub struct AccordionDefaults {
     /// The line between two sections.
     pub border_color: ColorValue,
     pub hover_color: ColorValue,
-    /// Milliseconds for the chevron's turn. The panel's own height animation is
-    /// `theme.collapse.duration`, not this.
+    /// Milliseconds for the chevron's turn; the panel's height uses `theme.collapse.duration`.
     pub chevron_duration: u32,
 }
 
@@ -84,7 +83,6 @@ impl AccordionDefaults {
         chevron_duration: 150,
     };
 
-    // Resolved on the root so every trigger and panel body inherits them.
     pub fn size_sx(size: Size) -> Sx {
         sx().font_size(ACCORDION_FONT_SIZE.value(size))
             .var(ACCORDION_PAD_X, ACCORDION_PADDING_X.value(size))

@@ -3,9 +3,7 @@ use crate::sx::{Sx, sx};
 
 use crate::theme::{Color, CssVar, Size, SizeCss, Sizes, TEXT_FONT_SIZE, TEXT_LINE_HEIGHT};
 
-/// The tint behind the quote, and the accent bar down its edge. Both are set
-/// per instance from the resolved `color`, so they are plain vars rather than
-/// an `-override` pair.
+/// The tint behind the quote and its accent bar, set per instance from `color`.
 pub const BLOCKQUOTE_BACKGROUND: CssVar = CssVar::new("--lsx-blockquote-background");
 pub const BLOCKQUOTE_BORDER_COLOR: CssVar = CssVar::new("--lsx-blockquote-border-color");
 /// Body text on the tint - the tint's `-contrast` twin, never an accent shade.
@@ -20,11 +18,11 @@ pub const BLOCKQUOTE_BORDER_WIDTH: SizeCss = SizeCss::new("--lsx-blockquote-bord
 pub struct BlockquoteSizeLevel {
     pub padding_y: &'static str,
     pub padding_x: &'static str,
-    /// The accent bar's thickness. Scales with `size` so the frame stays
-    /// proportional at `xxl`.
+    /// The accent bar's thickness.
     pub border_width: &'static str,
 }
 
+/// Theme defaults for `Blockquote`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BlockquoteDefaults {
     pub size: Size,
@@ -75,18 +73,13 @@ impl BlockquoteDefaults {
         ),
     };
 
-    /// The font scale is `TextDefaults`', not one of our own: "scales the
-    /// text" should mean the same scale everywhere, and a caller who retunes
-    /// `theme.text` gets quotes that still match their prose.
+    /// Uses `TextDefaults`' font scale, so retuning `theme.text` keeps quotes matching prose.
     pub fn size_sx(size: Size) -> Sx {
         sx().padding(format!(
             "{} {}",
             BLOCKQUOTE_PADDING_Y.value(size),
             BLOCKQUOTE_PADDING_X.value(size)
         ))
-        // The shorthand rather than `border-left-width`, which has no `Sx`
-        // builder: adding one would be a shared-file edit for a single
-        // caller, and the colour var inherits from the instance either way.
         .border_left(format!(
             "{} solid {}",
             BLOCKQUOTE_BORDER_WIDTH.value(size),
@@ -96,12 +89,8 @@ impl BlockquoteDefaults {
         .line_height(TEXT_LINE_HEIGHT.value(size))
     }
 
-    /// Only the two corners away from the accent bar. Rounding all four
-    /// rounds off the bar itself, which reads as a mistake rather than as a
-    /// radius.
-    ///
-    /// Physical corners, because `Sx` has no logical twins - the bar is on the
-    /// left in every writing direction, which the docs lead says out loud.
+    /// Only the two corners away from the accent bar, which stays on the left in
+    /// every writing direction (`Sx` has no logical corners).
     pub fn radius_sx(radius: Size) -> Sx {
         sx().border_top_right_radius(SizeCss::RADIUS.value(radius))
             .border_bottom_right_radius(SizeCss::RADIUS.value(radius))

@@ -10,26 +10,17 @@ pub const ALERT_GAP: CssVar = CssVar::new("--lsx-alert-gap");
 pub const ALERT_BODY_GAP: CssVar = CssVar::new("--lsx-alert-body-gap");
 pub const ALERT_ICON_SIZE: CssVar = CssVar::new("--lsx-alert-icon-size");
 
-/// What an alert looks like when nobody says otherwise.
+/// Theme defaults for `Alert`, set on [`Theme`](crate::theme::Theme).
 ///
-/// The spacing fields are `Size` steps resolved through [`SizeCss::SPACING`],
-/// not CSS lengths: a raw `"md"` is not something a `CssVar` can declare.
-/// `icon_size` is the exception and is a length, because 20px is off the
-/// spacing scale and is a glyph box rather than a gap.
+/// Spacing fields are [`SizeCss::SPACING`] steps; `icon_size` is a length (a glyph box).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AlertDefaults {
-    /// Chrome, shared with `Button`. `Tonal` is the tinted arm, which is what
-    /// an alert is; it carries no `var()` of its own, only a `data-state`.
+    /// Chrome, shared with `Button`; `Tonal` is the tinted arm.
     pub variant: Variant,
-    /// A palette colour name, read in Rust to default the `color` prop - not
-    /// a CSS declaration, the way `badge.size` is not one. The component
-    /// publishes the resolved shades as its own `var()`s per instance.
-    ///
-    /// `"info"` rather than the primary colour: severity is the caller's to
-    /// state, and an alert painted in the brand colour reads as decoration.
+    /// Palette colour name for the `color` prop. `"info"`, not the brand colour:
+    /// severity is the caller's to state.
     pub color: &'static str,
-    /// Meant to match `paper.radius` - an alert is a surface. Spelled rather
-    /// than referenced because `Theme::DEFAULT` is a const struct literal.
+    /// Matches `paper.radius`: an alert is a surface.
     pub radius: Size,
     pub padding: Size,
     pub gap: Size,
@@ -40,10 +31,7 @@ pub struct AlertDefaults {
 impl AlertDefaults {
     pub const DEFAULT: Self = Self {
         variant: Variant::Tonal,
-        // Not the primary colour: severity is the caller's to state, and
-        // the brand colour on an alert reads as decoration.
         color: "info",
-        // The same step as `paper.radius` - an alert is a surface.
         radius: Size::Md,
         padding: Size::Md,
         gap: Size::Md,

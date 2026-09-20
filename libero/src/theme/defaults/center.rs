@@ -4,6 +4,7 @@ use crate::theme::CssVar;
 
 pub const CENTER_DISPLAY: CssVar = CssVar::new("--lsx-center-display");
 
+/// Theme defaults for `Center`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CenterDefaults {
     pub inline: bool,

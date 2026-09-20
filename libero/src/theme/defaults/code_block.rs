@@ -9,9 +9,9 @@ pub const CODE_BLOCK_COPY_HOVER_BACKGROUND: CssVar =
     CssVar::new("--lsx-code-block-copy-hover-background");
 pub const CODE_BLOCK_COPY_HOVER_TEXT: CssVar = CssVar::new("--lsx-code-block-copy-hover-text");
 
-// Highlight and diff row colors aren't here on purpose: they derive from the
-// theme's primary/success/error rather than drifting as separate fields.
-
+/// Theme defaults for `CodeBlock`, set on [`Theme`](crate::theme::Theme).
+///
+/// No highlight or diff row colours: they derive from primary/success/error.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CodeBlockDefaults {
     pub background: &'static str,
@@ -29,9 +29,7 @@ pub struct CodeBlockDefaults {
 }
 
 impl CodeBlockDefaults {
-    /// Every colour is a step of the theme's `muted` ramp, so the block sits
-    /// on whatever page the palette draws and turns round with the scheme
-    /// (todo 396).
+    /// Every colour is a `muted` ramp step, so the block follows the scheme (todo 396).
     pub const DEFAULT: Self = Self {
         background: "var(--lsx-muted-1)",
         border: "var(--lsx-muted-4)",
@@ -89,8 +87,7 @@ mod tests {
         HexColor::parse(&value).unwrap_or_else(|| panic!("{value} is a hex"))
     }
 
-    /// Every text drawn on the block, inline `Code`, `Kbd` and `Tooltip`,
-    /// measured as `:root` ships it.
+    /// Every text on the block, inline `Code`, `Kbd` and `Tooltip`, as `:root` ships it.
     fn shortfalls(theme: &Theme) -> Vec<String> {
         let css = Stylesheet::from(theme).as_str().to_string();
         let on = |surface: &CssVar, what: &str, text: &CssVar, floor: f32| {
@@ -139,9 +136,8 @@ mod tests {
         short
     }
 
-    /// Todo 241, taken on every shipped palette since the block follows the
-    /// page (todo 396): GitHub's token numbers are measured on white and do
-    /// not carry over to a tinted one.
+    /// Todo 241 on every shipped palette (todo 396): GitHub's token contrast is
+    /// measured on white and does not carry over to a tint.
     #[test]
     fn every_derived_surface_reads_on_every_shipped_palette() {
         let mut short = Vec::new();

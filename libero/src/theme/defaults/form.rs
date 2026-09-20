@@ -5,7 +5,7 @@ use crate::theme::CssVar;
 pub const FORM_GAP: CssVar = CssVar::new("--lsx-form-gap");
 pub const FIELDSET_GAP: CssVar = CssVar::new("--lsx-fieldset-gap");
 
-/// What `Form` lays out: the space between its error summary and its fields.
+/// Theme defaults for `Form`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FormDefaults {
     /// Vertical gap between the summary and each child.
@@ -26,8 +26,9 @@ impl ToCssDeclarations for FormDefaults {
     }
 }
 
-/// What `Fieldset` lays out. The legend and caption typography is
-/// `FieldDefaults`', so a group reads at the size of its fields.
+/// Theme defaults for `Fieldset`, set on [`Theme`](crate::theme::Theme).
+///
+/// Legend and caption typography come from `FieldDefaults`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FieldsetDefaults {
     /// Vertical gap between the fields inside the group.

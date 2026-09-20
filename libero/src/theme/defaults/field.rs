@@ -14,8 +14,8 @@ pub const FIELD_FRAME_GAP: CssVar = CssVar::new("--lsx-field-frame-gap");
 pub const FIELD_CARD_PADDING: SizeCss = SizeCss::new("--lsx-field-card-padding-");
 
 str_enum! {
-    /// How a checkable field draws its wrapper. `Card` makes the whole field
-    /// a bordered surface and its hit area; the control itself is unchanged.
+    /// How a checkable field draws its wrapper. `Card` makes the whole field a
+    /// bordered surface and its hit area.
     pub enum ChoiceVariant {
         #[default]
         Plain = "plain",
@@ -23,27 +23,25 @@ str_enum! {
     }
 }
 
-/// One size step of a field: the slots stacked around the control, and the
-/// frame the control sits in.
+/// One size step of a field: the slots around the control, and its frame.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FieldSizeLevel {
     /// The caption above the control.
     pub label_font_size: &'static str,
-    /// Description, helper and status - all three share one scale.
+    /// Description, helper and status share one scale.
     pub caption_font_size: &'static str,
     /// The control's own text.
     pub font_size: &'static str,
     /// Floor for a single-line field, so every field in a form lines up.
     pub height: &'static str,
-    /// Drives the frame's real height once the control wraps - a `Textarea`,
-    /// or a field whose leading slot grows.
+    /// Drives the frame's height once the control wraps (a `Textarea`).
     pub padding_y: &'static str,
     pub padding_x: &'static str,
 }
 
-/// Shared by every field. A component keeps a `*Defaults` of its own only for
-/// what genuinely differs - which, for `TextField`, is the default `size` and
-/// `radius` and nothing else.
+/// Theme defaults shared by every field, set on [`Theme`](crate::theme::Theme).
+///
+/// A field's own `*Defaults` hold only what differs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FieldDefaults {
     /// Vertical gap between the slots.
@@ -112,10 +110,8 @@ impl FieldDefaults {
         card_paddings: Sizes::new("8px", "10px", "12px", "14px", "16px", "18px"),
     };
 
-    /// Per-slot typography for one size step. The slots are addressed from the
-    /// wrapper rather than each carrying its own class - four captions with
-    /// four `use_box` chains would cost four stylesheet registrations per
-    /// field, and none of them takes styling props of its own.
+    /// Per-slot typography, addressed from the wrapper: a class per slot would
+    /// cost four stylesheet registrations per field.
     fn size_sx(size: Size) -> Sx {
         sx().selector(
             "& > label",

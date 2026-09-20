@@ -4,17 +4,13 @@ use crate::theme::{ChoiceVariant, CssVar, Size, SizeCss, Sizes};
 
 pub const CHECKBOX_BOX_SIZE: SizeCss = SizeCss::new("--lsx-checkbox-box-size-");
 
-/// The picked level, resolved on the root so the box and the mark inside it -
-/// which carry no `data-state` of their own - can inherit it.
+/// The picked level, resolved on the root so the box and its mark inherit it.
 pub const CHECKBOX_BOX: CssVar = CssVar::new("--lsx-checkbox-box");
 pub const CHECKBOX_RADIUS: CssVar = CssVar::new("--lsx-checkbox-radius");
 
-/// What `Checkbox` does not share with every other field. The label and
-/// caption typography come from `FieldDefaults`, so a checkbox and a
-/// `TextField` in one form read at the same scale by construction.
+/// Theme defaults for `Checkbox`, set on [`Theme`](crate::theme::Theme).
 ///
-/// The box has a scale of its own rather than the field's content box: it is
-/// not an affordance inside a frame, it *is* the control.
+/// Label and caption typography come from `FieldDefaults`; the box has its own scale.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CheckboxDefaults {
     /// The wrapper a checkbox takes when a call site names none.

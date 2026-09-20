@@ -12,8 +12,7 @@ pub const FLEX_ROW_JUSTIFY: CssVar = CssVar::new("--lsx-flex-row-justify");
 pub const FLEX_ROW_SPACING: CssVar = CssVar::new("--lsx-flex-row-spacing");
 pub const FLEX_ROW_WRAP: CssVar = CssVar::new("--lsx-flex-row-wrap");
 
-// Set in the element's `style`, not baked into a class. `default_sx` falls
-// back to the axis's theme default, so an override mints no new class.
+// Set in the element's `style`, falling back to the axis default: an override mints no class.
 pub const FLEX_ALIGN_VAR: CssVar = CssVar::new("--lsx-flex-align");
 pub const FLEX_JUSTIFY_VAR: CssVar = CssVar::new("--lsx-flex-justify");
 pub const FLEX_WRAP_VAR: CssVar = CssVar::new("--lsx-flex-wrap");
@@ -26,6 +25,7 @@ pub struct FlexAxisDefaults {
     pub wrap: bool,
 }
 
+/// Theme defaults for `Flex`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FlexDefaults {
     pub column: FlexAxisDefaults,

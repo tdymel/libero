@@ -3,6 +3,7 @@ use crate::theme::{Size, SizeCss, Sizes};
 
 pub const DRAWER_SIZE: SizeCss = SizeCss::new("--lsx-drawer-size-");
 
+/// Theme defaults for `Drawer`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DrawerDefaults {
     pub size: Size,

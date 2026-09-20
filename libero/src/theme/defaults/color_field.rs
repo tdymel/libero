@@ -1,8 +1,8 @@
 use crate::theme::Size;
 
-/// What `ColorField` does not share with every other field. The frame's
-/// numbers live on `FieldDefaults` and the dropdown's picker on
-/// `ColorPickerDefaults`.
+/// Theme defaults for `ColorField`, set on [`Theme`](crate::theme::Theme).
+///
+/// Frame and picker come from `FieldDefaults` and `ColorPickerDefaults`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ColorFieldDefaults {
     pub size: Size,

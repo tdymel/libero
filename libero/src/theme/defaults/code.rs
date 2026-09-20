@@ -14,6 +14,7 @@ pub const CODE_TOK_TAG: CssVar = CssVar::new("--lsx-code-tok-tag");
 pub const CODE_TOK_ATTRIBUTE: CssVar = CssVar::new("--lsx-code-tok-attribute");
 pub const CODE_TOK_HEADING: CssVar = CssVar::new("--lsx-code-tok-heading");
 
+/// Theme defaults for `Code` and the code tokens, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CodeDefaults {
     pub font_family: &'static str,
@@ -34,8 +35,7 @@ impl CodeDefaults {
         font_family: MONO_FONT_FAMILY,
         tok_keyword: "#cf222e",
         tok_string: "#0a3069",
-        // The block's `muted_text`: GitHub's own comment grey fell to 4.27:1
-        // on a tinted background (todo 241).
+        // The block's `muted_text`: GitHub's grey fell to 4.27:1 on a tint (todo 241).
         tok_comment: "var(--lsx-muted-7)",
         tok_number: "#0550ae",
         tok_constant: "#0550ae",
@@ -46,8 +46,7 @@ impl CodeDefaults {
         tok_heading: "#cf222e",
     };
 
-    /// GitHub's dark tokens. The stylesheet walks any that fall short on the
-    /// palette's code block (todo 396).
+    /// GitHub's dark tokens; the stylesheet walks any that fall short (todo 396).
     pub const DARK: Self = Self {
         font_family: MONO_FONT_FAMILY,
         tok_keyword: "#ff7b72",

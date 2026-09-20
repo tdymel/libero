@@ -22,6 +22,7 @@ str_enum! {
     }
 }
 
+/// Theme defaults for `Float`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FloatDefaults {
     pub offset_x: &'static str,

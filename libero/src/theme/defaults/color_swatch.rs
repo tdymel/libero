@@ -7,6 +7,7 @@ pub const COLOR_SWATCH_SIZE_SIZE: SizeCss = SizeCss::new("--lsx-color-swatch-siz
 pub const COLOR_SWATCH_SIZE: CssVar = CssVar::new("--lsx-color-swatch-size");
 pub const COLOR_SWATCH_RADIUS: CssVar = CssVar::new("--lsx-color-swatch-radius");
 
+/// Theme defaults for `ColorSwatch`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ColorSwatchDefaults {
     pub size: Size,

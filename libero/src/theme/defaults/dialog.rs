@@ -3,6 +3,7 @@ use crate::theme::{SizeCss, Sizes};
 
 pub const DIALOG_SIZE: SizeCss = SizeCss::new("--lsx-dialog-size-");
 
+/// Theme defaults for `Dialog`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DialogDefaults {
     pub sizes: Sizes<u16>,

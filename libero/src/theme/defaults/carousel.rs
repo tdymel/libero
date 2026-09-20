@@ -8,8 +8,7 @@ pub const CAROUSEL_RADIUS: CssVar = CssVar::new("--lsx-carousel-radius");
 pub const CAROUSEL_CONTROL_SIZE: CssVar = CssVar::new("--lsx-carousel-control-size");
 pub const CAROUSEL_CONTROLS_OFFSET: CssVar = CssVar::new("--lsx-carousel-controls-offset");
 pub const CAROUSEL_INDICATOR_LENGTH: CssVar = CssVar::new("--lsx-carousel-indicator-length");
-/// The current dot's length. A second channel beside the colour, since the two
-/// colours are close in luminance.
+/// The current dot's length: a second channel, the two colours are close in luminance.
 pub const CAROUSEL_INDICATOR_CURRENT_LENGTH: CssVar =
     CssVar::new("--lsx-carousel-indicator-current-length");
 pub const CAROUSEL_INDICATOR_THICKNESS: CssVar = CssVar::new("--lsx-carousel-indicator-thickness");
@@ -23,8 +22,7 @@ pub const CAROUSEL_CONTROL_HOVER_BACKGROUND: CssVar =
 pub const CAROUSEL_CONTROL_COLOR: CssVar = CssVar::new("--lsx-carousel-control-color");
 
 str_enum! {
-    /// Where a snapped slide comes to rest inside the viewport - CSS
-    /// `scroll-snap-align`.
+    /// Where a snapped slide rests in the viewport: CSS `scroll-snap-align`.
     #[state_prefix = "align"]
     pub enum CarouselAlign {
         Start = "start",
@@ -34,9 +32,7 @@ str_enum! {
     }
 }
 
-/// Lives here rather than in the component because an enum prop with a themed
-/// default has to sit below `components` in the layer order - the
-/// `QrRobustness` precedent.
+/// Theme defaults for `Carousel`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CarouselDefaults {
     /// Slides visible at once. Fractional peeks the next one.
@@ -54,21 +50,14 @@ pub struct CarouselDefaults {
     pub indicator_current_length: &'static str,
     pub indicator_thickness: &'static str,
     pub indicators_gap: &'static str,
-    /// An idle dot. It is a button carrying the only visible position
-    /// affordance, so SC 1.4.11 asks 3:1 of it: `grey.6` is 3.32:1 on white,
-    /// `grey.5` about 2.0:1 and `grey.4` 1.49:1. Retheme it with that in hand.
+    /// An idle dot. SC 1.4.11 asks 3:1: `grey.6` is 3.32:1 on white, `grey.5` about 2.0:1.
     pub indicator_color: ColorValue,
     pub indicator_current_color: ColorValue,
-    /// The previous/next and pause buttons' fill. They sit over the slides,
-    /// not on the page, so this is their own surface rather than the paper's.
+    /// The previous/next and pause buttons' fill, over the slides.
     pub control_background: ColorValue,
-    /// A previous/next button's fill under the pointer. The pause button has
-    /// no hover arm.
+    /// A previous/next button's fill under the pointer; pause has no hover arm.
     pub control_hover_background: ColorValue,
-    /// The glyph on every control. It is also the controls' focus-ring
-    /// colour: a var is opaque to `sx`, so `background()` no longer publishes
-    /// the ring's `--lsx-focus-contrast`, and this is what reads against
-    /// `control_background`. Change the two together.
+    /// The controls' glyph and focus-ring colour; change it with `control_background`.
     pub control_color: ColorValue,
     /// Milliseconds between automatic advances, when `autoplay` is on.
     pub autoplay_delay: u32,

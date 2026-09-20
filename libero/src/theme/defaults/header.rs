@@ -5,6 +5,7 @@ pub const HEADER_HEIGHT: SizeCss = SizeCss::new("--lsx-header-height-");
 /// The page banner's height, published on `:root` for whatever sits below it.
 pub const HEADER_HEIGHT_VAR: CssVar = CssVar::new("--lsx-header-height");
 
+/// Theme defaults for `Header`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HeaderDefaults {
     pub heights: Sizes<u16>,

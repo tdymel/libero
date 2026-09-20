@@ -4,6 +4,7 @@ use crate::theme::CssVar;
 
 pub const ASPECT_RATIO: CssVar = CssVar::new("--lsx-aspect-ratio");
 
+/// Theme defaults for `AspectRatio`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct AspectRatioDefaults {
     pub ratio: f32,

@@ -10,9 +10,7 @@ pub const CHRONO_FONT_SIZE_SIZE: SizeCss = SizeCss::new("--lsx-chrono-font-size-
 pub const CHRONO_DAY: CssVar = CssVar::new("--lsx-chrono-day");
 pub const CHRONO_FONT_SIZE: CssVar = CssVar::new("--lsx-chrono-font-size");
 
-/// The view a calendar shows: days of a month, months of a year, years of a
-/// decade. `ChronoPicker`'s `level` picks the lowest one - the one a pick lands
-/// on; `ChronoField`'s the one its text reads.
+/// The view a calendar shows: days of a month, months of a year, years of a decade.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum DateLevel {
     Day,
@@ -23,8 +21,7 @@ pub enum DateLevel {
 str_enum! {
     /// How a `TimePicker` shows the time.
     pub enum TimePickerVariant {
-        /// A digital clock: a spinbutton column each for the hours, minutes,
-        /// seconds and AM/PM.
+        /// A digital clock: one spinbutton column per hours, minutes, seconds, AM/PM.
         Digital = "digital",
         /// A clock face: the hour, then the minute.
         #[default]
@@ -43,6 +40,7 @@ str_enum! {
     }
 }
 
+/// Theme defaults for `TimePicker`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TimePickerDefaults {
     pub size: Size,
@@ -66,9 +64,9 @@ pub struct ChronoSizeLevel {
     pub font_size: &'static str,
 }
 
-/// Styles the whole date and time family of pickers: `ChronoPicker`,
-/// `DatePicker`, `MonthPicker`, `YearPicker`, `DateRangePicker`, the clocks'
-/// sizes and the fields' dropdowns.
+/// Theme defaults for `ChronoPicker`, set on [`Theme`](crate::theme::Theme).
+///
+/// Also styles the other date pickers, the clocks' sizes and the fields' dropdowns.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ChronoPickerDefaults {
     pub size: Size,
@@ -134,16 +132,14 @@ impl ToCssDeclarations for ChronoPickerDefaults {
     }
 }
 
-/// Styles the whole date and time family of fields: `ChronoField`,
-/// `DateField`, `TimeField`, `DateTimeField` and the range fields. Holds what
-/// they do not share with every other field. The frame's numbers live on
-/// `FieldDefaults` and the dropdown's calendar on `ChronoPickerDefaults`.
+/// Theme defaults for `ChronoField`, set on [`Theme`](crate::theme::Theme).
+///
+/// Covers every date and time field; frame and calendar come from `FieldDefaults` and `ChronoPickerDefaults`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ChronoFieldDefaults {
     pub size: Size,
     pub radius: Size,
-    /// Picking a day, or the second end of a range of days, closes the
-    /// dropdown. Times, date-times and their ranges never close on a pick.
+    /// Picking a day, or a range's second day, closes the dropdown; times never do.
     pub close_on_change: bool,
 }
 

@@ -6,15 +6,13 @@ use crate::theme::{CssVar, FIELD_FONT_SIZE, FIELD_PADDING_X, Size, SizeCss, Size
 pub const FILE_FIELD_DROPZONE_HEIGHT_SIZE: SizeCss =
     SizeCss::new("--lsx-file-field-dropzone-height-");
 
-// The picked level, resolved on the root so the surface, the cards and the
-// prompt - which carry no `data-state` of their own - inherit it.
+// The picked level, resolved on the root so the surface, cards and prompt inherit it.
 pub const FILE_FIELD_DROPZONE_HEIGHT: CssVar = CssVar::new("--lsx-file-field-dropzone-height");
 pub const FILE_FIELD_PADDING: CssVar = CssVar::new("--lsx-file-field-padding");
 pub const FILE_FIELD_RADIUS: CssVar = CssVar::new("--lsx-file-field-radius");
 
 str_enum! {
-    /// Which control a `FileField` draws. Both pick the same files through the
-    /// same hidden input - only the surface the user aims at differs.
+    /// Which control a `FileField` draws; both use the same hidden input.
     #[state_prefix = "variant"]
     pub enum FileFieldVariant {
         /// One line in the field frame, like every other input.
@@ -25,7 +23,7 @@ str_enum! {
     }
 }
 
-/// What `FileField` does not share with every other field.
+/// Theme defaults for `FileField`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FileFieldDefaults {
     pub size: Size,
@@ -44,13 +42,10 @@ impl FileFieldDefaults {
         radius: Size::Sm,
         variant: FileFieldVariant::Input,
         clearable: true,
-        // Three or four lines of prompt at each step, and always taller
-        // than the one-line control it replaces.
         dropzone_heights: Sizes::new("72px", "88px", "104px", "124px", "148px", "176px"),
     };
 
-    /// The surface's own scale. Padding and font come from the field's scale,
-    /// so a dropzone and a text field at the same `size` read as one family.
+    /// The surface's own height; padding and font come from the field's scale.
     pub fn size_sx(size: Size) -> Sx {
         sx().var(
             FILE_FIELD_DROPZONE_HEIGHT,

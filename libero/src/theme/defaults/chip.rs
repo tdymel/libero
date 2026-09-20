@@ -13,6 +13,7 @@ pub struct ChipSizeLevel {
     pub padding_x: &'static str,
 }
 
+/// Theme defaults for `Chip`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ChipDefaults {
     /// The chrome a chip takes when a call site names none.
@@ -91,8 +92,7 @@ impl ToCssDeclarations for ChipDefaults {
 mod tests {
     use super::*;
 
-    /// A px box under `overflow: hidden` clips a rem label at 200% text size
-    /// (todo 741).
+    /// Todo 741: a px box under `overflow: hidden` clips a rem label at 200% text size.
     #[test]
     fn every_box_length_follows_the_text_size() {
         for size in Size::ALL {

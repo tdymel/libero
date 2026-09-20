@@ -6,18 +6,18 @@ pub const COMBOBOX_FONT_SIZE: SizeCss = SizeCss::new("--lsx-combobox-font-size-"
 pub const COMBOBOX_ROW_HEIGHT: SizeCss = SizeCss::new("--lsx-combobox-row-height-");
 pub const COMBOBOX_PADDING_X: SizeCss = SizeCss::new("--lsx-combobox-padding-x-");
 
-/// The dropdown's own padding, and so the inset a row nests at - which is what
-/// its corner radius has to be smaller by.
+/// The dropdown's padding: the inset a row nests at, and what its radius shrinks by.
 pub const COMBOBOX_PADDING: &str = "4px";
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ComboboxSizeLevel {
     pub font_size: &'static str,
-    /// A row's minimum height - a taller row grows past it.
+    /// A row's minimum height; a taller row grows past it.
     pub row_height: f64,
     pub padding_x: &'static str,
 }
 
+/// Theme defaults for `Combobox`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ComboboxDefaults {
     pub size: Size,
@@ -67,17 +67,14 @@ impl ComboboxDefaults {
 
     pub fn row_sx(size: Size) -> Sx {
         sx().font_size(COMBOBOX_FONT_SIZE.value(size))
-            // `min-height`, not `height`: a rich row is taller than the
-            // themed one and must not be clipped.
+            // Not `height`: a rich row is taller and must not be clipped.
             .min_height(COMBOBOX_ROW_HEIGHT.value(size))
             .padding_left(COMBOBOX_PADDING_X.value(size))
             .padding_right(COMBOBOX_PADDING_X.value(size))
     }
 
-    /// A row nests `COMBOBOX_PADDING` inside the dropdown, so its corner has
-    /// to be that much tighter or it crosses the dropdown's own - visibly, at
-    /// `xxl`, where the radius is 64px. `max` keeps the small steps at 0
-    /// rather than negative, which is not a radius at all.
+    /// The dropdown's radius less [`COMBOBOX_PADDING`], so a row's corner does not
+    /// cross it; `max` keeps small steps at 0.
     pub fn row_radius_sx(radius: Size) -> Sx {
         sx().border_radius(format!(
             "max(0px, calc({} - {COMBOBOX_PADDING}))",

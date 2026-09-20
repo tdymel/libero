@@ -1,9 +1,8 @@
 use crate::theme::Size;
 
-/// What `Autocomplete` does not share with every other field. The frame's
-/// numbers live on `FieldDefaults` and the dropdown's on `ComboboxDefaults`,
-/// so a suggestion field lines up with a `TextField` above it and with a
-/// `Select`'s list below it by construction.
+/// Theme defaults for `Autocomplete`, set on [`Theme`](crate::theme::Theme).
+///
+/// Frame and dropdown come from `FieldDefaults` and `ComboboxDefaults`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AutocompleteDefaults {
     pub size: Size,

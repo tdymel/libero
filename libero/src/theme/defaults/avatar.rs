@@ -9,30 +9,23 @@ pub const AVATAR_RADIUS: CssVar = CssVar::new("--lsx-avatar-radius");
 
 pub const AVATAR_GROUP_SPACING: CssVar = CssVar::new("--lsx-avatar-group-spacing");
 pub const AVATAR_GROUP_RING: CssVar = CssVar::new("--lsx-avatar-group-ring");
-/// A member's paint order inside a group, set per element by `AvatarGroup`.
-/// The first avatar gets the highest, so each circle overlaps the next.
+/// A member's paint order in a group, set by `AvatarGroup`: the first overlaps the next.
 pub const AVATAR_GROUP_INDEX: CssVar = CssVar::new("--lsx-avatar-group-index");
 
+/// Theme defaults for `Avatar`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AvatarDefaults {
-    /// The placeholder chrome when a call site names none, for an `Avatar`
-    /// and for every member of an `AvatarGroup`. `Tonal` because
-    /// initials on a light tint read at any size - the filled arm puts them
-    /// on a mid shade, where the palette's own contrast twin is the weakest.
+    /// Placeholder chrome, also for `AvatarGroup` members. `Tonal`: initials on a
+    /// light tint read at any size.
     pub variant: Variant,
     pub size: Size,
-    /// The step of [`Self::radii`] an avatar takes when a call site names
-    /// none. Overridden per instance the way `ImageDefaults::radius` is,
-    /// through `AVATAR_RADIUS`'s override twin.
+    /// The step of [`Self::radii`] an avatar takes when a call site names none.
     pub radius: Size,
     /// The square's side, in px.
     pub sizes: Sizes<u16>,
-    /// Derived from the square (`side / 2.5`), not a second scale to keep in
-    /// step with it.
+    /// Derived from the square (`side / 2.5`).
     pub font_sizes: Sizes<u16>,
-    /// The avatar's own radius scale. `xxl` is a circle, which no fixed
-    /// length gives: the global `xl` (64px) is a rounded square on the two
-    /// largest avatars and a circle on the two smallest.
+    /// Its own radius scale; `xxl` is a circle, which no fixed global step gives.
     pub radii: Sizes<&'static str>,
 }
 
@@ -48,15 +41,12 @@ impl AvatarDefaults {
 
     fn size_sx(size: Size) -> Sx {
         sx().width(AVATAR_SIZE.value(size))
-            // `min-width` as well: a flex parent squashes a width-only square
-            // into an ellipse, and an `AvatarGroup` *is* a flex row.
+            // A flex parent (`AvatarGroup`) squashes a width-only square into an ellipse.
             .min_width(AVATAR_SIZE.value(size))
             .height(AVATAR_SIZE.value(size))
             .font_size(AVATAR_FONT_SIZE.value(size))
     }
 
-    /// The `Pagination` shape: the size-independent declarations once, then a
-    /// per-size block, so every `Avatar` on a page shares one recycled class.
     pub fn theme_vars() -> Sx {
         sx().border_radius(AVATAR_RADIUS.overridable())
             .per_size(Self::size_sx)
@@ -75,12 +65,12 @@ impl ToCssDeclarations for AvatarDefaults {
     }
 }
 
+/// Theme defaults for `AvatarGroup`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AvatarGroupDefaults {
     /// How far each member is pulled over the one before it.
     pub spacing: Size,
-    /// Width of the ring in the page colour that separates two overlapping
-    /// members. Without it the overlap is unreadable.
+    /// The page-coloured ring that separates two overlapping members.
     pub ring: &'static str,
 }
 

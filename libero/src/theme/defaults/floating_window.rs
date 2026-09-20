@@ -1,16 +1,17 @@
 use crate::theme::{Placement, Size};
 
-/// Plain values read from Rust: a window's chrome comes from `Paper`, and its
-/// geometry is per instance, so nothing here is a CSS var.
+/// Theme defaults for `FloatingWindow`, set on [`Theme`](crate::theme::Theme).
+///
+/// Plain values read from Rust, no CSS vars: the chrome is `Paper`'s.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FloatingWindowDefaults {
     /// Where a window first appears, until it is dragged.
     pub placement: Placement,
     pub radius: Size,
     pub shadow: Size,
-    /// Pixels an arrow key moves the window by. Shift moves one.
+    /// Pixels an arrow key moves the window by; Shift moves one.
     pub move_step: u16,
-    /// Pixels an arrow key resizes it by. Shift resizes by one.
+    /// Pixels an arrow key resizes it by; Shift resizes by one.
     pub resize_step: u16,
 }
 

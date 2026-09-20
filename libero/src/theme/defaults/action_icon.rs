@@ -4,6 +4,7 @@ use crate::theme::{CssVar, ICON_SIZE, Size, SizeCss, Variant};
 pub const ACTION_ICON_SIZE: CssVar = CssVar::new("--lsx-action-icon-size");
 pub const ACTION_ICON_RADIUS: CssVar = CssVar::new("--lsx-action-icon-radius");
 
+/// Theme defaults for `ActionIcon`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ActionIconDefaults {
     /// The chrome an action icon takes when a call site names none.

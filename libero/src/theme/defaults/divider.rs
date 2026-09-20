@@ -7,6 +7,7 @@ pub const DIVIDER_SPACING: CssVar = CssVar::new("--lsx-divider-spacing");
 pub const DIVIDER_THICKNESS: SizeCss = SizeCss::new("--lsx-divider-thickness-");
 pub const DIVIDER_LINE: CssVar = CssVar::new("--lsx-divider-line");
 
+/// Theme defaults for `Divider`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DividerDefaults {
     /// The line's thickness step when `size` is omitted.
