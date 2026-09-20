@@ -258,7 +258,13 @@ pub(crate) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     return web::color_scheme();
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::color_scheme();
-    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    #[cfg(all(target_os = "android", not(feature = "native")))]
+    return webview::color_scheme();
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(target_os = "android"),
+        not(feature = "native")
+    ))]
     return None;
 }
 
@@ -305,13 +311,20 @@ pub(crate) fn timer() -> Option<&'static dyn TimerApi> {
 }
 
 /// The web listens on the window; Blitz hears a press bubble out of the app to
-/// `blitz::Listener`. The WebView floor and a server have neither.
+/// `blitz::Listener`, Android's WebView at the window over eval. The desktop
+/// WebView and a server have none.
 pub(crate) fn keyboard() -> Option<&'static dyn KeyboardApi> {
     #[cfg(target_arch = "wasm32")]
     return web::keyboard();
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::keyboard();
-    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    #[cfg(all(target_os = "android", not(feature = "native")))]
+    return webview::keyboard();
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(target_os = "android"),
+        not(feature = "native")
+    ))]
     return None;
 }
 

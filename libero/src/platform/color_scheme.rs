@@ -31,8 +31,9 @@ pub trait ColorSchemeApi {
 pub trait ColorSchemeSubscription {}
 
 /// `None` where the renderer cannot tell what the platform is set to - a
-/// webview and a headless build. Blitz answers from its viewport, and hears a
-/// live change within half a second.
+/// desktop webview and a headless build. Blitz answers from its viewport, and
+/// hears a live change within half a second. Android's WebView answers light
+/// until its media query first replies, then reports a dark answer as a change.
 pub fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     backend::color_scheme()
 }
