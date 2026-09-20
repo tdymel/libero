@@ -61,3 +61,7 @@ fullstack = ["dioxus/fullstack"]
 # the same CSS engine styles it as on the web. `dioxus/mobile` is
 # `dioxus-desktop` with a mobile event loop, so no separate `launch` call.
 mobile = ["dioxus/mobile"]
+# Every route in its own lazily fetched chunk. Release only, with `dx --wasm-split`:
+# the split wasm imports `__wasm_split.js`. Not in `build_release` until dx fixes
+# "Failed to find data symbol" (938).
+wasm-split = ["dioxus/wasm-split"]
