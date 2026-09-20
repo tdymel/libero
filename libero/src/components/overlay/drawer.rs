@@ -16,9 +16,12 @@ use crate::{
 // job; this only fills the slot it anchors.
 static DRAWER_SX: StaticSx = StaticSx::new(|| {
     let base = sx()
-        .margin("0")
-        .border_radius("0")
-        .max_width("none")
+        // Behind a state, to outrank `Dialog`'s base: two bare classes tie, and
+        // the CSS hash order decides.
+        .when(
+            "anchor-start || anchor-end || anchor-top || anchor-bottom",
+            sx().margin("0").border_radius("0").max_width("none"),
+        )
         .when("anchor-start", sx().height("100%"))
         .when("anchor-end", sx().height("100%"))
         .when("anchor-top", sx().width("100%"))
