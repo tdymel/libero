@@ -41,6 +41,8 @@ pub fn HeaderPage() -> Element {
                 prop("glass", "bool")
                     .default("false")
                     .doc("Frosted glass, as on `Paper`: content scrolling under the bar shows through, blurred. It takes the paper surface, so it replaces `color`. Opaque when the user reduces transparency, in forced colours, and in native windows."),
+                prop("gradient", "Gradient")
+                    .doc("Fills the header with a gradient, as on `Paper`, `Gradient::default()` for the theme's. The text colour and focus rings are picked to read on both stops. It replaces `color`; with `glass`, the stops turn translucent."),
                 prop("z_index", "ThemeAwareValue")
                     .default("100")
                     .doc("Stacking order."),

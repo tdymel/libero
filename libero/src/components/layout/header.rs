@@ -14,13 +14,14 @@ use crate::{
         layout::use_box,
     },
     css::Stylesheet,
-    hooks::{use_css, use_id},
+    hooks::{use_css, use_gradient_style, use_id},
     platform::{document, draws_backdrop_filter, when_laid_out},
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, HEADER_HEIGHT, HEADER_HEIGHT_VAR,
-        NamedColorCss, PAPER_BACKGROUND, PaperDefaults, Size, Z_INDEX_HEADER,
+        ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GRADIENT_CONTRAST, GRADIENT_FROM,
+        Gradient, HEADER_HEIGHT, HEADER_HEIGHT_VAR, NamedColorCss, PAPER_BACKGROUND, PaperDefaults,
+        Size, Z_INDEX_HEADER, gradient_fill_sx,
     },
 };
 
@@ -145,12 +146,29 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .top("0")
         .when("static", sx().position("static"))
         .when("fixed", sx().position("fixed").top("0"))
-        .when("glass", PaperDefaults::glass_sx())
+        // Rings inside take the label, which reads on every point of the fill.
+        .when(
+            "gradient",
+            gradient_fill_sx()
+                .var(
+                    CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
+                    GRADIENT_CONTRAST.value(),
+                )
+                .var(FOCUS_RING_HALO, GRADIENT_FROM.value()),
+        )
+        // After `gradient`, which its shorthand would otherwise reset.
+        .when(
+            "glass",
+            PaperDefaults::glass_sx().when("gradient", PaperDefaults::glass_gradient_sx()),
+        )
 });
 
 fn header_variables(props: &HeaderProps) -> Variables {
-    // Glass is the paper surface, so a `color` would leave its text unreadable.
-    let color = props.color.as_ref().filter(|_| !props.glass);
+    // Glass and gradient paint their own fill, so a `color` would leave the text unreadable.
+    let color = props
+        .color
+        .as_ref()
+        .filter(|_| !props.glass && props.gradient.is_none());
     let base = header_base_color(color);
     let contrast = base
         .as_ref()
@@ -202,6 +220,11 @@ base_props! {
         /// `color`. Opaque under reduced transparency, forced colours and natively.
         #[props(default)]
         glass: bool,
+        /// A linear gradient fill, as on `Paper`, labelled in whichever end of
+        /// the page reads on it. Replaces a `color`; with `glass`, its stops
+        /// turn translucent.
+        #[props(default)]
+        gradient: Option<Gradient>,
         children: Element,
     }
 }
@@ -230,7 +253,9 @@ pub fn Header(props: HeaderProps) -> Element {
         .with("static", position == HeaderPosition::Static)
         .with("fixed", position == HeaderPosition::Fixed)
         .with("glass", props.glass && draws_backdrop_filter())
+        .with("gradient", props.gradient.is_some())
         .into();
+    let gradient = use_gradient_style(props.gradient.as_ref(), true, false);
 
     // An opted-in sticky or fixed Header publishes its height on `:root`, the
     // last one mounted winning. The size's own CSS, so nothing is measured.
@@ -268,6 +293,7 @@ pub fn Header(props: HeaderProps) -> Element {
         .sx(&props.sx)
         .states(&states)
         .variables(&variables)
+        .style(gradient)
         .prepare()
         .render(HtmlTag::Header, props.attributes, props.children)
 }
@@ -289,6 +315,7 @@ mod tests {
             z_index: Input::None,
             publish_height: false,
             glass: false,
+            gradient: None,
             children: rsx! {},
         }
     }
@@ -343,6 +370,34 @@ mod tests {
 
         assert!(!variables.contains(HEADER_BACKGROUND_VAR.name()));
         assert!(!variables.contains(HEADER_COLOR_VAR.name()));
+    }
+
+    #[test]
+    fn a_gradient_drops_the_color_it_replaces() {
+        let props = HeaderProps {
+            gradient: Some(Gradient::default()),
+            ..header_props(Color::Primary.into())
+        };
+        let variables = header_variables(&props).to_string();
+
+        assert!(!variables.contains(HEADER_BACKGROUND_VAR.name()));
+        assert!(!variables.contains(HEADER_COLOR_VAR.name()));
+    }
+
+    /// Glass mixes the stops down after the fill; a ring inside reads the label.
+    #[test]
+    fn a_gradient_combines_with_glass() {
+        let css = crate::css::Stylesheet::from(&*HEADER_BASE_SX);
+        let css = css.as_str();
+
+        assert!(
+            css.contains("--lsx-focus-contrast:var(--lsx-gradient-contrast);"),
+            "{css}"
+        );
+        assert!(
+            css.contains("color-mix(in srgb, var(--lsx-gradient-from)"),
+            "{css}"
+        );
     }
 
     /// Unset means the themed default applies, so neither var is pinned.

@@ -41,7 +41,8 @@ base_props! {
         component: Input<HtmlTag>,
         /// Paints the glyphs in a linear gradient; `Gradient::default()` is the
         /// theme's. Palette stops take their text role, which reads on the
-        /// page; a literal stop's contrast is the caller's to check.
+        /// page; a literal stop's contrast is the caller's to check. A debug
+        /// build warns when a hex stop falls under 4.5:1 on the page background.
         #[props(default)]
         gradient: Option<Gradient>,
         children: Element,

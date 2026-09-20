@@ -102,6 +102,9 @@ impl Gradient {
         };
         let css = |stop: &ThemeAwareValue| stop.in_color_role(role).resolve(None);
         let (label, layer) = pick_label(&stops, themes, text);
+        if text && cfg!(debug_assertions) {
+            check_text_stops(&stops, themes);
+        }
         vec![
             GRADIENT_FROM.declare(css(&stops[0]).unwrap_or_default()),
             GRADIENT_TO.declare(css(&stops[1]).unwrap_or_default()),
@@ -250,11 +253,56 @@ fn pick_label(stops: &[ThemeAwareValue; 2], themes: &[&Theme], text: bool) -> (S
     // Nothing measurable: Mantine's white, on the caller.
     let (score, label, layer) = best.unwrap_or((f32::MAX, &white, &black));
     if score < TEXT_CONTRAST && !text {
-        warn(&format!(
+        warn_once(format!(
             "gradient: no label reads at 4.5:1 on {stops:?} (best {score:.2}:1); pick closer stops."
         ));
     }
     (label.to_string(), layer.to_string())
+}
+
+/// Gradient text with a literal stop: warns where a stop, or the midpoint,
+/// falls under 4.5:1 on the page background. Palette stops come off the text ramp.
+fn check_text_stops(stops: &[ThemeAwareValue; 2], themes: &[&Theme]) {
+    if !stops
+        .iter()
+        .any(|stop| matches!(stop, ThemeAwareValue::RawColor(..)))
+    {
+        return;
+    }
+    let worst = themes
+        .iter()
+        .filter_map(|theme| {
+            let from = stop_hex(&stops[0], theme, true)?;
+            let to = stop_hex(&stops[1], theme, true)?;
+            [from, to, midpoint(from, to)]
+                .into_iter()
+                .map(|point| point.contrast_ratio(theme.surface))
+                .reduce(f32::min)
+        })
+        .reduce(f32::min);
+    if let Some(worst) = worst.filter(|worst| *worst < TEXT_CONTRAST) {
+        warn_once(format!(
+            "gradient text: {stops:?} reads at {worst:.2}:1 on the page background, under 4.5:1; \
+             pick darker (or, in dark schemes, lighter) stops."
+        ));
+    }
+}
+
+/// Once per message: the check reruns on every render.
+fn warn_once(message: String) {
+    thread_local! {
+        static WARNED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+    let first = WARNED.with_borrow_mut(|warned| {
+        let first = !warned.contains(&message);
+        if first {
+            warned.push(message.clone());
+        }
+        first
+    });
+    if first {
+        warn(&message);
+    }
 }
 
 #[cfg(test)]
@@ -306,6 +354,35 @@ mod tests {
         pick_label(&stops, &[&Theme::DEFAULT, &Theme::DARK], false);
         let warnings = crate::utils::take_warnings();
         assert!(warnings.iter().any(|w| w.contains("4.5:1")), "{warnings:?}");
+    }
+
+    /// Pale yellow text fails on the light page; the default palette text passes.
+    #[test]
+    fn gradient_text_warns_on_a_pale_literal_stop() {
+        crate::utils::take_warnings();
+        let themes = [&Theme::DEFAULT, &Theme::DARK];
+        Gradient::default().declarations(&themes, true);
+        assert!(crate::utils::take_warnings().is_empty());
+
+        Gradient::default()
+            .from("#ffe066")
+            .declarations(&themes, true);
+        let warnings = crate::utils::take_warnings();
+        assert!(
+            warnings.iter().any(|w| w.contains("gradient text")),
+            "{warnings:?}"
+        );
+    }
+
+    /// A dark literal pair reads on the light page, so nothing is said.
+    #[test]
+    fn gradient_text_on_readable_literal_stops_stays_quiet() {
+        crate::utils::take_warnings();
+        Gradient::default()
+            .from("#1a1a80")
+            .to("#5c1a80")
+            .declarations(&[&Theme::DEFAULT], true);
+        assert!(crate::utils::take_warnings().is_empty());
     }
 
     #[test]

@@ -22,3 +22,6 @@ paragraph
   StaticText "Glass over a gradient."
 paragraph
   StaticText "Gradient text"
+banner
+  button "Menu"
+    StaticText "Menu"

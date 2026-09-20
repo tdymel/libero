@@ -2,7 +2,7 @@
 //! gradient and on an override, plus glass over a gradient and gradient text.
 
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Badge, Button, Flex, Icon, Paper, Text};
+use libero::components::{ActionIcon, Badge, Button, Flex, Header, Icon, Paper, Text};
 use libero::theme::Gradient;
 
 use crate::Routes;
@@ -33,6 +33,11 @@ fn GradientPage() -> Element {
                 Text { "Glass over a gradient." }
             }
             Text { id: "text", gradient: Gradient::default(), size: "xl", "Gradient text" }
+            // `color` is dropped: the gradient replaces it (968).
+            Header { id: "header", position: "static", glass: true, color: "error",
+                gradient: Gradient::default(),
+                Button { id: "in-header", variant: "standard", "Menu" }
+            }
         }
     }
 }

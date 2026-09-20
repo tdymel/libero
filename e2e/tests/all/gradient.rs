@@ -60,6 +60,7 @@ fn every_label_reads_on_its_whole_gradient_in_both_schemes() {
                 "#badge",
                 "#icon",
                 "#paper",
+                "#header",
             ] {
                 let ratio: f64 = page
                     .evaluate(format!("{WORST_RATIO}('{selector}')"))
@@ -132,6 +133,18 @@ fn glass_mixes_the_stops_down_and_text_clips_to_the_glyphs() {
             "{glass}"
         );
         assert_ne!(style(page, "#glass", "backdrop-filter").await, "none");
+        // Header combines them as Paper does, and a ring inside takes the label.
+        let header = style(page, "#header", "background-image").await;
+        assert!(header.starts_with("linear-gradient"), "{header}");
+        assert!(
+            header.contains("color-mix") || header.contains("rgba") || header.contains("/ 0.8"),
+            "{header}"
+        );
+        assert_ne!(style(page, "#header", "backdrop-filter").await, "none");
+        assert_eq!(
+            style(page, "#in-header", "--lsx-focus-contrast").await,
+            style(page, "#header", "--lsx-gradient-contrast").await
+        );
         assert_eq!(style(page, "#text", "background-clip").await, "text");
         assert_eq!(style(page, "#text", "color").await, "rgba(0, 0, 0, 0)");
         fixture.close().await.unwrap();
@@ -158,7 +171,7 @@ fn forced_colours_drop_the_image() {
         )
         .await
         .unwrap();
-        for selector in ["#button", "#paper", "#glass", "#text"] {
+        for selector in ["#button", "#paper", "#glass", "#text", "#header"] {
             assert_eq!(
                 style(page, selector, "background-image").await,
                 "none",
@@ -166,6 +179,7 @@ fn forced_colours_drop_the_image() {
             );
         }
         assert_eq!(style(page, "#glass", "backdrop-filter").await, "none");
+        assert_eq!(style(page, "#header", "backdrop-filter").await, "none");
         assert_ne!(style(page, "#text", "color").await, "rgba(0, 0, 0, 0)");
         fixture.close().await.unwrap();
     });

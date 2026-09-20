@@ -18,7 +18,7 @@ pub fn TextPage() -> Element {
                     .default("p")
                     .doc("The element to render."),
                 prop("gradient", "Gradient")
-                    .doc("Paints the glyphs with a gradient, `Gradient::default()` for the theme's. Keep it to large display text: the contrast of a literal CSS stop is yours to check. Solid in its first stop in forced colours and in native windows."),
+                    .doc("Paints the glyphs with a gradient, `Gradient::default()` for the theme's. Keep it to large display text: the contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in forced colours and in native windows."),
                 prop("children", "Element").default("required").doc("The text."),
             ])],
             lead: rsx! {
