@@ -104,6 +104,7 @@ mod tooltip;
 mod trailing_button;
 mod tree;
 mod typography;
+mod use_accessibility;
 mod visually_hidden;
 
 /// Every `.rs` file in this directory must have a `mod` line above it.

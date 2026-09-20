@@ -349,6 +349,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::UseDragPage {}, "use_drag"),
                 page(Route::UseThemeSetPage {}, "use_theme_set"),
                 page(Route::UseStylesheetPage {}, "use_stylesheet"),
+                page(Route::UseAccessibilityPage {}, "use_accessibility"),
             ],
         ),
     ]

@@ -11,11 +11,15 @@ use crate::{
     css::Stylesheet,
     localization::{Formats, Localization},
     platform::{
-        self, apply_direction, clear_root_direction, color_scheme, document, focus_selectors,
-        forget_direction, set_root_direction, store_direction, stored_direction,
+        self, a11y_media, answer_a11y_media, answers_a11y_media, apply_direction,
+        clear_root_direction, color_scheme, document, focus_selectors, forget_direction,
+        set_current_a11y_media, set_root_direction, store_direction, stored_direction,
     },
     theme::{THEME_ATTRIBUTE, Theme, ThemeSet, physical_text_align, themed_form_controls},
-    tokens::{ColorScheme, ColorSchemeSetting, Direction},
+    tokens::{
+        AccessibilityOverrides, AccessibilityPreferences, ColorScheme, ColorSchemeSetting,
+        Direction,
+    },
     utils::warn,
 };
 
@@ -55,6 +59,9 @@ pub struct LiberoContext {
     pub(crate) kept_direction: Signal<Option<Direction>>,
     /// The provider's `direction` prop, what clearing the choice goes back to.
     pub(crate) start_direction: Option<Direction>,
+    /// What the platform's accessibility settings say, and the app's own answers over them.
+    pub(crate) accessibility_system: Signal<AccessibilityPreferences>,
+    pub(crate) accessibility_overrides: Signal<AccessibilityOverrides>,
     pub(crate) layer_order_css: &'static str,
     /// `Rc<str>`, not a `Stylesheet`: every `use_context::<LiberoContext>()`
     /// clones this struct, and only `ThemeStyle` ever reads this field.
@@ -79,6 +86,8 @@ impl LiberoContext {
         direction: Signal<Direction>,
         kept_direction: Signal<Option<Direction>>,
         start_direction: Option<Direction>,
+        accessibility_system: Signal<AccessibilityPreferences>,
+        accessibility_overrides: Signal<AccessibilityOverrides>,
         theme_css: Signal<Rc<str>>,
         stylesheet_registry_version: Signal<u64>,
     ) -> Self {
@@ -93,6 +102,8 @@ impl LiberoContext {
             direction,
             kept_direction,
             start_direction,
+            accessibility_system,
+            accessibility_overrides,
             layer_order_css: CssLayer::order_css(),
             theme_css,
             stylesheet_registry: StylesheetRegistry::new(),
@@ -234,6 +245,36 @@ impl LiberoContext {
         kept.set(None);
     }
 
+    /// The system's accessibility settings with the app's overrides on top. Reactive.
+    pub(crate) fn accessibility(&self) -> AccessibilityPreferences {
+        self.accessibility_overrides
+            .read()
+            .resolve(*self.accessibility_system.read())
+    }
+
+    pub(crate) fn set_accessibility_overrides(&self, overrides: AccessibilityOverrides) {
+        let mut stored = self.accessibility_overrides;
+        stored.set(overrides);
+        self.publish_accessibility();
+    }
+
+    fn set_accessibility_system(&self, system: AccessibilityPreferences) {
+        let mut stored = self.accessibility_system;
+        stored.set(system);
+        self.publish_accessibility();
+    }
+
+    /// Hands the resolved answers to motion started from Rust and, natively, to
+    /// the sheets, whose feature tests libero answers itself.
+    fn publish_accessibility(&self) {
+        let overrides = *self.accessibility_overrides.peek();
+        set_current_a11y_media(overrides.resolve(*self.accessibility_system.peek()));
+        if answers_a11y_media() {
+            let mut version = self.stylesheet_registry_version;
+            version += 1;
+        }
+    }
+
     /// Swaps the whole set - what a theme picker does.
     ///
     /// The sheet is rebuilt, because the pair it carries is this set's pair:
@@ -312,15 +353,26 @@ fn ThemeStyle() -> Element {
 fn StyleOutlet() -> Element {
     let context = use_context::<LiberoContext>();
     let registry_version = *context.stylesheet_registry_version.read();
+    // Natively libero answers the accessibility media features itself (todo 954).
+    let accessibility = answers_a11y_media().then(|| context.accessibility());
 
     rsx! {
         for (node_key, stylesheet) in context.stylesheet_registry.stylesheets() {
             style {
                 key: "{node_key}",
-                dangerous_inner_html: "{focus_selectors(&stylesheet)}"
+                dangerous_inner_html: "{renderer_css(&stylesheet, accessibility.as_ref())}"
             }
         }
         {platform::SheetWatch(registry_version)}
+    }
+}
+
+/// `css` as this renderer matches it.
+fn renderer_css(css: &str, accessibility: Option<&AccessibilityPreferences>) -> String {
+    let css = focus_selectors(css);
+    match accessibility {
+        Some(accessibility) => answer_a11y_media(&css, accessibility).into_owned(),
+        None => css.into_owned(),
     }
 }
 
@@ -359,6 +411,21 @@ pub fn LiberoProvider(
     /// nothing kept, the root's `dir` is left as the page has it.
     #[props(default, into)]
     direction: Option<Direction>,
+    /// The app's own answers to the accessibility media features
+    /// (`prefers-reduced-motion`, `forced-colors`, `prefers-contrast`,
+    /// `prefers-reduced-transparency`), over the system's. Read at mount; change
+    /// them later with [`use_accessibility`](crate::hooks::use_accessibility).
+    ///
+    /// Native renderers only: on the web the browser's media queries decide.
+    ///
+    /// ```ignore
+    /// LiberoProvider {
+    ///     accessibility: AccessibilityOverrides { reduced_motion: Some(true), ..Default::default() },
+    ///     App {}
+    /// }
+    /// ```
+    #[props(default)]
+    accessibility: AccessibilityOverrides,
     children: Element,
 ) -> Element {
     let themes = use_hook(|| themes.clone());
@@ -399,6 +466,16 @@ pub fn LiberoProvider(
     let direction_set = use_hook(|| chosen_direction.is_some_and(set_root_direction));
     let direction_signal = use_signal(|| chosen_direction.unwrap_or_default());
 
+    // Natively at once, so the first frame already answers; on the web in an
+    // effect below, as a server cannot know it.
+    let accessibility_system = use_signal(|| {
+        a11y_media()
+            .filter(|_| answers_a11y_media())
+            .map(|platform| platform.system())
+            .unwrap_or_default()
+    });
+    let accessibility_overrides = use_signal(|| accessibility);
+
     let stylesheet_registry_version = use_signal(|| 0u64);
     let context = use_context_provider(|| {
         LiberoContext::new(
@@ -412,13 +489,36 @@ pub fn LiberoProvider(
             direction_signal,
             kept_direction,
             start_direction,
+            accessibility_system,
+            accessibility_overrides,
             theme_css,
             stylesheet_registry_version,
         )
     });
+    use_hook(|| set_current_a11y_media(accessibility.resolve(*accessibility_system.peek())));
+    // Every later change of the platform's settings, held for the provider's lifetime.
+    let _accessibility_subscription = use_hook(|| {
+        let context = context.clone();
+        Rc::new(a11y_media().map(|platform| {
+            platform.on_change(Box::new(move |system| {
+                context.set_accessibility_system(system)
+            }))
+        }))
+    });
+    use_effect({
+        let context = context.clone();
+        move || {
+            if let Some(platform) = a11y_media().filter(|_| !answers_a11y_media()) {
+                context.set_accessibility_system(platform.system());
+            }
+        }
+    });
     // Elsewhere after mount: Blitz reaches its root through an element the provider renders.
+    // The latest choice, not the mount's: a `set` during the first render found no root (956).
+    let kept = context.kept_direction;
     use_effect(move || {
-        if let Some(direction) = chosen_direction.filter(|_| !direction_set) {
+        let current = kept.peek().or(start_direction);
+        if let Some(direction) = current.filter(|_| !direction_set || current != chosen_direction) {
             apply_direction(direction);
         }
     });

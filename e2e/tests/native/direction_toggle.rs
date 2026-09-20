@@ -4,6 +4,8 @@
 use dioxus::prelude::*;
 use e2e::native::{Key, mount};
 use libero::components::DirectionToggle;
+use libero::hooks::use_direction;
+use libero::theme::Direction;
 
 const BUTTON: &str = "#direction";
 
@@ -44,5 +46,28 @@ fn a_click_and_enter_turn_the_root_and_rename_the_button() {
     assert_eq!(
         page.attr(BUTTON, "aria-label").as_deref(),
         Some("Switch to right-to-left text")
+    );
+}
+
+fn set_during_first_render() -> Element {
+    let direction = use_direction();
+    use_hook(|| direction.set(Direction::Rtl));
+    rsx! {
+        DirectionToggle { id: "direction" }
+    }
+}
+
+#[test]
+fn a_direction_set_during_the_first_render_reaches_the_root() {
+    let page = mount(set_during_first_render);
+    assert_eq!(
+        page.attr("html", "dir").as_deref(),
+        Some("rtl"),
+        "{}",
+        page.tree()
+    );
+    assert_eq!(
+        page.attr(BUTTON, "aria-label").as_deref(),
+        Some("Switch to left-to-right text")
     );
 }

@@ -11,13 +11,16 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen::prelude::Closure;
 
 use super::INTERACTIVE;
+use crate::platform::a11y_media::A11yMediaSubscription;
 use crate::platform::{
-    ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions, DocumentApi,
-    ElementApi, KeyChord, KeySubscription, KeyboardApi, PlatformError, Read, ScrollApi,
-    ScrollSubscription, TimerApi, TimerSubscription,
+    A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions,
+    DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, PlatformError, Read,
+    ScrollApi, ScrollSubscription, TimerApi, TimerSubscription,
     keyboard::{takes_arrows, takes_typing, warn_reserved_chord},
 };
-use crate::tokens::{COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting};
+use crate::tokens::{
+    AccessibilityPreferences, COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting, Contrast,
+};
 
 /// dioxus-web backs a mounted element with the `web_sys::Element` itself, so
 /// the whole trait is answerable - no id, no document lookup.
@@ -215,6 +218,85 @@ pub(super) fn prefers_reduced_motion() -> bool {
 
 pub(super) fn document() -> Option<&'static dyn DocumentApi> {
     Some(&DOCUMENT)
+}
+
+pub(super) fn a11y_media() -> Option<&'static dyn A11yMediaApi> {
+    Some(&A11Y_MEDIA)
+}
+
+/// The browser's own answers, read back for `use_accessibility`.
+struct WebA11yMedia;
+
+static A11Y_MEDIA: WebA11yMedia = WebA11yMedia;
+
+const A11Y_QUERIES: [&str; 5] = [
+    crate::sx::REDUCED_MOTION,
+    crate::sx::FORCED_COLORS,
+    "(prefers-contrast: more)",
+    "(prefers-contrast: less)",
+    "(prefers-reduced-transparency: reduce)",
+];
+
+fn a11y_queries() -> Vec<Option<web_sys::MediaQueryList>> {
+    let window = web_sys::window();
+    A11Y_QUERIES
+        .iter()
+        .map(|query| window.as_ref()?.match_media(query).ok()?)
+        .collect()
+}
+
+impl A11yMediaApi for WebA11yMedia {
+    fn system(&self) -> AccessibilityPreferences {
+        let matches: Vec<bool> = a11y_queries()
+            .iter()
+            .map(|query| query.as_ref().is_some_and(|query| query.matches()))
+            .collect();
+        AccessibilityPreferences {
+            reduced_motion: matches[0],
+            forced_colors: matches[1],
+            contrast: match (matches[2], matches[3]) {
+                (true, _) => Contrast::More,
+                (_, true) => Contrast::Less,
+                _ => Contrast::NoPreference,
+            },
+            reduced_transparency: matches[4],
+        }
+    }
+
+    fn on_change(
+        &self,
+        callback: Box<dyn Fn(AccessibilityPreferences)>,
+    ) -> Box<dyn A11yMediaSubscription> {
+        let closure = Closure::<dyn FnMut()>::new(move || callback(A11Y_MEDIA.system()));
+        let queries: Vec<_> = a11y_queries()
+            .into_iter()
+            .flatten()
+            .filter(|query| {
+                query
+                    .add_event_listener_with_callback("change", closure.as_ref().unchecked_ref())
+                    .is_ok()
+            })
+            .collect();
+        Box::new(WebA11yMediaSubscription { queries, closure })
+    }
+}
+
+struct WebA11yMediaSubscription {
+    queries: Vec<web_sys::MediaQueryList>,
+    closure: Closure<dyn FnMut()>,
+}
+
+impl A11yMediaSubscription for WebA11yMediaSubscription {}
+
+impl Drop for WebA11yMediaSubscription {
+    fn drop(&mut self) {
+        for query in &self.queries {
+            let _ = query.remove_event_listener_with_callback(
+                "change",
+                self.closure.as_ref().unchecked_ref(),
+            );
+        }
+    }
 }
 
 pub(super) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {

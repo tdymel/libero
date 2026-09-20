@@ -20,8 +20,8 @@ use dioxus::prelude::{
 };
 
 use super::{
-    ColorSchemeApi, ContentSubscription, DocumentApi, ElementApi, KeyboardApi, ScrollApi,
-    SilentFocusApi, TimerApi,
+    A11yMediaApi, ColorSchemeApi, ContentSubscription, DocumentApi, ElementApi, KeyboardApi,
+    ScrollApi, SilentFocusApi, TimerApi,
 };
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
@@ -29,6 +29,8 @@ mod blitz;
 mod mounted;
 #[cfg(not(target_arch = "wasm32"))]
 mod origin;
+#[cfg(all(target_os = "linux", feature = "native"))]
+mod portal;
 #[cfg(not(target_arch = "wasm32"))]
 mod thread;
 #[cfg(target_arch = "wasm32")]
@@ -555,6 +557,21 @@ pub(crate) fn when_laid_out(run: Box<dyn FnOnce()>) {
     blitz::when_laid_out(run);
     #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
     run();
+}
+
+/// Only Blitz's stylo lacks the accessibility media features - see
+/// [`answers_a11y_media`](crate::platform::answers_a11y_media).
+pub(crate) const ANSWERS_A11Y_MEDIA: bool =
+    cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
+/// The web's `matchMedia`, and the desktop portal for Blitz on Linux.
+pub(crate) fn a11y_media() -> Option<&'static dyn A11yMediaApi> {
+    #[cfg(target_arch = "wasm32")]
+    return web::a11y_media();
+    #[cfg(all(target_os = "linux", feature = "native"))]
+    return portal::a11y_media();
+    #[cfg(not(any(target_arch = "wasm32", all(target_os = "linux", feature = "native"))))]
+    return None;
 }
 
 /// The web and Android's WebView read the media query - see

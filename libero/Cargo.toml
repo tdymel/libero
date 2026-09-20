@@ -81,6 +81,11 @@ futures-core = { version = "0.3", optional = true }
 # Turns Blitz's callback-style fetch into a future. Already in dioxus's tree.
 futures-channel = { version = "0.3", optional = true }
 
+# The desktop portal's accessibility settings, which Blitz's stylo cannot match (todo 954).
+# The lock's copy (tao's).
+[target.'cfg(target_os = "linux")'.dependencies]
+dbus = { version = "0.9", optional = true }
+
 # Render-to-string, for the component tests in `tests/` - the same dioxus rev
 # this crate builds against.
 [dev-dependencies]
@@ -94,7 +99,7 @@ archunit = "0.0.1"
 # Reach elements through Blitz directly when running under `dioxus-native`.
 # Nothing forces it on: without it `platform::backend` falls back to dioxus's
 # portable mounted handle, which cannot query a subtree or report focus.
-native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:cursor-icon", "dep:style", "dep:arboard", "dep:rfd", "dep:futures-core", "dep:futures-channel"]
+native = ["dep:dioxus-native-dom", "dep:blitz-dom", "dep:blitz-traits", "dep:cursor-icon", "dep:style", "dep:arboard", "dep:rfd", "dep:futures-core", "dep:futures-channel", "dep:dbus"]
 default = [
     "code-lang-rust",
     "code-lang-bash",

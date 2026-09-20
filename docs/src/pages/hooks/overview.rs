@@ -78,6 +78,11 @@ fn hooks() -> Vec<HookRow> {
             Route::UseStylesheetPage {},
         ),
         row(
+            "use_accessibility",
+            "The reader's motion, contrast and transparency preferences, and app overrides.",
+            Route::UseAccessibilityPage {},
+        ),
+        row(
             "use_scroll_area",
             "Scrolls a ScrollArea from code.",
             Route::ScrollAreaPage {},

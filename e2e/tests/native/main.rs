@@ -2,6 +2,7 @@
 //! `tests/all` is. A unit mounts one app in `e2e::native::Page`; run one with
 //! `cargo test -p e2e --features native --test native switch::`.
 
+mod accessibility;
 mod anchor;
 mod avatar;
 mod button;

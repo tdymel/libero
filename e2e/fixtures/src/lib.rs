@@ -123,6 +123,7 @@ mod tooltip;
 mod trailing_button;
 mod tree;
 mod typography;
+mod use_accessibility;
 mod visually_hidden;
 
 use dioxus::prelude::*;
@@ -228,6 +229,7 @@ const FIXTURES: &[Routes] = &[
     trailing_button::ROUTES,
     tree::ROUTES,
     typography::ROUTES,
+    use_accessibility::ROUTES,
     visually_hidden::ROUTES,
 ];
 

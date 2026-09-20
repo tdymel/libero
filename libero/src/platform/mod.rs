@@ -10,6 +10,7 @@
 //! [`use_element`](crate::hooks::use_element), whose handle picks the richest
 //! backend the renderer offers. See [`backend`].
 
+mod a11y_media;
 mod backend;
 mod click;
 mod clipboard;
@@ -39,6 +40,10 @@ mod task;
 mod timer;
 mod transition;
 
+pub(crate) use a11y_media::{
+    A11yMediaApi, a11y_media, answer_a11y_media, answers_a11y_media, current_a11y_media,
+    set_current_a11y_media,
+};
 // The renderer seams everything above `platform` reaches `backend` through (todo 820).
 pub(crate) use backend::{Listener, Outlet, PortalEntry, PortalRoot, SheetWatch, element};
 pub(crate) use click::{

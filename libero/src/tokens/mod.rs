@@ -2,6 +2,7 @@
 //! properties naming them. Below [`crate::sx`], which types its values with
 //! these, and knows nothing of `Theme`, which sits above `sx`.
 
+mod accessibility;
 mod color;
 mod color_scheme;
 mod color_shade;
@@ -14,6 +15,7 @@ mod responsive;
 mod size;
 mod sizes;
 
+pub use accessibility::{AccessibilityOverrides, AccessibilityPreferences, Contrast};
 pub use color::Color;
 pub use color_scheme::{
     COLOR_SCHEME_RESTORE_SCRIPT, COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting,

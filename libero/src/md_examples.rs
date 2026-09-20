@@ -137,6 +137,7 @@ md_pages! {
     Title => "title",
     Tooltip => "tooltip",
     Tree => "tree",
+    UseAccessibility => "use_accessibility",
     UseDrag => "use_drag",
     UseElement => "use_element",
     UseFocusReturn => "use_focus_return",

@@ -89,6 +89,8 @@ pub(crate) enum Route {
     UseThemeSetPage {},
     #[route("/hooks/use-stylesheet")]
     UseStylesheetPage {},
+    #[route("/hooks/use-accessibility")]
+    UseAccessibilityPage {},
 
     #[route("/buttons/action-icon")]
     ActionIconPage {},

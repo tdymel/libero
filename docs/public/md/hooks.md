@@ -25,6 +25,7 @@ belong to.
 | `use_formats` | The active date, time and number formats. | [Localization](localization.md) |
 | `use_formats_handle` | Switches the formats at runtime. | [Localization](localization.md) |
 | `use_stylesheet` | Registers a stylesheet of your own, above every libero layer. | [use_stylesheet](use_stylesheet.md) |
+| `use_accessibility` | The reader's motion, contrast and transparency preferences, and app overrides. | [use_accessibility](use_accessibility.md) |
 | `use_scroll_area` | Scrolls a ScrollArea from code. | [ScrollArea](scroll_area.md) |
 | `use_scroller` | Steps a Scroller from controls of your own. | [Scroller](scroller.md) |
 | `use_form` | Controls a Form: validity, check, submit and reset. | [Form](form.md) |

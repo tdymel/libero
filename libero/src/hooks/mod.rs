@@ -1,3 +1,4 @@
+mod accessibility;
 mod cache;
 mod clipboard;
 mod color_scheme;
@@ -24,6 +25,7 @@ mod stylesheet;
 mod theme;
 mod typeahead;
 
+pub use accessibility::{AccessibilityHandle, use_accessibility};
 pub(crate) use cache::use_cache;
 pub use clipboard::{Clipboard, use_clipboard};
 pub use color_scheme::{ColorSchemeHandle, use_color_scheme};
