@@ -83,6 +83,12 @@ pub(crate) fn clipboard() -> Option<&'static dyn ClipboardApi> {
     return Some(&web::CLIPBOARD);
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return Some(&native::CLIPBOARD);
-    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    #[cfg(all(target_os = "android", not(feature = "native")))]
+    return super::backend::webview_clipboard();
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(target_os = "android"),
+        not(feature = "native")
+    ))]
     return None;
 }

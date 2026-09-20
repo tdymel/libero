@@ -33,6 +33,10 @@ mod origin;
 mod thread;
 #[cfg(target_arch = "wasm32")]
 mod web;
+#[cfg(all(target_os = "android", not(feature = "native")))]
+mod webview;
+#[cfg(all(target_os = "android", not(feature = "native")))]
+pub(crate) use webview::clipboard as webview_clipboard;
 
 /// What HTML counts as interactive content, plus anything a caller made
 /// focusable. A label does not forward a click on any of these.
@@ -225,7 +229,13 @@ pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     return web::document();
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::document();
-    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    #[cfg(all(target_os = "android", not(feature = "native")))]
+    return webview::document();
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(target_os = "android"),
+        not(feature = "native")
+    ))]
     return None;
 }
 
@@ -241,14 +251,20 @@ pub(crate) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     return None;
 }
 
-/// The web and Blitz can report a scroll. Elsewhere this is `None`, which is
-/// the house rule for an absent capability - never an `Unsupported` stub.
+/// The web, Blitz and Android's WebView can report a scroll. Elsewhere this is
+/// `None`, the house rule for an absent capability - never an `Unsupported` stub.
 pub(crate) fn scroll() -> Option<&'static dyn ScrollApi> {
     #[cfg(target_arch = "wasm32")]
     return web::scroll();
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::scroll();
-    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    #[cfg(all(target_os = "android", not(feature = "native")))]
+    return webview::scroll();
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(target_os = "android"),
+        not(feature = "native")
+    ))]
     return None;
 }
 
@@ -517,12 +533,17 @@ pub(crate) fn when_laid_out(run: Box<dyn FnOnce()>) {
     run();
 }
 
-/// Only the web can read a media query today - see
+/// The web and Android's WebView read the media query - see
 /// [`prefers_reduced_motion`](crate::platform::prefers_reduced_motion).
 pub(crate) fn prefers_reduced_motion() -> bool {
     #[cfg(target_arch = "wasm32")]
     return web::prefers_reduced_motion();
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(target_os = "android", not(feature = "native")))]
+    return webview::prefers_reduced_motion();
+    #[cfg(not(any(
+        target_arch = "wasm32",
+        all(target_os = "android", not(feature = "native"))
+    )))]
     return false;
 }
 
