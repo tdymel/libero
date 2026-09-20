@@ -65,9 +65,8 @@ impl RippleState {
     }
 }
 
-/// A pseudo-element on the component, not a child node. A rendered child
-/// costs ~1,000 ns per component per render even while no ripple is showing -
-/// see the render-cost notes.
+/// A pseudo-element on the component, not a child node, which costs ~1,000 ns
+/// per render even with no ripple showing.
 pub(crate) fn ripple_sx(base: Sx) -> Sx {
     base.position("relative")
         .overflow("hidden")

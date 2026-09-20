@@ -13,19 +13,17 @@ pub struct DragPoint {
     pub y: f64,
 }
 
-/// Where the pointer went down. Measure whatever geometry the drag is
-/// relative to here - it is the only moment the layout is known to be
-/// settled.
+/// Where the pointer went down. Measure the drag's geometry here: the only
+/// moment the layout is known to be settled.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DragStart {
     pub client: DragPoint,
-    /// Abandons the drag, either at once - a disabled control refusing it -
-    /// or once the handler has measured and learned it is impossible, which
-    /// off the web is a round-trip away. Called at once, no move or end is
-    /// ever reported for this press.
+    /// Abandons the drag, at once or after a measuring round-trip. Called at
+    /// once, no move or end is reported for this press.
     pub cancel: Callback<()>,
 }
 
+/// A pointer move during a drag.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DragMove {
     pub start: DragPoint,
@@ -33,6 +31,7 @@ pub struct DragMove {
 }
 
 impl DragMove {
+    /// How far the pointer moved since the drag started.
     pub fn delta(&self) -> DragPoint {
         DragPoint {
             x: self.client.x - self.start.x,
@@ -41,12 +40,13 @@ impl DragMove {
     }
 }
 
+/// What [`use_drag`] takes.
 pub struct DragOptions {
-    /// The element that takes pointer capture and carries the move/up/cancel
-    /// handlers - the one owning the geometry, not the grab handle.
+    /// Takes pointer capture and the move/up/cancel handlers: the element
+    /// owning the geometry, not the grab handle.
     pub capture: ElementHandle,
-    /// The geometry a drag needs may take a round-trip to measure, so this
-    /// cannot veto by returning - call [`DragStart::cancel`] once it knows.
+    /// Vetoes by calling [`DragStart::cancel`], not by returning: measuring
+    /// may take a round-trip.
     pub onstart: Callback<DragStart>,
     pub onmove: Callback<DragMove>,
     pub onend: Callback<()>,
@@ -71,15 +71,44 @@ pub struct Drag {
     pub onpointercancel: Callback<Event<PointerData>>,
 }
 
-/// Pointer plumbing for a drag: capture, a start coordinate, deltas against
-/// it, and one end path off both release and cancel. It knows nothing about
-/// axes or units - convert the client-space delta yourself.
+/// Pointer plumbing for a drag: capture, a start point, client-space deltas
+/// against it, and one end path off release and cancel.
 ///
-/// Give the handle [`drag_handle_sx`], or a touch never produces a move.
+/// Give the handle [`drag_handle_sx`], or a touch never produces a move. On
+/// the web the hook focuses the pressed tab stop; elsewhere focus in `onstart`.
 ///
-/// The press is cancelled, so on the web the hook focuses the pressed tab stop
-/// itself: the outermost one between the target and `capture`. Elsewhere, and
-/// to focus something else (a slider's nearest thumb), focus it in `onstart`.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Box;
+/// # use libero::hooks::{DragMove, DragOptions, drag_handle_sx, use_drag, use_element};
+/// # fn app() -> Element {
+/// let track = use_element();
+/// let mut x = use_signal(|| 0.0);
+/// let drag = use_drag(DragOptions {
+///     capture: track,
+///     onstart: Callback::new(|_| {}),
+///     onmove: Callback::new(move |step: DragMove| x.set(step.delta().x)),
+///     onend: Callback::new(|()| {}),
+/// });
+///
+/// rsx! {
+///     Box {
+///         onmounted: track.mount(),
+///         onpointermove: move |event| drag.onpointermove.call(event),
+///         onpointerup: move |event| drag.onpointerup.call(event),
+///         onpointercancel: move |event| drag.onpointercancel.call(event),
+///         Box {
+///             onpointerdown: move |event| drag.onpointerdown.call(event),
+///             sx: drag_handle_sx(),
+///             style: "translate: {x}px",
+///             "Drag me"
+///         }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/hooks/use-drag>
 pub fn use_drag(options: DragOptions) -> Drag {
     let DragOptions {
         capture,
@@ -142,9 +171,8 @@ pub fn use_drag(options: DragOptions) -> Drag {
             y: coordinates.y,
         };
 
-        // Active before `onstart`, so a `cancel` it makes synchronously - a
-        // disabled control refusing the drag - clears it rather than being
-        // overwritten.
+        // Active before `onstart`, so a synchronous `cancel` clears it rather
+        // than being overwritten.
         active.set(Some(ActiveDrag {
             pointer_id: event.pointer_id(),
             start: client,
@@ -180,17 +208,11 @@ pub fn use_drag(options: DragOptions) -> Drag {
     }
 }
 
-/// Without `touch-action: none` the browser claims a touch as a scroll and no
-/// `pointermove` ever arrives.
+/// `touch-action: none` for a drag handle: without it a touch scrolls and no
+/// `pointermove` arrives.
 ///
-/// It carries no colour, so it changes nothing about the handle's focus ring.
-/// Worth knowing anyway, because a drag handle is usually a filled knob: a
-/// handle with `background("primary.6")` takes a **white** focus ring drawn
-/// outside itself, which is 1.11:1 on a light track - and the two-tone ring
-/// does not save it, because the fill overrides the stripe and leaves it the
-/// same white as the halo. Inset the ring into the fill -
-/// `focus_visible(sx().outline_offset("-4px"))` - where the colour the fill
-/// publishes is the right one. See [`crate::components::Box`].
+/// A filled knob's focus ring turns white on white outside it: inset it with
+/// `focus_visible(sx().outline_offset("-4px"))`.
 pub fn drag_handle_sx() -> Sx {
     sx().touch_action("none")
 }

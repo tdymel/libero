@@ -6,29 +6,21 @@ use crate::{
 };
 
 /// The app's colour scheme: what it is set to, what that resolves to, and how
-/// to change it.
+/// to change it. Reactive, the platform's own changes included.
 ///
-/// [`ThemeToggle`](crate::components::ThemeToggle) is the
-/// ready-made switch built on it. Anything else - a `Switch`, or a
-/// `SegmentedControl` that offers "follow the system" - is built here.
+/// [`ThemeToggle`](crate::components::ThemeToggle) is the ready-made switch built on it.
 ///
-/// ```ignore
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::use_color_scheme;
+/// # fn app() -> Element {
 /// let scheme = use_color_scheme();
 ///
 /// rsx! {
-///     ActionIcon {
-///         onclick: move |_| scheme.toggle(),
-///         aria_label: match scheme.resolved() {
-///             ColorScheme::Dark => "Switch to the light theme",
-///             ColorScheme::Light => "Switch to the dark theme",
-///         },
-///     }
+///     button { onclick: move |_| scheme.toggle(), "Toggle the colour scheme" }
 /// }
+/// # }
 /// ```
-///
-/// Reactive: every read below subscribes, so a component that shows the
-/// scheme re-renders when it changes - including when the *platform* changes
-/// its mind while the app is following it.
 pub fn use_color_scheme() -> ColorSchemeHandle {
     ColorSchemeHandle {
         context: use_context::<LiberoContext>(),
@@ -53,17 +45,14 @@ impl ColorSchemeHandle {
         self.setting().resolve(*self.context.system_scheme.read())
     }
 
-    /// Pins a scheme, or hands the choice back to the platform with
-    /// [`ColorSchemeSetting::System`]. Persisted where the platform has
-    /// somewhere to persist it, so a reload comes back to the same scheme.
+    /// Pins a scheme, or follows the platform with [`ColorSchemeSetting::System`].
+    /// Persisted where the platform can, so a reload keeps it.
     pub fn set(&self, setting: impl Into<ColorSchemeSetting>) {
         self.context.set_color_scheme(setting.into());
     }
 
-    /// Flips to the other scheme. It pins that scheme only while it differs
-    /// from the platform's: flipping back to what the platform says hands
-    /// the choice back to it, so a toggle can never strand the app on a pin
-    /// that ignores the system - or a devtools emulation of it - for good.
+    /// Flips to the other scheme. Flipping back to the platform's scheme
+    /// follows the platform again, so a toggle never strands the app on a pin.
     pub fn toggle(&self) {
         let target = self.resolved().flipped();
         if target == *self.context.system_scheme.peek() {
@@ -73,11 +62,8 @@ impl ColorSchemeHandle {
         }
     }
 
-    /// Steps through all three settings: from following the platform to
-    /// the scheme it is *not* showing, then to the one it is, then back to
-    /// following it. Every press changes what is on screen except the last,
-    /// which changes what the app listens to - so a reader can always get
-    /// back to the platform's choice, and to a devtools emulation of it.
+    /// Steps through all three settings: the scheme the platform is *not*
+    /// showing, the one it is, then following the platform again.
     pub fn cycle(&self) {
         self.set(self.next_in_cycle());
     }
@@ -92,12 +78,8 @@ impl ColorSchemeHandle {
         }
     }
 
-    /// Selects a theme beyond the pair, by the name it was given to
-    /// [`ThemeSet::named`](crate::theme::ThemeSet::named).
-    ///
-    /// Such a theme is not in the emitted sheet, so this rebuilds it - the
-    /// accepted cost of not growing every app's sheet with every theme it
-    /// happens to own.
+    /// Selects a theme beyond the pair, by its [`ThemeSet::named`](crate::theme::ThemeSet::named)
+    /// name. Rebuilds the sheet, which holds only the pair.
     pub fn set_theme(&self, name: &'static str) {
         self.context.set_active_theme(name);
     }

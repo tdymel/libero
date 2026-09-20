@@ -4,11 +4,8 @@ use dioxus::prelude::*;
 
 use crate::platform::{TimerSubscription, prefers_reduced_motion, timer, transition_property};
 
-/// How long past the exit's own duration the fallback waits before it unmounts.
-/// Late is harmless - the closed state is already out of the accessibility
-/// tree - and early is the defect the property filter exists to prevent, so
-/// this errs long. A browser delivers `transitionend` about 30ms after the
-/// duration (630ms for a 600ms exit, measured 2026-09-16).
+/// How long past the exit's duration the fallback waits to unmount. Errs long:
+/// browsers send `transitionend` ~30ms late (measured 2026-09-16).
 const EXIT_SLACK: Duration = Duration::from_millis(150);
 
 /// Tracks the mount/visible lifecycle of an animated-open/close element.
@@ -16,8 +13,7 @@ const EXIT_SLACK: Duration = Duration::from_millis(150);
 pub(crate) struct Presence {
     mounted: Signal<bool>,
     visible: Signal<bool>,
-    /// A snapshot, not a signal: rebuilt every render, so never cache a
-    /// `Presence` across renders - a stashed one answers with a frozen `open`.
+    /// A snapshot: never cache a `Presence` across renders.
     open: bool,
     property: &'static str,
 }
@@ -39,22 +35,11 @@ impl Presence {
         }
     }
 
-    /// Attach to the element's `ontransitionend`.
-    ///
-    /// Filtered on `property`, because `transitionend` fires once per property
-    /// and the shortest one finishes first: without this a 100ms opacity
-    /// unmounts the content under a 600ms height still animating.
-    ///
-    /// A matching event **stops propagating here**. `transitionend` bubbles,
-    /// so a nested presence element's exit would otherwise reach this one's
-    /// ancestors and end their exit too - an inner `Collapse` unmounting its
-    /// parent's content mid-close. Stopping it at the innermost handler means
-    /// each one only ever sees its own element's end, on every renderer,
-    /// without reading the event's target.
+    /// Attach to the element's `ontransitionend`. Filtered on `property` (the
+    /// shortest one ends first); a match stops propagating, so no nested exit ends an outer one.
     pub fn on_transition_end(&self, event: &Event<TransitionData>) {
-        // An unreadable property counts as a match, so it unmounts rather
-        // than never - see `platform::transition_property` for which backends
-        // that costs.
+        // Unreadable counts as a match: unmount rather than never
+        // (`platform::transition_property` lists the backends).
         if transition_property(event).is_some_and(|property| property != self.property) {
             return;
         }
@@ -70,33 +55,11 @@ impl Presence {
     }
 }
 
-/// `property` is the CSS property carrying the **exit** transition -
-/// `"grid-template-rows"` for a collapse, `"opacity"` for a fade.
+/// Keeps closing content mounted until its exit transition on `property`
+/// (`"opacity"` for a fade) ends, or `exit` plus [`EXIT_SLACK`]; `None` waits.
 ///
-/// **The closed state must also hide the content from the a11y tree** - a
-/// `visibility: hidden` step (delayed by the duration, so it lands as the exit
-/// ends) or `inert`. Between the close and the unmount the content is still
-/// mounted, still focusable and still announced; a filtered exit makes that
-/// window as long as the animation rather than as short as its quickest
-/// property.
-///
-/// **An ancestor's own `ontransitionend` no longer sees this element's end
-/// events for `property`**: [`Presence::on_transition_end`] stops them, which
-/// is what keeps a nested exit from ending an outer one. Other properties
-/// still bubble.
-///
-/// **Under `prefers-reduced-motion: reduce` a close unmounts at once**, because
-/// the exit is expected to be switched off there and no `transitionend` would
-/// ever arrive. A consumer that still animates under reduced motion loses its
-/// exit.
-///
-/// `exit` is the exit's duration, the fallback for an exit that never reports
-/// its end. `transitionend` does not fire for a zero duration, for
-/// `transition: none`, or on a renderer that runs no transitions, and nothing
-/// else would ever latch `mounted` back to `false`. With `exit` known the hook
-/// unmounts at whichever comes first: the event, or `exit` plus 150ms of
-/// slack. A zero `exit` unmounts at once. `None` waits for the event
-/// alone.
+/// The closed state must hide the content from the a11y tree itself (`inert`, or
+/// a delayed `visibility: hidden`). Reduced motion unmounts at once.
 pub(crate) fn use_presence(open: bool, property: &'static str, exit: Option<Duration>) -> Presence {
     let mut mounted = use_signal(|| open);
     // Not `false`: the first render is the one a server sends, and

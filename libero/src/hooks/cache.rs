@@ -3,17 +3,8 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-/// A pure derivation of props, rebuilt only when `deps` change.
-///
-/// Not `use_memo`: a `Memo` re-runs when a *signal* it read changes, and props
-/// are not signals, so it would keep returning the first render's value.
-/// `use_memo(use_reactive!(..))` fixes that with a `use_signal` written during
-/// render, which dirties the scope and costs a second render pass on every
-/// change. A derivation of props needs no reactivity at all - the prop change
-/// re-renders the component by itself.
-///
-/// `deps` are moved in and only cloned on a miss, so passing a value the
-/// component does not otherwise need costs nothing per render.
+/// A pure derivation of props, rebuilt only when `deps` change. Not `use_memo`,
+/// which ignores props, nor `use_reactive!`, which costs a second render pass.
 pub(crate) fn use_cache<D, T>(deps: D, build: impl FnOnce(&D) -> T) -> T
 where
     D: PartialEq + Clone + 'static,

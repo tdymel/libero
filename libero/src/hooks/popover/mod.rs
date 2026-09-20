@@ -27,9 +27,7 @@ use crate::{
 use place::place;
 
 /// A popover's own state: where its box goes, and the portal slot it goes in.
-///
-/// Built by [`use_popover`], and `Copy`, so it travels into the handlers and
-/// closures that render the box.
+/// Built by [`use_popover`]; `Copy`, so it travels into handlers.
 #[derive(Clone, Copy)]
 pub struct PopoverHandle {
     floating: ElementHandle,
@@ -76,35 +74,18 @@ impl PopoverHandle {
             .unwrap_or_default()
     }
 
-    /// The box's `style`, for `use_box().style(..)`.
+    /// The box's `style`: `position: fixed` in viewport coordinates, and
+    /// `visibility: hidden` (measurable, unlike `display: none`) until placed.
     ///
-    /// `position: fixed` in viewport coordinates: the outlet sits at the
-    /// document root, but any ancestor `transform` still creates a containing
-    /// block, and `client_offset` already answers in the viewport's frame.
-    ///
-    /// Before the first measurement the box is laid out but
-    /// `visibility: hidden` - **not** `display: none`, which has no dimensions
-    /// to measure.
-    ///
-    /// **Every declaration is emitted on every render, never omitted.** A
-    /// renderer applies these one property at a time, so a declaration that
-    /// simply stops being printed is never taken off the element: dropping
-    /// `visibility` once the box was placed left it hidden at the right
-    /// coordinates.
-    ///
-    /// The width is capped at the viewport less the collision padding at both
-    /// edges, so a long row ellipsises instead of pushing the box off a phone's
-    /// screen (todo 357). In CSS rather than from the measurement: the cap then
-    /// holds on the pass that is measured, and for content that changes while
-    /// the box is open.
+    /// Every declaration is emitted on every render: a renderer never removes
+    /// one that stops being printed. The CSS width cap keeps it on a phone (todo 357).
     pub fn style(&self) -> Option<String> {
         let (x, y, visibility) = match *self.placed.read() {
             Some(placed) => (placed.x, placed.y, "visible"),
             None => (0.0, 0.0, "hidden"),
         };
-        // `auto` until the anchor has been measured: a `width: 0` box laid out
-        // for its own measurement would report the height of its text wrapped
-        // into nothing.
+        // `auto` until the anchor is measured: a `width: 0` box would measure
+        // the height of its text wrapped into nothing.
         let (width, min_width) = match (self.width, *self.anchor_width.read()) {
             (PopoverWidth::Match, Some(anchor)) => (format!("{anchor}px"), String::from("auto")),
             (PopoverWidth::Min, Some(anchor)) => (String::from("auto"), format!("{anchor}px")),
@@ -118,22 +99,14 @@ impl PopoverHandle {
         ))
     }
 
-    /// Portals the box. `None` takes it away, which is how a closed popover
-    /// stops rendering.
-    ///
-    /// Already-rendered: the reads inside it have to happen in the caller's
-    /// scope, not the outlet's.
+    /// Portals the box, `None` takes it away. Already rendered, so its reads
+    /// happen in the caller's scope, not the outlet's.
     pub fn show(&self, content: Option<Element>) {
         self.slot.show(content);
     }
 
-    /// What Escape and a press outside call, with
-    /// [`PopoverOptions::dismiss`] on. Call it on every render after
-    /// [`use_popover`]; the latest closure wins.
-    ///
-    /// ```ignore
-    /// popover.on_dismiss(move || opened.set(false));
-    /// ```
+    /// What Escape and a press outside call, with [`PopoverOptions::dismiss`]
+    /// on. Call it on every render; the latest closure wins.
     pub fn on_dismiss(&self, onclose: impl FnMut() + 'static) {
         if let Some(dismiss) = self.dismiss {
             let mut slot = dismiss.onclose;
@@ -165,23 +138,37 @@ impl PopoverHandle {
 /// Anchors a portaled box to `anchor`, flipping and shifting it to stay in the
 /// viewport.
 ///
-/// Measured once per open, again whenever `options` changes -
-/// [`PopoverOptions::remeasure`] is the knob for an anchor that resizes - and
-/// again on every scroll, so the box follows its anchor instead of being
-/// dragged off it. Scroll tracking needs [`platform::scroll`](crate::platform::scroll),
-/// which only the web answers; elsewhere an open popover still drifts.
+/// Measured per open, on `options` changes and on scroll (web only: elsewhere
+/// it drifts). It owns no open state; [`PopoverOptions::dismiss`] adds Escape
+/// and a press outside, and Escape hands focus to `anchor`.
 ///
-/// It keeps following even when the anchor leaves the viewport: `place()` flips
-/// and shifts as usual, so the box ends up clamped at the edge rather than
-/// hidden or closed. Closing is the caller's business - this hook owns no open
-/// state. [`PopoverOptions::dismiss`] asks it for Escape and a press outside
-/// (focus leaving the trigger and the box); Escape hands focus to `anchor`.
-///
-/// ```ignore
-/// let popover = use_popover(anchor, opened(), PopoverOptions::new(gap, padding).dismiss(true));
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::hooks::{PopoverOptions, use_element, use_popover};
+/// # fn app() -> Element {
+/// let anchor = use_element();
+/// let mut opened = use_signal(|| false);
+/// let popover = use_popover(anchor, opened(), PopoverOptions::new(4.0, 8.0).dismiss(true));
 /// popover.on_dismiss(move || opened.set(false));
-/// // `attributes: popover.anchor_events()` on the trigger,
-/// // `attributes: popover.floating_events()` and `tabindex: "-1"` on the box.
+/// popover.show(opened().then(|| rsx! {
+///     div {
+///         onmounted: popover.floating().mount(),
+///         style: popover.style(),
+///         tabindex: "-1",
+///         ..popover.floating_events(),
+///         "Content"
+///     }
+/// }));
+///
+/// rsx! {
+///     button {
+///         onmounted: anchor.mount(),
+///         onclick: move |_| opened.toggle(),
+///         ..popover.anchor_events(),
+///         "Open"
+///     }
+/// }
+/// # }
 /// ```
 pub fn use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -> PopoverHandle {
     let mut popover = use_popover_on(anchor, use_element(), open, options);
@@ -222,15 +209,11 @@ pub fn use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -
     popover
 }
 
-/// [`use_popover`] on a floating handle the caller made, for a box some scope
-/// other than this one has to read. A handle is owned by the scope that made
-/// it, and dioxus warns when a scope that is not its descendant reads it: a
-/// `Menu` level's box is read by every level above it, so the root `Menu`
-/// owns them all. Also the library's own entry: it skips the `dismiss` wiring,
-/// which each consumer does with its own `use_dismiss`.
 /// How often an open waits for its box's first layout before it places a 0x0.
 const UNLAID_TRIES: u8 = 3;
 
+/// [`use_popover`] on a caller-made floating handle, for a box another scope
+/// reads (the root `Menu` owns every level's). Skips the `dismiss` wiring.
 pub(crate) fn use_popover_on(
     anchor: ElementHandle,
     floating: ElementHandle,
@@ -241,13 +224,10 @@ pub(crate) fn use_popover_on(
     let mut anchor_width = use_signal(|| None::<f64>);
     let slot = use_portal_slot();
 
-    // Bumped from the scroll callback, which on the web runs outside every
-    // dioxus scope. The callback deliberately does *not* measure: it only
-    // invalidates, and the effect below does the work, in the runtime, where a
-    // `Read` may be created.
+    // Bumped from the scroll callback, outside every scope: it only invalidates,
+    // the effect below measures, where a `Read` may be created.
     let scroll_tick = use_signal(|| 0u64);
-    // Alive exactly while the popover is open. Dropping it removes the
-    // listener, so a page full of closed dropdowns listens to nothing.
+    // Alive only while open, so closed dropdowns listen to nothing.
     let subscription: Rc<RefCell<Option<Box<dyn ScrollSubscription>>>> =
         use_hook(|| Rc::new(RefCell::new(None)));
     // How often this open waited for the box's first layout.
@@ -264,9 +244,7 @@ pub(crate) fn use_popover_on(
     use_effect(use_reactive!(|(open, options)| {
         // Reading it is what re-runs this on a scroll.
         let _ = scroll_tick();
-        // Read first, branch second: this is what subscribes the effect to the
-        // box mounting, and an early return would skip it. It also re-runs on a
-        // *re*-mount, which is every reopen.
+        // Read before any return: it subscribes the effect to every (re)mount.
         let mounted = floating.mount_token().is_some();
         if !open || !mounted {
             listening.borrow_mut().take();
@@ -283,14 +261,11 @@ pub(crate) fn use_popover_on(
             return;
         };
 
-        // Read the borrow out in its own statement, so it is released before
-        // the `borrow_mut` below.
+        // Own statement, so the borrow ends before the `borrow_mut` below.
         let unsubscribed = listening.borrow().is_none();
         if let Some(api) = unsubscribed.then(scroll).flatten() {
             *listening.borrow_mut() = Some(api.on_scroll(Box::new(move || {
-                // A `Fn` callback cannot hand out `&mut` to what it captured,
-                // and `set` needs one. `Signal` is `Copy`, so a copy per call
-                // addresses the very same value.
+                // A `Fn` callback lends no `&mut`; a `Copy` of the signal is the same value.
                 let mut tick = scroll_tick;
                 // `peek`, not a read: a callback must subscribe nothing.
                 let next = tick.peek().wrapping_add(1);
@@ -298,9 +273,8 @@ pub(crate) fn use_popover_on(
             })));
         }
 
-        // Started here, awaited in the task: a read resolves where it is
-        // called, and under Blitz the document is locked for as long as dioxus
-        // drains tasks (see `ElementApi::dimensions`).
+        // Started here, awaited in the task: Blitz locks the document while
+        // tasks drain (see `ElementApi::dimensions`).
         let anchor_size = anchor.dimensions();
         let anchor_offset = anchor.client_offset();
         let floating_size = floating.dimensions();
@@ -317,9 +291,8 @@ pub(crate) fn use_popover_on(
             ) else {
                 return;
             };
-            // Not laid out yet: a native shell can run this before its next
-            // layout, and a 0x0 box placed at the anchor's edge overflows it.
-            // It may poll several times before that layout (todo 896).
+            // Not laid out yet (native shell): a 0x0 box placed at the anchor's
+            // edge overflows, so wait for layout, a few times at most (todo 896).
             let tries = waited.get();
             if floating_size.width == 0.0 && floating_size.height == 0.0 && tries < UNLAID_TRIES {
                 waited.set(tries + 1);

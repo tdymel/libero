@@ -5,35 +5,37 @@ use crate::{
     theme::{Gradient, Theme, ThemeSet},
 };
 
-/// The active theme.
+/// The active theme. Reactive, so a Rust-side read never disagrees with the CSS vars.
 ///
-/// Reactive: a component that reads a spacing number, a label or a `HexColor`
-/// off it re-renders when the theme changes, so a Rust-side read never
-/// disagrees with the CSS vars that changed without it.
+/// Docs: <https://libero-ui.dev/about/theming>
 pub fn use_theme() -> &'static Theme {
     *use_context::<LiberoContext>().theme.read()
 }
 
-/// The active [`ThemeSet`], and how to swap it - what a theme picker is
-/// built on.
+/// The active [`ThemeSet`], and how to swap it: a theme picker's base.
+/// Reactive. A swap rebuilds the stylesheet; the colour-scheme setting survives.
 ///
-/// Reactive: a picker showing the current set's name re-renders when it
-/// changes. Swapping a set rebuilds the stylesheet, because the pair the
-/// sheet carries is *this* set's pair; the colour-scheme setting survives
-/// the swap, so a reader who pinned dark stays in dark.
-///
-/// ```ignore
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::{theme::ThemeSet, use_theme_set};
+/// # fn app() -> Element {
 /// let themes = use_theme_set();
 ///
-/// for set in ThemeSet::CATALOGUE {
-///     rsx! {
-///         Button {
-///             onclick: move |_| themes.set((*set).clone()),
+/// rsx! {
+///     for set in ThemeSet::CATALOGUE {
+///         button {
+///             onclick: {
+///                 let themes = themes.clone();
+///                 move |_| themes.set((*set).clone())
+///             },
 ///             "{set.name()}"
 ///         }
 ///     }
 /// }
+/// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/hooks/use-theme-set>
 pub fn use_theme_set() -> ThemeSetHandle {
     ThemeSetHandle {
         context: use_context::<LiberoContext>(),
@@ -80,6 +82,7 @@ impl ThemeSetHandle {
         self.context.themes.read().name()
     }
 
+    /// Swaps the set and rebuilds the stylesheet.
     pub fn set(&self, themes: ThemeSet) {
         self.context.set_theme_set(themes);
     }

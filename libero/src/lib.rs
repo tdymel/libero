@@ -21,8 +21,8 @@ pub mod theme;
 mod tokens;
 mod utils;
 
-/// The date types the date and time components hold, so an app names the same
-/// version.
+/// The date types the date and time components hold, re-exported so an app
+/// names the same version.
 pub use chrono;
 pub(crate) use context::CssLayer;
 pub use context::{LiberoContext, LiberoProvider};

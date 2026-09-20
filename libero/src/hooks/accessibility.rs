@@ -5,23 +5,30 @@ use crate::{
     tokens::{AccessibilityPreferences, Contrast},
 };
 
-/// The reader's accessibility settings (`prefers-reduced-motion`,
-/// `forced-colors`, `prefers-contrast`, `prefers-reduced-transparency`), and an
-/// app's own reduced-motion switch over the system's.
+/// The reader's accessibility settings (reduced motion, forced colours,
+/// contrast, reduced transparency), and an app's own reduced-motion switch.
 ///
-/// ```ignore
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Switch;
+/// # use libero::hooks::use_accessibility;
+/// # fn app() -> Element {
 /// let accessibility = use_accessibility();
+/// let reduced = accessibility.reduced_motion();
 ///
 /// rsx! {
 ///     Switch {
 ///         label: "Reduce motion",
-///         checked: accessibility.reduced_motion(),
+///         checked: reduced,
 ///         onchange: move |reduce: bool| accessibility.set_reduced_motion(Some(reduce)),
 ///     }
 /// }
+/// # }
 /// ```
 ///
 /// A forced reduced motion reaches libero's own CSS, not a `<style>` the app adds itself.
+///
+/// Docs: <https://libero-ui.dev/hooks/use-accessibility>
 pub fn use_accessibility() -> AccessibilityHandle {
     AccessibilityHandle {
         context: use_context::<LiberoContext>(),

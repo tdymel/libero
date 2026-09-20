@@ -17,15 +17,27 @@ use crate::{
 /// Registers anything that converts into a [`Stylesheet`] and returns its
 /// class name, on the `UserCustom` layer so it always wins the cascade. Raw
 /// `&str`/`String` CSS has no single selector, so it returns no class name.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::{sx::sx, use_stylesheet};
+/// # fn app() -> Element {
+/// let class = use_stylesheet(&sx().padding("md").border_radius("sm"));
+///
+/// rsx! {
+///     div { class: class.unwrap_or_default(), "Styled once, shared by every instance" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/hooks/use-stylesheet>
 pub fn use_stylesheet(stylesheet: impl Into<Stylesheet>) -> Option<String> {
     let stylesheet: Stylesheet = stylesheet.into();
     use_css(Some(stylesheet), CssLayer::UserCustom)
 }
 
-/// A value [`use_css`] can register. Splits the cheap identity check from the
-/// expensive CSS build, so an unchanged re-render formats nothing:
-/// `identity_hash` is structural over in-memory entries, where a
-/// `Stylesheet` hash would need the rendered text first.
+/// A value [`use_css`] can register. The cheap `identity_hash` apart from the
+/// CSS build, so an unchanged re-render formats nothing.
 pub(crate) trait CssSource {
     fn identity_hash(&self) -> u64;
     fn build(self) -> Stylesheet;
@@ -42,13 +54,8 @@ impl CssSource for &Sx {
 }
 
 thread_local! {
-    /// A `'static` `Sx` renders to byte-identical CSS however many components
-    /// mount it, so the conversion is done once per static instead of once
-    /// per mount. Keyed by address, the way `platform::regex`'s `CompiledKey` keys
-    /// a pattern - sound because every key comes from a `&'static Sx`, so an
-    /// entry's address can never be reused by something else. Unbounded on
-    /// purpose: every one of them is a `static` item, so the map reaches a
-    /// fixed size.
+    /// A `'static` `Sx`'s CSS, built once. Keyed by address, never reused by a
+    /// `static`; unbounded, since the statics are a fixed set.
     static STATIC_SX_CSS: RefCell<HashMap<usize, Stylesheet>> = RefCell::new(HashMap::new());
 }
 
@@ -64,10 +71,8 @@ fn build_static(sx: &'static Sx) -> Stylesheet {
 
 /// `'static` so the address is a stable identity - see [`STATIC_SX_CSS`].
 impl CssSource for &'static StaticSx {
-    /// The address, not a hash of the entries: a `static` is its own identity,
-    /// and hashing the entry tree on every render is the cost being removed.
-    /// The *inner* `Sx`'s address, so a static reached through `framework_sx`
-    /// and through `sx` shares one cache entry.
+    /// The *inner* `Sx`'s address, not an entry hash: so a static reached
+    /// through `framework_sx` and through `sx` shares one cache entry.
     fn identity_hash(&self) -> u64 {
         std::ptr::from_ref::<Sx>(self) as u64
     }
@@ -77,9 +82,8 @@ impl CssSource for &'static StaticSx {
     }
 }
 
-/// A caller's `sx` prop, which carries whether it was built this render or
-/// declared as a `static` - see [`SxSource::identity_hash`]. Overlapping impls
-/// on `&Sx` and `&'static Sx` would not compile, so the two share one type.
+/// A caller's `sx` prop, built this render or a `static`. One type, since
+/// impls on both `&Sx` and `&'static Sx` would overlap.
 pub(crate) enum SxSource<'a> {
     Owned(&'a Sx),
     Static(&'static Sx),
@@ -127,9 +131,8 @@ struct CssRegistration {
     class_name: Option<String>,
 }
 
-/// Registers one source into the registry, reusing the previous registration
-/// when the source is unchanged. Returns whether the registry was touched; the
-/// class name stays in the slot, so composing borrows it instead of cloning.
+/// Registers one source, reusing the previous registration when unchanged.
+/// Returns whether the registry was touched.
 fn register(
     slot: &mut Option<CssRegistration>,
     source: Option<impl CssSource>,
@@ -140,7 +143,6 @@ fn register(
     let identity_hash = source.as_ref().map(CssSource::identity_hash);
 
     match slot.take() {
-        // Same content as last render - the registry is already correct.
         Some(prev) if prev.identity_hash == identity_hash => {
             *slot = Some(prev);
             false
@@ -177,12 +179,8 @@ fn register(
     }
 }
 
-/// The registrations one component holds, released when its scope goes.
-///
-/// One hook slot for the context, the slots and the teardown together. A slot
-/// costs ~51 ns per render, and `use_context`/`use_hook`/`use_drop` are three
-/// of them - `use_drop` is itself just a `use_hook` holding an `Rc` with a
-/// `Drop`, so doing it by hand runs at exactly the same point in teardown.
+/// The registrations one component holds, released when its scope goes. One
+/// hook slot (~51 ns per render each) for context, slots and teardown.
 struct CssRegistrations {
     context: RefCell<LiberoContext>,
     slots: RefCell<Vec<Option<CssRegistration>>>,
@@ -217,18 +215,15 @@ fn use_css_registrations(slots: usize) -> Rc<CssRegistrations> {
 }
 
 /// A signal write during render, sound only because `StyleOutlet` renders
-/// after `{children}` and so reads it once every child has registered.
-/// Load-bearing ordering.
+/// after `{children}`: load-bearing ordering.
 fn bump_if_changed(changed: bool, context: &mut LiberoContext) {
     if changed {
         *context.stylesheet_registry_version.write() += 1;
     }
 }
 
-/// Same as [`use_stylesheet`], but on a caller-chosen layer.
-///
-/// Takes an `Option` so a caller with nothing to register still calls it:
-/// hook slots are positional.
+/// [`use_stylesheet`] on a caller-chosen layer. An `Option`, so a caller with
+/// nothing to register still takes its hook slot.
 pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option<String> {
     let state = use_css_registrations(1);
     let context = &mut *state.context.borrow_mut();
@@ -246,10 +241,7 @@ fn class_name(slot: &Option<CssRegistration>) -> Option<&str> {
 }
 
 /// The three registrations every `Box`-shaped component makes, behind one hook
-/// slot, composed straight into the element's `class` value.
-///
-/// Three `use_css` calls cost ~180 ns each of which only ~28 ns is real work -
-/// the rest is per-hook plumbing. Sharing it is worth ~360 ns per component.
+/// slot (~360 ns saved per component), composed into the `class` value.
 pub(crate) fn use_box_css(
     class: &Input<ClassList>,
     focus: Option<&'static StaticSx>,
@@ -285,9 +277,7 @@ pub(crate) fn use_box_css(
     );
     bump_if_changed(focus_changed || framework_changed || sx_changed, context);
 
-    // Composed straight into the attribute value. Going through `ClassList`
-    // meant a `Vec`, a `String` per registration and a joining pass - five
-    // allocations for what one `String` holds. The order is the caller's
+    // One `String`, not a `ClassList` (five allocations). Order: the caller's
     // classes, then framework, focus, static.
     let caller = class.as_ref();
     let names = || {

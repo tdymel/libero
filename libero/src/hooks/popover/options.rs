@@ -23,9 +23,8 @@ pub struct Placement {
     pub align: Align,
 }
 
-/// How a popover is placed. `Default` is a dropdown: below its anchor, left
-/// edges aligned, flipping and shifting to stay on screen, with the theme's
-/// gap and collision padding.
+/// How a popover is placed. [`new`](Self::new) is a dropdown: below its anchor,
+/// start edges aligned, flipping and shifting to stay on screen.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PopoverOptions {
     /// The preferred side. Flipping may override it.
@@ -34,19 +33,16 @@ pub struct PopoverOptions {
     /// Pixels between the anchor's edge and the box.
     pub gap: f64,
     /// How close to a viewport edge the box may come before flipping or
-    /// shifting. The box's width is capped at the viewport less this at both
-    /// edges.
+    /// shifting; its width is capped at the viewport less this at both edges.
     pub padding: f64,
     pub flip: bool,
     pub shift: bool,
     pub width: PopoverWidth,
-    /// Not a placement input: the box is measured again whenever it changes.
-    /// For an anchor that resizes while the box is open - a multi-select
-    /// whose trigger grows a chip on every pick. Nothing else re-measures.
+    /// Re-measures whenever it changes, for an anchor that resizes while open
+    /// (a multi-select growing chips). Nothing else re-measures.
     pub remeasure: u64,
-    /// Escape anywhere and a press outside close the box: wire it with
-    /// [`PopoverHandle::on_dismiss`](super::PopoverHandle::on_dismiss) and the
-    /// handle's `anchor_events`/`floating_events`. Off by default.
+    /// Escape and a press outside close the box, through
+    /// [`PopoverHandle::on_dismiss`](super::PopoverHandle::on_dismiss). Off by default.
     pub dismiss: bool,
 }
 

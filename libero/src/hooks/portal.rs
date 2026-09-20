@@ -6,28 +6,18 @@ use crate::context::{PortalEntry, PortalHost};
 
 static NEXT_PORTAL_ID: AtomicU64 = AtomicU64::new(0);
 
-/// One component's claim on a slot in `PortalOutlet`.
-///
-/// Handed out by [`use_portal_slot`], and written through [`show`](Self::show)
-/// as often as the owner likes - which is what lets a caller decide what to
-/// portal *after* its hooks have run, rather than at the hook call itself.
+/// One component's claim on a slot in `PortalOutlet`, written through
+/// [`show`](Self::show) after its hooks have run.
 #[derive(Clone, Copy)]
 pub(crate) struct PortalSlot {
-    // A plain `u64`, not a `Signal`: it never changes, and the lookup below
-    // reads it once per entry - as a signal that was one read per entry per
-    // portal per render, which is what made a page with many portals scale
-    // quadratically.
+    // Not a `Signal`: read once per entry, a signal made many portals quadratic.
     id: u64,
     host: PortalHost,
 }
 
 impl PortalSlot {
     /// Publishes `content`, escaping any ancestor stacking/clipping context.
-    ///
-    /// Takes an already-rendered `Option<Element>`, not a closure, so signal
-    /// reads happen in your scope: `PortalOutlet` would invoke a closure from
-    /// its own scope, which isn't a descendant of the one owning your signals -
-    /// a cross-scope read, and a real hazard if your scope unmounts first.
+    /// Rendered, not a closure: `PortalOutlet` would read your signals cross-scope.
     pub(crate) fn show(&self, content: Option<Element>) {
         self.publish(content, false);
     }
@@ -79,12 +69,8 @@ pub(crate) fn use_portal_slot() -> PortalSlot {
     PortalSlot { id, host }
 }
 
-/// Renders `content` via `PortalOutlet`, escaping any
-/// ancestor stacking/clipping context. Re-registers each call; deregisters on
-/// drop.
-///
-/// Takes an already-rendered `Option<Element>`, not a closure - see
-/// [`PortalSlot::show`] for why.
+/// Renders `content` via `PortalOutlet`, like [`PortalSlot::show`].
+/// Re-registers each call; deregisters on drop.
 pub(crate) fn use_portal(content: Option<Element>) {
     use_portal_slot().show(content);
 }

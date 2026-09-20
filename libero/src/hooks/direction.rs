@@ -2,27 +2,31 @@ use dioxus::prelude::*;
 
 use crate::{context::LiberoContext, tokens::Direction};
 
-/// The app's text direction, and how to turn it. It sets the document root's
-/// `dir`, so every component and the overlays' portal follow.
+/// The app's text direction, set on the document root's `dir` so every
+/// component and the overlays' portal follow.
 ///
-/// [`DirectionToggle`](crate::components::DirectionToggle) is the ready-made
-/// switch built on it.
+/// [`DirectionToggle`](crate::components::DirectionToggle) is the ready-made switch built on it.
 ///
-/// ```ignore
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Switch;
+/// # use libero::hooks::use_direction;
+/// # fn app() -> Element {
 /// let direction = use_direction();
+/// let rtl = direction.is_rtl();
 ///
 /// rsx! {
 ///     Switch {
-///         checked: direction.is_rtl(),
-///         onchange: move |rtl: bool| direction.set(if rtl { Direction::Rtl } else { Direction::Ltr }),
-///         "Right to left"
+///         label: "Right to left",
+///         checked: rtl,
+///         onchange: move |_| direction.toggle(),
 ///     }
 /// }
+/// # }
 /// ```
 ///
-/// Reactive: a component that reads it re-renders when it changes. It knows
-/// only what `LiberoProvider` started in and what was set through it, not a
-/// `dir` written on the root by other means.
+/// Reactive. It knows only what `LiberoProvider` started in and what was set
+/// through it, not a `dir` written on the root by other means.
 pub fn use_direction() -> DirectionHandle {
     DirectionHandle {
         context: use_context::<LiberoContext>(),
@@ -36,16 +40,18 @@ pub struct DirectionHandle {
 }
 
 impl DirectionHandle {
+    /// The current direction. Reactive.
     pub fn get(&self) -> Direction {
         *self.context.direction.read()
     }
 
+    /// Whether the text runs right to left. Reactive.
     pub fn is_rtl(&self) -> bool {
         self.get() == Direction::Rtl
     }
 
-    /// Turns the app's text. Kept where the platform has somewhere to keep it
-    /// (the web's `localStorage`), so a reload comes back the same way.
+    /// Turns the app's text. Kept where the platform can (the web's
+    /// `localStorage`), so a reload keeps it.
     pub fn set(&self, direction: Direction) {
         self.context.set_direction(direction);
     }
@@ -59,12 +65,14 @@ impl DirectionHandle {
     /// Drops the choice, kept one included: back to `LiberoProvider`'s
     /// `direction`, or with none, the root's `dir` removed.
     ///
-    /// ```ignore
+    /// ```rust
+    /// # use libero::hooks::DirectionHandle;
     /// // Puts back what a preview found, choice or none.
-    /// let found = direction.kept();
-    /// match found {
-    ///     Some(found) => direction.set(found),
-    ///     None => direction.clear(),
+    /// fn restore(direction: &DirectionHandle, found: Option<libero::theme::Direction>) {
+    ///     match found {
+    ///         Some(found) => direction.set(found),
+    ///         None => direction.clear(),
+    ///     }
     /// }
     /// ```
     pub fn clear(&self) {

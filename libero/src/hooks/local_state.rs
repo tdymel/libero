@@ -4,14 +4,8 @@ use std::rc::Rc;
 use dioxus::core::{Runtime, ScopeId, current_scope_id};
 use dioxus::prelude::*;
 
-/// Component state nothing outside the component reads.
-///
-/// Not `use_signal`: a signal's subscription bookkeeping costs ~290 ns on
-/// every render, and none of it buys anything where the only reader is the
-/// component that owns the state. This re-renders the owning scope by hand
-/// instead.
-///
-/// Use `use_signal` the moment the value has to reach anywhere else.
+/// Component state nothing outside the component reads, without a signal's
+/// ~290 ns per render. Use `use_signal` once the value reaches anywhere else.
 pub(crate) fn use_local_state<T: Copy + 'static>(initial: impl FnOnce() -> T) -> LocalState<T> {
     use_hook(|| LocalState {
         value: Rc::new(Cell::new(initial())),
@@ -19,9 +13,8 @@ pub(crate) fn use_local_state<T: Copy + 'static>(initial: impl FnOnce() -> T) ->
     })
 }
 
-/// The handle [`use_local_state`] returns. `Clone`, not `Copy` - it holds an
-/// `Rc` - so a component that both reads it and moves it into an event handler
-/// reads first.
+/// The handle [`use_local_state`] returns. `Clone`, not `Copy` (an `Rc`): read
+/// it before moving it into a handler.
 pub(crate) struct LocalState<T: Copy + 'static> {
     value: Rc<Cell<T>>,
     scope: ScopeId,
@@ -32,11 +25,8 @@ impl<T: Copy + 'static> LocalState<T> {
         self.value.get()
     }
 
-    /// Writes, then marks the owning scope dirty - unconditionally, like
-    /// `Signal::set`, so an equal value still re-renders.
-    ///
-    /// Through the runtime rather than `needs_update_any`, which reads the
-    /// *current* scope and so needs one on the stack.
+    /// Writes, then marks the owning scope dirty even for an equal value.
+    /// Through the runtime: `needs_update_any` needs a scope on the stack.
     pub fn set(&self, value: T) {
         self.value.set(value);
         Runtime::current().needs_update(self.scope);

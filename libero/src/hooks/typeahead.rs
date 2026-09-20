@@ -1,9 +1,5 @@
-//! Typeahead for a list that owns its focus: typing "sav" moves to "Save",
-//! and the typed text is forgotten after a pause.
-//!
-//! Two halves. [`typeahead_match`] is pure - a query and a list in, an index
-//! out - so any list can use it however it stores its rows. [`use_typeahead`]
-//! is the buffer, and the only part that needs a timer.
+//! Typeahead for a list that owns its focus: typing "sav" moves to "Save". The
+//! pure [`typeahead_match`], and [`use_typeahead`], a buffer a pause forgets.
 
 use std::{cell::RefCell, rc::Rc, time::Duration};
 
@@ -15,13 +11,8 @@ use crate::platform::{TimerSubscription, timer};
 /// listbox example use.
 pub(crate) const TYPEAHEAD_RESET: Duration = Duration::from_millis(500);
 
-/// The typed text, and the timer that forgets it.
-///
-/// Nothing renders from the buffer, so it is a plain `RefCell` rather than a
-/// signal: a keystroke writes it, the next keystroke reads it, and no scope
-/// needs to hear about either. That is also why the timer's callback can
-/// clear it directly - it touches no signal, so it needs no runtime, and the
-/// web arm's callback runs with none ([[codebase/platform-timer]]).
+/// The typed text, and the timer that forgets it. A `RefCell`, not a signal:
+/// nothing renders it, and the web timer's callback runs without a runtime.
 #[derive(Clone)]
 pub(crate) struct Typeahead {
     query: Rc<RefCell<String>>,
@@ -51,11 +42,7 @@ impl Typeahead {
 }
 
 /// A typeahead buffer that forgets what was typed after `delay` without a
-/// keystroke - [`TYPEAHEAD_RESET`] unless a test needs it shorter.
-///
-/// Without a timer the text is never forgotten, so every keystroke would add
-/// to one ever-growing query. `timer()` answers on every renderer inside a
-/// runtime, so that is only a guard.
+/// keystroke: [`TYPEAHEAD_RESET`] unless a test needs it shorter.
 pub(crate) fn use_typeahead(delay: Duration) -> Typeahead {
     use_hook(|| Typeahead {
         query: Rc::new(RefCell::new(String::new())),
@@ -64,20 +51,8 @@ pub(crate) fn use_typeahead(delay: Duration) -> Typeahead {
     })
 }
 
-/// The row a typed `query` lands on, or `None` when nothing matches.
-///
-/// `label(index)` is a row's text, or `None` for a row typeahead must skip -
-/// a disabled one. Rows are searched from `current`, wrapping.
-///
-/// - **One character, or one character repeated** ("s", "ss") cycles: the
-///   search starts *after* `current`, so each press moves on to the next row
-///   starting with it. Pressing "s" three times walks the "S" rows.
-/// - **Anything longer** narrows: the search starts *at* `current`, so
-///   typing on through "sa", "sav" stays on "Save" while it still matches and
-///   only moves when it stops.
-///
-/// Case-insensitive, compared a character at a time, so no lowercased copy of
-/// every label is made per keystroke.
+/// The row a typed `query` lands on, from `current`, wrapping; `label` is `None`
+/// for a skipped row. One repeated character ("ss") cycles; longer narrows.
 pub(crate) fn typeahead_match<'a>(
     len: usize,
     current: Option<usize>,

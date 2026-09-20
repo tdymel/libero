@@ -2,13 +2,25 @@ use dioxus::prelude::*;
 
 use crate::platform::clipboard;
 
-/// Writes to the clipboard and tracks "just copied" and "copy failed" flags
-/// the caller clears.
+/// Writes to the clipboard and tracks "copied" and "failed" flags the caller clears.
 ///
-/// ```rust,ignore
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::hooks::use_clipboard;
+/// # fn app() -> Element {
 /// let mut clipboard = use_clipboard();
-/// // on click: clipboard.reset(); clipboard.copy("text");
-/// // status: if clipboard.copied() { "Copied" } else if clipboard.failed() { "Copy failed" }
+/// let status = if clipboard.copied() { "Copied" } else if clipboard.failed() { "Copy failed" } else { "Copy" };
+///
+/// rsx! {
+///     button {
+///         onclick: move |_| {
+///             clipboard.reset();
+///             clipboard.copy("text");
+///         },
+///         "{status}"
+///     }
+/// }
+/// # }
 /// ```
 #[derive(Clone, Copy)]
 pub struct Clipboard {
@@ -17,7 +29,7 @@ pub struct Clipboard {
 }
 
 impl Clipboard {
-    /// `copied()` only flips once the platform confirms the write; a denied
+    /// Copies `text`. `copied()` flips once the platform confirms; a denied
     /// write, or a target without a clipboard, raises `failed()` instead.
     pub fn copy(&mut self, text: impl Into<String>) {
         let Some(clipboard) = clipboard() else {
@@ -48,10 +60,12 @@ impl Clipboard {
         self.failed.set(false);
     }
 
+    /// Whether the last copy landed. Reactive.
     pub fn copied(&self) -> bool {
         (self.copied)()
     }
 
+    /// Whether the last copy failed. Reactive.
     pub fn failed(&self) -> bool {
         (self.failed)()
     }

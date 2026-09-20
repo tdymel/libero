@@ -8,15 +8,28 @@ fn next_id() -> String {
     format!("lsx-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed))
 }
 
-/// A process-unique DOM id, stable for the component's lifetime - for the aria
-/// wiring that has to name one instance's elements.
+/// A process-unique DOM id, stable for the component's lifetime, for aria wiring.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::hooks::use_id;
+/// # fn app() -> Element {
+/// let id = use_id();
+///
+/// rsx! {
+///     label { r#for: "{id}", "Name" }
+///     input { id: "{id}" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/hooks/use-id>
 pub fn use_id() -> Signal<String> {
     use_signal(next_id)
 }
 
-/// [`use_id`], except a caller's own `id` attribute takes over. Components that
-/// both need an id and spread `attributes` must use this - emitting both would
-/// render two `id`s, and the browser keeps the caller's.
+/// [`use_id`], except a caller's own `id` attribute takes over. A component
+/// that spreads `attributes` must use it, or it renders two `id`s.
 pub(crate) fn use_root_id(attributes: &[Attribute]) -> Signal<String> {
     let caller = caller_id(attributes);
     let mut id = use_signal(|| caller.clone().unwrap_or_else(next_id));
@@ -40,10 +53,8 @@ fn caller_id(attributes: &[Attribute]) -> Option<String> {
         })
 }
 
-/// A selector for the element with `id`. `#id` only takes a CSS identifier,
-/// and an id built on a caller's `id` need not be one (`1-faq`, `user.email`):
-/// `#1-faq` throws, so the lookup finds nothing. An attribute selector takes
-/// any string.
+/// A selector for the element with `id`. An attribute selector, since `#1-faq`
+/// throws: a caller's `id` need not be a CSS identifier.
 pub(crate) fn id_selector(id: &str) -> String {
     let escaped = id.replace('\\', "\\\\").replace('"', "\\\"");
     format!("[id=\"{escaped}\"]")

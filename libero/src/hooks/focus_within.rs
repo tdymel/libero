@@ -99,11 +99,8 @@ impl FocusWithin {
     }
 }
 
-/// Calls `onchange` as focus enters or leaves an element of `group`: from the
-/// listeners [`FocusWithin`] hands out, and for a move that fires no focus
-/// event (Blitz's Tab, libero's own `focus()`). There each element that
-/// changed is reported, those focus left first. The latest render's `group`
-/// and `onchange` are the ones used.
+/// Calls `onchange` as focus enters or leaves an element of `group`, also for a
+/// move that fires no focus event (Blitz's Tab, libero's own `focus()`).
 pub(crate) fn use_focus_within(
     group: impl Fn() -> Vec<Option<Rc<MountedData>>> + 'static,
     onchange: impl Fn(FocusChange) + 'static,

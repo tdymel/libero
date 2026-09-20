@@ -3,9 +3,9 @@ use dioxus::prelude::*;
 use crate::{context::LiberoContext, localization::Formats};
 
 /// The active [`Formats`]: how dates, times and numbers are written.
+/// Reactive. Panics outside a `LiberoProvider`.
 ///
-/// Reactive: a reader re-renders when the formats are swapped. Panics outside
-/// a `LiberoProvider`, as [`use_theme`](super::use_theme).
+/// Docs: <https://libero-ui.dev/about/localization>
 pub fn use_formats() -> &'static Formats {
     *use_context::<LiberoContext>().formats.read()
 }
@@ -16,15 +16,22 @@ pub(crate) fn current_formats() -> &'static Formats {
     *consume_context::<LiberoContext>().formats.read()
 }
 
-/// The active [`Formats`], and how to swap them - what a region picker is
-/// built on. Independent of the language.
+/// The active [`Formats`], and how to swap them: a region picker's base.
+/// Independent of the language.
 ///
-/// ```ignore
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::{localization::Formats, use_formats_handle};
+/// # fn app() -> Element {
 /// let formats = use_formats_handle();
+///
 /// rsx! {
-///     Button { onclick: move |_| formats.set(&Formats::GERMAN), "24-hour clock" }
+///     button { onclick: move |_| formats.set(&Formats::GERMAN), "24-hour clock" }
 /// }
+/// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/about/localization>
 pub fn use_formats_handle() -> FormatsHandle {
     FormatsHandle {
         formats: use_context::<LiberoContext>().formats,
@@ -38,12 +45,12 @@ pub struct FormatsHandle {
 }
 
 impl FormatsHandle {
+    /// The active formats. Reactive.
     pub fn get(&self) -> &'static Formats {
         *self.formats.read()
     }
 
-    /// A no-op when `formats` are the active ones, so readers do not
-    /// re-render for nothing.
+    /// Swaps the formats; a no-op for the active ones, so nothing re-renders.
     pub fn set(&self, formats: &'static Formats) {
         let mut current = self.formats;
         if !std::ptr::eq(*current.peek(), formats) {

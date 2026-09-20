@@ -41,9 +41,8 @@ impl Edge {
     }
 }
 
-/// The free space between the anchor and the viewport edge on one side, with
-/// the collision padding already taken off. Negative means the anchor's own
-/// edge is already past it.
+/// The free space between the anchor and one viewport edge, less the padding.
+/// Negative when the anchor's own edge is already past it.
 fn room(edge: Edge, anchor: Rect, viewport: Dimensions, padding: f64) -> f64 {
     match edge {
         Edge::Top => anchor.y - padding,
@@ -64,18 +63,13 @@ fn cross_axis(align: Align, start: f64, anchor_size: f64, floating_size: f64) ->
 }
 
 /// Clamps a coordinate into the viewport, leaving `padding` at both edges. A
-/// box too big to fit is pinned to the near edge rather than pushed off the
-/// far one.
+/// box too big to fit is pinned to the near edge.
 fn shift_into(start: f64, size: f64, viewport_size: f64, padding: f64) -> f64 {
     (start.min(viewport_size - padding - size)).max(padding)
 }
 
-/// Places a floating box against its anchor. `rtl` is the anchor's direction:
-/// it turns `Side::Start`/`End` and a horizontal `Align` into physical edges.
-///
-/// Pure: no DOM, no signals, no theme. Everything that decides the answer is an
-/// argument, which is what makes flipping and shifting testable without a
-/// renderer.
+/// Places a floating box against its anchor; `rtl` maps logical sides and
+/// aligns to physical edges. Pure, so it is testable without a renderer.
 pub fn place(
     anchor: Rect,
     floating: Dimensions,
@@ -101,8 +95,7 @@ pub fn place(
         options.padding,
     );
     // Flip only when the preferred side cannot hold the box *and* the opposite
-    // one holds more. A box too big for either side stays where it was asked
-    // to go, and `shift` decides what the user sees instead.
+    // holds more; too big for both, it stays and `shift` decides.
     let side = match options.flip && preferred < needed(options.side) && opposite > preferred {
         true => options.side.opposite(),
         false => options.side,

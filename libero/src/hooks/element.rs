@@ -10,14 +10,8 @@ use crate::platform::{
 /// A handle to one of this component's own elements, and the only way to reach
 /// an element at all.
 ///
-/// It implements [`ElementApi`] itself, so `element.dimensions().await` reads
-/// the same everywhere; behind it the handle picks the richest backing the
-/// renderer offers - the real `web_sys::Element` on the web, a Blitz node
-/// natively, and dioxus's portable `MountedData` under a webview, where
-/// measuring and focus still work but subtree queries cannot.
-///
-/// Attach it with `.element(&handle)` on the `Box` builder, or with
-/// [`mount`](Self::mount) directly; every call answers
+/// It implements [`ElementApi`] on the richest backing the renderer offers: a
+/// webview measures and focuses but has no subtree queries. Every call answers
 /// [`PlatformError::Unsupported`] until the element is mounted.
 #[derive(Clone, Copy, PartialEq)]
 pub struct ElementHandle {
@@ -36,13 +30,8 @@ impl ElementHandle {
         self.mounted.read().is_some()
     }
 
-    /// Identifies *which* mount this is, not merely that one happened.
-    ///
-    /// An element that unmounts and comes back - a portaled dropdown closing
-    /// and reopening - hands over a different `MountedData` at the same handle,
-    /// so [`is_mounted`](Self::is_mounted) never changes and an effect watching
-    /// it would keep measuring the dead node. Reading this subscribes to the
-    /// mount instead.
+    /// Identifies *which* mount this is. A remount (a portaled dropdown
+    /// reopening) leaves [`is_mounted`](Self::is_mounted) unchanged; this changes.
     pub(crate) fn mount_token(&self) -> Option<usize> {
         self.mounted
             .read()
@@ -50,9 +39,8 @@ impl ElementHandle {
             .map(|mounted| Rc::as_ptr(mounted) as *const () as usize)
     }
 
-    /// A handle owned by the current scope, for one that outlives the element's
-    /// own component - a `FormHandle` a parent holds. Not a hook: call it where
-    /// a signal may be created.
+    /// A handle owned by the current scope, outliving the element's component
+    /// (a `FormHandle` a parent holds). Not a hook.
     pub(crate) fn new() -> Self {
         Self {
             mounted: Signal::new(None),
@@ -93,17 +81,31 @@ impl ElementHandle {
     }
 }
 
-/// A handle to one of this component's own elements. Positional, like every
-/// hook.
+/// A handle to one of this component's own elements.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::hooks::use_element;
+/// # use libero::platform::ElementApi;
+/// # fn app() -> Element {
+/// let input = use_element();
+///
+/// rsx! {
+///     input { onmounted: input.mount() }
+///     button { onclick: move |_| { let _ = input.focus(); }, "Focus the input" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/hooks/use-element>
 pub fn use_element() -> ElementHandle {
     ElementHandle {
         mounted: use_signal(|| None),
     }
 }
 
-/// Counts the changes to `element`'s subtree while `enabled`, from each mount
-/// until this component unmounts: an effect that reads it re-runs after one.
-/// One observer per call, and it stays `0` where the renderer cannot watch.
+/// Counts the changes to `element`'s subtree while `enabled`, so an effect
+/// reading it re-runs. Stays `0` where the renderer cannot watch.
 pub(crate) fn use_content_changes(element: ElementHandle, enabled: bool) -> ReadSignal<u64> {
     // Bumped from the observer, which runs outside every scope.
     let changes = use_signal(|| 0u64);
@@ -169,9 +171,8 @@ pub(crate) fn use_resize_fallback(
     });
 }
 
-/// The DOM `<form>` that owns `element`, while `enabled`: `Some` with the
-/// `reset`s it has fired since, `None` without one. For a control inside a raw
-/// `<form>`, which no libero `Form` context reaches. Stays `None` off the web.
+/// The raw DOM `<form>` owning `element`, while `enabled`: `Some` with its
+/// `reset` count, `None` without one. Stays `None` off the web.
 pub(crate) fn use_form_owner(element: ElementHandle, enabled: bool) -> ReadSignal<Option<u32>> {
     // Bumped from the listener, which runs outside every scope.
     let owner = use_signal(|| None::<u32>);
@@ -260,9 +261,8 @@ impl ElementApi for ElementHandle {
         self.get().is_ok_and(|element| element.is_focused())
     }
 
-    /// An unmounted handle answers `false`: there is no node, so there is
-    /// nothing in the document. That differs from the mounted floor's `true`,
-    /// which is about a node that exists and cannot be asked about.
+    /// `false` unmounted: no node. The mounted floor's `true` means a node that
+    /// exists but cannot be asked.
     fn is_connected(&self) -> bool {
         self.get().is_ok_and(|element| element.is_connected())
     }
