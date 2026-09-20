@@ -66,8 +66,6 @@ impl A11yDoc {
     }
 
     /// Known gaps, such as a platform that lacks something.
-    // No pilot page has a known gap; 976's migration uses it.
-    #[allow(dead_code)]
     pub fn limits<S: Into<String>>(mut self, items: impl IntoIterator<Item = S>) -> Self {
         self.limits.extend(strings(items));
         self

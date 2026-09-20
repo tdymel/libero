@@ -184,13 +184,14 @@ pub fn RepoButton(props: RepoButtonProps) -> Element {
     let count = cached_stars(&api).filter(|&count| count > 0);
 
     let new_tab = localization.anchor.new_tab;
+    // The repo in the name, else two buttons on a page read alike.
+    let subject = format!("{} {}", host.name(), props.repo);
     let aria_label = match count {
         Some(count) => format!(
-            "{}, {} {new_tab}",
-            host.name(),
+            "{subject}, {} {new_tab}",
             (localization.repo_button.stars)(count, &compact_count(count, separator))
         ),
-        None => format!("{} {new_tab}", host.name()),
+        None => format!("{subject} {new_tab}"),
     };
     let variant = props.variant.copied_or(theme.repo_button.variant);
     let color = props

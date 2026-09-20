@@ -71,7 +71,7 @@ fn a_failed_fetch_leaves_the_plain_icon() {
         let page = &fixture.page;
         mount_with_fetch(page, "null").await;
         let (name, text, width, height) = link(page, GITHUB).await;
-        assert_eq!(name, "GitHub (opens in a new tab)");
+        assert_eq!(name, "GitHub example/repo (opens in a new tab)");
         assert_eq!(text, "", "a count showed after an error");
         assert_eq!(width, height, "the icon box changed shape");
         let cached: bool = page
@@ -92,7 +92,7 @@ fn zero_stars_leave_the_plain_icon() {
         let page = &fixture.page;
         mount_with_fetch(page, "{ stargazers_count: 0, star_count: 0 }").await;
         let (name, text, width, height) = link(page, GITHUB).await;
-        assert_eq!(name, "GitHub (opens in a new tab)");
+        assert_eq!(name, "GitHub example/repo (opens in a new tab)");
         assert_eq!(text, "");
         assert_eq!(width, height);
         fixture.close().await.unwrap();
@@ -108,8 +108,11 @@ fn each_host_asks_its_endpoint_and_links_its_page() {
         mount_with_fetch(page, "{ stargazers_count: 12, star_count: 3 }").await;
         let (github, _, _, _) = link(page, GITHUB).await;
         let (gitlab, _, _, _) = link(page, GITLAB).await;
-        assert_eq!(github, "GitHub, 12 stars (opens in a new tab)");
-        assert_eq!(gitlab, "GitLab, 3 stars (opens in a new tab)");
+        assert_eq!(github, "GitHub example/repo, 12 stars (opens in a new tab)");
+        assert_eq!(
+            gitlab,
+            "GitLab group/sub/repo, 3 stars (opens in a new tab)"
+        );
         let (mut urls, hrefs): (Vec<String>, Vec<String>) = page
             .evaluate(
                 "[window.__urls, [...document.querySelectorAll('#github, #gitlab')].map(a => a.href + ' ' + a.target)]",
@@ -144,7 +147,7 @@ fn a_count_joins_the_icon_and_is_cached_for_the_session() {
         let page = &fixture.page;
         mount_with_fetch(page, "{ stargazers_count: 1234, star_count: 1234 }").await;
         let (name, text, width, height) = link(page, GITHUB).await;
-        assert_eq!(name, "GitHub, 1.2k stars (opens in a new tab)");
+        assert_eq!(name, "GitHub example/repo, 1.2k stars (opens in a new tab)");
         assert_eq!(text, "1.2k");
         assert!(width > height, "no pill: {width}x{height}");
         // Unmount and mount again: the count comes from the session, not a second call.

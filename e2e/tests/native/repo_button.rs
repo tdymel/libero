@@ -73,7 +73,7 @@ fn a_count_joins_the_icon() {
     assert_eq!(asked(), ["https://api.github.com/repos/native/counted"]);
     assert_eq!(
         page.attr(LINK, "aria-label").as_deref(),
-        Some("GitHub, 1.2k stars (opens in a new tab)"),
+        Some("GitHub native/counted, 1.2k stars (opens in a new tab)"),
         "{}",
         page.tree()
     );
@@ -100,7 +100,7 @@ fn a_failed_fetch_leaves_the_plain_icon() {
     assert_eq!(asked().len(), 1);
     assert_eq!(
         page.attr(LINK, "aria-label").as_deref(),
-        Some("GitHub (opens in a new tab)")
+        Some("GitHub native/failing (opens in a new tab)")
     );
     assert_eq!(page.text(LINK).trim(), "");
 }
@@ -110,7 +110,7 @@ fn zero_stars_leave_the_plain_icon() {
     let page = landed(zero);
     assert_eq!(
         page.attr(LINK, "aria-label").as_deref(),
-        Some("GitHub (opens in a new tab)")
+        Some("GitHub native/zero (opens in a new tab)")
     );
     assert_eq!(page.text(LINK).trim(), "");
 }
@@ -124,7 +124,7 @@ fn gitlab_asks_its_own_endpoint_and_field() {
     );
     assert_eq!(
         page.attr(LINK, "aria-label").as_deref(),
-        Some("GitLab, 5 stars (opens in a new tab)")
+        Some("GitLab group/native, 5 stars (opens in a new tab)")
     );
 }
 
@@ -134,6 +134,6 @@ fn without_a_provider_the_icon_stands_alone() {
     let page = landed(unprovided);
     assert_eq!(
         page.attr(LINK, "aria-label").as_deref(),
-        Some("GitHub (opens in a new tab)")
+        Some("GitHub native/unprovided (opens in a new tab)")
     );
 }

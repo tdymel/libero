@@ -509,14 +509,14 @@ impl ThemeToggleLabels {
     };
 }
 
-/// A `RepoButton`'s name: the host's, plus the star count once one shows.
+/// A `RepoButton`'s name: the host and repo, plus the star count once one shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[allow(
     unpredictable_function_pointer_comparisons,
     reason = "compares by address; a miss on a copied closure only re-renders"
 )]
 pub struct RepoButtonLabels {
-    /// The count as heard after the host's name: the exact count, for the
+    /// The count as heard after the host and repo: the exact count, for the
     /// plural, and the shortened one on screen (`1.2k`). A fn, for plural forms.
     ///
     /// ```
