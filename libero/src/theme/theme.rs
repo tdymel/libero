@@ -14,6 +14,8 @@ pub struct Theme {
     pub elevation: Sizes<&'static str>,
     /// The type scale `Sx::font_size(Size)` resolves to, as CSS lengths.
     pub font_size: Sizes<&'static str>,
+    /// What a `gradient` surface paints when the call site names no stops.
+    pub gradient: GradientDefaults,
     pub flex: FlexDefaults,
     pub grid: GridDefaults,
     pub carousel: CarouselDefaults,
@@ -147,6 +149,7 @@ impl Theme {
         font_size: Sizes::new(
             "0.75rem", "0.875rem", "1rem", "1.125rem", "1.25rem", "1.375rem",
         ),
+        gradient: GradientDefaults::DEFAULT,
         flex: FlexDefaults::DEFAULT,
         grid: GridDefaults::DEFAULT,
         carousel: CarouselDefaults::DEFAULT,

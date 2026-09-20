@@ -20,6 +20,8 @@ pub fn IconPage() -> Element {
                     prop("variant", "Variant")
                         .default("filled")
                         .doc("The look, shared with `Button`. An icon is not interactive, so it has no hover state."),
+                    prop("gradient", "Gradient")
+                        .doc("With `variant: \"gradient\"`: this icon's own stops and angle. Ignored by the other variants."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background."),

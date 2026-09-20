@@ -19,6 +19,8 @@ pub fn BadgePage() -> Element {
                 prop("variant", "Variant")
                     .default("filled")
                     .doc("The look, shared with `Button` and `Chip`. A badge is not interactive, so it has no hover state."),
+                prop("gradient", "Gradient")
+                    .doc("With `variant: \"gradient\"`: this badge's own stops and angle. Ignored by the other variants."),
                 prop("color", "ThemeAwareValue")
                     .default("primary")
                     .doc("A theme color name or a CSS color. A theme color also sets a label color that reads on it."),

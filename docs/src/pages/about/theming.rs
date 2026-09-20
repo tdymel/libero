@@ -29,7 +29,7 @@ const PARTS: [Part; 4] = [
 ];
 
 /// The fields of `Theme`: name, type, what it holds.
-const FIELDS: [Part; 7] = [
+const FIELDS: [Part; 8] = [
     (
         "spacing",
         "Sizes<u8>",
@@ -55,6 +55,11 @@ const FIELDS: [Part; 7] = [
         "font_smoothing",
         "bool",
         "Whether the reset asks for antialiased text.",
+    ),
+    (
+        "gradient",
+        "GradientDefaults",
+        "The stops and angle of every gradient fill: Primary to Secondary at 45deg.",
     ),
     (
         "one field per component",
@@ -98,6 +103,11 @@ const SCALES: &str = r#"static THEME: Theme = Theme {
         glass_blur: "blur(20px)",
         ..PaperDefaults::DEFAULT
     },
+    ..Theme::DEFAULT
+};"#;
+
+const GRADIENT: &str = r#"static THEME: Theme = Theme {
+    gradient: GradientDefaults { from: Color::Info, to: Color::Success, deg: 90 },
     ..Theme::DEFAULT
 };"#;
 
@@ -190,6 +200,24 @@ pub fn ThemingPage() -> Element {
                     " blurs what shows through. Stay at 70 or more, so text keeps its contrast."
                 }
                 CodeBlock { source: SCALES, language: "rust" }
+            }
+
+            DocSection {
+                title: "Gradient",
+                Text {
+                    Code { source: "gradient" }
+                    " is the fill of "
+                    Code { source: "variant: \"gradient\"" }
+                    ", of a gradient "
+                    Code { source: "Paper" }
+                    " and of gradient "
+                    Code { source: "Text" }
+                    ": two palette roles and an angle. Its label is picked to read on both "
+                    "stops, in light and in dark. A component's "
+                    Code { source: "gradient" }
+                    " prop overrides it."
+                }
+                CodeBlock { source: GRADIENT, language: "rust" }
             }
 
             DocSection {

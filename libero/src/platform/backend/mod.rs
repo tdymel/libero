@@ -197,6 +197,10 @@ pub(crate) const WIDENS_SIZED_TABLES: bool =
 pub(crate) const DRAWS_BACKDROP_FILTER: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz clips `background-clip: text` to the box; see [`clips_background_to_text`](crate::platform::clips_background_to_text).
+pub(crate) const CLIPS_BACKGROUND_TO_TEXT: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 /// Blitz draws every SVG `<img>` `contain`; see [`fits_svg_images`](crate::platform::fits_svg_images).
 pub(crate) const FITS_SVG_IMAGES: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));

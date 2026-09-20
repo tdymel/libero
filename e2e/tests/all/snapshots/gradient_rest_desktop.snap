@@ -1,0 +1,24 @@
+---
+source: e2e/src/suite.rs
+description: gradient at desktop (rest)
+expression: tree
+---
+button "Theme"
+  StaticText "Theme"
+button "Override"
+  StaticText "Override"
+button "Selected" [pressed]
+  StaticText "Selected"
+button "Filled"
+  StaticText "Filled"
+button "Star"
+  StaticText "★"
+StaticText "NEW"
+image "Verified"
+  StaticText "✓"
+paragraph
+  StaticText "On the theme's gradient."
+paragraph
+  StaticText "Glass over a gradient."
+paragraph
+  StaticText "Gradient text"

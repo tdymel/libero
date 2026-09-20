@@ -21,6 +21,7 @@ mod focus_events;
 mod focus_return;
 mod focus_ring;
 mod form;
+mod gradient;
 mod header;
 mod hit;
 mod home;

@@ -4,7 +4,10 @@ use crate::{
         on_state_sx, on_tint_color, selected_color, shade_color, shadow_sx,
     },
     sx::{Sx, ThemeAwareValue, sx},
-    theme::{ColorShade, CssVar, PAPER_BACKGROUND, PaperDefaults, Size, SizeCss},
+    theme::{
+        ColorShade, CssVar, PAPER_BACKGROUND, PaperDefaults, Size, SizeCss, gradient_fill_sx,
+        gradient_hover_sx, gradient_selected_sx,
+    },
 };
 
 // What `interactive_variant_sx` references by name.
@@ -98,6 +101,8 @@ pub(crate) fn variant_chrome_sx(variant: Variant, vars: &VariantVars) -> Sx {
             .background("transparent")
             .border_color("transparent")
             .color(color.value()),
+        // Reads the gradient vars, not `vars`: the fill is not the colour's.
+        Variant::Gradient => gradient_fill_sx().border_color("transparent"),
     }
 }
 
@@ -120,6 +125,10 @@ pub(crate) fn interactive_variant_sx(
         Variant::Filled | Variant::Tonal => vars.fill.value_or(color.value()),
         Variant::Elevated => PAPER_BACKGROUND.value(),
         Variant::Outlined | Variant::Standard => "transparent".to_string(),
+        // The state layer over the image, not a flat colour.
+        Variant::Gradient => {
+            return variant_chrome_sx(variant, vars).selector(HOVER, gradient_hover_sx());
+        }
     };
 
     let mut hovered = sx().background(hover.value_or(fallback));
@@ -127,7 +136,7 @@ pub(crate) fn interactive_variant_sx(
         Variant::Filled => {
             hovered = hovered.color(on_state.value_or(vars.contrast.value_or("inherit")));
         }
-        Variant::Tonal => {}
+        Variant::Tonal | Variant::Gradient => {}
         Variant::Elevated | Variant::Outlined | Variant::Standard => {
             hovered = hovered.color(on_state.value_or(color.value()));
         }
@@ -136,13 +145,12 @@ pub(crate) fn interactive_variant_sx(
         hovered = hovered.and(shadow_sx(SizeCss::SHADOW.value(ELEVATED_HOVER)));
     }
 
-    // Skips a disabled control, so it needs no `pointer-events: none` and can
-    // show `not-allowed` (todo 586). `:where` keeps the specificity of `:hover`.
-    variant_chrome_sx(variant, vars).selector(
-        "&:hover:not(:where(:disabled, [data-state~=\"disabled\"]))",
-        hovered,
-    )
+    variant_chrome_sx(variant, vars).selector(HOVER, hovered)
 }
+
+// Skips a disabled control, so it needs no `pointer-events: none` and can
+// show `not-allowed` (todo 586). `:where` keeps the specificity of `:hover`.
+const HOVER: &str = "&:hover:not(:where(:disabled, [data-state~=\"disabled\"]))";
 
 /// Resolved values for the colour vars `variant` reads, from the caller's
 /// `color`. `None` wherever a literal colour has no shade ramp to walk.
@@ -179,6 +187,7 @@ pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> Varian
             shade_color(base, ColorShade::S1),
             shade_color(base, ColorShade::S2),
         ),
+        Variant::Gradient => (None, None),
         _ => (hover_color(base, filled), selected_color(base, filled)),
     };
 
@@ -187,6 +196,8 @@ pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> Varian
         Variant::Filled => hover_contrast_color(base),
         Variant::Tonal => contrast_shade_color(base, TONAL_SELECTED),
         Variant::Elevated | Variant::Outlined | Variant::Standard => on_tint_color(base),
+        // The gradient's own vars carry every state.
+        Variant::Gradient => None,
     };
 
     VariantColors {
@@ -235,6 +246,7 @@ pub(crate) fn variant_selected_sx(
         Variant::Outlined | Variant::Standard => sx()
             .background(selected_var.value_or("transparent"))
             .color(on_state.value_or(color.value())),
+        Variant::Gradient => gradient_selected_sx(),
     };
     // Outranks the plain focus rule, which would lose to the ring's
     // `box-shadow` here; the focus ring composes the marker back in.

@@ -21,6 +21,8 @@ pub fn ActionIconPage() -> Element {
             properties: vec![props("ActionIcon", vec![
                 prop("variant", "Variant")
                     .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. With `color` also unset, the button takes the surrounding text color."),
+                prop("gradient", "Gradient")
+                    .doc("With `variant: \"gradient\"`: this button's own stops and angle. Ignored by the other variants."),
                 prop("color", "ThemeAwareValue")
                     .doc("Accent color. A theme color name or any CSS color. Set alone, it gives the theme's default variant, `filled`."),
                 prop("size", "ThemeAwareValue")

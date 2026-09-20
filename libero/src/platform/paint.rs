@@ -6,6 +6,12 @@ pub(crate) fn draws_backdrop_filter() -> bool {
     backend::DRAWS_BACKDROP_FILTER
 }
 
+/// Whether `background-clip: text` clips to the glyphs. Blitz fills the whole
+/// box, so gradient text there is a solid colour instead (todo 937).
+pub(crate) fn clips_background_to_text() -> bool {
+    backend::CLIPS_BACKGROUND_TO_TEXT
+}
+
 /// Whether an SVG `<img>` is drawn as its `object-fit` says. Blitz draws every
 /// one `contain`, its letterbox offset outside the element's transform (todo 920).
 pub(crate) fn fits_svg_images() -> bool {

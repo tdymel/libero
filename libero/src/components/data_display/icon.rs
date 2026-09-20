@@ -9,9 +9,9 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::{use_cache, use_theme},
+    hooks::{use_cache, use_gradient_style, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CssVar, ICON_SIZE, Size, SizeCss},
+    theme::{CssVar, Gradient, ICON_SIZE, Size, SizeCss},
 };
 
 pub(crate) const ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-icon-color");
@@ -85,6 +85,10 @@ base_props! {
         component: Input<HtmlTag>,
         #[props(default, into)]
         variant: Input<Variant>,
+        /// The stops and angle of `variant: "gradient"`, over the theme's.
+        /// Ignored by the other variants.
+        #[props(default)]
+        gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -129,6 +133,11 @@ pub fn Icon(props: IconProps) -> Element {
         ),
         |_| icon_variables(&props, variant).render(),
     );
+    let gradient = use_gradient_style(props.gradient.as_ref(), variant == Variant::Gradient, false);
+    let style = match gradient {
+        Some(gradient) => format!("{style}{gradient}"),
+        None => style,
+    };
     let style = Some(style).filter(|style| !style.is_empty());
 
     let states: Input<States> = props
@@ -164,6 +173,7 @@ mod tests {
             states: Input::None,
             attributes: Vec::new(),
             variant: Input::None,
+            gradient: None,
             color,
             size: Input::None,
             radius: Input::None,

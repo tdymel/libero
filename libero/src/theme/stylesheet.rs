@@ -206,6 +206,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         radius,
         elevation,
         font_size,
+        // Measured against the palette, so declared with it below.
+        gradient: _,
         dialog,
         drawer,
         sidebar,
@@ -420,6 +422,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     ] {
         push_color_declarations(&mut declarations, color, base, ends, &cards);
     }
+    declarations.extend(super::gradient_theme_declarations(theme));
     rebase_text_on_derived_surfaces(&mut declarations, ends);
     declarations
 }

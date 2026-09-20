@@ -74,8 +74,8 @@ pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};
 pub(crate) use max_length::fit_max_length;
 pub(crate) use motion::prefers_reduced_motion;
 pub(crate) use paint::{
-    aligns_logical_text, draws_backdrop_filter, fires_image_errors, fits_svg_images,
-    paints_outer_inline_backgrounds,
+    aligns_logical_text, clips_background_to_text, draws_backdrop_filter, fires_image_errors,
+    fits_svg_images, paints_outer_inline_backgrounds,
 };
 pub(crate) use placeholder::{
     PLACEHOLDER_ATTR, PLACEHOLDER_CELL_ATTR, PLACEHOLDER_SHOWN_ATTR, draws_placeholders,

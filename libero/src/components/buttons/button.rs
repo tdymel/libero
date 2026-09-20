@@ -12,9 +12,9 @@ use crate::{
         feedback::Loader,
         layout::{render_anchor, use_box},
     },
-    hooks::{ripple_sx, use_cache, use_ripple, use_theme},
+    hooks::{ripple_sx, use_cache, use_gradient_style, use_ripple, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{BUTTON_HEIGHT, ButtonDefaults, LOADER_SIZE, Size, SizeCss},
+    theme::{BUTTON_HEIGHT, ButtonDefaults, Gradient, LOADER_SIZE, Size, SizeCss},
     utils::warn,
 };
 
@@ -182,6 +182,10 @@ base_props! {
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         variant: Input<Variant>,
+        /// The stops and angle of `variant: "gradient"`, over the theme's.
+        /// Ignored by the other variants.
+        #[props(default)]
+        gradient: Option<Gradient>,
         /// Corner radius, independent of `size`.
         #[props(default, into)]
         radius: Input<Size>,
@@ -263,6 +267,11 @@ pub fn Button(props: ButtonProps) -> Element {
         (variant, color, selectable),
         |(variant, color, selectable)| button_variables(*variant, color, *selectable),
     );
+    let gradient = use_gradient_style(props.gradient.as_ref(), variant == Variant::Gradient, false);
+    let style = match gradient {
+        Some(gradient) => format!("{style}{gradient}"),
+        None => style,
+    };
     let style = match showing.as_ref() {
         Some(ripple) => ripple.with_point(style),
         None => style,

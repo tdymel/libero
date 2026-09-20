@@ -5,9 +5,10 @@ use crate::{
         common::{HtmlTag, Input, States, Variables, base_props},
         layout::use_box,
     },
+    hooks::use_gradient_style,
     platform::draws_backdrop_filter,
     sx::{StaticSx, Sx, sx},
-    theme::{PAPER_BORDER_COLOR, PaperDefaults, Size},
+    theme::{Gradient, PAPER_BORDER_COLOR, PaperDefaults, Size, gradient_fill_sx},
 };
 
 /// The library's one definition of a surface, as an `Sx` to build on.
@@ -35,7 +36,12 @@ pub fn paper_sx() -> Sx {
             "bordered",
             sx().border(format!("1px solid {}", PAPER_BORDER_COLOR.value())),
         )
-        .when("glass", PaperDefaults::glass_sx())
+        .when("gradient", gradient_fill_sx())
+        // After `gradient`, which its shorthand would otherwise reset.
+        .when(
+            "glass",
+            PaperDefaults::glass_sx().when("gradient", PaperDefaults::glass_gradient_sx()),
+        )
 }
 
 static PAPER_BASE_SX: StaticSx = StaticSx::new(paper_sx);
@@ -63,6 +69,11 @@ base_props! {
         /// natively, where Blitz draws no backdrop blur.
         #[props(default)]
         glass: bool,
+        /// A linear gradient fill, labelled in whichever end of the page reads
+        /// on it. `Gradient::default()` is the theme's; with `glass`, its stops
+        /// turn translucent. Descendants on the theme's gradient inherit it.
+        #[props(default)]
+        gradient: Option<Gradient>,
         /// Which element to render as - `div` by default. `section`,
         /// `article`, `aside` and `a` are the ones worth naming; a surface
         /// that becomes a landmark owns its own `aria-label`.
@@ -100,6 +111,7 @@ base_props! {
 #[component]
 pub fn Paper(props: PaperProps) -> Element {
     let states = paper_states(&props);
+    let gradient = use_gradient_style(props.gradient.as_ref(), true, false);
 
     use_box()
         .framework_sx(props.framework_sx.unwrap_or(&PAPER_BASE_SX))
@@ -107,6 +119,7 @@ pub fn Paper(props: PaperProps) -> Element {
         .sx(&props.sx)
         .states(&states)
         .variables(&props.variables)
+        .style(gradient)
         .prepare()
         .render(
             props.component.copied_or_default(),
@@ -133,8 +146,9 @@ fn paper_states(props: &PaperProps) -> Input<States> {
     let radius = props.radius.as_ref();
     let shadow = props.shadow.as_ref();
     let glass = props.glass && draws_backdrop_filter();
+    let gradient = props.gradient.is_some();
 
-    if radius.is_none() && shadow.is_none() && !props.bordered && !glass {
+    if radius.is_none() && shadow.is_none() && !props.bordered && !glass && !gradient {
         return props.states.clone();
     }
 
@@ -148,6 +162,7 @@ fn paper_states(props: &PaperProps) -> Input<States> {
     states
         .with("bordered", props.bordered)
         .with("glass", glass)
+        .with("gradient", gradient)
         .into()
 }
 
@@ -162,6 +177,7 @@ mod tests {
             shadow: Input::None,
             bordered: false,
             glass: false,
+            gradient: None,
             component: Input::None,
             variables: Input::None,
             framework_sx: None,

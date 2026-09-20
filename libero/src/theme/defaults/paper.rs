@@ -1,7 +1,8 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{FORCED_COLORS, Sx, sx};
 use crate::theme::{
-    Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, NamedColorCss, Size, SizeCss,
+    Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, GRADIENT_FROM, NamedColorCss, Size,
+    SizeCss, gradient_fill_sx, gradient_image,
 };
 
 /// The library's one definition of a surface colour. Anything that paints
@@ -21,6 +22,8 @@ pub const PAPER_SHADOW: CssVar = CssVar::new("--lsx-paper-shadow");
 pub const GLASS_BACKGROUND: CssVar = CssVar::new("--lsx-glass-background");
 /// The `backdrop-filter` behind a `glass` surface.
 pub const GLASS_BLUR: CssVar = CssVar::new("--lsx-glass-blur");
+/// `glass_background` as a percentage, for mixing a gradient's stops.
+pub(crate) const GLASS_SHARE: CssVar = CssVar::new("--lsx-glass-share");
 
 /// Users who turned transparency off get opaque surfaces. Not Baseline yet, so
 /// [`FORCED_COLORS`] and the native branch back it up.
@@ -119,6 +122,20 @@ impl PaperDefaults {
             .media(REDUCED_TRANSPARENCY, opaque.clone())
             .media(FORCED_COLORS, opaque)
     }
+
+    /// Glass over a gradient: each stop mixed down to `glass_background`, and
+    /// the opaque gradient again wherever [`glass_sx`](Self::glass_sx) turns opaque.
+    pub(crate) fn glass_gradient_sx() -> Sx {
+        let share = GLASS_SHARE.value();
+        let opaque = gradient_fill_sx().backdrop_filter("none");
+        sx().background_color(format!(
+            "color-mix(in srgb, {} {share}, transparent)",
+            GRADIENT_FROM.value()
+        ))
+        .background_image(gradient_image(Some(&share)))
+        .media(REDUCED_TRANSPARENCY, opaque.clone())
+        .media(FORCED_COLORS, opaque)
+    }
 }
 
 impl ToCssDeclarations for PaperDefaults {
@@ -135,6 +152,7 @@ impl ToCssDeclarations for PaperDefaults {
                 self.glass_background
             )),
             GLASS_BLUR.declare(self.glass_blur),
+            GLASS_SHARE.declare(format!("{}%", self.glass_background)),
         ]
     }
 }

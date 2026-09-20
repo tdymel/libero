@@ -41,6 +41,7 @@ mod focus_return;
 mod focus_start;
 mod focus_trap;
 mod form;
+mod gradient;
 mod grid_zone;
 mod header;
 mod hit_area;

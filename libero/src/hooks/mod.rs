@@ -54,6 +54,7 @@ pub(crate) use ripple::{clipped_ripple_sx, ripple_sx, use_ripple};
 pub(crate) use silent_focus::{use_silent_focus_in, use_silent_focus_out};
 pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
+pub(crate) use theme::use_gradient_style;
 pub use theme::{ThemeSetHandle, use_theme, use_theme_set};
 pub(crate) use typeahead::{TYPEAHEAD_RESET, Typeahead, typeahead_match, use_typeahead};
 

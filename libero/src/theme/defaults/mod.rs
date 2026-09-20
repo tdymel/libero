@@ -35,6 +35,7 @@ mod float;
 mod floating_window;
 mod focus_ring;
 mod form;
+mod gradient;
 mod grid;
 mod header;
 mod hover_card;
@@ -197,6 +198,14 @@ pub use focus_ring::{
     FOCUS_RING_OFFSET, FOCUS_RING_WIDTH, FocusRingDefaults, OWN_SHADOW,
 };
 pub use form::{FIELDSET_GAP, FORM_GAP, FieldsetDefaults, FormDefaults};
+pub use gradient::{
+    GRADIENT_ANGLE, GRADIENT_CONTRAST, GRADIENT_FROM, GRADIENT_LAYER, GRADIENT_TO, Gradient,
+    GradientDefaults,
+};
+pub(crate) use gradient::{
+    gradient_fill_sx, gradient_hover_sx, gradient_image, gradient_selected_sx,
+    theme_declarations as gradient_theme_declarations,
+};
 pub use grid::{
     GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, GRID_ITEM_ROW_SPAN_VAR, GRID_ITEM_ROWS_VAR,
     GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR, GRID_ZONE_GAP, GridDefaults,

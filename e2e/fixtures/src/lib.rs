@@ -64,6 +64,7 @@ mod focus_return;
 mod focus_start;
 mod focus_trap;
 mod form;
+mod gradient;
 mod grid_zone;
 mod header;
 mod hit_area;
@@ -158,6 +159,7 @@ const FIXTURES: &[Routes] = &[
     docs_shell::ROUTES,
     drawer::ROUTES,
     elevation::ROUTES,
+    gradient::ROUTES,
     field_frame::ROUTES,
     field_value::ROUTES,
     file_field::ROUTES,

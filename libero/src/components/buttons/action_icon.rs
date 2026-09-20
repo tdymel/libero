@@ -11,9 +11,11 @@ use crate::{
         feedback::Loader,
         layout::{InternalAnchor, use_box},
     },
-    hooks::{clipped_ripple_sx, use_ripple, use_theme},
+    hooks::{clipped_ripple_sx, use_gradient_style, use_ripple, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, CssVar, ICON_SIZE, LOADER_SIZE, SizeCss},
+    theme::{
+        ACTION_ICON_RADIUS, ACTION_ICON_SIZE, CssVar, Gradient, ICON_SIZE, LOADER_SIZE, SizeCss,
+    },
     utils::warn,
 };
 
@@ -184,6 +186,10 @@ base_props! {
     pub struct ActionIconProps {
         #[props(default, into)]
         variant: Input<Variant>,
+        /// The stops and angle of `variant: "gradient"`, over the theme's.
+        /// Ignored by the other variants.
+        #[props(default)]
+        gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// `"sm"` is 20x20 and `"xs"` 16x16. Below 24px the button takes presses
@@ -249,6 +255,11 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
     let variant = props.variant.copied_or(use_theme().action_icon.variant);
     let variables: Input<Variables> =
         action_icon_variables(&props, variant, has_variant_styling).into();
+    let gradient = use_gradient_style(
+        props.gradient.as_ref(),
+        has_variant_styling && variant == Variant::Gradient,
+        false,
+    );
 
     use_name_warning(
         !props.aria_label.trim().is_empty() || names_itself(&props.attributes),
@@ -291,8 +302,11 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         .sx(&props.sx)
         .states(&states)
         .variables(&variables)
-        // Only a button that has been clicked pays for this.
-        .style(showing.map(|ripple| ripple.with_point(String::new())))
+        // Only a button that has been clicked pays for the ripple.
+        .style(match showing {
+            Some(ripple) => Some(ripple.with_point(gradient.unwrap_or_default())),
+            None => gradient,
+        })
         .prepare();
 
     if let Some(to) = props.to.as_ref().cloned() {
@@ -360,6 +374,7 @@ mod tests {
 
     fn action_icon_props(color: Input<ThemeAwareValue>) -> ActionIconProps {
         ActionIconProps {
+            gradient: None,
             class: Default::default(),
             sx: Default::default(),
             states: Input::None,

@@ -60,6 +60,8 @@ pub fn PaperPage() -> Element {
                     prop("glass", "bool")
                         .default("false")
                         .doc("Frosted glass: translucent, blurring what is behind it, tuned by the theme's `paper.glass_background` and `paper.glass_blur`. Use it over app chrome, not over images, where text can lose contrast. Opaque when the user reduces transparency, in forced colours, and in native windows."),
+                    prop("gradient", "Gradient")
+                        .doc("Fills the surface with a gradient, `Gradient::default()` for the theme's. The text colour is picked to read on both stops. With `glass`, the stops turn translucent. Its stops carry down to any gradient inside it."),
                     prop("component", "HtmlTag")
                         .default("div")
                         .doc("The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. A `section` or `aside` is a landmark and needs your `aria-label`."),

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     context::LiberoContext,
-    theme::{Theme, ThemeSet},
+    theme::{Gradient, Theme, ThemeSet},
 };
 
 /// The active theme.
@@ -38,6 +38,29 @@ pub fn use_theme_set() -> ThemeSetHandle {
     ThemeSetHandle {
         context: use_context::<LiberoContext>(),
     }
+}
+
+/// The inline gradient vars for `gradient`, `None` unless `active`. Measured
+/// on both themes of the set, since a scheme switch re-renders nothing.
+/// `text` puts palette stops in the text role, for gradient text.
+pub(crate) fn use_gradient_style(
+    gradient: Option<&Gradient>,
+    active: bool,
+    text: bool,
+) -> Option<String> {
+    let context = use_context::<LiberoContext>();
+    let gradient = gradient.filter(|_| active)?;
+    let active = *context.theme.read();
+    let set = context.themes.read();
+    let mut themes = vec![active, set.light_theme()];
+    themes.extend(set.dark_theme());
+    Some(
+        gradient
+            .declarations(&themes, text)
+            .iter()
+            .map(ToString::to_string)
+            .collect(),
+    )
 }
 
 /// What [`use_theme_set`] hands back.

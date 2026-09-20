@@ -19,7 +19,9 @@ pub fn ButtonPage() -> Element {
                     .doc("Accent color. A theme color name or any CSS color."),
                 prop("variant", "Variant")
                     .default("filled")
-                    .doc("Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`."),
+                    .doc("Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it with the theme's gradient."),
+                prop("gradient", "Gradient")
+                    .doc("With `variant: \"gradient\"`: this button's own stops and angle, such as `Gradient::default().from(\"success\").to(\"info\").deg(90)`. A literal CSS stop's label contrast is yours to check. Ignored by the other variants."),
                 prop("radius", "Size")
                     .default("md")
                     .doc("Corner radius, independent of `size`."),
@@ -72,9 +74,9 @@ pub fn ButtonPage() -> Element {
                     Control::color("color"),
                     Control::toggle(
                         "variant",
-                        ["filled", "tonal", "elevated", "outlined", "standard"],
+                        ["filled", "tonal", "elevated", "outlined", "standard", "gradient"],
                     )
-                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"]),
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])

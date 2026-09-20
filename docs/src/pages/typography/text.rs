@@ -1,6 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
+use libero::theme::Gradient;
 
 #[component]
 pub fn TextPage() -> Element {
@@ -16,6 +17,8 @@ pub fn TextPage() -> Element {
                 prop("component", "HtmlTag")
                     .default("p")
                     .doc("The element to render."),
+                prop("gradient", "Gradient")
+                    .doc("Paints the glyphs with a gradient, `Gradient::default()` for the theme's. Keep it to large display text: the contrast of a literal CSS stop is yours to check. Solid in its first stop in forced colours and in native windows."),
                 prop("children", "Element").default("required").doc("The text."),
             ])],
             lead: rsx! {
@@ -37,11 +40,16 @@ pub fn TextPage() -> Element {
                         .default("md"),
                     Control::toggle("component", ["p", "span", "div"])
                         .labels(["P", "Span", "Div"]),
+                    Control::switch("gradient").code(|_, values| match values.str("gradient").as_str() {
+                        "true" => vec!["gradient: Gradient::default()".to_string()],
+                        _ => vec![],
+                    }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Text {
                         size: values.str("size"),
                         component: values.str("component"),
+                        gradient: (values.str("gradient") == "true").then(Gradient::default),
                         "The quick brown fox jumps over the lazy dog."
                     }
                 },

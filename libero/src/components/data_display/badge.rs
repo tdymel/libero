@@ -8,9 +8,9 @@ use crate::{
         },
         layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{use_gradient_style, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{BADGE_BOX, BADGE_RADII, BADGE_RADIUS, BadgeDefaults, CssVar, Size, SizeCss},
+    theme::{BADGE_BOX, BADGE_RADII, BADGE_RADIUS, BadgeDefaults, CssVar, Gradient, Size, SizeCss},
 };
 
 const BADGE_COLOR_VAR: CssVar = CssVar::new("--lsx-badge-color");
@@ -99,10 +99,14 @@ fn badge_variables(props: &BadgeProps, variant: Variant) -> Variables {
 
 base_props! {
     pub struct BadgeProps {
-        /// The five M3 arms, shared with `Button` and `Chip` - minus their
-        /// hover response.
+        /// The five M3 arms plus `gradient`, shared with `Button` and `Chip` -
+        /// minus their hover response.
         #[props(default, into)]
         variant: Input<Variant>,
+        /// The stops and angle of `variant: "gradient"`, over the theme's.
+        /// Ignored by the other variants.
+        #[props(default)]
+        gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -132,6 +136,7 @@ pub fn Badge(props: BadgeProps) -> Element {
     let variant = props.variant.copied_or(theme.badge.variant);
     let size = props.size.copied_or(theme.badge.size);
     let variables: Input<Variables> = badge_variables(&props, variant).into();
+    let gradient = use_gradient_style(props.gradient.as_ref(), variant == Variant::Gradient, false);
 
     let states: Input<States> = props
         .states
@@ -147,6 +152,7 @@ pub fn Badge(props: BadgeProps) -> Element {
         .sx(&props.sx)
         .states(&states)
         .variables(&variables)
+        .style(gradient)
         .prepare()
         .render(HtmlTag::Span, props.attributes, props.children)
 }
