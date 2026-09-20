@@ -15,7 +15,7 @@ mod responsive;
 mod size;
 mod sizes;
 
-pub use accessibility::{AccessibilityOverrides, AccessibilityPreferences, Contrast};
+pub use accessibility::{AccessibilityPreferences, Contrast};
 pub use color::Color;
 pub use color_scheme::{
     COLOR_SCHEME_RESTORE_SCRIPT, COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting,

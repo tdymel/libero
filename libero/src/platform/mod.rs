@@ -41,8 +41,8 @@ mod timer;
 mod transition;
 
 pub(crate) use a11y_media::{
-    A11yMediaApi, a11y_media, answer_a11y_media, answers_a11y_media, current_a11y_media,
-    set_current_a11y_media,
+    A11yAnswers, A11yMediaApi, a11y_media, answer_a11y_media, answers_a11y_media,
+    current_a11y_answers, set_current_a11y_answers,
 };
 // The renderer seams everything above `platform` reaches `backend` through (todo 820).
 pub(crate) use backend::{Listener, Outlet, PortalEntry, PortalRoot, SheetWatch, element};

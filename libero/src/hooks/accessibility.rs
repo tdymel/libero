@@ -2,12 +2,12 @@ use dioxus::prelude::*;
 
 use crate::{
     context::LiberoContext,
-    tokens::{AccessibilityOverrides, AccessibilityPreferences},
+    tokens::{AccessibilityPreferences, Contrast},
 };
 
-/// The reader's accessibility preferences (`prefers-reduced-motion`,
-/// `forced-colors`, `prefers-contrast`, `prefers-reduced-transparency`), and the
-/// app's own answers over them, for a settings page.
+/// The reader's accessibility settings (`prefers-reduced-motion`,
+/// `forced-colors`, `prefers-contrast`, `prefers-reduced-transparency`), and an
+/// app's own reduced-motion switch over the system's.
 ///
 /// ```ignore
 /// let accessibility = use_accessibility();
@@ -15,18 +15,13 @@ use crate::{
 /// rsx! {
 ///     Switch {
 ///         label: "Reduce motion",
-///         checked: accessibility.get().reduced_motion,
-///         onchange: move |reduce: bool| accessibility.set_overrides(AccessibilityOverrides {
-///             reduced_motion: Some(reduce),
-///             ..accessibility.overrides()
-///         }),
+///         checked: accessibility.reduced_motion(),
+///         onchange: move |reduce: bool| accessibility.set_reduced_motion(Some(reduce)),
 ///     }
 /// }
 /// ```
 ///
-/// The overrides act on native renderers only: on the web the browser's media
-/// queries decide, and [`set_overrides`](AccessibilityHandle::set_overrides)
-/// changes nothing on screen.
+/// A forced reduced motion reaches libero's own CSS, not a `<style>` the app adds itself.
 pub fn use_accessibility() -> AccessibilityHandle {
     AccessibilityHandle {
         context: use_context::<LiberoContext>(),
@@ -40,30 +35,42 @@ pub struct AccessibilityHandle {
 }
 
 impl AccessibilityHandle {
-    /// What the page answers: the system's settings with the overrides on top.
-    /// Reactive. On the web, the browser's answers.
+    /// All four settings at once, a forced reduced motion included. Reactive.
     pub fn get(&self) -> AccessibilityPreferences {
-        if crate::platform::answers_a11y_media() {
-            self.context.accessibility()
-        } else {
-            *self.context.accessibility_system.read()
+        AccessibilityPreferences {
+            reduced_motion: self.reduced_motion(),
+            ..*self.context.accessibility_system.read()
         }
     }
 
-    /// The platform's own settings, without the overrides. Reactive.
-    pub fn system(&self) -> AccessibilityPreferences {
-        *self.context.accessibility_system.read()
+    /// Whether motion is reduced: the forced answer, else the system's. Reactive.
+    pub fn reduced_motion(&self) -> bool {
+        self.context
+            .forced_reduced_motion
+            .read()
+            .unwrap_or(self.context.accessibility_system.read().reduced_motion)
     }
 
-    /// The app's answers, as set on `LiberoProvider` or through
-    /// [`set_overrides`](Self::set_overrides). Reactive.
-    pub fn overrides(&self) -> AccessibilityOverrides {
-        *self.context.accessibility_overrides.read()
+    /// Forces reduced motion on or off for the session; `None` follows the system again.
+    pub fn set_reduced_motion(&self, reduced: Option<bool>) {
+        self.context.set_forced_reduced_motion(reduced);
     }
 
-    /// Replaces the app's answers; a `None` field follows the system again.
-    /// Lives for the session. Native renderers only.
-    pub fn set_overrides(&self, overrides: AccessibilityOverrides) {
-        self.context.set_accessibility_overrides(overrides);
+    /// Whether the system forces its own colours (`forced-colors: active`). Reactive.
+    pub fn forced_colors(&self) -> bool {
+        self.context.accessibility_system.read().forced_colors
+    }
+
+    /// Which way the system asks the contrast to go. Reactive.
+    pub fn contrast(&self) -> Contrast {
+        self.context.accessibility_system.read().contrast
+    }
+
+    /// Whether the system asks for less transparency. Reactive.
+    pub fn reduced_transparency(&self) -> bool {
+        self.context
+            .accessibility_system
+            .read()
+            .reduced_transparency
     }
 }

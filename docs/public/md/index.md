@@ -151,7 +151,7 @@ fetch only the file you need.
 - [use_drag](use_drag.md): Pointer plumbing for a drag. Capture, a start point, deltas against it, and one end path for release and cancel.
 - [use_theme_set](use_theme_set.md): Reads and swaps the active theme set, which a theme picker is built on.
 - [use_stylesheet](use_stylesheet.md): Registers a stylesheet of your own above every libero layer and returns its class.
-- [use_accessibility](use_accessibility.md): Reads the reader's accessibility preferences and lets an app answer them over the system.
+- [use_accessibility](use_accessibility.md): Reads the reader's accessibility settings and lets an app force reduced motion.
 
 ---
 

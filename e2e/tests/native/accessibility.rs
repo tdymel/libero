@@ -1,78 +1,58 @@
 //! Blitz's stylo matches none of the accessibility media features, so libero
-//! answers them itself from the system and the app's overrides (todo 954).
+//! settles them to `all` or `not all` in its own sheets (todo 954).
 
 use dioxus::prelude::*;
 use e2e::native::mount;
 use libero::components::Box;
 use libero::hooks::use_accessibility;
 use libero::sx::sx;
-use libero::theme::{AccessibilityOverrides, Contrast};
+
+const SETTLED: &str = "#all{width:20px;} #none{width:20px;}
+    @media all{#all{width:30px;}} @media not all{#none{width:30px;}}";
+
+#[test]
+fn stylo_matches_all_and_never_not_all() {
+    let page = mount(|| {
+        rsx! {
+            style { dangerous_inner_html: SETTLED }
+            div { id: "all" }
+            div { id: "none" }
+        }
+    });
+    assert_eq!(page.computed("#all", "width"), "30px");
+    assert_eq!(page.computed("#none", "width"), "20px");
+}
 
 fn app() -> Element {
     let accessibility = use_accessibility();
-    let set = move |overrides: AccessibilityOverrides| {
+    let force = move |reduced: Option<bool>| {
         let accessibility = accessibility.clone();
-        move |_| accessibility.set_overrides(overrides)
+        move |_| accessibility.set_reduced_motion(reduced)
     };
     rsx! {
-        button { id: "off", onclick: set(AccessibilityOverrides {
-            reduced_motion: Some(false),
-            forced_colors: Some(false),
-            contrast: Some(Contrast::NoPreference),
-            reduced_transparency: Some(false),
-        }) }
-        button { id: "motion", onclick: set(AccessibilityOverrides {
-            reduced_motion: Some(true),
-            ..AccessibilityOverrides::default()
-        }) }
-        button { id: "transparency", onclick: set(AccessibilityOverrides {
-            reduced_transparency: Some(true),
-            ..AccessibilityOverrides::default()
-        }) }
-        button { id: "contrast", onclick: set(AccessibilityOverrides {
-            contrast: Some(Contrast::More),
-            ..AccessibilityOverrides::default()
-        }) }
-        button { id: "forced", onclick: set(AccessibilityOverrides {
-            forced_colors: Some(true),
-            ..AccessibilityOverrides::default()
-        }) }
+        button { id: "still", onclick: force(Some(true)) }
+        button { id: "moving", onclick: force(Some(false)) }
         Box {
             id: "motion-box",
             sx: sx()
                 .width("10px")
                 .media("(prefers-reduced-motion: reduce)", sx().width("20px"))
                 .media("(prefers-reduced-motion: no-preference)", sx().height("10px"))
-                .media("(min-width: 1px) and (prefers-contrast: more)", sx().height("30px")),
-        }
-        Box {
-            id: "surface-box",
-            sx: sx()
-                .opacity("0.5")
-                .media("(prefers-reduced-transparency: reduce)", sx().opacity("1"))
-                .media("(forced-colors: active)", sx().opacity("0.25")),
+                .media("(min-width: 1px) and (prefers-reduced-motion: reduce)", sx().min_height("5px")),
         }
     }
 }
 
 #[test]
-fn an_override_answers_the_media_features() {
+fn a_forced_reduced_motion_answers_the_media_feature() {
     let mut page = mount(app);
-    page.click("#off");
+    page.click("#moving");
     assert_eq!(page.computed("#motion-box", "width"), "10px");
     assert_eq!(page.computed("#motion-box", "height"), "10px");
-    assert_eq!(page.computed("#surface-box", "opacity"), "0.5");
+    assert_eq!(page.computed("#motion-box", "min-height"), "auto");
 
-    page.click("#motion");
+    page.click("#still");
     assert_eq!(page.computed("#motion-box", "width"), "20px");
     assert_eq!(page.computed("#motion-box", "height"), "auto");
-
-    page.click("#contrast");
-    assert_eq!(page.computed("#motion-box", "height"), "30px");
-
-    page.click("#transparency");
-    assert_eq!(page.computed("#surface-box", "opacity"), "1");
-
-    page.click("#forced");
-    assert_eq!(page.computed("#surface-box", "opacity"), "0.25");
+    assert_eq!(page.computed("#motion-box", "min-height"), "5px");
 }

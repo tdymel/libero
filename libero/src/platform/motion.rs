@@ -8,10 +8,9 @@ use super::backend;
 /// Rust names its behaviour explicitly, and dioxus's `ScrollBehavior` has no
 /// `auto` that would defer to the stylesheet.
 ///
-/// Blitz answers what `LiberoProvider` resolved (todo 954).
+/// What `LiberoProvider` answers in the sheets wins: Blitz's, or a forced one (todo 954).
 pub(crate) fn prefers_reduced_motion() -> bool {
-    if super::answers_a11y_media() {
-        return super::current_a11y_media().reduced_motion;
-    }
-    backend::prefers_reduced_motion()
+    super::current_a11y_answers()
+        .reduced_motion
+        .unwrap_or_else(backend::prefers_reduced_motion)
 }

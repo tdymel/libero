@@ -105,6 +105,16 @@ fn watch(sender: mpsc::UnboundedSender<AccessibilityPreferences>) {
     while !sender.is_closed() && connection.process(Duration::from_secs(1)).is_ok() {}
 }
 
+struct PortalSubscription(Task);
+
+impl A11yMediaSubscription for PortalSubscription {}
+
+impl Drop for PortalSubscription {
+    fn drop(&mut self) {
+        self.0.cancel();
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -120,15 +130,5 @@ mod tests {
             read(&connection)
         );
         assert!(animations.is_some());
-    }
-}
-
-struct PortalSubscription(Task);
-
-impl A11yMediaSubscription for PortalSubscription {}
-
-impl Drop for PortalSubscription {
-    fn drop(&mut self) {
-        self.0.cancel();
     }
 }

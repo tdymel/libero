@@ -4,85 +4,60 @@ Crate: `libero`
 Import: `use libero::hooks::use_accessibility;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/accessibility.rs>
 Index: [index.md](index.md) lists every other page
-Description: Reads the reader's accessibility preferences and lets an app answer them over the system.
+Description: Reads the reader's accessibility settings and lets an app force reduced motion.
 
 `use_accessibility() -> AccessibilityHandle` reads the reader's accessibility
-preferences: reduced motion, forced colors, contrast and reduced transparency.
-An app's settings page can answer them over the system with overrides.
+settings: reduced motion, forced colors, contrast and reduced transparency. A
+settings page can force reduced motion on or off over the system's.
 
-The overrides act on native renderers only. In a browser the media queries
-decide: `get()` returns what the browser answers, and `set_overrides` changes
-nothing on screen. `LiberoProvider` takes the same overrides at mount as
-`accessibility`.
+A forced reduced motion reaches libero's own CSS and motion on every platform.
+A `<style>` the app adds itself still follows the system. The other settings
+are read-only.
 
 ## Usage
 
 ```rust
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Flex, Switch},
+    components::{Button, Flex, Switch, Text},
     hooks::use_accessibility,
-    theme::{AccessibilityOverrides, Contrast},
 };
 
 #[component]
 fn Settings() -> Element {
     let accessibility = use_accessibility();
-    let now = accessibility.get();
 
     rsx! {
         Flex { direction: "column", gap: "sm",
             Switch {
                 label: "Reduce motion",
-                checked: now.reduced_motion,
+                checked: accessibility.reduced_motion(),
                 onchange: {
                     let accessibility = accessibility.clone();
-                    move |on: bool| accessibility.set_overrides(AccessibilityOverrides {
-                        reduced_motion: Some(on),
-                        ..accessibility.overrides()
-                    })
-                },
-            }
-            Switch {
-                label: "More contrast",
-                checked: now.contrast == Contrast::More,
-                onchange: {
-                    let accessibility = accessibility.clone();
-                    move |on: bool| accessibility.set_overrides(AccessibilityOverrides {
-                        contrast: Some(if on { Contrast::More } else { Contrast::NoPreference }),
-                        ..accessibility.overrides()
-                    })
+                    move |on: bool| accessibility.set_reduced_motion(Some(on))
                 },
             }
             Button {
                 variant: "outlined",
-                onclick: move |_| accessibility.set_overrides(AccessibilityOverrides::default()),
+                onclick: {
+                    let accessibility = accessibility.clone();
+                    move |_| accessibility.set_reduced_motion(None)
+                },
                 "Follow the system"
+            }
+            Text {
+                "Contrast: {accessibility.contrast().as_str()}, forced colors: "
+                "{accessibility.forced_colors()}, reduced transparency: "
+                "{accessibility.reduced_transparency()}"
             }
         }
     }
 }
 ```
 
-At mount:
-
-```rust
-use dioxus::prelude::*;
-use libero::{LiberoProvider, theme::AccessibilityOverrides};
-
-fn App() -> Element {
-    rsx! {
-        LiberoProvider {
-            accessibility: AccessibilityOverrides { reduced_motion: Some(true), ..Default::default() },
-            "..."
-        }
-    }
-}
-```
-
-Natively the system's settings come from the desktop portal on Linux
-(`org.freedesktop.appearance`, GNOME's own keys as a fallback). Other
-platforms report no preference; the overrides still apply.
+In a browser and Android's WebView the settings are the page's media queries.
+Natively they come from the desktop portal on Linux (`org.freedesktop.appearance`,
+GNOME's own keys as a fallback); other native platforms report no preference.
 
 ## API
 
@@ -92,13 +67,11 @@ pub fn use_accessibility() -> AccessibilityHandle
 
 | Method | Returns | Description |
 |---|---|---|
-| `get()` | `AccessibilityPreferences` | What the page answers: the system with the overrides on top. On the web, the browser's answers. |
-| `system()` | `AccessibilityPreferences` | The platform's settings, without the overrides. |
-| `overrides()` | `AccessibilityOverrides` | The app's answers. |
-| `set_overrides(overrides: AccessibilityOverrides)` | `()` | Replaces them; a `None` field follows the system again. Native only, for the session. |
+| `get()` | `AccessibilityPreferences` | All four at once: `reduced_motion` (forced or the system's), `forced_colors`, `contrast`, `reduced_transparency`. |
+| `reduced_motion()` | `bool` | Whether motion is reduced: the forced answer, else the system's. |
+| `set_reduced_motion(reduced: Option<bool>)` | `()` | Forces reduced motion on or off for the session; `None` follows the system again. |
+| `forced_colors()` | `bool` | Whether the system forces its own colors. |
+| `contrast()` | `Contrast` | `Contrast::NoPreference`, `More` or `Less`. |
+| `reduced_transparency()` | `bool` | Whether the system asks for less transparency. |
 
-`AccessibilityPreferences` has `reduced_motion`, `forced_colors`,
-`reduced_transparency` (`bool`) and `contrast` (`Contrast::NoPreference`,
-`More`, `Less`). `AccessibilityOverrides` has the same fields as `Option`s.
-
-`Clone`, not `Copy`: clone it into each handler.
+Every getter is reactive. `Clone`, not `Copy`: clone it into each handler.

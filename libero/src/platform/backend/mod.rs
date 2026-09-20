@@ -539,13 +539,15 @@ pub(crate) fn when_laid_out(run: Box<dyn FnOnce()>) {
 pub(crate) const ANSWERS_A11Y_MEDIA: bool =
     cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
-/// The web's `matchMedia`, and the desktop portal for Blitz on Linux.
+/// The web's and a WebView's `matchMedia`, and the desktop portal for Blitz on Linux.
 pub(crate) fn a11y_media() -> Option<&'static dyn A11yMediaApi> {
     #[cfg(target_arch = "wasm32")]
     return web::a11y_media();
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::a11y_media();
     #[cfg(all(target_os = "linux", feature = "native"))]
     return portal::a11y_media();
-    #[cfg(not(any(target_arch = "wasm32", all(target_os = "linux", feature = "native"))))]
+    #[cfg(all(not(target_os = "linux"), feature = "native"))]
     return None;
 }
 

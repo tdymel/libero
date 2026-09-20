@@ -79,7 +79,7 @@ fn hooks() -> Vec<HookRow> {
         ),
         row(
             "use_accessibility",
-            "The reader's motion, contrast and transparency preferences, and app overrides.",
+            "The reader's motion, contrast and transparency settings; forces reduced motion.",
             Route::UseAccessibilityPage {},
         ),
         row(

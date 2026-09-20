@@ -16,13 +16,14 @@ use dioxus::core::{Runtime, ScopeId, Task, spawn_forever};
 use dioxus::document::{Document, eval};
 use dioxus::prelude::{Key, Modifiers, spawn};
 
+use crate::platform::a11y_media::A11yMediaSubscription;
 use crate::platform::{
-    ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi, KeyChord,
-    KeySubscription, KeyboardApi, PlatformError, Read, ScrollApi, ScrollSubscription,
+    A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi,
+    KeyChord, KeySubscription, KeyboardApi, PlatformError, Read, ScrollApi, ScrollSubscription,
     clipboard::{ClipboardApi, Write},
     keyboard::{CLICKED_INPUT_TYPES, warn_reserved_chord},
 };
-use crate::tokens::{ColorScheme, ColorSchemeSetting};
+use crate::tokens::{AccessibilityPreferences, ColorScheme, ColorSchemeSetting, Contrast};
 
 thread_local! {
     /// [`runs_scripts`]'s answer per document: one thread may serve SSR and liveview.
@@ -229,6 +230,96 @@ pub(super) fn prefers_reduced_motion() -> bool {
         REDUCED_MOTION.set(Some(reduced))
     });
     false
+}
+
+pub(super) fn a11y_media() -> Option<&'static dyn A11yMediaApi> {
+    runs_scripts().then_some(&A11Y_MEDIA as &'static dyn A11yMediaApi)
+}
+
+/// The page's accessibility media queries, as the web backend reads them.
+struct WebViewA11yMedia;
+
+static A11Y_MEDIA: WebViewA11yMedia = WebViewA11yMedia;
+
+type A11yCallback = Rc<dyn Fn(AccessibilityPreferences)>;
+
+thread_local! {
+    static A11Y: Cell<Option<AccessibilityPreferences>> = const { Cell::new(None) };
+    static A11Y_CALLBACKS: RefCell<Vec<(u64, A11yCallback)>> = const { RefCell::new(Vec::new()) };
+    static NEXT_A11Y_CALLBACK: Cell<u64> = const { Cell::new(0) };
+}
+
+/// The defaults until the page first answers; every answer then reaches the subscribers.
+fn watch_a11y() {
+    if A11Y.get().is_some() {
+        return;
+    }
+    A11Y.set(Some(AccessibilityPreferences::default()));
+    let script = eval(
+        "const queries = (await dioxus.recv()).map((query) => window.matchMedia(query));
+        const send = () => dioxus.send(queries.map((query) => query.matches));
+        send();
+        queries.forEach((query) => query.addEventListener('change', send));
+        await new Promise(() => {});",
+    );
+    let _ = script.send([
+        crate::sx::REDUCED_MOTION,
+        crate::sx::FORCED_COLORS,
+        "(prefers-contrast: more)",
+        "(prefers-contrast: less)",
+        "(prefers-reduced-transparency: reduce)",
+    ]);
+    spawn_forever(async move {
+        let mut script = script;
+        while let Ok([motion, forced, more, less, transparency]) = script.recv::<[bool; 5]>().await
+        {
+            let preferences = AccessibilityPreferences {
+                reduced_motion: motion,
+                forced_colors: forced,
+                contrast: match (more, less) {
+                    (true, _) => Contrast::More,
+                    (_, true) => Contrast::Less,
+                    _ => Contrast::NoPreference,
+                },
+                reduced_transparency: transparency,
+            };
+            if A11Y.replace(Some(preferences)) == Some(preferences) {
+                continue;
+            }
+            let callbacks: Vec<_> = A11Y_CALLBACKS
+                .with_borrow(|callbacks| callbacks.iter().map(|(_, call)| call.clone()).collect());
+            for callback in callbacks {
+                callback(preferences);
+            }
+        }
+    });
+}
+
+impl A11yMediaApi for WebViewA11yMedia {
+    fn system(&self) -> AccessibilityPreferences {
+        watch_a11y();
+        A11Y.get().unwrap_or_default()
+    }
+
+    fn on_change(
+        &self,
+        callback: Box<dyn Fn(AccessibilityPreferences)>,
+    ) -> Box<dyn A11yMediaSubscription> {
+        watch_a11y();
+        let id = NEXT_A11Y_CALLBACK.replace(NEXT_A11Y_CALLBACK.get() + 1);
+        A11Y_CALLBACKS.with_borrow_mut(|callbacks| callbacks.push((id, Rc::from(callback))));
+        Box::new(WebViewA11yMediaSubscription(id))
+    }
+}
+
+struct WebViewA11yMediaSubscription(u64);
+
+impl A11yMediaSubscription for WebViewA11yMediaSubscription {}
+
+impl Drop for WebViewA11yMediaSubscription {
+    fn drop(&mut self) {
+        A11Y_CALLBACKS.with_borrow_mut(|callbacks| callbacks.retain(|(id, _)| *id != self.0));
+    }
 }
 
 pub(super) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
