@@ -61,6 +61,7 @@ mod ids;
 mod image;
 mod image_list;
 mod indicator;
+mod input;
 mod kbd;
 mod lightbox;
 mod list;

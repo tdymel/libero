@@ -50,12 +50,6 @@ str_enum! {
 
 input_from_str!(CascaderLayout);
 
-impl From<CascaderLayout> for Input<CascaderLayout> {
-    fn from(value: CascaderLayout) -> Self {
-        Self::Value(value)
-    }
-}
-
 /// The value-free tree, compared by `Rc` pointer; see `CascaderCoreProps::options`.
 #[derive(Clone)]
 pub(super) struct CascaderTree(pub Rc<Vec<CascaderNode>>);

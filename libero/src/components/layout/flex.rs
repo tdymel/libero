@@ -38,12 +38,6 @@ impl From<bool> for FlexWrap {
     }
 }
 
-impl From<FlexWrap> for Input<FlexWrap> {
-    fn from(value: FlexWrap) -> Self {
-        Input::Value(value)
-    }
-}
-
 impl From<bool> for Input<FlexWrap> {
     fn from(value: bool) -> Self {
         Input::Value(FlexWrap::from(value))
@@ -63,6 +57,12 @@ mod tests {
         assert_eq!(FlexWrap::from("wrap"), FlexWrap::Wrap);
         assert_eq!(FlexWrap::from("wrap-reverse"), FlexWrap::NoWrap);
         assert_eq!(FlexWrap::from("nonsense"), FlexWrap::NoWrap);
+    }
+
+    #[test]
+    fn direction_takes_the_enum_as_well_as_a_string() {
+        let direction: Input<FlexDirection> = FlexDirection::Row.into();
+        assert_eq!(direction, Input::from("row"));
     }
 }
 

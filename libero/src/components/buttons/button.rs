@@ -20,12 +20,6 @@ use crate::{
 
 input_from_str!(NavigationTarget);
 
-impl From<NavigationTarget> for Input<NavigationTarget> {
-    fn from(value: NavigationTarget) -> Self {
-        Input::Value(value)
-    }
-}
-
 // Sealed: only `#[props(into)]` names it, through the impl below.
 #[doc(hidden)]
 #[allow(unnameable_types)]

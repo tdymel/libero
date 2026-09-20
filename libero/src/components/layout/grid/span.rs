@@ -18,12 +18,6 @@ str_enum! {
 
 crate::components::common::input_from_str!(GridSpan);
 
-impl From<GridSpan> for Input<GridSpan> {
-    fn from(value: GridSpan) -> Self {
-        Input::Value(value)
-    }
-}
-
 impl GridSpan {
     /// Columns of the zone's twelve.
     pub const fn columns(self) -> u8 {

@@ -81,9 +81,12 @@ impl Input<ThemeAwareValue> {
     }
 }
 
-/// `&str`/`String` -> `Input<T>` for a `str_enum!` type; `#[props(into)]` can't chain it.
+/// `&str`/`String`/`T`/`Option<T>` -> `Input<T>` for a `str_enum!` type -
+/// `#[props(into)]` can't chain that on its own.
 macro_rules! input_from_str {
     ($ty:ty) => {
+        $crate::sx::input::input_from!($ty);
+
         impl From<&str> for $crate::sx::Input<$ty> {
             fn from(value: &str) -> Self {
                 Self::Value(<$ty>::from(value))
@@ -104,13 +107,13 @@ pub(crate) use input_from_str;
 macro_rules! input_from {
     ($($ty:ty),+ $(,)?) => {
         $(
-            impl From<$ty> for Input<$ty> {
+            impl From<$ty> for $crate::sx::Input<$ty> {
                 fn from(value: $ty) -> Self {
                     Self::Value(value)
                 }
             }
 
-            impl From<Option<$ty>> for Input<$ty> {
+            impl From<Option<$ty>> for $crate::sx::Input<$ty> {
                 fn from(value: Option<$ty>) -> Self {
                     match value {
                         Some(value) => Self::Value(value),
@@ -122,7 +125,9 @@ macro_rules! input_from {
     };
 }
 
-input_from!(Sx, ClassList, Size, f32, f64, usize, States, Variables);
+pub(crate) use input_from;
+
+input_from!(Sx, f32, f64, usize, States, Variables);
 
 impl From<&'static StaticSx> for Input<Sx> {
     fn from(value: &'static StaticSx) -> Self {

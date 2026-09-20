@@ -25,12 +25,6 @@ str_enum! {
 
 input_from_str!(TabsActivation);
 
-impl From<TabsActivation> for Input<TabsActivation> {
-    fn from(value: TabsActivation) -> Self {
-        Input::Value(value)
-    }
-}
-
 // Hand-written: `base_props!` is not generic.
 #[derive(Props, Clone, PartialEq)]
 pub struct TabsProps<T: Options> {

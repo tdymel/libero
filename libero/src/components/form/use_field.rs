@@ -25,12 +25,6 @@ use crate::{
 
 input_from_str!(ChoiceVariant);
 
-impl From<ChoiceVariant> for Input<ChoiceVariant> {
-    fn from(value: ChoiceVariant) -> Self {
-        Input::Value(value)
-    }
-}
-
 /// The wrapper styles all four text slots by `data-slot`, saving four
 /// stylesheet registrations per field.
 static FIELD_SX: StaticSx = StaticSx::new(|| {
