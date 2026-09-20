@@ -20,14 +20,28 @@ static KBD_BASE_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub struct KbdProps {
-        /// Font size. Everything else about the look is `Theme::kbd` only.
+        /// Font size; the rest of the look is `Theme::kbd`.
         #[props(default, into)]
         size: Input<Size>,
         children: Element,
     }
 }
 
-/// A single keyboard key, rendered as a real `<kbd>`.
+/// A single keyboard key, rendered as a `<kbd>`.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Kbd;
+/// # fn app() -> Element {
+/// rsx! {
+///     Kbd { "Ctrl" }
+///     " + "
+///     Kbd { "K" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/typography/kbd>
 #[component]
 pub fn Kbd(props: KbdProps) -> Element {
     let theme = use_theme();

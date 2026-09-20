@@ -13,8 +13,7 @@ use crate::{
     tokens::NamedColorCss,
 };
 
-/// Where a repository lives. A new host is one value here plus its arms below:
-/// a page, an API URL and the reply's count field.
+/// Where a repository lives.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash)]
 pub enum RepoHost {
     #[default]
@@ -60,8 +59,7 @@ impl RepoHost {
     }
 }
 
-/// Where a count is kept for the session, by API URL. Unauthenticated calls
-/// are rate limited (GitHub: 60 an hour), so a remount or reload never asks twice.
+/// Session cache key: unauthenticated calls are rate limited (GitHub: 60 an hour).
 fn stars_key(api: &str) -> String {
     format!("libero-repo-stars:{api}")
 }
@@ -70,7 +68,6 @@ fn cached_stars(api: &str) -> Option<u64> {
     platform::session_get(&stars_key(api))?.parse().ok()
 }
 
-/// The count in a host's JSON reply.
 fn parse_stars(body: &str, field: &str) -> Option<u64> {
     serde_json::from_str::<serde_json::Value>(body)
         .ok()?
@@ -78,8 +75,7 @@ fn parse_stars(body: &str, field: &str) -> Option<u64> {
         .as_u64()
 }
 
-/// `999`, `1.2k`, `12k`, `1.2M`, with the locale's decimal separator. Rounds
-/// down, so a count never shows more than it is.
+/// `999`, `1.2k`, `12k`, `1.2M`. Rounds down, so it never shows more than it is.
 fn compact_count(count: u64, separator: &str) -> String {
     let scaled = |unit: u64, suffix: &str| {
         let tenths = count * 10 / unit;
@@ -105,8 +101,7 @@ static GLYPH_SX: StaticSx = StaticSx::new(|| {
         .height(side)
 });
 
-/// With a count, the square grows into a pill: icon, then number. On a
-/// wrapper, so the caller's `class`, `sx` and attributes reach the link untouched.
+/// With a count, the square grows into a pill. On a wrapper, leaving the caller's `sx` alone.
 static STARS_SX: StaticSx = StaticSx::new(|| {
     sx().display("contents").when(
         "stars",
@@ -121,25 +116,19 @@ static STARS_SX: StaticSx = StaticSx::new(|| {
     )
 });
 
-/// Text needs 4.5:1, which an unfilled label (3:1 is enough for an icon) and
-/// the muted tonal one can miss. A filled or tonal label passes.
+/// Text needs 4.5:1, which an unfilled or muted tonal label can miss.
 static COUNT_SX: StaticSx =
     StaticSx::new(|| sx().when("ink", sx().color(NamedColorCss::INK.value())));
 
 base_props! {
     pub struct RepoButtonProps {
-        /// `owner/repo`, as in the repository's URL. GitLab takes nested
-        /// groups too: `group/subgroup/repo`.
+        /// `owner/repo`, as in the repository's URL; GitLab takes nested groups.
         repo: String,
         /// Unset, GitHub.
         #[props(default)]
         host: RepoHost,
-        /// Unset, the theme's
-        /// [`RepoButtonDefaults::variant`](crate::theme::RepoButtonDefaults).
         #[props(default, into)]
         variant: Input<Variant>,
-        /// Unset, the theme's
-        /// [`RepoButtonDefaults::color`](crate::theme::RepoButtonDefaults).
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -150,9 +139,7 @@ base_props! {
 }
 
 /// A link to a repository that shows its star count beside the host's icon.
-/// The count is fetched once per mount and kept for the session; until it
-/// lands, when it is 0, or when the host does not answer, the icon stands
-/// alone. It opens in a new tab, and its name says so.
+/// Native builds need dioxus-native's `net` feature for the count.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -165,8 +152,7 @@ base_props! {
 /// # }
 /// ```
 ///
-/// Native builds fetch through dioxus-native's network provider, so the
-/// count needs its `net` feature there.
+/// Docs: <https://libero-ui.dev/buttons/repo-button>
 #[component]
 pub fn RepoButton(props: RepoButtonProps) -> Element {
     let theme = use_theme();
@@ -211,8 +197,7 @@ pub fn RepoButton(props: RepoButtonProps) -> Element {
         .color
         .into_option()
         .unwrap_or_else(|| theme.repo_button.color.into());
-    // A tonal palette colour's label passes; an unfilled one's may not (`warning`
-    // is 3.27:1). A literal fill's label is the button's own readable contrast.
+    // An unfilled label may miss 4.5:1 (`warning` is 3.27:1).
     let ink = match variant {
         Variant::Filled => false,
         Variant::Tonal => color == ThemeAwareValue::from(Color::Muted),

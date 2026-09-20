@@ -1,26 +1,7 @@
 use dioxus::prelude::*;
 
-/// The library's glyphs.
-///
-/// libero ships no icon set on purpose - an icon set is a design decision a
-/// project makes, not a component library. What lives here is the short list a
-/// *component* cannot do without: a close button has to draw something, and
-/// three modules drawing their own x is how the library ended up with three
-/// slightly different ones.
-///
-/// **The convention, library-wide**: a new glyph goes here. No component keeps
-/// a private one (todo 95 swept the last of them in).
-///
-/// A glyph here carries no size. It inherits `currentColor` and fills whatever
-/// box it is given - `ActionIcon`'s base has `& svg { width: 100%; height: 100% }`,
-/// which beats an `svg` presentation attribute anyway, so a hardcoded
-/// `width="16px"` inside one was never doing anything. A caller that needs a
-/// size states it on the element around the glyph.
-///
-/// `aria-hidden` is on the glyph rather than left to the caller: none of these
-/// carry meaning a reader needs, and the one place a glyph *is* the whole
-/// control - an icon-only button - is `ActionIcon`, which requires its own
-/// `aria_label`.
+/// The glyphs components cannot do without; every new one goes here (todo 95). Sizeless,
+/// `currentColor` and `aria-hidden`: the caller sizes the box around it.
 #[component]
 pub(crate) fn CloseIcon() -> Element {
     rsx! {
@@ -38,8 +19,7 @@ pub(crate) fn CloseIcon() -> Element {
     }
 }
 
-/// Points down while its disclosure is closed. The rotation that turns it is
-/// the caller's, on the element around it.
+/// Points down while its disclosure is closed; the caller rotates it.
 #[component]
 pub(crate) fn ChevronDownIcon() -> Element {
     rsx! {
@@ -56,8 +36,7 @@ pub(crate) fn ChevronDownIcon() -> Element {
     }
 }
 
-/// Two bars. Filled rather than stroked, so it keeps its weight at the small
-/// sizes a corner control is drawn at.
+/// Two bars, filled so they keep their weight at small sizes.
 #[component]
 pub(crate) fn PauseIcon() -> Element {
     rsx! {
@@ -100,8 +79,7 @@ pub(crate) fn CheckIcon() -> Element {
     }
 }
 
-/// Points at a submenu, which opens to the right. A menu that flips its
-/// submenu to the left keeps it pointing right, as native menus do.
+/// Points at a submenu; stays pointing right even when the submenu flips, as native menus do.
 #[component]
 pub(crate) fn ChevronRightIcon() -> Element {
     rsx! {
@@ -277,8 +255,7 @@ pub(crate) fn EyeOffIcon() -> Element {
     }
 }
 
-/// A file field's dropzone prompt. A tray with an arrow going into it, which
-/// is the shape every upload control has settled on.
+/// A file field's dropzone prompt: a tray with an arrow going into it.
 #[component]
 pub(crate) fn UploadIcon() -> Element {
     rsx! {
@@ -439,8 +416,7 @@ pub(crate) fn CopyIcon() -> Element {
     }
 }
 
-/// [`CopyIcon`]'s other state. A check, but not [`CheckIcon`]'s path: the two
-/// were drawn apart and are kept apart so the move changed nothing visible.
+/// [`CopyIcon`]'s other state. Not [`CheckIcon`]'s path, so nothing visible changed.
 #[component]
 pub(crate) fn CopiedIcon() -> Element {
     rsx! {

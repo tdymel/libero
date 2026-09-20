@@ -9,10 +9,7 @@ macro_rules! html_tags {
         default { $($dvariant:ident => $dtag:ident),* $(,)? }
         full { $($fvariant:ident => $ftag:ident),* $(,)? }
     ) => {
-        /// Always the full HTML5 element set - `full-polymorphism` controls
-        /// how many of `render_polymorphic`'s arms compile, not this type. So
-        /// a `full`-tier variant always compiles; without the feature it just
-        /// renders as `<div>`.
+        /// Every HTML5 element. A `full`-tier tag renders as `<div>` without `full-polymorphism`.
         #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         pub enum HtmlTag {
             $($dvariant,)*
@@ -74,14 +71,8 @@ macro_rules! html_tags {
             }
         }
 
-        /// Renders on whichever element `component` selects. `attributes`
-        /// carries event handlers too - `extends = GlobalAttributes` captures
-        /// them generically, so each arm only has to spread it.
-        ///
-        /// Only the `default` tier's arms compile unconditionally; the rest
-        /// need `full-polymorphism` and fall back to `<div>` without it. That
-        /// is what keeps a consumer using a handful of tags from paying for
-        /// all 111.
+        /// Renders on the element `component` selects; `attributes` carries the handlers too.
+        /// Only `default`-tier arms compile unconditionally, so few tags do not pay for 111.
         pub(crate) fn render_polymorphic(
             component: HtmlTag,
             class: String,
@@ -101,8 +92,7 @@ macro_rules! html_tags {
                         $ftag { ..attributes, {children.into_iter()} }
                     },
                 )*
-                // The value is fine, the build configuration is not - a
-                // different fix from a typo, so a different message.
+                // A build-config problem, not a typo, so a different message.
                 #[cfg(not(feature = "full-polymorphism"))]
                 _ => {
                     crate::utils::warn(&format!(
@@ -117,17 +107,12 @@ macro_rules! html_tags {
     };
 }
 
-/// What a component hands to `render` as its children.
-///
-/// Anything but a single `Element` splices its nodes straight into the
-/// element's template. Wrapping them in one more `Element` - which is what an
-/// `rsx! {}` block at the call site does - costs a dynamic node every render,
-/// and an empty one costs it for nothing.
+/// What a component hands to `render` as its children. Prefer these over an `rsx! {}`
+/// wrapper, which costs a dynamic node every render.
 pub(crate) trait IntoChildren {
     fn into_children(self) -> Vec<Element>;
 }
 
-/// No children at all.
 impl IntoChildren for () {
     fn into_children(self) -> Vec<Element> {
         Vec::new()
@@ -152,25 +137,8 @@ impl IntoChildren for Vec<Element> {
     }
 }
 
-/// Merges the styling triple into a caller's attributes, so the element carries
-/// one spread instead of three dynamic slots. A slot is diffed every render even
-/// when its value is `None`; a `Vec` entry that is not there costs nothing.
-///
-/// A caller's own `class`/`style` is merged with ours rather than emitted twice:
-/// a duplicate attribute silently drops one of the two, and which one depends on
-/// the renderer (SSR keeps the first, the DOM the last). Ours go first, so a
-/// caller's declarations win the cascade.
-///
-/// `class` is `None` for a caller that carries the class itself - the router
-/// `Link`, which renders its own `class` slot. A caller's `class` attribute is
-/// then left where it is, since there is nothing here to merge it into.
-///
-/// `aria-describedby` is merged for the same reason and by the same rule: it
-/// is a list of ids, so racing the caller's against the component's drops one
-/// of them - which took a field's validation message away from AT whenever the
-/// caller pointed at a hint of their own. The first occurrence keeps its
-/// place, and the component's attributes are appended after the caller's, so
-/// the caller's ids come first.
+/// Merges class/`data-state`/style into one attribute spread; a duplicate `class`, `style` or
+/// `aria-describedby` would drop one side, so they are joined (ours first). `class: None` for `Link`.
 pub(crate) fn styling_attributes(
     class: Option<String>,
     data_state: Option<String>,
@@ -251,20 +219,8 @@ fn join(into: &mut String, value: &str, separator: char) {
     into.push_str(value);
 }
 
-// The `default` tier is every tag a page is written out of: the sectioning,
-// text-level, list, table and form elements, plus every tag `libero` and
-// `docs` render themselves. It compiles unconditionally, so `Box`'s promise
-// that it "renders as any tag via `component`" holds on default features for
-// the tags a caller actually reaches for.
-//
-// `full` is what is left: document metadata (`head`, `meta`, `title`,
-// `script`, `style`, `link`, `base`, `body`, `noscript`), embedded and media
-// content (`iframe`, `canvas`, `audio`, `video`, `picture`, `source`,
-// `track`, `embed`, `object`, `param`, `map`, `area`), web components
-// (`template`, `slot`) and the bidi/ruby annotation set (`bdi`, `bdo`,
-// `ruby`, `rp`, `rt`). None of them is something a component library styles,
-// and each still type-checks without the feature - it renders as `<div>` and
-// `warn()`s. A new tag never grows this split, it only picks a side.
+// `default`: every tag a page is written out of, plus all `libero` and `docs` render.
+// `full`: metadata, media, web-component and bidi/ruby tags, behind `full-polymorphism`.
 html_tags! {
     default {
         A => a,
@@ -475,8 +431,7 @@ mod tests {
         assert_eq!(named(&out)[1], ("style", "color:blue;".into()));
     }
 
-    /// The `Link` path: the class stays a prop, so a caller's `class`
-    /// attribute is left alone rather than merged into nothing.
+    /// The `Link` path: the class stays a prop, so a caller's `class` is left alone.
     #[test]
     fn without_a_class_of_ours_the_callers_is_untouched() {
         let out = styling_attributes(

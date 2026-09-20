@@ -15,9 +15,8 @@ enum Owed {
     Unknown(Vec<(String, String)>),
 }
 
-/// Focus return out of content that closes around focus: a "Continue" button
-/// in an `Accordion` panel or a `Stepper` step. Asked during render, against
-/// the DOM the previous render left; repaid from the owner's effect.
+/// Focus return out of content that closes around focus, e.g. a `Stepper` step.
+/// Asked during render, repaid from the owner's effect.
 #[derive(Clone)]
 pub(crate) struct ClosingFocus {
     root: ElementHandle,
@@ -62,8 +61,7 @@ impl ClosingFocus {
         }
     }
 
-    /// From the owner's effect. An unknown answer is asked at the end of the
-    /// poll natively, while the closing content is still mounted.
+    /// From the owner's effect. Natively an unknown answer is asked once the document is free.
     pub(crate) fn repay(&self) {
         let owed = std::mem::replace(&mut *self.owed.borrow_mut(), Owed::Nothing);
         let root = self.root;

@@ -1,26 +1,13 @@
-//! What a strip of choices is made of: a finite, ordered set of values. A
-//! component is generic over it, so the choices are the caller's own domain
-//! type rather than a bag of strings.
-//!
-//! `String` is the only impl libero ships, and it lists nothing - a runtime
-//! set has no canonical options, so it arrives through the component's own
-//! override prop instead.
+//! A finite, ordered set of choices, so a component's choices are the caller's own type.
 
 use dioxus::prelude::*;
 
-/// A value one choice stands for.
+/// A value one choice stands for; `#[derive(Options)]` writes it for a unit enum.
 ///
-/// **`PartialEq` is identity, not content.** It is how a component finds the
-/// selected choice, so a type whose fields change under it (an `Order` whose
-/// total is edited) must compare its id alone - deriving over every field
-/// makes the selection silently vanish instead.
-///
-/// `#[derive(Options)]` writes this for an enum of unit variants: the
-/// variants in declaration order are the choices, each one's name its label.
+/// `PartialEq` is identity: a type whose fields change must compare its id alone,
+/// or the selection vanishes.
 pub trait Options: Clone + PartialEq + 'static {
-    /// Every choice, in order. Defaults to none: a type whose set is runtime
-    /// data (a `String`, a fetched record) implements `label` alone and
-    /// passes the list through the component's own override prop.
+    /// Every choice, in order. None by default: a runtime set comes through the component's prop.
     fn options() -> &'static [Self]
     where
         Self: Sized,
@@ -28,18 +15,11 @@ pub trait Options: Clone + PartialEq + 'static {
         &[]
     }
 
-    /// The choice's visible text and accessible name. Override it per
-    /// instance with the component's `label` prop - that one runs during
-    /// render, so it can read a locale from context.
+    /// The choice's visible text and accessible name.
     fn label(&self) -> String;
 
-    /// What a hidden input posts for this choice, so a select can take part in
-    /// a native form submit.
-    ///
-    /// Defaults to [`Options::label`], which is right for a runtime set like
-    /// `String`. The derive overrides it with the **variant's name**, so a
-    /// `#[option(label = "..")]` - or a translated label - never changes what
-    /// a form sends.
+    /// What a form posts for this choice. The derive uses the variant's name, so a
+    /// translated label never changes it.
     fn value(&self) -> String {
         self.label()
     }
@@ -52,11 +32,7 @@ impl Options for String {
     }
 }
 
-/// What a choice is called, and optionally how it is drawn.
-///
-/// A bare string is both (`"Konto".into()`); [`OptionLabel::rich`] takes the
-/// two apart for an icon or a badge - and asks for the name anyway, because
-/// the rsx is what a screen reader cannot use.
+/// What a choice is called, and optionally how it is drawn. A bare string is both.
 #[derive(Clone, PartialEq)]
 pub struct OptionLabel {
     pub(crate) name: String,
@@ -64,6 +40,7 @@ pub struct OptionLabel {
 }
 
 impl OptionLabel {
+    /// Drawn `content` with a plain-text accessible `name`.
     pub fn rich(name: impl Into<String>, content: Element) -> Self {
         Self {
             name: name.into(),

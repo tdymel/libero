@@ -17,20 +17,15 @@ static GLYPH_SX: StaticSx =
 
 base_props! {
     pub struct DirectionToggleProps {
-        /// Unset, the theme's
-        /// [`DirectionToggleDefaults::variant`](crate::theme::DirectionToggleDefaults).
         #[props(default, into)]
         variant: Input<Variant>,
-        /// Unset, the theme's
-        /// [`DirectionToggleDefaults::color`](crate::theme::DirectionToggleDefaults).
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
-        /// Replaces the localization's two names. Given the direction a press
-        /// turns the text to, it names what the press does.
+        /// Names the press, given the direction it turns to. Replaces the localized names.
         #[props(default)]
         label: Option<Callback<Direction, String>>,
         #[props(default)]
@@ -38,10 +33,7 @@ base_props! {
     }
 }
 
-/// An icon button that turns the app's text between left to right and right
-/// to left, through [`use_direction`](crate::hooks::use_direction). The glyph
-/// and the name both say where a press goes: the arrow points the way the
-/// text will run.
+/// An icon button that flips the app's text direction between LTR and RTL.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -50,6 +42,8 @@ base_props! {
 /// rsx! { DirectionToggle {} }
 /// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/buttons/direction-toggle>
 #[component]
 pub fn DirectionToggle(props: DirectionToggleProps) -> Element {
     let theme = use_theme();

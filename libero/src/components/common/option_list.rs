@@ -1,25 +1,8 @@
-//! The shape of a list of choices, and where it comes from.
-//!
-//! [`Options`](super::Options) says what one choice is. This says how a
-//! component is handed a set of them: flat or in named groups, with any of
-//! them disabled, and either already here or still being fetched.
-//!
-//! Three types, each one axis:
-//!
-//! - [`OptionItem`] - one choice plus the flags a *list* gives it. `disabled`
-//!   belongs here rather than on the caller's `T`, because a type does not know
-//!   which of its values this particular field refuses.
-//! - [`OptionList`] - flat, or a run of named groups.
-//! - [`OptionSource`] - an [`OptionList`] that may not have arrived yet. It is
-//!   what the `options` prop takes, and a `Vec<T>` converts into it, so every
-//!   call site that passes one keeps working.
+//! A list of choices: flat or grouped, with some disabled, ready or still being fetched.
 
 use dioxus::prelude::*;
 
-/// One choice, and the flags the list around it gives that choice.
-///
-/// A plain value converts, so a list of them mixes freely with the flagged
-/// ones: `[Berlin.into(), OptionItem::new(Bonn).disabled(true)]`.
+/// One choice and its list flags: `[Berlin.into(), OptionItem::new(Bonn).disabled(true)]`.
 #[derive(Clone, PartialEq, Debug)]
 pub struct OptionItem<T> {
     pub(crate) value: T,
@@ -34,8 +17,7 @@ impl<T> OptionItem<T> {
         }
     }
 
-    /// A row that is drawn and read out, `aria-disabled`, but that the arrows,
-    /// typeahead and clicks all pass over.
+    /// Drawn and announced as `aria-disabled`, but skipped by arrows, typeahead and clicks.
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -56,16 +38,10 @@ impl<T> From<T> for OptionItem<T> {
     }
 }
 
-/// The choices a list draws: one unnamed run, or several named ones.
-///
-/// Groups are explicit rather than derived from a field or a closure, because
-/// the caller is the only one who knows both the order the groups go in and
-/// what each is called. Nothing below the component sees them: they change how
-/// the rows are wrapped, never which index a row reports.
+/// The choices a list draws: one unnamed run, or several named groups.
 #[derive(Clone, PartialEq, Debug)]
 pub struct OptionList<T> {
-    /// In order. A `None` label is an unnamed run, which is what a flat list
-    /// is made of.
+    /// In order; a `None` label is an unnamed run.
     groups: Vec<(Option<String>, Vec<OptionItem<T>>)>,
 }
 
@@ -92,19 +68,8 @@ impl<T> OptionList<T> {
         Self::default()
     }
 
-    /// A named run of choices, after the ones already added.
-    ///
-    /// **The caller's order is kept, always.** A label used twice with another
-    /// group between the two - `group("A", ..).group("B", ..).group("A", ..)` -
-    /// draws the heading twice rather than merging the two runs, because
-    /// merging would silently reorder options the caller listed in a
-    /// particular order. Two groups that happen to share a name are legal:
-    /// nothing requires a `role="group"` to be uniquely named, and each
-    /// heading gets an id of its own, keyed on its run's first row.
-    ///
-    /// Two *adjacent* calls with one label still draw one heading - the
-    /// dropdown builds its groups by run, so equal neighbours are one run and
-    /// nothing is lost.
+    /// A named run of choices, after the ones already added. Order is kept: a repeated,
+    /// non-adjacent label draws its heading twice rather than merging.
     pub fn group(
         mut self,
         label: impl Into<String>,
@@ -115,8 +80,7 @@ impl<T> OptionList<T> {
         self
     }
 
-    /// Every choice, groups flattened away, in the order they are drawn. This
-    /// is the index space every component below works in.
+    /// Every choice in drawn order: the index space the components work in.
     pub(crate) fn items(&self) -> impl Iterator<Item = &OptionItem<T>> {
         self.groups.iter().flat_map(|(_, members)| members)
     }
@@ -133,10 +97,7 @@ impl<T> OptionList<T> {
         self.items().map(|item| item.disabled).collect()
     }
 
-    /// Flags every choice the predicate names, wherever it sits.
-    ///
-    /// The other half of [`from_options`](Self::from_options): the whole list
-    /// is the type's, and this says which of it this particular field refuses.
+    /// Disables every choice the predicate names. It only adds flags, never clears one.
     ///
     /// ```
     /// # use libero::components::{OptionList, Options};
@@ -144,10 +105,6 @@ impl<T> OptionList<T> {
     /// let plans: OptionList<Plan> =
     ///     OptionList::from_options().disabling(|plan| *plan == Plan::Team);
     /// ```
-    ///
-    /// It only ever *adds* a flag: a choice an [`OptionItem`] already disabled
-    /// stays disabled whatever the predicate says, so the two ways of writing
-    /// the same list cannot fight.
     pub fn disabling(mut self, disabled: impl Fn(&T) -> bool) -> Self {
         for (_, members) in &mut self.groups {
             for item in members {
@@ -157,13 +114,8 @@ impl<T> OptionList<T> {
         self
     }
 
-    /// One group label per choice, parallel to [`values`](Self::values),
-    /// `None` for a choice in an unnamed run.
-    ///
-    /// Parallel rather than nested, because the search filter drops rows from
-    /// the middle of the list: a group's members stay next to each other
-    /// whatever survives, so the dropdown rebuilds the runs from this and
-    /// nothing has to be remapped.
+    /// One group label per choice, parallel to [`values`](Self::values), so filtering
+    /// needs no remapping.
     pub(crate) fn group_labels(&self) -> Vec<Option<String>> {
         self.groups
             .iter()
@@ -173,13 +125,7 @@ impl<T> OptionList<T> {
 }
 
 impl<T: super::Options> OptionList<T> {
-    /// Every [`Options::options()`](super::Options::options), flat and in
-    /// declaration order - the list a component builds for itself when its
-    /// `options` prop is left unset.
-    ///
-    /// Left unset is still the way to say "all of them", and this exists for
-    /// the case just past it: the type's own list with a choice or two
-    /// refused, which otherwise means writing every variant out by hand.
+    /// Every [`Options::options()`](super::Options::options), flat. Empty for `String`.
     ///
     /// ```
     /// # use libero::components::{OptionList, Options};
@@ -187,9 +133,6 @@ impl<T: super::Options> OptionList<T> {
     /// let plans: OptionList<Plan> =
     ///     OptionList::from_options().disabling(|plan| *plan == Plan::Team);
     /// ```
-    ///
-    /// A runtime type like `String` lists nothing, so this is empty for it -
-    /// those callers build the list they fetched.
     pub fn from_options() -> Self {
         Self::new(T::options().to_vec())
     }
@@ -204,30 +147,15 @@ impl<T> From<Vec<T>> for OptionList<T> {
 /// Where a list's choices are in their lifetime.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Arrival {
-    /// The caller passed nothing, which is not the same as passing an empty
-    /// list: it is what lets a component fall back to
-    /// [`Options::options()`](super::Options::options).
+    /// Nothing passed, unlike an empty list: falls back to `Options::options()`.
     Unset,
-    /// Being fetched. The rows and the empty state are both held back - an
-    /// async list is empty between the request and its answer, and flashing
-    /// "no results" there is a lie.
+    /// Being fetched; rows and the empty state are held back.
     Pending,
     Ready,
 }
 
-/// The `options` prop: a list of choices that may still be on its way.
-///
-/// A `Vec<T>` converts, so a call site that has its options already passes them
-/// exactly as it always did. A [`Resource`] converts too, and that is the whole
-/// of the async wiring - the component reads pending against ready itself and
-/// derives the loading row, `aria-busy` and the held-back empty state from it.
-///
-/// There is deliberately **no separate `loading` flag**: two ways to say the
-/// same thing can be set to disagree.
-///
-/// A fetch that failed is an **empty list**. The library knows pending and
-/// ready, nothing else; an error message belongs beside the field, where the
-/// caller can say what went wrong and offer a retry.
+/// The `options` prop: choices that may still be on their way. A `Vec<T>` or a
+/// [`Resource`] converts; a failed fetch is an empty list.
 #[derive(Clone, PartialEq, Debug)]
 pub struct OptionSource<T> {
     list: OptionList<T>,
@@ -244,13 +172,10 @@ impl<T> Default for OptionSource<T> {
 }
 
 impl<T> OptionSource<T> {
-    /// Whether the caller passed no options at all, so a component may list
-    /// `Options::options()` instead.
     pub(crate) fn is_unset(&self) -> bool {
         self.arrival == Arrival::Unset
     }
 
-    /// Whether the choices are still being fetched.
     pub(crate) fn is_pending(&self) -> bool {
         self.arrival == Arrival::Pending
     }
@@ -261,15 +186,7 @@ impl<T> OptionSource<T> {
 }
 
 impl<T: super::Options> OptionSource<T> {
-    /// What a component lists: the caller's choices, or every
-    /// [`Options::options()`](super::Options::options) when the prop was left
-    /// unset - the fallback a runtime type like `String` leaves empty, so
-    /// those pass their own.
-    ///
-    /// Unset is not the same as an empty list, which is why the prop is an
-    /// `OptionSource` rather than an `Option<Vec<T>>`: a caller who passes
-    /// nothing wants the type's own options, and one who passes an empty list
-    /// means it.
+    /// The caller's choices, or every `Options::options()` when the prop was left unset.
     pub(crate) fn or_static(&self) -> OptionList<T> {
         match self.is_unset() {
             true => OptionList::from_options(),
@@ -293,9 +210,7 @@ impl<T> From<Vec<T>> for OptionSource<T> {
     }
 }
 
-/// A resource is pending until it first holds a value. A refetch that still
-/// holds the last answer keeps showing it rather than blanking the list, which
-/// is what makes search-as-you-type readable.
+/// Pending until the first value; a refetch keeps showing the last answer.
 impl<T: Clone + 'static> From<Resource<Vec<T>>> for OptionSource<T> {
     fn from(resource: Resource<Vec<T>>) -> Self {
         OptionSource::<T>::from(resource.read().clone().map(OptionList::from))
@@ -308,9 +223,7 @@ impl<T: Clone + 'static> From<Resource<OptionList<T>>> for OptionSource<T> {
     }
 }
 
-/// The shape both resource conversions land on, and the way to say "pending"
-/// without a [`Resource`] - a caller driving its own fetch passes `None` while
-/// it runs and `Some(list)` once it has an answer, an empty one included.
+/// `None` is pending: for a caller driving its own fetch.
 impl<T> From<Option<OptionList<T>>> for OptionSource<T> {
     fn from(list: Option<OptionList<T>>) -> Self {
         match list {
@@ -344,9 +257,7 @@ mod tests {
         assert_eq!(list.disabled(), [false, false]);
     }
 
-    /// Groups flatten into one index space, and the parallel arrays line up
-    /// with it - which is the whole contract everything below the prop relies
-    /// on.
+    /// Groups flatten into one index space, and the parallel arrays line up with it.
     #[test]
     fn groups_flatten_in_order_with_parallel_labels_and_flags() {
         let list = cities();
@@ -362,10 +273,7 @@ mod tests {
         assert_eq!(list.disabled(), [false, true, false]);
     }
 
-    /// The caller's order wins over heading uniqueness. Merging the two
-    /// "Germany" runs would put Kiel before Paris although the caller listed it
-    /// after - silently reordering data they supplied. Drawing the heading
-    /// twice is the honest answer, and two groups sharing a name are legal.
+    /// The caller's order wins over heading uniqueness: merging would move Kiel before Paris.
     #[test]
     fn a_repeated_group_label_keeps_the_callers_order() {
         let list = cities().group("Germany", ["Kiel"]);
@@ -410,16 +318,11 @@ mod tests {
         assert!(pending.list().values().is_empty());
     }
 
-    /// `from_options` plus `disabling` is the short form of the dominant call
-    /// shape: the type's own list, with the choices this one field refuses.
-    /// It only adds flags, so it cannot undo an `OptionItem` that is already
-    /// disabled - the two spellings of one list never fight.
+    /// It only adds flags, so it cannot undo an `OptionItem` already disabled.
     #[test]
     fn disabling_flags_the_named_choices_and_never_clears_one() {
         let list = cities().disabling(|city| *city == "Paris");
         assert_eq!(list.values(), ["Berlin", "Bonn", "Paris"]);
-        // Bonn was flagged by its `OptionItem` and the predicate misses it;
-        // Paris is flagged by the predicate alone.
         assert_eq!(list.disabled(), [false, true, true]);
 
         // A predicate that names nothing leaves the list exactly as it was.

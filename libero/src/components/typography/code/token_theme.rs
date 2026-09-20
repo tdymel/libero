@@ -11,8 +11,7 @@ use crate::{
     },
 };
 
-/// Fixed classes for `highlight::RAW_SCOPE_CLASSES`: one shared, deduped
-/// stylesheet rather than per-span inline styles. Colors are `CodeDefaults`.
+/// One shared stylesheet for the token classes, not per-span styles. Colours are `CodeDefaults`.
 static TOKEN_STYLESHEET: LazyLock<String> = LazyLock::new(|| {
     format!(
         ".lsx-tok-keyword{{color:{};}}\

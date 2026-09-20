@@ -19,9 +19,7 @@ static TEXT_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("gradient", gradient_text_sx())
 });
 
-/// The gradient through the glyphs. Forced colours drop the image and force
-/// the colour, so the text stays readable. Blitz paints the whole box, so
-/// there it is the first stop, solid.
+/// The gradient through the glyphs. Blitz paints the whole box, so there it is the first stop.
 fn gradient_text_sx() -> Sx {
     if !clips_background_to_text() {
         return sx().color(GRADIENT_FROM.value());
@@ -36,19 +34,29 @@ base_props! {
     pub struct TextProps {
         #[props(default, into)]
         size: Input<Size>,
-        /// Which element to render as - `p` by default.
+        /// The element to render, `p` by default.
         #[props(default, into)]
         component: Input<HtmlTag>,
-        /// Paints the glyphs in a linear gradient; `Gradient::default()` is the
-        /// theme's. Palette stops take their text role, which reads on the
-        /// page; a literal stop's contrast is the caller's to check. A debug
-        /// build warns when a hex stop falls under 4.5:1 on the page background.
+        /// Paints the glyphs in a gradient; a literal stop's contrast is the caller's to check.
         #[props(default)]
         gradient: Option<Gradient>,
         children: Element,
     }
 }
 
+/// Themed body text, a `p` unless `component` says otherwise.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Text;
+/// # fn app() -> Element {
+/// rsx! {
+///     Text { size: "sm", "Fine print" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/typography/text>
 #[component]
 pub fn Text(props: TextProps) -> Element {
     let theme = use_theme();

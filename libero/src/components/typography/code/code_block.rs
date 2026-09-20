@@ -24,11 +24,9 @@ use crate::{
     utils::warn,
 };
 
-// Shared with `max_lines`' height math, so neither drifts from
-// `CODE_LINES_SX`'s actual line-height and padding.
+// Shared with `max_lines`' height math, so neither drifts.
 const CODE_LINE_HEIGHT_PX: u32 = 20;
-// Set once on the lines container and inherited, so the gutter's width varies
-// per block without every row carrying an `sx` of its own.
+// Set once on the lines container and inherited by every row.
 const CODE_GUTTER_WIDTH_VAR: CssVar = CssVar::new("--lsx-code-block-gutter-width");
 const CODE_LINES_VERTICAL_PADDING_PX: u32 = 24;
 
@@ -55,8 +53,7 @@ static CODE_BLOCK_HEADER_SX: StaticSx = StaticSx::new(|| {
         .color(CODE_BLOCK_MUTED_TEXT.value())
 });
 
-// Only what differs from `ActionIcon`'s own base styling. No `variant`/`color`
-// on the `CopyButton`, so these fully control the look.
+// No `variant`/`color` on the `CopyButton`, so these fully control the look.
 static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().border_radius("6px")
         .padding("5px")
@@ -67,9 +64,7 @@ static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-// Centered on the first code line, not the container, which would drift on a
-// single-line block: 12px top padding + half of the 20px line-height, minus
-// half the button's ~26px height.
+// Centred on the first code line: 12px padding + 10px half line, minus half the ~26px button.
 static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .top("9px")
@@ -94,8 +89,7 @@ static CODE_BLOCK_SCROLL_SX: StaticSx = StaticSx::new(|| {
 
 static CODE_LINES_PRE_SX: StaticSx = StaticSx::new(|| sx().display("block").margin("0"));
 
-// On the `code` inside the `pre`, so the rows keep their `pre > code`
-// semantics (todo 595).
+// On the `code` inside the `pre`, keeping `pre > code` semantics (todo 595).
 static CODE_LINES_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
@@ -104,14 +98,11 @@ static CODE_LINES_SX: StaticSx = StaticSx::new(|| {
         .padding(format!("{}px 0", CODE_LINES_VERTICAL_PADDING_PX / 2))
         .font_family(CODE_FONT_FAMILY.value())
         .font_size(Size::Sm)
-        // Explicit, not the font's metrics: the copy button's centering and
-        // `max_lines`' scroll height are computed against this exact value.
+        // Explicit: the copy button's centring and `max_lines` compute against it.
         .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
 });
 
-// `box-shadow` rather than `border-left`, so the accent bar doesn't shift
-// content relative to unmarked rows. The three states are mutually exclusive
-// (see `code_lines`'s `row_state`).
+// `box-shadow`, not `border-left`, so the accent bar doesn't shift content.
 static CODE_LINE_ROW_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("row")
@@ -122,8 +113,7 @@ static CODE_LINE_ROW_SX: StaticSx = StaticSx::new(|| {
         .when("diff-remove", marked_row_sx(ColorCss::ERROR))
 });
 
-// A faint wash of the accent over the block's own ground: the `.1` tint took
-// the token colours under 4.5:1, and in dark mode it was a light tint.
+// A faint wash: the `.1` tint took the token colours under 4.5:1.
 fn marked_row_sx(color: ColorCss) -> Sx {
     let accent = color.value(ColorShade::S5);
     sx().background(format!(
@@ -155,8 +145,7 @@ static CODE_BLOCK_LINE_NUMBER_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         .text_align("right")
         .padding("0 12px")
-        // Global `border-box` counts the padding in `min-width`, so add it back
-        // or every gutter sizes to its own digits and `9` sits left of `10`.
+        // `border-box` counts the padding in `min-width`, so add it back.
         .min_width(format!(
             "calc({} + 24px)",
             CODE_GUTTER_WIDTH_VAR.value_or("1ch")
@@ -164,8 +153,7 @@ static CODE_BLOCK_LINE_NUMBER_SX: StaticSx = StaticSx::new(|| {
         .color(CODE_BLOCK_LINE_NUMBER.value())
 });
 
-// No gutter means nothing reserves a left inset; `no-gutter` matches
-// `CODE_BLOCK_LINE_NUMBER_SX`'s 12px so text isn't flush.
+// `no-gutter` matches the gutter's 12px, so text isn't flush.
 static CODE_LINE_CONTENT_SX: StaticSx = StaticSx::new(|| {
     sx().flex("1")
         .white_space("pre")
@@ -179,46 +167,32 @@ static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
         .padding(format!("{}px 16px", CODE_LINES_VERTICAL_PADDING_PX / 2))
         .font_family(CODE_FONT_FAMILY.value())
         .font_size(Size::Sm)
-        // Matches `CODE_LINES_SX`, so `max_lines` is right while highlighting
-        // is still in flight.
+        // As `CODE_LINES_SX`, so `max_lines` holds while highlighting runs.
         .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
 });
 
 base_props! {
     pub struct CodeBlockProps {
-        /// The text to render, highlighted when `language` names a grammar
-        /// this build compiles in. Line numbers and the copy button need a
-        /// real string, so this is the only way to pass content.
         #[props(into)]
         source: String,
-        /// Unrecognized values fall back to no highlighting rather than a guess.
+        /// Unset or unknown, no highlighting.
         #[props(default, into)]
         language: Input<Language>,
-        /// A bar above the code naming the language, or "Unrecognized
-        /// language" if it isn't in the catalog or its `code-lang-*` feature
-        /// is off.
+        /// A bar above the code naming the language.
         #[props(default)]
         header: Option<bool>,
         /// Without `header`, floats in the top-right corner.
         #[props(default)]
         copyable: Option<bool>,
-        /// Caps the visible height to roughly this many lines and scrolls
-        /// past it; unset grows to fit. Long lines always scroll horizontally
-        /// regardless.
+        /// Caps the height at about this many lines and scrolls past it.
         #[props(default)]
         max_lines: Option<u32>,
-        /// Toggles the line-number gutter.
         #[props(default)]
         line_numbers: Option<bool>,
-        /// 1-indexed lines to emphasize, e.g. `"1,5-7,10"`. Malformed
-        /// segments are skipped, not rejected. A range past the last line
-        /// stops at it.
+        /// 1-indexed lines to emphasize, e.g. `"1,5-7,10"`.
         #[props(default, into)]
         highlight_lines: Option<String>,
-        /// Reads `source` as a unified diff: a leading `+`/`-` colors the row,
-        /// moves into a marker column read as "added"/"removed", and is kept
-        /// out of what's highlighted and copied. Wins over `highlight_lines`.
-        /// Both mark plain lines too when there is no `language`.
+        /// Reads `source` as a unified diff; wins over `highlight_lines`.
         #[props(default)]
         diff: bool,
     }
@@ -230,8 +204,7 @@ enum DiffStatus {
     Removed,
 }
 
-/// From the raw leading byte, not the tokenized spans, so the grammar's
-/// scoping of `+`/`-` can't affect it.
+/// From the raw leading byte, so the grammar's scoping of `+`/`-` can't affect it.
 fn diff_status(line: &str) -> Option<DiffStatus> {
     match line.as_bytes().first() {
         Some(b'+') => Some(DiffStatus::Added),
@@ -240,9 +213,7 @@ fn diff_status(line: &str) -> Option<DiffStatus> {
     }
 }
 
-/// Drops a leading `+`/`-`, but not a leading space, so unchanged lines need
-/// no strict unified-diff form. Used by highlighting, plain rendering and the
-/// copy button alike, so shown and copied always match.
+/// Drops a leading `+`/`-`, not a space. Shared by rendering and copying, so both match.
 fn strip_diff_markers(source: &str) -> String {
     source
         .lines()
@@ -265,10 +236,8 @@ fn plain_lines(source: &str) -> Vec<HighlightedLine> {
         .collect()
 }
 
-/// `"3,5-7,10"` into the 1-indexed lines it names, plus the first range that
-/// ran past the last line. Malformed segments are skipped, not rejected. A
-/// range stops at `line_count`, so a typo like `"1-1000000000"` cannot fill
-/// the set with a billion entries.
+/// `"3,5-7,10"` into lines, plus the first overrunning range. Malformed segments are skipped;
+/// a range stops at `line_count`, so `"1-1000000000"` cannot fill the set.
 fn parse_highlighted_lines(spec: &str, line_count: usize) -> (HashSet<usize>, Option<String>) {
     let mut lines = HashSet::new();
     let mut overrun = None;
@@ -392,6 +361,19 @@ fn code_lines(
     }
 }
 
+/// A block of highlighted code, with optional header, copy button, line numbers and diff marks.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::CodeBlock;
+/// # fn app() -> Element {
+/// rsx! {
+///     CodeBlock { source: "let x = 1;", language: "rust", line_numbers: true }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/typography/code-block>
 #[component]
 pub fn CodeBlock(props: CodeBlockProps) -> Element {
     use_token_theme();
@@ -419,7 +401,6 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .sx(&props.sx)
         .states(&props.states)
         .prepare();
-    // `None` registers nothing, so a headerless block pays only the hook slot.
     let header_class = use_css(header.then_some(&CODE_BLOCK_HEADER_SX), CssLayer::Framework);
 
     // Diff statuses need the markers still present.
@@ -428,12 +409,8 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     } else {
         Vec::new()
     };
-    // Only the highlighted rows. While highlighting is in flight the block
-    // renders as one `pre` below rather than a full row tree that is thrown
-    // away the moment it resolves - ~330 ns/line of wasted build on every
-    // block.
-    // No grammar but marking asked for: unstyled rows, so the tint, marker and
-    // spoken word still land (todo 668).
+    // In flight, one plain `pre`, not a row tree thrown away on resolve (~330 ns/line).
+    // No grammar but marking asked for: unstyled rows, so the marks still land (todo 668).
     let marked = props.diff || props.highlight_lines.is_some();
     let lines = highlighted
         .read()
@@ -463,9 +440,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     }
     .into();
 
-    // A box that scrolls must be reachable from the keyboard (Safari does not
-    // make scrollers focusable), but one that does not is only a tab stop in
-    // the way - so it is measured.
+    // Focusable only while it scrolls; Safari does not make scrollers focusable itself.
     let scroll_element = use_element();
     let mut overflows = use_signal(|| false);
     let measure = move || {
@@ -483,8 +458,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
             }
         });
     };
-    // `ResizeObserver` reports the box, not its content, so the rows that
-    // replace the plain `pre` once highlighting resolves are measured here.
+    // `ResizeObserver` misses a content change, so measure again once highlighting lands.
     use_effect(move || {
         let _ = highlighted.read();
         measure();
@@ -500,8 +474,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .prepare()
         .element(&scroll_element)
         .event("onresize", move |_: Event<ResizeData>| measure())
-        // Source code is LTR text: bidi would reorder its operators on an RTL
-        // page (todo 735). The header and copy button still follow the page.
+        // Code is LTR: bidi would reorder its operators on an RTL page (todo 735).
         .attr("dir", Some("ltr"))
         .attr("tabindex", scrolls.then_some("0"))
         .attr("role", scrolls.then_some("region"))

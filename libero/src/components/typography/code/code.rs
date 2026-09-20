@@ -26,13 +26,11 @@ static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
         .font_size("0.875em")
         // An identifier has no break point; unbroken it runs out of a 320px column (WCAG 1.4.10).
         .with("overflow-wrap", "anywhere")
-        // `anywhere` also lowers min-content, so a shrink-to-fit parent split
-        // `#[derive(Options)]` after the `#` (todo 732). A short span fits 320px whole.
+        // `anywhere` lowers min-content, so shrink-to-fit parents split short spans (todo 732).
         .when("short", sx().white_space("nowrap"))
 });
 
-/// Up to this many characters a span stays on one line: about 170px of
-/// monospace at 14px, under a 320px column's width.
+/// Up to this many characters a span stays on one line: ~170px, under a 320px column.
 const SHORT_CODE_CHARS: usize = 20;
 
 /// Splits the whitespace off each classed token into bare text (`None`): Blitz
@@ -61,16 +59,27 @@ type Token = (String, Option<&'static str>);
 
 base_props! {
     pub struct CodeProps {
-        /// The text to render, highlighted when `language` names a grammar
-        /// this build compiles in.
         #[props(into)]
         source: String,
-        /// Unrecognized values fall back to no highlighting rather than a guess.
+        /// Unset or unknown, no highlighting.
         #[props(default, into)]
         language: Input<Language>,
     }
 }
 
+/// Inline code, highlighted when `language` is set.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Code;
+/// # fn app() -> Element {
+/// rsx! {
+///     Code { source: "let x = 1;", language: "rust" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/typography/code>
 #[component]
 pub fn Code(props: CodeProps) -> Element {
     use_token_theme();

@@ -1,6 +1,5 @@
-//! One file per language, each exposing `grammar() -> Grammar`. Hand-ports
-//! covering common syntax, restricted to what both `RegexApi` engines support
-//! (no lookaround, no backreferences).
+//! One `grammar()` per language, hand-ported from Prism. Both `RegexApi` engines must
+//! support every pattern: no lookaround, no backreferences.
 
 use super::highlight::{PatternDef, TokenRule};
 

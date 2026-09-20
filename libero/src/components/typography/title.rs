@@ -28,14 +28,26 @@ base_props! {
     pub struct TitleProps {
         #[props(default, into)]
         size: Input<Size>,
-        /// Defaults to `size`'s heading tag. Override to keep a size's visual
-        /// weight under a different tag, preserving h1->h2->h3 order.
+        /// Unset, `size`'s heading tag. Set it to keep the outline order under another size.
         #[props(default, into)]
         component: Input<HtmlTag>,
         children: Element,
     }
 }
 
+/// A heading, `h1` to `h6` by `size`.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Title;
+/// # fn app() -> Element {
+/// rsx! {
+///     Title { size: "xl", "Getting started" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/typography/title>
 #[component]
 pub fn Title(props: TitleProps) -> Element {
     let theme = use_theme();
@@ -51,8 +63,7 @@ pub fn Title(props: TitleProps) -> Element {
         .component
         .as_ref()
         .copied()
-        // The caller's size, never the theme's: a theme is a look, and must
-        // not move a bare `Title` in the document outline.
+        // The caller's size, never the theme's: a theme must not move the outline.
         .unwrap_or_else(|| default_component(props.size.copied_or(Size::Xxl)));
 
     use_box()

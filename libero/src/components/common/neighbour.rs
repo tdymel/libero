@@ -1,6 +1,5 @@
-/// The next item in `step`'s direction that can be picked, wrapping and
-/// stepping over the disabled ones. `None` when nothing else can be picked.
-/// Steps from `current`'s own index, so it works from a disabled item too.
+/// The next enabled item in `step`'s direction, wrapping; `None` if there is none.
+/// Works from a disabled `current` too.
 pub(crate) fn neighbour(disabled: &[bool], current: usize, step: isize) -> Option<usize> {
     let count = disabled.len() as isize;
     if count == 0 {

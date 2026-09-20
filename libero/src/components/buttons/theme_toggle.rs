@@ -15,16 +15,12 @@ use crate::{
     theme::{ACTION_ICON_SIZE, ColorSchemeSetting, ThemeSet},
 };
 
-/// The glyph's box. `ActionIcon` stretches any `svg` to its whole box, so an
-/// unsized glyph would be a 22px moon in a 24px button; this leaves a margin
-/// around it.
+/// `ActionIcon` stretches any `svg` to its whole box; this leaves a margin around the glyph.
 static GLYPH_SX: StaticSx =
     StaticSx::new(|| sx().display("inline-flex").width("55%").height("55%"));
 
-/// The pair drawn as one control: the two halves share the seam, and the
-/// focused one is lifted so its ring is not painted under its neighbour.
-/// The toggle is a direct child; the chevron sits inside the `div` `Menu`
-/// wraps its trigger in. Logical sides, so the seam follows `dir="rtl"`.
+/// The pair as one control; the focused half is lifted so its ring stays on top.
+/// The chevron sits inside `Menu`'s trigger `div`.
 static SPLIT_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")
         .align_items("stretch")
@@ -40,8 +36,7 @@ static SPLIT_SX: StaticSx = StaticSx::new(|| {
             "& > div > button",
             sx().border_start_start_radius("0")
                 .border_end_start_radius("0")
-                // Narrower than the toggle, as a split button's arrow is,
-                // but never under WCAG 2.5.8's 24px.
+                // Narrower than the toggle, never under WCAG 2.5.8's 24px.
                 .width(format!(
                     "max(24px, calc({} * 0.75))",
                     ACTION_ICON_SIZE.overridable()
@@ -51,26 +46,18 @@ static SPLIT_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub struct ThemeToggleProps {
-        /// Unset, the theme's
-        /// [`ThemeToggleDefaults::variant`](crate::theme::ThemeToggleDefaults).
         #[props(default, into)]
         variant: Input<Variant>,
-        /// Unset, the theme's
-        /// [`ThemeToggleDefaults::color`](crate::theme::ThemeToggleDefaults).
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
-        /// Opts into the theme picker: a second button beside the toggle, a
-        /// chevron that opens a menu of these sets with the active one
-        /// checked. Unset, it is the toggle alone.
+        /// Adds a chevron beside the toggle that opens a menu of these theme sets.
         #[props(default)]
         themes: Option<&'static [&'static ThemeSet]>,
-        /// Replaces the localization's three toggle names. Given the setting a
-        /// press moves to, it names what the press does. Runs during render,
-        /// so it can read a live locale.
+        /// Names the press, given the setting it moves to. Replaces the localized names.
         #[props(default)]
         label: Option<Callback<ColorSchemeSetting, String>>,
         #[props(default)]
@@ -78,33 +65,20 @@ base_props! {
     }
 }
 
-/// An icon button that steps the app's colour scheme: following the
-/// platform, then the scheme the platform is not showing, then the one it is,
-/// then back to following it. The glyph and the name both say where a press
-/// goes: a sun switches to light, a moon to dark, a half-filled disc back to
-/// following the platform.
-///
-/// ```no_run
-/// # use dioxus::prelude::*;
-/// # use libero::components::ThemeToggle;
-/// # fn app() -> Element {
-/// rsx! { ThemeToggle {} }
-/// # }
-/// ```
-///
-/// With `themes`, it becomes a split button: the toggle, and beside it a
-/// chevron opening a menu of theme sets. Two buttons, not one with a second
-/// gesture - each keeps one job and one name, and both are reachable from
-/// the keyboard. The pair is a named `group`, and `class`, `sx` and the extra
-/// attributes land on it rather than on either half.
+/// An icon button that cycles the app's colour scheme, optionally with a theme-set picker.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
 /// # use libero::{components::ThemeToggle, theme::ThemeSet};
 /// # fn app() -> Element {
-/// rsx! { ThemeToggle { themes: ThemeSet::CATALOGUE } }
+/// rsx! {
+///     ThemeToggle {}
+///     ThemeToggle { themes: ThemeSet::CATALOGUE }
+/// }
 /// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/buttons/theme-toggle>
 #[component]
 pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
     let theme = use_theme();
@@ -132,7 +106,7 @@ pub fn ThemeToggle(props: ThemeToggleProps) -> Element {
     let glyph = use_box().framework_sx(&GLYPH_SX).prepare().render(
         HtmlTag::Span,
         Vec::new(),
-        // Where a press goes, the same as the name: a sun switches to light.
+        // Where a press goes: a sun switches to light.
         match next {
             ColorSchemeSetting::System => rsx! { SystemSchemeIcon {} },
             ColorSchemeSetting::Light => rsx! { SunIcon {} },

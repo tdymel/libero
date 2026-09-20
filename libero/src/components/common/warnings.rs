@@ -2,8 +2,7 @@ use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use crate::utils::warn;
 
-/// Whether a spread `aria-label` or `aria-labelledby` names the element. A
-/// `None` value renders no attribute, so it names nothing.
+/// Whether a spread `aria-label` or `aria-labelledby` names the element; `None` does not.
 pub(crate) fn names_itself(attributes: &[Attribute]) -> bool {
     attributes.iter().any(|attribute| {
         matches!(attribute.name, "aria-label" | "aria-labelledby")
@@ -11,11 +10,8 @@ pub(crate) fn names_itself(attributes: &[Attribute]) -> bool {
     })
 }
 
-/// The one way a role that needs an accessible name says it has none: a
-/// `warn()` on mount, never a required prop. Once per mount rather than per
-/// render, so a `ProgressBar` ticking every frame does not flood the console.
-///
-/// A hook: call it on every render, whatever `named` is.
+/// Warns once per mount that a role lacks its accessible name. A hook: call it on every
+/// render, whatever `named` is.
 pub(crate) fn use_name_warning(named: bool, message: &'static str) {
     use_hook(move || {
         if !named {
@@ -24,9 +20,8 @@ pub(crate) fn use_name_warning(named: bool, message: &'static str) {
     });
 }
 
-/// Whether a link target runs script on click. Browsers strip leading and
-/// trailing controls and spaces, and tabs and newlines anywhere, before they
-/// read the scheme, so `" Java\tScript:"` counts too.
+/// Whether a link target runs script. Browsers strip controls, tabs and newlines first,
+/// so `" Java\tScript:"` counts too.
 pub(crate) fn is_javascript_url(url: &str) -> bool {
     let scheme: String = url
         .trim_matches(|c: char| c <= ' ')

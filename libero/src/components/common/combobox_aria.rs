@@ -10,20 +10,14 @@ pub(crate) fn option_id(id: &str, index: usize) -> String {
     format!("{id}-option-{index}")
 }
 
-/// A group heading's id, which the `role="group"` around it points at with
-/// `aria-labelledby`. Keyed on the group's first row, not on its position in
-/// the list: the search filter can empty a whole group, and an id that shifts
-/// under a surviving group would re-label it.
+/// A group heading's id, keyed on its first row: a position would shift when the filter
+/// empties a group.
 pub(crate) fn group_id(id: &str, first_row: usize) -> String {
     format!("{id}-group-{first_row}")
 }
 
-/// The trigger's half of the listbox wiring. Reached through
-/// [`ComboboxState::aria`](super::ComboboxState::aria), which is
-/// the only place that knows the `id` and the active row at once.
-///
-/// `aria-controls` only while `listbox` is mounted: a closed list is not in the
-/// DOM, and an id that names nothing is an invalid reference.
+/// The trigger's half of the listbox wiring. `aria-controls` only while `listbox` is
+/// mounted: an id that names nothing is an invalid reference.
 pub(crate) fn trigger_aria(
     id: &str,
     opened: bool,

@@ -14,8 +14,7 @@ pub(crate) const SVG_FIT: &str = "svg-fit";
 const SVG_FIT_SRC: CssVar = CssVar::new("--lsx-svg-fit-src");
 const SVG_FIT_SIZE: CssVar = CssVar::new("--lsx-svg-fit-size");
 
-/// Whether `src` is an SVG this renderer would misfit. Told by name: a `.svg`
-/// path or an `image/svg+xml` data URL; an SVG served under another name is not.
+/// Whether `src` is an SVG this renderer would misfit, told by a `.svg` path or SVG data URL.
 pub(crate) fn svg_fit(src: &str) -> bool {
     !platform::fits_svg_images() && is_svg(src)
 }
@@ -46,9 +45,8 @@ pub(crate) fn svg_fit_variables(variables: Variables, src: &str, size: &str) -> 
         .with(SVG_FIT_SIZE, size.to_string())
 }
 
-/// Under [`SVG_FIT`]: the picture as the `<img>`'s background, and its own
-/// drawing moved out past its clip. `!important`: a caller's `background` is
-/// a colour behind the picture, not a reset of it.
+/// Under [`SVG_FIT`]: the picture as background, its own drawing moved out of view.
+/// `!important`: a caller's `background` is a colour behind the picture.
 pub(crate) fn svg_fit_sx() -> Sx {
     sx().background_image(format!("{} !important", SVG_FIT_SRC.value()))
         .background_size(format!("{} !important", SVG_FIT_SIZE.value()))

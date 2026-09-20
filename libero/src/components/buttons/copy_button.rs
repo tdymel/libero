@@ -15,7 +15,7 @@ base_props! {
         /// The text a press writes to the clipboard.
         #[props(into)]
         value: String,
-        /// As on `ActionIcon`: unset, the button draws no chrome of its own.
+        /// Unset, no chrome of its own.
         #[props(default, into)]
         variant: Input<Variant>,
         #[props(default, into)]
@@ -24,8 +24,7 @@ base_props! {
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
-        /// Replaces the localization's name, e.g. "Copy link". Unset, the
-        /// localization's `copy`.
+        /// Replaces the localized name, e.g. "Copy link".
         #[props(default, into)]
         aria_label: Option<String>,
         #[props(default)]
@@ -33,9 +32,7 @@ base_props! {
     }
 }
 
-/// An icon button that copies `value` to the clipboard. The icon turns into a
-/// check once the write landed, and a polite status says "Copied" (or that
-/// the copy failed). Both reset when the pointer or focus leaves.
+/// An icon button that copies `value` to the clipboard and announces the result.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -45,8 +42,7 @@ base_props! {
 /// # }
 /// ```
 ///
-/// `class`, `sx` and extra attributes land on the button. For a copy control
-/// of your own, build on [`use_clipboard`](crate::hooks::use_clipboard).
+/// Docs: <https://libero-ui.dev/buttons/copy-button>
 #[component]
 pub fn CopyButton(props: CopyButtonProps) -> Element {
     let mut clipboard = use_clipboard();
@@ -70,8 +66,7 @@ pub fn CopyButton(props: CopyButtonProps) -> Element {
             sx: props.sx.clone(),
             states: props.states.clone(),
             attributes: props.attributes.clone(),
-            // Reset first, so a second copy empties the status and fills it
-            // again rather than leaving the same text a reader skips.
+            // Reset first, so a second copy re-announces rather than repeating unchanged text.
             onclick: move |_| {
                 clipboard.reset();
                 clipboard.copy(value.clone());
@@ -92,8 +87,7 @@ pub fn CopyButton(props: CopyButtonProps) -> Element {
                 CopyIcon {}
             }
         }
-        // Always mounted, so a reader is already watching it when the text
-        // arrives - the check icon alone says nothing.
+        // Always mounted, so a screen reader is watching it when the text arrives.
         VisuallyHidden { role: "status",
             if clipboard.copied() {
                 {labels.copied}

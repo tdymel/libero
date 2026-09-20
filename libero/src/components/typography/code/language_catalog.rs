@@ -1,8 +1,5 @@
-//! The languages `highlight.rs` can color. An entry exists only when its
-//! `code-lang-*` feature compiled the grammar in - there is no "recognized
-//! but not compiled" state. Plain text is the one entry every build has: its
-//! grammar is empty, so naming it is how a caller says "no highlighting"
-//! without the unrecognized-language warning.
+//! The languages compiled in by their `code-lang-*` feature. Plain text is always there:
+//! it asks for no highlighting without the unrecognized-language warning.
 
 use std::sync::LazyLock;
 
@@ -17,8 +14,6 @@ pub(crate) struct LanguageEntry {
 // Each push is feature-gated, so this can't be one `vec![...]`.
 #[allow(clippy::vec_init_then_push)]
 pub(crate) static LANGUAGE_CATALOG: LazyLock<Vec<LanguageEntry>> = LazyLock::new(|| {
-    // Every push below is feature-gated, so with no language compiled in
-    // nothing else is ever written.
     // Plain text stays first: `Language::name` finds it there to localize it.
     #[allow(unused_mut)]
     let mut catalog = vec![LanguageEntry {

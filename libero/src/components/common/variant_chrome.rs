@@ -20,14 +20,11 @@ pub(crate) const BUTTON_ON_STATE_VAR: CssVar = CssVar::new("--lsx-button-on-stat
 pub(crate) const BUTTON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-button-container");
 pub(crate) const BUTTON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-button-on-container");
 
-/// The `var()` names the variant chrome reads. `Chip` owns a parallel set
-/// under its own prefix, so it renders the same chrome from its own colour.
+/// The `var()` names the variant chrome reads; `Chip` owns a parallel set.
 pub(crate) struct VariantVars<'a> {
-    /// The colour in its **text** role: the label of an unfilled variant, and
-    /// the outline that matches that label. Not the brand colour itself -
-    /// see [`crate::tokens::ColorValue`] for why the two differ.
+    /// The colour in its text role: an unfilled variant's label and outline.
     pub color: &'a CssVar,
-    /// The colour in its **fill** role, under a `contrast` foreground.
+    /// The colour in its fill role, under a `contrast` foreground.
     pub fill: &'a CssVar,
     pub contrast: &'a CssVar,
     pub container: &'a CssVar,
@@ -43,8 +40,7 @@ pub(crate) const BUTTON_VARS: VariantVars<'static> = VariantVars {
     on_container: &BUTTON_ON_CONTAINER_VAR,
 };
 
-// The lightest tint on the ramp. A darker one cannot be labelled legibly:
-// black on `S1` clears 12:1 for every palette colour, on `S2` it is closer.
+// The lightest tint: black on `S1` clears 12:1 for every palette colour.
 const TONAL_CONTAINER: ColorShade = ColorShade::S1;
 const TONAL_SELECTED: ColorShade = ColorShade::S3;
 
@@ -52,11 +48,8 @@ const TONAL_SELECTED: ColorShade = ColorShade::S3;
 const ELEVATED_REST: Size = Size::Xs;
 const ELEVATED_HOVER: Size = Size::Sm;
 
-/// Structural chrome for `variant`, in `var()` names rather than resolved
-/// values - which is what lets a second component reuse it under its own set.
-///
-/// The hover response is [`interactive_variant_sx`]'s: `Icon` is a static badge and
-/// must not grow one, so it takes the chrome alone.
+/// Structural chrome for `variant`, in `var()` names. No hover: static `Icon` takes it alone;
+/// see [`interactive_variant_sx`].
 pub(crate) fn variant_chrome_sx(variant: Variant, vars: &VariantVars) -> Sx {
     let VariantVars {
         color,
@@ -65,29 +58,21 @@ pub(crate) fn variant_chrome_sx(variant: Variant, vars: &VariantVars) -> Sx {
         container,
         on_container,
     } = vars;
-    // A literal colour publishes neither role, so both fall back to the
-    // colour var, which holds the literal itself.
+    // A literal publishes neither role, so both fall back to the colour var.
     let fill = fill.value_or(color.value());
 
     match variant {
         Variant::Filled => sx()
-            // The rim is the fill, not the accent: a filled control whose
-            // border sat one ramp step lighter would show a bright hairline.
+            // The rim is the fill: a lighter border would show a bright hairline.
             .background(fill.clone())
             .border_color(fill)
             .color(contrast.value_or("inherit")),
-        // M3's secondary-container pairing: a light tint of the colour under
-        // the label that reads on it. A literal colour has no ramp, so every
-        // fallback here lands back on the filled look.
+        // M3's container pairing. A literal has no ramp, so it falls back to the filled look.
         Variant::Tonal => sx()
             .background(container.value_or(color.value()))
             .border_color("transparent")
             .color(on_container.value_or(contrast.value_or("inherit"))),
-        // The *surface*, not a tint of the colour - M3's elevated button is
-        // separated from the page by its shadow alone, and the label carries
-        // the accent. An opaque background is what the shadow needs to sit on.
-        // The shadow stays M3's own pair of steps rather than Paper's resting
-        // one: the hover lift is a fixed step above it.
+        // The surface, as M3: the shadow separates it and the label carries the accent.
         Variant::Elevated => sx()
             .and(PaperDefaults::background_sx())
             .border_color("transparent")
@@ -106,13 +91,8 @@ pub(crate) fn variant_chrome_sx(variant: Variant, vars: &VariantVars) -> Sx {
     }
 }
 
-/// [`variant_chrome_sx`] plus the hover response an interactive control needs:
-/// a filled or tinted variant darkens, an unfilled one tints, and `Elevated`
-/// lifts a level rather than changing its fill.
-///
-/// `on_state` is the label over the hover and selected fills, where the
-/// resting one does not read on them (an outlined `primary` label was 3.52:1
-/// on its hover tint, todo 452). `Tonal`'s hover keeps its container's label.
+/// [`variant_chrome_sx`] plus a hover response. `on_state` is the label over hover and
+/// selected fills, where the resting one may not read (todo 452).
 pub(crate) fn interactive_variant_sx(
     variant: Variant,
     vars: &VariantVars,
@@ -148,12 +128,10 @@ pub(crate) fn interactive_variant_sx(
     variant_chrome_sx(variant, vars).selector(HOVER, hovered)
 }
 
-// Skips a disabled control, so it needs no `pointer-events: none` and can
-// show `not-allowed` (todo 586). `:where` keeps the specificity of `:hover`.
+// Skips a disabled control, so it can show `not-allowed` (todo 586). `:where` keeps specificity.
 const HOVER: &str = "&:hover:not(:where(:disabled, [data-state~=\"disabled\"]))";
 
-/// Resolved values for the colour vars `variant` reads, from the caller's
-/// `color`. `None` wherever a literal colour has no shade ramp to walk.
+/// Resolved colour vars for a variant; `None` where a literal has no ramp.
 pub(crate) struct VariantColors {
     pub container: Option<String>,
     pub on_container: Option<String>,
@@ -162,9 +140,7 @@ pub(crate) struct VariantColors {
     pub on_state: Option<String>,
 }
 
-/// Which shades a variant tints with. The tinted variants pin absolute
-/// shades rather than stepping from `base`, the same way the hover tint
-/// always has.
+/// Which shades a variant tints with; tinted variants pin absolute shades.
 pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> VariantColors {
     let filled = variant == Variant::Filled;
     // Only `Tonal` paints a container; `Elevated` sits on the surface itself.
@@ -181,8 +157,7 @@ pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> Varian
             shade_color(base, ColorShade::S2),
             shade_color(base, TONAL_SELECTED),
         ),
-        // A faint tint over the surface, the way the other unfilled variants
-        // hover - the shadow is what actually moves.
+        // A faint tint; the shadow is what actually moves.
         Variant::Elevated => (
             shade_color(base, ColorShade::S1),
             shade_color(base, ColorShade::S2),
@@ -209,15 +184,8 @@ pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> Varian
     }
 }
 
-/// The `selected` look for `variant`, nested inside that variant's own block.
-/// Ties that block's own `:hover` on specificity, so it has to stay *after* it
-/// in `interactive_variant_sx`'s output - source order is what settles the two.
-///
-/// The label is `on_state`, as on hover: the resting one need not read on the
-/// selected fill. A literal `color` has no shade scale and so no selected
-/// tint - falling back to the base colour would paint a full-strength
-/// background under the resting label, so the untinted variants fall back to
-/// the ring of [`on_state_sx`] alone, which every variant carries.
+/// The `selected` look; it ties the variant's `:hover`, so it must come after it.
+/// A literal `color` has no selected tint and keeps [`on_state_sx`]'s ring alone.
 pub(crate) fn variant_selected_sx(
     variant: Variant,
     vars: &VariantVars,
@@ -248,7 +216,6 @@ pub(crate) fn variant_selected_sx(
             .color(on_state.value_or(color.value())),
         Variant::Gradient => gradient_selected_sx(),
     };
-    // Outranks the plain focus rule, which would lose to the ring's
-    // `box-shadow` here; the focus ring composes the marker back in.
+    // Outranks the plain focus rule; the focus ring composes the marker back in.
     selected.and(marker).focus_visible(focus_ring_sx())
 }

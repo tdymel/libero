@@ -3,11 +3,10 @@ use crate::tokens::{
     Color, ColorShade, ColorValue, HOVER_TINT_SHADE, HexColor, SELECTED_TINT_SHADE,
 };
 
-// A bare color name carries no shade, so it takes this over the sx
-// pipeline's generic default.
+// A bare colour name takes this shade.
 const DEFAULT_SHADE: ColorShade = ColorShade::S6;
 
-// Same, for a filled control, whose hover is already one step darker.
+// A filled control's hover is already one step darker.
 const SELECTED_DARKER_STEPS: usize = 2;
 
 /// The base color a filled/outlined/plain variant is built from. Anything but
@@ -22,12 +21,8 @@ pub(crate) fn base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
     }
 }
 
-/// `base` as a text colour: the first step of its ramp that reads on the
-/// surface. A literal colour has no ramp and comes back as itself.
-///
-/// This is the same resolution `sx`'s `color()` does for a colour written
-/// straight into a rule; components go through here because their colour
-/// travels to the rule through a custom property, which `sx` cannot type.
+/// `base` as a text colour, as `sx`'s `color()` resolves it; for colours that travel
+/// through a custom property. A literal comes back as itself.
 pub(crate) fn text_color(base: &ThemeAwareValue) -> Option<String> {
     base.in_color_role(ColorRole::Text).resolve(None)
 }
@@ -49,9 +44,8 @@ pub(crate) fn contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> 
     }
 }
 
-/// Black or white text for a literal fill, whichever clears 4.5:1 (one always
-/// does). A colour Rust cannot parse asks the browser's `contrast-color()`;
-/// where that is unsupported, the label keeps inheriting as before.
+/// Black or white text for a literal fill, whichever clears 4.5:1. An unparsed colour asks
+/// the browser's `contrast-color()`.
 pub(crate) fn literal_contrast(base: &ThemeAwareValue) -> Option<String> {
     match base {
         ThemeAwareValue::RawColor(_, fill) => {
@@ -71,9 +65,7 @@ pub(crate) fn literal_contrast(base: &ThemeAwareValue) -> Option<String> {
     }
 }
 
-/// Background for a selected/pressed control: one step past what
-/// [`hover_color`] would give, in the same direction, so a selected control
-/// still reads as selected under the pointer. `None` for a literal base.
+/// Selected background: one step past [`hover_color`], so it still reads under the pointer.
 pub(crate) fn selected_color(base: &ThemeAwareValue, filled: bool) -> Option<String> {
     let ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) = base else {
         return None;
@@ -88,8 +80,7 @@ pub(crate) fn selected_color(base: &ThemeAwareValue, filled: bool) -> Option<Str
     Some(ColorValue::Fill(*color, selected).value())
 }
 
-/// A specific shade of `base`'s color, for a variant that pins one rather
-/// than stepping from the base. `None` for a literal base, which has no ramp.
+/// A pinned shade of `base`'s colour. `None` for a literal base.
 pub(crate) fn shade_color(base: &ThemeAwareValue, shade: ColorShade) -> Option<String> {
     let ThemeAwareValue::ColorValue(ColorValue::Shade(color, _)) = base else {
         return None;
@@ -98,10 +89,8 @@ pub(crate) fn shade_color(base: &ThemeAwareValue, shade: ColorShade) -> Option<S
     Some(ColorValue::Fill(*color, shade).value())
 }
 
-/// Black or white, whichever reads on `base`'s color at `shade` - the label
-/// for a tinted container. Our ramp bottoms out at a 25% black mix, so a dark
-/// tone of the hue itself cannot reach 4.5:1 on its own tint for the lighter
-/// palette colors (`warning` peaks at 2.9:1). `None` for a literal base.
+/// Black or white on `base` at `shade`, a tinted container's label: a dark tone of the hue
+/// misses 4.5:1 on light colours (`warning` peaks at 2.9:1).
 pub(crate) fn contrast_shade_color(base: &ThemeAwareValue, shade: ColorShade) -> Option<String> {
     let ThemeAwareValue::ColorValue(ColorValue::Shade(color, _)) = base else {
         return None;
@@ -121,9 +110,7 @@ pub(crate) fn on_tint_color(base: &ThemeAwareValue) -> Option<String> {
     Some(format!("var({name}, {})", text_color(base)?))
 }
 
-/// The foreground of [`hover_color`]'s filled step: a darker fill can need the
-/// other end (`muted`'s black label read 2.59:1 on its hover). `None` for a
-/// literal base.
+/// The foreground on [`hover_color`]'s filled step, which can flip (`muted`: 2.59:1).
 pub(crate) fn hover_contrast_color(base: &ThemeAwareValue) -> Option<String> {
     let ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) = base else {
         return None;
@@ -187,9 +174,7 @@ mod tests {
         assert_eq!(ink("error"), None);
     }
 
-    /// On the fill ramp, not the brand one: the resting background is
-    /// `fill-6`, so a hover that named `primary.7` would be a step of the
-    /// wrong ramp and could land on the same colour.
+    /// On the fill ramp, not the brand one, which could land on the resting colour.
     #[test]
     fn filled_hover_darkens_while_the_rest_tint() {
         let base = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, ColorShade::S6));

@@ -1,6 +1,4 @@
-//! Small hand-port of TOML's common syntax.
-//!
-//! Same "key anywhere before `:`... `=`" simplification as `yaml.rs`.
+//! Small hand-port of TOML's common syntax. A key is any identifier before `=`, as in `yaml.rs`.
 
 use crate::components::typography::code::highlight::{Grammar, PatternDef, TokenRule};
 

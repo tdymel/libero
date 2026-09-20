@@ -10,16 +10,14 @@ use crate::{
     theme::{ANCHOR_COLOR, Color, ColorShade, ColorValue, CssVar, FOCUS_RING_HALO, NamedColorCss},
 };
 
-// Light enough to stay a tint rather than a fill, so text reads over it.
-// Which color gets tinted is `Theme::mark`; only the shade is fixed here.
+// Light enough to stay a tint, so text reads over it. The colour is `Theme::mark`.
 const MARK_TINT_SHADE: ColorShade = ColorShade::S1;
 
 const MARK_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-mark-background");
 const MARK_COLOR_VAR: CssVar = CssVar::new("--lsx-mark-color");
 
-// A bare color name carries no shade, so it takes the tint shade rather than
-// the sx pipeline's generic default. A palette shade paints in the fill role,
-// whose `contrast-N` twin reads on it; literal values pass through untouched.
+// A bare colour takes the tint shade; a palette shade paints in the fill role,
+// whose `contrast-N` twin reads on it. Literals pass through.
 fn mark_background_color(value: Option<&ThemeAwareValue>, default_color: Color) -> ThemeAwareValue {
     match value {
         None => ThemeAwareValue::ColorValue(ColorValue::Shade(default_color, MARK_TINT_SHADE)),
@@ -31,21 +29,16 @@ fn mark_background_color(value: Option<&ThemeAwareValue>, default_color: Color) 
     .in_color_role(ColorRole::Fill)
 }
 
-// A palette or hex background sets the text to its twin; anything else
-// inherits, never the UA's black. The background is always set.
+// A palette or hex background sets the text to its twin; anything else inherits.
 static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().color(format!("var({}, inherit)", MARK_COLOR_VAR.name()))
         .background(MARK_BACKGROUND_VAR.value())
-        // A link set in the text's colour needs its underline to stand out
-        // (1.4.1); `:any-link` outranks `Anchor`'s `underline` state.
+        // A link in the text's colour needs its underline (1.4.1); outranks `Anchor`'s state.
         .selector("& a:any-link", sx().text_decoration("underline"))
 });
 
-/// `--lsx-focus-contrast` is published beside the tint, because `sx`'s
-/// `background()` infers it only from a literal colour and ours is a `var()`.
-/// Without it a link inside a `Mark` draws its ring in `primary.6` on the
-/// tint. A literal the inference cannot read either (`"gold"`) leaves it
-/// unset, as `Blockquote` does. The tint is the ring's halo beside it (todo 630).
+/// Publishes `--lsx-focus-contrast`: `sx` infers it only from a literal, and the tint is a `var()`.
+/// The tint is the ring's halo (todo 630).
 fn mark_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Variables {
     let background = mark_background_color(color, default_color);
     // A palette shade's `contrast-N`, or a hex's literal black or white.
@@ -72,8 +65,20 @@ base_props! {
     }
 }
 
-/// A real `<mark>` with a themed background tint. `color` takes any theme
-/// color or literal value; unset uses a light shade of `Theme::mark`.
+/// A `<mark>` with a themed background tint.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Mark;
+/// # fn app() -> Element {
+/// rsx! {
+///     "Highlight "
+///     Mark { color: "info", "this part" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/typography/mark>
 #[component]
 pub fn Mark(props: MarkProps) -> Element {
     let theme = use_theme();
@@ -129,9 +134,7 @@ mod tests {
         );
     }
 
-    /// Todo 605: an explicit shade is untinted but painted as `fill-N`, the
-    /// colour `contrast-N` is computed on. On the brand `info.6` it was
-    /// white at 2.78:1; with no text set, dark `error.8` was 2.36:1.
+    /// Todo 605: an explicit shade paints `fill-N`, the colour `contrast-N` is computed on.
     #[test]
     fn an_explicit_shade_paints_its_fill_and_takes_its_twin() {
         for (color, shade) in [

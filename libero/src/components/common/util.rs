@@ -1,10 +1,4 @@
-/// Whether a key press carries a modifier that marks it a browser or OS
-/// shortcut rather than ordinary typing.
-///
-/// Shift is deliberately not one of them: it is how a capital letter is typed,
-/// so a typeahead that ignored `Shift+A` would refuse half the alphabet. Every
-/// list that types to search - `Menu`, `Menubar`, `Tree` and `Select` - asks
-/// this one question.
+/// Whether a key press is a shortcut rather than typing. Not Shift: it types capitals.
 pub(crate) fn has_shortcut_modifier(event: &dioxus::prelude::KeyboardEvent) -> bool {
     use dioxus::prelude::ModifiersInteraction;
 
@@ -12,8 +6,7 @@ pub(crate) fn has_shortcut_modifier(event: &dioxus::prelude::KeyboardEvent) -> b
     modifiers.ctrl() || modifiers.alt() || modifiers.meta()
 }
 
-/// What an arrow, Home, End, PageUp or PageDown under Ctrl, Alt or Meta means
-/// to a field.
+/// What a navigation key under Ctrl, Alt or Meta means to a field.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum NavigationChord {
     /// Alt+ArrowDown: a combobox opens its popup (APG).
@@ -59,28 +52,11 @@ pub(crate) fn attr<T>(
     dioxus::prelude::Attribute::new(name, value, None, false)
 }
 
-/// A `box-shadow` that draws nothing, as the tail of a shadow list. An
-/// element with no resting shadow still needs the list to parse.
+/// A `box-shadow` that draws nothing, so a shadow list always parses.
 const NO_SHADOW: &str = "0 0 #0000";
 
-/// The library's `:focus-visible` ring: a dark stripe with a light halo on
-/// both sides of it.
-///
-/// The halo is a `box-shadow` spreading past the stripe, and painting order
-/// does the rest - a `box-shadow` is painted *under* the element's `outline`.
-/// With the default numbers a 6px halo, a 2px stripe and a 2px offset land as
-/// light 0-2px, dark 2-4px, light 4-6px. So the stripe always has the halo
-/// next to it, and the indicator reads at the ratio between its own two tones
-/// rather than against a surface the caller owns - which is the only surface
-/// there is, for a ring drawn outside the element.
-///
-/// The stripe still yields to `--lsx-focus-contrast` where a surface
-/// publishes one: a component that knows what reads against itself keeps
-/// winning. Every number and both colours come from `theme.focus_ring`.
-///
-/// The stripe is drawn twice, as the outline and as a shadow between two halo
-/// shadows: Blitz paints the outline under the shadows (todo 478). The web
-/// paints the outline over the same pixels, and forced colours keep only it.
+/// The `:focus-visible` ring: a dark stripe between two light halo bands, so it reads on any surface.
+/// The stripe is also a shadow: Blitz paints the outline under the shadows (todo 478).
 pub(crate) fn focus_ring_sx() -> crate::sx::Sx {
     use crate::theme::{
         FOCUS_RING_COLOR, FOCUS_RING_HALO, FOCUS_RING_HALO_SPREAD, FOCUS_RING_OFFSET,
@@ -101,17 +77,8 @@ pub(crate) fn focus_ring_sx() -> crate::sx::Sx {
         ))
 }
 
-/// The same ring, inset into the element's own fill - a picked day, a
-/// highlighted option, the current thumbnail.
-///
-/// No outer halo, on purpose. An inset ring's surround is the element's own fill,
-/// which the component chose and can be sure of; a halo would only paint a
-/// light band *outside* an indicator that is drawn inside. `offset` is
-/// negative, and `-width` or beyond puts the whole stripe on the fill.
-///
-/// Drawn as offset inset shadows, which Blitz paints (it ignores
-/// `outline-offset` and inset spread); the outline stays, transparent, for
-/// forced colours. Past `-width`, a halo band covers the stripe's outer part.
+/// The ring inset into the element's own fill, with no outer halo; `offset` is negative.
+/// Inset shadows, as Blitz ignores `outline-offset`; the transparent outline serves forced colours.
 pub(crate) fn inset_focus_ring_sx(offset: &str) -> crate::sx::Sx {
     use crate::theme::{FOCUS_RING_COLOR, FOCUS_RING_HALO, FOCUS_RING_WIDTH, OWN_SHADOW};
     use crate::tokens::NamedColorCss;
@@ -139,23 +106,16 @@ fn inset_band(depth: &str, color: &str) -> String {
     )
 }
 
-/// A resting `box-shadow` on a focusable, written so the focus ring can
-/// compose it back in.
-///
-/// The ring's halo is itself a `box-shadow`, and a `:focus-visible` arm that
-/// sets the property drops whatever the resting rule put there - an
-/// `Elevated` button would lose its elevation for as long as it held focus.
-/// Declaring the value twice, once as the property and once as
-/// `--lsx-own-shadow`, is what lets the ring put it back.
+/// A resting `box-shadow`, also published as `--lsx-own-shadow` so the focus ring,
+/// itself a `box-shadow`, can compose it back in.
 pub(crate) fn shadow_sx(shadow: String) -> crate::sx::Sx {
     crate::sx::sx()
         .box_shadow(shadow.clone())
         .var(crate::theme::OWN_SHADOW, shadow)
 }
 
-/// The house on-state ring, `depth` of `currentColor` (the label's own colour, so
-/// it reads on whatever fill the label does, 1.4.11) inside the edge. Four offset
-/// shadows, not a spread: Blitz ignores inset spread.
+/// The on-state ring, `depth` of `currentColor` inside the edge (1.4.11).
+/// Offset shadows, not a spread: Blitz ignores inset spread.
 fn on_ring(depth: &str) -> String {
     inset_band(&format!("({depth})"), "currentColor")
 }
@@ -169,9 +129,8 @@ const ON_RING_BORDERLESS: &str = "1px";
 const ON_LINE_WIDTH: &str = "2px";
 const ON_LINE_LENGTH: &str = "min(50%, 1.5em)";
 
-/// The house marker for an on state (pressed, selected, current) on a bordered
-/// control, so it never rests on a fill alone (1.4.1). `resting` is a shadow the
-/// element keeps under the ring; the focus ring composes both back in.
+/// The on-state marker for a bordered control, so it never rests on a fill alone (1.4.1).
+/// `resting` is a shadow kept under the ring.
 pub(crate) fn on_ring_sx(resting: Option<&str>) -> crate::sx::Sx {
     let ring = on_ring(ON_RING_BORDERED);
     shadow_sx(match resting {
@@ -185,9 +144,8 @@ pub(crate) fn borderless_on_state_sx() -> crate::sx::Sx {
     shadow_sx(on_ring(ON_RING_BORDERLESS)).and(forced_on_sx())
 }
 
-/// The house line upright at the start edge, `inset` in from it, for a row
-/// whose full-width ring would read as its focus ring. `color` is the row's one
-/// on-state indicator beside its tint, so it must reach 3:1 on it (1.4.11).
+/// The on-state line at the start edge, for a row a full ring would confuse with focus.
+/// `color` must reach 3:1 on the row's tint (1.4.11).
 pub(crate) fn on_start_bar_sx(inset: &str, color: &str) -> crate::sx::Sx {
     crate::sx::sx()
         .with(
@@ -216,13 +174,8 @@ pub(crate) fn on_state_sx(resting: Option<&str>) -> crate::sx::Sx {
     on_ring_sx(resting).and(forced_on_sx())
 }
 
-/// The system's `Highlight` pair for an on state under forced colours, the ring
-/// drawn in it. Outranks [`disabled_look_sx`]: `GrayText` does not read on `Highlight`.
-///
-/// Opted out of forcing, or Chromium backs the label with a `Canvas` plate it
-/// cannot be read on; `!important`, as the author hover colours are not forced either.
-/// The opt-out is inherited, so descendants get what forcing would give them: no
-/// fill, borders in the text colour (a Badge, a filled x; todo 686).
+/// The `Highlight` pair for an on state under forced colours, over [`disabled_look_sx`].
+/// Opted out of forcing, or Chromium backs the label with a `Canvas` plate (todo 686).
 pub(crate) fn forced_on_sx() -> crate::sx::Sx {
     crate::sx::sx().media(
         crate::sx::FORCED_COLORS,
@@ -241,8 +194,7 @@ pub(crate) fn forced_on_sx() -> crate::sx::Sx {
     )
 }
 
-/// The house disabled look: faded to half, and the system's `GrayText` under
-/// forced colours, where the fade alone does not read as disabled.
+/// The disabled look: half opacity, and `GrayText` under forced colours.
 pub(crate) fn disabled_look_sx(cursor: &str) -> crate::sx::Sx {
     crate::sx::sx().opacity("0.5").cursor(cursor).media(
         crate::sx::FORCED_COLORS,
@@ -250,16 +202,8 @@ pub(crate) fn disabled_look_sx(cursor: &str) -> crate::sx::Sx {
     )
 }
 
-/// The stand-in that draws a focus ring for an element the focus lands
-/// *inside* of - a field's frame, a checkbox's box. Placed after the
-/// focusable, so `:focus-visible ~ [data-ring]` reaches it: a sibling rule.
-/// The obvious `:has(:focus-visible)` never matches natively, because stylo
-/// rejects `:has()` ([[codebase/blitz-platform-gaps]]), and there is no
-/// `:focus-visible-within`.
-///
-/// It covers its containing block - the nearest positioned ancestor, which
-/// must be the element the ring belongs to - and is styled there with
-/// [`ring_overlay_sx`]. Hidden from assistive tech, and never a tab stop.
+/// Draws the ring for an element focus lands inside, via `:focus-visible ~ [data-ring]`:
+/// stylo rejects `:has()`. Place it after the focusable, in a positioned owner.
 pub(crate) fn ring_overlay() -> dioxus::prelude::Element {
     use dioxus::prelude::*;
 
@@ -268,10 +212,7 @@ pub(crate) fn ring_overlay() -> dioxus::prelude::Element {
     }
 }
 
-/// The overlay's own box: over the whole padding box, with the owner's
-/// corners, and never in the way of a click. An owner with a border moves it
-/// out by the border's width, so the ring's offset is measured from the same
-/// edge as an outline on the owner.
+/// The overlay's box: the owner's padding box and corners, never in the way of a click.
 pub(crate) fn ring_overlay_sx() -> crate::sx::Sx {
     crate::sx::sx()
         .position("absolute")
@@ -280,8 +221,7 @@ pub(crate) fn ring_overlay_sx() -> crate::sx::Sx {
         .pointer_events("none")
 }
 
-/// A user-supplied value as a CSS string literal, quotes included. Rust's
-/// `{:?}` is not CSS escaping - it emits `\u{...}`, which no selector parses.
+/// A user-supplied value as a CSS string literal. Not `{:?}`: its `\u{...}` doesn't parse.
 pub(crate) fn css_string(value: &str) -> String {
     let mut out = String::with_capacity(value.len() + 2);
     out.push('"');
@@ -291,8 +231,7 @@ pub(crate) fn css_string(value: &str) -> String {
                 out.push('\\');
                 out.push(ch);
             }
-            // A hex escape needs its terminating space, or the next character
-            // is read as part of the escape.
+            // The space ends the escape, or the next character joins it.
             '\0'..='\u{1f}' | '\u{7f}' => out.push_str(&format!("\\{:x} ", ch as u32)),
             _ => out.push(ch),
         }

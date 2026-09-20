@@ -39,14 +39,8 @@ const ACTION_ICON_VARS: VariantVars<'static> = VariantVars {
     on_container: &ACTION_ICON_ON_CONTAINER_VAR,
 };
 
-// `Icon`'s sizing plus the resets a native `<button>` needs that its `<span>`
-// never did.
-//
-// The variant chrome sits behind a data-state token that `ActionIcon` sets
-// only when the caller asks for it via `variant`/`color`. A caller with its
-// own `sx` (`Code`'s copy button) needs background/color untouched: layering
-// means a plain declaration here would beat a `:hover` rule from their
-// lower-priority `sx`.
+// Variant chrome only behind a state set by `variant`/`color`: an ungated declaration
+// would beat a caller `sx`'s `:hover` (`Code`'s copy button).
 static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = clipped_ripple_sx(sx())
         .display("inline-flex")
@@ -64,16 +58,14 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .height(ACTION_ICON_SIZE.overridable())
         .border_radius(ACTION_ICON_RADIUS.overridable())
         .selector("& svg", sx().width("100%").height("100%"))
-        // WCAG 2.5.8: an invisible 24x24 press target round a smaller icon,
-        // the drawn box unchanged (todos 505, 566). Nothing at 24px and up.
+        // WCAG 2.5.8: an invisible 24x24 press target round a smaller icon (todos 505, 566).
         .selector(
             "::before",
             sx().content("\"\"")
                 .position("absolute")
                 .inset(HIT_AREA_INSET),
         )
-        // A chromeless toggle's only pressed look; a variant's own block below
-        // repeats it over its fill.
+        // A chromeless toggle's pressed look; the variants repeat it over their fill.
         .when(
             "checked",
             borderless_on_state_sx().focus_visible(focus_ring_sx()),
@@ -82,9 +74,7 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = Variant::ALL.iter().fold(base, |base, &variant| {
         base.when(
             variant.state_name(),
-            // The ungated base is `border: none` for a caller with its own
-            // `sx`, so the width the variants' `border-color` needs joins
-            // here rather than out there.
+            // The ungated base is `border: none`, so the variants add the border here.
             interactive_variant_sx(
                 variant,
                 &ACTION_ICON_VARS,
@@ -93,8 +83,7 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
             )
             .border_style("solid")
             .border_width("1px")
-            // After the variant's `:hover`, which it ties on specificity -
-            // as on `Button`.
+            // After the variant's `:hover`, which it ties on specificity.
             .when(
                 "checked",
                 variant_selected_sx(
@@ -107,18 +96,14 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         )
     });
 
-    // The variants' `:hover` skips a disabled control, so no `pointer-events:
-    // none`. `:disabled` too: a disabled `Fieldset` disables the `<button>` (todo 499).
+    // `:disabled` too: a disabled `Fieldset` disables the `<button>` (todo 499).
     let disabled = || disabled_look_sx("not-allowed");
     base.when("disabled", disabled())
         .selector("&:disabled", disabled())
         .when("loading", loading_sx())
 });
 
-/// `Button`'s loading shape: the caller's icon stays in the tree, hidden,
-/// because it holds the box and its `aria-label` is the name; the loader sits
-/// on top, centred. An icon fills its whole box, so the loader takes a share
-/// of the box rather than of a line height.
+/// `Button`'s loading shape; the loader takes a share of the box, not of a line height.
 fn loading_sx() -> Sx {
     sx().cursor("progress")
         .selector(
@@ -142,8 +127,6 @@ fn action_icon_variables(
     variant: Variant,
     has_variant_styling: bool,
 ) -> Variables {
-    // Only a toggle reads it, and every other icon would pay for the
-    // declaration in its `style` attribute.
     let selectable = props.selected.is_some();
     let result = variables()
         .with(
@@ -186,15 +169,12 @@ base_props! {
     pub struct ActionIconProps {
         #[props(default, into)]
         variant: Input<Variant>,
-        /// The stops and angle of `variant: "gradient"`, over the theme's.
-        /// Ignored by the other variants.
+        /// Stops and angle of the `gradient` variant, over the theme's.
         #[props(default)]
         gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// `"sm"` is 20x20 and `"xs"` 16x16. Below 24px the button takes presses
-        /// in an invisible 24x24 box centred on it (WCAG 2.5.8), so keep 2px
-        /// (`sm`) or 4px (`xs`) clear of any other target.
+        /// Below 24px the press target stays 24x24 (WCAG 2.5.8): keep other targets clear.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -206,23 +186,16 @@ base_props! {
         /// With `disabled`: keeps the button in the Tab order, as on `Button`.
         #[props(default)]
         focusable_when_disabled: Option<bool>,
-        /// Toggle button: renders `aria-pressed`, and the selected look when a
-        /// `variant` or `color` turns the chrome on. `None` leaves it a plain
-        /// action.
+        /// Toggle button: renders `aria-pressed`. `None` is a plain action.
         #[props(default)]
         selected: Option<bool>,
-        /// Overlays a `Loader` on the icon and swallows clicks, while leaving
-        /// the button focusable - a busy control is still one the reader can
-        /// find. Renders `aria-busy` and `aria-disabled` rather than native
-        /// `disabled`, which would drop focus mid-wait. Ignored in link mode.
+        /// Overlays a `Loader` and swallows clicks; stays focusable. Ignored in link mode.
         #[props(default)]
         loading: Option<bool>,
-        /// `Option`, not a bare `EventHandler` - see `Button`.
+        // `Option`, not a bare `EventHandler`: see `Button`.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
-        /// Renders a router-aware link instead of a `<button>`. No
-        /// ripple/`onclick`/`onmouseleave` then - real navigation happens
-        /// instead.
+        /// Renders a router link instead of a `<button>`.
         #[props(default, into)]
         to: Input<NavigationTarget>,
         #[props(default)]
@@ -231,8 +204,19 @@ base_props! {
     }
 }
 
-/// `Icon`'s badge as a real `<button>`, with `Button`'s click handling and
-/// a11y - for icon-only actions like copy or close.
+/// An icon-only button, for actions like copy or close.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::ActionIcon;
+/// # fn app() -> Element {
+/// rsx! {
+///     ActionIcon { aria_label: "Close", onclick: move |_| {}, svg { view_box: "0 0 24 24" } }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/buttons/action-icon>
 #[component]
 pub fn ActionIcon(props: ActionIconProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
@@ -283,8 +267,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
     .into();
 
     let handle_click = move |event: Event<MouseData>| {
-        // `prevent_default` as well as returning, as on `Button`: a busy
-        // `type="submit"` would otherwise still submit its form.
+        // Else a busy `type="submit"` still submits, as on `Button`.
         if loading || soft_disabled {
             event.prevent_default();
             return;
@@ -310,10 +293,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         .prepare();
 
     if let Some(to) = props.to.as_ref().cloned() {
-        // `<a>` has no native `disabled`: dropping `to` stops navigation,
-        // `aria-disabled`/`tabindex` handle the a11y tree and tab order.
-        // `InternalAnchor` can't do this - it always resolves a real link.
-        // An `<a>` without `href` is `generic`, so the role comes back by hand.
+        // `<a>` has no `disabled`: drop `href`; without it `<a>` is `generic`, so restore the role.
         if disabled {
             return boxed
                 .attr_default("role", "link")
@@ -339,8 +319,6 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         };
     }
 
-    // The loader is `aria-hidden` - the button already has its name, and
-    // `aria-busy` on it is what says it is waiting.
     let children = if loading {
         rsx! {
             span { {props.children} }

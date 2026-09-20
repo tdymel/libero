@@ -16,9 +16,8 @@ pub(crate) struct StyleAttributes {
     pub style: Option<String>,
 }
 
-/// Resolves the styling props every `Box`-shaped component shares.
-///
-/// Calls [`use_box_css`], so it is a hook: call it before any early return.
+/// Resolves the styling props every `Box`-shaped component shares. A hook: call it before
+/// any early return.
 pub(crate) fn use_style_attributes(
     class: &Input<ClassList>,
     framework_sx: Option<&'static StaticSx>,
@@ -28,8 +27,7 @@ pub(crate) fn use_style_attributes(
     style: Option<String>,
     focus_ring: bool,
 ) -> StyleAttributes {
-    // Not `sx.as_ref()`: that collapses the lifetime, so a caller's `static`
-    // is rehashed and rebuilt as if it were freshly built this render.
+    // Not `sx.as_ref()`: it collapses the lifetime, so a `static` would be rehashed every render.
     let sx_source = match sx {
         Input::None => None,
         Input::Value(sx) => Some(SxSource::Owned(sx)),
@@ -80,25 +78,16 @@ impl Written {
     }
 }
 
-// Shared rather than living in `Box`: a plain div only reaches this once it
-// has a tabindex, but an `<a href>` is focusable on its own.
+// Here, not in `Box`: an `<a href>` is focusable without a tabindex.
 static BOX_FOCUS_SX: StaticSx =
     StaticSx::new(|| crate::sx::sx().focus_visible(super::focus_ring_sx()));
 
-/// A custom property's value that computes as if it were absent - see
-/// [`keep_dropped_vars`]. For a `style` the revert cannot see, one set with
-/// `.attr("style", ..)`: write this rather than leave the var out.
+/// A custom property value that computes as absent. Write it in a `style` set via
+/// `.attr("style", ..)` rather than leave the var out.
 pub(crate) const ABSENT: &str = "revert-layer";
 
-/// Writes `--x:revert-layer` for every custom property this element had
-/// before and `style` no longer declares.
-///
-/// When the dioxus interpreter sets `style`, it puts back every property the
-/// new string omits, so a var dropped from one render to the next would keep
-/// its last value. `revert-layer` is what "absent" computes to: measured in
-/// Chromium, the element still takes a class rule's value, a layered one, its
-/// parent's, and `var(--x, fallback)`'s fallback. `initial` would lose all
-/// but the last. `written` is every name this element has ever declared.
+/// Writes `--x:revert-layer` for every var this element declared before and `style` no longer
+/// does: dioxus keeps an omitted property's last value. `initial` would drop inherited ones.
 fn keep_dropped_vars(style: Option<String>, written: &mut Vec<String>) -> Option<String> {
     if written.is_empty() && style.is_none() {
         return None;

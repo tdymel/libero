@@ -31,8 +31,7 @@ impl From<NavigationTarget> for Input<NavigationTarget> {
 #[allow(unnameable_types)]
 pub struct RouteMarker;
 
-// A typed `Route`, as `Anchor`'s `to` takes. A `From<R: Routable>` would
-// overlap the impls above, so this rides `#[props(into)]`'s marker instead.
+// A typed `Route`, as on `Anchor`. `From<R: Routable>` would overlap the impls above.
 impl<R: Routable> dioxus::core::SuperFrom<R, RouteMarker> for Input<NavigationTarget> {
     fn super_from(value: R) -> Self {
         Input::Value(value.into())
@@ -52,8 +51,7 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .white_space("nowrap")
         .text_decoration("none")
         .outline("none")
-        // One line that never outgrows its container (WCAG 1.4.10): a long
-        // label is cut at the edge. No ellipsis: that would wrap the children.
+        // One line, never wider than its container (WCAG 1.4.10). No ellipsis: it would wrap the children.
         .max_width("100%")
         .min_width("0")
         .selector("& > [data-slot='button-icon']", button_icon_sx())
@@ -89,11 +87,10 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .selector("&:disabled", disabled_look_sx("not-allowed"))
         .when("full-width", sx().width("100%"))
         .when("loading", loading_sx())
-        // The base outline is suppressed above and re-added only here.
         .focus_visible(focus_ring_sx())
 });
 
-/// Before the children, never shrinking, one spacing step from them - as on `Chip`.
+/// Before the children, never shrinking, as on `Chip`.
 fn button_icon_sx() -> Sx {
     sx().display("inline-flex")
         .align_items("center")
@@ -105,15 +102,8 @@ fn button_icon_sx() -> Sx {
         )
 }
 
-/// While `loading`, the button holds exactly two children: the caller's own,
-/// wrapped, and the loader.
-///
-/// The children stay in the tree at `opacity: 0` rather than being swapped for
-/// the loader: they are the button's accessible name, and they hold its width,
-/// so the button neither goes nameless nor jumps when the wait starts. The
-/// loader sits on top, centred, at half the active size's height - each step
-/// gets its own rule, since the button republishes no unsuffixed height to
-/// read.
+/// Children stay at `opacity: 0` under the loader: they keep the accessible name and the width.
+/// One rule per size, since the button publishes no unsuffixed height.
 fn loading_sx() -> Sx {
     let base = sx()
         .cursor("progress")
@@ -144,9 +134,7 @@ fn loading_sx() -> Sx {
     })
 }
 
-/// The colour half of the `style` attribute, already rendered. Depends on
-/// `(variant, base)` alone - see [`use_button_variables`], which is what keeps
-/// it off the render path.
+/// The colour half of the `style` attribute. Depends on its arguments alone, so `Button` caches it.
 pub(crate) fn button_variables(
     variant: Variant,
     base: &ThemeAwareValue,
@@ -154,8 +142,7 @@ pub(crate) fn button_variables(
 ) -> String {
     let contrast = contrast_color(base);
     let colors = variant_colors(variant, base);
-    // Only a toggle button ever reads it, and every other button would pay
-    // for the extra declaration in its `style` attribute.
+    // Only a toggle button reads it; the rest skip the declaration.
     let selected = selectable.then_some(colors.selected).flatten();
 
     variables()
@@ -182,8 +169,7 @@ base_props! {
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         variant: Input<Variant>,
-        /// The stops and angle of `variant: "gradient"`, over the theme's.
-        /// Ignored by the other variants.
+        /// Stops and angle of the `gradient` variant, over the theme's.
         #[props(default)]
         gradient: Option<Gradient>,
         /// Corner radius, independent of `size`.
@@ -193,45 +179,46 @@ base_props! {
         size: Input<Size>,
         #[props(default)]
         full_width: Option<bool>,
-        /// Toggle button: renders `aria-pressed` and the selected look.
-        /// `None` leaves the button a plain action.
+        /// Toggle button: renders `aria-pressed`. `None` is a plain action.
         #[props(default)]
         selected: Option<bool>,
         #[props(default)]
         disabled: Option<bool>,
-        /// With `disabled`: keeps the button in the Tab order. It renders
-        /// `aria-disabled` instead of `disabled`, looks disabled and swallows
-        /// presses - for a control that disables under the focus, such as a
-        /// stepper at its end.
+        /// With `disabled`: stays in the Tab order, with `aria-disabled`.
         #[props(default)]
         focusable_when_disabled: Option<bool>,
-        /// Overlays a `Loader` on the label and swallows clicks, while leaving
-        /// the button focusable - a busy control is still one the reader can
-        /// find. Renders `aria-busy` and `aria-disabled` rather than native
-        /// `disabled`, which would drop focus mid-wait. Ignored in link mode.
+        /// Overlays a `Loader` and swallows clicks; stays focusable. Ignored in link mode.
         #[props(default)]
         loading: Option<bool>,
-        /// `Option`, not a bare `EventHandler`: a defaulted one allocates a
-        /// `GenerationalBox` on every render of every button - ~300 ns - even
-        /// where no caller ever passes a handler.
+        // `Option`: a defaulted `EventHandler` allocates on every render (~300 ns).
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
-        /// Renders a router-aware link instead of a `<button>`. No
-        /// ripple/`onclick` then - see `is_link` below. A path/URL or a typed
-        /// route (`Route::Foo {}`), as on `Anchor`.
+        /// Renders a router link instead of a `<button>`: a path, URL or typed route.
         #[props(default, into)]
         to: Input<NavigationTarget>,
         #[props(default)]
         target: Option<String>,
-        /// Drawn before the label, with a gap; it never shrinks.
+        /// Drawn before the label.
         #[props(default)]
         icon: Option<Element>,
-        /// The label, on one line, laid out as the button's own flex items. A
-        /// long one is cut at the edge; pass `title` to show it on hover.
+        /// The label, on one line; a long one is cut at the edge.
         children: Element,
     }
 }
 
+/// A themed button, or a router link styled as one when `to` is set.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Button;
+/// # fn app() -> Element {
+/// rsx! {
+///     Button { variant: "outlined", onclick: move |_| {}, "Save" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/buttons/button>
 #[component]
 pub fn Button(props: ButtonProps) -> Element {
     let theme = use_theme();
@@ -261,8 +248,7 @@ pub fn Button(props: ButtonProps) -> Element {
     let radius = props.radius.copied_or(theme.button.radius);
 
     let showing = ripple.showing();
-    // Colour resolution plus rendering is ~790 ns, and `(variant, color)` is
-    // the same on almost every render of almost every button.
+    // ~790 ns uncached, and the key rarely changes between renders.
     let style = use_cache(
         (variant, color, selectable),
         |(variant, color, selectable)| button_variables(*variant, color, *selectable),
@@ -278,9 +264,7 @@ pub fn Button(props: ButtonProps) -> Element {
     };
     let style = Some(style).filter(|style| !style.is_empty());
 
-    // Built in one allocation rather than through `.with()`, which is a
-    // `retain` scan and a possible regrow per state. The caller's own states,
-    // which are usually absent, keep the merging path.
+    // One allocation; `.with()` scans and may regrow per state. Caller states merge.
     let mut own = Vec::with_capacity(8);
     own.extend([
         ("disabled", disabled),
@@ -306,9 +290,7 @@ pub fn Button(props: ButtonProps) -> Element {
     };
 
     let handle_click = move |event: Event<MouseData>| {
-        // `prevent_default` as well as returning: a busy `type="submit"`
-        // would otherwise still submit its form, by click or by Enter in a
-        // field, since implicit submission is a synthetic click here.
+        // Else a busy `type="submit"` still submits, by click or by Enter in a field.
         if loading || soft_disabled {
             event.prevent_default();
             return;
@@ -319,9 +301,7 @@ pub fn Button(props: ButtonProps) -> Element {
         }
     };
 
-    // One hook for every path, above the branch: `prepare` is where
-    // `use_style_attributes` runs, and hook order has to be the same on every
-    // render. The renders below are pure.
+    // Above the branch: `prepare` runs a hook, and hook order must not change.
     let boxed = use_box()
         .framework_sx(&BUTTON_BASE_SX)
         .class(&props.class)
@@ -330,7 +310,6 @@ pub fn Button(props: ButtonProps) -> Element {
         .style(style)
         .prepare();
 
-    // Children unwrapped: they are the button's flex items, whatever they are.
     let label = rsx! {
         if let Some(icon) = props.icon {
             // Not `icon`: an `Alert`'s own slot is, and a button sits in one.
@@ -339,13 +318,9 @@ pub fn Button(props: ButtonProps) -> Element {
         {props.children}
     };
 
-    // `InternalAnchor` has no `onclick`: a link-mode Button navigates for
-    // real and loses the ripple, which only makes sense on a `<button>`.
+    // Link mode: no `onclick`, no ripple.
     if let Some(to) = props.to.as_ref().cloned() {
-        // `<a>` has no native `disabled`: dropping `to` stops navigation,
-        // `aria-disabled`/`tabindex` handle the a11y tree and tab order.
-        // `InternalAnchor` can't do this - it always resolves a real link.
-        // An `<a>` without `href` is `generic`, so the role comes back by hand.
+        // `<a>` has no `disabled`: drop `href`; without it `<a>` is `generic`, so restore the role.
         if disabled {
             return boxed
                 .attr_default("role", "link")
@@ -354,8 +329,6 @@ pub fn Button(props: ButtonProps) -> Element {
                 .render(HtmlTag::A, props.attributes, label);
         }
 
-        // Styling already resolved above: an `InternalAnchor` scope would
-        // resolve it again.
         return render_anchor(
             boxed.into_style_attributes(),
             to,
@@ -366,8 +339,6 @@ pub fn Button(props: ButtonProps) -> Element {
         );
     }
 
-    // The loader is `aria-hidden` - the button already has a name, and
-    // `aria-busy` on it is what says it is waiting.
     let children = if loading {
         rsx! {
             span { {label} }
@@ -377,9 +348,7 @@ pub fn Button(props: ButtonProps) -> Element {
         label
     };
 
-    // `<button>` defaults to `submit`, which submits an enclosing form; a
-    // `Button` defaults to `button`. `attr_default`, so a caller asking for
-    // `submit` or `reset` still gets it.
+    // `<button>` defaults to `submit`; a caller can still ask for it.
     boxed
         .event("onclick", handle_click)
         .attr("disabled", disabled && !soft_disabled)

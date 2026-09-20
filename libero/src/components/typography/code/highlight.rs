@@ -1,9 +1,5 @@
-//! A small port of Prism (https://prismjs.com)'s tokenizing engine.
-//!
-//! Simplified: matching only happens within text no higher-priority rule has
-//! claimed, dropping Prism's greedy rematch across already-tokenized siblings.
-//! What that rematch is for - a `//` inside a string is not a comment - is
-//! covered by letting adjacent greedy patterns compete by position instead.
+//! A small port of Prism's (<https://prismjs.com>) tokenizer. Instead of Prism's greedy
+//! rematch, adjacent greedy patterns compete by position.
 
 use crate::components::common::Input;
 use crate::localization::CodeBlockLabels;
@@ -11,8 +7,7 @@ use crate::platform::{PreparedText, RegexMatch, regex_api};
 
 use super::language_catalog::LANGUAGE_CATALOG;
 
-/// Always has a grammar: the catalog only lists languages compiled in by
-/// their `code-lang-*` feature.
+/// A highlighting language, parsed from a name such as `"rust"`. Each needs its `code-lang-*` feature.
 #[derive(Clone, Copy)]
 pub struct Language(&'static super::language_catalog::LanguageEntry);
 
@@ -39,7 +34,7 @@ impl Language {
             .map(Language)
     }
 
-    /// The label a reader sees: plain text, the one entry that is no language name, is localized.
+    /// The shown label; only plain text is localized.
     pub(crate) fn name(self, labels: &CodeBlockLabels) -> &'static str {
         match std::ptr::eq(self.0, &LANGUAGE_CATALOG[0]) {
             true => labels.plain_text,
@@ -79,27 +74,20 @@ impl From<String> for Input<Language> {
 pub(crate) struct PatternDef {
     pattern: &'static str,
     case_insensitive: bool,
-    /// Lookbehind stand-in: matched, then stripped off the token's start.
-    /// Prism's own convention, so neither engine needs real lookbehind.
+    /// Lookbehind stand-in: matched, then stripped off the token's start (Prism's convention).
     lookbehind_group: Option<usize>,
-    /// Lookahead stand-in: matched so the pattern can assert on what follows
-    /// (a CSS property's trailing `:`), but the token ends where this group
-    /// starts rather than at the match's end.
+    /// Lookahead stand-in: the token ends where this group starts.
     lookahead_group: Option<usize>,
-    /// Adjacent greedy patterns, across rules, are matched in one pass where
-    /// the leftmost match wins and a tie goes to the earlier pattern. That is
-    /// what keeps a comment rule from starting inside a string and a string
-    /// rule from starting inside a comment, whichever of the two comes first.
+    /// Adjacent greedy patterns match in one pass, leftmost first, ties to the earlier one:
+    /// no comment starts inside a string, nor a string inside a comment.
     greedy: bool,
-    /// Nesting stand-in: the pattern matches the opener, and the token runs to
-    /// the closer that balances it - or to the end, unclosed. Neither engine recurses.
+    /// Nesting stand-in: the token runs from the opener to its balancing closer, or the end.
     balanced: Option<(&'static str, &'static str)>,
     inside: Option<fn() -> Grammar>,
     alias: Option<&'static str>,
 }
 
-// Which builders are used depends on which `code-lang-*` features are on -
-// a narrow feature set orphans the ones only its missing grammars call.
+// A narrow `code-lang-*` feature set leaves some builders unused.
 #[allow(dead_code)]
 impl PatternDef {
     pub(crate) const fn new(pattern: &'static str) -> Self {
@@ -155,15 +143,13 @@ impl PatternDef {
     }
 }
 
-/// A token type and its patterns, tried in array order - Prism's "first
-/// pattern to match wins".
+/// A token type and its patterns, tried in order: the first to match wins.
 pub(crate) struct TokenRule {
     pub(crate) name: &'static str,
     pub(crate) patterns: &'static [PatternDef],
 }
 
-/// Priority is array order: earlier rules claim text before later ones see
-/// it, as Prism does with object-key insertion order.
+/// Priority is array order: earlier rules claim text before later ones see it.
 pub(crate) type Grammar = &'static [TokenRule];
 
 enum Token<'a> {
@@ -197,18 +183,12 @@ fn tokenize(text: &str, grammar: Grammar) -> Vec<Token<'_>> {
     tokens
 }
 
-/// Replaces every match of `patterns` within still-untokenized (`Plain`)
-/// spans with a `Tagged` token, recursing into `inside` grammars first.
-/// Several patterns compete: the leftmost match wins, a tie goes to the
-/// earlier pattern, and a match that started inside the winner is searched
-/// for again after it.
+/// Tags every match of `patterns` in the `Plain` spans. Leftmost match wins, ties to the
+/// earlier pattern; a match that started inside the winner is searched again after it.
 fn apply_patterns<'a>(tokens: &mut Vec<Token<'a>>, patterns: &[(&'static str, &PatternDef)]) {
-    // Rebuilt rather than spliced in place: splicing shifts every following
-    // token per match, which is quadratic over a long block.
+    // Rebuilt, not spliced: splicing is quadratic over a long block.
     let mut out = Vec::with_capacity(tokens.len());
-    // Each pattern's next match in the current span; `None` once it has none.
-    // A pattern is only searched again when the cursor passes its match, so
-    // one competing pattern costs about what one sequential pass did.
+    // Each pattern's next match; searched again only once the cursor passes it.
     let mut next: Vec<Option<RegexMatch>> = Vec::with_capacity(patterns.len());
     for token in tokens.drain(..) {
         let Token::Plain(span) = token else {
@@ -216,8 +196,7 @@ fn apply_patterns<'a>(tokens: &mut Vec<Token<'a>>, patterns: &[(&'static str, &P
             continue;
         };
 
-        // Prepared once per span, then searched from a moving cursor - each
-        // `find` on a fresh `&str` would re-marshal the tail on wasm.
+        // Prepared once per span: a fresh `&str` per `find` re-marshals the tail on wasm.
         let prepared = PreparedText::new(span);
         let mut cursor = 0;
         let find = |pattern: &PatternDef, cursor: usize| {
@@ -232,8 +211,7 @@ fn apply_patterns<'a>(tokens: &mut Vec<Token<'a>>, patterns: &[(&'static str, &P
                     *slot = find(pattern, cursor);
                 }
             }
-            // `min_by_key` keeps the first of equal keys, so ties go to the
-            // earlier pattern.
+            // `min_by_key` keeps the first of equal keys: ties go to the earlier pattern.
             let Some((index, matched)) = next
                 .iter()
                 .enumerate()
@@ -252,8 +230,6 @@ fn apply_patterns<'a>(tokens: &mut Vec<Token<'a>>, patterns: &[(&'static str, &P
                 continue;
             }
 
-            // No pattern matches before the winner starts, so the text
-            // before it is never re-searched.
             if start > cursor {
                 out.push(Token::Plain(&span[cursor..start]));
             }
@@ -277,8 +253,7 @@ fn apply_patterns<'a>(tokens: &mut Vec<Token<'a>>, patterns: &[(&'static str, &P
     *tokens = out;
 }
 
-/// Strips a lookbehind group's prefix and/or a lookahead group's suffix out
-/// of the match span.
+/// The match span without its lookbehind prefix and lookahead suffix.
 fn resolve_span(pattern: &PatternDef, matched: &RegexMatch) -> (usize, usize) {
     let start = pattern
         .lookbehind_group
@@ -293,9 +268,8 @@ fn resolve_span(pattern: &PatternDef, matched: &RegexMatch) -> (usize, usize) {
     (start, end)
 }
 
-/// Where the `close` balancing an `open` that ended at `from` ends, scanning
-/// left to right as a lexer does; `text.len()` when it is never closed.
-/// Bytewise: both delimiters are ASCII, so no match lands inside a character.
+/// The end of the `close` balancing an `open` that ended at `from`; `text.len()` if unclosed.
+/// Bytewise: both delimiters are ASCII.
 fn balanced_end(text: &str, from: usize, open: &str, close: &str) -> usize {
     let bytes = text.as_bytes();
     let mut depth = 1;
@@ -318,8 +292,7 @@ fn balanced_end(text: &str, from: usize, open: &str, close: &str) -> usize {
     text.len()
 }
 
-/// Prism token name/alias -> the `lsx-tok-*` classes `token_theme.rs` styles.
-/// Deliberately not exhaustive; anything unmatched stays unstyled.
+/// Prism token name/alias to `lsx-tok-*` class. Anything unmatched stays unstyled.
 const TOKEN_CLASSES: &[(&str, &str)] = &[
     ("comment", "lsx-tok-comment"),
     ("string", "lsx-tok-string"),
@@ -355,9 +328,8 @@ fn classify_name(name: &str) -> Option<&'static str> {
 
 pub(crate) type HighlightedLine = Vec<(String, Option<&'static str>)>;
 
-/// Flattens a token tree into `(text, class)` spans. A token's own class beats
-/// its parent's when it maps to a known one (`alias` first, being more
-/// specific); otherwise it inherits its ancestor's.
+/// Flattens a token tree into `(text, class)` spans. A known own class (`alias` first)
+/// beats the inherited one.
 fn flatten<'a>(
     tokens: &[Token<'a>],
     out: &mut Vec<(&'a str, Option<&'static str>)>,
@@ -396,8 +368,7 @@ pub(crate) fn highlight(source: &str, language: Language) -> Vec<HighlightedLine
     split_into_lines(spans, source.ends_with('\n'))
 }
 
-/// The only place a span's text is copied: `flatten`'s spans borrow the
-/// source, and these are the pieces that outlive it.
+/// The only place a span's text is copied; `flatten`'s spans borrow the source.
 fn split_into_lines(
     spans: Vec<(&str, Option<&'static str>)>,
     source_ends_with_newline: bool,
@@ -439,17 +410,13 @@ fn split_into_lines(
 mod tests {
     use super::*;
 
-    /// Only languages whose `code-lang-*` feature is on are in the catalog, so
-    /// every test naming one carries that feature's `cfg` - otherwise
-    /// `--no-default-features` panics here instead of skipping the test.
+    /// A test naming a language needs its feature's `cfg`, or `--no-default-features` panics here.
     fn lang(name: &str) -> Language {
         Language::parse(name).unwrap_or_else(|| panic!("{name} should be in LANGUAGE_CATALOG"))
     }
 
-    /// The sweeps over every compiled-in grammar. Without a `code-lang-*`
-    /// feature the catalog is plain text alone and each of them would pass
-    /// having checked nothing, so they are compiled out instead (review 7
-    /// S2). The batch gate runs them with all 30 features on.
+    /// Sweeps over every grammar; compiled out without one, where they would check nothing
+    /// (review 7 S2). The batch gate runs them with all features on.
     #[cfg(any(
         feature = "code-lang-bash",
         feature = "code-lang-c",
@@ -485,9 +452,7 @@ mod tests {
     mod grammar_sweeps {
         use super::*;
 
-        /// Every grammar must tokenize arbitrary text without panicking or
-        /// hanging - `apply_pattern`'s "start >= end" guard is what stops a
-        /// pathological pattern looping forever.
+        /// No panic or hang: `apply_patterns`' `start >= end` guard stops an endless loop.
         #[test]
         fn every_catalog_language_highlights_without_panicking() {
             let sample = "hello_world(123) // a comment \"a string\" 4.5 { } [ ] < > = : ; \n";
@@ -498,12 +463,8 @@ mod tests {
             }
         }
 
-        /// Todo 279: the non-web arm rewrites `\b`, `\w` and `\d` into their
-        /// ASCII sets so it agrees with the browser's `RegExp`
-        /// (`platform::regex::ascii_semantics`). A rewrite that produced invalid
-        /// syntax would panic in the compile cache, so every pattern of every
-        /// compiled-in grammar is built here - including the nested ones, which
-        /// a sample text may never reach.
+        /// Todo 279: the native ASCII rewrite of `\b`, `\w`, `\d` must leave every pattern,
+        /// nested ones included, compiling.
         #[test]
         fn every_grammar_pattern_still_compiles_after_the_ascii_rewrite() {
             fn compile(grammar: Grammar, label: &str, depth: usize) {
@@ -514,8 +475,7 @@ mod tests {
                 let text = PreparedText::new("");
                 for rule in grammar {
                     for pattern in rule.patterns {
-                        // A compile failure panics inside the cache; a `None`
-                        // here just means the empty haystack did not match.
+                        // A compile failure panics; `None` only means no match.
                         regex_api().find(pattern.pattern, pattern.case_insensitive, &text, 0);
                         if let Some(inside) = pattern.inside {
                             compile(inside(), label, depth + 1);
@@ -529,9 +489,7 @@ mod tests {
             }
         }
 
-        /// Adjacent greedy patterns compete by position, so a comment and a
-        /// string only keep out of each other when no non-greedy pattern sits
-        /// between their rules.
+        /// Comment and string only compete when no non-greedy pattern sits between them.
         #[test]
         fn every_grammars_comment_and_string_rules_compete() {
             for entry in LANGUAGE_CATALOG.iter() {
@@ -555,11 +513,8 @@ mod tests {
         }
     }
 
-    /// Review 6 S1: `é` is a word character to the `regex` crate and not to
-    /// `RegExp`, so before the rewrite this line highlighted differently on
-    /// the web than it did here - and under `fullstack`, the server's markup
-    /// contradicted the client that hydrated it. Both engines now mark the
-    /// `if` inside `éif`, which is what Prism's grammars were written for.
+    /// Review 6 S1: `é` is a word character to `regex` but not to `RegExp`; both engines
+    /// must agree, or fullstack hydration mismatches.
     #[test]
     #[cfg(feature = "code-lang-rust")]
     fn a_keyword_after_a_non_ascii_letter_tokenizes_as_it_does_on_the_web() {
@@ -581,8 +536,7 @@ mod tests {
         highlight(source, language).into_iter().flatten().collect()
     }
 
-    /// With any of the three features off, `parse` returns `None` for both
-    /// sides and every equality holds trivially.
+    /// With a feature off, both sides are `None` and the test proves nothing.
     #[test]
     #[cfg(all(
         feature = "code-lang-rust",
@@ -791,8 +745,7 @@ mod tests {
                 .iter()
                 .any(|(text, class)| text == "class" && *class == Some("lsx-tok-attribute"))
         );
-        // Both the opening and closing tag name must be classified, not just
-        // the first occurrence in the source.
+        // Both the opening and the closing tag name.
         assert_eq!(
             spans
                 .iter()

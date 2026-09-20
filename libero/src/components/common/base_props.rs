@@ -1,11 +1,5 @@
-/// Declares a component `Props` struct, appending `attributes` (extends
-/// `GlobalAttributes`, so it also captures DOM events), `class`, `sx` and
-/// `states`. The body lists only what's specific to the component.
-///
-/// Expands at the call site, so `Props`, `Attribute` and `Input` must be in
-/// scope there - every component file imports them anyway. The shared fields'
-/// own types are named by path, so a component that does not otherwise mention
-/// `Sx` or `States` need not import them.
+/// Declares a component `Props` struct, appending `attributes`, `class`, `sx` and `states`.
+/// `Props`, `Attribute` and `Input` must be in scope at the call site.
 ///
 /// ```ignore
 /// # // Not compiled: `base_props!` is crate-internal, so a doc-test cannot name it.
@@ -18,11 +12,8 @@
 /// }
 /// ```
 ///
-/// A generic struct declares its parameters inline, one bound each - a `where`
-/// clause and a `A + B` bound are both unsupported, and nothing has wanted
-/// either. Capturing the parameter list as `tt` instead is the
-/// `local ambiguity when calling macro` trap, since a `tt` repetition cannot
-/// be followed by `>`.
+/// Generics inline, one bound each: no `where`, no `A + B`. A `tt` capture would hit the
+/// `local ambiguity when calling macro` trap.
 ///
 /// ```ignore
 /// # // Not compiled: `base_props!` is crate-internal, so a doc-test cannot name it.
@@ -33,9 +24,8 @@
 /// }
 /// ```
 ///
-/// A leading `extends(...)` adds a specific tag's own attributes (e.g.
-/// `option`'s `selected`). Several tags work, but an attribute two of them
-/// share is ambiguous at the call site - declare it as a field instead.
+/// `extends(...)` adds a tag's own attributes. An attribute two tags share is ambiguous:
+/// declare it as a field instead.
 ///
 /// ```ignore
 /// # // Not compiled: `base_props!` is crate-internal, so a doc-test cannot name it.
@@ -58,10 +48,8 @@ macro_rules! base_props {
         $(#[$struct_meta])*
         #[derive(Props, Clone, PartialEq)]
         $vis struct $name $(< $($generic: $bound),+ >)? {
-            // The component's own fields come first, and `children` with them,
-            // so the derived `PartialEq` that `memoize` runs bails on the
-            // never-equal `children` before it compares the four expensive
-            // shared fields below.
+            // Own fields first: `PartialEq` bails on the never-equal `children`
+            // before comparing the four expensive shared fields.
             $($fields)*
             #[props(extends = GlobalAttributes $($extra_extends)*)]
             attributes: Vec<Attribute>,

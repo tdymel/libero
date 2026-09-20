@@ -4,25 +4,16 @@ use crate::hooks::use_id;
 
 use super::combobox_aria::trigger_aria;
 
-/// A [`Combobox`](crate::components::Combobox)'s open state, its keyboard highlight, and
-/// the id that ties the two together - held in the caller's own scope, so the
-/// component holds nothing.
-///
-/// It exists because `aria-activedescendant` belongs on the focused trigger,
-/// and the trigger is the one element `Combobox` does not render.
-/// [`a11y_attributes`](Self::a11y_attributes) hands that wiring out; the rest
-/// is the open state, to drive however the control wants to.
+/// A [`Combobox`](crate::components::Combobox)'s open state and keyboard highlight, held
+/// in the caller's scope. Spread [`a11y_attributes`](Self::a11y_attributes) on the trigger.
 #[derive(Clone, Copy, PartialEq)]
 pub struct ComboboxState {
     id: Signal<String>,
     opened: Signal<bool>,
     active: Signal<Option<usize>>,
-    /// How many rows the open list draws, written by the list itself - none
-    /// while it is loading. The trigger must never point at a row that is not
-    /// in the DOM, and only the list knows what it drew.
+    /// Rows the open list drew, written by the list: the trigger must not name a missing row.
     rows: Signal<usize>,
-    /// Open, but refused by a disabled or read-only list, written by the list:
-    /// the trigger must not claim a listbox the list did not draw.
+    /// Open, but refused by a disabled or read-only list, written by the list.
     held: Signal<bool>,
 }
 
@@ -64,9 +55,8 @@ impl ComboboxState {
         self.set_open(!self.is_open());
     }
 
-    /// The row the arrow keys are on - an index into the `options` last handed
-    /// to the `Combobox`. `None` is no highlight at all, which is what lets a
-    /// control whose value is free text keep Enter for itself.
+    /// The row the arrow keys are on, an index into the `options`. `None` leaves Enter to
+    /// the control.
     pub fn active(&self) -> Option<usize> {
         (self.active)()
     }
@@ -76,8 +66,7 @@ impl ComboboxState {
         active.set(row);
     }
 
-    /// Written by `ComboboxCore` on render, with a peek-compare so an
-    /// unchanged count does not re-render the caller.
+    /// Peek-compared, so an unchanged count does not re-render the caller.
     pub(crate) fn set_rows(&self, count: usize) {
         let mut rows = self.rows;
         if *rows.peek() != count {
@@ -85,7 +74,7 @@ impl ComboboxState {
         }
     }
 
-    /// Written by `ComboboxCore` on render, peek-compared like `set_rows`.
+    /// Peek-compared like `set_rows`.
     pub(crate) fn set_held(&self, held: bool) {
         let mut signal = self.held;
         if *signal.peek() != held {
@@ -93,15 +82,7 @@ impl ComboboxState {
         }
     }
 
-    /// `role`, `aria-haspopup`, `aria-expanded`, and, while the list is open
-    /// and has a row to point at, `aria-controls` and `aria-activedescendant`.
-    ///
-    /// `aria-controls` is left out while the list is closed, loading or empty,
-    /// because the listbox it names is then not in the DOM. Before todo 360 it
-    /// was always set, so a caller that reads it must not expect it on a closed
-    /// combobox.
-    ///
-    /// Spread it on whatever control sits inside the `Combobox`:
+    /// The trigger's combobox ARIA. `aria-controls` only while the listbox is in the DOM (todo 360).
     ///
     /// ```no_run
     /// # use dioxus::prelude::*;
@@ -118,13 +99,11 @@ impl ComboboxState {
         self.aria(self.is_open() && (self.rows)() > 0)
     }
 
-    /// [`a11y_attributes`](Self::a11y_attributes) for a list that is not a
-    /// `ComboboxCore`'s, whose drawer says whether its listbox is mounted.
+    /// [`a11y_attributes`](Self::a11y_attributes) for a list that says itself whether it is mounted.
     pub(crate) fn aria(&self, listbox: bool) -> Vec<Attribute> {
         let opened = self.is_open() && !(self.held)();
         let listbox = listbox && opened;
-        // Clamped the way the list clamps its highlight, so the id named here
-        // is the row drawn as active.
+        // Clamped as the list clamps its highlight.
         let rows = (self.rows)();
         let active = self
             .active()
