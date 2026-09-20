@@ -48,9 +48,16 @@ fn Faq() -> Element {
 
 ## Accessibility
 
-An id is how `aria_controls`, `aria_labelledby`, `aria_describedby` and a
-label's `r#for` find their element. Each disclosure above names its own panel,
-so a screen reader pairs every button with the right one.
+### Libero handles
+
+- The id is unique in the process, so each instance's wiring stays its own.
+  Each disclosure in the demo names its own panel, so a screen reader pairs
+  every button with the right one.
+
+### You must
+
+- Pass the id to `aria_controls`, `aria_labelledby`, `aria_describedby` or a
+  label's `r#for`: an id is how they find their element.
 
 ## API
 

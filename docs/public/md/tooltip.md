@@ -51,11 +51,20 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Keyboard focus anywhere inside `Tooltip` shows the bubble, a click does not.
-Escape hides it until the pointer or focus comes back.
+### Keyboard
 
-Give the bubble an id with `label_id` and point your trigger's
-`aria-describedby` at it, so a screen reader reads the label.
+| Key | Action |
+|---|---|
+| `Escape` | Hides the bubble until the pointer or focus comes back. |
+
+### Libero handles
+
+- Keyboard focus anywhere inside `Tooltip` shows the bubble, a click does not.
+
+### You must
+
+- Give the bubble an id with `label_id` and point your trigger's
+  `aria-describedby` at it, so a screen reader reads the label.
 
 ```rust
 use dioxus::prelude::*;

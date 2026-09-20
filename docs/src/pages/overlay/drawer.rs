@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Flex, Text, Title},
@@ -92,6 +90,18 @@ pub fn DrawerPage() -> Element {
                     prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. Unset warns in a debug build."),
                 ]).without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Escape"], "Closes the drawer, as a backdrop click does.")
+                .key(["Tab", "Shift+Tab"], "Moves the focus within the panel. It does not leave while the drawer shows.")
+                .handles([
+                    "Focus moves into the panel, and back to the trigger once it closes, as with `use_modal`.",
+                    "A dismissal settles the `Opening` with `None`, so a result handler never runs on it.",
+                    "An unset `aria_label` warns in a debug build.",
+                ])
+                .must([
+                    "Set `DrawerOptions::aria_label`, since the panel is a dialog with no name of its own.",
+                    "Give its content a way to close it: it has no header close button.",
+                ]),
             lead: rsx! {
                 Text {
                     "A dimmed, focus-trapped panel docked to one edge. "
@@ -117,16 +127,6 @@ pub fn DrawerPage() -> Element {
                     DrawerDemo { anchor: values.str("anchor"), size: values.str("size") }
                 },
                 wrap: Wrap(wrap_hook),
-            }
-
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Escape and a backdrop click close it. Set "
-                    Code { source: "DrawerOptions::aria_label" }
-                    ", since the panel is a dialog with no name of its own. It has no header "
-                    "close button, so give its content a way to close it."
-                }
             }
         }
     }

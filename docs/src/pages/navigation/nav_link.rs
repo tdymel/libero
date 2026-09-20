@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, NavLink, Text},
@@ -64,6 +62,13 @@ pub fn NavLinkPage() -> Element {
                 prop("onchange", "EventHandler<bool>").doc("Called with the new `opened` when the toggle is pressed."),
                 prop("children", "Element").default("required").doc("The link's content."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "`description` is read as the link's description, not its name, so \"Docs\" stays \"Docs\" in a links list.",
+                    "With `nested`, a disclosure button follows the link with its own tab stop. It carries `aria-expanded` and `aria-controls`, and its name is the localized \"Show links\" plus the link's name (\"Show links Docs\").",
+                    "Enter or Space on the disclosure button toggles the panel, and the link still navigates.",
+                ])
+                .must(["Wrap a list of them in a `<nav>` to make a navigation landmark."]),
             lead: rsx! {
                 Text {
                     "A navigation list item for a sidebar or nav bar. It is an "
@@ -149,19 +154,6 @@ pub fn NavLinkPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_links),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Wrap a list of them in a "
-                    Code { source: "<nav>" }
-                    " to make a navigation landmark. "
-                    Code { source: "description" }
-                    " is read as the link's description, not its name. With "
-                    Code { source: "nested" }
-                    ", a disclosure button follows the link with its own tab stop, named "
-                    "\"Show links\" plus the link's name. It toggles the panel, and the link "
-                    "still navigates."
-                }
             }
         }
     }

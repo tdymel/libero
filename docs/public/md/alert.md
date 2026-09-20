@@ -56,14 +56,19 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-An `error` or `warning` color renders `role="alert"`, which interrupts a screen
-reader. Every other color renders the polite `role="status"`. Your own `role`
-replaces either.
+### Libero handles
 
-The icon is hidden from screen readers, so say the severity in the title or
-the message too. `outlined` has no tint, so prefer `tonal` or `filled` for an
-error. Closing removes the focused close button, so move focus somewhere
-sensible in `onclose`.
+- An `error` or `warning` color renders `role="alert"`, which interrupts a
+  screen reader. Every other color renders the polite `role="status"`. Your
+  own `role` replaces either.
+- The icon is hidden from screen readers.
+
+### You must
+
+- Say the severity in the title or the message too, as the icon is not read.
+- Prefer `tonal` or `filled` for an error: `outlined` has no tint.
+- Move the focus somewhere sensible in `onclose`: closing removes the focused
+  close button.
 
 ## Props
 

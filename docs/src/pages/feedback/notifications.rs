@@ -1,11 +1,11 @@
 use std::{cell::Cell, rc::Rc, time::Duration};
 
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, prop, props};
 use crate::icons::DismissIcon;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Box, Button, Code, Flex, Input, Kbd, NotificationData, NotificationLive,
+        ActionIcon, Box, Button, Code, Flex, Input, NotificationData, NotificationLive,
         NotificationOptions, NotificationScope, Notifications, Paper, ProgressBar, Text, Variant,
         use_notifications, use_notifications_with,
     },
@@ -473,6 +473,18 @@ pub fn NotificationsPage() -> Element {
                     prop("clear()", "()").doc("Removes every notification, shown and queued."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["F8"], "Focuses the newest notification from anywhere. The host's `hotkey` sets the key.")
+                .handles([
+                    "Showing one takes no focus. `live` picks a polite or an assertive announcement.",
+                    "Without the hotkey, a close button comes after the rest of the page in `Tab` order.",
+                    "A focused notification never closes on its own.",
+                    "Closing the focused one moves focus to the next close button in its stack, and back to where `F8` was pressed once the stack is empty.",
+                ])
+                .must([
+                    "Give one with an action, such as Undo, `AutoClose::Never`: it is safer.",
+                    "In your own template, draw the close button yourself: read `s.closable()` and give the button an `aria_label`, as the Card option does.",
+                ]),
             lead: rsx! {
                 Text {
                     "A hook and a host. Render "
@@ -597,35 +609,6 @@ pub fn NotificationsPage() -> Element {
                 },
                 wrap: Wrap(wrap_demo),
                 wide_preview: true,
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Showing one takes no focus. "
-                    Code { source: "live" }
-                    " picks a polite or an assertive announcement. "
-                    Kbd { "F8" }
-                    " (the host's "
-                    Code { source: "hotkey" }
-                    ") focuses the newest notification from anywhere. Otherwise its close "
-                    "button comes after the rest of the page in "
-                    Kbd { "Tab" }
-                    " order. A focused notification never closes on its own, but one with an "
-                    "action, such as Undo, is still safer with "
-                    Code { source: "AutoClose::Never" }
-                    "."
-                }
-                Text {
-                    "Closing the focused one moves focus to the next close button in its "
-                    "stack, and back to where "
-                    Kbd { "F8" }
-                    " was pressed once the stack is empty. Your own template draws the close "
-                    "button itself, so read "
-                    Code { source: "s.closable()" }
-                    " and give the button an "
-                    Code { source: "aria_label" }
-                    ", as the Card option does."
-                }
             }
         }
     }

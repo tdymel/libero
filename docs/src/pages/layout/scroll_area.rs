@@ -1,5 +1,5 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -142,6 +142,16 @@ pub fn ScrollAreaPage() -> Element {
                     .default("4")
                     .doc("Rows rendered beyond each edge, so a fast scroll has something to show."),
             ]).without_base_props()],
+            accessibility: a11y()
+                .handles([
+                    "Tab reaches focusable content inside the area as usual.",
+                    "When the content has nothing to focus, like a block of text, the area itself becomes a tab stop while it overflows, so the arrow keys can scroll it. `focusable: true` keeps the stop always.",
+                    "A debug build warns about a tab stop without a name.",
+                ])
+                .must([
+                    "Name the area with `aria_label` or `aria_labelledby`.",
+                    "Use `scrollbars: \"none\"` only where something else scrolls: it puts the clipped content out of reach.",
+                ]),
             lead: rsx! {
                 Text {
                     "Scrolls its content and fills its parent, so give the parent a size. "
@@ -260,13 +270,10 @@ pub fn ScrollAreaPage() -> Element {
             }
 
             DocSection {
-                title: "Accessibility",
+                title: "Text with nothing to focus",
                 Text {
-                    "Tab reaches focusable content inside the area as usual. When the "
-                    "content has nothing to focus, like a block of text, the area itself "
-                    "becomes a tab stop while it overflows, so the arrow keys can scroll it. "
-                    Code { source: "focusable: true" }
-                    " keeps the stop always."
+                    "The area itself becomes a tab stop while it overflows, so the arrow keys "
+                    "can scroll it. Tab to the box below and press the arrow keys."
                 }
                 CodeBlock { source: FOCUSABLE_EXAMPLE, language: "rust" }
                 Box {
@@ -284,16 +291,6 @@ pub fn ScrollAreaPage() -> Element {
                             }
                         }
                     }
-                }
-                Text {
-                    "Name the area with "
-                    Code { source: "aria_label" }
-                    " or "
-                    Code { source: "aria_labelledby" }
-                    ". A debug build warns about a tab stop without a name. "
-                    Code { source: "scrollbars: \"none\"" }
-                    " puts the clipped content out of reach, so use it only where something "
-                    "else scrolls."
                 }
             }
 

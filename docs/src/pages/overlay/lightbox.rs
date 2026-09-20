@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Image, Kbd, Text},
@@ -147,6 +147,18 @@ pub fn LightboxPage() -> Element {
                     prop("caption", "Option<String>").doc("Shown under the stage."),
                 ]).without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["z"], "On the picture: steps through 2x, 4x and 8x and back to fitted.")
+                .key(["+", "-"], "On the picture: zooms in finer steps.")
+                .key(["Left", "Right", "Up", "Down"], "On the picture: pans. At the edge of a pan, moves to the next picture.")
+                .key(["Left", "Right", "Home", "End"], "In the thumbnail strip: moves along the strip and changes the picture with it.")
+                .key(["Escape"], "Closes the viewer.")
+                .handles([
+                    "Focus returns to the thumbnail that opened it.",
+                    "With `zoom` on, the picture showing is a tab stop that takes the zoom and pan keys. Its description lists them, and a status message reads each new zoom level.",
+                    "At the edge of a pan the arrows move to the next picture, so the keyboard never gets stuck.",
+                ])
+                .must(["Give every picture its own `alt`."]),
             lead: rsx! {
                 Text {
                     "A modal image viewer. "
@@ -191,23 +203,6 @@ pub fn LightboxPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_hook),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Give every picture its own "
-                    Code { source: "alt" }
-                    ". With "
-                    Code { source: "zoom" }
-                    " on, the picture showing is a tab stop that takes the zoom and pan keys. "
-                    "Its description lists them, and a status message reads each new zoom "
-                    "level. In the thumbnail strip, the arrows, "
-                    Kbd { "Home" }
-                    " and "
-                    Kbd { "End" }
-                    " move along the strip and change the picture with it. "
-                    Kbd { "Esc" }
-                    " closes the viewer."
-                }
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Pagination, Text},
@@ -51,6 +51,14 @@ pub fn PaginationPage() -> Element {
                 prop("label", "Callback<PaginationLabel, String>")
                     .doc("Overrides every accessible name. Runs during render, so it can read a locale."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "Every control is a button and a tab stop.",
+                    "The page names come from the localization's `PaginationLabels`, and `label` overrides them.",
+                ])
+                .must([
+                    "Keep `theme.pagination.gap` above zero: at `xs` the controls are 22px and meet the 24px target size only through the gap.",
+                ]),
             lead: rsx! {
                 Text {
                     "A row of page buttons in a named "
@@ -113,21 +121,6 @@ pub fn PaginationPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Every control is a button and a tab stop. The page names come from the "
-                    "localization's "
-                    Code { source: "PaginationLabels" }
-                    ", and "
-                    Code { source: "label" }
-                    " overrides them. At "
-                    Code { source: "xs" }
-                    " the controls are 22px and meet the 24px target size only through the "
-                    "theme's gap, so keep "
-                    Code { source: "theme.pagination.gap" }
-                    " above zero."
-                }
             }
         }
     }

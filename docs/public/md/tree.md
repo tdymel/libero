@@ -105,16 +105,27 @@ state, not part of `Tree`.
 
 ## Accessibility
 
-`aria_label` names the tree and is required.
+### Keyboard
 
-The tree is one tab stop. Up and Down move between visible rows. Left and Right
-collapse and expand, or jump to the parent and first child. Home and End jump
-to the first and last row, and typing jumps to the next row whose `tree_label`
-matches. A disabled node is still reachable, but nothing activates, expands or
-collapses it.
+| Key | Action |
+|---|---|
+| `Tab` | Enters the tree, one tab stop. |
+| `Up` or `Down` | Moves between visible rows. |
+| `Left` or `Right` | Collapses and expands, or jumps to the parent and first child. |
+| `Home` or `End` | Jumps to the first or last row. |
 
-Any link or button `render_node` draws must take `args.tabindex`, or it adds a
-tab stop the arrow keys never reach. `TreeItem` does this for you.
+### Libero handles
+
+- Typing jumps to the next row whose `tree_label` matches.
+- A disabled node is still reachable, but nothing activates, expands or
+  collapses it.
+- `TreeItem` takes `args.tabindex` for you.
+
+### You must
+
+- Name the tree with `aria_label`. It is required.
+- Pass `args.tabindex` to any link or button `render_node` draws, or it adds a
+  tab stop the arrow keys never reach.
 
 ## Props
 

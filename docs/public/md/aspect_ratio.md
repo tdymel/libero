@@ -36,8 +36,10 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The edges of the child get cropped, so keep nothing meaningful there. An image
-still needs `alt` text that describes what the reader can see.
+### You must
+
+- Keep nothing meaningful at the child's edges: they get cropped.
+- Give an image `alt` text that describes what the reader can see.
 
 ## Props
 

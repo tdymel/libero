@@ -62,15 +62,22 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-A `header` is the `banner` landmark only outside `article`, `aside`, `main`,
-`nav` and `section`, so keep it at the top level of the page. Put a `nav` inside
-it for the navigation landmark. One banner per page.
+### Libero handles
 
-A `sticky` or `fixed` header with `publish_height` sets
-`scroll-padding-top: var(--lsx-header-height)` on `:root`, so focus moved under
-it scrolls clear (WCAG 2.4.11). That pads the page's scroller only. A header
-stuck inside another scroller needs the same padding on that scroller, from
-you.
+- A `sticky` or `fixed` header with `publish_height` sets
+  `scroll-padding-top: var(--lsx-header-height)` on `:root`, so focus moved
+  under it scrolls clear (WCAG 2.4.11). That pads the page's scroller only.
+
+### You must
+
+- Keep the page's header at the top level, outside `main`, `nav`, `section`,
+  `article` and `aside`: only there is it the `banner` landmark. One banner
+  per page.
+- Put a `nav` inside it for the navigation landmark.
+- Give a `sticky` or `fixed` header `publish_height`, so focus scrolls clear
+  of it.
+- Give a header stuck inside another scroller the same `scroll-padding-top` on
+  that scroller.
 
 ## Props
 

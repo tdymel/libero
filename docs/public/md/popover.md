@@ -142,29 +142,45 @@ let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
 use_drop(move || tick.manually_drop());
 ```
 
-## Accessibility
-
-The hook adds no role and no keys. Put a `role` on the box, and
-`aria-haspopup`, `aria-expanded` and `aria-controls` on the trigger, as the
-example does. Drive `aria-expanded` from the same signal the hook gets, or a
-screen reader hears the wrong state.
-
-Escape must close the box (WCAG 1.4.13). With `dismiss(true)`, Escape closes it
-and returns focus to the trigger. Focus leaving the trigger and the box closes
-it too. Give the box `tabindex="-1"`, or a click on its text moves focus out
-and closes it. Safari does not focus a button on click, so there a press
-outside a box opened by pointer does not close it.
-
-Focus is not trapped. Tab closes the box and moves on. If you animate the
-close, give the closing box `visibility: hidden` or `inert`. Until it
-unmounts, it is still tabbable and still announced.
-
 ## What it cannot do
 
 Only the web tells the box when the page scrolls. Elsewhere an open popover
 drifts. No backend tracks a resize, so use `remeasure`. A press outside needs
 to know where focus is. The web and Blitz can tell, a WebView cannot, so there
 only Escape and your own handlers close the box.
+
+## Accessibility
+
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Escape` | With `dismiss(true)`: closes the box and returns focus to the trigger. |
+| `Tab` | Closes the box and moves on. Focus is not trapped. |
+
+### Libero handles
+
+- The hook adds no role and no keys of its own. `dismiss(true)` adds the
+  Escape key and closing on focus leaving.
+- With `dismiss(true)`, focus leaving the trigger and the box closes it.
+
+### You must
+
+- Put a `role` on the box, and `aria-haspopup`, `aria-expanded` and
+  `aria-controls` on the trigger, as the example does.
+- Drive `aria-expanded` from the same signal the hook gets, or a screen reader
+  hears the wrong state.
+- Make Escape close the box (WCAG 1.4.13): turn on `dismiss(true)`, or handle
+  it yourself.
+- Give the box `tabindex="-1"`, or a click on its text moves focus out and
+  closes it.
+- If you animate the close, give the closing box `visibility: hidden` or
+  `inert`. Until it unmounts, it is still tabbable and still announced.
+
+### Limits
+
+- Safari does not focus a button on click, so there a press outside a box
+  opened by pointer does not close it.
 
 ## PopoverOptions
 

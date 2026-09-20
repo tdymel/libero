@@ -48,19 +48,29 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-`aria_label` names the bar and is required.
+### Keyboard
 
-On a trigger, ArrowLeft and ArrowRight move along the bar, wrapping unless
-`loop_focus` is off. If a menu is open, the next one opens. A disabled trigger
-takes focus and opens nothing. Home and End go to the first and last trigger.
-Enter, Space and ArrowDown open the menu on its first item, ArrowUp on its last.
-Typing jumps to a trigger by its label.
+| Key | Action |
+|---|---|
+| `Tab` | Enters the bar, one tab stop. In an open menu: closes it and leaves the bar. |
+| `Left` or `Right` | On a trigger: moves along the bar, disabled triggers included, wrapping unless `loop_focus` is off. If a menu is open, the next one opens. |
+| `Home` or `End` | On a trigger: goes to the first or last trigger. |
+| `Enter`, `Space` or `Down` | On a trigger: opens its menu on the first item. |
+| `Up` | On a trigger: opens its menu on the last item. |
+| `Right` | In an open menu: opens a submenu item's submenu, or else moves to the next menu. |
+| `Left` | In an open menu: closes a submenu, or on the top level moves to the previous menu. |
+| `Escape` | Closes the menu and returns focus to its trigger. |
 
-In an open menu, ArrowRight on an item without a submenu and ArrowLeft on the
-top level move to the next menu. ArrowRight on a submenu item opens the
-submenu, and ArrowLeft closes it. Escape closes the menu and returns focus to
-its trigger. Tab closes it and leaves the bar. The rest works as in `Menu`,
-including `MenuItem`'s `shortcut` and `checkbox`.
+### Libero handles
+
+- On a trigger, typing jumps to a trigger by its label.
+- A disabled trigger takes focus and opens nothing.
+- The rest works as in [`Menu`](menu.md), including `MenuItem`'s `shortcut`
+  and `checkbox`.
+
+### You must
+
+- Name the bar with `aria_label`. It is required.
 
 ## Props
 

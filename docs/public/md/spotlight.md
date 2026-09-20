@@ -93,12 +93,25 @@ let spotlight = use_spotlight(SpotlightOptions {
 
 ## Accessibility
 
-Focus stays in the search box. `↓` `↑` move the highlight, wrapping at both
-ends. Enter runs the highlighted action, by default the first row. Turn
-`highlight_first_on_query` off for a palette whose actions change things. Then
-nothing is highlighted until you press `↓`. Esc or a click outside closes, and
-focus goes back to what opened it. The hotkey is ignored while you type in
-another text field, and while a dialog or popover is open.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Down` or `Up` | Moves the highlight, wrapping at both ends. |
+| `Enter` | Runs the highlighted action, by default the first row. |
+| `Escape` | Closes, as a click outside does. Focus goes back to what opened it. |
+
+### Libero handles
+
+- Focus stays in the search box.
+- The hotkey is ignored while you type in another text field, and while a
+  dialog or popover is open.
+
+### You must
+
+- Turn `highlight_first_on_query` off for a palette whose actions change
+  things. Then nothing is highlighted until you press Down.
+- Call `open()` from the trigger's handler, so focus returns there.
 
 ## API
 

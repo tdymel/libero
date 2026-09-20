@@ -117,16 +117,27 @@ uploads.update(id, Upload { file: "archive.zip", percent: 40.0 });
 
 ## Accessibility
 
-Showing one takes no focus. `live` picks a polite or an assertive
-announcement. F8 (the host's `hotkey`) focuses the newest notification from
-anywhere. Otherwise its close button comes after the rest of the page in Tab
-order. A focused notification never closes on its own, but one with an action,
-such as Undo, is still safer with `AutoClose::Never`.
+### Keyboard
 
-Closing the focused one moves focus to the next close button in its stack, and
-back to where F8 was pressed once the stack is empty. Your own template draws
-the close button itself, so read `s.closable()` and give the button an
-`aria_label`, as the Card option does.
+| Key | Action |
+|---|---|
+| `F8` | Focuses the newest notification from anywhere. The host's `hotkey` sets the key. |
+
+### Libero handles
+
+- Showing one takes no focus. `live` picks a polite or an assertive
+  announcement.
+- Without the hotkey, a close button comes after the rest of the page in `Tab`
+  order.
+- A focused notification never closes on its own.
+- Closing the focused one moves focus to the next close button in its stack,
+  and back to where `F8` was pressed once the stack is empty.
+
+### You must
+
+- Give one with an action, such as Undo, `AutoClose::Never`: it is safer.
+- In your own template, draw the close button yourself: read `s.closable()`
+  and give the button an `aria_label`, as the Card option does.
 
 ## API
 

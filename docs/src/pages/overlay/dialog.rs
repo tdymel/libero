@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Dialog, Text};
 
@@ -73,6 +71,15 @@ pub fn DialogPage() -> Element {
                     prop("children", "Element").default("required").doc("The dialog's content."),
                 ]),
             ],
+            accessibility: a11y()
+                .handles([
+                    "Outside a modal, a close button without `onclose` warns in debug builds.",
+                ])
+                .must([
+                    "Name it with `title` or `aria_label`.",
+                    "Open it in a modal: the focus trap, Escape and backdrop dismissal come from the modal. A `Dialog` on its own has none of them.",
+                    "Outside a modal, give a close button `onclose`, or it closes nothing.",
+                ]),
             lead: rsx! {
                 Text {
                     "The dialog surface, a "
@@ -124,19 +131,6 @@ pub fn DialogPage() -> Element {
                 // The size scale runs to 900px, so side by side every step
                 // from md up is the pane's width.
                 wide_preview: true,
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Name it with "
-                    Code { source: "title" }
-                    " or "
-                    Code { source: "aria_label" }
-                    ". The focus trap, Escape and backdrop dismissal come from the modal. A "
-                    Code { source: "Dialog" }
-                    " on its own has none of them. Outside a modal, a close button without "
-                    Code { source: "onclose" }
-                    " closes nothing and warns in debug builds."
-                }
             }
         }
     }

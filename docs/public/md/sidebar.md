@@ -83,9 +83,15 @@ With `side: "top"` or `"bottom"`, `size` is a height, so the parent needs
 
 ## Accessibility
 
-The root is an `aside`, the `complementary` landmark. For the site navigation
-pass `component: "nav"`. Give it an `aria_label` when the page has more than one
-landmark of that kind.
+### Libero handles
+
+- The root is an `aside`, the `complementary` landmark.
+
+### You must
+
+- Pass `component: "nav"` for the site navigation.
+- Give it an `aria_label` when the page has more than one landmark of that
+  kind.
 
 ## Props
 

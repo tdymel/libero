@@ -62,8 +62,14 @@ render as a `div` without it. See
 
 ## Accessibility
 
-`Box` adds no roles, so the semantics are whatever tag `component` names.
-A clickable `div` has no keyboard support. Use `button` instead.
+### Libero handles
+
+- `Box` adds no roles, so the semantics are whatever tag `component` names.
+
+### You must
+
+- Use `component: "button"` for something clickable: a clickable `div` has no
+  keyboard support.
 
 ## Props
 

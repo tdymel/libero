@@ -62,10 +62,28 @@ fn Demo(photos: Vec<Photo>) -> Element {
 
 ## Accessibility
 
-Give every picture its own `alt`. With `zoom` on, the picture showing is a tab
-stop that takes the zoom and pan keys. Its description lists them, and a status
-message reads each new zoom level. In the thumbnail strip, the arrows, Home and
-End move along the strip and change the picture with it. Esc closes the viewer.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `z` | On the picture: steps through 2x, 4x and 8x and back to fitted. |
+| `+` or `-` | On the picture: zooms in finer steps. |
+| `Left`, `Right`, `Up` or `Down` | On the picture: pans. At the edge of a pan, moves to the next picture. |
+| `Left`, `Right`, `Home` or `End` | In the thumbnail strip: moves along the strip and changes the picture with it. |
+| `Escape` | Closes the viewer. |
+
+### Libero handles
+
+- Focus returns to the thumbnail that opened it.
+- With `zoom` on, the picture showing is a tab stop that takes the zoom and
+  pan keys. Its description lists them, and a status message reads each new
+  zoom level.
+- At the edge of a pan the arrows move to the next picture, so the keyboard
+  never gets stuck.
+
+### You must
+
+- Give every picture its own `alt`.
 
 ## API
 

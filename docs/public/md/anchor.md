@@ -47,11 +47,17 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The link text is the accessible name, so make it say where the link goes. A
-`target: "_blank"` link draws a small external icon and reads a hidden "(opens
-in a new tab)". `new_tab_hint: false` drops both, for a link whose text already
-says it. With `underline: "never"`, a
-link inside a paragraph stands out by color alone.
+### Libero handles
+
+- A `target: "_blank"` link draws a small external icon and reads a hidden
+  "(opens in a new tab)". `new_tab_hint: false` drops both, for a link whose
+  text already says it.
+
+### You must
+
+- Make the link text say where the link goes: it is the accessible name.
+- Keep the underline on a link inside a paragraph: with `underline: "never"`
+  it stands out by color alone.
 
 ## Props
 

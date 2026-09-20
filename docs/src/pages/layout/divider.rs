@@ -1,9 +1,9 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Divider, Input, Text},
+    components::{Box, Divider, Input, Text},
     sx::sx,
 };
 
@@ -54,6 +54,9 @@ pub fn DividerPage() -> Element {
                 prop("children", "Element")
                     .doc("An optional label in the line."),
             ])],
+            accessibility: a11y()
+                .handles(["The rule is a `separator`, named by its label. Your own `aria-label` or `aria-labelledby` wins."])
+                .must(["Pass `role: \"none\"` for a purely visual rule."]),
             lead: rsx! {
                 Text { "A horizontal or vertical rule, with an optional label sitting in the line." }
             },
@@ -132,15 +135,6 @@ pub fn DividerPage() -> Element {
                 },
                 wrap: Wrap(wrap_rule),
                 child: Child(label_child),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "The rule is a "
-                    Code { source: "separator" }
-                    ", named by its label. Pass "
-                    Code { source: "role: \"none\"" }
-                    " for a purely visual rule."
-                }
             }
         }
     }

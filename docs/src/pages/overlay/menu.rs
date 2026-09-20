@@ -1,5 +1,5 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -268,6 +268,23 @@ pub fn MenuPage() -> Element {
                         .doc("Stays in the arrow-key order but cannot be chosen, and typeahead skips it."),
                 ]).without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Enter", "Space", "Down"], "On the trigger: opens the menu on its first item.")
+                .key(["Up"], "On the trigger: opens the menu on its last item.")
+                .key(["Down", "Up"], "In the menu: moves an item, wrapping unless `loop_focus` is off.")
+                .key(["Home", "End"], "In the menu: goes to the first or last item.")
+                .key(["Enter", "Space"], "In the menu: chooses the item.")
+                .key(["Right"], "Opens a submenu.")
+                .key(["Left"], "Closes a submenu again.")
+                .key(["Escape"], "Closes only the menu it is pressed in and returns focus to what opened it.")
+                .key(["Tab"], "Closes every level and moves on from the trigger.")
+                .handles([
+                    "Typing jumps to an item, \"s\" to the next one starting with S and \"sav\" to Save. A pause of half a second starts over.",
+                    "`menu.a11y_attributes()` wires your trigger.",
+                ])
+                .must([
+                    "Put a shortcut hint in `shortcut`, not `trailing`. A screen reader then hears it as `aria-keyshortcuts`, not as part of the item's name.",
+                ]),
             lead: rsx! {
                 Text {
                     "A list of commands that drops from a trigger. The items are data, not "
@@ -323,36 +340,6 @@ pub fn MenuPage() -> Element {
                         disabled: values.str("disabled") == "true",
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "On the trigger, "
-                    Kbd { "Enter" } " " Kbd { "Space" } " and " Kbd { "↓" }
-                    " open the menu on its first item, " Kbd { "↑" } " on its last."
-                }
-                Text {
-                    "In the menu, " Kbd { "↓" } " " Kbd { "↑" }
-                    " move an item, wrapping unless "
-                    Code { source: "loop_focus" }
-                    " is off, and " Kbd { "Home" } " " Kbd { "End" } " go to the ends. "
-                    Kbd { "Enter" } " and " Kbd { "Space" } " choose. "
-                    Kbd { "→" } " opens a submenu and " Kbd { "←" } " closes it again. "
-                    Kbd { "Esc" } " closes only the menu it is pressed in and returns focus "
-                    "to what opened it. " Kbd { "Tab" }
-                    " closes every level and moves on from the trigger. Typing jumps to an "
-                    "item, \"s\" to the next one starting with S and \"sav\" to Save. A pause "
-                    "of half a second starts over."
-                }
-                Text {
-                    "Put a shortcut hint in "
-                    Code { source: "shortcut" }
-                    ", not "
-                    Code { source: "trailing" }
-                    ". A screen reader then hears it as "
-                    Code { source: "aria-keyshortcuts" }
-                    ", not as part of the item's name."
-                }
             }
         }
     }

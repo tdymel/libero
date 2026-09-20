@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Input, Overlay, Paper, Text},
@@ -24,6 +24,9 @@ pub fn OverlayPage() -> Element {
                     prop("children", "Element").doc("Content centred on the overlay, such as a loading spinner."),
                 ]),
             ],
+            accessibility: a11y().must([
+                "For a modal backdrop, use a `Dialog` in `use_modal`, which brings its own overlay. An overlay does not trap focus or hide the page from a screen reader.",
+            ]),
             lead: rsx! {
                 Text {
                     "Dims and blurs whatever is behind it. A modal renders one behind its "
@@ -72,16 +75,6 @@ pub fn OverlayPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "An overlay does not trap focus or hide the page from a screen reader. "
-                    "For a modal backdrop, use a "
-                    Code { source: "Dialog" }
-                    " in "
-                    Code { source: "use_modal" }
-                    ", which brings its own overlay."
-                }
             }
         }
     }

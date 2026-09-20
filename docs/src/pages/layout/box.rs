@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Text},
@@ -48,6 +48,9 @@ pub fn BoxPage() -> Element {
                     .doc("The `button` type, such as `\"submit\"`."),
                 prop("children", "Element").doc("The element's content."),
             ]).extends("img, a and button")],
+            accessibility: a11y()
+                .handles(["`Box` adds no roles, so the semantics are whatever tag `component` names."])
+                .must(["Use `component: \"button\"` for something clickable: a clickable `div` has no keyboard support."]),
             lead: rsx! {
                 Text {
                     "The primitive every other component is built on. "
@@ -98,18 +101,6 @@ pub fn BoxPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    Code { source: "Box" }
-                    " adds no roles, so the semantics are whatever tag "
-                    Code { source: "component" }
-                    " names. A clickable "
-                    Code { source: "div" }
-                    " has no keyboard support. Use "
-                    Code { source: "button" }
-                    " instead."
-                }
             }
         }
     }

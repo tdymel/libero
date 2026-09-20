@@ -1,4 +1,4 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Anchor, Code, Text};
 
@@ -35,6 +35,14 @@ pub fn AnchorPage() -> Element {
                     .doc("When the underline draws, `always`, `hover` or `never`."),
                 prop("children", "Element").default("required").doc("The link's content."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "A `target: \"_blank\"` link draws a small external icon and reads a hidden \"(opens in a new tab)\". `new_tab_hint: false` drops both, for a link whose text already says it.",
+                ])
+                .must([
+                    "Make the link text say where the link goes: it is the accessible name.",
+                    "Keep the underline on a link inside a paragraph: with `underline: \"never\"` it stands out by color alone.",
+                ]),
             lead: rsx! {
                 Text {
                     "A link styled and sized like "
@@ -100,18 +108,6 @@ pub fn AnchorPage() -> Element {
                     }
                 },
                 child: Child(link_label),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "The link text is the accessible name, so make it say where the link goes. A "
-                    Code { source: "target: \"_blank\"" }
-                    " link draws a small external icon and reads a hidden \"(opens in a new "
-                    "tab)\". "
-                    Code { source: "new_tab_hint: false" }
-                    " drops both, for a link whose text already says it. With "
-                    Code { source: "underline: \"never\"" }
-                    ", a link inside a paragraph stands out by color alone."
-                }
             }
         }
     }

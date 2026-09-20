@@ -1,5 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent, prop, props,
+    Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{Burger, Code, Flex, Input, Paper, Text};
@@ -94,6 +94,16 @@ pub fn BurgerPage() -> Element {
                     .default("false")
                     .doc("Disables the button."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "The name is \"Toggle navigation\" while `open` is set, since `aria-expanded` carries the state, and \"Open navigation\" otherwise. Translate both in the localization's `BurgerLabels`, or per burger with `label`.",
+                    "`Burger` warns when `open` is set without `aria-controls`.",
+                    "Focus stays on the burger when the panel opens. Moving it is the panel's job, and `Drawer` already traps it.",
+                ])
+                .must([
+                    "Set `open` only when the burger expands a panel, and spread `aria-controls` with that panel's id.",
+                    "Leave `open` unset for a burger that opens a modal, since a modal is not expanded by its trigger.",
+                ]),
             lead: rsx! {
                 Text {
                     "Three bars that morph into an X. It renders an "
@@ -138,25 +148,6 @@ pub fn BurgerPage() -> Element {
                         disabled: values.str("disabled") == "true",
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Set "
-                    Code { source: "open" }
-                    " only when the burger expands a panel, and spread "
-                    Code { source: "aria-controls" }
-                    " with that panel's id, or "
-                    Code { source: "Burger" }
-                    " warns. Leave "
-                    Code { source: "open" }
-                    " unset for a burger that opens a modal. The name is \"Toggle navigation\" "
-                    "while "
-                    Code { source: "open" }
-                    " is set, since "
-                    Code { source: "aria-expanded" }
-                    " carries the state, and \"Open navigation\" otherwise. Focus stays on the "
-                    "burger when the panel opens."
-                }
             }
         }
     }

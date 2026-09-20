@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use crate::icons::{FileIcon, FolderIcon};
 use dioxus::prelude::*;
 use libero::{
@@ -378,6 +376,18 @@ pub fn SpotlightPage() -> Element {
                     prop("is_open()", "bool").doc("Whether it is open."),
                 ]).without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Down", "Up"], "Moves the highlight, wrapping at both ends.")
+                .key(["Enter"], "Runs the highlighted action, by default the first row.")
+                .key(["Escape"], "Closes, as a click outside does. Focus goes back to what opened it.")
+                .handles([
+                    "Focus stays in the search box.",
+                    "The hotkey is ignored while you type in another text field, and while a dialog or popover is open.",
+                ])
+                .must([
+                    "Turn `highlight_first_on_query` off for a palette whose actions change things. Then nothing is highlighted until you press Down.",
+                    "Call `open()` from the trigger's handler, so focus returns there.",
+                ]),
             lead: rsx! {
                 Text {
                     "A command palette, a modal search box over a list of actions. "
@@ -427,20 +437,6 @@ pub fn SpotlightPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_example),
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Focus stays in the search box. " Kbd { "↓" } " " Kbd { "↑" }
-                    " move the highlight, wrapping at both ends. " Kbd { "Enter" }
-                    " runs the highlighted action, by default the first row. Turn "
-                    Code { source: "highlight_first_on_query" }
-                    " off for a palette whose actions change things. Then nothing is "
-                    "highlighted until you press " Kbd { "↓" } ". " Kbd { "Esc" }
-                    " or a click outside closes, and focus goes back to what opened it. The "
-                    "hotkey is ignored while you type in another text field, and while a dialog "
-                    "or popover is open."
-                }
             }
         }
     }

@@ -46,22 +46,37 @@ such as `side: Side::Top, align: Align::Center`.
 
 ## Accessibility
 
-A hover card is a preview for sighted users. A screen reader does not announce
-it, so keep it to extras the trigger's own target already offers. Content a
-user needs goes in a popover ([`use_popover`](popover.md)) that a click opens.
+### Keyboard
 
-Focusing the trigger opens the card, so `children` must hold a link or a
-button. A click does not keep it open. Tab on the trigger moves into the card,
-and past its last link to whatever follows the trigger. Shift+Tab walks back.
-Escape closes it and returns focus to the trigger if focus was inside.
+| Key | Action |
+|---|---|
+| `Tab` | On the trigger: moves into the card, and past its last link to whatever follows the trigger. |
+| `Shift+Tab` | Walks back. |
+| `Escape` | Closes the card and returns focus to the trigger if focus was inside. On the web it works wherever focus is. |
 
-Name the card with `aria_label` or `aria-labelledby` pointing into the content.
-A trigger with nothing focusable and an unnamed card both warn in the console.
+### Libero handles
 
-On the web, Escape closes the card wherever focus is. On desktop and mobile it
-works only while focus is on the trigger or in the card, so a card the pointer
-opened cannot be dismissed from the keyboard there (WCAG 1.4.13). On touch, a
-tap opens it and a tap elsewhere closes it. The card has no arrow.
+- Focusing the trigger opens the card. A click does not keep it open.
+- A trigger with nothing focusable and an unnamed card both warn in the
+  console.
+- On touch, a tap opens it and a tap elsewhere closes it. The card has no
+  arrow.
+
+### You must
+
+- Keep it to extras the trigger's own target already offers: a screen reader
+  does not announce a hover card, a preview for sighted users. Content a user
+  needs goes in a popover ([`use_popover`](popover.md)) that a click opens.
+- Put a link or a button in `children`, since focusing the trigger opens the
+  card.
+- Name the card with `aria_label` or `aria-labelledby` pointing into the
+  content.
+
+### Limits
+
+- On desktop and mobile, Escape works only while focus is on the trigger or
+  in the card, so a card the pointer opened cannot be dismissed from the
+  keyboard there (WCAG 1.4.13).
 
 ## Props
 

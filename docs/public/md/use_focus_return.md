@@ -78,19 +78,25 @@ fn Filters() -> Element {
 }
 ```
 
-## Accessibility
-
-Tab into the panel, then press Apply or Escape, and focus lands on Filters
-again. Some browsers do not focus a button on a mouse click, so a panel opened
-with the mouse may remember the body. That only matters to a keyboard user, and
-for them the trigger has focus. [Collapse](collapse.md) shows the same return
-on an animated panel.
-
 ## Web and native
 
 `remember_active()` reads the focused element from the document, which the web
 and Blitz have and a webview does not. There it remembers nothing, so name the
 trigger with `remember(event)` instead.
+
+## Accessibility
+
+### Libero handles
+
+- `restore()` puts focus back on the remembered element. In the demo, Tab into
+  the panel, then press Apply or Escape, and focus lands on Filters again.
+  [Collapse](collapse.md) shows the same return on an animated panel.
+
+### Limits
+
+- Some browsers do not focus a button on a mouse click, so a panel opened
+  with the mouse may remember the body. That only matters to a keyboard user,
+  and for them the trigger has focus.
 
 ## API
 

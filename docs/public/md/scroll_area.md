@@ -98,12 +98,10 @@ fn Rows() -> Element {
 }
 ```
 
-## Accessibility
+## Text with nothing to focus
 
-Tab reaches focusable content inside the area as usual. When the content has
-nothing to focus, like a block of text, the area itself becomes a tab stop while
-it overflows, so the arrow keys can scroll it. `focusable: true` keeps the stop
-always.
+The area itself becomes a tab stop while it overflows, so the arrow keys can
+scroll it.
 
 ```rust,ignore
 ScrollArea {
@@ -112,9 +110,21 @@ ScrollArea {
 }
 ```
 
-Name the area with `aria_label` or `aria_labelledby`. A debug build warns about
-a tab stop without a name. `scrollbars: "none"` puts the clipped content out of
-reach, so use it only where something else scrolls.
+## Accessibility
+
+### Libero handles
+
+- Tab reaches focusable content inside the area as usual.
+- When the content has nothing to focus, like a block of text, the area
+  itself becomes a tab stop while it overflows, so the arrow keys can scroll
+  it. `focusable: true` keeps the stop always.
+- A debug build warns about a tab stop without a name.
+
+### You must
+
+- Name the area with `aria_label` or `aria_labelledby`.
+- Use `scrollbars: "none"` only where something else scrolls: it puts the
+  clipped content out of reach.
 
 ## Props
 

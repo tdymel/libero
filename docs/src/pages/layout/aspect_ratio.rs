@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{AspectRatio, Code, Flex, Text},
@@ -31,6 +31,10 @@ pub fn AspectRatioPage() -> Element {
                     .doc("Width-to-height ratio, e.g. `16.0 / 9.0`."),
                 prop("children", "Element").doc("The child to crop, filling the box."),
             ])],
+            accessibility: a11y().must([
+                "Keep nothing meaningful at the child's edges: they get cropped.",
+                "Give an image `alt` text that describes what the reader can see.",
+            ]),
             lead: rsx! {
                 Text {
                     "Enforces a width-to-height ratio on its child, cropping it to fill the "
@@ -83,14 +87,6 @@ pub fn AspectRatioPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "The edges of the child get cropped, so keep nothing meaningful there. "
-                    "An image still needs "
-                    Code { source: "alt" }
-                    " text that describes what the reader can see."
-                }
             }
         }
     }

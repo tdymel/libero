@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap};
+use crate::components::{Demo, DemoValues, DocPage, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button, Code, Flex, Text},
@@ -55,6 +55,9 @@ pub fn UseIdPage() -> Element {
             title: "use_id",
             source: "libero/src/hooks/id.rs",
             markdown: "/md/use_id.md",
+            accessibility: a11y()
+                .handles(["The id is unique in the process, so each instance's wiring stays its own. Each disclosure in the demo names its own panel, so a screen reader pairs every button with the right one."])
+                .must(["Pass the id to `aria_controls`, `aria_labelledby`, `aria_describedby` or a label's `r#for`: an id is how they find their element."]),
             lead: rsx! {
                 Text {
                     Code { source: "use_id() -> Signal<String>" }
@@ -75,22 +78,6 @@ pub fn UseIdPage() -> Element {
                     }
                 },
                 wrap: Wrap(code),
-            }
-
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "An id is how "
-                    Code { source: "aria_controls" }
-                    ", "
-                    Code { source: "aria_labelledby" }
-                    ", "
-                    Code { source: "aria_describedby" }
-                    " and a label's "
-                    Code { source: "r#for" }
-                    " find their element. Each disclosure above names its own panel, so "
-                    "a screen reader pairs every button with the right one."
-                }
             }
         }
     }

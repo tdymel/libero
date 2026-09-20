@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Sidebar, Text},
@@ -44,6 +42,12 @@ pub fn SidebarPage() -> Element {
                 prop("component", "HtmlTag").default("aside").doc("The element to render, such as `nav` for a navigation panel."),
                 prop("children", "Element").doc("The panel's content, scrolled by an inner `ScrollArea`."),
             ])],
+            accessibility: a11y()
+                .handles(["The root is an `aside`, the `complementary` landmark."])
+                .must([
+                    "Pass `component: \"nav\"` for the site navigation.",
+                    "Give it an `aria_label` when the page has more than one landmark of that kind.",
+                ]),
             lead: rsx! {
                 Text {
                     "An in-flow panel on one edge of its parent that scrolls its own "
@@ -98,19 +102,6 @@ pub fn SidebarPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_layout),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "The root is an "
-                    Code { source: "aside" }
-                    ", the "
-                    Code { source: "complementary" }
-                    " landmark. For the site navigation pass "
-                    Code { source: "component: \"nav\"" }
-                    ". Give it an "
-                    Code { source: "aria_label" }
-                    " when the page has more than one landmark of that kind."
-                }
             }
         }
     }

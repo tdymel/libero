@@ -26,9 +26,21 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-A loader is hidden from screen readers, so something else says the wait.
-Beside its own text, the text says it. Inside a control, such as a `Button`
-with `loading`, the control does.
+### Libero handles
+
+- The loader is hidden from screen readers.
+- With reduced motion it stops moving but stays visible.
+
+### You must
+
+- Say the wait with something else. Beside its own text, the text says it.
+  Inside a control, such as a `Button` with `loading`, the control does.
+- As the only content of a region, mark the region `aria-busy` and put the
+  text in a `role="status"` region outside it.
+- Mount that status region up front and fill it only while loading, or a
+  screen reader may skip it.
+
+Beside its own text:
 
 ```rust
 use dioxus::prelude::*;
@@ -45,9 +57,7 @@ fn Demo() -> Element {
 }
 ```
 
-As the only content of a region, mark the region `aria-busy` and put the text
-in a `role="status"` region outside it. Mount that region up front and fill it
-only while loading, or a screen reader may skip it.
+As the only content of a region:
 
 ```rust
 use dioxus::prelude::*;

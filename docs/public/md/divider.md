@@ -52,8 +52,14 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The rule is a `separator`, named by its label. Your own `aria-label` or
-`aria-labelledby` wins. Pass `role: "none"` for a purely visual rule.
+### Libero handles
+
+- The rule is a `separator`, named by its label. Your own `aria-label` or
+  `aria-labelledby` wins.
+
+### You must
+
+- Pass `role: "none"` for a purely visual rule.
 
 ## Props
 

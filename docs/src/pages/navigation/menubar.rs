@@ -1,9 +1,7 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, Kbd, MenuEntry, MenuItem, Menubar, MenubarMenu, Text},
+    components::{Code, Flex, MenuEntry, MenuItem, Menubar, MenubarMenu, Text},
     hooks::{Align, Side},
 };
 
@@ -194,6 +192,21 @@ pub fn MenubarPage() -> Element {
                         .doc("The trigger stays in view and in the arrow order, and opens nothing."),
                 ]).without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Tab"], "Enters the bar, one tab stop. In an open menu: closes it and leaves the bar.")
+                .key(["Left", "Right"], "On a trigger: moves along the bar, disabled triggers included, wrapping unless `loop_focus` is off. If a menu is open, the next one opens.")
+                .key(["Home", "End"], "On a trigger: goes to the first or last trigger.")
+                .key(["Enter", "Space", "Down"], "On a trigger: opens its menu on the first item.")
+                .key(["Up"], "On a trigger: opens its menu on the last item.")
+                .key(["Right"], "In an open menu: opens a submenu item's submenu, or else moves to the next menu.")
+                .key(["Left"], "In an open menu: closes a submenu, or on the top level moves to the previous menu.")
+                .key(["Escape"], "Closes the menu and returns focus to its trigger.")
+                .handles([
+                    "On a trigger, typing jumps to a trigger by its label.",
+                    "A disabled trigger takes focus and opens nothing.",
+                    "The rest works as in `Menu`, including `MenuItem`'s `shortcut` and `checkbox`.",
+                ])
+                .must(["Name the bar with `aria_label`. It is required."]),
             lead: rsx! {
                 Text {
                     "A row of menus, like a desktop app's File, Edit and View. Each menu is a "
@@ -238,22 +251,6 @@ pub fn MenubarPage() -> Element {
                         loop_focus: values.str("loop_focus") == "true",
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "The bar is one tab stop. " Kbd { "←" } " " Kbd { "→" }
-                    " move along it, disabled triggers included, and " Kbd { "Home" } " "
-                    Kbd { "End" } " go to the ends. " Kbd { "Enter" } " " Kbd { "Space" }
-                    " and " Kbd { "↓" } " open a menu on its first item, " Kbd { "↑" }
-                    " on its last. In an open menu, " Kbd { "←" } " and " Kbd { "→" }
-                    " move to the next menu, unless a submenu takes them first. "
-                    Kbd { "Esc" } " closes the menu and returns to its trigger. " Kbd { "Tab" }
-                    " closes it and leaves the bar. Typing jumps to a trigger by its label. The "
-                    "rest works as in "
-                    Code { source: "Menu" }
-                    "."
-                }
             }
         }
     }

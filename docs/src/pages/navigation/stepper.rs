@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Flex, Input, Options, StepState, Stepper, Text};
 
@@ -105,6 +105,15 @@ pub fn StepperPage() -> Element {
                     prop("color", "ThemeAwareValue").default("primary").doc("The current and completed markers, and the connectors behind them."),
                 ]),
             ],
+            accessibility: a11y()
+                .handles([
+                    "With `onstepclick`, each clickable step is a button and a tab stop. Enter and Space activate. There are no arrow keys.",
+                    "`aria_label` and `aria_labelledby` land on the step list, not the root.",
+                ])
+                .must([
+                    "Name the steps with `aria_label` or `aria_labelledby`.",
+                    "Give a rich label a name that contains its visible text.",
+                ]),
             lead: rsx! {
                 Text {
                     "The stages of a process, one per variant of an enum, with the current "
@@ -236,20 +245,6 @@ pub fn StepperPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "With "
-                    Code { source: "onstepclick" }
-                    ", each clickable step is a button and a tab stop. Enter and Space activate. "
-                    "There are no arrow keys. Name the steps with "
-                    Code { source: "aria_label" }
-                    " or "
-                    Code { source: "aria_labelledby" }
-                    ", which land on the step list, not the root. A rich label's name must "
-                    "contain its visible text."
-                }
             }
         }
     }

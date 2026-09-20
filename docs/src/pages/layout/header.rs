@@ -1,5 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent, or_unset, prop, props,
+    Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, indent, or_unset, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -48,6 +48,16 @@ pub fn HeaderPage() -> Element {
                     .doc("Stacking order."),
                 prop("children", "Element").doc("Nav and actions."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "A `sticky` or `fixed` header with `publish_height` sets `scroll-padding-top: var(--lsx-header-height)` on `:root`, so focus moved under it scrolls clear (WCAG 2.4.11). That pads the page's scroller only.",
+                ])
+                .must([
+                    "Keep the page's header at the top level, outside `main`, `nav`, `section`, `article` and `aside`: only there is it the `banner` landmark. One banner per page.",
+                    "Put a `nav` inside it for the navigation landmark.",
+                    "Give a `sticky` or `fixed` header `publish_height`, so focus scrolls clear of it.",
+                    "Give a header stuck inside another scroller the same `scroll-padding-top` on that scroller.",
+                ]),
             lead: rsx! {
                 Text {
                     "The page's banner landmark, always a "
@@ -108,26 +118,6 @@ pub fn HeaderPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_frame),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Keep the page's header outside "
-                    Code { source: "main" }
-                    ", "
-                    Code { source: "nav" }
-                    ", "
-                    Code { source: "section" }
-                    ", "
-                    Code { source: "article" }
-                    " and "
-                    Code { source: "aside" }
-                    ", or it is no banner. Give it "
-                    Code { source: "publish_height" }
-                    " so focus scrolls clear of it. A header stuck inside another scroller "
-                    "needs "
-                    Code { source: "scroll-padding-top" }
-                    " on that scroller, from you."
-                }
             }
         }
     }

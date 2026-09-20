@@ -1,9 +1,7 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Dialog, Flex, FloatingWindowOptions, Input, Kbd, Text, WindowRect},
+    components::{Button, Code, Dialog, Flex, FloatingWindowOptions, Input, Text, WindowRect},
     hooks::{ModalScope, use_floating_window, use_modal},
     sx::sx,
 };
@@ -280,6 +278,21 @@ pub fn FloatingWindowPage() -> Element {
                     prop("is_open()", "bool").doc("Whether it is open. Reading it subscribes."),
                 ]).without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Tab"], "Reaches the title bar.")
+                .key(["Left", "Up", "Right", "Down"], "On the title bar: moves the window 10px.")
+                .key(["Shift+Left", "Shift+Up", "Shift+Right", "Shift+Down"], "On the title bar: moves the window 1px.")
+                .key(["Left", "Up", "Right", "Down"], "On the resize handle: resizes the window.")
+                .key(["Home", "End"], "On the resize handle: asks for the smallest or largest size allowed.")
+                .key(["Escape"], "Hides the Move or Resize step buttons. Otherwise closes the window and returns focus to its trigger.")
+                .key(["F6"], "Moves focus between the page and the topmost window.")
+                .handles([
+                    "A window takes focus when it opens.",
+                    "The title bar's menu offers Move, Resize and Reset. Move and Resize show step buttons, one click per step, so neither needs a drag. Done or Escape hides them.",
+                ])
+                .must([
+                    "Pick a `placement` that does not cover the page's controls: the page behind a window still takes Tab.",
+                ]),
             lead: rsx! {
                 Text {
                     "A non-modal window over the page, with a title bar that drags, an optional "
@@ -317,25 +330,6 @@ pub fn FloatingWindowPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_example),
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "A window takes focus when it opens. " Kbd { "Tab" }
-                    " reaches the title bar, where " Kbd { "←" } " " Kbd { "↑" } " "
-                    Kbd { "→" } " " Kbd { "↓" } " move it 10px and "
-                    Kbd { "Shift" } " + arrow 1px. On the resize handle the arrows resize, and "
-                    Kbd { "Home" } " " Kbd { "End" }
-                    " ask for the smallest and largest size allowed. The title bar's menu offers "
-                    "Move, Resize and Reset. Move and Resize show step buttons, one click per "
-                    "step, so neither needs a drag. Done or " Kbd { "Esc" }
-                    " hides them. " Kbd { "Esc" }
-                    " closes the window and returns focus to its trigger. " Kbd { "F6" }
-                    " moves focus between the page and the topmost window. The page behind "
-                    "a window still takes Tab, so pick a "
-                    Code { source: "placement" }
-                    " that does not cover its controls."
-                }
             }
         }
     }

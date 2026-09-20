@@ -1,9 +1,9 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, or_unset, prop, props,
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, or_unset, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Input, Kbd, List, ListItem, Splitter, Text},
+    components::{Box, Code, Input, Splitter, Text},
     sx::sx,
 };
 
@@ -106,6 +106,22 @@ pub fn SplitterPage() -> Element {
                 prop("panel_a", "Element").doc("The start or top pane."),
                 prop("panel_b", "Element").doc("The end or bottom pane."),
             ])],
+            accessibility: a11y()
+                .key(["Tab"], "Focuses the divider, a tab stop.")
+                .key(["Left", "Right"], "Moves a vertical divider by 1%.")
+                .key(["Up", "Down"], "Moves a horizontal divider by 1%.")
+                .key(["Shift+Left", "Shift+Right", "Shift+Up", "Shift+Down"], "Moves the divider by 10%.")
+                .key(["Home", "End"], "Jumps to either limit.")
+                .handles([
+                    "The divider is a focusable separator.",
+                    "Double-clicking the divider resizes without dragging (WCAG 2.5.7): pane A collapses to `min_size`, and the next double-click restores it. A single click only focuses the divider.",
+                    "The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses about 12px into each pane.",
+                    "A debug build warns without `aria_label`.",
+                ])
+                .must([
+                    "Set `aria_label` to name the divider after the pane it resizes, such as `\"Resize sidebar\"`. It has no name of its own.",
+                    "Keep a pane's scrollbar or edge buttons out of the 12px gutter next to the divider, which gets no press there. For example, use `padding: 12px` on that side.",
+                ]),
             lead: rsx! {
                 Text {
                     "Two panes, "
@@ -172,34 +188,6 @@ pub fn SplitterPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_splitter),
-            }
-
-            DocSection {
-                title: "Accessibility",
-                List {
-                    ListItem {
-                        "Set "
-                        Code { source: "aria_label" }
-                        " to name the divider after the pane it resizes."
-                    }
-                    ListItem {
-                        "The divider is a tab stop. "
-                        Kbd { "←" } " " Kbd { "→" } ", or " Kbd { "↑" } " " Kbd { "↓" }
-                        " when horizontal, move it, with " Kbd { "Shift" } " in bigger steps. "
-                        Kbd { "Home" } " and " Kbd { "End" } " jump to either limit."
-                    }
-                    ListItem {
-                        "Double-click the divider to collapse pane A to "
-                        Code { source: "min_size" }
-                        ", and again to restore it."
-                    }
-                    ListItem {
-                        "The divider takes presses about 12px into each pane. Keep a pane's "
-                        "scrollbar or edge buttons out of that gutter, for example with "
-                        Code { source: "padding: 12px" }
-                        " on the side next to the divider."
-                    }
-                }
             }
         }
     }

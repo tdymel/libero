@@ -68,18 +68,30 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-On the trigger, Enter, Space and ArrowDown open the menu on its first item,
-ArrowUp on its last.
+### Keyboard
 
-In the menu, ArrowDown and ArrowUp move an item, wrapping unless `loop_focus`
-is off, and Home and End go to the ends. Enter and Space choose. ArrowRight
-opens a submenu and ArrowLeft closes it again. Escape closes only the menu it
-is pressed in and returns focus to what opened it. Tab closes every level and
-moves on from the trigger. Typing jumps to an item, "s" to the next one
-starting with S and "sav" to Save. A pause of half a second starts over.
+| Key | Action |
+|---|---|
+| `Enter`, `Space` or `Down` | On the trigger: opens the menu on its first item. |
+| `Up` | On the trigger: opens the menu on its last item. |
+| `Down` or `Up` | In the menu: moves an item, wrapping unless `loop_focus` is off. |
+| `Home` or `End` | In the menu: goes to the first or last item. |
+| `Enter` or `Space` | In the menu: chooses the item. |
+| `Right` | Opens a submenu. |
+| `Left` | Closes a submenu again. |
+| `Escape` | Closes only the menu it is pressed in and returns focus to what opened it. |
+| `Tab` | Closes every level and moves on from the trigger. |
 
-Put a shortcut hint in `shortcut`, not `trailing`. A screen reader then hears
-it as `aria-keyshortcuts`, not as part of the item's name.
+### Libero handles
+
+- Typing jumps to an item, "s" to the next one starting with S and "sav" to
+  Save. A pause of half a second starts over.
+- `menu.a11y_attributes()` wires your trigger.
+
+### You must
+
+- Put a shortcut hint in `shortcut`, not `trailing`. A screen reader then
+  hears it as `aria-keyshortcuts`, not as part of the item's name.
 
 ## Props
 

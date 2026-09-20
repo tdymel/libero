@@ -63,9 +63,21 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The strip is a tab stop, so `aria_label` is required. On the focused strip `←`
-and `→` scroll it. A control at its own end leaves the tab order, but keeps
-focus if it had it.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Left` or `Right` | Scrolls the focused strip. |
+
+### Libero handles
+
+- The strip is a tab stop.
+- A control at its own end leaves the tab order, but keeps focus if it had it.
+
+### You must
+
+- Name the strip with `aria_label`. It is required, as the strip is a tab
+  stop.
 
 ## Props
 

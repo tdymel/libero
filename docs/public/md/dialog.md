@@ -40,10 +40,16 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Name it with `title` or `aria_label`. The focus trap, Escape and backdrop
-dismissal come from the modal. A `Dialog` on its own has none of them. Outside
-a modal, a close button without `onclose` closes nothing and warns in debug
-builds.
+### Libero handles
+
+- Outside a modal, a close button without `onclose` warns in debug builds.
+
+### You must
+
+- Name it with `title` or `aria_label`.
+- Open it in a modal: the focus trap, Escape and backdrop dismissal come from
+  the modal. A `Dialog` on its own has none of them.
+- Outside a modal, give a close button `onclose`, or it closes nothing.
 
 ## Props
 

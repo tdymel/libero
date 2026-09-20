@@ -67,6 +67,21 @@ fn Demo() -> Element {
 }
 ```
 
+## Accessibility
+
+### Libero handles
+
+- With `keep_mounted`, the closed children stay in the DOM but out of the
+  focus order and hidden from screen readers.
+
+### You must
+
+- Give the trigger `aria_expanded` and an `aria_controls` pointing at the
+  panel's `id`: `Collapse` has no role or ARIA.
+- Return focus yourself when the panel closes from inside: use
+  [`use_focus_return`](use_focus_return.md), with `remember_active()` on every
+  open and `restore()` where the panel closes.
+
 ## Props
 
 | Prop | Type | Default | Description |

@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Input, Paper, Text, Title},
@@ -72,6 +70,10 @@ pub fn PaperPage() -> Element {
                     prop("children", "Element").doc("The surface's contents."),
                 ]),
             ],
+            accessibility: a11y().must([
+                "Give a `Paper` rendered as a `section` or `aside` an `aria-label`: it is a landmark.",
+                "Put nothing interactive inside a `Paper` rendered as an `a`: the whole surface is one link, named by its contents.",
+            ]),
             lead: rsx! {
                 Text {
                     "A surface with a background, a corner radius, an elevation and an "
@@ -157,22 +159,6 @@ pub fn PaperPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_backdrop),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "A "
-                    Code { source: "Paper" }
-                    " rendered as a "
-                    Code { source: "section" }
-                    " or "
-                    Code { source: "aside" }
-                    " is a landmark and needs your "
-                    Code { source: "aria-label" }
-                    ". As an "
-                    Code { source: "a" }
-                    " the whole surface is one link, named by its contents, so nothing "
-                    "interactive belongs inside it."
-                }
             }
         }
     }

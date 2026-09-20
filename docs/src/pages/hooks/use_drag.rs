@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Text},
@@ -116,6 +116,11 @@ pub fn UseDragPage() -> Element {
             title: "use_drag",
             source: "libero/src/hooks/drag.rs",
             markdown: "/md/use_drag.md",
+            accessibility: a11y()
+                .handles(["A right or middle button never starts a drag, and a second finger is ignored."])
+                .must([
+                    "Give anything a drag sets a second way in: a pointer is not a keyboard. The demo's knob is a focusable, named slider that takes the arrow keys, Home and End.",
+                ]),
             lead: rsx! {
                 Text {
                     Code { source: "use_drag(options: DragOptions) -> Drag" }
@@ -149,16 +154,6 @@ pub fn UseDragPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Knob {} },
                 wrap: Wrap(code),
-            }
-
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "A pointer is not a keyboard, so anything a drag sets needs a second way "
-                    "in. The knob is a focusable, named slider that takes the arrow keys, "
-                    "Home and End. A right or middle button never starts a drag, and a "
-                    "second finger is ignored."
-                }
             }
 
             DocSection {

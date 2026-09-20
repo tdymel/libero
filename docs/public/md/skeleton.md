@@ -107,8 +107,18 @@ and sets `slow` back to `false`.
 
 ## Accessibility
 
-A skeleton says nothing to a screen reader. Mark the region you are filling
-`aria-busy` while it waits, as on [Loader](loader.md).
+### Libero handles
+
+- A skeleton says nothing to a screen reader.
+- Content it hides is not announced and not reachable with Tab.
+- With reduced motion the pulse stops half-way.
+
+### You must
+
+- Mark the region you are filling `aria-busy` while it waits, as on
+  [Loader](loader.md).
+- Avoid a descendant that sets `visibility: visible` on itself under a visible
+  skeleton: it shows through.
 
 ```rust
 use dioxus::prelude::*;

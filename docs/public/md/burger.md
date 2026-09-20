@@ -41,17 +41,14 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Set `open` only when the burger expands a panel, and spread `aria-controls`
-with that panel's id, or `Burger` warns. Leave `open` unset for a burger that
-opens a modal, since a modal is not expanded by its trigger.
+### Libero handles
 
-```rust,ignore
-Burger { onclick: move |_| modal.open() }
-```
-
-The name is "Toggle navigation" while `open` is set, since `aria-expanded`
-carries the state, and "Open navigation" otherwise. Translate both in the
-[localization](localization.md)'s `BurgerLabels`, or per burger with `label`.
+- The name is "Toggle navigation" while `open` is set, since `aria-expanded`
+  carries the state, and "Open navigation" otherwise. Translate both in the
+  [localization](localization.md)'s `BurgerLabels`, or per burger with `label`.
+- `Burger` warns when `open` is set without `aria-controls`.
+- Focus stays on the burger when the panel opens. Moving it is the panel's
+  job, and [`Drawer`](drawer.md) already traps it.
 
 ```rust,ignore
 Localization {
@@ -69,8 +66,16 @@ Burger {
 }
 ```
 
-Focus stays on the burger when the panel opens. Moving it is the panel's job,
-and [`Drawer`](drawer.md) already traps it.
+### You must
+
+- Set `open` only when the burger expands a panel, and spread `aria-controls`
+  with that panel's id.
+- Leave `open` unset for a burger that opens a modal, since a modal is not
+  expanded by its trigger.
+
+```rust,ignore
+Burger { onclick: move |_| modal.open() }
+```
 
 ## Props
 

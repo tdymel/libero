@@ -80,18 +80,25 @@ fn Knob() -> Element {
 }
 ```
 
-## Accessibility
-
-A pointer is not a keyboard, so anything a drag sets needs a second way in. The
-knob is a focusable, named slider that takes the arrow keys, Home and End. A
-right or middle button never starts a drag, and a second finger is ignored.
-
 ## Web and native
 
 The hook cancels the press's default, so on the web it focuses the pressed tab
 stop itself. Natively, or to focus something else, focus it in `onstart`. Blitz
 and a webview have no pointer capture; Blitz follows the pointer instead, and in
 a webview the drag stops once the pointer leaves the capture element.
+
+## Accessibility
+
+### Libero handles
+
+- A right or middle button never starts a drag, and a second finger is
+  ignored.
+
+### You must
+
+- Give anything a drag sets a second way in: a pointer is not a keyboard. The
+  demo's knob is a focusable, named slider that takes the arrow keys, Home and
+  End.
 
 ## API
 

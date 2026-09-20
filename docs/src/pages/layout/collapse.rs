@@ -1,4 +1,6 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Collapse, Flex, Text},
@@ -177,6 +179,14 @@ pub fn CollapsePage() -> Element {
                     .doc("Animation length in milliseconds. `0` turns the animation off."),
                 prop("children", "Element").doc("The content that grows and shrinks."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "With `keep_mounted`, the closed children stay in the DOM but out of the focus order and hidden from screen readers.",
+                ])
+                .must([
+                    "Give the trigger `aria_expanded` and an `aria_controls` pointing at the panel's `id`: `Collapse` has no role or ARIA.",
+                    "Return focus yourself when the panel closes from inside: use `use_focus_return`, with `remember_active()` on every open and `restore()` where the panel closes.",
+                ]),
             lead: rsx! {
                 Text {
                     "Animates its children's height open and closed, and follows the "

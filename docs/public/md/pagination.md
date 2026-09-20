@@ -37,10 +37,16 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Every control is a button and a tab stop. The page names come from the
-[localization](localization.md)'s `PaginationLabels`, and `label` overrides them.
-At `xs` the controls are 22px and meet the 24px target size only through the
-theme's gap, so keep `theme.pagination.gap` above zero.
+### Libero handles
+
+- Every control is a button and a tab stop.
+- The page names come from the [localization](localization.md)'s
+  `PaginationLabels`, and `label` overrides them.
+
+### You must
+
+- Keep `theme.pagination.gap` above zero: at `xs` the controls are 22px and
+  meet the 24px target size only through the gap.
 
 ## Props
 

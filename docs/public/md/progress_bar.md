@@ -38,10 +38,18 @@ ProgressBar { aria_label: "Connecting", value: None }
 
 ## Accessibility
 
-Name it with `aria_label`, or `aria_labelledby` pointing at a visible caption.
-A screen reader reads the rounded percentage, or `aria_valuetext` when you set
-it. The bar is not a live region. To announce progress, update a separate
-status line at milestones, not on every tick.
+### Libero handles
+
+- A screen reader reads the rounded percentage, or `aria_valuetext` when you
+  set it.
+- The bar takes no focus.
+
+### You must
+
+- Name it with `aria_label`, or `aria_labelledby` pointing at a visible
+  caption.
+- The bar is not a live region. To announce progress, update a separate status
+  line at milestones, not on every tick.
 
 ## Props
 

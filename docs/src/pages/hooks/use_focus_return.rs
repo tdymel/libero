@@ -1,8 +1,7 @@
-use crate::Route;
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, a11y};
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Button, Checkbox, Code, Flex, Text},
+    components::{Button, Checkbox, Code, Flex, Text},
     hooks::use_focus_return,
     sx::sx,
 };
@@ -118,6 +117,13 @@ pub fn UseFocusReturnPage() -> Element {
             title: "use_focus_return",
             source: "libero/src/hooks/focus_return.rs",
             markdown: "/md/use_focus_return.md",
+            accessibility: a11y()
+                .handles([
+                    "`restore()` puts focus back on the remembered element. In the demo, Tab into the panel, then press Apply or Escape, and focus lands on Filters again. `Collapse` shows the same return on an animated panel.",
+                ])
+                .limits([
+                    "Some browsers do not focus a button on a mouse click, so a panel opened with the mouse may remember the body. That only matters to a keyboard user, and for them the trigger has focus.",
+                ]),
             lead: rsx! {
                 Text {
                     Code { source: "use_focus_return() -> FocusReturn" }
@@ -152,18 +158,6 @@ pub fn UseFocusReturnPage() -> Element {
                 controls: Vec::new(),
                 render: move |_: DemoValues| rsx! { Filters {} },
                 wrap: Wrap(code),
-            }
-
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Tab into the panel, then press Apply or Escape, and focus lands on "
-                    "Filters again. Some browsers do not focus a button on a mouse click, so "
-                    "a panel opened with the mouse may remember the body. That only matters "
-                    "to a keyboard user, and for them the trigger has focus. "
-                    Anchor { to: Route::CollapsePage {}, "Collapse" }
-                    " shows the same return on an animated panel."
-                }
             }
 
             DocSection {

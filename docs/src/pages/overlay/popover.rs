@@ -1,5 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -285,6 +285,23 @@ pub fn PopoverPage() -> Element {
                         .doc("Spread on the box, with `dismiss` on."),
                 ]).without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Escape"], "With `dismiss(true)`: closes the box and returns focus to the trigger.")
+                .key(["Tab"], "Closes the box and moves on. Focus is not trapped.")
+                .handles([
+                    "The hook adds no role and no keys of its own. `dismiss(true)` adds the Escape key and closing on focus leaving.",
+                    "With `dismiss(true)`, focus leaving the trigger and the box closes it.",
+                ])
+                .must([
+                    "Put a `role` on the box, and `aria-haspopup`, `aria-expanded` and `aria-controls` on the trigger, as the example does.",
+                    "Drive `aria-expanded` from the same signal the hook gets, or a screen reader hears the wrong state.",
+                    "Make Escape close the box (WCAG 1.4.13): turn on `dismiss(true)`, or handle it yourself.",
+                    "Give the box `tabindex=\"-1\"`, or a click on its text moves focus out and closes it.",
+                    "If you animate the close, give the closing box `visibility: hidden` or `inert`. Until it unmounts, it is still tabbable and still announced.",
+                ])
+                .limits([
+                    "Safari does not focus a button on click, so there a press outside a box opened by pointer does not close it.",
+                ]),
             lead: rsx! {
                 Text {
                     "A popover is a hook, not a component. A dropdown, a menu and a hover "
@@ -341,46 +358,6 @@ pub fn PopoverPage() -> Element {
             DocSection {
                 title: "Context across the portal",
                 CodeBlock { source: CONTEXT_ACROSS_THE_PORTAL, language: "rust" }
-            }
-
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "The hook adds no role and no keys. Put a "
-                    Code { source: "role" }
-                    " on the box, and "
-                    Code { source: "aria-haspopup" }
-                    ", "
-                    Code { source: "aria-expanded" }
-                    " and "
-                    Code { source: "aria-controls" }
-                    " on the trigger, as the example does. Drive "
-                    Code { source: "aria-expanded" }
-                    " from the same signal the hook gets, or a screen reader hears the wrong "
-                    "state."
-                }
-                Text {
-                    Kbd { "Esc" }
-                    " must close the box (WCAG 1.4.13). With "
-                    Code { source: "dismiss(true)" }
-                    ", "
-                    Kbd { "Esc" }
-                    " closes it and returns focus to the trigger. Focus leaving the trigger "
-                    "and the box closes it too. Give the box "
-                    Code { source: "tabindex=\"-1\"" }
-                    ", or a click on its text moves focus out and closes it. Safari does not "
-                    "focus a button on click, so there a press outside a box opened by pointer "
-                    "does not close it."
-                }
-                Text {
-                    "Focus is not trapped. " Kbd { "Tab" }
-                    " closes the box and moves on. If you animate the close, give the closing "
-                    "box "
-                    Code { source: "visibility: hidden" }
-                    " or "
-                    Code { source: "inert" }
-                    ". Until it unmounts, it is still tabbable and still announced."
-                }
             }
 
             DocSection {

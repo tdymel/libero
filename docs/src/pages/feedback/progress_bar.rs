@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Input, ProgressBar, Text};
 
@@ -31,6 +31,15 @@ pub fn ProgressBarPage() -> Element {
                 prop("aria_valuetext", "String")
                     .doc("Read instead of the rounded percentage, such as \"4.2 MB of 12 MB\"."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "A screen reader reads the rounded percentage, or `aria_valuetext` when you set it.",
+                    "The bar takes no focus.",
+                ])
+                .must([
+                    "Name it with `aria_label`, or `aria_labelledby` pointing at a visible caption.",
+                    "The bar is not a live region. To announce progress, update a separate status line at milestones, not on every tick.",
+                ]),
             lead: rsx! {
                 Text {
                     "A bar that fills from "
@@ -90,19 +99,6 @@ pub fn ProgressBarPage() -> Element {
                         radius: values.str("radius"),
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Name it with "
-                    Code { source: "aria_label" }
-                    ", or "
-                    Code { source: "aria_labelledby" }
-                    " pointing at a visible caption. A screen reader reads the rounded "
-                    "percentage, or "
-                    Code { source: "aria_valuetext" }
-                    " when you set it. The bar is not a live region. To announce progress, "
-                    "update a separate status line at milestones, not on every tick."
-                }
             }
         }
     }

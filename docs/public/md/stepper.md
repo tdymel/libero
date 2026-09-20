@@ -59,11 +59,16 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-With `onstepclick`, each clickable step is a button and a tab stop. Enter and
-Space activate. There are no arrow keys. Name the steps with `aria_label` or
-`aria_labelledby`, which land on the step list, not the root. A rich label's
-name must contain its visible text.
+### Libero handles
 
+- With `onstepclick`, each clickable step is a button and a tab stop. Enter
+  and Space activate. There are no arrow keys.
+- `aria_label` and `aria_labelledby` land on the step list, not the root.
+
+### You must
+
+- Name the steps with `aria_label` or `aria_labelledby`.
+- Give a rich label a name that contains its visible text.
 
 ## Props
 

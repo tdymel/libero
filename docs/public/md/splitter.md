@@ -72,20 +72,33 @@ every resize.
 
 ## Accessibility
 
-The divider is a focusable separator with no name of its own. Set `aria_label`
-after the pane it resizes, such as `"Resize sidebar"`.
+### Keyboard
 
-With the divider focused, the arrow keys move it by 1% and Shift with an arrow
-by 10%. Home and End jump to either limit. Left and Right move a vertical
-divider, Up and Down a horizontal one.
+| Key | Action |
+|---|---|
+| `Tab` | Focuses the divider, a tab stop. |
+| `Left` or `Right` | Moves a vertical divider by 1%. |
+| `Up` or `Down` | Moves a horizontal divider by 1%. |
+| `Shift+Left`, `Shift+Right`, `Shift+Up` or `Shift+Down` | Moves the divider by 10%. |
+| `Home` or `End` | Jumps to either limit. |
 
-To resize without dragging (WCAG 2.5.7), double-click the divider. Pane A
-collapses to `min_size`, and the next double-click restores it. A single click
-only focuses the divider.
+### Libero handles
 
-The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses about
-12px into each pane. A scrollbar or button there gets no press. Keep that gutter
-clear, for example with `padding: 12px` on the pane's side next to the divider.
+- The divider is a focusable separator.
+- Double-clicking the divider resizes without dragging (WCAG 2.5.7): pane A
+  collapses to `min_size`, and the next double-click restores it. A single
+  click only focuses the divider.
+- The divider's hit area is 24px thick (WCAG 2.5.8), so it takes presses about
+  12px into each pane.
+- A debug build warns without `aria_label`.
+
+### You must
+
+- Set `aria_label` to name the divider after the pane it resizes, such as
+  `"Resize sidebar"`. It has no name of its own.
+- Keep a pane's scrollbar or edge buttons out of the 12px gutter next to the
+  divider, which gets no press there. For example, use `padding: 12px` on
+  that side.
 
 ## Props
 

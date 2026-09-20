@@ -88,15 +88,19 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Wrap a list of them in a `<nav>` to make a navigation landmark.
+### Libero handles
 
-`description` is read as the link's description, not its name, so "Docs" stays
-"Docs" in a links list.
+- `description` is read as the link's description, not its name, so "Docs"
+  stays "Docs" in a links list.
+- With `nested`, a disclosure button follows the link with its own tab stop.
+  It carries `aria-expanded` and `aria-controls`, and its name is the
+  localized "Show links" plus the link's name ("Show links Docs").
+- Enter or Space on the disclosure button toggles the panel, and the link
+  still navigates.
 
-With `nested`, a disclosure button follows the link with its own tab stop. It
-carries `aria-expanded` and `aria-controls`, and its name is the localized
-"Show links" plus the link's name ("Show links Docs"). Enter or Space on the
-button toggles the panel, and the link still navigates.
+### You must
+
+- Wrap a list of them in a `<nav>` to make a navigation landmark.
 
 ## Props
 

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Container, Text},
@@ -29,6 +29,10 @@ pub fn ContainerPage() -> Element {
                     .doc("Horizontal padding, a spacing step or a CSS length."),
                 prop("children", "Element").doc("The container's content."),
             ])],
+            accessibility: a11y().must([
+                "Use `component: \"main\"` or `\"section\"` when the region is a landmark.",
+                "Name a `section` (`aria-label` or `aria-labelledby`) for it to count as a landmark.",
+            ]),
             lead: rsx! {
                 Text {
                     "Centers content and caps its width at a breakpoint. Wrap your main "
@@ -58,21 +62,6 @@ pub fn ContainerPage() -> Element {
                         "Centered, width-capped content."
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Use "
-                    Code { source: "component: \"main\"" }
-                    " or "
-                    Code { source: "\"section\"" }
-                    " when the region is a landmark. A "
-                    Code { source: "section" }
-                    " needs an accessible name ("
-                    Code { source: "aria-label" }
-                    " or "
-                    Code { source: "aria-labelledby" }
-                    ") to count as one."
-                }
             }
         }
     }

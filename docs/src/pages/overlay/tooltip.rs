@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button, Code, Input, Text, Tooltip},
@@ -79,6 +77,12 @@ pub fn TooltipPage() -> Element {
                     .default("required")
                     .doc("The trigger."),
             ])],
+            accessibility: a11y()
+                .key(["Escape"], "Hides the bubble until the pointer or focus comes back.")
+                .handles(["Keyboard focus anywhere inside `Tooltip` shows the bubble, a click does not."])
+                .must([
+                    "Give the bubble an id with `label_id` and point your trigger's `aria-describedby` at it, so a screen reader reads the label. The demo's Save button does.",
+                ]),
             lead: rsx! {
                 Text {
                     "A label that appears while its child is hovered or focused by keyboard. "
@@ -155,27 +159,6 @@ pub fn TooltipPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_room),
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Keyboard focus anywhere inside "
-                    Code { source: "Tooltip" }
-                    " shows the bubble, a click does not. Escape hides it until the pointer "
-                    "or focus comes back."
-                }
-                Text {
-                    "Give the bubble an id with "
-                    Code { source: "label_id" }
-                    " and point your trigger's "
-                    Code { source: "aria-describedby" }
-                    " at it, so a screen reader reads the label."
-                }
-                Tooltip {
-                    label_id: "save-tip",
-                    label: rsx! { "Saves the current draft" },
-                    Button { aria_describedby: "save-tip", "Save" }
-                }
             }
         }
     }

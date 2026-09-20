@@ -31,9 +31,11 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Use `component: "main"` or `"section"` when the region is a landmark. A
-`section` needs an accessible name (`aria-label` or `aria-labelledby`) to count
-as one.
+### You must
+
+- Use `component: "main"` or `"section"` when the region is a landmark.
+- Name a `section` (`aria-label` or `aria-labelledby`) for it to count as a
+  landmark.
 
 ## Props
 

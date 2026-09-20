@@ -1,11 +1,9 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent, prop, props,
+    Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{
-        Button, Chip, Code, Flex, Input, Kbd, Scroller, ScrollerEdges, Text, use_scroller,
-    },
+    components::{Button, Chip, Code, Flex, Input, Scroller, ScrollerEdges, Text, use_scroller},
     sx::sx,
     use_theme,
 };
@@ -175,6 +173,13 @@ pub fn ScrollerPage() -> Element {
                     prop("children", "Element").doc("The strip."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Left", "Right"], "Scrolls the focused strip.")
+                .handles([
+                    "The strip is a tab stop.",
+                    "A control at its own end leaves the tab order, but keeps focus if it had it.",
+                ])
+                .must(["Name the strip with `aria_label`. It is required, as the strip is a tab stop."]),
             lead: rsx! {
                 Text {
                     "A horizontal strip with a hidden scrollbar and a step control over "
@@ -238,16 +243,6 @@ pub fn ScrollerPage() -> Element {
                 ],
                 wrap: Wrap(wrap_edges),
                 render: move |values: DemoValues| rsx! { ScrollerDemo { values } },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "The strip is a tab stop, so "
-                    Code { source: "aria_label" }
-                    " is required. On the focused strip "
-                    Kbd { "←" } " and " Kbd { "→" }
-                    " scroll it. A control at its own end leaves the tab order, but keeps "
-                    "focus if it had it."
-                }
             }
         }
     }

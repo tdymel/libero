@@ -51,9 +51,11 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-An overlay does not trap focus or hide the page from a screen reader. For a
-modal backdrop, use a [`Dialog`](dialog.md) in [`use_modal`](modal.md), which
-brings its own overlay.
+### You must
+
+- For a modal backdrop, use a [`Dialog`](dialog.md) in [`use_modal`](modal.md),
+  which brings its own overlay. An overlay does not trap focus or hide the
+  page from a screen reader.
 
 ## Props
 

@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Box, Code, Flex, Input, Loader, Text, VisuallyHidden};
 
@@ -55,6 +53,16 @@ pub fn LoaderPage() -> Element {
                     .default("primary")
                     .doc("A theme color name or any CSS color."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "The loader is hidden from screen readers.",
+                    "With reduced motion it stops moving but stays visible.",
+                ])
+                .must([
+                    "Say the wait with something else. Beside its own text, the text says it. Inside a control, such as a `Button` with `loading`, the control does.",
+                    "As the only content of a region, mark the region `aria-busy` and put the text in a `role=\"status\"` region outside it.",
+                    "Mount that status region up front and fill it only while loading, or a screen reader may skip it. The demo's `Beside text` and `Sole content` switches show both setups.",
+                ]),
             lead: rsx! {
                 Text {
                     "An indeterminate busy indicator. It says something is happening, not how "
@@ -113,28 +121,6 @@ pub fn LoaderPage() -> Element {
                         VisuallyHidden { role: "status", if in_region { "{LOADING}" } }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "A loader is hidden from screen readers, so something else says the wait. "
-                    "Beside its own text, the text says it. Inside a control, such as a "
-                    Code { source: "Button" }
-                    " with "
-                    Code { source: "loading" }
-                    ", the control does."
-                }
-                Text {
-                    "As the only content of a region, mark the region "
-                    Code { source: "aria-busy" }
-                    " and put the text in a "
-                    Code { source: "role=\"status\"" }
-                    " region outside it. Mount that region up front and fill it only while "
-                    "loading, or a screen reader may skip it. Switch "
-                    Code { source: "Beside text" }
-                    " and "
-                    Code { source: "Sole content" }
-                    " to see both."
-                }
             }
         }
     }

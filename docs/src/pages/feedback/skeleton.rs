@@ -1,5 +1,5 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{Box, Button, Code, CodeBlock, Flex, Input, Skeleton, Text};
@@ -121,6 +121,16 @@ pub fn SkeletonPage() -> Element {
                 prop("children", "Element")
                     .doc("The real content, when the skeleton wraps it."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "A skeleton says nothing to a screen reader.",
+                    "Content it hides is not announced and not reachable with Tab.",
+                    "With reduced motion the pulse stops half-way.",
+                ])
+                .must([
+                    "Mark the region you are filling `aria-busy` while it waits, as on `Loader`. The demo's `Busy region` switch shows it.",
+                    "Avoid a descendant that sets `visibility: visible` on itself under a visible skeleton: it shows through.",
+                ]),
             lead: rsx! {
                 Text {
                     "A placeholder for content that is still loading. Without children it is "
@@ -215,18 +225,6 @@ pub fn SkeletonPage() -> Element {
                         false => skeleton,
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "A skeleton says nothing to a screen reader. Mark the region you are "
-                    "filling "
-                    Code { source: "aria-busy" }
-                    " while it waits, as on "
-                    Code { source: "Loader" }
-                    ". Switch on "
-                    Code { source: "Busy region" }
-                    " to see it."
-                }
             }
         }
     }

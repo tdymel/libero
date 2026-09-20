@@ -63,14 +63,29 @@ let inspector = use_floating_window(
 
 ## Accessibility
 
-A window takes focus when it opens. Tab reaches the title bar, where `←` `↑` `→`
-`↓` move it 10px and Shift + arrow 1px. On the resize handle the arrows resize,
-and Home End ask for the smallest and largest size allowed. The title bar's menu
-offers Move, Resize and Reset. Move and Resize show step buttons, one click per
-step, so neither needs a drag. Done or Esc hides them. Esc closes the window and
-returns focus to its trigger. F6 moves focus between the page and the topmost
-window. The page behind a window still takes Tab, so pick a placement that does
-not cover its controls.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Tab` | Reaches the title bar. |
+| `Left`, `Up`, `Right` or `Down` | On the title bar: moves the window 10px. |
+| `Shift+Left`, `Shift+Up`, `Shift+Right` or `Shift+Down` | On the title bar: moves the window 1px. |
+| `Left`, `Up`, `Right` or `Down` | On the resize handle: resizes the window. |
+| `Home` or `End` | On the resize handle: asks for the smallest or largest size allowed. |
+| `Escape` | Hides the Move or Resize step buttons. Otherwise closes the window and returns focus to its trigger. |
+| `F6` | Moves focus between the page and the topmost window. |
+
+### Libero handles
+
+- A window takes focus when it opens.
+- The title bar's menu offers Move, Resize and Reset. Move and Resize show
+  step buttons, one click per step, so neither needs a drag. Done or Escape
+  hides them.
+
+### You must
+
+- Pick a `placement` that does not cover the page's controls: the page behind
+  a window still takes Tab.
 
 ## API
 

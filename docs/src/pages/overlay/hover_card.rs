@@ -1,5 +1,5 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -113,6 +113,23 @@ pub fn HoverCardPage() -> Element {
                     .default("false")
                     .doc("Renders `children` alone, with no card."),
             ])],
+            accessibility: a11y()
+                .key(["Tab"], "On the trigger: moves into the card, and past its last link to whatever follows the trigger.")
+                .key(["Shift+Tab"], "Walks back.")
+                .key(["Escape"], "Closes the card and returns focus to the trigger if focus was inside. On the web it works wherever focus is.")
+                .handles([
+                    "Focusing the trigger opens the card. A click does not keep it open.",
+                    "A trigger with nothing focusable and an unnamed card both warn in the console.",
+                    "On touch, a tap opens it and a tap elsewhere closes it. The card has no arrow.",
+                ])
+                .must([
+                    "Keep it to extras the trigger's own target already offers: a screen reader does not announce a hover card, a preview for sighted users. Content a user needs goes in a popover (`use_popover`) that a click opens.",
+                    "Put a link or a button in `children`, since focusing the trigger opens the card.",
+                    "Name the card with `aria_label` or `aria-labelledby` pointing into the content.",
+                ])
+                .limits([
+                    "On desktop and mobile, Escape works only while focus is on the trigger or in the card, so a card the pointer opened cannot be dismissed from the keyboard there (WCAG 1.4.13).",
+                ]),
             lead: rsx! {
                 Text {
                     "A card that opens while its trigger is hovered or focused. It stays open "
@@ -180,37 +197,6 @@ pub fn HoverCardPage() -> Element {
                         Button { variant: "outlined", "Ada Lovelace" }
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "A hover card is a preview for sighted users. A screen reader does not "
-                    "announce it, so keep it to extras the trigger's own target already offers. "
-                    "Content a user needs goes in a popover ("
-                    Code { source: "use_popover" }
-                    ") that a click opens."
-                }
-                Text {
-                    "Focusing the trigger opens the card, so "
-                    Code { source: "children" }
-                    " must hold a link or a button. " Kbd { "Tab" }
-                    " on the trigger moves into the card, and past its last link to whatever "
-                    "follows the trigger. " Kbd { "Esc" }
-                    " closes it and returns focus to the trigger if focus was inside. Name the "
-                    "card with "
-                    Code { source: "aria_label" }
-                    " or "
-                    Code { source: "aria-labelledby" }
-                    ". A trigger with nothing focusable and an unnamed card both warn in the "
-                    "console."
-                }
-                Text {
-                    "On the web, " Kbd { "Esc" }
-                    " closes the card wherever focus is. On desktop and mobile it works only "
-                    "while focus is on the trigger or in the card, so a card the pointer opened "
-                    "cannot be dismissed from the keyboard there (WCAG 1.4.13). On touch, a tap "
-                    "opens it and a tap elsewhere closes it."
-                }
             }
         }
     }

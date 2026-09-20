@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use crate::icons::CheckmarkIcon;
 use dioxus::prelude::*;
 use libero::{
@@ -47,6 +47,16 @@ pub fn AlertPage() -> Element {
                     .default("required")
                     .doc("The message, read as the alert's description."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "An `error` or `warning` color renders `role=\"alert\"`, which interrupts a screen reader. Every other color renders the polite `role=\"status\"`. Your own `role` replaces either.",
+                    "The icon is hidden from screen readers.",
+                ])
+                .must([
+                    "Say the severity in the title or the message too, as the icon is not read.",
+                    "Prefer `tonal` or `filled` for an error: `outlined` has no tint.",
+                    "Move the focus somewhere sensible in `onclose`: closing removes the focused close button.",
+                ]),
             lead: rsx! {
                 Text {
                     "A tinted surface for something the reader has to know, such as an error, "
@@ -121,34 +131,6 @@ pub fn AlertPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "An "
-                    Code { source: "error" }
-                    " or "
-                    Code { source: "warning" }
-                    " color renders "
-                    Code { source: "role=\"alert\"" }
-                    ", which interrupts a screen reader. Every other color renders the polite "
-                    Code { source: "role=\"status\"" }
-                    ". Your own "
-                    Code { source: "role" }
-                    " replaces either."
-                }
-                Text {
-                    "The icon is hidden from screen readers, so say the severity in the title "
-                    "or the message too. "
-                    Code { source: "outlined" }
-                    " has no tint, so prefer "
-                    Code { source: "tonal" }
-                    " or "
-                    Code { source: "filled" }
-                    " for an error. Closing removes the focused close button, so move focus "
-                    "somewhere sensible in "
-                    Code { source: "onclose" }
-                    "."
-                }
             }
         }
     }

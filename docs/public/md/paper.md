@@ -42,9 +42,12 @@ Paper { sx: sx().padding("lg").box_shadow("none"), "Flat" }
 
 ## Accessibility
 
-A `Paper` rendered as a `section` or `aside` is a landmark and needs your
-`aria-label`. As an `a` the whole surface is one link, named by its contents, so
-nothing interactive belongs inside it.
+### You must
+
+- Give a `Paper` rendered as a `section` or `aside` an `aria-label`: it is a
+  landmark.
+- Put nothing interactive inside a `Paper` rendered as an `a`: the whole
+  surface is one link, named by its contents.
 
 ## Props
 

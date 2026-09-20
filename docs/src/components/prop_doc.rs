@@ -112,6 +112,7 @@ pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
                         Title { size: "lg", component: "h2", "{group.component}" }
                     }
                     PropRows {
+                        name: format!("{} properties", group.component),
                         properties: group.props,
                         base: group.base,
                         extends: group.extends,
@@ -123,7 +124,7 @@ pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
 }
 
 #[component]
-fn PropRows(properties: Vec<PropDoc>, base: bool, extends: String) -> Element {
+fn PropRows(name: String, properties: Vec<PropDoc>, base: bool, extends: String) -> Element {
     let mut rows = properties;
     if base {
         rows.extend(base_props(&extends));
@@ -131,6 +132,7 @@ fn PropRows(properties: Vec<PropDoc>, base: bool, extends: String) -> Element {
 
     rsx! {
         Table {
+            aria_label: name,
             // A wrapped name cell would float a middle-aligned description
             // away from the prop it describes.
             //

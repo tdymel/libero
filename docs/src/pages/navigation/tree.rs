@@ -1,13 +1,12 @@
 use std::collections::HashSet;
 
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, or_unset, prop, props,
+    Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, or_unset, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Button, Code, Flex, Icon, Kbd, Text, Tree, TreeItem, TreeLabel, TreeNode,
-        TreeNodeRenderArgs,
+        Button, Code, Flex, Icon, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs,
     },
     sx::sx,
     use_theme,
@@ -203,6 +202,20 @@ pub fn TreePage() -> Element {
                     prop("children", "Element").default("required").doc("The row's content, such as an icon and the label."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Tab"], "Enters the tree, one tab stop.")
+                .key(["Up", "Down"], "Moves between visible rows.")
+                .key(["Left", "Right"], "Collapses and expands, or jumps to the parent and first child.")
+                .key(["Home", "End"], "Jumps to the first or last row.")
+                .handles([
+                    "Typing jumps to the next row whose `tree_label` matches.",
+                    "A disabled node is still reachable, but nothing activates, expands or collapses it.",
+                    "`TreeItem` takes `args.tabindex` for you.",
+                ])
+                .must([
+                    "Name the tree with `aria_label`. It is required.",
+                    "Pass `args.tabindex` to any link or button `render_node` draws, or it adds a tab stop the arrow keys never reach.",
+                ]),
             lead: rsx! {
                 Text {
                     "A tree view over "
@@ -288,22 +301,6 @@ pub fn TreePage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_selection),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "The tree is one tab stop. " Kbd { "↑" } " " Kbd { "↓" }
-                    " move between visible rows. " Kbd { "←" } " " Kbd { "→" }
-                    " collapse and expand, or jump to the parent and first child. "
-                    Kbd { "Home" } " " Kbd { "End" }
-                    " jump to the first and last row, and typing jumps to the next matching "
-                    "label. Any link or button "
-                    Code { source: "render_node" }
-                    " draws must take "
-                    Code { source: "args.tabindex" }
-                    ". "
-                    Code { source: "TreeItem" }
-                    " does this for you."
-                }
             }
         }
     }
