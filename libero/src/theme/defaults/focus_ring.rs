@@ -6,32 +6,15 @@ pub use crate::tokens::{
     FOCUS_RING_OFFSET, FOCUS_RING_WIDTH,
 };
 
-/// An element's own resting `box-shadow`, restated as a value the ring can
-/// compose back in. The ring's halo *is* a `box-shadow`, and a
-/// `:focus-visible` arm that sets the property drops whatever the resting
-/// rule put there - an `Elevated` button would lose its elevation for as long
-/// as it held focus. Set it wherever a focusable carries a resting shadow;
-/// [`shadow_sx`](crate::components::common::shadow_sx) writes both at once.
+/// An element's resting `box-shadow`, which the ring's halo shadow composes back in.
+/// Set it on any focusable with a resting shadow; [`shadow_sx`](crate::components::common::shadow_sx) does both.
 pub const OWN_SHADOW: CssVar = CssVar::new("--lsx-own-shadow");
 
-/// The library's one focus indicator: a dark stripe with a light halo on both
-/// sides of it.
-///
-/// A single-tone ring cannot be guaranteed any contrast, because the surface
-/// it is painted on belongs to the caller. `Splitter`'s divider is the proof -
-/// its focusable is a 10px invisible hit overlay over a 1px bar, so the ring
-/// is painted entirely over the caller's two panes. Deriving the ring from the
-/// component's own colour fails the other way, giving a white ring over light
-/// panes the moment a caller darkens the line.
-///
-/// Two tones carry their own contrast instead: whatever the surround is, the
-/// stripe has the halo next to it, and the pair reads at the ratio between
-/// `color` and `halo` rather than at the ratio against a surface nobody
-/// controls.
+/// The library's one focus indicator: a dark stripe with a light halo. Two tones
+/// carry their own contrast, whatever surface the caller paints it on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FocusRingDefaults {
-    /// The stripe. Dark on purpose: the halo only rescues a *dark* surround,
-    /// so the stripe is what has to read against a light one.
+    /// The stripe. Dark, since the halo only rescues a dark surround.
     pub color: ColorValue,
     /// What the stripe reads against.
     pub halo: ColorValue,
@@ -44,15 +27,8 @@ pub struct FocusRingDefaults {
 }
 
 impl FocusRingDefaults {
-    /// The two tones are the theme's own black and white rather than
-    /// literals, and rather than a palette shade.
-    ///
-    /// `Color::Ink`/`Color::Surface` have no ramp, so both resolve to the one
-    /// var each - `--lsx-ink` and `--lsx-surface`, which *are* `theme.ink`
-    /// and `theme.surface` - and the shade below is ignored. That is what makes
-    /// the pair follow the theme: a scheme that redefines the two ends of the
-    /// page redefines the ring with them, and the tones stay adjacent because
-    /// they invert together.
+    /// The theme's own ink and surface (no ramp, shade ignored), so the ring
+    /// follows any scheme that redefines the page's two ends.
     pub const DEFAULT: Self = Self {
         color: ColorValue::Shade(Color::Ink, ColorShade::DEFAULT),
         halo: ColorValue::Shade(Color::Surface, ColorShade::DEFAULT),

@@ -2,11 +2,8 @@ use std::fmt;
 
 use super::Size;
 
-/// A prop value that changes with the viewport: a `base` below every
-/// breakpoint, and an override from each named [`Size`] breakpoint up.
-///
-/// A plain value converts into one with no breakpoints, so `cols: 3` and
-/// `cols: responsive(1).sm(2).lg(3)` are the same prop.
+/// A prop value that changes with the viewport: a `base`, and an override from each
+/// named [`Size`] breakpoint up. A plain value converts, so `cols: 3` also works.
 ///
 /// ```rust
 /// use libero::theme::{Size, responsive};
@@ -15,6 +12,8 @@ use super::Size;
 /// assert_eq!(cols.base(), 1);
 /// assert_eq!(cols.at(Size::Md), 2);
 /// ```
+///
+/// Docs: <https://libero-ui.dev/about/styling>
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Responsive<T: Copy> {
     base: T,
@@ -64,8 +63,7 @@ impl<T: Copy> Responsive<T> {
         self.base
     }
 
-    /// The value in effect from `size`'s breakpoint up: the nearest one at or
-    /// below it, else `base`.
+    /// The value in effect at `size`: the nearest breakpoint at or below it, else `base`.
     pub fn at(&self, size: Size) -> T {
         self.breakpoints[..=size.index()]
             .iter()
@@ -102,7 +100,7 @@ impl<T: Copy> From<T> for Responsive<T> {
     }
 }
 
-/// `2` alone, else the builder that makes it: what a caller would write.
+/// What a caller would write: `2`, or `responsive(1).sm(2)`.
 impl<T: Copy + fmt::Display> fmt::Display for Responsive<T> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.breakpoints().next().is_none() {

@@ -5,32 +5,23 @@ use crate::theme::{ColorCss, ColorShade, CssVar, Size, SizeCss, Sizes};
 /// Track thickness, one declaration per step.
 pub const PROGRESS_BAR_THICKNESS: SizeCss = SizeCss::new("--lsx-progress-bar-thickness-");
 
-// The picked level, resolved on the root so the fill - which carries no
-// `data-state` of its own - inherits it.
+// The picked level, resolved on the root so the fill inherits it.
 pub const PROGRESS_BAR_SIZE: CssVar = CssVar::new("--lsx-progress-bar-size");
 pub const PROGRESS_BAR_RADIUS: CssVar = CssVar::new("--lsx-progress-bar-radius");
 
 /// The unfilled groove. Themed once, not per instance.
 pub const PROGRESS_BAR_TRACK: CssVar = CssVar::new("--lsx-progress-bar-track");
-/// How long the fill takes to ease to a new value. Themed once; app-wide
-/// chrome rather than a per-call knob, so there is no `transition` prop.
+/// How long the fill eases to a new value. App-wide, so there is no `transition` prop.
 pub const PROGRESS_BAR_TRANSITION: CssVar = CssVar::new("--lsx-progress-bar-transition");
 
-// Per instance, written from props by `progress_bar_variables`. Both are read
-// with `value_or`, never `overridable` - nothing writes an `-override` twin
-// here, which is the trap todo 49 records against `Carousel`.
+// Per instance, from props. Read with `value_or`, never `overridable`: no `-override`
+// twin is written (the todo 49 trap).
 pub const PROGRESS_BAR_COLOR: CssVar = CssVar::new("--lsx-progress-bar-color");
 /// The drawn fraction as a percentage, e.g. `42%`.
 pub const PROGRESS_BAR_FILL: CssVar = CssVar::new("--lsx-progress-bar-fill");
 
-/// The indeterminate sweep.
-///
-/// A fixed-width fill translated across the track rather than a `width`
-/// animation, so it composites on the GPU and never reflows. The fill is
-/// [`INDETERMINATE_WIDTH`] of the track, and `translateX` percentages are
-/// relative to the fill's own box: `-100%` parks its right edge on the track's
-/// left edge, and `400%` carries its left edge one full track width past the
-/// right - so the sweep enters and leaves completely.
+/// The indeterminate sweep: a [`INDETERMINATE_WIDTH`] fill translated (no reflow) from
+/// `-100%` to `400%` of its own box, so it enters and leaves completely.
 pub const PROGRESS_BAR_KEYFRAMES: &str = concat!(
     "@keyframes lsx-progress-bar-indeterminate{",
     "from{transform:translateX(-100%);}",
@@ -44,16 +35,12 @@ pub const PROGRESS_BAR_ANIMATION: &str = "lsx-progress-bar-indeterminate";
 /// Width of the sweeping fill, as a share of the track.
 pub const INDETERMINATE_WIDTH: &str = "25%";
 
+/// Theme defaults for `ProgressBar`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ProgressBarDefaults {
     pub size: Size,
-    /// Corner of both track and fill.
-    ///
-    /// Note that a track is a full pill as soon as the radius reaches half its
-    /// height, so most of the scale is visually inert on a thin bar: on the
-    /// default `md` track (8px) only `xs` differs, and even the tallest track
-    /// (`xxl`, 20px) separates only as far as `lg`. Shipped as specified
-    /// anyway; the docs page says so.
+    /// Corner of track and fill. Past half the height it is a pill, so on the 8px
+    /// `md` track only `xs` differs.
     pub radius: Size,
     /// Muted step of the unfilled groove.
     pub track_shade: ColorShade,
@@ -69,9 +56,6 @@ impl ProgressBarDefaults {
         radius: Size::Xl,
         track_shade: ColorShade::S2,
         transition: "100ms",
-        // Track heights. A bar is a full pill once the radius reaches half
-        // of these, which is why most of the radius scale is inert here -
-        // see `ProgressBarDefaults::radius`.
         sizes: Sizes::new("3px", "5px", "8px", "12px", "16px", "20px"),
     };
 

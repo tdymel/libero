@@ -1,14 +1,14 @@
 use super::{ColorCss, NamedColorCss, ShadeRamp};
 
-/// How a [`Color`] names its custom properties, as `(own, contrast)`. Palette
-/// colors get a 9-shade var per role; ink/surface get one each and are each
-/// other's contrast.
+/// A [`Color`]'s custom properties, as `(own, contrast)`. Ink and surface have one
+/// each and are each other's contrast.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum ColorVars {
     Palette(ColorCss, ColorCss),
     Named(NamedColorCss, NamedColorCss),
 }
 
+/// A theme palette colour, written as `"primary"` or with a shade, `"primary.7"`.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Color {
@@ -20,12 +20,9 @@ pub enum Color {
     Success,
     Neutral,
     Muted,
-    /// What text is set in. The dark end of the page on a light theme, the
-    /// light end on a dark one - which is why it is not called "black".
+    /// Text colour: the page's dark end on a light theme, its light end on a dark one.
     Ink,
-    /// The page text is set on, and the surface every color role is measured
-    /// against. Not `Paper`'s background: that is the card drawn on top of
-    /// this one.
+    /// The page, which every colour role is measured against. Not `Paper`'s card.
     Surface,
 }
 
@@ -38,15 +35,8 @@ impl Color {
         }
     }
 
-    /// A name this enum does not know returns `None`, and `sx` then passes
-    /// the string through as raw CSS.
-    ///
-    /// That matters here: `"white"` and `"black"` used to name the two ends
-    /// of the page and now do not, so they no longer resolve to
-    /// `--lsx-surface`/`--lsx-ink` - they fall through to the CSS keywords
-    /// `white` and `black`, which are valid CSS and so fail **silently**,
-    /// pinning the color to one scheme instead of following the theme. A name
-    /// that is not a CSS keyword either (`"primry"`) warns in debug builds.
+    /// `None` for an unknown name, which `sx` passes through as raw CSS. So `"white"`
+    /// and `"black"` stay fixed CSS keywords: use `"surface"`/`"ink"` to follow the theme.
     pub fn parse(value: &str) -> Option<Self> {
         match value {
             "primary" => Some(Self::Primary),
@@ -63,7 +53,6 @@ impl Color {
         }
     }
 
-    /// Every shade/contrast and name/value lookup goes through here.
     pub(crate) const fn vars(self) -> ColorVars {
         match self {
             Self::Primary => ColorVars::Palette(ColorCss::PRIMARY, ColorCss::PRIMARY_CONTRAST),

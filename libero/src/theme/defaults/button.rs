@@ -14,6 +14,7 @@ pub struct ButtonSizeLevel {
     pub padding_x: &'static str,
 }
 
+/// Theme defaults for `Button`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ButtonDefaults {
     /// The chrome a button takes when a call site names none.

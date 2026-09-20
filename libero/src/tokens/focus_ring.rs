@@ -3,16 +3,16 @@
 
 use super::CssVar;
 
-/// The dark stripe. Overridden per surface by `--lsx-focus-contrast`, which a
-/// surface publishes when it knows what reads against itself.
+/// The dark stripe. A surface overrides it through `--lsx-focus-contrast`.
 pub const FOCUS_RING_COLOR: CssVar = CssVar::new("--lsx-focus-ring-color");
-/// The light halo drawn on both sides of the stripe. Overridden, beside
-/// `--lsx-focus-contrast`, by the background that publishes it (todo 630).
+/// The light halo on both sides of the stripe; a background overrides it (todo 630).
 pub const FOCUS_RING_HALO: CssVar = CssVar::new("--lsx-focus-ring-halo");
+/// The stripe's width.
 pub const FOCUS_RING_WIDTH: CssVar = CssVar::new("--lsx-focus-ring-width");
+/// The gap between the element and the stripe.
 pub const FOCUS_RING_OFFSET: CssVar = CssVar::new("--lsx-focus-ring-offset");
+/// The halo's width on each side of the stripe.
 pub const FOCUS_RING_HALO_WIDTH: CssVar = CssVar::new("--lsx-focus-ring-halo-width");
-/// How far the halo's `box-shadow` spreads: out past the offset, the stripe
-/// and the halo's own width, so the stripe lands in the middle of it.
-/// Derived, not a field - it moves with whichever of the three a theme changes.
+/// The halo's `box-shadow` spread (offset + stripe + halo width), centring the stripe in it.
+/// Derived, not a theme field.
 pub const FOCUS_RING_HALO_SPREAD: CssVar = CssVar::new("--lsx-focus-ring-halo-spread");

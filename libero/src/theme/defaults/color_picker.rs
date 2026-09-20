@@ -11,8 +11,7 @@ pub const COLOR_PICKER_PREVIEW_SIZE: SizeCss = SizeCss::new("--lsx-color-picker-
 pub const COLOR_PICKER_SPACING_SIZE: SizeCss = SizeCss::new("--lsx-color-picker-spacing-");
 pub const COLOR_PICKER_SWATCH_SIZE: SizeCss = SizeCss::new("--lsx-color-picker-swatch-size-");
 
-// The picked level, resolved on the root so the panel, the sliders and the
-// swatches - which carry no `data-state` of their own - inherit it.
+// The picked level, resolved on the root so panel, sliders and swatches inherit it.
 pub const COLOR_PICKER_WIDTH: CssVar = CssVar::new("--lsx-color-picker-width");
 pub const COLOR_PICKER_SATURATION_HEIGHT: CssVar =
     CssVar::new("--lsx-color-picker-saturation-height");
@@ -22,8 +21,7 @@ pub const COLOR_PICKER_SPACING: CssVar = CssVar::new("--lsx-color-picker-spacing
 pub const COLOR_PICKER_SWATCH: CssVar = CssVar::new("--lsx-color-picker-swatch");
 
 str_enum! {
-    /// The CSS text a color is written as. Only text cares - a `ColorCode` is
-    /// the same value in every form.
+    /// The CSS text a colour is written as; a `ColorCode` is the same in every form.
     pub enum ColorFormat {
         #[default]
         Hex = "hex",
@@ -53,11 +51,11 @@ pub struct ColorPickerSizeLevel {
     pub preview_size: &'static str,
     /// Between the panel, the sliders and the swatches.
     pub spacing: &'static str,
-    /// One preset swatch. Fixed per step, so seven of them and their gaps
-    /// fit the step's `width` - a `full_width` picker does not grow them.
+    /// One preset swatch, fixed per step: seven fit `width`; `full_width` does not grow them.
     pub swatch_size: &'static str,
 }
 
+/// Theme defaults for `ColorPicker`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ColorPickerDefaults {
     pub size: Size,
@@ -79,11 +77,8 @@ impl ColorPickerDefaults {
                 saturation_height: "100px",
                 thumb_size: "8px",
                 preview_size: "26px",
-                // An accessibility threshold, not only a layout knob: a
-                // swatch is a button, and at 20px it meets WCAG 2.5.8 only
-                // by its spacing exception - swatch plus spacing at least
-                // 24px, centre to centre. Exactly 24 here, so neither value
-                // can shrink. Pinned by a test below.
+                // WCAG 2.5.8: a 20px swatch passes only at 24px centre to centre,
+                // so neither value can shrink (pinned by a test).
                 spacing: "4px",
                 swatch_size: "20px",
             },

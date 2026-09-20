@@ -2,9 +2,8 @@ use std::fmt::{self, Display};
 
 use crate::tokens::CssVar;
 
-/// CSS custom properties rendered into an element's `style` attribute, so a
-/// component's shared static class can reference a per-instance value through
-/// `var(--name, fallback)` rather than minting a class per value.
+/// CSS custom properties on an element's `style` attribute, so a shared class can
+/// read a per-instance value through `var(--name)` instead of minting a class per value.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Variables(Vec<(CssVar, String)>);
 
@@ -22,8 +21,7 @@ impl Variables {
         self
     }
 
-    /// `other`'s entries win by name. For a component forwarding a
-    /// caller-supplied `Variables` alongside its own.
+    /// `other`'s entries win by name.
     pub fn merge(mut self, other: Self) -> Self {
         for (name, value) in other.0 {
             self = self.with(name, value);
@@ -33,8 +31,7 @@ impl Variables {
 }
 
 impl Variables {
-    /// `write!` per entry costs more than the whole rest of the style
-    /// attribute; these are plain concatenations, so they skip `fmt`.
+    /// Plain concatenation: a `write!` per entry costs more than the rest of the attribute.
     pub(crate) fn render(&self) -> String {
         let mut out = String::with_capacity(
             self.0
@@ -71,8 +68,7 @@ mod tests {
 
     const COLOR: CssVar = CssVar::new("--lsx-test-color");
 
-    /// `render` is the hot path and `Display` the general one; they must not
-    /// drift.
+    /// `render` (hot path) and `Display` must not drift.
     #[test]
     fn render_matches_the_display_impl() {
         let variables = variables()

@@ -1,12 +1,7 @@
 //! Dracula - Alucard light, Dracula dark.
 //!
-//! The dark half is the Kopuz pack's. Alucard is Dracula's own light theme,
-//! from the Dracula specification (<https://draculatheme.com/spec>), mapped
-//! slot for slot: Comment for `muted`, Purple for `primary`, Pink for
-//! `secondary`, Green, Red, and "Background Dark" for the card, as the dark
-//! half's card is Dracula's "Background Dark". The pack's `accent-soft`
-//! (`#caa7fc`) is a lightened purple the spec does not name, so Alucard has
-//! no counterpart for it and `info` takes Alucard's Cyan instead.
+//! Alucard is mapped slot for slot from <https://draculatheme.com/spec>; the spec has
+//! no `accent-soft`, so `info` takes Alucard's Cyan.
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
@@ -21,7 +16,6 @@ pub static DRACULA_LIGHT: Theme = Theme {
     info: HexColor::new(0x036A96),
     success: HexColor::new(0x14710A),
     error: HexColor::new(0xCB3A2A),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#ceccc0",
         ..PaperDefaults::DEFAULT
@@ -41,7 +35,6 @@ pub static DRACULA_DARK: Theme = Theme {
     info: HexColor::new(0xCAA7FC),
     success: HexColor::new(0x50FA7B),
     error: HexColor::new(0xFF5555),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#21222c",
         ..PaperDefaults::DARK

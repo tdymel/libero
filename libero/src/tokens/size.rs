@@ -1,5 +1,7 @@
 use crate::utils::warn;
 
+/// A step on the theme's scales (spacing, radius, font size, shadow, breakpoint), written
+/// `"xs"` to `"xxl"` in `sx`. An unknown string warns and falls back to `md`.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Size {
@@ -18,8 +20,7 @@ impl Size {
         self as usize
     }
 
-    /// One step down the scale, for a part that rides inside a control of this
-    /// size - a chip in a field. `xs` has nowhere lower to go.
+    /// One step down, for a part inside a control of this size (a chip in a field). `xs` stays.
     pub(crate) const fn step_down(self) -> Self {
         Self::ALL[self.index().saturating_sub(1)]
     }
@@ -35,6 +36,7 @@ impl Size {
         }
     }
 
+    /// `None` for anything but `"xs"`..`"xxl"`.
     pub fn parse_dynamic(value: &str) -> Option<Self> {
         match value {
             "xs" => Some(Self::Xs),
@@ -47,6 +49,7 @@ impl Size {
         }
     }
 
+    /// This breakpoint's `min-width`.
     pub const fn breakpoint_value(&self) -> &'static str {
         match self {
             Self::Xs => "36rem",
@@ -58,8 +61,7 @@ impl Size {
         }
     }
 
-    /// This size's `data-state` token, e.g. `"size-md"` - for gating
-    /// size-specific CSS instead of minting a class per size.
+    /// This size's `data-state` token, e.g. `"size-md"`, gating size-specific CSS.
     pub const fn state_name(&self) -> &'static str {
         match self {
             Self::Xs => "size-xs",
@@ -71,9 +73,7 @@ impl Size {
         }
     }
 
-    /// [`state_name`](Self::state_name) in a separate namespace, so a
-    /// `radius` that scales independently of `size` can sit on the same
-    /// element without colliding.
+    /// [`state_name`](Self::state_name) for `radius`, which scales independently of `size`.
     pub const fn radius_state_name(&self) -> &'static str {
         match self {
             Self::Xs => "radius-xs",
@@ -85,8 +85,7 @@ impl Size {
         }
     }
 
-    /// The same, for an elevation step - a surface's `shadow` scales
-    /// independently of both its `size` and its `radius`.
+    /// The same, for an independent `shadow` (elevation) step.
     pub const fn shadow_state_name(&self) -> &'static str {
         match self {
             Self::Xs => "shadow-xs",

@@ -7,20 +7,13 @@ pub(crate) const FILL_INFIX: &str = "fill-";
 /// The var infix of the text ramp re-based onto the hover and selected tints.
 pub(crate) const ON_TINT_INFIX: &str = "on-tint-";
 
-/// The fill shade an unfilled control tints to on hover: transparent at rest,
-/// so it tints instead of darkening.
+/// The hover tint of an unfilled control, transparent at rest.
 pub(crate) const HOVER_TINT_SHADE: ColorShade = ColorShade::S1;
-/// One step past the hover tint, so a selected control still reads as
-/// selected while the pointer is over it.
+/// One past the hover tint, so a selected control still reads under the pointer.
 pub(crate) const SELECTED_TINT_SHADE: ColorShade = ColorShade::S2;
 
-/// A colour named for what it is about to do. The three roles are three
-/// ramps at `:root`, not three names for one colour: `Shade` is the brand
-/// colour itself, `Text` is the ramp re-based on the first step that reads on
-/// the surface, and `Fill` the ramp re-based on the first step that carries a
-/// black or white foreground. `Contrast` is that foreground.
-///
-/// See `theme::stylesheet` for how each ramp is derived.
+/// A palette shade in a role, each its own `:root` ramp: `Shade` is the brand colour,
+/// `Text` re-based to read on the surface, `Fill` to carry a black or white `Contrast`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ColorValue {
     Shade(Color, ColorShade),
@@ -30,15 +23,8 @@ pub enum ColorValue {
 }
 
 impl ColorValue {
-    /// The same colour in the text role. Only a palette shade has a ramp to
-    /// move along; everything else is already itself.
-    ///
-    /// The neutral ramps are left alone on purpose. An accent is picked for
-    /// *which* colour it is and has to be legible wherever it lands, but a
-    /// grey is picked for how quiet it should look: a disabled label, a
-    /// decorative rule, a chevron. Quietening text is what
-    /// [`NamedColorCss::TEXT_DIMMED`](crate::tokens::NamedColorCss::TEXT_DIMMED)
-    /// (`"text-dimmed"`) is for, and it says so at the call site.
+    /// The same colour in the text role. Neutral ramps stay put: a grey is picked for how
+    /// quiet it looks; `"text-dimmed"` is the legible quiet text.
     pub(crate) fn as_text(self) -> Self {
         match self {
             Self::Shade(color, shade) if color.shade_ramp() == ShadeRamp::Chromatic => {
@@ -66,8 +52,7 @@ impl ColorValue {
         let (color, shade, contrast) = match self {
             Self::Shade(color, shade) => (color, shade, false),
             Self::Contrast(color, shade) => (color, shade, true),
-            // Black and white have no ramp to re-base, so both roles are the
-            // colour itself.
+            // Ink and surface have no ramp: both roles are the colour itself.
             Self::Text(color, shade) | Self::Fill(color, shade) => {
                 let infix = if matches!(self, Self::Text(..)) {
                     TEXT_INFIX
@@ -88,8 +73,7 @@ impl ColorValue {
         }
     }
 
-    /// The var of this shade's label on a hover or selected tint. `None` for
-    /// anything but a palette shade, which has no tint to read on.
+    /// The var of this shade's label on a hover or selected tint; `None` but for a palette shade.
     pub(crate) fn on_tint_name(self) -> Option<String> {
         match (self, self.color().vars()) {
             (Self::Shade(_, shade), ColorVars::Palette(own, _)) => {
@@ -128,8 +112,7 @@ impl ColorValue {
             None => (name, false),
         };
 
-        // Name first: `rgba(0, 0, 0, 0.15)` splits into a nonsense shade and
-        // must bail before `ColorShade::parse` asserts.
+        // Name first: `rgba(0, 0, 0, 0.15)` must bail before `ColorShade::parse` warns.
         let color = Color::parse(name)?;
         if !matches!(color.vars(), ColorVars::Palette(..)) {
             return None;
@@ -207,8 +190,7 @@ mod tests {
         );
     }
 
-    /// Raw CSS must be rejected on the color name, not by tripping
-    /// `ColorShade::parse`'s debug assert.
+    /// Raw CSS is rejected on the colour name, before `ColorShade::parse` warns.
     #[test]
     fn parse_rejects_raw_css_without_asserting_on_the_shade() {
         assert_eq!(ColorValue::parse("rgba(255, 255, 255, 0.15)"), None);
@@ -217,7 +199,6 @@ mod tests {
 
     #[test]
     fn parse_rejects_non_palette_values() {
-        // Black/white have no shade scale, so only their bare names parse.
         assert_eq!(ColorValue::parse("black.3"), None);
         assert_eq!(ColorValue::parse("white-contrast"), None);
         assert_eq!(ColorValue::parse("primaryish"), None);

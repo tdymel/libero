@@ -10,8 +10,7 @@ pub const STEPPER_DESCRIPTION_FONT_SIZE: SizeCss =
 pub const STEPPER_GAP_SIZE: SizeCss = SizeCss::new("--lsx-stepper-gap-");
 pub const STEPPER_SPACING_SIZE: SizeCss = SizeCss::new("--lsx-stepper-spacing-");
 
-// The picked level, resolved on the root so the steps and their parts - which
-// carry no size `data-state` of their own - inherit it.
+// The picked level, resolved on the root so the steps and their parts inherit it.
 pub const STEPPER_MARKER: CssVar = CssVar::new("--lsx-stepper-marker");
 pub const STEPPER_DESCRIPTION_SIZE: CssVar = CssVar::new("--lsx-stepper-description-size");
 pub const STEPPER_GAP: CssVar = CssVar::new("--lsx-stepper-gap");
@@ -19,9 +18,8 @@ pub const STEPPER_SPACING: CssVar = CssVar::new("--lsx-stepper-spacing");
 
 pub const STEPPER_COLOR: CssVar = CssVar::new("--lsx-stepper-color");
 pub const STEPPER_COLOR_CONTRAST: CssVar = CssVar::new("--lsx-stepper-color-contrast");
-/// The same colour under the completed step's number, which is drawn in
-/// [`STEPPER_COLOR_CONTRAST`]. [`STEPPER_COLOR`] is the *text* role - the
-/// current step's number and ring - and the two differ by a ramp step.
+/// The fill under a completed step's [`STEPPER_COLOR_CONTRAST`] number;
+/// [`STEPPER_COLOR`] is the text role, a ramp step apart.
 pub const STEPPER_FILL: CssVar = CssVar::new("--lsx-stepper-fill");
 pub const STEPPER_PENDING: CssVar = CssVar::new("--lsx-stepper-pending");
 pub const STEPPER_ERROR: CssVar = CssVar::new("--lsx-stepper-error");
@@ -55,6 +53,7 @@ pub struct StepperSizeLevel {
     pub spacing: &'static str,
 }
 
+/// Theme defaults for `Stepper`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct StepperDefaults {
     pub size: Size,
@@ -159,16 +158,13 @@ impl StepperDefaults {
 
 impl ToCssDeclarations for StepperDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        // `.value()` on every colour, never the field itself: a raw
-        // `primary.6` reaches `:root` as a bare token and silently drops every
-        // shorthand that reads it. See `TimelineDefaults`.
+        // `.value()`: a bare `primary.6` drops every shorthand reading it (see Timeline).
         let mut declarations = vec![
             STEPPER_COLOR.declare(self.color.as_text().value()),
             STEPPER_FILL.declare(self.color.as_fill().value()),
             STEPPER_COLOR_CONTRAST.declare(contrast_of(self.color).value()),
             STEPPER_PENDING.declare(self.pending_color.value()),
-            // Only ever a fill, under the marker's `!` - unlike
-            // `STEPPER_COLOR`, which is also the current step's own number.
+            // Only ever a fill, under the marker's `!`.
             STEPPER_ERROR.declare(self.error_color.as_fill().value()),
             STEPPER_ERROR_CONTRAST.declare(contrast_of(self.error_color).value()),
             STEPPER_CONNECTOR_COLOR.declare(self.connector_color.value()),

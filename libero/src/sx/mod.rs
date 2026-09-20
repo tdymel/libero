@@ -1,6 +1,5 @@
 mod breakpoint_value;
-// The four `pub(crate)` modules are public through `components`, their public
-// path.
+// The four `pub(crate)` modules are public through `components`.
 pub(crate) mod class_list;
 pub(crate) mod input;
 pub(crate) mod states;

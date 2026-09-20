@@ -8,6 +8,15 @@ use crate::utils::warn;
 /// What a caller writes for [`NamedColorCss::TEXT_DIMMED`].
 const DIMMED_TEXT_TOKEN: &str = "text-dimmed";
 
+/// An `sx` value: a size word (`"md"`), a palette colour (`"primary"`, `"primary.7"`),
+/// a var, a number, or plain CSS text. Built by `From`, never by hand.
+///
+/// ```
+/// # use libero::sx::ThemeAwareValue;
+/// let value: ThemeAwareValue = "primary.7".into();
+/// ```
+///
+/// Docs: <https://libero-ui.dev/about/styling>
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ThemeAwareValue {
     String(String),
@@ -19,8 +28,8 @@ pub enum ThemeAwareValue {
     ColorValue(ColorValue),
     CssVar(CssVar),
     BreakpointValue(BreakpointValue),
-    /// A literal color: original text for CSS output, parsed RGB for contrast
-    /// lookups. A translucent `rgba()` stays a `String` instead.
+    /// A literal colour: its text for CSS, its RGB for contrast. A translucent
+    /// `rgba()` stays a `String`.
     RawColor(String, HexColor),
 }
 
@@ -41,9 +50,8 @@ impl ThemeAwareValue {
         }
     }
 
-    /// This value in `role`, for the properties that have one. A literal
-    /// colour, a var or a keyword has no ramp to move along and is returned
-    /// unchanged - the caller asked for exactly that colour.
+    /// This value in `role`. A literal colour, var or keyword has no ramp and
+    /// comes back unchanged.
     pub(crate) fn in_color_role(&self, role: ColorRole) -> Self {
         let in_role = |value: ColorValue| match role {
             ColorRole::Text => value.as_text(),
@@ -59,9 +67,8 @@ impl ThemeAwareValue {
         }
     }
 
-    /// Focus-ring color for this value used as a `background`. `None` when
-    /// the contrast can't be determined (named colors, `hsl()`, vars,
-    /// gradients) - leave the inherited value alone rather than clearing it.
+    /// Focus-ring colour on this value as a `background`. `None` when contrast
+    /// is unknown (named colours, `hsl()`, vars, gradients): keep the inherited one.
     pub(crate) fn focus_contrast(&self) -> Option<String> {
         match self {
             Self::Color(color) => Some(ColorValue::Contrast(*color, ColorShade::DEFAULT).value()),
@@ -76,10 +83,10 @@ impl ThemeAwareValue {
 }
 
 impl ThemeAwareValue {
-    /// The variants that borrow nothing, so a `&str` can be classified before
-    /// it is allocated. `None` leaves the two owning variants to the caller.
+    /// The non-owning variants, classified before any allocation. `None` leaves
+    /// the two owning ones to the caller.
     fn parse_borrowed(value: &str) -> Option<Self> {
-        // Before the palette: a role name, not a colour name.
+        // A role name, so before the palette.
         if value == DIMMED_TEXT_TOKEN {
             return Some(Self::CssVar(NamedColorCss::TEXT_DIMMED.var()));
         }
@@ -96,8 +103,7 @@ impl ThemeAwareValue {
             return Some(Self::Color(color));
         }
 
-        // Without a shade or the contrast suffix, `ColorValue::parse` reduces
-        // to the `Color::parse` above - which it also re-runs internally.
+        // Without a shade or `-contrast` this would only repeat `Color::parse`.
         if (value.contains('.') || value.ends_with("-contrast"))
             && let Some(color) = ColorValue::parse(value)
         {
@@ -112,15 +118,8 @@ impl ThemeAwareValue {
     }
 }
 
-/// `gray` and `grey` are both CSS keywords, and the palette name is `muted`:
-/// the two spellings that fall through to an off-theme colour without a
-/// sound. `grey` named the palette until the ramp was re-based on the
-/// surface, so a call site that predates the rename keeps compiling and
-/// paints the CSS keyword. Once per spelling, since this runs on every render
-/// of every `color: "gray"`.
-///
-/// `white` and `black` are the same trap in a dark theme: a fixed colour where
-/// `surface` or `ink` would follow the scheme.
+/// Warns once per spelling on CSS keywords that silently miss the theme: `gray`/`grey`
+/// (the palette's old name, now `muted`), `white`/`black` (use `surface`/`ink`).
 fn warn_misspelled_palette(value: &str) {
     thread_local! {
         static WARNED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
@@ -164,8 +163,7 @@ impl From<String> for ThemeAwareValue {
 }
 
 impl From<&str> for ThemeAwareValue {
-    /// Allocates only for the two owning variants - a token, color or var
-    /// value never reaches a `to_string`.
+    /// Allocates only for the two owning variants.
     fn from(value: &str) -> Self {
         if let Some(parsed) = Self::parse_borrowed(value) {
             return parsed;
@@ -342,8 +340,7 @@ mod tests {
         );
     }
 
-    /// Todo 240: the one name for quieter text. It is a var, not a palette
-    /// colour, so no role resolution touches it afterwards.
+    /// Todo 240: a var, not a palette colour, so no role resolution touches it.
     #[test]
     fn theme_aware_value_parses_the_dimmed_text_token() {
         assert_eq!(
@@ -358,8 +355,7 @@ mod tests {
         );
     }
 
-    /// A muted colour is picked for how quiet it looks, so it is taken literally -
-    /// a disabled label and a chevron must not darken into looking enabled.
+    /// A muted colour is taken literally: a disabled label must not darken into looking enabled.
     #[test]
     fn the_text_role_moves_an_accent_and_leaves_a_muted_one_alone() {
         use crate::tokens::{Color, ColorShade, ColorValue};
@@ -372,8 +368,7 @@ mod tests {
             ThemeAwareValue::from("muted.6").in_color_role(ColorRole::Text),
             ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Muted, ColorShade::S6))
         );
-        // The fill role has no such exception: a muted fill still has to
-        // carry its foreground.
+        // A muted fill still has to carry its foreground.
         assert_eq!(
             ThemeAwareValue::from("muted.6").in_color_role(ColorRole::Fill),
             ThemeAwareValue::ColorValue(ColorValue::Fill(Color::Muted, ColorShade::S6))

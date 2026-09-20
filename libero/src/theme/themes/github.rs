@@ -14,7 +14,6 @@ pub static GITHUB_LIGHT: Theme = Theme {
     info: HexColor::new(0x006A80),
     success: HexColor::new(0x1A7F37),
     error: HexColor::new(0xD1242F),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#f6f8fa",
         ..PaperDefaults::DEFAULT
@@ -34,7 +33,6 @@ pub static GITHUB_DARK: Theme = Theme {
     info: HexColor::new(0x07ACE4),
     success: HexColor::new(0x3FB950),
     error: HexColor::new(0xF85149),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#151b23",
         ..PaperDefaults::DARK

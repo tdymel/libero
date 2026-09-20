@@ -224,12 +224,8 @@ fn midpoint(a: HexColor, b: HexColor) -> HexColor {
     HexColor::new((mid(a.r(), b.r()) << 16) | (mid(a.g(), b.g()) << 8) | mid(a.b(), b.b()))
 }
 
-/// The label and its state-layer tint: the candidate whose worst contrast on
-/// `from`, `to` and the midpoint, across `themes`, is highest. The midpoint
-/// matters because luminance sags between two stops: it can sit darker than
-/// both, and fail a black label they both pass. A theme's own ends go first,
-/// so they follow the scheme; a literal black or white wins only where they
-/// cannot serve both schemes.
+/// The label and layer tint with the best worst-case contrast on both stops and the
+/// midpoint (luminance sags there). Theme ends first; literals only where they fail.
 fn pick_label(stops: &[ThemeAwareValue; 2], themes: &[&Theme], text: bool) -> (String, String) {
     let (ink, surface) = (NamedColorCss::INK.value(), NamedColorCss::SURFACE.value());
     let (black, white) = (BLACK.to_string(), WHITE.to_string());

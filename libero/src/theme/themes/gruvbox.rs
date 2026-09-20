@@ -1,11 +1,5 @@
-//! Gruvbox - Gruvbox Material dark, Gruvbox Light Soft light; Gruvbox
-//! Classic, `morhetz/gruvbox` at medium contrast in both schemes; and Gruvbox
-//! Soft, the pack's Dark Soft paired with the same Light Soft.
-//!
-//! Every dark half is the Kopuz pack's. Gruvbox Classic's light half is
-//! ported from `colors/gruvbox.vim`, which gives each scheme the same slots
-//! (`bg0`, `bg1`, `fg1`, `fg4`, blue, purple, green, red) and swaps the
-//! bright accents for the faded ones on a light background.
+//! Gruvbox (Material dark, Light Soft), Gruvbox Classic (`morhetz/gruvbox`, medium) and
+//! Gruvbox Soft. Dark halves are the Kopuz pack's; Classic light is from `gruvbox.vim`.
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
@@ -20,7 +14,6 @@ pub static GRUVBOX_LIGHT: Theme = Theme {
     info: HexColor::new(0x076678),
     success: HexColor::new(0x79740E),
     error: HexColor::new(0xCC241D),
-    // No warning colour in the palette, so Libero's amber stands in.
     paper: PaperDefaults {
         background: "#f9f5d7",
         ..PaperDefaults::DEFAULT
@@ -40,7 +33,6 @@ pub static GRUVBOX_DARK: Theme = Theme {
     info: HexColor::new(0x89B482),
     success: HexColor::new(0xA9B665),
     error: HexColor::new(0xEA6962),
-    // No warning colour in the palette, so Libero's amber stands in.
     paper: PaperDefaults {
         background: "#282828",
         ..PaperDefaults::DARK
@@ -49,9 +41,7 @@ pub static GRUVBOX_DARK: Theme = Theme {
     ..Theme::DARK
 };
 
-/// Gruvbox Classic light, `morhetz/gruvbox` at medium contrast: the slots of
-/// [`GRUVBOX_CLASSIC_DARK`], with the faded accents gruvbox.vim swaps in for
-/// a light background (the neutral blue is shared).
+/// Gruvbox Classic light: [`GRUVBOX_CLASSIC_DARK`]'s slots with gruvbox.vim's faded accents.
 pub static GRUVBOX_CLASSIC_LIGHT: Theme = Theme {
     surface: HexColor::new(0xFBF1C7),
     ink: HexColor::new(0x3C3836),
@@ -62,7 +52,6 @@ pub static GRUVBOX_CLASSIC_LIGHT: Theme = Theme {
     info: HexColor::new(0x076678),
     success: HexColor::new(0x79740E),
     error: HexColor::new(0x9D0006),
-    // No warning colour in the palette, so Libero's amber stands in.
     paper: PaperDefaults {
         background: "#ebdbb2",
         ..PaperDefaults::DEFAULT
@@ -82,7 +71,6 @@ pub static GRUVBOX_CLASSIC_DARK: Theme = Theme {
     info: HexColor::new(0x83A598),
     success: HexColor::new(0xB8BB26),
     error: HexColor::new(0xFB4934),
-    // No warning colour in the palette, so Libero's amber stands in.
     paper: PaperDefaults {
         background: "#3c3836",
         ..PaperDefaults::DARK
@@ -102,7 +90,6 @@ pub static GRUVBOX_SOFT_DARK: Theme = Theme {
     info: HexColor::new(0x8EC07C),
     success: HexColor::new(0xB8BB26),
     error: HexColor::new(0xFB4934),
-    // No warning colour in the palette, so Libero's amber stands in.
     paper: PaperDefaults {
         background: "#3c3836",
         ..PaperDefaults::DARK
@@ -115,16 +102,14 @@ impl ThemeSet {
     /// Gruvbox: [`GRUVBOX_LIGHT`] paired with [`GRUVBOX_DARK`].
     pub const GRUVBOX: ThemeSet = ThemeSet::pair("Gruvbox", &GRUVBOX_LIGHT, &GRUVBOX_DARK);
 
-    /// Gruvbox Classic: [`GRUVBOX_CLASSIC_LIGHT`] paired with
-    /// [`GRUVBOX_CLASSIC_DARK`].
+    /// Gruvbox Classic: [`GRUVBOX_CLASSIC_LIGHT`] paired with [`GRUVBOX_CLASSIC_DARK`].
     pub const GRUVBOX_CLASSIC: ThemeSet = ThemeSet::pair(
         "Gruvbox Classic",
         &GRUVBOX_CLASSIC_LIGHT,
         &GRUVBOX_CLASSIC_DARK,
     );
 
-    /// Gruvbox Soft: [`GRUVBOX_LIGHT`] (Gruvbox Light Soft) paired with
-    /// [`GRUVBOX_SOFT_DARK`].
+    /// Gruvbox Soft: [`GRUVBOX_LIGHT`] (Light Soft) paired with [`GRUVBOX_SOFT_DARK`].
     pub const GRUVBOX_SOFT: ThemeSet =
         ThemeSet::pair("Gruvbox Soft", &GRUVBOX_LIGHT, &GRUVBOX_SOFT_DARK);
 }

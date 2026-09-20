@@ -1,18 +1,10 @@
 //! Osmium - a derived light half, and IroncladDev's Osmium dark.
 //!
-//! The dark half is the Kopuz pack's, which matches the upstream palette
-//! (`@webtui/theme-osmium`: `root`, `foreground0`, `foreground1`,
-//! `purple-fg`, `pink-fg`, `blue-fg`, `green-fg`, `red-fg`, `surface0`).
-//! Osmium is dark-only upstream and no community light variant exists, so
-//! **the light half is ours**, derived by the rule Vague and kettek16 share
-//! (the module doc of [`super`] states it once):
+//! The dark half matches `@webtui/theme-osmium`. Dark-only upstream, so the light half
+//! is ours, by the rule in [`vague`](super::VAGUE_LIGHT):
 //!
-//! - the five accents are the dark half's own;
-//! - `ink` is the dark `bg`, `#14131e`;
-//! - the page is the dark `text` (`#c8d5f1`) mixed 80% toward white, the card
-//!   the same mixed 60%;
-//! - `muted` is the dark `text-muted` (`#949bb9`) moved toward the ink until
-//!   it is as far from the light page (6.70:1) as it is from the dark one.
+//! - `ink` is the dark `bg`, `#14131e`; page and card are `#c8d5f1` mixed 80%/60% to white;
+//! - `muted` is `#949bb9` moved toward the ink to the same 6.70:1 from the page.
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
@@ -27,7 +19,6 @@ pub static OSMIUM_LIGHT: Theme = Theme {
     info: HexColor::new(0x9ABFE8),
     success: HexColor::new(0xC9DE96),
     error: HexColor::new(0xE55376),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#e9eef9",
         ..PaperDefaults::DEFAULT
@@ -47,7 +38,6 @@ pub static OSMIUM_DARK: Theme = Theme {
     info: HexColor::new(0x9ABFE8),
     success: HexColor::new(0xC9DE96),
     error: HexColor::new(0xE55376),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#1f1d2d",
         ..PaperDefaults::DARK

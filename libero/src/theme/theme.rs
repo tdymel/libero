@@ -1,11 +1,19 @@
-// A glob over `theme`'s exports, so a new component's defaults never edit
-// this import list.
+// A glob, so a new component's defaults never edit this list.
 use super::*;
 
-// Deliberately not `Copy`, despite being built from `Copy` fields: at ~2KB a
-// stray by-value use is a silent memcpy. Nothing needs it - `Theme::DEFAULT`
-// is a `const` (so `Theme { ..Theme::DEFAULT }` still works) and `use_theme()`
-// hands out `&'static Theme`.
+/// Every design token and per-component default. Start from [`Theme::DEFAULT`] or
+/// [`Theme::DARK`] and override what you need; hand it over through a [`ThemeSet`].
+///
+/// ```
+/// # use libero::theme::{HexColor, Theme};
+/// static BRAND: Theme = Theme {
+///     primary: HexColor::new(0x0B7285),
+///     ..Theme::DEFAULT
+/// };
+/// ```
+///
+/// Docs: <https://libero-ui.dev/about/theming>
+// Not `Copy`: at ~2KB a stray by-value use is a silent memcpy.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Theme {
     pub spacing: Sizes<u8>,
@@ -53,8 +61,7 @@ pub struct Theme {
     pub segmented_control: SegmentedControlDefaults,
     pub checkbox: CheckboxDefaults,
     pub radio: RadioDefaults,
-    /// Shared by every field: the typography of the slots stacked around a
-    /// control. The frame numbers stay per component until R5.
+    /// Every field's slot typography around the control. Frames stay per component until R5.
     pub field: FieldDefaults,
     pub form: FormDefaults,
     pub fieldset: FieldsetDefaults,
@@ -123,21 +130,19 @@ pub struct Theme {
     /// Text-dark neutral: the label and outline color of a `neutral` control.
     pub neutral: HexColor,
     pub muted: HexColor,
-    /// What text is set in, and the page it is set on. Every colour role is
-    /// derived against `surface`, so a dark theme is a theme whose `surface`
-    /// is dark - not one that redefines "white". `Paper`'s own background is
-    /// a different thing: the card drawn on top of this one.
+    /// Text colour. A dark theme has a light `ink` and a dark `surface`.
     pub ink: HexColor,
+    /// The page, which every colour role derives against. Not `Paper`'s card.
     pub surface: HexColor,
     pub font_smoothing: bool,
 }
 
 impl Theme {
+    /// The library's light theme.
     pub const DEFAULT: Theme = Theme {
         spacing: Sizes::new(4, 8, 12, 16, 20, 24),
         radius: Sizes::new(2, 4, 8, 16, 32, 64),
-        // A tight key shadow for the edge, a wide ambient one for the lift. No
-        // negative spread or inset: Blitz draws plain offset-and-blur layers.
+        // Key plus ambient shadow. No negative spread or inset: Blitz draws plain layers.
         elevation: Sizes::new(
             "0 1px 2px rgba(0, 0, 0, 0.20), 0 1px 4px rgba(0, 0, 0, 0.12)",
             "0 1px 3px rgba(0, 0, 0, 0.20), 0 4px 12px rgba(0, 0, 0, 0.14)",
@@ -258,34 +263,16 @@ impl Theme {
         font_smoothing: true,
     };
 
-    /// The library's dark counterpart to [`DEFAULT`](Self::DEFAULT), and the
-    /// dark half of [`ThemeSet::DEFAULT`](crate::theme::ThemeSet::DEFAULT):
-    /// an app gets a working dark scheme without authoring a theme.
-    ///
-    /// Almost all of it is the default theme. The palette bases do not move -
-    /// `primary` is the brand blue on both pages, and the text and fill roles
-    /// are derived against `surface` (the text role against `Paper` too), so
-    /// each one walks its own ramp the right way here (see
-    /// `theme::stylesheet::push_color_declarations`). The
-    /// `muted` ramp does not move either: it is mixed between `ink` and
-    /// `surface`, so swapping those two is what turns it round.
-    ///
-    /// What is spelled out is everything that is *not* derived: the two ends
-    /// of the page, the `neutral` control colour - which is a text-dark
-    /// neutral on paper and so has to be a text-light one here - and the
-    /// `*Defaults` that carry literal CSS colours rather than theme ones.
+    /// The library's dark theme, the dark half of [`ThemeSet::DEFAULT`](crate::theme::ThemeSet::DEFAULT).
+    /// Palette bases stay: roles derive against `surface`, so swapping the ends turns them.
     pub const DARK: Theme = Theme {
-        // A near-black page; `PaperDefaults` lifts the card one step above it.
         surface: HexColor::new(0x1A1B1E),
         ink: HexColor::new(0xE9ECEF),
-        // The counterpart of the default's `#373A3C`: what a `neutral`
-        // control is labelled and outlined in when it must not compete with
-        // the page's accent.
+        // Text-light counterpart of the default's `#373A3C`.
         neutral: HexColor::new(0xCED4DA),
         paper: PaperDefaults::DARK,
         code: CodeDefaults::DARK,
-        // The light scale's shapes, darker: a black shadow on an inked page
-        // needs about three times the alpha to read at all.
+        // A black shadow on a dark page needs about three times the alpha.
         elevation: Sizes::new(
             "0 1px 2px rgba(0, 0, 0, 0.60), 0 1px 4px rgba(0, 0, 0, 0.40)",
             "0 1px 3px rgba(0, 0, 0, 0.60), 0 4px 12px rgba(0, 0, 0, 0.45)",

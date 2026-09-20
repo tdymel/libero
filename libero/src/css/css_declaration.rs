@@ -1,5 +1,6 @@
 use std::fmt::{self, Display, Formatter};
 
+/// One `property:value;` pair.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CssDeclaration {
     property: String,

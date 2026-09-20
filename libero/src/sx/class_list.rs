@@ -9,8 +9,7 @@ impl ClassList {
         Self::default()
     }
 
-    /// The entries, for composing a class attribute without going through
-    /// `Display` (which allocates a second time).
+    /// The entries, sparing `Display`'s second allocation.
     pub(crate) fn iter(&self) -> impl Iterator<Item = &str> {
         self.0.iter().map(String::as_str)
     }

@@ -3,19 +3,24 @@ use std::fmt::Display;
 use super::{ColorShade, Size};
 use crate::css::CssDeclaration;
 
-/// Marks the per-instance twin of a themed var: `Theme` declares
-/// `--lsx-icon-size`, a caller's prop sets `--lsx-icon-size-override`.
-/// Always derived, so the two can't drift apart.
+/// The per-instance twin of a themed var: `Theme` declares `--lsx-icon-size`, a prop
+/// sets `--lsx-icon-size-override`. Always derived, so the two can't drift.
 const OVERRIDE_SUFFIX: &str = "-override";
 
+/// A CSS custom property's name, e.g. `--lsx-spacing-md`.
+///
+/// ```
+/// # use libero::theme::CssVar;
+/// const ACCENT: CssVar = CssVar::new("--app-accent");
+/// assert_eq!(ACCENT.value(), "var(--app-accent)");
+/// ```
 #[derive(Clone, Debug)]
 pub enum CssVar {
     Static(&'static str),
     Owned(String),
 }
 
-// By name only - the variants are a storage detail, but `Variables` dedupes
-// on equality and identical CSS must hash to the same class name.
+// By name only: `Variables` dedupes on it and equal CSS must hash alike.
 impl PartialEq for CssVar {
     fn eq(&self, other: &Self) -> bool {
         self.name() == other.name()
@@ -46,8 +51,7 @@ impl CssVar {
         format!("var({})", self.name())
     }
 
-    /// `var(--name, <fallback>)`. The fallback is CSS text - pass another
-    /// var's `value()`, don't hand-write `var(--lsx-...)`.
+    /// `var(--name, <fallback>)`. Pass another var's `value()`, not a hand-written `var(..)`.
     pub fn value_or(&self, fallback: impl Display) -> String {
         format!("var({}, {fallback})", self.name())
     }
@@ -75,6 +79,7 @@ impl CssVar {
         Self::parse_name(inner)
     }
 
+    /// Accepts `--name` or `var(--name)`.
     pub fn parse(value: &str) -> Option<Self> {
         if let Some(name) = Self::parse_name(value) {
             return Some(Self::Owned(name.to_string()));
@@ -92,6 +97,7 @@ impl CssVar {
     }
 }
 
+/// A per-[`Size`] family of vars sharing a prefix, e.g. `--lsx-spacing-md`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SizeCss {
     prefix: &'static str,
@@ -140,6 +146,7 @@ impl SizeCss {
     }
 }
 
+/// A per-[`ColorShade`] family of vars sharing a prefix, e.g. `--lsx-primary-7`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ColorCss {
     prefix: &'static str,
@@ -180,9 +187,7 @@ impl ColorCss {
         format!("{}{}", self.prefix, shade.as_str())
     }
 
-    /// A derived ramp's var, `--lsx-primary-text-6` from `--lsx-primary-`.
-    /// Named by infix rather than by a const of its own, so a palette colour
-    /// keeps one [`ColorCss`] instead of gaining one per role.
+    /// A derived ramp's var by infix, `--lsx-primary-text-6` from `--lsx-primary-`.
     pub fn role_name(self, infix: &str, shade: ColorShade) -> String {
         format!("{}{infix}{}", self.prefix, shade.as_str())
     }
@@ -192,24 +197,20 @@ impl ColorCss {
     }
 }
 
+/// A single named colour var, without shades.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NamedColorCss {
     css_var: CssVar,
 }
 
 impl NamedColorCss {
-    /// The theme's two ends of the page. `INK` is what text is set in and
-    /// `SURFACE` the page it is set on - not "black" and "white", because a
-    /// dark theme swaps which end of the greyscale each one sits at.
+    /// Text colour; a dark theme swaps its end of the greyscale with `SURFACE`.
     pub const INK: NamedColorCss = NamedColorCss::new("--lsx-ink");
+    /// The page text is set on.
     pub const SURFACE: NamedColorCss = NamedColorCss::new("--lsx-surface");
-    /// Published by `background()` when a color's contrast is known, and read
-    /// by focus rings, so a ring contrasts against the nearest ancestor
-    /// background without either side knowing about the other.
+    /// Published by a known-contrast `background()`, read by focus rings inside it.
     pub const FOCUS_CONTRAST: NamedColorCss = NamedColorCss::new("--lsx-focus-contrast");
-    /// Secondary text - a placeholder, a hint, a unit, a day outside the
-    /// month. The one name for "this text is quieter"; `muted.6` stays what an
-    /// icon or a chevron is drawn in. Spelled `"text-dimmed"` in an `Sx`.
+    /// Quieter text: a placeholder, hint or unit. `"text-dimmed"` in an `Sx`; icons use `muted.6`.
     pub const TEXT_DIMMED: NamedColorCss = NamedColorCss::new("--lsx-text-dimmed");
 
     pub const fn new(name: &'static str) -> Self {
@@ -254,8 +255,7 @@ mod tests {
         assert_eq!(var.value_or(0), "var(--lsx-icon-color, 0)");
     }
 
-    // These names must stay byte-identical, or the theme's `:root`
-    // declaration and the element's override stop meeting.
+    // Byte-identical, or the `:root` declaration and the override stop meeting.
     #[test]
     fn override_names_match_the_literals_they_replaced() {
         for (base, expected) in [

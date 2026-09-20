@@ -13,7 +13,6 @@ pub static CATPPUCCIN_LIGHT: Theme = Theme {
     info: HexColor::new(0x209FB5),
     success: HexColor::new(0x40A02B),
     error: HexColor::new(0xD20F39),
-    // No warning colour in the palette, so Libero's amber stands in.
     paper: PaperDefaults {
         background: "#e6e9ef",
         ..PaperDefaults::DEFAULT
@@ -33,7 +32,6 @@ pub static CATPPUCCIN_DARK: Theme = Theme {
     info: HexColor::new(0x89DCEB),
     success: HexColor::new(0xA6E3A1),
     error: HexColor::new(0xF38BA8),
-    // No warning colour in the palette, so Libero's amber stands in.
     paper: PaperDefaults {
         background: "#181825",
         ..PaperDefaults::DARK

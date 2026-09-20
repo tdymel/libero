@@ -1,18 +1,12 @@
 //! Vague - a derived light half, and Vague dark (`vague-theme/vague.nvim`).
 //!
-//! The dark half is the Kopuz pack's. Vague is dark-only upstream - its light
-//! theme is an open request (vague.nvim issue 90) - and the one community
-//! light port, `Rnedlose/vague-light.nvim`, is gone, so **the light half is
-//! ours**, derived from the dark half by the rule Osmium and kettek16 share
-//! (the module doc of [`super`] states it once):
+//! Dark-only upstream (vague.nvim issue 90), so the light half is ours, by the rule
+//! Osmium and kettek16 share:
 //!
-//! - the five accents are the dark half's own - the stylesheet derives every
-//!   role's text and fill steps against the page, so a hue needs no retuning;
+//! - the five accents are the dark half's; the stylesheet re-derives roles per page;
 //! - `ink` is the dark `bg`, `#141415`;
-//! - the page is the dark `text` (`#cdcdcd`) mixed 80% toward white, the card
-//!   the same mixed 60%, so the card sits one step off the page;
-//! - `muted` is the dark `text-muted` (`#606079`) moved toward white until it
-//!   is as far from the light page (2.99:1) as it is from the dark one.
+//! - page and card are the dark `text` (`#cdcdcd`) mixed 80% and 60% toward white;
+//! - `muted` is the dark `text-muted` (`#606079`) moved to the same 2.99:1 from the page.
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
@@ -27,7 +21,6 @@ pub static VAGUE_LIGHT: Theme = Theme {
     info: HexColor::new(0x7E98E8),
     success: HexColor::new(0x7FA563),
     error: HexColor::new(0xD8647E),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#ebebeb",
         ..PaperDefaults::DEFAULT
@@ -47,7 +40,6 @@ pub static VAGUE_DARK: Theme = Theme {
     info: HexColor::new(0x7E98E8),
     success: HexColor::new(0x7FA563),
     error: HexColor::new(0xD8647E),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#1c1c24",
         ..PaperDefaults::DARK

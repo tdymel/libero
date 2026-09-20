@@ -3,6 +3,7 @@ use crate::{
     tokens::{Size, SizeCss},
 };
 
+/// A styling prop's value: unset, owned, or a `static` (compared by address first).
 #[derive(Clone, Debug, Default)]
 pub enum Input<T: 'static> {
     #[default]
@@ -11,17 +12,13 @@ pub enum Input<T: 'static> {
     Static(&'static T),
 }
 
-/// Hand-written only for the `Static` fast path; every other pair compares
-/// exactly as the derive did, cross-variant included.
+/// Hand-written only for the `Static` fast path; otherwise as the derive.
 impl<T: PartialEq + 'static> PartialEq for Input<T> {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
             (Self::None, Self::None) => true,
             (Self::Value(a), Self::Value(b)) => a == b,
-            // The same `static` on both sides is what props diffing sees on
-            // an unchanged render, and settling it by address is what keeps
-            // that off the value's own `PartialEq` - for an `Sx`, a walk of
-            // the whole entry tree.
+            // An unchanged render passes the same static: skip the deep `Sx` compare.
             (Self::Static(a), Self::Static(b)) => std::ptr::eq(*a, *b) || a == b,
             _ => false,
         }
@@ -50,7 +47,7 @@ impl<T: 'static> Input<T> {
         }
     }
 
-    /// The value if set, else `default`. The `Copy` read, which is most.
+    /// The value if set, else `default`.
     pub fn copied_or(&self, default: T) -> T
     where
         T: Copy,
@@ -84,8 +81,7 @@ impl Input<ThemeAwareValue> {
     }
 }
 
-/// `&str`/`String` -> `Input<T>` for a `str_enum!` type - `#[props(into)]`
-/// can't chain that on its own.
+/// `&str`/`String` -> `Input<T>` for a `str_enum!` type; `#[props(into)]` can't chain it.
 macro_rules! input_from_str {
     ($ty:ty) => {
         impl From<&str> for $crate::sx::Input<$ty> {
@@ -181,15 +177,13 @@ mod tests {
         assert_eq!(Input::Static(&*PADDING), Input::Static(&*PADDING));
     }
 
-    /// The fast path is an optimisation, not a narrowing: distinct statics
-    /// still fall through to the content compare the derive did.
+    /// Distinct statics still fall through to the content compare.
     #[test]
     fn two_statics_with_equal_content_are_equal() {
         assert_eq!(Input::Static(&*PADDING), Input::Static(&*SAME_PADDING));
     }
 
-    /// Derive parity: a different variant is never equal, however the
-    /// contents compare.
+    /// Derive parity: a different variant is never equal.
     #[test]
     fn a_static_never_equals_an_owned_value() {
         assert_ne!(Input::Static(&*PADDING), Input::Value(sx().padding("lg")));

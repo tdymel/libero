@@ -1,8 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 
-/// A conditional group rule wrapping a [`CssScope`](super::CssScope). Scopes
-/// hold an ordered list of these because `@media` and `@container` *nest* -
-/// only two `@media` can be folded into one `and`.
+/// A conditional group rule around a [`CssScope`](super::CssScope). A scope holds a
+/// list: `@media` and `@container` nest, and only two `@media` fold into one `and`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AtRule {
     Media(String),
@@ -10,8 +9,7 @@ pub enum AtRule {
 }
 
 impl AtRule {
-    /// Folds `other` into this rule if both are `@media`, since
-    /// `@media a{@media b{..}}` and `@media a and b{..}` are the same rule.
+    /// Folds `other` into this rule if both are `@media`: `@media a and b`.
     pub(crate) fn merged(&self, other: &AtRule) -> Option<AtRule> {
         match (self, other) {
             (AtRule::Media(existing), AtRule::Media(added)) => {

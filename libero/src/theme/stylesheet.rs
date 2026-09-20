@@ -27,12 +27,8 @@ const SHADES: [ColorShade; 9] = [
 ];
 
 impl From<&Theme> for Stylesheet {
-    /// One theme's whole sheet: its vars at `:root`, then the reset, `body`
-    /// and the keyframes ([`base_layer_and_keyframes`] carries why those are
-    /// layered and these are not).
-    ///
-    /// One theme is one scheme, so the `color-scheme` follows this theme's
-    /// own surface - `light` for a paper one, `dark` for an inked one.
+    /// One theme's sheet: its vars at `:root`, then reset, `body` and keyframes.
+    /// `color-scheme` follows this theme's surface.
     fn from(theme: &Theme) -> Self {
         let mut css = root_block(":root", theme);
         css.push_str(&base_layer_and_keyframes(
@@ -44,10 +40,8 @@ impl From<&Theme> for Stylesheet {
 }
 
 impl From<&ThemeSet> for Stylesheet {
-    /// The pair up front, so switching between the light and the dark theme
-    /// is one attribute on the document root: nothing re-renders to show the
-    /// new colours, the first paint is already right, and
-    /// `prefers-color-scheme` needs no JS at all.
+    /// The pair up front, so switching is one root attribute: no re-render, right
+    /// on first paint, `prefers-color-scheme` without JS.
     ///
     /// ```css
     /// :root { … }                            /* the light theme */
@@ -58,11 +52,8 @@ impl From<&ThemeSet> for Stylesheet {
     /// :root[data-lsx-theme="dark"]  { … }
     /// ```
     ///
-    /// A set with no dark theme is exactly one theme's sheet - there is
-    /// nothing to switch to, so none of the blocks above would ever match. A
-    /// theme added with [`ThemeSet::named`] is not in here either: it costs a
-    /// rebuild when it is selected, which is what keeps this sheet from
-    /// growing with every theme an app happens to own.
+    /// Without a dark theme, one theme's sheet. [`ThemeSet::named`] themes are not in
+    /// here: selecting one rebuilds the sheet.
     fn from(set: &ThemeSet) -> Self {
         let light = set.light_theme();
         let Some(dark) = set.dark_theme() else {
@@ -70,9 +61,7 @@ impl From<&ThemeSet> for Stylesheet {
         };
 
         let mut css = root_block(":root", light);
-        // The system case. Guarded by `:not([data-lsx-theme])` so an explicit
-        // choice below wins wherever it lands in the cascade - a media block
-        // carries no specificity of its own.
+        // The system case; `:not(..)` lets an explicit choice win, as `@media` adds no specificity.
         css.push_str(&format!(
             "@media {DARK_SCHEME_QUERY}{{{}}}",
             root_block(&format!(":root:not([{THEME_ATTRIBUTE}])"), dark)
@@ -80,9 +69,7 @@ impl From<&ThemeSet> for Stylesheet {
         css.push_str(&root_block(&theme_selector(ThemeSet::LIGHT), light));
         css.push_str(&root_block(&theme_selector(ThemeSet::DARK), dark));
 
-        // The base layer comes from the light theme: every colour in it is a
-        // var, so it follows whichever block above won, and `font_smoothing`
-        // is a typography choice rather than a scheme one.
+        // From the light theme: its colours are vars, and `font_smoothing` is not a scheme choice.
         css.push_str(&base_layer_and_keyframes(light, "light dark"));
         Stylesheet::from(css)
     }
@@ -91,9 +78,7 @@ impl From<&ThemeSet> for Stylesheet {
 /// The attribute a document root carries to pin one theme of the pair.
 pub(crate) const THEME_ATTRIBUTE: &str = "data-lsx-theme";
 
-/// The media query the dark half of a pair is emitted behind, and the one the
-/// web backend reads the platform's own scheme from. One string, so the sheet
-/// and the reading of it cannot drift apart.
+/// The dark half's media query, which the web backend also reads the platform scheme from.
 pub(crate) const DARK_SCHEME_QUERY: &str = "(prefers-color-scheme: dark)";
 
 fn theme_selector(name: &str) -> String {
@@ -106,15 +91,8 @@ fn root_block(selector: &str, theme: &Theme) -> String {
         .to_string()
 }
 
-/// The reset, `body` and the keyframes - everything in a sheet that is not a
-/// custom property, and so is emitted once however many themes it carries.
-///
-/// The vars and the keyframes stay unlayered - a custom property and an
-/// `@keyframes` name are not cascaded rules, so a layer would only make them
-/// harder to override. The reset and the `body` rules go into `lsx-base`, the
-/// first layer: unlayered they would beat *every* layered rule, so an app
-/// whose own base styles sit in a layer (Tailwind v4's `@layer base`, any
-/// `@layer reset`) could not restyle `body` without `!important`.
+/// Everything but the vars, emitted once per sheet. Reset and `body` go in `lsx-base`, or
+/// they'd beat an app's layered base styles (Tailwind v4); vars and keyframes stay unlayered.
 fn base_layer_and_keyframes(theme: &Theme, color_scheme: &str) -> String {
     let mut base_scopes = global_reset_scopes(theme, color_scheme);
     base_scopes.push(body_scope(theme));
@@ -139,10 +117,7 @@ fn base_layer_and_keyframes(theme: &Theme, color_scheme: &str) -> String {
 fn global_reset_scopes(theme: &Theme, color_scheme: &str) -> Vec<CssScope> {
     let mut html_declarations = vec![
         CssDeclaration::new("box-sizing", "border-box"),
-        // So the canvas, the scrollbars and every native control follow the
-        // theme's own end of the greyscale instead of the UA's light default.
-        // One theme is one scheme; a `ThemeSet` carrying a pair passes
-        // `light dark` and lets the browser follow the blocks above it.
+        // Canvas, scrollbars and native controls follow the theme; a pair passes `light dark`.
         CssDeclaration::new("color-scheme", color_scheme),
     ];
     if theme.font_smoothing {
@@ -200,9 +175,7 @@ pub(crate) fn themed_form_controls() -> String {
 }
 
 fn body_scope(theme: &Theme) -> CssScope {
-    // Ink and paper have no per-shade contrast var, so it's computed here the
-    // way `push_color_declarations` does for palette shades. A theme whose
-    // paper is dark gets its paper-coloured text this way round too.
+    // Ink and surface have no contrast var, so computed as `push_color_declarations` does.
     let text_color_var = foreground_var(theme.surface.contrast(), theme_ends(theme));
 
     CssScope::new(
@@ -221,8 +194,7 @@ fn body_scope(theme: &Theme) -> CssScope {
 }
 
 fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
-    // Exhaustive (no `..`) on purpose: a new `Theme` field won't compile
-    // until it's declared or explicitly ignored, so vars can't go unemitted.
+    // Exhaustive (no `..`): a new `Theme` field won't compile until it's handled.
     let Theme {
         spacing,
         radius,
@@ -424,8 +396,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     };
 
     push_named_color_declarations(&mut declarations, ends);
-    // Dimmed text is the grey ramp's own text role, so a re-themed `grey`
-    // carries it - see `NamedColorCss::TEXT_DIMMED`.
+    // The muted ramp's text role, so a re-themed `muted` carries it.
     declarations.push(CssDeclaration::new(
         NamedColorCss::TEXT_DIMMED.name(),
         ColorValue::Text(Color::Muted, ColorShade::DEFAULT).value(),
@@ -449,9 +420,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations
 }
 
-/// Code and `Kbd` sit on steps of the `muted` ramp, which follow the palette's
-/// page; the token hues do not. Each text var that falls short there walks the
-/// smallest mix that reads, and one that already reads is left alone (todo 396).
+/// Code and `Kbd` text sits on `muted` steps that follow the page, the token hues don't:
+/// each text var that falls short takes the smallest readable mix (todo 396).
 fn rebase_text_on_derived_surfaces(declarations: &mut [CssDeclaration], ends: Ends) {
     let block = CODE_BLOCK_BACKGROUND.name().to_string();
     // Inline `Code`'s `muted.2` background, which `sx` resolves as a fill.
@@ -484,8 +454,7 @@ fn rebase_text_on_derived_surfaces(declarations: &mut [CssDeclaration], ends: En
     }
 }
 
-/// Leaves `name` alone when it or a surface is not a colour this can read (a
-/// keyword, a translucent `rgba()`): nothing can be measured.
+/// Leaves `name` alone when it or a surface can't be measured (a keyword, a translucent `rgba()`).
 fn rebase_text(
     declarations: &mut [CssDeclaration],
     name: &str,
@@ -522,8 +491,7 @@ fn rebase_text(
     }
 }
 
-// `@media` can't reference custom properties, and breakpoints go straight
-// into query strings, so they stay literals rather than a themed scale.
+// Literals, not a themed scale: `@media` can't read custom properties.
 fn push_breakpoint_declarations(declarations: &mut Vec<CssDeclaration>) {
     for size in super::Size::ALL {
         declarations.push(SizeCss::BREAKPOINT.declare(size, size.breakpoint_value()));
@@ -541,12 +509,6 @@ fn push_named_color_declarations(declarations: &mut Vec<CssDeclaration>, ends: E
     ));
 }
 
-/// Which of the two ends `foreground` - always pure black or pure white,
-/// because that is all `contrast()` returns - is spelled as.
-///
-/// Not a black/white lookup: on a dark theme the ink is the *light* end, so a
-/// fill that wants a white label wants `--lsx-ink`, not `--lsx-surface`.
-/// A theme's two ends of the page, in the order every derivation wants them.
 fn theme_ends(theme: &Theme) -> Ends {
     Ends {
         surface: theme.surface,
@@ -554,6 +516,7 @@ fn theme_ends(theme: &Theme) -> Ends {
     }
 }
 
+/// The var a black or white `foreground` is spelled as: on a dark theme white is `--lsx-ink`.
 fn foreground_var(foreground: HexColor, ends: Ends) -> String {
     if ends.foreground_is_ink(foreground) {
         NamedColorCss::INK.value()
@@ -562,29 +525,9 @@ fn foreground_var(foreground: HexColor, ends: Ends) -> String {
     }
 }
 
-/// Three ramps per palette colour, plus the foreground that pairs with the
-/// fill ramp.
-///
-/// `Shade` is the brand colour, untouched - `primary` is `blue.6` wherever a
-/// border, a ring or a decoration asks for it. The other two are the same
-/// ramp **re-based** on an accessible step rather than a lookup that snaps
-/// each step to the first passing one: re-basing keeps the ramp a ramp, so a
-/// filled control's `:hover` (one step darker) is still visibly darker than
-/// its rest state. Snapping collapses `fill-6` and `fill-7` onto the same
-/// colour and the hover disappears.
-///
-/// - `text-N` walks from `base.text_base()`, the smallest mix away from
-///   `surface` that clears 4.5:1 on it - darker on a paper, lighter on an
-///   inked one.
-/// - `fill-N` walks from `base.fill_base()`, the smallest mix whose
-///   auto-contrast foreground clears 4.5:1 on it.
-/// - `contrast-N` is that foreground, computed on `fill-N` - the two are
-///   always used as a pair.
-///
-/// `surface` is `theme.surface`, whichever end of the greyscale it sits at:
-/// the text ramp is walked away from it, so a dark paper derives its roles
-/// correctly rather than inheriting a light one's (todo 69(b)). It must read on
-/// `cards` too, the `Paper` a dialog draws on (todo 314).
+/// The brand ramp, plus `text-N` and `fill-N` re-based on [`HexColor::text_base`] and
+/// [`HexColor::fill_base`], and `contrast-N` paired with `fill-N` (todos 69, 314).
+/// Re-based, not snapped per step: snapping merged `fill-6` and `fill-7` and lost the hover.
 fn push_color_declarations(
     declarations: &mut Vec<CssDeclaration>,
     color: Color,
@@ -630,9 +573,8 @@ fn push_color_declarations(
     push_on_tint_declarations(declarations, color, base, text_base, fill_base, ends);
 }
 
-/// The label an unfilled control takes over its hover and selected tints:
-/// its resting label, darkened until it reads on both. Declared only where
-/// the resting one does not, since `on_tint_color` falls back to it.
+/// An unfilled control's label on its hover and selected tints, mixed until it reads on
+/// both. Declared only where the resting label fails; `on_tint_color` falls back to it.
 fn push_on_tint_declarations(
     declarations: &mut Vec<CssDeclaration>,
     color: Color,
@@ -670,8 +612,7 @@ mod tests {
     use super::*;
     use crate::tokens::TEXT_CONTRAST;
 
-    /// Every palette name, so the check below cannot be defeated by a colour
-    /// nobody thought of.
+    /// Every palette name, so no colour slips past the checks below.
     pub(super) const PALETTE: &[&str] = &[
         "primary",
         "secondary",
@@ -683,20 +624,7 @@ mod tests {
         "muted",
     ];
 
-    /// A `*Defaults` that declares a colour as `"primary.6"` rather than
-    /// resolving it ships a bare palette token into `:root`. That is not a CSS
-    /// colour, and because a custom property accepts any tokens the var is
-    /// *set* - so no `var()` fallback fires, and any shorthand reading it is
-    /// invalid at computed-value time and is dropped whole.
-    ///
-    /// `Timeline` shipped exactly this: its rail was invisible under the
-    /// default theme, with every test green, because the tests asserted the
-    /// `Sx` expressions and nothing looked at what `:root` resolved them to.
-    ///
-    /// This is the cheap general guard - one test covering every component,
-    /// including the ones not written yet.
-    /// Reads the var out of the rendered `:root`, so these assert on what
-    /// ships rather than on the helper that built it.
+    /// Reads the var out of the rendered `:root`, so tests assert on what ships.
     pub(super) fn root_var(css: &str, name: &str) -> String {
         let root = css
             .split_once(":root{")
@@ -710,12 +638,8 @@ mod tests {
             .to_string()
     }
 
-    /// Todo 239's shape, approved on 2026-09-19: the brand colour stays
-    /// `blue.6`, and text on paper and the fill under a white label both move
-    /// off it, because white on `blue.6` is 3.56:1. Since 2026-09-22 they move
-    /// by the smallest mix that reads - `#1D78C8` at 4.59:1 - rather than a
-    /// whole step to `primary.8` at 4.86:1, so a palette's accent stays as
-    /// close to the colour its author picked as contrast allows.
+    /// Todo 239: the brand stays `blue.6`; text and fill move by the smallest readable
+    /// mix, `#1D78C8` at 4.59:1, not a whole step to `primary.8`.
     #[test]
     fn primary_keeps_its_brand_shade_and_moves_only_in_its_two_roles() {
         let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
@@ -733,9 +657,7 @@ mod tests {
         );
     }
 
-    /// Snapping each step to the first passing one would give `fill-6` and
-    /// `fill-7` the same colour, and every filled control would lose its
-    /// hover. Re-basing the ramp keeps the steps apart.
+    /// Snapping steps would merge `fill-6` and `fill-7`, losing every filled hover.
     #[test]
     fn the_fill_ramp_is_still_a_ramp() {
         let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
@@ -750,14 +672,10 @@ mod tests {
         );
     }
 
-    /// Every palette colour, so a re-themed one cannot quietly ship a fill
-    /// nobody can label. `warning` and `success` are the two the ramp cannot
-    /// rescue as *text* - see the test below.
+    /// No palette colour may ship a fill nobody can label.
     #[test]
     fn every_default_fill_carries_its_own_foreground() {
-        // Both shipped themes. The foreground is resolved to the colour the
-        // theme actually paints - a dark theme's ink is not pure white, so
-        // measuring against white would flatter it.
+        // Against the painted foreground: a dark theme's ink is not pure white.
         for theme in [&Theme::DEFAULT, &Theme::DARK] {
             let css = Stylesheet::from(theme).as_str().to_string();
 
@@ -780,10 +698,8 @@ mod tests {
         }
     }
 
-    /// `warning` and `success` are yellow and green: no step of a 25%-black
-    /// mix reaches 4.5:1 on white, so the text role takes the darkest step it
-    /// has and still falls short. Recorded rather than asserted away - the
-    /// only fix is a different base colour, which is the Maintainer's call.
+    /// Yellow and green reach no 4.5:1 on white within the ramp. Recorded: the only fix
+    /// is a different base colour, the Maintainer's call.
     #[test]
     fn the_text_role_is_the_best_the_ramp_can_do_and_two_colors_fall_short() {
         assert_eq!(
@@ -792,32 +708,17 @@ mod tests {
         );
     }
 
-    /// The same measurement on the shipped dark theme. Nothing falls short
-    /// there: yellow and green run out of ramp against white, and here they
-    /// have the other end of it to walk into.
+    /// On a dark page yellow and green have room to walk.
     #[test]
     fn every_text_role_reads_on_the_dark_theme_s_page() {
         assert_eq!(text_roles_falling_short(&Theme::DARK), Vec::<&str>::new());
     }
 
-    /// Every shipped set, both halves, measured on its own page.
+    /// Every shipped set: ink must read on page and card. Short text roles and pale
+    /// `muted.6` (todo 394) are recorded, not asserted: ported palettes are others' designs.
     ///
-    /// Two things are pinned. **The ink has to read on the page and on the
-    /// card** - a ported palette names both, and nothing else checks that the
-    /// two agree. And **which accents fall short as text**, as a list rather
-    /// than a bound, because a ported palette is somebody else's design and
-    /// the honest answer is a record, not an assertion that it is fine.
-    ///
-    /// `warning` is ours, not theirs: no ported theme takes the palette's own,
-    /// so every one keeps Libero's amber, and amber on a cream page is
-    /// what most of this list is. The long entries are light halves that
-    /// keep accents drawn for a dark page: Nord's bright ambiance, which
-    /// reuses Frost and Aurora as Nord's docs say to, and the three derived
-    /// halves (Vague, Osmium, kettek16), which take their dark half's.
-    ///
-    /// **`muted.6` on the page** is recorded the same way, with its ratio
-    /// (todo 394): it is the palette's own `text-muted`, exempt from the text
-    /// role, so a pale one stays pale and only this list says so.
+    /// Every set keeps Libero's amber `warning`; the long entries are light halves keeping
+    /// dark-page accents (Nord's own guidance, and the derived Vague, Osmium, kettek16).
     #[test]
     fn every_shipped_set_reads_on_its_own_page() {
         let mut short = Vec::new();
@@ -905,8 +806,7 @@ mod tests {
         );
     }
 
-    /// `muted.6` on `theme`'s own surface. Never re-based to a text role, so
-    /// a palette's own `text-muted` reads as pale as its author drew it.
+    /// `muted.6` on `theme`'s surface; never re-based, so it stays as pale as drawn.
     fn muted_on_its_page(theme: &Theme) -> f32 {
         let css = Stylesheet::from(theme).as_str().to_string();
         HexColor::parse(&root_var(&css, "--lsx-muted-6"))
@@ -914,8 +814,7 @@ mod tests {
             .contrast_ratio(theme.surface)
     }
 
-    /// Which palette colours cannot reach [`TEXT_CONTRAST`] on `theme`'s own
-    /// surface, however far their text ramp walks.
+    /// Palette colours whose text role misses [`TEXT_CONTRAST`] on `theme`'s surface.
     fn text_roles_falling_short(theme: &Theme) -> Vec<&'static str> {
         let css = Stylesheet::from(theme).as_str().to_string();
         PALETTE
@@ -929,11 +828,7 @@ mod tests {
             .collect()
     }
 
-    /// Todo 240: the one name for quieter text, the muted ramp's text role,
-    /// not the `muted.6` the library used to set real text in. It was
-    /// `muted.7` at 8.12:1 while roles moved a whole step; the smallest mix
-    /// that reads is `#70777E` at 4.54:1, which is quieter, as dimmed text
-    /// is meant to be, and still passes.
+    /// Todo 240: dimmed text is the muted text role, `#70777E` at 4.54:1: quiet but passing.
     #[test]
     fn dimmed_text_is_the_grey_ramps_text_role() {
         let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
@@ -949,16 +844,8 @@ mod tests {
         assert!(dimmed.contrast_ratio(white) >= TEXT_CONTRAST);
     }
 
-    /// Todo 69(b): every role is derived against the theme's own surface, so
-    /// a dark one walks its ramps the other way instead of inheriting a light
-    /// theme's answers. No `Theme::DARK` yet - this measures the mechanism on
-    /// a surface and ink swapped by hand.
-    /// The neutral ramp is distance from the page, not lightness: `muted.1`
-    /// is the step that barely separates from the surface - every hover
-    /// background in the library - and `muted.9` the one up against the ink.
-    /// Mixing it towards absolute white, the way a chromatic ramp is mixed,
-    /// put `muted.1` at the wrong end of a dark theme, and that is a bright
-    /// patch on a dark page rather than a subtle one.
+    /// The neutral ramp is distance from the page: `muted.1` (every hover) sits on the
+    /// surface, `muted.9` against the ink. Mixed towards white, it lit up dark pages.
     #[test]
     fn the_neutral_ramp_is_mixed_between_the_theme_s_own_ends() {
         let mut theme = Theme::DEFAULT;
@@ -991,14 +878,15 @@ mod tests {
         assert_eq!(step(&dark, 6), Theme::DEFAULT.muted);
         assert_eq!(step(&light, 6), Theme::DEFAULT.muted);
 
-        // The defect this closes, measured rather than assumed: the light
-        // theme's `muted.1` is a near-white patch on this page.
+        // The defect this closes: the light theme's `muted.1` is a bright patch here.
         assert!(
             step(&light, 1).contrast_ratio(theme.surface) > 10.0,
             "the light theme's hover background was not a bright patch here"
         );
     }
 
+    /// Todo 69(b): roles derive against the theme's own surface, so a dark one walks
+    /// its ramps the other way.
     #[test]
     fn a_dark_surface_derives_its_roles_the_other_way() {
         let mut theme = Theme::DEFAULT;
@@ -1020,18 +908,13 @@ mod tests {
             );
         }
 
-        // The light theme's answer is unreadable here - that is the bug this
-        // closes, not a hypothetical one.
+        // The light theme's answer is unreadable here: the bug this closes.
         let here = HexColor::parse(&root_var(&dark, "--lsx-primary-text-6")).expect("a hex");
         let there = HexColor::parse(&root_var(&light, "--lsx-primary-text-6")).expect("a hex");
         assert!(here.contrast_ratio(theme.surface) >= TEXT_CONTRAST);
         assert!(there.contrast_ratio(theme.surface) < TEXT_CONTRAST);
 
-        // Both pages label a filled control in the page colour, for opposite
-        // reasons: the light theme's fill is a dark blue under white, the
-        // dark theme's is a light one under the near-black page. The var is
-        // the same name because the *role* is the same; what changed is which
-        // end of the greyscale that name holds.
+        // Both label a fill in the page colour: same role, opposite end of the greyscale.
         assert_eq!(
             root_var(&dark, "--lsx-primary-contrast-6"),
             "var(--lsx-surface)"
@@ -1053,6 +936,7 @@ mod tests {
         assert!(dark.contains("color:var(--lsx-ink);"));
     }
 
+    /// A bare `primary.6` is not CSS; Timeline once shipped one. Declare `ColorValue::value()`.
     #[test]
     fn no_root_declaration_ships_a_bare_palette_token() {
         let css = Stylesheet::from(&Theme::DEFAULT);
@@ -1069,8 +953,7 @@ mod tests {
             };
             let value = value.trim();
             for colour in PALETTE {
-                // `primary.6` - a palette token. `var(--lsx-primary-6)` is the
-                // resolved form and starts with `var(`, so it never matches.
+                // The resolved `var(--lsx-primary-6)` never matches.
                 assert!(
                     !value.starts_with(colour) || !value[colour.len()..].starts_with('.'),
                     "{name} declares the bare palette token {value:?}; \
@@ -1159,14 +1042,11 @@ mod tests {
         ]);
     }
 
-    /// The two-tone ring's whole premise: the pair reads against itself, so
-    /// it owes 3:1 between its own tones rather than against a surface the
-    /// caller owns (todo 368).
+    /// Todo 368: the two-tone ring owes 3:1 between its own tones, not against the surface.
     #[test]
     fn the_focus_ring_carries_its_own_contrast() {
         assert_declares(&[
-            // Both tones are the theme's own two ends of the page, so a
-            // scheme that redefines those redefines the ring with them.
+            // The theme's two page ends, so a scheme redefines the ring with them.
             ("--lsx-focus-ring-color", "var(--lsx-ink)"),
             ("--lsx-focus-ring-halo", "var(--lsx-surface)"),
             ("--lsx-focus-ring-width", "2px"),

@@ -1,7 +1,5 @@
-/// Expands a comma-separated `selector()` pattern against the current
-/// selectors: `&` is replaced by each current selector, a bare suffix (e.g.
-/// `::before`) is appended to it. E.g. `"&::before, &::after"` against
-/// `[".cls"]` yields `[".cls::before", ".cls::after"]`.
+/// Expands a comma-separated `selector()` pattern against each current selector:
+/// `&` is replaced by it, a bare suffix (`::before`) is appended to it.
 pub(crate) fn expand_selector(pattern: &str, current: &[String]) -> Vec<String> {
     split_top_level_commas(pattern)
         .into_iter()
@@ -114,8 +112,7 @@ mod tests {
         );
     }
 
-    /// `Calendar`'s disabled cells: split on the inner comma, the second
-    /// alternative became `.cls[data-slot='cell']` and matched nothing.
+    /// `Calendar`'s disabled cells once split on the inner comma and matched nothing.
     #[test]
     fn a_comma_inside_a_functional_pseudo_class_is_not_a_separator() {
         assert_eq!(

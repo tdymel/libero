@@ -3,6 +3,12 @@ use std::sync::LazyLock;
 
 use super::Sx;
 
+/// An [`Sx`] built once, on first use, for a `static`. Equal only to itself.
+///
+/// ```
+/// # use libero::sx::{StaticSx, sx};
+/// static CARD_SX: StaticSx = StaticSx::new(|| sx().padding("md"));
+/// ```
 pub struct StaticSx(LazyLock<Sx>);
 
 impl std::fmt::Debug for StaticSx {

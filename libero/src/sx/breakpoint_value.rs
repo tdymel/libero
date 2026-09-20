@@ -2,6 +2,14 @@ use crate::tokens::Size;
 
 use super::ThemeAwareValue;
 
+/// One value per breakpoint, for a responsive `sx` property. Setting a size twice keeps the last.
+///
+/// ```
+/// # use libero::sx::{bp, sx};
+/// let responsive = sx().padding(bp().xs("sm").md("lg"));
+/// ```
+///
+/// Docs: <https://libero-ui.dev/about/styling>
 #[derive(Debug, Clone, PartialEq, Eq, Default, Hash)]
 pub struct BreakpointValue {
     values: Vec<(Size, ThemeAwareValue)>,
@@ -43,6 +51,7 @@ impl BreakpointValue {
     }
 }
 
+/// Starts an empty [`BreakpointValue`].
 pub fn bp() -> BreakpointValue {
     BreakpointValue::new()
 }

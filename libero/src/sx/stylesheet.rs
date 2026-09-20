@@ -15,8 +15,7 @@ struct CssContext {
 }
 
 impl CssContext {
-    /// Appends `at_rule`, folding it into the innermost one where both are
-    /// `@media` so nested breakpoints stay a single `and` query.
+    /// Appends `at_rule`, folding two `@media` into one `and` query.
     fn wrapped_in(&self, at_rule: AtRule) -> Vec<AtRule> {
         let mut at_rules = self.at_rules.clone();
         match at_rules.last().and_then(|last| last.merged(&at_rule)) {
@@ -27,8 +26,7 @@ impl CssContext {
     }
 }
 
-/// Stands in while the CSS is built, so the sheet can be hashed before its
-/// own name exists - see [`Sx::class_name`].
+/// The class name's stand-in, so the sheet can be hashed before its name exists.
 pub(crate) const ROOT_CLASS_PLACEHOLDER: &str = "\u{1}";
 
 impl From<&Sx> for Stylesheet {
@@ -76,10 +74,8 @@ fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
         );
     }
 
-    // Mobile-first: every `bp()` query is a `min-width`, so wherever several
-    // match the one emitted last wins. Base first, then smallest to largest,
-    // so the widest matching step applies whatever order `bp()` was written
-    // in. The sort is stable, so one step keeps its declaration order.
+    // Mobile-first `min-width` queries, so `bp()` steps sort smallest first (stable):
+    // the widest matching one wins, whatever order they were written in.
     breakpoint_scopes.sort_by_key(|(size, _): &(Size, CssScope)| size.index());
     scopes.extend(breakpoint_scopes.into_iter().map(|(_, scope)| scope));
 
@@ -95,9 +91,7 @@ fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
                 }
             }
             let next = apply_modifier(context, modifier);
-            // An all-whitespace `when()`/`selector()` expands to nothing, and
-            // a scope with no selector renders as a `{..}` block the browser
-            // silently discards.
+            // A blank `when()`/`selector()` would render a selectorless block the browser drops.
             if next.selectors.is_empty() {
                 warn(&format!(
                     "Sx: {modifier:?} names no selector, its block is dropped."
@@ -109,11 +103,8 @@ fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
     }
 }
 
-/// Nested `.breakpoint(..)` blocks keep the position they were declared at
-/// (unlike `bp()`, which `collect_scopes` sorts), and every query is a `min-width`, so a
-/// narrower block after a wider one beats it wherever both match. Sorting them
-/// would move blocks whose position is the documented contract; the warning
-/// asks the caller to write them smallest first instead.
+/// Nested `.breakpoint(..)` blocks keep their position (unlike `bp()`), so a narrower
+/// one after a wider one beats it. Their order is the contract, so warn rather than sort.
 fn warn_breakpoint_order(widest: Size, size: Size) {
     warn(&format!(
         "Sx: breakpoint({size:?}) comes after breakpoint({widest:?}), so it wins over it \
@@ -197,11 +188,8 @@ fn breakpoint_at_rule(size: Size) -> AtRule {
     AtRule::Media(format!("(min-width: {})", size.breakpoint_value()))
 }
 
-/// `background` and `background-color` also publish `--lsx-focus-contrast`,
-/// which inherits, so a descendant's focus ring can contrast against the
-/// nearest ancestor background - see `ThemeAwareValue::focus_contrast`.
-/// The background itself becomes the ring's halo, so stripe and halo stay a
-/// readable pair on a dark fill (todo 630).
+/// A background also publishes the inherited `--lsx-focus-contrast` for descendants' focus
+/// rings, and itself as the ring's halo (todo 630).
 fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> Vec<CssDeclaration> {
     let css_value = to_css_value(property, value);
     let mut declarations = vec![CssDeclaration::new(property.as_str(), css_value.clone())];
@@ -224,9 +212,7 @@ fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> V
 fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
     let (scale, role) = match property {
         SxPropertyKey::Known(property) => (property.size_scale(), property.color_role()),
-        // A custom property is written by one component and read by another,
-        // so nothing here knows what it will end up styling. The component
-        // names the role when it computes the value.
+        // Unknown target: the writing component picks the role when it computes the value.
         SxPropertyKey::Raw(_) => (None, None),
     };
 
@@ -246,7 +232,6 @@ fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
 
     match value.resolve(scale) {
         Some(value) => value,
-        // No scale for this property, so emit the bare keyword.
         None => match value {
             ThemeAwareValue::Size(size) => size.as_str().to_string(),
             ThemeAwareValue::NegativeSize(size) => format!("-{}", size.as_str()),
@@ -336,8 +321,7 @@ mod tests {
         assert!(!css.contains("background:var(--lsx-secondary-fill-2);"));
     }
 
-    /// Every query is a `min-width`, so the widest matching one must come
-    /// last: `sm` written after `xl` used to override `xl` at every width.
+    /// `sm` written after `xl` used to override `xl` at every width.
     #[test]
     fn breakpoint_scopes_run_smallest_to_largest_whatever_the_call_order() {
         let css = Stylesheet::from(&sx().color(bp().xl("red").sm("blue").md("green")))
@@ -594,9 +578,8 @@ mod tests {
         assert!(css.contains("color:var(--lsx-primary-text-6);"));
     }
 
-    /// The property decides the ramp. A border is neither role: 1.4.11 asks
-    /// 3:1 of it, which the brand colour already clears, so moving it would
-    /// repaint every outline for nothing.
+    /// The property decides the ramp. A border is neither role: the brand colour
+    /// already clears 1.4.11's 3:1.
     #[test]
     fn a_palette_color_resolves_through_the_ramp_its_property_needs() {
         let css = Stylesheet::from(
@@ -613,8 +596,7 @@ mod tests {
         assert!(css.contains("border-color:var(--lsx-primary-6);"));
     }
 
-    /// A literal colour has no ramp to walk, and a caller who wrote one gets
-    /// exactly it.
+    /// A literal colour has no ramp to walk.
     #[test]
     fn a_literal_color_is_not_moved_by_either_role() {
         let css = Stylesheet::from(&sx().color("#228BE6").background("#228BE6"))
@@ -799,9 +781,7 @@ mod tests {
 
     #[test]
     fn sx_selector_ampersand_with_space_expands_to_descendant_combinator() {
-        // A plain pattern is trimmed before being appended, so a leading
-        // space meant as a descendant combinator is silently lost. `&` is the
-        // correct form.
+        // A plain pattern is trimmed, losing a leading descendant space; `&` keeps it.
         let descendant_sx = sx().selector("& ul", sx().height("1px"));
         let css = Stylesheet::from(&descendant_sx).as_str().to_string();
 

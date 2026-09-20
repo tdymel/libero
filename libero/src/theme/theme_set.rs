@@ -1,26 +1,28 @@
 use super::Theme;
 
 /// The themes an app ships, and which of them is its light and its dark.
+/// Ready-made sets are in [`CATALOGUE`](Self::CATALOGUE).
 ///
-/// ```ignore
-/// ThemeSet::new()
-///     .with_name("Acme")
-///     .light(&LIGHT)
-///     .dark(&DARK)
-///     .named("sepia", &SEPIA)
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::LiberoProvider;
+/// # use libero::theme::{HexColor, Theme, ThemeSet};
+/// static LIGHT: Theme = Theme { primary: HexColor::new(0x0B7285), ..Theme::DEFAULT };
+/// static DARK: Theme = Theme { primary: HexColor::new(0x0B7285), ..Theme::DARK };
+///
+/// # fn app() -> Element {
+/// rsx! {
+///     LiberoProvider { themes: ThemeSet::new().with_name("Acme").light(&LIGHT).dark(&DARK),
+///         "..."
+///     }
+/// }
+/// # }
 /// ```
 ///
-/// The library ships several ready-made ones - [`ThemeSet::DEFAULT`] and the
-/// community palettes beside it, all of them in
-/// [`CATALOGUE`](Self::CATALOGUE).
+/// The light/dark pair ships in the sheet up front, so switching them is one root
+/// attribute, right on first paint; a [`named`](Self::named) theme rebuilds the sheet.
 ///
-/// The light/dark pair is emitted into the stylesheet up front, so switching
-/// between the two is one attribute on the document root: no re-render to see
-/// the new colours, right on the first paint, right under SSR, and
-/// `prefers-color-scheme` works with no JS at all. A theme added with
-/// [`named`](Self::named) is the rarer case and costs a rebuild of the sheet
-/// when it is selected - which is what stops the sheet growing with every
-/// theme an app happens to own.
+/// Docs: <https://libero-ui.dev/about/theming>
 #[derive(Clone, Debug, PartialEq)]
 pub struct ThemeSet {
     name: &'static str,
@@ -35,10 +37,8 @@ impl ThemeSet {
     /// The name the dark half of the pair answers to.
     pub const DARK: &'static str = "dark";
 
-    /// The library's own pair: [`Theme::DEFAULT`] as the light theme and
-    /// [`Theme::DARK`] as the dark one. An app that authors no theme at all
-    /// still gets a working dark scheme, and `prefers-color-scheme` alone
-    /// switches it.
+    /// The library's own pair, [`Theme::DEFAULT`] and [`Theme::DARK`], switched by
+    /// `prefers-color-scheme` alone.
     pub const DEFAULT: ThemeSet = ThemeSet {
         name: "Libero",
         light: &Theme::DEFAULT,
@@ -46,8 +46,7 @@ impl ThemeSet {
         extras: Vec::new(),
     };
 
-    /// A named pair, which is what every set the library ships is. `const`,
-    /// so a palette can be one.
+    /// A named light/dark pair, `const` so a palette can be one.
     pub const fn pair(name: &'static str, light: &'static Theme, dark: &'static Theme) -> Self {
         Self {
             name,
@@ -57,14 +56,13 @@ impl ThemeSet {
         }
     }
 
+    /// [`ThemeSet::DEFAULT`], to build on.
     pub fn new() -> Self {
         Self::DEFAULT
     }
 
-    /// One theme and nothing else - what `LiberoProvider { themes: &MINE }`
-    /// is sugar for. Deliberately not `new().light(theme)`: the default set
-    /// carries [`Theme::DARK`], and an app that hands over one theme of its
-    /// own has not authored a dark counterpart for it.
+    /// One theme, no dark half: what `LiberoProvider { themes: &MINE }` means. Not
+    /// `new().light(theme)`, which would pair it with the library's [`Theme::DARK`].
     pub fn of(theme: &'static Theme) -> Self {
         Self {
             name: "Custom",
@@ -74,8 +72,7 @@ impl ThemeSet {
         }
     }
 
-    /// What a picker calls this set. Only a label - nothing resolves through
-    /// it, and two sets may share one.
+    /// What a picker calls this set; only a label.
     pub fn with_name(mut self, name: &'static str) -> Self {
         self.name = name;
         self
@@ -95,9 +92,7 @@ impl ThemeSet {
         self
     }
 
-    /// A theme beyond the pair. `"light"` and `"dark"` are the pair's own
-    /// names, so they set the pair rather than adding a third entry that
-    /// could never be reached.
+    /// A theme beyond the pair. `"light"` and `"dark"` set the pair instead.
     pub fn named(mut self, name: &'static str, theme: &'static Theme) -> Self {
         match name {
             Self::LIGHT => return self.light(theme),
@@ -133,8 +128,7 @@ impl ThemeSet {
         }
     }
 
-    /// Whether `name` is one of the two the sheet already carries. The pair
-    /// switches by attribute; anything else rebuilds the sheet.
+    /// Whether `name` is in the pair, which switches by attribute rather than a rebuild.
     pub(crate) fn is_in_pair(&self, name: &str) -> bool {
         name == Self::LIGHT || (name == Self::DARK && self.dark.is_some())
     }
@@ -146,8 +140,7 @@ impl Default for ThemeSet {
     }
 }
 
-/// One theme as a set: [`ThemeSet::of`], except that the library's own
-/// [`Theme::DEFAULT`] brings its [`Theme::DARK`] along.
+/// [`ThemeSet::of`], except that [`Theme::DEFAULT`] brings its [`Theme::DARK`] along.
 impl From<&'static Theme> for ThemeSet {
     fn from(theme: &'static Theme) -> Self {
         if theme == &Theme::DEFAULT {
@@ -168,9 +161,7 @@ mod tests {
     fn a_bare_set_is_the_library_s_own_pair_and_nothing_else() {
         let set = ThemeSet::new();
 
-        // By value, not by pointer: `Theme::DEFAULT` is an associated const,
-        // so every `&Theme::DEFAULT` is its own promoted temporary and
-        // `ptr::eq` on two of them is not required to hold.
+        // By value: each `&Theme::DEFAULT` is its own promoted temporary.
         assert_eq!(set.light_theme(), &Theme::DEFAULT);
         assert_eq!(set.dark_theme(), Some(&Theme::DARK));
         assert!(set.get("sepia").is_none());
@@ -178,9 +169,7 @@ mod tests {
         assert!(set.is_in_pair("dark"));
     }
 
-    /// One theme is one theme: an app that hands over a theme of its own has
-    /// not authored a dark counterpart for it, so `of` must not quietly pair
-    /// it with the library's.
+    /// `of` must not quietly pair an app's theme with the library's dark one.
     #[test]
     fn one_theme_carries_no_dark_half() {
         let set = ThemeSet::of(&OTHER);
@@ -212,8 +201,7 @@ mod tests {
         assert!(set.is_in_pair("dark"));
     }
 
-    /// `"light"`/`"dark"` through `named` would otherwise add an entry that
-    /// `get` could never reach, because the pair answers first.
+    /// Otherwise the entry would be unreachable: `get` asks the pair first.
     #[test]
     fn naming_a_theme_light_or_dark_sets_the_pair() {
         let set = ThemeSet::new().named("dark", &OTHER).named("sepia", &OTHER);

@@ -17,6 +17,7 @@ impl Direction {
         }
     }
 
+    /// The other direction.
     pub const fn flipped(self) -> Self {
         match self {
             Self::Ltr => Self::Rtl,

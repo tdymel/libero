@@ -3,6 +3,7 @@ use std::fmt::Display;
 use super::{Size, SizeCss};
 use crate::css::CssDeclaration;
 
+/// One value per [`Size`], e.g. a theme's spacing scale.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Sizes<T> {
     pub xs: T,

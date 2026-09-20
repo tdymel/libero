@@ -1,39 +1,20 @@
-//! Ready-made [`ThemeSet`]s: the library's own, and nineteen community
-//! palettes.
-//!
-//! Ayu, Catppuccin, Everforest, Gruvbox, One and Rosé Pine are light/dark
-//! pairs straight from the Kopuz theme pack; Flexoki, GitHub and Kanagawa
-//! were taken from their upstream repositories, named in each file.
+//! Ready-made [`ThemeSet`]s: the library's own, and nineteen community palettes.
+//! Each file names its source: the Kopuz theme pack or the upstream repository.
 //!
 //! ## The pack's dark-only palettes
 //!
-//! Ten of the pack's palettes are dark-only, and a `ThemeSet` designates
-//! both halves. Their dark half is the pack's; the light half follows the
-//! Maintainer's rule (2026-09-22): **take the palette's popular light
-//! equivalent, and invent one only when there is none.** Each file names
-//! its source:
+//! The light half is the palette's popular light equivalent, invented only when
+//! none exists (Maintainer, 2026-09-22):
 //!
-//! - **Upstream's own light theme** - Dracula (Alucard, from the Dracula
-//!   spec), Nord (the bright ambiance Nord's docs describe, as Helix ships
-//!   it), Gruvbox Classic (`morhetz/gruvbox` light), Ef Night (ef-day, its
-//!   counterpart by name in `protesilaos/ef-themes`).
-//! - **A light half the catalogue already has** - Ayu Mirage takes
-//!   [`AYU_LIGHT`], Kanagawa Dragon [`KANAGAWA_LIGHT`] (Lotus), Gruvbox Soft
-//!   [`GRUVBOX_LIGHT`] (Light Soft): each is upstream's one light theme for
-//!   that family.
-//! - **Derived, because none exists** - Vague, Osmium and kettek16. The
-//!   light half keeps the dark half's five accents, since the stylesheet
-//!   derives every role's text and fill steps against the page anyway;
-//!   `ink` is the dark page; the page is the dark `text` mixed 80% toward
-//!   white and the card the same mixed 60%; `muted` is the dark
-//!   `text-muted` moved toward the ink or toward white until it sits as far
-//!   from the light page, by contrast ratio, as it does from the dark one.
-//!   Only the neutrals are ours, and each file shows its numbers.
+//! - **Upstream's own**: Dracula (Alucard), Nord (bright ambiance), Gruvbox Classic, Ef Night (ef-day).
+//! - **Already in the catalogue**: Ayu Mirage takes [`AYU_LIGHT`], Kanagawa Dragon
+//!   [`KANAGAWA_LIGHT`], Gruvbox Soft [`GRUVBOX_LIGHT`].
+//! - **Derived**: Vague, Osmium and kettek16 keep the dark accents; only the neutrals
+//!   are ours, and each file shows its numbers.
 //!
 //! ## How a palette is mapped
 //!
-//! Upstream palettes name colours by *what they are for*, which is the same
-//! shape as our roles, so the mapping is one to one:
+//! Upstream names colours by purpose, as our roles do, so the mapping is one to one:
 //!
 //! | Ours | Theirs | Why |
 //! |---|---|---|
@@ -48,18 +29,11 @@
 //! | `error` | `danger` | |
 //! | `paper.background` | `raised` | The card drawn on the page. |
 //!
-//! **`warning` has no counterpart** - the Kopuz pack carries none, and the
-//! palettes that do name a yellow are kept on ours for one catalogue - so
-//! every ported theme keeps Libero's amber. The shade ramps, the text and
-//! fill roles and the `muted` ramp are all derived from the four colours
-//! above by [`super::stylesheet`], so a ported theme is ten hex values and
-//! nothing else.
+//! **`warning` has no counterpart**: every ported theme keeps Libero's amber. Ramps
+//! and roles are derived by the stylesheet, so a ported theme is ten hex values.
 //!
-//! Code blocks, `Kbd` and `Tooltip` draw on steps of the `muted` ramp, so they
-//! follow the palette (todo 396). Two `*Defaults` still hold literal colours:
-//! `Paper`'s background, per palette because the palettes name it, and the
-//! syntax-token hues of `CodeDefaults`, which follow the *scheme* and are
-//! walked until they read on the palette's code block.
+//! Code blocks, `Kbd` and `Tooltip` follow the `muted` ramp (todo 396). Only `Paper`'s
+//! background and `CodeDefaults`' syntax hues (per scheme) stay literal.
 
 mod ayu;
 mod catppuccin;
@@ -98,12 +72,10 @@ pub use vague::{VAGUE_DARK, VAGUE_LIGHT};
 use super::ThemeSet;
 
 impl ThemeSet {
-    /// Every set the library ships, in the order a picker should list them:
-    /// ours first, then the ported palettes alphabetically.
+    /// Every shipped set in picker order, ours first. The only reference to the
+    /// ported themes, so an app that never touches it does not pay for them.
     ///
-    /// It is what the docs site's theme picker is built from, and it is the
-    /// only thing that references the ported themes - so an app that never
-    /// touches it does not pay for them.
+    /// Docs: <https://libero-ui.dev/about/theming>
     pub const CATALOGUE: &'static [&'static ThemeSet] = &[
         &ThemeSet::DEFAULT,
         &ThemeSet::AYU,
@@ -127,8 +99,12 @@ impl ThemeSet {
         &ThemeSet::VAGUE,
     ];
 
-    /// The set `name` labels, or `None`. Case-sensitive, and the names are
-    /// the ones in [`CATALOGUE`](Self::CATALOGUE).
+    /// The [`CATALOGUE`](Self::CATALOGUE) set labelled `name` (case-sensitive), or `None`.
+    ///
+    /// ```
+    /// # use libero::theme::ThemeSet;
+    /// assert_eq!(ThemeSet::from_catalogue("Nord"), Some(&ThemeSet::NORD));
+    /// ```
     pub fn from_catalogue(name: &str) -> Option<&'static ThemeSet> {
         Self::CATALOGUE
             .iter()

@@ -1,14 +1,5 @@
-//! Nord - Nord's bright ambiance light, Nord dark.
-//!
-//! The dark half is the Kopuz pack's. Nord has no separate light theme: its
-//! own documentation (<https://www.nordtheme.com/docs/colors-and-palettes>)
-//! describes a bright ambiance built from the same sixteen colours - Snow
-//! Storm `nord6` as the background, Polar Night `nord0` for plain text,
-//! `nord3` for the most subtle UI text, `nord4` for elevated panels and
-//! popups - with Frost and Aurora unchanged. The light half is that, as
-//! Helix ships it built in (`runtime/themes/nord_light.toml`, card `nord4`).
-//! The most-installed VS Code "Nord Light" (huytd) was not taken: its chrome
-//! and syntax are GitHub Light's colours on Nord's backgrounds.
+//! Nord: the Kopuz pack's dark, and the bright ambiance Nord's docs describe
+//! (<https://www.nordtheme.com/docs/colors-and-palettes>) as Helix ships it.
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
@@ -23,7 +14,6 @@ pub static NORD_LIGHT: Theme = Theme {
     info: HexColor::new(0x8FBCBB),
     success: HexColor::new(0xA3BE8C),
     error: HexColor::new(0xBF616A),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#d8dee9",
         ..PaperDefaults::DEFAULT
@@ -43,7 +33,6 @@ pub static NORD_DARK: Theme = Theme {
     info: HexColor::new(0x8FBCBB),
     success: HexColor::new(0xA3BE8C),
     error: HexColor::new(0xBF616A),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#3b4252",
         ..PaperDefaults::DARK

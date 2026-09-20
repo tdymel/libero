@@ -1,3 +1,5 @@
+/// Named on/off states, rendered as the element's `data-state`, which `sx().when(..)` matches.
+/// Setting a state twice keeps the last.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct States(Vec<(&'static str, bool)>);
 
@@ -25,8 +27,6 @@ impl States {
     }
 
     /// The element's `data-state` value, or `None` when nothing is active.
-    /// Built directly rather than `collect().join(" ")` - the intermediate
-    /// `Vec` is a second allocation on a path every component walks.
     pub fn data_state(&self) -> Option<String> {
         let active = || self.0.iter().filter(|(_, active)| *active).map(|(s, _)| *s);
 

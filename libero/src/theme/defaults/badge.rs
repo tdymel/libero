@@ -7,10 +7,8 @@ pub const BADGE_HEIGHT: SizeCss = SizeCss::new("--lsx-badge-height-");
 pub const BADGE_PADDING_X: SizeCss = SizeCss::new("--lsx-badge-padding-x-");
 pub const BADGE_RADII: SizeCss = SizeCss::new("--lsx-badge-radius-");
 
-/// The active step's values, republished unsuffixed by
-/// [`BadgeDefaults::size_sx`] - the `ColorSwatch` pattern. `circle` needs the
-/// current height for its `min-width` and has no way to know which size token
-/// is on.
+/// The active step, republished unsuffixed by [`BadgeDefaults::size_sx`]: `circle`
+/// needs the current height for its `min-width`.
 pub const BADGE_FONT: CssVar = CssVar::new("--lsx-badge-font");
 pub const BADGE_BOX: CssVar = CssVar::new("--lsx-badge-box");
 pub const BADGE_PAD_X: CssVar = CssVar::new("--lsx-badge-pad-x");
@@ -27,6 +25,7 @@ pub struct BadgeSizeLevel {
     pub padding_x: &'static str,
 }
 
+/// Theme defaults for `Badge`, set on [`Theme`](crate::theme::Theme).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BadgeDefaults {
     /// The chrome a badge takes when a call site names none.
@@ -34,16 +33,14 @@ pub struct BadgeDefaults {
     pub size: Size,
     /// The step of [`Self::radii`] a badge takes when a call site names none.
     pub radius: Size,
-    /// Uppercase is most of what separates a badge from a chip at a glance.
-    /// A project turns it off here, once.
+    /// Uppercase is most of what tells a badge from a chip; a project turns it off here.
     pub text_transform: &'static str,
     /// Opens up the uppercase, which sets tighter than lowercase.
     pub letter_spacing: &'static str,
     pub font_weight: &'static str,
     pub sizes: Sizes<BadgeSizeLevel>,
-    /// The badge's own radius scale, not the global one: a badge is at most
-    /// 2.375rem tall, so every global step past `sm` is already a pill on most of
-    /// its sizes. `xxl` is the pill itself.
+    /// Its own radius scale: global steps past `sm` are already pills at badge height.
+    /// `xxl` is the pill.
     pub radii: Sizes<&'static str>,
 }
 
@@ -102,9 +99,7 @@ impl BadgeDefaults {
     pub fn theme_vars() -> Sx {
         sx().font_size(BADGE_FONT.value())
             .height(BADGE_BOX.value())
-            // The optical centre, minus the 1px border on each edge. It also
-            // means the label does not sit on an inherited `line-height` the
-            // component never states.
+            // The optical centre, minus the 1px borders; no inherited `line-height`.
             .line_height(format!("calc({} - 2px)", BADGE_BOX.value()))
             .padding_left(BADGE_PAD_X.value())
             .padding_right(BADGE_PAD_X.value())
@@ -140,8 +135,7 @@ impl ToCssDeclarations for BadgeDefaults {
 mod tests {
     use super::*;
 
-    /// A px box under `overflow: hidden` clips a rem label at 200% text size
-    /// (todo 741).
+    /// Todo 741: a px box under `overflow: hidden` clips a rem label at 200% text size.
     #[test]
     fn every_box_length_follows_the_text_size() {
         for size in Size::ALL {

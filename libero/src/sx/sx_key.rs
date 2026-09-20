@@ -3,12 +3,12 @@ use crate::tokens::{Size, SizeCss};
 use super::{Sx, ThemeAwareValue};
 
 /// Every CSS property `Sx` knows: variant, CSS name, builder method, and the
-/// [`SizeCss`] scale a bare `Size` resolves through. Adding a property is one
-/// line here.
+/// [`SizeCss`] scale a bare `Size` resolves through.
 macro_rules! properties {
     (@scale) => { None };
     (@scale $scale:expr) => { Some($scale) };
     ($($variant:ident => $css_name:literal, $method:ident $(, $scale:expr)?;)*) => {
+        /// A CSS property `Sx` has a builder method for.
         #[repr(u16)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
         pub enum Property {
@@ -322,13 +322,8 @@ properties! {
     StrokeDashoffset => "stroke-dashoffset", stroke_dashoffset;
 }
 
-/// What a palette colour is about to be used for, which decides which of the
-/// three ramps at `:root` it resolves through. See [`crate::tokens::ColorValue`].
-///
-/// Only the properties that put a colour *under text* or *in text* have a
-/// role. A border, a ring or a shadow keeps the brand colour: 1.4.11 asks 3:1
-/// of those, which the palette already clears, and moving them would repaint
-/// every outline in the library for nothing.
+/// Which `:root` ramp a palette colour resolves through, by its use. Borders, rings
+/// and shadows have none: the brand colour already clears 1.4.11's 3:1.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum ColorRole {
     Text,
@@ -345,6 +340,7 @@ impl Property {
     }
 }
 
+/// A declaration's property: a known [`Property`] or any other name, custom properties included.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SxPropertyKey {
     Known(Property),
@@ -368,6 +364,7 @@ impl SxPropertyKey {
     }
 }
 
+/// What a nested `Sx` block applies under: a selector, a `data-state` condition, or an at-rule.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SxModifierKey {
     Selector(String),
@@ -388,8 +385,7 @@ mod tests {
         }
     }
 
-    /// Every builder method emits its own CSS name; the scaled ones resolve a
-    /// bare `Size` through their theme scale.
+    /// The scaled builders resolve a bare `Size` through their theme scale.
     #[test]
     fn every_builder_method_emits_its_declaration() {
         macro_rules! assert_emits {

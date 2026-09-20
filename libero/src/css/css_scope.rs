@@ -3,6 +3,7 @@ use std::fmt::{self, Display, Formatter};
 use super::at_rule::AtRule;
 use super::css_declaration::CssDeclaration;
 
+/// One rule: a selector and its declarations, inside zero or more at-rules.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CssScope {
     selector: String,

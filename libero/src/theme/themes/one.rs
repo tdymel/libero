@@ -13,7 +13,6 @@ pub static ONE_LIGHT: Theme = Theme {
     info: HexColor::new(0x0184BC),
     success: HexColor::new(0x50A14F),
     error: HexColor::new(0xE45649),
-    // No warning colour in the palette, so Libero's amber stands in.
     paper: PaperDefaults {
         background: "#f0f0f0",
         ..PaperDefaults::DEFAULT
@@ -33,7 +32,6 @@ pub static ONE_DARK: Theme = Theme {
     info: HexColor::new(0x61AFEF),
     success: HexColor::new(0x98C379),
     error: HexColor::new(0xE06C75),
-    // No warning colour in the palette, so Libero's amber stands in.
     paper: PaperDefaults {
         background: "#21252b",
         ..PaperDefaults::DARK

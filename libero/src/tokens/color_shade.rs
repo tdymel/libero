@@ -1,13 +1,13 @@
 use crate::utils::warn;
 
-/// Which mix curve `HexColor::shade` walks. A neutral grey needs a much wider
-/// spread than a hue to cover the same perceptual range.
+/// Which mix curve `HexColor::shade` walks: a grey needs a wider spread than a hue.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ShadeRamp {
     Chromatic,
     Neutral,
 }
 
+/// A step on a colour's 9-shade ramp, light (`S1`) to dark (`S9`); `S6` is the base colour.
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ColorShade {
@@ -45,9 +45,8 @@ impl ColorShade {
         }
     }
 
-    /// One step further from the page. There is no step *towards* it: every
-    /// ramp is mixed between the theme's own ends, so nothing ever walks a
-    /// ramp back towards the surface it is measured against (todo 69).
+    /// One step further from the page. None goes towards it: ramps are mixed between
+    /// the theme's own ends (todo 69).
     pub(crate) const fn darker(self) -> Self {
         match self {
             Self::S1 => Self::S2,

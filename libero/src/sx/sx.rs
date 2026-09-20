@@ -4,13 +4,25 @@ use crate::tokens::{CssVar, Size};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-/// The one reduced-motion query for [`Sx::media`], so a project grepping for
-/// the guard finds every component that has one.
+/// The one reduced-motion query for [`Sx::media`], so a grep finds every guard.
 pub(crate) const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
 /// The one forced-colours query for [`Sx::media`], same reason.
 pub(crate) const FORCED_COLORS: &str = "(forced-colors: active)";
 
+/// A style: declarations plus nested modifiers, rendered to one hashed class.
+/// Values take theme tokens: sizes (`"md"`), palette colours (`"primary.7"`), vars.
+///
+/// ```
+/// # use libero::sx::sx;
+/// let card = sx()
+///     .padding("md")
+///     .background_color("primary.1")
+///     .hover(sx().background_color("primary.2"))
+///     .media("(prefers-reduced-motion: reduce)", sx().transition("none"));
+/// ```
+///
+/// Docs: <https://libero-ui.dev/about/styling>
 #[derive(Debug, Clone, PartialEq, Default, Hash)]
 pub struct Sx {
     entries: Vec<SxEntry>,
@@ -25,8 +37,8 @@ impl Sx {
         self.with_declaration(SxPropertyKey::parse(property), value.into())
     }
 
-    /// Declares a CSS custom property in this rule - the in-stylesheet twin
-    /// of [`Variables`](crate::components::Variables).
+    /// Declares a CSS custom property in this rule, the stylesheet twin of
+    /// [`Variables`](crate::components::Variables).
     pub fn var(self, name: CssVar, value: impl Into<ThemeAwareValue>) -> Self {
         self.with(name.name().to_string(), value)
     }
@@ -55,8 +67,7 @@ impl Sx {
         self.selector(":focus-visible", nested)
     }
 
-    /// The element, while focus is on it *or* on anything inside it. What a
-    /// wrapper uses once the focusable thing is a child of it.
+    /// While focus is on the element or inside it, for a wrapper around the focusable child.
     pub fn focus_within(self, nested: Sx) -> Self {
         self.selector(":focus-within", nested)
     }
@@ -104,53 +115,26 @@ impl Sx {
         self.modifier(SxModifierKey::Breakpoint(breakpoint), nested)
     }
 
-    /// Styles that apply while `query` matches, e.g.
-    /// `"(prefers-reduced-motion: reduce)"`.
-    ///
-    /// The query is passed through verbatim. Nothing validates it, so a typo
-    /// silently matches nothing - the same tradeoff [`when`](Self::when)
-    /// makes. Nested media modifiers fold into one `and` query, exactly like
-    /// nested [`breakpoint`](Self::breakpoint)s.
+    /// Styles while `query` matches, e.g. `"(prefers-reduced-motion: reduce)"`.
+    /// Passed verbatim, so a typo silently matches nothing; nested ones join with `and`.
     pub fn media(self, query: impl Into<String>, nested: Sx) -> Self {
         self.modifier(SxModifierKey::Media(query.into()), nested)
     }
 
-    /// Marks this element as a named inline-size query container, so
-    /// descendants can [`container_query`](Self::container_query) it.
+    /// Makes this a named inline-size container for [`container_query`](Self::container_query).
+    /// Named, since an anonymous one binds to the nearest container once they nest.
     ///
-    /// The name is mandatory: an anonymous container binds a query to the
-    /// *nearest* ancestor container, which silently picks the wrong one as
-    /// soon as containers nest.
-    ///
-    /// `container-type: inline-size` is `contain: layout style inline-size` -
-    /// the element stops being sized by its own contents in the inline axis,
-    /// becomes a stacking context, and becomes the containing block for
-    /// absolutely and fixed positioned descendants.
-    ///
-    /// **So give it a width from somewhere else.** A query container cannot
-    /// derive its inline size from its contents, so it needs one from its
-    /// parent - a block-level box filling a block formatting context, or a
-    /// flex item with a definite basis - or from its own `width`. In a
-    /// shrink-to-fit context there is no such width and the element resolves
-    /// to **zero**, not to its content width: the query then never matches and
-    /// every rule under it silently takes the fallback.
-    ///
-    /// Shrink-to-fit is the box's *context*, not a property you can read off
-    /// this `Sx`. A flex or grid item sized from its content, a float, an
-    /// inline-block, an absolutely positioned box, and a `width: max-content`
-    /// wrapper are all it. `Timeline`'s `Alternate` arm shipped this way: the
-    /// `<ol>` was a flex item, measured 0px, and rendered byte-identical HTML
-    /// to a working one, so no SSR test could see it. If you cannot name where
-    /// the width comes from, declare one here.
+    /// **Give it a width from outside**: a container is not sized by its content, so in a
+    /// shrink-to-fit context (a content-sized flex or grid item, float, inline-block,
+    /// absolute box, `max-content` wrapper) it measures 0px and every query silently misses.
+    /// It also becomes a stacking context and the containing block for positioned descendants.
     pub fn container(self, name: impl Into<String>) -> Self {
         self.container_type("inline-size")
             .container_name(name.into())
     }
 
-    /// Styles that apply while the named ancestor container matches
-    /// `condition`, e.g. `"(min-width: 640px)"`.
-    ///
-    /// Like `@media`, the condition cannot read CSS custom properties.
+    /// Styles while the named ancestor container matches `condition`, e.g.
+    /// `"(min-width: 640px)"`. Like `@media`, it cannot read custom properties.
     pub fn container_query(
         self,
         name: impl Into<String>,
@@ -166,8 +150,7 @@ impl Sx {
         )
     }
 
-    /// [`container_query`](Self::container_query) at a `Size`'s breakpoint -
-    /// the container twin of [`breakpoint`](Self::breakpoint).
+    /// [`container_query`](Self::container_query) at a `Size`'s breakpoint.
     pub fn container_breakpoint(
         self,
         name: impl Into<String>,
@@ -188,13 +171,8 @@ impl Sx {
         }
     }
 
-    /// At most one declaration per property, and re-declaring *moves it to the
-    /// end* rather than overwriting in place - unlike [`Sx::with_modifier`].
-    /// Within one rule, source order is what settles a shorthand against a
-    /// longhand (`padding` vs `padding-top`), so the latest declaration must
-    /// land last for "re-declaring wins" to hold. Modifiers can keep their
-    /// position because their `[data-state~=..]` selector settles them by
-    /// specificity instead.
+    /// Re-declaring moves a property to the end, since source order settles a shorthand
+    /// against a longhand. Modifiers merge in place: specificity settles them.
     fn with_declaration(mut self, property: SxPropertyKey, value: ThemeAwareValue) -> Self {
         let existing = self.entries.iter().position(|entry| {
             matches!(entry, SxEntry::Declaration { property: existing, .. } if existing == &property)
@@ -208,8 +186,7 @@ impl Sx {
         self
     }
 
-    /// At most one block per modifier: a second `:hover`/`when(..)` merges
-    /// into the first, in place, rather than emitting a duplicate scope.
+    /// A second `:hover`/`when(..)` merges into the first, in place.
     fn with_modifier(mut self, modifier: SxModifierKey, nested: Sx) -> Self {
         let existing = self.entries.iter().position(|entry| {
             matches!(entry, SxEntry::Nested { modifier: existing, .. } if existing == &modifier)
@@ -231,14 +208,8 @@ impl Sx {
         self
     }
 
-    /// Merges `other` on top of `self`. A property `other` re-declares moves
-    /// to the end (see [`Sx::with_declaration`]), which is what lets it beat a
-    /// shorthand `self` declared earlier.
-    ///
-    /// So declaration order depends on build order, and two equivalent `Sx`
-    /// can render different CSS text under different class names. Cheap in
-    /// practice: every call site composes a `StaticSx` once per process, and
-    /// the `sx`/`framework_sx` override path never merges at all.
+    /// Merges `other` on top; a property it re-declares moves last, so it beats an
+    /// earlier shorthand. Build order thus shapes the CSS text and class name.
     pub fn and(mut self, other: Sx) -> Self {
         for entry in other.entries {
             match entry {
@@ -269,9 +240,7 @@ impl Sx {
         self.entries.hash(hasher);
     }
 
-    /// Base62 hash of the rendered CSS, and its stylesheet-registry key.
-    /// Getting it means building the CSS, so at runtime it comes from
-    /// `use_css`, which already has the sheet - this spelling is for tests.
+    /// Base62 hash of the rendered CSS. Tests only: at runtime `use_css` has the sheet.
     #[cfg(test)]
     pub(crate) fn class_name(&self) -> String {
         class_name_from_hash(crate::css::Stylesheet::from(self).hash())
@@ -302,6 +271,20 @@ fn encode_base62(mut value: u64) -> String {
     String::from_utf8(chars).expect("base62 alphabet is ASCII")
 }
 
+/// Starts an empty [`Sx`].
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::Box;
+/// # use libero::sx::sx;
+/// # fn app() -> Element {
+/// rsx! {
+///     Box { sx: sx().padding("md").color("primary"), "Hello" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/about/styling>
 pub fn sx() -> Sx {
     Sx::new()
 }
@@ -338,9 +321,8 @@ mod tests {
         assert_eq!(helpers.class_name(), folded.class_name());
     }
 
-    /// Overwriting in place instead would emit `padding-top:4px;padding:8px`,
-    /// letting the shorthand swallow the override - which `Flex`, `Divider`
-    /// and `DataList`'s `and` compositions rely on not happening.
+    /// In place would emit `padding-top:4px;padding:8px`; `Flex`, `Divider` and
+    /// `DataList` rely on the override winning.
     #[test]
     fn a_re_declared_property_moves_last_so_it_beats_an_earlier_shorthand() {
         use crate::css::Stylesheet;

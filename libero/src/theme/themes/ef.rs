@@ -1,11 +1,7 @@
 //! Ef Night - ef-day light, ef-night dark, from `protesilaos/ef-themes`.
 //!
-//! The dark half is the Kopuz pack's, which is `ef-night-theme.el`'s
-//! palette: `bg-main`, `fg-main`, `fg-dim`, `blue`, `magenta-cooler`,
-//! `cyan-warmer`, `green`, `red`, and `bg-dim` for the card. The light half
-//! is the same slots of `ef-day-theme.el`. Ef-themes does not document any
-//! two of its themes as a pair; ef-day is ef-night's counterpart by name
-//! only.
+//! The light half takes ef-night's slots from `ef-day-theme.el`, its counterpart by
+//! name only: ef-themes documents no pairs.
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
@@ -20,7 +16,6 @@ pub static EF_NIGHT_LIGHT: Theme = Theme {
     info: HexColor::new(0x3F6FAF),
     success: HexColor::new(0x007A0A),
     error: HexColor::new(0xBA2D2F),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#f2e9db",
         ..PaperDefaults::DEFAULT
@@ -40,7 +35,6 @@ pub static EF_NIGHT_DARK: Theme = Theme {
     info: HexColor::new(0x6FAFFF),
     success: HexColor::new(0x1FA526),
     error: HexColor::new(0xEF656A),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#1a202b",
         ..PaperDefaults::DARK

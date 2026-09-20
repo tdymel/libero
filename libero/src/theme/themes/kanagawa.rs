@@ -1,6 +1,5 @@
-//! Kanagawa - Lotus light and Wave dark, from `rebelot/kanagawa.nvim`, and
-//! Kanagawa Dragon, whose dark half is the Kopuz pack's and whose light half
-//! is Lotus again.
+//! Kanagawa: Lotus and Wave from `rebelot/kanagawa.nvim`, and Kanagawa Dragon
+//! (the Kopuz pack's dark, Lotus again for light).
 
 use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
@@ -15,7 +14,6 @@ pub static KANAGAWA_LIGHT: Theme = Theme {
     info: HexColor::new(0x4E8CA2),
     success: HexColor::new(0x6F894E),
     error: HexColor::new(0xE82424),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#d5cea3",
         ..PaperDefaults::DEFAULT
@@ -35,7 +33,6 @@ pub static KANAGAWA_DARK: Theme = Theme {
     info: HexColor::new(0x7FB4CA),
     success: HexColor::new(0x98BB6C),
     error: HexColor::new(0xE82424),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#16161d",
         ..PaperDefaults::DARK
@@ -55,7 +52,6 @@ pub static KANAGAWA_DRAGON_DARK: Theme = Theme {
     info: HexColor::new(0x8BA4B0),
     success: HexColor::new(0x87A987),
     error: HexColor::new(0xC4746E),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#1d1c19",
         ..PaperDefaults::DARK
@@ -68,9 +64,8 @@ impl ThemeSet {
     /// Kanagawa: [`KANAGAWA_LIGHT`] paired with [`KANAGAWA_DARK`].
     pub const KANAGAWA: ThemeSet = ThemeSet::pair("Kanagawa", &KANAGAWA_LIGHT, &KANAGAWA_DARK);
 
-    /// Kanagawa Dragon: [`KANAGAWA_LIGHT`] paired with
-    /// [`KANAGAWA_DRAGON_DARK`]. Lotus is kanagawa.nvim's one light theme,
-    /// the light half of Wave and Dragon alike.
+    /// Kanagawa Dragon: [`KANAGAWA_LIGHT`], the one light theme, paired with
+    /// [`KANAGAWA_DRAGON_DARK`].
     pub const KANAGAWA_DRAGON: ThemeSet =
         ThemeSet::pair("Kanagawa Dragon", &KANAGAWA_LIGHT, &KANAGAWA_DRAGON_DARK);
 }

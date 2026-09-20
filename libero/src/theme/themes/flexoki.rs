@@ -16,7 +16,6 @@ pub static FLEXOKI_LIGHT: Theme = Theme {
     info: HexColor::new(0x24837B),
     success: HexColor::new(0x66800B),
     error: HexColor::new(0xAF3029),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#f2f0e5",
         ..PaperDefaults::DEFAULT
@@ -36,7 +35,6 @@ pub static FLEXOKI_DARK: Theme = Theme {
     info: HexColor::new(0x3AA99F),
     success: HexColor::new(0x879A39),
     error: HexColor::new(0xD14D41),
-    // Warning stays Libero's amber, as in every ported theme.
     paper: PaperDefaults {
         background: "#1c1b1a",
         ..PaperDefaults::DARK

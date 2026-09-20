@@ -2,14 +2,11 @@ use std::fmt::{self, Display};
 
 use super::{ColorShade, ShadeRamp};
 
-/// WCAG 1.4.3 for text below 18.66px bold / 24px. Every colour this library
-/// resolves for a text or fill role is held to it, because a component cannot
-/// know how big the text on it will be.
+/// WCAG 1.4.3 for small text. Every text or fill role is held to it: a component
+/// can't know its text size.
 pub(crate) const TEXT_CONTRAST: f32 = 4.5;
 
-/// The two ends of a theme's page: the `surface` it is painted on and the
-/// `ink` text is set in. Carried together because a neutral ramp is mixed
-/// between them and every role derivation is measured against one of them.
+/// A theme's `surface` and `ink`: neutral ramps mix between them, roles measure against them.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Ends {
     pub(crate) surface: HexColor,
@@ -17,13 +14,8 @@ pub(crate) struct Ends {
 }
 
 impl Ends {
-    /// Which of the two ends `pick` - always pure black or pure white,
-    /// because that is all [`HexColor::contrast`] returns - is painted as.
-    ///
-    /// Not a black/white lookup: on a dark theme the ink is the *light* end,
-    /// so a fill that wants a white label is painted in the ink, and the ink
-    /// is not pure white. Everything that measures a foreground measures the
-    /// colour this returns, or it flatters the pair.
+    /// The end a black or white `pick` is painted as (on a dark theme, white is the ink).
+    /// Measure foregrounds against this, not pure black/white, or it flatters the pair.
     pub(crate) fn foreground(self, pick: HexColor) -> HexColor {
         if self.foreground_is_ink(pick) {
             self.ink
@@ -39,9 +31,7 @@ impl Ends {
         wants_dark == ink_is_dark
     }
 
-    /// The light theme's own ends. Nothing in the library mixes against
-    /// absolute white and black any more - every ramp uses the theme's ends -
-    /// so this is the tests' stand-in for "the default theme".
+    /// Pure white and black: the tests' stand-in for the default light theme.
     #[cfg(test)]
     pub(crate) const ABSOLUTE: Ends = Ends {
         surface: HexColor::new(0xFF_FF_FF),
@@ -49,6 +39,13 @@ impl Ends {
     };
 }
 
+/// An opaque RGB colour, e.g. a theme's palette base.
+///
+/// ```
+/// # use libero::theme::HexColor;
+/// const BRAND: HexColor = HexColor::new(0x22_8B_E6);
+/// assert_eq!(BRAND.to_string(), "#228BE6");
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct HexColor {
     rgb: u32,
@@ -62,9 +59,8 @@ impl HexColor {
         Self { rgb }
     }
 
-    /// `#rgb`/`#rrggbb`, `rgb()`, and fully-opaque `rgba()`. A translucent
-    /// `rgba()` is `None` on purpose - its visual color depends on whatever
-    /// shows through. Named colors, `hsl()` and vars are `None` too.
+    /// `#rgb`/`#rrggbb`, `rgb()`, opaque `rgba()`. `None` for a translucent `rgba()`
+    /// (its look depends on what shows through), names, `hsl()` and vars.
     pub(crate) fn parse(value: &str) -> Option<Self> {
         let value = value.trim();
 
@@ -135,18 +131,10 @@ impl HexColor {
         self.rgb
     }
 
-    /// **A neutral ramp mixes between the theme's own ends, a chromatic one
-    /// between absolute white and black.** The neutral ramp is not a
-    /// lightness scale, it is distance from the page: S1 is the step that
-    /// barely separates from the surface - a hover background - and S9 the
-    /// one furthest from it, up against the ink. Mixing it towards white
-    /// would put every subtle background at the wrong end of a dark theme,
-    /// and mixing it towards black would overshoot a surface that is not
-    /// itself black. On a light theme `ends` is white and black, so this is
-    /// exactly what it emitted before (todo 69 phase 3).
+    /// A ramp step as distance from the page: S1 barely leaves the surface, S9 is furthest.
+    /// Both start at the surface; see [`far_end`] for where they end (todo 69).
     pub(crate) const fn shade(self, shade: ColorShade, ramp: ShadeRamp, ends: Ends) -> Self {
         let percent = mix_percent(ramp, shade);
-        // The near end is the page itself; the far end is `far_end`'s.
         let far = far_end(ramp, ends);
 
         if percent >= 0 {
@@ -156,10 +144,8 @@ impl HexColor {
         }
     }
 
-    /// Black or white, picked by perceived brightness. It says which foreground *belongs* on this fill, not
-    /// whether that foreground passes - ask [`contrast_ratio`] for that.
-    ///
-    /// [`contrast_ratio`]: Self::contrast_ratio
+    /// Black or white by perceived brightness: which foreground belongs, not whether it
+    /// passes ([`contrast_ratio`](Self::contrast_ratio) says that).
     pub(crate) const fn contrast(self) -> Self {
         if self.luminance() >= 140 {
             HexColor::new(0x00_00_00)
@@ -168,9 +154,7 @@ impl HexColor {
         }
     }
 
-    /// Which `color-scheme` a surface of this colour is, so native controls
-    /// and the canvas are drawn on the same end of the greyscale as the rest
-    /// of the theme.
+    /// The `color-scheme` of a surface this colour, so native controls match the theme.
     pub(crate) const fn color_scheme(self) -> &'static str {
         if self.contrast().rgb() == 0xFF_FF_FF {
             "dark"
@@ -179,9 +163,7 @@ impl HexColor {
         }
     }
 
-    /// WCAG 2.x relative luminance. Not [`luminance`](Self::luminance): that
-    /// one is the cheap integer approximation `contrast()` sorts by, and it
-    /// is nowhere near the curve 1.4.3 is defined on.
+    /// WCAG 2.x relative luminance; [`luminance`](Self::luminance) is only a cheap approximation.
     pub(crate) fn relative_luminance(self) -> f32 {
         fn channel(value: u8) -> f32 {
             let value = value as f32 / 255.0;
@@ -202,14 +184,8 @@ impl HexColor {
         (lighter + 0.05) / (darker + 0.05)
     }
 
-    /// The foreground for this colour: [`contrast`](Self::contrast)'s pick,
-    /// unless it fails [`TEXT_CONTRAST`] and the other one does better.
-    ///
-    /// The fallback is for the steps the fill ramp is *not* re-based on -
-    /// the mid steps, where the brightness threshold and the WCAG curve
-    /// disagree. It never overrides the pick on a step that passes, which is
-    /// why a `blue` fill still gets white and is darkened instead of being
-    /// labelled in black.
+    /// [`contrast`](Self::contrast)'s pick, unless it fails [`TEXT_CONTRAST`] and the other
+    /// does better: for mid steps, where brightness and the WCAG curve disagree.
     pub(crate) fn readable_contrast(self, ends: Ends) -> Self {
         let picked = self.contrast();
         if self.contrast_ratio(ends.foreground(picked)) >= TEXT_CONTRAST {
@@ -231,21 +207,8 @@ impl HexColor {
         }
     }
 
-    /// The colour a *text* use of this base resolves to: the base itself
-    /// when it passes [`TEXT_CONTRAST`] on the surface, and otherwise the
-    /// **smallest** mix towards the ramp's far end that does - the end
-    /// furthest from the page, so darker on a paper and lighter on an inked
-    /// one. The far end itself when nothing passes, because there is nothing
-    /// further to offer and a wrong-looking colour beats no colour.
-    ///
-    /// The smallest mix, not the next ramp step: a step is up to 9% of a mix
-    /// away from the last, and jumping a whole one moved a palette's accent
-    /// visibly further from the colour its author picked than contrast asked
-    /// for. The ramps derived from this base are still ordinary ramps.
-    ///
-    /// `self` is the base (shade 6) of the ramp, as in [`shade`](Self::shade).
-    /// `cards` are the theme's other surfaces text lands on (a dark `Paper`
-    /// one step off the page, todo 314); it must read on those too.
+    /// This base (shade 6) as text: the smallest mix towards the far end that passes
+    /// [`TEXT_CONTRAST`] on the surface and every card (todo 314); a whole step overshoots.
     pub(crate) fn text_base(self, ramp: ShadeRamp, ends: Ends, cards: &[Self]) -> Self {
         self.first_mix(ramp, ends, |text| {
             text.contrast_ratio(ends.surface) >= TEXT_CONTRAST
@@ -255,30 +218,15 @@ impl HexColor {
         })
     }
 
-    /// The colour a *fill* use of this base resolves to: the smallest mix
-    /// towards the far end on which the foreground [`contrast`](Self::contrast)
-    /// picks passes [`TEXT_CONTRAST`]. On a fill like `blue.6`, where white is
-    /// picked and only reaches 3.56:1, this moves the fill until the pair
-    /// works.
-    ///
-    /// It moves away from the surface for the same reason the text one does.
-    /// On a paper page the fill darkens into white labels; on an inked one it
-    /// lightens into dark ones, which is also what keeps a filled control
-    /// visibly separate from the page it sits on. `info` is the case that
-    /// proves it: darkening on the dark theme runs out at `#0F7F8F`, whose
-    /// label lands at 3.98:1, and leaves a button 2:1 off its own page.
-    ///
-    /// The foreground measured is the one the theme paints - `ends.ink` or
-    /// `ends.surface` - not the pure black or white that picked the side.
+    /// This base as a fill: the smallest mix away from the surface on which its painted
+    /// foreground passes [`TEXT_CONTRAST`] (`blue.6` + white is only 3.56:1).
     pub(crate) fn fill_base(self, ramp: ShadeRamp, ends: Ends) -> Self {
         self.first_mix(ramp, ends, |fill| {
             fill.contrast_ratio(ends.foreground(fill.contrast())) >= TEXT_CONTRAST
         })
     }
 
-    /// [`text_base`](Self::text_base) for text drawn on other surfaces than
-    /// the page: the smallest mix towards black or white, opposite the page,
-    /// that reads at `floor` on every background. Any colour, not only a base.
+    /// [`text_base`](Self::text_base) for any colour on other backgrounds, at `floor`.
     pub(crate) fn readable_on(self, backgrounds: &[Self], floor: f32, ends: Ends) -> Self {
         let far = far_end(ShadeRamp::Chromatic, ends);
         (0..=100)
@@ -291,9 +239,7 @@ impl HexColor {
             .unwrap_or(far)
     }
 
-    /// Walks the mix from this base towards the ramp's far end one percent at
-    /// a time, as far as [`ColorShade::S9`] goes, and stops at the first
-    /// colour that `passes`.
+    /// The first 1% mix step towards the far end, up to [`ColorShade::S9`], that `passes`.
     fn first_mix(self, ramp: ShadeRamp, ends: Ends, passes: impl Fn(Self) -> bool) -> Self {
         let far = far_end(ramp, ends);
         let deepest = self.shade(ColorShade::S9, ramp, ends);
@@ -350,13 +296,8 @@ const fn mix_percent(ramp: ShadeRamp, shade: ColorShade) -> i8 {
     }
 }
 
-/// Where a ramp's dark-side steps mix towards. The near end is the page
-/// itself, in both ramps: a low step is a tint of the surface it will be
-/// drawn on. The far end differs. A neutral ramp ends at the theme's own
-/// `ink`, because its far steps *are* text. A chromatic one ends at pure black
-/// or pure white, whichever is opposite the page: its far steps exist to be
-/// legible, and a palette whose ink is only 6:1 on its own page would
-/// otherwise cap every accent's text role below 4.5:1.
+/// Where a ramp's far steps mix towards: a neutral ramp to the theme's `ink`, a chromatic
+/// one to pure black or white opposite the page, or a weak ink would cap accents below 4.5:1.
 const fn far_end(ramp: ShadeRamp, ends: Ends) -> HexColor {
     match ramp {
         ShadeRamp::Neutral => ends.ink,
@@ -392,8 +333,7 @@ mod tests {
         assert_eq!(CONTRAST.rgb(), 0xFF_FF_FF);
     }
 
-    /// The two ratios review 4 measured in Chromium (todo 239), so a change
-    /// to the maths is caught against a browser's own numbers.
+    /// Ratios measured in Chromium (todo 239).
     #[test]
     fn contrast_ratio_matches_what_the_browser_measured() {
         const WHITE: HexColor = HexColor::new(0xFF_FF_FF);
@@ -406,9 +346,8 @@ mod tests {
         assert!((ratio(0x4C_50_55) - 8.12).abs() < 0.01, "muted.7");
     }
 
-    /// `muted.6` is the boundary shade of every control outline, off track and
-    /// pending ring: 3:1 on the page and on `Paper` in both library themes,
-    /// and `muted.5` below it is not (WCAG 1.4.11, todo 490).
+    /// `muted.6`, every control outline's shade, is 3:1 on page and `Paper`; `muted.5`
+    /// is not (WCAG 1.4.11, todo 490).
     #[test]
     fn muted_6_is_the_first_boundary_shade_at_3_to_1() {
         // Measured against the library themes: exempt from the layer rule.
@@ -431,10 +370,7 @@ mod tests {
         }
     }
 
-    /// `blue.6` is the case picking a foreground alone cannot fix: white
-    /// is the right foreground for it and only reaches 3.56:1, so the fill
-    /// darkens instead of relabelling itself in black - but only as far as
-    /// the pair needs, not a whole ramp step.
+    /// `blue.6` + white is 3.56:1, so the fill darkens, only as far as the pair needs.
     #[test]
     fn the_two_roles_move_only_as_far_as_they_must() {
         const BLUE: HexColor = HexColor::new(0x22_8B_E6);
@@ -455,10 +391,7 @@ mod tests {
         let brand_distance = |c: HexColor| c.contrast_ratio(BLUE);
         assert!(brand_distance(text) < brand_distance(HexColor::new(0x1C_74_C1)));
 
-        // Why `fill_base` asks `contrast()` and not `readable_contrast()`:
-        // black *does* clear 4.5:1 on `blue.6` (5.90:1), so the readable pick
-        // would keep the fill and label the button in black. White is the
-        // foreground a blue fill wants; the fill moves instead.
+        // `fill_base` asks `contrast()`: `readable_contrast()` would label blue in black (5.90:1).
         assert_eq!(BLUE.contrast(), WHITE);
         assert_eq!(
             BLUE.readable_contrast(Ends::ABSOLUTE),
@@ -471,8 +404,7 @@ mod tests {
         assert_eq!(GREEN.fill_base(ShadeRamp::Chromatic, Ends::ABSOLUTE), GREEN);
     }
 
-    /// `Theme::DARK`'s blue reads 4.88:1 on its page but 4.24:1 on the
-    /// `Paper` one step off it, where every dialog puts its buttons (todo 314).
+    /// `Theme::DARK`'s blue: 4.88:1 on the page, 4.24:1 on dialogs' `Paper` (todo 314).
     #[test]
     fn the_text_role_reads_on_the_card_as_well_as_the_page() {
         const BLUE: HexColor = HexColor::new(0x22_8B_E6);
