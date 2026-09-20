@@ -11,22 +11,18 @@ pub(crate) enum MenuFocus {
     Last,
 }
 
-/// A [`Menu`](super::Menu)'s open state and the id that ties the trigger to
-/// the menu - held in the caller's own scope, like `use_combobox`.
-///
-/// It exists because the trigger is the one element `Menu` does not render:
-/// [`a11y_attributes`](Self::a11y_attributes) hands its wiring out.
+/// A [`Menu`](super::Menu)'s open state and the id tying the trigger to it.
 #[derive(Clone, Copy, PartialEq)]
 pub struct MenuState {
     id: Signal<String>,
     opened: Signal<bool>,
-    /// Bumped on every open, so the menu focuses an item again even when the
-    /// same item is asked for twice - ArrowDown on the trigger of a menu that
-    /// is already open.
+    /// Bumped per open, so the same item is focused again on a repeat request.
     request: Signal<(u64, MenuFocus)>,
 }
 
-/// One `Menu`'s state. Positional, like every hook.
+/// One `Menu`'s state.
+///
+/// Docs: <https://libero-ui.dev/overlay/menu>
 pub fn use_menu() -> MenuState {
     MenuState {
         id: use_id(),
@@ -36,10 +32,8 @@ pub fn use_menu() -> MenuState {
 }
 
 impl MenuState {
-    /// Not a hook: signals owned by the current scope, for a component that
-    /// holds a runtime number of menus - `Menubar`, one per menu, created on
-    /// first need and kept. `use_menu()` in a loop over a `Vec` would hand
-    /// hook slots from one menu to another as the `Vec` changes.
+    /// Not a hook, for a runtime number of menus (`Menubar`): `use_menu()` in a
+    /// loop would hand hook slots between menus as the `Vec` changes.
     pub(crate) fn new(id: String) -> Self {
         Self {
             id: Signal::new(id),
@@ -48,7 +42,6 @@ impl MenuState {
         }
     }
 
-    /// The id every part of the wiring is built from.
     pub fn id(&self) -> String {
         (self.id)()
     }
@@ -70,8 +63,7 @@ impl MenuState {
     }
 
     pub fn toggle(&self) {
-        // Copied out first: matching on the `peek()` itself holds the borrow
-        // through the arm that writes.
+        // Copied out: matching on `peek()` holds the borrow through the write.
         let opened = *self.opened.peek();
         match opened {
             true => self.close(),
@@ -93,9 +85,7 @@ impl MenuState {
         (self.request)()
     }
 
-    /// The trigger's `id`, `aria-haspopup="menu"`, `aria-expanded`, and
-    /// `aria-controls` while the menu is open. Spread it on the control inside
-    /// the `Menu`:
+    /// The trigger's ARIA wiring. Spread it on the control inside the `Menu`:
     ///
     /// ```no_run
     /// # use dioxus::prelude::*;
@@ -114,8 +104,7 @@ impl MenuState {
             attr("aria-haspopup", "menu"),
             attr("aria-expanded", opened.to_string()),
         ];
-        // Only while open: it would otherwise name an element that is not in
-        // the document.
+        // Only while open, when the menu is in the document.
         if opened {
             attributes.push(attr("aria-controls", menu_id(&id)));
         }

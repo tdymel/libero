@@ -17,22 +17,17 @@ const VISIBLE_STATE: &str = "visible";
 const ANIMATE_STATE: &str = "animate";
 const CIRCLE_STATE: &str = "circle";
 
-/// Where the pulse stops under reduced motion: between its two ends. Stopping
-/// on `0.4` reads as a disabled control rather than a placeholder.
+/// Reduced-motion resting opacity; `0.4` would read as a disabled control.
 const SETTLED_OPACITY: &str = "0.7";
 
 static SKELETON_BASE_SX: StaticSx = StaticSx::new(|| {
     SkeletonDefaults::theme_vars()
-        // Unset, a skeleton is the size of its children - the wrapper case
-        // needs neither prop.
         .height(SKELETON_HEIGHT.value_or("auto"))
         .width(SKELETON_WIDTH.value_or("100%"))
         .border_radius(SKELETON_RADIUS.value())
-        // Its own compositing layer, so the pulse on `::after` does not
-        // repaint the subtree underneath.
+        // Own compositing layer: the pulse does not repaint the subtree.
         .transform("translateZ(0)")
-        // A circle with no `height` has no width to copy either: it wraps
-        // its children, so it shrinks to them instead of spanning the row.
+        // A circle without `height` shrinks to its children.
         .when(
             CIRCLE_STATE,
             sx().var(SKELETON_RADIUS, "1000px")
@@ -40,11 +35,8 @@ static SKELETON_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             VISIBLE_STATE,
-            // The children are hidden, not covered: every descendant inherits
-            // `visibility: hidden`, so it keeps its layout but is not painted,
-            // whatever its z-index, and whatever the surface behind it. Only
-            // the grey opts back in. A descendant that sets `visibility:
-            // visible` itself would show through - the one hole.
+            // Children are hidden, not covered, so any z-index or surface works.
+            // A descendant setting `visibility: visible` itself shows through.
             sx().position("relative")
                 .overflow("hidden")
                 .visibility("hidden")
@@ -55,13 +47,11 @@ static SKELETON_BASE_SX: StaticSx = StaticSx::new(|| {
                         .inset("0")
                         .visibility("visible")
                         .background(SKELETON_COLOR.value())
-                        // Forced colours paint it `Canvas`: a blank card.
+                        // Forced colours would paint it `Canvas`: a blank card.
                         .media(FORCED_COLORS, sx().background("GrayText")),
                 ),
         )
-        // Only `::after` pulses, never the root: the root's opacity would fade
-        // the children as well once the skeleton is no longer visible. Without
-        // `visible` there is no `::after` to animate.
+        // Only `::after` pulses: the root's opacity would fade the children too.
         .when(
             ANIMATE_STATE,
             sx().selector(
@@ -78,9 +68,7 @@ static SKELETON_BASE_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// `circle` makes the width the height, so one number draws a round avatar
-/// placeholder. Without a height the width stays unset, and the circle is as
-/// wide as its children.
+/// `circle` copies the height into the width.
 fn skeleton_variables(height: Option<String>, width: Option<String>, circle: bool) -> Variables {
     let width = if circle { height.clone() } else { width };
     variables()
@@ -90,8 +78,7 @@ fn skeleton_variables(height: Option<String>, width: Option<String>, circle: boo
 
 base_props! {
     pub struct SkeletonProps {
-        /// Cover the children, or draw the standalone shape. `false` shows the
-        /// children as they are.
+        /// Show the placeholder; `false` shows the children.
         #[props(default = true)]
         visible: bool,
         /// A CSS length. Unset, the height of the children.
@@ -100,8 +87,7 @@ base_props! {
         /// A CSS length. Unset, `100%`. Ignored when `circle`.
         #[props(default, into)]
         width: Input<ThemeAwareValue>,
-        /// Width equals `height`, corners fully round. Without `height`, as wide
-        /// as the children.
+        /// Round, with width equal to `height`.
         #[props(default)]
         circle: bool,
         /// Corner. Ignored when `circle`.
@@ -117,20 +103,18 @@ base_props! {
 
 /// A placeholder for content that is still loading.
 ///
-/// Two ways to use it. With `height`/`width` and no children it is a grey
-/// shape, and a layout of them stands in for the real one. Wrapped around the
-/// real content, it covers that content while `visible` and gets out of the
-/// way when `visible` turns `false` - the layout is written once, and the
-/// placeholder is exactly its size because it *is* the content underneath.
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::Skeleton;
+/// # fn app() -> Element {
+/// # let loading = use_signal(|| true);
+/// # rsx! {
+/// Skeleton { height: "40px", circle: true }
+/// Skeleton { visible: loading(), "Loaded text" }
+/// # } }
+/// ```
 ///
-/// While `visible` the root carries `aria-hidden="true"` and `inert`: covered
-/// content is neither announced nor reachable with Tab. Announcing the wait is
-/// the caller's region's job - `aria-busy="true"` on it, the same rule as
-/// `Loader`.
-///
-/// The children are hidden with `visibility: hidden`, so the grey is right on
-/// any surface. A descendant that sets `visibility: visible` on itself shows
-/// through - do not do that under a skeleton.
+/// Docs: <https://libero-ui.dev/feedback/skeleton>
 #[component]
 pub fn Skeleton(props: SkeletonProps) -> Element {
     let theme = use_theme();

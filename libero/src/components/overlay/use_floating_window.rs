@@ -20,8 +20,7 @@ pub struct FloatingWindowHandle {
 }
 
 impl FloatingWindowHandle {
-    /// Shows the window, remembering where focus was so closing can put it
-    /// back. Opening an open window does nothing.
+    /// Shows the window, remembering where focus was for the close.
     pub fn open(&self) {
         if *self.open.peek() {
             return;
@@ -39,8 +38,8 @@ impl FloatingWindowHandle {
         open.set(true);
     }
 
-    /// Hides the window and returns focus to whatever opened it, unless focus
-    /// has moved on to the page or another window: a non-modal window leaves it there.
+    /// Hides the window and returns focus to the opener, unless focus already
+    /// moved to the page or another window.
     pub fn close(&self) {
         if !*self.open.peek() {
             return;
@@ -66,14 +65,7 @@ impl FloatingWindowHandle {
     }
 }
 
-/// A non-modal window over the page: a title bar that drags and moves by
-/// keyboard, an optional corner resize handle, Escape and a close button.
-/// The hook owns whether it exists, so no caller holds an open flag; the
-/// window owns where it is and how big.
-///
-/// It is not a modal: no focus trap, no overlay, and the page stays usable.
-/// Focus moves into the window on open and back to the trigger on close,
-/// unless it had already left the window.
+/// A non-modal window over the page, draggable and optionally resizable.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -89,8 +81,9 @@ impl FloatingWindowHandle {
 /// # #[component] fn InspectorBody() -> Element { rsx! {} }
 /// ```
 ///
-/// Call it under `LiberoProvider`, in a component that outlives every
-/// trigger: the window is portaled from there.
+/// Call it in a component that outlives every trigger: the window portals from there.
+///
+/// Docs: <https://libero-ui.dev/overlay/floating-window>
 pub fn use_floating_window(
     options: FloatingWindowOptions,
     render: impl FnMut(FloatingWindowHandle) -> Element + 'static,

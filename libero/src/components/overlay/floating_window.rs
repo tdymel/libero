@@ -48,14 +48,10 @@ pub struct FloatingWindowOptions {
     pub placement: Input<Placement>,
     /// Draws the corner resize handle.
     pub resizable: bool,
-    /// Pins it where `placement` put it: no drag, no keyboard move, no Move
-    /// in the title-bar menu.
+    /// Pins it where `placement` put it: no moving.
     pub pinned: bool,
     pub z_index: Input<ThemeAwareValue>,
-    /// On the window itself - this is where `min_width`/`max_width` and
-    /// friends go. The resize handle asks for a size, and these clamp it.
-    /// The viewport cap always applies on top: a `max_width("40rem")` is
-    /// still no wider than the screen.
+    /// On the window itself; its `min_*`/`max_*` clamp a resize, within the viewport.
     pub sx: Input<Sx>,
     /// After a drag, a keyboard or button move, or a Reset.
     pub onmove: Option<Callback<WindowRect>>,
@@ -65,17 +61,14 @@ pub struct FloatingWindowOptions {
 
 static NEXT_WINDOW_ID: AtomicU64 = AtomicU64::new(0);
 
-// A window is a `Paper`: background, border, radius, shadow and the focus
-// contrast all come from `paper_sx()`. The parts are keyed by data attributes
-// under the one class, the `Accordion` arrangement.
+// `paper_sx()`, with the parts keyed by data attributes under one class.
 static WINDOW_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
         // The resize handle's containing block.
         .position("relative")
         .display("flex")
         .flex_direction("column")
-        // The cap when the caller's `sx` sets no max. A caller's max replaces
-        // these, so the `Float` wrapper and the resized width cap it again.
+        // A caller's max replaces these; the `Float` wrapper caps it again.
         .max_width("100dvw")
         .max_height("100dvh")
         .overflow("hidden")
@@ -159,8 +152,7 @@ static FLOAT_SX: StaticSx = StaticSx::new(|| {
         .flex_direction("column")
 });
 
-/// What the title-bar menu asked for: the single-pointer way to move and
-/// resize (2.5.7), where the handles need a drag.
+/// The title-bar menu's single-pointer move and resize (WCAG 2.5.7).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Adjust {
     Move,
@@ -168,7 +160,6 @@ enum Adjust {
     Reset,
 }
 
-/// Arrow keys to a pixel delta, `None` for any other key.
 fn arrow_delta(key: &Key, step: f64) -> Option<(f64, f64)> {
     match key {
         Key::ArrowLeft => Some((-step, 0.0)),
@@ -179,17 +170,14 @@ fn arrow_delta(key: &Key, step: f64) -> Option<(f64, f64)> {
     }
 }
 
-/// `left`/`top` for a dragged window: where it was put, clamped into the
-/// viewport by CSS so it re-clamps when the viewport changes, with no
-/// listener. A window larger than the viewport pins to the top-left, because
-/// `clamp` answers its minimum when the maximum is below it.
+/// Clamped into the viewport by CSS, so it re-clamps with no listener. A window
+/// larger than the viewport pins top-left.
 fn clamped(at: f64, size: Option<f64>, viewport: &str) -> String {
     let size = size.unwrap_or(0.0);
     format!("clamp(0px, {at}px, calc({viewport} - {size}px))")
 }
 
-/// The size range the window's CSS clamps a requested size into, in pixels:
-/// the caller's `min-*`/`max-*`, and the viewport on top of the max.
+/// The pixel range CSS clamps a requested size into.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct WindowBounds {
     min: (f64, f64),
@@ -206,8 +194,7 @@ impl WindowBounds {
     }
 }
 
-/// Reads the window's computed `min-*`/`max-*` and the viewport into `bounds`.
-/// Where there is no computed style, `bounds` stays as it was.
+/// Reads computed `min-*`/`max-*` and the viewport into `bounds`, if available.
 fn read_bounds(root: ElementHandle, mut bounds: Signal<Option<WindowBounds>>) {
     let reads = ["min-width", "min-height", "max-width", "max-height"]
         .map(|property| root.computed_px(property));
@@ -261,10 +248,8 @@ fn active_element() -> Option<Rc<dyn ElementApi>> {
         .map(Rc::from)
 }
 
-/// F6 moves focus between the page and the topmost window (todo 572): the
-/// window is portaled past the page's end, so Tab reaches it last.
-///
-/// Not while a dismissible layer is open: a modal or a popover keeps it.
+/// F6 moves focus between the page and the topmost window, which Tab reaches
+/// last (todo 572). Not while a modal or popover is open.
 fn use_page_switch(
     root: ElementHandle,
     host: WindowHost,
@@ -274,8 +259,7 @@ fn use_page_switch(
     let layer = use_dismiss_layer();
     // Where the page had focus: the opener at first, then wherever F6 left.
     let mut page = use_hook(|| CopyValue::new(opener.call(())));
-    // Bumped from the key callback, which on the web runs outside every scope;
-    // the effect below moves focus (the `Spotlight` hotkey's shape).
+    // The key callback runs outside every scope on the web; an effect moves focus.
     let tick = use_signal(|| 0u64);
     let slot: Rc<RefCell<Option<Box<dyn KeySubscription>>>> = use_hook(|| {
         let callback = Box::new(move |chord: KeyChord| {
@@ -324,9 +308,8 @@ fn use_page_switch(
     });
 }
 
-/// Reads the window's current rect and hands it to `callback`. The reads
-/// start here, in the handler, and are awaited in the task - see
-/// `platform::Read`.
+/// Hands the window's rect to `callback`. The reads start in the handler, awaited
+/// in the task (`platform::Read`).
 fn report(root: crate::hooks::ElementHandle, callback: Option<Callback<WindowRect>>) {
     let Some(callback) = callback else { return };
     let (offset, dimensions) = (root.client_offset(), root.dimensions());
@@ -354,8 +337,7 @@ pub(crate) struct FloatingWindowProps {
     children: Element,
 }
 
-/// The window the hook portals. It owns its geometry: the caller never sees
-/// a position unless it asks through `onmove`/`onresize`.
+/// The window the hook portals. It owns its geometry.
 #[component]
 pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     let defaults = crate::hooks::use_theme().floating_window;
@@ -451,11 +433,8 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         }
     });
 
-    // Not a dismiss layer: a window is non-modal and hears only presses from
-    // inside it. It still skips one that something inside already took - an
-    // open `Select` closing its list, or on the web a `HoverCard` answering at
-    // the document - so one Escape closes one layer, as in `Modal`. A held
-    // Escape's repeats and a composing one are not closes either.
+    // Not a dismiss layer, so only presses inside it; one Escape closes one layer,
+    // as in `Modal`, and a held or composing Escape closes nothing.
     let onkeydown = move |event: Event<KeyboardData>| {
         if escape_closes(&event) {
             event.stop_propagation();
@@ -484,10 +463,8 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         ),
     };
 
-    // Inline, so a resize beats a `width`/`height` in the caller's `sx`, which
-    // stays the initial size (todo 922). The width is capped at the viewport
-    // here, because a caller's `max_width` replaces the window's own cap; the
-    // height shrinks into the wrapper's column flexbox, capped at `100dvh`.
+    // Inline, so a resize beats the caller's `sx` size (todo 922). Width capped
+    // here as a caller's `max_width` replaces ours; height by the wrapper.
     let resized_style =
         size().map(|(width, height)| format!("width:min({width}px, 100dvw);height:{height}px;"));
 
@@ -572,9 +549,8 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                         role: "separator",
                         tabindex: "0",
                         "aria-label": labels.resize_handle,
-                        // One handle resizes two axes, so a single number is
-                        // a compromise: the width, with the whole size in words.
-                        // Real pixels: ARIA's implicit 0..100 clamps the value.
+                        // The width in real pixels (ARIA's implicit 0..100 would
+                        // clamp), with the whole size in words.
                         "aria-valuemin": value_min,
                         "aria-valuemax": value_max,
                         "aria-valuenow": "{width.round()}",
@@ -596,12 +572,8 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
             offset_x,
             offset_y,
             z_index,
-            // As wide as the window, not as wide as the space left of a
-            // centred anchor - `left: 50%` would otherwise wrap it at half
-            // the viewport. The viewport cap lives here too, where no caller
-            // `sx` reaches: an auto-width window stretches to this box, and the
-            // column flexbox shrinks the window's height into it (`overflow:
-            // hidden` drops a flex item's automatic minimum to 0).
+            // As wide as the window (`left: 50%` would wrap it at half the
+            // viewport), and the viewport cap no caller `sx` reaches.
             sx: &FLOAT_SX,
             {window}
         }
@@ -692,9 +664,7 @@ fn WindowTitleBar(
     }
 }
 
-/// The step buttons Move or Resize in the title-bar menu shows: a click moves
-/// or resizes by the theme's step, with no drag. Focus starts on the first;
-/// Done or Escape hides them.
+/// The step buttons the menu's Move or Resize shows, until Done or Escape.
 #[component]
 fn WindowSteps(
     adjust: Adjust,
@@ -761,9 +731,7 @@ fn WindowSteps(
     }
 }
 
-/// A floating window's geometry: where it is, how big it is, and the two
-/// drags that move and resize it. One `Copy` argument, so the title bar, the
-/// corner handle and the window itself all read the same state.
+/// Position, size and the two drags, as one `Copy` value every part shares.
 #[derive(Clone, Copy)]
 struct WindowGeometry {
     root: ElementHandle,
@@ -810,9 +778,7 @@ fn use_window_geometry(
     let mut move_origin = use_signal(|| None::<(f64, f64)>);
     let mut size_origin = use_signal(|| None::<(f64, f64)>);
 
-    // A keyboard move or resize reports once the new geometry has rendered:
-    // reading the rect in the same task as the write would report the old one.
-    // An effect runs after the render commits, and the read forces layout.
+    // Reports after the render commits: a read in the writing task gets the old rect.
     let mut owed = use_signal(Vec::<Callback<WindowRect>>::new);
     use_effect(move || {
         let callbacks = owed();
@@ -972,9 +938,7 @@ impl WindowGeometry {
             .extend(self.onmove.into_iter().chain(self.onresize));
     }
 
-    /// The corner handle: Arrow resizes by a step, Shift+Arrow by a pixel, and
-    /// Home/End ask for nothing and for everything, which the window's
-    /// min/max constraints then clamp.
+    /// Arrow resizes by a step, Shift+Arrow by a pixel, Home/End to the min/max.
     fn resize_key(self, event: Event<KeyboardData>) {
         if has_shortcut_modifier(&event) {
             return;

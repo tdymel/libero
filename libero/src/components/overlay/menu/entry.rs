@@ -6,9 +6,7 @@ use crate::{localization::MenuLabels, utils::warn};
 #[derive(Clone, PartialEq)]
 pub enum MenuEntry {
     Item(MenuItem),
-    /// A named section: `role="group"`, labelled by its name, so a screen
-    /// reader announces "Edit" with the items under it. Inline - not a
-    /// submenu.
+    /// A named, inline section, `role="group"`. Not a submenu.
     Group {
         label: String,
         items: Vec<MenuEntry>,
@@ -23,9 +21,8 @@ impl From<MenuItem> for MenuEntry {
     }
 }
 
-/// What a menu item does when it is chosen: either run a command or open a
-/// submenu, never both. An item that opened a submenu *and* ran a command
-/// would run it on every ArrowRight and every hover that opened the submenu.
+/// Run a command or open a submenu, never both: the command would run on every
+/// hover that opened the submenu.
 #[derive(Clone, Default)]
 enum Action {
     #[default]
@@ -50,10 +47,7 @@ enum Action {
 /// # }
 /// ```
 ///
-/// `leading` and `trailing` land inside the item's `<button>`, so they must not
-/// be interactive themselves: a button inside a button is invalid HTML and
-/// cannot be reached from the keyboard. An icon or a badge is what they are
-/// for; a shortcut hint is [`shortcut`](Self::shortcut)'s.
+/// `leading` and `trailing` sit inside a `<button>`: never interactive.
 #[derive(Clone)]
 pub struct MenuItem {
     pub(super) label: String,
@@ -85,11 +79,8 @@ impl Check {
     }
 }
 
-/// **Never equal**, the way an `Element` is never equal. An item holds a
-/// `Callback`, and a `Callback` from the same scope compares equal across
-/// renders whatever it captures ([[codebase/dioxus-memoization-traps]]), so a
-/// derived `PartialEq` would let a submenu memoize over a command the caller
-/// had since replaced.
+/// Never equal: a same-scope `Callback` compares equal whatever it captures, so a
+/// submenu would memoize over a replaced command ([[codebase/dioxus-memoization-traps]]).
 impl PartialEq for MenuItem {
     fn eq(&self, _: &Self) -> bool {
         false
@@ -97,8 +88,7 @@ impl PartialEq for MenuItem {
 }
 
 impl MenuItem {
-    /// `label` is the accessible name, the visible text, and what typeahead
-    /// matches against.
+    /// `label` is the visible text, the accessible name and the typeahead key.
     pub fn new(label: impl Into<String>) -> Self {
         Self {
             label: label.into(),
@@ -111,58 +101,38 @@ impl MenuItem {
         }
     }
 
-    /// Runs when the item is chosen - clicked, or Enter or Space on it. The
-    /// menu then closes unless it was told not to (`close_on_select`).
-    ///
-    /// Replaces a [`submenu`](Self::submenu): an item does one or the other.
+    /// Runs when the item is chosen. Replaces a [`submenu`](Self::submenu).
     pub fn onselect(mut self, onselect: impl FnMut(()) + 'static) -> Self {
         self.action = Action::Select(Callback::new(onselect));
         self
     }
 
-    /// Makes this item open a second menu, beside it, rather than run
-    /// anything. ArrowRight, Enter, Space, a click, or resting the pointer on
-    /// it opens it.
-    ///
-    /// Replaces an [`onselect`](Self::onselect): an item does one or the
-    /// other.
+    /// Opens a second menu beside it. Replaces an [`onselect`](Self::onselect).
     pub fn submenu(mut self, items: Vec<MenuEntry>) -> Self {
         self.action = Action::Submenu(items);
         self
     }
 
-    /// Drawn before the label - an icon.
+    /// Drawn before the label, e.g. an icon.
     pub fn leading(mut self, leading: Element) -> Self {
         self.leading = Some(leading);
         self
     }
 
-    /// Drawn after the label, at the far end - a badge. It is part of the
-    /// accessible name; a shortcut hint belongs in [`shortcut`](Self::shortcut).
+    /// Drawn at the far end, e.g. a badge. Part of the accessible name.
     pub fn trailing(mut self, trailing: Element) -> Self {
         self.trailing = Some(trailing);
         self
     }
 
-    /// Makes it one choice of several - a `menuitemradio` announcing
-    /// `aria-checked` - with a check drawn before the label while `checked`.
-    /// Put the choices in one [`MenuEntry::Group`], which is the radio group
-    /// a reader hears; keeping exactly one of them checked is the caller's.
-    /// A menu holding a checked item opens with focus on it.
-    ///
-    /// Replaces a [`checkbox`](Self::checkbox), with a debug warning: an item
-    /// is one or the other.
+    /// One choice of several (`menuitemradio`); group the choices in a
+    /// [`MenuEntry::Group`]. Replaces a [`checkbox`](Self::checkbox).
     pub fn radio(self, checked: bool) -> Self {
         self.with_check(Check::Radio(checked))
     }
 
-    /// Makes it an independent on/off setting ("Show ruler") - a
-    /// `menuitemcheckbox` announcing `aria-checked` - with a check drawn
-    /// before the label while `checked`. Flipping it is the caller's, in
-    /// [`onselect`](Self::onselect).
-    ///
-    /// Replaces a [`radio`](Self::radio), with a debug warning: an item is
-    /// one or the other.
+    /// An on/off setting (`menuitemcheckbox`); flip it in
+    /// [`onselect`](Self::onselect). Replaces a [`radio`](Self::radio).
     pub fn checkbox(self, checked: bool) -> Self {
         self.with_check(Check::Checkbox(checked))
     }
@@ -181,12 +151,8 @@ impl MenuItem {
         self
     }
 
-    /// The key that runs this item outside the menu, in `aria-keyshortcuts`
-    /// syntax: `"Control+X"`, `"Control+Shift+S"`. Announced through that
-    /// attribute and drawn as a hint at the far end, hidden from readers so
-    /// it stays out of the name. Drawn as given, `Control` shortened to
-    /// `Ctrl`: no platform mapping (`Meta` is not shown as Cmd). The menu does
-    /// not listen for it: binding the key is the caller's.
+    /// A shortcut hint in `aria-keyshortcuts` syntax. The caller binds the key;
+    /// the menu does not listen for it.
     ///
     /// ```no_run
     /// # use libero::components::MenuItem;
@@ -200,8 +166,7 @@ impl MenuItem {
         self
     }
 
-    /// Stays in the arrow-key order - a reader still hears that it exists -
-    /// but cannot be chosen, and typeahead skips it.
+    /// Stays in the arrow-key order but cannot be chosen; typeahead skips it.
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -222,9 +187,7 @@ impl MenuItem {
     }
 }
 
-/// The visible hint for an `aria-keyshortcuts` value: its first alternative,
-/// with each modifier drawn in `labels`' words - "Control+X Meta+X" draws
-/// "Ctrl+X".
+/// The first alternative, modifiers in `labels`' words: "Control+X Meta+X" is "Ctrl+X".
 pub(super) fn shortcut_hint(keys: &str, labels: &MenuLabels) -> String {
     let first = keys.split_whitespace().next().unwrap_or_default();
     first
@@ -240,8 +203,7 @@ pub(super) fn shortcut_hint(keys: &str, labels: &MenuLabels) -> String {
         .join("+")
 }
 
-/// Every item, in order, through groups - the order the arrow keys walk and
-/// the index `data-menu-index` carries.
+/// Every item through groups, in arrow-key and `data-menu-index` order.
 pub(super) fn flatten(entries: &[MenuEntry]) -> Vec<&MenuItem> {
     fn walk<'a>(entries: &'a [MenuEntry], out: &mut Vec<&'a MenuItem>) {
         for entry in entries {

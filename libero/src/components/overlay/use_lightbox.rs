@@ -33,10 +33,7 @@ impl LightboxItem {
     }
 }
 
-/// What one opening shows: the gallery, and where it starts. The gallery
-/// travels with the opening rather than with the hook, because a `use_modal`
-/// render closure captures at its first render - a gallery passed there would
-/// freeze.
+/// What one opening shows: the gallery, and where it starts.
 #[derive(Clone, Debug, PartialEq)]
 pub struct LightboxOpening {
     pub items: Vec<LightboxItem>,
@@ -77,11 +74,9 @@ pub struct LightboxOptions {
     pub captions: bool,
     /// The previous / next arrows.
     pub controls: bool,
-    /// Neighbours each side of the current picture loaded `eager`; the rest
-    /// are `lazy`.
+    /// Neighbours each side loaded `eager`; the rest are `lazy`.
     pub preload: usize,
-    /// A downward swipe on a touch screen closes. Off while zoomed, where a
-    /// drag pans.
+    /// A downward touch swipe closes, unless zoomed.
     pub close_on_swipe_down: bool,
     /// Names the dialog. Defaults to the theme's `"Gallery"`.
     pub aria_label: Option<String>,
@@ -102,11 +97,7 @@ impl Default for LightboxOptions {
     }
 }
 
-/// A modal image viewer: [`use_modal`] with a gallery around it - same handle,
-/// same openings.
-///
-/// Open it from the thumbnail's own click handler, and focus goes back to that
-/// thumbnail when it closes.
+/// A modal image viewer: [`use_modal`] with a gallery around it.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -124,6 +115,8 @@ impl Default for LightboxOptions {
 /// # rsx! {}
 /// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/overlay/lightbox>
 pub fn use_lightbox(options: LightboxOptions) -> ModalHandle<LightboxOpening> {
     use_modal(move |s: ModalScope<LightboxOpening>| {
         rsx! {

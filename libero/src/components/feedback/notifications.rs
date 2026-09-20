@@ -39,9 +39,7 @@ thread_local! {
     static HOTKEYS: RefCell<Vec<(u64, NotificationStore, Key)>> = const { RefCell::new(Vec::new()) };
 }
 
-/// One stack, anchored to a corner or edge of the viewport, or of a
-/// contained host. It lets the pointer
-/// through: only the notifications in it take clicks.
+/// One stack. It lets the pointer through: only its notifications take clicks.
 static STACK_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
@@ -61,9 +59,8 @@ static CONTAINED_SX: StaticSx = StaticSx::new(|| sx().position("relative"));
 static LANDMARK_SX: StaticSx =
     StaticSx::new(|| sx().position("absolute").inset("0").pointer_events("none"));
 
-/// One live region. Both are always rendered, even empty, and the space
-/// between the two comes from here rather than from a `gap` on the stack, so
-/// an empty region takes none.
+/// One live region, always rendered. Spaced here, not by a `gap`, so an empty
+/// one takes no space.
 static REGION_SX: StaticSx = StaticSx::new(|| {
     sx().selector(
         "&:not(:empty) + &:not(:empty)",
@@ -71,7 +68,6 @@ static REGION_SX: StaticSx = StaticSx::new(|| {
     )
 });
 
-/// A region's list, rendered only while it holds a notification.
 static LIST_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
@@ -89,9 +85,8 @@ static ITEM_SX: StaticSx = StaticSx::new(|| {
         .selector("&:focus-visible", focus_ring_sx())
         .animation(animation(NOTIFICATION_IN, "ease-out"))
         .media(REDUCED_MOTION, sx().animation("none"))
-        // The end state is declared, not only animated to, so it holds for the
-        // few ms between the animation's end and the unmount - and is where a
-        // reduced-motion reader lands at once.
+        // Declared, not only animated to: it holds until the unmount, and is
+        // where reduced motion lands at once.
         .when(
             "leaving",
             sx().opacity("0")
@@ -102,8 +97,7 @@ static ITEM_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// The default template's surface floats over the page, so it takes back the
-/// shadow `Alert` drops for sitting in the flow.
+/// Floats over the page, so it takes back the shadow `Alert` drops.
 static DEFAULT_TEMPLATE_SX: StaticSx =
     StaticSx::new(|| sx().box_shadow(SizeCss::SHADOW.value(Size::Md)));
 
@@ -113,15 +107,12 @@ static DEFAULT_TEMPLATE_SX: StaticSx =
 pub struct NotificationId(u64);
 
 /// Which of the two live regions a notification is announced from.
-///
-/// Not derived from a colour: a custom `T` has no colour the library can read,
-/// and an error that is not urgent should not interrupt.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum NotificationLive {
-    /// Announced when the reader is idle. Right for nearly everything.
+    /// Announced when the reader is idle.
     #[default]
     Polite,
-    /// Interrupts the reader. For what cannot wait.
+    /// Interrupts the reader.
     Assertive,
 }
 
@@ -132,8 +123,7 @@ pub struct NotificationOptions {
     pub placement: Option<Placement>,
     /// `None` is the host's `auto_close`.
     pub auto_close: Option<AutoClose>,
-    /// Whether the template offers a close control. The default template
-    /// reads it; a custom one reads it from [`NotificationScope::closable`].
+    /// Offer a close control; see [`NotificationScope::closable`].
     pub closable: bool,
     pub live: NotificationLive,
 }
@@ -153,15 +143,13 @@ impl Default for NotificationOptions {
 #[derive(Clone, PartialEq, Default)]
 pub struct NotificationData {
     pub title: Option<String>,
-    /// Empty renders no message slot, so a title-only notification has no
-    /// `aria-describedby` pointing at nothing.
+    /// Empty renders no message slot.
     pub message: String,
-    /// `Alert`'s `color`; unset is `theme.alert.color`.
+    /// `Alert`'s `color`.
     pub color: Input<ThemeAwareValue>,
-    /// `Alert`'s `variant`; unset is `theme.alert.variant`.
+    /// `Alert`'s `variant`.
     pub variant: Input<Variant>,
-    /// A glyph only. It is rendered by the host long after the scope that
-    /// built it may be gone, so it must not carry event handlers.
+    /// A glyph only, without event handlers: it may outlive the scope that built it.
     pub icon: Option<Element>,
 }
 
@@ -186,28 +174,19 @@ type Draw = Rc<dyn Fn() -> Element>;
 /// compile once whatever `T`s an app uses.
 struct Entry {
     id: NotificationId,
-    /// The `T`, so [`NotificationHandle::update`] can replace it and
-    /// [`NotificationScope::args`] can read it. Only ever downcast to the `T`
-    /// of the handle that stored it.
-    ///
-    /// A signal of its own, not a field read through `entries`: only the
-    /// template that reads it redraws when it changes, and an `update` leaves
-    /// the host and every other notification alone.
+    /// The `T`. Its own signal, so an `update` redraws only this template.
     args: Signal<std::boxed::Box<dyn Any>>,
-    /// The template with `T` still known, called by the notification's own
-    /// scope.
+    /// The template with `T` still known.
     draw: Draw,
     placement: Option<Placement>,
-    /// The stack it was first drawn in. It stays there when the host's
-    /// `placement` changes: a move would remount it, announce it again and
-    /// restart its timer (todo 577).
+    /// Stays in its first stack when the host's `placement` changes: a move
+    /// would remount, re-announce and restart the timer (todo 577).
     drawn_in: Cell<Option<Placement>>,
     auto_close: Option<AutoClose>,
     live: NotificationLive,
-    /// Closing: the exit is running, and it is removed when that ends.
+    /// The exit is running; removed when it ends.
     leaving: bool,
-    /// Has been on screen. One that never was - queued past the limit - has
-    /// no exit to run and is removed at once.
+    /// Has been on screen. A queued one has no exit to run.
     shown: Cell<bool>,
 }
 
@@ -218,15 +197,12 @@ impl Drop for Entry {
     }
 }
 
-/// The queue. The app's lives in the root scope, so it outlives every
-/// component that raised a notification: a notification survives its caller
-/// navigating away. A contained host owns one of its own.
+/// The queue. The app's lives in the root scope, so a notification survives its
+/// caller navigating away. A contained host owns one of its own.
 #[derive(Clone, Copy, PartialEq)]
 struct NotificationStore {
     entries: Signal<Vec<Entry>>,
-    /// Which notification the pointer is on, and which one holds focus. Either
-    /// pauses every timer - hovering to read one must not let the rest vanish,
-    /// and a close button someone tabbed to must not disappear under them.
+    /// Hover or focus on any notification pauses every timer.
     hovered: Signal<Option<NotificationId>>,
     focused: Signal<Option<NotificationId>>,
     /// Each stack's ids in document order, as the host last drew them.
@@ -239,9 +215,8 @@ struct NotificationStore {
     return_in_host: CopyValue<bool>,
     /// Set while the store moves focus itself, so that move is no entry.
     handing_off: CopyValue<bool>,
-    /// The runtime the store was made in. `show` creates a signal, which
-    /// needs one, and may be called from a timer callback that runs outside
-    /// every runtime. Weak: the runtime owns the store.
+    /// `show` may run from a timer callback outside every runtime, and creates
+    /// a signal. Weak: the runtime owns the store.
     runtime: CopyValue<Weak<Runtime>>,
     /// The scope every signal of the store, and of each entry, belongs to.
     owner: ScopeId,
@@ -250,7 +225,6 @@ struct NotificationStore {
 }
 
 impl NotificationStore {
-    /// Called in a render, so the runtime is there.
     fn new(owner: ScopeId) -> Self {
         Self {
             entries: Signal::new_in_scope(Vec::new(), owner),
@@ -267,7 +241,6 @@ impl NotificationStore {
         }
     }
 
-    /// A new signal owned by the store's owner, like the store's own.
     fn owned_signal<V: 'static>(&self, value: V) -> Signal<V> {
         let runtime = self
             .runtime
@@ -277,8 +250,7 @@ impl NotificationStore {
         runtime.in_scope(self.owner, || Signal::new_in_scope(value, self.owner))
     }
 
-    /// Whether the store is still there. A contained host's goes with the
-    /// host, and a handle copied out of it may outlive it.
+    /// A handle may outlive a contained host's store.
     fn alive(&self) -> bool {
         self.entries.try_peek().is_ok()
     }
@@ -412,12 +384,8 @@ impl NotificationStore {
     }
 }
 
-/// The nearest contained host's store, else the app's, created in the root
-/// scope by whichever caller asks first.
-///
-/// Root, not the caller's scope: the store and every signal in it must outlive
-/// the component that first asked, and timer callbacks write to it from
-/// outside every scope.
+/// The nearest contained host's store, else the app's. The app's lives in the
+/// root scope, so it outlives the component that first asked.
 fn use_notification_store() -> NotificationStore {
     use_hook(|| {
         try_consume_context::<NotificationStore>().unwrap_or_else(|| {
@@ -426,8 +394,7 @@ fn use_notification_store() -> NotificationStore {
     })
 }
 
-/// A template's view of the notification it draws. `Copy`, so several
-/// handlers in one template can each hold it.
+/// A template's view of the notification it draws.
 pub struct NotificationScope<T: 'static> {
     id: NotificationId,
     store: NotificationStore,
@@ -471,12 +438,9 @@ impl<T: Clone + 'static> NotificationScope<T> {
     }
 }
 
-/// Shows, updates and hides notifications drawn by one template. `Copy`, so
-/// it can be handed to any handler, task or child.
+/// Shows, updates and hides notifications drawn by one template.
 ///
-/// **`show` queues; it does not promise the notification is visible.** Each
-/// stack shows at most the host's `limit`, and the rest wait their turn in
-/// order - their timers start only once they are on screen.
+/// `show` queues: past the host's `limit`, a notification waits its turn.
 pub struct NotificationHandle<T: 'static> {
     store: NotificationStore,
     template: fn(NotificationScope<T>) -> Element,
@@ -530,12 +494,9 @@ impl<T: 'static> NotificationHandle<T> {
         id
     }
 
-    /// Replaces the data a notification shows - "Uploading..." becoming
-    /// "Uploaded". Its place in the stack and its timer are untouched. Does
-    /// nothing once it is gone.
+    /// Replaces a notification's data; its place and timer are untouched.
     pub fn update(&self, id: NotificationId, args: impl Into<T>) {
-        // `peek`: the list itself is untouched, so nothing that draws it
-        // should hear of this.
+        // `peek`: the list is unchanged, so nothing drawing it should redraw.
         let Ok(entries) = self.store.entries.try_peek() else {
             return;
         };
@@ -553,13 +514,12 @@ impl<T: 'static> NotificationHandle<T> {
         }
     }
 
-    /// Closes one, with its exit. Does nothing once it is gone.
+    /// Closes one, with its exit.
     pub fn hide(&self, id: NotificationId) {
         self.store.hide(id);
     }
 
-    /// Removes every notification, of every template, at once. Focus inside
-    /// one goes back where it came from.
+    /// Removes every notification, of every template, at once.
     pub fn clear(&self) {
         if !self.store.alive() {
             return;
@@ -590,18 +550,15 @@ impl<T: 'static> NotificationHandle<T> {
 /// # }
 /// ```
 ///
-/// Nothing appears unless the app renders a [`Notifications`] host, once.
+/// Needs a [`Notifications`] host, rendered once.
 pub fn use_notifications() -> NotificationHandle<NotificationData> {
     use_notifications_with(default_template)
 }
 
 /// Notifications drawn by your own template, over your own `T`.
 ///
-/// The template is a `fn`, not a closure that captures: a notification
-/// outlives the component that raised it, so anything captured from that
-/// component could be dropped while the notification still draws with it.
-/// Everything a template needs travels in `T`, and a non-capturing closure
-/// coerces to the `fn`.
+/// A `fn`, not a capturing closure: a notification outlives its caller, so
+/// everything the template needs travels in `T`.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -617,9 +574,7 @@ pub fn use_notifications() -> NotificationHandle<NotificationData> {
 /// # }
 /// ```
 ///
-/// The template is called in its notification's own scope, on every render,
-/// so it may call hooks, the same ones every time. That scope redraws when the
-/// notification's data changes, and no other does.
+/// The template runs in the notification's own scope, so it may call hooks.
 pub fn use_notifications_with<T: 'static>(
     template: fn(NotificationScope<T>) -> Element,
 ) -> NotificationHandle<T> {
@@ -630,16 +585,14 @@ pub fn use_notifications_with<T: 'static>(
 }
 
 fn default_template(s: NotificationScope<NotificationData>) -> Element {
-    // All but the message's text, so an update of only that ("Uploading 40%")
-    // redraws `NotificationMessage` and not the `Alert`.
+    // All but the message text, so a text-only update redraws just `NotificationMessage`.
     let chrome = use_memo(move || {
         let data = s.args();
         let has_message = !data.message.is_empty();
         (data.title, data.color, data.variant, data.icon, has_message)
     });
     let (title, color, variant, icon, has_message) = chrome();
-    // `Alert` gives a message slot and `aria-describedby` to any children at
-    // all, so an empty message passes none rather than an empty text node.
+    // An empty text node would still get a message slot and `aria-describedby`.
     let message = if has_message {
         rsx! { NotificationMessage { args: s.args } }
     } else {
@@ -648,14 +601,12 @@ fn default_template(s: NotificationScope<NotificationData>) -> Element {
 
     rsx! {
         Alert {
-            // Not `alert`: the region around it is already live, and
-            // a live region inside another is announced twice or not at all.
+            // Not `alert`: a live region inside another is announced twice or not at all.
             role: "group",
             title,
             color,
             variant,
             icon,
-            // No `close_label`: `Alert`'s own default, `common.close`.
             onclose: s.closable().then(|| EventHandler::new(move |()| s.close())),
             sx: &DEFAULT_TEMPLATE_SX,
             children: message,
@@ -678,18 +629,8 @@ fn NotificationMessage(props: MessageProps) -> Element {
     rsx! { "{message}" }
 }
 
-/// Where the stacks and their notifications render. **Render it once**, near
-/// the root: it is the one outlet for every [`use_notifications`] handle, and
-/// a second one would draw every notification twice. A `contained` one is the
-/// exception: it has a queue of its own.
-///
-/// It is portaled, so where it sits in the tree does not matter, and each
-/// stack is a `Float { fixed: true }`, so it stays in its corner while the
-/// page scrolls.
-///
-/// `contained` makes it a host for one region instead: it draws its stacks
-/// inside its own box, around `children`, and every handle created below it
-/// shows notifications here rather than in the app's host.
+/// The host where notifications render. Render it once; a `contained` one has
+/// its own queue.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -703,37 +644,22 @@ fn NotificationMessage(props: MessageProps) -> Element {
 /// # #[component] fn SaveButton() -> Element { rsx! {} }
 /// ```
 ///
-/// `hotkey` (F8) focuses the newest notification from anywhere: its first
-/// focusable, else the notification itself. The stacks sit in one region named
-/// after it, "Notifications (F8)". No `Escape`. Otherwise a close button is
-/// reached by `Tab` in document order. Closing the focused notification hands focus to
-/// the next one in its stack (its `data-slot="close"`, else its first
-/// focusable), the previous one after the last, else back where it came from.
-/// A `clear()` with focus inside sends it back where it came from. So does a
-/// contained host unmounting, if that element sits outside the host; else
-/// focus moves to the last focusable before the host.
+/// Docs: <https://libero-ui.dev/feedback/notifications>
 #[component]
 pub fn Notifications(
-    /// The stack a notification joins unless it names its own. Defaults to
-    /// `theme.notifications.placement`. A change moves only notifications
-    /// shown after it.
+    /// The default stack. A change moves only notifications shown after it.
     #[props(default, into)]
     placement: Input<Placement>,
-    /// Shown at once per stack; the rest wait. Defaults to
-    /// `theme.notifications.limit`.
+    /// Shown at once per stack; the rest wait.
     #[props(default)]
     limit: Option<usize>,
-    /// Unless a notification says otherwise. Defaults to
-    /// `theme.notifications.auto_close`.
+    /// Unless a notification says otherwise.
     #[props(default)]
     auto_close: Option<AutoClose>,
-    /// Draws the stacks inside this host's box, a `position: relative` block
-    /// around `children`, and gives the handles below it a queue of their
-    /// own. Read once, when the host mounts.
+    /// Draws inside its own box, with a queue of its own. Read once, on mount.
     #[props(default)]
     contained: bool,
-    /// Focuses the newest notification from anywhere on the page, pressed
-    /// without Ctrl, Alt or Meta. A letter is not heard while the user types.
+    /// Focuses the newest notification from anywhere.
     #[props(default = Key::F8)]
     hotkey: Key,
     /// Rendered inside a contained host, before its stacks.
@@ -764,9 +690,8 @@ pub fn Notifications(
     let exit_ms = theme.notifications.transition_duration;
 
     let entries = store.entries.read();
-    // Every placement, always: both live regions of a stack have to be in the
-    // document before anything is added to them, or nothing is announced. Only
-    // the list inside a region comes and goes, so none sits empty (todo 447).
+    // Every placement, always: a live region must exist before content is added,
+    // or nothing is announced (todo 447).
     let mut drawn = Vec::new();
     let stacks = Placement::ALL.iter().map(|&placement| {
         let items = entries
@@ -842,12 +767,10 @@ pub fn Notifications(
     rsx! {}
 }
 
-/// `hotkey` focuses the newest notification (todo 575). A letter listens on
-/// the filtered stream, so it is not taken from a text field; any other key,
-/// F8 above all, is heard from anywhere.
+/// `hotkey` focuses the newest notification (todo 575). A letter is not taken
+/// from a text field; any other key is heard from anywhere.
 fn use_hotkey(store: NotificationStore, hotkey: Key) {
-    // Bumped from the key callback, which on the web runs outside every scope;
-    // the effect below moves focus (the `Spotlight` hotkey's shape).
+    // The key callback runs outside every scope on the web; an effect moves focus.
     let tick = use_signal(|| 0u64);
     let slot: Rc<RefCell<Option<std::boxed::Box<dyn KeySubscription>>>> =
         use_hook(|| Rc::new(RefCell::new(None)));
@@ -940,8 +863,7 @@ struct StackProps {
     polite: Vec<ItemProps>,
 }
 
-/// One stack in a scope of its own: a list write redraws only the stack it
-/// changed, and a stack with nothing in it never redraws.
+/// Its own scope: a list write redraws only the stack it changed.
 fn NotificationStack(props: StackProps) -> Element {
     let placement = props.placement;
     let regions = [("assertive", props.assertive), ("polite", props.polite)];
@@ -991,12 +913,9 @@ enum Axis {
     Vertical,
 }
 
-/// `Float`'s offsets are a translate, so pushing a stack in from an end or
-/// bottom edge is a negative one. A centred axis takes none.
+/// `Float`'s offsets are a translate: negative from an end or bottom edge.
 fn edge_offset(placement: Placement, axis: Axis) -> String {
     use Placement::*;
-    // `Some(true)` for the start or top edge, `Some(false)` for the end or
-    // bottom one.
     let from_start = match axis {
         Axis::Horizontal => match placement {
             TopStart | CenterStart | BottomStart => Some(true),
@@ -1016,8 +935,7 @@ fn edge_offset(placement: Placement, axis: Axis) -> String {
     }
 }
 
-/// Compared by pointer: the same `Rc` is the same template over the same
-/// entry, and a closure has no other equality.
+/// Compared by pointer: a closure has no other equality.
 #[derive(Clone)]
 struct DrawRef(Draw);
 
@@ -1029,8 +947,7 @@ impl PartialEq for DrawRef {
 
 #[derive(Props, Clone, PartialEq)]
 struct ItemProps {
-    /// Passed, not looked up: which store a lookup finds depends on where
-    /// the item renders, and the host already knows its own.
+    /// Passed, not looked up: a lookup depends on where the item renders.
     store: NotificationStore,
     id: NotificationId,
     draw: DrawRef,
@@ -1060,9 +977,7 @@ fn NotificationItem(props: ItemProps) -> Element {
         }
     });
 
-    // Dropping a subscription cancels it, so replacing this is the whole of
-    // "stop the old timer". Held here, not in the store: an item that
-    // unmounts takes its timer with it.
+    // Dropping a subscription cancels it. Held here, so an unmount takes its timer.
     let subscription =
         use_hook(|| Rc::new(RefCell::new(None::<std::boxed::Box<dyn TimerSubscription>>)));
 
@@ -1071,19 +986,15 @@ fn NotificationItem(props: ItemProps) -> Element {
     let exit_ms = props.exit_ms;
     let armed = subscription.clone();
     use_effect(use_reactive!(|(leaving, auto_close, exit_ms)| {
-        // Read here and not in the render: the effect subscribes to what it
-        // reads, so the pointer moving onto a notification re-arms every
-        // timer without redrawing a single notification.
+        // Read in the effect, not the render: a pause re-arms timers without a redraw.
         let paused = store.paused();
         let mut armed = armed.borrow_mut();
         *armed = None;
 
-        // The callbacks write the store's signals and nothing else: on the
-        // web they run with no dioxus runtime at all.
+        // The callbacks only write signals: on the web they run with no runtime.
         let (delay, then): (u32, fn(NotificationStore, NotificationId)) = match auto_close {
             _ if leaving => (exit_ms, |store, id| store.remove(id)),
-            // Resumed with the full time, not the remainder: someone who
-            // stopped to read it gets the whole of it again.
+            // Resumes with the full time, not the remainder.
             Some(_) if paused => return,
             Some(ms) => (ms, |store, id| store.hide(id)),
             None => return,
@@ -1105,16 +1016,14 @@ fn NotificationItem(props: ItemProps) -> Element {
     let remembered = before_host.clone();
     use_drop(move || {
         subscription.borrow_mut().take();
-        // Removed from under the pointer or with focus inside, it never sees
-        // its `mouseleave`/`focusout`, and every timer would stay paused.
+        // Removed under the pointer or focus, it never sees `mouseleave`/`focusout`.
         let (mut hovered, mut focused) = (store.hovered, store.focused);
         if *hovered.peek() == Some(id) {
             hovered.set(None);
         }
         if *focused.peek() == Some(id) {
             focused.set(None);
-            // Now, while the item is still in the document: a contained host
-            // going with it takes the scope a spawned focus would run in.
+            // Now, not spawned: a contained host going too takes the scope.
             let return_to = store.return_to.try_peek().ok().and_then(|to| to.clone());
             let return_to = return_to.filter(|to| to.is_connected());
             // An entry that outlives its item: the host itself is going.

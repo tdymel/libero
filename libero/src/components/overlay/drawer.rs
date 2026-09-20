@@ -39,10 +39,7 @@ static DRAWER_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
-/// A corner `Float` placement already pins two adjacent sides with no
-/// `transform`, so an anchor only needs the third offset to reach a full edge.
-// Static, so the CSS is built once for the process rather than per render,
-// and `Float`'s props settle by address instead of walking the entry tree.
+/// A corner `Float` placement pins two sides; the third offset makes a full edge.
 static DRAWER_FLOAT_VERTICAL_SX: StaticSx = StaticSx::new(|| sx().bottom("0"));
 static DRAWER_FLOAT_HORIZONTAL_SX: StaticSx = StaticSx::new(|| sx().right("0"));
 
@@ -56,8 +53,7 @@ fn drawer_float_placement(anchor: DrawerAnchor) -> (Placement, &'static StaticSx
 }
 
 str_enum! {
-    /// The edge a drawer docks to. Logical: `Start` is the right under
-    /// `dir="rtl"`.
+    /// The edge a drawer docks to. Logical: `Start` is the right under `dir="rtl"`.
     pub enum DrawerAnchor {
         #[default]
         Start = "start",

@@ -9,9 +9,7 @@ mod modal;
 mod overlay;
 mod spotlight;
 mod tooltip;
-// The hooks that render an overlay. Public through `hooks`, where they
-// have always been named; the modules are `pub(crate)` so `hooks` can reach
-// them without `components` exporting them twice.
+// The hooks that render an overlay. Exported once, through `hooks`.
 pub(crate) mod use_drawer;
 pub(crate) mod use_floating_window;
 pub(crate) mod use_lightbox;

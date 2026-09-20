@@ -1,10 +1,6 @@
 use dioxus::prelude::*;
 
 /// One thing a [`use_spotlight`](super::use_spotlight) palette can run.
-///
-/// A struct rather than an enum the caller matches on: a palette has no
-/// exhaustive obligation, and its actions are usually runtime data - pages,
-/// search hits - that no enum could name in advance.
 #[derive(Clone, Default)]
 pub struct SpotlightAction {
     pub label: String,
@@ -14,9 +10,8 @@ pub struct SpotlightAction {
     /// A section header. Groups are ordered by their first appearance.
     pub group: Option<String>,
     pub icon: Option<Element>,
-    /// A hint beside the row, one `Kbd` per key (split on spaces and `+`, so
-    /// spell a plus key "Plus"). Never bound - binding it would make the
-    /// palette an app-wide keybinding registry.
+    /// A hint, one `Kbd` per key split on spaces and `+` (spell a plus key
+    /// "Plus"). Never bound.
     pub shortcut: Option<String>,
     pub onclick: Option<Callback<()>>,
 }
@@ -60,12 +55,8 @@ impl SpotlightAction {
     }
 }
 
-/// The default filter: every action whose label, description or a keyword
-/// contains `query`, case-insensitively - **label hits first**, then the rest,
-/// each in source order. An empty query returns everything.
-///
-/// A free function so the common case is one call inside your own `actions`
-/// closure, and an async source simply does not call it.
+/// The default filter: a case-insensitive substring match on label, description
+/// and keywords, label hits first. An empty query returns everything.
 pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<SpotlightAction> {
     let query = query.trim().to_lowercase();
     if query.is_empty() {
@@ -81,9 +72,8 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
     by_label.into_iter().chain(by_other).cloned().collect()
 }
 
-/// `actions` regrouped by first appearance of their `group`, then cut to
-/// `limit` rows counted through the groups - not per group. Ungrouped actions
-/// form their own unnamed run, in the same first-appearance order.
+/// Regrouped by first appearance of `group`, then cut to `limit` rows in total,
+/// not per group.
 pub(super) fn group_and_limit(
     actions: Vec<SpotlightAction>,
     limit: Option<usize>,

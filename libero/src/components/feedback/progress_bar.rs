@@ -18,19 +18,16 @@ use crate::{
     utils::warn,
 };
 
-/// The `data-state` the determinate arm keys on. Named rather than left as the
-/// absence of `indeterminate`, because an `Sx` condition cannot say "not".
+/// Its own state, as an `Sx` condition cannot say "not indeterminate".
 const DETERMINATE_STATE: &str = "determinate";
 
-/// How long one indeterminate sweep takes.
 const SWEEP_DURATION: &str = "1.4s";
 
 static PROGRESS_BAR_TRACK_SX: StaticSx = StaticSx::new(|| {
     ProgressBarDefaults::theme_vars()
         .display("block")
         .width("100%")
-        // The fill is a plain block sized by a percentage; without this its
-        // square corners escape the track's radius at both ends.
+        // Clips the fill's square corners to the track's radius.
         .overflow("hidden")
         .height(PROGRESS_BAR_SIZE.value())
         .border_radius(PROGRESS_BAR_RADIUS.value())
@@ -42,16 +39,12 @@ static PROGRESS_BAR_TRACK_SX: StaticSx = StaticSx::new(|| {
 
 static PROGRESS_BAR_FILL_SX: StaticSx = StaticSx::new(|| {
     sx().height("100%")
-        // Picks up the near edge of the track, so a pill track gets a pill
-        // fill without restating the radius.
         .border_radius("inherit")
         .background(PROGRESS_BAR_COLOR.value_or(ColorCss::PRIMARY.value(ColorShade::S6)))
         .media(FORCED_COLORS, sx().background("Highlight"))
         .when(
             DETERMINATE_STATE,
             sx().width(PROGRESS_BAR_FILL.value_or("0%"))
-                // The sheet's "nice progress animation": the bar eases to each
-                // new value instead of jumping. No keyframes involved.
                 .transition(format!(
                     "width {} ease",
                     PROGRESS_BAR_TRANSITION.value_or("100ms")
@@ -64,11 +57,8 @@ static PROGRESS_BAR_FILL_SX: StaticSx = StaticSx::new(|| {
                 .animation(format!(
                     "{PROGRESS_BAR_ANIMATION} {SWEEP_DURATION} ease-in-out infinite"
                 ))
-                // Under reduced motion the sweep would otherwise freeze as a
-                // quarter-width stub parked at the left, which reads as a
-                // determinate 25% - a worse lie than no animation. A dimmed
-                // full-width track says "busy, amount unknown" while standing
-                // still.
+                // A frozen sweep would read as 25% done; a dimmed full bar says
+                // "busy, amount unknown".
                 .media(
                     REDUCED_MOTION,
                     sx().animation("none")
@@ -79,10 +69,7 @@ static PROGRESS_BAR_FILL_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// The drawn share of the track, in `0.0..=1.0`.
-///
-/// `max <= min` is a caller error with no sensible reading, so it warns and
-/// draws empty rather than dividing by zero.
+/// The drawn share, in `0.0..=1.0`. A broken range warns and draws empty.
 fn fraction(value: f64, min: f64, max: f64) -> f64 {
     if max <= min || !(min.is_finite() && max.is_finite()) {
         warn("ProgressBar: `max` must be greater than `min`.");
@@ -95,10 +82,8 @@ fn fraction(value: f64, min: f64, max: f64) -> f64 {
     (value.clamp(min, max) - min) / (max - min)
 }
 
-/// The value `aria-valuenow` reports: clamped like the fill, because ARIA
-/// requires it to sit inside `min..=max`. A broken range reports the raw value,
-/// because `clamp` panics on `min > max` and `fraction` has already warned.
-/// `NaN` reports `min`, matching the empty fill it draws.
+/// `aria-valuenow`, clamped like the fill. A broken range reports the raw
+/// value, as `clamp` panics on `min > max`.
 fn value_now(value: f64, min: f64, max: f64) -> f64 {
     if value.is_nan() {
         min
@@ -109,14 +94,11 @@ fn value_now(value: f64, min: f64, max: f64) -> f64 {
     }
 }
 
-/// `42%`, the rounded percentage the fill is drawn at and the a11y floor for
-/// `aria-valuetext`.
 fn percentage(fraction: f64) -> String {
     format!("{}%", (fraction * 100.0).round())
 }
 
-/// A raw bound for `aria-value*`. Whole numbers print without a decimal tail,
-/// so a `0..=10` range announces "3 of 10" and not "3 of 10.0".
+/// Whole numbers without a decimal tail: "3 of 10", not "3 of 10.0".
 fn aria_number(value: f64) -> String {
     if value.fract() == 0.0 && value.abs() < 1e15 {
         format!("{}", value as i64)
@@ -133,12 +115,7 @@ fn progress_bar_variables(color: &ThemeAwareValue, fill: Option<String>) -> Vari
 
 base_props! {
     pub struct ProgressBarProps {
-        /// Current progress, clamped into `min..=max`.
-        ///
-        /// `None` is indeterminate: the bar sweeps and drops `aria-valuenow`,
-        /// which is how ARIA spells "busy, amount unknown". Required, because
-        /// a progress bar with no value at all is not a thing - pass `None`
-        /// deliberately.
+        /// Current progress, clamped into `min..=max`. `None` is indeterminate.
         #[props(into)]
         value: Option<f64>,
         /// Range start.
@@ -154,36 +131,15 @@ base_props! {
         #[props(default, into)]
         size: Input<Size>,
         /// Corner of the track and the fill.
-        ///
-        /// Mostly inert on a thin bar: a track is a full pill once the radius
-        /// reaches half its height, so on the default `md` track (8px) only
-        /// `xs` differs and every step from `sm` up draws the same pill.
         #[props(default, into)]
         radius: Input<Size>,
-        /// What a screen reader announces instead of the percentage - a music
-        /// player's `"1:34 of 4:02"`, a download's `"4.2 MB of 12 MB"`, neither
-        /// of which three numbers can express.
-        ///
-        /// Unset, the rounded percentage is announced.
+        /// Announced instead of the percentage, e.g. `"4.2 MB of 12 MB"`.
         #[props(default, into)]
         aria_valuetext: Option<String>,
     }
 }
 
-/// A determinate or indeterminate progress bar.
-///
-/// Output, not a control: no focus, no keyboard, nothing posted. One `<div>`
-/// carrying `role="progressbar"` and the `aria-value*` set, wrapping one
-/// decorative fill.
-///
-/// `aria-valuenow`/`min`/`max` carry the **raw** values rather than the
-/// percentage, which is what lets a screen reader say "3 of 10". The bar is
-/// deliberately **not** a live region - one ticking sixty times a second inside
-/// `role="status"` floods the announcement queue. A caller who needs progress
-/// announced wraps it and announces at milestones.
-///
-/// It needs an accessible name, and `role` sits on the root, so a plain
-/// `aria_label` reaches exactly the right element:
+/// A determinate or indeterminate progress bar. Give it an accessible name.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -201,6 +157,8 @@ base_props! {
 /// }
 /// # } }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/feedback/progress-bar>
 #[component]
 pub fn ProgressBar(props: ProgressBarProps) -> Element {
     let theme = use_theme();
@@ -230,8 +188,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
 
     let vars: Input<Variables> = progress_bar_variables(&color, percentage.clone()).into();
 
-    // Its own `data-state`, because the indeterminate and determinate arms of
-    // its style are conditions, and a child inherits vars but not state.
+    // Its own `data-state`: a child inherits vars but not state.
     let fill = use_box()
         .framework_sx(&PROGRESS_BAR_FILL_SX)
         .states(&states)
@@ -249,8 +206,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
         .attr("role", "progressbar")
         .attr("aria-valuemin", aria_number(props.min))
         .attr("aria-valuemax", aria_number(props.max))
-        // Omitted entirely while indeterminate - the ARIA-correct spelling.
-        // `Option::None` renders no attribute.
+        // Omitted while indeterminate, as ARIA requires.
         .attr(
             "aria-valuenow",
             props
@@ -258,9 +214,7 @@ pub fn ProgressBar(props: ProgressBarProps) -> Element {
                 .map(|value| aria_number(value_now(value, props.min, props.max))),
         );
 
-    // The prop wins outright; the percentage is only a default, so a caller
-    // spreading their own `aria-valuetext` still beats it. Plain `attr` would
-    // silently replace theirs - see `attribute-precedence`.
+    // The percentage is only a default: a spread `aria-valuetext` beats it.
     let track = match props.aria_valuetext {
         Some(text) => track.attr("aria-valuetext", text),
         None => track.attr_default("aria-valuetext", percentage),
@@ -280,8 +234,6 @@ mod tests {
         assert_eq!(fraction(100.0, 0.0, 100.0), 1.0);
     }
 
-    /// The download case: a range that does not start at zero and does not end
-    /// at a hundred.
     #[test]
     fn a_range_that_is_not_zero_to_a_hundred() {
         assert_eq!(fraction(5.0, 0.0, 10.0), 0.5);
@@ -294,8 +246,6 @@ mod tests {
         assert_eq!(fraction(140.0, 0.0, 100.0), 1.0);
     }
 
-    /// The house rule for a bad prop combination: warn and draw nothing,
-    /// rather than divide by zero.
     #[test]
     fn a_max_at_or_below_min_draws_empty() {
         assert_eq!(fraction(5.0, 10.0, 10.0), 0.0);
@@ -309,8 +259,6 @@ mod tests {
         assert_eq!(fraction(0.0, 0.0, f64::INFINITY), 0.0);
     }
 
-    /// The fill clamps, so the announced value has to as well, or a screen
-    /// reader says "140" over a bar drawn full.
     #[test]
     fn aria_valuenow_is_clamped_like_the_fill() {
         assert_eq!(value_now(140.0, 0.0, 100.0), 100.0);
@@ -327,7 +275,6 @@ mod tests {
         assert_eq!(percentage(1.0), "100%");
     }
 
-    /// So a `0..=10` range announces "3 of 10", not "3 of 10.0".
     #[test]
     fn whole_aria_bounds_print_without_a_decimal_tail() {
         assert_eq!(aria_number(10.0), "10");

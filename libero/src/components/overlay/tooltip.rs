@@ -29,13 +29,9 @@ const TOOLTIP_GAP_VAR: CssVar = CssVar::new("--lsx-tooltip-gap");
 /// The bubble's widest, unless the viewport is narrower.
 const MAX_WIDTH: &str = "20rem";
 
-/// `gap` is transparent padding, not empty space: the pointer crossing it
-/// never leaves the bubble, so it can reach it (WCAG 2.1 SC 1.4.13). On the
-/// side the bubble actually landed on, after any flip.
+/// Bridges `gap` on the landed side, so the pointer can reach the bubble (WCAG 1.4.13).
 fn bridge_sx(side: Side) -> Sx {
     let gap = TOOLTIP_GAP_VAR.value();
-    // A start bubble sits left of the trigger under LTR, so its bridge leaves
-    // its right edge; `:dir(rtl)` mirrors that.
     let (bridge, rtl) = match side {
         Side::Top => (sx().top("100%").left("0").right("0").height(gap), None),
         Side::Bottom => (sx().bottom("100%").left("0").right("0").height(gap), None),
@@ -109,15 +105,13 @@ base_props! {
         open_delay: Option<u32>,
         #[props(default)]
         close_delay: Option<u32>,
-        /// Forces the bubble open or closed; `None` leaves it to hover/focus.
-        /// A bubble forced open ignores Escape.
+        /// Forces the bubble open or closed; `None` leaves it to hover and focus.
         #[props(default)]
         open: Option<bool>,
-        /// Renders `children` bare - no wrapper, no bubble.
+        /// Renders `children` bare: no wrapper, no bubble.
         #[props(default)]
         disabled: Option<bool>,
-        /// The bubble's `id`, so the trigger can carry `aria-describedby`.
-        /// It resolves while the bubble is closed, too.
+        /// The bubble's `id`, for the trigger's `aria-describedby`.
         #[props(default, into)]
         label_id: Option<String>,
         /// The trigger. `class`/`sx`/`states`/`attributes` style the *bubble*.
@@ -127,24 +121,31 @@ base_props! {
 
 /// A hover and keyboard-focus label for its `children`.
 ///
-/// The bubble is portaled, so an `overflow: hidden` ancestor cannot clip it,
-/// flips when its side has no room, and closes on Escape (WCAG 1.4.13). Until
-/// it opens, it costs a wrapper and its listeners and nothing else.
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, Tooltip};
+/// # fn app() -> Element {
+/// # rsx! {
+/// Tooltip { label: rsx! { "Save changes" },
+///     Button { "Save" }
+/// }
+/// # } }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/overlay/tooltip>
 #[component]
 pub fn Tooltip(props: TooltipProps) -> Element {
     let theme = use_theme();
     let hover = use_hover_intent();
     let mut focused = use_signal(|| false);
-    // A click focuses the trigger too, and the bubble opens for keyboard focus
-    // only - `:focus-visible`, asked on the web, a press heuristic elsewhere.
+    // Opens for keyboard focus only: `:focus-visible` on the web, a press heuristic elsewhere.
     let pressed = use_hook(|| Rc::new(Cell::new(false)));
     let press_focus = use_hook(try_consume_context::<PressFocus>);
     let marked = move || press_focus.as_ref().is_some_and(PressFocus::take);
     // Where the document hears Escape, the open bubble's `use_dismiss` does.
     let global_escape = use_hook(|| keyboard().is_some());
     let anchor = use_element();
-    // Re-places the open bubble on every render here: a slider's thumb moves
-    // its anchor while its value bubble stays open.
+    // Re-places the open bubble every render: a slider thumb moves its anchor.
     let generation = use_hook(|| Rc::new(Cell::new(0u64)));
     generation.set(generation.get().wrapping_add(1));
 
@@ -229,8 +230,7 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     wrapper.render(HtmlTag::Span, Vec::new(), vec![props.children, bubble])
 }
 
-/// The open bubble. Its own component, so a closed tooltip runs none of the
-/// popover's and dismissal's hooks and effects - a page may hold hundreds.
+/// Its own component, so a closed tooltip runs no popover hooks: a page may hold hundreds.
 #[component]
 fn TooltipBubble(
     tooltip: TooltipProps,
@@ -256,8 +256,7 @@ fn TooltipBubble(
             .remeasure(generation),
     );
     let floating = *popover.floating();
-    // Focus never enters the bubble, so nothing to hand back and no focus to
-    // lose: Escape alone.
+    // Focus never enters the bubble: Escape alone.
     let dismiss = use_escape_dismiss(true, tooltip.open.is_none(), onclose);
 
     let states: Input<States> = tooltip
@@ -273,8 +272,7 @@ fn TooltipBubble(
             tooltip.z_index.resolve(None),
         )
         .into();
-    // The popover caps the box inline, where no caller `sx` could change it;
-    // the class carries the same cap instead.
+    // The class carries the popover's inline cap, so a caller `sx` can change it.
     let inline_cap = format!("max-width:calc(100vw - {}px);", 2.0 * padding);
     let style = popover.style().map(|style| style.replace(&inline_cap, ""));
 

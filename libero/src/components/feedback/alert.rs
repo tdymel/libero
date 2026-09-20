@@ -34,21 +34,16 @@ const ALERT_VARS: VariantVars<'static> = VariantVars {
 
 static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = paper_sx()
-        // `paper_sx()` opens with `display: block`; an alert is the flex row
-        // `[icon][body][close]`. Chained on the same `Sx`, so the emitted
+        // Chained on the same `Sx` as `paper_sx()`'s `display: block`, so the
         // class carries one `display`, not two racing in the cascade.
         .display("flex")
-        // Top-aligned: with a wrapped message the icon and the close button
-        // belong beside the first line, not centred on the paragraph.
+        // Icon and close button sit beside the first line of a wrapped message.
         .align_items("flex-start")
-        // A surface that rests in the flow rather than floating over it.
         // `Elevated` puts its own shadow back, from inside its fold.
         .box_shadow("none")
-        // `variant_chrome_sx` sets `border-color` only - the width and style
-        // that make `Outlined`'s border visible join here.
+        // `variant_chrome_sx` sets only `border-color`.
         .border_style("solid")
         .border_width("1px")
-        // Nothing escapes the tint past the radius.
         .overflow("hidden")
         .and(AlertDefaults::theme_vars())
         .selector(
@@ -61,36 +56,27 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
                 .height(ALERT_ICON_SIZE.value())
                 .selector("& svg", sx().width("100%").height("100%")),
         )
-        // `icon: rsx! {}`, or an `if` that rendered nothing, is still a sized
-        // flex item and still takes the `gap`: 32px of nothing before the
-        // text. `:empty` ignores dioxus' placeholder, so this catches both.
+        // An empty icon would still take its size and the `gap`. `:empty`
+        // ignores dioxus' placeholder, so an `if` that rendered nothing counts.
         .selector("& > [data-slot='icon']:empty", sx().display("none"))
         .selector(
             "& > [data-slot='body']",
             sx().display("flex")
                 .flex_direction("column")
                 .gap(ALERT_BODY_GAP.value())
-                // Takes the row, and `min-width: 0` is what lets it shrink
-                // below its content so a long title wraps inside it.
+                // `min-width: 0` lets a long title wrap instead of overflowing.
                 .flex("1")
                 .min_width("0")
-                // Wraps, never an ellipsis: cut text has no other place to be
-                // read (WCAG 1.4.10), and the root's `overflow` would clip it.
+                // Wraps, never an ellipsis: cut text is unreadable (WCAG 1.4.10).
                 .with("overflow-wrap", "anywhere"),
         )
         .selector("& [data-slot='title']", sx().font_weight("600"));
 
-    // Chrome only, no `:hover` - `Badge`'s rule. An alert is not a target, and
-    // a tint that moved under the pointer would claim it is.
+    // Chrome only, no `:hover`: an alert is not a click target.
     Variant::ALL.iter().fold(base, |base, &variant| {
         let chrome = variant_chrome_sx(variant, &ALERT_VARS);
-        // `paper_sx()`'s black focus ring is lost on a solid ground - 1.8:1 on
-        // `neutral`. The text colour reads on it by construction, so the ring
-        // takes that. `currentColor` rather than an unset var for a literal
-        // colour: an unset var here would not fall back, it would erase the
-        // ring (`paper.md`). Only on the children: the alert's own ring sits
-        // outside it, on the page, where the text colour is often white on
-        // white. The fill is their halo (todo 630).
+        // `Filled`: children's focus ring takes the text colour, haloed by the fill
+        // (todo 630). `currentColor` fallback, as an unset var erases the ring.
         let chrome = match variant {
             Variant::Filled => chrome.selector(
                 "& > *",
@@ -128,8 +114,7 @@ fn alert_variables(props: &AlertProps, base: &ThemeAwareValue, variant: Variant)
         )
 }
 
-/// `alert` interrupts the reader, so only `error` and `warning` earn it; the
-/// rest, a literal colour included, is a polite `status`.
+/// `alert` interrupts the reader: only `error` and `warning` earn it.
 fn alert_role(color: &ThemeAwareValue) -> &'static str {
     let severity = match color {
         ThemeAwareValue::Color(color) => Some(*color),
@@ -144,44 +129,25 @@ fn alert_role(color: &ThemeAwareValue) -> &'static str {
 
 base_props! {
     pub struct AlertProps {
-        /// The heading, and the region's accessible name via
-        /// `aria-labelledby`. A `String` rather than an `Element`: a name is
-        /// text, and markup in it would be dropped from the name silently -
-        /// `Caption`'s rule.
+        /// The heading and accessible name.
         #[props(default, into)]
         title: Option<String>,
-        /// A leading glyph, rendered `aria-hidden` - it repeats what the text
-        /// already says. The library ships no icon set; this is the caller's
-        /// own.
+        /// A leading glyph, `aria-hidden`.
         #[props(default)]
         icon: Option<Element>,
-        /// The tint base; a theme colour name or a literal CSS colour.
-        /// Defaults to `theme.alert.color`, which is `info` - severity is the
-        /// caller's to state. It also picks the role: `error` and `warning`
-        /// are `alert`, the rest `status`.
+        /// Theme colour or CSS colour; `error` and `warning` make it `role="alert"`.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// The five M3 arms, shared with `Button` and `Badge` - minus their
-        /// hover response. `Outlined` is border-plus-`color: inherit` and
-        /// carries no tint, deliberately.
+        /// Surface style, without a hover response.
         #[props(default, into)]
         variant: Input<Variant>,
         /// A size step or any CSS length.
         #[props(default, into)]
         radius: Input<Size>,
-        /// **Its presence is what shows the close button.** There is no
-        /// separate `with_close_button`: the pair would make "a close button
-        /// that does nothing" representable, and a `Callback` prop can never
-        /// be required anyway, so missing has to mean something - here it
-        /// means no button.
-        ///
-        /// Closing is the caller unmounting the `Alert`. It does not hide
-        /// itself. The focused close button goes with it and focus falls to
-        /// `<body>`, so move it somewhere sensible (WCAG 2.4.3).
+        /// Set, shows the close button. The caller unmounts the alert and moves focus.
         #[props(default)]
         onclose: Option<EventHandler<()>>,
-        /// The close button's accessible name. Defaults to
-        /// `Localization::common.close`.
+        /// The close button's accessible name.
         #[props(default, into)]
         close_label: Option<String>,
         /// The message.
@@ -189,18 +155,7 @@ base_props! {
     }
 }
 
-/// A tinted surface that states something the reader has to know: an error
-/// summary, a warning, a note.
-///
-/// The role follows `color`: `error` and `warning` render `role="alert"`, every
-/// other colour `role="status"`. **A default the caller's own `role` wins
-/// over**, so `Form`'s summary, which brings its own `role` and `tabindex`, is
-/// not fighting the component.
-///
-/// It takes no focus, has no keyboard behaviour of its own and does not close
-/// on `Escape`: it is not an overlay, and nothing gives it focus. The close
-/// button is a real `<button>` inside an `ActionIcon`, so `Tab` reaches it and
-/// `Enter`/`Space` activate it.
+/// A tinted surface for something the reader has to know: an error, a warning, a note.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -218,12 +173,12 @@ base_props! {
 /// # } }
 /// # #[component] fn WarningGlyph() -> Element { rsx! {} }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/feedback/alert>
 #[component]
 pub fn Alert(props: AlertProps) -> Element {
     let theme = use_theme();
     let common = use_localization().common;
-    // Adopts a caller's own `id`, so the aria wiring below and the caller
-    // never render two.
     let id = use_root_id(&props.attributes);
 
     let variant = props.variant.copied_or(theme.alert.variant);
@@ -244,8 +199,7 @@ pub fn Alert(props: AlertProps) -> Element {
         .into();
 
     let title_id = props.title.as_ref().map(|_| format!("{}-title", id()));
-    // An alert with only a title has no message to describe it with, and an
-    // `aria-describedby` pointing at nothing is worse than none.
+    // No `aria-describedby` pointing at an empty message.
     let message = (props.children != VNode::empty()).then(|| props.children.clone());
     let body_id = message.as_ref().map(|_| format!("{}-body", id()));
     let close_label = props
@@ -271,8 +225,7 @@ pub fn Alert(props: AlertProps) -> Element {
         if let Some(onclose) = onclose {
             ActionIcon {
                 "data-slot": "close",
-                // `currentColor`, not the alert's colour: the glyph reads on
-                // whatever the variant painted, `Filled`'s solid ground too.
+                // `currentColor` reads on every variant's ground, `Filled` too.
                 variant: "standard",
                 color: "currentColor",
                 size: "sm",
@@ -290,10 +243,8 @@ pub fn Alert(props: AlertProps) -> Element {
         .states(&states)
         .variables(&variables)
         .prepare()
-        // `attr_default`, never `attr`: the component supplies the role only
-        // where the caller supplied none. `Form`'s summary sets its own, and
-        // a duplicate `role` attribute drops one of the two
-        // non-deterministically - SSR keeps the first, the DOM the last.
+        // `attr_default`: a caller's own `role` (`Form`'s summary) wins. A duplicate
+        // `role` is dropped non-deterministically, SSR keeping the first, the DOM the last.
         .attr_default("role", role)
         .attr("id", id())
         .attr("aria-labelledby", title_id)

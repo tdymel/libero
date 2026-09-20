@@ -47,10 +47,8 @@ const LIGHTBOX_TRANSFORM: CssVar = CssVar::new("--lsx-lightbox-transform");
 /// thumbnails and centres.
 const LIGHTBOX_THUMBNAILS_SHOWN: CssVar = CssVar::new("--lsx-lightbox-thumbnails-shown");
 
-/// On a phone the viewer is the whole screen: it has none to spare for a
-/// margin round a picture. Either way up - `xs` alone (576px) caught every
-/// phone held upright and none held sideways, which are 640 to 932px wide but
-/// never more than 480px tall.
+/// A phone either way up: held sideways it is 640 to 932px wide but never
+/// over 480px tall, so a width query alone misses it.
 fn phone() -> String {
     format!(
         "(width < {}), (height < 30rem)",
@@ -67,10 +65,8 @@ fn safe_padding(side: &str) -> String {
     )
 }
 
-// On a phone the dialog is the screen: fixed to the whole viewport, no
-// margin, radius or shadow, and a column in which the stage takes whatever
-// the close button, caption and thumbnails leave.
-// A double-click zooms: it selects nothing, the picture included (todo 917).
+// On a phone the dialog is the whole screen, the stage taking the room left.
+// A double-click zooms, so it selects nothing (todo 917).
 static LIGHTBOX_DIALOG_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
         .user_select("none")
@@ -104,9 +100,8 @@ static LIGHTBOX_BODY_SX: StaticSx = StaticSx::new(|| {
     )
 });
 
-// On a phone the pictures also reach past the dialog's `sm` padding, to the
-// safe area's edge, and the stage is a size container: a frame is as tall as
-// the room left, `100cqh`, where elsewhere it is the theme's stage height.
+// On a phone the pictures bleed to the safe area's edge, and the stage is a
+// size container so a frame is `100cqh` tall.
 static LIGHTBOX_STAGE_SX: StaticSx = StaticSx::new(|| {
     let bleed = format!("calc(-1 * {})", SizeCss::SPACING.value(Size::Sm));
     sx().media(
@@ -119,10 +114,8 @@ static LIGHTBOX_STAGE_SX: StaticSx = StaticSx::new(|| {
     )
 });
 
-// Every slide is this one box, so a picture is fitted into the stage rather
-// than sizing it. The ring sits here, inset, because the picture itself is
-// scaled while zoomed and an outline on it would be scaled and clipped with it.
-// Drawn by the overlay after the picture, which is what takes the focus.
+// A picture fits into this box rather than sizing it. The focus ring sits here:
+// on the zoomed picture it would be scaled and clipped.
 static LIGHTBOX_FRAME_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
         .height(LIGHTBOX_STAGE_HEIGHT.value())
@@ -171,9 +164,8 @@ static LIGHTBOX_IMAGE_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-// The zoom buttons and the close button, laid out like `Dialog`'s own header.
-// Lifted: Blitz hit-tests a zoomed picture past its frame's clip, and the
-// stage comes later, so a press here panned it (todo 916).
+// Lifted: Blitz hit-tests a zoomed picture past its frame's clip, so a press
+// here panned it (todo 916).
 static LIGHTBOX_TOOLBAR_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
         .z_index("1")
@@ -204,9 +196,8 @@ static LIGHTBOX_THUMBNAILS_SX: StaticSx = StaticSx::new(|| {
         ))
 });
 
-// The padding is the current thumbnail's frame: its background shows round the
-// picture. A second channel beside `aria-current`, with no opacity on the
-// others, which would dim their focus ring too.
+// The current thumbnail's padding shows a frame. No opacity on the others:
+// it would dim their focus ring.
 static LIGHTBOX_THUMBNAIL_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
         .width("100%")
@@ -241,10 +232,8 @@ struct Fit {
 }
 
 impl Fit {
-    /// The picture as `object-fit: scale-down` shows it: shrunk to fit the
-    /// frame, never grown past its natural size. Without a natural size - not
-    /// decoded yet, or a renderer that cannot say - it is taken to fill the
-    /// frame, which only makes the pan bounds generous.
+    /// The picture as `object-fit: scale-down` shows it. Without a natural size
+    /// it fills the frame, which only makes the pan bounds generous.
     fn new(frame: Dimensions, natural: Option<Dimensions>) -> Self {
         let picture = match natural {
             Some(natural) => {
@@ -262,9 +251,8 @@ impl Fit {
     }
 }
 
-/// The zoom of one picture. Carries the index it belongs to, so moving to
-/// another picture resets it without a write: a zoom for any other index reads
-/// as fitted, so the new picture never paints zoomed first.
+/// The zoom of picture `index`; any other picture reads it as fitted, so a
+/// new one never paints zoomed first.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Zoom {
     index: usize,
@@ -288,9 +276,8 @@ impl Zoom {
         self.scale > 1.0
     }
 
-    /// Keeps the picture covering the frame: at scale `s` it overhangs by
-    /// `(picture * s - frame) / 2` on each side, and that is how far it may
-    /// move. A picture still smaller than the frame does not move at all.
+    /// Keeps the picture covering the frame: it may move by its overhang,
+    /// `(picture * s - frame) / 2`, and not at all while smaller.
     fn clamped(self, fit: Fit) -> Self {
         let bound = |picture: f64, frame: f64| ((picture * self.scale - frame) / 2.0).max(0.0);
         let x_bound = bound(fit.picture.width, fit.frame.width);
@@ -388,9 +375,8 @@ fn thumbnail_id(base: &str, index: usize) -> String {
     format!("{base}-thumbnail-{index}")
 }
 
-/// Where a second `open_with` leaves the viewer: on its index, clamped to its
-/// gallery, and fitted. A zoom is keyed by index only, so kept, it would carry
-/// onto whichever new picture lands at the same index.
+/// A second `open_with` lands on its clamped index, fitted: a kept zoom would
+/// carry onto the new picture at the same index.
 fn reopened(zoom: Zoom, index: usize, count: usize) -> (usize, Zoom) {
     let zoom = match zoom.is_zoomed() {
         true => Zoom::fitted(usize::MAX),
@@ -399,9 +385,8 @@ fn reopened(zoom: Zoom, index: usize, count: usize) -> (usize, Zoom) {
     (index.min(count.saturating_sub(1)), zoom)
 }
 
-/// Frame `index`'s bounds and its top-left in the viewport. Measures the
-/// untransformed frame, never the zoomed `<img>`. Called in the handler and
-/// awaited in the task: Blitz answers a read only while the document is free.
+/// The untransformed frame's bounds and top-left. Call in the handler, await in
+/// the task: Blitz answers a read only while the document is free.
 fn measure_fit(
     stage: ElementHandle,
     picture: ElementHandle,
@@ -435,8 +420,7 @@ fn from_frame_centre(client: DragPoint, bounds: Fit, left: f64, top: f64) -> Dra
 }
 
 /// Rescales picture `index` to `next(current scale)`, about `client` or the
-/// centre. The frame and the picture's natural size are read first - for the
-/// pan bounds and for where the cursor sits - so the zoom lands once they do.
+/// centre, once the frame is measured.
 fn zoom_about(
     stage: ElementHandle,
     picture: ElementHandle,
@@ -518,9 +502,7 @@ fn refit(stage: ElementHandle, picture: ElementHandle, zooming: Zooming) {
     });
 }
 
-/// The zoom and the gesture, and the two scales that move them. One `Copy`
-/// argument, so the drag, the keys, the wheel and the double-click all read
-/// the same state.
+/// The zoom and the gesture, as one `Copy` value every input shares.
 #[derive(Clone, Copy)]
 struct Zooming {
     index: Signal<usize>,
@@ -597,10 +579,8 @@ impl Stage {
     }
 }
 
-/// The pan and the swipe-to-close, on the picture showing. Not on the stage:
-/// pointer capture retargets the click that follows a press
-/// ([[codebase/components/scroller]]), so a double-click on a zoomed picture
-/// would land on the stage, not on the picture's own `ondoubleclick`.
+/// The pan and the swipe-to-close, on the picture: capture on the stage would
+/// retarget its double-click there ([[codebase/components/scroller]]).
 fn use_lightbox_drag(zooming: Zooming, capture: ElementHandle, close: Callback<()>) -> Drag {
     let Zooming {
         mut zoom,
@@ -704,13 +684,8 @@ fn lightbox_slide(
         false => "lazy",
     };
 
-    // Keyed by picture, so a gallery swapped in by a second `open_with`
-    // gets new `<img>`s: Chromium fetches a new `src` at once on an
-    // element that has loaded before, whatever `loading` says (todo 227).
-    // `Carousel` keys its slide wrappers by position, so the strip and its
-    // scroll stay put and only what is inside a wrapper is replaced.
-    // The wheel, the double-click and the press are the frame's: natively a
-    // shrunk SVG leaves some of it round the picture (todos 920, 928).
+    // Keyed by picture: Chromium fetches a new `src` on a loaded `<img>` at once,
+    // whatever `loading` says (todo 227). Inputs are the frame's (todos 920, 928).
     rsx! {
         Box {
             key: "{item.src}",
@@ -803,9 +778,8 @@ fn lightbox_slide(
                         && let Some(bounds) = *fit.peek()
                     {
                         let moved = from.panned(dx, dy, bounds);
-                        // Only a pan that moved is a pan. At the edge the
-                        // key falls through to the slide change, so a
-                        // zoomed picture never traps the keyboard.
+                        // At the edge the key falls through to the slide
+                        // change, so a zoomed picture never traps the keyboard.
                         if moved != from {
                             event.prevent_default();
                             zoom.set(moved);
@@ -943,17 +917,11 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     // The opening `index` and `zoom` were last reset for, and whether a
     // picture held focus when a new one arrived.
     let settled = use_hook(|| Rc::new(RefCell::new((opening.clone(), false))));
-    // A second `open_with` while this one shows replaces the gallery in place,
-    // but the effect below only resets `index` after this render. Until then
-    // the new gallery is drawn at its own index: the new frames are keyed
-    // `<img>`s, and one created `eager` around the old index fetches at once
-    // and cannot be taken back (todo 227).
+    // A second `open_with` is drawn at its own index before the effect resets
+    // `index`: an `eager` `<img>` round the old index would fetch (todo 227).
     let pending = settled.borrow().0 != opening;
-    // The swap's own move is instant: a smooth scroll back from the old index
-    // would pass over new pictures that are not shown, and fetch them. Counted
-    // once per gallery, not once per pending render: a second count for the
-    // same gallery would still be unread when the user's next move arrives,
-    // and that move would jump as well.
+    // The swap jumps, so a smooth scroll fetches nothing it passes. Counted once
+    // per gallery, or the user's next move would jump too.
     let jump = use_context_provider(CarouselJump::default);
     // Thumbnails that all fit drop the strip's status and track tab stop (todo
     // 564). The one-up stage never fits: one picture renders no carousel.
@@ -964,9 +932,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         jump.swapped();
     }
     if pending {
-        // The last render in which the old pictures are still in the document.
-        // Their `<img>`s are about to be replaced, so focus on one would drop
-        // to the page.
+        // The old `<img>`s are about to go, so focus on one would drop to the page.
         let focused = stage
             .query_selector("[data-lightbox-frame] img:focus")
             .is_ok();
@@ -1012,9 +978,8 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         _ => Zoom::fitted(current),
     };
 
-    // The element a move sends focus to. Focused from an effect, not from the
-    // handler: until the render that moves the carousels, the target's slide
-    // is still `inert`, and `focus()` on it does nothing.
+    // Focused from an effect: until the carousels move, the target's slide is
+    // still `inert` and `focus()` does nothing.
     let mut focus_next = use_signal(|| None::<String>);
     use_effect(move || {
         if let Some(id) = focus_next() {
@@ -1025,10 +990,8 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         }
     });
 
-    // One handle per picture, and the drag captures on the one showing. Grown
-    // in render, where a signal may be created, because a later opening can
-    // bring more pictures; a `RefCell`, not a signal, so growing it re-renders
-    // nothing.
+    // One handle per picture, grown in render as a later opening can bring more;
+    // a `RefCell`, so growing it re-renders nothing.
     let pictures = use_hook(|| Rc::new(RefCell::new(Vec::<ElementHandle>::new())));
     {
         let mut pictures = pictures.borrow_mut();
@@ -1251,11 +1214,8 @@ mod tests {
         assert_eq!(fit.picture, size(800.0, 300.0));
     }
 
-    /// At 3x a 200px picture is still 600px, inside the 800px frame.
-    /// Todo 252, for `3203d7fd`: a second `open_with` drops the zoom, even
-    /// onto the index the zoom belonged to. Only this decision is testable
-    /// here: zooming needs the frame measured, which SSR cannot do. The
-    /// effect that calls it was checked in Chromium when it landed.
+    /// Todo 252: a second `open_with` drops the zoom, even on the same index.
+    /// SSR cannot measure a frame, so only this decision is tested.
     #[test]
     fn a_second_open_drops_the_zoom_and_clamps_the_index() {
         let zoomed = Zoom {
@@ -1271,6 +1231,7 @@ mod tests {
         assert_eq!(reopened(Zoom::fitted(1), 0, 0).0, 0);
     }
 
+    /// At 3x a 200px picture is still 600px, inside the 800px frame.
     #[test]
     fn a_zoomed_picture_smaller_than_the_frame_cannot_move() {
         let zoomed = Zoom {

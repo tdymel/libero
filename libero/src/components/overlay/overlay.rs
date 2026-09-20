@@ -24,11 +24,12 @@ base_props! {
     pub struct OverlayProps {
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
+        /// Opacity of the black backdrop.
         #[props(default, into)]
         opacity: Input<ThemeAwareValue>,
+        /// Backdrop blur; a bare number is `px`.
         #[props(default, into)]
         blur: Input<ThemeAwareValue>,
-        /// A `Callback` rather than a closure so the props still memoize.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
         children: Option<Element>,
@@ -43,7 +44,21 @@ fn px_value(value: &ThemeAwareValue) -> Option<String> {
     }
 }
 
-/// Dims/blurs what's behind it. Render it conditionally - there is no `open`.
+/// Dims and blurs what's behind it. Render it conditionally: there is no `open`.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::Overlay;
+/// # fn app() -> Element {
+/// # let mut shown = use_signal(|| true);
+/// # rsx! {
+/// if shown() {
+///     Overlay { opacity: 0.6, blur: 2, onclick: move |_| shown.set(false) }
+/// }
+/// # } }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/overlay/overlay>
 #[component]
 pub fn Overlay(props: OverlayProps) -> Element {
     let variables: Input<Variables> = variables()

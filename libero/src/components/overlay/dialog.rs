@@ -19,15 +19,10 @@ use crate::{
 
 const DIALOG_RADIUS_VAR: CssVar = CssVar::new("--lsx-dialog-radius");
 
-// A dialog is a `Paper`, so its chrome comes from `paper_sx()` - background,
-// border and the themed radius - and this adds only what makes it a dialog.
-// Both overrides below are plain declarations chained on top, which is what
-// `paper_sx()` leaves room for: `Paper` emits a `data-state` token only for a
-// step a caller names, and `Dialog` names none.
+// `Paper`'s chrome, plus what makes it a dialog.
 static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
-        // `Modal`'s wrapper is pointer-events:none so backdrop clicks fall
-        // through; the dialog itself needs them back.
+        // Back on: `Modal`'s wrapper lets backdrop clicks fall through.
         .pointer_events("auto")
         // A flex item shrinks to content, so `size` would only cap, not fill.
         .width("100%")
@@ -35,22 +30,18 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
         .margin("md")
         .padding("lg")
         .border_radius(DIALOG_RADIUS_VAR.value_or(PAPER_RADIUS.value()))
-        // A dialog floats above everything, where the surface default rests.
         .box_shadow(SizeCss::SHADOW.value(Size::Xl))
 });
 
 static DIALOG_HEADER_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("flex-start")
-        // Not `space-between`: that puts a lone child at the start, so a close
-        // button without a title sat top-left.
+        // Not `space-between`: a lone close button would sit top-left.
         .justify_content("flex-end")
         .gap("sm")
         .margin_bottom("md")
 });
 
-// Takes the free space, so the title starts at the left and the close button
-// stays at the right.
 static DIALOG_HEADER_TITLE_SX: StaticSx = StaticSx::new(|| sx().margin("0").flex("1"));
 
 fn dialog_variables(props: &DialogProps) -> Variables {
@@ -78,12 +69,10 @@ base_props! {
         /// Defaults to on inside a modal, or when `onclose` is set.
         #[props(default)]
         close_button: Option<bool>,
-        /// Called by the close button outside a modal. Inside one the button
-        /// closes the modal instead.
+        /// The close button outside a modal; inside one it closes the modal.
         #[props(default)]
         onclose: Option<EventHandler<()>>,
-        /// Accessible name for the close button, e.g. "Close cart". Unset, the
-        /// localization's `common.close`.
+        /// The close button's accessible name, e.g. "Close cart".
         #[props(default, into)]
         close_label: Option<String>,
         #[props(default, into)]
@@ -97,12 +86,8 @@ base_props! {
     }
 }
 
-/// Dialog surface: `role="dialog"`, plus `aria-modal="true"` when nested in a
-/// modal (auto-detected). Inside one it also names itself from `title` and
-/// closes itself from its own button, so a modal opened with
-/// [`crate::hooks::use_modal`] needs no closing wiring. Outside one the button
-/// calls `onclose`. No positioning of its own - anchor it with
-/// [`crate::components::Float`] or your own layout.
+/// A dialog surface with a title and close button. Inside a modal it closes
+/// the modal; it does not position itself.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -116,6 +101,8 @@ base_props! {
 /// }
 /// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/overlay/dialog>
 #[component]
 pub fn Dialog(props: DialogProps) -> Element {
     let modal = try_use_context::<ModalContext>().filter(ModalContext::is_modal);
@@ -146,8 +133,7 @@ pub fn Dialog(props: DialogProps) -> Element {
         .merge(props.variables.unwrap_or_default())
         .into();
 
-    // Pushed onto the caller's own: the component's attributes have to render
-    // after the caller's to win a duplicate name.
+    // Pushed after the caller's, to win a duplicate name.
     let mut attributes = props.attributes;
     attributes.push(attr("role", "dialog"));
     if is_modal {
@@ -177,9 +163,7 @@ pub fn Dialog(props: DialogProps) -> Element {
     }
     children.push(props.children);
 
-    // `Paper`'s body without its scope: a `Paper` taking `children` would
-    // re-render on every render of the dialog. Dialog sets no radius or shadow
-    // step, so `Paper` would pass `states` through unchanged.
+    // `Paper`'s body without its scope, which would re-render with every dialog render.
     use_box()
         .framework_sx(&DIALOG_BASE_SX)
         .class(&props.class)
@@ -190,8 +174,7 @@ pub fn Dialog(props: DialogProps) -> Element {
         .render(HtmlTag::Div, attributes, children)
 }
 
-/// The title and close button, in a scope of their own: its props compare
-/// equal, so a dialog re-rendered for its `children` skips the header.
+/// Its own scope, so a dialog re-rendered for its `children` skips the header.
 #[component]
 fn DialogHeader(
     title: Option<String>,

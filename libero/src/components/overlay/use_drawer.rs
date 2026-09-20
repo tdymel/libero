@@ -42,6 +42,8 @@ pub struct DrawerOptions {
 /// # rsx! {}
 /// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/overlay/drawer>
 pub fn use_drawer<S, R>(
     options: DrawerOptions,
     mut render: impl FnMut(ModalScope<S, R>) -> Element + 'static,

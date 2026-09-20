@@ -19,15 +19,13 @@ pub(crate) fn use_modal_z_index() -> i32 {
     host.z_index(id)
 }
 
-/// Closes the modal this content is rendered in. For a component factored out
-/// of the render closure, which cannot capture its [`ModalScope`].
+/// Closes the enclosing modal, for content that cannot capture its [`ModalScope`].
 pub fn use_modal_close() -> Callback<()> {
     let modal = use_context::<ModalContext>();
     use_callback(move |()| modal.close())
 }
 
-/// Everything about one opening that does not mention the argument type, so
-/// [`Opening`] can outlive it without carrying `S`.
+/// One opening's state without `S`, so [`Opening`] need not carry it.
 struct Resolution<R: 'static> {
     /// Bumped per open. Anything holding an older one is stale and inert.
     generation: u64,
@@ -50,11 +48,8 @@ impl<R: 'static> Resolution<R> {
     }
 }
 
-/// Settles `generation` if it is still the live one, otherwise does nothing -
-/// which is what makes a stale [`Opening`] inert.
-///
-/// Handlers run after the write lock is released, so one of them may open this
-/// same modal again.
+/// Settles `generation` if still live, so a stale [`Opening`] is inert. Handlers
+/// run after the lock is released, so one may reopen this modal.
 fn finish<R: Clone + 'static>(
     mut resolution: Signal<Resolution<R>>,
     closer: Callback<()>,
@@ -123,9 +118,8 @@ impl<S: 'static, R: Clone + 'static> ModalScope<S, R> {
     }
 }
 
-/// One opening of a modal. Attach per-open consequences to it, `.await` it, or
-/// close it. Keeping it past its opening is safe: a stale handle is inert, it
-/// never reaches whichever modal is open later.
+/// One opening of a modal: attach a handler, `.await` it, or close it. A stale
+/// one is inert.
 pub struct Opening<R: 'static = ()> {
     resolution: Signal<Resolution<R>>,
     closer: Callback<()>,
@@ -228,14 +222,8 @@ impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
             resolution.wakers.clear();
             (resolution.generation, resolution.focus_return)
         };
-        // Out of the guard, still inside the trigger's own handler - which is
-        // what makes the active element the one the user acted on.
-        //
-        // Skipped when this modal is *already* open, because then the active
-        // element is a control inside the overlay that is about to be torn
-        // down, and remembering it would clobber the trigger that is still the
-        // right answer ([[todos]] item 37). `peek`: `open_with` is called from
-        // handlers, and nothing here should subscribe.
+        // Still in the trigger's handler, so the active element is the trigger.
+        // Skipped when already open: it would remember a control inside (todo 37).
         let opening = self.args.peek().is_none();
         if opening {
             focus_return.remember_active();
@@ -275,10 +263,7 @@ impl<S: Default + 'static, R: Clone + 'static> ModalHandle<S, R> {
 
 /// Registers `render` as a modal and returns the handle that opens it.
 ///
-/// The modal is portaled from here, so this must be called in a component that
-/// outlives every trigger. Arguments shared by every opening are simply
-/// captured by `render`. The handle is `Copy`; a dialog wanting one shared
-/// instance can `use_context_provider` it in its own hook.
+/// Call it in a component that outlives every trigger: the modal portals from there.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -295,6 +280,8 @@ impl<S: Default + 'static, R: Clone + 'static> ModalHandle<S, R> {
 /// # rsx! {}
 /// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/overlay/modal>
 pub fn use_modal<S, R>(
     render: impl FnMut(ModalScope<S, R>) -> Element + 'static,
 ) -> ModalHandle<S, R>
@@ -305,9 +292,7 @@ where
     let args = use_signal(|| None::<S>);
     let focus_return = use_focus_return();
     let resolution = use_signal(move || Resolution::<R>::new(focus_return));
-    // `use_callback`, not the closure directly: rsx rebuilds `render` every
-    // render, and a context-provided handle is stored once - the swap keeps
-    // captured values live instead of frozen at mount.
+    // `use_callback`, so a stored handle sees fresh captures, not the mount's.
     let slot = use_portal_slot();
     let closer = use_callback(move |()| {
         let mut args = args;
@@ -319,8 +304,7 @@ where
     // Runs in `ModalSlot`'s scope, so `args` and whatever `render` reads
     // subscribe it, not this caller: opening redraws the modal alone.
     let draw = use_callback(move |()| {
-        // `peek`: the generation only ever changes together with `args`, and
-        // reading it would redraw on every handler attached.
+        // `peek`: it changes with `args`; reading would redraw per handler attached.
         let generation = resolution.peek().generation;
         args.read().is_some().then(|| {
             let scope = ModalScope {

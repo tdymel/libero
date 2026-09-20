@@ -1,5 +1,4 @@
-// Components that report state back to the user - an alert, a loader, a
-// progress bar, a skeleton, a notification.
+// Components that report state back to the user.
 
 mod alert;
 mod loader;

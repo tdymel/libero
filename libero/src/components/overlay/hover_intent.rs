@@ -7,9 +7,8 @@ use crate::{
     sx::{StaticSx, sx},
 };
 
-/// The trigger's wrapper, which is also the popover's anchor. Not `auto`, so a
-/// flex or grid parent's `align-items: stretch` cannot widen it past the
-/// trigger and anchor the box to the container instead.
+/// The trigger's wrapper and the popover's anchor. `max-content`, so a
+/// stretching flex or grid parent cannot widen it past the trigger.
 pub(super) static TRIGGER_WRAPPER_SX: StaticSx = StaticSx::new(|| {
     let base = sx()
         .display("inline-block")
@@ -34,7 +33,6 @@ pub(super) struct HoverIntent {
 }
 
 impl HoverIntent {
-    /// Reactive.
     pub(super) fn get(&self) -> bool {
         (self.hovered)()
     }

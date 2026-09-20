@@ -16,30 +16,18 @@ pub use crate::theme::LoaderVariant;
 
 input_from_str!(LoaderVariant);
 
-/// The ink, with a fallback so a `Loader` still draws if a caller ever renders
-/// one outside the theme's `variables()` path.
 fn ink() -> String {
     LOADER_COLOR.value_or("currentColor")
 }
 
-/// Cancelling an animation drops the element back on its *static* style, not
-/// the `from` frame, so the bars stay visible under `prefers-reduced-motion:
-/// reduce` even without `restore`. It pins the visible end anyway, so a static
-/// style that starts hidden cannot make the loader vanish for exactly the
-/// readers who asked for less motion.
-///
-/// Every variant goes through this helper so that the *next* one cannot be
-/// added without meeting the question.
+/// Reduced motion: stops the animation and pins the visible end, so a static
+/// style that starts hidden cannot make the loader vanish. Every variant uses it.
 fn stop_motion(restore: Sx) -> Sx {
     restore.animation("none")
 }
 
-/// One bar or one dot, with its own delay and its own reduced-motion arm.
-///
-/// The arm is repeated per child rather than written once against `& > span`
-/// because the delay lives on `:nth-child(n)`, and a bare `& > span` inside the
-/// media block loses to it on specificity - the middle dot would keep pulsing
-/// while the outer two stopped.
+/// Reduced-motion arm per child: a bare `& > span` loses to `:nth-child(n)` on
+/// specificity, and the middle dot would keep pulsing.
 fn staggered(animation: String, restore: Sx) -> Sx {
     sx().animation(animation)
         .media(REDUCED_MOTION, stop_motion(restore))
@@ -61,10 +49,8 @@ fn dot(delay: &str) -> Sx {
 
 static LOADER_BASE_SX: StaticSx = StaticSx::new(|| {
     let edge = LOADER_SIZE.value();
-    // Every number below is a fraction of the one edge, and the two divisions are not independent: three bars at `edge / 5` with
-    // two gaps of `edge / 5` fill the row exactly, and three dots at
-    // `edge / 3 - edge / 15` with two gaps of `edge / 10` do the same. Change
-    // one and the shape stops being square.
+    // Sizes and gaps together fill the edge exactly; change one and the shape
+    // stops being square.
     let gap = format!("calc({edge} / 5)");
     let ring = format!("calc({edge} / 8)");
     let dot_size = format!("calc({edge} / 3 - {edge} / 15)");
@@ -75,15 +61,11 @@ static LOADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .display("inline-flex")
         .align_items("center")
         .justify_content("center")
-        // A glyph, not a box: never stretched or squeezed by a flex parent.
         .flex("none")
         .width(edge.clone())
         .height(edge.clone())
-        // The root is `inline-flex`, so it sits on the text baseline by
-        // default and hangs below it. A spinner beside a word should line up
-        // with the word.
+        // Lines up with a word beside it instead of hanging below the baseline.
         .vertical_align("middle")
-        // Not a target and not text: no I-beam, no accidental selection.
         .user_select("none");
 
     let oval = sx().selector(
@@ -94,18 +76,13 @@ static LOADER_BASE_SX: StaticSx = StaticSx::new(|| {
             .border_radius("50%")
             .border_style("solid")
             .border_width(ring)
-            // Three sides inked and one transparent is what makes the
-            // rotation legible - a complete ring rotating looks static.
+            // The gap makes the rotation visible; a full ring looks static.
             .border_color(format!("{c} {c} {c} transparent"))
             .animation("lsx-loader-oval 1.2s linear infinite")
-            // Only `transform` is animated here, so cancelling leaves a
-            // static ring with its gap: visible and distinguishable.
             .media(REDUCED_MOTION, stop_motion(sx())),
     );
 
-    // The negative delays start each bar partway through one shared 1.2s
-    // cycle, 120ms apart, which is what makes the three read as one wave
-    // rather than three loops that happen to be near each other.
+    // Negative delays phase the bars into one wave.
     // Forced colours paint backgrounds `Canvas`; the oval's border survives.
     let forced = || sx().background_color("CanvasText");
     let bars = sx()
@@ -132,8 +109,7 @@ static LOADER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .media(FORCED_COLORS, forced()),
         )
         .selector("& > span:nth-child(1)", dot("0ms"))
-        // Half the cycle behind its neighbours, so the row breathes from the
-        // middle out instead of in lockstep.
+        // Half a cycle behind: the row breathes from the middle out.
         .selector("& > span:nth-child(2)", dot("0.4s"))
         .selector("& > span:nth-child(3)", dot("0ms"));
 
@@ -160,31 +136,9 @@ base_props! {
     }
 }
 
-/// An indeterminate busy indicator: a rotating ring, three bars or three dots.
+/// An indeterminate, silent (`aria-hidden`) busy indicator: a ring, bars or dots.
 ///
-/// Indeterminate on purpose - it says *something is happening*, never how much
-/// is left. A known fraction is `ProgressBar`, and showing a spinner for one is
-/// a downgrade the reader notices.
-///
-/// The root is a `<span>`, so a loader is legal inside a `<p>` or a `<button>`.
-///
-/// # Announcing it
-///
-/// A loader is always silent: `aria-hidden="true"`, on the assumption that
-/// something else on screen already says what is going on. A spinner next to
-/// the word "Uploading…" that also announced itself would be read twice.
-///
-/// | The loader is… | write | the root renders |
-/// |---|---|---|
-/// | beside its own visible text | `Loader {}` | `aria-hidden="true"` |
-/// | inside an already-named control | `Loader {}` | `aria-hidden="true"`; the control's name plus `aria-busy` carries it |
-/// | the only content of a region | `Loader {}`, `aria-busy="true"` on the region, and the text in an always-mounted `role="status"` region outside it | `aria-hidden="true"`; the status region carries it |
-///
-/// The status region must exist before the wait starts and must not sit inside
-/// the busy element. Some screen readers skip a live region that mounts with
-/// its text, and some hold back changes inside an `aria-busy` subtree until it
-/// is no longer busy - by which time the loader is gone. `ComboboxCore` does
-/// it this way:
+/// Announce the wait from an always-mounted status region outside the busy one:
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -201,19 +155,13 @@ base_props! {
 /// # #[component] fn ResultList(rows: Vec<String>) -> Element { rsx! {} }
 /// ```
 ///
-/// There is no `label` prop that would make the loader its own status region:
-/// that region would mount together with its text, which is the first risk
-/// above.
-///
-/// Not focusable, and no keyboard behaviour at all.
+/// Docs: <https://libero-ui.dev/feedback/loader>
 #[component]
 pub fn Loader(props: LoaderProps) -> Element {
     let theme = use_theme();
     let variant = props.variant.copied_or(theme.loader.variant);
     let size = props.size.copied_or(theme.loader.size);
 
-    // The theme names a `Color`; `base_color` is what turns that - or a
-    // caller's literal - into a resolvable value at the default shade.
     let requested = props
         .color
         .as_ref()
@@ -237,14 +185,10 @@ pub fn Loader(props: LoaderProps) -> Element {
         .variables(&variables)
         .prepare();
 
-    // `aria-hidden`, not `role="presentation"`: `presentation` strips an
-    // element's *implicit* role, and a `<span>` has none - it would be a no-op
-    // and leave a nameless node in the tree.
+    // Not `role="presentation"`: a `<span>` has no implicit role to strip.
     let boxed = boxed.attr("aria-hidden", "true");
 
-    // `oval` draws itself with `::after` and takes no children; the other two
-    // are three real elements, because three independently delayed animations
-    // need three boxes and an element has only one `::before`/`::after` pair.
+    // Three delayed animations need three boxes; one element has one `::after`.
     let children = match variant {
         LoaderVariant::Oval => rsx! {},
         LoaderVariant::Bars | LoaderVariant::Dots => rsx! {

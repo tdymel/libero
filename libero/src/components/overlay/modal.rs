@@ -27,11 +27,8 @@ static MODAL_SX: StaticSx = StaticSx::new(|| {
         .z_index(MODAL_Z_INDEX_VAR.value())
 });
 
-// Fixed + inset so it spans the viewport: `Dialog`'s `margin:auto` needs real
-// free space on this flex container to push against. `pointer-events:none` so
-// clicks in the empty area reach the `Overlay` below; the content restores it.
-// Goes on the `FocusTrap` itself rather than a wrapper - as an `sx` it lands in
-// `lsx-user-static`, which beats the trap's own `display:contents`.
+// On the `FocusTrap` as an `sx`, to beat its `display: contents`. No pointer
+// events, so clicks in the empty area reach the `Overlay`.
 static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
         .inset("0")
@@ -50,17 +47,12 @@ base_props! {
     }
 }
 
-/// A focus-trapped, dimmed layer that locks scroll and stacks above earlier
-/// modals. Crate-only: it returns no focus on close, which
-/// [`crate::hooks::use_modal`] and `use_drawer` add around it.
-/// Escape/backdrop only *request* a close via `onclose`.
+/// A focus-trapped, dimmed, scroll-locking layer. Crate-only: `use_modal` adds
+/// focus return. Escape and backdrop only request a close via `onclose`.
 #[component]
 pub(crate) fn Modal(props: ModalProps) -> Element {
-    // Forwarded through `use_callback`, not stored directly: a context
-    // provider runs once, but rsx builds a fresh `EventHandler` every render,
-    // so storing the prop would freeze descendants on the closure - and the
-    // values it captured - from mount. `use_callback` swaps its inner closure
-    // each render behind a handle stable enough to provide once.
+    // Through `use_callback`: the context is provided once, and the raw prop
+    // would freeze descendants on the first render's closure.
     let onclose = props.onclose;
     let onclose = use_callback(move |()| {
         if let Some(onclose) = &onclose {
@@ -72,33 +64,24 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
     });
 
     let z_index = use_modal_z_index();
-    // A `Modal` is only ever rendered while it is open, so mounting *is*
-    // opening. Its Escape stays a bubbled subtree `onkeydown` rather than
-    // moving to `KeyboardApi`: `platform::keyboard()` is `None` on the WebView
-    // floor, so the capability would regress Escape there. Only the
-    // arbitration is shared.
+    // Escape is a subtree `onkeydown`, not `KeyboardApi`: `keyboard()` is
+    // `None` on the WebView floor.
     let layer = use_dismiss_layer();
-    // The guard lives in this component's hook state, so the layer comes off
-    // the stack when the modal unmounts, whatever path got it there. `Rc`
-    // because `use_hook` clones what it stores on every render, and the guard
-    // is deliberately not `Clone` - there is one of it, and it pops when it
-    // dies.
+    // The guard pops the layer on unmount. `Rc`: `use_hook` clones, the guard is not `Clone`.
     use_hook(move || Rc::new(layer.push()));
     let variables: Input<Variables> = variables()
         .with(MODAL_Z_INDEX_VAR, z_index.to_string())
         .into();
 
-    // Deferred a microtask: closing synchronously from an event still
-    // bubbling through the torn-down modal re-enters the same `EventHandler`
-    // and panics with `AlreadyBorrowedMut`.
+    // Deferred: closing synchronously mid-bubble re-enters the same
+    // `EventHandler` and panics with `AlreadyBorrowedMut`.
     let close = move || {
         spawn(async move {
             onclose.call(());
         });
     };
 
-    // Stable identity, so `Overlay`'s props memoize - a closure here would be
-    // a fresh listener attribute every render and re-render it.
+    // Stable identity, so `Overlay`'s props memoize.
     let on_backdrop_click = use_callback(move |_: MouseEvent| close());
 
     use_box()
@@ -110,20 +93,8 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
         .prepare()
         .attr("data-lsx-scroll-lock", true)
         .event("onkeydown", move |event: Event<KeyboardData>| {
-            // Only the top layer answers: a popover open inside this modal
-            // hears the same press on its own box, and without the guard both
-            // would close.
-            //
-            // The stack cannot see everything that takes Escape. On the web a
-            // popover hears it at the document, and dioxus-web delivers this
-            // handler only after that popover has closed and left the stack,
-            // so `is_top()` alone answers yes. And a field dropdown - Select,
-            // Cascader, the date and colour fields - is never on the stack at
-            // all: it closes its list from a handler inside this modal and
-            // lets the press bubble on. Both prevent the press's default when
-            // they take it, and `escape_closes` reads that on every backend.
-            // It also drops a held Escape's repeats, which would otherwise
-            // close this modal right after the list inside it.
+            // Only the top layer answers. `escape_closes` also skips a press a popover
+            // or field dropdown already took (default prevented), and held repeats.
             if escape_closes(&event) && layer.is_top() {
                 close();
             }
@@ -137,8 +108,8 @@ pub(crate) fn Modal(props: ModalProps) -> Element {
             HtmlTag::Div,
             props.attributes,
             rsx! {
-                // The scroll lock: in the document exactly while a modal is.
-                // Not `body:has(..)` - `:has()` never matches natively.
+                // The scroll lock, mounted with the modal. Not `body:has(..)`:
+                // `:has()` never matches natively.
                 style { dangerous_inner_html: SCROLL_LOCK_CSS }
                 Overlay { z_index: 0, onclick: on_backdrop_click }
                 FocusTrap { sx: &MODAL_CONTENT_SX, {props.children} }
