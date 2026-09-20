@@ -35,3 +35,9 @@ pub(crate) fn paints_outer_inline_backgrounds() -> bool {
 pub(crate) fn aligns_logical_text() -> bool {
     backend::ALIGNS_LOGICAL_TEXT
 }
+
+/// Whether a raw `<input>`/`<textarea>`/`<select>` follows `color-scheme`.
+/// Blitz's UA sheet paints them white whatever the scheme (todo 955).
+pub(crate) fn colors_form_controls() -> bool {
+    backend::COLORS_FORM_CONTROLS
+}

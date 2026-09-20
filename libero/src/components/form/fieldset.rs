@@ -13,12 +13,18 @@ use crate::{
         },
         layout::use_box,
     },
+    platform::lifts_legends,
     sx::{StaticSx, sx},
-    theme::{FIELD_CAPTION_FONT_SIZE, FIELD_LABEL_FONT_SIZE, FieldsetDefaults, Size},
+    theme::{FIELD_CAPTION_FONT_SIZE, FIELD_LABEL_FONT_SIZE, FIELDSET_GAP, FieldsetDefaults, Size},
     utils::warn,
 };
 
 static FIELDSET_SX: StaticSx = StaticSx::new(|| {
+    let legend_gap = match lifts_legends() {
+        true => "4px".to_string(),
+        // Blitz's legend is a flex item: take the gap back out below it.
+        false => format!("calc(4px - {})", FIELDSET_GAP.value()),
+    };
     FieldsetDefaults::theme_vars()
         .display("flex")
         .flex_direction("column")
@@ -29,7 +35,7 @@ static FIELDSET_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& > legend",
             sx().padding("0")
-                .margin_bottom("4px")
+                .margin_bottom(legend_gap)
                 .font_weight("600")
                 .font_size(FIELD_LABEL_FONT_SIZE.value(Size::Md)),
         )

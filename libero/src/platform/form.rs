@@ -7,6 +7,12 @@ use dioxus::{
 
 use super::backend;
 
+/// Whether a `<fieldset>`'s legend sits outside its content box, clear of a
+/// flex `gap`. Blitz lays it out as the first flex item, a gap below it.
+pub(crate) fn lifts_legends() -> bool {
+    backend::LIFTS_LEGENDS
+}
+
 /// `Form`'s `onclick` and `onkeydown` where the renderer fires no `submit` of
 /// its own (Blitz): a submit button's click and Enter in a text field run
 /// `submit`. `None` where it does.

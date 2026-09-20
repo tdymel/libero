@@ -228,6 +228,13 @@ pub(crate) const PAINTS_OUTER_INLINE_BACKGROUNDS: bool =
 pub(crate) const ALIGNS_LOGICAL_TEXT: bool =
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
 
+/// Blitz lays a legend out as a flex item; see [`lifts_legends`](crate::platform::lifts_legends).
+pub(crate) const LIFTS_LEGENDS: bool = !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
+/// Blitz paints raw form controls white; see [`colors_form_controls`](crate::platform::colors_form_controls).
+pub(crate) const COLORS_FORM_CONTROLS: bool =
+    !cfg!(all(not(target_arch = "wasm32"), feature = "native"));
+
 pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     #[cfg(target_arch = "wasm32")]
     return web::document();

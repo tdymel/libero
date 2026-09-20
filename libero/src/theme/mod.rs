@@ -16,6 +16,8 @@ pub use themes::*;
 pub(crate) use stylesheet::{DARK_SCHEME_QUERY, THEME_ATTRIBUTE};
 // The provider emits it for a renderer without logical `text-align`.
 pub(crate) use stylesheet::physical_text_align;
+// ... and for one that paints raw form controls white in a dark scheme.
+pub(crate) use stylesheet::themed_form_controls;
 
 // Re-exported from `crate::tokens` (a layer below `sx`), so
 // `libero::theme::Size` stays the public path.

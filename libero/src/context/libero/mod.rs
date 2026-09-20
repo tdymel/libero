@@ -14,7 +14,7 @@ use crate::{
         self, apply_direction, clear_root_direction, color_scheme, document, focus_selectors,
         forget_direction, set_root_direction, store_direction, stored_direction,
     },
-    theme::{THEME_ATTRIBUTE, Theme, ThemeSet, physical_text_align},
+    theme::{THEME_ATTRIBUTE, Theme, ThemeSet, physical_text_align, themed_form_controls},
     tokens::{ColorScheme, ColorSchemeSetting, Direction},
     utils::warn,
 };
@@ -284,6 +284,7 @@ fn ThemeStyle() -> Element {
     });
 
     let physical = use_hook(|| (!platform::aligns_logical_text()).then(physical_text_align));
+    let form_controls = use_hook(|| (!platform::colors_form_controls()).then(themed_form_controls));
 
     rsx! {
         style {
@@ -291,6 +292,9 @@ fn ThemeStyle() -> Element {
         }
         if let Some(physical) = physical {
             style { dangerous_inner_html: "{physical}" }
+        }
+        if let Some(form_controls) = form_controls {
+            style { dangerous_inner_html: "{form_controls}" }
         }
         {platform::SheetWatch(count)}
     }

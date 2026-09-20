@@ -6,11 +6,12 @@ use super::{
     ANCHOR_CODE_COLOR, CODE_BLOCK_BACKGROUND, CODE_BLOCK_COPY_HOVER_BACKGROUND,
     CODE_BLOCK_COPY_HOVER_TEXT, CODE_BLOCK_LINE_NUMBER, CODE_BLOCK_MUTED_TEXT, CODE_TOK_ATTRIBUTE,
     CODE_TOK_COMMENT, CODE_TOK_CONSTANT, CODE_TOK_FUNCTION, CODE_TOK_HEADING, CODE_TOK_KEYWORD,
-    CODE_TOK_NUMBER, CODE_TOK_STRING, CODE_TOK_TAG, CODE_TOK_TYPE, Color, ColorShade, ColorValue,
-    CssVar, HexColor, INDICATOR_KEYFRAMES, KBD_BACKGROUND, KBD_COLOR, LOADER_KEYFRAMES,
-    MARQUEE_KEYFRAMES, NOTIFICATION_KEYFRAMES, NamedColorCss, PROGRESS_BAR_KEYFRAMES,
-    RIPPLE_KEYFRAMES, SKELETON_KEYFRAMES, Size, SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE,
-    TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, TOOLTIP_KEYFRAMES, Theme, ThemeSet,
+    CODE_TOK_NUMBER, CODE_TOK_STRING, CODE_TOK_TAG, CODE_TOK_TYPE, Color, ColorCss, ColorShade,
+    ColorValue, CssVar, HexColor, INDICATOR_KEYFRAMES, KBD_BACKGROUND, KBD_COLOR, LOADER_KEYFRAMES,
+    MARQUEE_KEYFRAMES, NOTIFICATION_KEYFRAMES, NamedColorCss, PAPER_BACKGROUND,
+    PROGRESS_BAR_KEYFRAMES, RIPPLE_KEYFRAMES, SKELETON_KEYFRAMES, Size, SizeCss, TEXT_FONT_FAMILY,
+    TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, TOOLTIP_KEYFRAMES,
+    Theme, ThemeSet,
 };
 
 const SHADES: [ColorShade; 9] = [
@@ -174,6 +175,27 @@ pub(crate) fn physical_text_align() -> String {
         "@layer {}{{{}}}",
         CssLayer::Base.css_name(),
         Stylesheet::new(scopes).as_str()
+    )
+}
+
+/// A field's paper and border for raw form controls, in the base layer, for a
+/// renderer that paints them white whatever `color-scheme` says (Blitz).
+pub(crate) fn themed_form_controls() -> String {
+    // Toggles and file/button inputs keep the UA look; text stays inherited.
+    let controls = ":where(input:not([type=checkbox], [type=radio], [type=range], \
+        [type=color], [type=file], [type=image], [type=submit], [type=reset], \
+        [type=button]), textarea, select)";
+    let scope = CssScope::new(
+        controls,
+        vec![
+            CssDeclaration::new("background-color", PAPER_BACKGROUND.value()),
+            CssDeclaration::new("border-color", ColorCss::MUTED.value(ColorShade::S6)),
+        ],
+    );
+    format!(
+        "@layer {}{{{}}}",
+        CssLayer::Base.css_name(),
+        Stylesheet::new(vec![scope]).as_str()
     )
 }
 

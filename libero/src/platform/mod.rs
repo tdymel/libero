@@ -63,7 +63,7 @@ pub(crate) use focus::{
     FocusMove, SilentFocusApi, SilentFocusSubscription, blur_counts, focus_entered_from,
     focus_pressed, focus_selectors, focus_visible, silent_focus,
 };
-pub(crate) use form::{submit_event, submit_listeners};
+pub(crate) use form::{lifts_legends, submit_event, submit_listeners};
 pub(crate) use http::fetch_text;
 pub(crate) use keyboard::arrow_target;
 pub(crate) use keyboard::key_taken;
@@ -74,8 +74,8 @@ pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};
 pub(crate) use max_length::fit_max_length;
 pub(crate) use motion::prefers_reduced_motion;
 pub(crate) use paint::{
-    aligns_logical_text, clips_background_to_text, draws_backdrop_filter, fires_image_errors,
-    fits_svg_images, paints_outer_inline_backgrounds,
+    aligns_logical_text, clips_background_to_text, colors_form_controls, draws_backdrop_filter,
+    fires_image_errors, fits_svg_images, paints_outer_inline_backgrounds,
 };
 pub(crate) use placeholder::{
     PLACEHOLDER_ATTR, PLACEHOLDER_CELL_ATTR, PLACEHOLDER_SHOWN_ATTR, draws_placeholders,
