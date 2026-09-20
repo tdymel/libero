@@ -20,7 +20,6 @@ pub use carousel::{Carousel, CarouselAlign, CarouselProps};
 pub(crate) use carousel::{CarouselJump, CarouselQuietWhenFits};
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
 pub use icon::{Icon, IconProps};
-// Shared with `ActionIcon` so it renders identically to a plain `Icon`.
 pub use image::{Image, ImageFit, ImageLoading, ImageProps};
 pub use image_list::{ImageBar, ImageItem, ImageList, ImageListProps};
 pub use indicator::{Indicator, IndicatorProps};

@@ -4,34 +4,31 @@ use crate::components::common::{Input, base_props, styling_attributes, use_style
 
 base_props! {
     pub struct DataListItemProps {
-        /// The term (`<dt>`). `sx`/`class`/`states` decorate this element
-        /// only - nothing wraps a term together with its descriptions.
+        /// The term (`<dt>`), which `sx`/`class`/`states` decorate.
         label: Element,
-        /// Descriptions for `label`, in a single `<dd>`: dioxus merges the
-        /// children into one node.
+        /// Descriptions for `label`, in a single `<dd>`.
         children: Element,
     }
 }
 
 /// A term and its descriptions, in a [`DataList`](super::DataList).
 ///
-/// ```no_run
+/// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::components::{DataList, DataListItem};
-/// # fn app() -> Element { rsx! { DataList {
-/// DataListItem {
-///     label: rsx! { "Phone" },
-///     "555-1234"
-///     "555-5678"
+/// # fn app() -> Element {
+/// rsx! {
+///     DataList {
+///         DataListItem { label: rsx! { "Phone" }, "555-1234" }
+///     }
 /// }
-/// # } } }
+/// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/data-display/data-list>
 #[component]
 pub fn DataListItem(props: DataListItemProps) -> Element {
-    // The `<dd>`s carry no styling of their own, so they are plain elements -
-    // a `Box` per description would be a component scope for nothing.
-    // Always a `<dt>`, so written inline: a rendered `Element` spliced in is a
-    // nested template.
+    // Plain `dt`/`dd`, not a `Box`: a spliced `Element` would be a nested template.
     let style = use_style_attributes(
         &props.class,
         None,
@@ -48,7 +45,6 @@ pub fn DataListItem(props: DataListItemProps) -> Element {
         props.attributes,
     );
 
-    // One `Element` here, so one `<dd>` and no list to diff.
     rsx! {
         dt { ..attributes, {props.label} }
         dd { {props.children} }

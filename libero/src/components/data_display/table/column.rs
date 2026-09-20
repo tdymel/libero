@@ -16,9 +16,8 @@ pub fn column(header: impl Into<String>) -> ColumnHeader {
     }
 }
 
-/// One column of a [`Table`](super::Table). The cell type `V` is read for its
-/// ordering and alignment, then erased - so columns over different cell types
-/// live in one `Vec`.
+/// One column of a [`Table`](super::Table). The cell type is erased, so
+/// columns over different types share one `Vec`.
 pub struct Column<T> {
     pub(super) header: String,
     pub(super) align: CellAlign,
@@ -59,11 +58,9 @@ impl<T> Column<T> {
         self
     }
 
-    /// Renders this column's cells as `th scope="row"`, so a screen reader
-    /// names each row by it while moving down another column. One per table,
-    /// usually the first.
+    /// Renders this column's cells as `th scope="row"`, naming each row. One per table.
     ///
-    /// ```no_run
+    /// ```rust
     /// # use libero::components::column;
     /// # #[derive(Clone, PartialEq)] struct User { name: String }
     /// column("Name").value(|u: &User| u.name.clone()).row_header();
@@ -75,8 +72,7 @@ impl<T> Column<T> {
 
     /// Replaces the cell body. Sorting still uses `value`.
     ///
-    /// Runs once per row inside `Table`'s own scope: no hooks, and capture
-    /// signals rather than values - a captured value can't re-render the table.
+    /// Runs per row in `Table`'s scope: no hooks, and capture signals, not values.
     pub fn render(mut self, render: impl Fn(&T) -> Element + 'static) -> Self {
         self.render = Some(Rc::new(render));
         self
@@ -104,8 +100,7 @@ impl<T> Clone for Column<T> {
     }
 }
 
-// Closures compare equal, as `ErasedRenderNode` does for `Tree`: a re-declared
-// `vec![..]` of the same columns must not defeat memoization.
+// Closures compare equal, so re-declared columns do not defeat memoization.
 impl<T> PartialEq for Column<T> {
     fn eq(&self, other: &Self) -> bool {
         self.header == other.header

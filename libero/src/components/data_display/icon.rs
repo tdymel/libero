@@ -47,7 +47,7 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
                 .height(ICON_GLYPH_VAR.value()),
         );
 
-    // Chrome only: a badge is not interactive, so it takes no hover response.
+    // Chrome only: a static icon takes no hover response.
     Variant::ALL.iter().fold(base, |base, &variant| {
         let chrome = variant_chrome_sx(variant, &ICON_VARS);
         // A glyph inside a container keeps clear of its edges; a bare one fills the box.
@@ -86,7 +86,6 @@ base_props! {
         #[props(default, into)]
         variant: Input<Variant>,
         /// The stops and angle of `variant: "gradient"`, over the theme's.
-        /// Ignored by the other variants.
         #[props(default)]
         gradient: Option<Gradient>,
         #[props(default, into)]
@@ -99,16 +98,7 @@ base_props! {
     }
 }
 
-/// Wraps an svg child in a sized, colored badge. `color` sets the container's
-/// CSS `color`, which a `currentColor` svg then inherits. The svg fills a
-/// `standard` icon's box; every other variant insets it to 60%
-/// (`--lsx-icon-glyph`).
-///
-/// Decorative (`aria-hidden`) unless named: pass `aria_label` or
-/// `aria_labelledby` and it becomes `role="img"` under that name.
-///
-/// **The svg's own `<title>` does not name it** - it is hidden with the rest.
-/// An icon that means something needs `aria_label` (children cannot be inspected).
+/// A sized, coloured box around an svg glyph; decorative unless given `aria_label`.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -119,6 +109,8 @@ base_props! {
 /// }
 /// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/data-display/icon>
 #[component]
 pub fn Icon(props: IconProps) -> Element {
     let component = props.component.copied_or(HtmlTag::Span);
@@ -203,8 +195,7 @@ mod tests {
         assert!(!variables.contains(ICON_CONTRAST_VAR.name()));
     }
 
-    /// Chrome only - a badge that changed colour under the pointer would be
-    /// claiming to be interactive.
+    /// Chrome only: a hover response would claim interactivity.
     #[test]
     fn a_badge_renders_variant_chrome_without_a_hover() {
         let class_of = |variant| variant_chrome_sx(variant, &ICON_VARS).class_name();
@@ -215,8 +206,7 @@ mod tests {
         unique.dedup();
         assert_eq!(unique.len(), Variant::ALL.len());
 
-        // The interactive chrome is the same rules plus a `:hover`, so a
-        // matching class name would mean the badge grew one.
+        // Interactive chrome adds a `:hover`; a matching class would mean one grew.
         assert_ne!(
             variant_chrome_sx(Variant::Filled, &ICON_VARS).class_name(),
             interactive_variant_sx(

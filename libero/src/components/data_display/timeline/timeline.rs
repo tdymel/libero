@@ -41,24 +41,16 @@ static TIMELINE_BASE_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .flex_direction("column")
         .gap(TIMELINE_SPACE.value())
-        // `Alternate` centres the rail in the list, so the list needs a width
-        // to centre it in. `Start` and `End` are happy shrink-to-fitting
-        // around their content; an alternating timeline that did the same
-        // would put two columns either side of a rail centred in its own
-        // max-content width, which is not what anyone means by "alternate".
-        // A caller who wants it narrower gives it a narrower parent.
+        // A centred rail needs a width to centre in; narrower means a narrower parent.
         .when(TimelineAlign::Alternate.state_name(), sx().width("100%"))
 });
 
-/// One event. The connector is a `::before` on this element, so it has to be
-/// the positioned ancestor of both it and the bullet.
+/// One event, the positioned ancestor of its `::before` connector and bullet.
 static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
     let rail = rail();
     let inset = rail.content_inset(CONTENT_SPACE);
-    // Through `Rail`, not hand-rolled: the marker straddles the midline here,
-    // so content starts a half-marker past 50%. Inlining `calc(50% + space)`
-    // left a clearance of `space - marker/2`, which is negative on the two
-    // largest bullet sizes - and C3's centred arm needs the same expression.
+    // Through `Rail`: `calc(50% + space)` ignored the half-marker and overlapped
+    // on the two largest bullets.
     let centred = rail.centred_content_inset(CONTENT_SPACE);
 
     let base = sx()
@@ -67,17 +59,14 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
         .with("overflow-wrap", "anywhere")
         .var(TIMELINE_MARKER, TIMELINE_LINE_COLOR.value())
         .var(TIMELINE_CONNECTOR, TIMELINE_LINE_COLOR.value())
-        // Both flip to the accent independently: the bullet for this event,
-        // the connector for the span below it. That pair is what makes the
-        // rail read as progress rather than as a highlight.
+        // Bullet and connector below flip to the accent independently.
         .when("active", sx().var(TIMELINE_MARKER, TIMELINE_COLOR.value()))
         .when(
             "line-active",
             sx().var(TIMELINE_CONNECTOR, TIMELINE_COLOR.value()),
         );
 
-    // `Rail` is physical, so each logical side takes a `:dir(rtl)` arm that
-    // swaps it, as `Stepper`'s vertical rail does.
+    // `Rail` is physical, so each logical side takes a swapping `:dir(rtl)` arm.
     let rail_on = |edge: RailInset, padding: &str| {
         // The rail's edge, and the other one, which the LTR arm had set.
         let (near, far) = match edge {
@@ -104,11 +93,7 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
                 .rtl(rail_on(RailInset::Start, &inset)),
         );
 
-    // The alternating layout, unconditionally. There is no width below which
-    // it collapses to one side: choosing `Alternate` in a 200px sidebar
-    // buys a cramped alternating timeline, and that is the caller's call to
-    // have made rather than the component's to overrule. A threshold also
-    // made the mode undemonstrable - see the note in the brain page.
+    // Alternating at every width: no collapse threshold (see the brain page).
     one_sided.when(
         TimelineAlign::Alternate.state_name(),
         sx().padding_left(centred.clone())
@@ -150,17 +135,14 @@ static TIMELINE_BULLET_SX: StaticSx = StaticSx::new(|| {
             TIMELINE_MARKER.value()
         ))
         .color(TIMELINE_MARKER.value())
-        // An active bullet fills, so done and pending differ by shape, not by
-        // colour alone (1.4.1).
+        // An active bullet fills: done and pending differ not by colour alone (1.4.1).
         .when("active", sx().background(TIMELINE_MARKER.value()))
         .when(
             "with-child && active",
-            // The surface the bullet is drawn on: whatever contrast the
-            // ring had against the accent, the filled glyph now has.
+            // The glyph inverts, or a light one vanishes on the fill.
             sx().color(TIMELINE_BULLET_BACKGROUND.value()),
         )
-        // Forced colours paint every fill `Canvas`, so done and pending dots
-        // would both be rings again.
+        // Forced colours paint every fill `Canvas`, so both would be rings again.
         .media(
             FORCED_COLORS,
             sx().when(
@@ -183,9 +165,7 @@ static TIMELINE_BULLET_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             TimelineAlign::Alternate.state_name(),
-            // Through `Rail` for the same reason the inset is: this and
-            // `centred_content_inset` are two halves of one measurement, and
-            // C3's centred marker needs both.
+            // Through `Rail`: the other half of `centred_content_inset`.
             sx().left(rail.centred_marker_start()).right("auto"),
         )
 });
@@ -197,14 +177,10 @@ base_props! {
         /// The events, in render order.
         #[props(default)]
         items: Vec<TimelineEvent>,
-        /// The current event. Bullets `0..=active` and the connectors
-        /// `0..active` draw active; out of range clamps to the last event.
+        /// The current event; it and those before draw active. Clamps to the last.
         #[props(default)]
         active: Option<usize>,
-        /// Which side of the rail content sits on - `"start"` (default),
-        /// `"end"`, or `"alternate"`, mirrored under `dir="rtl"`. `"alternate"` alternates at every
-        /// width and fills its parent, since a centred rail needs a width to
-        /// be centred in.
+        /// Which side of the rail content sits on; `"alternate"` fills its parent.
         #[props(default, into)]
         align: Input<TimelineAlign>,
         /// The active accent. Per-event colours override it.
@@ -215,7 +191,7 @@ base_props! {
         /// Bullet corner radius; `Xl` is the dot.
         #[props(default, into)]
         radius: Input<Size>,
-        /// Space between events, which is also the length of each connector.
+        /// Space between events, and so each connector's length.
         #[props(default, into)]
         gap: Input<Size>,
     }
@@ -223,13 +199,24 @@ base_props! {
 
 /// An ordered list of events drawn against a rail.
 ///
-/// Renders an `<ol role="list">`: the rail draws position and count visually,
-/// and the list is how a screen-reader user gets the same two facts. The
-/// explicit `role` is not redundant - Safari with VoiceOver drops list
-/// semantics from a `list-style: none` list.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Timeline, TimelineEvent};
+/// # fn app() -> Element {
+/// rsx! {
+///     Timeline {
+///         active: 1,
+///         items: vec![
+///             TimelineEvent::new("Ordered"),
+///             TimelineEvent::new("Shipped"),
+///             TimelineEvent::new("Delivered"),
+///         ],
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// Not interactive: no keyboard contract, no focus, no `tabindex`. Focusable
-/// content inside an event keeps document order, which is the visual order.
+/// Docs: <https://libero-ui.dev/data-display/timeline>
 #[component]
 pub fn Timeline(props: TimelineProps) -> Element {
     let theme = use_theme();
@@ -255,10 +242,7 @@ pub fn Timeline(props: TimelineProps) -> Element {
         )
         .into();
 
-    // Prepared once each, outside the loop - `use_box` is a hook, so it can
-    // never be called per item. Every item shares one class per element; only
-    // `data-state` and the per-item vars differ, and those are plain
-    // attributes. This is `PinField`'s one-prepared-frame-cloned-per-cell.
+    // Prepared once, outside the loop (`use_box` is a hook), and cloned per item.
     let item_style = use_box()
         .framework_sx(&TIMELINE_ITEM_SX)
         .focus_ring(false)
@@ -272,8 +256,7 @@ pub fn Timeline(props: TimelineProps) -> Element {
         .focus_ring(false)
         .prepare();
 
-    // `active` names an event, so an index past the end means "everything is
-    // done" rather than nothing - clamped once here instead of at each item.
+    // Past the end means everything is done, not nothing.
     let active = props
         .active
         .map(|active| active.min(props.items.len().saturating_sub(1)));
@@ -291,9 +274,8 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 .with(align.state_name(), true)
                 .with("active", is_active)
                 .with("line-active", line_active);
-            // Always written, `ABSENT` when unset: this `style` is a raw
-            // attribute, so a var it stops declaring would keep its last value
-            // ([[codebase/css-vars]]).
+            // `ABSENT` when unset: a raw `style` var it stops declaring would
+            // keep its last value ([[codebase/css-vars]]).
             let item_variables = variables()
                 .with(TIMELINE_LINE_STYLE, item.line.as_str().to_string())
                 .with(
@@ -332,12 +314,8 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 .clone()
                 .attr("data-state", item_states.data_state())
                 .attr("style", item_variables.to_string())
-                // A role token, so it needs no translation - and only the
-                // current event carries one. Completed events are conveyed
-                // visually; hidden text on every prior item is noise.
+                // Only the current event; hidden text on every done one is noise.
                 .attr("aria-current", is_current.then_some("step"))
-                // Two already-built elements and no markup of our own, so a
-                // `vec!` rather than an `rsx!` block wrapping them.
                 .render(HtmlTag::Li, Vec::new(), vec![bullet, body])
         })
         .collect::<Vec<_>>();

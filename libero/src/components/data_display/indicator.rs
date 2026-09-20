@@ -23,15 +23,11 @@ static INDICATOR_BASE_SX: StaticSx = StaticSx::new(|| {
     let fill = INDICATOR_COLOR_VAR.value();
 
     let base = IndicatorDefaults::theme_vars()
-        // Block-level, not `inline-flex`: inside a `Float` an inline root sits
-        // in a line box, and the line box's strut makes the `Float` taller than
-        // the dot - a bottom placement would then pin the strut, not the dot.
+        // Not `inline-flex`: a line box's strut makes the `Float` taller than the dot.
         .display("flex")
         .align_items("center")
         .justify_content("center")
-        // The `::before` ping's containing block. Without it the ping resolves
-        // against whatever positioned ancestor is nearest - `Float`'s box, which
-        // only coincides with the dot while the dot is its sole unpadded child.
+        // The `::before` ping's containing block, not `Float`'s box.
         .position("relative")
         .flex("none")
         .width("fit-content")
@@ -43,20 +39,16 @@ static INDICATOR_BASE_SX: StaticSx = StaticSx::new(|| {
         // Forced colours paint every fill `Canvas`, and a bare dot is nothing else.
         .media(FORCED_COLORS, sx().background("CanvasText").color("Canvas"));
 
-    // A `box-shadow`, not a `border`: under the global `border-box` a
-    // 2px border eats 4px of a 6px dot, and a border moves the dot inside its
-    // `Float`. The shadow is drawn outside the box and changes no geometry.
+    // A `box-shadow`, not a `border`: under `border-box` a 2px border eats 4px
+    // of a 6px dot and moves it inside its `Float`.
     let with_border = sx().box_shadow(format!(
         "0 0 0 {} {}",
         INDICATOR_BORDER_WIDTH.value(),
         PAPER_BACKGROUND.value()
     ));
 
-    // Behind the dot (`z-index: -1`), so the dot itself never moves - only
-    // the copy under it grows and fades. The reduced-motion arm is nested here,
-    // on the same per-instance `::before` rule, because a guard written
-    // anywhere else loses to this rule on specificity. With the animation
-    // cancelled the copy sits exactly under the dot, so nothing is left to see.
+    // A copy behind the dot grows and fades. The reduced-motion guard sits on
+    // this same rule: anywhere else it loses on specificity.
     let processing = sx().selector(
         "&::before",
         sx().content("\"\"")
@@ -104,32 +96,34 @@ base_props! {
         /// The fill. The label takes its auto-contrast twin.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// A step on the indicator's own radius scale. The theme's default,
-        /// `xxl`, is round.
+        /// A step on the indicator's own radius scale; the default is round.
         #[props(default, into)]
         radius: Input<Size>,
-        /// A ring in the surface colour, so the dot reads on top of a picture.
+        /// A ring in the surface colour, so the dot reads on a picture.
         #[props(default)]
         with_border: Option<bool>,
-        /// A ping behind the dot, repeating until you set it back to `false`:
-        /// turn it off when the work ends (WCAG 2.2.2). Stops under
-        /// `prefers-reduced-motion`.
+        /// A repeating ping: turn it off when the work ends (WCAG 2.2.2).
         #[props(default)]
         processing: Option<bool>,
     }
 }
 
-/// A dot or a small count pinned to something else - an unread marker on an
-/// avatar, a pending count on a button.
+/// A dot or small count marking something else; `aria-hidden`, so name the marked element.
 ///
-/// Presentational only. It has no positioning of its own: put it in a `Float`
-/// inside a `position: relative` parent, which is what owns the corner, the
-/// offset and the layer. To hide it, do not render it.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Float, Indicator};
+/// # fn app() -> Element {
+/// rsx! {
+///     button { position: "relative", aria_label: "Messages, 128 unread",
+///         "Messages"
+///         Float { Indicator { label: 128u32 } }
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// Always `aria-hidden`. The visible `99+` is a truncation and names nothing,
-/// so the meaning belongs on the element the indicator marks - its
-/// `aria-label` says "Messages, 128 unread". A caller who really wants the
-/// indicator itself announced can override `aria-hidden` from `attributes`.
+/// Docs: <https://libero-ui.dev/data-display/indicator>
 #[component]
 pub fn Indicator(props: IndicatorProps) -> Element {
     let theme = use_theme();

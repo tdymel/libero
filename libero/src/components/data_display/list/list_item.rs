@@ -11,12 +11,10 @@ use crate::{
 
 use super::list::ListContext;
 
-// Block, not flex, so a nested `List` stacks below this item's content rather
-// than beside it. Row alignment is the content's own job.
+// Block, not flex, so a nested `List` stacks below this item's content.
 static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().padding("0").when(
         "with-icon",
-        // Flex rows follow the writing direction, so the icon sits at the start.
         sx().display("flex")
             .align_items("flex-start")
             .gap(SizeCss::SPACING.value(Size::Sm))
@@ -37,14 +35,28 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub struct ListItemProps {
-        /// Shown at the start of the item, beside its first line. Overrides the
-        /// list's `icon`.
+        /// Shown beside the first line. Overrides the list's `icon`.
         #[props(default)]
         icon: Option<Element>,
         children: Element,
     }
 }
 
+/// One `<li>` of a [`List`](super::List).
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{List, ListItem};
+/// # fn app() -> Element {
+/// rsx! {
+///     List {
+///         ListItem { icon: rsx! { "✓" }, "Tested" }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/data-display/list>
 #[component]
 pub fn ListItem(props: ListItemProps) -> Element {
     let inherited =

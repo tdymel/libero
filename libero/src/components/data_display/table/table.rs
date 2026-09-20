@@ -46,8 +46,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& th[data-align=\"end\"], & td[data-align=\"end\"]",
         sx().text_align_end(),
     )
-    // The button carries the header's padding instead, so the whole
-    // padded area is clickable and not just the label. Marked from Rust:
+    // The button takes the padding, so all of it clicks. Marked from Rust:
     // `th:has(button)` never matches natively.
     .selector("& th[data-sortable]", sx().padding("0"))
     .selector(
@@ -65,8 +64,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .color("inherit")
             .cursor("pointer"),
     )
-    // The library's ring, not the UA's. Inset, as in `Accordion`: the
-    // button fills its cell edge to edge.
+    // Inset: the button fills its cell edge to edge.
     .selector("& th button:focus-visible", inset_focus_ring_sx("-2px"))
     .selector(
         "& th button svg",
@@ -76,8 +74,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             .opacity("0")
             .transition("opacity 150ms, transform 150ms"),
     )
-    // `aria-sort` sits on the sorted header only, so it doubles as the
-    // styling state: a hint on hover elsewhere, solid once sorted.
+    // `aria-sort`, on the sorted header only, doubles as the styling state.
     .selector(
         "& th[data-sortable]:not([aria-sort]):hover svg, \
              & th[data-sortable]:not([aria-sort]):focus-within svg",
@@ -91,8 +88,7 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
         "& th[aria-sort=\"ascending\"] svg",
         sx().transform("rotate(180deg)"),
     )
-    // `text-align` doesn't position flex items, so a sortable header
-    // needs its own justification to match its cells.
+    // `text-align` doesn't position flex items.
     .selector(
         "& th[data-align=\"center\"] button",
         sx().justify_content("center"),
@@ -128,9 +124,7 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     /// Shown in one full-width row when `data` is empty.
     #[props(default)]
     empty: Option<Element>,
-    /// Wraps the table in a named, focusable `role="region"` that scrolls
-    /// sideways, so a table wider than its parent stays keyboard-scrollable.
-    /// Named like the table; `class`, `sx` and `attributes` stay on the table.
+    /// Wraps the table in a named, focusable region that scrolls sideways.
     #[props(default)]
     scroll: bool,
     #[props(extends = GlobalAttributes)]
@@ -143,46 +137,30 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
     states: Input<States>,
 }
 
-/// A sortable data table.
+/// A sortable data table over rows of `T`.
 ///
-/// ```no_run
+/// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Table, column};
-/// # fn app() -> Element {
 /// # #[derive(Clone, PartialEq)] struct User { name: String, age: u32 }
-/// # let users = use_signal(Vec::<User>::new);
-/// # rsx! {
-/// Table {
-///     data: users(),
-///     columns: vec![
-///         column("Name").value(|u: &User| u.name.clone()).sortable(),
-///         column("Age").value(|u: &User| u.age).sortable(),
-///     ],
-/// }
-/// # } }
-/// ```
-///
-/// Name it with `caption`, or with `aria_label` / `aria_labelledby` when the
-/// title sits elsewhere. A wide one takes `scroll: true`:
-///
-/// ```no_run
-/// # use dioxus::prelude::*;
-/// # use libero::components::{Table, column};
 /// # fn app() -> Element {
-/// # #[derive(Clone, PartialEq)] struct User { name: String }
-/// # let users = use_signal(Vec::<User>::new);
-/// # rsx! {
-/// Table {
-///     caption: "Users",
-///     scroll: true,
-///     empty: rsx! { "No users yet." },
-///     data: users(),
-///     columns: vec![column("Name").value(|u: &User| u.name.clone())],
+/// let users = use_signal(Vec::<User>::new);
+/// rsx! {
+///     Table {
+///         caption: "Users",
+///         empty: rsx! { "No users yet." },
+///         data: users(),
+///         columns: vec![
+///             column("Name").value(|u: &User| u.name.clone()).sortable().row_header(),
+///             column("Age").value(|u: &User| u.age).sortable(),
+///         ],
+///     }
 /// }
-/// # } }
+/// # }
 /// ```
-// Generic shim: only the projection below compiles per `T`; the body it hands
-// off to is non-generic.
+///
+/// Docs: <https://libero-ui.dev/data-display/table>
+// Generic shim: only the projection below compiles per `T`.
 #[component]
 pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
     let sort = use_signal(|| None::<(String, SortDirection)>);
@@ -239,8 +217,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         text,
         id: caption_id(),
     });
-    // The region carries the table's own name: its caption, else a copy of
-    // the caller's label.
+    // The region takes the table's name: its caption, else the caller's label.
     let region_name: Vec<Attribute> = match &caption {
         Some(spec) => vec![attr("aria-labelledby", spec.id.clone())],
         None if props.scroll => props
@@ -283,8 +260,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
                 vec![attr("id", spec.id)],
                 rsx! { "{spec.text}" },
             );
-            // One box, as the web's table with its caption, so a flex row
-            // does not set them side by side.
+            // One box, so a flex row does not set them side by side.
             match props.scroll {
                 true => rsx! {
                     {caption}

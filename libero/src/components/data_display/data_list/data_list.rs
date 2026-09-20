@@ -10,8 +10,7 @@ use crate::{
     theme::{DataListDefaults, Size},
 };
 
-// Pins what the UA stylesheet would otherwise decide: `dl`/`dd` margins and
-// `dt`'s implicit bold.
+// Pins the UA's `dl`/`dd` margins and `dt` bold.
 fn data_list_reset_sx() -> Sx {
     sx().margin("0")
         // A long word in a term or description wraps instead of widening the page (1.4.10).
@@ -20,9 +19,8 @@ fn data_list_reset_sx() -> Sx {
         .selector("& dd", sx().margin("0"))
 }
 
-// Horizontal pins `grid-column` explicitly instead of letting the grid
-// auto-place: a term may have several `dd`s, and row-major auto-placement
-// would flow the second one into the term column.
+// Horizontal pins `grid-column`: auto-placement would flow a term's second `dd`
+// into the term column.
 static DATA_LIST_SX: StaticSx = StaticSx::new(|| {
     DataListDefaults::theme_vars()
         .display("flex")
@@ -30,8 +28,7 @@ static DATA_LIST_SX: StaticSx = StaticSx::new(|| {
         .and(data_list_reset_sx())
         .when(
             "horizontal",
-            // A term takes its own width up to half the list, then wraps, so
-            // the description column keeps room at 320px (1.4.10).
+            // A term wraps past half the list, so descriptions keep room at 320px (1.4.10).
             sx().display("grid")
                 .grid_template_columns("fit-content(50%) minmax(0, 1fr)")
                 .align_items("baseline")
@@ -42,8 +39,7 @@ static DATA_LIST_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub struct DataListProps {
-        /// `"horizontal"` puts each description beside its term;
-        /// `"vertical"` (default) stacks it below.
+        /// `"horizontal"`: descriptions beside their term; default `"vertical"`: below.
         #[props(default, into)]
         orientation: Input<Orientation>,
         /// Row gap. Off-scale values go through `sx`.
@@ -54,9 +50,22 @@ base_props! {
     }
 }
 
-/// A `<dl>` of term/description pairs. Unlike
-/// [`List`](crate::components::List), one term can carry several
-/// descriptions - see [`DataListItem`](super::DataListItem).
+/// A `<dl>` of term/description pairs.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{DataList, DataListItem};
+/// # fn app() -> Element {
+/// rsx! {
+///     DataList { orientation: "horizontal",
+///         DataListItem { label: rsx! { "Name" }, "Ada Lovelace" }
+///         DataListItem { label: rsx! { "Born" }, "1815" }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/data-display/data-list>
 #[component]
 pub fn DataList(props: DataListProps) -> Element {
     let theme = use_theme();

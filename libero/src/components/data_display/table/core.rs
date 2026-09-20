@@ -11,8 +11,7 @@ pub(super) struct HeaderSpec {
     pub row_header: bool,
 }
 
-/// A row's cells, keyed by its position in the unsorted `data`. A cell is its
-/// text, or a caller's body and no text.
+/// A row's cells, keyed by its index in `data`. A cell is its text, or a caller's body.
 pub(super) struct RowSpec {
     pub index: usize,
     pub cells: Vec<(String, Option<Element>)>,
@@ -37,8 +36,8 @@ pub(super) fn sorted_order(keys: &[SortKey], direction: SortDirection) -> Vec<us
     order
 }
 
-/// The column the sort sits on now. Keyed by header text, so reordering or
-/// hiding other columns can't move it; with duplicate headers the first wins.
+/// The sorted column, keyed by header text so reordering can't move it.
+/// With duplicate headers the first wins.
 pub(super) fn active_sort(
     headers: &[HeaderSpec],
     sort: Option<&(String, SortDirection)>,
@@ -104,9 +103,8 @@ pub(super) fn render_body(
                                     }
                                 },
                                 "{spec.header}"
-                                // Always rendered, so sorting a column can't
-                                // change its header's width. The `th`'s
-                                // `aria-sort` is what shows and flips it.
+                                // Always rendered, so sorting can't change the width;
+                                // `aria-sort` shows and flips it.
                                 ArrowDownIcon {}
                             }
                         } else {

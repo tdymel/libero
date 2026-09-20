@@ -9,10 +9,8 @@ use crate::{
     theme::PAPER_BACKGROUND,
 };
 
-/// The shared sr-only recipe, `absolute`. The hidden inputs of `Checkbox`,
-/// `Radio`, `Switch` and `Chip` sit in a `relative` label, so Tab onto one
-/// scrolls its label into view. Under `fixed` it scrolled nothing, and the
-/// label stayed off-screen (todo 63, measured).
+/// The sr-only recipe, `absolute`, for hidden inputs in a `relative` label:
+/// Tab then scrolls the label into view; `fixed` did not (todo 63).
 pub(crate) static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .width("1px")
@@ -23,21 +21,16 @@ pub(crate) static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(|| {
         .clip("rect(0, 0, 0, 0)")
         .white_space("nowrap")
         .border_width("0")
-        // Blitz ignores `clip`: it painted the input as a speck and its focus
-        // outline as a blue square (todo 757).
+        // Blitz ignores `clip` and painted a speck and focus square (todo 757).
         .opacity("0")
 });
 
-/// The same recipe, `fixed`. For a box nothing hosts: an absolute span with no
-/// positioned ancestor resolves against the page and adds to its scrollable
-/// overflow, and a focusable one scrolls the document to reach it. A fixed box
-/// is never overflow and scrolls nothing into view. `FocusTrapInitialFocus`
-/// (whose `FocusTrap` is `display: contents`) and the `VisuallyHidden`
-/// component (whose caller may supply no positioned parent) use it.
+/// The same recipe, `fixed`, for a box with no positioned host: an absolute one
+/// would add to the page's scrollable overflow.
 pub(crate) static VISUALLY_HIDDEN_FIXED_SX: StaticSx = StaticSx::new(fixed_recipe);
 
-/// The fixed recipe, undone while focus is inside: a skip link shows itself on
-/// focus. Never the default, or a hidden native input would pop out.
+/// The fixed recipe, undone while focus is inside, for a skip link.
+/// Never the default, or a hidden native input would pop out.
 static VISUALLY_HIDDEN_FOCUSABLE_SX: StaticSx = StaticSx::new(|| {
     fixed_recipe().selector(
         "&:focus-within",
@@ -72,15 +65,7 @@ base_props! {
     }
 }
 
-/// Text for assistive technology only.
-///
-/// `fixed`, not the hosted inputs' `absolute`: it needs no positioned parent,
-/// so it never makes the page scrollable wherever it lands.
-///
-/// `focusable` reveals it while focus is inside, on a paper background. It
-/// stays `fixed` at its place in the flow, so a skip link belongs at the top
-/// of the page; further down, host it in a positioned parent and set
-/// `position: absolute` through `sx`, or Tab never scrolls it into view.
+/// Content for assistive technology only.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -93,6 +78,8 @@ base_props! {
 /// }
 /// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/accessibility/visually-hidden>
 #[component]
 pub fn VisuallyHidden(props: VisuallyHiddenProps) -> Element {
     let recipe = if props.focusable {

@@ -122,8 +122,7 @@ base_props! {
         fit: Input<ImageFit>,
         #[props(default, into)]
         radius: Input<Size>,
-        /// What the picture shows. `None` warns in debug builds unless
-        /// `decorative` says the picture carries nothing.
+        /// What the picture shows. `None` warns in debug builds unless `decorative`.
         #[props(default, into)]
         alt: Option<String>,
         /// Marks the picture as decoration: `alt=""` and `role="presentation"`.
@@ -131,14 +130,13 @@ base_props! {
         decorative: bool,
         #[props(default)]
         zoomable: bool,
-        /// `Eager` (default) or `Lazy`, the `<img>`'s `loading` attribute.
+        /// The `<img>`'s `loading` attribute.
         #[props(default, into)]
         loading: Input<ImageLoading>,
     }
 }
 
-/// What describes the picture rather than the root: on a zoomable image these
-/// go to the `<img>`, not to the `<button>` around it.
+/// On a zoomable image these go to the `<img>`, not the `<button>` around it.
 const IMG_ATTRIBUTES: [&str; 8] = [
     "loading",
     "decoding",
@@ -168,6 +166,19 @@ pub(crate) fn LinkedImageScope(children: Element) -> Element {
     children
 }
 
+/// A picture with a fallback source, optional zoom into a lightbox, and a themed radius.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Image;
+/// # fn app() -> Element {
+/// rsx! {
+///     Image { src: "/photo.jpg", alt: "A harbour at dusk", fit: "cover", zoomable: true }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/data-display/image>
 #[component]
 pub fn Image(props: ImageProps) -> Element {
     let mut errored_src = use_signal(|| None::<String>);
@@ -227,9 +238,8 @@ pub fn Image(props: ImageProps) -> Element {
     };
     let decorative_role = (alt.as_deref() == Some("")).then_some("presentation");
 
-    // One `use_box` on both paths, so `zoomable` can flip without moving a
-    // hook: the `<img>` is the root when it can't zoom, and the picture inside
-    // `ZoomButton`, which takes the caller's styling, when it can.
+    // One `use_box` on both paths, so `zoomable` can flip without moving a hook.
+    // When zoomable, `ZoomButton` takes the caller's styling instead.
     let no_class = Input::None;
     let no_sx = Input::None;
     let (class, user_sx, img_states) = match zoomable {
@@ -326,8 +336,7 @@ fn ZoomButton(props: ZoomButtonProps) -> Element {
 
     let label = zoom_label(&props.alt, &use_localization().image);
     let item = props.item.clone();
-    // A dialog opener, not a toggle: the open state lives in the modal
-    // `Lightbox`, never on this button.
+    // A dialog opener, not a toggle: the open state lives in the `Lightbox`.
     root.attr("type", "button")
         .attr("aria-haspopup", "dialog")
         .attr("aria-label", label)

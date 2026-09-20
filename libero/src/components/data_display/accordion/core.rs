@@ -22,17 +22,14 @@ use crate::{
 static ACCORDION_SX: StaticSx = StaticSx::new(|| {
     AccordionDefaults::theme_vars()
         .display("block")
-        // A list fills the column it sits in; in a flex parent it would
-        // otherwise shrink to its longest label.
+        // Or a flex parent shrinks it to its longest label.
         .width("100%")
-        // One line between two sections - no outer frame, no radius. The list
-        // is flat; a surface around it is the caller's to add.
+        // One line between sections; no outer frame.
         .selector(
             "& > [data-accordion-item] + [data-accordion-item]",
             sx().border_top(format!("1px solid {}", ACCORDION_BORDER_COLOR.value())),
         )
-        // The heading is there for the document outline, not for its looks:
-        // the trigger inside it carries the type.
+        // The heading is for the outline; the trigger carries the type.
         .selector(
             "& > [data-accordion-item] > [data-accordion-heading]",
             sx().margin("0").font("inherit"),
@@ -53,16 +50,13 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
                 .text_align_start()
                 .cursor("pointer"),
         )
-        // A long unbreakable word wraps inside the label instead of pushing the
-        // chevron off a narrow screen (1.4.10).
+        // A long word wraps instead of pushing the chevron off-screen (1.4.10).
         .selector(
             "& > [data-accordion-item] > [data-accordion-heading] > button > span:not([data-accordion-chevron])",
             sx().min_width("0").with("overflow-wrap", "anywhere"),
         )
-        // `appearance: none` and `border: 0` take the UA ring with them. Inset,
-        // because the trigger spans the full width and an outset ring would be
-        // clipped by whatever holds the accordion. Doubled to outrank a
-        // `Button`'s own ring whatever the stylesheet order, as `Carousel`.
+        // Inset: a full-width outset ring gets clipped by the container.
+        // Doubled to outrank a `Button`'s ring whatever the stylesheet order.
         .selector(
             "& > [data-accordion-item] > [data-accordion-heading] > button:focus-visible:focus-visible",
             inset_focus_ring_sx("-2px"),
@@ -75,8 +69,7 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
             "& > [data-accordion-item] > [data-accordion-heading] > button[aria-disabled=\"true\"]",
             disabled_look_sx("not-allowed"),
         )
-        // The transition is declared here, so its reduced-motion guard is
-        // nested here too - at the same specificity, or it loses.
+        // The reduced-motion guard nests here, at the same specificity, or it loses.
         .selector(
             "& > [data-accordion-item] > [data-accordion-heading] [data-accordion-chevron]",
             sx().display("inline-flex")
@@ -94,16 +87,14 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
             "& > [data-accordion-item] > [data-accordion-heading] > button[aria-expanded=\"true\"] [data-accordion-chevron]",
             sx().transform("rotate(180deg)"),
         )
-        // Inside `Collapse`'s clipped box, so the padding animates with the
-        // height rather than standing outside it.
+        // Inside `Collapse`'s clipped box, so the padding animates with the height.
         .selector(
             "& > [data-accordion-item] [data-accordion-body]",
             sx().padding(format!("0 {} {}", ACCORDION_PAD_X.value(), ACCORDION_PAD_Y.value())),
         )
 });
 
-/// One section, with `T` already gone: `content` is the rendered label and
-/// `name` the accessible one.
+/// One section, `T` resolved: `content` is the rendered label, `name` the accessible one.
 pub(crate) struct SectionSpec {
     pub name: String,
     pub content: Element,
@@ -124,9 +115,8 @@ pub(crate) struct AccordionView {
     pub attributes: Vec<Attribute>,
 }
 
-/// Where each arrow key sends focus from one trigger: the next and previous
-/// enabled trigger, wrapping, and the first and last. `None` with nothing
-/// enabled. A disabled trigger is still a tab stop, so it has neighbours too.
+/// Arrow targets from one trigger: next, previous (wrapping), first, last enabled.
+/// `None` with nothing enabled.
 fn arrow_targets(disabled: &[bool], from: usize) -> Option<[usize; 4]> {
     let enabled: Vec<usize> = (0..disabled.len()).filter(|i| !disabled[*i]).collect();
     let first = *enabled.first()?;
@@ -147,8 +137,7 @@ fn heading(level: HtmlTag, trigger: Element) -> Element {
     }
 }
 
-/// A plain `fn`, not a component: `Vec<Element>` props defeat memoization, so
-/// a scope here would cost a scope and buy nothing.
+/// A plain `fn`, not a component: `Vec<Element>` props defeat memoization.
 pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
     let AccordionView {
         sections,
@@ -163,15 +152,8 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
 
     let root_element = use_element();
 
-    // Focus return. A panel can close while focus is inside it - a "Continue"
-    // button that opens the next step closes this one in `One` mode - and then
-    // `visibility: hidden` or the unmount drops focus to `<body>`. `Collapse`
-    // never sees the trigger, so the repair is here: the closed panel's own
-    // trigger takes focus back.
-    //
-    // Checked during render, against the DOM the previous render left: by the
-    // time an effect runs, a zero-duration panel is already gone and nothing
-    // can say where focus was. The move itself waits for the effect.
+    // A panel closing with focus inside returns it to its trigger. Checked in
+    // render: by the effect, a zero-duration panel is gone.
     let open: Vec<usize> = (0..sections.len()).filter(|i| sections[*i].open).collect();
     let previous = use_hook(|| Rc::new(RefCell::new(open.clone())));
     let closing = use_closing_focus(root_element);
@@ -205,8 +187,7 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
         let region_id = format!("{root}-region-{index}");
         let targets = arrow_targets(&disabled, index);
         let key_root = root.clone();
-        // A plain closure, not `use_callback`: it moves focus, and a focus
-        // handler is re-entrant.
+        // A plain closure, not `use_callback`: a focus handler is re-entrant.
         let onkeydown = move |event: Event<KeyboardData>| {
             let Some([next, previous, first, last]) = targets else {
                 return;
@@ -233,12 +214,10 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
             button {
                 id: "{trigger_id}",
                 r#type: "button",
-                // Strings, not bools: SSR writes a bare `true`, and the
-                // chevron's CSS matches on `[aria-expanded="true"]`.
+                // Strings: SSR writes a bare `true`, and the chevron CSS matches `"true"`.
                 "aria-expanded": if section.open { "true" } else { "false" },
                 "aria-controls": "{region_id}",
-                // `aria-disabled`, not `disabled`: the section stays a tab stop
-                // and still reads, it just cannot be toggled.
+                // `aria-disabled`, not `disabled`: the section stays a tab stop.
                 "aria-disabled": if disabled { "true" } else { "false" },
                 "aria-label": section.name,
                 onclick: move |_| {
@@ -294,8 +273,7 @@ mod tests {
         assert_eq!(arrow_targets(&disabled, 0), Some([2, 2, 0, 2]));
     }
 
-    /// Focus can sit on a disabled trigger - it is a tab stop - and the walk
-    /// still leaves it for its enabled neighbours.
+    /// A disabled trigger is a tab stop; the walk leaves it for its enabled neighbours.
     #[test]
     fn arrows_leave_a_focused_disabled_trigger() {
         let disabled = [false, true, false];

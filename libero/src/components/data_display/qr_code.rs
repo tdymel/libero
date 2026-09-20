@@ -25,11 +25,10 @@ impl From<QrRobustness> for ECL {
 
 input_from_str!(QrRobustness);
 
-// ISO/IEC 18004 quiet zone. Not a style choice - scanners need it.
+// ISO/IEC 18004 quiet zone: scanners need it.
 const QR_CODE_MARGIN: usize = 4;
 
-// `fast_qr`'s svg is viewBox-only, so it already scales to fill. `& svg` is
-// there to drop inline-svg's baseline gap underneath.
+// `fast_qr`'s svg is viewBox-only; `& svg` drops the inline baseline gap.
 static QR_CODE_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
         .width("100%")
@@ -44,7 +43,7 @@ base_props! {
         data: String,
         #[props(default, into)]
         robustness: Input<QrRobustness>,
-        /// Required: a QR code says nothing to a screen reader without one.
+        /// Required: the code's accessible name.
         aria_label: String,
     }
 }
@@ -64,8 +63,19 @@ fn generate_svg(data: String, robustness: QrRobustness) -> Option<String> {
         })
 }
 
-/// `data` as a scalable QR code SVG, colored from `Theme::qr_code`. Renders
-/// nothing if `data` is too long for the chosen `robustness` to encode.
+/// `data` as a scalable QR code SVG. Renders nothing if `data` is too long to encode.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::QrCode;
+/// # fn app() -> Element {
+/// rsx! {
+///     QrCode { data: "https://libero-ui.dev", aria_label: "Link to the Libero docs" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/data-display/qr-code>
 #[component]
 pub fn QrCode(props: QrCodeProps) -> Element {
     let theme = use_theme();

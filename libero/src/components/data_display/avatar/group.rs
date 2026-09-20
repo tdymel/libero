@@ -17,17 +17,14 @@ use crate::{
     theme::{AVATAR_GROUP_INDEX, AVATAR_GROUP_SPACING, Size, SizeCss},
 };
 
-/// How far the focused overflow chip rises above the members. The chip paints
-/// *under* its left-hand neighbour, which would otherwise cover a third of its
-/// focus ring; 100 clears any group a reader could take in at a glance.
+/// How far the focused chip rises, so its neighbour does not cover the focus ring.
 const FOCUS_RAISE: u16 = 100;
 
 static AVATAR_GROUP_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
         .width("fit-content")
-        // Pulled over the previous circle rather than spaced apart - so the
-        // gap is negative, and it is the *second* child onwards that moves.
+        // Each circle after the first is pulled over the previous one.
         .selector(
             "& > * + *",
             sx().margin_left(format!("calc(-1 * {})", AVATAR_GROUP_SPACING.value())),
@@ -42,9 +39,7 @@ static AVATAR_GROUP_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// The chip is an avatar in every way but what it means, so it rebuilds the
-/// same base (`framework_sx` has one slot) and adds the one thing an avatar
-/// never has: a focus state.
+/// The avatar base plus the focus state an avatar never has.
 static AVATAR_CHIP_SX: StaticSx = StaticSx::new(|| {
     avatar_sx().focus_visible(focus_ring_sx().z_index(format!(
         "calc({} + {FOCUS_RAISE})",
@@ -56,8 +51,7 @@ base_props! {
     pub struct AvatarGroupProps {
         /// The members, in paint order: the first is drawn on top.
         people: Vec<AvatarSpec>,
-        /// How many circles in total, the last of which is the `+N` chip when
-        /// there are more people than that.
+        /// Circles in total, the `+N` chip included.
         #[props(default)]
         max: Option<usize>,
         /// How far each circle is pulled over the one before it.
@@ -76,15 +70,22 @@ base_props! {
     }
 }
 
-/// A row of overlapping [`Avatar`]s, with the people past `max` collapsed into
-/// a `+N` chip that lists their names.
+/// A row of overlapping [`Avatar`]s; the people past `max` collapse into a `+N` chip.
 ///
-/// The group owns its members rather than taking them as children: that is
-/// what lets it count them, hide the overflow behind one chip, and give the
-/// row its paint order. The chip is focusable, so the names it hides are
-/// reachable by keyboard and not only by pointer.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::AvatarGroup;
+/// # fn app() -> Element {
+/// rsx! {
+///     AvatarGroup {
+///         people: vec!["Ada Lovelace".into(), "Alan Turing".into(), "Grace Hopper".into()],
+///         max: 2,
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// The chip's text comes from [`Localization::avatar`](crate::localization::Localization::avatar).
+/// Docs: <https://libero-ui.dev/data-display/avatar>
 #[component]
 pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     let theme = use_theme();
@@ -94,8 +95,7 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     let variant = props.variant.copied_or(theme.avatar.variant);
 
     let total = props.people.len();
-    // `max` is the number of *circles*, the chip included - so the chip always
-    // stands for at least two people and a `+1` is unrepresentable.
+    // `max` counts the chip, so it always stands for two or more: no `+1`.
     let shown = match props.max {
         Some(max) if total > max => max.saturating_sub(1),
         _ => total,
@@ -107,9 +107,8 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
         .with(AVATAR_GROUP_SPACING, SizeCss::SPACING.value(spacing))
         .into();
 
-    // Through `variables`, not a raw `style` attribute, so a var the chip
-    // stops setting is reverted ([[codebase/css-vars]]). Resolved only when
-    // there is a chip, but the hook runs unconditionally.
+    // Through `variables`, so a var the chip stops setting is reverted
+    // ([[codebase/css-vars]]). The hook runs unconditionally.
     let chip_variables: Input<Variables> = match hidden > 0 {
         // The bottom of the stack, under every member.
         true => avatar_variables(
@@ -133,8 +132,7 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
         .take(shown)
         .enumerate()
         .map(|(index, person)| {
-            // Counting down, so the first avatar paints over the second. DOM order
-            // stays visual order; nothing is reordered in CSS.
+            // Counting down, so the first avatar paints over the second.
             let member_variables = variables()
                 .with(AVATAR_GROUP_INDEX, (circles - index).to_string())
                 .to_string();
@@ -147,8 +145,7 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
                     initials: person.initials.clone(),
                     size,
                     radius: props.radius.clone(),
-                    // `input_from_str!` covers the string forms, not the enum
-                    // itself, so an already-resolved variant is wrapped by hand.
+                    // `input_from_str!` covers strings, not the enum itself.
                     variant: Input::Value(variant),
                     color: match person.color.clone() {
                         Some(color) => Input::Value(color),
@@ -178,11 +175,9 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
             .clone()
             .attr("data-state", chip_states.data_state())
             .attr("role", "img")
-            // The same names the tooltip shows, which is rendered only while
-            // open.
+            // The tooltip's names; the tooltip renders only while open.
             .attr("aria-label", more)
-            // Focusable so the tooltip is reachable without a pointer. One
-            // tab stop per group, which is what the hidden names cost.
+            // Focusable, so the tooltip is reachable without a pointer.
             .attr("tabindex", "0")
             .render(HtmlTag::Span, Vec::new(), rsx! { "{count}" });
 

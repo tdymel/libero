@@ -8,9 +8,7 @@ use crate::{
     utils::warn,
 };
 
-/// Which sections are open. **The variant is the mode**: `One` can hold at most
-/// one section, so "single mode with two open" is not a state a caller can
-/// build, and opening a section in `One` closes the other by construction.
+/// Which sections are open. The variant is the mode: `One` holds at most one.
 #[derive(Clone, Debug, PartialEq)]
 pub enum AccordionOpen<T> {
     /// At most one open section. Opening another closes it.
@@ -77,40 +75,23 @@ impl<T: PartialEq + Clone> AccordionOpen<T> {
 
 base_props! {
     pub struct AccordionProps<T: Options> {
-        /// Which sections are expanded, and through the variant whether one or
-        /// many may be. Strictly controlled - pair it with `onchange`.
+        /// The open sections; the variant picks one or many. Controlled, with `onchange`.
         #[props(default)]
         open: AccordionOpen<T>,
-        /// Called with the whole new open set, ready to store.
+        /// Called with the whole new open set.
         #[props(default)]
         onchange: Option<EventHandler<AccordionOpen<T>>>,
-        /// A section's body. Called for every section on each render, but a
-        /// closed panel's rsx is never mounted: its components do not run and
-        /// keep no state, and a half-typed form does not survive a close.
+        /// A section's body. A closed panel is never mounted, so it keeps no state.
         #[props(default)]
         panel: Option<Callback<T, Element>>,
-        /// The sections to show. Defaults to every `Options::options()`.
-        ///
-        /// `OptionItem::new(step).disabled(true)` renders a section that
-        /// cannot be toggled; it stays a tab stop. A grouped
-        /// [`OptionList`](crate::components::OptionList) is accepted and its
-        /// sections are drawn flattened, in the order given - the list draws
-        /// no group headings, because a section's own heading is already the
-        /// outline.
-        ///
-        /// A section list has no dropdown to put a loader in, so a
-        /// **pending** [`OptionSource`](crate::components::OptionSource) -
-        /// one built from a [`Resource`] that has not answered yet - simply
-        /// draws no sections. Await the fetch above the list if that
-        /// matters.
+        /// The sections; defaults to every `Options::options()`. Groups are flattened,
+        /// and a pending source draws none.
         #[props(default, into)]
         options: OptionSource<T>,
-        /// Overrides `Options::label`, like `Tabs::option_label`. `OptionLabel::rich`
-        /// draws a trigger as rsx and still names it.
+        /// Overrides `Options::label`; `OptionLabel::rich` draws rsx.
         #[props(default)]
         option_label: Option<Callback<T, OptionLabel>>,
-        /// The heading element around each trigger, `h1`..`h6`. Pick the level
-        /// the page outline needs; `h3` is a default, not an answer.
+        /// The heading around each trigger, `h1`..`h6`: match the page outline.
         #[props(default, into)]
         heading: Input<HtmlTag>,
         #[props(default, into)]
@@ -118,14 +99,9 @@ base_props! {
     }
 }
 
-/// A list of sections over an enum, each a heading whose button expands its
-/// panel. Controlled: it renders `open` and asks for a new set through
-/// `onchange`.
+/// Sections over an enum, each a heading whose button expands its panel.
 ///
-/// The sections are `T::options()` unless `options` narrows them, and `panel`
-/// is a match over `T` - so a forgotten section is a compile error.
-///
-/// ```no_run
+/// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Accordion, AccordionOpen, Options};
 /// # fn app() -> Element {
@@ -145,6 +121,8 @@ base_props! {
 /// # #[component] fn AddressForm() -> Element { rsx! {} }
 /// # #[component] fn CardForm() -> Element { rsx! {} }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/data-display/accordion>
 #[component]
 pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
     let root = use_root_id(&props.attributes);
@@ -190,9 +168,8 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
                 name,
                 disabled: option_disabled,
                 open: props.open.is_open(value),
-                // Not only while open: a closing panel animates out around its
-                // content, and only `Collapse` knows when that ends. It mounts
-                // this only while open or closing.
+                // Always built: a closing panel animates out around it, and
+                // `Collapse` mounts it only while open or closing.
                 panel: match &props.panel {
                     Some(panel) => panel.call(value.clone()),
                     None => rsx! {},

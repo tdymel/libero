@@ -21,9 +21,7 @@ const TRACK: &str = "& > [data-slot='track']";
 const COPIES: &str = "& > [data-slot='track'] > [data-slot='group']";
 const PAUSE: &str = "& > [data-slot='pause']";
 
-/// One copy plus one gap, as a share of the whole track: the track is `repeat`
-/// copies and `repeat - 1` gaps long, so adding the one missing gap and
-/// dividing by `repeat` lands exactly on the next copy.
+/// One copy plus one gap: the track plus the missing gap, over `repeat`.
 fn shift(axis: &str) -> String {
     format!(
         "translate{axis}(calc((-100% - {}) / {}))",
@@ -42,10 +40,8 @@ fn fade(side: &str) -> String {
 static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
     let offset = SizeCss::SPACING.value(Size::Xs);
 
-    // Every guard for reduced motion is nested in the selector it undoes: a
-    // bare `@media` rule would lose to the per-instance selector on
-    // specificity whatever its source order. Under it the same DOM becomes a
-    // strip the reader scrolls themselves - one copy, no fade, no toggle.
+    // Reduced-motion guards sit in the selector they undo: a bare `@media` rule
+    // loses on specificity. Under it: one copy, no fade, no toggle.
     let base = sx()
         .position("relative")
         .selector(
@@ -77,12 +73,8 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
                 .media(REDUCED_MOTION, sx().display("none")),
         );
 
-    // `clip`, not `hidden`, and only along the axis: the other one stays
-    // visible, so the toggle's focus ring and the content's own shadows are
-    // not cut off at the top and bottom of a strip barely taller than them.
-    // `hidden` would force the other axis to `auto`. A `clip` box is not a
-    // scroll container, so as a flex item it would refuse to shrink below
-    // its copies; the zero minimum gives that back.
+    // `clip` on one axis keeps focus rings visible on the other (`hidden` forces
+    // it to `auto`). The zero minimum lets the non-scroller shrink as a flex item.
     let horizontal = sx()
         .overflow_x("clip")
         .min_width("0")
@@ -114,9 +106,8 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
         .selector(COPIES, sx().flex_direction("column"))
         .selector(PAUSE, sx().bottom(offset));
 
-    // Above the moving track, which is its own stacking context, and below
-    // the toggle. Only the hidden seam is faded, so under reduced motion,
-    // where the first copy starts at the edge, the fade would cover content.
+    // Between the track and the toggle. Off under reduced motion, where it
+    // would cover the first copy.
     let fade_edges = sx()
         .selector(
             "&::before, &::after",
@@ -162,9 +153,8 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
                 sx().animation_play_state("paused"),
             ),
         )
-        // A focused link must be in view (WCAG 2.4.11): pausing could freeze it
-        // outside the clip, so the track stops at its start and scrolls to it.
-        // The track and not the root, so focusing the toggle keeps the motion.
+        // A focused link must be in view (2.4.11): the track stops at its start
+        // and scrolls to it. Focusing the toggle keeps the motion.
         .selector(
             "& > [data-slot='track']:focus-within",
             sx().animation("none"),
@@ -180,60 +170,58 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub struct MarqueeProps {
-        /// The axis it scrolls along. A vertical marquee needs a height from
-        /// the caller - without one it is as tall as all its copies.
+        /// The scroll axis. A vertical marquee needs a height from the caller.
         #[props(default, into)]
         orientation: Input<Orientation>,
         /// Scrolls towards the end instead of the start.
         #[props(default)]
         reverse: Option<bool>,
-        /// Milliseconds per full cycle. The same number moves a longer strip
-        /// faster.
+        /// Milliseconds per full cycle.
         #[props(default)]
         duration: Option<u32>,
-        /// Between copies, and between the last and the first.
+        /// Between copies.
         #[props(default, into)]
         gap: Input<Size>,
-        /// Copies laid in a row. Raise it when the content is shorter than
-        /// the marquee and a gap crosses the view. At least 2.
+        /// Copies in a row, at least 2. Raise it when a gap crosses the view.
         #[props(default, into)]
         repeat: Input<u8>,
-        /// Pointer hover pauses. Not a pause mechanism on its own: neither a
-        /// keyboard nor a touch screen can hover.
+        /// Pointer hover pauses; not a pause mechanism on its own.
         #[props(default)]
         pause_on_hover: Option<bool>,
-        /// Strictly controlled when set - pair it with `onpausechange`. `None`
-        /// leaves the state to the built-in toggle.
+        /// Controlled when set, paired with `onpausechange`.
         #[props(default)]
         paused: Option<bool>,
         /// The built-in toggle was pressed, with the state it asks for.
         #[props(default)]
         onpausechange: Option<EventHandler<bool>>,
-        /// Renders the pause toggle. Turn it off only when the page offers
-        /// its own control, through `paused`.
+        /// The pause toggle. Turn it off only when the page drives `paused` itself.
         #[props(default)]
         pause_control: Option<bool>,
-        /// Fades both ends into the surface colour, `Paper`'s background.
+        /// Fades both ends into the surface colour.
         #[props(default)]
         fade_edges: Option<bool>,
-        /// What scrolls. Rendered once per copy; interactive children work
-        /// only in the first copy, the others are `inert`.
+        /// What scrolls. Only the first copy is interactive; the others are `inert`.
         children: Element,
     }
 }
 
-/// Content scrolling on its own in an endless loop - a logo strip, a ticker.
+/// Content scrolling in an endless loop, with a pause toggle (WCAG 2.2.2).
 ///
-/// The children are rendered `repeat` times in a row, and the row moves by
-/// exactly one copy and one gap per cycle, so the restart cannot be seen.
-/// Nothing is measured: it renders the same under SSR and on every renderer.
-/// Every copy after the first is `aria-hidden` and `inert`, so it is read and
-/// tabbed through once.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Marquee;
+/// # fn app() -> Element {
+/// rsx! {
+///     Marquee { fade_edges: true,
+///         span { "Rust" }
+///         span { "Dioxus" }
+///         span { "Libero" }
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// It ships a pause toggle by default. WCAG 2.2.2 asks for a way to stop any
-/// motion that starts on its own and runs longer than five seconds, and
-/// hover is not one. Under `prefers-reduced-motion: reduce` it does not move
-/// at all: it shows one copy in a strip the reader scrolls themselves.
+/// Docs: <https://libero-ui.dev/data-display/marquee>
 #[component]
 pub fn Marquee(props: MarqueeProps) -> Element {
     let theme = use_theme();

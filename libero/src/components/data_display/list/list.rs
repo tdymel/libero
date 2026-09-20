@@ -26,40 +26,41 @@ static LIST_BASE_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub struct ListProps {
-        /// Item gap and nested-list indent - `theme.list.size` (`Md`) by default.
+        /// Item gap and nested-list indent.
         #[props(default, into)]
         size: Input<Size>,
-        /// An `ol` with visible numbers, for items whose order is the point.
+        /// A numbered `ol`.
         #[props(default)]
         ordered: bool,
-        /// Shown at the start of every item, beside its first line. A
-        /// `ListItem`'s own `icon` overrides it.
+        /// Shown beside every item's first line, unless the item sets its own.
         #[props(default)]
         icon: Option<Element>,
         children: Element,
     }
 }
 
-/// The list's `icon`, for its items. Every `List` provides one, so a nested
-/// list does not inherit its parent's.
+/// The list's `icon`, for its items. Every `List` provides one, so nesting does not inherit.
 #[derive(Clone, Copy)]
 pub(crate) struct ListContext {
     pub(crate) icon: Signal<Option<Element>>,
 }
 
-/// A vertical list of [`ListItem`](super::ListItem)s: a bare `ul`, or with
-/// `ordered` a numbered `ol`.
+/// A vertical list of [`ListItem`](super::ListItem)s: a bare `ul`, or a numbered `ol`.
 ///
-/// ```no_run
+/// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::components::{List, ListItem};
-/// # fn app() -> Element { rsx! {
-/// List { ordered: true,
-///     ListItem { "Install" }
-///     ListItem { "Configure" }
+/// # fn app() -> Element {
+/// rsx! {
+///     List { ordered: true,
+///         ListItem { "Install" }
+///         ListItem { "Configure" }
+///     }
 /// }
-/// # } }
+/// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/data-display/list>
 #[component]
 pub fn List(props: ListProps) -> Element {
     let theme = use_theme();
@@ -68,8 +69,7 @@ pub fn List(props: ListProps) -> Element {
     let context = use_context_provider(|| ListContext {
         icon: Signal::new(props.icon.clone()),
     });
-    // Guarded render-time write, as `Grid` does, so an unchanged render wakes
-    // no item.
+    // Guarded, so an unchanged render wakes no item.
     if *context.icon.peek() != props.icon {
         let mut icon = context.icon;
         icon.set(props.icon.clone());
@@ -93,8 +93,7 @@ pub fn List(props: ListProps) -> Element {
         .sx(&props.sx)
         .states(&states)
         .prepare()
-        // Not redundant: Safari with VoiceOver drops list semantics from a
-        // `list-style: none` list. A caller's own `role` still wins.
+        // Safari/VoiceOver drops list semantics under `list-style: none`.
         .attr_default("role", "list")
         .render(tag, props.attributes, props.children)
 }

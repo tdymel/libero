@@ -29,8 +29,7 @@ fn focus_first(root: &ElementHandle) {
     }
 }
 
-/// `false` when there was nothing to focus, so the caller can leave Tab to
-/// the browser rather than swallowing it and stranding focus.
+/// `false` when nothing took focus, so the caller leaves Tab to the browser.
 fn cycle_focus(root: &ElementHandle, backwards: bool) -> bool {
     let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
         return false;
@@ -40,8 +39,7 @@ fn cycle_focus(root: &ElementHandle, backwards: bool) -> bool {
 }
 
 /// Which of `items` are Tab stops: a native radio group is one, its checked
-/// radio or, with none checked, its first. The live checked state is a
-/// selector's (`:checked`), matched back to an item by the radio's `value`.
+/// radio (matched by `:checked` and `value`) or else its first.
 fn tab_stops(root: &ElementHandle, items: &[Box<dyn ElementApi>]) -> Vec<bool> {
     let attr = |item: &dyn ElementApi, name| item.attribute(name).ok().flatten();
     let group = |item: &dyn ElementApi| {
@@ -83,10 +81,8 @@ fn tab_stops(root: &ElementHandle, items: &[Box<dyn ElementApi>]) -> Vec<bool> {
         .collect()
 }
 
-/// The stop after `index` that takes focus; from outside (`None`), the first
-/// or, backwards, the last. A `display: none` match ignores `focus()`, so it
-/// is passed over rather than stalling Tab on it. Items `stops` marks `false`
-/// are passed over too.
+/// Focuses the stop after `index` (from `None`: the first, or last backwards).
+/// Skips non-stops and a `display: none` match, which ignores `focus()`.
 fn focus_next(
     items: &[Box<dyn ElementApi>],
     stops: &[bool],
@@ -123,6 +119,22 @@ base_props! {
     }
 }
 
+/// Keeps Tab and Shift+Tab cycling inside its children, and focuses the first one on mount.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::FocusTrap;
+/// # fn app() -> Element {
+/// rsx! {
+///     FocusTrap {
+///         input { placeholder: "Name" }
+///         button { "Save" }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/accessibility/focus-trap>
 #[component]
 pub fn FocusTrap(props: FocusTrapProps) -> Element {
     let root = use_element();
@@ -133,8 +145,7 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
         .sx(&props.sx)
         .states(&props.states)
         .prepare()
-        // Not `.element(&root)`: the trap also has to focus its first target
-        // once mounted, and both have to happen in the one `onmounted`.
+        // Not `.element(&root)`: mount and first focus share the one `onmounted`.
         .event("onmounted", move |event: Event<MountedData>| {
             (root.mount())(event);
             focus_first(&root);
@@ -151,8 +162,22 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
         .render(HtmlTag::Div, props.attributes, props.children)
 }
 
-/// A hidden placeholder that soaks up initial focus, then leaves the tab
-/// order once blurred.
+/// A hidden placeholder inside a [`FocusTrap`] that takes initial focus, then leaves the tab order.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{FocusTrap, FocusTrapInitialFocus};
+/// # fn app() -> Element {
+/// rsx! {
+///     FocusTrap {
+///         FocusTrapInitialFocus {}
+///         button { "Close" }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/accessibility/focus-trap>
 #[component]
 pub fn FocusTrapInitialFocus() -> Element {
     let used = use_local_state(|| false);

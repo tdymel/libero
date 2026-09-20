@@ -31,28 +31,20 @@ static BADGE_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = BadgeDefaults::theme_vars()
         .display("inline-flex")
         .align_items("center")
-        // So `Badge { Icon { .. } "Verified" }` reads as two things, without
-        // the caller reaching for a `Flex`.
+        // So `Badge { Icon { .. } "Verified" }` needs no `Flex`.
         .gap(SizeCss::SPACING.value(Size::Xs))
         .border_style("solid")
         .border_width("1px")
         .white_space("nowrap")
         .user_select("none")
-        // A label, never a target: no I-beam, no drag.
         .cursor("default")
-        // Shrink-to-fit even as a stretched flex item, and never wider than
-        // what holds it - at which point the label is cut, not wrapped, since
-        // the height is fixed. No `text-overflow: ellipsis` to soften that:
-        // the property wants a block container, and a flex root is not one, so
-        // it is dead here. An inner label span would give the ellipsis; one
-        // element is the trade.
+        // Too wide cuts the label: `text-overflow` is dead on a flex root, and
+        // an inner span for it would cost a second element.
         .width("fit-content")
         .max_width("100%")
         .overflow("hidden");
 
-    // Chrome only, no `:hover` - `Icon`'s rule and the same reason: a static
-    // label that changed colour under the pointer would be claiming to be
-    // interactive.
+    // Chrome only, no `:hover`: a static label must not look interactive.
     let base = Variant::ALL.iter().fold(base, |base, &variant| {
         base.when(
             variant.state_name(),
@@ -60,14 +52,8 @@ static BADGE_BASE_SX: StaticSx = StaticSx::new(|| {
         )
     });
 
-    // A count badge: the pill becomes a circle by taking its own height as a
-    // floor for its width. `BADGE_BOX` is why - the active step's height,
-    // republished unsuffixed, so this rule needs to know nothing about which
-    // size token is on.
-    // `justify-content` only here: a circle's label has room around it and has
-    // to sit in the middle of it. On a normal badge, centring an *overflowing*
-    // label clips it at both ends and shows the middle - the start is what a
-    // reader needs.
+    // A count badge floors its width at `BADGE_BOX`, the active size's height.
+    // Centred only here: an overflowing pill label must clip at its end, not both.
     base.when(
         "circle",
         sx().min_width(BADGE_BOX.value())
@@ -99,24 +85,19 @@ fn badge_variables(props: &BadgeProps, variant: Variant) -> Variables {
 
 base_props! {
     pub struct BadgeProps {
-        /// The five M3 arms plus `gradient`, shared with `Button` and `Chip` -
-        /// minus their hover response.
         #[props(default, into)]
         variant: Input<Variant>,
         /// The stops and angle of `variant: "gradient"`, over the theme's.
-        /// Ignored by the other variants.
         #[props(default)]
         gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         size: Input<Size>,
-        /// A step on the badge's own radius scale. The theme's default, `xxl`,
-        /// is a pill.
+        /// A step on the badge's own radius scale; the default is a pill.
         #[props(default, into)]
         radius: Input<Size>,
-        /// Squares the padding away and floors the width at the height, for a
-        /// one- or two-character count.
+        /// A circle for a one- or two-character count.
         #[props(default)]
         circle: Option<bool>,
         /// The label.
@@ -124,12 +105,19 @@ base_props! {
     }
 }
 
-/// A short status label: a pill of uppercase text, sized under a control.
+/// A short status label: a pill of uppercase text.
 ///
-/// Renders one `<span>` with no role and no ARIA - a badge is visible text,
-/// read in document order, and its content is its accessible name. Something
-/// that must announce a *change* is the caller's own `role="status"` region
-/// around it, not this.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Badge;
+/// # fn app() -> Element {
+/// rsx! {
+///     Badge { variant: "outlined", color: "success", "Active" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/data-display/badge>
 #[component]
 pub fn Badge(props: BadgeProps) -> Element {
     let theme = use_theme();

@@ -2,9 +2,8 @@ use dioxus::prelude::*;
 
 use super::VisuallyHidden;
 
-/// A polite live region for one-off messages: a refusal, an error on Enter.
-/// Render it unconditionally, since a region inserted with its text is not
-/// announced.
+/// A polite live region for one-off messages. Render it unconditionally:
+/// a region inserted with its text is not announced.
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct Announcer {
     /// Counted, so a message equal to the last one still lands as a new node.

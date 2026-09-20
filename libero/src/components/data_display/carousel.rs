@@ -42,32 +42,18 @@ pub use crate::theme::CarouselAlign;
 input_from_str!(CarouselAlign);
 
 static CAROUSEL_ROOT_SX: StaticSx = StaticSx::new(|| {
-    // The controls sit over the viewport, so the root is their containing
-    // block.
     sx().position("relative")
         .display("block")
-        // A viewport takes its cross-axis size from its container, never from
-        // its slides - `ScrollArea`'s root says the same thing. Without this
-        // the root shrink-to-fits wherever it is not a plain block child (a
-        // flex item, a grid cell), and then its width is the *track's*
-        // max-content width. A horizontal track overflows that and gets
-        // clamped back to the space available, so it fills by accident; a
-        // vertical one is as wide as its widest slide's text and collapses to
-        // a sliver.
+        // Sized by its container, not its slides: a shrink-to-fit vertical one collapses.
         .width("100%")
 });
 
 static CAROUSEL_VIEWPORT_SX: StaticSx = StaticSx::new(|| {
-    // The controls are absolute against *this*, not against the root: the root
-    // is the viewport plus the indicator strip, and positioning against it put
-    // a vertical carousel's next control 172px below the bottom of the strip,
-    // among the dots. They are inset by `CAROUSEL_CONTROLS_OFFSET`, so the
-    // `overflow: hidden` here does not clip them.
+    // The controls' containing block, not the root, which also holds the dots.
     sx().position("relative").overflow("hidden")
 });
 
-/// Merged onto `ScrollArea`'s own, which scrolls the carousel's axis and hides
-/// the scrollbar: that is the indicators' job here, the strip still scrolls.
+/// Merged onto `ScrollArea`'s own; the indicators replace the hidden scrollbar.
 static CAROUSEL_TRACK_SX: StaticSx = StaticSx::new(|| {
     scroll_area_base(
         sx().display("flex")
@@ -79,28 +65,20 @@ static CAROUSEL_TRACK_SX: StaticSx = StaticSx::new(|| {
             .when("vertical", sx().scroll_snap_type("y mandatory"))
             // Keeps a fast flick from skipping past a slide.
             .scroll_snap_stop("always")
-            // A carousel inside a scrollable page should not scroll the page when
-            // it reaches its own end.
             .overscroll_behavior_x("contain")
             .overscroll_behavior_y("contain")
             .height(CAROUSEL_HEIGHT.value_or("auto"))
             .scroll_behavior("smooth")
-            // Chrome and Safari do **not** disable `scroll-behavior: smooth` under
-            // reduced motion - only Firefox does - so the guard is explicit. It
-            // sits at the same specificity as the declaration it overrides and
-            // after it, which is what settles the two.
+            // Chrome and Safari keep smooth scrolling under reduced motion.
             .media(REDUCED_MOTION, sx().scroll_behavior("auto"))
-            // A drag is the pointer's own position: animating towards it lags,
-            // and a mandatory snap pulls every write back to the slide it left, so
-            // the strip sat still and then jumped a whole slide. After the
-            // orientation arms, which it has to beat at equal specificity.
+            // A drag follows the pointer: smoothing lags and a snap pulls it back.
+            // After the orientation arms, which it beats at equal specificity.
             .when(
                 "dragging",
                 sx().scroll_behavior("auto").scroll_snap_type("none"),
             )
             .when("seam", sx().scroll_behavior("auto"))
-            // Inset: the viewport is `overflow: hidden` and exactly this size, so
-            // an outset ring is clipped away entirely.
+            // Inset: the `overflow: hidden` viewport would clip an outset ring.
             .focus_visible(inset_focus_ring_sx("-2px")),
     )
 });
@@ -154,12 +132,8 @@ static CAROUSEL_CONTROLS_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// The fill and glyph every control shares, behind the theme's vars so a dark
-/// theme has one place to change them. A var is opaque to `background()`, so
-/// the `--lsx-focus-contrast` that `background("white")` used to publish is
-/// declared by hand - the glyph colour, which is what reads against the fill -
-/// or the ring would fall back to whatever the page around the carousel set.
-/// The fill is the ring's halo, as `background()` publishes it.
+/// Every control's fill and glyph. A var is opaque to `background()`, so the
+/// focus contrast and halo are declared by hand.
 fn control_colors_sx() -> Sx {
     sx().background(CAROUSEL_CONTROL_BACKGROUND.value())
         .color(CAROUSEL_CONTROL_COLOR.value())
@@ -190,8 +164,7 @@ static CAROUSEL_CONTROL_SX: StaticSx = StaticSx::new(|| {
             sx().rtl(sx().selector("& > svg", sx().transform("scaleX(-1)"))),
         )
         .hover(sx().background(CAROUSEL_CONTROL_HOVER_BACKGROUND.value()))
-        // `ActionIcon`'s `focusable_when_disabled`: the button keeps its tab
-        // stop so focus is never dropped at either end.
+        // Disabled keeps its tab stop, so focus is never dropped at either end.
         .when(
             "disabled",
             sx().opacity("0.4")
@@ -214,11 +187,7 @@ static CAROUSEL_INDICATOR_SX: StaticSx = StaticSx::new(|| {
     sx().padding("0")
         .border_width("0")
         .border_radius("999px")
-        // Behind a var, not a literal: `background("muted.6")` would publish
-        // this dot's own `--lsx-focus-contrast`, and the ring - drawn outside
-        // the dot, on the page - would then contrast against the dot instead
-        // of against what it sits on. On the current dot that was a white ring
-        // on a white page.
+        // A var, not a literal, so the ring contrasts with the page, not the dot.
         .background(CAROUSEL_INDICATOR_COLOR.value())
         .cursor("pointer")
         .transition("background-color 150ms")
@@ -232,10 +201,7 @@ static CAROUSEL_INDICATOR_SX: StaticSx = StaticSx::new(|| {
             sx().height(CAROUSEL_INDICATOR_LENGTH.value())
                 .width(CAROUSEL_INDICATOR_THICKNESS.value()),
         )
-        // Colour alone would not carry it: `primary.6` and `grey.6` are within
-        // about 1.07:1 of each other, so in greyscale or with a colour vision
-        // deficiency the current dot would be its neighbours' twin. Length is
-        // the second channel: the current dot is wider.
+        // Not colour alone (1.4.1): the current dot is also longer.
         .when(
             "current",
             sx().background(CAROUSEL_INDICATOR_CURRENT_COLOR.value())
@@ -249,16 +215,14 @@ static CAROUSEL_INDICATOR_SX: StaticSx = StaticSx::new(|| {
                 ),
         )
         .media(REDUCED_MOTION, sx().transition("none"))
-        // Forced colours paint every dot `Canvas`: the strip vanished, and the
-        // current dot with it.
+        // Forced colours paint every dot `Canvas`, so the strip vanished.
         .media(
             FORCED_COLORS,
             sx().background("CanvasText")
                 .when("current", sx().background("Highlight")),
         )
         .focus_visible(focus_ring_sx())
-        // WCAG 2.5.8: the dot is drawn 5px thick, so an invisible box at least
-        // 24px on both axes and centred on it takes the pointer, as `Slider`'s thumb.
+        // 2.5.8: an invisible 24px box centred on the thin dot takes the pointer.
         .position("relative")
         .selector(
             "&::before",
@@ -290,8 +254,7 @@ static CAROUSEL_PAUSE_SX: StaticSx = StaticSx::new(|| {
         .and(shadow_sx(SizeCss::SHADOW.value(Size::Sm)))
         .cursor("pointer")
         .selector("& > svg", sx().width("55%").height("55%"))
-        // Beside Next's column, not in it: on a short strip the corner is where
-        // Next sits, and the pause button covered it.
+        // Beside Next's column: on a short strip it covered Next.
         .when(
             "beside-next",
             sx().right(format!(
@@ -303,17 +266,8 @@ static CAROUSEL_PAUSE_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(focus_ring_sx())
 });
 
-/// The indices that can actually be snapped to, inclusive.
-///
-/// Two things narrow it. With `per_view` above 1 the final slides share the
-/// viewport, so the strip runs out of scroll before it runs out of slides - six
-/// slides three-up stop at 3, not 5. And the alignment slides the whole window:
-/// the same strip centred reaches 1 through 4, and end-aligned 2 through 5,
-/// because at either end the browser clamps the scroll and the slide sitting in
-/// the aligned position is not the one that was asked for.
-///
-/// At `per_view: 1.0` all three alignments coincide and this is `0..=count-1`,
-/// which is why nothing noticed the alignment was missing.
+/// The snappable indices, inclusive: six slides three-up reach 0..=3 at start,
+/// 1..=4 centred and 2..=5 end-aligned, since the browser clamps the scroll.
 fn index_range(count: usize, per_view: f64, align: CarouselAlign) -> (usize, usize) {
     if count == 0 {
         return (0, 0);
@@ -326,11 +280,8 @@ fn index_range(count: usize, per_view: f64, align: CarouselAlign) -> (usize, usi
     (first, last.max(first))
 }
 
-/// Where `index` stands among the positions the strip can actually rest at,
-/// and how many there are - what the status and the dots count: snaps, not
-/// slides. Six slides three-up rest at four
-/// places, so the status runs "1 of 4" to "4 of 4", and a strip whose slides
-/// all fit rests at one: "1 of 1". A looping strip has a position per slide.
+/// `index`'s place among the rest positions, and their count: the status and dots
+/// count snaps, not slides ("1 of 4" for six three-up). Looping: one per slide.
 fn snap_position(
     index: usize,
     count: usize,
@@ -344,14 +295,8 @@ fn snap_position(
     }
 }
 
-/// Whether strip position `position` lies wholly outside the viewport while the
-/// strip rests on `rest` - the slides that go `inert`.
-///
-/// In pitches (`u = slide + gap`) slide `k` covers `k..k + 1 - gap/u` and the
-/// viewport `p..p + per_view - gap/u`, where `p` is the aligned rest clamped to
-/// the scroll range. The gap is not measured, so it is taken as zero on both
-/// sides: that only ever keeps a slide live, never hides one that shows. A
-/// peeking slide therefore stays live.
+/// Whether `position` lies wholly outside the viewport at `rest`: it goes `inert`.
+/// The gap counts as zero, which only keeps a peeking slide live.
 fn outside_viewport(
     position: usize,
     rest: usize,
@@ -393,27 +338,19 @@ fn live_copy(index: usize, count: usize, clones: usize, shows: impl Fn(usize) ->
         .unwrap_or(real)
 }
 
-/// A dot's own id, derived from the track's so two carousels on one page do
-/// not collide.
+/// A dot's id, derived from the track's so two carousels do not collide.
 fn indicator_id(track_id: &str, index: usize) -> String {
     format!("{track_id}-indicator-{index}")
 }
 
-/// Moves focus onto the dot the arrows just made current. Synchronous, and a
-/// miss is not worth reporting: the dot is there in the same render.
+/// Moves focus onto the dot the arrows just made current.
 fn focus_indicator(root: ElementHandle, track_id: &str, index: usize) {
     let selector = format!("#{}", indicator_id(track_id, index));
     let _ = root.query_selector(&selector).and_then(|dot| dot.focus());
 }
 
-/// How far the snapped slide's index sits from the scroll offset's, in slides.
-///
-/// `scroll-snap-align` decides which edge of a slide meets which edge of the
-/// viewport, so it shifts the whole mapping. Writing the pitch as
-/// `u = slide + gap`, the viewport is `per_view * u - gap` wide, and slide `k`
-/// comes to rest at `u * (k - shift)`: nothing for `start`, half the extra
-/// slides for `center`, all of them for `end`. It is a function of `per_view`
-/// alone, so folding it in still measures nothing.
+/// How far `scroll-snap-align` shifts the snapped index from the offset's, in
+/// slides: none for `start`, half the extra slides for `center`, all for `end`.
 fn align_shift(per_view: f64, align: CarouselAlign) -> f64 {
     match align {
         CarouselAlign::Start => 0.0,
@@ -422,17 +359,8 @@ fn align_shift(per_view: f64, align: CarouselAlign) -> f64 {
     }
 }
 
-/// The snapped index for a scroll offset, from the three numbers `ScrollData`
-/// hands over.
-///
-/// Exact for an equal-width snap strip without measuring anything: the maximum
-/// offset is `(count - per_view) * u`, so dividing by it cancels both the slide
-/// width and the gap, and [`align_shift`] puts the result back on the slide the
-/// viewport is actually showing.
-///
-/// At the two ends the browser clamps the scroll, so under `center` or `end`
-/// the first and last slides cannot be brought to that position - and the index
-/// reported there is the slide genuinely in it, not the one that was asked for.
+/// The snapped index for a scroll offset. Exact without measuring: dividing by
+/// the max offset cancels slide width and gap.
 fn index_at(offset: f64, max: f64, count: usize, per_view: f64, align: CarouselAlign) -> usize {
     let span = count as f64 - per_view;
     if max <= 0.0 || span <= 0.0 {
@@ -446,8 +374,7 @@ fn index_at(offset: f64, max: f64, count: usize, per_view: f64, align: CarouselA
     raw.clamp(first, last)
 }
 
-/// The inverse of [`index_at`], clamped to what the browser will actually
-/// scroll to.
+/// The inverse of [`index_at`], clamped to the scroll range.
 fn offset_for(index: usize, max: f64, count: usize, per_view: f64, align: CarouselAlign) -> f64 {
     let span = count as f64 - per_view;
     if max <= 0.0 || span <= 0.0 {
@@ -456,14 +383,12 @@ fn offset_for(index: usize, max: f64, count: usize, per_view: f64, align: Carous
     ((index as f64 - align_shift(per_view, align)) / span * max).clamp(0.0, max)
 }
 
-/// How many items a looping strip holds: the slides plus the clones at both
-/// ends. `clones` is zero when not looping, and this is then the slide count.
+/// The slides plus the clones at both ends (zero when not looping).
 fn strip_count(count: usize, clones: usize) -> usize {
     count + 2 * clones
 }
 
-/// The real slide a strip position shows. The leading clones are the tail and
-/// the trailing ones are the head, so either side of the seam wraps around.
+/// The real slide a strip position shows: leading clones are the tail, trailing the head.
 fn real_for(raw: usize, count: usize, clones: usize) -> usize {
     if count == 0 {
         return 0;
@@ -471,17 +396,13 @@ fn real_for(raw: usize, count: usize, clones: usize) -> usize {
     (raw as isize - clones as isize).rem_euclid(count as isize) as usize
 }
 
-/// Whether a strip position is a cloned end rather than a real slide - the
-/// moment the seam has to be crossed.
+/// Whether a strip position is a cloned end: the seam has to be crossed.
 fn is_clone(raw: usize, count: usize, clones: usize) -> bool {
     clones > 0 && (raw < clones || raw >= clones + count)
 }
 
-/// Whether a controlled index's scroll is instant: the first one after mount,
-/// or one that arrives with a swap of the slides ([`CarouselJump`]). Only when
-/// it moves at all: where the strip already is, no scroll settles, and a
-/// raised `seam` would never come down. A looping strip mounts on a clone, so
-/// its first scroll always moves.
+/// Whether a controlled scroll is instant: the first after mount, or one with a
+/// slide swap. Only if it moves, or a raised `seam` never comes down.
 fn instant_scroll(
     first_scroll: bool,
     swapped: bool,
@@ -493,18 +414,9 @@ fn instant_scroll(
     (first_scroll && (clones > 0 || index != first)) || (swapped && index != from)
 }
 
-/// Provided by a caller that replaces a controlled carousel's slides and its
-/// `index` in the same render: `Lightbox`, on a second `open_with` while it
-/// is open. A controlled move that arrives with a swap is instant. A smooth
-/// scroll from the old index would pass over slides of the new set that are
-/// not being shown, and a lazy picture on one of them is fetched as it goes
-/// by (todo 323). A context rather than a prop: no caller outside the crate
-/// swaps slides this way, and a remount instead would drop focus off the
-/// controls.
-///
-/// A count of swaps, not a flag for the swapping render: the carousel's
-/// effect compares it with the last count it saw, so the swap is not lost
-/// when the provider renders again before that effect runs.
+/// From a caller swapping slides and `index` in one render (`Lightbox`): the move
+/// is instant, or a smooth scroll fetches lazy pictures in passing (todo 323).
+/// A count, so a swap survives a re-render before the effect.
 #[derive(Clone, Default)]
 pub(crate) struct CarouselJump(Rc<Cell<u64>>);
 
@@ -519,22 +431,17 @@ impl CarouselJump {
     }
 }
 
-/// Provided around a strip that drops its status and its track's tab stop when
-/// every slide fits: nothing scrolls, so both are noise (`Lightbox`'s
-/// thumbnails, todo 564). A context, as [`CarouselJump`]: no public prop.
+/// Drops the status and track tab stop when every slide fits (todo 564).
 #[derive(Clone, Copy)]
 pub(crate) struct CarouselQuietWhenFits;
 
-/// Whether a swap has arrived since the last time this was asked, and mark it
-/// as read. Reading it is what consumes it: a count that stayed unread would
-/// make every later controlled move instant too, and the carousel would have
-/// lost its animation for good.
+/// Whether a swap arrived since last asked; reading consumes it, or every later
+/// move would be instant too.
 fn consume_swap(seen: &mut Option<u64>, swaps: Option<u64>) -> bool {
     swaps != std::mem::replace(seen, swaps)
 }
 
-/// Scrolls the track so `index` is the snapped slide. The offset is a share of
-/// the range, so it goes over as a percent and `ScrollArea` measures the range.
+/// Scrolls the track so `index` is the snapped slide, as a percent of the range.
 fn scroll_to_index(
     track: ScrollAreaHandle,
     index: usize,
@@ -550,8 +457,7 @@ fn scroll_to_index(
     }
 }
 
-/// Per-instance only: a carousel's height has no default worth publishing on
-/// the theme, and `auto` is what a horizontal strip wants.
+/// Per-instance only: no themed default, `auto` suits a horizontal strip.
 const CAROUSEL_HEIGHT: CssVar = CssVar::new("--lsx-carousel-height");
 
 fn carousel_variables(
@@ -571,12 +477,8 @@ fn carousel_variables(
         )
 }
 
-/// Everything a move needs, in one `Copy` bundle.
-///
-/// Built fresh on every render and captured by copy into each handler, rather
-/// than closed over by a `use_callback` - a handler built once would keep the
-/// first render's `count` and `per_view` and quietly navigate against a stale
-/// strip.
+/// Everything a move needs, rebuilt each render and copied into handlers: a
+/// `use_callback` would keep the first render's `count` and `per_view`.
 #[derive(Clone, Copy, PartialEq)]
 struct Nav {
     current: Signal<usize>,
@@ -590,14 +492,11 @@ struct Nav {
     first: usize,
     last: usize,
     onindexchange: Option<EventHandler<usize>>,
-    /// Slides cloned onto each end so a looping strip has something to scroll
-    /// into past either edge. Zero when not looping.
+    /// Slides cloned onto each end of a looping strip; zero otherwise.
     clones: usize,
 }
 
 impl Nav {
-    /// How many items the strip actually holds - the slides plus the clones at
-    /// both ends.
     fn strip_count(self) -> usize {
         strip_count(self.count, self.clones)
     }
@@ -607,23 +506,15 @@ impl Nav {
         index + self.clones
     }
 
-    /// The real slide a strip position shows, wrapping through the clones: the
-    /// leading clones are the tail and the trailing ones are the head.
     fn real_for(self, raw: usize) -> usize {
         real_for(raw, self.count, self.clones)
     }
 
-    /// Whether a strip position is one of the cloned ends rather than a real
-    /// slide - the moment the seam has to be crossed.
     fn is_clone(self, raw: usize) -> bool {
         is_clone(raw, self.count, self.clones)
     }
 
-    /// A deliberate move: control, key, indicator or timer. Sets both indices
-    /// at once, because the caller asked for this one rather than scrolling
-    /// into it.
-    /// The furthest index this carousel will go to. A looping strip navigates
-    /// over the real slides; a plain one stops where the scrolling does.
+    /// Clamps to the real slides when looping, else to where scrolling stops.
     fn clamp_index(self, index: usize) -> usize {
         match self.clones > 0 {
             true => index.min(self.count.saturating_sub(1)),
@@ -631,11 +522,8 @@ impl Nav {
         }
     }
 
-    /// Pulls both indices into the reachable window. No scroll: at rest the
-    /// strip is already showing the slide this corrects to - the reading was
-    /// wrong, not the position. And no callback: an uncontrolled carousel has
-    /// no second party holding a wrong value, and a controlled one is told by
-    /// the effect that reads its `index`.
+    /// Pulls both indices into the reachable window. No scroll (the reading was
+    /// wrong, not the position) and no callback.
     fn pull_into_range(mut self) {
         let held = *self.current.peek();
         let clamped = self.clamp_index(held);
@@ -647,8 +535,7 @@ impl Nav {
 
     fn go_to(mut self, index: usize) {
         let index = self.clamp_index(index);
-        // Against `settled`, which is the last index the caller was told.
-        // `End` pressed twice, or an arrow on the last dot, is not a change.
+        // Against `settled`, the last index the caller was told.
         let changed = index != *self.settled.peek();
         self.current.set(index);
         self.settled.set(index);
@@ -669,11 +556,8 @@ impl Nav {
         );
     }
 
-    /// Asks for the seam to be crossed: the strip has settled on a clone, and
-    /// has to jump to the real slide showing the same thing. `seam` switches
-    /// smooth scrolling off for the jump, or the strip visibly rewinds - so
-    /// this only raises it, and the jump waits for the render that puts it in
-    /// the DOM. See the effect that reads it.
+    /// Settled on a clone: raises `seam` (smooth scrolling off) so the jump to the
+    /// real slide, in a later effect, does not visibly rewind.
     fn cross_seam(mut self) {
         self.seam.set(true);
     }
@@ -690,8 +574,7 @@ impl Nav {
         (self.real_for(first), self.real_for(last))
     }
 
-    /// The strip position a scroll report names: `index_at` only needs the
-    /// offset as a share of the range, which is exactly the percent.
+    /// The strip position a scroll report (in percent) names.
     fn raw_at(self, x: f64, y: f64) -> usize {
         let percent = match self.orientation {
             Orientation::Horizontal => x,
@@ -709,21 +592,16 @@ impl Nav {
 
 base_props! {
     pub struct CarouselProps {
-        /// The slides, in order. Not `children`: reasoning about order and
-        /// count is this component's whole job, and dioxus cannot inspect
-        /// children ([[principles/component-api-design]] §4).
+        /// The slides, in order.
         #[props(default)]
         slides: Vec<Element>,
-        /// Each slide group's accessible name. Defaults to the theme's
-        /// `"{n} of {m}"`.
+        /// Each slide's accessible name; defaults to `"{n} of {m}"`.
         #[props(default)]
         slide_label: Option<Callback<usize, String>>,
-        /// The current slide. Set it and the carousel follows; leave it unset
-        /// and the carousel keeps its own.
+        /// The current slide, when controlled.
         #[props(default)]
         index: Option<usize>,
-        /// Fired once a scroll settles, and on every control, key and
-        /// indicator.
+        /// Fired once a scroll settles, and on every control, key and indicator.
         #[props(default)]
         onindexchange: Option<EventHandler<usize>>,
         /// Slides visible at once. Fractional peeks the next one.
@@ -733,38 +611,29 @@ base_props! {
         gap: Input<Size>,
         #[props(default, into)]
         align: Input<CarouselAlign>,
-        /// `"horizontal"` by default - unlike `Orientation`'s own default.
+        /// `"horizontal"` by default, unlike `Orientation`'s own default.
         #[props(default, into)]
         orientation: Input<Orientation>,
-        /// Required for a vertical carousel, which has nothing to take its
-        /// height from.
+        /// Required for a vertical carousel.
         #[props(default, into)]
         height: Input<ThemeAwareValue>,
         #[props(default)]
         controls: Option<bool>,
         #[props(default)]
         indicators: Option<bool>,
-        /// Names the region. There is no sensible default for a set of
-        /// slides, so leaving it unset is a `warn()`.
+        /// Names the region; unset warns.
         #[props(default, into)]
         aria_label: Option<String>,
-        /// Mouse drag-to-scroll over the track. Touch already swipes - that is
-        /// the platform's own scroll - and this never applies
-        /// `touch-action: none`, which would take it away.
+        /// Mouse drag-to-scroll over the track; touch already swipes.
         #[props(default)]
         draggable: bool,
-        /// Advances on a timer. Ships with a pause control, first in Tab
-        /// order, and pauses while hovered. Focus entering stops it until the
-        /// control is pressed (WCAG 2.2.2). Starts paused under reduced motion.
+        /// Advances on a timer, with a pause control (WCAG 2.2.2).
         #[props(default)]
         autoplay: bool,
-        /// Milliseconds between advances. Defaults to the theme's.
+        /// Milliseconds between advances.
         #[props(default)]
         autoplay_delay: Option<u32>,
-        /// Wraps at both ends, by cloning enough slides onto each end for the
-        /// strip to scroll past the edge and jumping back across the seam once
-        /// it settles. Each slide has one live copy, a clone when that is the
-        /// one showing; the other copies are `aria-hidden` and `inert`.
+        /// Wraps at both ends through cloned slides.
         #[props(default)]
         r#loop: bool,
     }
@@ -772,32 +641,30 @@ base_props! {
 
 /// A scroll-snap strip that knows which slide it is on.
 ///
-/// The index is derived from the scroll position rather than from intent,
-/// which is what makes a native touch swipe, a keyboard arrow and a control
-/// click all end up in the same place.
-///
-/// ```no_run
+/// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Carousel, Image};
-/// # fn app() -> Element {
 /// # struct Photo { url: String, alt: String }
+/// # fn app() -> Element {
 /// # let photos: Vec<Photo> = Vec::new();
-/// # rsx! {
-/// Carousel {
-///     aria_label: "Product photos",
-///     per_view: 3.0,
-///     indicators: true,
-///     slides: photos.iter().map(|p| rsx! { Image { src: "{p.url}", alt: "{p.alt}" } }).collect(),
+/// rsx! {
+///     Carousel {
+///         aria_label: "Product photos",
+///         per_view: 3.0,
+///         indicators: true,
+///         slides: photos.iter().map(|p| rsx! { Image { src: "{p.url}", alt: "{p.alt}" } }).collect(),
+///     }
 /// }
-/// # } }
+/// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/data-display/carousel>
 #[component]
 pub fn Carousel(props: CarouselProps) -> Element {
     let theme = use_theme();
     let labels = &use_localization().carousel;
     let track = use_scroll_area();
-    // The indicators sit outside the track, so the roving focus looks them up
-    // from the root.
+    // The indicators sit outside the track, so roving focus finds them from the root.
     let root_handle = use_element();
     let track_id = use_id();
     // The status region describes the track, so the tab stop says where it is.
@@ -812,19 +679,13 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // `Orientation` defaults to vertical; a carousel does not.
     let orientation = props.orientation.copied_or(Orientation::Horizontal);
     let align = props.align.copied_or(theme.carousel.align);
-    // No slides is not "one slide": there is no position to announce, no dot
-    // to go to and nothing to rotate, so none of the chrome renders. The root
-    // stays, so a caller's size and placement hold while slides load, but it
-    // is no landmark and the empty track is no tab stop - a named region with
-    // nothing in it is noise in a screen reader's landmark list.
+    // No slides: no chrome, no landmark, no tab stop. The root keeps its box.
     let empty = count == 0;
     let controls = !empty && props.controls.unwrap_or(theme.carousel.controls);
     let indicators = !empty && props.indicators.unwrap_or(theme.carousel.indicators);
     let (first, last) = index_range(count, per_view, align);
 
-    // Read in render, so a slide swap is a dependency of the effect that
-    // applies a controlled index, which then runs even when the swap leaves
-    // the index where it was.
+    // Read in render, so a swap re-runs the controlled-index effect.
     let swaps = jump.as_ref().map(CarouselJump::count);
 
     let setup = CarouselSetup {
@@ -858,9 +719,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         root: root_handle,
     };
 
-    // A named region beats an unnamed one even when the name is generic, so
-    // the localization's stands in - and `use_carousel_state`'s warning still
-    // says to do better.
+    // A generic name beats none; the warning still asks for a better one.
     let aria_label = props
         .aria_label
         .clone()
@@ -931,9 +790,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
     )
 }
 
-/// Everything `Carousel`'s state hook reads off the props and the theme, in
-/// one reactive argument: an effect keyed on this re-runs when any of it
-/// moves.
+/// What `Carousel`'s state hook reads, as one reactive effect argument.
 #[derive(Clone, Copy, PartialEq)]
 struct CarouselSetup {
     track: ScrollAreaHandle,
@@ -957,10 +814,7 @@ struct CarouselSetup {
     quiet: bool,
 }
 
-/// `Carousel`'s live state: the strip mover and the two indices in `nav`, what
-/// pauses autoplay, and the drag. Every effect that moves the
-/// strip lives in [`use_carousel_state`], so the component body is left with
-/// rendering.
+/// `Carousel`'s live state: `nav`, what pauses autoplay, and the drag.
 #[derive(Clone, Copy, PartialEq)]
 struct CarouselState {
     nav: Nav,
@@ -978,14 +832,12 @@ struct CarouselState {
     running: bool,
 }
 
-/// `template` with `{n}` one-based, because it is read aloud, and `{m}` the
-/// count.
+/// `template` with `{n}` one-based (read aloud) and `{m}` the count.
 pub(crate) fn numbered(template: &str, index: usize, count: usize) -> String {
     fill(template, &[("n", &(index + 1)), ("m", &count)])
 }
 
-/// One argument for every part of the carousel's chrome: the resolved props,
-/// the live state, the strings and the ids.
+/// Everything the carousel's chrome needs: setup, state, strings and ids.
 #[derive(Clone, Copy, PartialEq)]
 struct CarouselView {
     setup: CarouselSetup,
@@ -996,9 +848,7 @@ struct CarouselView {
     root: ElementHandle,
 }
 
-/// The carousel's own state, and every effect that moves the strip: the
-/// reachable window, the looping strip's opening position, the seam jump, a
-/// controlled `index`, and autoplay.
+/// The carousel's state and every effect that moves the strip.
 fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
     let CarouselSetup {
         track,
@@ -1017,9 +867,7 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         ..
     } = setup;
 
-    // Two indices, deliberately: `current` follows the scroll frame by frame so
-    // the indicators and the controls feel live, `settled` only moves when the
-    // scroll comes to rest, so the live region does not read every frame.
+    // `current` follows the scroll live; `settled` moves at rest, for the live region.
     let mut current = use_signal(|| controlled.unwrap_or(0));
     let mut settled = use_signal(|| controlled.unwrap_or(0));
 
@@ -1032,15 +880,12 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
     let mut seam = use_signal(|| false);
     let drag_origin = use_signal(|| 0.0_f64);
 
-    // A named region beats an unnamed one even when the name is generic, so
-    // the theme's stands in - and the warning still says to do better.
     use_name_warning(
         named,
         "Carousel: no `aria_label`, falling back to the theme's. A region needs a name of its own to be told apart in a landmark list.",
     );
 
-    // One clone per visible slide at each end, so the strip can scroll a full
-    // viewport past either edge before the seam is crossed.
+    // One clone per visible slide at each end: a full viewport past either edge.
     let clones = match setup.r#loop && count > 1 {
         true => (per_view.ceil() as usize).min(count),
         false => 0,
@@ -1060,23 +905,14 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         clones,
     };
 
-    // The reachable window moves at runtime - `align` and `per_view` both move
-    // it, and `count` can shrink under a controlled index - so this is an
-    // effect keyed on the range rather than a seed. `use_signal`'s initialiser
-    // runs once, which would leave a carousel whose window later excludes its
-    // index with no tab stop in the indicator strip, no `aria-current`, and
-    // nothing to correct it, since at rest no scroll settles.
+    // An effect, not a seed: the window moves with `align`, `per_view` and `count`,
+    // and at rest no scroll settles to correct the index.
     use_effect(use_reactive!(|nav| {
         nav.pull_into_range();
     }));
 
-    // The seam jump itself, from an effect rather than from the handler that
-    // asks for it. The jump is only instant under the `seam` state's
-    // `scroll-behavior: auto`, and a state raised in a handler is not in the
-    // DOM until the next render. Scrolling from the handler started while the
-    // track was still `smooth`, and rewound across the whole strip - the one
-    // thing the clones exist to prevent. `current` is already the real slide:
-    // the settle that found the clone wrote it.
+    // The seam jump, in an effect: `seam`'s instant scrolling reaches the DOM a
+    // render later, and a jump from the handler rewound the whole strip.
     use_effect(use_reactive!(|nav| {
         if seam() {
             nav.scroll_to_raw(nav.raw_for(*nav.current.peek()));
@@ -1095,9 +931,7 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         }
     }));
 
-    // A caller driving `index` from outside. The whole tuple is reactive, so
-    // the closure is rebuilt whenever any of it changes rather than capturing
-    // the first render's values.
+    // A controlled `index`, with the whole tuple reactive.
     let mut mounting = use_signal(|| true);
     let mut applied = use_signal(|| None::<usize>);
     let mut swaps_seen = use_signal(|| swaps);
@@ -1106,10 +940,7 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
             return;
         };
         applied.set(Some(index));
-        // Through `nav`, like every other mover: a looping strip keeps the real
-        // slide `clones` positions in, and the clamp has to be the same one
-        // `go_to` uses or a controlled index is legal through one path and
-        // silently trimmed through the other.
+        // Through `nav`, so the clamp matches `go_to`'s.
         let asked = index;
         let index = nav.clamp_index(asked);
         // Where the strip is before this move: `current` follows the scroll.
@@ -1118,23 +949,15 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
             current.set(index);
             settled.set(index);
         }
-        // The strip mounts at offset 0, so a smooth first scroll to a
-        // controlled index swept past every earlier slide (a lightbox opened
-        // on 6 of 6 took about 1.5s). `seam` is the state that switches smooth
-        // scrolling off; like the seam jump, the scroll waits for the render
-        // that puts it in the DOM - the effect that reads it - and the settle
-        // on a real slide lowers it again.
+        // A smooth first scroll swept past every earlier slide (~1.5s to 6 of 6):
+        // `seam` makes it instant, via the seam effect.
         let first_scroll = std::mem::replace(&mut *mounting.write(), false);
         let swapped = consume_swap(&mut swaps_seen.write(), swaps);
         match instant_scroll(first_scroll, swapped, nav.clones, index, from, nav.first) {
             true => seam.set(true),
             false => nav.scroll_to_raw(nav.raw_for(index)),
         }
-        // The caller is holding an index that cannot be shown, so say which
-        // one is - here, where every such index arrives, and not only at
-        // mount. Otherwise it pushes the unreachable value back on every
-        // render, the clamp undoes it on every render, and the two disagree
-        // until something else moves the carousel.
+        // An unshowable index: report the clamped one, or caller and clamp disagree.
         if index != asked
             && let Some(handler) = &nav.onindexchange
         {
@@ -1142,9 +965,8 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
         }
     }));
 
-    // Focus entering stops rotation until Play, as APG's carousel (todo 548).
-    // An effect, so a move within - `focusout` then `focusin` - is no entry. A
-    // press on the pause control is its own choice and does not count.
+    // Focus entering stops rotation until Play (todo 548). A move within, or a
+    // press on the pause control, is no entry.
     let mut was_focused = use_signal(|| false);
     let mut pressing = use_signal(|| false);
     use_effect(use_reactive!(|autoplay| {
@@ -1163,11 +985,8 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
 
     // Hover only pauses: leaving resumes.
     let running = autoplay && !paused() && !hovered() && count > 1;
-    // The timer's callback runs outside every scope (`TimerApi`), and a move
-    // needs one: `scroll_to_index` spawns. So a tick only counts, and the
-    // effect below it, which has a scope, does the moving. A `go_to` from the
-    // callback set both indices and then panicked in `spawn` on the web - the
-    // dots advanced and the strip never did.
+    // The timer callback has no scope and a move spawns, so a tick only counts;
+    // the effect below moves. `go_to` there panicked in `spawn` on the web.
     let ticks = use_signal(|| 0usize);
     let mut advanced = use_signal(|| 0usize);
     use_effect(use_reactive!(|running, delay| {
@@ -1204,8 +1023,6 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
             return;
         }
         advanced.set(tick);
-        // A looping strip runs over every slide; a plain one stops where the
-        // scrolling does.
         let end = match nav.clones > 0 {
             true => nav.count.saturating_sub(1),
             false => last,
@@ -1231,11 +1048,8 @@ fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
     }
 }
 
-/// Mouse drag-to-scroll over the track. Deliberately **not** given
-/// `drag_handle_sx()`: that is `touch-action: none`, and it would take away
-/// the native touch swipe that is the whole reason the track is a scroll
-/// container. So a finger scrolls the platform's way and a mouse drags, on
-/// every backend.
+/// Mouse drag-to-scroll over the track. No `drag_handle_sx()`: its
+/// `touch-action: none` would kill the native touch swipe.
 fn use_carousel_drag(setup: CarouselSetup, state: CarouselState, draggable: bool) -> Drag {
     let track = setup.track;
     let orientation = setup.orientation;
@@ -1312,9 +1126,7 @@ fn settle_nearest(nav: Nav) {
     });
 }
 
-/// The strip: the tail cloned onto the front, the slides, the head cloned onto
-/// the back, each in its own slide group. Without looping the clones are empty
-/// and this is just the slides.
+/// The strip: the cloned tail, the slides, the cloned head (clones only when looping).
 fn carousel_slides(
     view: CarouselView,
     slides: &[Element],
@@ -1369,8 +1181,7 @@ fn carousel_slides(
         .collect()
 }
 
-/// One slide group. Its own scope, so a move redraws only the slides whose
-/// `data-current` or `inert` flips, not the track and every slide.
+/// One slide group, its own scope so a move redraws only the slides that flip.
 #[component]
 fn CarouselSlide(
     slide: Element,
@@ -1388,11 +1199,8 @@ fn CarouselSlide(
                                 position,
                                 index,
                                 is_clone| {
-            // Where the strip rests, for `inert`: `settled`, never `current`, or the
-            // slides would flip on every scroll frame. A controlled index the effect
-            // has not applied yet counts already, so the slide a caller moves to is
-            // live in the same render - `Lightbox` focuses its picture from an effect
-            // of its own, which may run before ours.
+            // `settled`, not `current`, or slides flip every frame. An unapplied
+            // controlled index counts already: `Lightbox`'s focus effect may run first.
             let rest = match controlled {
                 Some(held) if Some(held) != *applied.peek() => nav.clamp_index(held),
                 _ => (nav.settled)(),
@@ -1406,18 +1214,15 @@ fn CarouselSlide(
                     nav.align,
                 )
             };
-            // One copy per slide is live: a clone showing in the viewport
-            // stands in for its offscreen twin.
+            // One live copy per slide: a showing clone stands in for its twin.
             let live = live_copy(index, nav.count, nav.clones, shows) == position;
-            // Wholly offscreen at rest, or a copy: out of the Tab order and the
-            // reading order. A press on it still reaches the track (measured).
+            // Offscreen or a copy: out of Tab and reading order.
             let hidden = !live || !shows(position);
             (live, hidden, !is_clone && index == (nav.current)())
         }));
     let (live, hidden, current) = flags();
     let track = nav.track;
-    // No `current` token: nothing in `CAROUSEL_SLIDE_SX` styles one, and
-    // `data-current` below is what a caller actually reads.
+    // No `current` token: callers read `data-current`.
     let slide_states: Input<States> = states().with(nav.align.state_name(), true).into();
 
     rsx! {
@@ -1427,15 +1232,10 @@ fn CarouselSlide(
             role: live.then_some("group"),
             aria_roledescription: live.then_some("slide"),
             aria_label: live.then_some(label),
-            // A copy is the same content twice over, so it is hidden
-            // rather than announced a second time.
             aria_hidden: (!live).then(|| "true".to_string()),
             inert: hidden.then_some(true),
-            // Focus inside a slide that has just gone `inert` - the
-            // wheel, a drag, a native arrow on a button, a caller's
-            // index - is blurred by the browser and lands on `<body>`.
-            // The track takes it instead: it is what the keyboard
-            // was on, one level up.
+            // Focus in a slide that just went `inert` would drop to `<body>`:
+            // the track takes it instead.
             onfocusout: move |_| {
                 if hidden {
                     let _ = track.element.focus();
@@ -1447,9 +1247,7 @@ fn CarouselSlide(
     }
 }
 
-/// The scroll container, which is also the carousel's tab stop: the strip, the
-/// two scroll listeners that keep the indices honest, the arrow keys and the
-/// mouse drag.
+/// The scroll container and tab stop: the strip, scroll listeners, arrow keys and drag.
 fn carousel_track(
     view: CarouselView,
     aria_label: String,
@@ -1479,14 +1277,9 @@ fn carousel_track(
         }
     };
 
-    // Only a settled scroll moves `settled`, which is what the live region and
-    // `onindexchange` read - a scroll in progress moves `current` alone.
+    // Only a settled scroll moves `settled`, which the live region and `onindexchange` read.
     let mut onscrollend = move |x: f64, y: f64| {
-        // A drag writes an instant scroll per pointer move, and each of those
-        // ends too. None is a settle: treating them as one reported the index
-        // mid-drag and, on a looping strip, jumped the seam out from under the
-        // pointer on every move past half a slide. Releasing switches the snap
-        // back on, and the scroll that settles the strip ends after this.
+        // A drag's per-move scrolls end too, but are no settle: they jumped the seam.
         if *dragging.peek() {
             return;
         }
@@ -1505,9 +1298,7 @@ fn carousel_track(
                 handler.call(next);
             }
         }
-        // Settled on a clone: jump to the real slide showing the same thing.
-        // The jump scrolls again and so settles again, but that landing is a
-        // real slide and crosses nothing.
+        // Settled on a clone: jump to the real slide; that landing crosses nothing.
         match nav.is_clone(raw) {
             true => nav.cross_seam(),
             false => {
@@ -1518,28 +1309,8 @@ fn carousel_track(
         }
     };
 
-    // On the **track**, not the root: the arrows belong to the scroll
-    // container, which is also the tab stop. The controls, the pause button
-    // and the indicators are siblings of the viewport rather than descendants
-    // of the track, so their keys cannot reach this at all - the `Tree` rule
-    // of preventing a bubble by structure instead of stopping it.
-    //
-    // A slide's own focusable content is the case structure cannot separate,
-    // and the three guards below are how it is separated instead. A caller's
-    // `TextField` inside a slide is not code this component owns and cannot be
-    // asked to stop propagating - without them, `prevent_default` here eats
-    // caret movement, Home/End and option selection from slide content *and*
-    // advances the carousel underneath it.
-    //
-    // `key_taken` is the press something nearer already acted on, marked the
-    // one way it is marked everywhere - `Slider`, `RadioGroup` and
-    // `SegmentedControl` each prevent the default on the arrows, so every one
-    // of our own controls is covered by it. The other two are the cases that
-    // cannot mark themselves, because the browser's own default action is the
-    // wanted behaviour and nothing prevents it: `typing_target` for a caret
-    // move in a text entry, a `select` or a `contenteditable`, and
-    // `arrow_target` for raw HTML a caller wrote - an `<input type="range">`
-    // or an `<input type="radio">`, which step on an arrow without typing.
+    // On the track, so the sibling controls' keys never reach it. The guards skip
+    // keys slide content needs: taken presses, text entry, native arrow inputs.
     let onkeydown = move |event: Event<KeyboardData>| {
         if key_taken(&event)
             || typing_target(&event)
@@ -1552,9 +1323,7 @@ fn carousel_track(
         else {
             return;
         };
-        // Bubble phase is enough: a default action is preventable from any
-        // phase, and no slide stops propagation. Without this the native
-        // scroll runs as well and lands between two snap points.
+        // Or the native scroll runs too and lands between two snap points.
         event.prevent_default();
         nav.go_to(target);
     };
@@ -1574,15 +1343,12 @@ fn carousel_track(
                 Orientation::Vertical => "vertical",
             },
             scrollbar_visibility: "hidden",
-            // The track is the scrollable region, so it is the tab stop - the
-            // opposite of `ScrollArea`'s default, and on purpose. Empty, there
-            // is nothing to scroll to.
+            // The tab stop, unlike `ScrollArea`'s default; not when empty.
             focusable: !empty && !setup.quiet,
             framework_sx: ScrollAreaBase(&CAROUSEL_TRACK_SX),
             states: track_states,
             id: track_id(),
-            // The tab stop names itself: landing on a descendant does not
-            // reliably re-announce the region, and the status says where.
+            // Named itself: landing inside does not reliably re-announce the region.
             role: (!empty).then_some("group"),
             aria_label: (!empty).then(|| aria_label.clone()),
             aria_describedby: (!empty && !setup.quiet).then_some(status_id()),
@@ -1752,9 +1518,7 @@ fn CarouselStatus(view: CarouselView) -> Element {
         VisuallyHidden {
             id: status_id(),
             role: "status",
-            // Off while it rotates on its own: an unattended change is not
-            // worth interrupting a screen reader for, and it becomes
-            // `polite` the moment the rotation stops. WCAG 2.2.2.
+            // Off while autoplay rotates, `polite` once it stops (WCAG 2.2.2).
             aria_live: if state.running { "off" } else { "polite" },
             aria_atomic: "true",
             "{status}"
@@ -1843,10 +1607,7 @@ fn CarouselIndicators(view: CarouselView) -> Element {
                         count,
                     ),
                     aria_current: (index == current()).then(|| "true".to_string()),
-                    // Roving: one tab stop for the whole strip. The
-                    // arrows move the slide and the focus with it -
-                    // leaving focus on a `tabindex="-1"` dot would
-                    // strand the keyboard there.
+                    // Roving: one tab stop; arrows move the focus with the slide.
                     id: indicator_id(&track_id(), index),
                     tabindex: if index == current() { "0" } else { "-1" },
                     onclick: move |_| nav.go_to(index),
@@ -1868,12 +1629,8 @@ fn CarouselIndicators(view: CarouselView) -> Element {
     }
 }
 
-/// Where an arrow, `Home` or `End` on a dot goes; `None` for a key the strip
-/// does not act on.
-///
-/// It wraps only when the carousel does. Wrapping here unconditionally made
-/// the same key wrap through the dots and clamp through the track, so the two
-/// disagreed about whether this carousel loops.
+/// Where an arrow, `Home` or `End` on a dot goes. Wraps only when the carousel
+/// does, so dots and track agree.
 fn indicator_key_target(
     key: Key,
     index: usize,
@@ -1958,14 +1715,8 @@ mod tests {
         }
     }
 
-    /// Deliberately built from the geometry rather than from `align_shift`, so
-    /// it can fail when the model is wrong - the round-trip test below shares
-    /// the model and cannot.
-    ///
-    /// Six 100px slides, 20px gaps, three up: the viewport is 340px, the pitch
-    /// 120px, the content 700px and the scrollable range 360px. Where slide `k`
-    /// comes to rest follows from which of its edges meets which of the
-    /// viewport's.
+    /// Built from the geometry, not `align_shift`, so it can catch a wrong model.
+    /// Six 100px slides, 20px gaps, three up: viewport 340, pitch 120, range 360.
     #[test]
     fn the_reported_slide_is_the_one_in_the_aligned_position() {
         let (slide, gap, per_view, count) = (100.0, 20.0, 3.0, 6);
@@ -2004,8 +1755,7 @@ mod tests {
         }
     }
 
-    /// The whole point of deriving the index from a ratio: neither the slide
-    /// width nor the gap appears, so nothing has to be measured.
+    /// Index from a ratio: neither slide width nor gap is measured.
     #[test]
     fn an_index_round_trips_through_an_offset_at_any_slide_width() {
         for align in [
@@ -2038,8 +1788,7 @@ mod tests {
         assert_eq!(index_at(399.0, max, 4, 1.0, CarouselAlign::Start), 3);
     }
 
-    /// A strip that fits entirely in its viewport has one position, and
-    /// dividing by its zero span would otherwise be a `NaN` index.
+    /// A strip that fits has one position, not a `NaN` index from a zero span.
     #[test]
     fn a_strip_with_nothing_to_scroll_stays_at_zero() {
         assert_eq!(index_at(0.0, 0.0, 3, 3.0, CarouselAlign::Start), 0);
@@ -2054,9 +1803,7 @@ mod tests {
         assert_eq!(offset_for(0, 400.0, 4, 1.0, CarouselAlign::Start), 0.0);
     }
 
-    /// The props write `--lsx-carousel-*-override`, so the CSS has to read the
-    /// overridable form. Reading the bare themed var compiles, renders, and
-    /// silently ignores `per_view` and `gap` - which is what it did first.
+    /// The props write `--lsx-carousel-*-override`; the bare var silently ignored them.
     #[test]
     fn the_slide_size_reads_the_per_instance_twin_not_the_bare_theme_var() {
         let slide = Stylesheet::from(&CAROUSEL_SLIDE_SX);
@@ -2079,12 +1826,8 @@ mod tests {
         );
     }
 
-    /// A shrink-to-fit parent - a flex item, a grid cell, the docs preview
-    /// pane - would otherwise size the root from the *track's* max-content
-    /// width. Horizontally that overflows and gets clamped back, so it fills
-    /// by accident; vertically the widest slide's content is the whole width
-    /// and the carousel collapses to a sliver. No test in this repo computes a
-    /// layout, so this is the declaration, not the result.
+    /// A shrink-to-fit parent would size the root from the track, collapsing a
+    /// vertical carousel to a sliver. Checks the declaration, not the layout.
     #[test]
     fn the_root_takes_its_width_from_its_container_not_from_its_slides() {
         let css = Stylesheet::from(&CAROUSEL_ROOT_SX);
@@ -2107,10 +1850,8 @@ mod tests {
         );
     }
 
-    /// A mandatory snap pulls every programmatic write back to the slide it
-    /// left, so a drag that keeps it on does not move the strip at all until
-    /// it jumps a whole slide. The `dragging` arm shares its specificity with
-    /// the orientation arms, so it only wins by coming after both.
+    /// A mandatory snap undoes every drag write. The `dragging` arm shares the
+    /// axis arms' specificity, so it wins only by coming after both.
     #[test]
     fn a_drag_switches_the_snap_off_after_the_axis_switched_it_on() {
         let css = Stylesheet::from(&CAROUSEL_TRACK_SX);
@@ -2131,8 +1872,7 @@ mod tests {
         }
     }
 
-    /// The leading clones are the tail and the trailing ones are the head, so
-    /// a strip position either side of the seam maps back onto a real slide.
+    /// Leading clones are the tail, trailing ones the head.
     #[test]
     fn a_strip_position_maps_back_onto_a_real_slide() {
         assert_eq!(strip_count(5, 1), 7);
@@ -2152,8 +1892,7 @@ mod tests {
         assert!(is_clone(6, 5, 1));
     }
 
-    /// Three-up needs three clones at each end, or the strip runs out of
-    /// content before the seam is reached.
+    /// Three-up needs three clones each end, or the strip runs out before the seam.
     #[test]
     fn a_multi_up_strip_clones_a_whole_viewport_at_each_end() {
         assert_eq!(strip_count(6, 3), 12);
@@ -2186,9 +1925,8 @@ mod tests {
         assert!(css.as_str().contains("max(100%, 24px)"), "{}", css.as_str());
     }
 
-    /// A dot's ring is drawn outside the dot, so it has to contrast against
-    /// the surface around it. A literal `background()` publishes the dot's own
-    /// twin instead, and the ring on the current dot came out white on white.
+    /// The ring sits outside the dot, so it contrasts with the surface; a literal
+    /// `background()` made it white on white.
     #[test]
     fn a_dot_does_not_publish_its_own_focus_contrast() {
         let css = Stylesheet::from(&CAROUSEL_INDICATOR_SX);
@@ -2200,8 +1938,7 @@ mod tests {
         );
     }
 
-    /// The controls' colours come from the theme, and the ring colour the
-    /// literal `white` used to publish is still published, from the glyph.
+    /// Control colours come from the theme; the ring colour from the glyph.
     #[test]
     fn the_controls_read_their_colours_from_the_theme() {
         for sheet in [
@@ -2238,8 +1975,7 @@ mod tests {
         );
     }
 
-    /// The viewport clips at the track's own edge, so the ring is drawn inside
-    /// it. Outset, it is there in the CSS and invisible on the page.
+    /// The viewport clips the track's edge, so an outset ring is invisible.
     #[test]
     fn the_track_ring_is_inset_because_the_viewport_clips() {
         let css = Stylesheet::from(&CAROUSEL_TRACK_SX);
@@ -2324,8 +2060,7 @@ mod tests {
         );
     }
 
-    /// Not looping is the same code with no clones, and has to stay a plain
-    /// pass-through.
+    /// Not looping is the same code with no clones: a pass-through.
     #[test]
     fn without_clones_a_position_is_the_slide() {
         assert_eq!(strip_count(5, 0), 5);
@@ -2334,9 +2069,8 @@ mod tests {
         assert!(!is_clone(4, 5, 0));
     }
 
-    /// Only the first controlled scroll is instant, and only one that moves:
-    /// the settle that lowers `seam` never comes for a scroll to where the
-    /// strip already is.
+    /// Only a first controlled scroll that moves is instant: a no-op never
+    /// settles to lower `seam`.
     #[test]
     fn only_a_first_scroll_that_moves_is_instant() {
         assert!(instant_scroll(true, false, 0, 5, 0, 0));
@@ -2361,8 +2095,7 @@ mod tests {
         assert!(!consume_swap(&mut seen, Some(2)));
     }
 
-    /// No provider, no swaps: a plain carousel never takes the instant path
-    /// through this door.
+    /// No provider, no swaps.
     #[test]
     fn without_a_provider_nothing_is_a_swap() {
         let mut seen = None;

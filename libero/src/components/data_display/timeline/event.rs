@@ -4,12 +4,7 @@ use crate::str_enum::str_enum;
 use crate::{components::common::OptionLabel, sx::ThemeAwareValue};
 
 str_enum! {
-    /// How the connector *below* an event is drawn.
-    ///
-    /// Component-local, not in `theme/defaults/`: unlike `TimelineAlign` it
-    /// has no themed default - `Solid` is a builder default - so
-    /// `architecture.md`'s carve-out for enum props without a themed default
-    /// applies.
+    /// How the connector below an event is drawn. Component-local: no themed default.
     #[state_prefix = "line"]
     pub enum TimelineLine {
         #[default]
@@ -19,12 +14,15 @@ str_enum! {
     }
 }
 
-/// One event on a [`Timeline`](super::Timeline).
+/// One event on a [`Timeline`](super::Timeline), built from its title.
 ///
-/// A builder because the parts compose - a title alone is the common case, and
-/// content, a custom bullet, a colour and a line style are each independently
-/// optional. `TimelineEvent::new` rather than a free `event()`: too generic a
-/// name to export at the crate root beside dioxus's `Event`.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{TimelineEvent, TimelineLine};
+/// let event = TimelineEvent::new("Shipped")
+///     .content(rsx! { "Out to all users." })
+///     .line(TimelineLine::Dashed);
+/// ```
 #[derive(Clone, PartialEq)]
 pub struct TimelineEvent {
     pub(super) title: OptionLabel,
@@ -35,8 +33,7 @@ pub struct TimelineEvent {
 }
 
 impl TimelineEvent {
-    /// The event's name, optionally with its own rendering - rich content
-    /// always *has* a plain-text name, which is what a screen reader reads.
+    /// The event's name; rich content still carries the plain-text name a screen reader reads.
     pub fn new(title: impl Into<OptionLabel>) -> Self {
         Self {
             title: title.into(),
@@ -55,29 +52,20 @@ impl TimelineEvent {
 
     /// An icon or avatar inside the bullet, instead of the dot.
     ///
-    /// A bullet holding a child inverts when active: it *fills* with the
-    /// accent, because a light glyph on a white ring vanishes.
-    ///
-    /// **Never put anything focusable in here.** The bullet is
-    /// `aria-hidden="true"` - it is the rail's drawing, and the title is the
-    /// text - but `aria-hidden` does not remove an element from the tab order.
-    /// A `Button` or a link in a bullet stays tabbable and announces as
-    /// nothing, which is a dead stop for a keyboard user. The type cannot
-    /// prevent it and no `warn()` can detect focusability, so this note is the
-    /// whole guard. Interactive content belongs in `.content(..)`.
+    /// **Nothing focusable**: the bullet is `aria-hidden`, so a link in it is a
+    /// nameless tab stop. Interactive content belongs in `.content(..)`.
     pub fn bullet(mut self, bullet: Element) -> Self {
         self.bullet = Some(bullet);
         self
     }
 
-    /// This event's own accent, overriding the timeline's - an error step in
-    /// an otherwise unremarkable run.
+    /// This event's own accent, overriding the timeline's.
     pub fn color(mut self, color: impl Into<ThemeAwareValue>) -> Self {
         self.color = Some(color.into());
         self
     }
 
-    /// The connector drawn *below* this event. The last event has none.
+    /// The connector below this event. The last event has none.
     pub fn line(mut self, line: TimelineLine) -> Self {
         self.line = line;
         self
