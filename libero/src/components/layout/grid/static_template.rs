@@ -3,10 +3,10 @@ use std::sync::OnceLock;
 
 use super::{GridArea, GridTemplate, GridTemplateBuilder};
 
-/// A [`GridTemplate`] built once, at a `static` - the shape of a layout is a
-/// constant, and `build`'s `Result` cannot travel through `fn() -> Element`.
+/// A [`GridTemplate`] built on first use, at a `static`. Panics if CSS can't
+/// express the shape; use [`GridTemplate::new`] where the `Result` matters.
 ///
-/// ```no_run
+/// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Grid, GridArea, StaticGridTemplate};
 /// # fn app() -> Element {
@@ -21,15 +21,7 @@ use super::{GridArea, GridTemplate, GridTemplateBuilder};
 /// rsx! { Grid { template: PAGE.clone() } }
 /// # }
 /// ```
-///
-/// The type parameter stays here, on the caller's own `static`; `Grid` still
-/// takes the erased [`GridTemplate`], so no component is monomorphized per
-/// area enum.
-///
-/// `OnceLock` rather than `LazyLock` (which is what [`StaticSx`] uses) only
-/// because the builder function has to be stored and applied later.
-///
-/// [`StaticSx`]: crate::sx::StaticSx
+// `OnceLock`, not `LazyLock`: the builder function is stored and applied later.
 pub struct StaticGridTemplate<A: GridArea> {
     build: fn(GridTemplateBuilder<A>) -> GridTemplateBuilder<A>,
     template: OnceLock<GridTemplate>,
@@ -53,9 +45,7 @@ impl<A: GridArea> std::fmt::Debug for StaticGridTemplate<A> {
 impl<A: GridArea> Deref for StaticGridTemplate<A> {
     type Target = GridTemplate;
 
-    /// Panics on a template CSS cannot express. A `static` shape is a
-    /// programmer error, not a runtime condition - build it with
-    /// [`GridTemplate::new`] where the `Result` matters.
+    /// Panics on a template CSS cannot express: a bad `static` shape is a programmer error.
     fn deref(&self) -> &Self::Target {
         self.template.get_or_init(|| {
             (self.build)(GridTemplate::new())

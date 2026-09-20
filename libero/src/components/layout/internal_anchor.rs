@@ -18,9 +18,8 @@ fn navigation_target_href(to: NavigationTarget) -> String {
     }
 }
 
-/// Every link in the library resolves here, so this is the one place a
-/// script URL can be caught. It is passed through, not blocked: the caller
-/// may mean it, and a URL from user data is theirs to check.
+/// Every library link resolves here. Warned, not blocked: the caller may mean
+/// it, and a URL from user data is theirs to check.
 fn javascript_url_warning(to: &NavigationTarget) -> Option<String> {
     let (NavigationTarget::Internal(url) | NavigationTarget::External(url)) = to;
     is_javascript_url(url).then(|| {
@@ -50,9 +49,8 @@ base_props! {
     }
 }
 
-/// `to` as a working link: the router's `Link` when one is mounted and
-/// `target` allows it, else a plain `<a>`. No `onclick` - only `Button`'s
-/// `<button>` case needs one.
+/// `to` as the router's `Link` when one is mounted and `target` allows it,
+/// else a plain `<a>`.
 #[component]
 pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
     let style_attributes = use_style_attributes(

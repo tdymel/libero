@@ -12,17 +12,13 @@ use crate::{
     theme::{ICON_SIZE, Size},
 };
 
-/// The one thing `Tree` needs from a user-defined `data: T`: text to match
-/// typeahead against, and to render when there's no `render_node`.
+/// A node's text, for typeahead and the default `render_node`.
 pub trait TreeLabel {
     fn tree_label(&self) -> String;
 }
 
-/// What a `Tree` node's payload has to be, as one name: labelable, cloneable,
-/// comparable and owned. It exists because `base_props!` takes one bound per
-/// type parameter - a `T: A + B + C` cannot be captured by a macro, since a
-/// bound fragment may not be followed by `+`. Blanket-implemented, so no
-/// caller ever writes it.
+/// A `Tree` payload's bounds as one name, as `base_props!` takes one bound per
+/// type parameter. Blanket-implemented.
 pub trait TreeValue: TreeLabel + Clone + PartialEq + 'static {}
 
 impl<T: TreeLabel + Clone + PartialEq + 'static> TreeValue for T {}
@@ -39,6 +35,7 @@ impl TreeLabel for &'static str {
     }
 }
 
+/// One `Tree` node: a unique id, its payload and its children.
 #[derive(Clone, PartialEq)]
 pub struct TreeNode<T> {
     pub id: String,
@@ -68,9 +65,7 @@ impl<T> TreeNode<T> {
     }
 }
 
-/// Type-erased mirror of `TreeNode<T>`. The tree machinery is built against
-/// this so it compiles once instead of once per `T`; `label` is precomputed
-/// at erasure time, so nothing downstream needs `T: TreeLabel`.
+/// Type-erased `TreeNode<T>`, so the tree compiles once; `label` is precomputed.
 #[derive(Clone)]
 pub(super) struct TreeNodeErased {
     pub id: String,
@@ -113,9 +108,7 @@ pub(super) fn erase_nodes<T: TreeLabel + Clone + 'static>(
         .collect()
 }
 
-/// Type-erased mirror of [`TreeNodeRenderArgs<T>`]. `Tree<T>` wraps the typed
-/// callback in one that downcasts `data` back to `T`, so a downcast is the
-/// only per-`T` cost.
+/// Type-erased [`TreeNodeRenderArgs<T>`]; `Tree<T>` downcasts `data` back.
 pub(super) struct TreeNodeRenderArgsErased {
     pub id: String,
     pub data: Rc<dyn Any>,
@@ -125,9 +118,8 @@ pub(super) struct TreeNodeRenderArgsErased {
     pub depth: usize,
 }
 
-/// `Rc<dyn Fn>` wrapper so `TreeRowProps` derives `Clone`/`PartialEq` without
-/// being generic over `T`. Always equal: the closure instance doesn't change a
-/// row's output for given args, so it shouldn't gate memoization.
+/// Lets `TreeRowProps` derive `Clone`/`PartialEq` without `T`. Always equal, so
+/// it never gates memoization.
 #[derive(Clone)]
 pub(super) struct ErasedRenderNode(Rc<dyn Fn(TreeNodeRenderArgsErased) -> Element>);
 
@@ -147,9 +139,8 @@ impl PartialEq for ErasedRenderNode {
     }
 }
 
-/// Passed to `render_node` per visible row: the node's data plus live state a
-/// static `TreeNode<T>` can't know. There is no "selected" - a rendered link
-/// knows its own active state; anything else tracks selection itself.
+/// Passed to `render_node` per visible row: the data plus live state. No
+/// "selected": a link knows its own.
 #[derive(Clone, PartialEq)]
 pub struct TreeNodeRenderArgs<T> {
     pub id: String,
@@ -158,23 +149,17 @@ pub struct TreeNodeRenderArgs<T> {
     pub expanded: Option<bool>,
     /// By the node's own flag or an ancestor's.
     pub disabled: bool,
-    /// Apply to any interactive element your content renders. The row is
-    /// already the roving tab stop; without this the link/button adds a
-    /// second one that arrow-key navigation never moves.
+    /// Put on any link or button you render; the row is already the tab stop.
     pub tabindex: &'static str,
-    /// 0 at top level. Exposed so `render_node` can take indentation over
-    /// entirely - zero `TreeProps::indent` via `sx` and offset from this.
+    /// 0 at top level, for a `render_node` that indents on its own.
     pub depth: usize,
 }
 
-// Chevron-width, so leaves line up with their branch siblings. Reserved only
-// here, by the render that draws the chevron - not by `Tree`.
+// Chevron-width, so leaves line up with their branch siblings.
 static DEFAULT_RENDER_LEADING_SPACER_SX: StaticSx =
     StaticSx::new(|| sx().flex_shrink("0").width(ICON_SIZE.value(Size::Xs)));
 
-// Both the row and the chevron it contains, so a visible row builds no `Sx`
-// of its own: a `sx` prop is rehashed on every render and rendered to CSS
-// once per instance, where a static is built once per process.
+// Row and chevron in one static, so a visible row builds no `Sx` of its own.
 static DEFAULT_RENDER_ROW_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
@@ -195,12 +180,8 @@ static DEFAULT_RENDER_ROW_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// `render_node`'s default: a chevron for a branch, a matching spacer for a
-/// leaf, then `tree_label()`. `pub` so a custom `render_node` can fall back to
-/// it for some rows rather than reimplementing it.
-///
-/// The chevron is this function's concern, not `Tree`'s. It also brings its
-/// own vertical padding, since `TreeRow`'s wrapper deliberately has none.
+/// `render_node`'s default: a chevron or a leaf spacer, then `tree_label()`.
+/// A custom `render_node` can fall back to it for some rows.
 pub fn default_tree_render<T: TreeLabel>(args: TreeNodeRenderArgs<T>) -> Element {
     let leading = match args.expanded {
         Some(expanded) => rsx! {

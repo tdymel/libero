@@ -37,8 +37,7 @@ pub enum ScrollPositionEvent {
 }
 
 const SCROLL_AREA_THUMB_VAR: CssVar = CssVar::new("--lsx-scroll-area-thumb-color");
-/// Rows a `Virtualize` child skipped, standing in as padding so the scroll
-/// range still spans the whole list.
+/// Rows a `Virtualize` child skipped, as padding so the range spans the whole list.
 const SCROLL_AREA_LEADING_VAR: CssVar = CssVar::new("--lsx-scroll-area-leading");
 const SCROLL_AREA_TRAILING_VAR: CssVar = CssVar::new("--lsx-scroll-area-trailing");
 
@@ -51,13 +50,8 @@ fn visibility_token(visibility: ScrollbarVisibility) -> &'static str {
     }
 }
 
-/// The base styles of a component built on `ScrollArea`, standing in for
-/// `ScrollArea`'s own on the framework layer. Build it from
-/// [`scroll_area_base`], so it keeps everything the area needs.
-///
-/// Crate-internal: the field is `pub(crate)` and the type is not exported, so
-/// nothing outside the crate can make one. It exists so the component's CSS
-/// stays below a caller's `sx`, which passing it as `sx` would not.
+/// Crate-internal base styles replacing `ScrollArea`'s own on the framework
+/// layer, below a caller's `sx`. Build it from [`scroll_area_base`].
 #[doc(hidden)]
 #[allow(unnameable_types)]
 #[derive(Clone, Copy, PartialEq)]
@@ -112,9 +106,8 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
-/// Wraps the content so the rows a `Virtualize` skipped have something to be
-/// reserved on. `display: contents` until then, so an ordinary scroll area
-/// lays out exactly as it did without it.
+/// Reserves the rows a `Virtualize` skipped; `display: contents` until then,
+/// so an ordinary area lays out as without it.
 static SCROLL_AREA_CONTENT_SX: StaticSx = StaticSx::new(|| {
     sx().display("contents").when(
         "virtualized",
@@ -128,18 +121,16 @@ fn scroll_area_variables(color: Option<&ThemeAwareValue>) -> Variables {
     variables().with(SCROLL_AREA_THUMB_VAR, color.and_then(|v| v.resolve(None)))
 }
 
-/// Both are always written, `0px` included. Dropping one leaves the previous
-/// declaration in place - the style attribute is patched property by property,
-/// not replaced - and the last window's reserve outlives the window.
+/// Both always, `0px` included: the style attribute is patched per property,
+/// so a dropped one would keep the last window's reserve.
 fn scroll_area_content_variables(offsets: ContentOffsets) -> Variables {
     variables()
         .with(SCROLL_AREA_LEADING_VAR, format!("{}px", offsets.leading))
         .with(SCROLL_AREA_TRAILING_VAR, format!("{}px", offsets.trailing))
 }
 
-/// Which edges the last scroll position rested against, so `on*reached`
-/// fires on the rising edge rather than every event. Inline start and end,
-/// so the origin is the same under RTL.
+/// The edges the last position rested against, so `on*reached` fires on the
+/// rising edge. Inline start and end, so RTL shares the origin.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct EdgeState {
     top: bool,
@@ -149,9 +140,8 @@ struct EdgeState {
 }
 
 impl EdgeState {
-    /// Where a scroll container starts. All-`false` would make the first
-    /// scroll event report leaving-and-reaching the top and start edges it
-    /// was already resting against.
+    /// Where a scroll container starts; all-`false` would report the top and
+    /// start as newly reached on the first scroll.
     const AT_ORIGIN: Self = Self {
         top: true,
         bottom: false,
@@ -175,8 +165,7 @@ base_props! {
         /// `"vertical"` (default), `"horizontal"`, `"both"` or `"none"`.
         #[props(default, into)]
         scrollbars: Input<ScrollAxis>,
-        /// `"always"` (default), `"hover"`, `"hidden"`, or `"scroll"`
-        /// (currently identical to `"hover"`).
+        /// `"always"` (default), `"hover"`, `"hidden"`, or `"scroll"` (as `"hover"` for now).
         #[props(default, into)]
         scrollbar_visibility: Input<ScrollbarVisibility>,
         /// CSS `scrollbar-width`: `"thin"` (default) or `"auto"`.
@@ -185,22 +174,15 @@ base_props! {
         /// Scrollbar thumb color - track stays transparent.
         #[props(default, into)]
         scrollbar_color: Input<ThemeAwareValue>,
-        /// Percent (0-100) to scroll to. Bound to a signal it re-applies on
-        /// every change; a literal applies once, at mount.
+        /// Percent (0-100) to scroll to; re-applied on every change of a bound signal.
         scroll_position_x: Option<f64>,
         /// Percent (0-100) along the vertical axis - see `scroll_position_x`.
         scroll_position_y: Option<f64>,
-        /// Makes the viewport a tab stop always. Without it the area is one
-        /// only while it overflows and holds nothing focusable, so plain
-        /// content can still be scrolled with the arrow keys.
-        ///
-        /// A tab stop gets `role="region"` and needs a name: pass
-        /// `aria-label` or `aria-labelledby` (a debug build warns without).
+        /// Always a tab stop, not only while overflowing with nothing focusable
+        /// inside. A tab stop needs an `aria-label` or `aria-labelledby`.
         #[props(default)]
         focusable: bool,
-        /// From [`use_scroll_area`](super::use_scroll_area), to scroll the
-        /// area from an event handler. Unlike `scroll_position_x`/`_y`, each
-        /// call scrolls, including one that asks for the same position again.
+        /// From [`use_scroll_area`](super::use_scroll_area), to scroll from an event handler.
         #[props(default)]
         handle: Option<ScrollAreaHandle>,
         /// Crate-internal, see [`ScrollAreaBase`].
@@ -209,18 +191,8 @@ base_props! {
         framework_sx: Option<ScrollAreaBase>,
         #[props(default)]
         onscroll: Option<EventHandler<ScrollPositionEvent>>,
-        /// After the area resized, once it has re-measured itself. A prop, not
-        /// a spread attribute: a spread `onresize` would replace the area's own.
-        ///
-        /// ```no_run
-        /// # use dioxus::prelude::*;
-        /// # use libero::components::ScrollArea;
-        /// # fn app() -> Element {
-        /// # let mut resized = use_signal(|| 0);
-        /// # rsx! {
-        /// ScrollArea { onresize: move |_: Event<ResizeData>| resized += 1, "Rows" }
-        /// # } }
-        /// ```
+        /// After the area resized and re-measured itself. A prop, so it doesn't
+        /// replace the area's own listener.
         #[props(default)]
         onresize: Option<EventHandler<Event<ResizeData>>>,
         #[props(default)]
@@ -340,17 +312,25 @@ fn ScrollAreaContent(content: ElementHandle, children: Element) -> Element {
         .render(HtmlTag::Div, Vec::new(), children)
 }
 
-/// Scrolls its content, filling the parent by default. Read the scroll
-/// position via `onscroll`/`on*reached`; set it imperatively via
-/// `scroll_position_x`/`scroll_position_y` (reactive if bound to a signal,
-/// initial-only if a literal). A caller's `aria-label`/`aria-labelledby`
-/// applies only while the area has a role: its own region stop, or yours.
+/// Scrolls its content with themed scrollbars, filling the parent by default.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::ScrollArea;
+/// # fn app() -> Element {
+/// rsx! {
+///     div { style: "height: 200px",
+///         ScrollArea { aria_label: "Log", onbottomreached: move |_| {}, "Rows" }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/layout/scroll-area>
 #[component]
 pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let theme = use_theme();
-    // Always called, so the hook order does not depend on the prop. A caller's
-    // handle takes over the element when there is one; the area's own is
-    // then simply never mounted.
+    // Always called, for a stable hook order; unmounted under a caller's handle.
     let own = use_element();
     let root = props.handle.map_or(own, |handle| handle.element);
 
@@ -407,8 +387,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let offsets = use_signal(ContentOffsets::default);
     let virtualized = use_signal(|| false);
     use_context_provider(|| ScrollViewport::new(content, geometry, offsets, virtualized));
-    // A `Virtualize` child needs the viewport height before anything has been
-    // scrolled, and again whenever a pane around it resizes.
+    // A `Virtualize` child needs the height before any scroll and on every resize.
     let measure = move || {
         if root.is_mounted() {
             measure_area(root, geometry, UNLAID_TRIES);
@@ -701,8 +680,7 @@ mod tests {
         assert_eq!(scroll_metrics(&data), (25.0, 50.0, 200.0, 200.0));
     }
 
-    /// Under RTL `scrollLeft` runs negative; the percent still counts from the
-    /// start.
+    /// Under RTL `scrollLeft` runs negative; the percent still counts from the start.
     #[test]
     fn an_rtl_offset_is_a_percent_from_the_start() {
         let data = ScrollData::new(FakeScroll {

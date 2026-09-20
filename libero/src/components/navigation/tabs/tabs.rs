@@ -18,8 +18,7 @@ str_enum! {
         /// Arrows select as they move: the panel follows the focus.
         #[default]
         Automatic = "automatic",
-        /// Arrows only move the focus; Enter or Space selects. For panels that
-        /// are slow to render or fetch (APG manual activation).
+        /// Arrows only move the focus; Enter or Space selects. For slow panels.
         Manual = "manual",
     }
 }
@@ -32,38 +31,21 @@ impl From<TabsActivation> for Input<TabsActivation> {
     }
 }
 
-// Hand-written rather than `base_props!`, which is not generic - as
-// `SliderProps` is.
+// Hand-written: `base_props!` is not generic.
 #[derive(Props, Clone, PartialEq)]
 pub struct TabsProps<T: Options> {
-    /// Strictly controlled - pair it with `onchange`.
+    /// Strictly controlled; pair it with `onchange`.
     value: T,
     /// Called with the tab that should become selected.
     #[props(default)]
     onchange: Option<EventHandler<T>>,
-    /// The body of the selected tab. Called for `value` only, so the other
-    /// panels cost nothing.
+    /// The selected tab's body; called for `value` only.
     #[props(default)]
     panel: Option<Callback<T, Element>>,
-    /// The tabs to show. Defaults to every `Options::options()`.
-    ///
-    /// `OptionItem::new(tab).disabled(true)` renders a tab that cannot be
-    /// picked. A grouped [`OptionList`](crate::components::OptionList) is
-    /// accepted and its tabs are drawn flattened, in the order given: a strip
-    /// has no room for group headings and does not draw them.
-    ///
-    /// A strip has no dropdown to put a loader in, so a **pending**
-    /// [`OptionSource`](crate::components::OptionSource) - one built from a
-    /// [`Resource`] that has not answered yet - simply draws no tabs. Await
-    /// the fetch above the strip if that matters.
+    /// The tabs, default every `Options::options()`. Groups draw flattened; a pending source draws none.
     #[props(default, into)]
     options: OptionSource<T>,
-    /// Overrides `Options::label`. Runs during render, so it can read a
-    /// locale from context - which is how a renamed strip stays renamed.
-    ///
-    /// `"Konto".into()` names a tab; `OptionLabel::rich(name, rsx! { .. })`
-    /// draws it and names it, because the rsx is what a screen reader cannot
-    /// use.
+    /// Overrides `Options::label` during render; `OptionLabel::rich` draws rsx.
     #[props(default)]
     option_label: Option<Callback<T, OptionLabel>>,
     #[props(default, into)]
@@ -74,8 +56,7 @@ pub struct TabsProps<T: Options> {
     /// Tabs share the row evenly instead of sizing to their label.
     #[props(default)]
     full_width: Option<bool>,
-    /// `Manual` lets the arrows move the focus without selecting; Enter or
-    /// Space selects the focused tab.
+    /// `manual`: arrows move the focus, Enter or Space selects.
     #[props(default, into)]
     activation: Input<TabsActivation>,
     #[props(extends = GlobalAttributes)]
@@ -88,11 +69,28 @@ pub struct TabsProps<T: Options> {
     states: Input<States>,
 }
 
-/// A strip of tabs over an enum, with the selected one's panel below it.
-/// Controlled: it renders `value` and asks for a new one through `onchange`.
+/// A strip of tabs over an enum, with the selected tab's panel below it.
 ///
-/// The tabs are `T::options()` unless `options` narrows them, and `panel` is a
-/// match over `T` - so a forgotten or misspelled tab is a compile error.
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Options, Tabs};
+/// # fn app() -> Element {
+/// # #[derive(Clone, Copy, PartialEq, Options)] enum Tab { Overview, Settings }
+/// let mut tab = use_signal(|| Tab::Overview);
+/// rsx! {
+///     Tabs {
+///         value: tab(),
+///         onchange: move |t| tab.set(t),
+///         panel: |t: Tab| match t {
+///             Tab::Overview => rsx! { "Overview" },
+///             Tab::Settings => rsx! { "Settings" },
+///         },
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/navigation/tabs>
 #[component]
 pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
     let root = use_root_id(&props.attributes);

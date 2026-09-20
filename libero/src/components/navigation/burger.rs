@@ -17,12 +17,8 @@ use crate::{
     utils::warn,
 };
 
-/// One bar. The middle one *is* the glyph element; the outer two are its
-/// `::before`/`::after`, so the whole thing is a single `<span>`.
-///
-/// `background-color` and `transform` only - never `all`. The middle bar
-/// fading while the other two rotate is what makes the morph read as a morph
-/// and not as a swap.
+/// One bar: the middle one is the glyph `<span>`, the outer two its pseudo-elements.
+/// Never `transition: all`: the middle bar fades while the others rotate.
 fn bar_sx() -> Sx {
     let transition = format!(
         "background-color {duration} {timing}, transform {duration} {timing}",
@@ -33,15 +29,11 @@ fn bar_sx() -> Sx {
     sx().display("block")
         .width(BURGER_SIZE.overridable())
         .height(BURGER_LINE_SIZE.value())
-        // The fallback is the point: `sx().color("surface")` on the button
-        // still reaches the bars, because nothing here overrides it.
+        // `currentColor`, so a colour set on the button still reaches the bars.
         .background_color(BURGER_COLOR.value_or("currentColor"))
-        // A `background-color` is not painted in forced-colors mode; a
-        // transparent outline is, so the bars survive there. Costs no layout.
+        // Forced colours drop the background but paint an outline.
         .outline("1px solid transparent")
         .transition(transition)
-        // The two states differ in shape, not only in position, so snapping
-        // between them stays legible.
         .media(REDUCED_MOTION, sx().transition("none"))
 }
 
@@ -50,14 +42,10 @@ static BURGER_GLYPH_SX: StaticSx = StaticSx::new(|| {
     let down = format!("calc({size} / 3)");
     let up = format!("calc({size} / -3)");
 
-    // Absolutely positioned against the middle bar, which is why that one is
-    // `position: relative`.
     let outer = bar_sx().position("absolute").content("\"\"").left("0");
 
     bar_sx()
-        // Declared here rather than in the theme: a custom property resolves
-        // against the element it is declared on, and the caller's size
-        // override lives on this element.
+        // Here, not in the theme: it must resolve against this element's size override.
         .var(BURGER_LINE_SIZE, format!("calc({size} / 12)"))
         .position("relative")
         .selector("&::before", outer.clone().top(up.clone()))
@@ -76,9 +64,7 @@ static BURGER_GLYPH_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// The button is the glyph plus one spacing step,
-/// which is what makes the tap target bigger than the bars. `None` means the
-/// caller named no size, so the theme's active step is the glyph.
+/// The glyph plus one spacing step, for a tap target bigger than the bars.
 fn button_size(glyph_size: Option<&String>) -> String {
     let glyph = match glyph_size {
         Some(size) => size.clone(),
@@ -87,9 +73,8 @@ fn button_size(glyph_size: Option<&String>) -> String {
     format!("calc({glyph} + {})", SizeCss::SPACING.value(Size::Xs))
 }
 
-/// A burger that announces itself as expanded while naming no panel. Almost
-/// always an oversight - `aria-controls` is the caller's to spread (it rides
-/// `GlobalAttributes`), so this is the only place that can notice it missing.
+/// A burger announcing `aria-expanded` with no spread `aria-controls`: almost
+/// always an oversight.
 fn is_orphan_disclosure(open: Option<bool>, attributes: &[Attribute]) -> bool {
     open.is_some()
         && !attributes
@@ -119,21 +104,15 @@ fn take_spread_label(attributes: &mut Vec<Attribute>) -> Option<String> {
 
 base_props! {
     pub struct BurgerProps {
-        /// `Some(true)` draws the X and emits `aria-expanded="true"`.
-        /// `None` emits no `aria-expanded` at all, so a `Burger` can open
-        /// something that is not a disclosure. `Button::selected`'s rule.
+        /// `Some(true)` draws the X; `None` emits no `aria-expanded`, for a non-disclosure.
         #[props(default)]
         open: Option<bool>,
-        /// `Option`, not a bare `EventHandler` - see `Button`.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
-        /// Replaces the localization's labels,
-        /// [`BurgerLabels`](crate::localization::BurgerLabels). Runs during
-        /// render, with the open state. A spread `"aria-label"` wins over both.
+        /// The accessible name from the open state, replacing [`BurgerLabels`].
         #[props(default)]
         label: Option<Callback<bool, String>>,
-        /// The glyph's width and height. The button around it is one spacing
-        /// step larger.
+        /// The glyph's width and height; the button is one spacing step larger.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         /// The bars. Unset, they are `currentColor`.
@@ -144,30 +123,25 @@ base_props! {
     }
 }
 
-/// A three-bar button that morphs into an X: an [`ActionIcon`] with an
-/// animated glyph and the three ARIA facts a disclosure needs.
+/// A three-bar menu button that morphs into an X, a disclosure for the panel
+/// named by a spread `aria-controls`.
 ///
-/// It does not own `open` - the panel does, and the caller already holds
-/// that signal to drive the panel itself. `aria-controls` rides
-/// `GlobalAttributes`, so spread it:
-///
-/// ```no_run
+/// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::Burger;
 /// # fn app() -> Element {
-/// # let mut open = use_signal(|| false);
-/// # rsx! {
-/// Burger {
-///     open: open(),
-///     "aria-controls": "site-nav",
-///     onclick: move |_| open.toggle(),
+/// let mut open = use_signal(|| false);
+/// rsx! {
+///     Burger {
+///         open: open(),
+///         "aria-controls": "site-nav",
+///         onclick: move |_| open.toggle(),
+///     }
 /// }
-/// # } }
+/// # }
 /// ```
 ///
-/// Focus stays on the burger when the panel opens. Moving it into the panel
-/// is the panel's decision (`Drawer` traps already), and a burger that opens
-/// a static sidebar must not steal focus.
+/// Docs: <https://libero-ui.dev/navigation/burger>
 #[component]
 pub fn Burger(props: BurgerProps) -> Element {
     let labels = use_localization().burger;
@@ -209,8 +183,7 @@ pub fn Burger(props: BurgerProps) -> Element {
     rsx! {
         ActionIcon {
             aria_label,
-            // Only when `open` is `Some`: without it this is a plain
-            // button, which is what opening a modal wants.
+            // Only when `open` is `Some`: otherwise a plain button, as a modal wants.
             "aria-expanded": props.open.map(|open| open.to_string()),
             onclick: move |event| {
                 if let Some(onclick) = onclick {
@@ -256,8 +229,7 @@ mod tests {
         );
     }
 
-    /// The whole glyph is one element: the outer two bars are its pseudo-
-    /// elements, and only `open` moves them.
+    /// The outer two bars are the glyph's pseudo-elements; only `open` moves them.
     #[test]
     fn opened_fades_the_middle_bar_and_rotates_the_outer_two() {
         let css = Stylesheet::from(&BURGER_GLYPH_SX).as_str().to_string();
@@ -271,8 +243,7 @@ mod tests {
         }
     }
 
-    /// Only `background-color` and `transform` - a bare `all` would animate
-    /// the layout the size override changes too.
+    /// A bare `all` would also animate the layout the size override changes.
     #[test]
     fn the_transition_names_its_two_properties_and_reduced_motion_drops_it() {
         let css = Stylesheet::from(&BURGER_GLYPH_SX).as_str().to_string();

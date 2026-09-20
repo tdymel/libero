@@ -26,6 +26,7 @@ use crate::{
 };
 
 str_enum! {
+    /// How a [`Header`] stays on screen.
     pub enum HeaderPosition {
         Static = "static",
         #[default]
@@ -39,9 +40,7 @@ input_from_str!(HeaderPosition);
 // Matches Button's shade: bold enough for a solid brand-color banner.
 const HEADER_DEFAULT_SHADE: ColorShade = ColorShade::S6;
 
-// Unlike `Icon`/`Button`, an unset `color` keeps the neutral default rather
-// than falling back to a theme color. A bare color name takes the shade
-// above; everything else passes through.
+// Unset keeps the neutral default, unlike `Icon`/`Button`; a bare color takes the shade above.
 fn header_base_color(value: Option<&ThemeAwareValue>) -> Option<ThemeAwareValue> {
     match value {
         None => None,
@@ -172,15 +171,11 @@ fn header_variables(props: &HeaderProps) -> Variables {
             HEADER_HEIGHT.override_var(),
             props.size.resolve(Some(HEADER_HEIGHT)),
         )
-        // The banner is a fill under `HEADER_COLOR_VAR`, so it resolves
-        // through the fill ramp: a `primary` header used to be `blue.6` with
-        // white text on it, 3.56:1 (todo 239).
+        // Through the fill ramp: `blue.6` under white text was 3.56:1 (todo 239).
         .with(HEADER_BACKGROUND_VAR, fill.clone())
         .with(HEADER_COLOR_VAR, contrast.clone())
-        // The background comes through a var, so `sx` cannot publish the
-        // focus contrast from it (`codebase/sx`): without this every ring in a
-        // coloured header is the primary shade on a primary banner. Only with
-        // a `color`, so an uncoloured header inherits the page's.
+        // A var background, so `sx` can't publish the focus contrast; only with a
+        // `color`, so an uncoloured header inherits the page's.
         .with(FOCUS_RING_HALO, contrast.as_ref().and(fill))
         .with(
             CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
@@ -191,48 +186,43 @@ fn header_variables(props: &HeaderProps) -> Variables {
 
 base_props! {
     pub struct HeaderProps {
-        /// `Sticky` (default) needs no offset; `Fixed` is viewport-relative:
-        /// offset your content by `var(--lsx-header-height)` (see `publish_height`).
+        /// `Sticky` (default); `Fixed` content is offset by `var(--lsx-header-height)`.
         #[props(default, into)]
         position: Input<HeaderPosition>,
+        /// Height, a size or any CSS length.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
+        /// Banner fill; a bare color takes shade 6.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
-        /// Publishes this sticky/fixed Header's height as `--lsx-header-height`
-        /// and `scroll-padding-top` on `:root`, so focus scrolls clear of it.
-        /// Set it on the page's own banner only; the last one mounted wins.
+        /// Publishes the height on `:root`, so focus scrolls clear. The page's banner only.
         #[props(default)]
         publish_height: bool,
-        /// Frosted glass, as on `Paper`: content scrolling under a sticky bar
-        /// shows through, blurred. Takes the paper surface, so it replaces a
-        /// `color`. Opaque under reduced transparency, forced colours and natively.
+        /// Frosted glass, as on `Paper`. Replaces a `color`.
         #[props(default)]
         glass: bool,
-        /// A linear gradient fill, as on `Paper`, labelled in whichever end of
-        /// the page reads on it. Replaces a `color`; with `glass`, its stops
-        /// turn translucent.
+        /// A linear gradient fill, as on `Paper`. Replaces a `color`.
         #[props(default)]
         gradient: Option<Gradient>,
         children: Element,
     }
 }
 
-/// The page's `banner` landmark, always a `<header>`. Hosts nav and actions
-/// as children rather than being scoped to either.
+/// The page's `banner` landmark, a sticky `<header>` for nav and actions.
 ///
-/// ```rust
+/// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::Header;
 /// # fn app() -> Element {
 /// rsx! {
-///     // The page's banner: focus moved under it is scrolled clear.
 ///     Header { publish_height: true, "Libero" }
 /// }
 /// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/layout/header>
 #[component]
 pub fn Header(props: HeaderProps) -> Element {
     let position = props.position.copied_or_default();
@@ -248,8 +238,7 @@ pub fn Header(props: HeaderProps) -> Element {
         .into();
     let gradient = use_gradient_style(props.gradient.as_ref(), true, false);
 
-    // An opted-in sticky or fixed Header publishes its height on `:root`, the
-    // last one mounted winning. The size's own CSS, so nothing is measured.
+    // The last mounted publisher wins; the size's own CSS, so nothing is measured.
     let id = use_id();
     let published = use_hook(|| {
         Rc::new(Published {

@@ -37,14 +37,29 @@ base_props! {
         /// Which element to render as - `div` by default.
         #[props(default, into)]
         component: Input<HtmlTag>,
+        /// Maximum width, a breakpoint size or any CSS length.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
+        /// Inline padding on both sides.
         #[props(default, into)]
         gutters: Input<ThemeAwareValue>,
         children: Element,
     }
 }
 
+/// Centers content horizontally with a maximum width and side gutters.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::Container;
+/// # fn app() -> Element {
+/// rsx! {
+///     Container { size: "md", "Page content" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/layout/container>
 #[component]
 pub fn Container(props: ContainerProps) -> Element {
     let variables: Input<Variables> = container_variables(&props).into();

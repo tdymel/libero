@@ -63,17 +63,12 @@ static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
-/// The divider line and its oversized drag/keyboard target.
-///
-/// Its own component so it memoizes: every prop compares by value or by a
-/// stable identity, so a re-render of `Splitter` that did not move the divider
-/// skips this subtree entirely. Worth ~2900 ns per instance - it is the
-/// largest single block of `Splitter`'s render cost.
+/// The divider line and its oversized drag/keyboard target. Its own scope, so
+/// a `Splitter` render that didn't move it skips ~2900 ns here.
 #[component]
 pub(super) fn SplitterDivider(
     element: ElementHandle,
-    /// Pane A's percentage. A signal so moving the divider re-renders this
-    /// alone, not `Splitter`'s panes.
+    /// Pane A's percentage; a signal, so a move re-renders this alone.
     a: ReadSignal<f64>,
     vertical: bool,
     size: Size,

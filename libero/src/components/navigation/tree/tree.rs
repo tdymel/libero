@@ -22,9 +22,7 @@ use super::{
     tree_row::{TreeRow, child_active},
 };
 
-/// Borrows from the `data` it walks: it is rebuilt on every render and every
-/// keystroke, so owning the ids and labels meant two `String`s per node each
-/// time.
+/// Borrows from `data`: rebuilt on every keystroke, owning meant two `String`s per node.
 struct VisibleNode<'a> {
     id: &'a str,
     parent_id: Option<&'a str>,
@@ -33,8 +31,7 @@ struct VisibleNode<'a> {
     label: &'a str,
 }
 
-/// `disabled` cascades: a node under a disabled branch is disabled too, as the
-/// row's `pointer-events` and `aria-disabled` already make it.
+/// `disabled` cascades to the nodes under a disabled branch.
 fn push_visible_nodes<'a>(
     nodes: &'a [TreeNodeErased],
     expanded: &HashSet<String>,
@@ -66,9 +63,8 @@ fn visible_order<'a>(
     out
 }
 
-/// Where the first visible row with `id` sits, as child indices from the
-/// roots down. By position, not by id: a repeated id would otherwise make every
-/// row that carries it the tab stop.
+/// The first visible row with `id`, as child indices; by position, so a repeated
+/// id makes only one row the tab stop.
 fn visible_path(
     nodes: &[TreeNodeErased],
     expanded: &HashSet<String>,
@@ -130,9 +126,8 @@ enum Horizontal {
     Stay,
 }
 
-/// APG's tree arrows, with the rule every navigation widget shares: a disabled
-/// node is walked through like any other, but no key opens or closes it.
-/// `None` for ArrowRight on a leaf, which the tree leaves to the page.
+/// APG's tree arrows; a disabled node is walked through but never toggled.
+/// `None` for ArrowRight on a leaf, left to the page.
 fn horizontal(
     order: &[VisibleNode],
     node: &VisibleNode,
@@ -150,10 +145,7 @@ fn horizontal(
     })
 }
 
-/// The row a typed `query` lands on, through the library's one typeahead
-/// ([`typeahead_match`]): one character cycles from the row after `current`,
-/// a longer query narrows and stays on a row that still matches. Disabled rows
-/// are skipped.
+/// The row a typed `query` lands on via [`typeahead_match`], skipping disabled rows.
 fn typeahead_target(order: &[VisibleNode], current: &str, query: &str) -> Option<String> {
     let current = order.iter().position(|node| node.id == current)?;
     typeahead_match(order.len(), Some(current), query, |index| {
@@ -163,8 +155,7 @@ fn typeahead_target(order: &[VisibleNode], current: &str, query: &str) -> Option
     .map(|index| order[index].id.to_string())
 }
 
-/// The open branches, shared by every row. Controlled, a change only asks
-/// through `onchange`; the set moves when the caller's `expanded` does.
+/// The open branches, shared by every row. Controlled, a change only asks via `onchange`.
 #[derive(Clone, Copy, PartialEq)]
 pub(super) struct Expansion {
     pub open: Signal<HashSet<String>>,
@@ -173,9 +164,7 @@ pub(super) struct Expansion {
 }
 
 impl Expansion {
-    // The one state mutation `Tree` makes on its own behalf, shared between a
-    // branch row's click and the keyboard handling. Never touches selection -
-    // that belongs to `render_node`.
+    // Shared by a branch row's click and the keyboard; selection is `render_node`'s.
     pub fn toggle(self, id: &str) {
         let mut next = self.open.read().clone();
         if !next.remove(id) {
@@ -219,17 +208,14 @@ fn expand_siblings(order: &[VisibleNode], node: &VisibleNode, expansion: Expansi
     expansion.set(next);
 }
 
-// A leaf's real link/button is kept out of the tab order (see
-// `TreeNodeRenderArgs::tabindex`), so it is never focused and Enter never
-// reaches it natively. This triggers it the way a click would.
+// A leaf's link or button is out of the tab order, so Enter clicks it from here.
 fn click_tree_item(root: &ElementHandle, target_id: &str) {
     let id = css_string(target_id);
     let selector = format!("[data-tree-id={id}] a, [data-tree-id={id}] button");
     let _ = root.query_selector(&selector).and_then(|el| el.click());
 }
 
-// Keyboard nav only applies while the active row itself holds focus. Anything
-// else (an input or editable inside a row) owns its own keystrokes.
+// Only while the row itself holds focus; an input inside a row keeps its keys.
 fn tree_item_focused(root: &ElementHandle, target_id: &str) -> bool {
     let selector = format!("[data-tree-id={}]", css_string(target_id));
     root.query_selector(&selector)
@@ -244,8 +230,7 @@ fn row_control_focused(root: &ElementHandle, target_id: &str) -> bool {
         .is_ok_and(|el| el.is_focused())
 }
 
-// Scoped to this tree's own root, so two `Tree`s can reuse node ids without
-// colliding.
+// Scoped to this tree's root, so two `Tree`s can share node ids.
 fn focus_tree_item(root: &ElementHandle, target_id: &str) {
     let selector = format!("[data-tree-id={}]", css_string(target_id));
     let _ = root.query_selector(&selector).and_then(|el| el.focus());
@@ -253,47 +238,34 @@ fn focus_tree_item(root: &ElementHandle, target_id: &str) {
 
 base_props! {
     pub struct TreeProps<T: TreeValue> {
-        /// Row gap and per-level indent together - `List`'s scale, since `Tree`
-        /// renders through it. Off-scale, or the two apart, goes through `sx`:
-        /// `sx().gap("4px").selector("& ul", sx().padding_left("24px"))`.
+        /// Row gap and per-level indent, on `List`'s scale; set them apart through `sx`.
         #[props(default, into)]
         size: Input<Size>,
         /// Required by WAI-ARIA's tree pattern.
         #[props(into)]
         aria_label: String,
         data: Vec<TreeNode<T>>,
-        /// Each visible row's content. Defaults to [`default_tree_render`], which
-        /// a custom `render_node` can also call to fall back selectively - say,
-        /// default branches and `NavLink` leaves.
+        /// Each row's content. Defaults to [`default_tree_render`], which a custom one can call.
         #[props(default = Callback::new(super::tree_node::default_tree_render))]
         render_node: Callback<TreeNodeRenderArgs<T>, Element>,
-        /// Seeds `Tree`'s internal state once. Ignored when `expanded` is set.
+        /// Seeds the open branches once. Ignored when `expanded` is set.
         #[props(default)]
         default_expanded: HashSet<String>,
-        /// The ids of the open branches. Set it and the tree follows, asking
-        /// for every change through `onexpandedchange`; leave it unset and the
-        /// tree keeps its own, seeded by `default_expanded`.
+        /// The open branches' ids; set, the tree is controlled.
         #[props(default)]
         expanded: Option<HashSet<String>>,
-        /// The id of the node where the user is - a nav's current page. Tab
-        /// into the tree lands on it rather than on the first row, until the
-        /// arrow keys move on; when it changes, the tab stop follows it. Inside
-        /// a collapsed branch, the tab stop goes to the branch. Its row carries
-        /// `aria-current="true"`; `Tree` has no selection, every row is
-        /// `aria-selected="false"`.
+        /// The node where the user is, such as a nav's current page: the tab stop and `aria-current`.
         #[props(default, into)]
         current: Option<String>,
-        /// Called with the whole new set of open ids, ready to store. Without
-        /// `expanded` a notification only.
+        /// The whole new set of open ids.
         #[props(default)]
         onexpandedchange: Option<EventHandler<HashSet<String>>>,
     }
 }
 
-/// A WAI-ARIA tree of expandable branches. It keeps its open branches itself,
-/// or follows a controlled `expanded`:
+/// A WAI-ARIA tree of expandable branches.
 ///
-/// ```no_run
+/// ```
 /// # use std::collections::HashSet;
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Tree, TreeNode};
@@ -312,18 +284,11 @@ base_props! {
 /// # }
 /// ```
 ///
-/// Generic shim: erases `props.data`/`render_node` once, then hands off to the
-/// non-generic `TreeCore`. Only this conversion monomorphizes per `T`; the
-/// tree machinery compiles once.
-///
-/// Panics if a `TreeRow` hands back data that isn't a `T` - the erasure trades
-/// that compile-time guarantee for a runtime check.
+/// Docs: <https://libero-ui.dev/navigation/tree>
 #[component]
 pub fn Tree<T: TreeValue>(props: TreeProps<T>) -> Element {
-    // Cached so the `Rc<dyn Any>` pointers stay stable across renders that
-    // don't change `props.data`, which is what lets `TreeNodeErased`'s
-    // pointer equality skip an untouched subtree. Not a signal: it derives
-    // from `props.data`, and writing one here forces a second render pass.
+    // Erased once, so only this shim monomorphizes per `T`. Cached, not a signal,
+    // so stable pointers let an untouched subtree skip.
     let cache = use_hook(|| {
         let erased = erase_nodes::<T>(&props.data);
         warn_on_repeated_id(&erased);
@@ -405,7 +370,7 @@ base_props! {
     }
 }
 
-/// The real `Tree`, non-generic and compiled once. See [`Tree`] for why.
+/// The real `Tree`, non-generic so it compiles once.
 #[component]
 fn TreeCore(props: TreeCoreProps) -> Element {
     let theme = use_theme();
@@ -436,8 +401,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
 
     let order = visible_order(&props.data, &expanded.read());
     let visible = |id: &String| order.iter().any(|node| node.id == id);
-    // Where the tab stop last sat, so a row removed from `data` hands it to
-    // the row that took its place rather than the first.
+    // So a removed row hands the tab stop to the row taking its place.
     let mut last_index = use_hook(|| CopyValue::new(0_usize));
     let vanished = active_id.read().as_ref().is_some_and(|id| !visible(id));
     let resolved_active = active_id
@@ -473,8 +437,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             focus_tree_item(&root, &id);
         }
     }));
-    // The first row with that id, as `Tabs` resolves its value to the first
-    // tab that matches.
+    // The first row with that id, as `Tabs` does.
     let active_path = resolved_active
         .as_deref()
         .and_then(|id| visible_path(&props.data, &expanded.read(), id));
@@ -603,9 +566,8 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         }
     };
 
-    // A click on a row's own link or button leaves focus there, out of the
-    // keys' reach; the row the click made active takes it back. Checked from a
-    // task, as Blitz focuses the clicked control only after the click's handlers.
+    // A clicked link or button in a row hands focus back to the row. From a task,
+    // as Blitz focuses the clicked control after the click's handlers.
     let onclick = move |_: Event<MouseData>| {
         spawn(async move {
             when_free(move || {

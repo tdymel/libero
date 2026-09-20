@@ -15,10 +15,7 @@ use super::{GRID_ITEM_STATE, GridSpan, GridZoneContext, ZoneState, container_nam
 static GRID_ITEM_SX: StaticSx = StaticSx::new(|| {
     let base = sx().min_width("0").when(
         ROWS_STATE,
-        // (0,2,0), against the zone's (0,3,0) masonry rule on the same
-        // property. The token is never emitted inside a masonry zone, so the
-        // two do not meet - the specificity is the second guard, not the
-        // first.
+        // Never emitted in a masonry zone; losing to its (0,3,0) rule is the second guard.
         sx().grid_row(format!("span {}", GRID_ITEM_ROW_SPAN_VAR.value_or("1"))),
     );
 
@@ -43,17 +40,10 @@ fn rows_spanned(height_px: f64, unit_px: u32, gap_px: u32) -> u32 {
 base_props! {
     pub struct GridItemProps {
         children: Element,
-        /// Width, in twelfths of the zone. A `GridSpan`, or
-        /// `responsive(GridSpan::Full).md(GridSpan::Half)` for a span that
-        /// changes with the *zone's* width (a container query, not the viewport).
+        /// Width in twelfths of the zone, optionally responsive to the zone's width.
         #[props(default, into)]
         span: Input<Responsive<GridSpan>>,
-        /// Height, in rows of the zone's implicit grid.
-        ///
-        /// **Ignored in a masonry zone**, with a warn: there the row span is
-        /// derived from the item's measured height, and honouring a manual one
-        /// would leave the item overlapping its neighbours. One property, one
-        /// writer.
+        /// Height in rows of the zone's implicit grid; ignored in a masonry zone.
         #[props(default, into)]
         rows: Input<u8>,
         #[props(default, into)]
@@ -62,11 +52,25 @@ base_props! {
 }
 
 /// One cell of a [`GridZone`](super::GridZone).
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::{GridItem, GridSpan, GridZone};
+/// # fn app() -> Element {
+/// rsx! {
+///     GridZone {
+///         GridItem { span: GridSpan::Third, "Aside" }
+///         GridItem { span: GridSpan::TwoThirds, "Main" }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/layout/grid>
 #[component]
 pub fn GridItem(props: GridItemProps) -> Element {
     let zone = try_use_context::<GridZoneContext>();
-    // Every item keeps its own span, so a late-mounted or never-measured item
-    // costs exactly itself - there is no zone-wide invariant to break.
+    // Per item, so a late or never-measured item affects only itself.
     let mut rows = use_signal(|| None::<u32>);
 
     if zone.is_none() {
@@ -75,10 +79,8 @@ pub fn GridItem(props: GridItemProps) -> Element {
 
     let masonry = zone.is_some_and(|zone| zone.state.read().masonry);
 
-    // `ResizeObserver` delivers an initial observation for every element that
-    // has a box, so this is also the mount-time measurement - no id, no
-    // element lookup. An element with no box (`display: none`) never
-    // reports and simply stays unmeasured.
+    // Also the mount-time measurement, via `ResizeObserver`'s initial observation.
+    // An element with no box (`display: none`) stays unmeasured.
     let onresize = masonry.then_some(move |event: Event<ResizeData>| {
         let Some(zone) = zone else { return };
         let Ok(size) = event.get_border_box_size() else {
@@ -89,10 +91,8 @@ pub fn GridItem(props: GridItemProps) -> Element {
         } = *zone.state.peek();
         let next = rows_spanned(size.height, unit_px, gap_px);
 
-        // Integer quantisation damps sub-pixel jitter; the explicit no-op
-        // is what keeps a container feedback loop (item height -> zone
-        // height -> a scrollbar appears -> width changes) from becoming a
-        // render loop.
+        // The no-op check keeps a height -> scrollbar -> width feedback loop
+        // from becoming a render loop.
         if *rows.peek() != Some(next) {
             rows.set(Some(next));
         }
@@ -100,8 +100,7 @@ pub fn GridItem(props: GridItemProps) -> Element {
 
     let measured = rows.read().filter(|_| masonry);
 
-    // A caller's own span, which the masonry engine takes precedence over by
-    // simply not letting it exist: the two never write `grid-row` at once.
+    // Masonry drops the caller's row span: one writer of `grid-row`.
     if masonry && props.rows.as_ref().is_some() {
         warn(
             "GridItem: rows is ignored in a masonry zone, which derives the row span from the measured height.",
@@ -132,11 +131,8 @@ pub fn GridItem(props: GridItemProps) -> Element {
         .with(ROWS_STATE, row_span.is_some())
         .into();
 
-    // The base span rides the recycled framework class; only the breakpoints
-    // need a sheet of their own, and only an item that has any pays for one.
-    // They go in the user layer because the framework layer's base rule wins
-    // on specificity otherwise, and *before* `props.sx` so a caller's own
-    // `grid-column` still overrides them.
+    // Breakpoints go in the user layer, or the framework base rule wins; and
+    // before `props.sx`, so a caller's own `grid-column` still overrides them.
     let sx = match zone.map(|zone| zone.state.peek().container).unwrap_or("") {
         "" => {
             if zone.is_some() && span.breakpoints().next().is_some() {

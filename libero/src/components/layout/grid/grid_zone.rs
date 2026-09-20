@@ -21,12 +21,10 @@ use super::{AreaName, GridContext};
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct ZoneState {
     pub masonry: bool,
-    /// The masonry row quantum, in pixels. An item cannot resolve the theme's
-    /// row unit or its zone's gap on its own, so the zone hands both over.
+    /// The masonry row quantum in px; an item can't resolve it or the gap itself.
     pub unit_px: u32,
     pub gap_px: u32,
-    /// The zone's `@container` name, for an item keying a span off it.
-    /// Empty when the zone has no area, i.e. nothing to name it after.
+    /// The zone's `@container` name; empty when the zone has no area.
     pub container: &'static str,
 }
 
@@ -35,13 +33,11 @@ pub(crate) struct GridZoneContext {
     pub state: Signal<ZoneState>,
 }
 
-/// Only `GridItem` writes this token. Selecting bare `[data-state]` would hit
-/// every `Box`-derived child - it is the library's universal state attribute -
-/// and crush a stray `Text` into one row.
+/// Only `GridItem` writes this token; bare `[data-state]` would crush any
+/// `Box`-derived child, e.g. a stray `Text`, into one row.
 pub(crate) const GRID_ITEM_STATE: &str = "grid-item";
 
-/// The zone's `@container` name. Prefixed, so it cannot collide with a name
-/// the caller chose for a container of their own.
+/// Prefixed, so it can't collide with a caller's own container name.
 pub(crate) fn container_name(area: &str) -> String {
     format!("lsx-zone-{area}")
 }
@@ -55,57 +51,35 @@ static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
         .container_name(GRID_ZONE_CONTAINER_VAR.value_or("none"))
         .grid_template_columns("repeat(12, minmax(0, 1fr))")
         .align_content("start")
-        // A grid item defaults to `min-width: auto`, which refuses to shrink
-        // below its content - the outer track's `minmax(0, 1fr)` protects the
-        // *track*, not the zone sitting in it.
+        // The track's `minmax(0, 1fr)` protects the track, not the zone in it.
         .min_width("0")
-        // Twelve tracks always carry eleven gaps, whatever spans them, and a
-        // length gap cannot shrink: below `11 * gap` the tracks bottom out at
-        // zero and the zone overflows its area. At the theme's 12px that
-        // floor is 132px, which a quarter-width sidebar hits on a phone. The
-        // percentage resolves against the zone's own width, so the cap only
-        // engages under ~300px and wider zones keep the themed gap exactly.
+        // Eleven length gaps can't shrink and overflow a narrow zone; the `4%`
+        // cap engages only under ~300px.
         .column_gap(format!("min({}, 4%)", GRID_ZONE_GAP.value()))
         .row_gap(GRID_ZONE_GAP.value())
-        // Only a zone filling a named area, i.e. one sitting in a `Grid`'s
-        // `minmax(0, 1fr)` track, whose width therefore comes from its parent.
-        // Inline-size containment zeroes an element's intrinsic contribution,
-        // so on a shrink-to-fit box - a standalone zone as a flex item - it
-        // collapses the zone to nothing. A zone with no area has no name to be
-        // queried by either, so it gains nothing from being a container.
+        // Only a named zone: containment collapses a shrink-to-fit standalone
+        // zone to nothing.
         .when("container", sx().container_type("inline-size"))
         .when("dense", sx().grid_auto_flow("row dense"))
         .when(
             "masonry",
             sx()
-                // The quantum is the row unit *plus* the row gap, so a gapped
-                // masonry zone is ragged by up to a whole gap however small
-                // the unit gets. Zero it and carry the spacing on the item.
+                // A row gap would make the quantum ragged; the item carries it,
+                // and the zone cancels the last one.
                 .row_gap("0")
-                // Which leaves the last item in every column carrying a bottom
-                // margin the zone does not want. Cancel it once, here.
                 .margin_bottom(format!("calc(-1 * {})", GRID_ZONE_GAP.value()))
-                // `minmax`, not the bare unit: an item that has not measured
-                // yet sits at `grid-row: auto`, and a flat 2px track would
-                // make it overflow onto everything below it - permanently
-                // under SSR and off the web. The `auto` maximum lets that one
-                // track grow to its content instead, so an unmeasured zone is
-                // an ordinary grid rather than a pile.
+                // `minmax`: an unmeasured item (SSR, native) grows its track
+                // instead of overflowing onto the items below.
                 .grid_auto_rows(format!("minmax({}, auto)", GRID_ROW_UNIT.value()))
                 .selector(
                     &item,
-                    // Load-bearing: at the default `stretch` an item's border
-                    // box would be its whole row span, the next measurement
-                    // would report *that*, and the span would climb. Scoped to
-                    // masonry, or ordinary zones silently lose equal-height
-                    // cards.
+                    // At `stretch` each measurement reports its row span and
+                    // the span climbs. Masonry only, or cards lose equal heights.
                     sx().align_self("start")
                         .margin_bottom(GRID_ZONE_GAP.value()),
                 )
-                // (0,3,0), against the item's own (0,2,0) `grid-column` rule
-                // in the other stylesheet. Both are `CssLayer::Framework` and
-                // the registry emits those in hash order, so specificity is
-                // the only thing settling this - `& > *` would invert it.
+                // (0,3,0) beats the item's (0,2,0) `grid-column` rule: framework
+                // sheets come in hash order, so `& > *` would lose.
                 .selector(
                     &measured,
                     sx().grid_row(format!("span {}", GRID_ITEM_ROWS_VAR.value_or("1"))),
@@ -117,16 +91,13 @@ base_props! {
     pub struct GridZoneProps {
         /// `GridItem`s.
         children: Element,
-        /// Which of the parent `Grid`'s areas this fills. Omit it to use the
-        /// zone on its own, without a `Grid` - a plain masonry wall needs no
-        /// template.
+        /// Which of the parent `Grid`'s areas this fills; omit it outside a `Grid`.
         #[props(default, into)]
         area: AreaName,
-        /// Backfill gaps a wider item left behind. Pure CSS, no measurement.
+        /// Backfill gaps a wider item left behind.
         #[props(default)]
         dense: bool,
-        /// Measure item heights and pack them with no vertical dead space.
-        /// Costs a `ResizeObserver` per item.
+        /// Pack measured item heights with no vertical dead space.
         #[props(default)]
         masonry: bool,
         /// Between items.
@@ -137,15 +108,28 @@ base_props! {
     }
 }
 
-/// An independent twelfths-scale packing container. Inside a
-/// [`Grid`](super::Grid) it fills one named area; on its own it is just a
-/// twelve-column grid.
+/// A twelve-column packing container, filling one named area of a
+/// [`Grid`](super::Grid) or standing on its own.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::{GridItem, GridSpan, GridZone};
+/// # fn app() -> Element {
+/// rsx! {
+///     GridZone { masonry: true,
+///         GridItem { span: GridSpan::Half, "One" }
+///         GridItem { span: GridSpan::Half, "Two" }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/layout/grid>
 #[component]
 pub fn GridZone(props: GridZoneProps) -> Element {
     let theme = use_theme();
     let grid = try_use_context::<GridContext>();
-    // Read before this zone provides its own: an *enclosing* zone, i.e. a grid
-    // nested inside a `GridItem`.
+    // Read before this zone provides its own: the zone enclosing a nested grid.
     let enclosing = try_use_context::<GridZoneContext>();
 
     let area = props.area;
@@ -170,9 +154,8 @@ pub fn GridZone(props: GridZoneProps) -> Element {
     let gap = props.gap.copied_or(theme.grid.zone_gap);
     let gap_px = theme.spacing.get(gap).into();
     let container = if area.is_set() { area.name } else { "" };
-    // Zone container names come from the area name, so a nested grid reusing
-    // one leaves the inner zone as the nearest match for both - every
-    // responsive span in the outer zone would silently key off the inner one.
+    // A nested zone reusing the area name would capture the outer zone's
+    // responsive spans.
     if !container.is_empty()
         && enclosing.is_some_and(|zone| zone.state.peek().container == container)
     {
@@ -197,10 +180,8 @@ pub fn GridZone(props: GridZoneProps) -> Element {
         signal.set(state);
     }
 
-    // Always published, never only on override: `gap`, the item's
-    // `margin-bottom` and the zone's cancelling margin all read this one var,
-    // and a nested zone must not inherit its parent's.
-    // Rendered once per change: building the three vars was ~0.45x `Leaf`.
+    // Always published: a nested zone must not inherit its parent's gap.
+    // Cached per change: building the three vars was ~0.45x `Leaf`.
     let style = use_cache((container, gap), |&(container, gap)| {
         let named = !container.is_empty();
         variables()

@@ -19,8 +19,7 @@ use crate::{
 
 use crate::components::layout::render_anchor;
 
-// A literal hex/css color has no derivable "lighter shade", so it falls
-// through to the theme's default.
+// A literal CSS color has no lighter shade, so it falls back to the theme's.
 fn nav_link_color(value: Option<&ThemeAwareValue>) -> Option<Color> {
     match value {
         Some(ThemeAwareValue::Color(color)) => Some(*color),
@@ -68,16 +67,13 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         // A long unbreakable label wraps instead of widening the page (1.4.10).
         .with("overflow-wrap", "anywhere")
-        // Keeps `scroll_into_view`'s `Nearest` off the container's edge.
-        // Affects where a scroll lands, never whether one happens. Blitz reads the var.
+        // Keeps `scroll_into_view`'s `Nearest` off the container's edge; Blitz reads the var.
         .scroll_margin("8rem")
         .with(SCROLL_MARGIN_VAR, "8rem")
         // Inset: a full-width link in a scrolling sidebar would clip an outset ring.
         .focus_visible(inset_focus_ring_sx("-2px"))
-        // Hover is neutral grey, not `color`: it shouldn't preview the
-        // selected look. Active gets the light color tint instead.
-        // Skips a disabled link, which needs no `pointer-events: none` then and
-        // shows `not-allowed` (todo 596). `:where` keeps `:hover`'s specificity.
+        // Neutral grey, so hover doesn't preview the active tint. Skips a disabled
+        // link (todo 596); `:where` keeps `:hover`'s specificity.
         .selector(
             "&:hover:not(:where([data-state~=\"disabled\"]))",
             sx().background("muted.2"),
@@ -162,28 +158,21 @@ base_props! {
         target: Option<String>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Tints the link. Unset, it compares `to` against the current route,
-        /// so it is only ever true for an `Internal` target with a router
-        /// mounted. Set it explicitly for a section-level parent item, or
-        /// anywhere auto-detection has nothing to compare against.
+        /// Marks the current page. Unset, `to` is compared against the router's route.
         #[props(default)]
         active: Option<bool>,
         #[props(default)]
         disabled: Option<bool>,
-        /// Scrolls this link into view when it becomes active, if it isn't
-        /// already visible. Off by default - it acts on whatever scrollable
-        /// ancestor happens to exist, which only suits a sidebar.
+        /// Scrolls the link into view when it becomes active; suits a sidebar.
         #[props(default)]
         scroll_into_view: Option<bool>,
         /// A dimmed line under the label, read as the link's description.
         #[props(default, into)]
         description: Option<String>,
-        /// Child `NavLink`s, shown under this one by a toggle button beside
-        /// it. The link itself still goes to `to`.
+        /// Child `NavLink`s, shown by a toggle beside this one.
         #[props(default)]
         nested: Option<Element>,
-        /// Whether `nested` shows. Set, it is controlled: pair it with
-        /// `onchange`.
+        /// Whether `nested` shows; controlled when set, paired with `onchange`.
         #[props(default)]
         opened: Option<bool>,
         /// Whether `nested` shows at first, when `opened` is unset.
@@ -196,11 +185,10 @@ base_props! {
     }
 }
 
-/// A navigation list item - `Anchor` plus a themed active/hover background
-/// and `aria-current`, for a sidebar or nav bar link. With `nested` it is a
-/// disclosure too: a toggle beside the link shows the child links.
+/// A sidebar or nav bar link that marks the current page, optionally with
+/// nested links behind a toggle.
 ///
-/// ```no_run
+/// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::NavLink;
 /// # fn app() -> Element {
@@ -215,6 +203,8 @@ base_props! {
 /// }
 /// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/navigation/nav-link>
 #[component]
 pub fn NavLink(props: NavLinkProps) -> Element {
     let theme = use_theme();
@@ -246,21 +236,16 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let scroll_into_view = props.scroll_into_view.unwrap_or(false);
     let element = use_element();
 
-    // `is_active` is a plain bool, hence `use_reactive!`; `element` is read
-    // through a signal and tracks itself. Together they cover both "active
-    // on mount" and "became active later" in one path.
+    // Covers both active on mount and active later: `element` tracks itself.
     use_effect(use_reactive!(|is_active| {
         if scroll_into_view && is_active && element.is_mounted() {
-            // Not the DOM's `scrollIntoView`: in Chromium it moves the Tab
-            // starting point onto this link, so a fresh page's first Tab
-            // skipped everything above the nav. Instant under reduced motion:
-            // an explicit smooth scroll overrides the stylesheet.
+            // Not the DOM's `scrollIntoView`: Chromium moves the Tab start onto
+            // the link. Instant under reduced motion, which the stylesheet can't force.
             let _ = element.scroll_into_view(!prefers_reduced_motion());
         }
     }));
 
-    // One hook for every path, above the branch, and no `InternalAnchor`
-    // scope: that would resolve the styling a second time.
+    // Above the branch, and no `InternalAnchor` scope, which would resolve it twice.
     let style_attributes = use_style_attributes(
         &props.class,
         Some(&NAV_LINK_BASE_SX),
@@ -272,8 +257,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     );
 
     let mut attributes = props.attributes;
-    // Hidden from the link's name, which the label alone gives; the
-    // description reaches it through `aria-describedby`.
+    // Out of the link's name; it arrives through `aria-describedby`.
     let body = match &props.description {
         Some(description) => {
             join_described_by(&mut attributes, &description_id());

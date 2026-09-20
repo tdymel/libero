@@ -24,16 +24,13 @@ pub use crate::theme::ScrollerControls;
 
 input_from_str!(ScrollerControls);
 
-/// One pixel of slack: a fractional device-pixel offset makes an exact
-/// comparison flicker a control on and off at rest.
+/// A fractional device-pixel offset would flicker a control at rest.
 const EDGE_TOLERANCE: f64 = 1.0;
 
-/// How far a mouse has to travel before a press becomes a drag. Below it the
-/// press stays a click on whatever is under it.
+/// Mouse travel before a press becomes a drag rather than a click.
 const DRAG_THRESHOLD: f64 = 5.0;
 
-/// Whether the strip rests against either end. Both `true` means nothing
-/// overflows.
+/// Whether the strip rests against either end. Both `true`: nothing overflows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ScrollerEdges {
     pub at_start: bool,
@@ -41,16 +38,13 @@ pub struct ScrollerEdges {
 }
 
 impl ScrollerEdges {
-    /// Where every strip starts, before anything is measured: nothing known
-    /// to overflow, so no control offers to go anywhere.
+    /// Before any measurement: no control offers to go anywhere.
     const UNMEASURED: Self = Self {
         at_start: true,
         at_end: true,
     };
 
-    /// From the scroll offset and the two widths, in px - compared in px
-    /// rather than as a percent of the range, so the tolerance is one pixel
-    /// on any length of strip.
+    /// In px, not a percent of the range, so the tolerance is one pixel on any strip.
     fn measure(offset: f64, scroll_width: f64, client_width: f64) -> Self {
         let max = (scroll_width - client_width).max(0.0);
         Self {
@@ -103,9 +97,8 @@ fn step_target(offset: f64, amount: f64, forward: bool, max: f64) -> f64 {
     target.clamp(0.0, max.max(0.0))
 }
 
-/// The offset that shows an item (`start..end` along the viewport, in px)
-/// wholly clear of the controls, each `inset` wide; the start wins when both
-/// cannot. Moves only as far as needed, and never past the range.
+/// The nearest offset showing an item (`start..end`, px) clear of both `inset`
+/// wide controls; the start wins when both can't be.
 fn clear_of_controls(offset: f64, start: f64, end: f64, view: f64, inset: f64, max: f64) -> f64 {
     let (start, end) = (offset + start, offset + end);
     let mut target = offset;
@@ -128,12 +121,10 @@ fn inline_span(x: f64, width: f64, view_x: f64, view_width: f64, rtl: bool) -> (
     (start, start + width)
 }
 
-/// Steps a [`Scroller`] from an event handler, the way its own controls do.
+/// Steps a [`Scroller`] from the caller's own buttons. Bind it from the first
+/// render; before mount a call does nothing.
 ///
-/// For a strip whose buttons are the caller's own: `controls: "never"`,
-/// `onedgechange` for their state, and a handle to move it.
-///
-/// ```no_run
+/// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Button, Scroller, use_scroller};
 /// # fn app() -> Element {
@@ -145,16 +136,10 @@ fn inline_span(x: f64, width: f64, view_x: f64, view_width: f64, rtl: bool) -> (
 /// }
 /// # }
 /// ```
-///
-/// `Copy`, so any number of handlers can hold it. A call before the bound
-/// `Scroller` has mounted, or with none bound at all, does nothing. Bind it
-/// from the first render: the element is attached on mount, so a handle
-/// passed to an already mounted `Scroller` stays unattached.
 #[derive(Clone, Copy, PartialEq)]
 pub struct ScrollerHandle {
     area: ScrollAreaHandle,
-    /// The bound `Scroller`'s `scroll_amount`, written on every render. Not a
-    /// signal: nothing renders from it.
+    /// Written every render; not a signal, since nothing renders from it.
     amount: CopyValue<f64>,
 }
 
@@ -204,48 +189,36 @@ static SCROLLER_ROOT_SX: StaticSx = StaticSx::new(|| {
         // The controls' containing block.
         .position("relative")
         .display("block")
-        // A viewport takes its width from its container, never from its
-        // content - `Carousel`'s root, same reason.
+        // Width from the container, never the content - as `Carousel`'s root.
         .width("100%")
-        // A stacking context of its own, so the controls' `z-index` stays
-        // inside the strip rather than competing with the page's layers.
+        // Keeps the controls' `z-index` inside the strip.
         .z_index("0")
 });
 
-/// Merged onto `ScrollArea`'s own, which scrolls the x axis and hides the
-/// scrollbar: the controls are the affordance, the strip still scrolls
-/// natively.
+/// Merged onto `ScrollArea`'s own: x axis, hidden scrollbar, native scrolling.
 static SCROLLER_VIEWPORT_SX: StaticSx = StaticSx::new(|| {
-    // `ScrollArea` fills its parent's height; a strip is as tall as its
-    // content.
+    // As tall as its content, not the parent.
     scroll_area_base(
         sx().height("auto")
-            // A strip inside a scrolling page should not hand the scroll on when
-            // it reaches its own end.
             .overscroll_behavior_x("contain")
             .scroll_behavior("smooth")
-            // Chrome and Safari do not switch smooth scrolling off under reduced
-            // motion - only Firefox does - so the guard is explicit.
+            // Only Firefox drops smooth scrolling under reduced motion by itself.
             .media(REDUCED_MOTION, sx().scroll_behavior("auto"))
             .when("draggable", sx().cursor("grab"))
-            // A drag is the pointer's own position: animating towards it lags.
-            // After the smooth declaration, which it has to beat at equal
-            // specificity.
+            // Animating towards the pointer lags; after `smooth`, to win at equal specificity.
             .when(
                 "dragging",
                 sx().scroll_behavior("auto")
                     .cursor("grabbing")
                     .user_select("none"),
             )
-            // Outset: the root does not clip, and an inset ring would run under
-            // the two controls.
+            // Outset: an inset ring would run under the two controls.
             .focus_visible(focus_ring_sx()),
     )
 });
 
-/// `max-content` so the wrapper is as wide as the strip it holds, which is
-/// what makes its `onresize` fire when the content changes width. Never
-/// narrower than the viewport, so it also reports the viewport growing.
+/// As wide as the strip, so `onresize` fires on content width changes; never
+/// narrower than the viewport, so it reports that growing too.
 static SCROLLER_CONTENT_SX: StaticSx =
     StaticSx::new(|| sx().width("max-content").min_width("100%"));
 
@@ -279,12 +252,9 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .transition("opacity 150ms")
         .media(REDUCED_MOTION, sx().transition("none"))
-        // The gradient is the button's own background: one box is both the
-        // fade and the hit target.
+        // The gradient is the button's own background: fade and hit target in one.
         .selector("& svg", sx().width("60%").height("60%").flex("none"))
-        // Under RTL the start is the right edge: the sides, fades and glyphs
-        // swap.
-        // `flex-start` follows the direction: the glyph sits at the outer edge.
+        // Under RTL the sides, fades and glyphs swap; `flex-start` follows the direction.
         .when(
             "start",
             control_side_sx(&fade, "left", "right", "90deg").justify_content("flex-start"),
@@ -301,16 +271,13 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
             "end",
             sx().rtl(control_side_sx(&fade, "left", "right", "90deg")),
         )
-        // The glyph dims, not the button: the button's opacity would dim its
-        // focus ring with it.
+        // The glyph dims, not the button, whose opacity would dim its focus ring.
         .when(
             "disabled",
             sx().cursor("default")
                 .selector("& svg", sx().opacity("0.4")),
         )
-        // Under `Auto` a control at its own end is gone - unless the keyboard
-        // is on it, in which case it stays until the reader tabs away, so it
-        // never vanishes from under the focus.
+        // Under `Auto` a control at its end hides, but never from under the focus.
         .when(
             "controls-auto && disabled",
             sx().selector(
@@ -342,45 +309,41 @@ base_props! {
         /// The width of each control strip.
         #[props(default, into)]
         control_size: Input<Size>,
-        /// What the gradient under a control fades from - the surface the
-        /// strip sits on. Defaults to the paper background.
+        /// The surface the controls fade from; the paper background by default.
         #[props(default, into)]
         fade_color: Input<ThemeAwareValue>,
-        /// Mouse drag-to-pan. Touch and trackpad already scroll natively, and
-        /// this never applies `touch-action: none`, which would stop them.
+        /// Mouse drag-to-pan; touch and trackpad scroll natively anyway.
         #[props(default)]
         draggable: Option<bool>,
-        /// Fires when either edge state flips, including the first
-        /// measurement.
+        /// Fires when either edge state flips, including the first measurement.
         #[props(default)]
         onedgechange: Option<EventHandler<ScrollerEdges>>,
-        /// From [`use_scroller`], to step the strip from the caller's own
-        /// buttons.
+        /// From [`use_scroller`], to step the strip from the caller's own buttons.
         #[props(default)]
         handle: Option<ScrollerHandle>,
         children: Element,
     }
 }
 
-/// A horizontal strip with a hidden scrollbar and a step control overlaid at
-/// each end, shown while there is more content that way.
+/// A horizontal strip with a hidden scrollbar and a step control at each end
+/// while there is more content that way.
 ///
-/// The scrolling is the browser's own, so touch, trackpad and the arrow keys
-/// on the focused strip work untouched; the controls step by `scroll_amount`.
-///
-/// ```no_run
+/// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Chip, Flex, Scroller};
 /// # fn app() -> Element {
 /// # const TAGS: [&str; 2] = ["rust", "ui"];
-/// # rsx! {
-/// Scroller { aria_label: "Tags",
-///     Flex { direction: "row", gap: "sm", wrap: false,
-///         for tag in TAGS { Chip { "{tag}" } }
+/// rsx! {
+///     Scroller { aria_label: "Tags",
+///         Flex { direction: "row", gap: "sm", wrap: false,
+///             for tag in TAGS { Chip { "{tag}" } }
+///         }
 ///     }
 /// }
-/// # } }
+/// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/layout/scroller>
 #[component]
 pub fn Scroller(props: ScrollerProps) -> Element {
     let theme = use_theme();
@@ -408,8 +371,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         }
     };
 
-    // Edges are compared in px, and `ScrollArea` reports a scroll as a percent,
-    // so every report is a fresh read.
+    // `ScrollArea` reports a percent and edges need px, so each report re-reads.
     let measure = move || {
         let (offset, content, size) = (
             viewport.scroll_offset(),
@@ -495,10 +457,8 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         }
     });
 
-    // Blitz sends the strip no `resize` or `scroll` (todos 659, 677): measure
-    // once laid out, on new content and on every scroll the platform reports,
-    // until a real `resize` shows the element events arrive. Blitz's measured
-    // resizes come from `use_resize_fallback` below.
+    // Blitz sends the strip no `resize` or `scroll` (todos 659, 677): measure on
+    // new content and platform scrolls until a real `resize` arrives.
     let reported = use_signal(|| 0u64);
     let mut platform_scroll = use_hook(|| {
         CopyValue::new(scroll().map(|api| {
@@ -517,9 +477,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         }
     }));
 
-    // `ResizeObserver` delivers an initial observation, so this is also the
-    // mount-time measurement - before any scroll, nothing else says whether
-    // the strip overflows at all.
+    // Also the mount-time measurement, via `ResizeObserver`'s initial observation.
     // A measured resize (Blitz) says nothing about the strip's own events.
     let resized = move |event: Event<ResizeData>| {
         if platform_scroll.peek().is_some() && !is_measured_resize(&event.data()) {
@@ -530,16 +488,8 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     let strip_content = use_element();
     use_resize_fallback(strip_content, resized);
 
-    // Mouse drag-to-pan. Deliberately **not** given `drag_handle_sx()`: that
-    // is `touch-action: none`, and it would take away the native touch scroll
-    // this strip exists for. A finger scrolls the platform's way, a mouse
-    // drags.
-    //
-    // The press is held back until it travels `DRAG_THRESHOLD`, and only then
-    // handed to `use_drag`, which takes pointer capture. Capture retargets the
-    // click that follows a release onto the strip, so taken on the press it
-    // would swallow every plain click on an item; taken after a real drag it
-    // is exactly what stops the item under the pointer from activating.
+    // No `drag_handle_sx()`: its `touch-action: none` would stop touch scrolling.
+    // Captured only past `DRAG_THRESHOLD`, or capture would swallow plain clicks.
     let mut press = use_signal(|| None::<Event<PointerData>>);
     let mut origin = use_signal(|| 0.0_f64);
     // Under RTL a drag to the right heads for the end.
@@ -561,11 +511,9 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         {
             return;
         }
-        // Keeps a text selection or a native image or link drag from claiming
-        // the pointer. The click still fires.
+        // Keeps a text selection or native drag from claiming the pointer.
         event.prevent_default();
-        // Read now, not when the drag starts: the read resolves in a task, and
-        // the first move would otherwise run against the last drag's origin.
+        // Read now: read at drag start, the first move would use the last origin.
         let offset = viewport.scroll_offset();
         rtl.set(viewport.is_rtl());
         spawn(async move {
@@ -587,8 +535,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         let travelled = event.client_coordinates().x - down.client_coordinates().x;
         if travelled.abs() > DRAG_THRESHOLD {
             press.set(None);
-            // The original press, so the drag measures from where the pointer
-            // went down and the strip catches up with it at once.
+            // The original press, so the strip catches up with the pointer at once.
             drag.onpointerdown.call(down);
             drag.onpointermove.call(event);
         }
@@ -616,9 +563,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
             handle: area,
             scrollbars: "horizontal",
             scrollbar_visibility: "hidden",
-            // A tab stop, so a strip of plain images or text can still be
-            // reached and scrolled with the arrow keys - and so it needs a
-            // name.
+            // A strip of plain images or text still scrolls by keyboard; hence the name.
             focusable: true,
             framework_sx: ScrollAreaBase(&SCROLLER_VIEWPORT_SX),
             states: viewport_states,
@@ -665,9 +610,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
                     true => labels.forward,
                     false => labels.backward,
                 },
-                // `aria-disabled`, not `disabled`: a focused button that
-                // becomes `disabled` drops focus to the page. Out of the tab
-                // order instead, since there is nothing to do there.
+                // `aria-disabled`: a focused `disabled` button drops focus to the page.
                 aria_disabled: at_edge.to_string(),
                 tabindex: if at_edge { "-1" } else { "0" },
                 onclick: move |_| {
@@ -738,8 +681,7 @@ mod tests {
         assert!(at(600.0).at_end);
     }
 
-    /// Content that fits rests against both ends, so under `Auto` neither
-    /// control shows.
+    /// Content that fits: under `Auto` neither control shows.
     #[test]
     fn content_that_fits_is_at_both_edges() {
         assert_eq!(
@@ -753,8 +695,7 @@ mod tests {
         );
     }
 
-    /// Each press steps from where the strip is now, not from where the last
-    /// press aimed - a touch scroll in between is honoured.
+    /// From where the strip is now, so a touch scroll in between is honoured.
     #[test]
     fn a_step_moves_from_the_current_offset_and_clamps() {
         assert_eq!(step_target(0.0, 200.0, true, 600.0), 200.0);
@@ -782,16 +723,14 @@ mod tests {
         assert_eq!(clear(550.0, 300.0, 350.0), 600.0);
     }
 
-    /// A 300px viewport at x 100: a 50px item at x 150 is 50px in from the
-    /// left, and 200px in from the right, where RTL starts.
+    /// A 300px viewport at x 100: a 50px item at x 150 is 200px in from the right.
     #[test]
     fn an_rtl_item_is_measured_from_the_right_edge() {
         assert_eq!(inline_span(150.0, 50.0, 100.0, 300.0, false), (50.0, 100.0));
         assert_eq!(inline_span(150.0, 50.0, 100.0, 300.0, true), (200.0, 250.0));
     }
 
-    /// Chrome and Safari keep smooth scrolling under reduced motion, and a
-    /// drag has to switch it off after the base declaration switched it on.
+    /// Chrome and Safari keep smooth scrolling under reduced motion; a drag switches it off.
     #[test]
     fn smooth_scrolling_yields_to_reduced_motion_and_to_a_drag() {
         let css = Stylesheet::from(&SCROLLER_VIEWPORT_SX);

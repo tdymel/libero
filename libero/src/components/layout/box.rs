@@ -13,13 +13,10 @@ use crate::{
 };
 
 base_props! {
-    // Covers the non-global attributes callers set on a `Box`. Names shared
-    // by two of these tags are ambiguous at the call site, hence the explicit
-    // `alt`/`r#type` fields - an inherent builder method wins over both.
+    // Names shared by two of these tags are ambiguous, hence the explicit `alt`/`r#type`.
     extends(img, a, button);
     pub struct BoxProps {
-        /// Per-instance CSS custom properties on the `style` attribute, so
-        /// `sx` can reference a varying value without a class per value.
+        /// Per-instance CSS custom properties, for `sx` to reference.
         #[props(default, into)]
         variables: Input<Variables>,
         /// Which element to render as - `div` by default.
@@ -39,39 +36,14 @@ base_props! {
     }
 }
 
-/// A `Box` element built inline, in the caller's own scope.
-///
-/// Composing `rsx! { Box { .. } }` costs ~950 ns per instance for a scope that
-/// emits no markup of its own. Building the same element here costs nothing
-/// extra.
-///
-/// ```ignore
-/// # // Not compiled: `use_box` is crate-internal, so a doc-test cannot name it.
-/// use_box()
-///     .framework_sx(&TEXT_BASE_SX)
-///     .class(&props.class)
-///     .sx(&props.sx)
-///     .states(&states)
-///     .prepare()
-///     .render(HtmlTag::P, props.attributes, props.children)
-/// ```
-///
-/// A component with more than one return shape calls `.prepare()` once at the
-/// top and renders from the result in each branch - see `Button`.
-///
-/// `use_` because [`BoxBuilder::prepare`] calls [`use_style_attributes`]. The
-/// whole chain is one expression, so a conditional `use_box()` is a
-/// conditional hook: build it in the component body and return it - never
-/// inside an `if`, a `match` arm, or after an early `return`. The prefix is
-/// what the hook-order greps match on.
+/// A `Box` element built inline, saving the ~950 ns scope of `rsx! { Box {..} }`.
+/// A hook ([`BoxBuilder::prepare`]): never call it inside a branch or after an early return.
 pub(crate) fn use_box<'a>() -> BoxBuilder<'a> {
     BoxBuilder::default()
 }
 
-/// Set only what the component needs; everything else stays defaulted.
-///
-/// Holds **references** to the styling props, so a component that also has a
-/// non-`Box` return path still owns them afterwards - see `Button`.
+/// Holds references to the styling props, so a component with a non-`Box`
+/// return path still owns them afterwards - see `Button`.
 pub(crate) struct BoxBuilder<'a> {
     framework_sx: Option<&'static StaticSx>,
     class: Option<&'a Input<ClassList>>,
@@ -128,9 +100,8 @@ impl<'a> BoxBuilder<'a> {
         self
     }
 
-    /// Drops the shared `:focus-visible` ring from this element, for one that
-    /// delegates its ring to an ancestor - a field's control, whose frame draws
-    /// the ring for it. Two elements both carrying it draw two rings.
+    /// Drops the shared focus ring, for an element whose ancestor draws it
+    /// (a field's control and its frame); both would draw two rings.
     #[inline]
     pub fn focus_ring(mut self, focus_ring: bool) -> Self {
         self.focus_ring = focus_ring;
@@ -145,11 +116,8 @@ impl<'a> BoxBuilder<'a> {
         self
     }
 
-    /// Resolves the styling. **This is the hook** - see [`use_box`].
-    ///
-    /// Split from [`BoxStyle::render`] so a component with more than one
-    /// return shape can run it once, above the branch, and render from the
-    /// result on every path.
+    /// Resolves the styling; the hook. Split from [`BoxStyle::render`] so a
+    /// component with several return shapes runs it once, above the branch.
     pub fn prepare(self) -> BoxStyle {
         const NONE_CLASS: Input<ClassList> = Input::None;
         const NONE_SX: Input<Sx> = Input::None;
@@ -172,10 +140,8 @@ impl<'a> BoxBuilder<'a> {
     }
 }
 
-/// A [`BoxStyle`] from styling a component already resolved itself with
-/// `use_style_attributes` - so it can hand the pieces to something that is not
-/// an element on one path (`InternalAnchor`'s `Link`) and render the element
-/// on the other, without resolving twice.
+/// A [`BoxStyle`] from already resolved styling, for a component with a
+/// non-element path (`InternalAnchor`'s `Link`), without resolving twice.
 pub(crate) fn box_style(style: StyleAttributes) -> BoxStyle {
     BoxStyle {
         own: Vec::new(),
@@ -184,11 +150,8 @@ pub(crate) fn box_style(style: StyleAttributes) -> BoxStyle {
     }
 }
 
-/// A handler for [`BoxStyle::event`]: one, or an `Option` of one. A `None`
-/// pushes no attribute, for the reason a `None` [`BoxStyle::attr`] does not.
-///
-/// Two impls of one trait need two distinct `Marker`s, or they overlap - the
-/// same trick `EventHandlerValue` itself plays. Neither is ever named.
+/// A handler for [`BoxStyle::event`], or an `Option` of one. The two `Marker`s
+/// keep the impls from overlapping, as in `EventHandlerValue`.
 pub(crate) trait EventValue<T, Marker> {
     fn into_listener(self) -> Option<ListenerCallback<PlatformEventData>>;
 }
@@ -218,10 +181,8 @@ where
     }
 }
 
-/// The attribute, unless its value renders nothing: a `false` boolean or a
-/// `None` costs ~135 ns to diff and produces no markup either way. Dropping it
-/// is safe - a shrinking attribute list still clears what went away, which
-/// `tests/all/attributes.rs` pins down.
+/// The attribute, unless `false` or `None`: those cost ~135 ns to diff for no
+/// markup. A shrinking list still clears them (`tests/all/attributes.rs`).
 fn meaningful<T>(name: &'static str, value: impl IntoAttributeValue<T>) -> Option<Attribute> {
     let attribute = attr(name, value);
     match attribute.value {
@@ -230,22 +191,14 @@ fn meaningful<T>(name: &'static str, value: impl IntoAttributeValue<T>) -> Optio
     }
 }
 
-/// Resolved styling, ready to render as any element. Pure - no hooks - so it
-/// can be used in a branch, or not at all.
-///
-/// `Clone` because a component can render the same resolved styling as several
-/// elements - `PinField`'s cells are one prepared frame, cloned per cell. The
-/// clone is a class, a `data-state` and the attribute list; no hook runs again.
+/// Resolved styling, ready to render as any element. No hooks, so usable in a
+/// branch; `Clone` so one frame renders several elements (`PinField`'s cells).
 #[derive(Clone, PartialEq)]
 pub(crate) struct BoxStyle {
     style: StyleAttributes,
-    /// The component's own attributes, rendered **after** the caller's - so on
-    /// a duplicate name the component wins, not the caller (`id` is the one
-    /// exception, deduped in `render`).
+    /// Rendered after the caller's, so the component wins a duplicate (not `id`).
     own: Vec<Attribute>,
-    /// Attributes the component supplies only where the caller supplied none -
-    /// see [`BoxStyle::attr_default`]. Kept apart from `own` because whether
-    /// they apply is not known until `render` receives the caller's.
+    /// Applied in `render` only where the caller set none.
     fallback: Vec<Attribute>,
 }
 
@@ -256,13 +209,8 @@ impl BoxStyle {
         self.style
     }
 
-    /// An attribute the component sets itself, e.g. `type="button"`.
-    ///
-    /// A `false` boolean or a `None` is **not** pushed: it renders nothing
-    /// either way, but an attribute in the list still costs ~135 ns to diff.
-    /// Dropping it is safe - when the list shrinks, dioxus emits a `None` for
-    /// the attribute that went away, so a `disabled` button that becomes
-    /// enabled still loses the attribute in the DOM (`tests/all/attributes.rs`).
+    /// An attribute the component sets itself, e.g. `type="button"`. A `false`
+    /// or `None` is not pushed (see `meaningful`).
     pub fn attr<T>(mut self, name: &'static str, value: impl IntoAttributeValue<T>) -> Self {
         if let Some(attribute) = meaningful(name, value) {
             self.own.push(attribute);
@@ -270,12 +218,8 @@ impl BoxStyle {
         self
     }
 
-    /// An attribute the component supplies only where the caller supplied
-    /// none - a default, not an override.
-    ///
-    /// [`BoxStyle::attr`] would win the duplicate and silently replace what
-    /// the caller asked for, which is exactly the bug `Button`'s hardcoded
-    /// `type="button"` was.
+    /// A default the caller's own attribute overrides; [`BoxStyle::attr`] would
+    /// win instead (the bug `Button`'s hardcoded `type="button"` was).
     pub fn attr_default<T>(
         mut self,
         name: &'static str,
@@ -293,12 +237,8 @@ impl BoxStyle {
         self.event("onmounted", handle.mount())
     }
 
-    /// An event handler the component sets itself. Hand-building the
-    /// `Attribute` is the one thing `rsx!` does that a plain call cannot.
-    ///
-    /// The handler has to go through `EventHandlerValue`: a renderer delivers
-    /// `PlatformEventData`, and only that conversion turns it into `T`. A bare
-    /// `AttributeValue::listener::<T>` panics on the first real event.
+    /// An event handler the component sets itself. Goes through `EventHandlerValue`:
+    /// a bare `AttributeValue::listener::<T>` panics on the first real event.
     pub fn event<T, Marker>(
         mut self,
         name: &'static str,
@@ -324,9 +264,8 @@ impl BoxStyle {
         attributes: Vec<Attribute>,
         children: impl IntoChildren,
     ) -> Element {
-        // A component that sets its own root id and also spreads `attributes`
-        // sends two `id`s here. Browsers keep the first; `use_root_id` makes
-        // both the caller's, so dropping the rest is enough.
+        // A component's own root id plus the caller's: `use_root_id` makes both
+        // the caller's, so keeping the first is enough.
         let mut seen_id = false;
         let attributes = attributes
             .into_iter()
@@ -356,24 +295,20 @@ impl BoxStyle {
     }
 }
 
-/// The styled element every component is built from: any tag, the `sx`
-/// pipeline, the `data-state` machinery and the standard focus ring.
+/// The styled element every component is built from: any tag, `sx`, states and
+/// the focus ring. A filled focusable `Box` rings itself in its fill's colours (todo 630).
 ///
-/// **A filled focusable `Box` rings itself in its own colours.** `background()`
-/// publishes `--lsx-focus-contrast` and `--lsx-focus-ring-halo` on the element
-/// for what is drawn *inside* it, and the standard ring drawn 2px *outside*
-/// reads them too. So a knob with `background("primary.6")` takes a white
-/// stripe between two `primary.6` halo bands: the pair reads against itself,
-/// 4.86:1, whatever the knob sits on (todo 630; a white halo made it 1:1).
-///
-/// To draw the ring inside the fill instead, inset it:
-///
-/// ```ignore
-/// sx().background("primary.6")
-///     .focus_visible(sx().outline_offset("-4px"))
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::{components::{Box, HtmlTag}, sx::sx};
+/// # fn app() -> Element {
+/// rsx! {
+///     Box { component: HtmlTag::Section, sx: sx().padding("md"), "Content" }
+/// }
+/// # }
 /// ```
 ///
-/// `Calendar`, `TimePicker` and `Lightbox` do this for their filled parts.
+/// Docs: <https://libero-ui.dev/layout/box>
 #[component]
 pub fn Box(props: BoxProps) -> Element {
     let mut style = BoxBuilder {

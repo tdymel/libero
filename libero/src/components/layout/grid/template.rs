@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 /// A user-defined enum naming the zones of a [`GridTemplate`].
 ///
-/// ```no_run
+/// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::GridArea;
 /// # #[derive(Clone, Copy, PartialEq)] enum PageArea { Header, Content }
@@ -19,11 +19,8 @@ pub trait GridArea: Copy + PartialEq + 'static {
     fn name(&self) -> &'static str;
 }
 
-/// A zone name with its enum erased, so `Grid` is not generic - a component
-/// monomorphized per user enum is what the `Tree<T>` refactor removed.
-///
-/// `source` is only used to tell "wrong enum" apart from "not in the template"
-/// in the warning.
+/// A zone name with its enum erased, so `Grid` is not monomorphized per enum.
+/// `source` tells "wrong enum" from "not in the template" in the warning.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AreaName {
     pub(crate) name: &'static str,
@@ -31,10 +28,8 @@ pub struct AreaName {
 }
 
 impl AreaName {
-    /// A zone with no area, i.e. one used outside a `Grid`. `Option<AreaName>`
-    /// cannot be a prop: `#[props(into)]` would need
-    /// `From<A> for Option<AreaName>`, which overlaps `core`'s
-    /// `From<T> for Option<T>`.
+    /// A zone outside a `Grid`. Not `Option<AreaName>`: its `#[props(into)]`
+    /// impl would overlap `core`'s `From<T> for Option<T>`.
     pub(crate) const NONE: Self = Self {
         name: "",
         source: TypeId::of::<()>(),
@@ -62,6 +57,7 @@ impl<A: GridArea> From<A> for AreaName {
     }
 }
 
+/// Why [`GridTemplateBuilder::build`] rejected a shape.
 #[derive(Debug, PartialEq, Eq)]
 pub enum GridTemplateError {
     Empty,
@@ -111,12 +107,9 @@ pub(crate) struct TemplateInner {
 }
 
 /// The shape of a [`Grid`](super::Grid): named zones laid out in a matrix.
+/// Build it once, outside a component body, e.g. as a [`StaticGridTemplate`](super::StaticGridTemplate).
 ///
-/// Build it once, outside a component body - `build` returns a `Result`, which
-/// `?` cannot carry through `fn() -> Element`, and a template is a constant of
-/// the layout.
-///
-/// ```no_run
+/// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{GridArea, StaticGridTemplate};
 /// # #[derive(Clone, Copy, PartialEq)] enum PageArea { Header, Sidebar, Content }
@@ -130,8 +123,7 @@ pub(crate) struct TemplateInner {
 #[derive(Clone, Debug)]
 pub struct GridTemplate(pub(crate) Arc<TemplateInner>);
 
-// `Props` are cloned and compared every render, so the pointer check comes
-// first - a template hoisted out of the render always hits it.
+// Props compare every render; a template hoisted out of it hits the pointer check.
 impl PartialEq for GridTemplate {
     fn eq(&self, other: &Self) -> bool {
         Arc::ptr_eq(&self.0, &other.0) || self.0 == other.0
@@ -150,13 +142,13 @@ impl GridTemplate {
     }
 }
 
+/// Collects the rows of a [`GridTemplate`]; `build` validates them.
 pub struct GridTemplateBuilder<A: GridArea> {
     rows: Vec<Vec<A>>,
 }
 
-/// The cells of one row. Cells share the row equally, so what matters is each
-/// area's share of the total - `cell(A)` alone and `cells(A, 2)` alone are the
-/// same shape.
+/// The cells of one row, sharing it equally: `cell(A)` alone and `cells(A, 2)`
+/// alone are the same shape.
 pub struct RowBuilder<A: GridArea> {
     cells: Vec<A>,
 }
@@ -182,6 +174,7 @@ impl<A: GridArea> GridTemplateBuilder<A> {
         self
     }
 
+    /// The template, or why CSS can't express it.
     pub fn build(self) -> Result<GridTemplate, GridTemplateError> {
         if self.rows.is_empty() {
             return Err(GridTemplateError::Empty);

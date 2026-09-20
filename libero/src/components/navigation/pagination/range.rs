@@ -1,36 +1,25 @@
-//! The ellipsis range: a pure function of four integers, and the only hard part
-//! of `Pagination`.
-//!
-//! Shipped as a free function with a pinned table rather than folded into the
-//! component, the way `rows_spanned` is in `grid/grid_item.rs` - it is the piece
-//! worth testing on its own, and a caller drawing a custom strip can reuse the
-//! arithmetic.
+//! `Pagination`'s ellipsis range, public so a custom strip can reuse it.
 
-/// One slot in the rendered strip.
-///
-/// Only these two ever come out of [`pagination_range`]. The prev/next/first/
-/// last controls are the component's, not the range's, which is why they are
-/// not variants here - see `PaginationLabel` for what a caller naming controls
-/// receives.
+/// One slot in the strip; the arrow controls are the component's, not the range's.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PaginationItem {
     Page(u32),
     Ellipsis,
 }
 
-/// Which page numbers to draw, and where the gaps go.
+/// Which page numbers to draw and where the gaps go. An ellipsis never hides
+/// exactly one page, so the strip's length is the same for every `page`.
 ///
-/// **An ellipsis never hides exactly one page.** Hiding `9` behind `…` costs
-/// the same width as printing it, so the gap is only drawn where it saves
-/// something. That also fixes the rendered length at `2·siblings +
-/// 2·boundaries + 3` for every `page`, so the strip never reflows while the
-/// user clicks through it.
+/// `total` and `boundaries` of 0 count as 1; `page` is clamped into range.
 ///
-/// Inputs are taken loosely and clamped: `total` of 0 is treated as 1 by the
-/// arithmetic (the component renders nothing for 0 before calling this), `page`
-/// is clamped into range, and `boundaries` of 0 becomes 1 - both references
-/// emit leading dots with nothing outside them at 0, which is a worse strip
-/// than simply pinning the first page.
+/// ```
+/// # use libero::components::{PaginationItem, pagination_range};
+/// use PaginationItem::{Ellipsis, Page};
+/// assert_eq!(
+///     pagination_range(10, 6, 1, 1),
+///     [Page(1), Ellipsis, Page(5), Page(6), Page(7), Ellipsis, Page(10)],
+/// );
+/// ```
 pub fn pagination_range(
     total: u32,
     page: u32,
@@ -48,45 +37,8 @@ pub fn pagination_range(
         return (1..=total).map(PaginationItem::Page).collect();
     }
 
-    // Past here `total > window`, which is what makes the arithmetic below
-    // safe, and it is worth spelling out because both facts read as merely
-    // probable:
-    //
-    // - **Neither `clamp` can panic.** `u32::clamp` panics when its bounds
-    //   invert, and both widths here are exactly `total - window`:
-    //   `(total - boundaries - 2·siblings - 1) - (boundaries + 2)` and
-    //   `(total - boundaries - 1) - (boundaries + 2·siblings + 2)` both reduce
-    //   to it. In this branch that is at least 1, so `low < high` always.
-    // - **No subtraction underflows.** `total >= window + 1`, so
-    //   `total - boundaries - 2·siblings - 1 >= boundaries + 3` and
-    //   `total - boundaries - 1 >= boundaries + 2·siblings + 3`, both above
-    //   zero.
-    // - **No addition overflows.** `page + siblings` can pass `u32::MAX` when
-    //   `page` sits within `siblings` of it, so it saturates. That changes
-    //   nothing: saturating only happens above `u32::MAX >= total`, and the
-    //   upper bound of its clamp is below `total`, so the clamp lands on the
-    //   same value either way. Every other sum is of `siblings` and
-    //   `boundaries`, which are widened `u8`s and cannot reach it.
-    //
-    // - **The rendered width is the same for every `page`**, which is what keeps
-    //   the strip from reflowing as you click through it. **This rests on the
-    //   same branch condition as the clamp fact above and is not independent of
-    //   it**: given neither clamp inverts, the two have identical widths and
-    //   bounds differing by exactly `2 * siblings`, so `right - left` is
-    //   `2 * siblings` whatever `page` is and the total is always
-    //   `2 * boundaries + 2 * siblings + 3` - `window`, which is what
-    //   `with_capacity` below is given. Move one of these without the other and
-    //   the survivor loses its footing. (Karen3, reviewing C4.)
-    //
-    // The test sweep and this derivation are not the same evidence, and the
-    // difference is worth keeping. The sweep establishes that the width was
-    // constant for `total` 1..39; the derivation is why it is constant at
-    // `window` for every `total`. A reader who sees only the sweep will take
-    // the bound for empirical and re-run it after any change.
-    //
-    // Proved rather than sampled: a u32 underflow or overflow panics in debug
-    // and wraps in release, and neither shows up in a test that only walks the
-    // pinned table.
+    // `total > window` keeps both clamp ranges `total - window` wide, so nothing
+    // inverts or underflows and `right - left` is always `2 * siblings`.
     let left = (page.saturating_sub(siblings))
         .clamp(boundaries + 2, total - boundaries - 2 * siblings - 1);
     let right = page
@@ -192,9 +144,7 @@ mod tests {
         assert!(strip(20, 10, 1, 0).starts_with("1 …"));
     }
 
-    /// The three properties the whole design rests on, over the range the plan
-    /// claims them for. The pinned table is a sample; these are the reason it
-    /// looks the way it does.
+    /// Order, no one-page gap and a constant width, over a sweep of inputs.
     #[test]
     fn the_invariants_hold_across_the_sweep() {
         for total in 1..=39u32 {
@@ -210,8 +160,7 @@ mod tests {
                             "total={total} siblings={siblings} boundaries={boundaries} page={page}"
                         );
 
-                        // Pages strictly increase, so nothing is repeated or
-                        // out of order.
+                        // Pages strictly increase.
                         let pages: Vec<u32> = items
                             .iter()
                             .filter_map(|item| match item {
@@ -224,11 +173,8 @@ mod tests {
                             "pages out of order at {where_}: {pages:?}"
                         );
 
-                        // An ellipsis always stands for two pages or more.
-                        // `index - 1` and `index + 1` cannot go out of bounds:
-                        // `boundaries >= 1` puts a page before every ellipsis,
-                        // and the trailing boundary pages are pushed after the
-                        // second one.
+                        // An ellipsis stands for two pages or more; boundary pages
+                        // flank each one, so `index ± 1` is in bounds.
                         for index in 0..items.len() {
                             if at(index) != PaginationItem::Ellipsis {
                                 continue;

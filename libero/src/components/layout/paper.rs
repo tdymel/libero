@@ -11,25 +11,16 @@ use crate::{
     theme::{Gradient, PAPER_BORDER_COLOR, PaperDefaults, Size, gradient_surface_sx},
 };
 
-/// The library's one definition of a surface, as an `Sx` to build on.
+/// The library's surface as an `Sx`, to build a [`PaperProps::framework_sx`] on,
+/// which replaces `Paper`'s own base. Chained declarations override its defaults.
 ///
-/// Public because [`PaperProps::framework_sx`] is: that prop **replaces**
-/// `Paper`'s own base rather than layering on it, so without this a caller
-/// outside the crate could only use it to delete the surface.
-///
-/// A component that renders a surface in bulk, or that would rather not pay
-/// for a `Paper` scope, starts its own base static here and chains its own
-/// declarations on top - `Dialog` is the worked example. Everything else
-/// renders a [`Paper`].
-///
-/// The `radius`/`shadow` steps arrive as `data-state` tokens and the themed
-/// defaults as plain declarations, so chaining `border_radius`/`box_shadow`
-/// on top of this overrides the default without fighting a `[data-state]`
-/// block's specificity.
+/// ```
+/// # use libero::{components::paper_sx, sx::StaticSx};
+/// static CARD_SX: StaticSx = StaticSx::new(|| paper_sx().padding("lg"));
+/// ```
 pub fn paper_sx() -> Sx {
     PaperDefaults::theme_vars()
-        // A surface is a block, and it drops
-        // the underline so `component: "a"` reads as a card, not as a link.
+        // No underline, so `component: "a"` reads as a card, not as a link.
         .display("block")
         .text_decoration("none")
         .when(
@@ -47,67 +38,54 @@ pub fn paper_sx() -> Sx {
 static PAPER_BASE_SX: StaticSx = StaticSx::new(paper_sx);
 
 base_props! {
-    // `href`/`target`: a surface rendered as an `<a>` is a clickable card, and
-    // the base is written for it.
+    // `href`/`target`: a surface rendered as an `<a>` is a clickable card.
     extends(a);
     pub struct PaperProps {
-        /// Corner radius, a step on the shared radius scale. An off-scale
-        /// value goes through `sx` instead: `sx: sx().border_radius("2px")`.
+        /// Corner radius, a step on the radius scale.
         #[props(default, into)]
         radius: Input<Size>,
-        /// Elevation, a step on the shared shadow scale. A flat surface is
-        /// `sx: sx().box_shadow("none")`, the way `Image` spells it.
+        /// Elevation, a step on the shadow scale.
         #[props(default, into)]
         shadow: Input<Size>,
-        /// A hairline border in the themed surface border colour. Legal
-        /// together with a shadow - that is a design choice, not a misuse.
+        /// A hairline border in the themed surface border colour.
         #[props(default)]
         bordered: bool,
-        /// Frosted glass: translucent, blurring what is behind it, tuned by
-        /// the theme's `glass_background`/`glass_blur`. Meant over app chrome,
-        /// not imagery. Opaque under reduced transparency, forced colours and
-        /// natively, where Blitz draws no backdrop blur.
+        /// Frosted glass; opaque where it can't blur (natively, reduced transparency).
         #[props(default)]
         glass: bool,
-        /// A linear gradient fill, labelled in whichever end of the page reads
-        /// on it. `Gradient::default()` is the theme's; with `glass`, its stops
-        /// turn translucent. Descendants on the theme's gradient inherit it.
+        /// A linear gradient fill; `Gradient::default()` is the theme's.
         #[props(default)]
         gradient: Option<Gradient>,
-        /// Which element to render as - `div` by default. `section`,
-        /// `article`, `aside` and `a` are the ones worth naming; a surface
-        /// that becomes a landmark owns its own `aria-label`.
+        /// Which element to render as - `div` by default.
         #[props(default, into)]
         component: Input<HtmlTag>,
-        /// Per-instance CSS custom properties on the `style` attribute, for a
-        /// component built on `Paper`.
+        /// Per-instance CSS custom properties, for a component built on `Paper`.
         #[props(default, into)]
         variables: Input<Variables>,
-        /// Base styles of a component built on `Paper`, on the framework
-        /// layer. It **replaces** `Paper`'s own base rather than layering on
-        /// it, so build it from [`paper_sx`].
+        /// Replaces `Paper`'s base styles; build it from [`paper_sx`].
         #[props(default)]
         framework_sx: Option<&'static StaticSx>,
         children: Element,
     }
 }
 
-/// A surface: a background, a corner radius, an elevation, optionally a
-/// border. No role, no ARIA and nothing focusable - a surface is
-/// presentational, and the contents are what a reader interacts with.
+/// A surface: a background, a corner radius, an elevation, optionally a border.
 ///
-/// ```no_run
+/// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Paper, Text, Title};
 /// # use libero::sx::sx;
 /// # fn app() -> Element {
-/// # rsx! {
-/// Paper { shadow: "sm", radius: "md", sx: sx().padding("lg"),
-///     Title { size: "md", "Invoice #4021" }
-///     Text { "Due 30 September." }
+/// rsx! {
+///     Paper { shadow: "sm", radius: "md", sx: sx().padding("lg"),
+///         Title { size: "md", "Invoice #4021" }
+///         Text { "Due 30 September." }
+///     }
 /// }
-/// # } }
+/// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/layout/paper>
 #[component]
 pub fn Paper(props: PaperProps) -> Element {
     let states = paper_states(&props);
@@ -128,20 +106,8 @@ pub fn Paper(props: PaperProps) -> Element {
         )
 }
 
-/// The caller's states plus a token per axis the caller actually set.
-///
-/// **This deliberately diverges from `Button`**, which always emits its
-/// `size`/`radius` token and defaults it from the theme. `Paper` emits one
-/// only for a step the caller named; with the prop unset there is no token at
-/// all and the themed default arrives as a plain `border-radius:
-/// var(--lsx-paper-radius)` declaration from [`paper_sx`].
-///
-/// The difference is not an omission. A fold is a `[data-state~="radius-lg"]`
-/// block at 0-2-0 and beats a top-level declaration whatever the source order,
-/// so a component building its own base static from [`paper_sx`] - `Dialog`,
-/// and every later surface - could never override the radius or the shadow if
-/// `Paper` always emitted one. The rule: a gate others derive their base from
-/// emits a token only for an explicit step; a leaf component can always emit.
+/// A token only per axis the caller set, unlike `Button`: a `[data-state]` block
+/// would beat the radius or shadow a surface built on [`paper_sx`] chains on.
 fn paper_states(props: &PaperProps) -> Input<States> {
     let radius = props.radius.as_ref();
     let shadow = props.shadow.as_ref();
@@ -307,8 +273,7 @@ mod tests {
             css.contains("border:1px solid var(--lsx-paper-border-color);"),
             "{css}"
         );
-        // `background()` publishes this for free only for a colour it can
-        // read; a `var()` is opaque to it, so the surface owes it by hand.
+        // `background()` can't read a `var()`, so the surface publishes it by hand.
         assert!(
             css.contains("--lsx-focus-contrast:var(--lsx-paper-contrast);"),
             "{css}"

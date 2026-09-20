@@ -23,11 +23,8 @@ use crate::{
 };
 
 str_enum! {
-    /// What a step's marker shows.
-    ///
-    /// Three of the four are derived from `active`'s position; `Error` is the
-    /// one only the application knows, which is why `Stepper::state` is an
-    /// override rather than a source.
+    /// What a step's marker shows. Derived from the order, except `Error`,
+    /// which only `Stepper::state` sets.
     pub enum StepState {
         /// Not reached yet: a ring around the step's number.
         #[default]
@@ -36,14 +33,12 @@ str_enum! {
         Active = "active",
         /// Before the current one: a filled marker with a check.
         Completed = "completed",
-        /// Filled in the error colour with a cross. Changes only the marker -
-        /// an errored active step is still the current one.
+        /// Filled in the error colour with a cross; an errored step can still be current.
         Error = "error",
     }
 }
 
-/// Per step: the connector's colour, resolved on the `<li>` so one rule
-/// serves every step and the accent flips on a `data-state` token.
+/// The connector's colour, set per `<li>` so a `data-state` token flips it.
 const STEPPER_CONNECTOR: CssVar = CssVar::new("--lsx-stepper-connector");
 
 /// The root's container name, which the side-label fallback queries.
@@ -100,14 +95,12 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         .font("inherit")
         .color("inherit")
         .text_align_start()
-        // A long unbreakable word wraps inside the step instead of widening a
-        // narrow page (1.4.10).
+        // A long word wraps instead of widening a narrow page (1.4.10).
         .with("overflow-wrap", "anywhere")
         // No min-content measure: Blitz kept a label broken per glyph from one (734).
         .min_width("0")
         .selector("& [data-step-marker]", marker)
-        // At least a marker tall and centred, so a one-line label sits on the
-        // marker's middle and a label with a description grows downward.
+        // A marker tall and centred: one line sits on the marker's middle, more grow down.
         .selector(
             "& [data-step-body]",
             sx().display("flex")
@@ -123,11 +116,8 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                 .color(STEPPER_DESCRIPTION_COLOR.value()),
         );
 
-    // The horizontal connector is a flex item *before* each step but the
-    // first, so it is drawn between the previous marker and this one. Its
-    // top edge sits at `Rail::connector_start`, the same centreline the
-    // vertical rail uses, because the marker is at the top of every step in
-    // both label positions.
+    // The connector is a `::before` flex item on each step but the first, at
+    // `Rail::connector_start`, the vertical rail's centreline.
     let horizontal = sx()
         .selector(
             "& > ol",
@@ -144,8 +134,7 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                 .flex("1 1 auto")
                 .min_width(STEPPER_SPACING.value())
                 .margin_top(rail.connector_start())
-                // The gap a marker keeps from its own label, so a connector
-                // sits as close to a marker as the label does.
+                // As close to a marker as its label sits.
                 .margin_left(STEPPER_GAP.value())
                 .margin_right(STEPPER_GAP.value())
                 .border_top(format!("{} solid {}", rail.line, rail.color)),
@@ -161,16 +150,13 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
             .align_items("center")
             .text_align("center"),
     );
-    // Three side-labelled steps need ~360px; narrower, they broke words
-    // mid-word, so they stack as `below` does (1.4.10). Blitz has no
-    // container queries: natively only a narrow window stacks them.
+    // Under ~360px side labels broke mid-word, so they stack (1.4.10). Blitz has
+    // no container queries: natively only a narrow window stacks them.
     let side = sx()
         .container_query(STEPPER_CONTAINER, NARROW, below.clone())
         .media(NARROW, below.clone());
 
-    // Everything hangs off the item's own inline-start edge, the origin
-    // `Rail` measures from: the marker sits at it, the rail runs from under
-    // the marker to the next step, and content clears the marker by one gap.
+    // Marker, rail and content inset all measure from the item's inline-start edge.
     let vertical = sx()
         .selector(
             "& > ol",
@@ -202,8 +188,7 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
 
     StepperDefaults::theme_vars()
         .display("block")
-        // Fills its column: the horizontal connectors share whatever width
-        // there is, and in a flex parent there would otherwise be none.
+        // Else a flex parent leaves the connectors no width to share.
         .width("100%")
         .container(STEPPER_CONTAINER)
         .selector(
@@ -226,10 +211,8 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
             "& > ol > li > button[data-step-header]",
             sx().cursor("pointer"),
         )
-        // `appearance: none` and `border: 0` take the UA ring with the
-        // button, and a non-clickable header only ever takes focus from the
-        // focus return - it needs a ring then too. Doubled to outrank a
-        // `Button`'s own ring whatever the stylesheet order, as `Carousel`.
+        // Also on a non-clickable header, which the focus return focuses. Doubled
+        // to outrank a `Button`'s ring whatever the order, as `Carousel`.
         .selector(
             "& > ol > li > [data-step-header]:focus-visible:focus-visible",
             focus_ring_sx().outline_offset("2px").border_radius("4px"),
@@ -251,14 +234,12 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
                 .border_color(STEPPER_ERROR.value())
                 .color(STEPPER_ERROR_CONTRAST.value()),
         )
-        // The house on-state ring inside the current marker, so current and
-        // pending differ in shape too; an errored current step keeps it.
+        // On-state ring, so current and pending differ in shape too.
         .selector(
             "& > ol > li > [aria-current=\"step\"] [data-step-marker]",
             on_ring_sx(None),
         )
-        // Forced colours paint every fill `Canvas` and every ring `CanvasText`:
-        // the completed fill and the current ring would vanish into the rest.
+        // Forced colours would flatten the completed fill and current ring into the rest.
         .media(
             FORCED_COLORS,
             sx().selector(
@@ -307,8 +288,7 @@ pub(crate) struct StepSpec {
     pub description: Option<String>,
     /// What the marker shows: the derived state, or the caller's override.
     pub state: StepState,
-    /// The step's body. Filled for every step in the vertical arm, where a
-    /// closing step animates out around its content; empty otherwise.
+    /// The step's body; filled only when vertical.
     pub content: Element,
 }
 
@@ -316,8 +296,7 @@ pub(crate) struct StepperView {
     pub steps: Vec<StepSpec>,
     /// How many steps are behind the current one. Every step when finished.
     pub reached: usize,
-    /// The current step. `None` when every step is finished, or when
-    /// `active` is not among the steps.
+    /// `None` when every step is finished or `active` is not a step.
     pub current: Option<usize>,
     /// The horizontal arm's one content region, for `current`.
     pub content: Option<Element>,
@@ -326,8 +305,7 @@ pub(crate) struct StepperView {
     pub orientation: Orientation,
     pub label_position: StepLabelPosition,
     pub size: Size,
-    /// Only a per-instance override; the theme's colour is already on `:root`.
-    /// `(text role, fill role, the foreground on the fill)`.
+    /// Per-instance override: `(text, fill, foreground on the fill)`.
     pub color: Option<(String, String, Option<String>)>,
     pub completed_label: &'static str,
     pub error_label: &'static str,
@@ -337,8 +315,7 @@ pub(crate) struct StepperView {
     pub attributes: Vec<Attribute>,
 }
 
-/// The state a step's position gives it: behind the current step is done,
-/// the current one is active, the rest are still to come.
+/// The state a step's position gives it.
 pub(crate) fn derived_state(index: usize, reached: usize, current: Option<usize>) -> StepState {
     if current == Some(index) {
         StepState::Active
@@ -349,8 +326,7 @@ pub(crate) fn derived_state(index: usize, reached: usize, current: Option<usize>
     }
 }
 
-/// A plain `fn`, not a component: `Vec<Element>` props defeat memoization, so
-/// a scope here would cost a scope and buy nothing.
+/// A plain `fn`: `Vec<Element>` props defeat memoization, so a scope buys nothing.
 pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
     let StepperView {
         steps,
@@ -374,18 +350,8 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
     let vertical = orientation == Orientation::Vertical;
     let root_element = use_element();
 
-    // Focus return. A step's content goes away when `active` moves - it
-    // collapses in the vertical arm and is swapped out in the horizontal one -
-    // and the usual way `active` moves is a "Continue" button *inside* that
-    // content, which drops focus to `<body>`. The destination is the step the
-    // user is now on, `aria-current`, the `Pagination` anchor-point rule: it
-    // exists whatever was clicked, and Tab from it reaches that step's content.
-    // When every step is finished there is no current one, and the step that
-    // just closed takes it back instead.
-    //
-    // Checked during render against the DOM the previous render left, as
-    // `Accordion` does: by the time an effect runs a zero-duration panel is
-    // already gone. The move itself waits for the effect.
+    // A "Continue" inside closing content drops focus: move it to the current step,
+    // or the closed one when finished. Checked in render, as `Accordion` does.
     let previous = use_hook(|| Rc::new(RefCell::new(current)));
     let closing = use_closing_focus(root_element);
     {
@@ -426,9 +392,8 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
     let last = steps.len().saturating_sub(1);
     let items = steps.into_iter().enumerate().map(|(index, step)| {
         let derived = derived_state(index, reached, current);
-        // The connector a step carries is the one *before* it horizontally
-        // and the one *after* it vertically; either way it is accented once
-        // the step it leads away from is done.
+        // A step's connector is before it horizontally, after it vertically;
+        // accented once the step it leaves is done.
         let line_active = if vertical {
             derived == StepState::Completed && index < last
         } else {
@@ -472,8 +437,7 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         _ => rsx! {},
     };
 
-    // The caller's name belongs on the list: `aria-label` is prohibited on
-    // the role-less root.
+    // The caller's name goes on the list: `aria-label` is prohibited on the role-less root.
     let (naming, attributes): (Vec<Attribute>, Vec<Attribute>) = attributes
         .into_iter()
         .partition(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
@@ -490,16 +454,14 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
             HtmlTag::Div,
             attributes,
             rsx! {
-                // The explicit role is not redundant: Safari with VoiceOver
-                // drops list semantics from a `list-style: none` list.
+                // Safari with VoiceOver drops list semantics from a `list-style: none` list.
                 ol { role: "list", ..naming, {items.into_iter()} }
                 {region}
             },
         )
 }
 
-/// One step. Its own scope, so a move redraws the steps it changes and the
-/// rest skip; `rich` and a vertical step's `content` are drawn and never do.
+/// One step, its own scope so a move redraws only the steps it changes.
 #[component]
 fn StepItem(
     index: usize,
@@ -534,8 +496,7 @@ fn StepItem(
     };
     // Every part is a `span`: a `<button>` takes phrasing content only.
     let inner = rsx! {
-        // The number repeats the list's own position, and the glyphs are
-        // drawing; the status text below is what a reader gets.
+        // Decorative; readers get the status text below.
         span { "data-step-marker": "", "aria-hidden": "true", {marker} }
         span { "data-step-body": "",
             // Name and status in one text node: Chromium puts a space
@@ -556,9 +517,7 @@ fn StepItem(
         }
     };
 
-    // `aria-current` on the step's own element rather than the `<li>`:
-    // tabbing to a button announces the button, not its list item, so on the
-    // `<li>` a keyboard user would never hear which step is current.
+    // `aria-current` on the header, not the `<li>`, which tabbing never announces.
     let header = match onstepclick {
         Some(onstepclick) => rsx! {
             button {
@@ -570,8 +529,7 @@ fn StepItem(
                 {inner}
             }
         },
-        // Not a control, so no tab stop - but `tabindex="-1"` lets the focus
-        // return land here when the steps are not clickable.
+        // No tab stop, but `tabindex="-1"` lets the focus return land here.
         None => rsx! {
             span {
                 id: "{header_id}",

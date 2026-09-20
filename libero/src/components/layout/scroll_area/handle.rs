@@ -6,14 +6,10 @@ use crate::{
     platform::{ElementApi, when_laid_out},
 };
 
-/// Scrolls a [`ScrollArea`](super::ScrollArea) from an event handler.
+/// Scrolls a [`ScrollArea`](super::ScrollArea) from an event handler. Unlike
+/// the percent props, every call scrolls; before mount it does nothing.
 ///
-/// The percent props are declarative: they re-apply only when their value
-/// changes, so asking for the same position twice - after the reader has
-/// scrolled away in between - does nothing. A handle is a command, and every
-/// call scrolls.
-///
-/// ```no_run
+/// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Button, ScrollArea, use_scroll_area};
 /// # fn app() -> Element {
@@ -24,13 +20,9 @@ use crate::{
 /// }
 /// # }
 /// ```
-///
-/// `Copy`, so any number of handlers can hold it. A call before the bound
-/// `ScrollArea` has mounted, or with none bound at all, does nothing.
 #[derive(Clone, Copy, PartialEq)]
 pub struct ScrollAreaHandle {
-    /// Crate-wide so a component built on `ScrollArea` (`Scroller`,
-    /// `Carousel`) can read px offsets for a drag or a step.
+    /// For `Scroller` and `Carousel` to read px offsets for a drag or a step.
     pub(crate) element: ElementHandle,
 }
 
@@ -74,11 +66,8 @@ fn percent_offset(pct: Option<f64>, max: f64, current: f64) -> f64 {
     pct.map_or(current, |pct| max.max(0.0) * pct.clamp(0.0, 100.0) / 100.0)
 }
 
-/// Shared by the handle and the `scroll_position_*` props.
-///
-/// Started here, awaited in the task: a read resolves where it is called (see
-/// `ElementApi::dimensions`). Off the web each is a round-trip, so the
-/// awaiting has to happen in a task rather than inline.
+/// Shared by the handle and the `scroll_position_*` props. Reads start here and
+/// are awaited in a task: off the web each is a round-trip.
 pub(super) fn scroll_to_percent(root: ElementHandle, x: Option<f64>, y: Option<f64>) {
     scroll_to_percent_tried(root, x, y, UNLAID_TRIES);
 }

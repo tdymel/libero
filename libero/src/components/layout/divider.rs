@@ -24,6 +24,7 @@ fn divider_color_value(value: &ThemeAwareValue) -> ThemeAwareValue {
 }
 
 str_enum! {
+    /// Where a [`Divider`]'s label sits along the line.
     pub enum LabelPosition {
         Start = "start",
         #[default]
@@ -42,7 +43,6 @@ fn divider_color() -> String {
     DIVIDER_COLOR_VAR.value_or(ColorCss::MUTED.value(ColorShade::S4))
 }
 
-/// The line thickness for the current `size`.
 fn divider_line() -> String {
     DIVIDER_LINE.value()
 }
@@ -151,14 +151,31 @@ base_props! {
         size: Input<Size>,
         #[props(default, into)]
         label_position: Input<LabelPosition>,
+        /// Margin on both sides of the line.
         #[props(default, into)]
         spacing: Input<ThemeAwareValue>,
+        /// A bare color is tinted to its shade 3.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// An optional label, which also names the separator.
         children: Option<Element>,
     }
 }
 
+/// A horizontal or vertical separator line, optionally labelled.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::Divider;
+/// # fn app() -> Element {
+/// rsx! {
+///     Divider {}
+///     Divider { "or" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/layout/divider>
 #[component]
 pub fn Divider(props: DividerProps) -> Element {
     let orientation = props.orientation.copied_or(Orientation::Horizontal);
@@ -183,9 +200,7 @@ pub fn Divider(props: DividerProps) -> Element {
     let data_state = divider_states.data_state();
     let aria_orientation = vertical.then_some("vertical");
 
-    // The label span carries only a static framework style, so it needs a
-    // class rather than a component: `use_css` unconditionally, then the
-    // element only when there is a label.
+    // A static class, not a component: `use_css` always, the span only with a label.
     let label_class = use_css(
         Some(if vertical {
             &DIVIDER_LABEL_VERTICAL_SX

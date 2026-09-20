@@ -32,10 +32,7 @@ pub use grid::{
 pub use header::{Header, HeaderPosition, HeaderProps};
 // A `Box` rendered as a link, here so buttons and navigation share it one-way.
 pub(crate) use internal_anchor::{InternalAnchor, render_anchor};
-/// The surface definition itself, for a component that renders one as part of
-/// its own element instead of nesting a `Paper` - see `PaperProps::framework_sx`.
-pub use paper::paper_sx;
-pub use paper::{Paper, PaperProps};
+pub use paper::{Paper, PaperProps, paper_sx};
 pub use scroll_area::{
     ScrollArea, ScrollAreaHandle, ScrollAreaProps, ScrollPositionEvent, Virtualize, use_scroll_area,
 };

@@ -12,12 +12,7 @@ use crate::{
     theme::{FLEX_ALIGN_VAR, FLEX_JUSTIFY_VAR, FLEX_WRAP_VAR, FlexDefaults, Size, SizeCss},
 };
 
-/*
- * Notes:
- * - An option to give every child the same width is missing.
- *   We should at least provide a variable to use it on children.
- *   Not sure if we should provide a similar API.
- */
+// Missing: an option, or at least a variable, to give every child the same width.
 
 str_enum! {
     pub enum FlexDirection {
@@ -71,8 +66,7 @@ mod tests {
     }
 }
 
-// Column is the unconditional base and `row` overrides it. `gap` folds in
-// afterwards, so an explicit `gap` beats either axis's default spacing.
+// `gap` folds in after `row`, so it beats either axis's default spacing.
 // The per-instance vars reset to `initial` so a nested Flex does not inherit them.
 static FLEX_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = sx()
@@ -101,20 +95,40 @@ fn flex_variables(props: &FlexProps) -> Variables {
 
 base_props! {
     pub struct FlexProps {
+        /// `align-items`.
         #[props(default, into)]
         align: Input<ThemeAwareValue>,
+        /// `justify-content`.
         #[props(default, into)]
         justify: Input<ThemeAwareValue>,
         #[props(default, into)]
         gap: Input<Size>,
+        /// `column` by default.
         #[props(default, into)]
         direction: Input<FlexDirection>,
+        /// `true` or `FlexWrap::Wrap` wraps.
         #[props(default, into)]
         wrap: Input<FlexWrap>,
         children: Element,
     }
 }
 
+/// Lays its children out in a column or a row, with a themed gap.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, Flex};
+/// # fn app() -> Element {
+/// rsx! {
+///     Flex { direction: "row", gap: "sm",
+///         Button { "Save" }
+///         Button { "Cancel" }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/layout/flex>
 #[component]
 pub fn Flex(props: FlexProps) -> Element {
     let direction = props.direction.copied_or_default();

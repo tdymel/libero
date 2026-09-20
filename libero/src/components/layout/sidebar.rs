@@ -14,8 +14,6 @@ pub use crate::theme::SidebarSide;
 
 input_from_str!(SidebarSide);
 
-// A sidebar is usually a flex item that must not be squeezed. This only sizes
-// the panel; the scrolling is `ScrollArea`'s job.
 static SIDEBAR_SCROLL_SX: StaticSx = StaticSx::new(|| sx().padding("lg"));
 
 static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -46,9 +44,7 @@ static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub struct SidebarProps {
-        /// Which edge this panel borders and which axis `size` applies to.
-        /// It does not place the panel - an in-flow item is positioned by its
-        /// parent's layout, so put it at the matching end of the DOM yourself.
+        /// The edge it borders and the axis `size` sizes; it does not place the panel.
         #[props(default, into)]
         side: Input<SidebarSide>,
         #[props(default, into)]
@@ -60,9 +56,23 @@ base_props! {
     }
 }
 
-/// An in-flow panel bordering one edge of its parent, scrolling its own
-/// content - a sidebar, nav rail or inspector. For the portaled, dimmed,
-/// focus-trapped kind, see [`crate::hooks::use_drawer`].
+/// An in-flow panel bordering one edge of its parent, scrolling its own content.
+/// For the modal kind, see [`crate::hooks::use_drawer`].
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Flex, Sidebar};
+/// # fn app() -> Element {
+/// rsx! {
+///     Flex { direction: "row",
+///         Sidebar { aria_label: "Filters", "Filters" }
+///         main { "Results" }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/layout/sidebar>
 #[component]
 pub fn Sidebar(props: SidebarProps) -> Element {
     let side = props.side.copied_or_default();

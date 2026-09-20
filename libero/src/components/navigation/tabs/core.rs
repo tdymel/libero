@@ -26,9 +26,8 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
         .display("block")
         .selector(
             "& > [role=\"tablist\"]",
-            // Scrolls inside itself, so a crowded strip does not widen the
-            // page (WCAG 1.4.10). The line is an inset shadow: a border
-            // would clip the selected tab's underline where they overlap.
+            // Scrolls inside itself (1.4.10). An inset shadow, as a border would
+            // clip the selected tab's underline.
             sx().display("flex")
                 .align_items("stretch")
                 .overflow_x("auto")
@@ -36,8 +35,7 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& [role=\"tab\"]",
-            // A flex line, so a rich label (an icon beside the text) sits on
-            // the text's centre rather than its baseline.
+            // Centres a rich label's icon on the text.
             sx().display("inline-flex")
                 .align_items("center")
                 .justify_content("center")
@@ -49,17 +47,13 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 .padding(format!("{} {}", TABS_PAD_Y.value(), TABS_PAD_X.value()))
                 .font("inherit")
                 .color("inherit")
-                // Sized to the whole label so a crowded strip scrolls, but never
-                // wider than the strip: a longer label wraps (1.4.10).
+                // The strip scrolls; a label wider than it wraps (1.4.10).
                 .flex_shrink("0")
                 .max_width("100%")
                 .with("overflow-wrap", "anywhere")
                 .cursor("pointer"),
         )
-        // `appearance: none` and `border: 0` above take the UA's own focus
-        // ring with them, so the tab has to draw one or keyboard users cannot
-        // see where they are. Inset, because the strip's line sits flush
-        // against the tab's bottom edge and an outset ring would be clipped.
+        // Replaces the UA ring `appearance: none` drops; inset, or the strip clips it.
         .selector(
             "& [role=\"tab\"]:focus-visible",
             inset_focus_ring_sx("-2px"),
@@ -73,8 +67,7 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
             sx().color(TABS_COLOR.value())
                 .border_bottom_color(TABS_COLOR.value()),
         )
-        // Forced colours paint every transparent underline, so each tab would
-        // look selected; system colours keep only the selected one's.
+        // Forced colours paint every transparent underline; keep only the selected one.
         .media(
             FORCED_COLORS,
             sx().selector("& [role=\"tab\"]", sx().border_bottom_color("Canvas"))
@@ -91,17 +84,15 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
             "& > [role=\"tabpanel\"]",
             sx().padding_top(SizeCss::SPACING.value(Size::Md)),
         )
-        // The panel is a tab stop too, and without this it gets the UA's
-        // outline rather than the house ring. Doubled to outrank a component's
-        // own ring whatever the stylesheet order, as `Carousel`.
+        // The panel is a tab stop too. Doubled to outrank a component's own ring
+        // whatever the order, as `Carousel`.
         .selector(
             "& > [role=\"tabpanel\"]:focus-visible:focus-visible",
             focus_ring_sx(),
         )
         .when(
             "full-width",
-            // The root pins its own width, or a flex parent shrinks it to the
-            // tabs and there is nothing for them to share.
+            // Else a flex parent shrinks the root to the tabs.
             sx().width("100%")
                 .selector("& [role=\"tab\"]", sx().flex("1 1 0")),
         )
@@ -125,11 +116,9 @@ pub(crate) struct TabsView {
     pub full_width: bool,
     /// Arrows move the focus only; the tab's own click (Enter, Space) selects.
     pub manual: bool,
-    /// `false` keeps the tabs out of the tab order, as a picker in a dropdown
-    /// whose text input keeps focus.
+    /// `false` keeps the tabs out of the tab order, for a picker in a dropdown.
     pub focusable: bool,
-    /// The panel is a tab stop of its own: APG's rule for a panel whose first
-    /// content cannot take focus.
+    /// The panel is a tab stop (APG, for content that can't take focus).
     pub panel_stop: bool,
     pub size: Size,
     pub class: Input<ClassList>,
@@ -138,8 +127,7 @@ pub(crate) struct TabsView {
     pub attributes: Vec<Attribute>,
 }
 
-/// A plain `fn`, not a component: `Vec<Element>` props defeat memoization, so
-/// a scope here would cost a scope and buy nothing.
+/// A plain `fn`: `Vec<Element>` props defeat memoization, so a scope buys nothing.
 pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     let TabsView {
         tabs,
@@ -159,9 +147,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     } = view;
 
     let disabled: Vec<bool> = tabs.iter().map(|tab| tab.disabled).collect();
-    // One tab stop for the strip: the focused tab, so Tab leaves from there
-    // (manual mode, a clicked disabled tab); else the selected tab, or the
-    // first enabled one when `value` is not among the tabs.
+    // One tab stop: the focused tab, else the selected one, else the first enabled.
     let mut focused = use_signal(|| None::<usize>);
     let tab_stop = focused()
         .filter(|&index| index < tabs.len())
@@ -181,8 +167,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         },
     );
     let keydown_root = root.clone();
-    // Steps from the focused tab: a click focuses a disabled tab without
-    // selecting it.
+    // From the focused tab, which may be a clicked disabled one.
     let onkeydown = use_callback(move |(at, event): (usize, Event<KeyboardData>)| {
         if has_shortcut_modifier(&event) {
             return;
@@ -198,8 +183,6 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
             return;
         };
         event.prevent_default();
-        // Auto activation: the selection follows the focus, so the strip
-        // behaves like one control rather than a row of buttons.
         if !manual {
             onselect.call(next);
         }
@@ -217,12 +200,10 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         .with(size.state_name(), true)
         .with("full-width", full_width)
         .into();
-    // The selected tab's own label, so the text role - the underline under
-    // it takes the same colour rather than a second one.
+    // The text role, shared by the selected label and its underline.
     let variables: Input<Variables> = variables().with(TABS_COLOR, text_color(&color)).into();
 
-    // The caller's name belongs on the tablist: `aria-label` is prohibited on
-    // the role-less root (APG).
+    // The caller's name goes on the tablist: `aria-label` is prohibited on the role-less root.
     let (naming, attributes): (Vec<Attribute>, Vec<Attribute>) = attributes
         .into_iter()
         .partition(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
@@ -258,11 +239,9 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                             // Strings, not bools: SSR writes a bare `true`, and the
                             // selected-tab CSS matches on `[aria-selected="true"]`.
                             "aria-selected": if selected == Some(index) { "true" } else { "false" },
-                            // Only the selected panel is rendered, and an id
-                            // that is not in the document is an invalid ref.
+                            // Only the selected panel exists to point at.
                             "aria-controls": (selected == Some(index)).then(|| format!("{root}-panel-{index}")),
-                            // `aria-disabled`, not `disabled`: a disabled tab
-                            // stays reachable, it just cannot be picked.
+                            // Not `disabled`: the tab stays reachable.
                             "aria-disabled": if tab.disabled { "true" } else { "false" },
                             // An empty name leaves the content to name the tab.
                             "aria-label": (!tab.name.is_empty()).then(|| tab.name.clone()),

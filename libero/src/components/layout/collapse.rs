@@ -12,41 +12,12 @@ use crate::{
     theme::{COLLAPSE_DURATION, COLLAPSE_EASING, COLLAPSE_OPACITY_CLOSED},
 };
 
-/// The property the exit transition is measured on, and the one
-/// [`use_presence`](crate::hooks::use_presence) filters `transitionend` by.
-/// The content's own `opacity` bubbles a second event to this same root; it
-/// shares `COLLAPSE_DURATION`, so the two finish together rather than one
-/// arriving early, but the filter is what keeps either from standing in for
-/// the other.
-///
-/// A nested `Collapse` bubbles a matching `grid-template-rows` event towards
-/// this root, and the hook stops it at the inner root, so an inner exit never
-/// ends this one's (todo 36d).
+/// The property `use_presence` filters `transitionend` by; a nested
+/// `Collapse`'s matching event stops at its own root (todo 36d).
 const EXIT_PROPERTY: &str = "grid-template-rows";
 
-/// `0fr` -> `1fr` rather than a measured pixel height: it needs no platform
-/// capability, so web, Blitz, the WebView floor and SSR all behave alike, and
-/// it re-animates for free when the content's own height changes - which a
-/// measured height cannot without a resize observer we do not have.
-///
-/// **The reduced-motion guard lives wherever the transition lives.** Here each
-/// `transition` is declared inside the `when(..)` block whose values it
-/// animates, so each guard is nested inside that same block. A `media`
-/// modifier adds no specificity, so a guard hoisted out beside the conditions
-/// would be 0-1-0 against their 0-2-0 and the motion would still play. If a
-/// transition is ever moved to the base level, its guard moves with it - the
-/// invariant is the pairing, not the nesting. See `docs/public/md/styling.md`,
-/// and `libero/tests/all/collapse.rs`, which asserts the emitted CSS text rather
-/// than trusting the builder.
-///
-/// `visibility` is how a closed panel stops being a tab stop without any JS,
-/// and it sits on the root so a caller's `role="region"` stops being a
-/// landmark too. A zero-length `visibility` transition *delayed by the
-/// duration* keeps the panel visible and announced for the whole close and
-/// drops it out of focus order and the accessibility tree the instant the
-/// animation ends. No `aria-hidden`: it would hide content that is still on
-/// screen and may still hold focus. No `inert` either - it is unimplemented off
-/// the web, `visibility` is portable.
+/// Each reduced-motion guard sits in its transition's `when(..)` block, or loses on specificity.
+/// `visibility`, not `aria-hidden`/`inert`, drops a closed panel from focus and the a11y tree.
 static COLLAPSE_BASE_SX: StaticSx = StaticSx::new(|| {
     let duration = COLLAPSE_DURATION.overridable();
     let rows = format!("{EXIT_PROPERTY} {duration} {}", COLLAPSE_EASING.value());
@@ -63,20 +34,15 @@ static COLLAPSE_BASE_SX: StaticSx = StaticSx::new(|| {
             "closed",
             sx().grid_template_rows("0fr")
                 .visibility("hidden")
-                // Under reduced motion there is no animation to outlast, so
-                // the delay goes with the transition and the panel leaves the
-                // accessibility tree at once.
+                // Delayed so the panel stays announced until the close ends.
                 .transition(format!("{rows}, visibility 0s linear {duration}"))
                 .media(REDUCED_MOTION, sx().transition("none")),
         )
         .selector("& > div", content_sx())
 });
 
-/// `min-height: 0` lets the grid row actually reach zero, and `overflow:
-/// hidden` is load-bearing twice: it clips during the transition, and it stops
-/// the content's own margins collapsing out of the row and holding it open.
-/// Its `visibility` is inherited from the root. Hung off the root's class, so
-/// the content needs no class or style hook of its own.
+/// `min-height: 0` lets the row reach zero; `overflow: hidden` clips and stops
+/// the content's margins from holding the row open.
 fn content_sx() -> Sx {
     let transition = format!(
         "opacity {} {}",
@@ -100,11 +66,7 @@ fn content_sx() -> Sx {
         )
 }
 
-/// Only when the caller set one: an absent `duration` has to leave the theme's
-/// var alone rather than pinning it to the value it happens to hold.
-///
-/// Custom properties inherit, so setting it on the root is what reaches the
-/// content element too.
+/// Unset leaves the theme's var alone.
 fn collapse_variables(duration: Option<u32>) -> Variables {
     variables().with(
         COLLAPSE_DURATION.override_var(),
@@ -114,22 +76,12 @@ fn collapse_variables(duration: Option<u32>) -> Variables {
 
 base_props! {
     pub struct CollapseProps {
-        /// Whether the panel is expanded. Strictly controlled - `Collapse`
-        /// holds no open state of its own, like `Tabs::value`.
+        /// Whether the panel is expanded. Strictly controlled.
         open: bool,
-        /// Keep `children` in the DOM while closed (the default). `false`
-        /// unmounts them when the exit transition ends, which discards
-        /// whatever state they held - a half-typed form does not survive being
-        /// collapsed.
-        ///
-        /// The **root is always in the DOM** either way, so a trigger's
-        /// `aria-controls` always resolves and a caller may put `id`,
-        /// `role="region"` and `aria-labelledby` on it through `attributes`.
-        /// A closed root is `visibility: hidden`, so that landmark closes too.
+        /// Keep `children` in the DOM while closed (the default); the root always stays.
         #[props(default)]
         keep_mounted: Option<bool>,
-        /// Milliseconds, defaulting to `theme.collapse.duration`. `0` disables
-        /// the animation.
+        /// Milliseconds, defaulting to `theme.collapse.duration`. `0` disables it.
         #[props(default)]
         duration: Option<u32>,
         children: Element,
@@ -138,11 +90,7 @@ base_props! {
 
 /// Animates its children's height open and closed.
 ///
-/// Renders no role and no ARIA of its own: the disclosure semantics belong to
-/// whatever owns the trigger, and `Collapse` never sees it. It handles no keys
-/// either, because it focuses nothing.
-///
-/// ```no_run
+/// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Button, Collapse, Text};
 /// # fn app() -> Element {
@@ -158,17 +106,16 @@ base_props! {
 /// }
 /// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/layout/collapse>
 #[component]
 pub fn Collapse(props: CollapseProps) -> Element {
     let theme = use_theme();
     let duration = props.duration.unwrap_or(theme.collapse.duration);
     let keep_mounted = props.keep_mounted.unwrap_or(true);
 
-    // Unconditional, as every hook must be: the `keep_mounted: true` path
-    // ignores `mounted()` but still reads `visible()`, which is what makes the
-    // grid row animate from `0fr` instead of snapping. The duration is the
-    // hook's fallback for an exit that never fires `transitionend` - a zero
-    // duration, reduced motion, or a renderer that runs no transitions.
+    // Also with `keep_mounted`: `visible()` makes the row animate from `0fr`. The
+    // duration is the fallback for an exit that never fires `transitionend`.
     let presence = use_presence(
         props.open,
         EXIT_PROPERTY,
@@ -185,8 +132,7 @@ pub fn Collapse(props: CollapseProps) -> Element {
         .into();
     let variables: Input<Variables> = collapse_variables(props.duration).into();
 
-    // Its own state, not the caller's tokens. Styled from the root's class, so
-    // a plain element rather than a second `use_box`.
+    // Styled from the root's class, so a plain element, not a second `use_box`.
     let content_state = if visible { "open" } else { "closed" };
     let content = rsx! {
         div { "data-state": content_state,

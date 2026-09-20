@@ -14,50 +14,37 @@ use crate::{
 
 input_from_str!(StepLabelPosition);
 
-// Hand-written rather than `base_props!`, which is not generic - as
-// `TabsProps` is.
+// Hand-written: `base_props!` is not generic.
 #[derive(Props, Clone, PartialEq)]
 pub struct StepperProps<T: Options> {
-    /// The current step. `None` means every step is finished: all of them
-    /// show as completed and none is current. Strictly controlled.
+    /// The current step; `None` marks every step completed. Strictly controlled.
     #[props(!optional)]
     value: Option<T>,
-    /// A step's body. Horizontal: called for the current step only, and
-    /// shown below the strip. Vertical: called for every step, and shown
-    /// under its own step while current - a closing step animates out around
-    /// its content, so it has to have some. A closed step's rsx is never
-    /// mounted either way, so it keeps no state.
+    /// A step's body: the current one's below the strip, or each under its step when vertical.
     #[props(default)]
     panel: Option<Callback<T, Element>>,
-    /// The steps to show, in order. Defaults to every `Options::options()`.
+    /// The steps, in order. Defaults to every `Options::options()`.
     #[props(default)]
     options: Option<Vec<T>>,
-    /// Overrides `Options::label`, like `Tabs::option_label`. `OptionLabel::rich`
-    /// draws a label as rsx and still names it.
+    /// Overrides `Options::label`; `OptionLabel::rich` draws rsx.
     #[props(default)]
     option_label: Option<Callback<T, OptionLabel>>,
-    /// A second line under a step's label. An empty string means none.
+    /// A second line under a step's label; empty means none.
     #[props(default)]
     option_description: Option<Callback<T, String>>,
-    /// Overrides the state a step's position gives it. `None` keeps the
-    /// derived one, so a caller names only the step that differs - and this is
-    /// the only way to say `StepState::Error`.
+    /// Overrides a step's derived state; the only way to set `StepState::Error`.
     #[props(default)]
     state: Option<Callback<T, Option<StepState>>>,
-    /// Called with the step a user picked. **Without it the steps are not
-    /// interactive**: they render no buttons and no tab stops.
+    /// The picked step. Without it the steps are not interactive.
     #[props(default)]
     onstepclick: Option<EventHandler<T>>,
-    /// With `onstepclick`, whether steps not reached yet can be picked.
-    /// Defaults to `false`: only the completed steps and the current one.
+    /// Whether steps not reached yet can be picked. Default `false`.
     #[props(default)]
     allow_next_steps: Option<bool>,
-    /// `horizontal` (default) or `vertical`. Vertical shows each step's
-    /// content under the step itself, collapsing the rest.
+    /// `horizontal` (default) or `vertical`.
     #[props(default, into)]
     orientation: Input<Orientation>,
-    /// `side` or `below` the marker. Ignored when vertical. `side` draws as
-    /// `below` in a stepper under 360px wide (natively: a window under 360px).
+    /// `side` or `below` the marker; `side` falls back to `below` under 360px wide.
     #[props(default, into)]
     label_position: Input<StepLabelPosition>,
     #[props(default, into)]
@@ -75,15 +62,9 @@ pub struct StepperProps<T: Options> {
     states: Input<States>,
 }
 
-/// The stages of a process over an enum, with the current one's content.
-/// Controlled: it renders `value` and reports a picked step through
-/// `onstepclick`; moving on is the caller's.
+/// The stages of a process over an enum, with the current step's content.
 ///
-/// The steps are `T::options()` unless `options` narrows them, and `panel`
-/// is a match over `T` - so a step without a body is a compile error.
-/// Completed, current and pending come from the order; `state` adds errors.
-///
-/// ```no_run
+/// ```
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Options, Stepper};
 /// # fn app() -> Element {
@@ -105,14 +86,15 @@ pub struct StepperProps<T: Options> {
 /// # #[component] fn AddressForm() -> Element { rsx! {} }
 /// # #[component] fn OrderSummary() -> Element { rsx! {} }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/navigation/stepper>
 #[component]
 pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
     let root = use_root_id(&props.attributes);
     let theme = use_theme();
     let labels = use_localization().stepper;
 
-    // Hardcoded, not themed: the shared `Orientation` defaults to vertical,
-    // and a themed default would have to move it below `components`.
+    // Not themed: the shared `Orientation` defaults to vertical.
     let orientation = props.orientation.copied_or(Orientation::Horizontal);
     let vertical = orientation == Orientation::Vertical;
 

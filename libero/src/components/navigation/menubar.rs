@@ -29,15 +29,13 @@ use crate::components::overlay::{Menu, MenuEdge, MenuEntry, MenuFocus, MenuState
 
 const TRIGGER: &str = "& [data-menubar-index]";
 
-// The triggers carry no class of their own: styled from the bar, so a row of
-// them costs one class.
+// Triggers are styled from the bar, so a row of them costs one class.
 static MENUBAR_SX: StaticSx = StaticSx::new(|| {
     MenubarDefaults::theme_vars()
         .display("flex")
         .flex_direction("row")
         .align_items("center")
-        // A crowded bar wraps, and a trigger longer than the bar wraps its
-        // label, instead of widening the page (1.4.10).
+        // Bar and long labels wrap instead of widening the page (1.4.10).
         .flex_wrap("wrap")
         .gap(MENUBAR_GAP.value())
         // Each `Menu` wrapper is the flex item. `anywhere` already floors it at a glyph, and
@@ -65,9 +63,7 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
                 .cursor("pointer")
                 .user_select("none"),
         )
-        // Hover, focus and an open menu share one tint - the open menu's
-        // trigger keeps it after the pointer has gone. `Menu`'s items draw the
-        // same.
+        // Hover, focus and an open menu share one tint, as `Menu`'s items.
         .selector(
             "& [data-menubar-index]:hover:not([aria-disabled=\"true\"])",
             sx().background("muted.1"),
@@ -100,6 +96,7 @@ pub struct MenubarMenu {
 }
 
 impl MenubarMenu {
+    /// An enabled menu.
     pub fn new(label: impl Into<String>, items: Vec<MenuEntry>) -> Self {
         Self {
             label: label.into(),
@@ -121,8 +118,7 @@ base_props! {
         /// `role="menubar"` needs a name.
         #[props(into)]
         aria_label: String,
-        /// Whether the arrow keys wrap at the ends - along the bar, and down
-        /// each menu.
+        /// Whether the arrow keys wrap at the ends, along the bar and down each menu.
         #[props(default)]
         loop_focus: Option<bool>,
         /// Which side of its trigger every menu opens on.
@@ -139,9 +135,8 @@ base_props! {
     }
 }
 
-/// Everything the triggers' handlers share. The menu states outlive the list:
-/// one per menu the bar has ever had, so a menu that comes back gets its own
-/// state again, and a switch closes every one of them.
+/// Everything the triggers' handlers share. One menu state per menu the bar
+/// has ever had, so a returning menu gets its own again.
 #[derive(Clone)]
 struct Row {
     bar: ElementHandle,
@@ -187,9 +182,8 @@ impl Row {
         }
     }
 
-    /// Moves the open menu to `index`. Its trigger takes focus first, still
-    /// inside this event, so the menu remembers the trigger as the place to
-    /// hand focus back to - not an item of the menu that is closing.
+    /// Moves the open menu to `index`. Its trigger takes focus first, so the menu
+    /// returns focus there, not to an item of the closing one.
     fn switch(&self, index: usize, focus: MenuFocus) {
         self.focus(index);
         self.close_others(index);
@@ -215,16 +209,26 @@ impl Row {
     }
 }
 
-/// A row of menus - APG's menubar, the desktop application's File / Edit /
-/// View.
+/// A row of menus, the desktop application's File / Edit / View. Each menu is
+/// a [`Menu`]; the bar is one tab stop with at most one menu open.
 ///
-/// The bar owns everything: which menu is open (at most one), and which
-/// trigger is the bar's single tab stop. Left and Right move along the bar, in
-/// an open menu too, and while one menu is open the pointer resting on another
-/// trigger switches to it. Each menu is a [`Menu`], so everything inside one is
-/// `Menu`'s.
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::{MenuItem, Menubar, MenubarMenu};
+/// # fn app() -> Element {
+/// rsx! {
+///     Menubar {
+///         aria_label: "Editor",
+///         menus: vec![
+///             MenubarMenu::new("File", vec![MenuItem::new("Save").onselect(|_| {}).into()]),
+///             MenubarMenu::new("Edit", vec![MenuItem::new("Undo").onselect(|_| {}).into()]),
+///         ],
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// `sx`, `class`, `states` and `attributes` land on the bar.
+/// Docs: <https://libero-ui.dev/navigation/menubar>
 #[component]
 pub fn Menubar(props: MenubarProps) -> Element {
     let theme = use_theme();
@@ -237,9 +241,8 @@ pub fn Menubar(props: MenubarProps) -> Element {
     let touch: Rc<Cell<bool>> = use_hook(|| Rc::new(Cell::new(false)));
     let armed: Rc<Cell<Option<usize>>> = use_hook(|| Rc::new(Cell::new(None)));
 
-    // `use_menu()` in a loop over `menus` would hand hook slots from one menu
-    // to another whenever the list changes length. The states are created
-    // here instead, on first need, and kept - `MenuLevel`'s anchor pool.
+    // Not `use_menu()` in a loop: hook slots would shift with the list's length.
+    // Created on first need and kept, like `MenuLevel`'s anchor pool.
     let pool: Rc<RefCell<Vec<MenuState>>> = use_hook(|| Rc::new(RefCell::new(Vec::new())));
     let len = props.menus.len();
     let states: Rc<[MenuState]> = {
@@ -265,8 +268,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
         armed,
     };
 
-    // The single tab stop: the open menu's trigger, else the one focused
-    // last, else the first.
+    // The tab stop: the open menu's trigger, else the last focused, else the first.
     let tabbable = row
         .open_index()
         .or(current())
@@ -319,8 +321,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
                         let Some(ch) = text.chars().next() else {
                             return;
                         };
-                        // A space is the trigger's own click unless a query is
-                        // being typed.
+                        // A space clicks the trigger unless a query is being typed.
                         if ch == ' ' && !typeahead.is_typing() {
                             return;
                         }
@@ -341,8 +342,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
 
         let onclick = {
             let row = row.clone();
-            // `Menu` toggles this one on the click's way up; the others close
-            // here.
+            // `Menu` toggles this one on the click's way up; the others close here.
             move |_: MouseEvent| {
                 if !disabled {
                     row.close_others(index);
@@ -443,9 +443,8 @@ pub fn Menubar(props: MenubarProps) -> Element {
         .render(HtmlTag::Div, props.attributes, columns)
 }
 
-/// The trigger after (or before) `from` in a row of `len`, or `None` at an end
-/// that does not wrap and for a lone trigger. Disabled triggers count: they
-/// take focus like any other.
+/// The trigger after (or before) `from`, disabled ones included, or `None` at
+/// an end that does not wrap and for a lone trigger.
 fn step(len: usize, from: usize, forward: bool, loop_focus: bool) -> Option<usize> {
     let next = match (forward, from) {
         (true, from) if from + 1 < len => from + 1,

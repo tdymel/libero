@@ -20,24 +20,20 @@ pub(super) struct ContentOffsets {
     pub trailing: f64,
 }
 
-/// The contract between `ScrollArea` and `Virtualize`: geometry down, offsets
-/// back up. Private both ways - neither appears in either component's props,
-/// and `ScrollArea` never reads `Virtualize`.
+/// The private contract between `ScrollArea` and `Virtualize`: geometry down,
+/// offsets back up.
 #[derive(Clone)]
 pub(super) struct ScrollViewport {
-    /// The box holding the rows. It sizes to them, so measuring it gives the
-    /// real content height - `scroll_size` on the container floors at the
-    /// viewport, which a short probe never clears.
+    /// The box holding the rows; unlike the container's, its height isn't
+    /// floored at the viewport.
     pub content: ElementHandle,
     /// `None` until the first measurement lands.
     pub geometry: Signal<Option<ScrollGeometry>>,
     pub offsets: Signal<ContentOffsets>,
-    /// Set by a `Virtualize`: the content box stops being `display: contents`
-    /// and becomes a real box that can carry the offsets.
+    /// Set by a `Virtualize`: the content box becomes a real box for the offsets.
     pub virtualized: Signal<bool>,
-    // A plain cell, not a signal: claiming happens during a child's first
-    // render, and dirtying the ScrollArea's scope from there would cost a
-    // render pass for something nothing draws.
+    // Not a signal: claimed in a child's first render, where dirtying the area
+    // would cost a render pass for nothing drawn.
     claimed: Rc<Cell<bool>>,
 }
 
@@ -87,11 +83,8 @@ fn measurable(px: f64) -> bool {
     px.is_finite() && px > 0.0
 }
 
-/// The rows visible at `geometry`, plus `overscan` beyond each edge.
-///
-/// `pitch` is a row's height *plus the gap below it*, so `count * pitch`
-/// overshoots the real content by one trailing gap - a few px at the very
-/// bottom, against a scroll range of thousands.
+/// The rows visible at `geometry`, plus `overscan` beyond each edge. `pitch`
+/// includes the gap, so the total overshoots by one trailing gap.
 pub(super) fn window(
     count: usize,
     pitch: f64,
@@ -124,10 +117,8 @@ pub(super) fn window(
     }
 }
 
-/// Row pitch from two probe renders - one row tall, then `rows` tall.
-///
-/// The subtraction is the point: whatever else shares the scroll area is a
-/// constant in both heights and cancels, so only the rows are measured.
+/// Row pitch from two probe renders, one row then `rows`: the subtraction
+/// cancels whatever else shares the scroll area.
 pub(super) fn probed_pitch(single: f64, batch: f64, rows: usize) -> Option<f64> {
     let pitch = match rows {
         0 | 1 => single,

@@ -10,8 +10,7 @@ use crate::{
 
 use super::tree_row::TreeRowContext;
 
-// A `<button>` inherits none of the page's type, and `Tree` puts no vertical
-// padding on the row - both are this element's job.
+// The page's type and the row's vertical padding are this button's job.
 static TREE_ITEM_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
@@ -26,8 +25,7 @@ static TREE_ITEM_SX: StaticSx = StaticSx::new(|| {
         .font("inherit")
         .text_align_start()
         .cursor("pointer")
-        // Disabled by its row or by a `Fieldset` (todo 514). A disabled row
-        // already dims itself, so only the Fieldset's case dims here.
+        // Disabled by its row or a `Fieldset` (todo 514); only the Fieldset's case dims here.
         .selector("&:disabled", sx().cursor("not-allowed"))
         .selector(
             "&:disabled:not([aria-disabled=\"true\"] *)",
@@ -43,16 +41,29 @@ base_props! {
     }
 }
 
-/// A row's interactive content, for a custom `render_node`. Renders the
-/// `<button>` `Tree`'s Enter/Space handling looks for, and takes the row's
-/// tab stop and `disabled` from the row itself - so neither can be forgotten.
+/// A button row for a custom `render_node`, taking the row's tab stop and
+/// `disabled`. A link row is a `NavLink` with `TreeNodeRenderArgs::tabindex`.
 ///
-/// A row that is a *link* is `NavLink`, not this: pass it
-/// `TreeNodeRenderArgs::tabindex` yourself.
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Tree, TreeItem, TreeNode, TreeNodeRenderArgs};
+/// # fn app() -> Element {
+/// rsx! {
+///     Tree {
+///         aria_label: "Actions",
+///         data: vec![TreeNode::new("open", "Open")],
+///         render_node: |args: TreeNodeRenderArgs<&'static str>| rsx! {
+///             TreeItem { onclick: |_| {}, "{args.data}" }
+///         },
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/navigation/tree>
 #[component]
 pub fn TreeItem(props: TreeItemProps) -> Element {
-    // Outside a `Tree` there is no roving tab stop to stay out of the way of,
-    // so the button is an ordinary one.
+    // Outside a `Tree`, an ordinary button.
     let row = use_hook(try_consume_context::<TreeRowContext>);
     let (tabindex, disabled) = match row {
         Some(row) => {

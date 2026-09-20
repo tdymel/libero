@@ -27,9 +27,7 @@ pub enum SplitterResizeEvent {
 
 const SPLITTER_A_VAR: CssVar = CssVar::new("--lsx-splitter-a");
 
-/// `value`, or `fallback` with a warning - a bad number from a caller falls
-/// back, it does not crash the page. The theme's own defaults are finite, so
-/// the fallback always is.
+/// `value`, or `fallback` with a warning: a bad number doesn't crash the page.
 fn finite_or(value: f64, fallback: f64, message: &str) -> f64 {
     if value.is_finite() {
         return value;
@@ -72,12 +70,10 @@ fn splitter_variables(a: f64, divider_color: Option<&ThemeAwareValue>) -> Variab
 
 base_props! {
     pub struct SplitterProps {
-        /// Divider line axis - `"vertical"` (default, side-by-side panes) or
-        /// `"horizontal"` (stacked panes).
+        /// Divider line axis: `"vertical"` (default, side by side) or `"horizontal"` (stacked).
         #[props(default, into)]
         orientation: Input<Orientation>,
-        /// Initial % of pane A, clamped to `min_size` at mount. Uncontrolled
-        /// afterward - `onresize` only notifies.
+        /// Initial % of pane A; uncontrolled afterwards.
         initial_size: f64,
         /// % floor applied to both panes, capped at 50.
         #[props(default, into)]
@@ -88,9 +84,7 @@ base_props! {
         divider_color: Input<ThemeAwareValue>,
         #[props(default)]
         onresize: Option<EventHandler<SplitterResizeEvent>>,
-        /// Names the divider, which is a focusable `role="separator"` - after
-        /// the pane it resizes, e.g. `"Resize sidebar"`. An `aria_label` in
-        /// `attributes` would land on the root instead. Unset is a `warn()`.
+        /// Names the divider, after the pane it resizes, e.g. `"Resize sidebar"`.
         #[props(default, into)]
         aria_label: Option<String>,
         /// Pane A (start/top: the right under RTL).
@@ -100,8 +94,25 @@ base_props! {
     }
 }
 
-/// Splits two panes with a draggable/keyboard-resizable divider. Only two
-/// panes - nest another `Splitter` inside a pane for more.
+/// Splits two panes with a divider resizable by drag or keyboard. Nest another
+/// `Splitter` in a pane for more.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::Splitter;
+/// # fn app() -> Element {
+/// rsx! {
+///     Splitter {
+///         initial_size: 30.0,
+///         aria_label: "Resize sidebar",
+///         panel_a: rsx! { "Sidebar" },
+///         panel_b: rsx! { "Editor" },
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/layout/splitter>
 #[component]
 pub fn Splitter(props: SplitterProps) -> Element {
     let theme = use_theme();
@@ -119,9 +130,8 @@ pub fn Splitter(props: SplitterProps) -> Element {
     let orientation = props.orientation.copied_or(Orientation::Vertical);
     let vertical = orientation == Orientation::Vertical;
 
-    // Both panes get the same floor, so anything above 50 leaves no range -
-    // and `f64::clamp` asserts `min <= max`. `clamp` keeps a NaN receiver, so
-    // a non-finite floor has to be dropped before it becomes a bound below.
+    // Above 50 leaves no range and `f64::clamp` asserts `min <= max`; a NaN
+    // survives `clamp`, so it's dropped first.
     let min_size = finite_or(
         props.min_size.copied_or(theme.splitter.min_size),
         theme.splitter.min_size,
@@ -130,9 +140,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
     .clamp(0.0, 50.0);
     let size = props.divider_size.copied_or(theme.splitter.size);
 
-    // `NaN` survives a `clamp` as its receiver, and `a / (a + b)` is `NaN`
-    // when both are 0 - which would write `--lsx-splitter-a:NaN%` and leave
-    // both panes without a size.
+    // A NaN survives `clamp` and would write `--lsx-splitter-a:NaN%`.
     let initial_size = finite_or(
         props.initial_size,
         50.0,
@@ -141,8 +149,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
     let mut a = use_signal(|| initial_size.clamp(min_size, 100.0 - min_size));
     // A `min_size` raised after mount pulls pane A up to the new floor.
     let bounded = move || a().clamp(min_size, 100.0 - min_size);
-    // Container width (vertical) or height (horizontal), measured once at
-    // pointerdown to turn the drag's pixel delta into a percentage.
+    // Measured at pointerdown, to turn the drag's px delta into a percentage.
     let mut container_size = use_signal(|| 0.0_f64);
     let mut start_a = use_signal(|| 0.0_f64);
     // Under RTL a row puts pane A on the right, so moving right shrinks it.
@@ -161,8 +168,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
             onresize.call(event);
         }
     };
-    // `Change` then `End`: a key press or double-click settles on its size at
-    // once, and `End` is where the docs tell a caller to persist the layout.
+    // A key press or double-click settles at once; `End` is where callers persist.
     let settle = move |new_a: f64| {
         let new_a = new_a.clamp(min_size, 100.0 - min_size);
         a.set(new_a);
@@ -301,8 +307,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
     let variables: Input<Variables> =
         splitter_variables(bounded(), props.divider_color.as_ref()).into();
 
-    // The two panes carry a static framework style and nothing else, so they
-    // are classes on plain elements rather than component scopes.
+    // Static styles only, so classes on plain elements, not component scopes.
     let panel_a_class = use_css(Some(&SPLITTER_PANEL_A_SX), CssLayer::Framework);
     let panel_b_class = use_css(Some(&SPLITTER_PANEL_B_SX), CssLayer::Framework);
 

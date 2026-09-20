@@ -26,14 +26,26 @@ fn center_variables(props: &CenterProps) -> Variables {
 
 base_props! {
     pub struct CenterProps {
-        /// `inline-flex` instead of `flex`, so it doesn't stretch to the
-        /// parent's width.
+        /// `inline-flex`, so it doesn't stretch to the parent's width.
         #[props(default)]
         inline: Option<bool>,
         children: Element,
     }
 }
 
+/// Centers its children on both axes.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::Center;
+/// # fn app() -> Element {
+/// rsx! {
+///     Center { "Nothing here yet" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/layout/center>
 #[component]
 pub fn Center(props: CenterProps) -> Element {
     let variables: Input<Variables> = center_variables(&props).into();
@@ -75,8 +87,7 @@ mod tests {
         );
     }
 
-    /// Unset means "leave it to the theme", so the override var must stay
-    /// absent rather than being pinned to `flex`.
+    /// Unset leaves it to the theme: no override var pinned to `flex`.
     #[test]
     fn unset_emits_no_override() {
         assert_eq!(center_variables(&center_props(None)).to_string(), "");

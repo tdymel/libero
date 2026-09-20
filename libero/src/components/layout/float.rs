@@ -48,16 +48,13 @@ static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
             "horizontal-end",
             sx().right("0").rtl(sx().right("auto").left("0")),
         )
-        // Against the viewport rather than the nearest positioned ancestor.
-        // A state rather than a second static sheet, so `fixed` changes one
-        // declaration and the placement rules above serve both arms.
+        // A state, not a second sheet: the placement rules above serve both arms.
         .when("fixed", sx().position("fixed"))
 });
 
 fn float_variables(props: &FloatProps) -> Variables {
     variables()
-        // Through the spacing scale, so a size token is an offset like
-        // anywhere else - `resolve(None)` dropped one silently.
+        // Through the spacing scale: `resolve(None)` dropped a size token silently.
         .with(
             FLOAT_OFFSET_X_VAR,
             props.offset_x.resolve(Some(SizeCss::SPACING)),
@@ -82,24 +79,31 @@ base_props! {
         offset_y: Input<ThemeAwareValue>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
-        /// Place against the viewport (`position: fixed`) instead of the
-        /// nearest `position: relative` ancestor, so it stays put while the
-        /// page scrolls. `placement` and the offsets mean the same thing,
-        /// measured from the viewport's edges.
+        /// Place against the viewport (`position: fixed`) instead.
         #[props(default)]
         fixed: bool,
         children: Element,
     }
 }
 
-/// Anchors `children` to a corner/edge of the nearest `position: relative`
-/// ancestor. The parent must set `position: relative` itself.
+/// Anchors `children` to a corner or edge of the nearest `position: relative`
+/// ancestor, or of the viewport with `fixed`. A `transform`ed ancestor still
+/// traps a fixed one; render it through `use_portal` then.
 ///
-/// With `fixed`, the corner/edge is the viewport's instead - an action bar, a
-/// notification stack, a floating window. **An ancestor with a `transform`,
-/// `filter`, `contain` or `container-type` becomes the containing block of a
-/// fixed element**, which then scrolls and clips with that ancestor. Where the
-/// ancestors are not yours to control, render it through `use_portal`.
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::{components::{Box, Float}, sx::sx};
+/// # fn app() -> Element {
+/// rsx! {
+///     Box { sx: sx().position("relative"),
+///         Float { placement: "top-end", "New" }
+///         "Card"
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/layout/float>
 #[component]
 pub fn Float(props: FloatProps) -> Element {
     let theme = use_theme();
@@ -184,8 +188,7 @@ mod tests {
         }
     }
 
-    /// A size token has no meaning without a scale, and `resolve(None)` used
-    /// to drop it - the offset silently did nothing.
+    /// `resolve(None)` used to drop a size token silently.
     #[test]
     fn a_size_offset_resolves_through_the_spacing_scale() {
         let variables = float_variables(&props(Size::Md.into()));
@@ -200,8 +203,7 @@ mod tests {
         );
     }
 
-    /// The spacing scale has no negative sizes, so pushing a float outward
-    /// from a `top`/`start` edge needs `-md` rather than a raw pixel value.
+    /// The scale has no negative sizes, so an outward push takes `-md`.
     #[test]
     fn a_negated_size_offset_resolves_through_the_spacing_scale() {
         let variables = float_variables(&props(Input::from("-md")));

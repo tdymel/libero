@@ -79,23 +79,33 @@ base_props! {
     pub struct AnchorProps {
         #[props(default, into)]
         size: Input<Size>,
-        /// A path/URL or a typed route (`Route::Foo {}`). With a router
-        /// mounted and `target` unset or `"_blank"`, an internal target gets
-        /// SPA navigation; otherwise a plain `href`.
+        /// A path/URL or a typed route (`Route::Foo {}`); router navigation when mounted.
         #[props(into)]
         to: NavigationTarget,
         #[props(default)]
         target: Option<String>,
         #[props(default, into)]
         underline: Input<AnchorUnderline>,
-        /// With `target: "_blank"`, an external icon plus a hidden
-        /// "(opens in a new tab)" from the localization. `false` drops both.
+        /// With `target: "_blank"`, an icon and a hidden "(opens in a new tab)".
         #[props(default = true)]
         new_tab_hint: bool,
         children: Element,
     }
 }
 
+/// A text link to a URL or a router route.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::Anchor;
+/// # fn app() -> Element {
+/// rsx! {
+///     Anchor { to: "https://dioxuslabs.com", target: "_blank", "Dioxus" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/navigation/anchor>
 #[component]
 pub fn Anchor(props: AnchorProps) -> Element {
     let theme = use_theme();
@@ -109,8 +119,7 @@ pub fn Anchor(props: AnchorProps) -> Element {
         .with(underline.state_name(), true)
         .into();
 
-    // Resolved here rather than in an `InternalAnchor` scope, which `children`
-    // would re-render every time.
+    // Resolved here: an `InternalAnchor` scope would re-render with `children`.
     let style_attributes = use_style_attributes(
         &props.class,
         Some(&ANCHOR_BASE_SX),

@@ -41,6 +41,21 @@ base_props! {
     }
 }
 
+/// Holds its child to a fixed width-to-height ratio.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::components::AspectRatio;
+/// # fn app() -> Element {
+/// rsx! {
+///     AspectRatio { ratio: 16.0 / 9.0,
+///         img { src: "/cover.jpg", alt: "Cover" }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/layout/aspect-ratio>
 #[component]
 pub fn AspectRatio(props: AspectRatioProps) -> Element {
     let variables: Input<Variables> = aspect_ratio_variables(props.ratio.as_ref()).into();
