@@ -38,9 +38,7 @@ const CHIP_VARS: VariantVars<'static> = VariantVars {
 
 static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = ChipDefaults::theme_vars()
-        // The containing block of a selectable chip's hidden checkbox, which
-        // would otherwise be laid out against the viewport - see
-        // `SegmentedControl`'s root.
+        // Contains the hidden checkbox, which would otherwise lay out against the viewport.
         .position("relative")
         .display("inline-flex")
         .align_items("center")
@@ -51,9 +49,8 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         .white_space("nowrap")
         .user_select("none")
         .max_width("100%")
-        // A long label is cut at the pill's edge instead of running past it
-        // (todo 358). Not on a selectable chip: its label clips itself, and the
-        // ring overlay drawn out by the border would be clipped with it.
+        // Cuts a long label (todo 358). Not on a selectable chip: its label clips
+        // itself, and the ring overlay would be clipped too.
         .overflow("hidden")
         // A `<button>` root inherits neither, and a chip has to look the same
         // whichever tag it lands on.
@@ -71,11 +68,8 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
                 interactive_variant_sx(variant, &CHIP_VARS, &CHIP_HOVER_VAR, &CHIP_ON_STATE_VAR),
             )
         })
-        // Folded after the variants, which is what makes it win: equal
-        // specificity, so source order decides. `variant` describes the
-        // unselected look; selected is M3's secondary-container - a tint,
-        // which also drops the outline the way the spec asks, since `Tonal`
-        // sets `border-color: transparent`.
+        // After the variants so it wins on source order. Selected is M3's
+        // secondary-container tint; `Tonal` also drops the outline.
         .when(
             "checked",
             interactive_variant_sx(
@@ -97,11 +91,8 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         // A button chip ignores a disabled `Fieldset`, but the browser still
         // disables its `<button>` (todo 499).
         .selector("&:disabled", disabled_sx())
-        // The root is not focusable; the visually hidden checkbox inside it
-        // is, and the overlay after its label draws the root's ring. Scoped
-        // to that child so the delete button's own ring - every `Box` gets
-        // one - does not draw a second one out here. Out by the border, as an
-        // outline on the root would sit.
+        // The hidden checkbox has the focus; the overlay draws the root's ring.
+        // Scoped to that child so the delete button's ring is not doubled.
         .selector("& > [data-ring]", ring_overlay_sx().inset("-1px"))
         .selector("& > input:focus-visible ~ [data-ring]", focus_ring_sx())
         // The `<button>`/`<a>` root focuses itself.
@@ -148,9 +139,8 @@ static CHIP_TRAILING_SX: StaticSx = StaticSx::new(|| {
 
 /// Depends on `(variant, checked, color)` alone - see the `use_cache` below.
 fn chip_variables(variant: Variant, checked: bool, base: &ThemeAwareValue) -> String {
-    // Selected is a tonal container, whatever the unselected look is - but one
-    // step past `Tonal`'s own resting tint, or selecting a chip that is
-    // already tonal would produce no visible change at all.
+    // One step past `Tonal`'s resting tint, or selecting a tonal chip would
+    // change nothing visible.
     let colors = if checked {
         VariantColors {
             container: shade_color(base, ColorShade::S2),
@@ -189,64 +179,60 @@ base_props! {
         /// Corner radius, independent of `size`.
         #[props(default, into)]
         radius: Input<Size>,
-        /// Pair it with `onchange`. Left out, a chip with a `name` keeps its
-        /// own state unless that name binds it to the form around it.
+        /// Pair it with `onchange`; left out, a named chip keeps its own state.
         #[props(default)]
         checked: Option<bool>,
         #[props(default)]
         disabled: Option<bool>,
-        /// A checkbox chip stays focusable and posted with the form, but
-        /// clicks and Space no longer toggle it, as on `Checkbox`. `None` is
-        /// "not stated".
+        /// A checkbox chip stays focusable and posted, but does not toggle.
         #[props(default)]
         readonly: Option<bool>,
         /// Called with the value `checked` should take next.
         #[props(default)]
         onchange: Option<EventHandler<bool>>,
-        /// Makes the chip a checkbox that posts under this name. A path -
-        /// `Filters::FIELDS.open()` - also binds it to the surrounding
-        /// `Form`'s value when the chip has no `onchange`, as on `Checkbox`.
+        /// Makes the chip a checkbox that posts under this name. A path also
+        /// binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<bool>,
-        /// What the chip posts under its `name` when it is checked, so a row
-        /// of filter chips can share one name: `Chip { name: "tags", value:
-        /// "rust" }` posts `tags=rust`. Left out, it posts the browser's
-        /// `name=on`, as `Checkbox` does.
+        /// What a checked chip posts under `name`; defaults to `on`.
         #[props(default, into)]
         value: Option<String>,
         /// A plain action: renders a `<button>` root.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
-        /// Renders a router-aware link instead. Takes precedence over
-        /// `onclick`, which an `<a>` has no use for.
+        /// Renders a router-aware link; takes precedence over `onclick`.
         #[props(default, into)]
         to: Input<NavigationTarget>,
         #[props(default)]
         target: Option<String>,
-        /// As on `Anchor`: with `to` and `target: "_blank"`, an external icon
-        /// plus a hidden "(opens in a new tab)". `false` drops both.
+        /// As on `Anchor`: the new-tab icon and hidden hint. `false` drops both.
         #[props(default = true)]
         new_tab_hint: bool,
-        /// Drawn before the label, with a gap; it never shrinks.
+        /// Drawn before the label; it never shrinks.
         #[props(default)]
         icon: Option<Element>,
-        /// Drawn after the label, with a gap; it never shrinks - a remove x.
-        /// Outside a checkbox chip's `<label>`, so it may be a button - but not
-        /// on an `onclick` or `to` chip, whose root is one already.
+        /// Drawn after the label, e.g. a remove x. No button on an `onclick` or `to` chip.
         #[props(default)]
         trailing: Option<Element>,
-        /// The label, laid out as the chip's own flex items. Text and `Icon`
-        /// only: a `<label>` hijacks clicks on nested controls.
+        /// The label. Text and `Icon` only: a `<label>` hijacks nested clicks.
         children: Element,
     }
 }
 
 /// A compact token; `onchange` makes it a real checkbox.
 ///
-/// An icon goes in `icon` and a remove x in `trailing`; both keep their gap
-/// and never shrink: `Chip { icon: rsx! { MyIcon {} }, "rust" }`. A long label
-/// is cut at the edge; for an ellipsis, give the text a span of its own:
-/// `span { style: "min-width: 0; overflow: hidden; text-overflow: ellipsis", "{label}" }`.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Chip;
+/// # fn app() -> Element {
+/// let mut open = use_signal(|| false);
+/// rsx! {
+///     Chip { checked: open(), onchange: move |next| open.set(next), "Open only" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/chip>
 #[component]
 pub fn Chip(props: ChipProps) -> Element {
     let theme = use_theme();
@@ -308,9 +294,7 @@ pub fn Chip(props: ChipProps) -> Element {
     let id = use_id();
     let element = use_element();
 
-    // Every hook above the branch, `prepare()` included - it is the hook, so a
-    // chain built inside an `if` is a conditional hook. The unused ones are
-    // simply dropped.
+    // Every hook above the branch: `prepare()` inside an `if` is a conditional hook.
     let root = use_box()
         .framework_sx(&CHIP_BASE_SX)
         .class(&props.class)
@@ -404,11 +388,9 @@ pub fn Chip(props: ChipProps) -> Element {
     }
 
     let onchange = bound.emit(props.onchange);
-    // Refused here and said with `aria-readonly`, as on `Checkbox`: HTML's
-    // `readonly` does not apply to a checkbox.
+    // HTML `readonly` does not apply to a checkbox: refused here, as on `Checkbox`.
     let readonly = props.readonly.unwrap_or(false);
-    // The label is the chip's own, so it wires the label's half of the
-    // activation too - the same fix `use_field` gives `Checkbox`.
+    // The label is the chip's own, so it wires the label's half of the activation too.
     let activation = Activation::new(element, move || {
         if let Some(onchange) = &onchange
             && !disabled
@@ -422,8 +404,7 @@ pub fn Chip(props: ChipProps) -> Element {
         .attr("type", "checkbox")
         .attr("id", id())
         .attr("name", bound.name().map(str::to_string))
-        // No attribute is how the `on` fallback is kept: the browser's own
-        // default for a valueless checkbox, exactly as `Checkbox` posts.
+        // No attribute keeps the browser's `on` default.
         .attr("value", props.value)
         .attr("checked", checked)
         .attr("disabled", disabled)
@@ -455,9 +436,8 @@ pub fn Chip(props: ChipProps) -> Element {
 #[cfg(debug_assertions)]
 const NESTED_CONTROL: &str = "a[href], button, input, select, textarea, [tabindex]";
 
-/// Debug builds: an `onclick`/`to` chip's `trailing` lands inside its
-/// `<button>`/`<a>`, so a control there is nested interactive content (todo
-/// 661). Read off the DOM: a badge there is fine, a button is not.
+/// Debug builds: warns on a control in an `onclick`/`to` chip's `trailing`,
+/// nested interactive content (todo 661).
 fn use_nested_control_warning(slot: ElementHandle, nested: bool) {
     #[cfg(debug_assertions)]
     use_effect(use_reactive!(|nested| {
@@ -488,9 +468,7 @@ mod tests {
         assert!(css.as_str().contains("overflow:hidden"), "{}", css.as_str());
     }
 
-    /// A plain chip's root clips, or a long label runs past the pill (todo
-    /// 358). A selectable one does not: its label clips, and the root has to
-    /// let the ring overlay out by the border.
+    /// A plain chip's root clips (todo 358); a selectable one lets the ring out.
     #[test]
     fn a_plain_chip_clips_and_a_selectable_one_lets_its_ring_out() {
         let css = Stylesheet::from(&CHIP_BASE_SX);

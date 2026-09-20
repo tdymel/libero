@@ -21,17 +21,14 @@ use crate::{
 const SEGMENT: &str = "& > label";
 
 static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
-    // Nested under the `collapsed` and orientation `when`s, these render as
-    // `.cls[data-state~="collapsed"][data-state~="horizontal"] >
-    // label:not(:first-of-type)` - enough to beat the radius rule below,
-    // which is one `when` shallower.
+    // Nested two `when`s deep, these outrank the radius rule, which is one
+    // `when` shallower.
     let collapse_start = "& > label:not(:first-of-type)";
     let collapse_end = "& > label:not(:last-of-type)";
 
     let base = sx()
-        // The containing block of the radios below. Without it they are laid
-        // out against the viewport: they stay put while a scroll container
-        // moves the labels, and focusing one scrolls the document to it.
+        // Contains the radios; against the viewport, focusing one scrolls the
+        // document to it.
         .position("relative")
         .display("inline-flex")
         .align_items("center")
@@ -40,8 +37,7 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // A long row wraps rather than run off a phone's page (WCAG 1.4.10).
         .max_width("100%")
         .flex_wrap("wrap")
-        // The radio is what a screen reader and the keyboard use; the label
-        // beside it is the whole of what anyone sees.
+        // The radio serves screen readers and keys; only the label shows.
         .selector(
             "& > input",
             sx().position("absolute")
@@ -58,8 +54,7 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 .display("inline-flex")
                 .align_items("center")
                 .justify_content("center")
-                // Only a rich label has two children to separate, and it is
-                // the component's job rather than every caller's `sx`.
+                // Separates a rich label's two children.
                 .gap(SizeCss::SPACING.value(Size::Xs))
                 .border_style("solid")
                 .border_width("1px")
@@ -83,9 +78,8 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // focus ring and selected background.
         .selector("& > label:hover", sx().z_index("1"))
         .selector("& > label[data-state~=\"checked\"]", sx().z_index("1"))
-        // The ring goes on the label, since the input it belongs to is the
-        // one thing here with no size - reachable as a sibling because the
-        // radio is rendered beside its label rather than inside it.
+        // The ring goes on the label: the radio has no size, and sits beside
+        // its label so `+` reaches it.
         .selector("& > input:focus-visible + label", {
             focus_ring_sx().z_index("2")
         })
@@ -129,15 +123,8 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 ),
             ),
         )
-        // Only the row shares out its main axis; in a column `flex` would
-        // stretch the segments' heights past their size scale, and
-        // `align-items: stretch` has already equalised what "full width"
-        // means there.
-        //
-        // A shared-out row must fit the box it fills, so a segment may shrink
-        // below its label and the label ends in an ellipsis. Wrapping was the other option, but one word cannot wrap and
-        // a row of segments at different heights stops reading as one strip.
-        // The radio's `aria-label` still carries the whole name.
+        // Only a row shares out its width; a shrunk segment ellipsizes rather
+        // than wraps, and the radio's `aria-label` keeps the whole name.
         .when(
             "full-width",
             sx().width("100%").when(
@@ -240,9 +227,8 @@ fn focus_segment(element: &ElementHandle, root: &str, index: usize) {
     let _ = element.query_selector(&selector).and_then(|el| el.focus());
 }
 
-/// A segment label's `data-state`. The two flags are independent: a picked
-/// segment that is then disabled still reads as picked, because its radio
-/// stays checked (todo 134).
+/// A segment label's `data-state`. A picked segment that is then disabled
+/// still reads as picked, since its radio stays checked (todo 134).
 fn segment_state(shared: &str, disabled: bool, checked: bool) -> String {
     let mut state = shared.to_string();
     if checked {
@@ -298,16 +284,12 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
     }
     let states = own.into();
 
-    // Every segment carries the same pair, so it is built once rather than
-    // per segment.
+    // Shared by every segment, so built once.
     let segment_states = format!("{} {}", size.state_name(), radius.radius_state_name());
 
     let items = segments.iter().enumerate().map(|(index, segment)| {
-        // The label's click, Space, Enter outside a `Form` and a click on the
-        // radio itself all go through `Activation` - see it for why none of them may activate
-        // the radio natively (todo 66). A control that is not focusable wants
-        // no focus from its label: inside a dropdown that keeps focus on its
-        // field, focusing here would blur the field and close it.
+        // Every activation goes through `Activation`, never the native radio
+        // (todo 66). Unfocusable: focusing here would close a host dropdown.
         let disabled = segment.disabled;
         let activation = {
             let root = root.clone();
@@ -327,10 +309,8 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
             )
             .enter_activates(enter)
         };
-        // Inside a `Form`, Enter is left to the browser, which submits it as
-        // for a native radio. The arrows move *and* select, which is what a
-        // native radio group does and what Blitz, which does neither, now gets
-        // too.
+        // Enter in a `Form` submits natively. The arrows move and select, as
+        // a native radio group does; Blitz does neither on its own.
         let keydown = {
             let activation = activation.clone();
             let disabled_segments = disabled_segments.clone();
@@ -349,9 +329,8 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                 // Cancelled even when read-only: the browser's own arrow would
                 // move focus and check the next radio.
                 event.prevent_default();
-                // The arrows move *and* select, so read-only refuses them
-                // outright, as `RadioGroup` does - moving focus alone would
-                // leave the checked radio, and so the tab stop, behind.
+                // Read-only refuses them outright: moving focus alone would
+                // leave the tab stop behind.
                 if readonly {
                     return;
                 }
@@ -362,12 +341,8 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
             }
         };
         rsx! {
-            // The radio sits *beside* its label, not inside it, so the focus
-            // ring can be `input:focus-visible + label`. Nesting it would need
-            // `label:has(> input:focus-visible)`, and `:has()` is not
-            // universally supported - Blitz's stylo rejects it at parse time.
-            // `for` binds the two, which is what forwards a label click to the
-            // radio everywhere.
+            // Beside its label, not inside: nesting would need `:has()`, which
+            // Blitz's stylo rejects. `for` forwards the label's click.
             input {
                 key: "{index}",
                 id: "{root}-segment-{index}",
@@ -378,9 +353,8 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                 // so the radio carries it.
                 "aria-label": segment.name.clone(),
                 checked: selected == Some(index),
-                // `Some(true)` or nothing: dioxus-native writes a `false` bool
-                // as the string "false", and Blitz reads `disabled` by
-                // presence - so `false` would disable every segment.
+                // `Some(true)` or nothing: dioxus-native writes `false` as a
+                // string, and Blitz reads `disabled` by presence.
                 disabled: segment.disabled.then_some(true),
                 tabindex: if focusable && tab_stop == Some(index) { "0" } else { "-1" },
                 onclick: activation.input_click(),
@@ -399,9 +373,8 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         }
     });
 
-    // Read-only keeps focus on the tab stop, the checked segment (APG), however
-    // it got into the strip: a second tab stop otherwise (todo 746). A task
-    // later: the move fires `focusin` again, inside this handler.
+    // Read-only keeps focus on the checked segment (todo 746); a task later,
+    // since the move fires `focusin` again.
     let focusin = {
         let root = root.clone();
         move |_: FocusEvent| {

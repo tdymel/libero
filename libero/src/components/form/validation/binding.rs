@@ -4,9 +4,8 @@ use dioxus::{prelude::*, stores::scope::SelectorScope};
 
 use super::path::{Step, StepKey, join, resolve, resolve_mut};
 
-/// A form's value with its type erased, so a field typed only by its own
-/// value can read and write its place in it. Both take the path in two parts,
-/// the scope's steps and the field's, to spare a joined copy per render.
+/// A form's value, type-erased. The path comes in two parts (scope, field) to
+/// spare a joined copy per render.
 pub(crate) trait Source {
     /// Subscribes the caller to the value at the path and everything under it.
     fn read_value(&self, path: [&[Step]; 2], reader: &mut dyn FnMut(&dyn Any));
@@ -56,9 +55,8 @@ impl Binding {
         }
     }
 
-    /// The scope a `Fieldset` opens at `path`. Without steps of its own - a
-    /// plain string path - only the names move, and the fieldset's fields
-    /// cannot bind.
+    /// The scope a `Fieldset` opens at `path`. A plain string path moves only
+    /// the names; its fields cannot bind.
     pub fn narrow(&self, path: &str, steps: Option<&[Step]>) -> Self {
         Self {
             source: steps.and(self.source.clone()),
@@ -121,8 +119,7 @@ impl Binding {
     }
 }
 
-/// What a disabled `Fieldset` shares with everything inside it, nested
-/// fieldsets included. A signal, so fields whose props compare equal still
-/// follow a toggle.
+/// A disabled `Fieldset`'s state for everything inside. A signal, so memoized
+/// fields still follow a toggle.
 #[derive(Clone, Copy)]
 pub(crate) struct Disabled(pub Signal<bool>);

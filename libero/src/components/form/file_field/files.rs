@@ -4,12 +4,8 @@ use dioxus::html::FileData;
 
 use crate::localization::FileFieldLabels;
 
-/// A `FileField`'s value, in either arity.
-///
-/// One type for both, because `multiple` is a runtime prop: a single-file
-/// field holds at most one entry and a multi-file one holds any number. The
-/// `From` impls are what let a call site write whichever it has -
-/// `From<Option<FileData>> for Vec<FileData>` cannot exist, both being foreign.
+/// A `FileField`'s value: one type for both arities, since `multiple` is a
+/// runtime prop. Converts from an `Option` or a `Vec`.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -57,9 +53,8 @@ impl Files {
     }
 }
 
-/// A file's size for a human, in the units a file manager shows: powers of
-/// 1000, one decimal once past a kilobyte, in the localization's units and
-/// the formats' decimal separator.
+/// A file's size for a human: powers of 1000, one decimal past a kilobyte,
+/// in the localization's units.
 pub(super) fn format_size(bytes: u64, words: &FileFieldLabels, decimal_separator: &str) -> String {
     let units = &words.size_units;
     let mut size = bytes as f64;

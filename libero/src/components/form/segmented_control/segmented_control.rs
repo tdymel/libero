@@ -18,45 +18,24 @@ use crate::{
 
 field_props! {
     pub struct SegmentedControlProps<T: Options> {
-        /// Strictly controlled - pair it with `onchange`. Exactly one segment
-        /// is selected, which is what makes this a radio group and not a row
-        /// of toggles. Optional only so a field bound to a `Form` can leave it
-        /// out.
+        /// Controlled: pair it with `onchange`. Optional only so a `Form`-bound
+        /// control can leave it out.
         #[props(default)]
         value: Option<T>,
         /// Called with the segment that should become selected.
         #[props(default)]
         onchange: Option<EventHandler<T>>,
-        /// What the control posts as. A path - `Settings::FIELDS.align()` -
-        /// also binds it to the surrounding `Form`'s value when it has no
-        /// `onchange`.
+        /// What the control posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<T>,
-        /// Rules over the selection, shown once the control loses focus or its
-        /// form is submitted.
+        /// Rules over the selection, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<T>,
-        /// The segments to show. Defaults to every `Options::options()` - which
-        /// `String` leaves empty, so a runtime set passes them here.
-        ///
-        /// `OptionItem::new(value).disabled(true)` renders a segment that
-        /// cannot be picked; `disabled` disables all of them. A grouped
-        /// [`OptionList`](crate::components::OptionList) is accepted and its
-        /// segments are drawn flattened, in the order given: a single row of
-        /// segments has nowhere to put group headings and does not draw them.
-        ///
-        /// A control has no dropdown to put a loader in, so a **pending**
-        /// [`OptionSource`](crate::components::OptionSource) - one built from
-        /// a [`Resource`] that has not answered yet - simply draws no
-        /// segments. Await the fetch above the field if that matters.
+        /// The segments; `Options::options()` by default. Groups are flattened,
+        /// and a pending source draws no segments.
         #[props(default, into)]
         options: OptionSource<T>,
-        /// Overrides `Options::label`. Runs during render, so it can read a
-        /// locale from context - which is how a renamed control stays renamed.
-        ///
-        /// `"Konto".into()` names a segment; `OptionLabel::rich(name, rsx! { .. })`
-        /// draws it and names it, because the rsx is what a screen reader cannot
-        /// use.
+        /// Overrides `Options::label`; runs during render, so it can read a locale.
         #[props(default)]
         option_label: Option<Callback<T, OptionLabel>>,
         #[props(default, into)]
@@ -66,31 +45,39 @@ field_props! {
         variant: Input<Variant>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Space between the segments. Set it and they stop sharing borders -
-        /// each keeps its own, and its own radius.
+        /// Space between the segments; set, each keeps its own border and radius.
         #[props(default, into)]
         gap: Input<Size>,
         /// Segments share the width evenly instead of sizing to their label.
         #[props(default)]
         full_width: Option<bool>,
-        /// `false` keeps the segments out of the tab order, and a click on one
-        /// leaves focus where it is - for a control inside a field's dropdown.
-        /// On by default.
+        /// `false` keeps the segments from taking focus, for a control inside
+        /// a field's dropdown.
         #[props(default)]
         focusable: Option<bool>,
     }
 }
 
 /// A connected strip of segments over an enum, exactly one of them selected.
-/// Controlled: it renders `value` and asks for a new one through `onchange`.
 ///
-/// The segments are `T::options()` unless `options` narrows them - so a
-/// misspelled segment is a compile error rather than a selection that never
-/// matches. Each one is a `<label>` beside a radio, which is what gives the
-/// control its "1 of 3" announcement and arrow-key navigation for free.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Options, SegmentedControl};
+/// #[derive(Clone, Copy, PartialEq, Options)]
+/// enum View { List, Grid }
+/// # fn app() -> Element {
+/// let mut view = use_signal(|| View::List);
+/// rsx! {
+///     SegmentedControl {
+///         label: "View",
+///         value: view(),
+///         onchange: move |next| view.set(next),
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// The control is a field: the label names the `radiogroup` through
-/// `aria-labelledby`, and the captions describe it.
+/// Docs: <https://libero-ui.dev/form/segmented-control>
 #[component]
 pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element {
     let theme = use_theme();

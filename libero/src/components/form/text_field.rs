@@ -18,48 +18,53 @@ use crate::{
 field_props! {
     extends(input);
     pub struct TextFieldProps {
-        /// The text to render. `None` leaves the `<input>` uncontrolled - it
-        /// keeps its own text and needs no handler.
+        /// The text. `None` leaves the `<input>` uncontrolled.
         #[props(default, into)]
         value: Option<String>,
         /// Fires per keystroke with the text the field should hold next.
-        /// Native name, native timing.
         #[props(default)]
         oninput: Option<EventHandler<String>>,
-        /// Rules over the text, shown once the field loses focus or its form
-        /// is submitted.
+        /// Rules over the text, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<String>,
-        /// What the field posts as. A path - `Signup::FIELDS.email()` - also
-        /// binds the text to the surrounding `Form`'s value when the field has
-        /// no `oninput`.
+        /// What the field posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<String>,
         #[props(default, into)]
         placeholder: Option<String>,
-        /// Inside the frame, before the control - a search icon, a currency
-        /// prefix.
+        /// Inside the frame, before the control.
         #[props(default, into)]
         leading: Option<Element>,
-        /// Inside the frame, after the control - a clear button, a unit.
+        /// Inside the frame, after the control.
         #[props(default, into)]
         trailing: Option<Element>,
-        /// `leading` is text that belongs to the value - `"https://"`, `"@"` -
-        /// so the input's `aria-describedby` reads it. Not for an icon or a button.
+        /// `leading` is text that describes the value (`aria-describedby`).
         #[props(default)]
         describe_leading: bool,
-        /// `trailing` is text that belongs to the value - `"kg"`, `"12/20"`.
+        /// `trailing` is text that describes the value, e.g. a unit.
         #[props(default)]
         describe_trailing: bool,
     }
 }
 
-/// A single-line text field, with a label, a description, helper text and a
-/// validation message stacked around it, and room either side of the control
-/// inside the frame.
+/// A single-line text field with its label, captions and validation message.
 ///
-/// Controlled through `value` + `oninput`. Omit `value` and the `<input>` owns
-/// its own text.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::TextField;
+/// # fn app() -> Element {
+/// let mut name = use_signal(String::new);
+/// rsx! {
+///     TextField {
+///         label: "Name",
+///         value: name(),
+///         oninput: move |text| name.set(text),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/text-field>
 #[component]
 pub fn TextField(props: TextFieldProps) -> Element {
     let mut props = props;

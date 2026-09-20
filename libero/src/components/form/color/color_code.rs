@@ -5,16 +5,10 @@ use std::{
 
 use crate::theme::{ColorFormat, HexColor};
 
-/// A color as the picker holds it: hue, saturation, value and alpha.
+/// A color as the picker holds it: HSVA, so a grey keeps its hue.
 ///
-/// Stored as HSVA, not RGB, because RGB has no hue on a grey - a picker
-/// dragged onto black or white would lose its hue and the hue thumb would
-/// jump to 0. Kept as HSVA, the hue survives for as long as the caller stores
-/// the value they were handed.
-///
-/// Any of the six CSS forms parses in (`"#228be6".parse()`), and any of them
-/// comes back out: [`to_hex`](Self::to_hex), [`to_rgba`](Self::to_rgba),
-/// [`to_hsl`](Self::to_hsl) and the rest.
+/// Parses from any CSS hex, rgb or hsl form (`"#228be6".parse()`); writes back
+/// with [`to_hex`](Self::to_hex), [`to_rgba`](Self::to_rgba) and the rest.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ColorCode {
     /// Degrees, `0.0..360.0`.
@@ -253,9 +247,8 @@ impl From<HexColor> for ColorCode {
 impl FromStr for ColorCode {
     type Err = ParseColorError;
 
-    /// `#rgb`, `#rgba`, `#rrggbb`, `#rrggbbaa` (the `#` optional), `rgb()`,
-    /// `rgba()`, `hsl()` and `hsla()` - comma or space separated, alpha as a
-    /// number or a percentage, optionally after a `/`.
+    /// Hex with 3, 4, 6 or 8 digits (`#` optional), `rgb[a]()` and `hsl[a]()`,
+    /// comma or space separated, alpha as a number or percentage.
     fn from_str(text: &str) -> Result<Self, Self::Err> {
         let text = text.trim().to_ascii_lowercase();
 

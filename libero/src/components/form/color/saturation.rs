@@ -66,9 +66,8 @@ static THUMB_SX: StaticSx = StaticSx::new(|| {
         .cursor("grab")
 });
 
-/// The panel and its handlers. `value` is the picker's own signal and only
-/// [`SaturationThumb`] reads it while rendering, so a drag frame redraws the
-/// thumb and skips this scope.
+/// The panel and its handlers. Only [`SaturationThumb`] reads `value` in
+/// render, so a drag frame redraws the thumb alone.
 #[derive(Props, Clone, PartialEq)]
 pub(super) struct SaturationProps {
     value: Signal<ColorCode>,
@@ -249,9 +248,8 @@ fn SaturationThumb(
         .variables(&thumb_variables)
         .prepare();
 
-    // One `role="slider"` for a 2D control: its value is the saturation, and
-    // the up and down keys still move the brightness - so the text names
-    // both, or an Up/Down press would announce nothing.
+    // One `role="slider"` for a 2D control: the text names brightness too, or
+    // an Up/Down press would announce nothing.
     let percent = |fraction: f64| (fraction * 100.0).round();
     let valuetext = fill(
         use_localization().color.saturation_value,

@@ -11,21 +11,15 @@ use crate::{
     platform::{self, ElementApi, PlatformError},
 };
 
-/// Controls a [`Form`](crate::components::Form) from code: reset it, validate
-/// it, submit it. Make one with [`use_form`] and pass it as the form's `form`
-/// prop to reach it from outside; anything inside a form gets it from
-/// [`use_form_context`].
+/// Resets, validates or submits a [`Form`](crate::components::Form) from code.
+/// Made with [`use_form`], or reached from inside with [`use_form_context`].
 #[derive(Clone, Copy, PartialEq)]
 pub struct FormHandle {
     pub(crate) scope: FormScope,
-    /// The `<form>` element. Created with the handle rather than by the form,
-    /// so a parent holding the handle uses a signal it owns - dioxus warns
-    /// when a scope uses a signal its child created.
+    /// Created with the handle, so a parent holding it owns the signal.
     pub(crate) element: ElementHandle,
-    /// Bumped when the summary appears; the form's effect focuses it. Owned
-    /// here for the same reason as `element`.
+    /// Bumped when the summary appears; the form's effect focuses it.
     pub(crate) focus_requests: Signal<u32>,
-    /// What only the `Form` itself has - its value's type and its summary.
     /// Filled in when the form mounts.
     control: CopyValue<Option<Control>>,
 }
@@ -72,9 +66,8 @@ impl FormHandle {
             .and_then(|control| control.clone())
     }
 
-    /// Checks the form the way a submit does, without `onsubmit`: every status
-    /// shows, and with any error the summary appears and takes focus. `true`
-    /// when nothing is an error - warnings never count.
+    /// Checks the form as a submit does, without `onsubmit`. `true` when
+    /// nothing is an error; warnings never count.
     pub fn validate(&self) -> bool {
         let mut scope = self.scope;
         scope.submit();
@@ -89,9 +82,8 @@ impl FormHandle {
         valid
     }
 
-    /// Submits the form as its submit button would: validation, then
-    /// `onsubmit`. Where the renderer cannot fire a submit, the form's handler
-    /// runs directly; [`PlatformError::Unsupported`] only once the form is gone.
+    /// Submits the form as its submit button would. [`PlatformError::Unsupported`]
+    /// only once the form is gone.
     pub fn submit(&self) -> Result<(), PlatformError> {
         match self.element.request_submit() {
             Err(PlatformError::Unsupported) => {
@@ -105,18 +97,13 @@ impl FormHandle {
         }
     }
 
-    /// Back to the start: the form's value to its default, nothing touched,
-    /// not submitted, no summary. On the web uncontrolled controls reset too,
-    /// the way a native reset does; under Blitz uncontrolled text fields. A
-    /// field with a `value` and handler of its own keeps what it shows - reset
-    /// that state yourself.
+    /// Back to the start: default value, nothing touched, no summary. A field
+    /// with its own `value` and handler keeps what it shows.
     pub fn reset(&self) {
-        // Before the value, so a bound control ends on the value's default
-        // rather than on its markup default.
+        // Before the value, so a bound control ends on the value's default.
         let _ = self.element.reset();
         if let Some(control) = self.control() {
-            // In the form's scope: the store it reads is the form's, and a
-            // parent holding the handle is no descendant of it.
+            // In the form's scope: a parent holding the handle is no descendant.
             Runtime::current().in_scope(control.summary.owner, || (control.reset_value)());
             control.summary.set(Vec::new());
         }
@@ -138,9 +125,8 @@ impl FormHandle {
     }
 }
 
-/// The error summary a failed submit leaves. Lines drop out as their errors
-/// are fixed; none is added until the next submit, so the list is not
-/// re-announced while someone works through it.
+/// The error summary a failed submit leaves. Fixed lines drop out; none is
+/// added until the next submit, so it is not re-announced.
 #[derive(Clone)]
 pub(crate) struct Summary {
     /// Outside a signal: the form reads it while rendering and trims it there.
@@ -169,9 +155,7 @@ impl Summary {
         }
     }
 
-    /// The lines still failing. Only while there are lines does it subscribe
-    /// the form to the fields' statuses, so a form with no summary does not
-    /// re-render when a field's status changes.
+    /// The lines still failing. Subscribes to statuses only while there are lines.
     pub fn visible(&self, scope: &FormScope) -> Vec<SummaryItem> {
         let mut items = self.items.borrow_mut();
         if items.is_empty() {

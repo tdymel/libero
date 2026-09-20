@@ -18,9 +18,7 @@ use crate::{
     utils::warn,
 };
 
-/// The control keeps the UA's own chevron - drawing our own would mean
-/// `appearance: none`, and with it the native picker's arrow on every
-/// platform.
+/// Keeps the UA's chevron: our own would need `appearance: none`.
 static NATIVE_SELECT_CONTROL_SX: StaticSx = StaticSx::new(|| {
     field_control_sx()
         .cursor("pointer")
@@ -33,41 +31,26 @@ static NATIVE_SELECT_CONTROL_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-// No `readonly`: HTML has no read-only `<select>`, and every way to stop a
-// native picker takes it out of the tab order or out of the post. `Select` is
-// the read-only picker (todo 304).
+// No `readonly`: HTML has no read-only `<select>`; `Select` is the read-only picker (todo 304).
 field_props! {
     without(readonly);
     pub struct NativeSelectProps<T: Options> {
-        /// Strictly controlled - pair it with `onchange`. `None` shows
-        /// `placeholder` and selects nothing.
+        /// Strictly controlled; `None` shows `placeholder`.
         #[props(default)]
         value: Option<T>,
-        /// Called with the option the caller should select next. Never fires
-        /// for the placeholder, which cannot be picked.
+        /// Called with the option the caller should select next.
         #[props(default)]
         onchange: Option<EventHandler<T>>,
-        /// What the select posts as. A path - `Order::FIELDS.size()` - also
-        /// binds it to the surrounding `Form`'s value when it has no
-        /// `onchange`.
+        /// What the select posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<Option<T>>,
-        /// Rules over the selection, shown once the select loses focus or its
-        /// form is submitted.
+        /// Rules over the selection, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<Option<T>>,
-        /// The options to show. Defaults to every `Options::options()` - which
-        /// `String` and any other runtime type leave empty, so those pass them
-        /// here. A disabled [`OptionItem`](crate::components::OptionItem) is a
-        /// disabled `<option>`, a named group an `<optgroup>`; a pending
-        /// source draws no options.
+        /// The options to show. Defaults to `Options::options()`.
         #[props(default, into)]
         options: OptionSource<T>,
-        /// Overrides `Options::label`. Runs during render, so it can read a
-        /// locale from context.
-        ///
-        /// Returns a `String`, not an `OptionLabel`: `<option>` holds text and
-        /// nothing else, so there is no rich form to offer.
+        /// Overrides `Options::label`; plain text, as `<option>` holds nothing else.
         #[props(default)]
         option_label: Option<Callback<T, String>>,
         /// Shown while `value` is `None`, as an unpickable first entry.
@@ -98,31 +81,27 @@ fn runs(groups: &[Option<String>]) -> Vec<(usize, usize)> {
     runs
 }
 
-/// A styled native `<select>` over an enum, with a label, a description,
-/// helper text and a validation message stacked around it. Controlled: it
-/// renders `value` and asks for a new one through `onchange`.
+/// A styled native `<select>` over the caller's options type.
 ///
-/// The options are `T::options()` unless `options` narrows them - so a
-/// misspelled option is a compile error, and `onchange` hands back the value
-/// itself rather than a string the caller has to look up again.
-///
-/// The real `<select>`, not a listbox: it keeps the OS picker on phones, works
-/// without wasm, and renders its selection correctly under SSR. Reach for it
-/// when those matter; reach for `Select` when the rows have to be styled.
-/// Under the `native` renderer a `<select>` opens no picker, so there it draws
-/// `Select`'s listbox from the same props.
-///
-/// There is no `readonly`, unlike every other field: a native `<select>` has
-/// no read-only state. `Select` is the read-only picker.
-///
-/// ```no_run
+/// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::components::{NativeSelect, Options};
+/// #[derive(Clone, Copy, PartialEq, Options)]
+/// enum Plan { Free, Pro }
+///
 /// # fn app() -> Element {
-/// # #[derive(Clone, Copy, PartialEq, Options)] enum Plan { Free, Pro }
-/// rsx! { NativeSelect::<Plan> { value: Some(Plan::Free) } }
+/// let mut plan = use_signal(|| Some(Plan::Free));
+/// rsx! {
+///     NativeSelect {
+///         label: "Plan",
+///         value: plan(),
+///         onchange: move |next| plan.set(Some(next)),
+///     }
+/// }
 /// # }
 /// ```
+///
+/// No `readonly`, unlike every other field:
 ///
 /// ```compile_fail,E0599
 /// # use dioxus::prelude::*;
@@ -132,6 +111,8 @@ fn runs(groups: &[Option<String>]) -> Vec<(usize, usize)> {
 /// rsx! { NativeSelect::<Plan> { value: Some(Plan::Free), readonly: true } }
 /// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/form/native-select>
 #[component]
 pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
     // Fixed per build, so the hooks below always run in the same order.
@@ -251,11 +232,8 @@ fn NativeSelectShell<T: Options>(live: Signal<Option<T>>, field: NativeSelectPro
 
     let placeholder = props.placeholder.clone().unwrap_or_default();
 
-    // `selected` on each `<option>`, not `value` on the `<select>`: the
-    // property is written to the option itself, so it does not depend on the
-    // parent's children already existing - which is what made the old
-    // `value` path miss on the creating render, and what left SSR with no
-    // selection at all.
+    // `selected` on each `<option>`, not `value` on the `<select>`: that missed
+    // on the creating render and under SSR.
     let draw = Rc::new(move || {
         let current = bound_value.clone().unwrap_or_else(|| live.cloned());
         let selected = current

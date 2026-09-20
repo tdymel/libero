@@ -35,9 +35,8 @@ static CHECKBOX_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .position("relative")
         // On the control rather than the box, so `disabled` below reaches it.
         .cursor("pointer")
-        // The box is the whole control, so the ring hugs it rather than the
-        // row. Drawn by the overlay after the box, because the focus is on
-        // the input beside it.
+        // The ring hugs the box, drawn by the overlay: the focus is on the
+        // input beside it.
         .selector("& > [data-ring]", ring_overlay_sx())
         .selector("& > input:focus-visible ~ [data-ring]", focus_ring_sx())
         // A card rings itself: the control stops being the overlay's
@@ -97,44 +96,48 @@ field_props! {
         /// The box's colour when checked.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Pair it with `onchange`. Left out, the box keeps its own state
-        /// unless a `name` binds it to the form around it.
+        /// Pair it with `onchange`; left out, the box keeps its own state.
         #[props(default)]
         checked: Option<bool>,
-        /// Draws the mixed state and reads as mixed to assistive tech. Outranks
-        /// `checked` visually; toggling from it gives `true`.
+        /// Draws and announces the mixed state; toggling from it gives `true`.
         #[props(default)]
         indeterminate: Option<bool>,
         /// Called with the value `checked` should take next.
         #[props(default)]
         onchange: Option<EventHandler<bool>>,
-        /// Rules over `checked`, shown once the checkbox loses focus or its
-        /// form is submitted.
+        /// Rules over `checked`, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<bool>,
-        /// What the field posts as. A path - `Signup::FIELDS.terms()` - also
-        /// binds it to the surrounding `Form`'s value when the field has no
-        /// `onchange`.
+        /// What the field posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<bool>,
         /// Names the checkbox when it has no `label`.
         #[props(default, into)]
         aria_label: Option<String>,
-        /// `Card` draws the checkbox as a bordered surface and makes all of
-        /// it the hit area - pair it with a `description`. A link or button
-        /// in the label or captions keeps its own click.
+        /// `Card` draws a bordered surface that is all hit area.
         #[props(default, into)]
         variant: Input<ChoiceVariant>,
     }
 }
 
-/// A checkbox, with its label beside the box and the description, helper text
-/// and validation message under both.
+/// A checkbox with its label, description and validation message.
 ///
-/// The browser never toggles the input itself - a label click and Space are
-/// taken in Rust - so the property, `:checked`, assistive tech and form
-/// submission never drift apart. Pass `checked` and handle `onchange` to own
-/// the state; with neither, and outside a form binding, the box keeps its own.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Checkbox;
+/// # fn app() -> Element {
+/// let mut agreed = use_signal(|| false);
+/// rsx! {
+///     Checkbox {
+///         label: "I accept the terms",
+///         checked: agreed(),
+///         onchange: move |next| agreed.set(next),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/checkbox>
 #[component]
 pub fn Checkbox(props: CheckboxProps) -> Element {
     let theme = use_theme();
@@ -151,9 +154,8 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .or(bound.entered())
         .unwrap_or(false);
     let indeterminate = props.indeterminate.unwrap_or(false);
-    // HTML's `readonly` does not apply to a checkbox, and the activation is
-    // ours anyway - so it is refused here and said with `aria-readonly`,
-    // which WAI-ARIA 1.2 supports on the `checkbox` role.
+    // HTML `readonly` does not apply to a checkbox: refused here, announced
+    // with `aria-readonly`.
     let readonly = props.readonly.unwrap_or(false);
     let card = props.variant.copied_or(theme.checkbox.variant) == ChoiceVariant::Card;
 
@@ -245,11 +247,8 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 
-    // The box is decoration: the input owns the name, the state and the
-    // keyboard. It carries the click because a visually hidden input has no
-    // hit area, and a second `<label for>` around it would compete with the
-    // field's own label for the accessible name. A card takes the click
-    // itself, so the box leaves it to the card rather than toggling twice.
+    // Decoration that carries the click: a hidden input has no hit area, and a
+    // second `<label for>` would compete for the name. A card takes the click itself.
     let box_node = rsx! {
         span {
             class: box_class,

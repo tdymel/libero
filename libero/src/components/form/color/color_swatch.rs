@@ -24,9 +24,8 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
         .height(COLOR_SWATCH_SIZE.value())
         .min_width(COLOR_SWATCH_SIZE.value())
         .border_radius(COLOR_SWATCH_RADIUS.value())
-        // The color as a one-stop gradient, so it can layer over the
-        // checkerboard: a translucent color shows it through, an opaque one
-        // hides it.
+        // A one-stop gradient layers over the checkerboard, so a translucent
+        // color shows it through.
         .background(format!("linear-gradient({color}, {color}), {CHECKERBOARD}"))
         .border_style("none")
         .padding("0")
@@ -52,21 +51,31 @@ base_props! {
         size: Input<Size>,
         #[props(default, into)]
         radius: Input<Size>,
-        /// A faint inner ring, so a color close to the background still has
-        /// an edge. On by default.
+        /// A faint inner ring, so a color close to the background has an edge.
         #[props(default)]
         with_shadow: Option<bool>,
         /// Makes the swatch a `<button>`.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
-        /// Drawn on top of the color - a check mark on the picked swatch.
-        /// Takes black or white, whichever reads on `color`.
+        /// Drawn on the color in black or white, whichever reads.
         #[props(default)]
         children: Element,
     }
 }
 
 /// A patch of one color, with a checkerboard behind a translucent one.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{ColorCode, ColorSwatch};
+/// # fn app() -> Element {
+/// rsx! {
+///     ColorSwatch { color: ColorCode::rgba(34, 139, 230, 0.5) }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/color-picker>
 #[component]
 pub fn ColorSwatch(props: ColorSwatchProps) -> Element {
     let theme = use_theme();

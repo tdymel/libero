@@ -13,51 +13,51 @@ use crate::{
 field_props! {
     extends(input);
     pub struct PasswordFieldProps {
-        /// The secret. `None` leaves the `<input>` uncontrolled - it keeps its
-        /// own text and needs no handler.
+        /// The secret. `None` leaves the `<input>` uncontrolled.
         #[props(default, into)]
         value: Option<String>,
         /// Fires per keystroke with the text the field should hold next.
         #[props(default)]
         oninput: Option<EventHandler<String>>,
-        /// Rules over the secret, shown once the field loses focus or its form
-        /// is submitted.
+        /// Rules over the secret, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<String>,
-        /// What the field posts as. A path - `Signup::FIELDS.password()` - also
-        /// binds it to the surrounding `Form`'s value when the field has no
-        /// `oninput`.
+        /// What the field posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<String>,
         #[props(default, into)]
         placeholder: Option<String>,
-        /// Offers the reveal button at all. On by default - a password nobody
-        /// can read back is the field's worst papercut - but a confirmation
-        /// field, or one next to a revealed twin, has nothing to add.
+        /// Offers the reveal button. On by default.
         #[props(default)]
         reveal_button: Option<bool>,
-        /// The reveal button's name in both states, e.g. "Show PIN":
-        /// `aria-pressed` carries whether the secret is shown. Unset, the
-        /// localization's `password_field.show`.
+        /// The reveal button's name. Defaults to `password_field.show`.
         #[props(default, into)]
         reveal_label: Option<String>,
     }
 }
 
-/// A password field: a [`TextField`] whose `type` flips between `password` and
-/// `text`, with the reveal toggle in its trailing slot.
+/// A [`TextField`] for a secret, with a reveal toggle in its trailing slot.
 ///
-/// It is a `TextField` rather than its own field, which is the composition the
-/// field foundation is built for - a domain field is a text field with a
-/// narrower contract. Everything `TextField` grows, this grows too.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::PasswordField;
+/// # fn app() -> Element {
+/// let mut password = use_signal(String::new);
+/// rsx! {
+///     PasswordField {
+///         label: "Password",
+///         value: password(),
+///         oninput: move |text| password.set(text),
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// Reveal state is the component's own: a password that starts visible is not
-/// a state a caller should be able to ask for. A submit or a reset of the
-/// surrounding `Form` hides the secret again.
+/// Docs: <https://libero-ui.dev/form/password-field>
 #[component]
 pub fn PasswordField(props: PasswordFieldProps) -> Element {
     // Revealed at a count of the form's submits and resets, so the next one
-    // hides the secret again (todo 497).
+    // hides it again (todo 497).
     let form = try_use_context::<FormScope>();
     let settled = form.map_or(0, |form| form.settled());
     let mut revealed_at = use_signal(|| None::<u32>);

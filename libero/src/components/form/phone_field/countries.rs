@@ -1,13 +1,5 @@
-//! The country table `PhoneField` is built on: an ISO 3166-1 alpha-2 code, an
-//! English name and an E.164 country calling code, hand-kept.
-//!
-//! No crate backs this ([[plans/31-component-expansion/f3-phone-field]], the
-//! 2026-09-16 decision): `phonenumber` drags `regex` and a megabyte of metadata
-//! into wasm against a standing `Cargo.toml` decision, and `phonelib` is a
-//! single-maintainer dependency for length-only validation. So the table holds
-//! what the component actually needs - the dial code the value is assembled
-//! from, and a name to pick by - and **nothing here validates a number**. A
-//! caller who needs that attaches their own `Validator<String>`.
+//! `PhoneField`'s hand-kept country table: ISO code, English name, dial code.
+//! No crate backs it and nothing here validates a number (f3-phone-field plan).
 
 /// One row of the table.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -25,15 +17,8 @@ const fn row(iso: &'static str, name: &'static str, dial: &'static str) -> Count
     Country { iso, name, dial }
 }
 
-/// Sorted by name, which is also the order the picker offers them in.
-///
-/// Checked on 2026-09-20 against libphonenumber's `PhoneNumberMetadata.xml`
-/// (commit `806ee32e`), each row's `countryCode` plus its `leadingDigits` where
-/// that is one fixed area code. A NANP member with one area code carries it in
-/// its dial code (`1684`), because the picker then fills it in; one with several
-/// (`DO`, `JM`, `PR`) carries a bare `1` and the area code is typed. `AQ`
-/// (`672`) and `PN` (`64`) are not in libphonenumber and follow the ITU-T
-/// E.164 assignment list.
+/// Sorted by name, the picker's order. Checked 2026-09-20 against libphonenumber
+/// `806ee32e`; a NANP member with one area code carries it (`1684`).
 pub(crate) static COUNTRIES: &[Country] = &[
     row("AF", "Afghanistan", "93"),
     row("AX", "Åland Islands", "358"),
@@ -290,13 +275,8 @@ pub(crate) fn find(iso: &str) -> Option<&'static Country> {
         .find(|country| country.iso.eq_ignore_ascii_case(iso))
 }
 
-/// The country an E.164 number belongs to, by the **longest** dial code that
-/// prefixes it - `+1242` is the Bahamas and `+1213` is the first `+1` row.
-///
-/// Ambiguous by construction: twenty-odd countries share `+1` and three share
-/// `+44`. Resolving that needs the area-code tables we deliberately do not
-/// ship, so the caller's own pick wins whenever it fits - see
-/// [`country_for`](super::field::country_for).
+/// The country by the longest dial code prefixing the number. Shared codes are
+/// ambiguous, so [`country_for`](super::field::country_for) prefers the pick.
 pub(crate) fn by_dial(digits: &str) -> Option<&'static Country> {
     COUNTRIES
         .iter()
@@ -304,11 +284,8 @@ pub(crate) fn by_dial(digits: &str) -> Option<&'static Country> {
         .max_by_key(|country| (country.dial.len(), !SHARING.contains(&country.iso)))
 }
 
-/// The rows that share their dial code with a larger country, which is the one
-/// a bare `+61` or `+39` belongs to - libphonenumber's main country for the
-/// code. Without it the tie went to whichever row sorted last by name, so an
-/// Australian number arrived as the Cocos Islands and an Italian one as the
-/// Vatican.
+/// Rows that lose a dial-code tie to the main country, or `+39` would read as
+/// the Vatican rather than Italy.
 pub(crate) const SHARING: &[&str] = &[
     "AQ", "AX", "BL", "BQ", "CA", "CC", "CX", "DO", "EH", "GG", "IM", "JE", "JM", "KZ", "MF", "PN",
     "PR", "SJ", "VA", "YT",
@@ -339,17 +316,8 @@ pub(crate) fn national_of(e164: &str, country: &Country) -> Option<String> {
         .map(|national| national.to_string())
 }
 
-/// The national number grouped for reading, or `None` where this numbering
-/// plan has no one fixed shape.
-///
-/// Deliberately sparse. A grouping is only applied where the national number
-/// has one fixed, well-known shape, because inventing a grouping for 240
-/// numbering plans is exactly the data we decided not to ship. Nothing here is
-/// validation: a number of the wrong length is simply not grouped.
-///
-/// `None` rather than the bare digits, because a caller that has the user's own
-/// text must keep it: returning the digits made a blur on a German number strip
-/// the spaces the user had typed (todo 87b).
+/// The national number grouped for reading, only where the plan has one fixed
+/// shape. `None` otherwise, so the user's own spacing survives (todo 87b).
 pub(crate) fn group(country: &Country, national: &str) -> Option<String> {
     let digits = digits_of(national);
     let groups: &[usize] = match (country.dial, digits.len()) {

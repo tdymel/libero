@@ -66,9 +66,8 @@ impl Scale {
         }
     }
 
-    /// One mark per option in range, captioned by `name` - the same namer the
-    /// bubble uses, so a translated slider is translated everywhere.
-    /// Empty for a continuous scale, which has nothing to enumerate.
+    /// One mark per option in range, captioned by the bubble's namer. Empty on
+    /// a continuous scale.
     pub(super) fn derived_marks<V: SliderValue>(
         &self,
         name: impl Fn(&V) -> String,
@@ -89,11 +88,8 @@ impl Scale {
     }
 }
 
-/// The field's own gap is measured to the control's *box*, and a slider fills
-/// that box edge to edge: the thumb overhangs the track at the top, and the
-/// `marks-labeled` reserve ends at the caption's baseline box at the bottom.
-/// So a label would land on the thumb and a helper on the mark captions
-/// unless the control pushes them off itself.
+/// Keeps the label off the overhanging thumb and the helper off the mark
+/// captions: the field's gap only reaches the control's box.
 pub(super) fn control_spacing(above: bool, below: bool) -> Input<Sx> {
     if !above && !below {
         return Input::default();

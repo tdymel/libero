@@ -16,8 +16,7 @@ use crate::{
 field_props! {
     without(radius);
     pub struct SliderProps<V: SliderValue> {
-        /// Strictly controlled - pair it with `oninput`. Inside a `Form`, a
-        /// path `name` can supply it instead.
+        /// Controlled: pair it with `oninput`, or bind a path `name` in a `Form`.
         #[props(default)]
         value: Option<V>,
         /// Defaults to the first option, or `0.0` on a continuous scale.
@@ -26,53 +25,53 @@ field_props! {
         /// Defaults to the last option, or `100.0` on a continuous scale.
         #[props(default, into)]
         max: Option<V>,
-        /// Distance one step covers: a count of options discretely, a value
-        /// continuously. Measured from `min`, and it sets how many decimals
-        /// an emitted value keeps.
+        /// One step from `min`: options discretely, a value continuously. Sets
+        /// the decimals an emitted value keeps.
         #[props(default, into)]
         step: Option<V::Step>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Formats the bubble shown on hover, drag and keyboard focus, and
-        /// sets the thumb's `aria-valuetext`. Defaults to the bare value
-        /// continuously, and to `SliderValue::label` discretely. Also names
-        /// the derived marks, and runs during render - so it is how a
-        /// discrete slider is translated, reading a locale from context.
+        /// Formats the bubble, `aria-valuetext` and derived marks; runs during
+        /// render, so it can translate.
         #[props(default)]
         format: Option<Callback<V, String>>,
-        /// Ticks on the track; a labeled one gets a caption below it.
-        /// Replaces the marks a discrete scale derives.
+        /// Ticks on the track, a labeled one captioned. Replaces derived marks.
         #[props(default)]
         marks: Vec<SliderMark<V>>,
-        /// Names the thumb, which is the `role="slider"` element, when the
-        /// field has no `label` - an `aria_label` in `attributes` would land
-        /// on the wrapper instead.
+        /// Names the thumb without a `label`; one in `attributes` lands on the wrapper.
         #[props(default)]
         aria_label: Option<String>,
-        /// Emits a hidden input of that name, so the value posts with a form.
-        /// A path - `Settings::FIELDS.volume()` - also binds the value to the
-        /// surrounding `Form`'s value when there is no `oninput`.
+        /// What the value posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<V>,
-        /// Fires per value: a drag is the DOM's `input` event, not its
-        /// `change`. `Start`/`End` bracket a drag, `Change` carries every new
-        /// value.
+        /// Fires per value; `Start`/`End` bracket a drag.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent<V>>>,
-        /// Rules over the value, shown once the slider loses focus or its form
-        /// is submitted.
+        /// Rules over the value, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<V>,
     }
 }
 
-/// A draggable value along a track, with the field slots stacked around it.
-/// Controlled: it renders `value` and asks for a new one through `oninput`.
+/// A draggable value along a track. A [`SliderValue`] enum that lists its
+/// options makes it discrete.
 ///
-/// `V` is inferred from `value`. A [`SliderValue`] that lists its options -
-/// an ordered enum - makes the slider discrete: the range, the step grid, one
-/// mark per option and every caption come from the list, and `min`/`max` are
-/// written in that type rather than as indices.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Slider, SliderChangeEvent};
+/// # fn app() -> Element {
+/// let mut volume = use_signal(|| 40.0);
+/// rsx! {
+///     Slider {
+///         label: "Volume",
+///         value: volume(),
+///         oninput: move |event: SliderChangeEvent| volume.set(event.value()),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/slider>
 #[component]
 pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
     let theme = use_theme();

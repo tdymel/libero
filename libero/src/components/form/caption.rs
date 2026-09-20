@@ -1,11 +1,7 @@
 use dioxus::prelude::*;
 
-/// The text around a field's control: its label, its description, its helper.
-///
-/// `Text` is the case the a11y wiring can use - it gets an id and joins
-/// `aria-describedby`. `Node` is markup the caller built, so it renders and is
-/// styled like the others, but names nothing: a caller passing markup owns its
-/// own a11y, the same rule a caller-supplied `aria-describedby` follows.
+/// The text around a field's control: its label, description or helper.
+/// Only `Text` joins `aria-describedby`; a `Node` caller owns its own a11y.
 #[derive(Clone, Default, PartialEq)]
 pub enum Caption {
     #[default]

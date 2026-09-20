@@ -52,39 +52,54 @@ static SUMMARY_LIST_SX: StaticSx = StaticSx::new(|| {
 base_props! {
     extends(form);
     pub struct FormProps<V: FormValue> {
-        /// The whole form's value, which `validate` checks. A field inside
-        /// whose `name` is a path into it - `Signup::FIELDS.email()` - reads
-        /// and writes its place in it, unless it has a handler of its own.
-        /// A `Store`, so typing into one field re-renders that field only.
-        /// Handing over a different store - another record in an edit view -
-        /// mounts the fields again on it, so nothing is left reading the old
-        /// one.
+        /// The whole form's value. Fields named by a path into it read and write
+        /// their place. A different store remounts the fields.
         #[props(default)]
         value: Option<Store<V>>,
-        /// Composite rules over `value`. Name the fields a rule concerns with
-        /// `.on(..)` and its status shows on each of them.
+        /// Composite rules over `value`; `.on(..)` shows one on the named fields.
         #[props(default, into)]
         validate: Validators<V>,
-        /// Fires on a submit nothing blocks. Without an `action` the browser's
-        /// own submit is cancelled.
+        /// Fires on a submit nothing blocks. Without an `action` the native submit is cancelled.
         #[props(default)]
         onsubmit: Option<EventHandler<FormEvent>>,
         /// A heading over the error summary.
         #[props(default, into)]
         summary_title: Option<String>,
         /// Controls the form from outside, made with `use_form()`. Taken once.
-        /// Without it the form makes its own, which `use_form_context()`
-        /// reaches from inside.
         #[props(default)]
         form: Option<FormHandle>,
         children: Element,
     }
 }
 
-/// A `<form>` that validates on submit. Every field inside it shows its
-/// status, the composite rules run, and when anything is an error the submit
-/// is cancelled and an error summary is shown and focused - so a screen reader
-/// hears every problem at once.
+/// A `<form>` that validates on submit and focuses an error summary.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Fields, Form, Rule, TextField, not_empty};
+/// #[derive(Clone, PartialEq, Default, Fields)]
+/// struct Signup {
+///     email: String,
+/// }
+///
+/// # fn app() -> Element {
+/// let signup = use_store(Signup::default);
+/// rsx! {
+///     Form {
+///         value: signup,
+///         onsubmit: move |_| {},
+///         TextField {
+///             label: "Email",
+///             name: Signup::FIELDS.email(),
+///             validate: [not_empty::<String>.error("Enter your email.")],
+///         }
+///         button { r#type: "submit", "Sign up" }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/form>
 #[component]
 pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let handle = use_hook(|| props.form.unwrap_or_else(FormHandle::new));
@@ -93,12 +108,8 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     use_context_provider(|| handle);
     let key = use_hook(|| scope.key());
     use_drop(move || scope.withdraw(key));
-    // A field resolves its binding when it mounts, so the binding is keyed on
-    // the store: a caller that hands over a *different* `Store` - another
-    // record in an edit view, or `None` then `Some` - gets the fields mounted
-    // again on it, because their binding, their form scope and their touched
-    // state all belong to the store they resolved against. `Store`'s equality
-    // is its identity and not its contents, so a write is not a swap.
+    // A field binds on mount, so a different `Store` remounts the fields. `Store`
+    // equality is identity, so a write is not a swap.
     let mut store = use_hook(|| CopyValue::new(props.value));
     let mut record = use_hook(|| CopyValue::new(0u32));
     let swapped = *store.peek() != props.value;
@@ -114,8 +125,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let current = binding.peek().clone();
     use_context_provider(|| current.clone());
     if swapped {
-        // The fields about to mount read it out of the context, so it has to
-        // be the new one before they do.
+        // The fields about to mount read it from the context.
         provide_context(current);
     }
     // Read only with rules to run, so a form without any does not re-render on
@@ -153,8 +163,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let summary = use_hook(|| {
         let summary = Summary::new(focus_requests);
         handle.attach(Control {
-            // Through `store`, so a reset clears the value the fields are on
-            // and not the one the form mounted with.
+            // Through `store`: a reset clears the current value, not the first.
             reset_value: Rc::new(move || {
                 if let Some(mut value) = *store.peek() {
                     value.set(V::default());
@@ -183,8 +192,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
                 color: "error",
                 title: props.summary_title.clone(),
                 "data-slot": "summary",
-                // Over `Alert`'s own default, which is the same role - stated so
-                // the focus target below does not depend on that default.
+                // Stated so the focus target does not depend on `Alert`'s default.
                 role: "alert",
                 tabindex: "-1",
                 onmounted: summary_element.mount(),
@@ -197,9 +205,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
                                     rsx! {
                                         a {
                                             href: "#{id}",
-                                            // Focus, not the browser's jump: a `#fragment` would
-                                            // go through the router, and focus scrolls the
-                                            // field into view anyway.
+                                            // Focus, not a `#fragment` jump through the router.
                                             onclick: move |event: MouseEvent| {
                                                 event.prevent_default();
                                                 let _ = form_element
@@ -219,12 +225,8 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         }
     });
 
-    // Always two children: a summary slot that appears would otherwise shift
-    // the fields, and dioxus would remount them - new ids, touched state lost.
-    // The fields are keyed on the record instead, which is the one time they
-    // *must* be remounted.
-    // Both keyed, or dioxus refuses to diff the pair: a key on one sibling
-    // makes the whole list keyed. The summary's never changes.
+    // Always two keyed children, so a summary appearing never remounts the
+    // fields; they remount only on a record swap.
     let summary_key = "summary";
     let children = vec![
         rsx! {

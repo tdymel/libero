@@ -13,12 +13,8 @@ use crate::{
     utils::warn,
 };
 
-/// One suggestion, handed to `Autocomplete`'s `option` callback. It draws the
-/// row's *content*: the row itself - its highlight, its click - is the
-/// component's.
-///
-/// No `selected`: a suggestion is not a selection, which is the call
-/// `Combobox` already made for `aria-selected`.
+/// One suggestion, handed to `Autocomplete`'s `option` callback to draw the
+/// row's content. No `selected`: a suggestion is not a selection.
 #[derive(Clone, PartialEq)]
 pub struct AutocompleteOptionArgs<T> {
     pub value: T,
@@ -44,33 +40,25 @@ field_props! {
         /// picked or the field is cleared.
         #[props(default)]
         oninput: Option<EventHandler<String>>,
-        /// Rules over the text, shown once the field loses focus or its form
-        /// is submitted.
+        /// Rules over the text, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<String>,
-        /// The suggestions to offer. `T` infers from it, so no call site ever
-        /// annotates one.
+        /// The suggestions to offer.
         #[props(default)]
         options: Vec<T>,
-        /// Draws one row's content. Defaults to `Options::label`, in a
-        /// `span { "data-slot": "label" }`, which is what ellipsises a long one.
+        /// Draws one row's content. Defaults to `Options::label`.
         #[props(default)]
         option: Option<Callback<AutocompleteOptionArgs<T>, Element>>,
-        /// A suggestion was accepted, with the whole `T` behind the text - the
-        /// record's id, not just its label. Fires after `oninput`.
+        /// A suggestion was accepted, with the whole `T`. Fires after `oninput`.
         #[props(default)]
         onpick: Option<EventHandler<T>>,
-        /// Narrows `options`. Defaults to a case-insensitive `contains` over
-        /// `Options::label`.
+        /// Narrows `options`. Defaults to a case-insensitive `contains` on the label.
         #[props(default)]
         filter: Option<Callback<AutocompleteFilterArgs<T>, bool>>,
-        /// `options` arrives already narrowed - a list fetched per keystroke.
-        /// Skips filtering entirely, so `filter` is dead alongside it.
+        /// `options` arrives already narrowed; `filter` is skipped.
         #[props(default)]
         prefiltered: Option<bool>,
-        /// What the field posts as. A path - `Signup::FIELDS.city()` - also
-        /// binds it to the surrounding `Form`'s value when the field has no
-        /// `oninput`.
+        /// What the field posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<String>,
         #[props(default, into)]
@@ -78,40 +66,44 @@ field_props! {
         /// Shows an x that empties the field while it holds text.
         #[props(default)]
         clearable: Option<bool>,
-        /// Shown in place of the list when nothing matches. Without it, typed
-        /// text matching no option shows the localization's
-        /// `combobox.nothing_found`; either way that string is announced. An
-        /// `Element` has no text to read, so match your `empty` by overriding
-        /// that string in the `Localization`.
+        /// Shown in place of the list when nothing matches. Announced as
+        /// `combobox.nothing_found` either way.
         #[props(default)]
         empty: Option<Element>,
-        /// Inside the frame, before the control - a search icon.
+        /// Inside the frame, before the control.
         #[props(default, into)]
         leading: Option<Element>,
-        /// Inside the frame, after the control, before the clear x.
+        /// Inside the frame, after the control.
         #[props(default, into)]
         trailing: Option<Element>,
-        /// `leading` is text that belongs to the value, so the input's
-        /// `aria-describedby` reads it. Not for an icon or a button.
+        /// `leading` is text that describes the value (`aria-describedby`).
         #[props(default)]
         describe_leading: bool,
-        /// `trailing` is text that belongs to the value - a unit.
+        /// `trailing` is text that describes the value, e.g. a unit.
         #[props(default)]
         describe_trailing: bool,
     }
 }
 
-/// A text field that offers completions.
+/// A text field that offers completions; the value stays a `String`.
 ///
-/// The value is a `String` at all times - picking a suggestion inserts its
-/// label, it does not make the field hold a `T`. `T` is only what the rows are
-/// drawn from, and `onpick` hands the whole one back for the caller that needs
-/// the record behind the text. To *choose* out of a fixed set instead, reach
-/// for `Select`.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Autocomplete;
+/// # fn app() -> Element {
+/// let mut city = use_signal(String::new);
+/// rsx! {
+///     Autocomplete {
+///         label: "City",
+///         value: city(),
+///         oninput: move |text| city.set(text),
+///         options: vec!["Berlin".to_string(), "Paris".to_string()],
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// Typing opens the list; ArrowDown opens it too. Nothing is highlighted until
-/// the user arrows onto a row, so Enter on text that matches nothing is not
-/// swallowed and a form still submits.
+/// Docs: <https://libero-ui.dev/form/autocomplete>
 #[component]
 pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let theme = use_theme();
@@ -123,9 +115,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
 
     let bound = use_bound(&props.name, props.oninput.is_some());
     let disabled = bound.disabled(props.disabled);
-    // The text is the value, so the native `readonly` covers typing; the
-    // suggestion list is the other way to change it, and a read-only field
-    // does not open it.
+    // Native `readonly` covers typing; a read-only field also never opens the list.
     let readonly = props.readonly.unwrap_or(false);
     let text = bound.value().unwrap_or_else(|| props.value.clone());
 
@@ -137,7 +127,6 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     }
 
     let state = use_combobox();
-    // What the x hands the focus to once it has cleared the field.
     let input_element = use_element();
 
     let query = text.to_lowercase();
@@ -230,9 +219,8 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             state.set_active(None);
         },
     );
-    // The caller's own trailing content keeps its place; the x sits at the end,
-    // nearest the frame's edge. The id goes on the caller's part alone, so the
-    // x's name does not describe the input.
+    // The x sits last. The id goes on the caller's part alone, so the x's name
+    // does not describe the input.
     let [leading_id, trailing_id] = field.slot_ids();
     let trailing = (props.trailing.is_some() || clear.is_some()).then(|| {
         let caller = match (props.trailing.clone(), trailing_id) {
@@ -279,9 +267,8 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             if let Some(oninput) = &oninput {
                 oninput(event.value());
             }
-            // The list changes under the highlight, so typing disarms it: the
-            // next Enter belongs to whatever was typed, not to a row that
-            // happens to sit where the old one did.
+            // Typing disarms the highlight: the next Enter belongs to the typed
+            // text, not to a row that moved under it.
             state.set_active(None);
             state.open();
         })

@@ -16,8 +16,8 @@ use crate::{
 field_props! {
     without(radius);
     pub struct RangeSliderProps<V: SliderValue> {
-        /// The two ends, in track order. Strictly controlled - pair it with
-        /// `oninput`. Inside a `Form`, a path `name` can supply it instead.
+        /// The two ends in track order. Controlled: pair it with `oninput`, or
+        /// bind a path `name` in a `Form`.
         #[props(default)]
         value: Option<(V, V)>,
         /// Defaults to the first option, or `0.0` on a continuous scale.
@@ -26,9 +26,8 @@ field_props! {
         /// Defaults to the last option, or `100.0` on a continuous scale.
         #[props(default, into)]
         max: Option<V>,
-        /// Distance one step covers: a count of options discretely, a value
-        /// continuously. Measured from `min`, and it sets how many decimals
-        /// an emitted value keeps.
+        /// One step from `min`: options discretely, a value continuously. Sets
+        /// the decimals an emitted value keeps.
         #[props(default, into)]
         step: Option<V::Step>,
         /// The smallest gap the two thumbs keep. They may meet by default.
@@ -36,52 +35,51 @@ field_props! {
         min_range: Option<V::Step>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Formats the bubble shown on hover, drag and keyboard focus, and
-        /// sets each thumb's `aria-valuetext`. Defaults to the bare value
-        /// continuously, and to `SliderValue::label` discretely. Also names
-        /// the derived marks, and runs during render - so it is how a
-        /// discrete slider is translated, reading a locale from context.
+        /// Formats the bubbles, `aria-valuetext` and derived marks; runs during
+        /// render, so it can translate.
         #[props(default)]
         format: Option<Callback<V, String>>,
-        /// Ticks on the track; a labeled one gets a caption below it.
-        /// Replaces the marks a discrete scale derives.
+        /// Ticks on the track, a labeled one captioned. Replaces derived marks.
         #[props(default)]
         marks: Vec<SliderMark<V>>,
-        /// Names the lower thumb, which the field's own label cannot tell
-        /// apart from the upper one. Unset or `None`, the localization's
-        /// `slider.minimum`.
+        /// Names the lower thumb; defaults to the localization's `slider.minimum`.
         #[props(default)]
         aria_label_from: Option<String>,
-        /// Names the upper thumb. Unset or `None`, the localization's `slider.maximum`.
+        /// Names the upper thumb; defaults to the localization's `slider.maximum`.
         #[props(default)]
         aria_label_to: Option<String>,
-        /// Emits two hidden inputs of that name, in track order, so the pair
-        /// posts with a form - `FormData::get_all` reads it back.
-        /// A path - `Settings::FIELDS.volume()` - also binds the value to the
-        /// surrounding `Form`'s value when there is no `oninput`.
+        /// Posts two inputs of that name in track order. A path also binds the
+        /// pair to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<(V, V)>,
-        /// Fires per value: a drag is the DOM's `input` event, not its
-        /// `change`. `Start`/`End` bracket a drag, `Change` carries every new
-        /// pair.
+        /// Fires per pair; `Start`/`End` bracket a drag.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent<(V, V)>>>,
-        /// Rules over the pair, shown once the slider loses focus or its form
-        /// is submitted.
+        /// Rules over the pair, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<(V, V)>,
     }
 }
 
-/// Two thumbs on one track, with the field slots stacked around them.
-/// Controlled: it renders `value` and asks for a new pair through `oninput`.
+/// Two thumbs on one track that never cross, on [`Slider`](super::Slider)'s engine.
 ///
-/// The same engine and the same value types as [`Slider`](super::Slider) - a
-/// [`SliderValue`] that lists its options makes the range discrete, and the
-/// marks and captions come from that list.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{RangeSlider, SliderChangeEvent};
+/// # fn app() -> Element {
+/// let mut price = use_signal(|| (20.0, 80.0));
+/// rsx! {
+///     RangeSlider {
+///         label: "Price",
+///         value: price(),
+///         min_range: 5.0,
+///         oninput: move |event: SliderChangeEvent<(f64, f64)>| price.set(event.value()),
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// The thumbs never cross: each stops at the other, or `min_range` short of
-/// it.
+/// Docs: <https://libero-ui.dev/form/range-slider>
 #[component]
 pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
     let theme = use_theme();

@@ -129,9 +129,8 @@ impl<V: 'static> Clone for Validators<V> {
     }
 }
 
-/// Equal when every rule captures nothing and matches the other's by type,
-/// message and targets, so a field with `not_empty` memoizes. A capturing
-/// closure never compares equal, and its field re-renders with its parent.
+/// Equal when every rule captures nothing and matches by type, message and
+/// targets, so a field with `not_empty` memoizes. A capturing closure never is.
 impl<V: 'static> PartialEq for Validators<V> {
     fn eq(&self, other: &Self) -> bool {
         self.0.len() == other.0.len()

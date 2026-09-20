@@ -21,12 +21,8 @@ use crate::{
     utils::warn,
 };
 
-/// The frame's control: the chips and the input on one wrapping flow, so a tag
-/// editor types *between* its chips rather than in a box beside them.
-///
-/// It is not the `<input>` itself, because the input is only the draft. The
-/// field's id, its label and its `aria-describedby` still land on the input -
-/// that is what the caller types into and what `<label for>` may name.
+/// The chips and the draft input on one wrapping flow. The field's id and
+/// label still land on the input.
 static TAGS_VALUE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_wrap("wrap")
@@ -48,12 +44,8 @@ static TAGS_VALUE_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// The draft input, sharing the value slot's lines with the chips.
-///
-/// `flex-basis` rather than `min-width`: the basis is what a wrapping flex
-/// container measures before it shrinks anything, so the input drops onto its
-/// own line once the chips have taken the one it was on, instead of being
-/// squeezed to nothing beside them.
+/// The draft input. `flex-basis`, not `min-width`, so it wraps onto its own
+/// line instead of being squeezed beside the chips.
 static TAGS_INPUT_SX: StaticSx = StaticSx::new(|| field_control_sx().flex("1 1 60px"));
 
 field_props! {
@@ -65,46 +57,30 @@ field_props! {
         /// Called with the whole list the caller should hold next.
         #[props(default)]
         onchange: Option<EventHandler<Vec<String>>>,
-        /// Offers a dropdown of tags to pick instead of typing. Absent means no
-        /// dropdown at all - no listbox, no portal, and the input is a plain
-        /// text input rather than a combobox. Tags already held are never
-        /// offered.
+        /// Offers a dropdown of tags to pick; held tags are never offered.
         #[props(default)]
         suggestions: Option<Vec<String>>,
-        /// Each one commits the text before it. Defaults to `[","]`, and
-        /// applies to a paste as much as to typing - a paste arrives as one
-        /// `oninput` with the whole resulting string, so one splitter covers
-        /// both and nothing reads the clipboard.
+        /// Each one commits the text before it, typed or pasted. Defaults to `[","]`.
         #[props(default)]
         split_chars: Option<Vec<String>>,
         /// Lets the same tag be added twice. Off, the comparison is trimmed and
         /// case-insensitive.
         #[props(default)]
         allow_duplicates: Option<bool>,
-        /// The most tags the field accepts. Everything past it is refused, one
-        /// tag at a time - a paste of five into a field with room for two adds
-        /// those two and refuses the rest, rather than refusing the paste.
+        /// The most tags the field accepts; the rest are refused one by one.
         #[props(default)]
         max_tags: Option<usize>,
-        /// Accepts or refuses **one** tag, before it is added. `validate` is
-        /// the ordinary field line and rules over the whole list; this one
-        /// never shows a message, because "you already added that" is heavier
-        /// as an error under the field than the mistake it describes.
+        /// Accepts or refuses one tag before it is added. Shows no message.
         #[props(default)]
         tag_rules: Option<Callback<String, bool>>,
-        /// A tag was refused - a duplicate, one past `max_tags`, or one
-        /// `tag_rules` turned down. The only thing `onchange` cannot report,
-        /// which is why it is the only callback here beside it.
+        /// A tag was refused: a duplicate, past `max_tags`, or by `tag_rules`.
         #[props(default)]
         onrefuse: Option<EventHandler<String>>,
-        /// Rules over the whole list, shown once the field loses focus or its
-        /// form is submitted.
+        /// Rules over the whole list, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<Vec<String>>,
-        /// Emits one hidden input of that name per tag. The visible input holds
-        /// the draft, not the value, so it cannot carry the name itself.
-        /// A path - `Article::FIELDS.topics()` - also binds the list to the
-        /// surrounding `Form`'s value when there is no `onchange`.
+        /// Posts one hidden input per tag. A path also binds the list to the
+        /// surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<Vec<String>>,
         /// Shown while there are no tags and nothing has been typed.
@@ -113,33 +89,31 @@ field_props! {
         /// Shows an x that empties the field.
         #[props(default)]
         clearable: Option<bool>,
-        /// Draws one tag. Defaults to the text in a `Chip` with an x. A caller
-        /// who overrides it draws the whole chip, remove control included -
-        /// `args.remove` is the wiring.
-        ///
-        /// Make that control a `<button>` with `tabindex: "-1"`: the input is
-        /// the field's one tab stop, and the chip cursor (ArrowLeft from an
-        /// empty input) focuses each tag's button in turn. The field already
-        /// cancels `mousedown` on each tag, so a click never moves the focus
-        /// there.
+        /// Draws one whole tag, remove control included (`args.remove`). Make
+        /// that a `<button>` with `tabindex: "-1"`.
         #[props(default)]
         tag: Option<Callback<SelectionArgs<String>, Element>>,
     }
 }
 
-/// A field whose value is a list of free-typed strings, drawn as chips with the
-/// editor between them.
+/// A list of free-typed strings, drawn as chips with the editor between them.
 ///
-/// A comma - or any `split_chars` entry - and Enter both commit what was typed;
-/// Backspace on an empty input takes the last tag back. ArrowLeft on an empty
-/// input walks the tags, Delete or Backspace removes the focused one and
-/// ArrowRight past the last returns to the input. `suggestions` adds a
-/// dropdown, which is the only thing that makes this more than a text field
-/// with chips, and a picked suggestion becomes the same kind of tag a typed one
-/// does.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::TagsField;
+/// # fn app() -> Element {
+/// let mut topics = use_signal(Vec::<String>::new);
+/// rsx! {
+///     TagsField {
+///         label: "Topics",
+///         value: topics(),
+///         onchange: move |next| topics.set(next),
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// To choose out of a fixed set instead, reach for `MultiSelect`: its value is
-/// a `Vec<T>` over a real domain type, and it cannot be typed into.
+/// Docs: <https://libero-ui.dev/form/tags-field>
 #[component]
 pub fn TagsField(props: TagsFieldProps) -> Element {
     let theme = use_theme();
@@ -149,9 +123,8 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
-    // Three ways to change the list, so three refusals: the draft input
-    // (native `readonly`), the keys that commit or delete a tag, and the
-    // chips' own remove buttons. The clear button stands down with them.
+    // Refused on the input (native), the commit/delete keys, the chips' x and
+    // the clear button.
     let readonly = props.readonly.unwrap_or(false);
     let held = bound.value().unwrap_or_else(|| props.value.clone());
     let announcer = use_chip_announcer(held.clone());
@@ -160,12 +133,9 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         warn("TagsField: without `onchange` the tags can never change.");
     }
 
-    // The draft is the component's, the way `SelectCore` owns its query: it is
-    // not the value, nothing outside can act on it, and a controlled copy would
-    // be one more thing for every call site to hold.
+    // The draft is the component's own, as `SelectCore` owns its query.
     let mut text = use_signal(String::new);
     let state = use_combobox();
-    // What the x hands the focus to once it has cleared the field.
     let input_element = use_element();
     let cursor = TagCursor {
         slot: use_element(),
@@ -207,15 +177,11 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
 
     let onchange = bound.emit(props.onchange);
 
-    // Every path that can add a tag goes through this one: typing a splitter,
-    // pasting, Enter, blur and picking a suggestion all merge the same way, so
-    // `max_tags` and the duplicate rule cannot disagree between them.
+    // Every path that adds a tag merges here, so the rules cannot disagree.
     let merging = held.clone();
     let onrefuse = props.onrefuse;
     let emit = onchange.clone();
-    // An `Rc` rather than a `use_callback`: blur is one of the paths that calls
-    // it, and nothing focus or blur can re-enter goes through `use_callback`
-    // ([[codebase/reentrant-handlers]]).
+    // An `Rc`, not a `use_callback`: blur calls it ([[codebase/reentrant-handlers]]).
     // Returns the first refused tag, which the draft keeps.
     let refusals = use_announcer();
     let localization = use_localization();
@@ -339,14 +305,10 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 size,
                 radius,
                 disabled: disabled || readonly,
-                // The list stays up after a pick, the way `MultiSelect` keeps
-                // it up: the picked row leaves
-                // the list and the next one is one key away. `Autocomplete`
-                // closes because its single value is then settled.
+                // Stays up after a pick, as on `MultiSelect`.
                 close_on_pick: false,
                 width: PopoverWidth::Match,
-                // A tag added or taken back resizes the frame under an open
-                // list.
+                // A tag added or taken back resizes the frame under an open list.
                 remeasure: held.len() as u64,
                 {framed}
             }
@@ -537,8 +499,7 @@ fn after_removal(index: usize, count: usize) -> Option<usize> {
     }
 }
 
-/// The chips, one per held tag. The input is the one tab stop; the chip cursor
-/// moves the focus onto a tag's button, and a removal moves it on before the
+/// The chips, one per held tag. A keyboard removal moves focus on before the
 /// tag goes ([[principles/focus-after-removal]]).
 fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
     held: &[String],
@@ -580,15 +541,12 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
                 key: "{index}",
                 "data-slot": "tag",
                 "data-tag-index": "{index}",
-                // The default chip's own guard, applied here so a caller's
-                // `tag` has it too: a press on its x must not take the focus
-                // off the input, or the removal strands it on the body.
+                // The default chip's guard, so a caller's `tag` has it too: a
+                // press on its x must not strand the focus on the body.
                 onmousedown: move |event: MouseEvent| event.prevent_default(),
                 onkeydown: move |event: KeyboardEvent| {
                     let key = logical_key(&event);
-                    // Tab leaves, Escape closes the list and chords are the
-                    // browser's; every other key is the cursor's, not the
-                    // combobox's around it.
+                    // Tab, Escape and chords pass; every other key is the cursor's.
                     if matches!(key, Key::Tab | Key::Escape) || !event.modifiers().is_empty() {
                         return;
                     }
@@ -607,11 +565,8 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
     }
 }
 
-/// The suggestion rows: what is already held is never offered again, and the
-/// draft narrows what is left.
-///
-/// Drawn eagerly and handed down as values: a `Callback` would let the rows
-/// memoize and a narrowed list would leave stale ones on screen.
+/// The suggestion rows not yet held, narrowed by the draft. Drawn eagerly: a
+/// `Callback` would let the rows memoize and leave stale ones on screen.
 fn tags_field_rows(
     suggestions: Option<Vec<String>>,
     held: &[String],
@@ -648,9 +603,7 @@ fn tags_field_rows(
         .collect()
 }
 
-/// A hidden input per tag is how the list posts: the visible one holds the
-/// draft, so it carries no `name` at all. The same shape `MultiSelect` uses,
-/// and the same one a native `<select multiple>` sends.
+/// A hidden input per tag, as `MultiSelect` and `<select multiple>` post.
 fn tags_field_hidden(name: Option<String>, held: &[String], disabled: bool) -> Option<Element> {
     let held = held.to_vec();
     name.map(|name| {
@@ -685,8 +638,7 @@ struct Draft {
     cursor: TagCursor,
 }
 
-/// The draft input: the field's id, label and `aria-describedby` land here,
-/// because this is what the caller types into and what `<label for>` may name.
+/// The draft input, which carries the field's id, label and description.
 fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
     control: BoxStyle,
     draft: Draft,
@@ -707,15 +659,11 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
         placeholder,
         cursor,
     } = draft;
-    // One `Rc` per path that can add a tag: typing a splitter, Enter and blur
-    // all merge through the same closure.
     let (typing, entering, blurring) = (add.clone(), add.clone(), add);
 
     let mut attributes = match has_suggestions {
         true => state.a11y_attributes(),
-        // Without a dropdown there is no listbox for `aria-controls` to name
-        // and nothing for the arrows to move, so the input is what it looks
-        // like: a text input.
+        // Without a dropdown the input is a plain text input.
         false => Vec::new(),
     };
     attributes.extend(extra);
@@ -736,18 +684,15 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
             let raw = event.value();
             let pieces: Vec<String> = split(&raw, &split_chars);
             match pieces.is_empty() {
-                // Nothing to commit - the text is only separators. Keeping what
-                // arrived is what keeps the signal and the DOM agreeing: a
-                // value the vdom already rendered is not written back, so
-                // normalising `","` to `""` would leave the comma on screen.
+                // Only separators: keep them, or an already rendered `""` is not
+                // written back and the comma stays on screen.
                 true if raw != text() => text.set(raw),
                 true => {}
                 // A refused tag stays in the draft, to fix or drop.
                 false => text.set(typing(pieces).unwrap_or_default()),
             }
-            // The list changes under the highlight, so typing disarms it: the
-            // next Enter belongs to what was typed, not to a row that happens
-            // to sit where the old one did.
+            // Typing disarms the highlight: the next Enter belongs to the typed
+            // text, not to a row that moved under it.
             state.set_active(None);
             if has_suggestions {
                 state.open();
@@ -758,9 +703,8 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                 return;
             }
             match logical_key(&event) {
-                // A highlighted row is the core's Enter, and it must never mean
-                // two things. Nothing highlighted and nothing typed is nobody's,
-                // so it bubbles and a form still submits.
+                // A highlighted row owns Enter; with nothing typed it bubbles
+                // and a form still submits.
                 Key::Enter
                     if !(state.is_open() && state.active().is_some() && row_count > 0)
                         && !text().trim().is_empty() =>
@@ -771,9 +715,8 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                     }
                     state.set_active(None);
                 }
-                // The input is the value's own editor here, not a filter over a
-                // list - which is why this reverses the call `MultiSelect`'s
-                // search box made. With text in it, Backspace only ever edits.
+                // The input edits the value, unlike `MultiSelect`'s search box;
+                // with text in it, Backspace only edits.
                 Key::Backspace if text().is_empty() && !held.is_empty() => {
                     let Some(onchange) = &onchange else {
                         return;
@@ -796,9 +739,7 @@ fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
                 _ => {}
             }
         })
-        // What was typed and not committed is still what the user meant, so it
-        // becomes a tag rather than being thrown away. Not a prop: nobody turns
-        // it off, and one for "discard my typing" is not worth the line.
+        // An uncommitted draft becomes a tag rather than being thrown away.
         .event("onblur", move |_: FocusEvent| {
             let draft = text();
             if !readonly

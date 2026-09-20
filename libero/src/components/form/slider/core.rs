@@ -44,9 +44,8 @@ const SLIDER_THUMB_FILL: CssVar = CssVar::new("--lsx-slider-thumb-fill");
 /// sliders sit closer than that sets it; see `SLIDER_THUMB_SX`.
 pub(in crate::components::form) const SLIDER_HIT: CssVar = CssVar::new("--lsx-slider-hit");
 
-/// Where a 0-1 `fraction` sits along the track. The track is the full width,
-/// so the thumb travels inset by half its own width and never overhangs -
-/// which is also what keeps stacked sliders of different sizes aligned.
+/// Where a 0-1 `fraction` sits along the track, inset by half a thumb so it
+/// never overhangs.
 fn along_track(fraction: CssVar) -> String {
     let thumb = SLIDER_THUMB.value();
     format!(
@@ -63,17 +62,13 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .align_items("center")
         .position("relative")
-        // A flex/grid parent sizes to content, and the track is empty - so
-        // without this the whole slider collapses to nothing.
+        // Or a flex/grid parent collapses the empty track to nothing.
         .width("100%")
         .min_height(SLIDER_THUMB.value())
         .user_select("none")
-        // Captions sit below the root, so they need reserved space or they
-        // overlap whatever follows. Padding, not margin: a margin collapses
-        // with the next sibling's and the reserve goes away.
+        // Room for the captions. Padding, not margin, which would collapse.
         .when("marks-labeled", sx().padding_bottom("1.5em"))
-        // Nothing to grab: the track's pointer and the thumb's grab hand would
-        // promise a drag that `onstart` refuses.
+        // No grab cursor for a drag `onstart` refuses.
         .when("readonly", sx().selector("& *", sx().cursor("default")))
         // No `pointer-events: none`, so `not-allowed` shows (todo 596): `onstart`
         // refuses the drag, and the thumb's bubble is held shut. After `readonly`.
@@ -83,10 +78,8 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
                 .cursor("not-allowed")
                 .selector("& *", sx().cursor("not-allowed")),
         )
-        // The track is the scale, so the thumb must read against any color on
-        // it: white ring, dark halo, the picked color as its face.
-        // The shadow only while unfocused: this selector outranks the thumb's
-        // own `:focus-visible` arm, which drew the ring without its halo.
+        // White ring and dark halo read on any track color. The shadow only
+        // unfocused, or it outranks the thumb's `:focus-visible` ring.
         .when(
             "plain",
             sx().selector(
@@ -105,13 +98,10 @@ static SLIDER_TRACK_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
         .flex("1 1 auto")
         .height(SLIDER_TRACK.value())
-        // 3:1 on the page in both schemes: the track shows the range's extent
-        // (WCAG 1.4.11, todo 512). Through its var: a named shade would publish
-        // `--lsx-focus-contrast`, dark in dark mode, and the thumb's ring takes it.
+        // 3:1 in both schemes (WCAG 1.4.11, todo 512). Via its var: a named
+        // shade would publish a `--lsx-focus-contrast` the thumb's ring takes.
         .background(ColorValue::Shade(Color::Muted, ColorShade::S6).value())
-        // A pill, always: the radius scale starts at 2px and a track is 2-10px
-        // tall, so every step above the smallest clamped to the same half-height
-        // curve. The shared `radius` prop is not wired here for that reason.
+        // Always a pill: at 2-10px tall every radius step clamps the same.
         .border_radius("999px")
         .cursor("pointer")
         // Forced colours drop the background but paint a transparent outline
@@ -171,20 +161,15 @@ static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
         .width(SLIDER_THUMB.value())
         .height(SLIDER_THUMB.value())
         .border_radius("50%")
-        // `value_or`'s fallback is interpolated as raw CSS - `sx` never sees
-        // it - so it has to be a var reference, not a colour name. `"surface"`
-        // here would be an unknown CSS keyword and the thumb would compute to
-        // transparent (todo 385).
+        // `value_or`'s fallback is raw CSS, so a var, not `"surface"`, which
+        // computes to transparent (todo 385).
         .background(SLIDER_THUMB_FILL.value_or(NamedColorCss::SURFACE.value()))
         .border_style("solid")
         .border_width("2px")
         .border_color(SLIDER_COLOR.value())
         .cursor("grab")
-        // WCAG 2.5.8 wants a 24x24 target, and the default thumb is 16px. An
-        // invisible square centred on the thumb takes the pointer instead, so
-        // the thumb keeps its look. Which thumb a press grabs is picked by
-        // value, never by hit-test, so two overlapping squares cannot swap
-        // a range's thumbs.
+        // An invisible 24px square for WCAG 2.5.8. A press picks its thumb by
+        // value, not hit-test, so overlapping squares cannot swap them.
         .position("relative")
         .selector(
             "&::before",
@@ -233,18 +218,8 @@ static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
 
 static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
-        // Off the track's centre line, not its bottom: the track is thinner
-        // than the thumb, so `100%` would put the caption under the thumb.
-        //
-        // Measured from the top in thumbs, never as a percentage: `50%`
-        // resolves against the *padding* box, and the `marks-labeled` reserve
-        // below is padding - so a percentage drifts the caption down by half
-        // the reserve and eats the gap to whatever follows. The content box is
-        // one thumb tall, so its centre line is at `thumb / 2`, and one whole
-        // thumb sits the caption directly under the thumb's lower edge.
-        //
-        // The reserve below must stay this offset plus the caption's own line
-        // box, or the captions overflow the root and land on whatever follows.
+        // In thumbs, not `%`, which counts the `marks-labeled` padding. Keep
+        // that reserve equal to this offset plus a line, or captions overflow.
         .top(SLIDER_THUMB.value())
         .left(along_track(SLIDER_MARK_AT))
         // Centred in the middle, edge-aligned at the ends: a `-50%` caption
@@ -275,12 +250,8 @@ fn bar_variables(bar: (f64, f64)) -> String {
         .render()
 }
 
-/// The `f64` engine every `Slider<V>` renders. Non-generic on purpose: this
-/// is the whole component, and it is compiled once no matter how many value
-/// types a caller slides over.
-///
-/// `HueSlider` and `AlphaSlider` render it too, as a `plain` slider over a
-/// `track` gradient.
+/// The `f64` engine every `Slider<V>`, `HueSlider` and `AlphaSlider` renders.
+/// Non-generic, so it compiles once.
 #[derive(Props, Clone, PartialEq)]
 pub(in crate::components::form) struct SliderCoreProps {
     /// Already resolved by the skin - the scale, not the caller's type. One
@@ -352,9 +323,7 @@ struct Live {
 
 #[component]
 pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element {
-    // `snap` clamps on every render, and `f64::clamp` panics on an inverted
-    // or non-finite range - which `max: items.len() as f64 - 1.0` is for an
-    // empty list. `step.max(0.0)` already maps a NaN step to 0 (continuous).
+    // `f64::clamp` panics on a broken range; `step.max(0.0)` maps NaN to 0.
     let (min, max) = sane_bounds(props.min, props.max);
     let live_now = Live {
         value: props.value.snapped(min, max, props.step.max(0.0)),
@@ -417,9 +386,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let thumb_width = use_local_state(|| 0.0_f64);
     // Under RTL the minimum is at the right edge.
     let track_rtl = use_local_state(|| false);
-    // What `End` reports, and what a range's moves are measured against: the
-    // drag's own last value, which a controlled parent may not have echoed
-    // back yet. Never rendered, so a write redraws nothing.
+    // The drag's own last value, which the parent may not have echoed yet.
+    // Never rendered, so a write redraws nothing.
     let mut latest = use_hook(|| CopyValue::new(live.peek().value));
     // Which thumb the pointer grabbed. Always 0 for a single thumb. A signal:
     // the thumbs' scope reads it for the open bubble.
@@ -433,9 +401,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         }
     });
 
-    // A `Callback`, not a closure: `LocalState` is not `Copy`, and two drag
-    // handlers need this. Unsnapped - the grid is applied where the thumb is
-    // also clamped against its neighbour.
+    // A `Callback`: `LocalState` is not `Copy`. Unsnapped; `moved` applies
+    // the grid.
     let position_at = {
         let (track_left, track_width, thumb_width, track_rtl) = (
             track_left.clone(),
@@ -488,15 +455,13 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                 (track_left.clone(), track_width.clone(), thumb_width.clone());
             track_rtl.set(root_element.is_rtl());
             let press_focus = press_focus.clone();
-            // Started here, awaited in the task: a read resolves where it is
-            // called, and under Blitz that has to be inside the handler - the
-            // document is locked for as long as tasks are draining.
+            // Started here, awaited in the task: Blitz locks the document
+            // while tasks drain.
             let track_size = track_element.dimensions();
             let track_offset = track_element.client_offset();
             let thumb_size = thumb_elements[0].dimensions();
-            // Off the web a measurement is a round-trip, so the drag starts
-            // before the geometry is known - moves landing first are dropped
-            // by `position_at`'s own zero-travel guard.
+            // Off the web the drag starts before the geometry; early moves hit
+            // `position_at`'s zero-travel guard.
             spawn(async move {
                 let (Ok(dimensions), Ok((left, _))) = (track_size.await, track_offset.await) else {
                     event.cancel.call(());
@@ -513,10 +478,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
 
                 match position_at.call(event.client.x) {
                     Some(raw) => {
-                        // `use_drag` cancels the pointerdown, which cancels
-                        // the browser's own focus - so the keyboard would be
-                        // unreachable after a mouse drag. Which thumb to
-                        // focus is only known once the pointer is mapped.
+                        // `use_drag` cancels the pointerdown and so its focus;
+                        // the grabbed thumb is focused here instead.
                         let index = grab.call(raw);
                         let thumb = thumb_elements[index];
                         if focusable && !thumb.is_focused() {
@@ -563,9 +526,8 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
             theme.slider.step
         } * unit;
 
-        // `Change` then `End`: a key press settles on its value the moment it
-        // lands, so a caller that commits on `End` - which is what the docs
-        // ask for - has to hear about a keyboard edit too.
+        // `Change` then `End`: a key press settles at once, and callers commit
+        // on `End`.
         let value = live.peek().value;
         let go_to = |raw: f64| {
             event.prevent_default();
@@ -763,11 +725,8 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
         let bubble_text = text
             .clone()
             .unwrap_or_else(|| thumb_value.to_string().replacen('.', decimal_separator, 1));
-        // `aria-labelledby` beats `aria-label`, so a range thumb that has both
-        // lists itself after the field's label: its own `aria-label` then
-        // follows the caption ("Price Minimum") instead of being dropped. A
-        // single thumb's `aria_label` is the stand-in for a missing `label`,
-        // so there the label keeps winning alone.
+        // `aria-labelledby` beats `aria-label`, so a range thumb lists itself
+        // after the label ("Price Minimum"); a single thumb's label wins alone.
         let aria_label = aria_labels[index].clone();
         let (own_id, labelledby) = match (&props.labelledby, &aria_label) {
             (Some(label), Some(_)) if range => {
@@ -778,9 +737,8 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             _ => (None, props.labelledby.clone()),
         };
 
-        // A `plain` slider has no bubble to point at. The bubble goes after
-        // the field's captions: a hint or an error is the news, the value is
-        // already in `aria-valuenow`.
+        // A `plain` slider has no bubble. It goes after the captions: the
+        // value is already in `aria-valuenow`.
         let bubble_id = (!props.plain).then(|| format!("{}-value-{index}", bubble_id.read()));
         let describedby = [props.describedby.clone(), bubble_id.clone()]
             .into_iter()
@@ -828,9 +786,8 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
             };
         }
 
-        // The drag keeps it open once the pointer has left the thumb; hover
-        // and keyboard focus are the tooltip's own doing. A disabled thumb
-        // takes the pointer now (todo 596), but still opens no bubble.
+        // A drag holds it open off the thumb; a disabled thumb opens none
+        // (todo 596).
         let open = match props.disabled {
             true => Some(false),
             false => (dragging() && active() == index).then_some(true),
@@ -845,9 +802,8 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
                     gap: Size::Sm,
                     open,
                     label_id: bubble_id,
-                    // The thumb's hit area already spans the gap, and the
-                    // portaled bridge over it would take the press from it. No
-                    // box at all: Blitz hits the bubble's text over its overflow.
+                    // No bridge: it would take the thumb's presses, and Blitz
+                    // hits even an overflowing box.
                     sx: sx().selector("&::before", sx().display("none")),
                     {thumb}
                 }
@@ -869,8 +825,7 @@ fn SliderThumbs(props: SliderThumbsProps) -> Element {
 #[component]
 fn SliderHidden(live: Signal<Live>, name: String, disabled: bool) -> Element {
     let inputs = live.read().value.thumbs().map(move |thumb_value| {
-        // `Some(true)` or nothing - see `SegmentedControl`: a `false`
-        // bool reaches a native renderer as the string "false", which
+        // `Some(true)` or nothing: native writes `false` as a string, which
         // reads as disabled.
         rsx! {
             input {

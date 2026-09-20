@@ -17,7 +17,7 @@ use crate::{
 
 base_props! {
     pub struct HueSliderProps {
-        /// Degrees, `0-360`. Strictly controlled - pair it with `oninput`.
+        /// Degrees, `0-360`. Controlled: pair it with `oninput`.
         value: f64,
         /// `Start`/`End` bracket a drag, `Change` carries every new hue.
         #[props(default)]
@@ -29,15 +29,29 @@ base_props! {
         /// Names the thumb, which is the `role="slider"` element.
         #[props(default, into)]
         aria_label: Option<String>,
-        /// `false` keeps the thumb out of the tab order and a drag from
-        /// focusing it. On by default.
+        /// `false` keeps the thumb from taking focus.
         #[props(default)]
         focusable: Option<bool>,
     }
 }
 
-/// A track of every hue, with the thumb showing the one picked. The hue half
-/// of a `ColorPicker`, usable on its own.
+/// A track of every hue: a `ColorPicker`'s hue slider, on its own.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{HueSlider, SliderChangeEvent};
+/// # fn app() -> Element {
+/// let mut hue = use_signal(|| 210.0);
+/// rsx! {
+///     HueSlider {
+///         value: hue(),
+///         oninput: move |event: SliderChangeEvent| hue.set(event.value()),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/color-picker>
 #[component]
 pub fn HueSlider(props: HueSliderProps) -> Element {
     let theme = use_theme();

@@ -1,8 +1,6 @@
 use dioxus::prelude::*;
 
-/// libero ships no icon set, so the glyphs a field cannot do without live
-/// here. Shared rather than per component: `Select`'s trigger and
-/// `Autocomplete`'s clear button draw the same x.
+/// The select trigger's chevron.
 #[component]
 pub(super) fn ChevronIcon() -> Element {
     rsx! {
@@ -19,14 +17,10 @@ pub(super) fn ChevronIcon() -> Element {
     }
 }
 
-// The x moved to `components/common/icons.rs`, which is where every glyph
-// lives from now on; `Alert`'s close button was the third module to need it.
-// Re-exported rather than re-pointed at eight call sites, so `glyphs::`
-// stays the one name a field imports.
+// Re-exported so `glyphs::` stays the one path a field imports icons from.
 pub(super) use crate::components::common::CloseIcon;
 
-/// The dropzone's prompt. A tray with an arrow going into it, which is the
-/// shape every upload control has settled on.
+/// The dropzone's prompt: a tray with an arrow going into it.
 #[component]
 pub(super) fn UploadIcon() -> Element {
     rsx! {

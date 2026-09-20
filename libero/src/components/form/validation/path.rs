@@ -2,9 +2,7 @@ use std::{any::Any, borrow::Cow, fmt, marker::PhantomData};
 
 use dioxus::dioxus_core::{AttributeValue, IntoAttributeValue};
 
-/// One field access with its type erased: from a struct to one of its fields.
-/// Emitted by `#[derive(Fields)]` and [`path!`](crate::path), so a path can
-/// read and write the value it names inside a form's value.
+/// One type-erased field access, emitted by `#[derive(Fields)]` and [`path!`](crate::path).
 #[doc(hidden)]
 #[derive(Clone, Copy)]
 pub struct Step {
@@ -41,12 +39,8 @@ pub(crate) fn resolve_mut<'a>(root: &'a mut dyn Any, steps: &[Step]) -> Option<&
     Some(value)
 }
 
-/// A field's place inside a value of type `Root`, holding a `T`. Doubles as
-/// the field's `name`, so what posts and what a composite rule names are one
-/// string - `address.zip` for a nested field.
-///
-/// Built by `#[derive(Fields)]` (`Signup::FIELDS.address().zip()`) or by
-/// [`path!`](crate::path) for a type that cannot derive.
+/// A field's place inside a `Root`, holding a `T`; also its posted `name`
+/// (`address.zip`). Built by `#[derive(Fields)]` or [`path!`](crate::path).
 pub struct FieldPath<Root, T> {
     path: Cow<'static, str>,
     steps: Cow<'static, [Step]>,
@@ -145,14 +139,8 @@ impl<Root, T> IntoAttributeValue for FieldPath<Root, T> {
     }
 }
 
-/// A field's `name`, typed by the value the field holds. Built from a
-/// [`FieldPath`] - `Signup::FIELDS.email()` - which inside a `Form` also binds
-/// the field to that place in the form's value, or from a plain string, which
-/// only posts.
-///
-/// Only `T` is checked when compiling: `name: Signup::FIELDS.terms()` on a
-/// `TextField` is an error. The path's root is checked against the form's
-/// value when the field renders.
+/// A field's `name`, typed by its value. A [`FieldPath`] also binds it inside
+/// a `Form`; a plain string only posts. The root is checked at render.
 pub struct FieldName<T> {
     path: Cow<'static, str>,
     steps: Option<Cow<'static, [Step]>>,

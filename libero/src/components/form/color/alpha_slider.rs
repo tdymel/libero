@@ -18,7 +18,7 @@ use crate::{
 
 base_props! {
     pub struct AlphaSliderProps {
-        /// `0.0-1.0`. Strictly controlled - pair it with `oninput`.
+        /// `0.0-1.0`. Controlled: pair it with `oninput`.
         value: f64,
         /// The color the track fades in. Its own alpha is ignored.
         color: ColorCode,
@@ -32,19 +32,35 @@ base_props! {
         /// Names the thumb, which is the `role="slider"` element.
         #[props(default, into)]
         aria_label: Option<String>,
-        /// `false` keeps the thumb out of the tab order and a drag from
-        /// focusing it. On by default.
+        /// `false` keeps the thumb from taking focus.
         #[props(default)]
         focusable: Option<bool>,
     }
 }
 
-/// A track from transparent to `color` over a checkerboard. The opacity half
-/// of a `ColorPicker`, usable on its own.
+/// A track from transparent to `color` over a checkerboard: a `ColorPicker`'s
+/// alpha slider, on its own.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{AlphaSlider, ColorCode, SliderChangeEvent};
+/// # fn app() -> Element {
+/// let mut alpha = use_signal(|| 0.8);
+/// rsx! {
+///     AlphaSlider {
+///         value: alpha(),
+///         color: ColorCode::rgba(34, 139, 230, 1.0),
+///         oninput: move |event: SliderChangeEvent| alpha.set(event.value()),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/color-picker>
 #[component]
 pub fn AlphaSlider(props: AlphaSliderProps) -> Element {
-    // Both ends spelled as `rgba()`: a bare `transparent` is transparent
-    // *black*, which greys the middle of the gradient in older engines.
+    // A bare `transparent` is transparent black, which greys the gradient's
+    // middle in older engines.
     let track = format!(
         "linear-gradient(to right, {}, {}), {CHECKERBOARD}",
         props.color.with_alpha(0.0).to_rgba(),

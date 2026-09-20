@@ -1,13 +1,8 @@
-//! What a `Slider` can be dragged over: a continuous range, or a finite
-//! ordered set. The component itself is `f64`-only - this is the layer that
-//! maps a caller's own type onto it.
-//!
-//! `f64` is the only impl libero ships: a slider's values are the caller's
-//! domain, not ours. An ordered enum of theirs derives the rest.
+//! What a `Slider` can be dragged over: a continuous `f64` range, or an
+//! ordered enum that derives `SliderValue`, mapped onto the `f64` core.
 
-/// How far one arrow press or one `step` moves. A count over the options in
-/// a discrete set, a distance in a continuous one - so `step: 1.5` on an
-/// enum-valued slider is a type error, not a runtime surprise.
+/// How far one step moves: a count of options, or a distance, so `step: 1.5`
+/// on an enum slider is a type error.
 pub trait SliderStep: Copy + PartialEq + 'static {
     fn as_f64(self) -> f64;
 }
@@ -24,13 +19,8 @@ impl SliderStep for usize {
     }
 }
 
-/// A value a `Slider` renders and emits.
-///
-/// A discrete type lists its `options` and gets its range, step grid, marks
-/// and captions derived from them; the default `position`/`at` walk that
-/// list. A continuous one returns `None` and must override both.
-///
-/// `#[derive(SliderValue)]` writes the discrete impl for an ordered enum.
+/// A value a `Slider` renders and emits. A discrete type lists its `options`
+/// (`#[derive(SliderValue)]`); a continuous one overrides `position`/`at`.
 pub trait SliderValue: Clone + PartialEq + 'static {
     type Step: SliderStep;
 
@@ -111,11 +101,8 @@ impl From<f64> for SliderMark {
     }
 }
 
-/// Where the value went, and how far along the interaction is. `Start` and
-/// `End` bracket one pointer drag; a key press emits `Change` then `End`,
-/// because it settles on its value at once. So `End` always means a value the
-/// user is done choosing, whichever way they chose it, and committing on it
-/// is enough.
+/// Where the value went and how far along the interaction is. `Start`/`End`
+/// bracket a drag; a key press emits `Change` then `End`, so commit on `End`.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SliderChangeEvent<V = f64> {
     Start(V),

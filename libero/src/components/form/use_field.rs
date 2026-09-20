@@ -31,9 +31,8 @@ impl From<ChoiceVariant> for Input<ChoiceVariant> {
     }
 }
 
-/// The wrapper owns the look of all four text slots, addressed by tag and by
-/// `data-slot`. Giving each caption its own `use_box` would cost four more
-/// stylesheet registrations per field, and none of them takes styling props.
+/// The wrapper styles all four text slots by `data-slot`, saving four
+/// stylesheet registrations per field.
 static FIELD_SX: StaticSx = StaticSx::new(|| {
     FieldDefaults::theme_vars()
         .display("flex")
@@ -45,14 +44,9 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
                 .margin_left("2px")
                 .rtl(sx().margin_left("0").margin_right("2px")),
         )
-        // A control with no frame - a checkbox, a radio - sits beside its
-        // label instead of under it. The control takes column one of the
-        // first row; the label and every caption take column two, so the
-        // captions line up under the label rather than under the box.
-        // A control that fills its width can only fill the wrapper's, so the
-        // wrapper has to fill its parent too - a centring parent would
-        // otherwise shrink it to the control's natural width.
+        // A full-width control fills only the wrapper, so the wrapper fills its parent.
         .when("full-width", sx().width("100%"))
+        // A frameless control sits beside its label; captions line up under the label.
         .when(
             "inline",
             sx().display("grid")
@@ -61,23 +55,19 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
                 .column_gap(FIELD_FRAME_GAP.value())
                 .selector("& > label, & > [data-slot]", sx().grid_column("2")),
         )
-        // A card is the inline layout drawn as a surface, and the whole of it
-        // is the hit area. Paper's tokens, not a paint of its own. No
-        // `--lsx-focus-contrast`: the only ring is the card's own, and it sits
-        // outside the card, on whatever the card sits on.
+        // The inline layout as a `Paper` surface that is all hit area. No
+        // `--lsx-focus-contrast`: the ring sits outside the card.
         .when(
             "card",
             sx().background(PAPER_BACKGROUND.value())
                 .border(format!("1px solid {}", PAPER_BORDER_COLOR.value()))
                 .border_radius(PAPER_RADIUS.value())
                 .cursor("pointer")
-                // A card stretched by its row keeps its content at the top
-                // rather than spreading the rows over the extra height.
+                // A stretched card keeps its content at the top.
                 .align_content("start")
                 .per_size(|size| sx().padding(FIELD_CARD_PADDING.value(size)))
-                // The ring moves from the control to the card: the control
-                // turns static under `card`, so its ring overlay covers this
-                // box instead, out by the border as an outline would sit.
+                // The control turns static under `card`, so its ring overlay
+                // covers the card instead.
                 .position("relative")
                 .selector(
                     "& [data-state~=\"card\"] > [data-ring]",
@@ -102,17 +92,8 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// The chrome every field stacks around its control: the label, the
-/// description, the helper text, the status message, and the a11y wiring that
-/// ties them to the control.
-///
-/// Prepare-style, like [`use_box`]: libero's own fields pay no extra component
-/// scope for it. The field keeps its control - its element, its type, its
-/// events and its frame; the helper never touches those.
-///
-/// `use_` because [`FieldBuilder::prepare`] calls [`use_root_id`] and
-/// [`use_box`]. Build it in the component body and return it - never inside an
-/// `if`, a `match` arm, or after an early `return`.
+/// The chrome every field stacks around its control, and its a11y wiring.
+/// A hook: `prepare` calls hooks, so never build it conditionally.
 pub(crate) fn use_field<'a>() -> FieldBuilder<'a> {
     FieldBuilder::default()
 }
@@ -242,22 +223,16 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
-    /// Draws the inline layout as a card: a bordered surface whose every
-    /// click activates the control. Needs [`inline`](Self::inline) and
-    /// [`activates`](Self::activates); without an activation the card is
-    /// only drawn.
+    /// Draws the inline layout as a card whose every click activates the
+    /// control. Needs [`inline`](Self::inline) and [`activates`](Self::activates).
     #[inline]
     pub fn card(mut self, card: bool) -> Self {
         self.card = card;
         self
     }
 
-    /// Names the control by `aria-labelledby` rather than `<label for>`, for a
-    /// control `for` cannot name: an element with a `role`, or one another
-    /// component owns. The field then hands the ids out instead of applying
-    /// them - see [`PreparedField::label_id`].
-    ///
-    /// A click on the label focuses the control, as `<label for>` would.
+    /// Names the control by `aria-labelledby`, for one `for` cannot name; the
+    /// ids are handed out by [`PreparedField::label_id`].
     #[inline]
     pub fn labelled_by(mut self) -> Self {
         self.labelled_by = true;
@@ -288,13 +263,8 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
-    /// Makes the field's control a checkbox or a radio whose checked state
-    /// Rust owns: `activate` is what a click on the label, Space and a
-    /// cancelled click on the input all do. [`PreparedField::aria`] wires the
-    /// input's side and attaches `element` to it; the label focuses it.
-    ///
-    /// No activation reaches the native control, so nothing restores its
-    /// `checked` - see [`Activation`] for why that is the whole fix.
+    /// A checkbox or radio whose checked state Rust owns: label clicks, Space
+    /// and input clicks all run `activate`. See [`Activation`].
     #[inline]
     pub fn activates(mut self, element: ElementHandle, activate: impl Fn() + 'static) -> Self {
         self.activation = Some(Activation::new(element, activate));
@@ -341,9 +311,7 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
-    /// The caller's attributes, read for an `id` to adopt. A caller's own
-    /// `aria-describedby` is not read here: it is merged with the field's in
-    /// `styling_attributes`, so neither side loses its ids.
+    /// The caller's attributes, read for an `id` to adopt.
     #[inline]
     pub fn attributes(mut self, attributes: &'a [Attribute]) -> Self {
         self.attributes = attributes;
@@ -518,9 +486,8 @@ impl<'a> FieldBuilder<'a> {
     }
 }
 
-/// What a field keeps across renders for validation and binding. Nothing
-/// outside the field reads `touched`, so it re-renders its owner by hand rather
-/// than through a signal.
+/// What a field keeps across renders for validation and binding. `touched`
+/// re-renders its owner by hand; nothing else reads it.
 pub(crate) struct FieldHook {
     touched: Cell<bool>,
     /// The form's reset generation this field last rendered at.
@@ -548,12 +515,8 @@ impl FieldHook {
     }
 }
 
-/// Resolves a field's `name` against the `Form` or `Fieldset` around it: the
-/// full name it posts as, and - for a name built from a path, on a field with
-/// no handler of its own - its value inside the form's value.
-///
-/// **This is a hook**, and it is the one [`FieldBuilder::prepare`] would take:
-/// hand the result to [`FieldBuilder::bound`].
+/// Resolves a field's `name` against the enclosing `Form` or `Fieldset`: its
+/// full name, and its bound value. A hook; hand it to [`FieldBuilder::bound`].
 pub(crate) fn use_bound<T: Clone + 'static>(name: &FieldName<T>, controlled: bool) -> Bound<T> {
     let hook = use_hook(FieldHook::new);
     let entered = use_hook(|| Signal::new(None::<T>));
@@ -575,10 +538,8 @@ pub(crate) struct Bound<T> {
     name: Option<FieldName<T>>,
     full: Option<String>,
     /// What the user last entered, for a field whose value lives nowhere else.
-    /// `None` until the first edit.
     entered: Signal<Option<T>>,
-    /// Whether `entered` is a value source at all: with a handler or a binding
-    /// the value belongs to the caller or the form, and this is never read.
+    /// Whether `entered` is a value source: not with a handler or a binding.
     owns: bool,
 }
 
@@ -588,9 +549,7 @@ impl<T> Bound<T> {
         self.full.as_deref()
     }
 
-    /// The field's own `disabled`, or'd with every disabled `Fieldset` around
-    /// it - a native `<fieldset disabled>` wins over a `false` too. Subscribes
-    /// the field to the group's state.
+    /// The field's own `disabled`, or'd with every enclosing disabled `Fieldset`.
     pub fn disabled(&self, own: Option<bool>) -> bool {
         own.unwrap_or(false) || self.hook.disabled.is_some_and(|Disabled(group)| group())
     }
@@ -624,10 +583,8 @@ impl<T: Clone + 'static> Bound<T> {
         })
     }
 
-    /// What the field calls with its next value: the caller's `handler`, or,
-    /// bound and without one, a write into the form's value - and, with
-    /// neither, a note of what the user entered, which is then the field's
-    /// only value. See [`entered`](Self::entered).
+    /// What the field calls with its next value: the `handler`, else a bound
+    /// write, else a note in [`entered`](Self::entered).
     pub fn emit(&self, handler: Option<EventHandler<T>>) -> Option<impl Fn(T) + Clone + 'static> {
         let setter = self.setter();
         let entered = self.owns.then_some(self.entered);
@@ -635,8 +592,7 @@ impl<T: Clone + 'static> Bound<T> {
             return None;
         }
         Some(move |next: T| {
-            // Copied out, so the closure stays an `Fn` - a handler a field
-            // holds across renders cannot be `FnMut`.
+            // Copied out, so the closure stays an `Fn`.
             if let Some(mut entered) = entered {
                 entered.set(Some(next.clone()));
             }
@@ -648,22 +604,14 @@ impl<T: Clone + 'static> Bound<T> {
         })
     }
 
-    /// What the user last entered, for a field with no handler and no place in
-    /// a form's value. Without it such a field has no value at all: its rules
-    /// would judge `T::default()` for ever, and inside a `Form` that default
-    /// cancels every submit.
-    ///
-    /// A control the browser keeps no state for - a checkbox, a switch - also
-    /// *renders* from it, and so becomes usable uncontrolled. One that keeps
-    /// its own text does not: writing the text back would move the caret.
+    /// What the user last entered, for a field with no handler and no binding,
+    /// so its rules don't judge `T::default()` for ever.
     pub fn entered(&self) -> Option<T> {
         self.owns.then(|| self.entered.cloned()).flatten()
     }
 
-    /// The status the field's own rules give it, over the value they must
-    /// judge: the form's value when bound, else `value`, else what the user
-    /// entered. Nothing is read without rules, so a field that has none never
-    /// re-renders on a keystroke.
+    /// The status the field's rules give `value`, else what was entered. Reads
+    /// nothing without rules, so no re-render per keystroke.
     pub fn check(&self, rules: &Validators<T>, value: Option<T>) -> Option<FieldStatus>
     where
         T: Default,
@@ -740,9 +688,7 @@ impl PreparedField {
         &self.id
     }
 
-    /// The label's own id, for a control named by `aria-labelledby`. `None`
-    /// when there is no label, or when the label names the control by `for`
-    /// alone - see [`FieldBuilder::label_with_id`].
+    /// The label's id, for a control named by `aria-labelledby`.
     pub fn label_id(&self) -> Option<String> {
         self.labelled_by.then(|| format!("{}-label", self.id))
     }
@@ -782,9 +728,8 @@ impl PreparedField {
         }
     }
 
-    /// Label, description, control, helper, status - in that order, inside the
-    /// wrapper. Under [`FieldBuilder::inline`] the control comes first
-    /// instead, and the grid puts it beside the label.
+    /// Label, description, control, helper, status in the wrapper; an inline
+    /// control comes first.
     pub fn render(self, control: Element) -> Element {
         let mut children = Vec::with_capacity(5);
         if self.inline {
@@ -803,22 +748,9 @@ impl PreparedField {
     }
 }
 
-/// A checkable control's activation, taken off the browser.
-///
-/// The browser flips `checked` before a click is dispatched, and when the
-/// click is cancelled it restores the old value at the *end* of the dispatch.
-/// dioxus re-renders synchronously inside that dispatch, so a caller that
-/// honours `onchange` has its new `checked` written and then overwritten, and
-/// the next render sees nothing to write: the look moves, the property,
-/// `:checked`, AT and the form post do not. So nothing is left to activate the
-/// input natively: the label's click is cancelled, and Space is answered on
-/// `keydown`, which stops the activation outright. Enter is left to the
-/// browser, which submits the form around it; outside a `Form`, a switch and
-/// a segmented control take it too ([`enter_activates`](Self::enter_activates)).
-///
-/// A field gets it through [`FieldBuilder::activates`]; a control whose label
-/// is its own - `Chip` - wires both halves itself, and one that renders its
-/// inputs by hand - `SegmentedControl` - takes the input's handlers one by one.
+/// A checkable control's activation, taken off the browser. A cancelled click
+/// restores the old `checked` after dioxus re-rendered inside the dispatch, so
+/// label clicks are cancelled and Space is answered on `keydown`.
 #[derive(Clone)]
 pub(crate) struct Activation {
     /// Attached to the input by [`wire`](Self::wire), and focused by the label.
@@ -827,8 +759,7 @@ pub(crate) struct Activation {
     focus: Option<Rc<dyn Fn()>>,
     activate: Rc<dyn Fn()>,
     enter: bool,
-    /// Inside a card, whose own click activates too: the label's and the
-    /// input's clicks stop where they are, or they would activate twice.
+    /// Inside a card, whose click activates too: inner clicks stop, or they activate twice.
     card: bool,
 }
 
@@ -843,8 +774,7 @@ impl Activation {
         }
     }
 
-    /// For inputs rendered in a loop, which cannot each take a handle: the
-    /// label calls `focus` where it would focus the handle.
+    /// For inputs rendered in a loop, which cannot each take a handle.
     pub(crate) fn focusing(focus: impl Fn() + 'static, activate: impl Fn() + 'static) -> Self {
         Self {
             element: None,
@@ -855,9 +785,7 @@ impl Activation {
         }
     }
 
-    /// Enter activates as well as Space: a switch or segmented control
-    /// outside a `Form` or raw `<form>`, where Enter has nothing to submit
-    /// (todos 648, 660).
+    /// Enter activates as well as Space, outside any form (todos 648, 660).
     pub(crate) fn enter_activates(mut self, enter: bool) -> Self {
         self.enter = enter;
         self
@@ -873,10 +801,8 @@ impl Activation {
         }
     }
 
-    /// The label's half. Cancelling the label's click cancels its activation
-    /// behaviour, which is the whole of "forward this click to the control":
-    /// the input gets no click at all. The focus the forwarding gave it goes
-    /// too, so it is given back by hand.
+    /// The label's half: the click is cancelled, so the input's focus is
+    /// given back by hand.
     pub(crate) fn label_click(&self) -> impl FnMut(Event<MouseData>) + 'static {
         let activation = self.clone();
         move |event| {
@@ -892,9 +818,7 @@ impl Activation {
         }
     }
 
-    /// A card's half: a click anywhere on the card that neither the label nor
-    /// the input took. Not cancelled - a card is a `div` and has no default
-    /// action of its own to cancel.
+    /// A card's half: a click the label and input did not take.
     fn card_click(&self) -> impl FnMut(Event<MouseData>) + 'static {
         let activation = self.clone();
         move |event| {
@@ -906,8 +830,7 @@ impl Activation {
         }
     }
 
-    /// A click on the control's own padding that neither the label nor the
-    /// input took - both cancel theirs. Blitz places a label's `::after`
+    /// A click on the control's padding. Blitz places a label's `::after`
     /// against the label, not the positioned root (todo 941).
     pub(crate) fn padding_click(
         &self,
@@ -940,11 +863,8 @@ impl Activation {
             .event("onkeyup", self.input_keyup())
     }
 
-    /// What still reaches the input as a click - assistive tech's default
-    /// action, a click on the input itself - is cancelled, and taken in Rust
-    /// only once the dispatch is over. The cancelled activation restores the
-    /// old `checked` at the end of the dispatch, so a re-render inside it
-    /// would be overwritten; after it, the new `checked` is the last write.
+    /// A click still reaching the input is cancelled and taken after the
+    /// dispatch, so the new `checked` is the last write.
     pub(crate) fn input_click(&self) -> impl FnMut(Event<MouseData>) + 'static {
         let (activate, card) = (self.activate.clone(), self.card);
         move |event| {
@@ -960,18 +880,14 @@ impl Activation {
         }
     }
 
-    /// Blitz forwards a `<label>` click to its input as a default action that
-    /// emits `input`, never `click`. On the web nothing activates the input
-    /// any more, so this never fires there; both compute the same next value,
-    /// so firing twice is a no-op.
+    /// Blitz forwards a `<label>` click as `input`, never `click`. Never fires
+    /// on the web.
     pub(crate) fn input_input(&self) -> impl FnMut(FormEvent) + 'static {
         let activate = self.activate.clone();
         move |_| activate()
     }
 
-    /// Space - and Enter, outside a `Form` - answered on `keydown`, which
-    /// stops the activation outright. `true` when the key was one of those, so
-    /// a control with keys of its own knows it is handled.
+    /// Space (and Enter outside a form) on `keydown`; `true` when handled.
     pub(crate) fn keydown(&self, event: &Event<KeyboardData>) -> bool {
         if !activates(event, self.enter) {
             return false;
@@ -995,9 +911,8 @@ impl Activation {
     }
 }
 
-/// What a label or a card leaves to a link or button nested in it: the
-/// label, or the card's wrapper - not the control `<span>`, which carries
-/// `card` too.
+/// Where a nested link or button's click stops: the label or the card's
+/// wrapper, not the control `<span>`.
 const CLICK_BOUNDARY: &str = "label, div[data-state~=\"card\"]";
 
 fn activates(event: &KeyboardData, enter: bool) -> bool {
@@ -1063,9 +978,7 @@ fn label_node(
         return None;
     }
 
-    // `for` names a labelable element. A control that is not one - a `role` on
-    // a span, or an element another component owns - is named the other way
-    // round, by an id the control points at.
+    // `for` names only a labelable element; any other control points at the label's id.
     let named = (labelled_by || with_id).then(|| format!("{id}-label"));
     let points_at = (!labelled_by).then(|| id.to_string());
     let content = caption_content(label);

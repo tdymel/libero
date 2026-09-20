@@ -16,11 +16,8 @@ pub(super) fn round_to(value: f64, decimals: usize) -> f64 {
     (value * factor).round() / factor
 }
 
-/// Bounds `snap` may clamp with: finite, and in order. `f64::clamp` panics on
-/// `min > max` or a non-finite bound, and a slider snaps on every render, so a
-/// caller's `max: items.len() as f64 - 1.0` on an empty list would take the
-/// page down. A broken range collapses to a point instead and draws empty,
-/// which is what `ProgressBar` already does with the same mistake.
+/// Finite, ordered bounds for `snap`: `f64::clamp` panics otherwise, so a
+/// broken range collapses to a point and draws empty.
 pub(super) fn sane_bounds(min: f64, max: f64) -> (f64, f64) {
     if min.is_finite() && max.is_finite() && min <= max {
         return (min, max);
@@ -31,14 +28,8 @@ pub(super) fn sane_bounds(min: f64, max: f64) -> (f64, f64) {
     (min, max)
 }
 
-/// The nearest valid value to `raw`: snapped to the `step` grid from `min`,
-/// clamped, and rounded to that grid's precision.
-///
-/// `step: 0` is continuous - no grid, and no rounding either, or every value
-/// would land on a whole number.
-///
-/// `min` and `max` must have been through [`sane_bounds`]. A `NaN` `raw` reads
-/// as `min`, the same empty position `fraction` gives it.
+/// `raw` snapped to the `step` grid from `min`, clamped and rounded; `step: 0`
+/// is continuous. Bounds come from [`sane_bounds`]; `NaN` reads as `min`.
 pub(super) fn snap(raw: f64, min: f64, max: f64, step: f64) -> f64 {
     if raw.is_nan() {
         return min;
@@ -48,9 +39,8 @@ pub(super) fn snap(raw: f64, min: f64, max: f64, step: f64) -> f64 {
     }
 
     let value = min + step * ((raw - min) / step).round();
-    // The grid is `min + step * n`, so `min`'s precision counts as much as
-    // `step`'s: rounding `0.5 + 1.0 * n` to `step`'s zero decimals would walk
-    // the value off its own grid.
+    // `min`'s precision counts too: `0.5 + 1.0 * n` at zero decimals leaves
+    // the grid.
     round_to(value.clamp(min, max), decimals(step).max(decimals(min)))
 }
 
@@ -127,9 +117,8 @@ impl SliderCoreValue {
         }
     }
 
-    /// Moves one thumb to `raw`: snapped to the grid, and blocked at its
-    /// neighbour - `min_range` short of it, where a gap is asked for. The
-    /// thumbs never cross, so the pair stays ordered without a swap.
+    /// Moves one thumb to `raw`, snapped and stopped `min_range` short of its
+    /// neighbour, so the pair stays ordered.
     pub(super) fn moved(
         self,
         index: usize,
@@ -142,9 +131,8 @@ impl SliderCoreValue {
         let value = snap(raw, min, max, step);
         match self {
             Self::Single(_) => Self::Single(value),
-            // The outer clamp wins over `min_range`: a gap wider than the
-            // range itself has no solution, and leaving the track is worse.
-            // The gap clamp snaps back towards the thumb's origin, to stay on the grid.
+            // The track clamp beats `min_range`; the gap clamp snaps back
+            // towards the thumb's origin, to stay on the grid.
             Self::Range { from, to } => match index {
                 0 => Self::Range {
                     from: snap_towards(value.min(to - min_range), min, step, true).max(min),

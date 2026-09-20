@@ -7,31 +7,25 @@ use dioxus::{
 
 use crate::components::form::{FieldStatus, Validators, worst};
 
-/// What a `Form` shares with the fields and fieldsets inside it. A `Fieldset`
-/// with no `Form` above it opens one of its own, so its composite rules still
-/// reach its fields.
+/// What a `Form` shares with the fields and fieldsets inside it. A lone
+/// `Fieldset` opens its own.
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) struct FormScope {
     fields: Signal<BTreeMap<usize, FieldEntry>, UnsyncStorage>,
-    /// Composite issues by the key of the `Form` or `Fieldset` that raised
-    /// them.
+    /// Composite issues by the key of the `Form` or `Fieldset` that raised them.
     issues: Signal<BTreeMap<usize, Vec<Issue>>>,
-    /// Names of fields that lost focus once. Shared, because a composite issue
-    /// waits until every field it names is touched.
+    /// Names of fields that lost focus once; a composite issue waits for all it names.
     touched: Signal<BTreeSet<String>>,
     submitted: Signal<bool>,
-    /// Bumped by a reset. A field keeps its touched flag to itself, so it
-    /// compares this on render and drops the flag when it moved.
+    /// Bumped by a reset; a field drops its own touched flag when it moved.
     generation: Signal<u32>,
     /// Bumped by every submit and every reset, not only the first submit.
     settled: Signal<u32>,
     /// Bumped by every reset, native reset button included.
     resets: Signal<u32>,
     next_key: Signal<usize>,
-    /// The scope that created the signals above. Cleanup runs inside it: a
-    /// field or fieldset drops while dioxus diffs whatever unmounts the page,
-    /// and touching these signals from that outside scope is what dioxus warns
-    /// about as a copy value used outside its owner.
+    /// The scope that created the signals above. Cleanup runs inside it, or dioxus
+    /// warns of a copy value used outside its owner.
     owner: ScopeId,
 }
 
@@ -178,8 +172,7 @@ impl FormScope {
     }
 
     /// The worst composite issue naming `name` that may show: after a submit,
-    /// or once every field the issue names is touched. Reactive on the issues,
-    /// the touched set and the submit.
+    /// or once every field it names is touched. Reactive.
     pub fn visible_issue(&self, name: &str) -> FieldStatus {
         let submitted = self.submitted();
         let touched = self.touched.read();
@@ -223,9 +216,8 @@ impl FormScope {
         }
     }
 
-    /// Tolerates a form that is already gone: a field inside it can drop after
-    /// the form's own signals did. Forgets the field's touched name unless
-    /// another field still carries it, so a remount waits for its own blur.
+    /// Tolerates a form already gone. Forgets the touched name unless another
+    /// field carries it, so a remount waits for its own blur.
     pub fn unregister(&mut self, key: usize) {
         let fields = self.fields;
         let mut touched = self.touched;
@@ -336,9 +328,8 @@ fn errors_in(fields: &BTreeMap<usize, FieldEntry>, issues: &BTreeMap<usize, Vec<
             .any(|issue| issue.status.is_error())
 }
 
-/// Runs drop-time cleanup as the scope that owns the signals. A whole
-/// `VirtualDom` dropping tears hooks down with no runtime left, where the
-/// signals' own `try_peek` already tolerates what is gone.
+/// Runs drop-time cleanup as the scope that owns the signals; with no runtime
+/// left (a whole `VirtualDom` dropping) `try_peek` already tolerates it.
 fn in_owner(owner: ScopeId, cleanup: impl FnOnce()) {
     match Runtime::try_current() {
         Some(runtime) => runtime.in_scope(owner, cleanup),

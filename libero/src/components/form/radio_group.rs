@@ -20,10 +20,8 @@ static RADIO_GROUP_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
         .gap(FIELD_GAP.value())
-        // A row is under 24px tall at every step below `xxl`, so WCAG 2.5.8
-        // holds only by its spacing exception: rows 24px apart, centre to
-        // centre. Topped up per row rather than by a bigger gap, so a row
-        // that a caption already makes taller keeps the theme's gap.
+        // WCAG 2.5.8 spacing exception: rows 24px apart centre to centre, topped
+        // up per row so a captioned row keeps the theme's gap.
         .selector(
             "& > *",
             sx().min_height(format!("calc(24px - {})", FIELD_GAP.value())),
@@ -36,8 +34,7 @@ static RADIO_GROUP_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// Scoped to this group's own root, so two groups can hold the same options
-/// without colliding.
+/// Scoped to this group's root, so two groups with the same options don't collide.
 fn focus_option(root: &ElementHandle, index: usize) {
     let selector = format!("input[data-radio-index=\"{index}\"]");
     let _ = root.query_selector(&selector).and_then(|el| el.focus());
@@ -46,53 +43,32 @@ fn focus_option(root: &ElementHandle, index: usize) {
 field_props! {
     without(radius);
     pub struct RadioGroupProps<T: Options> {
-        /// Strictly controlled - pair it with `onchange`. `None` selects
-        /// nothing, which is what an unanswered question looks like.
+        /// Strictly controlled; `None` selects nothing.
         #[props(default)]
         value: Option<T>,
         /// Called with the option the caller should select next.
         #[props(default)]
         onchange: Option<EventHandler<T>>,
-        /// What the group posts as. A path - `Survey::FIELDS.plan()` - also
-        /// binds it to the surrounding `Form`'s value when it has no
-        /// `onchange`.
+        /// What the group posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<Option<T>>,
-        /// Rules over the selection, shown once the group loses focus or its
-        /// form is submitted.
+        /// Rules over the selection, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<Option<T>>,
-        /// The options to show. Defaults to every `Options::options()` - which
-        /// `String` and any other runtime type leave empty, so those pass them
-        /// here.
-        ///
-        /// `OptionItem::new(value).disabled(true)` renders an option that
-        /// cannot be picked and that the arrow keys step over; `disabled`
-        /// disables all of them. A grouped
-        /// [`OptionList`](crate::components::OptionList) is accepted and its
-        /// options are drawn flattened, in the order given: the group is the
-        /// field, so it draws no group headings inside itself.
-        ///
-        /// A group has no dropdown to put a loader in, so a **pending**
-        /// [`OptionSource`](crate::components::OptionSource) - one built from
-        /// a [`Resource`] that has not answered yet - simply draws no
-        /// options. Await the fetch above the field if that matters.
+        /// The options to show. Defaults to `Options::options()`. Groups are
+        /// flattened; a pending source draws no options.
         #[props(default, into)]
         options: OptionSource<T>,
-        /// Overrides `Options::label`. Runs during render, so it can read a
-        /// locale from context.
+        /// Overrides `Options::label`.
         #[props(default)]
         option_label: Option<Callback<T, String>>,
-        /// A line under each option's label. Empty text renders none. What
-        /// makes a `Card` option worth its surface.
+        /// A line under each option's label; empty text renders none.
         #[props(default)]
         option_description: Option<Callback<T, String>>,
-        /// `Card` draws every option as a bordered surface that is its own
-        /// hit area. A row of cards stretches them to one height.
+        /// `Card` draws every option as a bordered surface that is its hit area.
         #[props(default, into)]
         variant: Input<ChoiceVariant>,
-        /// Lays the options out in a row instead of a column. A form stacks;
-        /// a row is for two or three short options.
+        /// Lays the options out in a row instead of a column.
         #[props(default, into)]
         orientation: Input<Orientation>,
         /// The ring and dot colour of the selected option.
@@ -101,12 +77,27 @@ field_props! {
     }
 }
 
-/// A group of radios over an enum, exactly one of them selected.
+/// A group of radios over the caller's options type, one of them selected.
 ///
-/// The group is the field: it owns the question's label, description, helper
-/// text and status, the `name` that makes the set exclusive, and the single
-/// tab stop the ARIA pattern asks for. Arrow keys move through the options and
-/// select as they go, wrapping at the ends.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Options, RadioGroup};
+/// #[derive(Clone, Copy, PartialEq, Options)]
+/// enum Plan { Free, Pro }
+///
+/// # fn app() -> Element {
+/// let mut plan = use_signal(|| None::<Plan>);
+/// rsx! {
+///     RadioGroup {
+///         label: "Plan",
+///         value: plan(),
+///         onchange: move |next| plan.set(Some(next)),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/radio-group>
 #[component]
 pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     let theme = use_theme();
@@ -118,10 +109,8 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
-    // In a radio group the arrow keys *are* the change - APG has them move and
-    // select in one press - so read-only refuses them outright rather than
-    // moving focus without selecting, which would leave the roving `tabindex`
-    // on an option that is not focused. Each option refuses its own click too.
+    // The arrow keys move and select in one press (APG), so read-only refuses
+    // them outright; moving alone would strand the roving `tabindex`.
     let readonly = props.readonly.unwrap_or(false);
     let current = bound.value().unwrap_or_else(|| props.value.clone());
 
@@ -173,8 +162,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
 
     let onchange = props.onchange;
     let setter = bound.setter();
-    // One identity across renders, so an option whose own props did not
-    // change skips the re-render.
+    // One identity across renders, so an unchanged option skips the re-render.
     let pick = {
         let values = values.clone();
         use_callback(move |index: usize| {
@@ -190,10 +178,8 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     };
 
     let option_disabled = list.disabled();
-    // One tab stop for the whole group: the selected option, or the first one
-    // that can be picked. A disabled input takes no focus, so a selected
-    // option the caller has disabled cannot hold the stop - the group would
-    // drop out of the Tab order. Arrow keys move between them from there.
+    // One tab stop: the selected option, or the first enabled one. A disabled
+    // selected option cannot hold it, or the group drops out of the Tab order.
     let tab_stop = selected
         .filter(|&index| !option_disabled[index])
         .or_else(|| option_disabled.iter().position(|off| !off))
@@ -211,11 +197,8 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
                 Key::ArrowUp | Key::ArrowLeft => -1,
                 _ => return,
             };
-            // The web moves and selects on its own for a native radio group;
-            // cancelling it keeps one code path, and gives Blitz - which does
-            // neither - the same behaviour. Read-only too: the native arrow
-            // would otherwise walk focus onto an option that is not the tab
-            // stop, while the selection stays put (todo 320, measured).
+            // Cancel the native move: one code path, the same on Blitz, and
+            // read-only focus stays on the tab stop (todo 320).
             event.prevent_default();
             if readonly {
                 return;
@@ -278,9 +261,8 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .attr("aria-required", required.then_some("true"))
         .element(&root)
         .event("onkeydown", arrows)
-        // Read-only keeps focus on the tab stop, the checked option (APG): a
-        // click elsewhere would leave a second tab stop behind (todo 746). A
-        // task later: the move fires `focusin` again, inside this handler.
+        // Read-only keeps focus on the checked option (todo 746). A task later:
+        // the move fires `focusin` again, inside this handler.
         .event("onfocusin", move |_: FocusEvent| {
             if readonly && !disabled {
                 spawn(async move {

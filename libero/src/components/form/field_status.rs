@@ -1,9 +1,6 @@
 use crate::components::common::Input;
 
 /// The validation state of a field, and the message that goes with it.
-///
-/// Deliberately not a `Result<(), _>`: a validator returns a `FieldStatus`
-/// directly, so there is no `Err(Valid)` to represent.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub enum FieldStatus {
     #[default]
@@ -33,9 +30,7 @@ impl FieldStatus {
         matches!(self, Self::Error(_))
     }
 
-    /// The `data-state` name for the status, or `None` for `Valid` - a valid
-    /// field carries no state at all rather than a `"valid"` one, so the
-    /// default costs no attribute.
+    /// The `data-state` name for the status; `None` for `Valid`.
     pub fn state(&self) -> Option<&'static str> {
         match self {
             Self::Valid => None,
@@ -45,8 +40,7 @@ impl FieldStatus {
     }
 }
 
-/// A bare message is an error, which is the common case. A warning has to be
-/// spelled out.
+/// A bare message is an error; a warning has to be spelled out.
 impl From<&str> for FieldStatus {
     fn from(message: &str) -> Self {
         Self::Error(message.to_string())

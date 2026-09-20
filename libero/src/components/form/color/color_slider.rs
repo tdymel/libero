@@ -29,11 +29,8 @@ pub(super) fn ltr_scale(mut attributes: Vec<Attribute>) -> Vec<Attribute> {
     attributes
 }
 
-/// The picker's scale on the slider's own root, and the slider's track and
-/// thumb pointed at it. The caller's `sx` goes after, so it still wins.
-///
-/// On the root rather than inherited from a `ColorPicker`, so a slider used
-/// on its own sizes the same as one inside the picker.
+/// The picker's scale on the slider's own root, so a lone slider sizes like
+/// one inside the picker. The caller's `sx` still wins.
 pub(super) fn color_slider_sx(caller: &Input<Sx>) -> Input<Sx> {
     match caller.as_ref() {
         Some(sx) => COLOR_SLIDER_SX.clone().and(sx.clone()).into(),
@@ -47,9 +44,8 @@ static COLOR_SLIDER_SX: StaticSx = StaticSx::new(|| {
     ColorPickerDefaults::theme_vars()
         .var(SLIDER_TRACK, COLOR_PICKER_THUMB.value())
         .var(SLIDER_THUMB, COLOR_PICKER_THUMB.value())
-        // The picker stacks its sliders one `spacing` apart, and at `xs` and
-        // `sm` a 24px hit area would reach into the next slider and take its
-        // presses. Capped so it never passes the middle of the gap.
+        // At `xs`/`sm` a 24px hit area would take the next slider's presses,
+        // so it stops at the middle of the gap.
         .var(
             SLIDER_HIT,
             format!(

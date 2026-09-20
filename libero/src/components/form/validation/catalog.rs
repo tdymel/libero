@@ -1,5 +1,4 @@
-//! Predicates every form needs. Each is a plain [`Rule`](super::Rule), so it
-//! takes its message the same way a caller's own `fn` does:
+//! Predicates every form needs, each a plain [`Rule`](super::Rule):
 //! `min_length(3).error("At least 3 characters")`.
 
 /// A value that can be empty, for [`not_empty`].
@@ -27,8 +26,7 @@ impl<T> IsEmpty for Vec<T> {
 }
 
 impl IsEmpty for bool {
-    /// `false` is empty, so a required checkbox reads the same as a required
-    /// text field.
+    /// `false` is empty, so a required checkbox reads like a required text field.
     fn is_empty_value(&self) -> bool {
         !self
     }
@@ -56,9 +54,7 @@ pub fn max<V: PartialOrd + 'static>(bound: V) -> impl Fn(&V) -> bool {
     move |value| *value <= bound
 }
 
-/// One `@` with something before it and a dotted domain with no empty label
-/// after. A shape check, not delivery - the only proof an address works is
-/// mail arriving.
+/// One `@` with something before it and a dotted domain after. A shape check only.
 // `&String`, not `&str`: a rule over a `String` field is `Fn(&String) -> bool`.
 #[allow(clippy::ptr_arg)]
 pub fn is_email(value: &String) -> bool {

@@ -1,8 +1,5 @@
-/// Declares a field's `Props` struct: everything
-/// [`base_props`](crate::components::common::base_props) emits, plus the
-/// eight props every field shares - the four text slots, the validation status,
-/// `size`, `radius`, `disabled` and `required`. The body lists only what is
-/// specific to the field.
+/// A field's `Props` struct: [`base_props`](crate::components::common::base_props)
+/// plus the props every field shares. No `value`, handler or `placeholder`.
 ///
 /// ```ignore
 /// # // Not compiled: `field_props!` is crate-internal, so a doc-test cannot name it.
@@ -15,22 +12,8 @@
 /// }
 /// ```
 ///
-/// It deliberately does **not** emit `value` or a change handler: the value
-/// type differs per field (`String`, `bool`, `f64`, `T`, `Vec<T>`), and a macro
-/// cannot emit a type it does not know. Nor `placeholder` - six of the planned
-/// fields have none, and a prop that silently does nothing is worse than one
-/// repeated line.
-///
-/// A leading `without(readonly);` leaves `readonly` out, for a field that has
-/// no way to honour it (`NativeSelect`: HTML has no read-only `<select>`). It
-/// cannot be combined with `extends(..)`; no such field exists yet.
-///
-/// `without(radius);`, after an `extends(..)` if there is one, leaves `radius`
-/// out, for a field whose shape is fixed (a radio's circle, a slider's pill).
-///
-/// Like `base_props!`, the leading `extends(..)` clause needs the internal
-/// `@build` arm plus two dispatch arms: `$(extends(..);)?` before the struct is
-/// a `local ambiguity when calling macro` error, since both can match empty.
+/// `without(readonly);` (not with `extends`) and `without(radius);` drop those
+/// props. Separate dispatch arms: an optional `extends` is a macro ambiguity.
 macro_rules! field_props {
     (@build [$($extra_extends:tt)*] [$($readonly:ident)?] [$($radius:ident)?]
         $(#[$struct_meta:meta])*
@@ -52,8 +35,7 @@ macro_rules! field_props {
                 /// Under the control. Formatting rules, constraints, counters.
                 #[props(default, into)]
                 helper: crate::components::form::Caption,
-                /// Validation state, under the helper. A bare `&str` is an
-                /// error.
+                /// Validation state, under the helper. A bare `&str` is an error.
                 #[props(default, into)]
                 status: Input<crate::components::form::FieldStatus>,
                 #[props(default, into)]
@@ -63,17 +45,13 @@ macro_rules! field_props {
                     #[props(default, into)]
                     $radius: Input<crate::theme::Size>,
                 )?
-                /// `None` is "not stated" - what a `Fieldset` will cascade
-                /// into later.
+                /// `None` is "not stated", so a `Fieldset` can cascade into it.
                 #[props(default)]
                 disabled: Option<bool>,
                 #[props(default)]
                 required: Option<bool>,
                 $(
-                    /// Focusable and posted with the form, but not editable.
-                    /// `disabled` instead drops the field from the tab order and
-                    /// from the post, which is wrong for a review-your-answers
-                    /// view. `None` is "not stated".
+                    /// Focusable and posted, but not editable. `None` is "not stated".
                     #[props(default)]
                     $readonly: Option<bool>,
                 )?

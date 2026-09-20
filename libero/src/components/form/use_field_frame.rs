@@ -15,9 +15,7 @@ use crate::{
     theme::{FieldDefaults, PaperDefaults, Size, SizeCss},
 };
 
-/// The bordered box a control sits in. Shared by every framed field, so the
-/// border, the background, the per-size padding, the status colours and the
-/// focus treatment are written once.
+/// The bordered box every framed field's control sits in.
 static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
     FieldDefaults::frame_theme_vars()
         .display("flex")
@@ -27,15 +25,12 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
         .border_width("1px")
         // 3:1 on the page and on a dark `Paper` (WCAG 1.4.11, todo 490).
         .border_color("muted.6")
-        // The surface's own colour rather than a control token of its own: a
-        // field sits on a surface and matches it until a theme says otherwise.
+        // Matches the surface it sits on.
         .and(PaperDefaults::background_sx())
         .color("ink")
         .focus_within(sx().border_color("primary.6"))
-        // The control's ring is the frame's: the control is followed by a ring
-        // overlay, and the frame is the overlay's containing block. A button in
-        // a slot rings itself (todo 410). Keyed off `:focus-visible`, not
-        // `:focus-within`, so a click on a trigger draws no ring.
+        // The control's ring overlay covers the frame; a slot button rings itself
+        // (todo 410). `:focus-visible`, so a click on a trigger draws no ring.
         .position("relative")
         .selector(
             "& [data-ring]",
@@ -63,9 +58,7 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
             sx().display("flex")
                 .align_items("center")
                 .flex("0 0 auto")
-                // A slot holds text as often as an icon - a unit, a prefix,
-                // `PhoneField`'s country code, which inherits from here - so
-                // it is dimmed text, not a grey (todo 240).
+                // A slot holds text as often as an icon: dimmed text, not a grey (todo 240).
                 .color("text-dimmed"),
         )
         // A placeholder cell takes the control's place.
@@ -86,9 +79,8 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// Where the renderer draws no placeholder, a control and its drawn placeholder
-/// share one grid cell: the text is clipped at the control's edges and wraps
-/// with a `Textarea`.
+/// Where the renderer draws no placeholder, the control and a drawn one share
+/// one grid cell.
 static PLACEHOLDER_CELL_SX: StaticSx = StaticSx::new(|| {
     sx().display("grid")
         .grid_template_columns("minmax(0, 1fr)")
@@ -122,11 +114,8 @@ static PLACEHOLDER_CELL_SX: StaticSx = StaticSx::new(|| {
 /// A press on the frame's padding is a press on its control (todo 462).
 const FRAME: &str = "[data-frame]";
 
-/// The `ActionIcon` step for a slot button (stepper, reveal, clear, eye
-/// dropper) in a field of `size`. `ActionIcon`'s scale (16, 20, 24, 32, 40,
-/// 48px) climbs faster than a field's content box (18, 20, 22, 24, 26, 28px):
-/// at `md` an `md` icon is 24px in a 22px box and would grow the frame 2px
-/// (todo 495). Two field steps per icon step fits every step.
+/// The `ActionIcon` size for a slot button in a field of `size`: two field
+/// steps per icon step, or the icon grows the frame (todo 495).
 pub(crate) const fn slot_icon_size(size: Size) -> Size {
     match size {
         Size::Xs | Size::Sm => Size::Xs,
@@ -135,14 +124,10 @@ pub(crate) const fn slot_icon_size(size: Size) -> Size {
     }
 }
 
-/// The native control inside the frame, stripped of the chrome that is now the
-/// frame's. Every framed field renders its element with this as its
-/// `framework_sx`.
+/// The native control inside the frame, stripped of the frame's chrome.
 pub(crate) static FIELD_CONTROL_SX: StaticSx = StaticSx::new(field_control_sx);
 
-/// The same declarations, for a control that adds one of its own - `NativeSelect`'s
-/// pointer cursor. `StaticSx` takes a single builder, so a field extending the
-/// control's look calls this rather than a second `framework_sx`.
+/// The same declarations, for a control that extends them.
 pub(crate) fn field_control_sx() -> Sx {
     sx().flex("1 1 auto")
         // Without it a long value pushes the frame wider instead of scrolling.
@@ -152,25 +137,16 @@ pub(crate) fn field_control_sx() -> Sx {
         .background("transparent")
         .padding("0")
         .color("inherit")
-        // An `<input>` inherits none of these, so each would fall back to the
-        // UA's.
+        // An `<input>` inherits neither.
         .font_family("inherit")
         .font_size("inherit")
-        // The frame's padding sets the height now, so the control contributes
-        // exactly one line box and a `Textarea` can contribute several.
+        // The frame's padding sets the height; the control adds line boxes only.
         .line_height("1.5")
         .selector("::placeholder", sx().color("text-dimmed"))
 }
 
-/// The frame around a field's control, with room either side of it.
-///
-/// Separate from `use_field` rather than folded into it: `Checkbox`, `Radio`,
-/// `RadioGroup` and `RangeSlider` have no frame at all, and folding it in would
-/// make them prepare a `use_box` they never render.
-///
-/// `use_` because [`FieldFrameBuilder::prepare`] calls [`use_box`]. Build it in
-/// the component body and return it - never inside an `if`, a `match` arm, or
-/// after an early `return`.
+/// The frame around a field's control, with slots either side. A hook:
+/// `prepare` calls [`use_box`], so never build it conditionally.
 pub(crate) fn use_field_frame<'a>() -> FieldFrameBuilder<'a> {
     FieldFrameBuilder::default()
 }
@@ -187,9 +163,8 @@ pub(crate) struct FieldFrameBuilder<'a> {
 }
 
 impl<'a> FieldFrameBuilder<'a> {
-    /// The control's `placeholder`, drawn by the frame where the renderer
-    /// draws none (Blitz). Pass what the control's attribute holds, `None`
-    /// too: the control's place in the tree then stays put when one comes.
+    /// The control's `placeholder`, drawn where the renderer draws none (Blitz).
+    /// Pass `None` too, so the control's place in the tree stays put.
     #[inline]
     pub fn placeholder(mut self, placeholder: Option<&'a str>) -> Self {
         self.placeholder = Some(placeholder);
@@ -404,9 +379,8 @@ pub(crate) fn with_drawn_placeholder(
     }
 }
 
-/// The control and, while it has one, its placeholder: hidden until the
-/// renderer marks the control empty. The control's own `placeholder` still
-/// names it to assistive tech.
+/// The control and its drawn placeholder, shown once the renderer marks the
+/// control empty.
 #[component]
 fn PlaceholderCell(
     text: Option<String>,

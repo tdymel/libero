@@ -241,8 +241,7 @@ static FILE_CARD_SX: StaticSx = StaticSx::new(|| {
                 .color("text-dimmed")
                 .font_size("0.85em"),
         )
-        // `inline-flex`, or the button sits on the text's baseline instead of
-        // the row's centre line - the same fix the chip's x needed.
+        // `inline-flex`, or the button sits on the text's baseline.
         .selector(
             "& [data-slot='remove']",
             sx().flex("0 0 auto")
@@ -265,16 +264,14 @@ static FILE_INPUT_SX: StaticSx = StaticSx::new(|| sx().display("none"));
 
 field_props! {
     pub struct FileFieldProps {
-        /// Strictly controlled - pair it with `onchange`. Takes a
-        /// `FileData`, an `Option<FileData>` or a `Vec<FileData>`.
+        /// Controlled: pair it with `onchange`. Takes a `FileData`, an
+        /// `Option` or a `Vec` of them.
         #[props(default, into)]
         value: Files,
-        /// Lets the user pick and drop more than one file. A single-file
-        /// field keeps the first of whatever it is given.
+        /// Takes more than one file; otherwise the field keeps the first.
         #[props(default)]
         multiple: bool,
-        /// The `accept` attribute: `.pdf`, `image/png`, `image/*`, or a
-        /// comma-separated list. The picker applies it, and so does a drop.
+        /// The `accept` attribute (`.pdf`, `image/*`, ...), applied to drops too.
         #[props(default, into)]
         accept: Option<String>,
         /// Asks a phone for a fresh capture - `user` or `environment`.
@@ -286,52 +283,51 @@ field_props! {
         /// Shows an x that empties the field.
         #[props(default)]
         clearable: Option<bool>,
-        /// An upload is in flight. Draws a `Loader` in the control - beside
-        /// the selection in the `Input` variant, in place of the icon on a
-        /// dropzone, on the card once a single-file dropzone has put its
-        /// surface away - and marks the field's group `aria-busy`.
-        ///
-        /// It blocks nothing: a `multiple` field can take more files while
-        /// the first ones upload. `disabled` is the switch for that.
+        /// An upload is in flight: draws a `Loader` and sets `aria-busy`. Blocks
+        /// nothing; `disabled` does.
         #[props(default)]
         loading: Option<bool>,
         /// Which control to draw: a one-line input, or a drop surface.
         #[props(default, into)]
         variant: Input<FileFieldVariant>,
-        /// Draws one picked file. Defaults to a `Chip` with an x when
-        /// `multiple`, and to the bare filename when not. A caller who
-        /// overrides it draws the whole thing, remove control included -
-        /// `args.remove` is the wiring.
+        /// Draws one picked file, remove control included (`args.remove`).
         #[props(default)]
         selection: Option<Callback<SelectionArgs<FileData>, Element>>,
-        /// The hidden `input[type="file"]`'s name, so the files post with a
-        /// form. The list is kept equal to `value`, removals included.
-        /// A path - `Claim::FIELDS.receipts()` - also binds the files to the
-        /// surrounding `Form`'s value when there is no `onchange`.
+        /// What the files post as, kept equal to `value`. A path also binds it
+        /// to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<Files>,
-        /// Fires with the files the field should hold next - a pick, a drop,
-        /// a removal or a clear.
+        /// Fires with the next files: a pick, a drop, a removal or a clear.
         #[props(default)]
         onchange: Option<EventHandler<Files>>,
-        /// Rules over the files, shown once the field loses focus or its form
-        /// is submitted.
+        /// Rules over the files, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<Files>,
-        /// The `Dropzone` variant's prompt, inside the surface. Ignored by
-        /// the `Input` variant, which shows `placeholder` instead.
+        /// The `Dropzone` variant's prompt; `Input` shows `placeholder`.
         #[props(default)]
         children: Element,
     }
 }
 
-/// Files picked from the system dialog or dropped on the control, wearing the
-/// field slots. Controlled: it renders `value` and asks for the next set
-/// through `onchange`.
+/// Files picked from the system dialog or dropped on the control.
 ///
-/// Both variants drive one hidden `input[type="file"]`, which is also what a
-/// `name` posts - the component writes the caller's own list back into it, so
-/// a removed file stops posting.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{FileField, Files};
+/// # fn app() -> Element {
+/// let mut resume = use_signal(|| None::<dioxus::html::FileData>);
+/// rsx! {
+///     FileField {
+///         label: "Resume",
+///         accept: ".pdf",
+///         value: resume(),
+///         onchange: move |files: Files| resume.set(files.one()),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/file-field>
 #[component]
 pub fn FileField(props: FileFieldProps) -> Element {
     let theme = use_theme();
@@ -341,10 +337,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let browse_element = use_element();
     // The chips or the cards, whichever the variant draws.
     let list_element = use_element();
-    // What the input itself holds, and *which* input held it. A pick fills
-    // the list; every other edit happens in Rust, and `use_input_mirror`
-    // writes the difference back. A `Signal` rather than a `use_local_state`,
-    // which needs `Copy`.
+    // What the input holds, and which input held it; `use_input_mirror`
+    // writes Rust-side edits back.
     let mirrored = use_signal(|| (None::<usize>, Files::default()));
     let opening = use_hook(|| Rc::new(Cell::new(false)));
 
@@ -358,10 +352,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
     let interactive = (props.onchange.is_some() || bound.is_bound()) && !disabled;
-    // Two gates, because `interactive` also drives the tab stop and the
-    // input's `disabled`, and a read-only field keeps both - it is reached
-    // and it posts. `editable` is what refuses the picker, the drop, the
-    // clear button and every remove.
+    // A read-only field stays reachable and posts (`interactive`); `editable`
+    // refuses the picker, drops, clear and removes.
     let editable = interactive && !props.readonly.unwrap_or(false);
 
     if props.onchange.is_none() && !bound.is_bound() && !disabled {
@@ -372,13 +364,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let announcer = use_chip_announcer(value.iter().map(FileData::name).collect());
     let dragging = use_local_state(|| false);
 
-    // A drop bypasses the picker, which is the only place `accept` applies by
-    // itself - so the component applies it, and says so rather than dropping
-    // files in silence.
     let cards = variant == FileFieldVariant::Dropzone;
-    // A single-file dropzone has nothing left to ask for once it holds its
-    // file: the card replaces the surface, and removing the file brings it
-    // back. A `multiple` one keeps taking files, so it keeps its surface.
+    // A full single-file dropzone swaps its surface for the card.
     let surface = !cards || multiple || value.is_empty();
 
     let Intake {
@@ -559,9 +546,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
     };
 
     match variant {
-        // Each variant draws its control in a scope of its own: the two
-        // prepare different boxes, and hooks in one scope are positional, so
-        // a `variant` switch must remount rather than reuse the other's slots.
+        // A scope per variant: their hooks differ, so a `variant` switch must
+        // remount rather than reuse the other's slots.
         FileFieldVariant::Input => file_input_variant(
             field,
             control,
@@ -595,10 +581,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
     }
 }
 
-/// The files a pick or a drop leaves once `accept` and `multiple` have had
-/// their say. A drop bypasses the picker, which is the only place `accept`
-/// applies by itself - so the component applies it, and says so rather than
-/// dropping files in silence.
+/// The files a pick or a drop leaves after `accept` and `multiple`. A drop
+/// skips the picker's own `accept`, so it is applied here, with a warning.
 fn keep_accepted(files: Vec<FileData>, accept: &str, multiple: bool) -> Files {
     let picked = files.len();
     let kept: Files = files
@@ -612,12 +596,8 @@ fn keep_accepted(files: Vec<FileData>, accept: &str, multiple: bool) -> Files {
     kept
 }
 
-/// The caller's `sx` behind a full width. The wrapper needs a **definite**
-/// width, not merely `min-width: 0`: a stretched flex item is floored at its
-/// own min-content width, and a long filename is one unbreakable word.
-/// Measured in the browser against every other candidate - `min-width: 0` up
-/// the chain, `overflow: hidden`, `contain: inline-size`, a breakable filename
-/// - and this is the only one that keeps the frame inside its parent.
+/// The caller's `sx` behind a definite width: `min-width: 0` and the rest let a
+/// long filename push the frame out of its parent (measured in the browser).
 fn full_width(caller: &Input<Sx>) -> Input<Sx> {
     match caller.as_ref() {
         // The caller's own declarations come second, so they still win.
@@ -626,10 +606,8 @@ fn full_width(caller: &Input<Sx>) -> Input<Sx> {
     }
 }
 
-/// The frame's trailing slot: the clear button, with the loader ahead of it -
-/// or the loader alone when there is nothing to clear. The loader is silent:
-/// it sits beside a group that the field's label already names, and
-/// `aria-busy` on that group is what says it is waiting.
+/// The frame's trailing slot: the loader, then the clear button. The loader is
+/// silent; the group's `aria-busy` says it is waiting.
 fn trailing_slot(
     loader: Option<Size>,
     clearable: bool,
@@ -702,18 +680,15 @@ fn file_input(
         .render(HtmlTag::Input, Vec::new(), ())
 }
 
-/// The input's `FileList` is the only thing a form posts, and it cannot be
-/// edited - so whenever the caller's value and the input disagree (a removal,
-/// a clear, a drop), the list is written back.
+/// Writes the caller's value back into the input's `FileList`, what a form
+/// posts, whenever the two disagree.
 fn use_input_mirror(
     input_element: ElementHandle,
     mut mirrored: Signal<(Option<usize>, Files)>,
     synced: Files,
 ) {
-    // The token, not merely `is_mounted`: switching `variant` unmounts the
-    // input and mounts a fresh one, whose `FileList` starts empty. Without
-    // this the mirror still claimed the old list and nothing rewrote it, so a
-    // field holding a file posted nothing.
+    // The token, not `is_mounted`: a `variant` switch mounts a fresh, empty
+    // input that must be rewritten too.
     let mount = input_element.mount_token();
     use_effect(use_reactive!(|(synced, mount)| {
         let (mirrored_mount, mirrored_files) = mirrored.peek().clone();
@@ -726,11 +701,8 @@ fn use_input_mirror(
     }));
 }
 
-/// Removing a row destroys the element the keyboard was on, and focus would
-/// otherwise fall to the body. It moves to the row that took this one's
-/// place, to the new last row when the removed one was last, and to the
-/// Browse button when the list is empty. `focus_prefix` plus a row index is
-/// that row's tab stop's id: a card's x, or a chip.
+/// After a removal, moves focus to the row that took its place (clamped), or
+/// the Browse button, not the body. `focus_prefix` + index is a row's id.
 fn use_focus_debt(
     mut owed: Signal<Option<FocusDebt>>,
     remaining: usize,
@@ -889,11 +861,8 @@ fn browse_content(placeholder: &str, empty: bool) -> Element {
     }
 }
 
-/// What the surface holds: an icon, or `loader` while an upload is in flight,
-/// then the prompt. `children` when the caller wrote one, `placeholder` next,
-/// and the localization's last - the shape `Dialog`'s `close_label` set. Then
-/// a hint read off `accept` rather than written beside it, so the prompt
-/// cannot claim something the picker would refuse.
+/// The surface: an icon or `loader`, the prompt (`children`, `placeholder`,
+/// then the localization's), and a hint read off `accept`.
 fn dropzone_prompt(props: &FileFieldProps, loader: Option<Size>) -> Element {
     let written = props
         .children
@@ -928,9 +897,8 @@ fn dropzone_prompt(props: &FileFieldProps, loader: Option<Size>) -> Element {
     }
 }
 
-/// The chip the keyboard is on, of `count`. Removing the chip under the
-/// cursor leaves the index pointing at the one that took its place, and past
-/// the end it clamps. A dropzone has no chips, so no cursor.
+/// The chip the keyboard is on, clamped to `count`. A dropzone has no chips,
+/// so no cursor.
 fn chip_cursor(cursor: Option<usize>, count: usize, cards: bool) -> Option<usize> {
     match count {
         _ if cards => None,
@@ -992,9 +960,8 @@ impl ChipKeys {
     }
 }
 
-/// What both variants draw: a group named by the label - the frame's control,
-/// or the drop surface - holding the chips and a real Browse button. A click
-/// anywhere on it opens the picker; a drop takes the files.
+/// What both variants draw: a labelled group with the chips and a Browse
+/// button. A click opens the picker; a drop takes the files.
 #[derive(Clone)]
 struct Surface {
     browse: ElementHandle,
@@ -1127,9 +1094,8 @@ impl Surface {
             })
             .event("ondragover", move |event: DragEvent| {
                 if interactive {
-                    // Without this the browser opens the file instead - which
-                    // on a read-only field would navigate away from the form
-                    // being reviewed, so it is taken and then refused below.
+                    // Else the browser opens the file and leaves the form, so
+                    // a read-only field takes the drop and refuses it.
                     event.prevent_default();
                     // `dragover` fires every few ms; `set` re-renders even on an equal value.
                     if dragging_over.get() != editable {
@@ -1224,9 +1190,8 @@ fn FileDropzoneControl(
     }
 }
 
-/// A chip with an x when the field takes several files, the bare filename
-/// when it takes one - a chip's x beside the frame's clear button would be
-/// two removes for one file.
+/// A chip with an x for several files, the bare filename for one: the clear
+/// button already removes it.
 fn default_chip(
     file: &FileData,
     remove: Callback<()>,
@@ -1247,9 +1212,8 @@ fn default_chip(
     removable_chip(name, remove, size, !editable)
 }
 
-/// One picked file as a row under the dropzone: the name, its size, and an x.
-/// The card is outside the control, so its remove button is an ordinary tab
-/// stop rather than something the control's own keyboard has to reach.
+/// One picked file as a row under the dropzone: the name, its size, and an x
+/// that is an ordinary tab stop.
 fn default_card(
     file: &FileData,
     remove: Callback<()>,
@@ -1349,9 +1313,8 @@ struct Cards {
     has_files: bool,
 }
 
-/// The `Dropzone` variant. The cards sit under the surface, not in it: a
-/// dropzone that grows with its own contents stops being a target to aim at.
-/// The input stays mounted either way - it is what posts.
+/// The `Dropzone` variant. The cards sit under the surface so it keeps its
+/// size; the input stays mounted, since it posts.
 fn file_dropzone_variant(
     field: PreparedField,
     control: Surface,
@@ -1385,8 +1348,7 @@ fn file_dropzone_variant(
     })
 }
 
-/// What the two paths that add files need. `accept` applies to a drop as well
-/// as to the picker, which is the only place the browser applies it itself.
+/// What the two paths that add files, pick and drop, need.
 struct Taking {
     onchange: Option<EventHandler<Files>>,
     setter: Option<Setter<Files>>,
@@ -1399,9 +1361,8 @@ struct Taking {
 #[derive(Clone, Copy)]
 struct Intake {
     emit: Callback<Files>,
-    /// What the next render owes the keyboard. A removal destroys the button
-    /// focus was on; a pick that stands the surface down destroys the
-    /// *surface* focus was on. Either way focus would fall to the body.
+    /// What the next render owes the keyboard, after a removal or a pick
+    /// destroyed the element focus was on.
     owed: Signal<Option<FocusDebt>>,
     take: Callback<Vec<FileData>>,
 }
@@ -1437,18 +1398,15 @@ fn use_file_intake(taking: Taking) -> Intake {
     Intake { emit, owed, take }
 }
 
-/// Which chip the keyboard is on. Only the `Input` variant has one: the
-/// dropzone's cards sit outside the control, so their remove buttons are
-/// ordinary tab stops and need no cursor at all.
+/// Which chip the keyboard is on. Only the `Input` variant has one.
 fn use_chip_cursor(
     variant: FileFieldVariant,
     count: usize,
     cards: bool,
 ) -> (Signal<Option<usize>>, Option<usize>) {
     let mut cursor = use_signal(|| None::<usize>);
-    // A cursor set in the `Input` variant means nothing to the dropzone, and
-    // coming back must not show a chip the keyboard never picked there. The
-    // dropzone ignores it above, so clearing it one render late is unseen.
+    // Cleared on a variant switch, so coming back shows no stale chip; one
+    // render late is unseen.
     use_effect(use_reactive!(|(variant,)| {
         let _ = variant;
         if cursor.peek().is_some() {

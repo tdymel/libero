@@ -63,7 +63,6 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .flex("1 1 auto")
                 .min_width("0"),
         )
-        // The preview keeps the picker's own scale, not the swatch's.
         // Painted from the root's vars, so a drag leaves the swatch's props
         // equal and it skips the redraw.
         .selector(
@@ -76,14 +75,12 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& > [data-slot='swatches']",
             // Wraps, so a `full_width` picker fills its width with swatches.
-            // At a step's own width, seven fit per row.
             sx().display("flex")
                 .flex_wrap("wrap")
                 .gap(spacing)
                 .max_width(COLOR_PICKER_SWATCHES_WIDTH.value_or("none")),
         )
-        // Fixed per size step, never stretched to the picker's width: the
-        // theme picks a swatch that seven of fit the step's own width.
+        // Fixed per size step: seven fit the step's own width.
         .selector(
             "& > [data-slot='swatches'] > *",
             sx().width(swatch.clone())
@@ -98,31 +95,25 @@ static COLOR_PICKER_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub struct ColorPickerProps {
-        /// Strictly controlled - pair it with `oninput`.
+        /// Controlled: pair it with `oninput`.
         value: ColorCode,
-        /// `Start`/`End` bracket a drag on the panel or a slider; a key press
-        /// or a swatch click emits `Change` then `End`, because either
-        /// settles on its color at once. So committing on `End` is enough.
+        /// A drag brackets its moves with `Start`/`End`; a key press or swatch
+        /// emits `Change` then `End`, so committing on `End` is enough.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent<ColorCode>>>,
         /// Shows the alpha slider and the preview swatch beside it.
         #[props(default)]
         with_alpha: Option<bool>,
-        /// Preset colors under the panel. Takes `ColorCode`s or CSS strings,
-        /// named by their hex; `Swatches::labelled` names them. The one equal
-        /// to `value` is pressed and checked.
+        /// Preset colors under the panel, `ColorCode`s or CSS strings.
         #[props(default, into)]
         swatches: Swatches,
-        /// Caps how many swatches share a row. Unset, they wrap to fill the
-        /// width - seven per row at a size step's own width.
+        /// Caps how many swatches share a row; unset, they wrap.
         #[props(default)]
         swatches_per_row: Option<usize>,
-        /// `false` leaves only the swatches - a palette. Without `swatches`
-        /// that draws nothing, which warns in a debug build.
+        /// `false` leaves only the swatches, a palette.
         #[props(default)]
         with_picker: Option<bool>,
-        /// Corner radius of the swatches and the preview. Round by default;
-        /// `xs` makes them square.
+        /// Corner radius of the swatches and the preview. Round by default.
         #[props(default, into)]
         radius: Input<Size>,
         /// A swatch was clicked. `oninput` fires with the same color first.
@@ -136,35 +127,43 @@ base_props! {
         /// Emits a hidden input of that name, so the color posts with a form.
         #[props(default, into)]
         name: Option<String>,
-        /// How the hidden input writes the color. Hex by default, hexa
-        /// `with_alpha`.
+        /// How the hidden input writes the color.
         #[props(default, into)]
         format: Input<ColorFormat>,
-        /// Names the saturation panel's thumb. Unset, the localization's
-        /// `color.saturation`.
+        /// Names the saturation panel's thumb.
         #[props(default, into)]
         saturation_label: Option<String>,
-        /// Names the hue slider's thumb. Unset, the localization's `color.hue`.
+        /// Names the hue slider's thumb.
         #[props(default, into)]
         hue_label: Option<String>,
-        /// Names the alpha slider's thumb. Unset, the localization's
-        /// `color.alpha`.
+        /// Names the alpha slider's thumb.
         #[props(default, into)]
         alpha_label: Option<String>,
-        /// `false` keeps the thumbs and swatches out of the tab order and
-        /// stops a drag or a click from focusing them - for a picker inside a
-        /// dropdown whose text input must keep focus, the way `ColorField`
-        /// uses it. On by default.
+        /// `false` keeps the thumbs and swatches from taking focus, for a
+        /// dropdown whose text input must keep it (`ColorField`).
         #[props(default)]
         focusable: Option<bool>,
     }
 }
 
-/// A saturation panel, a hue slider, an optional alpha slider with a preview,
-/// and optional preset swatches.
+/// A saturation panel, a hue slider, an optional alpha slider and preset swatches.
 ///
-/// Controlled: it renders `value` and asks for a new one through `oninput`.
-/// The value is a [`ColorCode`], which converts to any CSS form afterwards.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{ColorCode, ColorPicker, SliderChangeEvent};
+/// # fn app() -> Element {
+/// let mut color = use_signal(ColorCode::default);
+/// rsx! {
+///     ColorPicker {
+///         value: color(),
+///         with_alpha: true,
+///         oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/color-picker>
 #[component]
 pub fn ColorPicker(props: ColorPickerProps) -> Element {
     let theme = use_theme();
@@ -175,9 +174,8 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
     if !with_picker && props.swatches.is_empty() {
         warn("ColorPicker: `with_picker: false` without `swatches` renders nothing.");
     }
-    // Without the alpha slider there is no way to see or change alpha, so the
-    // picker holds a solid color: whatever alpha `value` carried is dropped,
-    // and everything it emits - panel, hue, swatch - is opaque.
+    // Without the alpha slider nothing can change alpha, so the picker holds
+    // and emits an opaque color.
     let value = match with_alpha {
         true => props.value,
         false => props.value.opaque(),
@@ -388,9 +386,8 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
                 tabindex: (!focusable).then_some("-1"),
                 onclick: move |_| {
                     if let Some(oninput) = &oninput {
-                        // A pick is settled the moment it is made, so it
-                        // brackets itself: a caller committing on `End` sees
-                        // a swatch the same way it sees a finished drag.
+                        // Settled at once, so a caller committing on `End`
+                        // sees it like a finished drag.
                         oninput.call(SliderChangeEvent::Change(color));
                         oninput.call(SliderChangeEvent::End(color));
                     }

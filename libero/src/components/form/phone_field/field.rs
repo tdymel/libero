@@ -22,9 +22,8 @@ use crate::{
 
 use super::countries::{self, COUNTRIES, Country};
 
-/// The picker in the frame's leading slot. It is a real `<button>` and a real
-/// tab stop, because it is the only way to reach what it does
-/// ([[codebase/components/field]]).
+/// The picker in the leading slot: a real `<button>` and tab stop, the only
+/// way to reach what it does.
 static PICKER_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")
         .align_items("center")
@@ -57,10 +56,8 @@ static PICKER_SX: StaticSx = StaticSx::new(|| {
 /// the same `+49`, with no tab stop and nothing to open.
 static PREFIX_SX: StaticSx = StaticSx::new(|| sx().white_space("nowrap"));
 
-/// The search box at the top of the list, which is what makes 240 rows
-/// reachable. Copied from `SelectCore`'s: it sits inside the dropdown, above
-/// the rows and outside their scroll, so it carries its own chrome rather than
-/// the field frame's.
+/// The search box above the rows, copied from `SelectCore`'s. It sits outside
+/// the field frame, so it carries its own chrome.
 static SEARCH_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
         .border("none")
@@ -100,60 +97,35 @@ static ROW_SX: StaticSx = StaticSx::new(|| {
 field_props! {
     extends(input);
     pub struct PhoneFieldProps {
-        /// The number, **in E.164** - `"+12133734253"`. `None` leaves the
-        /// field uncontrolled; it keeps its own text and needs no handler.
-        ///
-        /// The text on screen is a rendering of this, never the value itself:
-        /// what a caller holds, posts and validates is always the E.164 string.
+        /// The number in E.164 (`"+12133734253"`); `None` leaves it uncontrolled.
         #[props(default, into)]
         value: Option<String>,
-        /// Fires per keystroke with the E.164 the field should hold next, or
-        /// an empty string once nothing is typed - an empty field is worth no
-        /// value at all, not a bare dial code.
+        /// Fires per keystroke with the next E.164, or `""` once nothing is typed.
         #[props(default)]
         oninput: Option<EventHandler<String>>,
-        /// The country the field starts on, ISO 3166-1 alpha-2 - `"DE"`.
-        /// Defaults to the theme's. A `value` whose dial code belongs to
-        /// another country wins over it, which is what makes an existing
-        /// number render under the right flag.
-        ///
-        /// The picker wins over it too - until the prop changes, which moves
-        /// the field and re-emits the number under the new dial code.
+        /// The starting country, ISO alpha-2 (`"DE"`). A `value`'s own dial code
+        /// wins; a change re-emits the number under the new code.
         #[props(default, into)]
         country: Option<String>,
-        /// The user picked another country. The value is re-emitted through
-        /// `oninput` at the same time, under the new dial code.
+        /// The user picked another country; `oninput` re-emits the value too.
         #[props(default)]
         oncountrychange: Option<EventHandler<String>>,
-        /// Offers the picker at all. Off pins the country and draws a static
-        /// `+49` in its place, which is also one tab stop fewer.
+        /// `false` pins the country and draws a static `+49` instead.
         #[props(default)]
         country_select: Option<bool>,
-        /// Overrides the name a country is offered under, during render. Unset,
-        /// the localization's `phone_field.country_names` names it, else the
-        /// built-in English name.
+        /// Overrides the name a country is offered under, during render.
         #[props(default)]
         country_label: Option<Callback<String, String>>,
-        /// Narrows the list to these ISO codes, in the order given. Anything
-        /// the table does not know is dropped.
+        /// Narrows the list to these ISO codes, in the order given.
         #[props(default)]
         countries: Option<Vec<String>>,
-        /// Draws a flag beside a country, in the picker and in the list. The
-        /// library ships none: emoji flags render as two letters on Windows
-        /// and an SVG sprite is ~44 KB gzipped, so a caller who wants flags
-        /// brings their own. Draw it decorative (`aria-hidden`, or `alt=""`):
-        /// the row and the button already say the country's name.
+        /// Draws a flag beside a country; none ship. Keep it `aria-hidden`.
         #[props(default)]
         flag: Option<Callback<String, Element>>,
-        /// Rules over the E.164, shown once the field loses focus or its form
-        /// is submitted. Nothing here validates a number on its own - the
-        /// library ships no numbering-plan data.
+        /// Rules over the E.164, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<String>,
-        /// What the field posts as - the E.164, through a hidden input,
-        /// because the visible one holds the text being edited. A path -
-        /// `Signup::FIELDS.phone()` - also binds it to the surrounding
-        /// `Form`'s value when the field has no `oninput`.
+        /// What the E.164 posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<String>,
         #[props(default, into)]
@@ -161,17 +133,26 @@ field_props! {
     }
 }
 
-/// A phone field: a country picker in the leading slot, a `tel` input beside
-/// it, and one E.164 string as the value.
+/// A country picker and a `tel` input, holding one E.164 string. Validates
+/// nothing on its own.
 ///
-/// Two values at once is what makes this a component rather than a `TextField`
-/// with a `leading` the caller fills: the text being edited is the national
-/// number, and the value the caller holds, posts and validates is the E.164
-/// string assembled from it - `NumberField`'s edit buffer in another shape.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::PhoneField;
+/// # fn app() -> Element {
+/// let mut phone = use_signal(String::new);
+/// rsx! {
+///     PhoneField {
+///         label: "Phone",
+///         country: "DE",
+///         value: phone(),
+///         oninput: move |next| phone.set(next),
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// The library ships the country list and the dial codes, and **no
-/// validation**: nothing here knows that `+1 555` is short. Bring a
-/// `Validator<String>` for that.
+/// Docs: <https://libero-ui.dev/form/phone-field>
 #[component]
 pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let theme = use_theme();
@@ -186,8 +167,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let readonly = props.readonly.unwrap_or(false);
     let current = bound.value().or_else(|| props.value.clone());
 
-    // The country the user picked, which only the picker writes. The prop is
-    // the *initial* one, so a re-render never drags the field back to it.
+    // Only the picker writes it; the prop is the initial country.
     let initial = props
         .country
         .as_deref()
@@ -197,10 +177,8 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     let picked = use_signal(|| initial);
     let country = country_for(current.as_deref(), picked());
 
-    // The text is the component's edit buffer, not the value: `NumberField`'s
-    // shape. It is what the control shows for as long as it still assembles
-    // into the E.164 the caller holds - otherwise the caller's value wins,
-    // which is what makes the field controlled.
+    // The edit buffer, shown while it still assembles into the caller's E.164;
+    // otherwise the caller's value wins.
     let text = use_signal(String::new);
     let display = match &current {
         None => text(),
@@ -209,8 +187,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             .map(|national| countries::group(country, &national).unwrap_or(national))
             .unwrap_or_default(),
     };
-    // What a pick or a blur re-assembles from - the digits on screen, which is
-    // not the same as the buffer when the caller's value is what won above.
+    // A pick or a blur re-assembles from the digits on screen, not the buffer.
     let typed = countries::digits_of(&display);
     // The pick closure below outlives `display`, which the input takes.
     let shown = display.clone();
@@ -253,21 +230,15 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
 
     let oncountrychange = props.oncountrychange;
     let pick_emit = emit.clone();
-    // An `Rc` rather than a `use_callback`: every row holds one, and it writes
-    // signals this component reads from inside a click
-    // ([[codebase/reentrant-handlers]]).
-    // The `bool` is "the user did this": a pick closes the list, reports
-    // through `oncountrychange` and takes the focus back, and a caller changing
-    // `country` under the field does none of those things.
+    // An `Rc`, not a `use_callback`: it writes signals read here from a click
+    // ([[codebase/reentrant-handlers]]). The `bool` is "the user did this".
     let pick: Rc<dyn Fn(&'static Country, bool)> =
         Rc::new(move |next: &'static Country, by_user: bool| {
             let mut picked = picked;
             let mut text = text;
             picked.set(next);
-            // The typed digits keep their meaning - only the dial code in front of
-            // them changed. Where the new plan has no fixed shape there is
-            // nothing to regroup into, so the text the user typed stays as it
-            // is rather than losing its spacing (todo 87b).
+            // Only the dial code changed; without a fixed shape the typed text
+            // keeps its spacing (todo 87b).
             text.set(countries::group(next, &typed).unwrap_or_else(|| shown.clone()));
             if let Some(emit) = &pick_emit {
                 emit(countries::to_e164(next, &typed));
@@ -279,15 +250,12 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             if let Some(oncountrychange) = &oncountrychange {
                 oncountrychange.call(next.iso.to_string());
             }
-            // The list is gone and the box it was typed in with it, so the focus
-            // goes back to what opened it.
+            // The list and its search box are gone; focus returns to the picker.
             let _ = picker_element.focus();
         });
 
-    // `country` is the country the field starts on, but a caller who changes it
-    // has changed their mind, and the number moves with it - the same work a
-    // pick does, minus the list, the callback and the focus. Guarded on the
-    // country actually differing, so the first render emits nothing.
+    // A changed `country` prop moves the number like a pick would. Guarded on
+    // a real change, so the first render emits nothing.
     let requested = props.country.clone();
     let following = pick.clone();
     use_effect(use_reactive!(|requested| {
@@ -345,9 +313,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             // The list under the highlight just changed; arm its top row.
             state.set_active(Some(0));
         })
-        // The rows and the dropdown cancel `mousedown`, so a click inside the
-        // list never reaches this - which leaves an outside click, and that is
-        // exactly what should close the picker.
+        // The list cancels `mousedown`, so only an outside click blurs this.
         .event("onblur", move |_: FocusEvent| state.close())
         .render(HtmlTag::Input, state.a11y_attributes(), ());
     let search = with_drawn_placeholder(Some(localization.common.search), SEARCH_INSET, search);
@@ -451,13 +417,8 @@ fn offered(codes: &Option<Vec<String>>) -> Vec<&'static Country> {
     }
 }
 
-/// Which country a rendered field is on: the one the user picked, unless the
-/// value it is holding belongs somewhere else.
-///
-/// The pick wins whenever the value still fits it, which is what settles the
-/// twenty countries sharing `+1`: typing `242` into a US field does not silently
-/// become the Bahamas, while a value that arrives as `+1242...` with nothing
-/// picked does render as one.
+/// The field's country: the pick while the value fits it, so `242` typed in a
+/// US field stays US; else the value's own dial code.
 pub(crate) fn country_for(value: Option<&str>, picked: &'static Country) -> &'static Country {
     let digits = countries::digits_of(value.unwrap_or_default());
     if digits.is_empty() || digits.starts_with(picked.dial) {
@@ -476,10 +437,7 @@ struct RowList {
     flag: Option<Callback<String, Element>>,
 }
 
-/// The country rows. Nothing is built while the list is closed: 240 rows is a
-/// `Vec<Element>` and 240 name lookups per render, and a closed
-/// `ComboboxCore` draws none of them - which is exactly the cost [[todos]] 29
-/// is about.
+/// The country rows.
 fn phone_rows(
     list: RowList,
     name_of: impl Fn(&'static Country) -> String,
@@ -494,9 +452,7 @@ fn phone_rows(
         flag,
     } = list;
     let codes = &codes;
-    // Nothing is built while the list is closed. 240 rows is a `Vec<Element>`
-    // and 240 name lookups per render, and a closed `ComboboxCore` draws none
-    // of them - which is exactly the cost [[todos]] 29 is about.
+    // Nothing built while closed: 240 rows and name lookups per render (todo 29).
     if !opened {
         return Vec::new();
     }
@@ -609,9 +565,8 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
         .attr_default("type", "button")
         // What names the listbox.
         .attr("id", picker_id(state))
-        // Two elements cannot both be the combobox: while the list is open the
-        // search box owns the role, `aria-controls` and the active descendant,
-        // and the button keeps only what says a list hangs off it.
+        // The open list's search box is the combobox; the button only says a
+        // list hangs off it.
         .attr("aria-haspopup", "listbox")
         .attr("aria-expanded", opened.to_string())
         // The content reads `DE +49`, which names a code and not a country; the
@@ -630,9 +585,8 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
         .attr("disabled", disabled)
         // Read-only keeps the tab stop but says the button does nothing.
         .attr("aria-disabled", (readonly && !disabled).then_some("true"))
-        // Or clicking the button while the list is open closes it twice over:
-        // the press blurs the search box, which closes the list, and the click
-        // that follows opens it again.
+        // Else the press blurs the search box, closing the list, and the click
+        // reopens it.
         .event("onmousedown", move |event: MouseEvent| {
             event.prevent_default()
         })
@@ -656,9 +610,8 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
         )
 }
 
-/// What the picker needs to be the frame's leading slot: the button, the
-/// search box the open list carries, and the two handles the focus moves
-/// between.
+/// The frame's leading slot: the button, the open list's search box, and the
+/// two handles focus moves between.
 struct Picker {
     picker: Element,
     prefix_box: BoxStyle,
@@ -792,14 +745,10 @@ fn phone_input<F: Fn(String) + Clone + 'static>(
             }
             text.set(raw);
         })
-        // Grouped on the way out rather than on every keystroke: regrouping as
-        // the text is typed moves the caret, and `ElementApi` has no
-        // `selection_start` to put it back.
+        // Grouped on blur: regrouping per keystroke moves the caret, and
+        // `ElementApi` cannot put it back.
         .event("onblur", move |_: FocusEvent| {
-            // Only where the plan has a fixed shape. A plan without one has no
-            // grouping to apply, and the bare digits are not an improvement on
-            // what the user typed - blurring a German number used to strip its
-            // spaces, and so did every re-render after it (todo 87b).
+            // Only where the plan has a fixed shape (todo 87b).
             if let Some(grouped) = countries::group(blur_country, &text())
                 && grouped != text()
             {
@@ -905,9 +854,8 @@ mod tests {
         );
     }
 
-    /// Every dial code two rows share has exactly one main country, so the
-    /// tie-break never falls back to the table's order - and every row marked
-    /// as sharing really does share.
+    /// Every shared dial code has exactly one main country, so the tie-break
+    /// never falls back to table order.
     #[test]
     fn every_shared_dial_code_has_one_main_country() {
         for entry in COUNTRIES {
@@ -930,9 +878,7 @@ mod tests {
         assert_eq!(country_for(Some(""), country("DE")).iso, "DE");
     }
 
-    /// Grouping is deliberately sparse: where a numbering plan has one fixed
-    /// shape it is used, and everywhere else there is no grouping at all -
-    /// which leaves the text the user typed alone (todo 87b).
+    /// Only a fixed-shape plan groups; elsewhere the typed text stays (todo 87b).
     #[test]
     fn blur_groups_only_where_the_plan_is_fixed() {
         assert_eq!(

@@ -39,14 +39,12 @@ static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .position("relative")
         // On the control rather than the track, so `disabled` below reaches it.
         .cursor("pointer")
-        // The control wraps the track and nothing else, so the ring hugs the
-        // track rather than the row. Drawn by the overlay after the track,
-        // because the focus is on the input beside it.
+        // The ring hugs the track, drawn by the overlay: the focus is on the
+        // input beside it.
         .selector("& > [data-ring]", ring_overlay_sx())
         .selector("& > input:focus-visible ~ [data-ring]", focus_ring_sx())
         // A card rings itself: the control stops being the overlay's
-        // containing block, so the same overlay covers the card - as on
-        // `Checkbox`.
+        // containing block, so the same overlay covers the card.
         .when("card", sx().position("static"))
         .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
 });
@@ -125,42 +123,45 @@ field_props! {
         /// The track colour when checked.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Pair it with `onchange`. Left out, the switch keeps its own state
-        /// unless a `name` binds it to the form around it.
+        /// Pair it with `onchange`; left out, the switch keeps its own state.
         #[props(default)]
         checked: Option<bool>,
         /// Called with the value `checked` should take next.
         #[props(default)]
         onchange: Option<EventHandler<bool>>,
-        /// Rules over `checked`, shown once the switch loses focus or its form
-        /// is submitted.
+        /// Rules over `checked`, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<bool>,
-        /// What the field posts as. A path - `Signup::FIELDS.terms()` - also
-        /// binds it to the surrounding `Form`'s value when the field has no
-        /// `onchange`.
+        /// What the field posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<bool>,
         /// Names the switch when it has no `label`.
         #[props(default, into)]
         aria_label: Option<String>,
-        /// `Card` draws the switch as a bordered surface and makes all of it
-        /// the hit area - pair it with a `description`. A link or button in
-        /// the label or captions keeps its own click.
+        /// `Card` draws a bordered surface that is all hit area.
         #[props(default, into)]
         variant: Input<ChoiceVariant>,
     }
 }
 
-/// A checkbox styled as a track and thumb, with its label beside it and the
-/// description, helper text and validation message under both.
+/// An on/off switch with its label, description and validation message.
 ///
-/// The browser never toggles the input itself - a label click and Space are
-/// taken in Rust, and Enter too outside a form; inside one Enter submits it -
-/// so the track, the DOM property, assistive tech and form submission never
-/// drift apart. Pass `checked` and handle `onchange`
-/// to own the state; with neither, and outside a form binding, the switch
-/// keeps its own.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Switch;
+/// # fn app() -> Element {
+/// let mut enabled = use_signal(|| true);
+/// rsx! {
+///     Switch {
+///         label: "Email notifications",
+///         checked: enabled(),
+///         onchange: move |next| enabled.set(next),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/switch>
 #[component]
 pub fn Switch(props: SwitchProps) -> Element {
     let theme = use_theme();
@@ -177,9 +178,8 @@ pub fn Switch(props: SwitchProps) -> Element {
         .or(bound.entered())
         .unwrap_or(false);
 
-    // HTML's `readonly` does not apply to a checkbox, and the activation is
-    // ours anyway - so it is refused here and said with `aria-readonly`,
-    // which the `switch` role inherits from `checkbox`.
+    // HTML `readonly` does not apply to a checkbox: refused here, announced
+    // with `aria-readonly`.
     let readonly = props.readonly.unwrap_or(false);
     let card = props.variant.copied_or(theme.switch.variant) == ChoiceVariant::Card;
 
@@ -200,9 +200,8 @@ pub fn Switch(props: SwitchProps) -> Element {
         }
     };
 
-    // Space toggles. Enter toggles too outside a form (APG); inside one it is
-    // left to the browser, which submits as for a native checkbox. A raw
-    // `<form>` counts, read off the DOM (todo 660).
+    // Enter toggles outside a form (APG) and submits inside one; a raw `<form>`
+    // counts, read off the DOM (todo 660).
     let in_form = use_form_context().is_some();
     let element = use_element();
     let owner = use_form_owner(element, !in_form);
@@ -271,16 +270,13 @@ pub fn Switch(props: SwitchProps) -> Element {
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 
-    // The track is decoration: the input owns the name, the state and the
-    // keyboard. It carries the click because a visually hidden input has no
-    // hit area, and a `<label>` around it would compete with the field's own
-    // label for the accessible name.
+    // Decoration that carries the click: a hidden input has no hit area, and a
+    // `<label>` would compete for the name.
     let track = rsx! {
         span {
             class: track_class,
             "aria-hidden": "true",
-            // A card takes the click itself, so the track leaves it to the
-            // card rather than toggling twice. Focuses the input as a native
+            // A card takes the click itself. Focuses the input as a native
             // click would, so its blur shows the rules.
             onclick: move |_| {
                 if !card {

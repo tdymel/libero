@@ -95,35 +95,44 @@ field_props! {
         /// Strictly controlled - pair it with `onselect`.
         #[props(default)]
         checked: Option<bool>,
-        /// Fires when this radio is picked. Never fires to *unpick* one: a
-        /// radio is turned off by another in its group being turned on.
+        /// Fires when this radio is picked; never to unpick it.
         #[props(default)]
         onselect: Option<EventHandler<()>>,
-        /// Shared by every radio in one group, which is what makes the native
-        /// control exclusive. `RadioGroup` sets it.
+        /// Shared by every radio in one group. `RadioGroup` sets it.
         #[props(default, into)]
         name: Option<String>,
-        /// `RadioGroup` makes exactly one radio the group's tab stop and takes
-        /// the rest out of the tab order.
+        /// `RadioGroup` sets one tab stop per group.
         #[props(default, into)]
         tabindex: Option<String>,
         /// Names the radio when it has no `label`.
         #[props(default, into)]
         aria_label: Option<String>,
-        /// `Card` draws the radio as a bordered surface and makes all of it
-        /// the hit area. A link or button in the label or captions keeps its
-        /// own click.
+        /// `Card` draws a bordered surface that is all hit area.
         #[props(default, into)]
         variant: Input<ChoiceVariant>,
     }
 }
 
-/// One option of a radio group: a circle with its label beside it.
+/// One radio with its label. Prefer [`RadioGroup`](crate::components::RadioGroup),
+/// which owns the shared `name` and the single tab stop.
 ///
-/// Prefer [`RadioGroup`](crate::components::RadioGroup) - a radio on its own
-/// owns neither the shared `name` that makes the set exclusive nor the single
-/// tab stop the ARIA pattern asks for. This is the escape hatch for a caller
-/// laying a group out by hand.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Radio;
+/// # fn app() -> Element {
+/// let mut express = use_signal(|| false);
+/// rsx! {
+///     Radio {
+///         label: "Express shipping",
+///         name: "shipping",
+///         checked: express(),
+///         onselect: move |_| express.set(true),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/radio-group>
 #[component]
 pub fn Radio(props: RadioProps) -> Element {
     let theme = use_theme();
@@ -143,8 +152,7 @@ pub fn Radio(props: RadioProps) -> Element {
     }
 
     let onselect = props.onselect;
-    // Picking the checked radio again is not a change - and there is no way to
-    // unpick one, so a second click reports nothing.
+    // Picking the checked radio again is not a change.
     let select = move || {
         if let Some(onselect) = &onselect
             && !checked
@@ -214,10 +222,8 @@ pub fn Radio(props: RadioProps) -> Element {
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 
-    // The circle is decoration: the input owns the name, the state and the
-    // keyboard. It carries the click because a visually hidden input has no
-    // hit area, and a `<label>` around it would compete with the field's own
-    // label for the accessible name. A card takes the click itself.
+    // Decoration that carries the click: a hidden input has no hit area, and a
+    // `<label>` would compete for the name. A card takes the click itself.
     let circle = rsx! {
         span {
             class: circle_class,

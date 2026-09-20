@@ -1,14 +1,8 @@
-//! The `accept` attribute, applied in Rust.
-//!
-//! The file picker applies `accept` itself; a **drop** does not, so the
-//! component has to. Kept out of the component so it is testable without a
-//! DOM, the way `slider/value.rs` is.
+//! The `accept` attribute, applied in Rust: the picker applies it, a drop
+//! does not.
 
-/// Whether a file with this name and content type satisfies `accept`.
-///
-/// `accept` is the attribute's own syntax: a comma-separated list of `.ext`
-/// suffixes, `type/subtype` types and `type/*` wildcards. An empty list
-/// accepts everything, which is what an absent attribute means.
+/// Whether a file satisfies `accept` (`.ext`, `type/subtype`, `type/*`). An
+/// empty list accepts everything.
 pub(super) fn accepts(accept: &str, name: &str, content_type: Option<&str>) -> bool {
     let mut entries = accept.split(',').map(str::trim).filter(|e| !e.is_empty());
     let mut empty = true;
@@ -22,21 +16,18 @@ pub(super) fn accepts(accept: &str, name: &str, content_type: Option<&str>) -> b
 }
 
 fn matches(entry: &str, name: &str, content_type: Option<&str>) -> bool {
-    // A suffix, and the only arm that looks at the name. Case-insensitive:
-    // `.PDF` off a camera roll is the same file as `.pdf`.
+    // Case-insensitive: `.PDF` off a camera roll is a `.pdf`.
     if let Some(extension) = entry.strip_prefix('.') {
         return name
             .rsplit_once('.')
             .is_some_and(|(_, actual)| actual.eq_ignore_ascii_case(extension));
     }
 
-    // Everything else is a media type, and a file with none can only be
-    // matched by `*/*`.
+    // A file with no media type only matches `*/*`.
     let Some(content_type) = content_type else {
         return entry == "*/*";
     };
-    // A media type may carry parameters (`text/plain;charset=utf-8`), which
-    // are not part of what `accept` compares.
+    // Parameters (`;charset=utf-8`) are not compared.
     let content_type = content_type
         .split(';')
         .next()
@@ -45,8 +36,7 @@ fn matches(entry: &str, name: &str, content_type: Option<&str>) -> bool {
         .to_ascii_lowercase();
     let entry = entry.to_ascii_lowercase();
 
-    // `*/*` first: it also ends in `/*`, and its "group" would never match a
-    // real type's.
+    // `*/*` first: it also ends in `/*`.
     if entry == "*/*" {
         return true;
     }
@@ -58,11 +48,8 @@ fn matches(entry: &str, name: &str, content_type: Option<&str>) -> bool {
     }
 }
 
-/// What the dropzone says it takes, read off the same attribute the picker
-/// uses - so the prompt cannot drift from what is actually accepted.
-///
-/// `.pdf` reads as `PDF`, `image/png` as `PNG`, and a `type/*` wildcard as
-/// `any_of` names its group. `None` when the attribute takes everything.
+/// What the dropzone says it takes (`.pdf` as `PDF`, `type/*` via `any_of`),
+/// read off `accept` itself. `None` when it takes everything.
 pub(super) fn accept_hint(accept: &str, any_of: fn(&str) -> String) -> Option<String> {
     let names: Vec<String> = accept
         .split(',')

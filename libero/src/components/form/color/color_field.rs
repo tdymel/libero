@@ -25,14 +25,11 @@ use crate::{
 };
 
 static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
-    // A surface, so the background and the `bordered` border are
-    // `paper_sx()`'s. Everything positional comes from `use_popover` as an
-    // inline style.
+    // Position comes from `use_popover` as an inline style.
     paper_sx()
         .z_index(Z_INDEX_POPOVER.value())
         .padding(SizeCss::SPACING.value(Size::Sm))
-        // The field's own corner rather than the surface default, and a
-        // dropdown floats over the page, where that default rests.
+        // The field's corner, and a shadow: the dropdown floats over the page.
         .border_radius(SizeCss::RADIUS.value(Size::Sm))
         .box_shadow(SizeCss::SHADOW.value(Size::Lg))
 });
@@ -48,22 +45,18 @@ static COLOR_FIELD_PREVIEW_SX: StaticSx =
 field_props! {
     extends(input);
     pub struct ColorFieldProps {
-        /// Strictly controlled - pair it with `oninput`. Inside a `Form`, a
-        /// path `name` can supply it instead.
+        /// Controlled: pair it with `oninput`, or bind a path `name` in a `Form`.
         #[props(default)]
         value: ColorCode,
-        /// A drag in the dropdown brackets its moves with `Start`/`End`.
-        /// Everything else settles at once and emits `Change` then `End`:
-        /// a key press or a swatch in the dropdown, typed text each time it
-        /// parses, and the eyedropper.
+        /// A drag brackets its moves with `Start`/`End`; anything else emits
+        /// `Change` then `End` at once.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent<ColorCode>>>,
-        /// Rules over the color, shown once the field loses focus or its form
-        /// is submitted.
+        /// Rules over the color, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<ColorCode>,
-        /// How the text shows the color, and so what `name` posts. Hex by
-        /// default, hexa `with_alpha`. Typing accepts every form either way.
+        /// How the text shows the color and what `name` posts. Typing accepts
+        /// every form.
         #[props(default, into)]
         format: Input<ColorFormat>,
         /// Shows the alpha slider in the dropdown, and keeps typed alpha.
@@ -75,15 +68,13 @@ field_props! {
         /// Caps how many swatches share a row in the dropdown.
         #[props(default)]
         swatches_per_row: Option<usize>,
-        /// `false` leaves only the swatches in the dropdown, and no dropdown
-        /// at all without them.
+        /// `false` leaves only the swatches, and no dropdown without them.
         #[props(default)]
         with_picker: Option<bool>,
         /// The swatch in the leading slot.
         #[props(default)]
         with_preview: Option<bool>,
-        /// The eyedropper button in the trailing slot, where the platform has
-        /// one - Chromium today.
+        /// The eyedropper button, where the platform has one (Chromium today).
         #[props(default)]
         with_eye_dropper: Option<bool>,
         /// The text is read-only: a color comes from the dropdown alone.
@@ -95,8 +86,7 @@ field_props! {
         /// Picking a swatch closes the dropdown.
         #[props(default)]
         close_on_swatch_click: Option<bool>,
-        /// What the field posts as. A path - `Theme::FIELDS.accent()` - also
-        /// binds it to the surrounding `Form`'s value when it has no `oninput`.
+        /// What the field posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<ColorCode>,
         #[props(default, into)]
@@ -105,11 +95,24 @@ field_props! {
 }
 
 /// A text field holding a color, with a preview swatch, an eyedropper and a
-/// `ColorPicker` in a dropdown.
+/// `ColorPicker` dropdown.
 ///
-/// Controlled: it renders `value` and asks for a new one through `oninput`.
-/// Typed text is kept as typed until it blurs; each time it parses, the color
-/// is emitted.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{ColorCode, ColorField, SliderChangeEvent};
+/// # fn app() -> Element {
+/// let mut color = use_signal(|| ColorCode::rgba(34, 139, 230, 1.0));
+/// rsx! {
+///     ColorField {
+///         label: "Accent",
+///         value: color(),
+///         oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value()),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/color-field>
 #[component]
 pub fn ColorField(props: ColorFieldProps) -> Element {
     let theme = use_theme();
@@ -284,9 +287,8 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             .and_then(|element| element.focus());
     });
 
-    // After the platform's next task focus has landed, so this can tell
-    // whether it stayed in the field - the text input or the dropdown - or
-    // left. Without a platform answer it counts as left.
+    // Waits a task for focus to land, then closes unless it stayed in the
+    // input or the dropdown. No platform answer counts as left.
     let settle = move || {
         spawn(async move {
             next_task().await;
@@ -329,8 +331,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         }
     };
     // Element 0 is the text input, 1 the dropdown; the box closes once focus
-    // is in neither. The wrapper's and the dropdown's `focusout` wait to see
-    // where it went.
+    // is in neither.
     let focus = use_focus_within(
         move || vec![anchor.mounted(), floating.mounted()],
         move |change| {
@@ -411,10 +412,8 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         })
         .render(HtmlTag::Input, props.attributes, ());
 
-    // Portaled, so no `overflow: hidden` ancestor clips it. A mousedown in the
-    // box is cancelled, so a click keeps focus on the text input; the keyboard
-    // enters the picker with Arrow Down and leaves it with Escape or Tab. The box
-    // closes once focus is in neither.
+    // Portaled, so no `overflow: hidden` ancestor clips it. A cancelled
+    // mousedown keeps focus on the text input.
     let picker_setter = bound.setter();
     popover.show(showing.then(|| {
         dropdown
@@ -506,9 +505,8 @@ mod tests {
     use super::*;
     use crate::css::Stylesheet;
 
-    /// The dropdown is a `Paper` surface with two overrides. The `bordered`
-    /// token it is rendered with only exists in a browser - the box opens on
-    /// an event.
+    /// The dropdown is a `Paper` surface with two overrides. Its `bordered`
+    /// token only shows in a browser, where the box opens.
     #[test]
     fn the_dropdown_starts_from_the_paper_surface() {
         let css = Stylesheet::from(&*COLOR_FIELD_DROPDOWN_SX);

@@ -3,11 +3,8 @@
 use super::ColorCode;
 use crate::utils::warn;
 
-/// A list of preset colors, built from `ColorCode`s or from CSS strings.
-///
-/// Strings are parsed at runtime - the list usually comes from config or a
-/// design token file. One that parses as no color is skipped with a dev
-/// warning, never a panic.
+/// A list of preset colors, built from `ColorCode`s or CSS strings. A string
+/// that parses as no color is skipped with a dev warning.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;

@@ -21,10 +21,8 @@ pub use crate::theme::PinKind;
 
 input_from_str!(PinKind);
 
-/// A cell is a square of `FIELD_HEIGHT`, so a `PinField` is exactly as tall as
-/// a `TextField` at the same size. The frame's own `padding_x` would make it a
-/// rectangle, so the row overrides it - `& > div` outranks the frame's own
-/// class.
+/// A cell is a square of `FIELD_HEIGHT`, as tall as a `TextField`. `& > div`
+/// outranks the frame's `padding_x`, which would make it a rectangle.
 static PIN_FIELD_ROW_SX: StaticSx = StaticSx::new(|| {
     PinFieldDefaults::theme_vars()
         .display("flex")
@@ -43,47 +41,35 @@ static PIN_FIELD_ROW_SX: StaticSx = StaticSx::new(|| {
 
 field_props! {
     pub struct PinFieldProps {
-        /// The pin so far, one character per filled cell. `None` leaves the
-        /// cells to the field's own buffer - it always keeps one, because
-        /// auto-advance has to know which cell just filled.
+        /// The pin so far. `None` leaves the cells to the field's own buffer.
         #[props(default, into)]
         value: Option<String>,
-        /// Fires per accepted character with the pin the field should hold
-        /// next. Native name, native timing.
+        /// Fires per accepted character with the pin the field should hold next.
         #[props(default)]
         oninput: Option<EventHandler<String>>,
-        /// Rules over the pin, shown once the field loses focus or its form is
-        /// submitted.
+        /// Rules over the pin, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<String>,
-        /// Fires once when the last empty cell fills. Clearing a cell arms it
-        /// again.
+        /// Fires once when the last empty cell fills; clearing a cell re-arms it.
         #[props(default)]
         oncomplete: Option<EventHandler<String>>,
         /// How many cells.
         #[props(default, into)]
         length: Input<usize>,
-        /// Which characters a cell accepts. Anything else is dropped at the
-        /// key, so a rejected character never appears and is never removed
-        /// again.
+        /// Which characters a cell accepts; others are dropped at the key.
         #[props(default, into)]
         kind: Input<PinKind>,
         /// Renders the cells as password inputs. The value is unaffected.
         #[props(default)]
         mask: Option<bool>,
-        /// `autocomplete="one-time-code"` on the first cell, so a phone offers
-        /// the code it just received. On by default - an OTP is what a pin
-        /// field is usually for.
+        /// `autocomplete="one-time-code"` on the first cell. On by default.
         #[props(default)]
         one_time_code: Option<bool>,
-        /// Rendered between the cells - a dash, a wider gap.
+        /// Rendered between the cells.
         #[props(default, into)]
         separator: Option<Element>,
-        /// Emits a hidden input of that name, so the pin posts with a form.
-        /// The cells cannot carry it themselves - there are several of them,
-        /// and each holds one character.
-        /// A path - `Login::FIELDS.code()` - also binds the pin to the
-        /// surrounding `Form`'s value when there is no `oninput`.
+        /// Posts the pin through a hidden input. A path also binds it to the
+        /// surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<String>,
         /// Focuses the first cell on mount.
@@ -92,16 +78,25 @@ field_props! {
     }
 }
 
-/// A pin, one character per cell.
+/// A pin or one-time code, one character per cell.
 ///
-/// Typing fills a cell and moves to the next; Backspace clears and steps back;
-/// the arrows, Home and End move without changing anything. Pasting a whole
-/// code into any cell spreads it across the rest.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::PinField;
+/// # fn app() -> Element {
+/// let mut code = use_signal(String::new);
+/// rsx! {
+///     PinField {
+///         label: "Verification code",
+///         length: 6usize,
+///         value: code(),
+///         oninput: move |next| code.set(next),
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// Controlled through `value` + `oninput`, and `oncomplete` fires the moment
-/// the last cell fills. Holes are not representable: the value is the filled
-/// cells joined, so typing into a cell past the end of the value lands in the
-/// first empty one.
+/// Docs: <https://libero-ui.dev/form/pin-field>
 #[component]
 pub fn PinField(props: PinFieldProps) -> Element {
     let theme = use_theme();
@@ -161,9 +156,8 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .states(&states)
         .prepare();
 
-    // One prepared frame and one prepared control, rendered once per cell.
-    // Neither carries an id, so a clone is a class, a `data-state`, the
-    // attribute list and the frame's two listeners - no hook runs again.
+    // One prepared frame and control, cloned per cell: neither carries an id,
+    // so no hook runs again.
     let frame = use_field_frame().states(&states).prepare();
     let control = use_box()
         .framework_sx(&FIELD_CONTROL_SX)
@@ -176,9 +170,8 @@ pub fn PinField(props: PinFieldProps) -> Element {
     // The latch reads the rendered value, not a flag of our own: a parent
     // resetting `value` re-arms it just as the field's own edits do.
     let was_full = cells.iter().all(Option::is_some);
-    // An `Rc` rather than a `use_callback`: every cell holds one, and it writes
-    // signals this component reads from inside an input event
-    // ([[codebase/reentrant-handlers]]).
+    // An `Rc`, not a `use_callback`: it writes signals read inside an input
+    // event ([[codebase/reentrant-handlers]]).
     let report: Rc<dyn Fn(Vec<Option<char>>)> = Rc::new(move |cells: Vec<Option<char>>| {
         let mut buffer = buffer;
         let next: String = cells.iter().flatten().collect();
@@ -289,8 +282,7 @@ fn next_len_floor(length: usize) -> usize {
     length - 1
 }
 
-/// Scoped to this field's own root, so two pin fields on one page do not take
-/// each other's cells. Out-of-range indices are how the ends stop moving -
+/// Scoped to this field's root. An out-of-range index stops at the ends:
 /// `wrapping_sub` on cell zero lands far past the last cell.
 fn focus_cell(root: &ElementHandle, index: usize, length: usize) {
     if index >= length {
@@ -300,9 +292,8 @@ fn focus_cell(root: &ElementHandle, index: usize, length: usize) {
     let _ = root.query_selector(&selector).and_then(|el| el.focus());
 }
 
-/// The pin's editing engine. Every path that can change a cell - a keystroke,
-/// a paste, Backspace, Delete - goes through `report`, so the completion latch
-/// cannot disagree between them.
+/// The pin's editing engine. Every change goes through `report`, so the
+/// completion latch cannot disagree between paths.
 #[derive(Clone)]
 struct PinEdit {
     cells: Vec<Option<char>>,
@@ -410,9 +401,7 @@ impl PinEdit {
                 event.prevent_default();
                 focus_cell(root, length - 1, length);
             }
-            // Read-only cells still take every key that only moves:
-            // the native `readonly` stops typing, but a handler that
-            // clears a cell itself is not typing and it does not stop.
+            // Native `readonly` does not stop a handler clearing a cell.
             Key::Delete => {
                 event.prevent_default();
                 if !readonly {
@@ -448,9 +437,7 @@ impl PinEdit {
                         event.prevent_default();
                         focus_cell(root, index + 1, length);
                     }
-                    // Dropped at the key, so a rejected character never
-                    // reaches the DOM - there is nothing to take back out
-                    // of an input the value prop did not change.
+                    // Dropped at the key: an unchanged value prop could not take it back out.
                     Some(character) if !self.kind.accepts(character) => event.prevent_default(),
                     // Written here rather than by the browser, which would
                     // put it beside the old one on whichever side the caret is.

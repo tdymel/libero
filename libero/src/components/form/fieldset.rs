@@ -57,23 +57,16 @@ static FIELDSET_SX: StaticSx = StaticSx::new(|| {
 base_props! {
     extends(fieldset);
     pub struct FieldsetProps<V: FormValue> {
-        /// The group's own value, for a fieldset outside a `Form`. Inside one
-        /// the value is the form's, at `path`.
+        /// The group's own value, for a fieldset outside a `Form`.
         #[props(default)]
         value: Option<Store<V>>,
-        /// Composite rules over `value`. A rule naming fields with `.on(..)`
-        /// shows on each of them; one naming none shows under the fields.
-        /// With no value - none of its own, and no bound `Form` above - the
-        /// rules do not run.
+        /// Composite rules over `value`; `.on(..)` shows one on the named fields.
         #[props(default, into)]
         validate: Validators<V>,
-        /// Where the group sits in the form's value - `Order::FIELDS.address()`.
-        /// The names of the fields inside and the paths of `validate` are
-        /// relative to it.
+        /// Where the group sits in the form's value; names inside are relative to it.
         #[props(default, into)]
         path: FieldName<V>,
-        /// The group's caption, rendered as its `<legend>`. Named `label` like
-        /// every field's caption.
+        /// The group's caption, rendered as its `<legend>`.
         #[props(default, into)]
         label: Caption,
         #[props(default, into)]
@@ -83,21 +76,41 @@ base_props! {
         /// The group's own status, under the fields. A bare `&str` is an error.
         #[props(default, into)]
         status: Input<FieldStatus>,
-        /// Disables every field inside, nested fieldsets included. The fields
-        /// draw it themselves, so non-native controls follow too.
+        /// Disables every field inside, nested fieldsets included.
         #[props(default)]
         disabled: Option<bool>,
         children: Element,
     }
 }
 
-/// Several fields that form one value - an address, a date range - under one
-/// `<legend>`, with a status of their own. Composite rules run over the
-/// group's `value` and land on the fields they name.
+/// Several fields that form one value under one `<legend>`, with composite rules.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Fields, Fieldset, TextField};
+/// #[derive(Clone, PartialEq, Default, Fields)]
+/// struct Address {
+///     street: String,
+///     city: String,
+/// }
+///
+/// # fn app() -> Element {
+/// let address = use_store(Address::default);
+/// rsx! {
+///     Fieldset {
+///         label: "Delivery address",
+///         value: address,
+///         TextField { label: "Street", name: Address::FIELDS.street() }
+///         TextField { label: "City", name: Address::FIELDS.city() }
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/fieldset>
 #[component]
 pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
-    // Inside a `Form` the group joins its scope; alone, it opens its own so its
-    // rules still reach its fields.
+    // Inside a `Form` the group joins its scope; alone, it opens its own.
     let mut scope = use_hook(|| try_consume_context::<FormScope>().unwrap_or_else(FormScope::new));
     use_context_provider(|| scope);
     let key = use_hook(|| scope.key());

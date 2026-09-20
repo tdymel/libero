@@ -18,16 +18,12 @@ use crate::{
     utils::warn,
 };
 
-/// The steppers, side by side in the trailing slot, behind `steppers`. Two
-/// `ActionIcon`s rather than the native spinner: `type="number"` hands back an
-/// empty string for text a browser cannot parse, which is exactly the
-/// in-progress text the edit buffer exists to keep.
+/// The steppers in the trailing slot. Not the native spinner: `type="number"`
+/// empties text it cannot parse, the in-progress text the edit buffer keeps.
 static STEPPERS_SX: StaticSx =
     StaticSx::new(|| sx().display("flex").align_items("center").gap("2px"));
 
-/// Each stepper's 24px hit area stops at the middle of the 2px gap, so the two
-/// meet instead of overlapping; the spare width goes outwards, which `rtl`
-/// mirrors.
+/// Each 24px hit area stops mid-gap so the two meet; spare width goes outwards.
 static DECREMENT_SX: StaticSx = StaticSx::new(|| {
     sx().selector("::before", sx().left("calc(100% - 23px)").right("-1px"))
         .rtl(sx().selector("&::before", sx().left("-1px").right("calc(100% - 23px)")))
@@ -40,67 +36,42 @@ static INCREMENT_SX: StaticSx = StaticSx::new(|| {
 field_props! {
     extends(input);
     pub struct NumberFieldProps<T: NumberValue> {
-        /// The number in the field; strictly controlled. `None` is the empty
-        /// field - nobody has typed anything yet.
+        /// The number in the field; strictly controlled. `None` is empty.
         #[props(default)]
         value: Option<T>,
-        /// Called with the number the caller should hold next; `None` once the
-        /// field is emptied. Silent while the text is not yet a number, so
-        /// `"-"` and `"1."` never reach it.
+        /// Called with the next number; `None` once emptied. Silent on `"-"` or `"1."`.
         #[props(default)]
         onchange: Option<EventHandler<Option<T>>>,
-        /// Rules over the number, shown once the field loses focus or its form is
-        /// submitted.
+        /// Rules over the number, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<Option<T>>,
-        /// Floor. Steps clamp to it; typed text below it clamps once the field
-        /// is left or Enter is pressed.
+        /// Floor. Steps clamp to it; typed text clamps on commit.
         #[props(default)]
         min: Option<T>,
         /// Ceiling, same.
         #[props(default)]
         max: Option<T>,
-        /// What one press of a stepper moves by. Defaults to
-        /// `T::default_step()` - `1` for an integer, `1.0` for a float.
+        /// What one stepper press moves by. Defaults to `T::default_step()`.
         #[props(default)]
         step: Option<T>,
-        /// What the field posts as. A path - `Signup::FIELDS.age()` - also
-        /// binds it to the surrounding `Form`'s value when the field has no
-        /// `onchange`.
+        /// What the field posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<Option<T>>,
         #[props(default, into)]
         placeholder: Option<String>,
-        /// Shows the minus/plus buttons in the trailing slot. Off by default: a
-        /// number is usually typed, the arrow keys step it either way, and two
-        /// buttons are the most expensive thing a field can carry.
+        /// Shows the minus/plus buttons. The arrow keys step either way.
         #[props(default)]
         steppers: bool,
-        /// Announced on the stepper that raises the value, e.g. "Add a guest".
-        /// Unset, the localization's `number_field.increase`.
+        /// Names the raising stepper. Defaults to `number_field.increase`.
         #[props(default, into)]
         increment_label: Option<String>,
-        /// Announced on the stepper that lowers it. Unset, the localization's
-        /// `number_field.decrease`.
+        /// Names the lowering stepper. Defaults to `number_field.decrease`.
         #[props(default, into)]
         decrement_label: Option<String>,
     }
 }
 
-/// A numeric field over the caller's own number type, with optional steppers
-/// in its trailing slot.
-///
-/// Every primitive number is a `NumberValue`, so `T` is normally inferred from
-/// `value` and there is nothing to implement. Controlled: it renders `value`
-/// and asks for a new one through `onchange`.
-///
-/// The control is a `<text>` input with a numeric `inputmode`, not
-/// `type="number"`: a number input reports an empty string for anything a
-/// browser cannot parse, which would erase `"-"` and `"1."` as they are typed.
-/// The field keeps the raw text in an edit buffer instead and only publishes a
-/// value the caller's type could parse, or `None` for an emptied field. On
-/// commit (leaving the field, Enter) the text becomes the value's canonical
-/// form: an out-of-range number clamps, text that never parsed reverts.
+/// A numeric field over the caller's own number type, with optional steppers.
 ///
 /// ```rust
 /// # use dioxus::prelude::*;
@@ -117,9 +88,7 @@ field_props! {
 /// # }
 /// ```
 ///
-/// Arrow Up and Arrow Down step the value whether or not `steppers` renders
-/// the buttons, Page Up and Page Down ten steps - the keys are what
-/// `role="spinbutton"` promises.
+/// Docs: <https://libero-ui.dev/form/number-field>
 #[component]
 pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
     let mut props = props;
@@ -255,9 +224,7 @@ fn NumberFieldShell<T: NumberValue>(
         .aria(control)
         .attr_default("type", "text")
         .attr_default("inputmode", "decimal")
-        // A text input driving a value in a range is a spinbutton, and that is
-        // what carries the range to assistive technology - `min`/`max` on a
-        // `type="text"` input mean nothing.
+        // The role carries the range: `min`/`max` mean nothing on `type="text"`.
         .attr("role", "spinbutton")
         .attr("aria-valuemin", min.map(|min| min.to_string()))
         .attr("aria-valuemax", max.map(|max| max.to_string()))
@@ -332,11 +299,8 @@ fn NumberFieldShell<T: NumberValue>(
     field.render(frame.render(rsx! { LiveControl { draw } }))
 }
 
-/// Text typed since the last commit, and the value the caller holds once it
-/// has taken it in. The text shows while it parses to the caller's value, or
-/// while that value has not moved since (`"-"`, an out-of-range `"5"`). So the
-/// rendered `value` tracks the DOM text, and a commit that drops the buffer
-/// always writes the canonical text back.
+/// Text typed since the last commit, shown while it parses to the caller's
+/// value or that value has not moved. Dropping it writes the canonical text.
 #[derive(Clone, PartialEq)]
 struct Edit<T> {
     text: String,

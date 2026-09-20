@@ -1,7 +1,5 @@
-//! When a status shows: a field's rules wait for a blur or a submit, an
-//! explicit status never waits, and a composite rule lands on the fields it
-//! names. A submit cannot be fired under SSR, so the tests submit the scope
-//! directly, the way `Form`'s handler does.
+//! When a status shows. SSR cannot fire a submit, so the tests submit the
+//! scope directly, as `Form`'s handler does.
 
 use std::cell::Cell;
 

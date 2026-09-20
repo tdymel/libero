@@ -28,32 +28,24 @@ static TEXTAREA_CONTROL_SX: StaticSx = StaticSx::new(|| {
 field_props! {
     extends(textarea);
     pub struct TextareaProps {
-        /// The text to render. `None` leaves the `<textarea>` uncontrolled -
-        /// it keeps its own text and needs no handler.
+        /// The text. `None` leaves the `<textarea>` uncontrolled.
         #[props(default, into)]
         value: Option<String>,
         /// Fires per keystroke with the text the field should hold next.
-        /// Native name, native timing.
         #[props(default)]
         oninput: Option<EventHandler<String>>,
-        /// Rules over the text, shown once the field loses focus or its form
-        /// is submitted.
+        /// Rules over the text, shown on blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<String>,
-        /// What the field posts as. A path - `Signup::FIELDS.bio()` - also
-        /// binds it to the surrounding `Form`'s value when the field has no
-        /// `oninput`.
+        /// What the field posts as. A path also binds it to the surrounding `Form`.
         #[props(default, into)]
         name: crate::components::form::FieldName<String>,
         #[props(default, into)]
         placeholder: Option<String>,
-        /// Visible lines, which is what sets the starting height. The user can
-        /// still drag it taller.
+        /// Visible lines, which set the starting height.
         #[props(default = 3)]
         rows: u32,
-        /// Shows `12/200` under the control while a `maxlength` attribute is
-        /// set, and politely announces the characters left once a tenth of
-        /// the limit remains. Without `maxlength` it draws nothing.
+        /// Shows `12/200` under the control while a `maxlength` attribute is set.
         #[props(default)]
         counter: bool,
     }
@@ -97,12 +89,25 @@ fn near_limit(left: usize, max: usize) -> bool {
     left <= max.div_ceil(10)
 }
 
-/// A multi-line text field, with a label, a description, helper text and a
-/// validation message stacked around it.
+/// A multi-line text field with its label, captions and validation message.
 ///
-/// `rows` sets the starting height and the browser's own drag handle takes it
-/// from there. Controlled through `value` + `oninput`; omit `value` and the
-/// `<textarea>` owns its own text.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Textarea;
+/// # fn app() -> Element {
+/// let mut bio = use_signal(String::new);
+/// rsx! {
+///     Textarea {
+///         label: "Bio",
+///         rows: 4,
+///         value: bio(),
+///         oninput: move |text| bio.set(text),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/textarea>
 #[component]
 pub fn Textarea(props: TextareaProps) -> Element {
     let theme = use_theme();
@@ -145,10 +150,8 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .focus_ring(false)
         .prepare();
 
-    // Only a caller's text is known without the input events: an
-    // uncontrolled textarea's length is tracked from them, stamped with the
-    // form's reset count: a reset brings back the initial text, no input event.
-    // A raw `<form>`'s own `reset` is heard off the DOM (todo 685).
+    // An uncontrolled length is tracked from input events, stamped with the
+    // form's reset count; a raw `<form>` reset is heard off the DOM (todo 685).
     let limit = max_length(&props.attributes).filter(|_| props.counter);
     let scope = try_use_context::<FormScope>();
     let element = use_element();
