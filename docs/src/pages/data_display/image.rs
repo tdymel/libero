@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Image, Input, Text},
@@ -52,6 +52,15 @@ pub fn ImagePage() -> Element {
                         .doc("The `<img>`'s `loading`. `lazy` loads the picture only when it nears the viewport."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Enter", "Space"], "On a zoomable image: opens the overlay.")
+                .key(["Escape"], "Closes the overlay, as do the backdrop and the Close button.")
+                .handles([
+                    "`decorative` renders `alt=\"\"` and `role=\"presentation\"`.",
+                    "A zoomable image is a button named after its `alt`, \"Zoom in: <alt>\" (the localization's `image.zoom_named`).",
+                    "An image with neither `alt` nor `decorative` warns in a debug build and renders no `alt`, so a checker still flags it.",
+                ])
+                .must(["Give every image an `alt`, or set `decorative` for one that carries nothing."]),
             lead: rsx! {
                 Text {
                     "An "
@@ -116,18 +125,6 @@ pub fn ImagePage() -> Element {
                         sx: sx().width("160px").height("160px").background("muted.1"),
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Give every image an "
-                    Code { source: "alt" }
-                    ", or set "
-                    Code { source: "decorative" }
-                    " for one that carries nothing. A zoomable image is a button named "
-                    "after its "
-                    Code { source: "alt" }
-                    ". Space or Enter opens the overlay, and Escape closes it."
-                }
             }
         }
     }

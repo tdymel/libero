@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Input, Text, ThemeToggle},
@@ -33,6 +33,12 @@ pub fn ThemeTogglePage() -> Element {
                     .default("false")
                     .doc("Disables and dims the button."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "The button's name says what a press does, from the localization's `ThemeToggleLabels`: `to_light`, `to_dark` or `to_system`.",
+                    "With `themes`, both buttons sit in a `role=\"group\"` named by `group`. The picker is named by `picker` and opens a `Menu`, with its keys; the sets are radio items in a group named by `themes`.",
+                ])
+                .must(["With `label`, return what the press does, not the current scheme."]),
             lead: rsx! {
                 Text {
                     "An icon button that switches the app's colour scheme. Each press steps "

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, HtmlTag, Input, Text, Title};
 
@@ -18,6 +18,12 @@ pub fn TitlePage() -> Element {
                     .doc("The heading tag. The size's look stays."),
                 prop("children", "Element").default("required").doc("The heading text."),
             ])],
+            accessibility: a11y()
+                .handles(["`size` picks the heading tag, `xxl` as `h1` down to `xs` as `h6`, unless `component` is set."])
+                .must([
+                    "Keep one `h1` per page and skip no levels.",
+                    "A `lg` heading in a section under the page's `h1` needs `component: \"h2\"`, or the document jumps from `h1` to `h3`.",
+                ]),
             lead: rsx! {
                 Text {
                     "A heading, "
@@ -69,23 +75,6 @@ pub fn TitlePage() -> Element {
                             "The quick brown fox"
                         }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Keep one "
-                    Code { source: "h1" }
-                    " per page and skip no levels. A "
-                    Code { source: "lg" }
-                    " heading in a section under the page's "
-                    Code { source: "h1" }
-                    " needs "
-                    Code { source: "component: \"h2\"" }
-                    ", or the document jumps from "
-                    Code { source: "h1" }
-                    " to "
-                    Code { source: "h3" }
-                    "."
-                }
             }
         }
     }

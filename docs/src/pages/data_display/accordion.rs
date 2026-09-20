@@ -1,10 +1,10 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use crate::icons::{ClipboardCheckIcon, CreditCardIcon, TruckIcon};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Accordion, AccordionOpen, Box, Button, Code, Flex, Icon, Kbd, List, ListItem, OptionLabel,
-        OptionList, Options, Text,
+        Accordion, AccordionOpen, Box, Button, Code, Flex, Icon, OptionLabel, OptionList, Options,
+        Text,
     },
     sx::sx,
 };
@@ -164,6 +164,21 @@ pub fn AccordionPage() -> Element {
                     prop("size", "Size").default("md").doc("Type and padding of the triggers and panels."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Tab"], "Moves between the triggers: each one is a tab stop.")
+                .key(["Enter", "Space"], "Toggles the focused section.")
+                .key(["Up", "Down"], "Moves to the previous or next trigger, without toggling.")
+                .key(["Home", "End"], "Jumps to the first or last trigger, without toggling.")
+                .handles([
+                    "Every open panel is a region named by its trigger.",
+                ])
+                .must([
+                    "Pick the heading level the page outline needs, then the size. `h3` assumes a section title above the accordion.",
+                    "With `OptionLabel::rich`, make the name contain the visible text, since it replaces the drawn label (WCAG 2.5.3).",
+                ])
+                .limits([
+                    "A `Many` accordion with a dozen open sections makes a long landmark list.",
+                ]),
             lead: rsx! {
                 Text {
                     "Sections over an enum, each a heading with a button that opens its "
@@ -273,34 +288,6 @@ pub fn AccordionPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                List {
-                    ListItem {
-                        "Every trigger is a tab stop. "
-                        Kbd { "Enter" } " and " Kbd { "Space" } " toggle. "
-                        Kbd { "↑" } " and " Kbd { "↓" }
-                        " move between triggers, and "
-                        Kbd { "Home" } " and " Kbd { "End" }
-                        " jump to the ends, without toggling."
-                    }
-                    ListItem {
-                        "Pick the heading level the page outline needs, then the size. "
-                        Code { source: "h3" }
-                        " assumes a section title above the accordion."
-                    }
-                    ListItem {
-                        "Every open panel is a region named by its trigger. A "
-                        Code { source: "Many" }
-                        " accordion with a dozen open sections makes a long landmark list."
-                    }
-                    ListItem {
-                        "With "
-                        Code { source: "OptionLabel::rich" }
-                        ", the name replaces the drawn label, so it must contain the visible "
-                        "text (WCAG 2.5.3)."
-                    }
-                }
             }
         }
     }

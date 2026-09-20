@@ -25,8 +25,17 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Use `component: "span"` for text inside a sentence. A large size is only
-styling, so it never makes a heading.
+### Libero handles
+
+- A large size is only styling, so it never makes a heading.
+
+### You must
+
+- Use `component: "span"` for text inside a sentence.
+- For a heading, use [`Title`](title.md).
+- Keep `gradient` to large display text and check the contrast of a literal CSS
+  stop. A debug build warns when a hex stop reads under 4.5:1 on the page
+  background.
 
 ## Props
 

@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Avatar, Box, Code, Float, Indicator, Input, Text},
@@ -70,6 +68,17 @@ pub fn IndicatorPage() -> Element {
                     .default("false")
                     .doc("A ping behind the dot that repeats until you set it back to `false`. Stops under `prefers-reduced-motion`."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "Screen readers never read the indicator.",
+                    "A theme color labels the count at 4.5:1 or better.",
+                ])
+                .must([
+                    "Put the count in the name of what it marks, as the demo avatar's `alt: \"Ada Lovelace, 128 unread\"`, or `aria_label: \"Messages, 128 unread\"` on a button.",
+                    "To have the indicator read, pass `aria_hidden: \"false\"` and wrap it in your own `role=\"status\"` region.",
+                    "`processing` pings until you turn it off. Set it back to `false` when the work ends, since motion that never stops fails WCAG 2.2.2.",
+                    "With a CSS color, check the contrast yourself.",
+                ]),
             lead: rsx! {
                 Text {
                     "A dot or a small count pinned to something else, such as an unread "
@@ -126,28 +135,6 @@ pub fn IndicatorPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_anchor),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Screen readers never read the indicator. Put the count in the name of "
-                    "what it marks, as the avatar's "
-                    Code { source: "alt" }
-                    " does above, or "
-                    Code { source: "aria_label: \"Messages, 128 unread\"" }
-                    " on a button. To have the indicator read, pass "
-                    Code { source: "aria_hidden: \"false\"" }
-                    " and wrap it in your own "
-                    Code { source: "role=\"status\"" }
-                    " region."
-                }
-                Text {
-                    Code { source: "processing" }
-                    " pings until you turn it off. Set it back to "
-                    Code { source: "false" }
-                    " when the work ends, since motion that never stops fails WCAG 2.2.2. A "
-                    "theme color labels the count at 4.5:1 or better. With a CSS color, check "
-                    "the contrast yourself."
-                }
             }
         }
     }

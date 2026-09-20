@@ -1,7 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Carousel, Code, Input, Kbd, List, ListItem, Text},
+    components::{Box, Carousel, Input, Text},
     sx::sx,
     use_theme,
 };
@@ -113,6 +113,16 @@ pub fn CarouselPage() -> Element {
                         .doc("Milliseconds between advances."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Tab"], "Enters the track, then the indicators: each is one tab stop. With `autoplay`, the pause button comes first.")
+                .key(["Left", "Right"], "Moves to the previous or next slide, on the track or the indicators.")
+                .key(["Up", "Down"], "The same, when vertical.")
+                .key(["Home", "End"], "Goes to the first or last slide.")
+                .handles([
+                    "On the indicators, focus follows the slide.",
+                    "With `autoplay`, focus entering the carousel stops it until the pause button is pressed. Hover only pauses it.",
+                ])
+                .must(["Set `aria_label` to name the region."]),
             lead: rsx! {
                 Text {
                     "A strip of slides that snaps as it scrolls and knows which slide it is "
@@ -213,33 +223,6 @@ pub fn CarouselPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "Accessibility",
-                List {
-                    ListItem {
-                        "Set "
-                        Code { source: "aria_label" }
-                        " to name the region."
-                    }
-                    ListItem {
-                        "The track is a tab stop. "
-                        Kbd { "←" } " " Kbd { "→" } ", or " Kbd { "↑" } " " Kbd { "↓" }
-                        " when vertical, move to the previous and next slide. "
-                        Kbd { "Home" } " and " Kbd { "End" } " go to the first and last."
-                    }
-                    ListItem {
-                        "The indicators are one tab stop with the same keys, and focus follows "
-                        "the slide."
-                    }
-                    ListItem {
-                        "With "
-                        Code { source: "autoplay" }
-                        ", the pause button is the first tab stop. Focus entering the carousel "
-                        "stops it until the button is pressed. Hover only pauses it."
-                    }
-                }
             }
         }
     }

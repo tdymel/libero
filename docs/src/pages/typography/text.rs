@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 use libero::theme::Gradient;
@@ -21,6 +21,13 @@ pub fn TextPage() -> Element {
                     .doc("Paints the glyphs with a gradient, `Gradient::default()` for the theme's. Keep it to large display text: the contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in forced colours and in native windows."),
                 prop("children", "Element").default("required").doc("The text."),
             ])],
+            accessibility: a11y()
+                .handles(["A large size is only styling, so it never makes a heading."])
+                .must([
+                    "Use `component: \"span\"` for text inside a sentence.",
+                    "For a heading, use `Title`.",
+                    "Keep `gradient` to large display text and check the contrast of a literal CSS stop. A debug build warns when a hex stop reads under 4.5:1 on the page background.",
+                ]),
             lead: rsx! {
                 Text {
                     "Body copy in a "
@@ -53,14 +60,6 @@ pub fn TextPage() -> Element {
                         "The quick brown fox jumps over the lazy dog."
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Use "
-                    Code { source: "component: \"span\"" }
-                    " for text inside a sentence. A large size is only styling, so it never "
-                    "makes a heading."
-                }
             }
         }
     }

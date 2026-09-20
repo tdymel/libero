@@ -42,8 +42,15 @@ the first column and every description in the second.
 
 ## Accessibility
 
-Put each `DataListItem` directly inside the `DataList`. A wrapper element
-between them breaks the pairing of term and description.
+### Libero handles
+
+- Each term is a `<dt>` and its descriptions one `<dd>`, so a screen reader
+  pairs them.
+
+### You must
+
+- Put each `DataListItem` directly inside the `DataList`. A wrapper element
+  between them breaks the pairing of term and description.
 
 ## Props
 

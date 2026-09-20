@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Code, Input, Text};
 
@@ -53,6 +53,15 @@ pub fn ActionIconPage() -> Element {
                     .doc("The link's `target` attribute."),
                 prop("children", "Element").default("required").doc("The icon."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "Below 24px (`xs` and `sm`) the button still takes presses in a 24x24 box centred on it.",
+                    "`focusable_when_disabled` keeps a disabled button in the Tab order, with `aria-disabled`.",
+                ])
+                .must([
+                    "Name the button with `aria_label`: the icon gives a screen reader nothing to read.",
+                    "Keep other targets 2px (`sm`) or 4px (`xs`) away, or the one drawn later takes the overlap.",
+                ]),
             lead: rsx! {
                 Text {
                     "An icon-only button for actions like copy, close or delete. It renders a "
@@ -139,19 +148,6 @@ pub fn ActionIconPage() -> Element {
                         CheckmarkIcon {}
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Below 24px ("
-                    Code { source: "xs" }
-                    " and "
-                    Code { source: "sm" }
-                    ") the button still takes presses in a 24x24 box centred on it. Keep other targets 2px ("
-                    Code { source: "sm" }
-                    ") or 4px ("
-                    Code { source: "xs" }
-                    ") away, or the one drawn later takes the overlap."
-                }
             }
         }
     }

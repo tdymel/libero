@@ -80,11 +80,17 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-In `diff` mode a screen reader hears "added" or "removed" before a changed
-line. A line in `highlight_lines` is marked only by color and a bar, so say in
-the text why it matters. A block that scrolls is a region named after its
-language, such as "Rust code". The words come from the
-[localization](localization.md).
+### Libero handles
+
+- In `diff` mode a screen reader hears "added" or "removed" before a changed
+  line.
+- A block that scrolls is a region named after its language, such as "Rust
+  code". The words come from the [localization](localization.md).
+
+### You must
+
+- A line in `highlight_lines` is marked only by color and a bar, so say in the
+  text why it matters.
 
 ## Props
 

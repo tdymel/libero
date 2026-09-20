@@ -106,15 +106,24 @@ Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: s
 
 ## Accessibility
 
-Set `aria_label` to name the region.
+### Keyboard
 
-The track is a tab stop. `←` `→`, or `↑` `↓` when vertical, move to the previous
-and next slide. Home and End go to the first and last.
+| Key | Action |
+|---|---|
+| `Tab` | Enters the track, then the indicators: each is one tab stop. With `autoplay`, the pause button comes first. |
+| `Left` or `Right` | Moves to the previous or next slide, on the track or the indicators. |
+| `Up` or `Down` | The same, when vertical. |
+| `Home` or `End` | Goes to the first or last slide. |
 
-The indicators are one tab stop with the same keys, and focus follows the slide.
+### Libero handles
 
-With `autoplay`, the pause button is the first tab stop. Focus entering the
-carousel stops it until the button is pressed. Hover only pauses it.
+- On the indicators, focus follows the slide.
+- With `autoplay`, focus entering the carousel stops it until the pause button
+  is pressed. Hover only pauses it.
+
+### You must
+
+- Set `aria_label` to name the region.
 
 ## Props
 

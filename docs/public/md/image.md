@@ -58,13 +58,24 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Give every image an `alt`, or set `decorative` for one that carries nothing.
-That renders `alt=""` and `role="presentation"`. An image with neither warns in
-a debug build and renders no `alt`, so a checker still flags it.
+### Keyboard
 
-A zoomable image is a button named after its `alt`, "Zoom in: <alt>" (the
-localization's `image.zoom_named`). Space or Enter opens the overlay, and
-Escape, the backdrop or the Close button closes it.
+| Key | Action |
+|---|---|
+| `Enter` or `Space` | On a zoomable image: opens the overlay. |
+| `Escape` | Closes the overlay, as do the backdrop and the Close button. |
+
+### Libero handles
+
+- `decorative` renders `alt=""` and `role="presentation"`.
+- A zoomable image is a button named after its `alt`, "Zoom in: <alt>" (the
+  localization's `image.zoom_named`).
+- An image with neither `alt` nor `decorative` warns in a debug build and
+  renders no `alt`, so a checker still flags it.
+
+### You must
+
+- Give every image an `alt`, or set `decorative` for one that carries nothing.
 
 ## Props
 

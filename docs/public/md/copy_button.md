@@ -35,6 +35,22 @@ fn Demo() -> Element {
 }
 ```
 
+## Accessibility
+
+### Libero handles
+
+- An always-mounted `role="status"` region says "Copied", or that the copy
+  failed, once the platform answers. A second copy announces again.
+- The icon and the status reset when the pointer or the focus leaves.
+- Unset, `aria_label` is the localization's `copy`. The words are
+  `CopyButtonLabels`.
+
+### You must
+
+- Name it after what it copies with `aria_label`, such as "Copy link".
+- For a copy control of your own on `use_clipboard()`, say the result in a
+  status region that is already mounted.
+
 ## Props
 
 | Prop | Type | Default | Description |

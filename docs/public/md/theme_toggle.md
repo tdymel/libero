@@ -34,6 +34,20 @@ fn Demo() -> Element {
 }
 ```
 
+## Accessibility
+
+### Libero handles
+
+- The button's name says what a press does, from the localization's
+  `ThemeToggleLabels`: `to_light`, `to_dark` or `to_system`.
+- With `themes`, both buttons sit in a `role="group"` named by `group`. The
+  picker is named by `picker` and opens a [`Menu`](menu.md), with its keys; the
+  sets are radio items in a group named by `themes`.
+
+### You must
+
+- With `label`, return what the press does, not the current scheme.
+
 ## Props
 
 | Prop | Type | Default | Description |

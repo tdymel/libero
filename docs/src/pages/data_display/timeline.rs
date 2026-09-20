@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use crate::icons::{CheckmarkIcon, CodeIcon, FileIcon, GitHubIcon};
 use dioxus::prelude::*;
 use libero::components::{Code, Text, Timeline, TimelineEvent, TimelineLine};
@@ -135,6 +133,14 @@ pub fn TimelinePage() -> Element {
                         .doc("The connector below this event, `Solid`, `Dashed` or `Dotted`."),
                 ]),
             ],
+            accessibility: a11y()
+                .handles([
+                    "The list gives a screen reader the position and count the rail shows.",
+                    "Bullets are `aria-hidden`, and the title is the text. A custom `.bullet(..)` is hidden too.",
+                ])
+                .must([
+                    "Never put anything focusable in a `.bullet(..)`. It would stay a tab stop with no name. Interactive content belongs in `.content(..)`.",
+                ]),
             lead: rsx! {
                 Text {
                     "An ordered list of events drawn against a rail. "
@@ -199,18 +205,6 @@ pub fn TimelinePage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "The list gives a screen reader the position and count the rail shows. "
-                    "Bullets are hidden from screen readers, and the title is the text. A "
-                    "custom "
-                    Code { source: ".bullet(..)" }
-                    " is hidden too, so never put anything focusable in one. It would stay a "
-                    "tab stop with no name. Interactive content belongs in "
-                    Code { source: ".content(..)" }
-                    "."
-                }
             }
         }
     }

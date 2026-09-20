@@ -35,6 +35,22 @@ fn Demo() -> Element {
 }
 ```
 
+## Accessibility
+
+### Libero handles
+
+- The link's name is the host, the star count once it arrives, and the new-tab
+  cue. The words come from `RepoButtonLabels::stars` and `AnchorLabels::new_tab`
+  in the localization.
+- The drawn count is not read twice: the name replaces the link's content.
+- A count drawn in the accent color, which could miss 4.5:1, takes the `ink`
+  color instead.
+
+### Limits
+
+- The name holds the host, not the repository: two buttons on one page read
+  alike.
+
 ## Props
 
 | Prop | Type | Default | Description |

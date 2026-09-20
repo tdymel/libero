@@ -50,17 +50,29 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Every trigger is a tab stop. Enter and Space toggle. `↑` and `↓` move between
-triggers, and Home and End jump to the ends, without toggling.
+### Keyboard
 
-Pick the heading level the page outline needs, then the size. `h3` assumes a
-section title above the accordion.
+| Key | Action |
+|---|---|
+| `Tab` | Moves between the triggers: each one is a tab stop. |
+| `Enter` or `Space` | Toggles the focused section. |
+| `Up` or `Down` | Moves to the previous or next trigger, without toggling. |
+| `Home` or `End` | Jumps to the first or last trigger, without toggling. |
 
-Every open panel is a region named by its trigger. A `Many` accordion with a
-dozen open sections makes a long landmark list.
+### Libero handles
 
-With `OptionLabel::rich`, the name replaces the drawn label, so it must contain
-the visible text (WCAG 2.5.3).
+- Every open panel is a region named by its trigger.
+
+### You must
+
+- Pick the heading level the page outline needs, then the size. `h3` assumes a
+  section title above the accordion.
+- With `OptionLabel::rich`, make the name contain the visible text, since it
+  replaces the drawn label (WCAG 2.5.3).
+
+### Limits
+
+- A `Many` accordion with a dozen open sections makes a long landmark list.
 
 ## Props
 

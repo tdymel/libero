@@ -34,9 +34,16 @@ level and a screen does not.
 
 ## Accessibility
 
-A screen reader user cannot scan the code, so `aria_label` is the only way to
-the payload. Say where the code leads or what it holds, not that it is a QR
-code. Next to a real link, the link serves better.
+### Libero handles
+
+- The code is one `role="img"` named by `aria_label`. The svg inside is hidden.
+
+### You must
+
+- Say in `aria_label` where the code leads or what it holds, not that it is a
+  QR code. A screen reader user cannot scan it, so the label is the only way to
+  the payload.
+- Next to a real link, the link serves better.
 
 ## Props
 

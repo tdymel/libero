@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Input, RepoButton, RepoHost, Text};
 
@@ -28,6 +28,13 @@ pub fn RepoButtonPage() -> Element {
                     .default("sm")
                     .doc("Corner radius, independent of `size`."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "The link's name is the host, the star count once it arrives, and the new-tab cue. The words come from `RepoButtonLabels::stars` and `AnchorLabels::new_tab` in the localization.",
+                    "The drawn count is not read twice: the name replaces the link's content.",
+                    "A count drawn in the accent color, which could miss 4.5:1, takes the `ink` color instead.",
+                ])
+                .limits(["The name holds the host, not the repository: two buttons on one page read alike."]),
             lead: rsx! {
                 Text {
                     "A link to a repository with its star count beside the host's icon. "

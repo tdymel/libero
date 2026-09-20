@@ -36,13 +36,22 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-A badge has no role, so screen readers read its text in place and announce no
-change. For a badge that reports a change, wrap it in your own `role="status"`
-region.
+### Libero handles
 
-`filled` and `tonal` labels reach 4.5:1 in every color. The other variants
-print the label in the color itself, which stays under 4.5:1 on white for
-`warning` (3.27:1) and `success` (4.05:1). Pick `filled` or `tonal` for those.
+- A badge has no role, so screen readers read its text in place and announce no
+  change.
+- `filled` and `tonal` labels reach 4.5:1 in every color.
+
+### You must
+
+- For a badge that reports a change, wrap it in your own `role="status"`
+  region.
+- Pick `filled` or `tonal` for `warning` and `success`.
+
+### Limits
+
+- The other variants print the label in the color itself, which stays under
+  4.5:1 on white for `warning` (3.27:1) and `success` (4.05:1).
 
 ## Props
 

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, QrCode, Text},
@@ -26,6 +26,12 @@ pub fn QrCodePage() -> Element {
                         .doc("The code's accessible name. Say where it leads."),
                 ]),
             ],
+            accessibility: a11y()
+                .handles(["The code is one `role=\"img\"` named by `aria_label`. The svg inside is hidden."])
+                .must([
+                    "Say in `aria_label` where the code leads or what it holds, not that it is a QR code. A screen reader user cannot scan it, so the label is the only way to the payload.",
+                    "Next to a real link, the link serves better.",
+                ]),
             lead: rsx! {
                 Text {
                     "Encodes "
@@ -69,15 +75,6 @@ pub fn QrCodePage() -> Element {
                         sx: sx().width("160px"),
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "A screen reader user cannot scan the code, so "
-                    Code { source: "aria_label" }
-                    " is the only way to the payload. Say where the code leads or what it "
-                    "holds, not that it is a QR code. Next to a real link, the link serves "
-                    "better."
-                }
             }
         }
     }

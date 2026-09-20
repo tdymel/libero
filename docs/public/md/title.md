@@ -26,9 +26,16 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Keep one `h1` per page and skip no levels. A `lg` heading in a section under
-the page's `h1` needs `component: "h2"`, or the document jumps from `h1` to
-`h3`.
+### Libero handles
+
+- `size` picks the heading tag, `xxl` as `h1` down to `xs` as `h6`, unless
+  `component` is set.
+
+### You must
+
+- Keep one `h1` per page and skip no levels.
+- A `lg` heading in a section under the page's `h1` needs `component: "h2"`, or
+  the document jumps from `h1` to `h3`.
 
 ```rust
 use dioxus::prelude::*;

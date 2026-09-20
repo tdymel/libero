@@ -31,9 +31,15 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Put the separator in the text around the keys. A screen reader reads
-`Kbd { "Ctrl" } " + " Kbd { "S" }` as "Ctrl plus S", but one
-`Kbd { "Ctrl+S" }` as a single token.
+### Libero handles
+
+- Each key is a real `<kbd>`.
+
+### You must
+
+- Put the separator in the text around the keys. A screen reader reads
+  `Kbd { "Ctrl" } " + " Kbd { "S" }` as "Ctrl plus S", but one
+  `Kbd { "Ctrl+S" }` as a single token.
 
 ## Props
 

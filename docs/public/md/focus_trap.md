@@ -43,10 +43,24 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-On mount the trap focuses the element marked `data-autofocus`, or else its
-first focusable child. To focus nothing visible, so a dialog does not open with
-its first button looking pressed, render `FocusTrapInitialFocus` as the first
-child.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Tab` or `Shift+Tab` | Cycles through the focusable children, wrapping at either end. |
+
+### Libero handles
+
+- On mount the trap focuses the element marked `data-autofocus`, or else its
+  first focusable child.
+
+### You must
+
+- To focus nothing visible, so a dialog does not open with its first button
+  looking pressed, render `FocusTrapInitialFocus` as the first child.
+- Keep a trap only around content that is the one thing that matters on
+  screen, such as an open overlay. A keyboard user who cannot Tab out of a
+  region has no way back to the page.
 
 ```rust
 use dioxus::prelude::*;
@@ -63,10 +77,6 @@ fn Demo() -> Element {
     }
 }
 ```
-
-Keep a trap only around content that is the one thing that matters on screen,
-such as an open overlay. A keyboard user who cannot Tab out of a region has no
-way back to the page.
 
 ## Props
 

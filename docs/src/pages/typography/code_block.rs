@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, CodeBlock, Text};
 
@@ -70,6 +70,14 @@ pub fn CodeBlockPage() -> Element {
                     .default("false")
                     .doc("Reads `source` as a unified diff. A leading `+` or `-` colors the row and stays out of what is copied. Wins over `highlight_lines`."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "In `diff` mode a screen reader hears \"added\" or \"removed\" before a changed line.",
+                    "A block that scrolls is a region named after its language, such as \"Rust code\". The words come from the localization.",
+                ])
+                .must([
+                    "A line in `highlight_lines` is marked only by color and a bar, so say in the text why it matters.",
+                ]),
             lead: rsx! {
                 Text {
                     "A multi-line code block with line numbers, a copy button and a header "
@@ -137,18 +145,6 @@ pub fn CodeBlockPage() -> Element {
                             }
                         }
                     },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "In "
-                    Code { source: "diff" }
-                    " mode a screen reader hears \"added\" or \"removed\" before a changed "
-                    "line. A line in "
-                    Code { source: "highlight_lines" }
-                    " is marked only by color and a bar, so say in the text why it matters. "
-                    "A block that scrolls is a region named after its language, such as "
-                    "\"Rust code\"."
-                }
             }
         }
     }

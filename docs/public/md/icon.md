@@ -37,10 +37,16 @@ variant insets it to 60% of the box, clear of the container's edges. Set
 
 ## Accessibility
 
-An icon is hidden from screen readers (`aria-hidden="true"`). One that means
-something needs `aria_label` or `aria_labelledby`, which makes it `role="img"`.
-A `<title>` inside the svg does not name it, since it is hidden with the rest.
-For a clickable icon, use [`ActionIcon`](action_icon.md).
+### Libero handles
+
+- An icon is hidden from screen readers (`aria-hidden="true"`).
+- `aria_label` or `aria_labelledby` makes it `role="img"`.
+
+### You must
+
+- Name an icon that means something with `aria_label` or `aria_labelledby`. A
+  `<title>` inside the svg does not name it, since it is hidden with the rest.
+- For a clickable icon, use [`ActionIcon`](action_icon.md).
 
 ## Props
 

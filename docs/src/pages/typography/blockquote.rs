@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Blockquote, Code, Text},
@@ -38,6 +38,12 @@ pub fn BlockquotePage() -> Element {
                     .doc("A URL naming the source. Only machines read it, browsers do not show it."),
                 prop("children", "Element").default("required").doc("The quote."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "The quote is a `<blockquote>` in a `<figure>`, and the attribution sits in a `<figcaption>` outside it, so a screen reader does not read the speaker's name as part of the quote.",
+                    "`work` renders in a `<cite>`, the comma kept outside it.",
+                ])
+                .limits(["`cite_url` is for machines only: browsers do not show it, so link the source yourself where readers need it."]),
             lead: rsx! {
                 Text {
                     "A quotation in a tinted frame with an accent bar. The attribution sits in a "

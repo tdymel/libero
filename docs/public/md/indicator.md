@@ -53,14 +53,21 @@ fn Demo(unread: u32) -> Element {
 
 ## Accessibility
 
-Screen readers never read the indicator. Put the count in the name of what it
-marks, as `alt: "Ada Lovelace, 128 unread"` or `aria_label: "Messages, 128
-unread"`. To have the indicator read, pass `aria_hidden: "false"` and wrap it
-in your own `role="status"` region.
+### Libero handles
 
-`processing` pings until you turn it off. Set it back to `false` when the work
-ends, since motion that never stops fails WCAG 2.2.2. A theme color labels the
-count at 4.5:1 or better. With a CSS color, check the contrast yourself.
+- Screen readers never read the indicator.
+- A theme color labels the count at 4.5:1 or better.
+
+### You must
+
+- Put the count in the name of what it marks, as the demo avatar's
+  `alt: "Ada Lovelace, 128 unread"`, or `aria_label: "Messages, 128 unread"` on
+  a button.
+- To have the indicator read, pass `aria_hidden: "false"` and wrap it in your
+  own `role="status"` region.
+- `processing` pings until you turn it off. Set it back to `false` when the
+  work ends, since motion that never stops fails WCAG 2.2.2.
+- With a CSS color, check the contrast yourself.
 
 ## Props
 

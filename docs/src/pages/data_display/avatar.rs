@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Avatar, AvatarGroup, AvatarSpec, Code, Input, Text};
 
@@ -174,6 +172,16 @@ pub fn AvatarPage() -> Element {
                         .doc("This member's own tint."),
                 ]),
             ],
+            accessibility: a11y()
+                .handles([
+                    "`name` is the accessible name, so a screen reader says \"Ada Lovelace\" rather than the initials.",
+                    "A decorative avatar is hidden whole.",
+                    "The group's `+N` chip is focusable, and its label lists the hidden names. Its words come from the `avatar` labels of the localization.",
+                ])
+                .must([
+                    "Pass `alt: \"\"` where the name shows beside the avatar, or it is read twice.",
+                    "Put nothing focusable in a decorative avatar.",
+                ]),
             lead: rsx! {
                 Text {
                     "A person as a fixed square. It shows the picture, else "
@@ -262,24 +270,6 @@ pub fn AvatarPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    Code { source: "name" }
-                    " is the accessible name, so a screen reader says \"Ada Lovelace\" "
-                    "rather than the initials. Pass "
-                    Code { source: "alt: \"\"" }
-                    " where the name shows beside the avatar, or it is read twice. A "
-                    "decorative avatar is hidden whole, so put nothing focusable in it."
-                }
-                Text {
-                    "The group's "
-                    Code { source: "+N" }
-                    " chip is focusable, and its label lists the hidden names. Its words come "
-                    "from the "
-                    Code { source: "avatar" }
-                    " labels of the localization."
-                }
             }
         }
     }

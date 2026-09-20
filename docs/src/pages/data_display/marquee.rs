@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Chip, Code, Marquee, Text},
@@ -78,6 +78,18 @@ pub fn MarqueePage() -> Element {
                     .default("false")
                     .doc("Fades both ends into the surface color. Only right on a surface of that color."),
             ])],
+            accessibility: a11y()
+                .key(["Enter", "Space"], "On the pause toggle, a tab stop: pauses or resumes the motion.")
+                .handles([
+                    "Every copy after the first is `aria-hidden` and `inert`, so the content is read and tabbed through once.",
+                    "The pause toggle meets WCAG 2.2.2, which asks for a way to stop motion that runs longer than five seconds. It is named \"Pause\", and `aria-pressed` says whether it is paused.",
+                    "While focus is on the content the toggle turns transparent, so it never covers a focused link.",
+                ])
+                .must([
+                    "Put interactive children in the content knowing they work only in the first copy.",
+                    "Don't rely on `pause_on_hover` alone: a keyboard or a touch screen cannot hover.",
+                    "Turn the toggle off only when the page offers its own control through `paused` and `onpausechange`. `paused` is controlled when set: the toggle then only reports through `onpausechange`, and without the handler it does nothing.",
+                ]),
             lead: rsx! {
                 Text {
                     "Content that scrolls on its own in an endless loop, such as a logo strip "
@@ -138,21 +150,6 @@ pub fn MarqueePage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Every copy after the first is hidden and inert, so the content is read "
-                    "and tabbed through once. The pause toggle meets WCAG 2.2.2, which asks "
-                    "for a way to stop motion that runs longer than five seconds. It is a tab "
-                    "stop named \"Pause\", and "
-                    Code { source: "aria-pressed" }
-                    " says whether it is paused. Turn it off only when the page offers its "
-                    "own control through "
-                    Code { source: "paused" }
-                    " and "
-                    Code { source: "onpausechange" }
-                    "."
-                }
             }
         }
     }

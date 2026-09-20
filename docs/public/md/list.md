@@ -67,11 +67,16 @@ fn Checklist() -> Element {
 
 ## Accessibility
 
-Keep a `List`'s children to `ListItem`s. A stray element between them breaks
-the list and its item count for a screen reader.
+### Libero handles
 
-Icons are hidden from screen readers. When an icon carries meaning, such as
-done or missing, say it in the item's text too.
+- Icons are hidden from screen readers.
+
+### You must
+
+- Keep a `List`'s children to `ListItem`s. A stray element between them breaks
+  the list and its item count for a screen reader.
+- When an icon carries meaning, such as done or missing, say it in the item's
+  text too.
 
 ## Props
 

@@ -51,6 +51,20 @@ fn Demo() -> Element {
 }
 ```
 
+## Accessibility
+
+### Libero handles
+
+- The quote is a `<blockquote>` in a `<figure>`, and the attribution sits in a
+  `<figcaption>` outside it, so a screen reader does not read the speaker's name
+  as part of the quote.
+- `work` renders in a `<cite>`, the comma kept outside it.
+
+### Limits
+
+- `cite_url` is for machines only: browsers do not show it, so link the source
+  yourself where readers need it.
+
 ## Props
 
 | Prop | Type | Default | Description |

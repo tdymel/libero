@@ -1,8 +1,6 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Button, Code, Flex, FocusTrap, Text};
+use libero::components::{Button, Flex, FocusTrap, Text};
 
 const TRAPPED: &str = r#"Flex {
     direction: "row",
@@ -37,6 +35,15 @@ pub fn FocusTrapPage() -> Element {
                     .default("required")
                     .doc("The content that keeps the focus."),
             ])],
+            accessibility: a11y()
+                .key(["Tab", "Shift+Tab"], "Cycles through the focusable children, wrapping at either end.")
+                .handles([
+                    "On mount the trap focuses the element marked `data-autofocus`, or else its first focusable child.",
+                ])
+                .must([
+                    "To focus nothing visible, so a dialog does not open with its first button looking pressed, render `FocusTrapInitialFocus` as the first child.",
+                    "Keep a trap only around content that is the one thing that matters on screen, such as an open overlay. A keyboard user who cannot Tab out of a region has no way back to the page.",
+                ]),
             lead: rsx! {
                 Text {
                     "Keeps Tab and Shift+Tab cycling inside its children, as inside an open "
@@ -81,21 +88,6 @@ pub fn FocusTrapPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_page),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "On mount the trap focuses the element marked "
-                    Code { source: "data-autofocus" }
-                    ", or else its first focusable child. To focus nothing visible, so a "
-                    "dialog does not open with its first button looking pressed, render "
-                    Code { source: "FocusTrapInitialFocus" }
-                    " as the first child."
-                }
-                Text {
-                    "Keep a trap only around content that is the one thing that matters on "
-                    "screen, such as an open overlay. A keyboard user who cannot Tab out of "
-                    "a region has no way back to the page."
-                }
             }
         }
     }

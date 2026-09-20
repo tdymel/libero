@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use crate::icons::CheckmarkIcon;
 use dioxus::prelude::*;
 use libero::{
@@ -286,6 +286,17 @@ pub fn ImageListPage() -> Element {
                         .doc("The dark gradient behind an overlay bar and its light text color. Off leaves a bare transparent strip. A `below` bar has none."),
                 ]),
             ],
+            accessibility: a11y()
+                .handles([
+                    "Each picture's name is its own `alt`.",
+                    "A cell with a bar is a `figure`, and the bar is its caption.",
+                    "`ImageItem::to` makes the picture the link and stretches it over the tile, so the link's name is the image's `alt`. The bar sits above the link, so a control in it still works.",
+                    "The scrim never drops below 60% black, so the bar's white text holds at least 5.7:1 even over a white picture. A `below` bar has no scrim and always reads.",
+                ])
+                .must([
+                    "Give a linked picture an `alt`: a decorative image leaves the link unnamed.",
+                    "Check the contrast of text you dim yourself in a bar: it can still fall short.",
+                ]),
             lead: rsx! {
                 Text {
                     "A grid of pictures, each with an optional caption bar. It renders a list, "
@@ -395,28 +406,6 @@ pub fn ImageListPage() -> Element {
                     }
                 },
                 wrap: Wrap(placeholder_header),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Each picture's name is its own "
-                    Code { source: "alt" }
-                    ". A cell with a bar is a "
-                    Code { source: "figure" }
-                    ", and the bar is its caption. "
-                    Code { source: "ImageItem::to" }
-                    " makes the picture the link and stretches it over the tile, so the "
-                    "link's name is the image's "
-                    Code { source: "alt" }
-                    ". A decorative image leaves the link unnamed. The bar sits above the "
-                    "link, so a control in it still works."
-                }
-                Text {
-                    "The scrim never drops below 60% black, so the bar's white text holds "
-                    "at least 5.7:1 even over a white picture. Text you dim yourself can "
-                    "still fall short. A "
-                    Code { source: "below" }
-                    " bar has no scrim and always reads."
-                }
             }
         }
     }

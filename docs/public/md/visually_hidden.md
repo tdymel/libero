@@ -34,15 +34,21 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Place the text where it should be read, inside the link and not next to it.
-Use it for text a screen reader user is missing, never to hide something
-sighted users need. To replace a control's whole name, use `aria_label`
-instead.
+### Libero handles
 
-Keep the children to text unless `focusable` is set, or keyboard focus lands
-somewhere invisible. A skip link shows at its place in the flow, so put it
-first on the page. Further down, put it in a positioned parent and set
-`position: absolute` through `sx`, or Tab never scrolls it into view.
+- With `focusable`, the content shows while focus is inside it.
+
+### You must
+
+- Place the text where it should be read, inside the link and not next to it.
+- Use it for text a screen reader user is missing, never to hide something
+  sighted users need. To replace a control's whole name, use `aria_label`
+  instead.
+- Keep the children to text unless `focusable` is set, or keyboard focus lands
+  somewhere invisible.
+- A skip link shows at its place in the flow, so put it first on the page.
+  Further down, put it in a positioned parent and set `position: absolute`
+  through `sx`, or Tab never scrolls it into view.
 
 ```rust,ignore
 VisuallyHidden {

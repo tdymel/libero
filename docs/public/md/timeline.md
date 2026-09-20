@@ -93,10 +93,16 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The list gives a screen reader the position and count the rail shows. Bullets
-are `aria-hidden`, and the title is the text. A custom `.bullet(..)` is hidden
-too, so never put anything focusable in one. It would stay a tab stop with no
-name. Interactive content belongs in `.content(..)`.
+### Libero handles
+
+- The list gives a screen reader the position and count the rail shows.
+- Bullets are `aria-hidden`, and the title is the text. A custom `.bullet(..)`
+  is hidden too.
+
+### You must
+
+- Never put anything focusable in a `.bullet(..)`. It would stay a tab stop with
+  no name. Interactive content belongs in `.content(..)`.
 
 ## Props
 

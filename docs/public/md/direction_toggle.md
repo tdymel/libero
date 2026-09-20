@@ -30,6 +30,19 @@ fn Demo() -> Element {
 }
 ```
 
+## Accessibility
+
+### Libero handles
+
+- The button's name says what a press does, from the localization's
+  `DirectionToggleLabels`: `to_rtl` or `to_ltr`.
+- It sets the document's `dir`, so a screen reader and every component follow
+  the new direction.
+
+### You must
+
+- With `label`, return what the press does, not the current direction.
+
 ## Props
 
 | Prop | Type | Default | Description |

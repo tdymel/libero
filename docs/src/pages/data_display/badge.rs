@@ -1,4 +1,4 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Badge, Code, Input, Text};
 
@@ -35,6 +35,18 @@ pub fn BadgePage() -> Element {
                     .doc("Drops the horizontal padding and makes the width at least the height, for a count of one or two characters."),
                 prop("children", "Element").default("required").doc("The label."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "A badge has no role, so screen readers read its text in place and announce no change.",
+                    "`filled` and `tonal` labels reach 4.5:1 in every color.",
+                ])
+                .must([
+                    "For a badge that reports a change, wrap it in your own `role=\"status\"` region.",
+                    "Pick `filled` or `tonal` for `warning` and `success`.",
+                ])
+                .limits([
+                    "The other variants print the label in the color itself, which stays under 4.5:1 on white for `warning` (3.27:1) and `success` (4.05:1).",
+                ]),
             lead: rsx! {
                 Text {
                     "A short status label, rendered as one "
@@ -84,30 +96,6 @@ pub fn BadgePage() -> Element {
                     }
                 },
                 child: Child(label),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "A badge has no role, so screen readers read its text in place and "
-                    "announce no change. For a badge that reports a change, wrap it in your "
-                    "own "
-                    Code { source: "role=\"status\"" }
-                    " region."
-                }
-                Text {
-                    Code { source: "filled" }
-                    " and "
-                    Code { source: "tonal" }
-                    " labels reach 4.5:1 in every color. The other variants print the label "
-                    "in the color itself, which stays under 4.5:1 on white for "
-                    Code { source: "warning" }
-                    " and "
-                    Code { source: "success" }
-                    ". Pick "
-                    Code { source: "filled" }
-                    " or "
-                    Code { source: "tonal" }
-                    " for those."
-                }
             }
         }
     }

@@ -35,9 +35,19 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Below 24px (`xs` and `sm`) the button still takes presses in a 24x24 box
-centred on it. Keep other targets 2px (`sm`) or 4px (`xs`) away, or the one
-drawn later takes the overlap.
+### Libero handles
+
+- Below 24px (`xs` and `sm`) the button still takes presses in a 24x24 box
+  centred on it.
+- `focusable_when_disabled` keeps a disabled button in the Tab order, with
+  `aria-disabled`.
+
+### You must
+
+- Name the button with `aria_label`: the icon gives a screen reader nothing to
+  read.
+- Keep other targets 2px (`sm`) or 4px (`xs`) away, or the one drawn later
+  takes the overlap.
 
 ## Props
 

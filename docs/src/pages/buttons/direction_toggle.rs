@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, DirectionToggle, Input, Text};
 
@@ -28,6 +28,12 @@ pub fn DirectionTogglePage() -> Element {
                     .default("false")
                     .doc("Disables and dims the button."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "The button's name says what a press does, from the localization's `DirectionToggleLabels`: `to_rtl` or `to_ltr`.",
+                    "It sets the document's `dir`, so a screen reader and every component follow the new direction.",
+                ])
+                .must(["With `label`, return what the press does, not the current direction."]),
             lead: rsx! {
                 Text {
                     "An icon button that turns the app's text between left to right and "

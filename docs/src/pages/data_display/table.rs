@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, Table, Text, column};
 
@@ -97,6 +97,21 @@ pub fn TablePage() -> Element {
                     prop("row_header", "bool").default("false").doc("Renders the column's cells as `th scope=\"row\"`, so a screen reader names each row by it. One per table, usually the first."),
                 ]).without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Tab"], "With `scroll: true`: enters the scroll region, a tab stop.")
+                .key(["Left", "Right", "Up", "Down"], "In the scroll region: scrolls the table.")
+                .key(["Enter", "Space"], "On a sortable header, a button: sorts by that column.")
+                .handles([
+                    "An unnamed table warns in a debug build.",
+                    "With `scroll: true` the wrapper is a `role=\"region\"` named like the table.",
+                    "Only the sorted header carries `aria-sort`.",
+                    "`.row_header()` cells render as `th scope=\"row\"`, so a screen reader reads that name as it moves down any other column. They look like the other cells.",
+                ])
+                .must([
+                    "Name every table. `caption` shows a title and names it, `aria_labelledby` points at a heading already on the page, and `aria_label` names it without text.",
+                    "Set `scroll: true` on a table wider than its container.",
+                    "Mark the column that names a row with `.row_header()`.",
+                ]),
             lead: rsx! {
                 Text {
                     "A table built from "
@@ -152,29 +167,6 @@ pub fn TablePage() -> Element {
                         ],
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Name every table. "
-                    Code { source: "caption" }
-                    " shows a title and names it, "
-                    Code { source: "aria_labelledby" }
-                    " points at a heading already on the page, and "
-                    Code { source: "aria_label" }
-                    " names it without text. An unnamed table warns in a debug build."
-                }
-                Text {
-                    "A table wider than its container needs "
-                    Code { source: "scroll: true" }
-                    ". The region is a tab stop, so a keyboard user can scroll it with the "
-                    "arrow keys. A sortable header is a button, and Enter or Space sorts."
-                }
-                Text {
-                    "Mark the column that names a row with "
-                    Code { source: ".row_header()" }
-                    ". A screen reader then reads that name as it moves down any other column."
-                }
             }
         }
     }

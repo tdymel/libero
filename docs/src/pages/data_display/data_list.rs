@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, DataList, DataListItem, Text};
 
@@ -49,6 +49,11 @@ pub fn DataListPage() -> Element {
                         .doc("The term's descriptions, in one `<dd>`."),
                 ]),
             ],
+            accessibility: a11y()
+                .handles(["Each term is a `<dt>` and its descriptions one `<dd>`, so a screen reader pairs them."])
+                .must([
+                    "Put each `DataListItem` directly inside the `DataList`. A wrapper element between them breaks the pairing of term and description.",
+                ]),
             lead: rsx! {
                 Text {
                     "A "
@@ -88,16 +93,6 @@ pub fn DataListPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Put each "
-                    Code { source: "DataListItem" }
-                    " directly inside the "
-                    Code { source: "DataList" }
-                    ". A wrapper element between them breaks the pairing of term and "
-                    "description."
-                }
             }
         }
     }

@@ -75,18 +75,32 @@ fn Demo() -> Element {
 
 ## Accessibility
 
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Enter` or `Space` | On the pause toggle, a tab stop: pauses or resumes the motion. |
+
+### Libero handles
+
 - Every copy after the first is `aria-hidden` and `inert`, so the content is
-  read and tabbed through once. Interactive children work only in the first
-  copy.
+  read and tabbed through once.
 - The pause toggle meets WCAG 2.2.2, which asks for a way to stop motion that
-  runs longer than five seconds. It is a tab stop that `Enter` or `Space`
-  toggles, named "Pause", and `aria-pressed` says whether it is paused. While
-  focus is on the content it turns transparent, so it never covers a focused
-  link. `pause_on_hover` is not enough on its own, since a keyboard or a touch
-  screen cannot hover.
-- `paused` is controlled when set. The toggle then only reports through
-  `onpausechange`, and without the handler it does nothing. Turn the toggle off
-  only when the page offers its own control.
+  runs longer than five seconds. It is named "Pause", and `aria-pressed` says
+  whether it is paused.
+- While focus is on the content the toggle turns transparent, so it never
+  covers a focused link.
+
+### You must
+
+- Put interactive children in the content knowing they work only in the first
+  copy.
+- Don't rely on `pause_on_hover` alone: a keyboard or a touch screen cannot
+  hover.
+- Turn the toggle off only when the page offers its own control through
+  `paused` and `onpausechange`. `paused` is controlled when set: the toggle then
+  only reports through `onpausechange`, and without the handler it does
+  nothing.
 
 ## Props
 

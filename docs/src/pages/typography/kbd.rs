@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Kbd, Text};
 
@@ -15,6 +15,11 @@ pub fn KbdPage() -> Element {
                     .doc("Font size. The rest of the look comes from the theme."),
                 prop("children", "Element").default("required").doc("The key label."),
             ])],
+            accessibility: a11y()
+                .handles(["Each key is a real `<kbd>`."])
+                .must([
+                    "Put the separator in the text around the keys. A screen reader reads `Kbd { \"Ctrl\" } \" + \" Kbd { \"S\" }` as \"Ctrl plus S\", but one `Kbd { \"Ctrl+S\" }` as a single token.",
+                ]),
             lead: rsx! {
                 Text {
                     "One keyboard key in a real "
@@ -37,15 +42,6 @@ pub fn KbdPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     Kbd { size: values.str("size"), "Ctrl" }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Put the separator in the text around the keys. A screen reader reads "
-                    Code { source: "Kbd {{ \"Ctrl\" }} \" + \" Kbd {{ \"S\" }}" }
-                    " as \"Ctrl plus S\", but one "
-                    Code { source: "Kbd {{ \"Ctrl+S\" }}" }
-                    " as a single token."
-                }
             }
         }
     }

@@ -146,18 +146,29 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Name every table. `caption` shows a title and names it, `aria_labelledby`
-points at a heading already on the page, and `aria_label` names it without
-text. An unnamed table warns in a debug build.
+### Keyboard
 
-A table wider than its container needs `scroll: true`. The wrapper is a
-`role="region"` named like the table and a tab stop, so a keyboard user can
-scroll it with the arrow keys. A sortable header is a button, and Enter or
-Space sorts. Only the sorted header carries `aria-sort`.
+| Key | Action |
+|---|---|
+| `Tab` | With `scroll: true`: enters the scroll region, a tab stop. |
+| `Left` or `Right` or `Up` or `Down` | In the scroll region: scrolls the table. |
+| `Enter` or `Space` | On a sortable header, a button: sorts by that column. |
 
-Mark the column that names a row with `.row_header()`. Its cells render as
-`th scope="row"`, so a screen reader reads that name as it moves down any other
-column. It looks like the other cells.
+### Libero handles
+
+- An unnamed table warns in a debug build.
+- With `scroll: true` the wrapper is a `role="region"` named like the table.
+- Only the sorted header carries `aria-sort`.
+- `.row_header()` cells render as `th scope="row"`, so a screen reader reads
+  that name as it moves down any other column. They look like the other cells.
+
+### You must
+
+- Name every table. `caption` shows a title and names it, `aria_labelledby`
+  points at a heading already on the page, and `aria_label` names it without
+  text.
+- Set `scroll: true` on a table wider than its container.
+- Mark the column that names a row with `.row_header()`.
 
 ## Props
 

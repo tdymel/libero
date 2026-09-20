@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, Input, Text};
 
@@ -34,6 +34,15 @@ pub fn IconPage() -> Element {
                     prop("children", "Element").default("required").doc("The svg."),
                 ]),
             ],
+            accessibility: a11y()
+                .handles([
+                    "An icon is hidden from screen readers (`aria-hidden=\"true\"`).",
+                    "`aria_label` or `aria_labelledby` makes it `role=\"img\"`.",
+                ])
+                .must([
+                    "Name an icon that means something with `aria_label` or `aria_labelledby`. A `<title>` inside the svg does not name it, since it is hidden with the rest.",
+                    "For a clickable icon, use `ActionIcon`.",
+                ]),
             lead: rsx! {
                 Text {
                     "Wraps an svg in a sized, colored box. An svg drawn in "
@@ -77,20 +86,6 @@ pub fn IconPage() -> Element {
                         CheckmarkIcon {}
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "An icon is hidden from screen readers. One that means something needs "
-                    Code { source: "aria_label" }
-                    ", which makes it "
-                    Code { source: "role=\"img\"" }
-                    ". A "
-                    Code { source: "<title>" }
-                    " inside the svg does not name it, since it is hidden with the rest. "
-                    "For a clickable icon, use "
-                    Code { source: "ActionIcon" }
-                    "."
-                }
             }
         }
     }

@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Anchor, Code, Text, VisuallyHidden};
 
@@ -33,6 +31,14 @@ pub fn VisuallyHiddenPage() -> Element {
                     .default("required")
                     .doc("The screen-reader-only content."),
             ])],
+            accessibility: a11y()
+                .handles(["With `focusable`, the content shows while focus is inside it."])
+                .must([
+                    "Place the text where it should be read, inside the link and not next to it.",
+                    "Use it for text a screen reader user is missing, never to hide something sighted users need. To replace a control's whole name, use `aria_label` instead.",
+                    "Keep the children to text unless `focusable` is set, or keyboard focus lands somewhere invisible.",
+                    "A skip link shows at its place in the flow, so put it first on the page. Further down, put it in a positioned parent and set `position: absolute` through `sx`, or Tab never scrolls it into view.",
+                ]),
             lead: rsx! {
                 Text {
                     "Content for screen readers only, such as extra context for a link that "
@@ -62,26 +68,6 @@ pub fn VisuallyHiddenPage() -> Element {
                     }
                 } },
                 wrap: Wrap(wrap_link),
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Place the text where it should be read, inside the link and not next to "
-                    "it. Use it for text a screen reader user is missing, never to hide "
-                    "something sighted users need. To replace a control's whole name, use "
-                    Code { source: "aria_label" }
-                    " instead."
-                }
-                Text {
-                    "Keep the children to text unless "
-                    Code { source: "focusable" }
-                    " is set, or keyboard focus lands somewhere invisible. A skip link shows "
-                    "at its place in the flow, so put it first on the page. Further down, "
-                    "put it in a positioned parent and set "
-                    Code { source: "position: absolute" }
-                    " through "
-                    Code { source: "sx" }
-                    ", or Tab never scrolls it into view."
-                }
             }
         }
     }

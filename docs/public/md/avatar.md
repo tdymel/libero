@@ -72,15 +72,20 @@ Barbara Liskov, Margaret Hamilton".
 
 ## Accessibility
 
-`name` is the accessible name, so a screen reader says "Ada Lovelace" rather
-than the initials. Pass `alt: ""` where the name shows beside the avatar, or it
-is read twice. A decorative avatar is hidden whole, so put nothing focusable in
-it.
+### Libero handles
 
-The group's `+N` chip is focusable, and its label lists the hidden names. Its
-words come from the `avatar` labels of the [localization](localization.md).
-`{n}` is the hidden count and `{names}` their names, for example
-`AvatarLabels { count: "+{n}", more: "{n} weitere: {names}" }`.
+- `name` is the accessible name, so a screen reader says "Ada Lovelace" rather
+  than the initials.
+- A decorative avatar is hidden whole.
+- The group's `+N` chip is focusable, and its label lists the hidden names. Its
+  words come from the `avatar` labels of the [localization](localization.md).
+  `{n}` is the hidden count and `{names}` their names, for example
+  `AvatarLabels { count: "+{n}", more: "{n} weitere: {names}" }`.
+
+### You must
+
+- Pass `alt: ""` where the name shows beside the avatar, or it is read twice.
+- Put nothing focusable in a decorative avatar.
 
 ## Props
 

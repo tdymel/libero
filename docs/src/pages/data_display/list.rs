@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use crate::icons::CheckmarkIcon;
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, List, ListItem, Text};
@@ -46,6 +46,12 @@ pub fn ListPage() -> Element {
                     prop("children", "Element").default("required").doc("The item's content."),
                 ]),
             ],
+            accessibility: a11y()
+                .handles(["Icons are hidden from screen readers."])
+                .must([
+                    "Keep a `List`'s children to `ListItem`s. A stray element between them breaks the list and its item count for a screen reader.",
+                    "When an icon carries meaning, such as done or missing, say it in the item's text too.",
+                ]),
             lead: rsx! {
                 Text {
                     "A "
@@ -100,20 +106,6 @@ pub fn ListPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Keep a "
-                    Code { source: "List" }
-                    "'s children to "
-                    Code { source: "ListItem" }
-                    "s. A stray element between them breaks the list and its item count for "
-                    "a screen reader."
-                }
-                Text {
-                    "Icons are hidden from screen readers. When an icon carries meaning, such as "
-                    "done or missing, say it in the item's text too."
-                }
             }
         }
     }

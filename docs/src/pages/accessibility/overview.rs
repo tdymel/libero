@@ -18,7 +18,7 @@ pub fn AccessibilityPage() -> Element {
             markdown: "/md/accessibility.md",
             lead: rsx! {
                 Text {
-                    "Each component page has its own Accessibility section with the keys the "
+                    "Each component page has its own Accessibility tab with the keys the "
                     "component answers and the props you must set, mostly a name for "
                     "something without a visible label. This page covers the library as a "
                     "whole, including what libero does not do."
