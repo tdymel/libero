@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, Switch, Text};
 
@@ -53,6 +53,11 @@ pub fn SwitchPage() -> Element {
                     .default("plain")
                     .doc("`card` draws the switch as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles."),
             ])],
+            accessibility: a11y()
+                .key(["Space"], "Toggles the switch.")
+                .key(["Enter"], "Outside a `Form`: toggles the switch. Inside one: submits the form, as on a native checkbox.")
+                .handles(["A debug build warns when the switch has neither a visible label nor `aria_label`."])
+                .must(["Without a visible label, set `aria_label`."]),
             lead: rsx! {
                 Text {
                     "An on/off toggle drawn as a track and thumb. It is a checkbox underneath, "
@@ -162,17 +167,6 @@ pub fn SwitchPage() -> Element {
                         disabled: (values.str("disabled") == "true").then_some(true),
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Space toggles the switch. Outside a "
-                    Code { source: "Form" }
-                    " Enter toggles it too. Inside one, Enter submits the form, as on a native "
-                    "checkbox. Without a visible label, set "
-                    Code { source: "aria_label" }
-                    ". A debug build warns when the switch has neither."
-                }
             }
         }
     }

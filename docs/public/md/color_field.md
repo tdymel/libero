@@ -35,12 +35,20 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Focus opens the dropdown and stays in the text, so typing works at once. Arrow
-Down moves focus into the picker, onto the saturation area or the first swatch,
-where the [ColorPicker](color_picker.md#accessibility) keys apply. Escape goes
-back to the text, and so does a swatch that closes the dropdown. Tab past
-either end of the dropdown leaves the field. Focus leaving both the text and
-the dropdown closes it. A mouse click in the dropdown leaves focus in the text.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Down` | Moves focus into the picker, onto the saturation area or the first swatch, where the [ColorPicker](color_picker.md#accessibility) keys apply. |
+| `Escape` | Moves focus back to the text. |
+| `Tab` or `Shift+Tab` | Past either end of the dropdown: leaves the field. |
+
+### Libero handles
+
+- Focus opens the dropdown and stays in the text, so typing works at once.
+- A swatch that closes the dropdown moves focus back to the text.
+- Focus leaving both the text and the dropdown closes it.
+- A mouse click in the dropdown leaves focus in the text.
 
 ## Props
 

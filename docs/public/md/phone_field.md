@@ -39,9 +39,19 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The country picker is a second tab stop. Enter, Space and Arrow Down open the
-list, typing filters it, the arrows move the highlight, Enter picks and Escape
-closes. Both return focus to the picker.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Enter`, `Space` or `Down` | On the country picker: opens the list. |
+| `Letter` | Filters the open list. |
+| `Up` or `Down` | Move the highlight. |
+| `Enter` | Picks the highlighted country and returns focus to the picker. |
+| `Escape` | Closes the list and returns focus to the picker. |
+
+### Libero handles
+
+- The country picker is a second tab stop.
 
 ## Props
 

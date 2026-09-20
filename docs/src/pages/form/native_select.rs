@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, NativeSelect, OptionList, Options, Text};
 
@@ -75,6 +75,9 @@ pub fn NativeSelectPage() -> Element {
                         .doc("Disables and dims the field. A native `<select>` has no read-only state, so there is no `readonly`. Use `Select` for that."),
                 ]),
             ],
+            accessibility: a11y()
+                .handles(["Your own `aria-describedby` ids come first, before the captions."])
+                .must(["Without a visible `label`, set `aria_label`. A select with no name is a defect."]),
             lead: rsx! {
                 Text {
                     "A styled native select over an enum, with a label, captions and a status "
@@ -173,18 +176,6 @@ pub fn NativeSelectPage() -> Element {
                         onchange: move |next| value.set(Some(next)),
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Without a visible "
-                    Code { source: "label" }
-                    ", set "
-                    Code { source: "aria_label" }
-                    ". A select with no name is a defect. Your own "
-                    Code { source: "aria-describedby" }
-                    " ids come first, before the captions."
-                }
             }
         }
     }

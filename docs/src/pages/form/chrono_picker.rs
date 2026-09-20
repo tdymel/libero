@@ -2,10 +2,10 @@ use super::date_common::{
     SIZES, calendar_controls, day_limits, has_days, has_time, is_mini, is_on, is_weekend,
     moment_limits, shared_controls, shown, step_of, time_limits, today_of, twelve_hour_of,
 };
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use libero::components::{ChronoPicker, Code, DateLevel, DateRange, Flex, Kbd, Text};
+use libero::components::{ChronoPicker, Code, DateLevel, DateRange, Flex, Text};
 
 const KINDS: [&str; 7] = [
     "date",
@@ -57,6 +57,33 @@ pub fn ChronoPickerPage() -> Element {
                     prop("focusable", "bool").default("true").doc("`false` keeps the picker out of the tab order, for a picker inside a dropdown whose input keeps focus."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Left", "Right"], "Days: the day before or after. Months and years: the cell before or after. Mini calendar: a day, sliding the row one day past its ends.")
+                .key(["Up", "Down"], "Days: a week earlier or later. Months and years: a row up or down.")
+                .key(["Home", "End"], "Days: the first or last day of the week. Months, years and the mini calendar: the row's ends.")
+                .key(["PageUp", "PageDown"], "Days: a month. Months: a year. Years: a decade. Mini calendar: `days` days.")
+                .key(["Shift+PageUp", "Shift+PageDown"], "Days: a year.")
+                .key(["Enter", "Space"], "Picks the cell.")
+                .key(["Enter"], "On the month heading: climbs to the months, focus on the year heading. On the year heading: climbs to the years, focus into them.")
+                .key(["Up", "Right"], "Analog clock: the hand forward by an hour or `step` minutes. Digital column (`Up`): a step forward.")
+                .key(["Down", "Left"], "Analog clock: the hand back. Digital column (`Down`): a step back.")
+                .key(["PageUp", "PageDown"], "Digital column: a bigger step.")
+                .key(["Home", "End"], "Digital column: the first or last value.")
+                .key(["Digit"], "Digital column: picks. A filled column moves on to the next.")
+                .key(["Enter"], "Analog clock: from the hour to the minute. Digital column: to the next column.")
+                .key(["Tab"], "Analog clock: to the next control. Digital column: to the next column.")
+                .handles([
+                    "Days, months and years are one tab stop each, on the picked cell, else today, else the first.",
+                    "Today's day, month and year carry `aria-current=\"date\"`.",
+                    "The decade heading is disabled, since there is no level above it.",
+                    "Picking a month or a year below the lowest level climbs back down with focus on it.",
+                    "The mini calendar's days are one tab stop. Its two buttons page the row by `days`.",
+                    "The analog clock face is one tab stop. Each digital column is a spinbutton and one tab stop.",
+                    "The clock keys change the value at once and skip what `min` and `max` rule out.",
+                    "The wheel and a drag turn a digital column too, and a press on the value above or below picks it.",
+                    "A date-time's day and time are tabs above the picker, and picking the day moves focus into the clock.",
+                    "A date-time range has three tabs: the days, the start time and the end time. Each shows its value once picked, such as `12–14 Oct` or `09:00`, and moves on to the next when complete. The start and the end may be on different days.",
+                ]),
             lead: rsx! {
                 Text {
                     "One picker for every date and time value. The value's type picks what it draws. "
@@ -157,47 +184,6 @@ pub fn ChronoPickerPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     ChronoPickerDemo { values }
                 },
-            }
-
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Days, months and years are one tab stop each, on the picked cell, else today, else the first. "
-                    Kbd { "←" } " " Kbd { "→" } " move a cell, "
-                    Kbd { "↑" } " " Kbd { "↓" } " a week or a row, "
-                    Kbd { "Home" } " " Kbd { "End" } " to the ends of the week or row, and "
-                    Kbd { "PageUp" } " " Kbd { "PageDown" } " page a month, a year or a decade, or a year among days with "
-                    Kbd { "Shift" } ". "
-                    Kbd { "Enter" } " and " Kbd { "Space" } " pick. Enter on a heading climbs a level, up to the years."
-                }
-                Text {
-                    "The analog clock face is one tab stop. "
-                    Kbd { "↑" } " " Kbd { "→" } " step the hand forward by an hour or "
-                    Code { source: "step" }
-                    " minutes, and "
-                    Kbd { "↓" } " " Kbd { "←" } " back, skipping what "
-                    Code { source: "min" }
-                    " and "
-                    Code { source: "max" }
-                    " rule out. "
-                    Kbd { "Enter" } " moves from the hour to the minute. "
-                    "Each digital column is a spinbutton and one tab stop. "
-                    Kbd { "↑" } " " Kbd { "↓" } " turn it a step, "
-                    Kbd { "PageUp" } " " Kbd { "PageDown" } " a bigger step, "
-                    Kbd { "Home" } " " Kbd { "End" } " to the first and last value, and typed digits pick. "
-                    "A filled column and " Kbd { "Enter" } " move on to the next. The wheel and a drag turn it too."
-                }
-                Text {
-                    "The mini calendar's days are one tab stop. "
-                    Kbd { "←" } " " Kbd { "→" } " move a day and slide the row past its ends, "
-                    Kbd { "Home" } " " Kbd { "End" } " go to the row's ends, and "
-                    Kbd { "PageUp" } " " Kbd { "PageDown" } " move a row's worth of days. The buttons page the row."
-                }
-                Text {
-                    "A date-time's day and time are tabs above the picker, and picking the day moves focus into the clock. "
-                    "A date-time range has three: the days, the start time and the end time, each showing its value once picked. "
-                    "Each step moves on to the next when it is complete."
-                }
             }
         }
     }

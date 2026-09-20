@@ -115,17 +115,24 @@ MultiSelect {
 
 ## Accessibility
 
-Closed, the trigger opens on ArrowDown, ArrowUp, Enter or Space, and on Home or
-End at the first or last row. Open, the arrows move the highlight, Enter or
-Space toggles the row and keeps the list open, and Escape, Tab or Alt+ArrowUp
-close it. ArrowLeft and ArrowRight move over the chips, and Backspace or Delete
-removes the chip you are on, or the last one. Inside the search box Backspace
-only edits the query.
+### Keyboard
 
-Typing jumps to a matching label and opens the list there. Unlike on `Select`,
-it never changes the value in place, since a pick here toggles. Disabled options
-are read out but skipped. With `searchable` the search box takes over typing
-and holds the focus while the list is open.
+| Key | Action |
+|---|---|
+| `Down`, `Up`, `Enter` or `Space` | Closed: opens the list. |
+| `Home` or `End` | Closed: opens the list at the first or last row. |
+| `Up` or `Down` | Open: move the highlight. |
+| `Enter` or `Space` | Open: toggles the row and keeps the list open. |
+| `Escape`, `Tab` or `Alt+Up` | Open: close the list. |
+| `Left` or `Right` | Move over the chips. |
+| `Backspace` or `Delete` | Removes the chip you are on, or the last one. Inside the search box `Backspace` only edits the query. |
+| `Letter` | Jumps to a matching label and opens the list there. Unlike on `Select`, it never changes the value in place, since a pick here toggles. |
+
+### Libero handles
+
+- Disabled options are read out but skipped.
+- With `searchable` the search box takes over typing and holds the focus while
+  the list is open.
 
 ## Props
 

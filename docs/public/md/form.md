@@ -105,11 +105,17 @@ fn CheckButton() -> Element {
 
 ## Accessibility
 
-A form becomes a `form` landmark only once it has a name. Name it when the page
-holds more than one form, or when the form is the page's main task, such as a
-checkout. Pass `aria-labelledby` pointing at a visible heading, or
-`aria-label`. Intro text can join through `aria-describedby`. A form without a
-name is still valid.
+### Libero handles
+
+- A form becomes a `form` landmark only once it has a name. A form without a
+  name is still valid.
+
+### You must
+
+- Name the form when the page holds more than one form, or when the form is the
+  page's main task, such as a checkout. Pass `aria-labelledby` pointing at a
+  visible heading, or `aria-label`.
+- Join intro text through `aria-describedby`, if any.
 
 ```rust,ignore
 h2 { id: "checkout-title", "Checkout" }

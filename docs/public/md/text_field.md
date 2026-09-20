@@ -45,14 +45,20 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Leave `label` unset only when something else names the field, such as an
-`aria_label`. A string `description` or `helper` is read with the input. Markup
-in either is shown but not read, so its accessibility is yours.
+### Libero handles
 
-A `leading` or `trailing` slot is not read with the input. When it is text that
-belongs to the value, such as a unit or a counter, set `describe_leading` or
-`describe_trailing`. An error status marks the input invalid, a warning does
-not.
+- A string `description` or `helper` is read with the input.
+- An error status marks the input invalid, a warning does not.
+
+### You must
+
+- Leave `label` unset only when something else names the field, such as an
+  `aria_label`.
+- Markup in `description` or `helper` is shown but not read, so its
+  accessibility is yours.
+- A `leading` or `trailing` slot is not read with the input. When it is text
+  that belongs to the value, such as a unit or a counter, set
+  `describe_leading` or `describe_trailing`.
 
 ## Props
 

@@ -74,6 +74,19 @@ Form {
 }
 ```
 
+## Accessibility
+
+### Libero handles
+
+- A native `<fieldset>`, named by its `<legend>`, the `label`.
+- `description`, `helper` and the group's status join its `aria-describedby`.
+- `disabled` reaches every field inside, Libero's own and nested fieldsets
+  included, not only native controls.
+
+### You must
+
+- Give the group a `label`, so screen readers announce what its fields are for.
+
 ## Props
 
 ### `Fieldset`

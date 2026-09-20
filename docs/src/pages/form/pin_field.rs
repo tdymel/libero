@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, Flex, PinField, Text};
 
@@ -42,6 +42,15 @@ pub fn PinFieldPage() -> Element {
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Left", "Right"], "Moves to the previous or next cell.")
+                .key(["Home", "End"], "Moves to the first or last cell.")
+                .key(["Tab"], "Moves to the next cell, and past the last one leaves the field, as in any group of inputs.")
+                .handles([
+                    "Each cell is a tab stop.",
+                    "Each cell is named for its place, such as \"Character 1 of 6\", from the localization's `PinFieldLabels`, and reads the helper and the error too.",
+                ])
+                .must(["Give the field a `label`, which names the whole group."]),
             lead: rsx! {
                 Text {
                     "A pin, one character per cell. Typing fills a cell and moves to the next, "
@@ -121,17 +130,6 @@ pub fn PinFieldPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     PinFieldDemo { values }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Each cell is a tab stop. The arrows, Home and End move within the field, "
-                    "and Tab leaves it as it leaves any group of inputs. Give it a "
-                    Code { source: "label" }
-                    ", which names the whole group. Each cell is named for its place, such as "
-                    "\"Character 1 of 6\", from the localization's "
-                    Code { source: "PinFieldLabels" }
-                    ", and reads the helper and the error too."
-                }
             }
         }
     }

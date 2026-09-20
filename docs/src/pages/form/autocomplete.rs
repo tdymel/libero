@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -169,6 +169,14 @@ pub fn AutocompletePage() -> Element {
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Down"], "Opens the list. Typing opens it too.")
+                .key(["Up", "Down", "Home", "End"], "Move the highlight.")
+                .key(["Enter"], "Picks the highlighted row.")
+                .key(["Escape", "Tab"], "Close the list.")
+                .handles([
+                    "Nothing is highlighted until you arrow onto a row, so Enter on text that matches nothing still submits the form.",
+                ]),
             lead: rsx! {
                 Text {
                     "A "
@@ -286,15 +294,6 @@ pub fn AutocompletePage() -> Element {
                         oninput: move |next| value.set(next),
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Typing or ArrowDown opens the list. The arrows, Home and End move the "
-                    "highlight, Enter picks the highlighted row, and Escape and Tab close. "
-                    "Nothing is highlighted until you arrow onto a row, so Enter on text that "
-                    "matches nothing still submits the form."
-                }
             }
         }
     }

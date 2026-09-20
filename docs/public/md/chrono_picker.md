@@ -56,48 +56,46 @@ web. A server render and native builds mark no day unless `today` is set.
 
 ## Accessibility
 
-Days, months and years are one tab stop each, on the picked cell, else today,
-else the first. Today's day, month and year carry `aria-current="date"`.
+### Keyboard
 
-| Key | Days | Months and years |
-|---|---|---|
-| Arrow Left / Right | the day before / after | the cell before / after |
-| Arrow Up / Down | a week earlier / later | a row up / down |
-| Home / End | the first / last day of the week | the row's ends |
-| Page Up / Page Down | a month, or a year with Shift | a year / a decade |
-| Enter / Space | picks | picks |
+| Key | Action |
+|---|---|
+| `Left` or `Right` | Days: the day before or after. Months and years: the cell before or after. Mini calendar: a day, sliding the row one day past its ends. |
+| `Up` or `Down` | Days: a week earlier or later. Months and years: a row up or down. |
+| `Home` or `End` | Days: the first or last day of the week. Months, years and the mini calendar: the row's ends. |
+| `PageUp` or `PageDown` | Days: a month. Months: a year. Years: a decade. Mini calendar: `days` days. |
+| `Shift+PageUp` or `Shift+PageDown` | Days: a year. |
+| `Enter` or `Space` | Picks the cell. |
+| `Enter` | On the month heading: climbs to the months, focus on the year heading. On the year heading: climbs to the years, focus into them. |
+| `Up` or `Right` | Analog clock: the hand forward by an hour or `step` minutes. Digital column (`Up`): a step forward. |
+| `Down` or `Left` | Analog clock: the hand back. Digital column (`Down`): a step back. |
+| `PageUp` or `PageDown` | Digital column: a bigger step. |
+| `Home` or `End` | Digital column: the first or last value. |
+| `Digit` | Digital column: picks. A filled column moves on to the next. |
+| `Enter` | Analog clock: from the hour to the minute. Digital column: to the next column. |
+| `Tab` | Analog clock: to the next control. Digital column: to the next column. |
 
-Enter on the month heading climbs to the months and keeps focus on the year
-heading. Enter on the year heading climbs to the years and moves focus into the
-years. The decade heading is disabled, since there is no level above it.
-Picking a month or a year below the lowest level climbs back down with focus on
-it.
+### Libero handles
 
-The mini calendar's days are one tab stop too. Arrow Left / Right move a day
-and slide the row one day past its ends, Home / End go to the row's ends, and
-Page Up / Page Down move `days` days. The two buttons page the row by `days`.
-
-The clock keys:
-
-| Key | Analog face (one tab stop) | Digital column (a spinbutton, one tab stop each) |
-|---|---|---|
-| Arrow Up / Right | the hand forward by an hour or `step` minutes | Up: a step forward |
-| Arrow Down / Left | the hand back | Down: a step back |
-| Page Up / Page Down | - | a bigger step |
-| Home / End | - | the first / last value |
-| Digits | - | pick; a filled column moves on to the next |
-| Enter | from the hour to the minute | to the next column |
-| Tab | to the next control | to the next column |
-
-The keys change the value at once and skip what `min` and `max` rule out. The
-wheel and a drag turn a digital column too, and a press on the value above or
-below picks it.
-
-A date-time's day and time are tabs above the picker, and picking the day moves
-focus into the clock. A date-time range has three tabs: the days, the start time
-and the end time. Each shows its value once picked, such as `12–14 Oct` or
-`09:00`, and each step moves on to the next when it is complete. The start and
-the end may be on different days.
+- Days, months and years are one tab stop each, on the picked cell, else today,
+  else the first.
+- Today's day, month and year carry `aria-current="date"`.
+- The decade heading is disabled, since there is no level above it.
+- Picking a month or a year below the lowest level climbs back down with focus
+  on it.
+- The mini calendar's days are one tab stop. Its two buttons page the row by
+  `days`.
+- The analog clock face is one tab stop. Each digital column is a spinbutton
+  and one tab stop.
+- The clock keys change the value at once and skip what `min` and `max` rule
+  out.
+- The wheel and a drag turn a digital column too, and a press on the value
+  above or below picks it.
+- A date-time's day and time are tabs above the picker, and picking the day
+  moves focus into the clock.
+- A date-time range has three tabs: the days, the start time and the end time.
+  Each shows its value once picked, such as `12–14 Oct` or `09:00`, and moves on
+  to the next when complete. The start and the end may be on different days.
 
 ## Props
 

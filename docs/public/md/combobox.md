@@ -196,11 +196,29 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Focus stays on your trigger, so typing keeps working. Spread
-`state.a11y_attributes()` on it, or screen readers cannot tie the list to it.
-ArrowDown opens and moves down, ArrowUp moves up, Home and End jump to the ends,
-Enter picks and Escape and Tab close. Close the list on your trigger's blur, or
-an enclosing `Modal` stops hearing Escape while the list stays open.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Down` | Opens the list, and moves the highlight down. |
+| `Up` | Moves the highlight up. |
+| `Home` or `End` | Jumps to the first or last row. |
+| `Enter` | Picks the highlighted row. |
+| `Escape` or `Tab` | Close the list. |
+
+### Libero handles
+
+- Focus stays on your trigger, so typing keeps working.
+
+### You must
+
+- Spread `state.a11y_attributes()` on your trigger, or screen readers cannot
+  tie the list to it.
+- Close the list on your trigger's blur, or an enclosing `Modal` stops hearing
+  Escape while the list stays open.
+- Name the trigger: it becomes a `combobox`, which takes no name from its
+  content. Point a button trigger's `aria-labelledby` at a visible label, and
+  give a text field a `label`.
 
 ## Props
 

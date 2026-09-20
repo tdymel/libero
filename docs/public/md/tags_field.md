@@ -42,16 +42,27 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The whole field is one tab stop, plus the clear button when `clearable` shows
-it. Backspace on an empty input removes the last tag. Arrow Left on an empty
-input, or with the caret before the typed text, moves onto the tags and keeps
-the text. The arrows walk them, Delete, Backspace or Enter removes the focused
-one, and Arrow Right past the last returns to the input.
+### Keyboard
 
-With `suggestions`, Arrow Down and Arrow Up open the list and move the
-highlight, Enter picks the highlighted row and Escape closes the list. A custom
-`tag` must make its remove control a button with `tabindex: "-1"`. The arrow
-keys focus it, and without the tabindex each tag adds a tab stop.
+| Key | Action |
+|---|---|
+| `Backspace` | On an empty input: removes the last tag. |
+| `Left` | On an empty input, or with the caret before the typed text: moves onto the tags and keeps the text. |
+| `Left` or `Right` | On the tags: walk them. `Right` past the last returns to the input. |
+| `Delete`, `Backspace` or `Enter` | On a tag: removes it. |
+| `Down` or `Up` | With `suggestions`: open the list and move the highlight. |
+| `Enter` | With `suggestions`: picks the highlighted row. |
+| `Escape` | With `suggestions`: closes the list. |
+
+### Libero handles
+
+- The whole field is one tab stop, plus the clear button when `clearable` shows
+  it.
+
+### You must
+
+- A custom `tag` must make its remove control a button with `tabindex: "-1"`.
+  The arrow keys focus it, and without the tabindex each tag adds a tab stop.
 
 ## Props
 

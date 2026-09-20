@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, NumberField, NumberValue, Text};
 
@@ -149,6 +149,11 @@ pub fn NumberFieldPage() -> Element {
                         .doc("The value pulled into the field's range."),
                 ]).without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Up", "Down"], "Step the value, with or without `steppers`.")
+                .key(["PageUp", "PageDown"], "Step the value ten steps.")
+                .handles(["The stepper buttons are not tab stops, since the arrow keys do the same from the field."])
+                .must(["Leave `label` unset only when something else names the field."]),
             lead: rsx! {
                 Text {
                     "A numeric field over your own number type, with optional steppers. Every "
@@ -312,17 +317,6 @@ pub fn NumberFieldPage() -> Element {
                         },
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Arrow Up and Arrow Down step the value, Page Up and Page Down ten steps, "
-                    "with or without "
-                    Code { source: "steppers" }
-                    ". The stepper buttons are not tab stops, since the arrow keys do the same "
-                    "from the field. Leave "
-                    Code { source: "label" }
-                    " unset only when something else names the field."
-                }
             }
         }
     }

@@ -47,9 +47,21 @@ Switch {
 
 ## Accessibility
 
-Space toggles the switch. Outside a `Form` Enter toggles it too. Inside one,
-Enter submits the form, as on a native checkbox. Without a visible label, set
-`aria_label`. A debug build warns when the switch has neither.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Space` | Toggles the switch. |
+| `Enter` | Outside a `Form`: toggles the switch. Inside one: submits the form, as on a native checkbox. |
+
+### Libero handles
+
+- A debug build warns when the switch has neither a visible label nor
+  `aria_label`.
+
+### You must
+
+- Without a visible label, set `aria_label`.
 
 ## Props
 

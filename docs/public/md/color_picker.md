@@ -58,13 +58,21 @@ color.to_hsla_channels(); // (208.0, 0.8, 0.52, 1.0)
 
 ## Accessibility
 
-Each thumb is a slider with the usual keys. The hue and alpha tracks meet the
-24px target size of WCAG 2.5.8 from `md` up, and not at `sm` or `xs`. The
-saturation panel meets it at every size.
+### Libero handles
 
-The swatch equal to the value is pressed and checked. Swatches are named by
-their hex, which a screen reader spells out, so name them with
-`Swatches::labelled`.
+- Each thumb is a slider with the usual keys.
+- The saturation panel meets the 24px target size of WCAG 2.5.8 at every size.
+- The swatch equal to the value is pressed and checked.
+
+### You must
+
+- Name swatches with `Swatches::labelled`. By default they are named by their
+  hex, which a screen reader spells out.
+
+### Limits
+
+- The hue and alpha tracks meet the 24px target size of WCAG 2.5.8 from `md`
+  up, not at `sm` or `xs`.
 
 ## Props
 

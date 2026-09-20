@@ -109,11 +109,19 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Focus opens the dropdown and stays in the text, so you can type at once. `↓`
-moves focus into the picker, onto the picked day or the clock, where the
-[ChronoPicker](chrono_picker.md) keys apply. Escape goes back to the text, and so
-does a pick that closes the dropdown. Focus leaving both the text and the
-dropdown closes it. A mouse click in the dropdown leaves focus in the text.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Down` | Moves focus into the picker, onto the picked day or the clock, where the [ChronoPicker](chrono_picker.md#accessibility) keys apply. |
+| `Escape` | Moves focus back to the text. |
+
+### Libero handles
+
+- Focus opens the dropdown and stays in the text, so you can type at once.
+- A pick that closes the dropdown moves focus back to the text.
+- Focus leaving both the text and the dropdown closes it.
+- A mouse click in the dropdown leaves focus in the text.
 
 ## Props
 

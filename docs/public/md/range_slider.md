@@ -125,18 +125,27 @@ form.getAll("price") // ["20", "80"]
 
 ## Accessibility
 
-The keys move the focused thumb. The arrows move one step, Shift with an arrow,
-PageUp and PageDown move `big_step` steps, and Home and End jump to the end,
-stopping at the other thumb.
+### Keyboard
 
-Each thumb is named by the label plus its own word, such as "Price Minimum" and
-"Price Maximum", from the localization's `slider.minimum` and `slider.maximum`.
-Set `aria_label_from` and `aria_label_to` when those words do not fit, and
-`format` when a bare number does not say the unit.
+| Key | Action |
+|---|---|
+| `Left`, `Right`, `Up` or `Down` | Move the focused thumb one step. |
+| `Shift+Arrow`, `PageUp` or `PageDown` | Move the focused thumb `big_step` steps. |
+| `Home` or `End` | Move the focused thumb to the end, stopping at the other thumb. |
 
-To translate a discrete range, pass `format`, as on a `Slider`. On a discrete
-range the mark captions are hidden from screen readers, since the thumbs
-already name each value.
+### Libero handles
+
+- Each thumb is named by the label plus its own word, such as "Price Minimum"
+  and "Price Maximum", from the localization's `slider.minimum` and
+  `slider.maximum`.
+- On a discrete range the mark captions are hidden from screen readers, since
+  the thumbs already name each value.
+
+### You must
+
+- Set `aria_label_from` and `aria_label_to` when those words do not fit.
+- Set `format` when a bare number does not say the unit. To translate a
+  discrete range, pass `format`, as on a `Slider`.
 
 ## Props
 

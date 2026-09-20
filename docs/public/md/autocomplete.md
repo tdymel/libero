@@ -88,10 +88,19 @@ Autocomplete {
 
 ## Accessibility
 
-Typing or ArrowDown opens the list. The arrows, Home and End move the highlight,
-Enter picks the highlighted row, and Escape and Tab close. Nothing is
-highlighted until you arrow onto a row, so Enter on text that matches nothing
-still submits the form.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Down` | Opens the list. Typing opens it too. |
+| `Up`, `Down`, `Home` or `End` | Move the highlight. |
+| `Enter` | Picks the highlighted row. |
+| `Escape` or `Tab` | Close the list. |
+
+### Libero handles
+
+- Nothing is highlighted until you arrow onto a row, so Enter on text that
+  matches nothing still submits the form.
 
 ## Props
 

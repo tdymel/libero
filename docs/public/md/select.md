@@ -101,16 +101,23 @@ option is read out, and the arrows, typeahead and clicks skip it.
 
 ## Accessibility
 
-Closed, the trigger opens on ArrowDown, ArrowUp, Enter or Space, and on Home or
-End at the first or last row. Open, the arrows move the highlight, Home and End
-jump to the ends, and Enter or Space picks. Tab and Alt+ArrowUp pick the
-highlighted row and close. Escape closes without a pick.
+### Keyboard
 
-Typing jumps to a matching label. "b", "e", "r" typed quickly finds Berlin, and
-a lone "b" after a pause cycles the rows starting with it. On a closed trigger
-this changes the value in place, as on a native `<select>`. Disabled options are
-read out but skipped. With `searchable` the search box takes over typing and
-holds the focus while the list is open.
+| Key | Action |
+|---|---|
+| `Down`, `Up`, `Enter` or `Space` | Closed: opens the list. |
+| `Home` or `End` | Closed: opens the list at the first or last row. Open: jumps to the first or last row. |
+| `Up` or `Down` | Open: move the highlight. |
+| `Enter` or `Space` | Open: picks the highlighted row. |
+| `Tab` or `Alt+Up` | Open: pick the highlighted row and close. |
+| `Escape` | Open: closes without a pick. |
+| `Letter` | Jumps to a matching label. "b", "e", "r" typed quickly finds Berlin, and a lone "b" after a pause cycles the rows starting with it. On a closed trigger this changes the value in place, as on a native `<select>`. |
+
+### Libero handles
+
+- Disabled options are read out but skipped.
+- With `searchable` the search box takes over typing and holds the focus while
+  the list is open.
 
 ## Props
 

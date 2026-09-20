@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, Text, Textarea};
 
@@ -53,6 +53,11 @@ pub fn TextareaPage() -> Element {
                         .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
                 ]).extends("textarea"),
             ],
+            accessibility: a11y()
+                .handles([
+                    "The visible counter is hidden from screen readers. Instead, a polite status says how many characters are left once a tenth of the limit remains. Its words come from the localization's `textarea.characters_left`.",
+                ])
+                .must(["Leave `label` unset only when something else names the field."]),
             lead: rsx! {
                 Text {
                     "A multi-line text field with the same slots as "
@@ -152,18 +157,6 @@ pub fn TextareaPage() -> Element {
                         oninput: move |next| value.set(next),
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Leave "
-                    Code { source: "label" }
-                    " unset only when something else names the field. The visible counter is "
-                    "hidden from screen readers. Instead, a polite status says how many characters "
-                    "are left once a tenth of the limit remains. Its words come from the "
-                    "localization's "
-                    Code { source: "textarea.characters_left" }
-                    "."
-                }
             }
         }
     }

@@ -42,10 +42,16 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Leave `label` unset only when something else names the field. The reveal
-button is a toggle with one name, so a screen reader hears it as pressed or
-not. Set `autocomplete` so password managers can fill the field:
-`"new-password"` on a sign-up form, `"current-password"` on a sign-in form.
+### Libero handles
+
+- The reveal button is a toggle with one name, so a screen reader hears it as
+  pressed or not.
+
+### You must
+
+- Leave `label` unset only when something else names the field.
+- Set `autocomplete` so password managers can fill the field: `"new-password"`
+  on a sign-up form, `"current-password"` on a sign-in form.
 
 ## Props
 

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, FieldStatus, Flex, PhoneField, Text},
@@ -95,6 +95,13 @@ pub fn PhoneFieldPage() -> Element {
                         .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post. The country button stays focusable and opens nothing."),
                 ]).extends("input"),
             ],
+            accessibility: a11y()
+                .key(["Enter", "Space", "Down"], "On the country picker: opens the list.")
+                .key(["Letter"], "Filters the open list.")
+                .key(["Up", "Down"], "Move the highlight.")
+                .key(["Enter"], "Picks the highlighted country and returns focus to the picker.")
+                .key(["Escape"], "Closes the list and returns focus to the picker.")
+                .handles(["The country picker is a second tab stop."]),
             lead: rsx! {
                 Text {
                     "A country picker in front of a "
@@ -214,13 +221,6 @@ pub fn PhoneFieldPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "The country picker is a second tab stop. Enter, Space and Arrow Down open "
-                    "the list, typing filters it, the arrows move the highlight, Enter picks and "
-                    "Escape closes. Both return focus to the picker."
-                }
             }
         }
     }

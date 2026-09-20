@@ -3,11 +3,11 @@ use super::date_common::{
     has_time, is_on, is_weekend, moment_limits, shared_controls, shown, status_of, step_of,
     text_of, time_limits, today_of, twelve_hour_of,
 };
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use libero::components::{
-    ChronoField, Code, DateLevel, DateRange, Flex, Kbd, Rule, Text, Validators, not_empty,
+    ChronoField, Code, DateLevel, DateRange, Flex, Rule, Text, Validators, not_empty,
 };
 use libero::{use_formats_handle, use_localization_handle};
 
@@ -104,6 +104,15 @@ pub fn ChronoFieldPage() -> Element {
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Down"], "Moves focus into the picker, onto the picked day or the clock, where the `ChronoPicker` keys apply.")
+                .key(["Escape"], "Moves focus back to the text.")
+                .handles([
+                    "Focus opens the dropdown and stays in the text, so you can type at once.",
+                    "A pick that closes the dropdown moves focus back to the text.",
+                    "Focus leaving both the text and the dropdown closes it.",
+                    "A mouse click in the dropdown leaves focus in the text.",
+                ]),
             lead: rsx! {
                 Text {
                     "A text field for every date and time value, with a "
@@ -307,17 +316,6 @@ pub fn ChronoFieldPage() -> Element {
                     " is text it cannot read. A screen reader hears each column's value with its unit, "
                     Code { source: "2 hours" }
                     "."
-                }
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Focus opens the dropdown and stays in the text, so you can type at once. "
-                    Kbd { "↓" } " moves focus into the picker, onto the picked day or the clock, where the "
-                    Code { source: "ChronoPicker" }
-                    " keys apply. "
-                    Kbd { "Escape" } " goes back to the text, and so does a pick that closes the dropdown. "
-                    "Focus leaving both the text and the dropdown closes it. A mouse click in the dropdown leaves focus in the text."
                 }
             }
         }

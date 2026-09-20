@@ -66,26 +66,31 @@ holds selects nothing and warns. The hidden input posts `Options::value()`.
 
 ## Accessibility
 
-| Key | State | Effect |
-|---|---|---|
-| `ArrowDown` / `ArrowUp` / `ArrowRight` / `Enter` / `Space` | closed | Opens on the committed path, or with the cursor on the first (Up: last) enabled root |
-| `Home` / `End` | closed | Opens with the cursor on the first/last enabled root |
-| A letter | not searchable | The next enabled row of the cursor's column starting with the typed text. A closed list opens on the roots |
-| `ArrowDown` / `ArrowUp` | open | Moves within the cursor's column, skipping disabled rows |
-| `Home` / `End` | open | The first/last enabled row of that column |
-| `ArrowRight` | open, `"columns"` | Expands the cursor's node, cursor onto its first enabled child |
-| `ArrowLeft` | open, `"columns"` | Up one level. At the root, nothing |
-| `Enter` | open, leaf | Commits its value and closes. On the committed leaf it keeps the value (clears it with `allow_deselect`) |
-| `Enter` | open, branch | Expands. Commits too, with `any_level` |
-| `Space` | open, not searchable | As `Enter` |
-| `Tab` / `Alt+ArrowUp` | open | Commits the cursor's row if `Enter` would, closes, and (Tab) moves on |
-| `Escape` | open | Closes and keeps the value |
+### Keyboard
 
-In `"paths"`, and so while searching, `ArrowLeft` and `ArrowRight` move the
-search box's caret.
+| Key | Action |
+|---|---|
+| `Down`, `Up`, `Right`, `Enter` or `Space` | Closed: opens on the committed path, or with the cursor on the first enabled root (`Up`: the last). |
+| `Home` or `End` | Closed: opens with the cursor on the first or last enabled root. Open: moves to the first or last enabled row of the column. |
+| `Letter` | Unless searchable: moves to the next enabled row of the column starting with the typed text. A closed list opens on the roots. |
+| `Down` or `Up` | Open: moves within the column, skipping disabled rows. |
+| `Right` | Open, in `"columns"`: expands the row, the cursor onto its first enabled child. |
+| `Left` | Open, in `"columns"`: up one level. At the root, nothing. |
+| `Enter` | Open, on a leaf: picks it and closes. On the committed leaf it keeps the value, or clears it with `allow_deselect`. |
+| `Enter` | Open, on a branch: expands it. Picks it too, with `any_level`. |
+| `Space` | Open, unless searchable: as `Enter`. |
+| `Tab` or `Alt+Up` | Open: picks the cursor's row if `Enter` would, and closes. `Tab` moves on. |
+| `Escape` | Open: closes and keeps the value. |
 
-Without a `label`, set `aria_label`. Otherwise screen readers announce an
-unnamed combobox.
+### Libero handles
+
+- In `"paths"`, and so while searching, `Left` and `Right` move the search
+  box's caret.
+
+### You must
+
+- Without a `label`, set `aria_label`. Otherwise screen readers announce an
+  unnamed combobox.
 
 ## Props
 

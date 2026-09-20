@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, Text, TextField};
 
@@ -57,6 +57,16 @@ pub fn TextFieldPage() -> Element {
                         .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
                 ]).extends("input"),
             ],
+            accessibility: a11y()
+                .handles([
+                    "A string `description` or `helper` is read with the input.",
+                    "An error status marks the input invalid, a warning does not.",
+                ])
+                .must([
+                    "Leave `label` unset only when something else names the field, such as an `aria_label`.",
+                    "Markup in `description` or `helper` is shown but not read, so its accessibility is yours.",
+                    "A `leading` or `trailing` slot is not read with the input. When it is text that belongs to the value, such as a unit or a counter, set `describe_leading` or `describe_trailing`.",
+                ]),
             lead: rsx! {
                 Text {
                     "A single-line text field. Like every field, it stacks a label, a description, "
@@ -171,32 +181,6 @@ pub fn TextFieldPage() -> Element {
                         oninput: move |next| value.set(next),
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Leave "
-                    Code { source: "label" }
-                    " unset only when something else names the field, such as an "
-                    Code { source: "aria_label" }
-                    ". A string "
-                    Code { source: "description" }
-                    " or "
-                    Code { source: "helper" }
-                    " is read with the input. Markup in either is shown but not read, so its "
-                    "accessibility is yours."
-                }
-                Text {
-                    "A "
-                    Code { source: "leading" }
-                    " or "
-                    Code { source: "trailing" }
-                    " slot is not read with the input. When it is text that belongs to the value, "
-                    "such as a unit or a counter, set "
-                    Code { source: "describe_leading" }
-                    " or "
-                    Code { source: "describe_trailing" }
-                    ". An error status marks the input invalid, a warning does not."
-                }
             }
         }
     }

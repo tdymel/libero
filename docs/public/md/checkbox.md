@@ -58,7 +58,15 @@ Checkbox {
 
 ## Accessibility
 
-Space toggles the checkbox. Without a visible label, set `aria_label`.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Space` | Toggles the checkbox. |
+
+### You must
+
+- Without a visible label, set `aria_label`.
 
 ## Props
 

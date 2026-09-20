@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, Input, Text};
 
@@ -51,6 +51,12 @@ pub fn ChipPage() -> Element {
                 prop("children", "Element")
                     .doc("The label, cut at the chip's edge. Text and `Icon` only."),
             ])],
+            accessibility: a11y()
+                .key(["Space"], "Toggles a selectable chip.")
+                .handles(["A `readonly` chip keeps its tab stop and ignores the toggle."])
+                .must([
+                    "Keep `children` to text and `Icon`: a selectable chip is a `<label>`, which takes the clicks of any control inside it.",
+                ]),
             lead: rsx! {
                 Text {
                     "A compact token. With "
@@ -134,20 +140,6 @@ pub fn ChipPage() -> Element {
                         "rust"
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Space toggles a selectable chip. A "
-                    Code { source: "readonly" }
-                    " one keeps its tab stop and ignores the toggle. Keep "
-                    Code { source: "children" }
-                    " to text and "
-                    Code { source: "Icon" }
-                    ", because a selectable chip is a "
-                    Code { source: "label" }
-                    ", which takes the clicks of any control inside it."
-                }
             }
         }
     }

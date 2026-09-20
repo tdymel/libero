@@ -127,9 +127,20 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Space toggles a selectable chip. A `readonly` one keeps its tab stop and
-ignores the toggle. Keep `children` to text and `Icon`, because a selectable
-chip is a `<label>`, which takes the clicks of any control inside it.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Space` | Toggles a selectable chip. |
+
+### Libero handles
+
+- A `readonly` chip keeps its tab stop and ignores the toggle.
+
+### You must
+
+- Keep `children` to text and `Icon`: a selectable chip is a `<label>`, which
+  takes the clicks of any control inside it.
 
 ## Props
 

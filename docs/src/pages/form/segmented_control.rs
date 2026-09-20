@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, or_unset, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, or_unset, prop, props};
 use crate::icons::{AlignCenterIcon, AlignLeftIcon, AlignRightIcon};
 use dioxus::prelude::*;
 use libero::components::{
@@ -173,6 +171,12 @@ pub fn SegmentedControlPage() -> Element {
                         .doc("Drawn in place of the name, such as an icon and text. `name` still names the segment for screen readers."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Tab"], "Enters and leaves the whole control.")
+                .key(["Left", "Right", "Up", "Down"], "Move the selection.")
+                .key(["Space"], "Picks the focused segment.")
+                .key(["Enter"], "Outside a `Form`: picks the focused segment. Inside one: submits the form, as on a native radio.")
+                .must(["Without a visible label, spread `\"aria-label\"`, since the segments name the options, not the question."]),
             lead: rsx! {
                 Text {
                     "A connected strip of segments over an enum, exactly one of them selected. "
@@ -311,18 +315,6 @@ pub fn SegmentedControlPage() -> Element {
                         onchange: move |next| alignment.set(next),
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "The arrow keys move the selection, and Tab enters and leaves the whole "
-                    "control. Space picks the focused segment. Outside a "
-                    Code { source: "Form" }
-                    " Enter does too. Inside one, Enter submits the form, as on a native radio. "
-                    "Without a visible label, spread "
-                    Code { source: "\"aria-label\"" }
-                    ", since the segments name the options, not the question."
-                }
             }
         }
     }

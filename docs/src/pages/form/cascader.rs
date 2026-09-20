@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Cascader, CascaderOption, Code, FieldStatus, Flex, Text},
@@ -139,6 +137,20 @@ pub fn CascaderPage() -> Element {
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the field from the tab order and the post instead."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Down", "Up", "Right", "Enter", "Space"], "Closed: opens on the committed path, or with the cursor on the first enabled root (`Up`: the last).")
+                .key(["Home", "End"], "Closed: opens with the cursor on the first or last enabled root. Open: moves to the first or last enabled row of the column.")
+                .key(["Letter"], "Unless searchable: moves to the next enabled row of the column starting with the typed text. A closed list opens on the roots.")
+                .key(["Down", "Up"], "Open: moves within the column, skipping disabled rows.")
+                .key(["Right"], "Open, in `\"columns\"`: expands the row, the cursor onto its first enabled child.")
+                .key(["Left"], "Open, in `\"columns\"`: up one level. At the root, nothing.")
+                .key(["Enter"], "Open, on a leaf: picks it and closes. On the committed leaf it keeps the value, or clears it with `allow_deselect`.")
+                .key(["Enter"], "Open, on a branch: expands it. Picks it too, with `any_level`.")
+                .key(["Space"], "Open, unless searchable: as `Enter`.")
+                .key(["Tab", "Alt+Up"], "Open: picks the cursor's row if `Enter` would, and closes. `Tab` moves on.")
+                .key(["Escape"], "Open: closes and keeps the value.")
+                .handles(["In `\"paths\"`, and so while searching, `Left` and `Right` move the search box's caret."])
+                .must(["Without a `label`, set `aria_label`. Otherwise screen readers announce an unnamed combobox."]),
             lead: rsx! {
                 Text {
                     "Picks one option from a tree, one level at a time. The value is that option's "
@@ -232,28 +244,6 @@ pub fn CascaderPage() -> Element {
                         Text { size: "sm", "value: {chosen():?}" }
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "The arrows, Enter, Space, Home and End open the list. Inside it, ArrowUp and "
-                    "ArrowDown move within a column and skip disabled rows. ArrowRight goes into "
-                    "the children and ArrowLeft back up. Enter picks a leaf and expands a branch, "
-                    "and with "
-                    Code { source: "any_level" }
-                    " it picks the branch too. Escape closes without a change. Unless the list "
-                    "is searchable, Space acts like Enter and typing a letter jumps to a row. "
-                    "In "
-                    Code { source: "\"paths\"" }
-                    ", and so while searching, ArrowLeft and ArrowRight move the search box's caret."
-                }
-                Text {
-                    "Without a "
-                    Code { source: "label" }
-                    ", set "
-                    Code { source: "aria_label" }
-                    ". Otherwise screen readers announce an unnamed combobox."
-                }
             }
         }
     }

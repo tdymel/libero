@@ -96,10 +96,21 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Arrow Up and Arrow Down step the value, Page Up and Page Down ten steps, with
-or without `steppers`. The stepper buttons are not tab stops, since the arrow
-keys do the same from the field. Leave `label` unset only when something else
-names the field.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Up` or `Down` | Step the value, with or without `steppers`. |
+| `PageUp` or `PageDown` | Step the value ten steps. |
+
+### Libero handles
+
+- The stepper buttons are not tab stops, since the arrow keys do the same from
+  the field.
+
+### You must
+
+- Leave `label` unset only when something else names the field.
 
 ## Props
 

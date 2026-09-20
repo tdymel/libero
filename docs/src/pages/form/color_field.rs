@@ -1,7 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{
-    Code, ColorCode, ColorField, FieldStatus, Flex, Kbd, SliderChangeEvent, Swatches, Text,
+    Code, ColorCode, ColorField, FieldStatus, Flex, SliderChangeEvent, Swatches, Text,
 };
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
@@ -67,6 +67,16 @@ pub fn ColorFieldPage() -> Element {
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
                 ]).extends("input"),
             ],
+            accessibility: a11y()
+                .key(["Down"], "Moves focus into the picker, onto the saturation area or the first swatch, where the `ColorPicker` keys apply.")
+                .key(["Escape"], "Moves focus back to the text.")
+                .key(["Tab", "Shift+Tab"], "Past either end of the dropdown: leaves the field.")
+                .handles([
+                    "Focus opens the dropdown and stays in the text, so typing works at once.",
+                    "A swatch that closes the dropdown moves focus back to the text.",
+                    "Focus leaving both the text and the dropdown closes it.",
+                    "A mouse click in the dropdown leaves focus in the text.",
+                ]),
             lead: rsx! {
                 Text {
                     "A text field holding a "
@@ -161,18 +171,6 @@ pub fn ColorFieldPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     ColorFieldDemo { values }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Focus opens the dropdown and stays in the text, so typing works at once. "
-                    Kbd { "↓" } " moves focus into the picker, onto the saturation area or the first swatch, where the "
-                    Code { source: "ColorPicker" }
-                    " keys apply. "
-                    Kbd { "Escape" } " goes back to the text, and so does a swatch that closes the dropdown. "
-                    Kbd { "Tab" } " past either end of the dropdown leaves the field. "
-                    "Focus leaving both the text and the dropdown closes it. A mouse click in the dropdown leaves focus in the text."
-                }
             }
         }
     }

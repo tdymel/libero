@@ -114,21 +114,29 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The arrows move one step. Shift with an arrow, PageUp and PageDown move
-`big_step` steps, and Home and End jump to the ends. With `step: 0.0` a step is
-1% of the range.
+### Keyboard
 
-Without a `label`, set the `aria_label` prop. Put in `attributes`, it would name
-the wrapper instead of the thumb. Pass `format` when a bare number does not say
-the unit.
+| Key | Action |
+|---|---|
+| `Left`, `Right`, `Up` or `Down` | Move one step. With `step: 0.0` a step is 1% of the range. |
+| `Shift+Arrow`, `PageUp` or `PageDown` | Move `big_step` steps. |
+| `Home` or `End` | Jump to the ends. |
 
-To translate a discrete slider, pass `format`. It replaces `SliderValue::label`
-in the bubble, the captions and `aria-valuetext`, and runs during render, so it
-can read the locale from context.
+### Libero handles
 
-On a discrete slider the mark captions are hidden from screen readers, since the
-thumb already names each value. On a continuous one they stay, since they can
-say more than the number.
+- `format` replaces `SliderValue::label` in the bubble, the captions and
+  `aria-valuetext`, and runs during render, so it can read the locale from
+  context.
+- On a discrete slider the mark captions are hidden from screen readers, since
+  the thumb already names each value. On a continuous one they stay, since they
+  can say more than the number.
+
+### You must
+
+- Without a `label`, set the `aria_label` prop. Put in `attributes`, it would
+  name the wrapper instead of the thumb.
+- Pass `format` when a bare number does not say the unit, and to translate a
+  discrete slider.
 
 ## Props
 

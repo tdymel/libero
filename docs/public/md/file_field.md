@@ -64,16 +64,27 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The field is a group named by its label, holding the picked files and a Browse
-button. Enter or Space on the button opens the picker, and so does a click
-anywhere on the field. Without a `label`, pass `aria_label`, which names the
-Browse button.
+### Keyboard
 
-In the `input` variant the files are one tab stop. Arrow Left and Arrow Right
-move along them, Home and End jump to the first and last, and Backspace or
-Delete removes the focused file. On the Browse button, Arrow Left moves to the
-last file and Backspace removes it. In the `dropzone` variant each card's
-remove button is its own tab stop.
+| Key | Action |
+|---|---|
+| `Enter` or `Space` | On the Browse button: opens the picker. A click anywhere on the field opens it too. |
+| `Left` or `Right` | `input` variant: moves along the files. |
+| `Home` or `End` | `input` variant: jumps to the first or last file. |
+| `Backspace` or `Delete` | `input` variant: removes the focused file. |
+| `Left` | On the Browse button: moves to the last file. |
+| `Backspace` | On the Browse button: removes the last file. |
+
+### Libero handles
+
+- The field is a group named by its label, holding the picked files and a
+  Browse button.
+- In the `input` variant the files are one tab stop.
+- In the `dropzone` variant each card's remove button is its own tab stop.
+
+### You must
+
+- Without a `label`, pass `aria_label`, which names the Browse button.
 
 ## Props
 

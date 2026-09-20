@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -267,6 +267,18 @@ pub fn SelectPage() -> Element {
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Down", "Up", "Enter", "Space"], "Closed: opens the list.")
+                .key(["Home", "End"], "Closed: opens the list at the first or last row. Open: jumps to the first or last row.")
+                .key(["Up", "Down"], "Open: move the highlight.")
+                .key(["Enter", "Space"], "Open: picks the highlighted row.")
+                .key(["Tab", "Alt+Up"], "Open: pick the highlighted row and close.")
+                .key(["Escape"], "Open: closes without a pick.")
+                .key(["Letter"], "Jumps to a matching label. \"b\", \"e\", \"r\" typed quickly finds Berlin, and a lone \"b\" after a pause cycles the rows starting with it. On a closed trigger this changes the value in place, as on a native `<select>`.")
+                .handles([
+                    "Disabled options are read out but skipped.",
+                    "With `searchable` the search box takes over typing and holds the focus while the list is open.",
+                ]),
             lead: rsx! {
                 Text {
                     "A listbox over an enum, in the same frame as every other field. Unlike "
@@ -410,24 +422,6 @@ pub fn SelectPage() -> Element {
                         onchange: move |next| value.set(next),
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Closed, the trigger opens on ArrowDown, ArrowUp, Enter or Space, and on Home "
-                    "or End at the first or last row. Open, the arrows move the highlight, Home "
-                    "and End jump to the ends, and Enter or Space picks. Tab and Alt+ArrowUp pick "
-                    "the highlighted row and close. Escape closes without a pick."
-                }
-                Text {
-                    "Typing jumps to a matching label. \"b\", \"e\", \"r\" typed quickly finds "
-                    "Berlin, and a lone \"b\" after a pause cycles the rows starting with it. On a "
-                    "closed trigger this changes the value in place, as on a native "
-                    Code { source: "<select>" }
-                    ". Disabled options are read out but skipped. With "
-                    Code { source: "searchable" }
-                    " the search box takes over typing and holds the focus while the list is open."
-                }
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Checkbox, Code, FieldStatus, Text};
 
@@ -58,6 +58,9 @@ pub fn CheckboxPage() -> Element {
                         .doc("`card` draws the checkbox as a bordered surface you can click anywhere. Pair it with a `description`. On the web a link inside the card keeps its own click. Natively the whole card toggles."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Space"], "Toggles the checkbox.")
+                .must(["Without a visible label, set `aria_label`."]),
             lead: rsx! {
                 Text {
                     "A checkbox with its label beside the box and the description, helper and "
@@ -175,14 +178,6 @@ pub fn CheckboxPage() -> Element {
                         disabled: (values.str("disabled") == "true").then_some(true),
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Space toggles the checkbox. Without a visible label, set "
-                    Code { source: "aria_label" }
-                    "."
-                }
             }
         }
     }

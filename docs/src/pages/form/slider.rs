@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -277,6 +275,18 @@ pub fn SliderPage() -> Element {
                 ])
                 .without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Left", "Right", "Up", "Down"], "Move one step. With `step: 0.0` a step is 1% of the range.")
+                .key(["Shift+Arrow", "PageUp", "PageDown"], "Move `big_step` steps.")
+                .key(["Home", "End"], "Jump to the ends.")
+                .handles([
+                    "`format` replaces `SliderValue::label` in the bubble, the captions and `aria-valuetext`, and runs during render, so it can read the locale from context.",
+                    "On a discrete slider the mark captions are hidden from screen readers, since the thumb already names each value. On a continuous one they stay, since they can say more than the number.",
+                ])
+                .must([
+                    "Without a `label`, set the `aria_label` prop. Put in `attributes`, it would name the wrapper instead of the thumb.",
+                    "Pass `format` when a bare number does not say the unit, and to translate a discrete slider.",
+                ]),
             lead: rsx! {
                 Text {
                     "A value you drag along a track. It slides over any "
@@ -446,20 +456,6 @@ pub fn SliderPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_readout),
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "The arrows move one step. Shift with an arrow, PageUp and PageDown move "
-                    Code { source: "big_step" }
-                    " steps, and Home and End jump to the ends. Without a "
-                    Code { source: "label" }
-                    ", set the "
-                    Code { source: "aria_label" }
-                    " prop, and pass "
-                    Code { source: "format" }
-                    " when a bare number does not say the unit."
-                }
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{
     Button, Checkbox, Code, FieldName, Fields, Fieldset, Flex, Form, PasswordField, Rule, Text,
@@ -166,6 +166,12 @@ pub fn FormPage() -> Element {
                         .doc("What the field posts as, and how rules address it. A path from `#[derive(Fields)]` also binds the field to the form's value, unless the field has a handler of its own. `T` is the field's value type."),
                 ]).without_base_props(),
             ],
+            accessibility: a11y()
+                .handles(["A form becomes a `form` landmark only once it has a name. A form without a name is still valid."])
+                .must([
+                    "Name the form when the page holds more than one form, or when the form is the page's main task, such as a checkout. Pass `aria-labelledby` pointing at a visible heading, or `aria-label`.",
+                    "Join intro text through `aria-describedby`, if any.",
+                ]),
             lead: rsx! {
                 Text {
                     "A "
@@ -198,20 +204,6 @@ pub fn FormPage() -> Element {
                         handle: values.str("form") == "true",
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "A form becomes a "
-                    Code { source: "form" }
-                    " landmark only once it has a name. Name it when the page holds more than one "
-                    "form, or when the form is the page's main task, such as a checkout. Pass "
-                    Code { source: "aria-labelledby" }
-                    " pointing at a visible heading, or "
-                    Code { source: "aria-label" }
-                    ". Intro text can join through "
-                    Code { source: "aria-describedby" }
-                    ". A form without a name is still valid."
-                }
             }
         }
     }

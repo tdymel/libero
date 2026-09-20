@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, OptionList, Options, RadioGroup, Text};
 
@@ -137,6 +137,11 @@ pub fn RadioGroupPage() -> Element {
                         .doc("`card` draws the radio as a bordered surface you can click anywhere."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Tab"], "Enters the group at the selected option, or the first one that is not disabled. Pressed again, leaves the group.")
+                .key(["Down", "Right"], "Moves to the next option and selects it, wrapping at the end.")
+                .key(["Up", "Left"], "Moves to the previous option and selects it, wrapping at the start.")
+                .must(["Without a visible `label`, spread `\"aria-label\"`, since the option labels do not say what the question is."]),
             lead: rsx! {
                 Text {
                     "A group of radios over an enum, exactly one of them selected. The group "
@@ -252,18 +257,6 @@ pub fn RadioGroupPage() -> Element {
                     }
                 },
                 wrap: Wrap(|_values, code| format!("{PLAN_ENUM}{code}")),
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Tab enters the group at the selected option, or the first one that is not "
-                    "disabled, and Tab leaves it. The arrow keys move to the next or previous "
-                    "option and select it, wrapping at the ends. Without a visible "
-                    Code { source: "label" }
-                    ", spread "
-                    Code { source: "\"aria-label\"" }
-                    ", since the option labels do not say what the question is."
-                }
             }
         }
     }

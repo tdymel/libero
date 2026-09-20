@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{
     AlphaSlider, Code, ColorCode, ColorPicker, ColorSwatch, Flex, HueSlider, SliderChangeEvent,
@@ -146,6 +144,14 @@ pub fn ColorPickerPage() -> Element {
                     prop("children", "Element").doc("Drawn on the color, such as a check mark, in black or white, whichever reads."),
                 ]),
             ],
+            accessibility: a11y()
+                .handles([
+                    "Each thumb is a slider with the usual keys.",
+                    "The saturation panel meets the 24px target size of WCAG 2.5.8 at every size.",
+                    "The swatch equal to the value is pressed and checked.",
+                ])
+                .must(["Name swatches with `Swatches::labelled`. By default they are named by their hex, which a screen reader spells out."])
+                .limits(["The hue and alpha tracks meet the 24px target size of WCAG 2.5.8 from `md` up, not at `sm` or `xs`."]),
             lead: rsx! {
                 Text {
                     "A saturation panel and a hue slider, with an optional alpha slider and "
@@ -224,26 +230,6 @@ pub fn ColorPickerPage() -> Element {
                     },
                     _ => rsx! { ColorPickerDemo { values } },
                 },
-            }
-
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Each thumb is a slider with the usual keys. The hue and alpha tracks meet "
-                    "the 24px target size of WCAG 2.5.8 from "
-                    Code { source: "md" }
-                    " up, and not at "
-                    Code { source: "sm" }
-                    " or "
-                    Code { source: "xs" }
-                    ". The saturation panel meets it at every size."
-                }
-                Text {
-                    "The swatch equal to the value is pressed and checked. Swatches are named by "
-                    "their hex, which a screen reader spells out, so name them with "
-                    Code { source: "Swatches::labelled" }
-                    "."
-                }
             }
         }
     }

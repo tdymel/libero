@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -533,6 +533,18 @@ pub fn ComboboxPage() -> Element {
                         .doc("The row's content. Put a long label in `span { \"data-slot\": \"label\" }` to end it in an ellipsis."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Down"], "Opens the list, and moves the highlight down.")
+                .key(["Up"], "Moves the highlight up.")
+                .key(["Home", "End"], "Jumps to the first or last row.")
+                .key(["Enter"], "Picks the highlighted row.")
+                .key(["Escape", "Tab"], "Close the list.")
+                .handles(["Focus stays on your trigger, so typing keeps working."])
+                .must([
+                    "Spread `state.a11y_attributes()` on your trigger, or screen readers cannot tie the list to it.",
+                    "Close the list on your trigger's blur, or an enclosing `Modal` stops hearing Escape while the list stays open.",
+                    "Name the trigger: it becomes a `combobox`, which takes no name from its content. Point a button trigger's `aria-labelledby` at a visible label, and give a text field a `label`.",
+                ]),
             lead: rsx! {
                 Text {
                     "A listbox that hangs off whatever control you put in it. It holds no "
@@ -571,28 +583,6 @@ pub fn ComboboxPage() -> Element {
                     "fetching" => rsx! { FetchingDemo { values } },
                     _ => rsx! { SelectDemo { values } },
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Focus stays on your trigger, so typing keeps working. Spread "
-                    Code { source: "state.a11y_attributes()" }
-                    " on it, or screen readers cannot tie the list to it. ArrowDown opens and "
-                    "moves down, ArrowUp moves up, Home and End jump to the ends, Enter picks "
-                    "and Escape and Tab close. Close the list on your trigger's blur, or an "
-                    "enclosing "
-                    Code { source: "Modal" }
-                    " stops hearing Escape while the list stays open."
-                }
-                Text {
-                    "The trigger becomes a "
-                    Code { source: "combobox" }
-                    ", which takes no name from its content: point a button trigger's "
-                    Code { source: "aria-labelledby" }
-                    " at a visible label, and give a text field a "
-                    Code { source: "label" }
-                    "."
-                }
             }
         }
     }

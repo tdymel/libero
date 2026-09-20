@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, FileField, Files, Flex, Text};
 
@@ -87,6 +87,19 @@ pub fn FileFieldPage() -> Element {
                 ])
                 .without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Enter", "Space"], "On the Browse button: opens the picker. A click anywhere on the field opens it too.")
+                .key(["Left", "Right"], "`input` variant: moves along the files.")
+                .key(["Home", "End"], "`input` variant: jumps to the first or last file.")
+                .key(["Backspace", "Delete"], "`input` variant: removes the focused file.")
+                .key(["Left"], "On the Browse button: moves to the last file.")
+                .key(["Backspace"], "On the Browse button: removes the last file.")
+                .handles([
+                    "The field is a group named by its label, holding the picked files and a Browse button.",
+                    "In the `input` variant the files are one tab stop.",
+                    "In the `dropzone` variant each card's remove button is its own tab stop.",
+                ])
+                .must(["Without a `label`, pass `aria_label`, which names the Browse button."]),
             lead: rsx! {
                 Text {
                     "Files picked from the system dialog or dropped on the control. It shows "
@@ -164,27 +177,6 @@ pub fn FileFieldPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     FileFieldDemo { values }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "The field is a group named by its label, holding the picked files and a "
-                    "Browse button. Enter or Space on the button opens the picker, and so does a "
-                    "click anywhere on the field. Without a "
-                    Code { source: "label" }
-                    ", pass "
-                    Code { source: "aria_label" }
-                    ", which names the Browse button."
-                }
-                Text {
-                    "In the "
-                    Code { source: "input" }
-                    " variant the files are one tab stop. Arrow Left and Arrow Right move along "
-                    "them, Home and End jump to the first and last, and Backspace or Delete "
-                    "removes the focused file. On the Browse button, Arrow Left moves to the last "
-                    "file and Backspace removes it. In the "
-                    Code { source: "dropzone" }
-                    " variant each card's remove button is its own tab stop."
-                }
             }
         }
     }

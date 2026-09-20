@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, Fields, Fieldset, Input, Rule, Text, TextField};
 
@@ -107,6 +107,13 @@ pub fn FieldsetPage() -> Element {
                     .doc("Disables every field inside, nested fieldsets included. A field's own `disabled: false` cannot re-enable it."),
                 prop("children", "Element").default("required").doc("The fields."),
             ]).extends("fieldset")],
+            accessibility: a11y()
+                .handles([
+                    "A native `<fieldset>`, named by its `<legend>`, the `label`.",
+                    "`description`, `helper` and the group's status join its `aria-describedby`.",
+                    "`disabled` reaches every field inside, Libero's own and nested fieldsets included, not only native controls.",
+                ])
+                .must(["Give the group a `label`, so screen readers announce what its fields are for."]),
             lead: rsx! {
                 Text {
                     "Several fields that form one value, such as an address or a date range, under "

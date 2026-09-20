@@ -150,10 +150,19 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The arrow keys move the selection, and Tab enters and leaves the whole control.
-Space picks the focused segment. Outside a `Form` Enter does too. Inside one,
-Enter submits the form, as on a native radio. Without a visible label, spread
-`"aria-label"`, since the segments name the options, not the question.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Tab` | Enters and leaves the whole control. |
+| `Left`, `Right`, `Up` or `Down` | Move the selection. |
+| `Space` | Picks the focused segment. |
+| `Enter` | Outside a `Form`: picks the focused segment. Inside one: submits the form, as on a native radio. |
+
+### You must
+
+- Without a visible label, spread `"aria-label"`, since the segments name the
+  options, not the question.
 
 ## Props
 

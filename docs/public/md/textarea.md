@@ -36,10 +36,15 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Leave `label` unset only when something else names the field. The visible
-counter is hidden from screen readers. Instead, a polite status says how many
-characters are left once a tenth of the limit remains. Its words come from the
-localization's `textarea.characters_left`.
+### Libero handles
+
+- The visible counter is hidden from screen readers. Instead, a polite status
+  says how many characters are left once a tenth of the limit remains. Its
+  words come from the localization's `textarea.characters_left`.
+
+### You must
+
+- Leave `label` unset only when something else names the field.
 
 ## Props
 

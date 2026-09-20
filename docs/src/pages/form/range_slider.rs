@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -282,6 +280,18 @@ pub fn RangeSliderPage() -> Element {
                 ])
                 .without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Left", "Right", "Up", "Down"], "Move the focused thumb one step.")
+                .key(["Shift+Arrow", "PageUp", "PageDown"], "Move the focused thumb `big_step` steps.")
+                .key(["Home", "End"], "Move the focused thumb to the end, stopping at the other thumb.")
+                .handles([
+                    "Each thumb is named by the label plus its own word, such as \"Price Minimum\" and \"Price Maximum\", from the localization's `slider.minimum` and `slider.maximum`.",
+                    "On a discrete range the mark captions are hidden from screen readers, since the thumbs already name each value.",
+                ])
+                .must([
+                    "Set `aria_label_from` and `aria_label_to` when those words do not fit.",
+                    "Set `format` when a bare number does not say the unit. To translate a discrete range, pass `format`, as on a `Slider`.",
+                ]),
             lead: rsx! {
                 Text {
                     "Two thumbs on one track, for a span instead of a point. It takes the same "
@@ -437,23 +447,6 @@ pub fn RangeSliderPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_readout),
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "The keys move the focused thumb. The arrows move one step, Shift with an "
-                    "arrow, PageUp and PageDown move "
-                    Code { source: "big_step" }
-                    " steps, and Home and End jump to the end, stopping at the other thumb."
-                }
-                Text {
-                    "Each thumb is named by the label plus its own word, such as \"Price "
-                    "Minimum\" and \"Price Maximum\". Set "
-                    Code { source: "aria_label_from" }
-                    " and "
-                    Code { source: "aria_label_to" }
-                    " when those words do not fit."
-                }
             }
         }
     }

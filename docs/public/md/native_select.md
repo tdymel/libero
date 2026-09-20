@@ -163,8 +163,14 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Without a visible `label`, set `aria_label`. A select with no name is a defect.
-Your own `aria-describedby` ids come first, before the captions.
+### Libero handles
+
+- Your own `aria-describedby` ids come first, before the captions.
+
+### You must
+
+- Without a visible `label`, set `aria_label`. A select with no name is a
+  defect.
 
 ## Props
 

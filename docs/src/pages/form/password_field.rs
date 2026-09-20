@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, PasswordField, Text};
 
@@ -53,6 +53,12 @@ pub fn PasswordFieldPage() -> Element {
                         .doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
                 ]).extends("input"),
             ],
+            accessibility: a11y()
+                .handles(["The reveal button is a toggle with one name, so a screen reader hears it as pressed or not."])
+                .must([
+                    "Leave `label` unset only when something else names the field.",
+                    "Set `autocomplete` so password managers can fill the field: `\"new-password\"` on a sign-up form, `\"current-password\"` on a sign-in form.",
+                ]),
             lead: rsx! {
                 Text {
                     "A "
@@ -141,20 +147,6 @@ pub fn PasswordFieldPage() -> Element {
                         oninput: move |next| value.set(next),
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "Leave "
-                    Code { source: "label" }
-                    " unset only when something else names the field. The reveal button is a "
-                    "toggle with one name, so a screen reader hears it as pressed or not. Set "
-                    Code { source: "autocomplete" }
-                    " so password managers can fill the field: "
-                    Code { source: "\"new-password\"" }
-                    " on a sign-up form, "
-                    Code { source: "\"current-password\"" }
-                    " on a sign-in form."
-                }
             }
         }
     }

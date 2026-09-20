@@ -1,8 +1,8 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Chip, Code, FieldStatus, MultiSelect, OptionItem, OptionList, Options,
+        ActionIcon, Chip, FieldStatus, MultiSelect, OptionItem, OptionList, Options,
         SelectFilterArgs, SelectOptionArgs, SelectionArgs, Text,
     },
     sx::sx,
@@ -307,6 +307,19 @@ pub fn MultiSelectPage() -> Element {
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` drops the select from the tab order and the post instead."),
                 ]),
             ],
+            accessibility: a11y()
+                .key(["Down", "Up", "Enter", "Space"], "Closed: opens the list.")
+                .key(["Home", "End"], "Closed: opens the list at the first or last row.")
+                .key(["Up", "Down"], "Open: move the highlight.")
+                .key(["Enter", "Space"], "Open: toggles the row and keeps the list open.")
+                .key(["Escape", "Tab", "Alt+Up"], "Open: close the list.")
+                .key(["Left", "Right"], "Move over the chips.")
+                .key(["Backspace", "Delete"], "Removes the chip you are on, or the last one. Inside the search box `Backspace` only edits the query.")
+                .key(["Letter"], "Jumps to a matching label and opens the list there. Unlike on `Select`, it never changes the value in place, since a pick here toggles.")
+                .handles([
+                    "Disabled options are read out but skipped.",
+                    "With `searchable` the search box takes over typing and holds the focus while the list is open.",
+                ]),
             lead: rsx! {
                 Text {
                     "A listbox over an enum that holds any number of its options, drawn as chips "
@@ -437,24 +450,6 @@ pub fn MultiSelectPage() -> Element {
                         onchange: move |next| value.set(next),
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Closed, the trigger opens on ArrowDown, ArrowUp, Enter or Space, and on Home "
-                    "or End at the first or last row. Open, the arrows move the highlight, Enter "
-                    "or Space toggles the row and keeps the list open, and Escape, Tab or "
-                    "Alt+ArrowUp close it. ArrowLeft and ArrowRight move over the chips, and "
-                    "Backspace or Delete removes the chip you are on, or the last one."
-                }
-                Text {
-                    "Typing jumps to a matching label and opens the list there. Unlike on "
-                    Code { source: "Select" }
-                    ", it never changes the value in place, since a pick here toggles. Disabled "
-                    "options are read out but skipped. With "
-                    Code { source: "searchable" }
-                    " the search box takes over typing and holds the focus while the list is open."
-                }
             }
         }
     }

@@ -67,10 +67,18 @@ RadioGroup {
 
 ## Accessibility
 
-Tab enters the group at the selected option, or the first one that is not
-disabled, and Tab leaves it. The arrow keys move to the next or previous option
-and select it, wrapping at the ends. Without a visible `label`, spread
-`"aria-label"`, since the option labels do not say what the question is.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Tab` | Enters the group at the selected option, or the first one that is not disabled. Pressed again, leaves the group. |
+| `Down` or `Right` | Moves to the next option and selects it, wrapping at the end. |
+| `Up` or `Left` | Moves to the previous option and selects it, wrapping at the start. |
+
+### You must
+
+- Without a visible `label`, spread `"aria-label"`, since the option labels do
+  not say what the question is.
 
 ## Props
 

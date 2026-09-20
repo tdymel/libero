@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{ActionIcon, Chip, Code, FieldStatus, SelectionArgs, TagsField, Text},
@@ -124,6 +124,18 @@ pub fn TagsFieldPage() -> Element {
                     prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable. `disabled` instead drops the field from the tab order and from the post."),
                 ]).extends("input"),
             ],
+            accessibility: a11y()
+                .key(["Backspace"], "On an empty input: removes the last tag.")
+                .key(["Left"], "On an empty input, or with the caret before the typed text: moves onto the tags and keeps the text.")
+                .key(["Left", "Right"], "On the tags: walk them. `Right` past the last returns to the input.")
+                .key(["Delete", "Backspace", "Enter"], "On a tag: removes it.")
+                .key(["Down", "Up"], "With `suggestions`: open the list and move the highlight.")
+                .key(["Enter"], "With `suggestions`: picks the highlighted row.")
+                .key(["Escape"], "With `suggestions`: closes the list.")
+                .handles(["The whole field is one tab stop, plus the clear button when `clearable` shows it."])
+                .must([
+                    "A custom `tag` must make its remove control a button with `tabindex: \"-1\"`. The arrow keys focus it, and without the tabindex each tag adds a tab stop.",
+                ]),
             lead: rsx! {
                 Text {
                     "A field whose value is a list of typed strings, drawn as chips around the "
@@ -255,27 +267,6 @@ pub fn TagsFieldPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "The whole field is one tab stop, plus the clear button when "
-                    Code { source: "clearable" }
-                    " shows it. Backspace on an empty input removes the last tag. Arrow Left on "
-                    "an empty input, or with the caret before the typed text, moves onto the tags "
-                    "and keeps the text. The arrows walk them, Delete, Backspace or Enter removes "
-                    "the focused one, and Arrow Right past the last returns to the input."
-                }
-                Text {
-                    "With "
-                    Code { source: "suggestions" }
-                    ", Arrow Down and Arrow Up open the list and move the highlight, Enter picks "
-                    "the highlighted row and Escape closes the list. A custom "
-                    Code { source: "tag" }
-                    " must make its remove control a button with "
-                    Code { source: "tabindex: \"-1\"" }
-                    ". The arrow keys focus it, and without the tabindex each tag adds a tab stop."
-                }
             }
         }
     }
