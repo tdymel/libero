@@ -5,10 +5,10 @@ use libero::{
     theme::PAPER_BORDER_COLOR,
 };
 
-use super::{PropGroup, PropertyTable};
+use super::{A11yDoc, A11yPanel, PropGroup, PropertyTable};
 use crate::{
     Route,
-    icons::{CodeIcon, FileIcon, GitHubIcon, MarkdownIcon},
+    icons::{AccessibilityIcon, CodeIcon, FileIcon, GitHubIcon, MarkdownIcon},
     nav::neighbours,
 };
 
@@ -19,13 +19,14 @@ const REPO: &str = "https://github.com/tdymel/libero/tree/main/";
 enum DocTab {
     Usage,
     Properties,
+    Accessibility,
 }
 
 /// A docs page: its heading, a lead paragraph, and its `DocSection`s.
 ///
 /// `lead` is an `Element` rather than a `String` because most leads embed
-/// `Code` spans in their prose. With `properties` set, the sections move into
-/// a "Usage" tab beside the generated property table.
+/// `Code` spans in their prose. With `properties` or `accessibility` set, the
+/// sections move into a "Usage" tab beside those tabs.
 #[component]
 pub fn DocPage(
     title: String,
@@ -38,9 +39,40 @@ pub fn DocPage(
     #[props(default)]
     markdown: Option<String>,
     #[props(default)] properties: Vec<PropGroup>,
+    /// Fills an "Accessibility" tab; `None` shows no such tab.
+    #[props(default)]
+    accessibility: Option<A11yDoc>,
     children: Element,
 ) -> Element {
     let mut tab = use_signal(|| DocTab::Usage);
+    let tabs: Vec<DocTab> = DocTab::options()
+        .iter()
+        .filter(|tab| match tab {
+            DocTab::Usage => true,
+            DocTab::Properties => !properties.is_empty(),
+            DocTab::Accessibility => accessibility.is_some(),
+        })
+        .cloned()
+        .collect();
+    // Three equal tabs with icons break "Accessibility" mid-word on a phone:
+    // drop the icons there and size each tab to its label.
+    let crowded = tabs.len() > 2;
+    let narrow = "(max-width: 30rem)";
+    let icon_sx = match crowded {
+        true => sx().media(narrow, sx().display("none")),
+        false => sx(),
+    };
+    let tabs_sx = match crowded {
+        true => sx().media(
+            narrow,
+            sx().selector(
+                // Child combinators, or the Tabs page's own demo strip matches too.
+                "& > [role=tablist] > [role=tab]",
+                sx().flex("1 1 auto"),
+            ),
+        ),
+        false => sx(),
+    };
 
     rsx! {
         // Every route is a `DocPage`, so this names each one; `App`'s bare
@@ -117,21 +149,25 @@ pub fn DocPage(
                 }
                 {lead}
             }
-            if properties.is_empty() {
+            if tabs.len() == 1 {
                 {children}
             } else {
                 Tabs {
+                    options: tabs,
                     value: tab(),
                     onchange: move |next| tab.set(next),
                     size: "lg",
                     full_width: true,
-                    option_label: |selected: DocTab| OptionLabel::rich(
+                    sx: tabs_sx,
+                    option_label: move |selected: DocTab| OptionLabel::rich(
                         selected.label(),
                         rsx! {
                             Icon { variant: "standard", size: "md",
+                                sx: icon_sx.clone(),
                                 match selected {
                                     DocTab::Usage => rsx! { FileIcon {} },
                                     DocTab::Properties => rsx! { CodeIcon {} },
+                                    DocTab::Accessibility => rsx! { AccessibilityIcon {} },
                                 }
                             }
                             "{selected.label()}"
@@ -145,6 +181,9 @@ pub fn DocPage(
                         },
                         DocTab::Properties => rsx! {
                             PropertyTable { properties: properties.clone() }
+                        },
+                        DocTab::Accessibility => rsx! {
+                            A11yPanel { doc: accessibility.clone().unwrap_or_default() }
                         },
                     },
                 }

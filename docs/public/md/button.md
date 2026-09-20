@@ -33,9 +33,18 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-A cut label is still the full accessible name. Pass it as `title` too, so
-sighted users can read it on hover. `selected: Some(false)` announces a toggle
-that is off, while an unset `selected` announces no state.
+### Libero handles
+
+- A label cut at the edge is still the full accessible name.
+- `selected: Some(false)` announces a toggle that is off. An unset `selected`
+  announces no state.
+- `focusable_when_disabled` keeps a disabled button in the Tab order, with
+  `aria-disabled`.
+
+### You must
+
+- Pass a label that may be cut as `title` too, so sighted users can read it on
+  hover.
 
 ```rust
 use dioxus::prelude::*;

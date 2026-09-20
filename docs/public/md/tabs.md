@@ -130,12 +130,25 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-Only the selected tab is in the tab order. Left and Right move between tabs and
-select as they go, skipping disabled ones. Home and End jump to the ends. With
-`activation: TabsActivation::Manual`, the keys move only the focus, and Enter
-or Space selects. Name the strip with `aria_label` or `aria_labelledby`, which
-land on the tablist, not the root. If you remove the focused tab from
-`options`, move the focus back to the strip yourself.
+### Keyboard
+
+| Key | Action |
+|---|---|
+| `Tab` | Enters the strip at the selected tab, the only one in the tab order. |
+| `Left` or `Right` | Moves to the previous or next tab and selects it, skipping disabled ones. |
+| `Home` or `End` | Jumps to the first or last tab. |
+| `Enter` or `Space` | With `activation: TabsActivation::Manual`, where the arrows move only the focus: selects the focused tab. |
+
+### Libero handles
+
+- Only the selected tab is in the tab order.
+- `aria_label` and `aria_labelledby` land on the tablist, not the root.
+
+### You must
+
+- Name the strip with `aria_label` or `aria_labelledby`.
+- If you remove the focused tab from `options`, move the focus back to the
+  strip yourself.
 
 
 ## Props

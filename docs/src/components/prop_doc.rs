@@ -164,22 +164,27 @@ fn PropRows(properties: Vec<PropDoc>, base: bool, extends: String) -> Element {
                     }),
                 column("Description")
                     .value(|p: &PropDoc| p.description.clone())
-                    .render(|p: &PropDoc| rsx! {
-                        for (code, run) in code_spans(&p.description) {
-                            if code {
-                                Code { source: run }
-                            } else {
-                                for (em, text) in emphasis_spans(&run) {
-                                    if em {
-                                        em { "{text}" }
-                                    } else {
-                                        "{text}"
-                                    }
-                                }
-                            }
-                        }
-                    }),
+                    .render(|p: &PropDoc| prose(&p.description)),
             ],
+        }
+    }
+}
+
+/// Inline prose with `` `code` `` and `*emphasis*` runs, as the docs write them.
+pub(super) fn prose(text: &str) -> Element {
+    rsx! {
+        for (code, run) in code_spans(text) {
+            if code {
+                Code { source: run }
+            } else {
+                for (em, text) in emphasis_spans(&run) {
+                    if em {
+                        em { "{text}" }
+                    } else {
+                        "{text}"
+                    }
+                }
+            }
         }
     }
 }

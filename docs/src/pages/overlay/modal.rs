@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Dialog, Flex, Text},
@@ -214,6 +212,15 @@ pub fn ModalPage() -> Element {
                         .doc("Dismisses the modal around the content. `use_modal_close()` is the shorthand, for a component outside the render closure."),
                 ]).without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Escape"], "Dismisses the modal, as a backdrop click does.")
+                .key(["Tab", "Shift+Tab"], "Moves the focus within the modal. It does not leave while the modal shows.")
+                .handles([
+                    "Focus moves into the modal, and back to the trigger once it closes.",
+                    "The focus trap, Escape and backdrop dismissal come from the modal. A `Dialog` on its own has none of them.",
+                    "A dismissal settles the `Opening` with `None`, so a handler written for an answer never runs on it.",
+                ])
+                .must(["Name the `Dialog` with its `title`, or `aria_label`."]),
             lead: rsx! {
                 Text {
                     "A modal is a hook, not a component. "
@@ -255,24 +262,6 @@ pub fn ModalPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_hook_call),
-            }
-
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Escape and a backdrop click dismiss the modal, settling the "
-                    Code { source: "Opening" }
-                    " with "
-                    Code { source: "None" }
-                    ", so a handler written for an answer never runs on a dismissal. Focus "
-                    "moves into the modal and back to the trigger once it closes. Name the "
-                    Code { source: "Dialog" }
-                    " with its "
-                    Code { source: "title" }
-                    ", or "
-                    Code { source: "aria_label" }
-                    "."
-                }
             }
         }
     }

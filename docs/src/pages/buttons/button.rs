@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Input, Text};
 
@@ -54,6 +54,13 @@ pub fn ButtonPage() -> Element {
                     .default("required")
                     .doc("The label, on one line. A long one is cut at the edge."),
             ]).extends("button")],
+            accessibility: a11y()
+                .handles([
+                    "A label cut at the edge is still the full accessible name.",
+                    "`selected: Some(false)` announces a toggle that is off. An unset `selected` announces no state.",
+                    "`focusable_when_disabled` keeps a disabled button in the Tab order, with `aria-disabled`.",
+                ])
+                .must(["Pass a label that may be cut as `title` too, so sighted users can read it on hover."]),
             lead: rsx! {
                 Text {
                     "A clickable action, a toggle, or a link when "
@@ -146,17 +153,6 @@ pub fn ButtonPage() -> Element {
                         "Save changes"
                     }
                 },
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "A cut label is still the full accessible name. Pass it as "
-                    Code { source: "title" }
-                    " too, so sighted users can read it on hover. "
-                    Code { source: "selected: Some(false)" }
-                    " announces a toggle that is off, while an unset "
-                    Code { source: "selected" }
-                    " announces no state."
-                }
             }
         }
     }

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, prop, props};
 use crate::icons::FileIcon;
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, Input, OptionLabel, OptionList, Options, Tabs, Text};
@@ -104,6 +104,19 @@ pub fn TabsPage() -> Element {
                         .doc("Drawn in place of the name, such as an icon, via `OptionLabel::rich`. `name` still names the tab. Keep it inline: an `Icon` fits, a `Flex` does not."),
                 ]).without_base_props(),
             ],
+            accessibility: a11y()
+                .key(["Tab"], "Enters the strip at the selected tab, the only one in the tab order.")
+                .key(["Left", "Right"], "Moves to the previous or next tab and selects it, skipping disabled ones.")
+                .key(["Home", "End"], "Jumps to the first or last tab.")
+                .key(["Enter", "Space"], "With `activation: TabsActivation::Manual`, where the arrows move only the focus: selects the focused tab.")
+                .handles([
+                    "Only the selected tab is in the tab order.",
+                    "`aria_label` and `aria_labelledby` land on the tablist, not the root.",
+                ])
+                .must([
+                    "Name the strip with `aria_label` or `aria_labelledby`.",
+                    "If you remove the focused tab from `options`, move the focus back to the strip yourself.",
+                ]),
             lead: rsx! {
                 Text {
                     "A strip of tabs over an enum, with the selected tab's panel below it. "
@@ -185,22 +198,6 @@ pub fn TabsPage() -> Element {
                         },
                     }
                 },
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Only the selected tab is in the tab order. Left and Right move between "
-                    "tabs and select as they go, skipping disabled ones. Home and End jump to "
-                    "the ends. With "
-                    Code { source: "activation: TabsActivation::Manual" }
-                    ", the keys move only the focus, and Enter or Space selects. Name the strip with "
-                    Code { source: "aria_label" }
-                    " or "
-                    Code { source: "aria_labelledby" }
-                    ", which land on the tablist, not the root. If you remove the focused tab from "
-                    Code { source: "options" }
-                    ", move the focus back to the strip yourself."
-                }
             }
         }
     }
