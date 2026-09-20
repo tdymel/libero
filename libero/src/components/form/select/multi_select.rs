@@ -18,57 +18,38 @@ use super::{
 
 field_props! {
     pub struct MultiSelectProps<T: Options> {
-        /// Strictly controlled - pair it with `onchange`. Empty shows
-        /// `placeholder`.
+        /// Strictly controlled: pair it with `onchange`. Empty shows `placeholder`.
         #[props(default)]
         value: Vec<T>,
-        /// Called with the whole selection the caller should hold next.
+        /// The whole selection to hold next.
         #[props(default)]
         onchange: Option<EventHandler<Vec<T>>>,
-        /// The options to list. Defaults to every `Options::options()` - which
-        /// `String` and any other runtime type leave empty, so those pass them
-        /// here.
-        ///
-        /// A `Vec<T>` converts, which is the flat list. An
-        /// [`OptionList`](crate::components::OptionList) adds named groups and
-        /// per-option `disabled`, and a [`Resource`] adds the fetch: the list
-        /// then reads pending against ready itself, and derives the loader,
-        /// `aria-busy` and the held-back empty state from it.
+        /// Defaults to `Options::options()`, empty for runtime types like `String`. A `Vec<T>`,
+        /// an [`OptionList`](crate::components::OptionList) (groups, `disabled`), or a [`Resource`].
         #[props(default, into)]
         options: OptionSource<T>,
-        /// Draws one row's content. Defaults to `Options::label`, in a
-        /// `span { "data-slot": "label" }`, which is what ellipsises a long one.
+        /// Draws one row's content. Defaults to `Options::label` in an ellipsising label slot.
         #[props(default)]
         option: Option<Callback<SelectOptionArgs<T>, Element>>,
-        /// Draws one selected value beside the trigger. Defaults to the label
-        /// in a `Chip` with an x. A caller who overrides it draws the whole
-        /// chip, remove control included - `args.remove` is the wiring, and the
-        /// keyboard stays the control's either way.
+        /// Draws one selected value. Defaults to a `Chip` with an x; an override draws the whole chip.
         #[props(default)]
         selection: Option<Callback<SelectionArgs<T>, Element>>,
         /// Shown while `value` is empty.
         #[props(default)]
         placeholder: Option<String>,
-        /// Emits one hidden input of that name per selected option, carrying
-        /// its `Options::value()`. The trigger is a `div`, so it cannot carry
-        /// the name itself.
-        /// A path - `Order::FIELDS.toppings()` - also binds the selection to
-        /// the surrounding `Form`'s value when there is no `onchange`.
+        /// One hidden input per selected option. A field path also binds to the `Form` without `onchange`.
         #[props(default, into)]
         name: crate::components::form::FieldName<Vec<T>>,
-        /// Rules over the selection, shown once the select loses focus or its
-        /// form is submitted.
+        /// Rules over the selection, shown after blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<Vec<T>>,
         /// Shows an x that empties the selection.
         #[props(default)]
         clearable: Option<bool>,
-        /// Puts a search box at the top of the list. The query survives a pick,
-        /// so several matches of one search can be ticked without retyping it.
+        /// Puts a search box at the top of the list. The query survives a pick.
         #[props(default)]
         searchable: Option<bool>,
-        /// Narrows the options while searching. Defaults to a case-insensitive
-        /// `contains` over `Options::label`.
+        /// Narrows the options while searching. Defaults to a case-insensitive `contains` over the label.
         #[props(default)]
         filter: Option<Callback<SelectFilterArgs<T>, bool>>,
         /// What the search box says while empty.
@@ -77,11 +58,27 @@ field_props! {
     }
 }
 
-/// A listbox over an enum that holds any number of its options.
+/// A listbox field holding any number of options, shown as chips in pick order.
 ///
-/// Stays open on a pick, and a pick toggles the row: Escape, clicking
-/// elsewhere and the trigger close it. The selection is drawn in the trigger,
-/// as chips unless `selection` says otherwise - in the order it was picked.
+/// A pick toggles its row and keeps the list open.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::MultiSelect;
+/// # fn app() -> Element {
+/// let mut toppings = use_signal(Vec::<String>::new);
+/// rsx! {
+///     MultiSelect {
+///         label: "Toppings",
+///         options: vec!["Cheese".to_string(), "Olives".to_string()],
+///         value: toppings(),
+///         onchange: move |next| toppings.set(next),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/multi-select>
 #[component]
 pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     let theme = use_theme();
@@ -96,8 +93,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
 
     let list = props.options.or_static();
     let values = list.values();
-    // The same rule as `Select`: a request still in flight lists nothing, and
-    // says nothing about being empty.
+    // As `Select`: a pending list shows nothing and doesn't report empty.
     let loading = props.options.is_pending();
     if values.is_empty() && !loading {
         warn("MultiSelect: no options - a `T` without static `options()` needs `options`.");
@@ -118,20 +114,16 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     let disabled = bound.disabled(props.disabled);
     let readonly = props.readonly.unwrap_or(false);
 
-    // Every callback below is stable, so a closed select's `SelectCore`
-    // compares equal and skips. They still run the newest captures.
+    // Stable callbacks, so a closed select's `SelectCore` compares equal and skips.
     let removable = held.clone();
     let remove_change = onchange.clone();
     let onremove = use_callback(move |index: usize| drop_at(&removable, index, &remove_change));
-    // The chips, redrawn from the cursor the core owns. Each wrapper carries the
-    // id `aria-activedescendant` points at; what is inside it is the skin's, or
-    // the caller's.
+    // Each chip wrapper carries the id `aria-activedescendant` points at.
     let picked = held.clone();
     let draw_selection = props.selection;
     let draw = use_callback(move |args: SelectionRenderArgs| {
         let chips = picked.iter().cloned().enumerate().map(|(index, value)| {
-            // Guarded as the trigger's Backspace is: a caller's own
-            // `selection` gets `remove` too.
+            // Guarded as Backspace is, since a caller's `selection` gets it too.
             let remove = Callback::new(move |_: ()| {
                 if !disabled && !readonly {
                     onremove.call(index);
@@ -185,8 +177,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             }
             None => next.push(value.clone()),
         }
-        // As `Select` does: `use_picked`'s own write lands a pass later and
-        // re-ran `SelectCore` on every pick (todo 876).
+        // As `Select`: `use_picked`'s write lands a pass later (todo 876).
         let mut picked = picked;
         picked.set(Picked {
             selected: values.iter().map(|row| next.contains(row)).collect(),
@@ -245,7 +236,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     }
 }
 
-/// Drops one value from the selection - the same edit as picking its row again.
+/// Drops one value, the same edit as picking its row again.
 fn drop_at<T: Options>(values: &[T], index: usize, onchange: &Option<impl Fn(Vec<T>)>) {
     let Some(onchange) = onchange else {
         return;

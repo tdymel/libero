@@ -23,16 +23,12 @@ use crate::{
     theme::Size,
 };
 
-/// A single select's trigger is the frame's control: one line, the selection
-/// or the placeholder, and the chevron at its end - inside the control rather
-/// than in the frame's trailing slot, so a click on the chevron opens the list
-/// too. A multi-select's trigger sits in `MULTI_VALUE_SX`'s flow instead.
+/// The chevron sits inside the control, so clicking it opens the list. A multi-select's trigger sits in `MULTI_VALUE_SX`'s flow.
 static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
     field_control_sx()
         .display("flex")
         .align_items("center")
-        // The frame's height, not its contents': with no value and no
-        // placeholder the trigger was 0px tall (todo 532, as 520).
+        // The frame's height: empty, the trigger was 0px tall (todo 532, as 520).
         .align_self("stretch")
         .gap("4px")
         .cursor("pointer")
@@ -53,10 +49,7 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
                 .height("1em")
                 .color("muted.6"),
         )
-        // In the chips' flow, after the last one. A zero basis keeps it on the
-        // last row whatever is left there, and the negative margin cancels
-        // the gap before it, so it never wraps onto a row of its own and the
-        // chips break exactly where they did inside the trigger.
+        // After the last chip: a zero basis and a margin cancelling the gap keep it off a row of its own.
         .when(
             "multiple",
             sx().flex("1 1 0")
@@ -69,12 +62,8 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
         .when("disabled", sx().cursor("not-allowed"))
 });
 
-/// `MultiSelect`'s control: the chips and the trigger on one wrapping flow.
-///
-/// The chips sit beside the `role="combobox"` element, not in it. Inside it,
-/// each chip's x was part of the combobox's value, which read "Cherry Remove
-/// Cherry". The trigger carries the selection as hidden text instead, and this
-/// slot takes the clicks the trigger used to own.
+/// `MultiSelect`'s chips and trigger in one wrapping flow. Chips sit beside the combobox,
+/// or their x's joined its value ("Cherry Remove Cherry"); the trigger carries hidden text.
 static MULTI_VALUE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_wrap("wrap")
@@ -87,10 +76,7 @@ static MULTI_VALUE_SX: StaticSx = StaticSx::new(|| {
         .min_width("0")
         .cursor("pointer")
         .user_select("none")
-        // One wrapper per selected item: it carries the id
-        // `aria-activedescendant` points at, and nothing visual. `min-width: 0`,
-        // or a long option's chip is floored at its whole label before the
-        // chip's own ellipsis can apply.
+        // Carries the `aria-activedescendant` id. `min-width: 0` lets a long chip ellipsise.
         .selector(
             "& > [data-slot='chip']",
             sx().display("inline-flex").max_width("100%").min_width("0"),
@@ -100,9 +86,7 @@ static MULTI_VALUE_SX: StaticSx = StaticSx::new(|| {
             "& [data-slot='remove']",
             sx().display("inline-flex").align_items("center"),
         )
-        // The chip the keyboard is on. The ring goes on what the skin drew, not
-        // on the wrapper, so it follows that element's own radius. The trigger
-        // keeps the DOM focus the whole time, so nothing else marks it.
+        // The keyboard's chip; the only mark, as the trigger keeps focus. On the drawn chip, for its radius.
         .selector(
             "& > [data-slot='chip'][data-cursor='true'] > *",
             focus_ring_sx(),
@@ -110,10 +94,8 @@ static MULTI_VALUE_SX: StaticSx = StaticSx::new(|| {
         .when("disabled", sx().cursor("not-allowed"))
 });
 
-/// `MultiSelect`'s chevron, in the frame's trailing slot rather than at the
-/// end of the trigger, where it would sit on the last chip row. The frame's
-/// gap is wider than the trigger's was, so the margin gives the difference
-/// back and the chevron stays where it was.
+/// `MultiSelect`'s chevron, in the frame's trailing slot, not on the last chip row.
+/// The margin gives back the frame's wider gap.
 static MULTI_CHEVRON_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .margin_left("-4px")
@@ -122,9 +104,7 @@ static MULTI_CHEVRON_SX: StaticSx = StaticSx::new(|| {
         .when("disabled", sx().cursor("not-allowed"))
 });
 
-/// The search box at the top of the list. It is not a field control - it sits
-/// inside the dropdown, above the rows and outside their scroll - so it carries
-/// its own chrome rather than the field frame's.
+/// The search box above the rows. Not a field control, so it carries its own chrome.
 static SEARCH_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
         .border("none")
@@ -144,17 +124,14 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
 /// [`SEARCH_SX`]'s padding and bottom border, where a drawn placeholder sits.
 const SEARCH_INSET: &str = "4px 8px 5px";
 
-/// What the skin needs to draw the selection: which chip the keyboard is on,
-/// and the prefix its ids are built from, so `aria-activedescendant` on the
-/// trigger has something to point at.
+/// The keyboard's chip, and the id prefix `aria-activedescendant` points into.
 #[derive(Clone, PartialEq)]
 pub(crate) struct SelectionRenderArgs {
     pub cursor: Option<usize>,
     pub id_prefix: String,
 }
 
-/// A skin's own drawing reads only compared props, so it may compare equal; a
-/// caller's never does, since its closure can read state no prop carries.
+/// A skin's drawing may compare equal; a caller's never does, as it can read unseen state.
 #[derive(Clone, Copy)]
 pub(crate) struct SelectionDraw {
     draw: Callback<SelectionRenderArgs, Element>,
@@ -173,19 +150,16 @@ impl PartialEq for SelectionDraw {
     }
 }
 
-/// The selection, handed down in a signal rather than as props: a pick on a
-/// closed select then redraws the trigger's value, not the whole field.
+/// The selection, in a signal: a pick on a closed select redraws the value, not the field.
 #[derive(Clone, PartialEq, Default)]
 pub(crate) struct Picked {
     /// One per option, whether or not `rows` is drawn.
     pub selected: Vec<bool>,
-    /// What the hidden inputs post, one `Options::value()` each - the shape a
-    /// native `<select multiple>` sends.
+    /// One `Options::value()` per hidden input, as `<select multiple>` posts.
     pub form_values: Vec<String>,
 }
 
-/// The skin's half of [`Picked`]: written in its render, and only on a change,
-/// so a re-render that picked nothing wakes no reader.
+/// Written in the skin's render only on a change, so an unchanged render wakes no reader.
 pub(crate) fn use_picked(picked: Picked) -> Signal<Picked> {
     let mut signal = use_signal(|| picked.clone());
     if *signal.peek() != picked {
@@ -196,46 +170,31 @@ pub(crate) fn use_picked(picked: Picked) -> Signal<Picked> {
 
 field_props! {
     pub(crate) struct SelectCoreProps {
-        /// Each row's content, drawn by the skin only while open: an empty
-        /// list compares equal, so a closed select skips a re-render.
+        /// Drawn only while open: an empty list compares equal, so a closed select skips a render.
         rows: Vec<Element>,
-        /// The selection. Read only where it is drawn, so a closed single
-        /// select skips a pick and only its value redraws.
+        /// Read only where drawn, so a pick on a closed select redraws just the value.
         picked: Signal<Picked>,
-        /// Held by the skin, which draws `rows` only while it is open.
         state: ComboboxState,
-        /// One group label per row, parallel to `rows`, `None` for a row in no
-        /// group. Filtered alongside the rows and handed on, so a search
-        /// narrows the groups with the list.
+        /// One group label per row, parallel to `rows`, filtered with them.
         #[props(default)]
         groups: Vec<Option<String>>,
-        /// One flag per row, parallel to `rows`. A disabled row is drawn and
-        /// read out; the arrows, typeahead and the click all pass over it.
+        /// Parallel to `rows`. Drawn and read out; arrows, typeahead and click pass over it.
         #[props(default)]
         row_disabled: Vec<bool>,
-        /// `Some(label)` while the options are being fetched: the list shows a
-        /// loader in place of the rows and the empty state, and a status region
-        /// beside the trigger says `label`.
+        /// `Some(label)` while fetching: a loader replaces the rows; a status region says it.
         #[props(default)]
         loading: Option<String>,
         onpick: EventHandler<usize>,
-        /// Drawn inside the trigger - beside it when `multiple` - as a
-        /// function of the chip cursor - the
-        /// skin owns no state, so the cursor lives here and the selection is
-        /// redrawn from it. `None` shows `placeholder`.
+        /// Drawn in the trigger (beside it when `multiple`) from the chip cursor. `None` shows `placeholder`.
         #[props(default)]
         selection: Option<SelectionDraw>,
-        /// The selection's labels, in order. A `multiple` trigger carries them
-        /// as its hidden value text - the chips sit beside it - and its live
-        /// region announces what they gained or lost.
+        /// A `multiple` trigger's hidden value text; its live region announces changes.
         #[props(default)]
         value_labels: Vec<String>,
-        /// How many removable chips `selection` draws. The core moves a cursor
-        /// over items it cannot see, so it has to be told how many there are.
+        /// How many chips `selection` draws, for the cursor over them.
         #[props(default)]
         chip_count: usize,
-        /// Called with an index into the selection order, never into `rows`.
-        /// Without it the chip keys do nothing.
+        /// An index into the selection order, not `rows`. Without it the chip keys do nothing.
         #[props(default)]
         onremove: Option<EventHandler<usize>>,
         #[props(default)]
@@ -244,49 +203,30 @@ field_props! {
         #[props(default)]
         clearable: bool,
         onclear: EventHandler<()>,
-        /// Stay open on a pick, mark the listbox `aria-multiselectable`, and
-        /// let the selection wrap.
+        /// Stays open on a pick, sets `aria-multiselectable`, lets the selection wrap.
         #[props(default)]
         multiple: bool,
-        /// Puts a search box at the top of the list.
         #[props(default)]
         searchable: bool,
         #[props(default)]
         search_placeholder: Option<String>,
-        /// Emits one hidden input of that name per `form_values` entry, so the
-        /// selection posts with a native form. The trigger is a `div` and
-        /// cannot carry a `name` itself.
+        /// One hidden input per `form_values` entry: the trigger is a `div` and can't post.
         #[props(default)]
         name: Option<String>,
-        /// What the skin's `validate` rules say; `T` never reaches here.
         #[props(default)]
         rules: Option<crate::components::form::FieldStatus>,
-        /// Each row's plain text, parallel to `rows`, which is what the
-        /// typeahead searches. Empty turns typeahead off.
-        ///
-        /// A `Vec<String>` rather than a callback, for the same reason
-        /// `Picked::selected` is a `Vec<bool>`: it erases the skin's `T` just as well,
-        /// and it lets the core do the matching itself against the disabled
-        /// mask it already holds. `matches` cannot serve - it carries the
-        /// caller's `filter` semantics, and typeahead is
-        /// prefix-from-current-with-wrap.
+        /// Plain text per row for typeahead; empty turns it off. Not `matches`: that
+        /// is the caller's filter, typeahead is prefix-from-current-with-wrap.
         #[props(default)]
         row_labels: Vec<String>,
-        /// Which rows survive the query, one `bool` per row. The skin closes
-        /// over its own `Vec<T>` and the caller's filter, so `T` never reaches
-        /// here - the mask is the same erasure `rows: Vec<Element>` performs.
+        /// Which rows survive the query, one `bool` per row; erases `T` like `rows`.
         #[props(default)]
         matches: Option<Callback<String, Vec<bool>>>,
     }
 }
 
-/// The engine under `Select` and `MultiSelect`. It never sees `T`: the skins
-/// hand it drawn rows and a selection, and take indices back.
-///
-/// Composes a field frame, `ComboboxCore` and a `use_combobox` state. The
-/// trigger holds focus the whole time - the rows and the list cancel
-/// `mousedown` - so losing it is what closes the list on an outside click,
-/// with no window-level listener.
+/// The `T`-free engine under `Select` and `MultiSelect`: drawn rows in, indices out.
+/// The trigger keeps focus (rows cancel `mousedown`), so its blur closes the list.
 #[component]
 pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let theme = use_theme();
@@ -294,9 +234,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let size = props.size.copied_or(theme.select.size);
     let radius = props.radius.copied_or(theme.select.radius);
     let disabled = props.disabled.unwrap_or(false);
-    // The list is the only editor, so read-only keeps the trigger focusable
-    // and posting and refuses to open it. The chip keys and the clear button
-    // go with it, and `aria-readonly` says so on the `combobox` role.
+    // Read-only stays focusable and posting, but never opens; chip keys and clear go too.
     let readonly = props.readonly.unwrap_or(false);
     let required = props.required.unwrap_or(false);
 
@@ -304,20 +242,14 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let opened = state.is_open() && !disabled && !readonly;
     let searchable = props.searchable && !disabled;
 
-    // The typed characters, forgotten after a pause - the buffer a native
-    // `<select>` keeps, so "b","e","r" inside the window finds Berlin while a
-    // lone "b" after it cycles the B rows. A hook, so it is prepared whether
-    // or not this list answers typeahead at all.
+    // A native `<select>`'s buffer: "ber" finds Berlin, a lone "b" after a pause cycles.
     let typeahead = use_typeahead(TYPEAHEAD_RESET);
-    // Never while `searchable`: there the search box is the affordance, and
-    // once the list is open the focus is inside it anyway.
+    // Never while `searchable`: the search box is the affordance.
     let typeahead_on = !searchable && !props.row_labels.is_empty();
 
-    // The query lives here, beside the open and highlight state. The skins
-    // stay stateless: they hand down `matches` and nothing else.
+    // Here, so the skins stay stateless.
     let query = use_signal(String::new);
-    // Which chip the keyboard is on. An index into the *selection* order, which
-    // is the skin's `value`, not into `rows`.
+    // The keyboard's chip, an index into the selection order, not `rows`.
     let cursor = use_signal(|| None::<usize>);
     let search = use_element();
     let trigger_element = use_element();
@@ -325,16 +257,14 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let picked = props.picked;
     let visible = visible_rows(searchable, props.matches, query, picked);
 
-    // Removing the chip under the cursor leaves the index pointing at the one
-    // that took its place; past the end it clamps to the new last, and with no
-    // chips left there is nothing to point at.
+    // After a removal the index points at the next chip, clamped to the last.
     let chip_count = props.chip_count;
     let chip_cursor = match chip_count {
         0 => None,
         count => cursor().map(|index| index.min(count - 1)),
     };
 
-    // Read, and so subscribed to, only where a pick changes what is drawn.
+    // Subscribed only where a pick changes what is drawn.
     let has_selection = props.clearable && picked.read().selected.iter().any(|selected| *selected);
     let open = SelectOpen {
         state,
@@ -377,9 +307,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     );
 
     let typed = SelectTypeahead {
-        // A clone of the hook's buffer, so the keydown arms can still ask it
-        // whether a space is being typed. Both halves share one `Rc`, so it is
-        // the same buffer.
+        // Shares the hook's `Rc`, so the keydown arms can ask whether a space is typed.
         buffer: typeahead.clone(),
         labels: props.row_labels.clone(),
         row_disabled: props.row_disabled.clone(),
@@ -391,7 +319,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     let multiple = props.multiple;
 
-    // Hooks, so all three are prepared whether or not this is a multi-select.
+    // Hooks, so prepared either way.
     let value_slot = use_box()
         .framework_sx(&MULTI_VALUE_SX)
         .focus_ring(false)
@@ -403,10 +331,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .prepare();
     let announcer = use_chip_announcer(props.value_labels.clone());
 
-    // A multi-select's chevron is in the trailing slot, where the clear
-    // button replaces it just as it does inside a single select's trigger.
-    // Neither takes the focus: it stays on the trigger, whose blur closes the
-    // list.
+    // A multi-select's chevron, replaced by the clear button. Neither takes focus from the trigger.
     let trailing = match (multiple, &clear) {
         (true, None) => Some(
             chevron_box
@@ -429,7 +354,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .unwrap_or_default()
         .with("multiple", props.multiple)
         .into();
-    // The frame draws the ring, so the trigger must not draw a second one.
+    // The frame draws the ring.
     let control = use_box()
         .framework_sx(&SELECT_TRIGGER_SX)
         .focus_ring(false)
@@ -437,8 +362,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .prepare();
 
     let (rows, groups, row_disabled) = select_rows(&props, &visible, state);
-    // The count `ComboboxCore` would write, written before the trigger reads it:
-    // written from there, it re-ran this whole scope on every open (todo 842).
+    // Written before the trigger reads it; from `ComboboxCore` it re-ran this scope per open (todo 842).
     if opened {
         state.set_rows(if props.loading.is_some() {
             0
@@ -447,10 +371,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         });
     }
 
-    // A hook, so it is prepared unconditionally and only used when searching.
     let search_box = use_box().framework_sx(&SEARCH_SX).prepare();
-    // The caller's name follows the combobox role: on the open search box, a
-    // role-less trigger may not carry it.
+    // The caller's name follows the combobox role onto the open search box.
     let searching = searchable && opened;
     let (naming, attributes): (Vec<Attribute>, Vec<Attribute>) =
         props.attributes.iter().cloned().partition(|attribute| {
@@ -498,8 +420,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         ),
     };
 
-    // While the search box is open it is the combobox, so it takes the field's
-    // wiring: a role-less trigger may not carry `aria-required` or `aria-expanded`.
+    // The open search box is the combobox; a role-less trigger may not carry `aria-required`.
     let control = match searching {
         true => control.attr("id", field.id().to_string()),
         false => field
@@ -522,7 +443,6 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             opened,
             searchable,
             multiple,
-            // A single select with nothing to clear draws its own chevron.
             chevron: !multiple && clear.is_none(),
         },
         content,
@@ -543,8 +463,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         loading: props.loading,
         nothing_found: (searchable && !query.read().is_empty()).then(|| nothing_found.to_string()),
         multiple,
-        // A pick on a multi-select adds or drops a chip, which resizes the
-        // trigger under an open list.
+        // A multi-select pick adds or drops a chip, resizing the trigger.
         remeasure: match opened {
             true => picked
                 .read()
@@ -554,8 +473,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
                 .count() as u64,
             false => 0,
         },
-        // Focused once the list has been measured and is visible. Doing it any
-        // earlier is a no-op that reports success.
+        // Focused once measured; earlier is a silent no-op.
         autofocus: searchable.then_some(search),
         labelled_by: field.label_id(),
     });
@@ -569,8 +487,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     })
 }
 
-/// The dropdown, with the field frame - trigger, chips and all - as the thing
-/// it hangs off.
+/// The dropdown, hung off the whole field frame.
 struct Listbox {
     rows: Vec<Element>,
     groups: Vec<Option<String>>,
@@ -583,11 +500,10 @@ struct Listbox {
     size: Size,
     radius: Size,
     loading: Option<String>,
-    /// Said when the query leaves no rows.
     nothing_found: Option<String>,
     multiple: bool,
     remeasure: u64,
-    /// The search box to focus once the list is measured, when there is one.
+    /// The search box, if any.
     autofocus: Option<ElementHandle>,
     labelled_by: Option<String>,
 }
@@ -647,9 +563,7 @@ fn select_listbox(list: Listbox) -> Element {
     }
 }
 
-/// Opening and closing the list. It arms the row already selected on the way
-/// in and drops the chip cursor, because one `aria-activedescendant` has one
-/// owner.
+/// Opening arms the selected row and drops the chip cursor: one `aria-activedescendant`, one owner.
 #[derive(Clone, Copy)]
 struct SelectOpen {
     state: ComboboxState,
@@ -664,9 +578,7 @@ struct SelectOpen {
 }
 
 impl SelectOpen {
-    /// A list opens on what is already selected, like a native `<select>` -
-    /// counted among the rows actually on screen. Read at the press, since a
-    /// pick on a closed select does not redraw the scope holding this.
+    /// The first selected visible row, like a native `<select>`. Read at the press, not render.
     fn first_selected(self) -> usize {
         let picked = self.picked.peek();
         visible_rows(self.searchable, self.matches, self.query, self.picked)
@@ -678,17 +590,14 @@ impl SelectOpen {
     fn open(self, next: bool) {
         if next && !self.state.is_open() {
             self.state.set_active(Some(self.first_selected()));
-            // One `aria-activedescendant`, one owner: the open list takes it.
             let mut cursor = self.cursor;
             cursor.set(None);
         }
         self.state.set_open(next);
     }
 
-    /// The trigger no longer spans the chips, so the slot around them and the
-    /// chevron each open the list and hand the focus to the trigger. The open
-    /// state is read before the focus moves: a searchable list closes on its
-    /// box's blur.
+    /// For the chip slot and chevron: focuses the trigger and toggles. State is read first,
+    /// since a searchable list closes on its box's blur.
     fn toggle(self) {
         if self.disabled {
             return;
@@ -701,8 +610,7 @@ impl SelectOpen {
     }
 }
 
-/// The typed-character buffer and everything it searches. A clone of the
-/// hook's `Typeahead`, so this and the keydown arms share one buffer.
+/// The typeahead buffer (shared with the keydown arms) and what it searches.
 #[derive(Clone)]
 struct SelectTypeahead {
     buffer: Typeahead,
@@ -716,13 +624,11 @@ struct SelectTypeahead {
 }
 
 impl SelectTypeahead {
-    /// One typed character, folded into the buffer and acted on. `true` when
-    /// it landed on a row, which is what decides whether the key was ours.
+    /// `true` when the character landed on a row, so the key was ours.
     fn type_to(&self, ch: char) -> bool {
         let state = self.open.state;
         let query = self.buffer.push(ch);
-        // Where typeahead searches from: the highlight while the list is open,
-        // the selection while it is closed. Neither starts at the top.
+        // From the highlight while open, the selection while closed.
         let from = match state.is_open() {
             true => state.active(),
             false => self.open.picked.peek().selected.iter().position(|on| *on),
@@ -737,15 +643,11 @@ impl SelectTypeahead {
             return false;
         };
         match (state.is_open(), self.multiple) {
-            // An open list moves its highlight and picks nothing: Enter or a
-            // click still commits, exactly as with the arrows.
+            // Open: moves the highlight only, as the arrows do.
             (true, _) => state.set_active(Some(row)),
-            // A closed single select changes its value in place, the way a
-            // native `<select>` does.
+            // Closed single select: picks in place, like a native `<select>`.
             (false, false) => self.onpick.call(row),
-            // A closed multi-select opens instead. A pick there *toggles*, so
-            // typing would silently drop a value the caller had chosen - the
-            // one thing the native control never has to worry about.
+            // Closed multi-select opens instead: a pick toggles, so typing could drop a value.
             (false, true) => {
                 self.open.open(true);
                 state.set_active(Some(row));
@@ -755,7 +657,6 @@ impl SelectTypeahead {
     }
 }
 
-/// What the trigger's two keyboards move.
 #[derive(Clone, Copy)]
 struct TriggerKeys {
     open: SelectOpen,
@@ -765,7 +666,6 @@ struct TriggerKeys {
     onremove: Option<EventHandler<usize>>,
 }
 
-/// The trigger's drawn shape, and the ids it owns while the list is shut.
 struct TriggerParts {
     element: ElementHandle,
     id_prefix: String,
@@ -773,13 +673,11 @@ struct TriggerParts {
     opened: bool,
     searchable: bool,
     multiple: bool,
-    /// The trigger draws its own chevron: a single select with nothing to
-    /// clear.
+    /// A single select with nothing to clear draws its own chevron.
     chevron: bool,
 }
 
-/// The trigger: the one element `ComboboxCore` does not draw, and the one that
-/// holds the focus the whole time.
+/// The one element `ComboboxCore` doesn't draw; it holds focus throughout.
 fn select_trigger(
     control: BoxStyle,
     keys: TriggerKeys,
@@ -800,9 +698,7 @@ fn select_trigger(
     let state = open.state;
     let (disabled, readonly) = (open.disabled, open.readonly);
 
-    // Two elements cannot both be the combobox. While the search box is open it
-    // owns the role and the whole field wiring; the trigger keeps only what says
-    // a list hangs off it.
+    // Only one element is the combobox: with the search box open, the trigger keeps `aria-haspopup`.
     let searching = searchable && opened;
     let mut attributes = match searching {
         true => vec![attr("aria-haspopup", "listbox")],
@@ -831,8 +727,7 @@ fn select_trigger(
         .event("onkeydown", move |event: KeyboardEvent| {
             trigger_key(&event, keys, &typed)
         })
-        // While searchable the focus moves into the search box, so closing on
-        // the trigger's blur would shut the list before a key could land.
+        // While searchable, focus moves to the search box, whose blur closes instead.
         .event("onblur", move |event: FocusEvent| {
             if !searchable && blur_counts(&event) {
                 state.close();
@@ -850,10 +745,7 @@ fn select_trigger(
         )
 }
 
-/// Two keyboards on one element. The chips answer Left, Right and Backspace,
-/// which `ComboboxCore` leaves alone; the list answers the rest. While
-/// `searchable` and open the focus is in the search box, so none of this fires
-/// and Backspace only ever edits the query.
+/// The chips take Left, Right and Backspace; the list the rest. Silent while the search box has focus.
 fn trigger_key(event: &KeyboardEvent, keys: TriggerKeys, typed: &SelectTypeahead) {
     let TriggerKeys {
         open,
@@ -872,8 +764,7 @@ fn trigger_key(event: &KeyboardEvent, keys: TriggerKeys, typed: &SelectTypeahead
             event.prevent_default();
             let index = match chip_cursor {
                 Some(index) => index.saturating_sub(1),
-                // From no cursor, the last chip - the one Backspace would have
-                // taken.
+                // From no cursor, the last chip, the one Backspace takes.
                 None => chip_count - 1,
             };
             cursor.set(Some(index));
@@ -893,9 +784,7 @@ fn trigger_key(event: &KeyboardEvent, keys: TriggerKeys, typed: &SelectTypeahead
             event.prevent_default();
             onremove.call(chip_cursor.unwrap_or(chip_count - 1));
         }
-        // APG select-only: ArrowUp opens like ArrowDown, on the selection; Home
-        // and End open on the first and last row. `ComboboxCore` snaps a
-        // disabled one to its nearest enabled neighbour.
+        // APG select-only: ArrowUp opens on the selection, Home/End on the first/last enabled row.
         key @ (Key::ArrowUp | Key::Home | Key::End) if !state.is_open() => {
             event.prevent_default();
             open.open(true);
@@ -906,16 +795,14 @@ fn trigger_key(event: &KeyboardEvent, keys: TriggerKeys, typed: &SelectTypeahead
                 _ => {}
             }
         }
-        // `ComboboxCore` opens on ArrowDown; a select-only combobox opens on
-        // Enter and Space as well. Enter on an *open* list is the core's pick.
+        // Select-only also opens on Enter and Space; Enter on an open list is the core's pick.
         Key::Enter if !state.is_open() => {
             event.prevent_default();
             open.open(true);
         }
         // A browser or OS shortcut is never typeahead.
         Key::Character(_) if has_shortcut_modifier(event) => {}
-        // A space mid-query is part of "new york", not an activation: kept
-        // from `ComboboxCore`, whose Space picks.
+        // A space mid-query is part of "new york": kept from `ComboboxCore`, whose Space picks.
         Key::Character(ref key) if key == " " && typed.on && typed.buffer.is_typing() => {
             event.prevent_default();
             event.stop_propagation();
@@ -926,8 +813,7 @@ fn trigger_key(event: &KeyboardEvent, keys: TriggerKeys, typed: &SelectTypeahead
             open.open(true);
         }
         Key::Character(ref key) if typed.on && key != " " => {
-            // Only when it lands somewhere: a key that matches no row still
-            // belongs to the page, as it does in a native control.
+            // A key matching no row stays the page's, as in a native control.
             if let Some(ch) = key.chars().next()
                 && typed.type_to(ch)
             {
@@ -938,11 +824,8 @@ fn trigger_key(event: &KeyboardEvent, keys: TriggerKeys, typed: &SelectTypeahead
     }
 }
 
-/// The chips and the trigger share one wrapping flow, the shape `TagsField`
-/// has. The slot cancels `mousedown`, so a press anywhere in it - a chip, its
-/// x, the trigger itself - leaves the focus where it was, and a click focuses
-/// the trigger by hand. The trigger is not the frame's child any more, so it
-/// needs a ring overlay of its own as its sibling.
+/// Chips and trigger in one flow, as `TagsField`. The slot cancels `mousedown` and focuses the
+/// trigger on click; the trigger, no longer the frame's child, needs its own ring overlay.
 fn select_control(
     multiple: bool,
     value_slot: BoxStyle,
@@ -967,8 +850,7 @@ fn select_control(
     }
 }
 
-/// Which rows survive the query, and what each one's index was in the full
-/// list. `onpick` reports the original index, so the skins never remap.
+/// The full-list indices of the rows the query keeps, so the skins never remap.
 fn visible_rows(
     searchable: bool,
     matches: Option<Callback<String, Vec<bool>>>,
@@ -983,18 +865,12 @@ fn visible_rows(
             .filter(|(_, keep)| *keep)
             .map(|(index, _)| index)
             .collect(),
-        // `selected`, not `rows`: a closed list draws no rows. Peeked, as the
-        // count moves only with the options, which redraw the core anyway.
+        // `selected`, not `rows`, which a closed list leaves empty. Peeked: options redraw the core anyway.
         _ => (0..picked.peek().selected.len()).collect(),
     }
 }
 
-/// The rows that survive the query, each wrapped in a `ComboboxOption`, plus
-/// the group label and the disabled flag for each.
-///
-/// The three are filtered together so they stay parallel: a search that
-/// empties a group simply leaves no row carrying its label, and the group is
-/// gone from the list.
+/// The kept rows as `ComboboxOption`s, with their group labels and disabled flags, filtered in parallel.
 fn select_rows(
     props: &SelectCoreProps,
     visible: &[usize],
@@ -1024,11 +900,9 @@ fn select_rows(
             Some(rsx! {
                 ComboboxOption {
                     selected,
-                    // `index` is the row's place in the *full* list, so a
-                    // filtered list still reports what the skin expects.
+                    // `index` is the full-list index.
                     onpick: move |_| {
-                        // A single select's re-pick changes nothing, so it
-                        // emits nothing, as a native `<select>` (Tab commits).
+                        // A single select's re-pick emits nothing, as a native `<select>`.
                         if !(close_on_pick && selected) {
                             onpick.call(index);
                         }
@@ -1045,11 +919,8 @@ fn select_rows(
     (rows, groups, row_disabled)
 }
 
-/// The search box at the top of the list. It owns the combobox role while it
-/// is there, so it carries the a11y attributes the trigger gives up - the
-/// field's label and captions included, or it is named by its placeholder.
-/// `naming` is the caller's own `aria-label`/`aria-labelledby`, moved off the
-/// trigger.
+/// The open search box owns the combobox role and the trigger's a11y wiring, field label included.
+/// `naming` is the caller's `aria-label`/`aria-labelledby`, moved off the trigger.
 fn select_search_box(
     search_box: BoxStyle,
     search: ElementHandle,
@@ -1075,12 +946,10 @@ fn select_search_box(
         .attr("aria-required", required.then_some("true"))
         .event("oninput", move |event: FormEvent| {
             query.set(event.value());
-            // The list under the highlight just changed; arm its top row.
+            // A new list: arm its top row.
             state.set_active(Some(0));
         })
-        // The trigger's blur no longer closes while searchable - this does,
-        // and the rows and the list cancel `mousedown`, so a click inside
-        // never reaches it.
+        // Closes while searchable; the rows cancel `mousedown`, so a click inside never blurs.
         .event("onblur", move |event: FocusEvent| {
             if blur_counts(&event) {
                 state.close();
@@ -1089,10 +958,7 @@ fn select_search_box(
         .render(HtmlTag::Input, attributes, ())
 }
 
-/// What the trigger says it holds, and - for a multi-select - the chips that
-/// go beside it. A multi-select's chips are not inside the trigger, so what it
-/// holds is said inside it as text, the combobox's value, and shown by the
-/// chips.
+/// The trigger's content, and a multi-select's chips beside it; the trigger then says the value as hidden text.
 fn select_value_content(
     drawn: Option<Element>,
     value_labels: &[String],
@@ -1113,8 +979,7 @@ fn placeholder_value(placeholder: &str) -> Element {
     }
 }
 
-/// A single select's value inside the trigger, in a scope of its own: a pick
-/// rewrites `picked` and redraws this alone.
+/// A single select's value in its own scope, so a pick redraws this alone.
 #[component]
 fn SelectValue(
     picked: Signal<Picked>,
@@ -1135,9 +1000,7 @@ fn SelectValue(
     }
 }
 
-/// A hidden input is the only way a control that is not a form element can
-/// post - the shape `Slider` and `PinField` use. `disabled` goes on it too, so
-/// a disabled select sends nothing.
+/// Hidden inputs post the value, as on `Slider`; a disabled select sends nothing.
 fn select_hidden_inputs(
     name: Option<String>,
     picked: Signal<Picked>,

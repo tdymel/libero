@@ -12,9 +12,7 @@ use crate::{
 
 use super::option::{ComboboxContext, ComboboxRowContext};
 
-/// Publishes where this row sits, so `ComboboxOption` needs no props for its
-/// `id` or its highlight. A `Signal`, written during render: a provider runs
-/// once, but `active` moves with the arrow keys.
+/// Publishes the row's place to `ComboboxOption`. A `Signal` written in render: a provider runs once.
 #[component]
 fn ComboboxRow(index: usize, active: bool, disabled: bool, children: Element) -> Element {
     let mut context = use_context_provider(|| {
@@ -36,8 +34,7 @@ fn ComboboxRow(index: usize, active: bool, disabled: bool, children: Element) ->
     children
 }
 
-/// The scrolling option list. The rows arrive drawn, which is what erases the
-/// `Combobox`'s `T` - and what keeps them from being memoized.
+/// The scrolling option list. Rows arrive drawn, which erases `T` and prevents memoizing.
 #[component]
 pub(super) fn ComboboxDropdown(
     rows: Vec<Element>,
@@ -46,48 +43,29 @@ pub(super) fn ComboboxDropdown(
     max_height: String,
     scroll_y: Option<f64>,
     empty: Option<Element>,
-    /// The options are being fetched.
     loading: bool,
-    /// One group label per row, parallel to `rows`, `None` for a row in no
-    /// group. Adjacent rows sharing a label are drawn as one `role="group"`.
-    ///
-    /// Parallel rather than nested, because a search filter drops rows out of
-    /// the middle: the list arrives grouped and the filter only ever removes,
-    /// so a group's survivors are still next to each other and the runs are
-    /// simply shorter. Nothing is remapped, and a row's index stays its index
-    /// in the full list.
+    /// One group label per row, parallel to `rows`: filtering only drops rows, so groups stay adjacent.
+    /// Adjacent equal labels are one `role="group"`.
     groups: Vec<Option<String>>,
-    /// One flag per row, parallel to `rows`. A disabled row is drawn and read
-    /// out; the arrows, typeahead and the click all pass over it.
+    /// Parallel to `rows`. A disabled row is drawn and read out, but never picked.
     row_disabled: Vec<bool>,
-    /// Above the rows and outside the scroll, so it stays put while the list
-    /// under it changes - or empties.
+    /// Above the rows and outside the scroll.
     header: Option<Element>,
     multiselectable: bool,
     labelled_by: Option<String>,
-    /// Re-provided here, not inherited: the dropdown is portaled, so it mounts
-    /// under `PortalOutlet` rather than under `ComboboxCore`, and a context
-    /// resolves along the mounted chain. Without this every row loses its `id`,
-    /// its highlight and its Enter target - silently, because `ComboboxOption`
-    /// looks it up with `try_consume_context`.
+    /// Re-provided: portaled under `PortalOutlet`, rows would otherwise lose it silently.
     context: ComboboxContext,
 ) -> Element {
     use_context_provider(|| context);
 
-    // No rows and no `empty` draws nothing at all - an empty bordered box is
-    // not a state worth showing. A `header` is the exception: it is drawn
-    // either way, because a search that matched nothing still needs its box.
-    //
-    // Loading wins over both. The loader is silent: `ComboboxCore`'s status
-    // region, outside this `aria-busy` dropdown, is what says it.
+    // No rows and no `empty` draws nothing, but a `header` always draws. Loading wins over both;
+    // the loader is silent, `ComboboxCore`'s status region says it.
     let list = match (loading, rows.is_empty()) {
         (true, _) => rsx! {
             Loader { size: Size::Sm, sx: sx().align_self("center") }
         },
         (false, true) => empty.unwrap_or_else(|| rsx! {}),
         (false, false) => {
-            // Drawn once and indexed by the runs below, so a row is built
-            // whether or not it ends up inside a group wrapper.
             let drawn: Vec<Element> = rows
                 .into_iter()
                 .enumerate()
@@ -113,9 +91,6 @@ pub(super) fn ComboboxDropdown(
                     "aria-multiselectable": multiselectable.then_some("true"),
                     "aria-labelledby": labelled_by,
                     for (label , start , end) in runs {
-                        // A named run is wrapped and labelled; an unnamed one
-                        // is bare, which is the markup an ungrouped list has
-                        // always had.
                         if let Some(label) = label {
                             div {
                                 key: "group-{start}",
@@ -123,9 +98,7 @@ pub(super) fn ComboboxDropdown(
                                 "aria-labelledby": group_id(&id, start),
                                 div {
                                     id: group_id(&id, start),
-                                    // Named by the group's `aria-labelledby`,
-                                    // so as an element of its own it would be
-                                    // read a second time.
+                                    // Already the group's name; would be read twice.
                                     role: "presentation",
                                     "data-slot": "group-label",
                                     "{label}"
@@ -147,13 +120,7 @@ pub(super) fn ComboboxDropdown(
     }
 }
 
-/// The rows cut into runs of adjacent equal group labels, each
-/// `(label, start, end)` with `end` exclusive.
-///
-/// Run-length rather than a nested list, because this is rebuilt from what the
-/// search filter left behind: the labels arrive already in group order, so
-/// equal neighbours are one group and a group that lost every row simply has
-/// no run.
+/// Runs of adjacent equal group labels, `(label, start, end)` with `end` exclusive.
 fn group_runs(groups: &[Option<String>], len: usize) -> Vec<(Option<String>, usize, usize)> {
     let mut runs: Vec<(Option<String>, usize, usize)> = Vec::new();
     for index in 0..len {
@@ -177,7 +144,6 @@ mod tests {
     #[test]
     fn an_ungrouped_list_is_one_unnamed_run() {
         assert_eq!(group_runs(&[None, None, None], 3), [(None, 0, 3)]);
-        // No labels at all is the shape every existing caller hands down.
         assert_eq!(group_runs(&[], 2), [(None, 0, 2)]);
     }
 
@@ -190,10 +156,7 @@ mod tests {
         );
     }
 
-    /// A label used again after another group is a second run, not a merge:
-    /// the caller listed the rows in that order and keeps it. The two runs get
-    /// separate headings, each with its own id, which is legal - nothing
-    /// requires a `role="group"` to be uniquely named.
+    /// A returning label is a second run, not a merge: the caller's order is kept.
     #[test]
     fn a_label_that_comes_back_starts_a_second_run() {
         let groups = [label("A"), label("B"), label("A")];
@@ -203,9 +166,7 @@ mod tests {
         );
     }
 
-    /// What the search filter leaves: rows dropped out of the middle, so a run
-    /// is shorter and a group that lost everything is gone. The surviving rows
-    /// keep their own indices, which is what the ids are keyed on.
+    /// After a filter, runs shorten and emptied groups vanish.
     #[test]
     fn a_filtered_list_regroups_from_what_survived() {
         // "DE" lost its second row and "FR" lost all of its.

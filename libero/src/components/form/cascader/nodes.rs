@@ -1,25 +1,18 @@
-//! Reading the option tree the two ways a cascader needs it: as columns walked
-//! by an index path, and as a flat list of full root-to-option paths.
-//!
-//! Every function here is pure and takes `&[CascaderNode]` - the tree without
-//! its values - which is what keeps it out of the per-`T` code and makes the
-//! cursor arithmetic testable without rendering anything.
+//! Pure walks over the value-free tree: columns by index path, and flat root-to-option paths.
 
 use super::option::CascaderNode;
 
-/// One full root-to-node path. `Paths` draws one row per entry, and search
-/// matches against the joined [`labels`](Self::labels).
+/// One root-to-node path: a `Paths` row, and what search matches against.
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct FlatPath {
-    /// One index per level - the same shape as the cursor.
+    /// One index per level, the cursor's shape.
     pub indices: Vec<usize>,
     pub labels: Vec<String>,
-    /// The node's own `disabled`, or'd with every ancestor's: a node under a
-    /// disabled ancestor is disabled.
+    /// Inherited: the node's own flag or any ancestor's.
     pub disabled: bool,
 }
 
-/// The nodes one level below `indices` - the roots for an empty path.
+/// The nodes one level below `indices`; the roots for an empty path.
 pub(super) fn children_at<'a>(nodes: &'a [CascaderNode], indices: &[usize]) -> &'a [CascaderNode] {
     let mut level = nodes;
     for index in indices {
@@ -39,9 +32,7 @@ pub(super) fn node_at<'a>(
     children_at(nodes, parents).get(*last)
 }
 
-/// Whether the node at `indices` is unreachable - its own `disabled`, or any
-/// ancestor's. A path that does not resolve counts as disabled, so a stale
-/// cursor can never be committed.
+/// Disabled itself or by an ancestor. An unresolved path counts as disabled, so a stale cursor never commits.
 pub(super) fn disabled_at(nodes: &[CascaderNode], indices: &[usize]) -> bool {
     let mut level = nodes;
     for index in indices {
@@ -56,9 +47,7 @@ pub(super) fn disabled_at(nodes: &[CascaderNode], indices: &[usize]) -> bool {
     false
 }
 
-/// Every path, depth first. With `any_level` that is one entry per node;
-/// without it, one per leaf - which is the same rule the keyboard commits by,
-/// so `Paths` never offers a row Enter would refuse.
+/// Every path, depth first: one per node with `any_level`, else one per leaf, as Enter commits.
 pub(super) fn flatten_paths(nodes: &[CascaderNode], any_level: bool) -> Vec<FlatPath> {
     let mut out = Vec::new();
     let mut prefix = FlatPath {
@@ -97,12 +86,8 @@ pub(super) fn join_labels(labels: &[String], separator: &str) -> String {
     labels.join(separator)
 }
 
-/// The next enabled row in one direction, or `None` when there is none - which
-/// leaves the cursor where it is rather than wrapping. Clamping, not wrapping,
-/// is what `ComboboxCore`'s arrows already do.
-///
-/// From no cursor at all, forward lands on the first enabled row and backward
-/// on the last, so one press arms the list instead of moving inside it.
+/// The next enabled row, or `None`: clamps rather than wraps, as `ComboboxCore` does.
+/// From no cursor, forward lands on the first enabled row and backward on the last.
 pub(super) fn step(
     len: usize,
     disabled: impl Fn(usize) -> bool,
@@ -121,8 +106,7 @@ pub(super) fn step(
     range.into_iter().find(|index| !disabled(*index))
 }
 
-/// [`step`] in the column under `parents`, by the inherited flag Enter and the
-/// rows use: inside a disabled branch every row is disabled.
+/// [`step`] in the column under `parents`, by the inherited disabled flag.
 pub(super) fn step_in(
     nodes: &[CascaderNode],
     parents: &[usize],

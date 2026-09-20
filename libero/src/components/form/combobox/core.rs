@@ -19,28 +19,19 @@ use crate::{
 
 use super::{ComboboxState, dropdown::ComboboxDropdown, option::ComboboxContext};
 
-// The dropdown is a surface, so its background, border and corner come from
-// `paper_sx()`: the `bordered` and `radius-{step}` tokens below are the ones
-// its folds answer. It renders through `use_box` rather than `Paper` because
-// it needs the popover's element handle and its own events.
+// A `paper_sx()` surface, through `use_box` rather than `Paper` for the popover's handle and events.
 pub(crate) static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
-        // Everything positional - `position`, `left`, `top`, `width` - comes
-        // from `use_popover` as an inline style, measured per open.
+        // Position and width come from `use_popover` as an inline style.
         .z_index(Z_INDEX_POPOVER.value())
         .display("flex")
         .flex_direction("column")
         .gap("4px")
         .padding(COMBOBOX_PADDING)
-        // A row still has square-ish corners next to an `xxl` radius, so the
-        // dropdown clips rather than trusting them to nest.
+        // Rows don't nest inside an `xxl` radius, so the dropdown clips.
         .overflow("hidden")
-        // A dropdown floats over the page, where the surface default rests.
         .box_shadow(SizeCss::SHADOW.value(Size::Lg))
-        // A group's heading. Styled from here, by a selector, because the
-        // headings are drawn inside a loop where a `use_box` would be a hook
-        // called a variable number of times - the shape `Spotlight`'s own group
-        // labels use.
+        // By selector: headings are drawn in a loop, where `use_box` can't be called. As `Spotlight`.
         .selector(
             "& [data-slot='group-label']",
             sx().padding("4px 8px")
@@ -60,54 +51,33 @@ pub(crate) static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub(crate) struct ComboboxCoreProps {
-        /// The rows, already drawn - which is what erases the caller's `T`,
-        /// and what stops anything below here from memoizing.
+        /// Already drawn: erases the caller's `T` and stops memoizing below.
         rows: Vec<Element>,
-        /// One group label per row, parallel to `rows`, `None` for a row in no
-        /// group. Handed straight to the dropdown, which draws adjacent equal
-        /// labels as one `role="group"`. Groups change how rows are wrapped,
-        /// never which index a row reports.
+        /// One group label per row, parallel to `rows`. Wraps rows, never changes their index.
         #[props(default)]
         groups: Vec<Option<String>>,
-        /// One flag per row, parallel to `rows`. A disabled row is drawn and
-        /// read out, `aria-disabled`; the arrows pass over it and it registers
-        /// no Enter target, so the keyboard can never pick it.
+        /// Parallel to `rows`. Drawn and `aria-disabled`, never reachable by the keyboard.
         #[props(default)]
         row_disabled: Vec<bool>,
-        /// The highlighted row, or `None` for no highlight - which is what an
-        /// autocomplete opens with, so Enter commits the typed text instead of
-        /// the top suggestion.
+        /// `None` is no highlight, as an autocomplete opens, so Enter commits the typed text.
         active: Option<usize>,
         onactive: EventHandler<usize>,
         opened: bool,
         onopened: EventHandler<bool>,
-        /// The caller's state: its id is what the aria wiring is built from,
-        /// and it is told how many rows are drawn.
+        /// Its id builds the aria wiring; it is told the row count.
         state: ComboboxState,
         #[props(default)]
         empty: Option<Element>,
-        /// `Some(label)` while the options are being fetched: the dropdown
-        /// shows a `Loader` in place of the rows and `empty`, and the status
-        /// region says `label`.
+        /// `Some(label)` while fetching: a `Loader` replaces rows and `empty`; the status region says it.
         #[props(default)]
         loading: Option<String>,
-        /// `Some(text)` while a typed query filters the rows. A query that
-        /// leaves none shows `empty`, else `text`, and the status region says it.
+        /// `Some(text)` while a query filters. No rows left shows `empty`, else `text`, and says it.
         #[props(default)]
         nothing_found: Option<String>,
-        /// Above the rows, inside the dropdown and outside its scroll - a
-        /// search box. It survives an empty list, which is the whole point:
-        /// a query that matches nothing is exactly when the box has to still
-        /// be there to edit.
+        /// A search box above the rows, outside the scroll. It survives an empty list.
         #[props(default)]
         header: Option<Element>,
-        /// Focused once the list is actually on screen.
-        ///
-        /// The box is `visibility: hidden` until `use_popover` has measured it,
-        /// and focusing a hidden element does nothing while still reporting
-        /// success - so a caller that focuses its own header the moment it
-        /// mounts silently loses the focus every time. Only this component
-        /// knows when the box became visible.
+        /// Focused once visible: before `use_popover` measures, focus silently fails.
         #[props(default)]
         autofocus: Option<ElementHandle>,
         #[props(default, into)]
@@ -116,35 +86,27 @@ base_props! {
         radius: Input<Size>,
         /// Disabled or read-only: the list is neither drawn nor opened by a key.
         disabled: bool,
-        /// Whether Enter closes the list after picking. A multi-select keeps
-        /// it open, so each pick toggles a row and the next one is one key
-        /// away.
+        /// Enter closes after picking. A multi-select keeps the list open.
         #[props(default = true)]
         close_on_pick: bool,
-        /// When Home and End move the text caret rather than the highlight
-        /// (APG editable combobox).
+        /// When Home and End move the text caret (APG editable combobox).
         #[props(default)]
         caret_keys: CaretKeys,
-        /// APG select-only: Tab and Alt+ArrowUp pick the highlight before
-        /// closing.
+        /// APG select-only: Tab and Alt+ArrowUp pick the highlight before closing.
         #[props(default)]
         commit_on_leave: bool,
         /// Space picks the highlight, like Enter: a list with no text to type in.
         #[props(default)]
         space_picks: bool,
-        /// Sets `aria-multiselectable` on the listbox.
         #[props(default)]
         multiselectable: bool,
-        /// The id naming the listbox, usually the field's label.
+        /// Usually the field's label id.
         #[props(default)]
         labelled_by: Option<String>,
-        /// What the list's width follows. `Match` reproduces the `width: 100%`
-        /// it had while it was nested; a select, whose rows are the content,
-        /// takes `Min` so a long row is never clipped.
+        /// `Match` the trigger; a select takes `Min` so a long row is never clipped.
         #[props(default = PopoverWidth::Match)]
         width: PopoverWidth,
-        /// Measures the list again whenever it changes, for a trigger that
-        /// resizes while the list is open.
+        /// Remeasures on change, for a trigger that resizes while open.
         #[props(default)]
         remeasure: u64,
         children: Element,
@@ -158,22 +120,15 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     let radius = props.radius.copied_or(theme.combobox.radius);
 
     let context = use_combobox_context(props.state.id(), size, radius);
-    // Provided here for a row drawn inside the trigger, and handed to the
-    // portaled dropdown as a prop, which mounts outside this scope entirely.
+    // For a row inside the trigger; the portaled dropdown gets it as a prop.
     use_context_provider(|| context);
 
-    // A disabled or read-only list is never drawn, whatever the state says:
-    // the pointer and the ARIA go through this gate, not only the keys.
+    // Disabled or read-only never draws: pointer and ARIA pass this gate, not only the keys.
     let opened = props.opened && !props.disabled;
     props.state.set_held(props.state.is_open() && !opened);
     let loading = props.loading.is_some();
-    // Said by a region outside the dropdown, not by the loader inside it. The
-    // dropdown is `aria-busy` while loading, and some screen readers hold a
-    // busy subtree's changes back until it is done - by which time the loader
-    // is gone. And a region has to be in the tree before its text changes to
-    // be announced, so it stays mounted, empty, while there is nothing to say.
-    // The rows belong to the previous query while a fetch runs, so they are
-    // neither drawn nor reachable by the arrows.
+    // Said outside the `aria-busy` dropdown, whose changes some readers hold back. While
+    // fetching, the rows are the previous query's, so none are drawn or reachable.
     let count = if loading { 0 } else { props.rows.len() };
     let nothing_found = props
         .nothing_found
@@ -191,17 +146,11 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     if opened {
         props.state.set_rows(count);
     }
-    // The rows the keyboard is allowed on, in order. Everything the arrows do
-    // is a move inside this list, so a disabled row is not a case any of them
-    // has to remember.
+    // The rows the arrows move through.
     let enabled: Vec<usize> = (0..count)
         .filter(|row| !props.row_disabled.get(*row).copied().unwrap_or(false))
         .collect();
-    // A disabled row is never the highlight. Opening, a filter change and a
-    // caller's own `set_active` can each land on one, so it is snapped here,
-    // once, rather than guarded at all three: forward first, because a list
-    // opens at or after what is selected, and back only when there is nothing
-    // left ahead.
+    // Snaps a disabled highlight (from open, filter or `set_active`) to the next enabled row, else back.
     let active_row = props
         .active
         .filter(|_| count > 0)
@@ -240,32 +189,20 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         .with("disabled", disabled)
         .into();
 
-    // On the Escape stack exactly while the key handler above would take
-    // Escape, so a `HoverCard` around this field leaves the press to it.
+    // On the Escape stack while open, so a surrounding `HoverCard` leaves the press to it.
     use_field_list_layer(opened);
     let anchor = use_element();
-    // Unstyled, and not user-facing: it is only what the keys are caught on and
-    // what the dropdown is measured against, which is why `sx` lands on the
-    // dropdown instead. Its width is the trigger's, so `PopoverWidth::Match`
-    // reproduces the `width: 100%` the dropdown had while it was nested.
+    // Unstyled: catches the keys and anchors the dropdown, so `sx` goes to the dropdown.
     let wrapper = use_box().prepare();
-    // A span in this scope rather than a `VisuallyHidden`, which would be one
-    // more scope re-rendered with every list.
+    // A span, not `VisuallyHidden`: one scope fewer to re-render.
     let status_box = use_box().framework_sx(&VISUALLY_HIDDEN_FIXED_SX).prepare();
 
-    // A linear map of the active row across the scroll range. It costs no
-    // measurement and still always lands the row inside the viewport - the
-    // row's offset from the top works out to `row * (viewport - row height) /
-    // (rows - 1)`, which never exceeds the viewport.
+    // Linear over the scroll range: no measuring, and the row always lands in view.
     let scroll_y = active_row
         .filter(|_| count > 1)
         .map(|row| row as f64 / (count - 1) as f64 * 100.0);
 
-    // An open list with nothing to show and no `empty` renders nothing at all -
-    // an empty bordered box is not a state worth drawing, and it is what would
-    // otherwise force callers to derive `opened` from the option count.
-    // A `header` keeps the box open through a list of nothing: a search that
-    // matches no row must not close the thing holding the search.
+    // Nothing to show draws nothing, but a `header` keeps the box: a failed search must stay editable.
     let showing = opened && (loading || count > 0 || empty.is_some() || props.header.is_some());
     // Mounted only while showing, so a closed list pays for no popover.
     let popup = showing.then(|| {
@@ -297,10 +234,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
 
     wrapper
         .element(&anchor)
-        // The trigger is the caller's, so the keys are caught where they
-        // bubble to rather than on a field this component owns. The portaled
-        // dropdown carries the very same handler, for focus that moved inside
-        // it.
+        // The trigger is the caller's, so keys are caught as they bubble. The dropdown has the same handler.
         .event("onkeydown", onkeydown)
         .render(
             HtmlTag::Div,
@@ -357,8 +291,7 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
         use_element(),
         true,
         PopoverOptions::new(theme.popover.gap, theme.popover.padding)
-            // Portaling takes away the positioned wrapper a `width: 100%` used
-            // to resolve against, so the width is measured instead.
+            // Portaled, so no wrapper for `width: 100%`: measured instead.
             .width(props.width)
             .remeasure(props.remeasure),
     );
@@ -370,15 +303,12 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
         .style(popover.style())
         .prepare();
 
-    // Placed means measured, which means visible - the first moment at which
-    // focusing anything inside the box can take.
+    // Placed means measured and visible, the first moment focus can take.
     let autofocus = props.autofocus;
     let placed = popover.placed();
     use_effect(use_reactive!(|placed| {
         if let (true, Some(target)) = (placed, autofocus) {
-            // Out of this dispatch: the click that opened the list ends by
-            // focusing the trigger, so focusing inline is undone a moment
-            // later.
+            // Deferred: the opening click ends by focusing the trigger.
             spawn(async move {
                 let _ = target.focus();
             });
@@ -387,22 +317,15 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
 
     let keys = props.keys;
     let context = props.context;
-    // Portaled rather than nested, so no `overflow: hidden` ancestor can clip
-    // it and it can flip above the trigger when the page runs out of room.
+    // Portaled, so no `overflow: hidden` ancestor clips it and it can flip above the trigger.
     popover.show(Some(
         dropdown
             .element(popover.floating())
-            // Clicking the list's padding or its scrollbar must not move focus
-            // off the trigger: a trigger that closes on blur would close under
-            // the click. The rows cancel it for themselves already.
+            // A click on the padding or scrollbar must not blur the trigger, which would close the list.
             .event("onmousedown", move |event: MouseEvent| {
                 event.prevent_default()
             })
-            // The same handler as the wrapper's, because the dropdown is
-            // portaled: it is no descendant of that wrapper, so a key pressed
-            // inside it bubbles to `PortalOutlet` instead. Nothing in a plain
-            // dropdown can hold focus, so this is dead weight there - it is
-            // what lets a search box inside the list answer the arrows.
+            // Portaled, so keys bubble to `PortalOutlet`; this lets a search box inside answer the arrows.
             .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
             .attr("aria-busy", props.loading.then_some("true"))
             .render(
@@ -431,14 +354,8 @@ fn ComboboxPopup(props: ComboboxPopupProps) -> Element {
     rsx! {}
 }
 
-/// The four signals every portaled row reads.
-///
-/// Owned by the root scope, not by the component's, and dropped by hand on
-/// unmount. The rows that read them are portaled, so they mount under
-/// `PortalOutlet` and are *not* descendants of `ComboboxCore` - a signal
-/// created there would be read from outside the scope that owns it, which
-/// dioxus warns about and which really can drop the value while a row still
-/// holds it.
+/// The signals every portaled row reads. Owned by the root scope and dropped by hand:
+/// a component-owned signal read from a portaled row can be dropped while still held.
 fn use_combobox_context(state_id: String, size: Size, radius: Size) -> ComboboxContext {
     let id = use_hook(|| Signal::new_in_scope(state_id, ScopeId::ROOT));
     let mut shared_size = use_hook(|| Signal::new_in_scope(size, ScopeId::ROOT));
@@ -465,10 +382,7 @@ fn use_combobox_context(state_id: String, size: Size, radius: Size) -> ComboboxC
     }
 }
 
-/// Where each arrow lands, worked out in render rather than inside the
-/// handler: they depend only on what this render already knows, and four
-/// `Option<usize>` keep the handler `Copy` - which is what lets the wrapper
-/// and the portaled dropdown share one closure.
+/// Where each arrow lands, computed in render so the handler stays `Copy` and shareable.
 #[derive(Clone, Copy, PartialEq)]
 struct Arrows {
     down: Option<usize>,
@@ -488,9 +402,7 @@ fn arrow_targets(enabled: &[usize], active_row: Option<usize>, opened: bool) -> 
     let first = enabled.first().copied();
 
     Arrows {
-        // From no highlight, both arrows land on the first row the keyboard
-        // may have - the first press arms the list rather than moving inside
-        // it.
+        // From no highlight, the first press arms the first enabled row.
         down: match (opened, active_row) {
             (true, Some(_)) => step(1),
             _ => active_row.or(first),
@@ -501,8 +413,7 @@ fn arrow_targets(enabled: &[usize], active_row: Option<usize>, opened: bool) -> 
     }
 }
 
-/// The list's one keyboard, shared by the wrapper and the portaled dropdown.
-/// Every field is `Copy`, so the closure that forwards to it is `Copy` too.
+/// The one keyboard, shared by the wrapper and the portaled dropdown; `Copy` throughout.
 #[derive(Clone, Copy, PartialEq)]
 struct ComboboxKeys {
     active_row: Option<usize>,
@@ -549,8 +460,7 @@ impl ComboboxKeys {
             }
             request(false);
         };
-        // A list of nothing but disabled rows has nowhere to go, and the
-        // arrows then only open it.
+        // With only disabled rows, the arrows just open the list.
         let go_to = |row: Option<usize>| {
             if let Some(row) = row {
                 self.set_active.call(row);
@@ -601,8 +511,7 @@ impl ComboboxKeys {
                 event.prevent_default();
                 go_to(self.arrows.last);
             }
-            // Nothing highlighted means Enter is not ours: it bubbles, so a
-            // form still submits.
+            // Nothing highlighted: Enter bubbles, so a form still submits.
             Key::Enter if opened && active_row.is_some() => {
                 event.prevent_default();
                 pick();

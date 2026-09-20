@@ -18,11 +18,9 @@ use super::{
     option::{CascaderOption, erase, indices_for_value, options_at},
 };
 
-/// One row under the `node` callback's brush. The row itself - its highlight,
-/// its `aria-selected`, its chevron, its click - is the component's.
+/// One row's content, handed to `node`. The row itself (highlight, chevron, click) stays the component's.
 ///
-/// The option's `value` and `label` rather than the option itself: a root's
-/// option carries its whole subtree, which every visible row would clone.
+/// `value` and `label`, not the option: a root option would clone its whole subtree per row.
 #[derive(Clone, PartialEq)]
 pub struct CascaderNodeArgs<T> {
     pub value: T,
@@ -40,8 +38,7 @@ pub struct CascaderNodeArgs<T> {
 pub struct CascaderFilterArgs<T> {
     /// What is currently typed in the search box.
     pub query: String,
-    /// The path's labels, already joined by `separator` - what the default
-    /// filter matches against.
+    /// The path's labels joined by `separator`, what the default filter matches.
     pub label: String,
     /// The values root to option; the last one is what this path commits.
     pub path: Vec<T>,
@@ -49,56 +46,42 @@ pub struct CascaderFilterArgs<T> {
 
 field_props! {
     pub struct CascaderProps<T: Options> {
-        /// The tree to walk. Values are unique across the whole tree, not
-        /// just among siblings - the cascader finds its value by searching.
+        /// The tree. Values must be unique across the whole tree, not just among siblings.
         data: Vec<CascaderOption<T>>,
-        /// The selected option's value. Strictly controlled - pair it with
-        /// `onchange`, or bind it with `name`. The path to it is found in
-        /// `data`, for the trigger's text and for where the list opens.
+        /// The selected option's value. Strictly controlled: pair it with `onchange`, or bind it with `name`.
         #[props(default)]
         value: Option<T>,
-        /// Called with the value to select next, or `None` when the
-        /// selection was cleared - by the x, or by `allow_deselect`.
+        /// The value to select next, or `None` when cleared (the x, or `allow_deselect`).
         #[props(default)]
         onchange: Option<EventHandler<Option<T>>>,
         /// A branch commits its own value as well as expanding. Off, only a leaf can be picked.
         #[props(default)]
         any_level: Option<bool>,
-        /// Picking the committed option again clears it. Off by default:
-        /// APG keeps the value on a re-pick, so Enter only confirms.
+        /// Picking the committed option again clears it. Off by default, as in APG.
         #[props(default)]
         allow_deselect: Option<bool>,
-        /// `"columns"` (default) or `"paths"`. A search renders `"paths"`
-        /// whatever this says.
+        /// `"columns"` (default) or `"paths"`. A search always renders `"paths"`.
         #[props(default, into)]
         layout: Input<CascaderLayout>,
         /// Puts a search box at the top of the list.
         #[props(default)]
         searchable: Option<bool>,
-        /// Narrows the paths while searching. Defaults to a case-insensitive
-        /// `contains` over the joined path.
+        /// Narrows the paths while searching. Defaults to a case-insensitive `contains` over the joined path.
         #[props(default)]
         filter: Option<Callback<CascaderFilterArgs<T>, bool>>,
-        /// Between labels, in the trigger and in a `"paths"` row. `" / "` by
-        /// default.
+        /// Between labels, in the trigger and in a `"paths"` row. Defaults to `" / "`.
         #[props(default)]
         separator: Option<String>,
-        /// Overrides the joined labels in the trigger; takes the labels root
-        /// to option. A `String`, not a node: the value slot clips for
-        /// `text-overflow: ellipsis`.
+        /// The trigger's text from the labels, root first. A `String`, so it can clip with an ellipsis.
         #[props(default)]
         format_value: Option<Callback<Vec<String>, String>>,
         /// Draws one row's content. Defaults to the label.
         #[props(default)]
         node: Option<Callback<CascaderNodeArgs<T>, Element>>,
-        /// One column's width, and its minimum: when the trigger is wider
-        /// than the open columns, they share the rest. Defaults to the
-        /// theme's; `"max-content"` is how a column takes the width of its
-        /// longest row.
+        /// One column's minimum width; `"max-content"` fits the longest row. Defaults to the theme's.
         #[props(default)]
         column_width: Option<String>,
-        /// Shows an x that clears the selection, which is what makes
-        /// `onchange` fire `None`.
+        /// Shows an x that clears the selection.
         #[props(default)]
         clearable: Option<bool>,
         /// Shown while nothing is selected.
@@ -107,47 +90,38 @@ field_props! {
         /// What the search box says while empty.
         #[props(default)]
         search_placeholder: Option<String>,
-        /// Emits a hidden input of that name carrying the selected value's
-        /// `Options::value()`, so the field posts with a native form. A path -
-        /// `Listing::FIELDS.category()` - also binds the selection to the
-        /// surrounding `Form`'s value when there is no `onchange`.
+        /// A hidden input posting `Options::value()`. A field path also binds to the `Form` without `onchange`.
         #[props(default, into)]
         name: crate::components::form::FieldName<Option<T>>,
-        /// Rules over the selected value, shown once the cascader loses focus
-        /// or its form is submitted.
+        /// Rules over the selected value, shown after blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<Option<T>>,
     }
 }
 
-/// A listbox over a tree, walked level by level. Its value is one option's
-/// `value` - any `T` a `Select` could hold; what it adds is the path to that
-/// option, which it finds in `data` itself and shows in the trigger.
+/// A select over a tree, walked level by level; the trigger shows the path to the picked option.
 ///
-/// It takes its own `CascaderOption<T>`. Only this shell is
-/// generic: the engine under it walks the tree by index path and never sees a
-/// `T`, so a second `T` costs a few small functions, not a second engine. Unlike `Tree` it is a
-/// field: it sits in a frame with a label, it posts, it validates, and focus
-/// never leaves its trigger - the columns are listboxes the trigger points at
-/// with `aria-activedescendant`.
+/// Only this shell is generic: the engine walks the tree by index path and never sees a `T`.
 ///
-/// ```no_run
+/// ```rust
 /// # use dioxus::prelude::*;
 /// # use libero::components::{Cascader, CascaderOption};
 /// # fn app() -> Element {
-/// # type Category = String;
-/// # let categories = use_signal(Vec::<CascaderOption<Category>>::new);
-/// # let mut chosen = use_signal(|| None::<Category>);
-/// # rsx! {
-/// Cascader {
-///     label: "Category",
-///     data: categories(),
-///     value: chosen(),
-///     onchange: move |next: Option<Category>| chosen.set(next),
-///     searchable: true,
+/// let mut chosen = use_signal(|| None::<String>);
+/// rsx! {
+///     Cascader {
+///         label: "Category",
+///         data: vec![CascaderOption::new("fruit", "Fruit").children(vec![
+///             CascaderOption::new("apple", "Apple"),
+///         ])],
+///         value: chosen(),
+///         onchange: move |next| chosen.set(next),
+///     }
 /// }
-/// # } }
+/// # }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/form/cascader>
 #[component]
 pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
     let theme = use_theme();
@@ -173,8 +147,6 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
         warn("Cascader: no option in `data` holds `value`, so nothing is selected.");
     }
 
-    // The trigger's text. A `String` and not a node, so the value slot can
-    // clip it for `text-overflow: ellipsis`.
     let display = match &committed {
         None => String::new(),
         Some(indices) => {

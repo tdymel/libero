@@ -40,12 +40,10 @@ str_enum! {
     /// How an open `Cascader` draws its tree.
     #[state_prefix = "layout"]
     pub enum CascaderLayout {
-        /// One listbox per level, side by side - the column walk the
-        /// component is named after.
+        /// One listbox per level, side by side.
         #[default]
         Columns = "columns",
-        /// One row per full path, joined by `separator`. Also what a search
-        /// renders, whatever this says.
+        /// One row per full path, joined by `separator`. A search always renders this.
         Paths = "paths",
     }
 }
@@ -58,9 +56,7 @@ impl From<CascaderLayout> for Input<CascaderLayout> {
     }
 }
 
-/// The option tree without its values, compared by `Rc` pointer. `Cascader`
-/// erases its `data` into a fresh one every render, so `CascaderCoreProps`
-/// never compares equal - see `CascaderCoreProps::options`.
+/// The value-free tree, compared by `Rc` pointer; see `CascaderCoreProps::options`.
 #[derive(Clone)]
 pub(super) struct CascaderTree(pub Rc<Vec<CascaderNode>>);
 
@@ -70,17 +66,14 @@ impl PartialEq for CascaderTree {
     }
 }
 
-/// One row as the engine knows it: where it is, not what it holds.
-/// `Cascader<T>` looks the option up by `indices` for the caller's `node`.
+/// One row by position; `Cascader<T>` looks its option up by `indices`.
 pub(super) struct CascaderRowArgs {
     pub indices: Vec<usize>,
     pub expanded: bool,
     pub selected: bool,
 }
 
-/// `Rc<dyn Fn>` wrapper, so `CascaderCoreProps` derives `Clone`/`PartialEq`
-/// without being generic over `T`. Always equal, like `Tree`'s
-/// `ErasedRenderNode`; what keeps a *stale* one from surviving is `options`.
+/// Always equal, like `Tree`'s `ErasedRenderNode`; the never-equal `options` keeps it fresh.
 #[derive(Clone)]
 pub(super) struct CascaderRender(pub Rc<dyn Fn(CascaderRowArgs) -> Element>);
 
@@ -90,8 +83,7 @@ impl PartialEq for CascaderRender {
     }
 }
 
-/// The query, a path's index path and its joined label in; whether the path
-/// survives out.
+/// Query, index path and joined label in; whether the path survives out.
 type MatchFn = dyn Fn(&str, &[usize], String) -> bool;
 
 /// A caller's `filter`, erased the same way as `CascaderRender`.
@@ -104,9 +96,7 @@ impl PartialEq for CascaderMatch {
     }
 }
 
-/// The trigger: the joined path or the placeholder on one line, and the
-/// chevron at its end - inside the control rather than in the frame's trailing
-/// slot, so a click on the chevron opens the list too.
+/// The chevron sits inside the control, not the frame's trailing slot, so clicking it opens the list.
 static CASCADER_TRIGGER_SX: StaticSx = StaticSx::new(|| {
     field_control_sx()
         .display("flex")
@@ -135,10 +125,7 @@ static CASCADER_TRIGGER_SX: StaticSx = StaticSx::new(|| {
         .when("disabled", sx().cursor("not-allowed"))
 });
 
-/// What both layouts do to the rows inside them. A row is a `ComboboxOption`,
-/// so its tint, its ring and its `aria-selected` are already settled - this is
-/// only the label/chevron split, and the one mark `ComboboxOption` has no
-/// state for.
+/// The label/chevron split and the committed mark; the rest is `ComboboxOption`'s.
 fn cascader_rows_sx() -> Sx {
     sx().selector(
         "& [data-slot='label']",
@@ -162,10 +149,7 @@ fn cascader_rows_sx() -> Sx {
         "& [data-slot='branch'] > svg",
         sx().width("1em").height("1em"),
     )
-    // The committed path, which is *not* what `selected` means here:
-    // `selected` follows the cursor, so `aria-activedescendant` always has a
-    // marked row under it. The value then needs a mark of its own, or it is
-    // invisible the moment the arrows wander off it.
+    // `selected` follows the cursor here, so the committed path needs its own mark.
     .selector("& [data-state~='committed']", sx().font_weight("700"))
 }
 
@@ -175,12 +159,9 @@ static CASCADER_COLUMNS_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .align_items("stretch")
         .gap("4px")
-        // Only where the dropdown is held narrower than its columns, which
-        // on a desktop it never is.
+        // Only where the dropdown is narrower than its columns; never on a desktop.
         .overflow_x("auto")
-        // A column never shrinks below `column_width`, and grows into the
-        // room a trigger wider than the open columns leaves - or the rows,
-        // and the chevrons at their ends, stop short of the dropdown's edge.
+        // Grows into a wider trigger's room, or the rows' chevrons stop short of the edge.
         .selector(
             "& > [data-slot='column']",
             sx().flex("1 0 auto")
@@ -196,12 +177,9 @@ static CASCADER_COLUMNS_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-/// One row per full path. No columns, so the rows only need the shared bits.
 static CASCADER_PATHS_SX: StaticSx = StaticSx::new(cascader_rows_sx);
 
-/// The search box at the top of the list - the shape `Select` settled on. It
-/// is not a field control: it sits inside the dropdown, above the rows and
-/// outside their scroll, so it carries its own chrome.
+/// The search box above the rows, as on `Select`. Not a field control, so it carries its own chrome.
 static CASCADER_SEARCH_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
         .border("none")
@@ -218,72 +196,50 @@ static CASCADER_SEARCH_SX: StaticSx = StaticSx::new(|| {
         .selector("::placeholder", sx().color("text-dimmed"))
 });
 
-/// [`CASCADER_SEARCH_SX`]'s padding and bottom border, where a drawn
-/// placeholder sits.
+/// [`CASCADER_SEARCH_SX`]'s padding plus bottom border, for a drawn placeholder.
 const SEARCH_INSET: &str = "4px 8px 5px";
 
 field_props! {
     pub(crate) struct CascaderCoreProps {
-        /// The tree, **wrapped fresh on every render on purpose**.
-        /// `CascaderTree` compares by `Rc` pointer, so these props never
-        /// compare equal - which is what stops this component memoizing and
-        /// keeping a stale `node` or `filter`, both of which always compare
-        /// equal ([[codebase/dioxus-memoization-traps]]). It also spares a
-        /// deep comparison of the tree.
+        /// Wrapped fresh each render on purpose: never equal, so a stale `node` or `filter` can't
+        /// survive memoization ([[codebase/dioxus-memoization-traps]]).
         options: CascaderTree,
-        /// The committed option's index path. `None` is no selection.
         committed: Option<Vec<usize>>,
-        /// The option to commit next, by index path - `None` to clear.
+        /// The option to commit next, by index path; `None` clears.
         onpick: EventHandler<Option<Vec<usize>>>,
-        /// Draws one row's content. `None` draws the label.
+        /// `None` draws the label.
         #[props(default)]
         node: Option<CascaderRender>,
         /// The trigger's text. Empty shows `placeholder`.
         display: String,
         separator: String,
-        /// A branch commits as well as expanding.
         any_level: bool,
-        /// Committing the path that is already committed clears it instead.
         allow_deselect: bool,
         layout: CascaderLayout,
-        /// Puts a search box at the top of the list, which switches it to
-        /// `Paths` over the matches.
         searchable: bool,
         column_width: String,
         #[props(default)]
         placeholder: Option<String>,
         #[props(default)]
         search_placeholder: Option<String>,
-        /// Shows an x in place of the chevron while a value is committed.
         #[props(default)]
         clearable: bool,
-        /// A hidden input of that name carrying `form_value`, so the field
-        /// posts with a native form. The trigger is a `div` and cannot carry
-        /// a `name` itself.
+        /// A hidden input carrying `form_value`: the trigger is a `div` and can't post.
         #[props(default)]
         name: Option<String>,
-        /// What the hidden input posts - the value's `Options::value()`.
         /// `None` posts nothing.
         #[props(default)]
         form_value: Option<String>,
-        /// What the skin's `validate` rules say.
         #[props(default)]
         rules: Option<crate::components::form::FieldStatus>,
-        /// Narrows the paths while searching. `None` is a case-insensitive
-        /// `contains` over the joined labels.
+        /// `None` is a case-insensitive `contains` over the joined labels.
         #[props(default)]
         filter: Option<CascaderMatch>,
     }
 }
 
-/// The engine under `Cascader`. It never sees `T`: the skin hands it the tree
-/// without its values, the committed option as an index path, and erased
-/// callbacks, and takes an index path back.
-///
-/// Focus stays on the trigger the whole time - the rows and the list cancel
-/// `mousedown` - so losing it is what closes the list on an outside click,
-/// with no window-level listener. While `searchable` and open, focus is in the
-/// dropdown's search box instead and that box's blur closes the list.
+/// The `T`-free engine under `Cascader`: index paths in and out.
+/// Focus stays on the trigger (or the open search box), so its blur closes the list.
 #[component]
 pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let theme = use_theme();
@@ -291,8 +247,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let size = props.size.copied_or(theme.cascader.size);
     let radius = props.radius.copied_or(theme.cascader.radius);
     let disabled = props.disabled.unwrap_or(false);
-    // Like `SelectCore`: the tree is the only editor, so read-only leaves the
-    // trigger focusable and posting and refuses to open it.
+    // As `SelectCore`: read-only stays focusable and posting, but never opens.
     let readonly = props.readonly.unwrap_or(false);
     let required = props.required.unwrap_or(false);
 
@@ -300,9 +255,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let opened = state.is_open() && !disabled && !readonly;
     let searchable = props.searchable && !disabled;
 
-    // One index per level. `[2, 0]` highlights the first child of the third
-    // root, and does *not* expand it:
-    // the columns never run ahead of the cursor.
+    // One index per level. `[2, 0]` highlights the third root's first child without expanding it.
     let cursor = use_signal(Vec::<usize>::new);
     let query = use_signal(String::new);
     let search = use_element();
@@ -319,9 +272,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         false => props.layout,
     };
 
-    // Every path the `Paths` layout could draw, and which of them the query
-    // leaves. `Columns` never reads it, and building it costs one walk of a
-    // tree the component is holding anyway.
+    // The `Paths` rows the query leaves. `Columns` ignores it; it costs one walk.
     let visible: Rc<Vec<FlatPath>> = Rc::new(visible_paths(
         &nodes,
         any_level,
@@ -331,15 +282,14 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     ));
 
     let cursor_now = cursor.read().clone();
-    // The cursor as a row of `visible`, which is the `Paths` keyboard's index.
+    // The cursor as a row of `visible`, the `Paths` keyboard's index.
     let path_row = visible.iter().position(|path| path.indices == cursor_now);
 
     let id = state.id();
     let listbox_id = format!("{id}-listbox");
     let controlled_id = controlled_id(&listbox_id, layout, &cursor_now);
 
-    // `Rc` rather than a bare closure: each is needed in two or more handlers,
-    // and what they capture - a path - is not `Copy`.
+    // `Rc`: each is shared by several handlers and captures a non-`Copy` path.
     let open = open_handler(cursor, state, committed.clone());
     let onpick = props.onpick;
     let commit = commit_handler(state, onpick, committed.clone(), props.allow_deselect);
@@ -379,7 +329,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .states(field.states())
         .prepare();
 
-    // The frame draws the ring, so the trigger must not draw a second one.
+    // The frame draws the ring.
     let control = use_box()
         .framework_sx(&CASCADER_TRIGGER_SX)
         .focus_ring(false)
@@ -442,8 +392,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         size,
         radius,
         layout,
-        // The box changes shape while it is open: a column appears, and a
-        // query shortens the list.
+        // A new column or a shorter match list reshapes the open box.
         remeasure: (cursor_now.len() * 4096 + visible.len()) as u64,
         gap: theme.popover.gap,
         padding: theme.popover.padding,
@@ -493,8 +442,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     }));
 
     // ---- the trigger --------------------------------------------------
-    // While the search box is open it is the combobox, so it takes the field's
-    // wiring: a role-less trigger may not carry `aria-required` or `aria-expanded`.
+    // The open search box is the combobox; a role-less trigger may not carry `aria-required`.
     let control = match searchable && opened {
         true => control.attr("id", field.id().to_string()),
         false => field
@@ -568,9 +516,7 @@ fn option_id(id: &str, level: usize, index: usize) -> String {
     format!("{id}-option-{level}-{index}")
 }
 
-/// Two elements cannot both be the combobox. While the search box is open it
-/// owns the role and the whole field wiring; the trigger keeps only what says
-/// a list hangs off it.
+/// Only one element is the combobox: while the search box is open, the trigger keeps just `aria-haspopup`.
 fn trigger_aria(
     searchable: bool,
     opened: bool,
@@ -585,8 +531,7 @@ fn trigger_aria(
         attr("aria-haspopup", "listbox"),
         attr("aria-expanded", opened.to_string()),
     ];
-    // The list is mounted only while open, and an id that names nothing is an
-    // invalid reference.
+    // The list is mounted only while open; a dangling id is invalid.
     if opened {
         trigger.push(attr("aria-controls", controlled_id.to_string()));
     }
@@ -596,10 +541,8 @@ fn trigger_aria(
     trigger
 }
 
-/// The keyboard: two tables on one handler, chosen by the layout that is on
-/// screen. `Columns` walks the tree; `Paths` walks a flat list and leaves Left
-/// and Right to the search box's caret. Held in an `Rc`, because the trigger
-/// and the portaled dropdown both need it.
+/// The keyboard, by layout: `Columns` walks the tree, `Paths` a flat list (Left/Right stay the caret's).
+/// In an `Rc`: the trigger and the portaled dropdown share it.
 struct CascaderKeys {
     nodes: Rc<Vec<CascaderNode>>,
     visible: Rc<Vec<FlatPath>>,
@@ -620,8 +563,7 @@ impl CascaderKeys {
         if self.disabled {
             return;
         }
-        // APG: Alt+ArrowDown opens without moving the cursor, Alt+ArrowUp
-        // closes; any other chord is the caret's or the browser's.
+        // APG: Alt+ArrowDown opens in place, Alt+ArrowUp closes; other chords aren't ours.
         match navigation_chord(&event) {
             Some(NavigationChord::Open) => {
                 event.prevent_default();
@@ -653,8 +595,7 @@ impl CascaderKeys {
                 self.state.close();
             }
             Key::Tab => self.leave(),
-            // APG select-only: Space is Enter. While `searchable` the focus is
-            // in the search box, where a space is ordinary typing.
+            // APG select-only: Space is Enter, except in the search box.
             Key::Character(ref character) if character == " " && !self.searchable => {
                 event.prevent_default();
                 self.activate();
@@ -692,14 +633,11 @@ impl CascaderKeys {
         let here = self.cursor.read().clone();
         match self.layout {
             CascaderLayout::Paths => {
-                // Nothing highlighted means Enter is not ours: it bubbles, so a
-                // form still submits.
+                // Nothing highlighted: Enter bubbles, so a form still submits.
                 let Some(path) = self.visible.iter().find(|path| path.indices == here) else {
                     return false;
                 };
                 if !path.disabled {
-                    // A `Paths` row is a whole path, so there is nothing left
-                    // to drill into - every pick here is the end.
                     (self.commit)(path.indices.clone(), true);
                 }
                 true
@@ -713,8 +651,7 @@ impl CascaderKeys {
                     (self.commit)(here, true);
                     return true;
                 }
-                // A branch expands. With `any_level` it is picked on the way,
-                // and the list stays open so the walk can go on.
+                // A branch expands; with `any_level` it is also picked, and the list stays open.
                 if self.any_level {
                     (self.commit)(here.clone(), false);
                 }
@@ -742,8 +679,7 @@ impl CascaderKeys {
         };
         event.prevent_default();
         open(true);
-        // APG select-only: Home and End open on the first and last row; the
-        // other keys keep the committed path, or arm the first (Up: last) row.
+        // APG select-only: Home/End open on the first/last row; other keys keep the committed path.
         if (matches!(key, Key::Home | Key::End) || cursor.read().is_empty())
             && let Some(next) = self.edge(forward)
         {
@@ -769,9 +705,7 @@ impl CascaderKeys {
         }
     }
 
-    /// APG typeahead: a printable key moves to the next row of the cursor's
-    /// column that starts with it, and opens a closed list on the roots. Off
-    /// while `searchable`, where typing is the search box's.
+    /// APG typeahead within the cursor's column; opens a closed list on the roots. Off while `searchable`.
     fn typeahead(&self, event: &KeyboardEvent) -> bool {
         if self.searchable || has_shortcut_modifier(event) {
             return false;
@@ -863,8 +797,7 @@ impl CascaderKeys {
         }
     }
 
-    /// The tree. `Paths` has no levels to walk, so Left and Right are left
-    /// alone there - which is what lets them move the search box's caret.
+    /// The tree. Under `Paths`, Left and Right stay the search box's caret keys.
     fn columns(&self, event: KeyboardEvent) {
         let (mut cursor, nodes) = (self.cursor, &self.nodes);
         let paths_layout = self.layout == CascaderLayout::Paths;
@@ -903,7 +836,6 @@ impl CascaderKeys {
             }
             Key::ArrowLeft if !paths_layout => {
                 event.prevent_default();
-                // At the root there is nothing to go up to.
                 if here.len() > 1 {
                     let mut next = here;
                     next.pop();
@@ -922,12 +854,11 @@ struct CascaderRows {
     nodes: Rc<Vec<CascaderNode>>,
     node: Option<CascaderRender>,
     separator: String,
-    /// The combobox's id, which every option id is built from.
+    /// The combobox's id, the base of every option id.
     id: String,
     cursor: Signal<Vec<usize>>,
-    /// The cursor as this render read it.
     cursor_now: Vec<usize>,
-    /// The committed path, empty for none.
+    /// Empty for none.
     committed: Vec<usize>,
     commit: Rc<dyn Fn(Vec<usize>, bool)>,
     any_level: bool,
@@ -936,9 +867,7 @@ struct CascaderRows {
 }
 
 impl CascaderRows {
-    /// One node, through the skin's renderer. A `Paths` row is several of these
-    /// with the separator between them, so the caller's `node` still draws
-    /// every level rather than being skipped for the flat layout.
+    /// One node through the caller's `node`; a `Paths` row draws one per level.
     fn node(&self, prefix: &[usize]) -> Element {
         let cursor = &self.cursor_now;
         match (node_at(&self.nodes, prefix), &self.node) {
@@ -957,16 +886,10 @@ impl CascaderRows {
         let node = node_at(nodes, &indices);
         let has_children = node.is_some_and(|node| !node.children.is_empty());
         let row_disabled = disabled_at(nodes, &indices);
-        // On the cursor's own chain, which in each column is exactly one row -
-        // so the row `aria-activedescendant` points at always carries
-        // `aria-selected`, the APG contract a committed-only mark would break
-        // the moment two columns are open.
+        // One row per column: the active descendant always carries `aria-selected` (APG).
         let on_cursor = self.cursor_now.starts_with(&indices);
         let is_cursor = self.cursor_now == indices;
-        // One listbox, so exactly one row may be selected. `Paths` draws every
-        // ancestor of the cursor as a row of its own, and "on the cursor's
-        // chain" marked all of them - three `aria-selected` rows in one
-        // single-select listbox, measured with `any_level` on.
+        // `Paths` is one listbox holding the cursor's ancestors too, so only the cursor row is marked.
         let marked = match whole_path {
             true => is_cursor,
             false => on_cursor,
@@ -974,8 +897,6 @@ impl CascaderRows {
         let is_committed = self.committed == indices;
         let content = match whole_path {
             false => self.node(&indices),
-            // Every level, separated - a `Paths` row is the path, which is
-            // what makes one row of it enough to pick by.
             true => {
                 let levels: Vec<Element> = (1..=indices.len())
                     .map(|depth| self.node(&indices[..depth]))
@@ -992,9 +913,7 @@ impl CascaderRows {
             }
         };
         let picked = indices.clone();
-        // Clicking a branch puts the cursor on its first child, not on the
-        // branch itself - the deepest highlighted node is never expanded, so
-        // stopping on the branch would show no children at all.
+        // A clicked branch moves the cursor to its first child, since the cursor row never expands.
         let next_cursor = match first_enabled(children_at(nodes, &indices)) {
             Some(child) => {
                 let mut next = indices.clone();
@@ -1033,9 +952,7 @@ impl CascaderRows {
         }
     }
 
-    /// One column per level the cursor has reached, and the roots when it has
-    /// reached none. The deepest highlighted node is *not* expanded, so the
-    /// columns never run ahead of the cursor.
+    /// One column per level the cursor reached (the roots at least); never ahead of the cursor.
     fn columns(
         &self,
         strip: BoxStyle,
@@ -1054,8 +971,7 @@ impl CascaderRows {
                 let scroll_y = highlighted
                     .filter(|_| column.len() > 1)
                     .map(|index| index as f64 / (column.len() - 1) as f64 * 100.0);
-                // Named by the row it hangs off, so no column needs an English
-                // literal to be announced by.
+                // Named by its parent row, so no English literal is needed.
                 let labelled_by = match level {
                     0 => label_id.clone(),
                     _ => Some(option_id(&self.id, level - 1, cursor[level - 1])),
@@ -1137,17 +1053,14 @@ impl CascaderRows {
     }
 }
 
-/// Opens or closes the list. The list opens on what is already committed,
-/// like a native `<select>`; with nothing committed there is no highlight
-/// until a key makes one.
+/// Opens on the committed path, like a native `<select>`; with none, nothing is highlighted.
 fn open_handler(
     cursor: Signal<Vec<usize>>,
     state: ComboboxState,
     seed: Option<Vec<usize>>,
 ) -> Rc<dyn Fn(bool)> {
     Rc::new(move |next: bool| {
-        // `Signal` is `Copy`, so a local copy is what lets an `Fn` closure
-        // write one.
+        // A local copy lets an `Fn` closure write the signal.
         let mut cursor = cursor;
         if next && !state.is_open() {
             cursor.set(seed.clone().unwrap_or_default());
@@ -1156,11 +1069,8 @@ fn open_handler(
     })
 }
 
-/// The one place a value is committed, shared by the keyboard and the mouse.
-/// `allow_deselect` turns a re-pick of `picked` into a clear, which is the
-/// same edit the x makes. `close` is false for the one commit that is not the
-/// end of the interaction: an `any_level` branch, which is picked *and*
-/// drilled into.
+/// The one commit path for keyboard and mouse. `allow_deselect` turns a re-pick into a clear;
+/// `close` is false only for an `any_level` branch, which is picked and drilled into.
 fn commit_handler(
     state: ComboboxState,
     onpick: EventHandler<Option<Vec<usize>>>,
@@ -1179,7 +1089,6 @@ fn commit_handler(
     })
 }
 
-/// What the search box reads and writes.
 #[derive(Clone, Copy)]
 struct CascaderSearch {
     element: ElementHandle,
@@ -1195,8 +1104,7 @@ fn search_header(
     controlled_id: String,
     descendant: Option<String>,
     placeholder: String,
-    // While the box is open it is the combobox, so it carries the field's
-    // label and captions - without them it was an unnamed combobox.
+    // The open box is the combobox, so it carries the field's label and captions.
     field: &PreparedField,
     required: bool,
 ) -> Element {
@@ -1226,23 +1134,16 @@ fn search_header(
         .attr("aria-activedescendant", descendant)
         .event("oninput", move |event: FormEvent| {
             query.set(event.value());
-            // The list under the highlight just changed; nothing in the new
-            // one is armed until an arrow says so.
+            // A new list: nothing is armed until an arrow says so.
             cursor.set(Vec::new());
         })
-        // The trigger's blur no longer closes while searchable - this does,
-        // and the rows and the list cancel `mousedown`, so a click inside
-        // never reaches it.
+        // Closes while searchable; the rows cancel `mousedown`, so a click inside never blurs.
         .event("onblur", move |event: FocusEvent| {
             if blur_counts(&event) {
                 state.close();
             }
         })
-        // **No `onkeydown` here.** The box is inside the portaled dropdown,
-        // which carries the very same handler, so a second one would run the
-        // whole table twice per key - and the second pass sees the state the
-        // first left. An Enter that committed and closed was reopened by its
-        // own second pass, measured in Chromium.
+        // No `onkeydown`: the portaled dropdown has it, and a second pass reopened a committing Enter.
         .render(HtmlTag::Input, Vec::new(), ())
 }
 
@@ -1261,10 +1162,7 @@ fn value_slot(display: &str, placeholder: Option<&str>) -> Element {
     }
 }
 
-/// A hidden input is the only way a control that is not a form element can
-/// post - the shape `Select` and `Slider` use. The value alone: the path is
-/// derived from it, so the server needs nothing else. Nothing selected posts
-/// nothing, as a `Select` does.
+/// Posts the value alone, as `Select` does; nothing selected posts nothing.
 fn hidden_input(
     name: Option<String>,
     form_value: Option<String>,
@@ -1284,15 +1182,11 @@ fn hidden_input(
     })
 }
 
-/// Focuses the search box once the open list is placed. Placed means
-/// measured, which means visible - the first moment at which focusing anything
-/// inside the box can take.
+/// Focuses the search box once the list is placed, the first moment it is visible and focus can take.
 fn use_focus_search(opened: bool, searchable: bool, placed: bool, search: ElementHandle) {
     use_effect(use_reactive!(|(opened, searchable, placed)| {
         if opened && searchable && placed {
-            // Out of this dispatch: the click that opened the list ends by
-            // focusing the trigger, so focusing inline is undone a moment
-            // later.
+            // Deferred: the opening click ends by focusing the trigger.
             spawn(async move {
                 let _ = search.focus();
             });
@@ -1309,24 +1203,16 @@ fn dropdown_box(
 ) -> Element {
     style
         .element(floating)
-        // Clicking the list's padding or its scrollbar must not move focus off
-        // the trigger: a trigger that closes on blur would close under the
-        // click. The rows cancel it for themselves already.
+        // A click on the padding or scrollbar must not blur the trigger, which would close the list.
         .event("onmousedown", move |event: MouseEvent| {
             event.prevent_default()
         })
-        // The same handler as the trigger's, because the dropdown is
-        // portaled: it is no descendant of the trigger, so a key pressed
-        // inside it would otherwise bubble to `PortalOutlet` and die.
+        // Portaled, so keys inside would bubble to `PortalOutlet`, not the trigger.
         .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
         .render(HtmlTag::Div, Vec::new(), content)
 }
 
-/// The listbox `aria-controls` names. `Columns` puts `role="listbox"` on each
-/// column and only `role="presentation"` on the strip holding them, so naming
-/// the strip pointed the combobox at an element with no popup role at all -
-/// measured in Chromium. It names the cursor's own column instead, which is
-/// the one [`active_descendant`] points into.
+/// The listbox `aria-controls` names: in `Columns` the cursor's column, since the strip is only `presentation`.
 fn controlled_id(listbox_id: &str, layout: CascaderLayout, cursor: &[usize]) -> String {
     match layout {
         CascaderLayout::Paths => listbox_id.to_string(),
@@ -1334,8 +1220,7 @@ fn controlled_id(listbox_id: &str, layout: CascaderLayout, cursor: &[usize]) -> 
     }
 }
 
-/// Which row `aria-activedescendant` points at - the cursor's deepest node in
-/// `Columns`, and its row in the flat list in `Paths`.
+/// The row `aria-activedescendant` names: the cursor's deepest node, or its `Paths` row.
 fn active_descendant(
     id: &str,
     layout: CascaderLayout,
@@ -1351,8 +1236,6 @@ fn active_descendant(
     }
 }
 
-/// What the dropdown is built from: the open state, the two things that change
-/// its shape, and the chrome tokens its box carries.
 struct DropdownSetup {
     opened: bool,
     searchable: bool,
@@ -1365,8 +1248,6 @@ struct DropdownSetup {
     padding: f64,
 }
 
-/// The dropdown's own plumbing: the Escape layer, the popover, and the three
-/// prepared boxes it draws with.
 struct Dropdown {
     anchor: ElementHandle,
     popover: PopoverHandle,
@@ -1388,8 +1269,7 @@ fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         padding,
     } = setup;
 
-    // On the Escape stack exactly while the key handler would take
-    // Escape, so a `HoverCard` around this field leaves the press to it.
+    // On the Escape stack while open, so a surrounding `HoverCard` leaves the press to it.
     use_field_list_layer(opened);
     let anchor = use_element();
     let popover = use_popover_on(
@@ -1397,9 +1277,7 @@ fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         use_element(),
         opened,
         PopoverOptions::new(gap, padding)
-            // The columns are the content and are wider than the trigger, so
-            // the box must not be clipped to it. A `Paths` row is a whole
-            // joined path, which is long for the same reason.
+            // Columns and joined paths run wider than the trigger.
             .width(PopoverWidth::Min)
             .remeasure(remeasure),
     );
@@ -1413,10 +1291,7 @@ fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
         .with(layout.state_name(), true)
         .into();
     let dropdown = use_box()
-        // Held inside the viewport by `use_popover`'s own cap: three columns
-        // side by side are wider than a phone, and a fixed box that runs off
-        // the right edge cannot be scrolled to - the columns scroll inside it
-        // instead.
+        // `use_popover` caps it to the viewport; wide columns scroll inside instead of off-screen.
         .framework_sx(&COMBOBOX_DROPDOWN_SX)
         .states(&dropdown_states)
         .style(popover.style())
@@ -1433,7 +1308,6 @@ fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
     }
 }
 
-/// What the trigger draws and what its one keyboard moves.
 struct Trigger {
     element: ElementHandle,
     state: ComboboxState,
@@ -1442,7 +1316,7 @@ struct Trigger {
     disabled: bool,
     readonly: bool,
     searchable: bool,
-    /// The trigger draws its own chevron: nothing to clear.
+    /// Nothing to clear, so the trigger draws its chevron.
     chevron: bool,
     display: String,
     placeholder: Option<String>,
@@ -1450,7 +1324,7 @@ struct Trigger {
     descendant: Option<String>,
 }
 
-/// The trigger: the frame's control, and the one element that is a tab stop.
+/// The frame's control, and the one tab stop.
 fn cascader_trigger(
     control: BoxStyle,
     parts: Trigger,
@@ -1488,16 +1362,13 @@ fn cascader_trigger(
                 toggle(!state.is_open());
             }
         })
-        // While searchable the focus moves into the search box, so closing on
-        // the trigger's blur would shut the list before a key could land.
+        // While searchable, focus moves to the search box, whose blur closes instead.
         .event("onblur", move |event: FocusEvent| {
             if !searchable && blur_counts(&event) {
                 state.close();
             }
         })
-        // On the trigger, not on a wrapper around the frame: the frame also
-        // holds the x, and a wrapper would take its Enter and Space to open
-        // the list instead of letting the button clear.
+        // Not on a frame wrapper: it would take the x's Enter and Space.
         .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
         .render(
             HtmlTag::Div,
@@ -1511,10 +1382,9 @@ fn cascader_trigger(
         )
 }
 
-/// What the open tree is drawn from, beside the rows themselves.
 struct Body {
     layout: CascaderLayout,
-    /// How deep the cursor is, which is how many columns are open.
+    /// The cursor's depth, the number of open columns.
     depth: usize,
     visible: Rc<Vec<FlatPath>>,
     path_row: Option<usize>,
@@ -1524,7 +1394,7 @@ struct Body {
     max_height: &'static str,
 }
 
-/// The tree itself: a strip of columns, or the flat list of paths.
+/// A strip of columns, or the flat list of paths.
 fn use_cascader_body(rows: CascaderRows, parts: Body) -> Element {
     let Body {
         layout,
@@ -1537,18 +1407,13 @@ fn use_cascader_body(rows: CascaderRows, parts: Body) -> Element {
         max_height,
     } = parts;
 
-    // The strip of columns, which scrolls sideways once the viewport holds
-    // the dropdown narrower than them. The cursor always sits in the last
-    // column, so each new column is scrolled into view as it opens - by
-    // pointer or by the arrows, which would otherwise move into a column no
-    // one can see.
+    // A narrow strip scrolls sideways; each new column scrolls into view, as the cursor lives there.
     let strip = use_element();
     use_effect(use_reactive!(|depth| {
         let _ = depth;
-        // Read, not branched on: it subscribes the effect to every reopen,
-        // which mounts a new strip at the same handle.
+        // Subscribes to every reopen, which mounts a new strip at the same handle.
         if strip.mount_token().is_some() {
-            // Past the end on purpose: the browser clamps it to the range.
+            // Past the end on purpose: the browser clamps it.
             let _ = strip.scroll_to(f64::from(u32::MAX), 0.0);
         }
     }));
@@ -1573,11 +1438,7 @@ mod tests {
     use super::*;
     use crate::css::Stylesheet;
 
-    /// The dropdown is at least as wide as the trigger, so one 220px column
-    /// in a wider field leaves a gap to its right, and every row's chevron
-    /// ends short of the dropdown's edge. The columns grow into that space
-    /// and never shrink below `column_width`. The dropdown only exists in a
-    /// browser, so this reads the rule rather than a layout.
+    /// Columns grow into a wider trigger's room, so chevrons reach the edge. Reads the rule, not a layout.
     #[test]
     fn the_columns_fill_the_dropdown() {
         let css = Stylesheet::from(&*CASCADER_COLUMNS_SX);
@@ -1586,21 +1447,17 @@ mod tests {
         assert!(css.contains("flex:1 0 auto;"), "{css}");
     }
 
-    /// A combobox's `aria-controls` must name its popup, and the row
-    /// `aria-activedescendant` names has to be inside it. In `Columns` that is
-    /// one column per level, so the two have to agree on which.
+    /// `aria-controls` must name the column that holds the `aria-activedescendant` row.
     #[test]
     fn aria_controls_names_the_column_the_active_row_is_in() {
         let cursor = vec![1, 0];
         let controls = controlled_id("x-listbox", CascaderLayout::Columns, &cursor);
         let active = active_descendant("x", CascaderLayout::Columns, &cursor, None).unwrap();
         assert_eq!(controls, "x-listbox-1");
-        // `columns()` builds a column's id as `{listbox_id}-{level}` and a
-        // row's as `{id}-option-{level}-{index}`, so the level must match.
+        // Column `{listbox_id}-{level}`, row `{id}-option-{level}-{index}`: the levels match.
         assert_eq!(active, "x-option-1-0");
 
-        // The list opens with nothing highlighted: there is still exactly one
-        // column, and it is the one named.
+        // Nothing highlighted: the one root column is named.
         assert_eq!(
             controlled_id("x-listbox", CascaderLayout::Columns, &[]),
             "x-listbox-0"
@@ -1612,10 +1469,7 @@ mod tests {
         );
     }
 
-    /// Three columns are wider than a phone. The dropdown is held inside the
-    /// viewport (by `use_popover`, see `tests/all/combobox.rs`) and the columns
-    /// scroll sideways within it, rather than opening off the right edge where
-    /// nothing can reach them.
+    /// Wider than a phone, the columns scroll inside the viewport-capped dropdown (`tests/all/combobox.rs`).
     #[test]
     fn the_columns_stay_inside_the_viewport() {
         let columns = Stylesheet::from(&*CASCADER_COLUMNS_SX);

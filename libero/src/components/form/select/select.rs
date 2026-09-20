@@ -13,100 +13,68 @@ use crate::{
 
 use super::core::{Picked, SelectCore, SelectionDraw, SelectionRenderArgs, use_picked};
 
-/// One row, handed to `Select`'s and `MultiSelect`'s `option` callback. It
-/// draws the row's *content*: the row itself - its highlight, its
-/// `aria-selected`, its click - is the component's.
+/// One row's content, handed to `option`. The row itself (highlight, `aria-selected`, click) is the component's.
 #[derive(Clone, PartialEq)]
 pub struct SelectOptionArgs<T> {
     pub value: T,
     pub index: usize,
-    /// Whether this row is part of the selection, for a checkmark.
+    /// Part of the selection, for a checkmark.
     pub selected: bool,
-    /// Whether the list refuses this row. The row's greying and its
-    /// `aria-disabled` are the component's either way - this is for a caller
-    /// who wants to say so in the content too.
+    /// The list refuses this row. Greying and `aria-disabled` are drawn anyway.
     pub disabled: bool,
 }
 
-/// One selected value, handed to the `selection` callback of `MultiSelect`
-/// and `FileField` alike. The chip's inner design is the caller's, `remove`
-/// included - the control keeps only the keyboard.
-///
-/// Shared rather than duplicated: a second struct of `{ value, remove }`
-/// differing by nothing would be the wart. There is no single-`Select`
-/// counterpart because one selection is emptied by `clearable`.
+/// One selected value, handed to `MultiSelect`'s and `FileField`'s `selection` callback.
+/// The chip is the caller's, `remove` included; the control keeps the keyboard.
 #[derive(Clone, PartialEq)]
 pub struct SelectionArgs<T> {
     pub value: T,
-    /// Drops this value from the selection, which is the same edit as picking
-    /// its row again.
+    /// Drops this value, the same edit as picking its row again.
     pub remove: Callback<()>,
 }
 
-/// One option under test, handed to `Select`'s and `MultiSelect`'s `filter`
-/// callback while searching.
-///
-/// Deliberately the same pair `AutocompleteFilterArgs<T>` carries: two filter
-/// args structs differing by nothing would be the wart.
+/// One option under test, handed to `filter` while searching. The same pair as `AutocompleteFilterArgs`.
 #[derive(Clone, PartialEq)]
 pub struct SelectFilterArgs<T> {
     pub value: T,
-    /// What is currently typed in the search box.
+    /// What is typed in the search box.
     pub query: String,
 }
 
 field_props! {
     pub struct SelectProps<T: Options> {
-        /// Strictly controlled - pair it with `onchange`. `None` shows
-        /// `placeholder`.
+        /// Strictly controlled: pair it with `onchange`. `None` shows `placeholder`.
         #[props(default)]
         value: Option<T>,
-        /// Called with the option the caller should select next, or `None`
-        /// when `clearable`'s x is clicked.
+        /// The option to select next, or `None` when `clearable`'s x is clicked.
         #[props(default)]
         onchange: Option<EventHandler<Option<T>>>,
-        /// The options to list. Defaults to every `Options::options()` - which
-        /// `String` and any other runtime type leave empty, so those pass them
-        /// here.
-        ///
-        /// A `Vec<T>` converts, which is the flat list. An
-        /// [`OptionList`](crate::components::OptionList) adds named groups and
-        /// per-option `disabled`, and a [`Resource`] adds the fetch: the list
-        /// then reads pending against ready itself, and derives the loader,
-        /// `aria-busy` and the held-back empty state from it.
+        /// Defaults to `Options::options()`, empty for runtime types like `String`. A `Vec<T>`,
+        /// an [`OptionList`](crate::components::OptionList) (groups, `disabled`), or a [`Resource`].
         #[props(default, into)]
         options: OptionSource<T>,
-        /// Draws one row's content. Defaults to `Options::label`, in a
-        /// `span { "data-slot": "label" }`, which is what ellipsises a long one.
+        /// Draws one row's content. Defaults to `Options::label` in an ellipsising label slot.
         #[props(default)]
         option: Option<Callback<SelectOptionArgs<T>, Element>>,
-        /// Draws the selection inside the trigger. Defaults to the label as
-        /// text.
+        /// Draws the selection in the trigger. Defaults to the label.
         #[props(default)]
         selection: Option<Callback<T, Element>>,
         /// Shown while `value` is `None`.
         #[props(default)]
         placeholder: Option<String>,
-        /// Emits a hidden input of that name carrying the selected option's
-        /// `Options::value()`, so the select posts with a native form. The
-        /// trigger is a `div`, so it cannot carry the name itself.
-        /// A path - `Order::FIELDS.plan()` - also binds the selection to the
-        /// surrounding `Form`'s value when there is no `onchange`.
+        /// A hidden input posting `Options::value()`. A field path also binds to the `Form` without `onchange`.
         #[props(default, into)]
         name: crate::components::form::FieldName<Option<T>>,
-        /// Rules over the selection, shown once the select loses focus or its
-        /// form is submitted.
+        /// Rules over the selection, shown after blur or submit.
         #[props(default, into)]
         validate: crate::components::form::Validators<Option<T>>,
-        /// Shows an x that clears the selection, which is what makes
-        /// `onchange` fire `None`.
+        /// Shows an x that clears the selection.
         #[props(default)]
         clearable: Option<bool>,
         /// Puts a search box at the top of the list.
         #[props(default)]
         searchable: Option<bool>,
-        /// Narrows the options while searching. Defaults to a case-insensitive
-        /// `contains` over `Options::label`.
+        /// Narrows the options while searching. Defaults to a case-insensitive `contains` over the label.
         #[props(default)]
         filter: Option<Callback<SelectFilterArgs<T>, bool>>,
         /// What the search box says while empty.
@@ -115,13 +83,27 @@ field_props! {
     }
 }
 
-/// A listbox over an enum, with a label, a description, helper text and a
-/// validation message stacked around it. Controlled: it renders `value` and
-/// asks for a new one through `onchange`.
+/// A controlled single-choice listbox field with custom-drawn rows.
 ///
-/// Unlike `NativeSelect`, the rows are libero's own, so they can be drawn with
-/// anything through `option`. What that costs is the OS picker on phones and
-/// working without wasm - reach for `NativeSelect` when those matter.
+/// Unlike `NativeSelect` it has no OS picker on phones and needs wasm.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::Select;
+/// # fn app() -> Element {
+/// let mut plan = use_signal(|| None::<String>);
+/// rsx! {
+///     Select {
+///         label: "Plan",
+///         options: vec!["Free".to_string(), "Pro".to_string()],
+///         value: plan(),
+///         onchange: move |next| plan.set(next),
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/select>
 #[component]
 pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     let theme = use_theme();
@@ -136,9 +118,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
 
     let list = props.options.or_static();
     let values = list.values();
-    // A list that has been asked for and has not answered yet lists nothing,
-    // and says nothing about being empty: the rows belong to the request still
-    // in flight.
+    // A pending list shows nothing and doesn't report empty.
     let loading = props.options.is_pending();
     if values.is_empty() && !loading {
         warn("Select: no options - a `T` without static `options()` needs `options`.");
@@ -162,8 +142,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
         &row_disabled,
         props.option.as_ref(),
     );
-    // A single selection has no chips, so the cursor the core hands down is
-    // always `None` here.
+    // No chips, so the core's cursor is always `None` here.
     let draw_selection = props.selection;
     let shown = selected_index.map(|index| values[index].clone());
     let draw = use_callback(
@@ -192,16 +171,14 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     let clear = onchange.clone();
     let onpick = use_callback(move |index: usize| {
         if let (Some(onchange), Some(value)) = (&onchange, values.get(index)) {
-            // Also written here: `use_picked`'s write lands a pass after this
-            // render and re-ran `SelectCore` on every pick (todo 842).
+            // Written here too: `use_picked`'s write lands a pass later (todo 842).
             let mut picked = picked;
             picked.set(Picked {
                 selected: (0..values.len()).map(|row| row == index).collect(),
                 form_values: vec![value.value()],
             });
             onchange(Some(value.clone()));
-            // Runs after the renders `onchange` caused: a caller that kept the
-            // old value left `latest` behind, and the props win again.
+            // After `onchange`'s renders: a caller that kept the old value wins back.
             spawn(async move {
                 if *picked.peek() != *latest.peek() {
                     picked.set(latest.cloned());
@@ -250,9 +227,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     }
 }
 
-/// Which rows a query keeps, through the caller's `filter` or by label. `None`
-/// unless `searchable`. A hook: the mask keeps one identity across renders and
-/// runs the newest `values` and `filter`, which only an open list calls.
+/// Which rows a query keeps; `None` unless `searchable`. A stable callback running the newest captures.
 pub(super) fn use_search_mask<T: Options>(
     searchable: bool,
     values: Vec<T>,
@@ -269,8 +244,7 @@ pub(super) fn use_search_mask<T: Options>(
                 }),
                 None => value.label().to_lowercase().contains(&needle),
             })
-            // Annotated: a `Callback`'s return type is inferred through
-            // `SpawnIfAsync`, which leaves a bare `collect` ambiguous.
+            // Annotated: `SpawnIfAsync` leaves a bare `collect` ambiguous.
             .collect::<Vec<bool>>()
     });
     searchable.then_some(mask)
@@ -290,7 +264,7 @@ pub(super) fn draw_open_rows<T: Options>(
     }
 }
 
-/// Each row's content - the caller's `option`, or the label.
+/// Each row's content: the caller's `option`, or the label.
 pub(super) fn draw_rows<T: Options>(
     values: &[T],
     selected: &[bool],
@@ -317,8 +291,7 @@ pub(super) fn draw_rows<T: Options>(
 mod tests {
     use super::*;
 
-    /// `Select` and `MultiSelect` draw their default rows here. The text goes
-    /// in the label slot, the only element a long label can ellipsise in.
+    /// Default rows put their text in the label slot, the one that can ellipsise.
     #[test]
     fn a_default_row_puts_its_text_in_the_label_slot() {
         let values = vec!["Apple".to_string(), "Banana".to_string()];

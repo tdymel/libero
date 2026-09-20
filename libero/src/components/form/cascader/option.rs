@@ -1,24 +1,16 @@
 use crate::components::common::Options;
 
-/// One entry of a `Cascader`'s tree, over any value a `Select` could hold.
+/// One entry of a `Cascader`'s tree. Values must be unique across the whole tree.
 ///
-/// `value` is what the field holds, `label` what it shows. Values are unique
-/// across the whole tree, not just among siblings: the cascader finds the path
-/// to its value by searching for it.
-///
-/// ```no_run
-/// # use dioxus::prelude::*;
-/// # use libero::components::{CascaderOption};
-/// # fn app() -> Element {
-/// # let _: CascaderOption<&str> =
-/// CascaderOption::new("fruit", "Fruit").children(vec![
+/// ```rust
+/// # use libero::components::CascaderOption;
+/// let fruit: CascaderOption<&str> = CascaderOption::new("fruit", "Fruit").children(vec![
 ///     CascaderOption::new("apple", "Apple"),
 ///     CascaderOption::new("quince", "Quince").disabled(true),
-/// ])
-/// # ;
-/// # rsx! {}
-/// # }
+/// ]);
 /// ```
+///
+/// Docs: <https://libero-ui.dev/form/cascader>
 #[derive(Clone, Debug, PartialEq)]
 pub struct CascaderOption<T> {
     pub value: T,
@@ -50,9 +42,7 @@ impl<T> CascaderOption<T> {
     }
 }
 
-/// The engine's view of one option: everything but the `T`. The engine walks
-/// these by index path and never sees a value, so it compiles once instead of
-/// once per `T`; the generic shell maps an index path back to its `T`.
+/// One option without its `T`, so the engine compiles once rather than once per `T`.
 #[derive(Clone, Debug, PartialEq)]
 pub(super) struct CascaderNode {
     pub label: String,
@@ -66,8 +56,6 @@ impl CascaderNode {
     }
 }
 
-// The generic part, kept to three small walks.
-
 pub(super) fn erase<T>(options: &[CascaderOption<T>]) -> Vec<CascaderNode> {
     options
         .iter()
@@ -79,9 +67,7 @@ pub(super) fn erase<T>(options: &[CascaderOption<T>]) -> Vec<CascaderNode> {
         .collect()
 }
 
-/// The index path to the option holding `value`, depth first, at any level.
-/// Values are unique across the tree, so the first match is the only one.
-/// `None` when no option holds it - a `value` that no longer matches `data`.
+/// The index path to the option holding `value`, depth first. `None` when no option holds it.
 pub(super) fn indices_for_value<T: Options>(
     options: &[CascaderOption<T>],
     value: &T,
@@ -141,7 +127,7 @@ mod tests {
             .map(|option| option.label.as_str())
             .collect();
         assert_eq!(labels, vec!["Food", "Veg", "Leek"]);
-        // A branch's value is a value like any other - what `any_level` commits.
+        // A branch's value, what `any_level` commits.
         assert_eq!(
             indices_for_value(&tree, &"fruit".to_string()),
             Some(vec![0, 0])

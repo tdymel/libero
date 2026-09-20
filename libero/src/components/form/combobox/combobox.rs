@@ -12,31 +12,19 @@ use super::{ComboboxState, core::ComboboxCore, option::ComboboxOptionArgs};
 // Hand-written rather than `base_props!`, which is not generic.
 #[derive(Props, Clone, PartialEq)]
 pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
-    /// Whether the list is open and which row the arrows are on, from
-    /// [`use_combobox`](crate::hooks::use_combobox). It lives in the caller's
-    /// scope, and `state.a11y_attributes()` is what wires the control up.
-    /// Close it on your trigger's blur (`state.close()`): on the web an open
-    /// list takes Escape first, so an enclosing `Modal` or `HoverCard` stops
-    /// hearing Escape while it stays open.
+    /// Open state and highlight, from [`use_combobox`](crate::hooks::use_combobox); wire the trigger with
+    /// `state.a11y_attributes()`. Close it on the trigger's blur: an open list takes Escape from a `Modal`.
     state: ComboboxState,
-    /// The options to list, already filtered. There is no query prop: a
-    /// suggestion list narrows by handing a shorter `options` in.
-    ///
-    /// A `Vec<T>` converts, which is the flat list. An
-    /// [`OptionList`](crate::components::OptionList) adds named groups and
-    /// per-option `disabled`, and a [`Resource`] adds the fetch: the list then
-    /// reads pending against ready itself, and derives the loader, `aria-busy`
-    /// and the held-back empty state from it.
+    /// The options, already filtered. A `Vec<T>`, an [`OptionList`](crate::components::OptionList)
+    /// (groups, `disabled`), or a [`Resource`], which adds the loader and `aria-busy`.
     #[props(into)]
     options: OptionSource<T>,
-    /// Draws one row - typically a [`ComboboxOption`](super::ComboboxOption),
-    /// which is themed and wires the click for you.
+    /// Draws one row, typically a [`ComboboxOption`](super::ComboboxOption).
     option: Callback<ComboboxOptionArgs<T>, Element>,
     /// Shown in place of the list when `options` is empty.
     #[props(default)]
     empty: Option<Element>,
-    /// What the status region says while the options are being fetched. Unset, the
-    /// localization's [`CommonLabels::loading`](crate::localization::CommonLabels::loading) says it.
+    /// Said while fetching. Defaults to [`CommonLabels::loading`](crate::localization::CommonLabels::loading).
     #[props(default, into)]
     loading_label: Option<String>,
     /// A row's height and font size.
@@ -51,40 +39,60 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     attributes: Vec<Attribute>,
     #[props(default, into)]
     class: Input<ClassList>,
-    /// Styles the dropdown - the wrapper it hangs off is scaffolding, not a
-    /// user-facing element.
+    /// Styles the dropdown, not the wrapper it hangs off.
     #[props(default, into)]
     sx: Input<Sx>,
     #[props(default, into)]
     states: Input<States>,
-    /// The trigger, and anything else that belongs with it - a hidden input,
-    /// say. `Combobox` renders no control of its own.
+    /// The trigger, plus anything that belongs with it. `Combobox` renders no control of its own.
     children: Element,
 }
 
-/// A listbox that hangs off whatever control you put in it.
+/// A stateless listbox that hangs off whatever trigger you put in it.
 ///
-/// It holds no state: `opened` and the selection are the caller's, the rows
-/// are drawn by `option`, and the trigger is just `children`. All it adds is
-/// the placement, the arrow keys, and the row theming.
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, Combobox, ComboboxOption, ComboboxOptionArgs, use_combobox};
+/// # fn app() -> Element {
+/// let state = use_combobox();
+/// let mut picked = use_signal(|| "Apple");
+/// rsx! {
+///     Combobox {
+///         state,
+///         options: vec!["Apple", "Pear"],
+///         option: move |row: ComboboxOptionArgs<&'static str>| rsx! {
+///             ComboboxOption {
+///                 selected: picked() == row.value,
+///                 onpick: move |_| {
+///                     picked.set(row.value);
+///                     state.close();
+///                 },
+///                 "{row.value}"
+///             }
+///         },
+///         Button {
+///             attributes: state.a11y_attributes(),
+///             onclick: move |_| state.toggle(),
+///             onblur: move |_| state.close(),
+///             "{picked}"
+///         }
+///     }
+/// }
+/// # }
+/// ```
 ///
-/// Generic only at this boundary: the options are erased to indices here, and
-/// everything below compiles once.
+/// Docs: <https://libero-ui.dev/form/combobox>
 #[component]
 pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Element {
     let common = use_localization().common;
     let list = props.options.list();
     let values = list.values();
     let count = values.len();
-    // The list has been asked for and has not answered yet. It wins over
-    // `empty`: an async list is empty between the request and its results, so
-    // without this every keystroke would flash "no results" before the data
-    // lands. It replaces the rows too, which belong to the previous query.
+    // Wins over `empty` and the old rows, or each keystroke flashes "no results" before the data lands.
     let loading = props.options.is_pending();
     let state = props.state;
 
-    // Opening always starts at the top; nothing carries over from last time.
-    // Reading `opened` is what makes the effect re-run on it.
+    // Every open starts at the top; reading `is_open` re-runs the effect on it.
     use_effect(move || {
         let _ = state.is_open();
         state.set_active(Some(0));
@@ -95,12 +103,8 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
         .filter(|_| count > 0)
         .map(|row| row.min(count - 1));
 
-    // Drawn here, eagerly, and handed down as values. A `Callback` would be
-    // the obvious way to keep this lazy, but two `Callback`s built in the same
-    // scope on different renders compare *equal* - `GenerationalBox::ptr_eq`
-    // sees the recycled slot - so the whole subtree below would memoize and a
-    // filtered `options` would leave stale rows on screen. A `Vec<Element>`
-    // never compares equal, which is exactly the guarantee this needs.
+    // Drawn eagerly: `Callback`s from one scope compare equal across renders and left stale rows.
+    // A `Vec<Element>` never compares equal, so the subtree never memoizes.
     let option = props.option;
     let row_disabled = list.disabled();
     let groups = list.group_labels();

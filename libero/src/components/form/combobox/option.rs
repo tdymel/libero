@@ -13,8 +13,7 @@ use crate::{
     theme::{Color, ColorShade, ColorValue, ComboboxDefaults, Size},
 };
 
-/// What the rows share with the `Combobox` around them. Signals, not values: a
-/// provider runs once, so a plain field would freeze on the first render.
+/// Shared with the rows. Signals: a provider runs once, so plain fields would freeze.
 #[derive(Clone, Copy, PartialEq)]
 pub(super) struct ComboboxContext {
     pub id: Signal<String>,
@@ -24,14 +23,11 @@ pub(super) struct ComboboxContext {
     pub active_pick: Signal<Option<Callback<()>>>,
 }
 
-/// Where a row sits, provided per row so `ComboboxOption` needs no props to
-/// know its own `id` or whether the arrows are on it.
+/// Provided per row, so `ComboboxOption` needs no props for its `id`, highlight or `disabled`.
 #[derive(Clone, Copy, PartialEq)]
 pub(super) struct ComboboxRowContext {
     pub index: usize,
     pub active: bool,
-    /// The list refuses this row. It reaches the row the same way `active`
-    /// does, so a caller's `option` callback needs to pass nothing on.
     pub disabled: bool,
 }
 
@@ -40,12 +36,9 @@ pub(super) struct ComboboxRowContext {
 pub struct ComboboxOptionArgs<T> {
     pub value: T,
     pub index: usize,
-    /// Whether the arrow keys are on this row. `ComboboxOption` reads it for
-    /// itself - this is for a row drawn without one.
+    /// The arrow keys are on this row. For rows drawn without `ComboboxOption`.
     pub active: bool,
-    /// Whether the list refuses this row. `ComboboxOption` reads it for itself
-    /// too - this is for a row drawn without one, which then owes its reader
-    /// both the greying and `aria-disabled`.
+    /// The list refuses this row. A row without `ComboboxOption` owes the greying and `aria-disabled`.
     pub disabled: bool,
 }
 
@@ -64,10 +57,7 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         .white_space("nowrap")
         .overflow("hidden")
-        // The row is a flex root, where `text-overflow` never applies, so a
-        // bare-text row was cut mid-glyph (todo 94). A label in a span of its
-        // own is a flex item, and so a block container the ellipsis works in.
-        // Every default row wraps its text this way; a caller's row can too.
+        // `text-overflow` never applies on a flex root (todo 94); the label span carries the ellipsis.
         .selector(
             "& > [data-slot='label']",
             sx().min_width("0")
@@ -76,9 +66,7 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         )
         .hover(sx().background("muted.1"))
         .when("active", sx().background("muted.2"))
-        // The shade's own contrast twin, not `primary.7`: blue text on a light
-        // blue tint was hard to read. A blue start bar marks it, as `NavLink`'s:
-        // a full ring would read as the active row's.
+        // The contrast twin, not `primary.7` (hard to read). A start bar, as `NavLink`'s: a ring means active.
         .when(
             "selected",
             sx().background("primary.1")
@@ -86,10 +74,8 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
                 .and(on_start_bar_sx("0px", &bar))
                 .and(forced_on_sx()),
         )
-        // Folded *after* the selected tint, or it never lands: equal
-        // specificity, so source order decides, and a selected row would
-        // answer neither the mouse nor the keyboard. The bar again after the
-        // `background`, which resets it.
+        // After the selected tint: equal specificity, so source order decides.
+        // The bar again, since `background` resets it.
         .when(
             "selected",
             sx().hover(
@@ -97,19 +83,14 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
                     .and(on_start_bar_sx("0px", &bar)),
             ),
         )
-        // The keyboard's own mark, on top of any background - a tint alone
-        // cannot say "highlighted" on a row that is already tinted. Inset, so
-        // it neither overlaps the row above nor is clipped by the dropdown.
+        // A ring, since a tint can't mark an already tinted row. Inset, so the dropdown doesn't clip it.
         .when("active", inset_focus_ring_sx(ACTIVE_RING_OFFSET))
-        // Every `active` arm folds into the first, ahead of the bar: this one
-        // outranks it, moving the bar clear of the ring's stripe.
+        // Outranks the bar above, moving it clear of the ring.
         .when(
             "selected",
             sx().when("active", on_start_bar_sx("2px", &bar)),
         )
-        // Folded last, so it wins over the tints above it: a disabled row is
-        // drawn and read out, and answers nothing. The hover has to be undone
-        // by hand - a row the pointer cannot pick must not light up under it.
+        // Last, so it beats the tints by source order. The hover is undone by hand.
         .when(
             "disabled",
             sx().opacity("0.5")
@@ -120,38 +101,42 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub struct ComboboxOptionProps {
-        /// The current selection - `aria-selected` and a tint. Leave it unset
-        /// for a suggestion list, where "selected" means nothing.
+        /// `aria-selected` and a tint. Leave unset for a suggestion list.
         #[props(default)]
         selected: Option<bool>,
-        /// Overrides the keyboard highlight, which otherwise comes from the
-        /// `Combobox` drawing this row.
+        /// Overrides the keyboard highlight from the `Combobox`.
         #[props(default)]
         active: Option<bool>,
-        /// Overrides whether the list refuses this row, which otherwise comes
-        /// from the `Combobox` drawing it. A refused row is greyed and
-        /// `aria-disabled`, and answers neither the click nor Enter.
+        /// Overrides the `Combobox`'s `disabled` for this row: greyed, `aria-disabled`, not pickable.
         #[props(default)]
         disabled: Option<bool>,
         #[props(default)]
         onpick: Option<EventHandler<()>>,
-        /// Row height and font size. Defaults to the `Combobox`'s own `size`.
+        /// Defaults to the `Combobox`'s `size`.
         #[props(default, into)]
         size: Input<Size>,
-        /// Corner radius. Defaults to the `Combobox`'s own, tightened by the
-        /// dropdown's padding so the row nests inside it.
+        /// Defaults to the `Combobox`'s, tightened by the dropdown's padding.
         #[props(default, into)]
         radius: Input<Size>,
         children: Element,
     }
 }
 
-/// A themed row for `Combobox`'s `option` callback. Registers itself as the
-/// Enter target while it is the active row, and takes its `id` from the
-/// `Combobox` so `aria-activedescendant` can point at it.
+/// A themed row for `Combobox`'s `option` callback; the active one is Enter's target.
 ///
-/// The row is a flex row, so bare text in it is cut at the edge. Put a long
-/// label in `span { "data-slot": "label" }` and it ends in an ellipsis instead.
+/// Bare text is cut at the edge; wrap a long label in `span { "data-slot": "label" }` for an ellipsis.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::components::ComboboxOption;
+/// # fn app() -> Element {
+/// rsx! {
+///     ComboboxOption { selected: true, onpick: move |_| {}, "Apple" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/combobox>
 #[component]
 pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
     let theme = use_theme();
@@ -170,9 +155,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
     let disabled = props
         .disabled
         .unwrap_or_else(|| row.is_some_and(|row| row().disabled));
-    // A disabled row is never the highlight, whatever the list thinks: the
-    // core snaps the highlight off one already, and this is the second lock,
-    // for a caller who sets `active` by hand.
+    // Never the highlight when disabled, even with a hand-set `active`.
     let active = !disabled
         && props
             .active
@@ -182,8 +165,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .map(|(combobox, row)| option_id(&(combobox.id)(), row().index));
 
     let onpick = props.onpick;
-    // The one gate both the click and Enter go through: Enter fires this same
-    // callback, which the active row registers as the `active_pick`.
+    // The one gate for click and Enter; the active row registers it as `active_pick`.
     let pick = use_callback(move |()| {
         if disabled {
             return;
@@ -217,8 +199,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .attr_default("id", id)
         .attr_default("role", "option")
         .attr("aria-selected", props.selected.map(|on| on.to_string()))
-        // Not `disabled`, which is no attribute on a `div` - and an option a
-        // screen reader can still reach and read is the point of `aria-`.
+        // `disabled` is no `div` attribute, and the row must stay readable.
         .attr("aria-disabled", disabled.then_some("true"))
         // Or the click blurs whatever the caller focused first.
         .event("onmousedown", move |event: MouseEvent| {
@@ -228,9 +209,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .render(HtmlTag::Div, props.attributes, props.children)
 }
 
-/// A default row's text: the one element `COMBOBOX_ROW_SX` can ellipsise, since
-/// the row itself is a flex root. `Select`, `MultiSelect`, `Autocomplete` and
-/// `TagsField` draw their own rows through it.
+/// A default row's text, the element that can ellipsise. Shared by the pickers' own rows.
 pub(crate) fn row_label(label: String) -> Element {
     rsx! {
         span { "data-slot": "label", "{label}" }
@@ -242,8 +221,7 @@ mod tests {
     use super::*;
     use crate::css::Stylesheet;
 
-    /// The ellipsis lives on the label, not on the row: `text-overflow` on a
-    /// flex root never applies, and a bare-text row was cut mid-glyph.
+    /// The ellipsis lives on the label: `text-overflow` never applies on a flex root.
     #[test]
     fn the_label_slot_carries_the_ellipsis_and_the_row_does_not() {
         let css = Stylesheet::from(&COMBOBOX_ROW_SX);
@@ -256,11 +234,8 @@ mod tests {
         assert_eq!(css.matches("text-overflow").count(), 1, "{css}");
     }
 
-    /// The greying beats the active and selected tints by **source order at
-    /// equal specificity**, not by specificity, so it only works while the
-    /// `disabled` fold is the last one. A reorder - or a merge conflict in
-    /// this static, which happened once - would leave a disabled row tinted
-    /// and pointer-hovering with every other test still green.
+    /// The greying wins by source order at equal specificity, so `disabled` must fold last.
+    /// A reorder (once, by a merge conflict) passes every other test.
     #[test]
     fn the_disabled_greying_folds_after_the_tints_it_has_to_beat() {
         let css = Stylesheet::from(&COMBOBOX_ROW_SX);
