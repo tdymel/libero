@@ -54,6 +54,38 @@ start-android: _dx android-wait
 build-android: _dx
     cd {{root}}/docs && {{aenv}} {{dx}} build --platform android {{mfeat}}
 
+# Signing key for the sideloaded APK. Created on first use, outside the repo;
+# keep it, since an update signed with another key has to uninstall first.
+keystore := env_var_or_default("LIBERO_KEYSTORE", env_var("HOME") / ".android/libero-docs.jks")
+ks_pass := env_var_or_default("LIBERO_KEYSTORE_PASS", "android")
+apk_dir := clean(root / "target/android")
+
+# Signed release APK, arm64 for a phone (`x86_64` for the emulator). `dx` only
+# packages gradle's debug variant, so gradle builds the release one itself.
+apk-android arch="aarch64": _dx
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd {{root}}/docs
+    app="${CARGO_TARGET_DIR:-{{root}}/target/main}/dx/docs/release/android/app"
+    # `dx` keeps the other arch's library from an earlier build.
+    rm -rf "$app/app/src/main/jniLibs"
+    {{aenv}} {{dx}} build --platform android --release --target {{arch}}-linux-android {{mfeat}}
+    # No R8: it strips the Kotlin classes wry reaches only through JNI.
+    sed -i 's/isMinifyEnabled = true/isMinifyEnabled = false/' "$app/app/build.gradle.kts"
+    (cd "$app" && {{aenv}} ./gradlew -q assembleRelease)
+    [ -f "{{keystore}}" ] || keytool -genkeypair -keystore "{{keystore}}" -storepass "{{ks_pass}}" \
+        -alias libero-docs -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Libero docs"
+    tools=$(ls -d {{sdk}}/build-tools/* | sort -V | tail -1)
+    apk="{{apk_dir}}/libero-docs-{{arch}}.apk"
+    mkdir -p "{{apk_dir}}"
+    "$tools/zipalign" -f -p 4 "$app/app/build/outputs/apk/release/app-release-unsigned.apk" "$apk"
+    "$tools/apksigner" sign --ks "{{keystore}}" --ks-pass "pass:{{ks_pass}}" "$apk"
+    echo "$apk"
+
+# Installs `apk-android`'s file on the one device `adb devices` shows.
+install-android arch="aarch64":
+    adb install -r "{{apk_dir}}/libero-docs-{{arch}}.apk"
+
 # The app's own log lines; a Rust panic surfaces here and nowhere else.
 android-logcat:
     adb logcat -v color RustStdoutStderr:V Dioxus:V '*:S'

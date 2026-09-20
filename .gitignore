@@ -14,6 +14,10 @@ libero/tests/page_snippets.md
 # qmd local search index (config .qmd/index.yml is tracked)
 .qmd/index.sqlite*
 
+# Signing keys for `just apk-android`, should $LIBERO_KEYSTORE point in here
+*.jks
+*.keystore
+
 # added by gcma: paths removed from history
 .agents/*
 .claude/*
