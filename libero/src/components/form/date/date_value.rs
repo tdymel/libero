@@ -1,6 +1,4 @@
-//! One trait over every date and time value. The value's type picks what is
-//! drawn, so `ChronoPicker` and `ChronoField` are one component each for all of
-//! them, and the typed pickers are the same drawing under a name.
+//! One trait over every date and time value; the value's type picks what is drawn.
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 use dioxus::prelude::*;
@@ -22,8 +20,7 @@ use crate::{
     utils::warn,
 };
 
-/// Everything a picker takes besides the value, resolved once by the
-/// component that draws it. Each value type reads the part it needs.
+/// Everything a picker takes besides the value, resolved. Each value type reads its part.
 #[derive(Clone, Copy)]
 pub struct PickerOptions<B: 'static> {
     pub min: Option<B>,
@@ -74,10 +71,8 @@ pub struct PickerArgs<V: DateValue> {
     pub attributes: Vec<Attribute>,
 }
 
-/// A value [`ChronoPicker`](super::ChronoPicker) and [`ChronoField`](super::ChronoField)
-/// can hold: `NaiveDate`, `NaiveTime`, `NaiveDateTime`, a `DateRange` of days
-/// or of date-times, and a `TimeDelta` duration. Sealed: the six are all there
-/// is.
+/// A value [`ChronoPicker`](super::ChronoPicker) and [`ChronoField`](super::ChronoField) can hold.
+/// Sealed: `NaiveDate`, `NaiveTime`, `NaiveDateTime`, `DateRange` of days or date-times, `TimeDelta`.
 #[allow(
     private_bounds,
     reason = "the seal, which keeps its machinery out of rustdoc"
@@ -117,8 +112,7 @@ fn available(
 
 /// The part of [`DateValue`] only libero calls.
 pub(super) trait Sealed: FieldValue {
-    /// The type-dependent props this value type reads; debug builds warn about
-    /// the others when set.
+    /// The type-dependent props this value type reads; debug builds warn about the others.
     const USES: &'static [&'static str];
 
     /// Whether a typed or picked value passes `min`, `max` and `exclude_date`.
@@ -126,8 +120,7 @@ pub(super) trait Sealed: FieldValue {
     where
         Self: DateValue;
 
-    /// `min` and `max` with the value type's defaults, for an error that
-    /// names them.
+    /// `min` and `max` with the value type's defaults, for an error that names them.
     fn limits(
         min: Option<<Self as DateValue>::Bound>,
         max: Option<<Self as DateValue>::Bound>,
@@ -160,19 +153,16 @@ pub(super) trait Sealed: FieldValue {
         refusal_message::<Self>(refusal, min, max, formats)
     }
 
-    /// Whether a pick leaves nothing more to pick, so a field may close its
-    /// dropdown.
+    /// Whether a pick leaves nothing more to pick, so a field may close its dropdown.
     fn closes(value: Option<Self>) -> bool;
 
-    /// Draws the picker for this value type. Calls hooks: only from a
-    /// component's body, never behind a condition.
+    /// Draws the picker for this value type. Calls hooks: never behind a condition.
     fn picker(args: PickerArgs<Self>) -> Element
     where
         Self: DateValue;
 }
 
-/// Warns once per mount about each prop set to something `V` does not use, or
-/// that `dropped` names. Debug builds only.
+/// Debug builds: warns once per mount about each set prop `V` does not use or `dropped` names.
 pub(super) fn use_ignored_props_warning<V: DateValue>(
     component: &str,
     set: &[(&'static str, bool)],
@@ -258,8 +248,7 @@ impl Sealed for NaiveDate {
         let allow_deselect = options.allow_deselect && level == DateLevel::Day;
         // Only days come as a mini calendar.
         let mini = level == DateLevel::Day && options.calendar == CalendarVariant::Mini;
-        // One identity across renders, so the calendar's props compare equal
-        // and a re-render from above skips it.
+        // One identity across renders, so a re-render from above skips the calendar.
         let onpick = use_callback(move |day: NaiveDate| {
             let next = match allow_deselect && value == Some(day) {
                 true => None,
@@ -269,9 +258,7 @@ impl Sealed for NaiveDate {
                 onchange.call(next);
             }
         });
-        // Keyed by level and layout inside a one-item list: dioxus remounts a
-        // keyed child whose key changes, and the calendar's own view state
-        // starts over. Inline, as a nested `rsx!` costs a node.
+        // A one-item keyed list remounts the calendar, resetting its view, when level or layout change.
         rsx! {
             for args in std::iter::once(args) {
                 Calendar {

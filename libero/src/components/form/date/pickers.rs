@@ -1,5 +1,4 @@
-//! The pickers for one value type each - what `ChronoPicker` draws, under a
-//! name and with only the props that type uses.
+//! The pickers for one value type each: `ChronoPicker` with only the props that type uses.
 
 use dioxus::prelude::*;
 
@@ -17,16 +16,19 @@ date_props! {
     picker DatePickerProps(NaiveDate, NaiveDate): limits, exclude_date, allow_deselect, columns, calendar, today
 }
 
-/// A month of days to pick one from, and what `ChronoPicker` draws for a
-/// `NaiveDate`.
+/// A month of days to pick one from; `ChronoPicker` for a `NaiveDate`.
 ///
-/// Controlled: it renders `value` and asks for a new one through `onchange`.
-/// The month shown is its own state: it opens on `value`'s month, else
-/// today's, and the arrows page it. The heading climbs to months and years.
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::chrono::NaiveDate;
+/// # use libero::components::DatePicker;
+/// # fn app() -> Element {
+/// let mut date = use_signal(|| None::<NaiveDate>);
+/// rsx! { DatePicker { value: date(), onchange: move |v| date.set(v) } }
+/// # }
+/// ```
 ///
-/// A WAI-ARIA grid. One day is a tab stop; the arrow keys move a day or a
-/// week, Home and End to the week's ends, Page Up and Page Down a month, with
-/// Shift a year. Enter and Space pick.
+/// Docs: <https://libero-ui.dev/form/chrono-picker>
 #[component]
 pub fn DatePicker(props: DatePickerProps) -> Element {
     let theme = use_theme();
@@ -58,9 +60,19 @@ date_props! {
     picker DateRangePickerProps(DateRange<NaiveDate>, NaiveDate): limits, exclude_date, columns, today
 }
 
-/// Two months side by side to pick a start and an end from. The first pick starts a new range and the second
-/// sets its end, swapped in when it comes first. While the end is missing, the
-/// days up to the one under the mouse preview the range.
+/// Two months side by side to pick a start and an end from.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::chrono::NaiveDate;
+/// # use libero::components::{DateRange, DateRangePicker};
+/// # fn app() -> Element {
+/// let mut range = use_signal(|| None::<DateRange<NaiveDate>>);
+/// rsx! { DateRangePicker { value: range(), onchange: move |v| range.set(v) } }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/chrono-picker>
 #[component]
 pub fn DateRangePicker(props: DateRangePickerProps) -> Element {
     DateRange::<NaiveDate>::picker(PickerArgs {
@@ -88,8 +100,19 @@ date_props! {
     picker MonthPickerProps(NaiveDate, NaiveDate): limits, today
 }
 
-/// The months of a year to pick one from, and `ChronoPicker` at `DateLevel::Month`. The heading climbs to a decade of years.
-/// A month is held as its first day.
+/// The months of a year to pick one from, held as the month's first day.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::chrono::NaiveDate;
+/// # use libero::components::MonthPicker;
+/// # fn app() -> Element {
+/// let mut month = use_signal(|| None::<NaiveDate>);
+/// rsx! { MonthPicker { value: month(), onchange: move |v| month.set(v) } }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/chrono-picker>
 #[component]
 pub fn MonthPicker(props: MonthPickerProps) -> Element {
     NaiveDate::picker(PickerArgs {
@@ -116,7 +139,19 @@ date_props! {
     picker YearPickerProps(NaiveDate, NaiveDate): limits, today
 }
 
-/// A decade of years to pick one from, and `ChronoPicker` at `DateLevel::Year`. A year is held as its January 1.
+/// A decade of years to pick one from, held as the year's January 1.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::chrono::NaiveDate;
+/// # use libero::components::YearPicker;
+/// # fn app() -> Element {
+/// let mut year = use_signal(|| None::<NaiveDate>);
+/// rsx! { YearPicker { value: year(), onchange: move |v| year.set(v) } }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/chrono-picker>
 #[component]
 pub fn YearPicker(props: YearPickerProps) -> Element {
     NaiveDate::picker(PickerArgs {

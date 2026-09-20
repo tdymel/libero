@@ -1,42 +1,27 @@
-//! The props every date and time component shares, declared once. A field or
-//! a picker names its value type, its `min`/`max` type and the groups of props
-//! it uses; the declarations and their docs come from here.
+//! The props every date and time component shares, declared once.
 
-/// Declares a date or time component's props.
+/// Declares a date or time component's props: kind, value and bound types, prop groups.
 ///
-/// ```ignore
-/// # // Not compiled: `date_props!` is crate-internal, so a doc-test cannot name it.
+/// ```text
 /// date_props! {
 ///     field DateFieldProps(NaiveDate, NaiveDate): format, limits, exclude_date, today, close_on_change
 /// }
 /// ```
 ///
-/// `field` builds on `field_props!` and adds `value`, `onchange`, `validate`,
-/// `name` and `placeholder`. `picker` builds on `base_props!` and adds `value`,
-/// `onchange`, `size`, `name` and `focusable`. The groups are `format`,
-/// `time_format`, `limits` (`min`, `max`), `exclude_date`, `today`, `clock`
-/// (`variant`, `with_seconds`, `step`, `twelve_hour`), `calendar` (`calendar`,
-/// `days`), `columns`,
-/// `close_on_change`, `allow_deselect` and `level`.
-///
-/// The docs are written for every value type at once. What is special about
-/// one type goes in its component's doc comment.
+/// `field` builds on `field_props!`, `picker` on `base_props!`. Prop docs cover every value type.
 macro_rules! date_props {
     (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] format $($rest:ident)*) => {
         $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
-            /// How the text shows the value, in dayjs tokens, at whatever
-            /// level the field is. Defaults to the provider's
-            /// `Formats::date` for that level. Typing is lenient either
-            /// way: only the order of day, month and year has to match.
+            /// How the text shows the value, in dayjs tokens. Defaults to `Formats::date` for the level.
+            /// Typing is lenient: only the order of day, month and year has to match.
             #[props(default, into)]
             format: Option<String>,
         ] $($rest)*);
     };
     (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] time_format $($rest:ident)*) => {
         $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
-            /// How the text shows a time, in dayjs tokens. Defaults to the
-            /// provider's `Formats::time`, adjusted for
-            /// `with_seconds` and `twelve_hour`.
+            /// How the text shows a time, in dayjs tokens. Defaults to `Formats::time`,
+            /// adjusted for `with_seconds` and `twelve_hour`.
             #[props(default, into)]
             time_format: Option<String>,
         ] $($rest)*);
@@ -116,9 +101,8 @@ macro_rules! date_props {
     };
     (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] close_on_change $($rest:ident)*) => {
         $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
-            /// Picking a day, or the second end of a range of days, closes the
-            /// dropdown. Defaults to the theme's
-            /// `ChronoFieldDefaults::close_on_change`.
+            /// Picking a day, or a range's second end, closes the dropdown.
+            /// Defaults to the theme's `ChronoFieldDefaults::close_on_change`.
             #[props(default)]
             close_on_change: Option<bool>,
         ] $($rest)*);
@@ -142,14 +126,12 @@ macro_rules! date_props {
         $crate::components::form::field_props! {
             extends(input);
             pub struct $name $(< $generic: $bound >)? {
-                /// The value in the field; strictly controlled. `None` is the
-                /// empty field. Inside a `Form`, a path `name` can supply it
-                /// instead.
+                /// The value in the field; strictly controlled. `None` is the empty field.
+                /// Inside a `Form`, a path `name` can supply it instead.
                 #[props(default)]
                 value: Option<$v>,
-                /// Called with the value the caller should hold next: when
-                /// typed text is committed - on blur or Enter - and on every
-                /// pick. Emptied text commits `None`.
+                /// Called with the value to hold next: on blur, Enter and every pick.
+                /// Emptied text commits `None`.
                 #[props(default)]
                 onchange: Option<EventHandler<Option<$v>>>,
                 /// Rules over the value, shown once the field loses focus or
@@ -157,9 +139,8 @@ macro_rules! date_props {
                 #[props(default, into)]
                 validate: $crate::components::form::Validators<Option<$v>>,
                 $($acc)*
-                /// What the field posts as - the value in ISO 8601, whatever
-                /// the text shows. A path also binds it to the surrounding
-                /// `Form`'s value when it has no `onchange`.
+                /// Posts the value as ISO 8601. A path also binds it to the
+                /// surrounding `Form`'s value when there is no `onchange`.
                 #[props(default, into)]
                 name: $crate::components::form::FieldName<Option<$v>>,
                 #[props(default, into)]
@@ -183,9 +164,8 @@ macro_rules! date_props {
                 /// 8601.
                 #[props(default, into)]
                 name: Option<String>,
-                /// `false` keeps the picker out of the tab order - for a picker
-                /// inside a dropdown whose text input must keep focus. On by
-                /// default.
+                /// `false` keeps the picker out of the tab order, for a dropdown whose
+                /// input keeps focus. On by default.
                 #[props(default)]
                 focusable: Option<bool>,
             }

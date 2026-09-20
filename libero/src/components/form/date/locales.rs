@@ -1,5 +1,5 @@
-//! The shipped languages in the shipped formats, every pairing written and
-//! read back: every day of three years and every minute of a day.
+//! Every shipped language and format pairing, written and read back over three years of days
+//! and every minute of a day.
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, TimeDelta};
 

@@ -1,6 +1,5 @@
-//! A span of time, `chrono::TimeDelta`, as a date field's value: shown as
-//! `1 h 30 min`, posted as ISO 8601 (`PT1H30M`), picked on the digital clock's
-//! columns - hours, minutes and optional seconds, each a spinbutton.
+//! `TimeDelta` as a date field's value: shown as `1 h 30 min`, posted as `PT1H30M`,
+//! picked on a spinbutton column per part.
 
 use std::sync::LazyLock;
 
@@ -40,8 +39,7 @@ static NUMBERS: LazyLock<Vec<String>> = LazyLock::new(|| {
 /// The columns, by their `data-column`, in order.
 const COLUMNS: [&str; 3] = ["Hours", "Minutes", "Seconds"];
 
-/// `min` and `max` with their defaults: nothing below zero, nothing above
-/// 99 h 59 min 59 s.
+/// `min` and `max` with their defaults: zero and 99 h 59 min 59 s.
 pub(super) fn bounds(min: Option<TimeDelta>, max: Option<TimeDelta>) -> (TimeDelta, TimeDelta) {
     let min = min.unwrap_or_default().max(TimeDelta::zero());
     (min, max.unwrap_or(DEFAULT_MAX).max(min))
@@ -126,9 +124,8 @@ fn unit_of(word: &str, names: &DateLocale) -> Option<usize> {
     }
 }
 
-/// Typed text back: `1 h 30 min`, `1h30`, `90 min`, `1:30`, `1:30:15`, or a
-/// bare number of minutes. A number after a unit counts in the next smaller
-/// one. Nothing negative.
+/// Reads `1 h 30 min`, `1h30`, `90 min`, `1:30`, `1:30:15` or bare minutes.
+/// A number after a unit counts in the next smaller one. Nothing negative.
 fn read_duration(text: &str, names: &DateLocale) -> Result<TimeDelta, Unreadable> {
     let text = bare(text.trim());
     if text.contains(':') {
@@ -183,8 +180,7 @@ fn read_duration(text: &str, names: &DateLocale) -> Result<TimeDelta, Unreadable
     }
 }
 
-/// The error for a span outside `min` and `max`, naming the bound it missed:
-/// a duration always has both, and "between" would name one never set.
+/// The error naming the bound missed. Never "between": a default bound was never set.
 pub(super) fn duration_refusal(
     span: TimeDelta,
     min: Option<TimeDelta>,

@@ -1,7 +1,5 @@
-//! The engine every date and time field shares: a text input read on blur or
-//! Enter, a dropdown holding a picker, and a hidden input posting ISO 8601.
-//! Generic over the value, but private - `ChronoField` and the typed fields
-//! reach it through `chrono_field::chrono_field`.
+//! The engine every date and time field shares: a text input read on blur or Enter,
+//! a dropdown holding a picker, and a hidden input posting ISO 8601.
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
 use dioxus::prelude::*;
@@ -39,20 +37,16 @@ use crate::{
 };
 
 static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
-    // A surface, so the background and the `bordered` border are
-    // `paper_sx()`'s. Everything positional comes from `use_popover` as an
-    // inline style.
+    // Position comes from `use_popover` as an inline style.
     paper_sx()
         .z_index(Z_INDEX_POPOVER.value())
         .padding(SizeCss::SPACING.value(Size::Sm))
-        // The field's own corner rather than the surface default, and a
-        // dropdown floats over the page, where that default rests.
+        // The field's corner, and a floating shadow over the surface's resting one.
         .border_radius(SizeCss::RADIUS.value(Size::Sm))
         .box_shadow(SizeCss::SHADOW.value(Size::Lg))
 });
 
-/// Where Arrow Down in the text input puts focus: the picker's own tab stop in
-/// the days, the months or years, or the clock - not the navigation above it.
+/// Where Arrow Down in the input puts focus: the picker's tab stop, not the navigation above it.
 const DROPDOWN_ENTRY: &str = ":is([data-slot='months'], [data-slot='cells'], [data-slot='columns']) [tabindex='0'], [data-slot='face'][tabindex='0']";
 
 /// The formats a field shows its value in, and reads typed text against.
@@ -71,8 +65,7 @@ pub struct Formats {
 pub trait FieldValue: Copy + PartialEq + 'static {
     /// The input's text.
     fn show(self, formats: &Formats) -> String;
-    /// Typed text back. `current` is the field's value, for whatever the text
-    /// leaves out.
+    /// Typed text back. `current` fills in whatever the text leaves out.
     fn read(
         text: &str,
         formats: &Formats,
@@ -248,8 +241,7 @@ pub struct DropdownArgs<V: 'static> {
     pub pick: Callback<(Option<V>, bool)>,
 }
 
-/// Builds a [`PickerField`] from a field's props, which all spell the shared
-/// ones the same way.
+/// Builds a [`PickerField`] from a field's props.
 macro_rules! picker_field {
     ($props:ident, $today:expr) => {
         $crate::components::form::date::picker_field::PickerField {
@@ -277,10 +269,7 @@ macro_rules! picker_field {
 }
 pub(super) use picker_field;
 
-/// Controlled: renders `value` and asks for a new one through `onchange`.
-/// Typed text stays as typed until the field blurs or Enter is pressed; text
-/// that `V` cannot read stays and shows `DateLocale::invalid_date`, a value
-/// `accepts` refuses the error it returns.
+/// Typed text stays until blur or Enter. Unreadable or refused text stays and shows an error.
 pub(super) fn use_picker_field<V: FieldValue>(
     field: PickerField<'_, V>,
     formats: Formats,
@@ -295,9 +284,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let required = field.required.unwrap_or(false);
     let bound = use_bound(field.name, field.onchange.is_some());
     let disabled = bound.disabled(field.disabled);
-    // Two editors again: the text (native `readonly`) and the dropdown, which
-    // is refused rather than opened - so focus, Tab and the form post are
-    // untouched.
+    // Readonly: native on the text; the dropdown refuses to open, leaving focus and posting alone.
     let readonly = field.readonly.unwrap_or(false);
     let value = bound.value().unwrap_or(field.value);
     let today = use_today(field.today);
@@ -305,11 +292,9 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let mut opened = use_signal(|| false);
     // The text as typed, until it is committed. `None` shows `value`.
     let mut draft = use_signal(|| Option::<String>::None);
-    // Why the last commit found nothing it accepts; cleared by the next
-    // keystroke.
+    // Why the last commit was refused; cleared by the next keystroke.
     let mut rejected = use_signal(|| Option::<String>::None);
-    // Focus is coming back to the text input from the dropdown, which closed:
-    // that focus must not open it again.
+    // Focus returning from the closed dropdown must not open it again.
     let mut returning = use_signal(|| false);
     // Arrow Down asked for focus in the picker, once the dropdown is drawn.
     let mut entering = use_signal(|| false);
@@ -353,8 +338,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let (commit_on_blur, mut commit_on_enter) = (commit.clone(), commit.clone());
     let mut commit_on_enter_picker = commit;
 
-    // Unaccepted text outranks the caller's status: the field cannot hold what
-    // it shows.
+    // Refused text outranks the caller's status: the field cannot hold what it shows.
     let status: Input<FieldStatus> = match rejected() {
         Some(error) => Input::Value(FieldStatus::Error(error)),
         None => field.status.clone(),
@@ -386,12 +370,10 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .focus_ring(false)
         .prepare();
 
-    // Every one of these is a hook, so all of them run before anything
-    // branches on `opened`.
+    // Hooks: all run before anything branches on `opened`.
     let anchor = use_element();
     let showing = opened() && !disabled && !readonly;
-    // On the Escape stack exactly while the key handler below would take
-    // Escape, so a `HoverCard` around this field leaves the press to it.
+    // On the Escape stack exactly while the handler below takes Escape, so a `HoverCard` leaves it.
     use_field_list_layer(opened() && !readonly);
     let popover = use_popover_on(
         anchor,
@@ -406,8 +388,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .states(&dropdown_states)
         .style(popover.style())
         .prepare();
-    // Waits for placement too: Arrow Down on a closed field opens it, and the
-    // picker is not drawn until the box has been measured.
+    // Waits for placement: the picker is not drawn until the box is measured.
     use_effect(move || {
         if !entering() || !popover.placed() {
             return;
@@ -418,9 +399,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
             .and_then(|element| element.focus());
     });
 
-    // After the platform's next task focus has landed, so this can tell
-    // whether it went somewhere else in the field - the text input or the
-    // dropdown - or left. Without a platform answer it counts as left.
+    // After the next task focus has landed: closes unless it is in the input or dropdown.
+    // Without a platform answer it counts as left.
     let settle = move || {
         spawn(async move {
             next_task().await;
@@ -445,8 +425,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         (true, _) | (_, true) => returning.set(false),
         (false, false) => opened.set(true),
     };
-    // Element 0 is the text input, 1 the dropdown; the box closes once focus
-    // is in neither.
+    // Element 0 is the text input, 1 the dropdown; closes once focus is in neither.
     let focus = use_focus_within(
         move || vec![anchor.mounted(), floating.mounted()],
         move |change| {
@@ -531,10 +510,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
         }
     });
 
-    // Portaled, so no `overflow: hidden` ancestor clips it. A mousedown in the
-    // box is cancelled, so a click keeps focus on the text input; the keyboard
-    // enters the picker with Arrow Down and leaves it with Escape. The box
-    // closes once focus is in neither.
+    // Portaled past `overflow: hidden`. Mousedown is cancelled so a click keeps focus on the input;
+    // the keyboard enters with Arrow Down and leaves with Escape.
     popover.show(showing.then(|| {
         let pick = Callback::new(move |(next, close): (Option<V>, bool)| {
             draft.set(None);
@@ -563,8 +540,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
                     focus_input();
                     opened.set(false);
                 }
-                // Portaled after the page: Tab past either end goes back
-                // through the text input, then on as from the field.
+                // Portaled after the page: Tab past either end goes back via the input.
                 Key::Tab => {
                     let Ok(stops) = floating.query_selector_all(FOCUSABLE_SELECTOR) else {
                         return;
@@ -611,9 +587,7 @@ mod tests {
     use super::*;
     use crate::css::Stylesheet;
 
-    /// The dropdown is a `Paper` surface with two overrides. The `bordered`
-    /// token it is rendered with only exists in a browser - the box opens on
-    /// an event.
+    /// The dropdown is a `Paper` surface with two overrides. Its `bordered` token needs a browser.
     #[test]
     fn the_dropdown_starts_from_the_paper_surface() {
         let css = Stylesheet::from(&*PICKER_FIELD_DROPDOWN_SX);

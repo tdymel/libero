@@ -175,15 +175,12 @@ pub(super) static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         )
         .selector("& button:focus-visible", focus_ring_sx())
         .selector("& [data-slot='face']:focus-visible", focus_ring_sx())
-        // As in `Calendar`: a picked option's fill sets the ring's contrast
-        // colour for its inside, so the ring is drawn there. After the ring
-        // above, and more specific, so it wins.
+        // As in `Calendar`: a picked fill takes the ring inside. More specific than the ring above.
         .selector(
             "& [data-selected]:focus-visible",
             inset_focus_ring_sx("-4px"),
         )
-        // Forced colours paint every fill `Canvas`: the picks and the hand
-        // itself would vanish, as in `Calendar`.
+        // Forced colours paint every fill `Canvas`: the picks and the hand would vanish.
         .media(
             FORCED_COLORS,
             sx().selector(
@@ -215,11 +212,19 @@ enum Hand {
 const OUTER_RING: f64 = 0.8;
 const INNER_RING: f64 = 0.52;
 
-/// A time to pick - scrolling columns of hours, minutes and seconds, or an
-/// analog clock face that takes the hour, then the minute.
+/// A time to pick, on columns of hours and minutes or on a clock face.
 ///
-/// Controlled: it renders `value` and asks for a new one through `onchange`.
-/// A part picked with no value yet starts from `min`, else midnight.
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::chrono::NaiveTime;
+/// # use libero::components::TimePicker;
+/// # fn app() -> Element {
+/// let mut time = use_signal(|| None::<NaiveTime>);
+/// rsx! { TimePicker { value: time(), onchange: move |v| time.set(v) } }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/chrono-picker>
 #[component]
 pub fn TimePicker(props: TimePickerProps) -> Element {
     let theme = use_theme();
@@ -249,8 +254,7 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
     })
 }
 
-/// What `TimePicker` draws, with every option resolved. Its props are plain,
-/// so `ChronoPicker` can hand on the caller's attributes.
+/// What `TimePicker` draws, every option resolved. Plain props, so `ChronoPicker` can pass attributes on.
 #[derive(Props, Clone, PartialEq)]
 pub(super) struct ClockProps {
     value: Option<NaiveTime>,
@@ -268,8 +272,7 @@ pub(super) struct ClockProps {
     sx: Input<Sx>,
     states: Input<States>,
     attributes: Vec<Attribute>,
-    /// Called once the last part is set: the last hand picked, or Enter on
-    /// the last column. A date-time range moves on to its next step.
+    /// Called once the last hand is picked, or Enter on the last column.
     #[props(default)]
     oncomplete: Option<Callback<()>>,
 }
@@ -399,9 +402,8 @@ impl ClockView {
         }
     }
 
-    /// The time a point on the face picks for `shown`: `turn` is clockwise
-    /// from 12 in `0..1`, `reach` the distance from the centre over the half
-    /// width. `None` where `min` or `max` rule it out.
+    /// The time a point on the face picks: `turn` clockwise from 12 in `0..1`, `reach`
+    /// the distance from the centre over the half width. `None` outside `min`/`max`.
     fn at_point(self, shown: Hand, turn: f64, reach: f64) -> Option<NaiveTime> {
         let base = self.base;
         let (hour, minute, second) = (base.hour(), base.minute(), base.second());
@@ -469,9 +471,8 @@ impl ClockView {
         self.emit(next);
     }
 
-    /// A digital clock: a spinbutton each for the hours, the minutes, the
-    /// seconds and AM/PM. `pick` gets a column's picked index, `ondone` the
-    /// column Enter or typing has finished.
+    /// A digital clock, one spinbutton per part. `pick` gets a column's picked index,
+    /// `ondone` the column Enter or typing has finished.
     fn digital_view(
         self,
         pick: Callback<(&'static str, usize)>,
@@ -658,10 +659,8 @@ impl ClockView {
         }
     }
 
-    /// The face is a slider over the hand it shows: the arrows step an hour,
-    /// `step` minutes or a second, past what `min` and `max` rule out; Page
-    /// Up/Down a quarter of the face, Home/End its first and last open value;
-    /// Enter moves on to the next hand.
+    /// The face is a slider over its hand: arrows step past what `min`/`max` rule out,
+    /// Page keys a quarter face, Home/End the first/last open value, Enter the next hand.
     fn face_keydown(self, event: KeyboardEvent) {
         // Ctrl/Alt/Meta chords are the browser's.
         if has_shortcut_modifier(&event) {
@@ -851,8 +850,7 @@ impl ClockView {
                 }
             }
         });
-        // Minutes and seconds say their unit, as a duration's columns do; an hour
-        // of the day reads as itself, with its half on a twelve-hour clock.
+        // Minutes and seconds say their unit; an hour reads as itself, plus AM/PM if twelve-hour.
         let (face_label, face_text, face_now, face_max) = match hand() {
             Hand::Hour => (
                 names.hours_label,
@@ -1120,9 +1118,8 @@ struct Mark {
     disabled: bool,
 }
 
-/// The marks on the analog face. Its own scope with plain values, so a value
-/// change that moves no mark - a minute, while the face shows hours - skips
-/// it. Labels only: the face picks by the pointer's angle.
+/// The analog face's marks, own scope so a change that moves no mark skips it.
+/// Labels only: the face picks by the pointer's angle.
 #[component]
 fn ClockMarks(marks: Vec<Mark>) -> Element {
     let marks = marks.into_iter().map(|mark| {

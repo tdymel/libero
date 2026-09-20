@@ -1,6 +1,5 @@
-//! Typed text back into a time, or a day and a time. As forgiving as the date
-//! reader: hours, minutes and seconds come in that order, and whatever sits
-//! between them only separates.
+//! Typed text back into a time, or a day and a time. Hours, minutes, seconds in order;
+//! whatever sits between them only separates.
 
 use chrono::{NaiveDateTime, NaiveTime};
 
@@ -12,14 +11,8 @@ pub(super) const MIDNIGHT: NaiveTime = match NaiveTime::from_hms_opt(0, 0, 0) {
     None => unreachable!(),
 };
 
-/// Reads what someone typed:
-///
-/// - hours, then minutes, then seconds, separated by anything: `13:05`,
-///   `13.05.30`, `9 30`;
-/// - or run together: `930`, `0930`, `93015`;
-/// - an `am`/`pm` word from `names`, any case or a prefix (`p`), makes it a
-///   12-hour time: `1:05 pm`, `12am`;
-/// - a word `format` writes as literal text is skipped: `h` in `HH[ h ]mm`.
+/// Reads `13:05`, `13.05.30`, `9 30`, `930`, `93015`; an am/pm word or prefix makes it 12-hour.
+/// A word `format` writes as literal text is skipped: `h` in `HH[ h ]mm`.
 pub(super) fn parse_time(
     text: &str,
     format: &str,
@@ -79,11 +72,8 @@ pub(super) fn parse_time(
     NaiveTime::from_hms_opt(hour, minute, second).ok_or(Unreadable)
 }
 
-/// Reads a typed day and time: the time starts at the number before the first
-/// `:` or the first literal word of `time_format` (`h` in `HH[ h ]mm`), and at
-/// an am/pm word right before that number. Everything before it is the day,
-/// read as [`parse_date`] reads it. Without either the whole text is the day
-/// and the time is `fallback_time`, else midnight.
+/// Reads a day and time: the time starts at the number (or am/pm word) before the first `:`
+/// or `time_format` literal. Without one, the time is `fallback_time`, else midnight.
 pub(super) fn parse_date_time(
     text: &str,
     format: &str,
@@ -119,8 +109,7 @@ pub(super) fn parse_date_time(
     Ok(NaiveDateTime::new(date, time))
 }
 
-/// Where the time shows itself in `text`: the first `:`, or the first word
-/// `time_format` writes as literal text that `format` does not.
+/// Where the time starts: the first `:`, or the first literal word only `time_format` writes.
 fn time_marker(text: &str, format: &str, time_format: &str) -> Option<usize> {
     let date_words = literal_words(format);
     let time_words: Vec<String> = literal_words(time_format)

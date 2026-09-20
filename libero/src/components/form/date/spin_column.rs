@@ -1,6 +1,4 @@
-//! One column of a digital clock: an APG spinbutton over a fixed list of
-//! values - the hours, the minutes at a step, AM and PM. `TimePicker` stacks
-//! them into `HH:MM`; anything else counted in steps can reuse them.
+//! One column of a digital clock: an APG spinbutton over a fixed list of values.
 
 use dioxus::prelude::*;
 
@@ -80,8 +78,8 @@ pub(super) fn stepped(
     landed.then_some(index)
 }
 
-/// The option typed text picks: one that reads as the text without its
-/// leading zeros first (`1` is `01`, not `12`), then one the text starts.
+/// The option typed text picks: an exact match without leading zeros first (`1` is `01`,
+/// not `12`), then a prefix.
 pub(super) fn typed(options: &[SpinOption], text: &str) -> Option<usize> {
     let text = text.to_lowercase();
     let open = || {
@@ -109,8 +107,8 @@ fn typing_goes_on(options: &[SpinOption], text: &str, picked: usize) -> bool {
     })
 }
 
-/// The travel left over and the step a wheel event takes: a notch is one step
-/// however far it reports, a trackpad's small deltas add up to one.
+/// The travel left over and the step a wheel event takes: a notch is one step,
+/// a trackpad's small deltas add up to one.
 fn wheel_steps(held: f64, travel: f64) -> (f64, isize) {
     // A turn back drops what was held the other way.
     let total = if held * travel < 0.0 {
@@ -138,8 +136,7 @@ pub(super) struct SpinColumnProps {
     pub label: String,
     pub options: Vec<SpinOption>,
     pub at: SpinAt,
-    /// What the column shows: its option's text, a value between the options,
-    /// or `--`.
+    /// What the column shows: its option's text, a value between the options, or `--`.
     pub text: &'static str,
     /// `aria-valuetext` with its unit (`2 hours`); `text` without one.
     pub valuetext: Option<String>,
@@ -148,18 +145,15 @@ pub(super) struct SpinColumnProps {
     /// The steps Page Up and Page Down take.
     pub page: usize,
     pub focusable: bool,
-    /// Called with `column` and the picked option's index: one callback can
-    /// serve every column, so a pick leaves the other columns' props equal.
+    /// Called with `column` and the picked index: one callback serves every column,
+    /// so a pick leaves the others' props equal.
     pub onpick: Callback<(&'static str, usize)>,
-    /// Called with `column` on Enter, and once typing has picked a value no
-    /// further key can change: the clock moves on to the next column.
+    /// Called with `column` on Enter, or once typing can pick nothing else.
     pub ondone: Callback<&'static str>,
 }
 
-/// The value between its two neighbours, a spinbutton: the arrows step, Page
-/// Up and Down take `page` steps, Home and End go to the ends, typed digits or
-/// letters pick, Enter is done. A wheel or a vertical drag turns it; a press
-/// on a neighbour picks that.
+/// The value between its two neighbours, a spinbutton. Keys, typing, wheel and a
+/// vertical drag turn it; a press on a neighbour picks that.
 #[component]
 pub(super) fn SpinColumn(props: SpinColumnProps) -> Element {
     let SpinColumnProps {

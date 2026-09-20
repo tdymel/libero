@@ -35,21 +35,8 @@ pub(super) enum Piece<'a> {
     Word(&'a str),
 }
 
-/// Reads what someone typed, in the order `format` puts day, month and year,
-/// with the names from `names`:
-///
-/// - any run of non-alphanumeric characters separates, so `1/2/2026`,
-///   `01-02-2026` and `1. 2. 2026` all read alike;
-/// - digits alone work when they are exactly as wide as `DDMMYYYY` in the
-///   format's order: `01022026`;
-/// - day and month take one or two digits, the year exactly four;
-/// - a month may be a name, any case, full, short or a prefix naming only one
-///   month: `1 feb 2026`, `1 Septem 2026`. A weekday name is skipped, and so
-///   is a word the format writes as literal text: `年` in `YYYY年M月D日`;
-/// - without a year, `fallback_year` fills it in - the current year, or the
-///   field's current value's.
-///
-/// A format with no day or no month token reads nothing.
+/// Reads typed text in `format`'s order of day, month and year: any separator, `01022026`,
+/// month names or unique prefixes. A missing year is `fallback_year`.
 pub(super) fn parse_date(
     text: &str,
     format: &str,
@@ -59,8 +46,7 @@ pub(super) fn parse_date(
     parse_at(text, format, names, fallback_year, DateLevel::Day)
 }
 
-/// [`parse_date`] for a day, a month or a year. A month reads as its first
-/// day and needs a month; a year reads as its January 1 and needs a year.
+/// [`parse_date`] for a day, a month (its first day) or a year (its January 1).
 pub(super) fn parse_at(
     text: &str,
     format: &str,
@@ -202,8 +188,7 @@ pub(super) fn pieces(text: &str) -> Vec<Piece<'_>> {
     pieces
 }
 
-/// `1` for January. An exact full or short name wins; otherwise a prefix has
-/// to name exactly one month.
+/// `1` for January. An exact name wins; otherwise a prefix must name exactly one month.
 fn month_named(word: &str, names: &DateLocale) -> Option<u32> {
     let months = || (0..12).map(|index| (index, names.months[index], names.months_short[index]));
     if let Some((index, ..)) = months()

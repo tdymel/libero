@@ -1,6 +1,4 @@
-//! The typed date and time fields: each names its own value type and fills
-//! the part of [`FieldOptions`] that type uses, then draws through the same
-//! path as `ChronoField`.
+//! The typed date and time fields: `ChronoField` with only the props that type uses.
 
 use dioxus::prelude::*;
 
@@ -28,17 +26,15 @@ pub(super) fn day_allowed(
     }
 }
 
-/// The time format a field shows when the caller names none: `theme`, the
-/// formats' own, adjusted for `with_seconds` and `twelve_hour`; separators,
-/// padding and text stay.
+/// The theme's time format adjusted for `with_seconds` and `twelve_hour`.
+/// Separators, padding and text stay.
 pub(super) fn time_format(theme: &str, twelve_hour: Option<bool>, with_seconds: bool) -> String {
     let twelve = twelve_hour.unwrap_or_else(|| uses_twelve_hours(theme));
     if !with_seconds && twelve == uses_twelve_hours(theme) {
         return theme.to_string();
     }
     let mut parts = tokens(theme);
-    // Seconds go after the minutes, split off as the minutes are from the hour.
-    // `with_seconds: false` leaves a theme's own seconds alone.
+    // Seconds follow the minutes with the minutes' separator. `with_seconds: false` keeps a theme's own.
     if with_seconds
         && !parts
             .iter()
@@ -135,10 +131,17 @@ date_props! {
 
 /// A text field holding a day, with a `DatePicker` in a dropdown.
 ///
-/// Controlled: it renders `value` and asks for a new one through `onchange`.
-/// Typed text stays as typed until the field blurs or Enter is pressed; then
-/// it is read leniently against `format`. Text that is not an accepted day
-/// stays, and the field shows an error.
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::chrono::NaiveDate;
+/// # use libero::components::DateField;
+/// # fn app() -> Element {
+/// let mut date = use_signal(|| None::<NaiveDate>);
+/// rsx! { DateField { label: "Due", value: date(), onchange: move |v| date.set(v) } }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/chrono-field>
 #[component]
 pub fn DateField(props: DateFieldProps) -> Element {
     let options = FieldOptions {
@@ -158,7 +161,19 @@ date_props! {
     field TimeFieldProps(NaiveTime, NaiveTime): time_format, limits, clock
 }
 
-/// A text field holding a time, with a `TimePicker` in a dropdown. Typing reads `13:05`, `1:05 pm`, `1305`.
+/// A text field holding a time, with a `TimePicker` in a dropdown.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::chrono::NaiveTime;
+/// # use libero::components::TimeField;
+/// # fn app() -> Element {
+/// let mut time = use_signal(|| None::<NaiveTime>);
+/// rsx! { TimeField { label: "Start", value: time(), onchange: move |v| time.set(v) } }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/chrono-field>
 #[component]
 pub fn TimeField(props: TimeFieldProps) -> Element {
     let options = FieldOptions {
@@ -178,9 +193,19 @@ date_props! {
     field DateTimeFieldProps(NaiveDateTime, NaiveDateTime): format, time_format, limits, exclude_date, today, clock, calendar
 }
 
-/// A text field holding a day and a time. The dropdown picks the day, then
-/// the time, and a `SegmentedControl` goes back.
-/// The text shows the day, then the time after a space.
+/// A text field holding a day and a time; the dropdown picks the day, then the time.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::chrono::NaiveDateTime;
+/// # use libero::components::DateTimeField;
+/// # fn app() -> Element {
+/// let mut at = use_signal(|| None::<NaiveDateTime>);
+/// rsx! { DateTimeField { label: "Meeting", value: at(), onchange: move |v| at.set(v) } }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/chrono-field>
 #[component]
 pub fn DateTimeField(props: DateTimeFieldProps) -> Element {
     let options = FieldOptions {
@@ -205,9 +230,18 @@ date_props! {
 }
 
 /// A text field holding a range of days, with two months in a dropdown.
-/// An `end` of `None` is a range
-/// still being picked. The text joins both days with the theme's
-/// `range_separator`; typing takes `–`, ` - ` or ` to ` between them.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::chrono::NaiveDate;
+/// # use libero::components::{DateRange, DateRangeField};
+/// # fn app() -> Element {
+/// let mut stay = use_signal(|| None::<DateRange<NaiveDate>>);
+/// rsx! { DateRangeField { label: "Stay", value: stay(), onchange: move |v| stay.set(v) } }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/chrono-field>
 #[component]
 pub fn DateRangeField(props: DateRangeFieldProps) -> Element {
     let options = FieldOptions {
@@ -226,9 +260,19 @@ date_props! {
     field DateTimeRangeFieldProps(DateRange<NaiveDateTime>, NaiveDateTime): format, time_format, limits, exclude_date, today, clock
 }
 
-/// A text field holding a range of moments. The dropdown picks the start - a
-/// day, then a time - before the end; `SegmentedControl`s switch sides and
-/// parts.
+/// A text field holding a range of moments; the dropdown picks each end's day, then time.
+///
+/// ```
+/// # use dioxus::prelude::*;
+/// # use libero::chrono::NaiveDateTime;
+/// # use libero::components::{DateRange, DateTimeRangeField};
+/// # fn app() -> Element {
+/// let mut slot = use_signal(|| None::<DateRange<NaiveDateTime>>);
+/// rsx! { DateTimeRangeField { label: "Slot", value: slot(), onchange: move |v| slot.set(v) } }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/form/chrono-field>
 #[component]
 pub fn DateTimeRangeField(props: DateTimeRangeFieldProps) -> Element {
     let options = FieldOptions {

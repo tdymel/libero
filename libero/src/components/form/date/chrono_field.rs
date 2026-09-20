@@ -21,26 +21,13 @@ date_props! {
     field ChronoFieldProps<V: DateValue>(V, V::Bound): format, time_format, limits, exclude_date, today, clock, calendar, columns, close_on_change, level
 }
 
-/// One text field for every date and time value, with the [`ChronoPicker`](super::ChronoPicker)
-/// its type calls for in a dropdown.
+/// One text field for every date and time value, with its [`ChronoPicker`](super::ChronoPicker) in a dropdown.
 ///
-/// Controlled: it renders `value` and asks for a new one through `onchange`.
-/// Typed text stays as typed until the field blurs or Enter is pressed; then
-/// it is read leniently. Text that is not an accepted value stays, and the
-/// field shows an error. A typed `value` alone does not name `V`, so a typed
-/// `onchange` or a turbofish has to.
+/// A typed `value` alone does not name `V`: a typed `onchange` or a turbofish does.
+/// Props the type does not use warn in debug builds.
 ///
-/// A `TimeDelta` field is a duration: it shows `1 h 30 min`, reads that,
-/// `1h30`, `1:30` or a bare number of minutes, posts `PT1H30M`, and runs from
-/// `min` (0 by default) to `max` (99 h 59 min 59 s by default).
-///
-/// `level` makes a `NaiveDate` field a month or a year field: the text reads
-/// `(Formats::date)(level)` (`MMMM YYYY` or `YYYY` in both formats) unless
-/// `format` says otherwise, the value is the month's first day or the year's
-/// January 1, and the dropdown opens on that grid.
-///
-/// ```no_run
-/// # use chrono::NaiveDate;
+/// ```
+/// # use libero::chrono::NaiveDate;
 /// # use dioxus::prelude::*;
 /// # use libero::components::{ChronoField, DateLevel};
 /// # fn app() -> Element {
@@ -56,13 +43,7 @@ date_props! {
 /// # }
 /// ```
 ///
-/// Props a value type does not use are ignored, with a warning in debug
-/// builds: the clock props and `time_format` need a time (a `TimeDelta`
-/// reads `with_seconds` and `step`), `format`, `today`
-/// and `exclude_date` a day, `columns` and `close_on_change` a day or a range
-/// of days, `calendar` and `days` a day or a date-time, `level` a single
-/// `NaiveDate`. A month or year field also ignores `exclude_date`, `columns`,
-/// `calendar` and `days`.
+/// Docs: <https://libero-ui.dev/form/chrono-field>
 #[component]
 pub fn ChronoField<V: DateValue>(props: ChronoFieldProps<V>) -> Element {
     let level = used::<V, _>("level", props.level)
@@ -85,8 +66,6 @@ pub fn ChronoField<V: DateValue>(props: ChronoFieldProps<V>) -> Element {
             ("close_on_change", props.close_on_change.is_some()),
             ("level", props.level.is_some()),
         ],
-        // A month or year dropdown has no excluded days, columns or mini
-        // calendar.
         match level {
             DateLevel::Day => &[],
             _ => &["exclude_date", "columns", "calendar", "days"],
@@ -111,9 +90,7 @@ pub fn ChronoField<V: DateValue>(props: ChronoFieldProps<V>) -> Element {
     chrono_field(picker_field!(props, props.today), options)
 }
 
-/// What a field's text and dropdown are drawn from, besides the props every
-/// field shares. `ChronoField` fills all of it; a typed field fills what its
-/// value type uses and leaves the rest unset.
+/// A field's type-specific props. A typed field fills what its value type uses.
 pub(super) struct FieldOptions<B: 'static> {
     pub format: Option<String>,
     pub time_format: Option<String>,
@@ -152,9 +129,7 @@ impl<B> Default for FieldOptions<B> {
     }
 }
 
-/// The one path from a field's props to its text and its dropdown, so every
-/// field hands the picker the same props. Calls hooks: only from a component
-/// body.
+/// The one path from a field's props to its text and dropdown. Calls hooks.
 pub(super) fn chrono_field<V: DateValue>(
     field: PickerField<'_, V>,
     options: FieldOptions<V::Bound>,

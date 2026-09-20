@@ -132,8 +132,7 @@ static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             "& [data-slot='day']",
             button.clone().width(day.clone()).height(day.clone()),
         )
-        // The mini variant: one row of taller days, a month label over the
-        // number.
+        // The mini variant: one row of taller days, a month label over the number.
         .selector(
             "& [data-slot='strip']",
             sx().display("flex").align_items("center").gap("4px"),
@@ -179,9 +178,8 @@ static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             disabled_look_sx("not-allowed").hover(sx().background("transparent")),
         )
         .selector("& button:focus-visible", focus_ring_sx())
-        // A picked cell's fill sets the ring's contrast colour, which is
-        // meant for its inside: drawn around it, a light ring vanishes on the
-        // page. After the ring above, and more specific, so it wins.
+        // A picked cell's fill sets a ring colour meant for its inside: outside, a light ring vanishes.
+        // More specific than the ring above.
         .selector(
             "& [data-selected]:focus-visible",
             inset_focus_ring_sx("-4px"),
@@ -287,8 +285,7 @@ impl Selection {
     }
 }
 
-// In the theme, since `DateLocale::format` takes it and the layers below
-// `components` may not import from it.
+// Lives in the theme: `DateLocale::format` takes it, and lower layers may not import `components`.
 pub use crate::theme::DateLevel;
 
 /// Where focus goes after the next render.
@@ -300,10 +297,8 @@ enum Focus {
     Stop,
 }
 
-/// `exclude_date` as a calendar holds it. Two `Callback`s built on different
-/// renders can compare equal, so a changed rule would not redraw a calendar
-/// whose other props did not change. A rule never compares equal: only a
-/// calendar without one skips a re-render from above.
+/// `exclude_date`, never equal to another rule: `Callback`s from different renders can compare
+/// equal, and a changed rule would not redraw.
 #[derive(Clone, Copy, Default)]
 pub(super) struct DayRule(Option<Callback<NaiveDate, bool>>);
 
@@ -359,9 +354,8 @@ pub(super) struct CalendarProps {
     attributes: Vec<Attribute>,
 }
 
-/// Where focus goes after the next render. Only moves focus that is already
-/// in the calendar: a click inside a field's dropdown leaves it on the text
-/// input.
+/// Where focus goes after the next render. Only moves focus already in the calendar,
+/// so a click in a field's dropdown leaves it on the input.
 #[derive(Clone, Copy)]
 struct FocusRequest {
     root: ElementHandle,
@@ -382,9 +376,8 @@ impl FocusRequest {
     }
 }
 
-/// A selector to focus inside `root` after the next render, which drew the
-/// target. A level change replaces the heading and the cells, which would
-/// leave focus on `body`.
+/// A selector to focus inside `root` after the next render. A level change replaces
+/// the heading and cells, which would leave focus on `body`.
 pub(super) fn use_focus_after_render(root: ElementHandle) -> Signal<Option<String>> {
     let mut focus_request = use_signal(|| None::<String>);
     use_effect(move || {
@@ -452,9 +445,8 @@ impl View {
         day
     }
 
-    /// The first day a pick can land on, from `from` on, `step` days at a
-    /// time. `None` once a step leaves `min`/`max`, or after a year of steps
-    /// that `exclude_date` all refuses.
+    /// The first pickable day from `from`, `step` days at a time. `None` once a step
+    /// leaves `min`/`max`, or after a year of excluded days.
     fn seek(self, from: NaiveDate, step: i64) -> Option<NaiveDate> {
         let mut day = from;
         for _ in 0..366 {
@@ -511,9 +503,7 @@ impl View {
             return;
         }
         let years = if event.modifiers().shift() { 12 } else { 1 };
-        // Disabled days are skipped: `focus()` on one does nothing, and the
-        // grid would lose its only tab stop. An arrow with nothing left to
-        // land on stays put.
+        // Skip disabled days: `focus()` on one does nothing and the grid would lose its tab stop.
         let next = match logical_key(&event) {
             Key::ArrowLeft => self.seek(add_days(tab_stop, -1), -1),
             Key::ArrowRight => self.seek(add_days(tab_stop, 1), 1),
@@ -540,8 +530,7 @@ impl View {
         self.focus.to(Focus::Date(next));
     }
 
-    /// The month and year views' one tab stop: a grid three wide, one cell a
-    /// month or a year.
+    /// The month and year views' one tab stop, in a grid three wide.
     fn cell_stop(self) -> NaiveDate {
         let level = (self.level)();
         let in_view = |cell: NaiveDate| match level {
@@ -567,8 +556,7 @@ impl View {
             .unwrap_or(stop)
     }
 
-    /// A month or year cell pulled inside the cells of `min` and `max`: the
-    /// only ones these views disable, and always at the ends.
+    /// A month or year cell pulled inside the cells of `min` and `max`, the only ones disabled.
     fn clamp_cell(self, cell: NaiveDate) -> NaiveDate {
         let mut cell = cell;
         if let Some(min) = self.min {
@@ -768,8 +756,7 @@ impl View {
                     tabindex: self.tabindex(true),
                     onclick: move |_| {
                         level.set(DateLevel::Year);
-                        // The decade's title is disabled: there is no level
-                        // above it. Focus goes to the year the view stands on.
+                        // The decade's title is disabled, so focus goes to the year.
                         focus.to(Focus::Stop);
                     },
                     "{year}"
@@ -781,8 +768,7 @@ impl View {
                 role: "grid",
                 "aria-label": "{year}",
                 onkeydown: move |event| self.cell_keydown(event, cell_stop),
-                // Rows written out, not looped: one template, cells diffed in
-                // place.
+                // Rows written out, not looped: one template, cells diffed in place.
                 div { role: "row", {cell(0)} {cell(1)} {cell(2)} }
                 div { role: "row", {cell(3)} {cell(4)} {cell(5)} }
                 div { role: "row", {cell(6)} {cell(7)} {cell(8)} }
@@ -927,8 +913,7 @@ impl Strip {
         let Some(next) = next else {
             return;
         };
-        // A step off an end moves the row as far: an arrow a day, a page a
-        // page.
+        // A step off an end moves the row as far.
         let start = match (self.start..=self.end).contains(&next) {
             true => self.start,
             false => add_days(self.start, (next - self.stop).num_days()),
@@ -940,9 +925,8 @@ impl Strip {
     }
 }
 
-/// The engine every date picker draws: a header, then a day, month or year
-/// view. Non-generic - what is picked arrives as a [`Selection`] of plain
-/// values, so the props compare properly.
+/// The engine every date picker draws: a header, then a day, month or year view.
+/// Non-generic: a [`Selection`] of plain values keeps the props comparable.
 #[component]
 pub(super) fn Calendar(props: CalendarProps) -> Element {
     let names = &use_localization().date;
@@ -955,8 +939,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let focusable = props.focusable;
 
     let today = use_today(props.today);
-    // A new `lowest` remounts the calendar - `DateValue::picker` keys it - so
-    // the view only has to start there.
+    // A new `lowest` remounts the calendar (`DateValue::picker` keys it).
     let mut level = use_signal(|| lowest);
     let mut paged = use_signal(|| None::<NaiveDate>);
     let active = use_signal(|| None::<NaiveDate>);
@@ -1005,8 +988,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         .or(selection.anchor().filter(|day| shown(*day)))
         .or(today.filter(|day| shown(*day)))
         .unwrap_or(first);
-    // A disabled day cannot take focus, so the stop moves to the nearest one
-    // that can, while one is shown.
+    // A disabled day cannot take focus: move the stop to the nearest shown one that can.
     let tab_stop = view.nearest_in(tab_stop, shown).unwrap_or(tab_stop);
 
     let first_weekday = formats.first_weekday.num_days_from_sunday() as usize;
@@ -1017,8 +999,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let cell_stop = view.cell_stop();
 
     let awaits_end = selection.awaits_end();
-    // Read only while a range waits, so a plain picker never re-renders on
-    // mouse movement.
+    // Read only while a range waits, so a plain picker never re-renders on mouse movement.
     let hovered = if awaits_end { hover() } else { None };
 
     // The first day of each of a month's six weeks.
@@ -1038,8 +1019,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         DateLevel::Day => {
             nav_targets.set([add_months(first, -1), add_months(first, 1)]);
             let months = (0..columns).map(|index| (index, add_months(first, index)));
-            // Items drawn inline: see `Week`. Keyed by column, so a page
-            // diffs the grid in place rather than remounting it.
+            // Inline, see `Week`. Keyed by column, so paging diffs the grid in place.
             rsx! {
                 div { "data-slot": "header",
                     Nav {
@@ -1146,9 +1126,8 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     )
 }
 
-/// One row of a month grid. Its own scope, and the calendar hands it only what
-/// lands on its seven days, so a pick or a range preview elsewhere leaves its
-/// props equal and it skips the re-render.
+/// One row of a month grid, own scope with only its seven days' marks, so a pick
+/// elsewhere leaves its props equal and skips the re-render.
 #[derive(Props, Clone, PartialEq)]
 struct WeekProps {
     first: NaiveDate,
@@ -1216,9 +1195,8 @@ fn Week(props: WeekProps) -> Element {
         (offset, day, outside(day), picked, in_range)
     };
 
-    // Items drawn inline, not through a helper returning `rsx!`: a nested
-    // element per item costs about a microsecond each. Keyed by column, so a
-    // page diffs the days in place rather than remounting them.
+    // Inline, not a helper returning `rsx!`: a nested element costs ~1 µs per item.
+    // Keyed by column, so paging diffs the days in place.
     rsx! {
         div { role: "row",
             for offset in 0..lead {
@@ -1266,8 +1244,7 @@ fn Week(props: WeekProps) -> Element {
     }
 }
 
-/// The weekday names over a month. Its own scope: nothing in it moves with the
-/// calendar's state, so it skips every re-render.
+/// The weekday names over a month, own scope so it skips every re-render.
 #[component]
 fn Weekdays(first_weekday: usize) -> Element {
     let names = &use_localization().date;
@@ -1285,8 +1262,7 @@ fn Weekdays(first_weekday: usize) -> Element {
     }
 }
 
-/// A button that pages the calendar. Its own scope with its icon drawn inside,
-/// and its target read on click, so a page leaves its props equal.
+/// A button that pages the calendar. Reads its target on click, so paging leaves its props equal.
 #[derive(Props, Clone, PartialEq)]
 struct NavProps {
     label: &'static str,
@@ -1323,8 +1299,7 @@ fn Nav(props: NavProps) -> Element {
     }
 }
 
-/// The navigation buttons' icon step for a picker step. `ActionIcon`'s scale
-/// climbs faster than a day cell's, so two picker steps share one icon step.
+/// The nav icon size for a picker size: `ActionIcon`'s scale climbs faster, so two share one.
 const fn nav_size(size: Size) -> Size {
     match size {
         Size::Xs | Size::Sm => Size::Xs,

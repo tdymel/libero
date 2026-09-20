@@ -7,12 +7,14 @@ use std::{
 
 use chrono::{NaiveDate, NaiveDateTime};
 
-/// Two days - or two `NaiveDateTime`s - with the start picked first.
-/// `end: None` is a range still being picked: half a range is a real state a
-/// picker shows, so the value holds it rather than the component.
+/// Two days or two `NaiveDateTime`s, the start picked first. `end: None` is a range still being picked.
 ///
-/// Shows and parses as an ISO 8601 interval, `2026-09-01/2026-09-05`, which is
-/// also what a form posts; a half range as `2026-09-01/`.
+/// ```
+/// # use libero::chrono::NaiveDate;
+/// # use libero::components::DateRange;
+/// let range: DateRange<NaiveDate> = "2026-09-01/2026-09-05".parse().unwrap();
+/// assert_eq!(range.to_string(), "2026-09-01/2026-09-05");
+/// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct DateRange<T> {
     pub start: T,
@@ -32,9 +34,8 @@ impl<T: Copy + Ord> DateRange<T> {
         }
     }
 
-    /// What a pick of `value` makes of `current`: a new start when nothing is
-    /// picked or the range is complete, otherwise the end - swapped in when it
-    /// comes before the start.
+    /// What a pick of `value` makes of `current`: a new start, or the missing end
+    /// (swapped in when it comes before the start).
     pub fn pick(current: Option<Self>, value: T) -> Self {
         match current {
             Some(range) if range.end.is_none() => Self::new(range.start, Some(value)).ordered(),
@@ -43,8 +44,7 @@ impl<T: Copy + Ord> DateRange<T> {
     }
 }
 
-/// A moment in ISO 8601, `2026-09-14T13:05:00`. `chrono`'s `Display` puts a
-/// space where the `T` goes, and its `FromStr` wants the `T`.
+/// A moment in ISO 8601, `2026-09-14T13:05:00`. `chrono`'s `Display` writes a space for the `T`.
 pub(super) fn iso_date_time(value: NaiveDateTime) -> String {
     format!("{}T{}", value.date(), value.time())
 }
@@ -95,9 +95,8 @@ impl<T: FromStr + Copy + Ord> FromStr for DateRange<T> {
     }
 }
 
-/// Typed range text split at its separator: the theme's `separator` first,
-/// then an en or em dash, ` - ` with spaces, or ` to `. The end is `None`
-/// when nothing follows.
+/// Typed range text split at the theme's `separator`, else a dash, ` - ` or ` to `.
+/// The end is `None` when nothing follows.
 pub(super) fn split_range<'a>(text: &'a str, separator: &str) -> (&'a str, Option<&'a str>) {
     // Unspaced only without ASCII: `-` or `to` would split `2026-09-01` or `October`.
     let bare = separator.trim();

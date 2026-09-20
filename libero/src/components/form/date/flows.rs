@@ -1,6 +1,4 @@
-//! What a field's dropdown shows when one picker is not enough: a calendar and
-//! a clock for a day and a time, under tabs; for a range of them, the days,
-//! then the start's time, then the end's.
+//! Multi-step pickers under tabs: day then time, or a range's days, start time, end time.
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime, Timelike};
 use dioxus::prelude::*;
@@ -74,8 +72,8 @@ fn short_day(day: NaiveDate, year: bool, names: &DateLocale) -> String {
     }
 }
 
-/// A range of days as a tab shows it: `12–14 Oct`, `30 Sep – 2 Oct`, the
-/// years only when they differ, `12 Oct –` while the end is missing.
+/// A range of days as a tab shows it: `12–14 Oct`, `30 Sep – 2 Oct`, `12 Oct –`.
+/// Years only when they differ.
 pub(super) fn short_days(range: DateRange<NaiveDate>, names: &DateLocale) -> String {
     let start = range.start;
     let Some(end) = range.end else {
@@ -117,9 +115,7 @@ pub(super) fn short_time(
     }
 }
 
-/// One tab: `name` alone before there is a value, else the value it shows
-/// after a hidden `name, `, so the content names it with its visible text in
-/// the name (2.5.3).
+/// One tab: `name`, or the value after a hidden `name, `, so the visible text is in the name (2.5.3).
 fn step_tab(name: &'static str, value: Option<String>) -> TabSpec {
     let content = match value {
         Some(value) => rsx! {
@@ -194,8 +190,7 @@ fn flow_root(
         .render(HtmlTag::Div, attributes, children)
 }
 
-/// Moves focus into the picker a step switched to, so a keyboard user is not
-/// left on `body` when the day grid gives way to the clock.
+/// Moves focus into the picker a step switched to, rather than leaving it on `body`.
 fn use_handoff() -> (ElementHandle, Signal<bool>) {
     let root = use_element();
     let mut handoff = use_signal(|| false);
@@ -252,8 +247,7 @@ pub(super) struct DateTimeFlowProps {
     attributes: Vec<Attribute>,
 }
 
-/// Day, then time, under two tabs. Picking a day keeps the time and moves on
-/// to the clock.
+/// Day, then time, under two tabs. Picking a day keeps the time and moves on to the clock.
 #[component]
 pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
     let names = &use_localization().date;
@@ -375,9 +369,8 @@ pub(super) struct DateTimeRangeFlowProps {
     attributes: Vec<Attribute>,
 }
 
-/// Three steps under three tabs: the days, the start's time, the end's time.
-/// Each step moves on to the next once it is complete. The end never comes
-/// before the start: on the start's day its clock starts at the start's time.
+/// The days, the start's time, the end's time under three tabs, each moving on once complete.
+/// The end never comes before the start.
 #[component]
 pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
     let theme = use_theme();
@@ -403,8 +396,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
         step.set(to);
         handoff.set(focusable && root.query_selector(":focus").is_ok());
     };
-    // One identity across renders, so the calendar's props compare equal and
-    // a re-render from above skips it.
+    // One identity across renders, so a re-render from above skips the calendar.
     let onpick_day = use_callback(move |day: NaiveDate| {
         let days =
             value.map(|range| DateRange::new(range.start.date(), range.end.map(|end| end.date())));

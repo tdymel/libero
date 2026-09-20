@@ -1,6 +1,5 @@
-//! dayjs' format tokens - the ones a date and a time need - read once and
-//! shared by the formatters and the parsers. `chrono`'s own `format` takes
-//! strftime and English names; these take the theme's.
+//! dayjs format tokens, shared by the formatters and parsers.
+//! `chrono`'s `format` takes strftime and English names; these take the theme's.
 
 use chrono::{Datelike, NaiveDate, NaiveTime, Timelike};
 
