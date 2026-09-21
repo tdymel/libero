@@ -287,6 +287,14 @@ fn launch(serial: &str) -> Result<u16> {
     // A fresh boot sits on the lock screen, which takes the taps and keys.
     adb(serial, &["shell", "input", "keyevent", "KEYCODE_WAKEUP"])?;
     adb(serial, &["shell", "wm", "dismiss-keyguard"])?;
+    // Gesture navigation takes a swipe from a screen edge as Back and closes the app (992).
+    const BUTTONS: &str = "com.android.internal.systemui.navbar.threebutton";
+    let overlays = adb(serial, &["shell", "cmd", "overlay", "list"])?;
+    if !overlays.contains(&format!("[x] {BUTTONS}")) {
+        adb(serial, &["shell", "cmd", "overlay", "enable", BUTTONS])?;
+        // System UI swaps the bar asynchronously; a swipe before it lands still goes Back.
+        std::thread::sleep(Duration::from_secs(3));
+    }
     let mut attempts = 0;
     let pid = loop {
         attempts += 1;

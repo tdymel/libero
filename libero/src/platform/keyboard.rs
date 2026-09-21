@@ -79,7 +79,8 @@ pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
 }
 
 /// Whether this press landed in right-to-left content: the target's computed
-/// `direction` on the web, the focused node's natively. `false` elsewhere.
+/// `direction` on the web, the focused node's natively and in a WebView (read
+/// when it took focus). `false` on a server.
 pub(crate) fn rtl_target(event: &Event<KeyboardData>) -> bool {
     backend::rtl_target(event)
 }
@@ -108,7 +109,6 @@ pub(crate) fn logical_arrow(key: Key, rtl: bool) -> Key {
 
 /// Whether an element takes typing: the filter behind [`KeyboardApi::on_key`].
 /// `tag` upper case, as `tagName`; a clicked `input` type does not count.
-#[cfg_attr(not(any(target_arch = "wasm32", feature = "native")), allow(dead_code))]
 pub(crate) fn takes_typing(tag: &str, input_type: Option<&str>) -> bool {
     match tag {
         "TEXTAREA" | "SELECT" => true,
@@ -127,7 +127,6 @@ pub(crate) const CLICKED_INPUT_TYPES: &[&str] = &[
 
 /// Whether an element steps on arrows without taking typing: a `range` or
 /// `radio`, the complement of [`takes_typing`]. A backstop for raw caller HTML.
-#[cfg_attr(not(any(target_arch = "wasm32", feature = "native")), allow(dead_code))]
 pub(crate) fn takes_arrows(tag: &str, input_type: Option<&str>) -> bool {
     tag == "INPUT"
         && input_type.is_some_and(|kind| {

@@ -109,13 +109,17 @@ pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
     return false;
 }
 
-/// What the renderer needs mounted at the root, once, by `LiberoProvider`. Only
-/// Blitz needs anything (see `blitz::Outlet`).
+/// What the renderer needs mounted at the root, once, by `LiberoProvider`:
+/// Blitz's `blitz::Outlet`; a WebView starts its focus mirror before any press.
 #[allow(non_snake_case)]
 pub(crate) fn Outlet() -> Element {
     use dioxus::prelude::*;
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return rsx! { blitz::Outlet {} };
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    use_hook(|| {
+        webview::watch_focus();
+    });
     #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
     return rsx! {};
 }
@@ -349,7 +353,7 @@ pub(crate) fn key_taken(event: &Event<KeyboardData>) -> bool {
 }
 
 /// The web reads the event's target; Blitz the focused node, where it sends a
-/// key press - see [`typing_target`](crate::platform::typing_target).
+/// key press, and a WebView its mirror of it - see [`typing_target`](crate::platform::typing_target).
 pub(crate) fn typing_target(event: &Event<KeyboardData>) -> bool {
     #[cfg(not(target_arch = "wasm32"))]
     let _ = event;
@@ -358,7 +362,7 @@ pub(crate) fn typing_target(event: &Event<KeyboardData>) -> bool {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::typing_target();
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
-    return false;
+    return webview::typing_target();
 }
 
 /// As [`typing_target`] - see [`arrow_target`](crate::platform::arrow_target).
@@ -370,7 +374,7 @@ pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::arrow_target();
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
-    return false;
+    return webview::arrow_target();
 }
 
 /// As [`typing_target`] - see [`rtl_target`](crate::platform::rtl_target).
@@ -382,7 +386,7 @@ pub(crate) fn rtl_target(event: &Event<KeyboardData>) -> bool {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::rtl_target();
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
-    return false;
+    return webview::rtl_target();
 }
 
 /// The web reads the click's target, Blitz the press `blitz::Listener` hit -

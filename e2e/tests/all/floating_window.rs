@@ -5,7 +5,7 @@ use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Rect, eventually, eventually_focused};
+use e2e::driver::{Driver, Platform, Rect, eventually, eventually_focused};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, passes::focus, passes::keyboard, passes::pointer, wait};
 
@@ -765,7 +765,10 @@ async fn the_separator_clamps<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
     })
     .await?;
     reported(d, RESIZE_REPORT, "the step").await?;
-    for (key, name, (width, height)) in [(keyboard::HOME, "Home", MIN), (keyboard::END, "End", MAX)]
+    // A phone's viewport is narrower than MAX: the window caps at it.
+    let (vw, vh) = d.viewport().await?;
+    let max = (MAX.0.min(vw.floor()), MAX.1.min(vh.floor()));
+    for (key, name, (width, height)) in [(keyboard::HOME, "Home", MIN), (keyboard::END, "End", max)]
     {
         d.press(key).await?;
         eventually(d, &format!("{name} to reach {width}x{height}"), async |d| {
@@ -782,6 +785,10 @@ async fn the_separator_clamps<D: Driver>(d: &mut D, _route: &str) -> Result<()> 
             d.attr(SEPARATOR, "aria-valuetext").await?,
             Some(format!("{width} by {height} pixels"))
         );
+    }
+    // The bounds come from `computed_px`, `Unsupported` on the WebView floor (958).
+    if d.platform() == Platform::Android {
+        return Ok(());
     }
     assert_eq!(
         d.attr(SEPARATOR, "aria-valuemin").await?,
@@ -839,10 +846,14 @@ async fn the_menu_resizes_and_resets<D: Driver>(d: &mut D, _route: &str) -> Resu
 
 async fn a_title_bar_drag<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let before = opened(d).await?;
+    // A phone's viewport leaves the window less room than the drag: it stops at the edge.
+    let (vw, vh) = d.viewport().await?;
+    let x = (before.x + 30.0).min(vw - before.width).max(0.0);
+    let y = (before.y + 20.0).min(vh - before.height).max(0.0);
     d.drag(HANDLE, 30.0, 20.0).await?;
     eventually(d, "the drag to move it by (30, 20)", async |d| {
         let r = d.rect(DIALOG).await?;
-        Ok(near(r.x, before.x + 30.0) && near(r.y, before.y + 20.0))
+        Ok(near(r.x, x) && near(r.y, y))
     })
     .await?;
     reported(d, MOVE_REPORT, "the drag").await?;
@@ -875,13 +886,19 @@ async fn a_resize_beats_the_callers_size<D: Driver>(d: &mut D, _route: &str) -> 
     })
     .await?;
     let keyed = reported(d, RESIZE_REPORT, "the keyboard resize").await?;
+    // A phone's viewport caps the width below the drag's.
+    let (vw, _) = d.viewport().await?;
     d.drag(SEPARATOR, 30.0, 20.0).await?;
     eventually(d, "the pointer to add (30, 20)", async |d| {
         let r = d.rect(DIALOG).await?;
-        Ok(near(r.width, keyed.width + 30.0) && near(r.height, keyed.height + 20.0))
+        Ok(near(r.width, (keyed.width + 30.0).min(vw)) && near(r.height, keyed.height + 20.0))
     })
     .await?;
     reported(d, RESIZE_REPORT, "the pointer resize").await?;
+    // The menu's roving keys need element identity on the WebView (958).
+    if d.platform() == Platform::Android {
+        return Ok(());
+    }
     d.focus(MENU).await?;
     d.press(keyboard::ENTER).await?;
     eventually(d, "the title-bar menu", async |d| {

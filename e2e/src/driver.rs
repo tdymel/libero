@@ -596,7 +596,17 @@ mod android {
             input(&["tap".into(), x, y]).await
         }
 
+        /// In touch mode (after an earlier tap opened the soft keyboard) the WebView
+        /// holds no view focus, and Android eats the first key to leave touch mode (998).
+        async fn leave_touch_mode(&self) -> Result<()> {
+            if !json::<bool>(&self.page, "document.hasFocus()").await? {
+                input(&["keyevent".into(), keycode("ArrowUp")?.to_string()]).await?;
+            }
+            Ok(())
+        }
+
         async fn chord(&self, modifier: u32, key: keyboard::Key) -> Result<()> {
+            self.leave_touch_mode().await?;
             let code = keycode(key.key)?;
             input(&[
                 "keycombination".into(),
@@ -639,6 +649,7 @@ mod android {
         /// A hardware key's: an Escape the soft keyboard would eat goes twice.
         async fn press(&mut self, key: keyboard::Key) -> Result<()> {
             let code = keycode(key.key)?.to_string();
+            self.leave_touch_mode().await?;
             if key.key == "Escape" && soft_keyboard_shown().await? {
                 input(&["keyevent".into(), code.clone()]).await?;
             }

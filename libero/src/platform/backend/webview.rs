@@ -21,21 +21,21 @@ use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi,
     KeyChord, KeySubscription, KeyboardApi, PlatformError, Read, ScrollApi, ScrollSubscription,
     clipboard::{ClipboardApi, Write},
-    keyboard::{CLICKED_INPUT_TYPES, warn_reserved_chord},
+    keyboard::{CLICKED_INPUT_TYPES, takes_arrows, takes_typing, warn_reserved_chord},
 };
 use crate::tokens::{
     AccessibilityPreferences, COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting, Contrast,
 };
 
-thread_local! {
-    /// [`runs_scripts`]'s answer per document: one thread may serve SSR and liveview.
-    static RUNS_SCRIPTS: RefCell<Vec<(Weak<dyn Document>, bool)>> =
-        const { RefCell::new(Vec::new()) };
-}
-
 /// Whether a page runs the current document's scripts: a server's or the no-op
-/// document fails the send.
+/// document fails the send. Kept in [`PageState`]: Android resets thread-locals.
 fn runs_scripts() -> bool {
+    let Some(page) = page() else {
+        return false;
+    };
+    if let Some(runs) = page.runs_scripts.get() {
+        return runs;
+    }
     // Outside a scope (a drop, a task's wake-up) the root's document answers.
     let Some(document) = Runtime::try_current().and_then(|runtime| {
         let scope = runtime.try_current_scope_id().unwrap_or(ScopeId::ROOT);
@@ -43,23 +43,13 @@ fn runs_scripts() -> bool {
     }) else {
         return false;
     };
-    let key = Rc::downgrade(&document);
-    let known = RUNS_SCRIPTS.with_borrow(|known| {
-        known
-            .iter()
-            .find(|(seen, _)| Weak::ptr_eq(seen, &key))
-            .map(|(_, runs)| *runs)
-    });
-    if let Some(runs) = known {
-        return runs;
-    }
-    // No `dioxus.recv()`: liveview's spins on an empty queue, and dropping the
-    // eval empties it, which froze the tab.
-    let runs = document.eval(String::new()).send(()).is_ok();
-    RUNS_SCRIPTS.with_borrow_mut(|known| {
-        known.retain(|(seen, _)| seen.strong_count() > 0);
-        known.push((key, runs));
-    });
+    // Alive past the send queued behind it: an ended script's query is gone, and
+    // the send throws in the page. No `dioxus.recv()`: liveview's spins and froze the tab.
+    let runs = document
+        .eval("await new Promise((done) => setTimeout(done, 200));".to_string())
+        .send(())
+        .is_ok();
+    page.runs_scripts.set(Some(runs));
     runs
 }
 
@@ -260,6 +250,8 @@ type A11yCallback = Rc<dyn Fn(AccessibilityPreferences)>;
 /// one thread. Each watcher is a task of that dom.
 #[derive(Default)]
 struct PageState {
+    /// [`runs_scripts`]'s answer, `None` until probed.
+    runs_scripts: Cell<Option<bool>>,
     /// The media query's last answer; `None` until a listener is running.
     reduced_motion: Cell<Option<bool>>,
     scheme: Cell<Option<ColorScheme>>,
@@ -269,7 +261,13 @@ struct PageState {
     next_callback: Cell<u64>,
     /// The chords each subscribing scope has taken, by `Key` name and modifiers.
     taken_chords: RefCell<HashMap<ScopeId, HashSet<String>>>,
+    /// The focused element, mirrored by [`watch_focus`] once `watching_focus`.
+    focused: RefCell<Focused>,
+    watching_focus: Cell<bool>,
 }
+
+/// The focused element as the page last reported it: tag, `type`, editable, RTL.
+type Focused = Option<(String, Option<String>, bool, bool)>;
 
 impl PageState {
     fn next_id(&self) -> u64 {
@@ -643,6 +641,58 @@ impl KeyboardApi for WebViewKeyboard {
     }
 }
 
+/// A focus move with no `relatedTarget` left for no element.
+const ON_FOCUS: &str =
+    "const send = (el) => dioxus.send(el instanceof Element && el !== document.body
+        ? [el.tagName, el.getAttribute('type'), el.isContentEditable === true,
+           getComputedStyle(el).direction === 'rtl']
+        : null);
+    document.addEventListener('focusin', (event) => send(event.target));
+    document.addEventListener('focusout', (event) => { if (!event.relatedTarget) send(null); });
+    send(document.activeElement);
+    await new Promise(() => {});";
+
+/// Starts mirroring the page's focus into Rust, once per dom. A key press goes
+/// to the focused element, so its handler reads the mirror, as on Blitz.
+pub(super) fn watch_focus() {
+    focus_page();
+}
+
+fn focus_page() -> Option<Rc<PageState>> {
+    if !runs_scripts() {
+        return None;
+    }
+    let page = page()?;
+    if !page.watching_focus.replace(true) {
+        let script = eval(ON_FOCUS);
+        let mirror = page.clone();
+        spawn_forever(async move {
+            let mut script = script;
+            while let Ok(next) = script.recv::<Focused>().await {
+                mirror.focused.replace(next);
+            }
+        });
+    }
+    Some(page)
+}
+
+fn focused() -> Focused {
+    focus_page().and_then(|page| page.focused.borrow().clone())
+}
+
+pub(super) fn typing_target() -> bool {
+    focused()
+        .is_some_and(|(tag, kind, editable, _)| editable || takes_typing(&tag, kind.as_deref()))
+}
+
+pub(super) fn arrow_target() -> bool {
+    focused().is_some_and(|(tag, kind, ..)| takes_arrows(&tag, kind.as_deref()))
+}
+
+pub(super) fn rtl_target() -> bool {
+    focused().is_some_and(|(.., rtl)| rtl)
+}
+
 #[cfg(test)]
 mod tests {
     use std::future::Future;
@@ -684,6 +734,8 @@ mod tests {
         let dom = VirtualDom::new(app).with_root_context(Rc::new(NoOpDocument) as Rc<dyn Document>);
         assert_eq!(answers(&dom), [false; 5]);
         assert!(!dom.in_scope(ScopeId::ROOT, prefers_reduced_motion));
+        assert!(dom.in_scope(ScopeId::ROOT, focus_page).is_none());
+        assert!(!dom.in_scope(ScopeId::ROOT, typing_target));
     }
 
     /// A page whose every script answers `dark` once.

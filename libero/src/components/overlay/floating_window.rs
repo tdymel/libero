@@ -817,7 +817,8 @@ fn use_window_geometry(
                 position.set(Some((x + delta.x, y + delta.y)));
             }
         }),
-        onend: use_callback(move |()| report(root, onmove)),
+        // Owed, not read here: a WebView would read before the last move's edit lands.
+        onend: use_callback(move |()| owed.write().extend(onmove)),
     });
 
     let mut left_origin = use_signal(|| 0.0);
@@ -851,7 +852,7 @@ fn use_window_geometry(
                 }
             }
         }),
-        onend: use_callback(move |()| report(root, onresize)),
+        onend: use_callback(move |()| owed.write().extend(onresize)),
     });
 
     WindowGeometry {
