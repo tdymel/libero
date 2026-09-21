@@ -1,5 +1,6 @@
 mod handle;
 mod scroll_area;
+mod scrollbars;
 mod viewport;
 mod virtualize;
 

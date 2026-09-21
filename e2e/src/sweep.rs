@@ -589,7 +589,9 @@ async fn settle(page: &Page) -> Result<()> {
     const COUNT: &str = "document.fonts.status === 'loaded' \
                          ? document.getElementsByTagName('*').length : -1";
     const RUNNING: &str = "[...document.getAnimations()].filter(a => a.playState === 'running' \
-                           && a.effect && a.effect.getComputedTiming().iterations !== Infinity).length";
+                           && a.effect && a.effect.getComputedTiming().iterations !== Infinity \
+                           && !(typeof ScrollTimeline !== 'undefined' \
+                           && a.timeline instanceof ScrollTimeline)).length";
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
     let (mut last, mut stable) = (-2i64, 0);
     while std::time::Instant::now() < deadline {

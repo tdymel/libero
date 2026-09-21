@@ -163,6 +163,8 @@ fn a_select_pick_stays_in_budget() {
                 ("ComboboxOption", 5),
                 ("ScrollArea", 1),
                 ("ScrollAreaContent", 1),
+                // The drawn bar (1010): mount, the measure, and its re-read.
+                ("ScrollAreaBars", 3),
                 ("Fragment", 2),
                 ("PortalOutlet", 2),
                 ("StyleOutlet", 1),
@@ -195,6 +197,8 @@ fn a_select_pick_stays_in_budget() {
                 ("ComboboxCore", 1),
                 ("PortalOutlet", 1),
                 ("StyleOutlet", 1),
+                // The bars re-measure once as the list closes.
+                ("ScrollAreaBars", 1),
             ],
             "a pick",
         );
@@ -315,10 +319,14 @@ fn scrolling_a_virtual_list_stays_in_budget() {
         }
         let renders = settled(page, "scrolling").await;
         // No row is a scope of its own: a step redraws the window and the
-        // padding box around it, never the area.
+        // padding box around it, never the area. The drawn thumb moves each step.
         assert_within(
             &renders,
-            &[("ScrollAreaContent", 10), ("Virtualize", 10)],
+            &[
+                ("ScrollAreaContent", 10),
+                ("Virtualize", 10),
+                ("ScrollAreaBars", 10),
+            ],
             "ten scroll steps",
         );
         fixture.console.assert_clean("scrolling").unwrap();

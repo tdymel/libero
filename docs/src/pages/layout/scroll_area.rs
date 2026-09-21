@@ -97,10 +97,10 @@ pub fn ScrollAreaPage() -> Element {
                     .doc("Which axes scroll and show a scrollbar. `none` clips the overflow."),
                 prop("scrollbar_visibility", "ScrollbarVisibility")
                     .default("always")
-                    .doc("When the scrollbar shows, `always`, `hover` or `hidden`. `scroll` acts like `hover` for now."),
+                    .doc("When the scrollbar shows, `always`, `hover` or `hidden`. `scroll` acts like `hover` for now. In a browser or WebView, `always` draws its own track and thumb, so the bar stays where the system overlays and fades its scrollbars; drag the thumb or press the track. The other values keep the native bar."),
                 prop("scrollbar_size", "ScrollbarSize")
                     .default("thin")
-                    .doc("The CSS `scrollbar-width`, `thin` or `auto`."),
+                    .doc("`thin` or `auto`: the CSS `scrollbar-width`, or 8px and 12px for the bar `always` draws."),
                 prop("scrollbar_color", "ThemeAwareValue")
                     .doc("Thumb color. The track stays transparent."),
                 prop("scroll_position_x", "f64")
@@ -137,6 +137,7 @@ pub fn ScrollAreaPage() -> Element {
                     "Tab reaches focusable content inside the area as usual.",
                     "When the content has nothing to focus, like a block of text, the area itself becomes a tab stop while it overflows, so the arrow keys can scroll it. The Usage preview is one: Tab to it and press the arrow keys. `focusable: true` keeps the stop always.",
                     "A debug build warns about a tab stop without a name.",
+                    "The bar `always` draws is hidden from screen readers and takes no focus: the area itself scrolls by keyboard, wheel and touch. Forced colours paint its thumb in the system text colour.",
                 ])
                 .must([
                     "Name the area with `aria_label` or `aria_labelledby`.",

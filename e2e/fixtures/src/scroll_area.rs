@@ -12,7 +12,61 @@ pub const ROUTES: Routes = &[
     ("/scroll-area/edges", || rsx! { EdgesPage {} }),
     ("/scroll-area/keyboard", || rsx! { KeyboardPage {} }),
     ("/scroll-area/rtl", || rsx! { RtlPage {} }),
+    ("/scroll-area/bars", || rsx! { BarsPage {} }),
 ];
+
+/// The bars `Always` draws: a padded vertical area whose pane `#bars-pane` a test resizes,
+/// both axes, a padded and bordered horizontal one under RTL, `Hover`, which draws none,
+/// and a flex and a grid area with gaps the bars must stay out of (1010).
+#[component]
+fn BarsPage() -> Element {
+    let lines =
+        || (0..40).map(|i| rsx! { p { key: "{i}", style: "margin: 0; height: 20px", "Line {i}" } });
+    rsx! {
+        Flex { direction: "column", gap: "md",
+            div { id: "bars-pane", style: "width: 240px; height: 120px",
+                ScrollArea { id: "bars-v", "aria-label": "Lines", style: "padding: 16px", {lines()} }
+            }
+            div { style: "width: 240px; height: 120px",
+                ScrollArea { id: "bars-both", scrollbars: "both", "aria-label": "Grid",
+                    div { style: "width: 1000px; height: 1000px", "Both ways" }
+                }
+            }
+            div { dir: "rtl", style: "width: 240px; height: 80px",
+                ScrollArea {
+                    id: "bars-rtl",
+                    scrollbars: "horizontal",
+                    "aria-label": "Wide",
+                    style: "padding: 12px; border: 3px solid",
+                    div { style: "width: 960px", "Wide content" }
+                }
+            }
+            div { style: "width: 240px; height: 120px",
+                ScrollArea { id: "bars-hover", scrollbar_visibility: "hover", "aria-label": "Hover", {lines()} }
+            }
+            div { style: "width: 240px; height: 120px",
+                ScrollArea {
+                    id: "bars-flex",
+                    "aria-label": "Flex",
+                    style: "display: flex; flex-direction: column; gap: 10px; padding: 8px",
+                    for i in 0..10 {
+                        div { key: "{i}", "data-item": i, style: "flex: none; height: 20px", "Flex {i}" }
+                    }
+                }
+            }
+            div { style: "width: 240px; height: 120px",
+                ScrollArea {
+                    id: "bars-grid",
+                    "aria-label": "Grid cells",
+                    style: "display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 8px",
+                    for i in 0..20 {
+                        div { key: "{i}", "data-item": i, style: "height: 20px", "Cell {i}" }
+                    }
+                }
+            }
+        }
+    }
+}
 
 /// A horizontal area under `dir="rtl"`, starting at its right edge: the last `onscroll`
 /// percent, both `on*reached` counts, and `#to-end` asking the handle for 100%.

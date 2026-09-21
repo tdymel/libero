@@ -27,6 +27,12 @@ pub(crate) fn clips_z_indexed() -> bool {
     !NATIVE
 }
 
+/// Whether an always-visible `ScrollArea` draws its own track and thumb. A
+/// browser may overlay and fade its bars; Blitz keeps painting its own.
+pub(crate) fn draws_own_scrollbars() -> bool {
+    !NATIVE
+}
+
 /// Whether a released scroll comes to rest on its `scroll-snap` points. Blitz
 /// has no scroll snap.
 pub(crate) fn snaps_scroll() -> bool {

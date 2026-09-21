@@ -277,6 +277,7 @@ pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobu
 pub use radio::{RADIO_CIRCLE, RADIO_CIRCLE_SIZE, RadioDefaults};
 pub use repo_button::RepoButtonDefaults;
 pub use ripple::{RIPPLE_ANIMATION, RIPPLE_CLIP_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
+pub(crate) use scroll_area::{SCROLL_AREA_KEYFRAMES, SCROLL_AREA_RANGE_X, SCROLL_AREA_RANGE_Y};
 pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
 pub use scroller::{
     SCROLLER_CONTROL, SCROLLER_CONTROL_SIZE, SCROLLER_FADE, SCROLLER_FADE_DEFAULT,

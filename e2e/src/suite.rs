@@ -413,7 +413,8 @@ impl Suite {
     }
 
     /// Waits for finite animations to end: axe measured a fading-in notification at 3.72:1 (todo 315).
-    /// Infinite ones are ignored; a finite one past the budget fails.
+    /// Infinite ones are ignored, and scroll-driven ones, which run as long as their
+    /// scroller exists (1010's drawn bars); a finite one past the budget fails.
     async fn wait_for_animations(
         &self,
         page: &chromiumoxide::Page,
@@ -421,7 +422,8 @@ impl Suite {
     ) -> anyhow::Result<()> {
         const RUNNING: &str = "[...document.getAnimations()] \
              .filter(a => a.playState === 'running' && a.effect \
-               && a.effect.getComputedTiming().iterations !== Infinity) \
+               && a.effect.getComputedTiming().iterations !== Infinity \
+               && !(typeof ScrollTimeline !== 'undefined' && a.timeline instanceof ScrollTimeline)) \
              .map(a => a.animationName || (a.effect.target && a.effect.target.tagName) || 'animation')";
         let deadline = std::time::Instant::now() + ANIMATION_BUDGET;
         loop {

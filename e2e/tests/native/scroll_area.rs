@@ -64,6 +64,19 @@ fn the_window_fits_the_short_pane() {
     assert!(last < 29, "rows to {last} for a 120px pane");
 }
 
+/// Blitz keeps painting its own bar under `Always`: a drawn one would double it (1010).
+#[test]
+fn blitz_draws_no_track_of_ours() {
+    let mut page = mount(app);
+    page.wait_for(|page| last_row(page, |last| last < 29));
+    assert!(
+        page.query_all(&format!("{PANE} [data-scrollbars]"))
+            .is_empty(),
+        "a drawn track under Blitz:\n{}",
+        page.tree()
+    );
+}
+
 #[test]
 fn a_wheel_renders_the_rows_it_scrolls_to() {
     let mut page = mount(app);

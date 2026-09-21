@@ -1,4 +1,23 @@
-use crate::str_enum::str_enum;
+use crate::{str_enum::str_enum, theme::CssVar};
+
+/// How far the area scrolls, in px, on the layer the drawn bars ride.
+pub(crate) const SCROLL_AREA_RANGE_Y: CssVar = CssVar::new("--lsx-scroll-area-range-y");
+/// Negative under RTL, where the content moves right as it scrolls on.
+pub(crate) const SCROLL_AREA_RANGE_X: CssVar = CssVar::new("--lsx-scroll-area-range-x");
+
+/// Keeps the drawn bars' layers still while the content scrolls, on the
+/// compositor. Without scroll timelines, their inline `translate` does it.
+pub(crate) const SCROLL_AREA_KEYFRAMES: &str = concat!(
+    "@keyframes lsx-scroll-area-pin-y{from{translate:0 0;}",
+    "to{translate:0 var(--lsx-scroll-area-range-y);}}",
+    "@keyframes lsx-scroll-area-pin-x{from{translate:0 0;}",
+    "to{translate:var(--lsx-scroll-area-range-x) 0;}}",
+    "@supports (animation-timeline:scroll()){",
+    "[data-scrollbars]{animation:lsx-scroll-area-pin-y linear both;",
+    "animation-timeline:scroll(nearest block);}",
+    "[data-scrollbars-x]{animation:lsx-scroll-area-pin-x linear both;",
+    "animation-timeline:scroll(nearest inline);}}"
+);
 
 str_enum! {
     /// Which axes allow overflow and show a scrollbar.

@@ -2,6 +2,7 @@ use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 use super::{
     handle::{ScrollAreaHandle, inline_x, scroll_to_percent},
+    scrollbars::{DrawnBars, ScrollAreaBars, ScrollMetrics},
     viewport::{ContentOffsets, ScrollGeometry, ScrollViewport},
 };
 use crate::{
@@ -15,7 +16,7 @@ use crate::{
     hooks::{ElementHandle, use_content_changes, use_element, use_resize_fallback, use_theme},
     platform::{
         Dimensions, ElementApi, PlatformError, SCROLL_QUIET, TimerSubscription, clips_z_indexed,
-        fires_scroll_end, scroll_range, timer, when_laid_out,
+        draws_own_scrollbars, fires_scroll_end, scroll_range, timer, when_laid_out,
     },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
@@ -63,6 +64,12 @@ pub(crate) fn scroll_area_base(sx: crate::sx::Sx) -> crate::sx::Sx {
     SCROLL_AREA_BASE_SX.clone().and(sx)
 }
 
+/// The thumb's colour, native or drawn.
+pub(super) fn thumb_color() -> String {
+    // Shade 6: shade 5 was 2.07:1 on the light page, under WCAG 1.4.11's 3:1.
+    SCROLL_AREA_THUMB_VAR.value_or(ColorCss::MUTED.value(ColorShade::S6))
+}
+
 static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = sx()
         .display("block")
@@ -78,11 +85,7 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         .when("axis-both", sx().overflow_x("auto").overflow_y("auto"))
         .when("axis-none", sx().overflow_x("hidden").overflow_y("hidden"))
-        // Shade 6: shade 5 was 2.07:1 on the light page, under WCAG 1.4.11's 3:1.
-        .scrollbar_color(format!(
-            "{} transparent",
-            SCROLL_AREA_THUMB_VAR.value_or(ColorCss::MUTED.value(ColorShade::S6))
-        ))
+        .scrollbar_color(format!("{} transparent", thumb_color()))
         .when("visible-hidden", sx().scrollbar_width("none"));
     // A stacking context of its own, so it clips a z-indexed row natively too.
     let base = match clips_z_indexed() {
@@ -93,11 +96,16 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
     ScrollbarSize::ALL.iter().fold(base, |acc, &size| {
         let token = size.state_name();
         let width = size.as_str();
-        acc.when(
-            format!("visible-always && {token}"),
-            sx().scrollbar_width(width),
-        )
-        .when(
+        // Drawn by `ScrollAreaBars` instead: an overlay bar fades out. The
+        // area holds their layer and stacks it above its rows.
+        let always = match draws_own_scrollbars() {
+            true => sx()
+                .scrollbar_width("none")
+                .position("relative")
+                .z_index("0"),
+            false => sx().scrollbar_width(width),
+        };
+        acc.when(format!("visible-always && {token}"), always).when(
             format!("visible-hover && {token}"),
             sx().scrollbar_width("none")
                 .hover(sx().scrollbar_width(width))
@@ -339,6 +347,18 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .scrollbar_visibility
         .copied_or(theme.scroll_area.visibility);
     let size = props.scrollbar_size.copied_or(theme.scroll_area.size);
+    let own_bars = visibility == ScrollbarVisibility::Always
+        && scrollbars != ScrollAxis::None
+        && draws_own_scrollbars();
+    let drawn_bars = DrawnBars {
+        root,
+        metrics: use_signal(|| None::<ScrollMetrics>),
+    };
+    let measure_bars_now = move |own_bars: bool| {
+        if own_bars && root.is_mounted() {
+            drawn_bars.measure(1);
+        }
+    };
 
     // A caller's own `tabindex`, or a role like `listbox`, brings its own
     // keyboard model: no automatic stop then.
@@ -360,14 +380,15 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let content = use_element();
     // Only while the area picks its own stop: a change inside a child component
     // re-renders nothing here (todo 681).
-    let changes = use_content_changes(content, automatic);
+    let changes = use_content_changes(content, automatic || own_bars);
     // After the DOM has the content: on mount (the effect reads the mount), on
     // new content, on a change deeper down, and on resize (`onresize`).
     let children = props.children.clone();
-    use_effect(use_reactive!(|children| {
+    use_effect(use_reactive!(|children, own_bars| {
         let _ = (&children, changes());
         if root.is_mounted() {
             check_stop();
+            measure_bars_now(own_bars);
         }
     }));
     let tab_stop = props.focusable || (automatic && auto_stop());
@@ -437,6 +458,9 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
 
     let onscroll = move |event: Event<ScrollData>| {
         let data = event.data();
+        if own_bars {
+            drawn_bars.scrolled(&data);
+        }
         let (x_pct, y_pct, max_x, max_y) = scroll_metrics(&data);
         geometry.set(Some(ScrollGeometry {
             offset: data.scroll_top(),
@@ -530,12 +554,16 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
 
     let virtualized = virtualized();
     let body = rsx! {
+        if own_bars {
+            ScrollAreaBars { state: drawn_bars, scrollbars, size }
+        }
         ScrollAreaContent { content, {props.children} }
     };
 
     // A listener costs a render and, for `onresize`, an observer: attach each
     // only while something reads it.
     let tracks_scroll = virtualized
+        || own_bars
         || onscroll_prop
         || [ontopreached, onbottomreached, onleftreached, onrightreached]
             .iter()
@@ -544,6 +572,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     // `ResizeObserver` reports once on observe: the mount-time check.
     let resized = move |event: Event<ResizeData>| {
         check_stop();
+        measure_bars_now(own_bars);
         if virtualized || onresize.is_some() {
             measure();
         }

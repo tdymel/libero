@@ -107,6 +107,9 @@ fn Rows() -> Element {
   itself becomes a tab stop while it overflows, so the arrow keys can scroll
   it. The Usage example is one. `focusable: true` keeps the stop always.
 - A debug build warns about a tab stop without a name.
+- The bar `always` draws is hidden from screen readers and takes no focus:
+  the area itself scrolls by keyboard, wheel and touch. Forced colours paint
+  its thumb in the system text colour.
 
 ### You must
 
@@ -119,8 +122,8 @@ fn Rows() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `scrollbars` | `ScrollAxis` | `vertical` | Which axes scroll and show a scrollbar. `none` clips the overflow. |
-| `scrollbar_visibility` | `ScrollbarVisibility` | `always` | When the scrollbar shows, `always`, `hover` or `hidden`. `scroll` acts like `hover` for now. |
-| `scrollbar_size` | `ScrollbarSize` | `thin` | The CSS `scrollbar-width`, `thin` or `auto`. |
+| `scrollbar_visibility` | `ScrollbarVisibility` | `always` | When the scrollbar shows, `always`, `hover` or `hidden`. `scroll` acts like `hover` for now. In a browser or WebView, `always` draws its own track and thumb, so the bar stays where the system overlays and fades its scrollbars; drag the thumb or press the track. The other values keep the native bar. |
+| `scrollbar_size` | `ScrollbarSize` | `thin` | `thin` or `auto`: the CSS `scrollbar-width`, or 8px and 12px for the bar `always` draws. |
 | `scrollbar_color` | `ThemeAwareValue` | - | Thumb color. The track stays transparent. Unset it is `muted.5`. |
 | `scroll_position_x` | `f64` | - | Scrolls to this percent (0-100) horizontally. A signal re-applies it on every change, a literal once at mount. |
 | `scroll_position_y` | `f64` | - | The same as `scroll_position_x`, vertically. |
@@ -180,3 +183,10 @@ State tokens on the root's `data-state`, space separated.
 
 The content box inside the root carries `virtualized` once it holds a
 `Virtualize`.
+
+Under `always` in a browser, the root's first child is the drawn bar: an
+`aria-hidden`, absolutely positioned `[data-scrollbars]` layer holding a
+`[data-scrollbar="vertical"]` or `"horizontal"` track, each with a
+`[data-thumb]`. It stays out of the content's flow, so a flex or grid root lays
+out as without it. The root is `position: relative` then, a stacking context
+for the layer.

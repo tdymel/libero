@@ -1,0 +1,478 @@
+use dioxus::{html::input_data::MouseButton, prelude::*};
+
+use super::{
+    handle::{inline_x, physical_x},
+    scroll_area::thumb_color,
+};
+use crate::{
+    components::{common::HtmlTag, layout::use_box},
+    hooks::{DragMove, DragOptions, ElementHandle, use_drag, use_element},
+    platform::{ElementApi, when_laid_out},
+    sx::{FORCED_COLORS, StaticSx, sx},
+    theme::{SCROLL_AREA_RANGE_X, SCROLL_AREA_RANGE_Y, ScrollAxis, ScrollbarSize},
+};
+
+/// Two layers over the area's padding box, out of its flow, each shifted by
+/// the scroll offset on one axis so the tracks stay put while the content
+/// moves. `SCROLL_AREA_KEYFRAMES` shifts them on the compositor where scroll
+/// timelines exist; elsewhere the inline `translate` does, a frame late.
+static DRAWN_BARS_SX: StaticSx = StaticSx::new(|| {
+    let layer = || {
+        sx().position("absolute")
+            .top("0")
+            .with("inset-inline-start", "0")
+            .width("100%")
+            .height("100%")
+            .pointer_events("none")
+    };
+    // Above any row, inside the area's own stacking context.
+    layer()
+        .z_index("2147483647")
+        .selector("& > [data-scrollbars-x]", layer())
+        .selector(
+            "& [data-scrollbar]",
+            sx().position("absolute").pointer_events("auto"),
+        )
+        .selector(
+            "& [data-scrollbar=vertical]",
+            sx().top("0").with("inset-inline-end", "0"),
+        )
+        .selector(
+            "& [data-scrollbar=horizontal]",
+            sx().bottom("0").with("inset-inline-start", "0"),
+        )
+        .selector(
+            "& [data-thumb]",
+            sx().position("absolute")
+                .box_sizing("border-box")
+                .padding("2px")
+                // The whole width grabs; the inset part shows.
+                .with("background-clip", "content-box")
+                .background_color(thumb_color())
+                .border_radius("9999px")
+                .touch_action("none")
+                .media(
+                    FORCED_COLORS,
+                    sx().with("forced-color-adjust", "none")
+                        .background_color("CanvasText"),
+                ),
+        )
+        .selector(
+            "& [data-scrollbar=vertical] > [data-thumb]",
+            sx().with("inset-inline", "0"),
+        )
+        .selector(
+            "& [data-scrollbar=horizontal] > [data-thumb]",
+            sx().with("inset-block", "0"),
+        )
+});
+
+/// A thumb stays grabbable however long the content.
+const MIN_THUMB: f64 = 20.0;
+
+/// How big a drawn scrollbar is across, in px.
+fn thickness(size: ScrollbarSize) -> f64 {
+    match size {
+        ScrollbarSize::Thin => 8.0,
+        ScrollbarSize::Auto => 12.0,
+    }
+}
+
+/// What the drawn bars need of their area, in px.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub(super) struct ScrollMetrics {
+    /// The padding box: `clientWidth`/`clientHeight`.
+    pub view_width: f64,
+    pub view_height: f64,
+    pub content_width: f64,
+    pub content_height: f64,
+    /// From the inline start, so RTL shares the origin.
+    pub x: f64,
+    pub y: f64,
+    /// `scrollLeft` as the platform has it, negative under RTL.
+    pub left: f64,
+}
+
+/// One drawn bar, along its axis: track length, thumb length and thumb start.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct Bar {
+    pub track: f64,
+    pub thumb: f64,
+    pub at: f64,
+    range: f64,
+}
+
+impl Bar {
+    fn new(view: f64, content: f64, offset: f64, track: f64) -> Option<Self> {
+        let range = content - view;
+        if range <= 0.0 || track <= 0.0 {
+            return None;
+        }
+        let thumb = (track * view / content).max(MIN_THUMB).min(track);
+        let at = (track - thumb) * (offset / range).clamp(0.0, 1.0);
+        Some(Self {
+            track,
+            thumb,
+            at,
+            range,
+        })
+    }
+
+    /// The scroll offset that puts the thumb's start `at` px along the track.
+    pub fn offset_at(&self, at: f64) -> f64 {
+        let free = self.track - self.thumb;
+        if free <= 0.0 {
+            return 0.0;
+        }
+        at.clamp(0.0, free) / free * self.range
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub(super) struct Bars {
+    pub x: Option<Bar>,
+    pub y: Option<Bar>,
+}
+
+/// The bars to draw: one per scrolled axis that overflows.
+pub(super) fn bars(axis: ScrollAxis, metrics: ScrollMetrics, thickness: f64) -> Bars {
+    // A pixel of slack, as for the tab stop: a rounded box is not overflow.
+    let over = |content: f64, view: f64| content > view + 1.0;
+    let y = matches!(axis, ScrollAxis::Vertical | ScrollAxis::Both)
+        && over(metrics.content_height, metrics.view_height);
+    let x = matches!(axis, ScrollAxis::Horizontal | ScrollAxis::Both)
+        && over(metrics.content_width, metrics.view_width);
+    // Both drawn: each stops short of the corner the other ends in.
+    let corner = |other: bool| if other { thickness } else { 0.0 };
+    Bars {
+        y: y.then(|| {
+            Bar::new(
+                metrics.view_height,
+                metrics.content_height,
+                metrics.y,
+                metrics.view_height - corner(x),
+            )
+        })
+        .flatten(),
+        x: x.then(|| {
+            Bar::new(
+                metrics.view_width,
+                metrics.content_width,
+                metrics.x,
+                metrics.view_width - corner(y),
+            )
+        })
+        .flatten(),
+    }
+}
+
+/// What a `ScrollArea` shares with its [`ScrollAreaBars`].
+#[derive(Clone, Copy, PartialEq)]
+pub(super) struct DrawnBars {
+    pub root: ElementHandle,
+    pub metrics: Signal<Option<ScrollMetrics>>,
+}
+
+impl DrawnBars {
+    /// From a scroll event, which carries every size and offset.
+    pub fn scrolled(mut self, data: &ScrollData) {
+        let next = Some(ScrollMetrics {
+            view_width: data.client_width() as f64,
+            view_height: data.client_height() as f64,
+            content_width: data.scroll_width() as f64,
+            content_height: data.scroll_height() as f64,
+            x: inline_x(data.scroll_left()),
+            y: data.scroll_top(),
+            left: data.scroll_left(),
+        });
+        if *self.metrics.peek() != next {
+            self.metrics.set(next);
+        }
+    }
+
+    /// Re-reads the geometry once laid out. A changed one is read once more:
+    /// the tracks it replaced may have stretched the overflow it measured.
+    pub fn measure(self, tries: u8) {
+        let Self { root, mut metrics } = self;
+        when_laid_out(move || {
+            let (size, content, offset) =
+                (root.dimensions(), root.scroll_size(), root.scroll_offset());
+            // The padding box is the border box less the borders; 0 in a WebView.
+            let borders = [
+                "border-top-width",
+                "border-bottom-width",
+                "border-left-width",
+                "border-right-width",
+            ]
+            .map(|property| root.computed_px(property));
+            spawn(async move {
+                let (Ok(size), Ok(content), Ok((left, y))) =
+                    (size.await, content.await, offset.await)
+                else {
+                    return;
+                };
+                let mut read = [0.0; 4];
+                for (slot, px) in read.iter_mut().zip(borders) {
+                    *slot = px.await.ok().flatten().unwrap_or(0.0);
+                }
+                let [top, bottom, start, end] = read;
+                let measured = ScrollMetrics {
+                    view_width: size.width - start - end,
+                    view_height: size.height - top - bottom,
+                    content_width: content.width,
+                    content_height: content.height,
+                    x: inline_x(left),
+                    y,
+                    left,
+                };
+                if *metrics.peek() != Some(measured) {
+                    metrics.set(Some(measured));
+                    if tries > 0 {
+                        self.measure(tries - 1);
+                    }
+                }
+            });
+        });
+    }
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum Axis {
+    X,
+    Y,
+}
+
+/// The track and thumb `ScrollArea` draws for `Always`. Hidden from assistive
+/// technology and never focused: the area itself scrolls and holds the tab stop.
+#[component]
+pub(super) fn ScrollAreaBars(
+    state: DrawnBars,
+    scrollbars: ScrollAxis,
+    size: ScrollbarSize,
+) -> Element {
+    let DrawnBars { root, metrics } = state;
+    let thick = thickness(size);
+    let current = move |axis: Axis| {
+        let drawn = bars(scrollbars, (*metrics.peek())?, thick);
+        match axis {
+            Axis::X => drawn.x,
+            Axis::Y => drawn.y,
+        }
+    };
+    // Scrolls so the thumb starts `at` px along its track; the other axis stays.
+    let scroll_along = move |axis: Axis, at: f64, rtl: bool| {
+        let (Some(metrics), Some(bar)) = (*metrics.peek(), current(axis)) else {
+            return;
+        };
+        let (x, y) = match axis {
+            Axis::X => (bar.offset_at(at), metrics.y),
+            Axis::Y => (metrics.x, bar.offset_at(at)),
+        };
+        let _ = root.scroll_to(physical_x(x, rtl), y);
+    };
+
+    // Where the thumb started and whether the area was RTL, for the drag in hand.
+    let mut grab = use_hook(|| CopyValue::new((0.0, false)));
+    let thumb_drag = |axis: Axis, thumb: ElementHandle| {
+        use_drag(DragOptions {
+            capture: thumb,
+            onstart: Callback::new(move |_| {
+                if let Some(bar) = current(axis) {
+                    grab.set((bar.at, root.is_rtl()));
+                }
+            }),
+            onmove: Callback::new(move |step: DragMove| {
+                let (from, rtl) = grab();
+                let delta = match axis {
+                    Axis::Y => step.delta().y,
+                    // The inline start is on the right under RTL.
+                    Axis::X if rtl => -step.delta().x,
+                    Axis::X => step.delta().x,
+                };
+                scroll_along(axis, from + delta, rtl);
+            }),
+            onend: Callback::new(|()| {}),
+        })
+    };
+    let (thumb_x, thumb_y) = (use_element(), use_element());
+    let drag_x = thumb_drag(Axis::X, thumb_x);
+    let drag_y = thumb_drag(Axis::Y, thumb_y);
+
+    // A press on the track centres the thumb on the pointer.
+    let press = move |axis: Axis| {
+        move |event: Event<PointerData>| {
+            if matches!(event.trigger_button(), Some(button) if button != MouseButton::Primary) {
+                return;
+            }
+            event.prevent_default();
+            let Some(bar) = current(axis) else {
+                return;
+            };
+            let rtl = root.is_rtl();
+            let point = event.element_coordinates();
+            let along = match axis {
+                Axis::Y => point.y,
+                Axis::X if rtl => bar.track - point.x,
+                Axis::X => point.x,
+            };
+            scroll_along(axis, along - bar.thumb / 2.0, rtl);
+        }
+    };
+
+    let measured = metrics();
+    let layer_style = measured.map(|measured| {
+        let range_y = (measured.content_height - measured.view_height).max(0.0);
+        format!(
+            "translate: 0 {}px; {}: {range_y}px",
+            measured.y,
+            SCROLL_AREA_RANGE_Y.name()
+        )
+    });
+    let layer = use_box()
+        .framework_sx(&DRAWN_BARS_SX)
+        .focus_ring(false)
+        .style(layer_style)
+        .prepare();
+
+    let Some(measured) = measured else {
+        return rsx! {};
+    };
+    let drawn = bars(scrollbars, measured, thick);
+    if drawn.x.is_none() && drawn.y.is_none() {
+        return rsx! {};
+    }
+    // Under RTL the content moves right as it scrolls on: the layer follows left.
+    let range_x = (measured.content_width - measured.view_width).max(0.0);
+    let range_x = if root.is_rtl() { -range_x } else { range_x };
+    let corner = |other: Option<Bar>| if other.is_some() { thick } else { 0.0 };
+
+    let tracks = rsx! {
+        div {
+            "data-scrollbars-x": true,
+            style: "translate: {measured.left}px 0; {SCROLL_AREA_RANGE_X.name()}: {range_x}px",
+            if let Some(bar) = drawn.y {
+                div {
+                    "data-scrollbar": "vertical",
+                    style: "bottom: {corner(drawn.x)}px; width: {thick}px",
+                    onpointerdown: press(Axis::Y),
+                    div {
+                        "data-thumb": true,
+                        style: "top: {bar.at}px; height: {bar.thumb}px",
+                        onmounted: thumb_y.mount(),
+                        onpointerdown: move |event: Event<PointerData>| {
+                            event.stop_propagation();
+                            drag_y.onpointerdown.call(event);
+                        },
+                        onpointermove: drag_y.onpointermove,
+                        onpointerup: drag_y.onpointerup,
+                        onpointercancel: drag_y.onpointercancel,
+                    }
+                }
+            }
+            if let Some(bar) = drawn.x {
+                div {
+                    "data-scrollbar": "horizontal",
+                    style: "inset-inline-end: {corner(drawn.y)}px; height: {thick}px",
+                    onpointerdown: press(Axis::X),
+                    div {
+                        "data-thumb": true,
+                        style: "inset-inline-start: {bar.at}px; width: {bar.thumb}px",
+                        onmounted: thumb_x.mount(),
+                        onpointerdown: move |event: Event<PointerData>| {
+                            event.stop_propagation();
+                            drag_x.onpointerdown.call(event);
+                        },
+                        onpointermove: drag_x.onpointermove,
+                        onpointerup: drag_x.onpointerup,
+                        onpointercancel: drag_x.onpointercancel,
+                    }
+                }
+            }
+        }
+    };
+    layer
+        .attr("data-scrollbars", true)
+        .attr("aria-hidden", "true")
+        .render(HtmlTag::Div, Vec::new(), tracks)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A 100px view over 400px of content.
+    const TALL: ScrollMetrics = ScrollMetrics {
+        view_width: 200.0,
+        view_height: 100.0,
+        content_width: 200.0,
+        content_height: 400.0,
+        x: 0.0,
+        y: 0.0,
+        left: 0.0,
+    };
+
+    #[test]
+    fn the_thumb_is_the_visible_share_of_the_track() {
+        let bar = bars(ScrollAxis::Vertical, TALL, 8.0).y.unwrap();
+
+        assert_eq!((bar.track, bar.thumb, bar.at), (100.0, 25.0, 0.0));
+    }
+
+    #[test]
+    fn the_thumb_travels_with_the_offset() {
+        let half = ScrollMetrics { y: 150.0, ..TALL };
+        let end = ScrollMetrics { y: 300.0, ..TALL };
+
+        assert_eq!(bars(ScrollAxis::Vertical, half, 8.0).y.unwrap().at, 37.5);
+        assert_eq!(bars(ScrollAxis::Vertical, end, 8.0).y.unwrap().at, 75.0);
+    }
+
+    #[test]
+    fn a_long_list_keeps_a_grabbable_thumb() {
+        let long = ScrollMetrics {
+            content_height: 100_000.0,
+            ..TALL
+        };
+
+        assert_eq!(
+            bars(ScrollAxis::Vertical, long, 8.0).y.unwrap().thumb,
+            MIN_THUMB
+        );
+    }
+
+    #[test]
+    fn content_that_fits_or_an_unscrolled_axis_draws_nothing() {
+        let fits = ScrollMetrics {
+            content_height: 100.5,
+            ..TALL
+        };
+
+        assert_eq!(bars(ScrollAxis::Vertical, fits, 8.0).y, None);
+        assert_eq!(
+            bars(ScrollAxis::Horizontal, TALL, 8.0),
+            Bars { x: None, y: None }
+        );
+        assert_eq!(bars(ScrollAxis::None, TALL, 8.0), Bars { x: None, y: None });
+    }
+
+    #[test]
+    fn two_bars_leave_the_corner_free() {
+        let both = ScrollMetrics {
+            content_width: 800.0,
+            ..TALL
+        };
+        let drawn = bars(ScrollAxis::Both, both, 8.0);
+
+        assert_eq!(drawn.y.unwrap().track, 92.0);
+        assert_eq!(drawn.x.unwrap().track, 192.0);
+    }
+
+    #[test]
+    fn a_thumb_position_maps_back_to_its_offset() {
+        let bar = bars(ScrollAxis::Vertical, TALL, 8.0).y.unwrap();
+
+        assert_eq!(bar.offset_at(37.5), 150.0);
+        assert_eq!(bar.offset_at(-10.0), 0.0);
+        assert_eq!(bar.offset_at(500.0), 300.0);
+    }
+}
