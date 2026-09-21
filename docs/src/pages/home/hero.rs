@@ -66,7 +66,7 @@ pub fn Hero() -> Element {
                         component: "p",
                         sx: sx()
                             .font_size("1.75rem")
-                            .font_weight("800")
+                            .font_weight("400")
                             .line_height("1.2")
                             .color("primary.7"),
                         "Build once, run everywhere"
