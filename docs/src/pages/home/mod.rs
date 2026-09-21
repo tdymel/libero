@@ -10,7 +10,7 @@ mod stats;
 use dioxus::prelude::*;
 use libero::{
     components::{Flex, OptionLabel, Title},
-    sx::sx,
+    sx::{Sx, sx},
     theme::{ColorCss, ColorShade},
 };
 
@@ -35,6 +35,11 @@ pub(super) fn tint(percent: u8) -> String {
         "color-mix(in srgb, {} {percent}%, transparent)",
         ColorCss::PRIMARY.value(ColorShade::S6)
     )
+}
+
+/// A row of buttons in which one that cannot share a line grows to the full width.
+pub(super) fn cta_row_sx() -> Sx {
+    sx().selector("& > *", sx().flex("1 1 auto"))
 }
 
 /// A tab's label with `icon` before its name; the name is still what names the tab.

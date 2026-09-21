@@ -5,7 +5,7 @@ use libero::{
     theme::{ColorCss, ColorShade},
 };
 
-use super::tint;
+use super::{cta_row_sx, tint};
 use crate::{GITHUB, Route};
 
 /// The way in once more, and the page's footer line.
@@ -40,7 +40,7 @@ pub fn Closing() -> Element {
                     line_numbers: false,
                     sx: sx().width("100%").max_width("320px").text_align("start"),
                 }
-                Flex { direction: "row", gap: "md", wrap: "wrap", justify: "center",
+                Flex { direction: "row", gap: "md", wrap: "wrap", justify: "center", sx: cta_row_sx(),
                     Button { to: Route::GettingStarted {}, size: "lg", "Get started" }
                     // Text role 8: role 6 misses 4.5:1 on the tint (899).
                     Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", color: "primary.8", "Browse components" }

@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use libero::components::{ActionIcon, Button, Icon, Menu, MenuEntry, MenuItem, use_menu};
+use libero::components::{ActionIcon, Chip, Icon, Menu, MenuEntry, MenuItem, use_menu};
 
 use crate::{Route, icons::SparklesIcon};
 
@@ -36,13 +36,16 @@ pub fn Tldr(
     rsx! {
         Menu { state: menu, items,
             if let Some(label) = label {
-                Button {
+                // A `Chip`, like the Source and markdown links beside it. Its no-op `onclick`
+                // makes it a `<button>`; the click bubbles to the menu.
+                Chip {
                     size: "sm",
                     variant: "outlined",
                     color: "neutral",
                     icon: rsx! {
                         Icon { variant: "standard", size: "sm", color: "inherit", SparklesIcon {} }
                     },
+                    onclick: |_| {},
                     attributes: menu.a11y_attributes(),
                     "{label}"
                 }

@@ -364,7 +364,8 @@ fn AppShell() -> Element {
                 // under the sticky bar shows through.
                 publish_height: true,
                 glass: true,
-                sx: sx().gap("md"),
+                // Tighter on a phone: the seven controls just miss 320px at `md`.
+                sx: sx().gap("sm").breakpoint(Size::Sm, sx().gap("md")),
                 // Focus target when a page link closes the drawer. `Burger` takes no
                 // `onmounted`, so a `display: contents` wrapper holds the handle.
                 div { display: "contents", onmounted: burger.mount(),
@@ -382,11 +383,19 @@ fn AppShell() -> Element {
                         },
                     }
                 }
-                // The way home: the nav has no entry for it. Named by the title.
+                // The way home: the nav has no entry for it. The title is hidden on a phone,
+                // so the label names it.
                 Anchor {
                     to: Route::Home {},
+                    "aria-label": "Libero",
                     underline: "never",
-                    sx: sx().display("flex").align_items("center").gap("md").color("inherit"),
+                    // The logo is the one item that gives way when the row runs short.
+                    sx: sx()
+                        .display("flex")
+                        .align_items("center")
+                        .gap("md")
+                        .color("inherit")
+                        .min_width("0"),
                     Icon {
                         src: LOGO,
                         variant: "standard",
@@ -394,10 +403,16 @@ fn AppShell() -> Element {
                         // Wide, and the glyph nearly filling it: at icon size the bars blur together.
                         sx: sx()
                             .width("72px")
+                            .min_width("0")
                             .height("44px")
                             .with("--lsx-icon-glyph", "84%"),
                     }
-                    Title { size: "lg", component: "span", "Libero" }
+                    Title {
+                        size: "lg",
+                        component: "span",
+                        sx: sx().display("none").breakpoint(Size::Sm, sx().display("inline")),
+                        "Libero"
+                    }
                 }
                 // Search: an icon button on a phone, the field-shaped button below from `Sm` up.
                 // Both open Spotlight; the shortcut rides `aria-keyshortcuts`, not the name.

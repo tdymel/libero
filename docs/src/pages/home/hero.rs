@@ -6,7 +6,7 @@ use libero::{
     theme::{ColorCss, ColorShade, Size},
 };
 
-use super::tint;
+use super::{cta_row_sx, tint};
 use crate::{GITHUB, Route};
 
 const PLATFORMS: [&str; 4] = ["Web", "Desktop", "Android", "iOS"];
@@ -78,7 +78,7 @@ pub fn Hero() -> Element {
                         }
                     }
                 }
-                Flex { direction: "row", gap: "md", wrap: "wrap", justify: "center",
+                Flex { direction: "row", gap: "md", wrap: "wrap", justify: "center", sx: cta_row_sx(),
                     Button { to: Route::GettingStarted {}, size: "lg", "Get started" }
                     Button { to: Route::BoxPage {}, size: "lg", variant: "outlined", color: "primary.8", "Browse components" }
                     Button {
