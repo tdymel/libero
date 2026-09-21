@@ -11,6 +11,7 @@
 //! - `// snippet: in <rsx>` - the rsx the snippet goes into, at `..`.
 
 use std::cell::RefCell;
+use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -19,7 +20,7 @@ use dioxus::history::{History, MemoryHistory, provide_history_context};
 use dioxus::prelude::*;
 
 use crate::Route;
-use crate::components::{DemoCode, DemoValues};
+use crate::components::{DemoCode, DemoValues, PropGroup};
 
 const PRELUDE: &str = "use dioxus::prelude::*;
 use libero::components::*;
@@ -36,6 +37,15 @@ use std::time::Duration;
 
 thread_local! {
     static DEMOS: RefCell<Vec<DemoCode>> = const { RefCell::new(Vec::new()) };
+}
+
+thread_local! {
+    static PAGES: RefCell<Vec<(Option<String>, Vec<PropGroup>)>> = const { RefCell::new(Vec::new()) };
+}
+
+/// Called by every `DocPage` as it mounts.
+pub fn record_page(markdown: Option<String>, properties: Vec<PropGroup>) {
+    PAGES.with(|pages| pages.borrow_mut().push((markdown, properties)));
 }
 
 /// Called by every `Demo` as it mounts.
@@ -361,6 +371,91 @@ fn demos_of(route: Route) -> Vec<DemoCode> {
     DEMOS.with(|demos| std::mem::take(&mut *demos.borrow_mut()))
 }
 
+/// The markdown mirror and the property groups of every `DocPage` the route renders.
+fn pages_of(route: Route) -> Vec<(Option<String>, Vec<PropGroup>)> {
+    PAGES.with(|pages| pages.borrow_mut().clear());
+    let mut dom = VirtualDom::new_with_props(Page, PageProps { route });
+    dom.rebuild_in_place();
+    PAGES.with(|pages| std::mem::take(&mut *pages.borrow_mut()))
+}
+
+/// The names in a mirror's `## Props` tables, per `###` group; `""` names the ones before any.
+fn md_props(md: &str) -> Vec<(String, BTreeSet<String>)> {
+    let mut groups: Vec<(String, BTreeSet<String>)> = Vec::new();
+    let mut in_props = false;
+    for line in md.lines() {
+        if let Some(heading) = line.strip_prefix("## ") {
+            in_props = heading.trim() == "Props";
+        } else if !in_props {
+            continue;
+        } else if let Some(heading) = line.strip_prefix("### ") {
+            let heading = heading.trim().trim_matches('`');
+            groups.push((heading.to_string(), BTreeSet::new()));
+        } else if let Some(row) = line.strip_prefix("| `") {
+            let Some((name, _)) = row.split_once('`') else {
+                continue;
+            };
+            if groups.is_empty() {
+                groups.push((String::new(), BTreeSet::new()));
+            }
+            groups.last_mut().unwrap().1.insert(name.to_string());
+        }
+    }
+    groups
+}
+
+/// Todo 1038: the page's property tables and its `public/md` mirror name the same props.
+#[test]
+fn md_mirrors_list_the_props_of_their_page() {
+    let public = Path::new(env!("CARGO_MANIFEST_DIR")).join("public");
+    let mut problems = Vec::new();
+    for route in Route::static_routes() {
+        for (markdown, groups) in pages_of(route.clone()) {
+            let Some(markdown) = markdown.filter(|_| !groups.is_empty()) else {
+                continue;
+            };
+            let Ok(md) = std::fs::read_to_string(public.join(markdown.trim_start_matches('/')))
+            else {
+                problems.push(format!("{route}: no mirror at {markdown}"));
+                continue;
+            };
+            let mirrored = md_props(&md);
+            for group in &groups {
+                // A group the mirror files under another heading, such as an options
+                // struct, is not compared; a page's only group may sit under none.
+                let named = |heading: &str| {
+                    heading.split('<').next() == group.component().split('<').next()
+                };
+                let listed = mirrored
+                    .iter()
+                    .find(|(heading, _)| named(heading))
+                    .or_else(|| {
+                        mirrored
+                            .first()
+                            .filter(|(heading, _)| groups.len() == 1 && heading.is_empty())
+                    })
+                    .map(|(_, names)| names);
+                let Some(listed) = listed else {
+                    continue;
+                };
+                let page: BTreeSet<&str> = group.names().collect();
+                for name in page.iter().filter(|name| !listed.contains(**name)) {
+                    problems.push(format!(
+                        "{markdown}: `{}` lacks `{name}`",
+                        group.component()
+                    ));
+                }
+                for name in listed.iter().filter(|name| !page.contains(name.as_str())) {
+                    problems.push(format!("{markdown}: `{name}` is not on the {route} page"));
+                }
+            }
+        }
+    }
+    problems.sort();
+    problems.dedup();
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
+}
+
 /// The code block in the defaults, then in as few states as show every control option once.
 /// A control the defaults hide is revealed by also moving the control that shows it.
 fn demo_sources(code: &DemoCode) -> Vec<String> {
@@ -490,6 +585,28 @@ fn demo_markers(source: &str) -> Vec<(usize, Vec<String>)> {
         .filter(|(_, line)| line.trim() == "Demo {")
         .map(|(index, _)| (index + 1, markers(&lines, index)))
         .collect()
+}
+
+/// Todo 1034: a screen reader lists the code blocks by name, so two demos of a page need two.
+#[test]
+fn demo_code_labels_are_distinct_per_page() {
+    let mut problems = Vec::new();
+    for route in Route::static_routes() {
+        let labels: Vec<String> = demos_of(route.clone())
+            .into_iter()
+            .map(|code| code.label)
+            .collect();
+        for label in &labels {
+            if labels.iter().filter(|other| *other == label).count() > 1 {
+                problems.push(format!(
+                    "{route}: `{label}` names several demos: give each a `title`"
+                ));
+            }
+        }
+    }
+    problems.sort();
+    problems.dedup();
+    assert!(problems.is_empty(), "{}", problems.join("\n"));
 }
 
 #[test]

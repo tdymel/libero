@@ -86,7 +86,8 @@ fn Demo() -> Element {
 | `position` | `HeaderPosition` | `sticky` | `sticky` pins to the top of the scrolling ancestor, `static` scrolls away. `fixed` pins to the viewport, so offset your content by `var(--lsx-header-height)`. |
 | `size` | `ThemeAwareValue` | `md` | Minimum height. The header grows when its content wraps. |
 | `color` | `ThemeAwareValue` | none, a neutral background | Fills the header with shade 6 and a readable text color. Under a gradient, its first stop. |
-| `gradient` | `Gradient` | - | Fills the header with a gradient from `color`, as on `Paper`: `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text colour and focus rings are picked to read on both stops. |
+| `glass` | `bool` | `false` | Frosted glass, as on `Paper`: content scrolling under the bar shows through, blurred. It takes the paper surface, so it replaces `color`. Opaque when the user reduces transparency, in forced colours, and in native windows. |
+| `gradient` | `Gradient` | - | Fills the header with a gradient from `color`, as on `Paper`: `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text colour and focus rings are picked to read on both stops. With `glass`, the stops turn translucent. |
 | `z_index` | `ThemeAwareValue` | `100` | Stacking order. |
 | `publish_height` | `bool` | `false` | Publishes the height as `--lsx-header-height` and `scroll-padding-top` on `:root`, so focus scrolls clear of a sticky or fixed banner. Set it on the page's own banner only. |
 | `children` | `Element` | required | Nav and actions. |

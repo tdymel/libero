@@ -39,6 +39,7 @@ use blitz_traits::{
         KeyState, MouseEventButton, MouseEventButtons, Point, PointerCoords, PointerDetails,
         UiEvent,
     },
+    navigation::{NavigationOptions, NavigationProvider},
     net::{Bytes, NetHandler, NetProvider, Request},
     shell::{ShellProvider, Viewport},
 };
@@ -77,12 +78,14 @@ pub fn mount(app: fn() -> Element) -> Page {
 pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
     let warnings = SignalWarnings::watch();
     let vdom = VirtualDom::new_with_props(Root, RootProps { app: App(app) });
+    let navigations = Arc::new(Navigations::default());
     let mut doc = DioxusDocument::new(
         vdom,
         DocumentConfig {
             viewport: Some(viewport(scheme)),
             html_parser_provider: Some(Arc::new(blitz_html::HtmlProvider)),
             net_provider: Some(Arc::new(DataUrls)),
+            navigation_provider: Some(navigations.clone()),
             ..Default::default()
         },
     );
@@ -94,6 +97,7 @@ pub fn mount_in(app: fn() -> Element, scheme: ColorScheme) -> Page {
         time: 0.0,
         warnings,
         redraws,
+        navigations,
     };
     page.settle();
     page
@@ -116,6 +120,16 @@ impl ShellProvider for Redraws {
     fn set_clipboard_text(&self, text: String) -> Result<(), blitz_traits::shell::ClipboardError> {
         *self.1.lock().unwrap() = text;
         Ok(())
+    }
+}
+
+/// The shell's link handler, recording what it would open instead of opening it.
+#[derive(Default)]
+struct Navigations(std::sync::Mutex<Vec<String>>);
+
+impl NavigationProvider for Navigations {
+    fn navigate_to(&self, options: NavigationOptions) {
+        self.0.lock().unwrap().push(options.url.to_string());
     }
 }
 
@@ -264,9 +278,16 @@ pub struct Page {
     time: f64,
     warnings: SignalWarnings,
     redraws: Arc<Redraws>,
+    navigations: Arc<Navigations>,
 }
 
 impl Page {
+    /// The URLs the document asked the shell to open, in order. dioxus-native
+    /// hands http, https and mailto ones to the browser.
+    pub fn navigations(&self) -> Vec<String> {
+        self.navigations.0.lock().unwrap().clone()
+    }
+
     /// How many redraws the document has asked the shell for: at rest, none.
     pub fn redraws(&self) -> usize {
         self.redraws.0.load(Ordering::Relaxed)

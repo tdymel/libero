@@ -221,6 +221,9 @@ pub struct DemoCode {
     pub controls: Vec<Control>,
     pub wrap: Option<Wrap>,
     pub child: Option<Child>,
+    /// Names the code block for a screen reader, so it must differ per demo on a page.
+    #[cfg(test)]
+    pub label: String,
 }
 
 impl DemoCode {
@@ -277,12 +280,19 @@ pub fn Demo(
     /// that needs the card's whole width - a notification host.
     #[props(default)]
     wide_preview: bool,
+    /// Tells the code blocks apart when a page has several demos of one component.
+    title: Option<String>,
 ) -> Element {
     let mut values = use_signal(|| DemoValues::defaults(&controls));
     // Every page has several demos: "Copy code" alone would not say which (todo 1025).
-    let code_label = format!("{component} demo, Rust code");
+    let code_label = match &title {
+        Some(title) => format!("{component} demo, {title}, Rust code"),
+        None => format!("{component} demo, Rust code"),
+    };
 
     let code = DemoCode {
+        #[cfg(test)]
+        label: code_label.clone(),
         component,
         children_text,
         children_code,

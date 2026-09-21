@@ -1,5 +1,6 @@
 //! The home page's live card: a booking form and the bookings it made, in two
-//! tabs. The e2e fixture keeps its own copy (`e2e/fixtures/src/home.rs`, todo 940).
+//! tabs. The e2e fixture copies the `// copy:` regions (`e2e/fixtures/src/home.rs`, todos 940,
+//! 1031): a test in `home/mod.rs` fails when they differ.
 
 use dioxus::prelude::*;
 use libero::{
@@ -14,6 +15,7 @@ use libero::{
 use super::icon_label;
 use crate::icons::{CalendarCheckIcon, UtensilsIcon};
 
+// copy: model
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Guests {
     #[option(label = "1 guest")]
@@ -52,6 +54,7 @@ struct Row {
     guests: u8,
     terrace: bool,
 }
+// copy: end
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum CardTab {
@@ -61,6 +64,7 @@ enum CardTab {
     Bookings,
 }
 
+// copy: row
 fn row(name: &str, (y, m, d): (i32, u32, u32), guests: u8, terrace: bool) -> Row {
     Row {
         name: name.into(),
@@ -69,9 +73,11 @@ fn row(name: &str, (y, m, d): (i32, u32, u32), guests: u8, terrace: bool) -> Row
         terrace,
     }
 }
+// copy: end
 
 #[component]
 pub fn BookingCard() -> Element {
+    // copy: state
     let booking = use_store(Booking::default);
     let mut bookings = use_signal(|| {
         vec![
@@ -82,6 +88,7 @@ pub fn BookingCard() -> Element {
     let mut tab = use_signal(|| CardTab::Book);
     let form = use_form();
     let notify = use_notifications();
+    // copy: end
 
     rsx! {
         Paper {
@@ -113,6 +120,7 @@ pub fn BookingCard() -> Element {
                             },
                             Form {
                                 "aria-label": "Book a table",
+                                // copy: form
                                 value: booking,
                                 form,
                                 sx: sx().padding_top("md"),
@@ -148,6 +156,7 @@ pub fn BookingCard() -> Element {
                                 }
                                 Switch { label: "On the terrace", name: Booking::FIELDS.terrace() }
                                 Button { r#type: "submit", "Book" }
+                                // copy: end
                             }
                         }
                         if selected == CardTab::Bookings {
@@ -157,6 +166,7 @@ pub fn BookingCard() -> Element {
                                     .inset("0")
                                     .overflow("auto")
                                     .padding_top("md"),
+                                // copy: table
                                 Table {
                                     caption: "Your bookings",
                                     data: bookings(),
@@ -167,6 +177,7 @@ pub fn BookingCard() -> Element {
                                         column("Seat").value(|r: &Row| if r.terrace { "Terrace" } else { "Inside" }.to_string()),
                                     ],
                                 }
+                                // copy: end
                             }
                         }
                     }

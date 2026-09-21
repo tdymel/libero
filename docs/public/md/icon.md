@@ -58,7 +58,8 @@ variant insets it to 60% of the box, clear of the container's edges. Set
 | `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
 | `size` | `ThemeAwareValue` | `md` | Width and height. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius. |
-| `children` | `Element` | required | The svg. |
+| `src` | `String` | - | An image URL drawn as the glyph, in the icon's color, instead of `children`. Only its shape is used: its own colors are ignored. |
+| `children` | `Element` | required | The svg. Not needed with `src`. |
 
 Like every component, `Icon` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.

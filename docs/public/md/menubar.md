@@ -93,8 +93,7 @@ Like every component, `Menubar` also takes the shared props `sx`, `class`,
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `label` | `String` | required | The trigger's text, which typeahead on the bar matches. |
-| `items` | `Vec<MenuEntry>` | required | `Menu`'s items. |
+| `new(label, items)` | `String, Vec<MenuEntry>` | required | The trigger's text, which typeahead on the bar matches, and `Menu`'s items. |
 | `disabled` | `bool` | `false` | The trigger stays in view and in the arrow order, and opens nothing. |
 
 ## Theme defaults

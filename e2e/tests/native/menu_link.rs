@@ -1,7 +1,7 @@
 //! A link item in a `Menu` with a mask mark before it (the docs' TLDR menu), in Blitz.
 
 use dioxus::prelude::*;
-use e2e::native::{Page, mount};
+use e2e::native::{Key, Page, mount};
 use libero::components::{Button, Icon, Menu, MenuEntry, MenuItem, use_menu};
 
 /// Only the left half is inked.
@@ -40,6 +40,26 @@ fn a_link_item_is_an_anchor_with_its_target() {
         page.tree()
     );
     assert_eq!(page.attr(link, "target").as_deref(), Some("_blank"));
+}
+
+const URL: &str = "https://claude.ai/new?q=x";
+
+/// dioxus-native opens what the document navigates to in the browser.
+#[test]
+fn a_click_on_a_link_item_opens_its_url() {
+    let mut page = opened();
+    assert!(page.navigations().is_empty());
+    page.click("[role=menu] a[role=menuitem]");
+    assert_eq!(page.navigations(), [URL], "{}", page.tree());
+}
+
+#[test]
+fn enter_on_a_link_item_opens_its_url() {
+    let mut page = opened();
+    assert!(page.navigations().is_empty());
+    page.focus("[role=menu] a[role=menuitem]");
+    page.press(Key::Enter);
+    assert_eq!(page.navigations(), [URL], "{}", page.tree());
 }
 
 /// The mask keeps the inked half in the icon's color and leaves the rest of the

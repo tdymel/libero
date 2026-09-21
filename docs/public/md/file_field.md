@@ -131,7 +131,7 @@ Like every component, `FileField` also takes the shared props `sx`, `class`,
 |---|---|---|
 | `one()` | `Option<FileData>` | The first file, a single-file field's whole value. |
 | `into_vec()` | `Vec<FileData>` | Every file. |
-| deref | `&[FileData]` | So `len`, `iter` and `is_empty` work directly. |
+| `deref` | `&[FileData]` | So `len`, `iter` and `is_empty` work directly. |
 
 ## Theme defaults
 

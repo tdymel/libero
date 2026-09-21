@@ -11,9 +11,11 @@ pub fn Stats() -> Element {
     rsx! {
         section { "aria-labelledby": "stats-title",
             // The hidden span sits in the `h2`, not around it: a span may not hold a heading.
+            // copy: stats-title
             Title { component: "h2", id: "stats-title", sx: sx().margin("0"),
                 VisuallyHidden { "Libero in numbers" }
             }
+            // copy: end
             Box {
                 component: "ul",
                 // Safari drops the list role with `list-style: none`.

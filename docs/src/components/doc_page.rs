@@ -41,6 +41,8 @@ pub fn DocPage(
     accessibility: Option<A11yDoc>,
     children: Element,
 ) -> Element {
+    #[cfg(test)]
+    use_hook(|| crate::snippets::record_page(markdown.clone(), properties.clone()));
     let mut tab = use_signal(|| DocTab::Usage);
     let tabs: Vec<DocTab> = DocTab::options()
         .iter()

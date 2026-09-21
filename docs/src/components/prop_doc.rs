@@ -55,6 +55,16 @@ pub fn props(component: impl Into<String>, props: Vec<PropDoc>) -> PropGroup {
 }
 
 impl PropGroup {
+    #[cfg(test)]
+    pub fn component(&self) -> &str {
+        &self.component
+    }
+
+    #[cfg(test)]
+    pub fn names(&self) -> impl Iterator<Item = &str> {
+        self.props.iter().map(|prop| prop.name.as_str())
+    }
+
     /// For a type that is not a `base_props!` component - a builder, say.
     pub fn without_base_props(mut self) -> Self {
         self.base = false;

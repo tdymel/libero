@@ -43,6 +43,8 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `size` | `Size` | `md` | Visual size, `xs` to `xxl`. |
 | `component` | `HtmlTag` | `p` | The element to render. |
+| `color` | `ThemeAwareValue` | - | The text color: a theme color name in its text shade, or any CSS color. Unset, the text inherits. Under a gradient, its first stop. |
+| `gradient` | `Gradient` | - | Paints the glyphs with a gradient from `color` to a second stop, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. Keep it to large display text: the contrast of a literal CSS stop is yours to check, and a debug build warns when a hex stop reads under 4.5:1 on the page background. Solid in its first stop in forced colours and in native windows. |
 | `children` | `Element` | required | The text. |
 
 Like every component, `Text` also takes the shared props `sx`, `class`,

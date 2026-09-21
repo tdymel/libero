@@ -230,6 +230,7 @@ pub fn StylingPage() -> Element {
                 title: "Usage",
                 Demo {
                     component: "Box",
+                    title: "Usage",
                     children_text: "Styled with sx",
                     controls: vec![
                         Control::color("background")
@@ -273,6 +274,7 @@ pub fn StylingPage() -> Element {
                 }
                 Demo {
                     component: "Box",
+                    title: "States",
                     children_text: "Badge",
                     fixed: vec![STATES_SX.to_string()],
                     controls: vec![

@@ -1,5 +1,5 @@
-//! A copy of the docs home page's booking card: e2e never includes docs source
-//! (todo 940), so a change to `docs/src/pages/home/booking.rs` is copied by hand.
+//! A copy of the docs home page's booking card: e2e never includes docs source (todo 940).
+//! The `// copy:` regions equal those in `docs/src/pages/home/`: a docs test compares them.
 
 use dioxus::prelude::*;
 use libero::{
@@ -30,9 +30,11 @@ pub const ROUTES: Routes = &[
 fn Stats() -> Element {
     rsx! {
         section { "aria-labelledby": "stats-title",
+            // copy: stats-title
             Title { component: "h2", id: "stats-title", sx: sx().margin("0"),
                 VisuallyHidden { "Libero in numbers" }
             }
+            // copy: end
             Paper { bordered: true, "100+ Components and Hooks" }
         }
     }
@@ -62,6 +64,7 @@ fn HomeCode() -> Element {
     }
 }
 
+// copy: model
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Guests {
     #[option(label = "1 guest")]
@@ -100,6 +103,7 @@ struct Row {
     guests: u8,
     terrace: bool,
 }
+// copy: end
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum CardTab {
@@ -108,6 +112,7 @@ enum CardTab {
     Bookings,
 }
 
+// copy: row
 fn row(name: &str, (y, m, d): (i32, u32, u32), guests: u8, terrace: bool) -> Row {
     Row {
         name: name.into(),
@@ -116,9 +121,11 @@ fn row(name: &str, (y, m, d): (i32, u32, u32), guests: u8, terrace: bool) -> Row
         terrace,
     }
 }
+// copy: end
 
 #[component]
 pub fn BookingCard() -> Element {
+    // copy: state
     let booking = use_store(Booking::default);
     let mut bookings = use_signal(|| {
         vec![
@@ -129,6 +136,7 @@ pub fn BookingCard() -> Element {
     let mut tab = use_signal(|| CardTab::Book);
     let form = use_form();
     let notify = use_notifications();
+    // copy: end
 
     rsx! {
         Paper {
@@ -145,6 +153,7 @@ pub fn BookingCard() -> Element {
                     CardTab::Book => rsx! {
                         Form {
                             "aria-labelledby": "booking-title",
+                            // copy: form
                             value: booking,
                             form,
                             sx: sx().padding_top("md"),
@@ -180,9 +189,11 @@ pub fn BookingCard() -> Element {
                             }
                             Switch { label: "On the terrace", name: Booking::FIELDS.terrace() }
                             Button { r#type: "submit", "Book" }
+                            // copy: end
                         }
                     },
                     CardTab::Bookings => rsx! {
+                        // copy: table
                         Table {
                             caption: "Your bookings",
                             data: bookings(),
@@ -193,6 +204,7 @@ pub fn BookingCard() -> Element {
                                 column("Seat").value(|r: &Row| if r.terrace { "Terrace" } else { "Inside" }.to_string()),
                             ],
                         }
+                        // copy: end
                     },
                 },
             }

@@ -50,6 +50,51 @@ pub(super) fn icon_label(name: String, icon: Element) -> OptionLabel {
     )
 }
 
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+    use std::path::Path;
+
+    /// The trimmed lines between `// copy: <name>` and `// copy: end`, per name.
+    fn regions(source: &str) -> BTreeMap<String, Vec<String>> {
+        let mut found = BTreeMap::new();
+        let mut open: Option<(String, Vec<String>)> = None;
+        for line in source.lines().map(str::trim) {
+            match (line.strip_prefix("// copy: "), open.as_mut()) {
+                (Some("end"), _) => {
+                    let (name, lines) = open.take().expect("`// copy: end` without a region");
+                    found.insert(name, lines);
+                }
+                (Some(name), _) => open = Some((name.to_string(), Vec::new())),
+                (None, Some((_, lines))) => lines.push(line.to_string()),
+                (None, None) => {}
+            }
+        }
+        found
+    }
+
+    /// Todo 1031: the e2e fixture's hand copies of the booking card and the stats heading.
+    #[test]
+    fn the_e2e_copies_match_their_docs_source() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let read = |path: &str| std::fs::read_to_string(root.join(path)).unwrap();
+        let mut original = regions(&read("src/pages/home/booking.rs"));
+        original.extend(regions(&read("src/pages/home/stats.rs")));
+        let copy = regions(&read("../e2e/fixtures/src/home.rs"));
+        assert!(!original.is_empty());
+        assert_eq!(
+            original.keys().collect::<Vec<_>>(),
+            copy.keys().collect::<Vec<_>>()
+        );
+        for (name, lines) in &original {
+            assert_eq!(
+                lines, &copy[name],
+                "region `{name}` differs from the e2e fixture"
+            );
+        }
+    }
+}
+
 /// A section's heading: an `h2` set small, blue and capitalised.
 #[component]
 pub(super) fn SectionTitle(id: &'static str, children: Element) -> Element {
