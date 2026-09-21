@@ -99,6 +99,38 @@ pub async fn move_to(page: &Page, at: Point) -> Result<()> {
     mouse(page, DispatchMouseEventType::MouseMoved, at, 0).await
 }
 
+/// A touch held at an element's centre for `ms`, with touch emulation turned on
+/// for the page. CDP rejects a `touchEnd` without a point.
+pub async fn long_press(page: &Page, selector: &str, ms: u64) -> Result<()> {
+    use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
+    use chromiumoxide::cdp::browser_protocol::input::{
+        DispatchTouchEventParams, DispatchTouchEventType, TouchPoint,
+    };
+    page.execute(SetTouchEmulationEnabledParams::new(true))
+        .await?;
+    let at = centre_of(page, selector).await?;
+    for kind in [
+        DispatchTouchEventType::TouchStart,
+        DispatchTouchEventType::TouchEnd,
+    ] {
+        if kind == DispatchTouchEventType::TouchEnd {
+            tokio::time::sleep(std::time::Duration::from_millis(ms)).await;
+        }
+        let point = TouchPoint::builder()
+            .x(at.x)
+            .y(at.y)
+            .build()
+            .map_err(anyhow::Error::msg)?;
+        let event = DispatchTouchEventParams::builder()
+            .r#type(kind)
+            .touch_point(point)
+            .build()
+            .map_err(anyhow::Error::msg)?;
+        page.execute(event).await?;
+    }
+    Ok(())
+}
+
 /// Click an element at its centre.
 pub async fn click(page: &Page, selector: &str) -> Result<()> {
     click_at(page, centre_of(page, selector).await?).await

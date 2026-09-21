@@ -93,17 +93,20 @@ async fn tab_out_and_back<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     arrow_right_moves_focus_and_selection_to_the_next_tab,
     "/tabs",
-    arrow_right_moves
+    arrow_right_moves,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     arrow_left_wraps_and_home_and_end_jump,
     "/tabs",
-    arrows_wrap_and_jump
+    arrows_wrap_and_jump,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     tab_leaves_the_strip_from_a_focused_unselected_tab,
     "/tabs-manual",
-    leaves_from_focused_unselected
+    leaves_from_focused_unselected,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     shift_tab_leaves_the_strip_from_a_clicked_disabled_tab,
@@ -113,7 +116,8 @@ e2e::scenario!(
 e2e::scenario!(
     tab_leaves_the_strip_and_shift_tab_comes_back_to_the_selected_tab,
     "/tabs",
-    tab_out_and_back
+    tab_out_and_back,
+    android: skip("958: element identity on the WebView")
 );
 
 /// Forced colours paint every transparent underline, so each tab looked

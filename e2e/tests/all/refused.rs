@@ -2,7 +2,7 @@
 //! click, an `inert` subtree neither a click nor focus. Blitz gave both.
 
 use anyhow::{Result, ensure};
-use e2e::driver::{Driver, eventually_focused, linger};
+use e2e::driver::{Driver, Platform, eventually_focused, linger};
 use e2e::passes::keyboard::TAB;
 
 async fn a_disabled_button<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
@@ -43,8 +43,14 @@ async fn focus_after_a_press<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click("#off").await?;
     linger(d, 3).await;
     let off = d.focused_id().await?;
+    // A touch on a disabled control sends no mouse events, so focus stays; a
+    // plain `<button disabled>` does the same on the WebView (990).
+    let holder = match d.platform() {
+        Platform::Android => "first",
+        _ => "card",
+    };
     ensure!(
-        in_card == "card" && off.is_empty(),
+        in_card == holder && off.is_empty(),
         "{:?}: in card {in_card:?}, bare {off:?}",
         d.platform()
     );
@@ -77,5 +83,6 @@ e2e::scenario!(
 e2e::scenario!(
     tab_skips_disabled_buttons_and_an_inert_subtree,
     "/refused",
-    tab_past_them
+    tab_past_them,
+    android: skip("958: element identity on the WebView")
 );

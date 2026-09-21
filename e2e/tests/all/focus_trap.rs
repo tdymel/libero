@@ -65,7 +65,8 @@ async fn tab_passes_over_hidden_stops<D: Driver>(d: &mut D, _route: &str) -> Res
 e2e::scenario!(
     tab_passes_over_a_stop_that_is_not_rendered,
     "/focus-trap",
-    tab_passes_over_hidden_stops
+    tab_passes_over_hidden_stops,
+    android: skip("958: element identity on the WebView")
 );
 
 /// The radio groups alone, in a trap a click opens.
@@ -83,7 +84,8 @@ async fn a_radio_group_is_one_stop<D: Driver>(d: &mut D, _route: &str) -> Result
 e2e::scenario!(
     a_radio_group_is_one_tab_stop,
     "/focus-trap/radios",
-    a_radio_group_is_one_stop
+    a_radio_group_is_one_stop,
+    android: skip("958: element identity on the WebView")
 );
 
 /// Both traps used to answer the one press: focus skipped a stop and walked
@@ -108,7 +110,8 @@ async fn a_nested_trap_moves_focus_once<D: Driver>(d: &mut D, _route: &str) -> R
 e2e::scenario!(
     a_nested_trap_moves_focus_once_per_tab,
     "/focus-trap/nested",
-    a_nested_trap_moves_focus_once
+    a_nested_trap_moves_focus_once,
+    android: skip("958: element identity on the WebView")
 );
 
 /// Focus on the dialog itself (a click on its text) is outside the stops:

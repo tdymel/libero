@@ -20,7 +20,8 @@ async fn arrow_down_enters_on_the_typed_day<D: Driver>(d: &mut D, _route: &str) 
 e2e::scenario!(
     arrow_down_after_typing_enters_on_the_typed_day,
     "/home-booking",
-    arrow_down_enters_on_the_typed_day
+    arrow_down_enters_on_the_typed_day,
+    android: skip("958: element identity on the WebView")
 );
 
 const TAB_BOOK: &str = "[role=tab][aria-selected=true]";

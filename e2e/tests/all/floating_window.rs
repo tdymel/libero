@@ -905,12 +905,14 @@ e2e::scenario!(
 e2e::scenario!(
     enter_opens_it_with_focus_inside_and_escape_hands_it_back,
     "/floating-window",
-    enter_and_escape
+    enter_and_escape,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     f6_moves_focus_between_the_window_and_the_page,
     "/floating-window",
-    f6_round_trips
+    f6_round_trips,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     a_drag_past_the_edge_keeps_it_in_the_viewport,
@@ -930,7 +932,8 @@ e2e::scenario!(
 e2e::scenario!(
     the_title_bar_menu_resizes_and_resets,
     "/floating-window",
-    the_menu_resizes_and_resets
+    the_menu_resizes_and_resets,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     a_title_bar_drag_moves_it_with_the_pointer,
@@ -940,5 +943,6 @@ e2e::scenario!(
 e2e::scenario!(
     drags_leave_their_handle_focused,
     "/floating-window",
-    drags_leave_the_handle_focused
+    drags_leave_the_handle_focused,
+    android: skip("958: element identity on the WebView")
 );

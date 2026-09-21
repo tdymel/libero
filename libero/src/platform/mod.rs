@@ -42,6 +42,7 @@ pub(crate) use a11y_media::{
 pub(crate) use backend::{Listener, Outlet, PortalEntry, PortalRoot, SheetWatch, element};
 pub(crate) use click::{
     DoublePress, follow_pointer, hits_inline_boxes, nested_interactive, padding_press,
+    reads_click_targets,
 };
 pub(crate) use clipboard::clipboard;
 pub use clock::{ClockApi, clock};

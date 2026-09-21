@@ -13,6 +13,12 @@ pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bo
     super::backend::nested_interactive(event, boundary)
 }
 
+/// Whether [`nested_interactive`] can answer. The Android WebView cannot: it
+/// reads no click target (958).
+pub(crate) fn reads_click_targets() -> bool {
+    cfg!(any(target_arch = "wasm32", feature = "native"))
+}
+
 /// Whether an inline box in a padded block takes the pointer. Blitz's hit test
 /// reaches one only when positioned with a positive `z-index` (889).
 pub(crate) fn hits_inline_boxes() -> bool {

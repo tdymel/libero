@@ -285,7 +285,8 @@ pub fn Button(props: ButtonProps) -> Element {
 
     let handle_click = move |event: Event<MouseData>| {
         // Else a busy `type="submit"` still submits, by click or by Enter in a field.
-        if loading || soft_disabled {
+        // Android's WebView sends a tap on a disabled button's child a click (990).
+        if loading || disabled {
             event.prevent_default();
             return;
         }

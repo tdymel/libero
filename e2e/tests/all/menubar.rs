@@ -81,7 +81,8 @@ async fn hovering_switches<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     the_arrows_rove_along_the_bar_and_wrap,
     "/menubar-docs",
-    the_arrows_rove
+    the_arrows_rove,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     arrow_down_opens_a_menu_and_escape_hands_focus_back,

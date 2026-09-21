@@ -91,13 +91,15 @@ async fn a_disabling_arrow_hands_focus_on<D: Driver>(d: &mut D, route: &str) -> 
 e2e::scenario!(
     a_disabling_arrow_hands_focus_to_the_current_page,
     "/pagination",
-    a_disabling_arrow_hands_focus_on
+    a_disabling_arrow_hands_focus_on,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     a_late_answer_hands_focus_to_the_current_page_too,
     // The caller sets the page 150 ms after `onchange`.
     "/pagination-async",
-    a_disabling_arrow_hands_focus_on
+    a_disabling_arrow_hands_focus_on,
+    android: skip("958: element identity on the WebView")
 );
 
 /// Todo 526: the current page is no change, so its click emits nothing, like

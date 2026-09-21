@@ -81,7 +81,8 @@ e2e::scenario!(
 e2e::scenario!(
     under_rtl_rightwards_shrinks_pane_a,
     "/splitter/rtl",
-    rtl_rightwards_shrinks
+    rtl_rightwards_shrinks,
+    android: skip("963: is_rtl reads false on the WebView")
 );
 e2e::scenario!(
     the_arrows_and_home_end_move_a_focused_divider,

@@ -29,6 +29,10 @@ const TOOLTIP_GAP_VAR: CssVar = CssVar::new("--lsx-tooltip-gap");
 /// The bubble's widest, unless the viewport is narrower.
 const MAX_WIDTH: &str = "20rem";
 
+/// Milliseconds a touch must hold to open it, and it stays after the release (MUI's).
+const LONG_PRESS: u32 = 500;
+const TOUCH_LINGER: u32 = 1500;
+
 /// Bridges `gap` on the landed side, so the pointer can reach the bubble (WCAG 1.4.13).
 fn bridge_sx(side: Side) -> Sx {
     let gap = TOOLTIP_GAP_VAR.value();
@@ -140,6 +144,8 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     let mut focused = use_signal(|| false);
     // Opens for keyboard focus only: `:focus-visible` on the web, a press heuristic elsewhere.
     let pressed = use_hook(|| Rc::new(Cell::new(false)));
+    // The last press was a touch, until the pointer leaves: a long press opens it (996).
+    let touch = use_hook(|| Rc::new(Cell::new(false)));
     let press_focus = use_hook(try_consume_context::<PressFocus>);
     let marked = move || press_focus.as_ref().is_some_and(PressFocus::take);
     // Where the document hears Escape, the open bubble's `use_dismiss` does.
@@ -204,16 +210,40 @@ pub fn Tooltip(props: TooltipProps) -> Element {
     };
 
     let leave = pressed.clone();
+    let (enter, leave_touch, press_touch) = (touch.clone(), touch.clone(), touch.clone());
     let mut wrapper = wrapper
         .element(&anchor)
+        // A touch's compatibility mouse events are no hover: a tap never opens it.
         .event("onmouseenter", move |_: MouseEvent| {
-            hover.hover(true, open_delay)
+            if !enter.get() {
+                hover.hover(true, open_delay)
+            }
         })
         .event("onmouseleave", move |_: MouseEvent| {
             leave.set(false);
-            hover.hover(false, close_delay);
+            if !leave_touch.replace(false) {
+                hover.hover(false, close_delay);
+            }
         })
-        .event("onpointerdown", move |_: PointerEvent| pressed.set(true))
+        .event("onpointerdown", move |event: PointerEvent| {
+            pressed.set(true);
+            let is_touch = event.data().pointer_type() == "touch";
+            press_touch.set(is_touch);
+            if is_touch {
+                hover.hover(true, LONG_PRESS);
+            }
+        })
+        // Released before the long press: nothing. After: it lingers, then closes.
+        .event("onpointerup", move |event: PointerEvent| {
+            if event.data().pointer_type() == "touch" {
+                hover.hover(false, TOUCH_LINGER);
+            }
+        })
+        .event("onpointercancel", move |event: PointerEvent| {
+            if event.data().pointer_type() == "touch" {
+                hover.hover(false, TOUCH_LINGER);
+            }
+        })
         .event("onfocusin", focus.focusin(0))
         .event("onfocusout", focus.focusout(0));
     // Off the web only the focused element hears Escape. Absent while closed,

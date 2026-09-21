@@ -55,6 +55,11 @@ pub trait Driver {
     async fn type_text(&mut self, text: &str) -> Result<()>;
     /// Presses at the first match's centre, moves by `(dx, dy)` in steps, releases.
     async fn drag(&mut self, selector: &str, dx: f64, dy: f64) -> Result<()>;
+    /// A touch held still at the first match's centre for `ms`, then lifted.
+    async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {
+        let _ = (selector, ms);
+        bail!("{:?}: no touch input", self.platform())
+    }
     async fn focus(&mut self, selector: &str) -> Result<()>;
     async fn text(&mut self, selector: &str) -> Result<String>;
     async fn attr(&mut self, selector: &str, name: &str) -> Result<Option<String>>;
@@ -147,6 +152,7 @@ pub async fn eventually_text<D: Driver>(
 ///
 /// A backend gap is a named skip, listed by `--ignored`, never silent:
 /// `scenario!(name, "/route", body, native: skip("Blitz has no <summary> stop"));`
+/// `android: skip("958 ...")` does the same for Android; both may follow each other.
 #[macro_export]
 macro_rules! scenario {
     ($name:ident, $route:expr, $body:ident) => {
@@ -154,6 +160,12 @@ macro_rules! scenario {
     };
     ($name:ident, $route:expr, $body:ident, native: skip($reason:literal)) => {
         $crate::scenario!(@web $name, $route, $body, #[test] #[ignore = $reason]);
+    };
+    ($name:ident, $route:expr, $body:ident, android: skip($reason:literal)) => {
+        $crate::scenario!(@all $name, $route, $body, [#[test]], [#[test] #[ignore = $reason]]);
+    };
+    ($name:ident, $route:expr, $body:ident, native: skip($native:literal), android: skip($android:literal)) => {
+        $crate::scenario!(@all $name, $route, $body, [#[test] #[ignore = $native]], [#[test] #[ignore = $android]]);
     };
     (@web $name:ident, $route:expr, $body:ident, $(#[$native:meta])*) => {
         $crate::scenario!(@all $name, $route, $body, [$(#[$native])*], [#[test]]);
@@ -288,6 +300,10 @@ mod web {
                 y: from.y + dy,
             };
             pointer::drag(page, from, to, 8).await
+        }
+
+        async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {
+            pointer::long_press(&self.fixture.page, selector, ms).await
         }
 
         async fn focus(&mut self, selector: &str) -> Result<()> {
@@ -519,7 +535,7 @@ mod android {
 
     use super::web::{element, json};
     use super::{Driver, Platform, Rect};
-    use crate::android::{CTRL, SHIFT, harness, input, input_text, keycode};
+    use crate::android::{CTRL, SHIFT, harness, input, input_text, keycode, soft_keyboard_shown};
     use crate::passes::{focus, keyboard, pointer};
 
     /// A fixture route in the emulator's WebView, reached through the app's
@@ -620,8 +636,13 @@ mod android {
             json(&self.page, "[innerWidth, innerHeight]").await
         }
 
+        /// A hardware key's: an Escape the soft keyboard would eat goes twice.
         async fn press(&mut self, key: keyboard::Key) -> Result<()> {
-            input(&["keyevent".into(), keycode(key.key)?.to_string()]).await
+            let code = keycode(key.key)?.to_string();
+            if key.key == "Escape" && soft_keyboard_shown().await? {
+                input(&["keyevent".into(), code.clone()]).await?;
+            }
+            input(&["keyevent".into(), code]).await
         }
 
         async fn press_shift(&mut self, key: keyboard::Key) -> Result<()> {
@@ -649,6 +670,12 @@ mod android {
                 y: from.y + dy,
             });
             input(&["swipe".into(), x1, y1, x2, y2, "400".into()]).await
+        }
+
+        /// A swipe that goes nowhere.
+        async fn long_press(&mut self, selector: &str, ms: u64) -> Result<()> {
+            let [x, y] = self.device(self.centre(selector).await?);
+            input(&["swipe".into(), x.clone(), y.clone(), x, y, ms.to_string()]).await
         }
 
         async fn focus(&mut self, selector: &str) -> Result<()> {

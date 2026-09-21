@@ -66,15 +66,35 @@ async fn tab_focus_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     is_open(d, true, "Tab focus").await
 }
 
+/// Todo 996, as MUI: on touch a long press opens it, a tap does not, and it
+/// closes a while after the release.
+async fn long_press_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    ensure!(!d.exists(OPEN).await?, "open at rest");
+    d.long_press(TRIGGER, 100).await?;
+    linger(d, 8).await;
+    ensure!(!d.exists(OPEN).await?, "a short touch opened it");
+    d.long_press(TRIGGER, 800).await?;
+    is_open(d, true, "a long press").await?;
+    is_open(d, false, "the release").await
+}
+
 e2e::scenario!(
     hover_opens_it_below_the_trigger_and_leaving_closes_it,
     "/tooltip/quick",
-    hover_places_and_leaving_closes
+    hover_places_and_leaving_closes,
+    android: skip("996: no hover on touch; a long press opens it instead")
 );
 e2e::scenario!(
     the_pointer_can_rest_on_the_bubble,
     "/tooltip/quick",
-    rests_on_the_bubble
+    rests_on_the_bubble,
+    android: skip("996: no hover on touch; a long press opens it instead")
+);
+e2e::scenario!(
+    a_long_press_opens_it_on_touch,
+    "/tooltip/quick",
+    long_press_opens,
+    native: skip("996: Blitz has no touch input")
 );
 e2e::scenario!(
     escape_closes_it_under_the_pointer,

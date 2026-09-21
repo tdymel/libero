@@ -86,17 +86,20 @@ async fn modal_backdrop_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     a_modal_moves_focus_in_and_traps_tab,
     "/modal",
-    modal_traps_tab
+    modal_traps_tab,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     tab_cycles_through_every_button_in_a_modal,
     "/modal",
-    modal_tab_cycles
+    modal_tab_cycles,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     a_backdrop_click_closes_a_modal,
     "/modal",
-    modal_backdrop_closes
+    modal_backdrop_closes,
+    android: skip("958: element identity on the WebView")
 );
 
 #[test]

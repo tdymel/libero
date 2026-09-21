@@ -136,28 +136,39 @@ fn webview_origin(address: &str) -> Result<(f64, f64)> {
 
 /// `adb shell input <args>` on the runner's device.
 pub(crate) async fn input(args: &[String]) -> Result<()> {
+    let mut command = vec!["input".to_string()];
+    command.extend_from_slice(args);
+    shell(&command).await.map(drop)
+}
+
+/// Whether the soft keyboard is up: it takes an Escape's `keydown` to hide
+/// itself, and the page sees only the `keyup` (994).
+pub(crate) async fn soft_keyboard_shown() -> Result<bool> {
+    let state = shell(&["dumpsys".into(), "input_method".into()]).await?;
+    Ok(state.contains("mInputShown=true"))
+}
+
+/// `adb shell <args>` on the runner's device; its stdout.
+async fn shell(args: &[String]) -> Result<String> {
     let mut command = tokio::process::Command::new("adb");
     if let Ok(serial) = std::env::var(SERIAL_ENV) {
         command.args(["-s", &serial]);
     }
-    command
-        .args(["shell", "input"])
-        .args(args)
-        .kill_on_drop(true);
+    command.arg("shell").args(args).kill_on_drop(true);
     // Bounded: the emulator has exited mid-run a few times (964), and a
     // hung `adb` would stall the whole serial run.
     let output = tokio::time::timeout(std::time::Duration::from_secs(20), command.output())
         .await
-        .with_context(|| format!("adb shell input {} hung for 20 s", args.join(" ")))?
+        .with_context(|| format!("adb shell {} hung for 20 s", args.join(" ")))?
         .context("run adb")?;
     if !output.status.success() {
         bail!(
-            "adb shell input {}: {}",
+            "adb shell {}: {}",
             args.join(" "),
             String::from_utf8_lossy(&output.stderr).trim()
         );
     }
-    Ok(())
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
 /// The Android keycode for a DOM `key`, for `input keyevent`.

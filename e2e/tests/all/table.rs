@@ -63,7 +63,8 @@ async fn the_tabbed_last_header_shows<D: Driver>(d: &mut D, _route: &str) -> Res
 e2e::scenario!(
     a_tabbed_header_scrolls_into_its_region,
     "/table/wide",
-    the_tabbed_last_header_shows
+    the_tabbed_last_header_shows,
+    android: skip("958: element identity on the WebView")
 );
 
 #[test]

@@ -250,5 +250,6 @@ async fn arrow_down_enters_and_escape_returns<D: Driver>(d: &mut D, _route: &str
 e2e::scenario!(
     arrow_down_enters_the_colour_dialog_and_escape_returns,
     "/color-field/alpha",
-    arrow_down_enters_and_escape_returns
+    arrow_down_enters_and_escape_returns,
+    android: skip("958: element identity on the WebView")
 );

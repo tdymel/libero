@@ -51,12 +51,23 @@ async fn hugs_the_end<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     .await
 }
 
-e2e::scenario!(a_drawer_moves_focus_in_and_traps_tab, "/drawer", traps_tab);
-e2e::scenario!(a_backdrop_click_closes_a_drawer, "/drawer", backdrop_closes);
+e2e::scenario!(
+    a_drawer_moves_focus_in_and_traps_tab,
+    "/drawer",
+    traps_tab,
+    android: skip("958: element identity on the WebView")
+);
+e2e::scenario!(
+    a_backdrop_click_closes_a_drawer,
+    "/drawer",
+    backdrop_closes,
+    android: skip("958: element identity on the WebView")
+);
 e2e::scenario!(
     a_button_in_a_drawer_closes_it_and_focus_returns,
     "/drawer",
-    close_button_closes
+    close_button_closes,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(a_right_drawer_hugs_the_right_edge, "/drawer", hugs_the_end);
 

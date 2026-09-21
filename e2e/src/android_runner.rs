@@ -127,36 +127,20 @@ fn run_on(
     adb(serial, &["install", "-r", &apk.to_string_lossy()])?;
 
     // libtest ORs its filters, so the `android` tests matching any of them are
-    // named one by one, `--exact`.
-    let listed = Command::new(env!("CARGO"))
-        .current_dir(root)
-        .args([
-            "test",
-            "-q",
-            "-p",
-            "e2e",
-            "--features",
-            "android",
-            "--test",
-            "all",
-            "--target-dir",
-        ])
-        .arg(target_dir)
-        .args(["--", "--list"])
-        .stderr(Stdio::inherit())
-        .output()
-        .context("list the tests")?;
-    let names: Vec<String> = String::from_utf8_lossy(&listed.stdout)
-        .lines()
-        .filter_map(|line| line.strip_suffix(": test"))
-        .filter(|name| name.ends_with("::android"))
-        .filter(|name| filters.is_empty() || filters.iter().any(|f| name.contains(f.as_str())))
-        .map(str::to_string)
+    // named one by one, `--exact`. An `android: skip(...)` is left out.
+    let skipped = list(root, target_dir, filters, true)?;
+    let names: Vec<String> = list(root, target_dir, filters, false)?
+        .into_iter()
+        .filter(|name| !skipped.contains(name))
         .collect();
-    if names.is_empty() {
+    if names.is_empty() && skipped.is_empty() {
         bail!("no android scenario matches {filters:?}");
     }
-    eprintln!("e2e android: running {} scenario(s)", names.len());
+    eprintln!(
+        "e2e android: running {} scenario(s), {} skipped",
+        names.len(),
+        skipped.len()
+    );
 
     // One app per unit, and a unit whose emulator died is run again on a fresh
     // one: its qemu dies of SIGSEGV every 30-40 scenarios (964).
@@ -180,6 +164,36 @@ fn run_on(
         bail!("android scenarios failed in: {}", red.join(", "));
     }
     Ok(())
+}
+
+/// The `android` tests matching `filters`; with `ignored`, only the skipped ones.
+fn list(root: &Path, target_dir: &Path, filters: &[String], ignored: bool) -> Result<Vec<String>> {
+    let listed = Command::new(env!("CARGO"))
+        .current_dir(root)
+        .args([
+            "test",
+            "-q",
+            "-p",
+            "e2e",
+            "--features",
+            "android",
+            "--test",
+            "all",
+            "--target-dir",
+        ])
+        .arg(target_dir)
+        .args(["--", "--list"])
+        .args(ignored.then_some("--ignored"))
+        .stderr(Stdio::inherit())
+        .output()
+        .context("list the tests")?;
+    Ok(String::from_utf8_lossy(&listed.stdout)
+        .lines()
+        .filter_map(|line| line.strip_suffix(": test"))
+        .filter(|name| name.ends_with("::android"))
+        .filter(|name| filters.is_empty() || filters.iter().any(|f| name.contains(f.as_str())))
+        .map(str::to_string)
+        .collect())
 }
 
 /// One unit's scenarios on a freshly launched app; whether they passed. A

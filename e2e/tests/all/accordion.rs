@@ -351,7 +351,8 @@ async fn focus_returns<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     the_arrows_move_focus_skip_the_disabled_and_never_toggle,
     "/accordion",
-    arrows_move_focus
+    arrows_move_focus,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     enter_opens_space_closes_and_a_closed_panel_hides,
@@ -362,7 +363,8 @@ e2e::scenario!(a_click_toggles_a_section, "/accordion", a_click_toggles);
 e2e::scenario!(
     focus_returns_to_the_trigger_of_a_panel_that_closes_around_it,
     "/accordion",
-    focus_returns
+    focus_returns,
+    android: skip("958: element identity on the WebView")
 );
 
 /// Ctrl/Alt/Meta chords are the browser's: no focus move, no toggle.

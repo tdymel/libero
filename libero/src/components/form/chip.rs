@@ -1,3 +1,6 @@
+use std::cell::Cell;
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -15,6 +18,7 @@ use crate::{
         navigation::{NewTabHint, wants_new_tab_hint},
     },
     hooks::{ElementHandle, use_cache, use_css, use_element, use_id, use_theme},
+    platform::reads_click_targets,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ChipDefaults, ColorShade, CssVar, Size, SizeCss},
     utils::warn,
@@ -318,6 +322,13 @@ pub fn Chip(props: ChipProps) -> Element {
         trailing_slot,
         clickable && !selectable && props.trailing.is_some(),
     );
+    // Where no click target can be read, a click in the trailing slot counts as
+    // its control's, so the padding does not toggle the chip too (993).
+    let trailing_hit = use_hook(|| Rc::new(Cell::new(false)));
+    let mark_trailing = {
+        let trailing_hit = trailing_hit.clone();
+        move |_: MouseEvent| trailing_hit.set(selectable && !reads_click_targets())
+    };
     let trailing = rsx! {
         if let Some(trailing) = props.trailing {
             // Not `trailing`: a field frame's own slot is, and a chip sits in one.
@@ -325,6 +336,7 @@ pub fn Chip(props: ChipProps) -> Element {
                 class: trailing_class,
                 "data-slot": "chip-trailing",
                 onmounted: trailing_slot.mount(),
+                onclick: mark_trailing,
                 {trailing}
             }
         }
@@ -420,11 +432,13 @@ pub fn Chip(props: ChipProps) -> Element {
     // The trailing slot sits beside the label, not in it: a `<label>` would
     // take a button's click for the checkbox.
     // The pill's padding, which the label's `::after` covers on the web only.
+    let mut padding_click = activation.padding_click("span[data-state~=\"selectable\"]");
     root.attr("aria-disabled", disabled)
-        .event(
-            "onclick",
-            activation.padding_click("span[data-state~=\"selectable\"]"),
-        )
+        .event("onclick", move |event: Event<MouseData>| {
+            if !trailing_hit.replace(false) {
+                padding_click(event);
+            }
+        })
         .render(
             HtmlTag::Span,
             props.attributes,

@@ -73,7 +73,8 @@ e2e::scenario!(
 e2e::scenario!(
     the_arrows_move_focus_with_the_selection_and_wrap,
     "/segmented-control",
-    the_arrows_move_focus_and_wrap
+    the_arrows_move_focus_and_wrap,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     enter_picks_the_focused_segment,

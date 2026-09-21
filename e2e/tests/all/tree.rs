@@ -44,12 +44,14 @@ async fn enter_clicks_the_link<D: Driver>(d: &mut D, _route: &str) -> Result<()>
 e2e::scenario!(
     the_chevron_turns_when_the_branch_expands,
     "/tree/chevron",
-    chevron_turns
+    chevron_turns,
+    android: skip("958: element identity on the WebView")
 );
 e2e::scenario!(
     enter_on_a_leaf_clicks_its_link,
     "/tree/activate",
-    enter_clicks_the_link
+    enter_clicks_the_link,
+    android: skip("958: element identity on the WebView")
 );
 
 const STAR: keyboard::Key = keyboard::Key {
@@ -258,7 +260,8 @@ async fn controlled<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_controlled_tree_follows_its_caller,
     "/tree/controlled",
-    controlled
+    controlled,
+    android: skip("958: element identity on the WebView")
 );
 
 #[test]
