@@ -4,9 +4,8 @@ use crate::platform;
 
 pub(crate) struct PortalEntry {
     pub(crate) id: u64,
-    /// Already rendered in the registering component's own scope, not a
-    /// closure `PortalOutlet` would call from its unrelated one - that would
-    /// read signals from a non-ancestor scope.
+    /// Rendered in the registering scope: a closure run by `PortalOutlet`
+    /// would read signals from a non-ancestor scope.
     pub(crate) render: Option<Element>,
     /// Mounted but drawing nothing (a notification stack's empty live
     /// regions): a scroll need not realign the outlet for it.

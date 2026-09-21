@@ -1,11 +1,5 @@
-//! Portal registration across mount and unmount.
-//!
-//! `use_portal` keeps a per-portal index hint into the shared entry list, so
-//! it doesn't scan every entry on every render. An unmount shifts those
-//! entries, so this renders three more passes after one and checks every
-//! survivor still owns its own entry. The content changes every pass: a portal
-//! writing through a stale hint lands in a neighbour's entry, which identical
-//! content would hide.
+//! Portal registration across an unmount, which shifts `use_portal`'s index hints.
+//! Content changes every pass, so a write through a stale hint shows.
 
 use std::cell::Cell;
 
@@ -19,9 +13,7 @@ thread_local! {
     static PASS: Cell<u32> = const { Cell::new(0) };
 }
 
-/// One portal entry, mounted and unmounted by the test - `use_portal` itself
-/// is what is under test, so nothing is gained by going through a component
-/// that happens to use it.
+/// One bare portal entry: `use_portal` itself is under test.
 #[component]
 fn Portalled(content: String) -> Element {
     use_portal(Some(rsx! { "{content}" }));
@@ -41,9 +33,8 @@ fn app() -> Element {
             if SHOW_MIDDLE.with(Cell::get) {
                 Portalled { content: "middle-{phase}" }
             }
-            // Two portals after the removable one: with only one, every stale
-            // hint lands past the end of the list and the fallback scan hides
-            // the bug this test is for.
+            // Two after the removable one: with one, a stale hint lands past the
+            // end and the fallback scan hides the bug.
             Portalled { content: "third-{phase}" }
             Portalled { content: "last-{phase}" }
         }
@@ -65,8 +56,7 @@ fn a_portal_still_owns_its_entry_after_an_earlier_one_unmounts() {
     SHOW_MIDDLE.with(|show| show.set(false));
     dom.mark_dirty(ScopeId::APP);
     dom.render_immediate(&mut NoOpMutations);
-    // The render *after* the unmount is where a stale hint bites: the
-    // survivors re-register against a list that has already shrunk.
+    // The render after the unmount is where a stale hint bites.
     dom.mark_dirty(ScopeId::APP);
     dom.render_immediate(&mut NoOpMutations);
 

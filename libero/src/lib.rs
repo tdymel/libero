@@ -1,3 +1,6 @@
+//! Libero: a Dioxus component library focused on DX, UX, a11y and configurability.
+//!
+//! Docs: <https://libero-ui.dev/about/getting-started>
 #![allow(non_snake_case)]
 // A component's `mod.rs` only re-exports, so `code/code.rs`, `tree/tree.rs`
 // etc. are deliberate.

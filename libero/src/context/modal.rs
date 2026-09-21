@@ -9,13 +9,8 @@ static NEXT_MODAL_ID: AtomicU64 = AtomicU64::new(0);
 /// Stacks the open modals: the last one opened is on top. Provided by
 /// [`crate::LiberoProvider`].
 ///
-/// A stack of ids rather than a counter, like [`super::WindowHost`]: a
-/// counter can only give back its top index, so every modal closed below
-/// another one leaked a step for the session, and enough of them climbed
-/// past `popover`. Derived from the open stack, the indices stay a dense run
-/// `modal, modal + step, ..` whatever order modals close in. The top is
-/// capped below `popover`, so a dropdown opened inside a modal clears it
-/// even with more modals open than the gap holds; the ones past the cap tie.
+/// Ids, not a counter: a counter leaked a step per modal closed below another.
+/// Capped below `popover` so a dropdown inside a modal clears it; past the cap they tie.
 #[derive(Clone, Copy)]
 pub(crate) struct ModalHost {
     stack: Signal<Vec<u64>>,
@@ -61,8 +56,21 @@ impl ModalHost {
 }
 
 /// Lets a dialog rendered by [`crate::hooks::use_modal`] close itself.
-/// Non-modal surfaces (popover, FloatingWindow) provide an empty one, so their
-/// content is not modal and cannot close a modal around them.
+/// Non-modal surfaces (popover, FloatingWindow) provide an empty one.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::context::ModalContext;
+/// # fn app() -> Element {
+/// let modal = use_context::<ModalContext>();
+///
+/// rsx! {
+///     button { onclick: move |_| modal.close(), "Close" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/overlay/modal>
 #[derive(Clone, Copy)]
 pub struct ModalContext {
     pub(crate) onclose: Option<EventHandler<()>>,
@@ -77,9 +85,8 @@ impl ModalContext {
         self.onclose.is_some()
     }
 
-    /// Deferred a microtask: closing synchronously from a click still
-    /// bubbling through the torn-down modal re-enters the same
-    /// `EventHandler` and panics with `AlreadyBorrowedMut`.
+    /// Closes the surrounding modal; a no-op outside one.
+    // Deferred: a synchronous close from a bubbling click re-enters the handler (`AlreadyBorrowedMut`).
     pub fn close(&self) {
         if let Some(onclose) = self.onclose {
             spawn(async move {

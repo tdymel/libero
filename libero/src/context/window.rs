@@ -2,11 +2,8 @@ use dioxus::prelude::*;
 
 /// Stacks the open floating windows: the last one raised is on top.
 ///
-/// A stack of ids rather than a counter, so the z-indices stay a dense run
-/// `window, window + step, ..` however often windows are raised - a counter
-/// would climb with every click. The top is still capped below `overlay`, so
-/// a modal and its overlay cover every window even with more windows open
-/// than the gap between the two layers holds; the ones past the cap then tie.
+/// Ids, not a counter, so z-indices stay dense however often windows are raised.
+/// Capped below `overlay` so a modal covers every window; windows past the cap tie.
 #[derive(Clone, Copy)]
 pub(crate) struct WindowHost {
     stack: Signal<Vec<u64>>,

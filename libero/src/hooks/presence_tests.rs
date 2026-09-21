@@ -1,9 +1,5 @@
-//! `use_presence`'s first render, which is the one a server sends.
-//!
-//! Deliberately a *single* pass - `common::render` runs two, and the second is
-//! exactly where the mount effect would paper over a wrong initial value. What
-//! is asserted here is the markup a hydrating client is handed before any
-//! effect of its own has run.
+//! `use_presence`'s first render, the one a server sends. A single pass: a
+//! second one would let the mount effect hide a wrong initial value.
 
 use std::thread;
 use std::time::{Duration, Instant};
@@ -31,8 +27,7 @@ fn an_initially_open_presence_renders_open() {
 
     let html = render_once(app);
 
-    // Both, not just `mounted`: mounted-but-not-visible is the closed frame,
-    // and it is what the server used to send for an open element.
+    // Both: mounted-but-not-visible is the closed frame the server used to send.
     assert!(html.contains(r#"data-mounted="yes""#), "{html}");
     assert!(html.contains(r#"data-visible="yes""#), "{html}");
 }
@@ -55,9 +50,8 @@ fn an_initially_closed_presence_renders_neither_mounted_nor_visible() {
     assert!(html.contains(r#"data-visible="no""#), "{html}");
 }
 
-/// A caller with a duration gets the exit fallback (todo 321). Nothing here
-/// fires `transitionend`, which is the position of a suppressed exit: with
-/// `None` the element stayed mounted for good.
+/// A caller with a duration gets the exit fallback (todo 321). No `transitionend`
+/// fires here, as on a suppressed exit.
 #[test]
 fn a_caller_with_a_duration_unmounts_on_the_fallback() {
     fn app() -> Element {
@@ -88,7 +82,6 @@ fn a_caller_with_a_duration_unmounts_on_the_fallback() {
     };
 
     assert!(!html.contains("faded body"), "never unmounted: {html}");
-    // Not before the duration plus the slack.
     assert!(
         start.elapsed() >= Duration::from_millis(30 + 150),
         "{:?}",

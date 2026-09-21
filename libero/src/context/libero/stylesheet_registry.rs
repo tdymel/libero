@@ -3,21 +3,18 @@ use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 use super::CssLayer;
 use crate::css::Stylesheet;
 
-/// Where a sheet sorts among the others in its layer. Two rules of equal
-/// specificity in one layer are decided by source order, and without a rank
-/// that order is the CSS hash's - arbitrary.
+/// Where a sheet sorts in its layer: without a rank, source order between equal
+/// specificity rules is the CSS hash's, i.e. arbitrary.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum SheetRank {
-    /// Ahead of every other sheet in the layer, so any of them overrides it
-    /// at equal specificity. Only `Box`'s focus ring: a component's own
-    /// `:focus-visible` has the same specificity and has to win.
+    /// First in the layer, so any other sheet overrides it at equal specificity.
+    /// Only `Box`'s focus ring, which a component's own `:focus-visible` must beat.
     Default,
     /// Hash order.
     Component,
 }
 
-/// Only [`StylesheetRegistry::acquire`] mints one, so nothing can be released
-/// under a key the registry never issued.
+/// Minted only by [`StylesheetRegistry::acquire`], so no foreign key can be released.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct StylesheetKey {
     layer: CssLayer,
@@ -25,9 +22,8 @@ pub(crate) struct StylesheetKey {
     hash: u64,
 }
 
-/// Built once at `acquire`. `Rc<str>` so
-/// [`StylesheetRegistry::stylesheets`], called on every style-outlet render,
-/// bumps a refcount instead of re-allocating the whole CSS corpus.
+/// Built once at `acquire`. `Rc<str>`: the outlet calls
+/// [`StylesheetRegistry::stylesheets`] every render, so it must not re-allocate.
 #[derive(Clone)]
 struct RegisteredStylesheet {
     node_key: Rc<str>,
@@ -36,9 +32,8 @@ struct RegisteredStylesheet {
 }
 
 impl RegisteredStylesheet {
-    /// Whether this entry really holds `stylesheet`'s CSS. Debug-only: it
-    /// re-renders the layered text, which is the allocation `css` exists to
-    /// avoid - see [`StylesheetRegistry::acquire`].
+    /// Whether this entry holds `stylesheet`'s CSS. Debug-only: it re-renders
+    /// the layered text, the allocation `css` exists to avoid.
     #[cfg(debug_assertions)]
     fn holds(&self, layer: CssLayer, stylesheet: &Stylesheet) -> bool {
         *self.css == *layered_css(layer, stylesheet)
@@ -74,9 +69,8 @@ impl StylesheetRegistry {
         let mut registry = self.inner.borrow_mut();
 
         let entry = registry.entry(key).or_insert_with(|| RegisteredStylesheet {
-            // Not a `Stylesheet`: that re-hashes text for a key we have.
-            // The rank is part of the key, so the same CSS on both ranks is
-            // two entries and needs two node keys.
+            // Not a `Stylesheet`, which would re-hash. The rank is in the key,
+            // so the same CSS on both ranks needs two node keys.
             node_key: Rc::from(match rank {
                 SheetRank::Default => format!("{}-default-{:x}", layer.css_name(), key.hash),
                 SheetRank::Component => format!("{}-{:x}", layer.css_name(), key.hash),
@@ -85,11 +79,8 @@ impl StylesheetRegistry {
             ref_count: 0,
         });
 
-        // The key is a 64-bit hash of the CSS text, and the same number mints
-        // the class name, so a collision would render one sheet with
-        // another's CSS *and* share its refcount - silently, and identically
-        // on every reload. Too unlikely to design around, far too quiet to
-        // leave undetected.
+        // A 64-bit hash collision would silently render one sheet with another's
+        // CSS and share its refcount: too rare to design around, too quiet to ignore.
         #[cfg(debug_assertions)]
         if !entry.holds(layer, &stylesheet) {
             crate::utils::warn(&format!(
@@ -116,8 +107,7 @@ impl StylesheetRegistry {
         }
     }
 
-    /// Every registered sheet as `(node key, CSS)`. Cheap - both halves are
-    /// refcounted handles.
+    /// Every registered sheet as `(node key, CSS)`. Cheap: both are refcounted.
     pub fn stylesheets(&self) -> Vec<(Rc<str>, Rc<str>)> {
         self.inner
             .borrow()
@@ -174,9 +164,7 @@ mod tests {
         assert_eq!(registry.stylesheets().len(), 1);
     }
 
-    /// Stands in for a real hash collision, which can't be constructed to
-    /// order: the check is what turns one into a visible warning instead of
-    /// silently wrong styles.
+    /// Stands in for a real hash collision, which can't be constructed to order.
     #[cfg(debug_assertions)]
     #[test]
     fn an_entry_does_not_hold_a_different_sheets_css() {
@@ -209,9 +197,8 @@ mod tests {
         assert!(css.starts_with("@layer lsx-framework{"));
     }
 
-    /// `Box`'s ring and a component's own `:focus-visible` tie on
-    /// specificity, so the ring has to come first whatever the two hash to.
-    /// Several sheets, so some hash below the default one and some above.
+    /// The ring must come first whatever it hashes to. Several sheets, so some
+    /// hash below the default one and some above.
     #[test]
     fn a_default_ranked_sheet_comes_before_every_other_in_its_layer() {
         let registry = StylesheetRegistry::new();

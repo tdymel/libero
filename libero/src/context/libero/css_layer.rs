@@ -1,9 +1,7 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CssLayer {
-    /// The theme's reset and its `body` rules. First, so an app's own base
-    /// styles - Tailwind v4's `@layer base`, any `@layer reset` - override
-    /// them without `!important`. Only the theme sheet
-    /// (`Stylesheet::from(&Theme)`) writes here; nothing registers into it.
+    /// The theme's reset and `body` rules, first so an app's base layers (Tailwind
+    /// v4's `@layer base`) override them. Only `Stylesheet::from(&Theme)` writes here.
     Base,
     Framework,
     UserStatic,

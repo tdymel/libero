@@ -36,9 +36,8 @@ impl CommonLabels {
     };
 }
 
-/// Every list with a search or typed filter: `Select`, `MultiSelect`,
-/// `Cascader`, `Autocomplete`, `TagsField`. Its loader reads
-/// [`CommonLabels::loading`].
+/// Every list with a search or typed filter: `Select`, `MultiSelect`, `Cascader`,
+/// `Autocomplete`, `TagsField`. Its loader reads [`CommonLabels::loading`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ComboboxLabels {
     /// Shown, and announced, when typed text matches no option.
@@ -246,8 +245,13 @@ pub struct PhoneFieldLabels {
     /// Country names by upper-case ISO code; a code missing here keeps its
     /// English name. `country_label` on the field wins over both.
     ///
-    /// ```ignore
-    /// country_names: &[("DE", "Deutschland"), ("AT", "Österreich")],
+    /// ```
+    /// use libero::localization::PhoneFieldLabels;
+    ///
+    /// static LABELS: PhoneFieldLabels = PhoneFieldLabels {
+    ///     country_names: &[("DE", "Deutschland"), ("AT", "Österreich")],
+    ///     ..PhoneFieldLabels::GERMAN
+    /// };
     /// ```
     pub country_names: &'static [(&'static str, &'static str)],
 }
@@ -625,8 +629,7 @@ pub struct CarouselLabels {
     /// The live region above one slide per view: the slides showing,
     /// `{from}` to `{to}`, of `{n}`.
     pub status_range: &'static str,
-    /// The autoplay button's name. It stays the same whether the slideshow
-    /// runs or not: `aria-pressed` carries the state.
+    /// The autoplay button's name in both states: `aria-pressed` carries the state.
     pub pause: &'static str,
 }
 
@@ -852,10 +855,10 @@ impl StepperLabels {
     };
 }
 
+/// A `Marquee`'s pause toggle.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MarqueeLabels {
-    /// The pause toggle's name. It stays the same whether the marquee is
-    /// running or not: `aria-pressed` carries the state.
+    /// The toggle's name in both states: `aria-pressed` carries the state.
     pub pause: &'static str,
 }
 

@@ -21,13 +21,10 @@ fn german_date(level: DateLevel) -> &'static str {
     }
 }
 
-/// How dates, times and numbers are written: the conventions a region picks,
-/// apart from the language that names things. [`AMERICAN`](Self::AMERICAN) by
-/// default, [`GERMAN`](Self::GERMAN) ships too.
+/// How dates, times and numbers are written, apart from the language.
+/// [`AMERICAN`](Self::AMERICAN) by default, [`GERMAN`](Self::GERMAN) ships too.
 ///
-/// Handed to `LiberoProvider { formats }`, read with
-/// [`use_formats`](crate::hooks::use_formats). Any language goes with any
-/// formats: English words, German dates.
+/// Handed to `LiberoProvider { formats }`, read with [`use_formats`](crate::hooks::use_formats).
 ///
 /// ```
 /// use dioxus::prelude::*;
@@ -43,6 +40,8 @@ fn german_date(level: DateLevel) -> &'static str {
 ///     }
 /// }
 /// ```
+///
+/// Docs: <https://libero-ui.dev/about/localization>
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[allow(
     unpredictable_function_pointer_comparisons,
@@ -51,14 +50,13 @@ fn german_date(level: DateLevel) -> &'static str {
 pub struct Formats {
     /// The first column of a calendar.
     pub first_weekday: Weekday,
-    /// How a date field shows a day, a month or a year, in dayjs tokens:
-    /// `YYYY`, `M`, `MM`, `MMM`, `MMMM`, `D`, `DD`, `dd`, `ddd`, `dddd`. Text
-    /// in `[brackets]` is literal. Call it as `(formats.date)(level)`.
+    /// A date field's day, month or year, in dayjs tokens (`YYYY`, `MMMM`, `D`,
+    /// `dddd`, ...; `[text]` is literal). Call it as `(formats.date)(level)`.
     pub date: fn(DateLevel) -> &'static str,
     /// A calendar's month heading.
     pub month_heading: &'static str,
-    /// How a time is shown, in dayjs tokens: `H`, `HH`, `h`, `hh`, `m`, `mm`,
-    /// `s`, `ss`, `A`, `a`. An `h` or an `A` makes pickers 12-hour.
+    /// A time, in dayjs tokens (`H`, `HH`, `h`, `mm`, `ss`, `A`, ...).
+    /// An `h` or an `A` makes pickers 12-hour.
     pub time: &'static str,
     /// Between a range's two ends in a field's text.
     pub range_separator: &'static str,
@@ -114,8 +112,7 @@ mod tests {
         assert_eq!(german.decimal_separator, ",");
     }
 
-    /// A copy compares equal, so a provider handed the same formats twice
-    /// does not re-render.
+    /// A copy compares equal, so the same formats twice does not re-render.
     #[test]
     fn a_copy_compares_equal() {
         let copy = Formats::GERMAN;

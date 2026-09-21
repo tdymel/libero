@@ -1,14 +1,10 @@
 use super::*;
 
-/// Every string libero puts in front of a reader, one group per component
-/// plus [`CommonLabels`]: the language. Two ship: [`ENGLISH`](Self::ENGLISH),
-/// the default, and [`GERMAN`](Self::GERMAN). How dates and numbers are
-/// written is apart, in [`Formats`], so any language goes with any formats.
+/// Every string libero shows a reader, one group per component plus [`CommonLabels`].
+/// [`ENGLISH`](Self::ENGLISH) by default, [`GERMAN`](Self::GERMAN) ships too; dates are [`Formats`].
 ///
-/// Handed to `LiberoProvider { localization }` and read with
-/// [`use_localization`](crate::hooks::use_localization). A per-instance prop
-/// (`aria_label`, `close_label`, ...) wins over it. Override with struct
-/// update, one group or one string at a time:
+/// Handed to `LiberoProvider { localization }`; a per-instance prop (`aria_label`, ...)
+/// wins over it. Override with struct update, one group or one string at a time:
 ///
 /// ```
 /// use libero::localization::{CommonLabels, Localization, PaginationLabels};
@@ -21,9 +17,10 @@ use super::*;
 /// assert_eq!(WORDS.common.close, "Zumachen");
 /// ```
 ///
-/// Templates take named holes (`{n}`, `{m}`, `{names}`), so a language can
-/// reorder them. A catalogue loaded at runtime is leaked once per language
-/// (`Box::leak`), which is bounded.
+/// Templates take named holes (`{n}`, `{names}`), so a language can reorder them.
+/// A catalogue loaded at runtime is leaked once per language (`Box::leak`).
+///
+/// Docs: <https://libero-ui.dev/about/localization>
 // Not `Copy`, the `Theme` reason: a stray by-value use is a silent memcpy.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Localization {
@@ -64,6 +61,7 @@ pub struct Localization {
 }
 
 impl Localization {
+    /// The default.
     pub const ENGLISH: Localization = Localization {
         common: CommonLabels::ENGLISH,
         date: DateLocale::ENGLISH,

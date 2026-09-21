@@ -25,30 +25,37 @@ mod stylesheet_registry;
 
 pub(crate) use css_layer::CssLayer;
 
+/// The app-wide state [`LiberoProvider`] provides: themes, localization, formats.
+/// Most apps reach it through the hooks (`use_theme`, `use_localization`, ...).
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::LiberoContext;
+/// # fn app() -> Element {
+/// let context = use_context::<LiberoContext>();
+///
+/// rsx! {
+///     button { onclick: move |_| context.set_active_theme("dark"), "Dark" }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/about/theming>
 #[derive(Clone)]
 pub struct LiberoContext {
-    /// Every theme the app ships, and which of them is its light and its
-    /// dark. A `Signal`, because a whole set can be swapped at runtime -
-    /// which is what a theme picker does.
+    /// Every theme the app ships, with its light and dark pair. Swappable at runtime.
     pub themes: Signal<ThemeSet>,
-    /// The active one. A `Signal` so [`use_theme`](crate::hooks::use_theme) is
-    /// reactive: a component that reads a spacing number, a label or a
-    /// `HexColor` off the theme re-renders when the theme changes, and so
-    /// stays in step with the CSS vars that changed without it.
+    /// The active theme. Reactive, so values read off it stay in step with its CSS vars.
     pub theme: Signal<&'static Theme>,
-    /// Every string libero shows a reader. A `Signal`, so a language switch
-    /// re-renders its readers without touching the theme's sheet.
+    /// Every string libero shows a reader. A switch leaves the theme's sheet alone.
     pub localization: Signal<&'static Localization>,
     /// How dates, times and numbers are written, apart from the language.
     pub formats: Signal<&'static Formats>,
-    /// The active theme's name, so a switch can tell a repeat from a change
-    /// and the pair from a rebuild.
+    /// The active theme's name: tells a repeat from a change, the pair from a rebuild.
     pub(crate) active: Signal<&'static str>,
-    /// What the app asked for, which is not what is on screen until it is
-    /// resolved against `system_scheme`.
+    /// What the app asked for, before it is resolved against `system_scheme`.
     pub(crate) scheme_setting: Signal<ColorSchemeSetting>,
-    /// What the platform is set to. `Light` where this build cannot tell -
-    /// see [`color_scheme`](crate::platform::color_scheme).
+    /// What the platform is set to; `Light` where this build cannot tell.
     pub(crate) system_scheme: Signal<ColorScheme>,
     /// Which way the text runs, as the document root's `dir` says.
     pub(crate) direction: Signal<Direction>,
@@ -60,17 +67,15 @@ pub struct LiberoContext {
     pub(crate) accessibility_system: Signal<AccessibilityPreferences>,
     pub(crate) forced_reduced_motion: Signal<Option<bool>>,
     pub(crate) layer_order_css: &'static str,
-    /// `Rc<str>`, not a `Stylesheet`: every `use_context::<LiberoContext>()`
-    /// clones this struct, and only `ThemeStyle` ever reads this field.
+    /// `Rc<str>`, not a `Stylesheet`: every `use_context` clones this struct,
+    /// and only `ThemeStyle` reads this field.
     pub(crate) theme_css: Signal<Rc<str>>,
     pub(crate) stylesheet_registry: StylesheetRegistry,
     pub(crate) stylesheet_registry_version: Signal<u64>,
 }
 
 impl LiberoContext {
-    /// `pub(crate)`: the signals are internal, and `LiberoProvider` is the
-    /// only thing that may own them. A caller reaches the context through
-    /// `use_context`, never by building it.
+    /// Only `LiberoProvider` builds one; callers reach it through `use_context`.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
         themes: Signal<ThemeSet>,
@@ -108,13 +113,10 @@ impl LiberoContext {
         }
     }
 
-    /// Switches to the theme `name` selects. An unknown name warns and
-    /// changes nothing, so a typo cannot blank the app's colours.
+    /// Switches to the theme `name` selects. An unknown name warns and changes nothing.
     ///
-    /// The light/dark pair is already in the sheet, so that switch is the
-    /// attribute on the document root plus a signal write - no re-mount, and
-    /// the colours change before the re-render that follows. Anything else,
-    /// or any platform with no reachable root, rebuilds the sheet.
+    /// Within the light/dark pair only the root attribute changes; anything else,
+    /// or a platform with no reachable root, rebuilds the sheet.
     pub fn set_active_theme(&self, name: &'static str) {
         let Some(theme) = self.themes.peek().get(name) else {
             warn(&format!(
@@ -141,18 +143,11 @@ impl LiberoContext {
 
     /// Pins one scheme of the pair, or hands the choice back to the platform.
     ///
-    /// Not [`set_active_theme`](Self::set_active_theme): that one is about
-    /// *which theme*, and cannot express "whichever the platform says". The
-    /// two differ in the attribute - a pinned scheme writes it, the system
-    /// case removes it so the sheet's own media block decides - and this one
-    /// writes it even when the resolved theme is the one already showing,
-    /// because otherwise a click on "dark" while the platform is dark would
-    /// leave the page following the platform.
+    /// Writes the attribute even when that theme already shows: else "dark"
+    /// clicked on a dark platform would leave the page following the platform.
     pub(crate) fn set_color_scheme(&self, setting: ColorSchemeSetting) {
-        // A set with no dark half cannot be pinned to dark. Falling back to
-        // the system setting rather than refusing outright, because this also
-        // runs when a *picker* swaps to such a set while dark was pinned:
-        // refusing would leave the pin describing a theme that is not there.
+        // No dark half: follow the system rather than refuse, since a picker
+        // swapping sets while dark is pinned also lands here.
         let setting = match setting.fixed() {
             Some(scheme) if self.themes.peek().get(scheme.as_str()).is_none() => {
                 warn(&format!(
@@ -194,11 +189,8 @@ impl LiberoContext {
         current.set(theme);
     }
 
-    /// Hands the choice back to the platform: the root carries no theme
-    /// attribute, so the sheet's `@media (prefers-color-scheme: dark)` block
-    /// decides. The Rust-side theme is set to `scheme`'s anyway, or a
-    /// component reading a `HexColor` off the theme would disagree with the
-    /// page it is painted on.
+    /// Hands the choice back to the platform: no root attribute, so the sheet's
+    /// media block decides. The Rust-side theme still follows `scheme`.
     pub(crate) fn follow_system(&self, scheme: ColorScheme) {
         let name = scheme.as_str();
         let themes = self.themes.peek().clone();
@@ -207,9 +199,8 @@ impl LiberoContext {
         let cleared =
             document().is_some_and(|document| document.set_root_attribute(THEME_ATTRIBUTE, None));
         if !cleared {
-            // No attribute to clear, so the sheet has to carry the choice
-            // itself. The whole set, not this one theme: the media block is
-            // what makes the system case work without us.
+            // No attribute to clear: rebuild with the whole set, whose media
+            // block follows the system on its own.
             let mut css = self.theme_css;
             css.set(Rc::from(Stylesheet::from(&themes).as_str()));
         }
@@ -273,30 +264,22 @@ impl LiberoContext {
         version += 1;
     }
 
-    /// Swaps the whole set - what a theme picker does.
-    ///
-    /// The sheet is rebuilt, because the pair it carries is this set's pair:
-    /// nothing in the old sheet describes the new palette. The colour-scheme
-    /// *setting* is kept and re-applied on top, so a reader who pinned dark
-    /// stays in dark through the swap.
+    /// Swaps the whole set, as a theme picker does. Rebuilds the sheet and keeps
+    /// the colour-scheme setting, so a pinned dark stays dark.
     pub fn set_theme_set(&self, themes: ThemeSet) {
         let (mut current_set, mut css) = (self.themes, self.theme_css);
         current_set.set(themes.clone());
         css.set(Rc::from(Stylesheet::from(&themes).as_str()));
 
-        // Read out first: `set_color_scheme` writes this same signal, and a
-        // `peek()` guard held across the call is a borrow panic, not a
-        // compile error.
+        // Read out first: a `peek()` guard held across `set_color_scheme` is a borrow panic.
         let setting = *self.scheme_setting.peek();
-        // Re-applied rather than assumed: the new set may have no dark half,
-        // in which case this falls back to following the platform.
+        // Re-applied: the new set may have no dark half.
         self.set_color_scheme(setting);
     }
 }
 
-/// The theme's own `<style>`. Its own component so that a rebuilt sheet - a
-/// named theme beyond the pair, or a platform that cannot carry the attribute
-/// - re-renders this leaf instead of everything under `{children}`.
+/// The theme's own `<style>`, its own component so a rebuilt sheet re-renders
+/// this leaf instead of everything under `{children}`.
 #[component]
 fn ThemeStyle() -> Element {
     let context = use_context::<LiberoContext>();
@@ -339,14 +322,8 @@ fn ThemeStyle() -> Element {
     }
 }
 
-/// The `<style>` nodes for everything registered so far.
-///
-/// Its own component for two reasons. It subscribes to
-/// `stylesheet_registry_version`, so registering CSS re-renders this leaf
-/// rather than everything under `{children}`. And `LiberoProvider` renders it
-/// *after* `{children}`: child scopes render eagerly in tree order, so by the
-/// time this runs every descendant has registered and the first pass carries
-/// the complete CSS.
+/// The `<style>` nodes for everything registered so far. A leaf, so registering
+/// re-renders only it; after `{children}`, so the first pass has every sheet.
 #[component]
 fn StyleOutlet() -> Element {
     let context = use_context::<LiberoContext>();
@@ -370,39 +347,41 @@ fn renderer_css(css: &str, answers: &A11yAnswers) -> String {
     answer_a11y_media(&focus_selectors(css), answers).into_owned()
 }
 
+/// The root every libero app renders once: themes, localization, stylesheets,
+/// portals and the modal stack.
+///
+/// ```rust
+/// # use dioxus::prelude::*;
+/// # use libero::{LiberoProvider, localization::{Formats, Localization}};
+/// # fn app() -> Element {
+/// // English words, German dates: `14. September 2026`, `15:30`.
+/// rsx! {
+///     LiberoProvider {
+///         localization: &Localization::ENGLISH,
+///         formats: &Formats::GERMAN,
+///         "Hello"
+///     }
+/// }
+/// # }
+/// ```
+///
+/// Docs: <https://libero-ui.dev/about/getting-started>
 #[component]
 pub fn LiberoProvider(
-    /// Every theme the app ships. Its light and dark halves are emitted into
-    /// the sheet together, so switching between them costs no re-render.
-    ///
-    /// A lone `&'static Theme` converts to a set of that theme alone: a theme
-    /// of the caller's own has no dark counterpart for us to pair it with.
-    /// The default is [`ThemeSet::DEFAULT`], so an app that names no theme at
-    /// all still follows `prefers-color-scheme`.
+    /// Every theme the app ships; the light and dark halves share one sheet.
+    /// A lone `&'static Theme` is a set of one. Default [`ThemeSet::DEFAULT`].
     #[props(default, into)]
     themes: ThemeSet,
     /// Every string libero shows a reader. Read at mount; switch it later with
     /// [`use_localization_handle`](crate::hooks::use_localization_handle).
     #[props(default = &Localization::ENGLISH)]
     localization: &'static Localization,
-    /// How dates, times and numbers are written, whatever the language. Read
-    /// at mount; switch it later with
-    /// [`use_formats_handle`](crate::hooks::use_formats_handle).
-    ///
-    /// ```ignore
-    /// // English words, German dates: `14. September 2026`, `15:30`.
-    /// LiberoProvider {
-    ///     localization: &Localization::ENGLISH,
-    ///     formats: &Formats::GERMAN,
-    ///     Router::<Route> {}
-    /// }
-    /// ```
+    /// How dates, times and numbers are written, whatever the language. Read at
+    /// mount; switch it later with [`use_formats_handle`](crate::hooks::use_formats_handle).
     #[props(default = &Formats::AMERICAN)]
     formats: &'static Formats,
-    /// The text direction to start in, set as the document root's `dir`. A
-    /// choice made through [`use_direction`](crate::hooks::use_direction) is
-    /// kept on the web and wins over it on the next visit. Unset, and with
-    /// nothing kept, the root's `dir` is left as the page has it.
+    /// The start text direction, set as the root's `dir`. A choice made through
+    /// [`use_direction`](crate::hooks::use_direction) is kept on the web and wins.
     #[props(default, into)]
     direction: Option<Direction>,
     children: Element,
@@ -410,8 +389,7 @@ pub fn LiberoProvider(
     let themes = use_hook(|| themes.clone());
     let localization = use_signal(|| localization);
     let formats = use_signal(|| formats);
-    // Read once, at mount, so the first render already paints the scheme the
-    // app was last left in rather than flashing the light one.
+    // Read at mount, so the first render paints the kept scheme, not a light flash.
     let setting = use_hook(|| {
         color_scheme()
             .and_then(|platform| platform.stored())
@@ -437,8 +415,7 @@ pub fn LiberoProvider(
         move || Rc::<str>::from(Stylesheet::from(&themes).as_str())
     });
     let theme_set = use_signal(|| themes);
-    // Read and set before the first render where the root is in reach (the
-    // web), so the first layout already runs the kept way.
+    // Set before the first render where the root is in reach (the web).
     let kept_direction = use_signal(stored_direction);
     let start_direction = use_hook(|| direction);
     let chosen_direction = use_hook(|| kept_direction.peek().or(start_direction));
@@ -502,15 +479,10 @@ pub fn LiberoProvider(
         }
     });
 
-    // The platform can change its mind while the app is running, and while
-    // the app follows it that has to reach the Rust side too: the CSS already
-    // follows on its own. Held for the provider's lifetime; dropping it
-    // removes the listener.
+    // A platform scheme change reaches the Rust side too; the CSS follows on its own.
     let _scheme_subscription = use_hook(|| {
         let context = context.clone();
-        // `Rc`, because a hook's value has to be `Clone` and a subscription
-        // is not - cloning one would be a second listener, not a second
-        // handle to the same one.
+        // `Rc`: a hook value must be `Clone`, and a subscription is not.
         Rc::new(color_scheme().map(|platform| {
             platform.on_change(Box::new(move |scheme| {
                 let mut system = context.system_scheme;
@@ -522,10 +494,8 @@ pub fn LiberoProvider(
         }))
     });
 
-    // A stored choice has to reach the document root, or the sheet's media
-    // block would keep answering. The inline script below already did this
-    // before first paint; this is the same write for a client-only build,
-    // where there was no server-rendered document to run it in.
+    // A stored choice must reach the root, or the media block keeps answering.
+    // The inline script does it before paint; this covers a client-only build.
     use_hook(|| {
         if let Some(pinned) = setting.fixed() {
             context.set_color_scheme(pinned.into());

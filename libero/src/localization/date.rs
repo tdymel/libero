@@ -1,20 +1,10 @@
-/// The words every date and time component shares: one place to translate.
-/// English by default, German in [`GERMAN`](Self::GERMAN). How dates are
-/// written - first weekday, patterns, clock - is [`Formats`](super::Formats).
+/// The words every date and time component shares. English by default, German in
+/// [`GERMAN`](Self::GERMAN); how dates are written is [`Formats`](super::Formats).
 ///
-/// The names follow dayjs' locale files (`months`, `monthsShort`, `weekdays`,
-/// `weekdaysShort`, `weekdaysMin`), so an existing translation copies over.
+/// The names follow dayjs' locale files (`months`, `weekdaysShort`, ...), so an
+/// existing translation copies over.
 ///
-/// # Fields, in two groups
-///
-/// - **Names**: `months`, `months_short`, `weekdays`, `weekdays_short`,
-///   `weekdays_min`, `am`, `pm`.
-/// - **Labels** a screen reader or a sighted reader gets: the paging buttons
-///   (`previous_month` to `next_days`), the errors (`invalid_date` to
-///   `unavailable`, and a duration's `invalid_duration` to `duration_at_most`), the
-///   calendar/clock switch, the range steps (`dates_label` to
-///   `range_steps_label`), the `TimePicker` columns and a duration's label and
-///   units (`duration_label` to `seconds_value`).
+/// Docs: <https://libero-ui.dev/about/localization>
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[allow(
     unpredictable_function_pointer_comparisons,
@@ -22,14 +12,12 @@
 )]
 pub struct DateLocale {
     // Names.
-    /// `January` to `December`. `MMMM` in a format, and what a typed month
-    /// name is matched against.
+    /// `January` to `December`. `MMMM` in a format; typed names match these.
     pub months: [&'static str; 12],
     /// `Jan` to `Dec`. `MMM` in a format; typed names match these too.
     pub months_short: [&'static str; 12],
-    /// `Sunday` to `Saturday` - always Sunday first, as dayjs has them,
-    /// whatever `Formats::first_weekday` says, so
-    /// `Weekday::num_days_from_sunday` indexes them. `dddd` in a format.
+    /// `Sunday` to `Saturday`, always Sunday first whatever `first_weekday` says,
+    /// so `Weekday::num_days_from_sunday` indexes them. `dddd` in a format.
     pub weekdays: [&'static str; 7],
     /// `Sun` to `Sat`. `ddd` in a format.
     pub weekdays_short: [&'static str; 7],
@@ -56,8 +44,7 @@ pub struct DateLocale {
     pub next_days: &'static str,
     /// The error a date field shows for text it cannot read.
     pub invalid_date: &'static str,
-    /// The error for a value before `min`, with no `max`: `{min}` in the
-    /// field's own format.
+    /// The error for a value before `min`, with no `max`: `{min}` in the field's format.
     pub on_or_after: &'static str,
     /// The error for a value after `max`, with no `min`: `{max}`.
     pub on_or_before: &'static str,
@@ -76,8 +63,7 @@ pub struct DateLocale {
     pub time_label: &'static str,
     /// Names the calendar/clock switch itself.
     pub part_switch_label: &'static str,
-    /// The steps of a date-time range dropdown: its days, then the start's
-    /// time, then the end's. Each tab shows its value once there is one.
+    /// The steps of a date-time range dropdown: its days, the start's time, the end's.
     pub dates_label: &'static str,
     pub start_time_label: &'static str,
     pub end_time_label: &'static str,

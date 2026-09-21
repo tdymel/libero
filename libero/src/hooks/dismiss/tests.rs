@@ -12,23 +12,19 @@ use crate::{
     use_theme,
 };
 
-/// Every element that registered a `keydown` listener, in the order the
-/// renderer saw them - which is creation order, so outermost first.
+/// Every element that registered a `keydown` listener, in creation order
+/// (outermost first).
 #[derive(Default)]
 struct FindKeydownListeners {
     last: Option<ElementId>,
     keydown: Vec<ElementId>,
     focusout: Vec<ElementId>,
     mounted: Vec<ElementId>,
-    /// The element carrying `id="trigger"`, so a press can be dispatched at
-    /// it even when it has no listener of its own - which is exactly the
-    /// state `a_closed_box_does_not_swallow_escape_from_the_modal_around_it`
-    /// is about.
+    /// `id="trigger"`, so a press can target it even without a listener of its own.
     trigger: Option<ElementId>,
-    /// The element carrying `id="dropdown"`, the field-dropdown stand-in.
+    /// `id="dropdown"`, the field-dropdown stand-in.
     dropdown: Option<ElementId>,
-    /// The first element carrying `role="combobox"`: a real `Select`'s
-    /// trigger.
+    /// The first `role="combobox"`: a real `Select`'s trigger.
     combobox: Option<ElementId>,
 }
 
@@ -79,9 +75,8 @@ impl WriteMutations for FindKeydownListeners {
     fn remove(&mut self) {}
 }
 
-/// A stand-in for the renderer's key event: Escape, plain unless a test
-/// asks for a held or a composing one - or ArrowDown, which is how a test
-/// opens a real `Select`'s list.
+/// The renderer's key event: Escape, plain, held or composing; or ArrowDown,
+/// which opens a real `Select`'s list.
 #[derive(Clone, Copy, Default)]
 struct FakeEscape {
     repeat: bool,
@@ -159,8 +154,7 @@ impl dioxus::html::HtmlEventConverter for EscapeConverter {
     fn convert_media_data(&self, _e: &PlatformEventData) -> dioxus::html::MediaData {
         unimplemented!()
     }
-    /// `()` backs no richer handle, so this is the mounted floor: every
-    /// focus-containment question answers `Unsupported`.
+    /// The mounted floor: every focus-containment question answers `Unsupported`.
     fn convert_mounted_data(&self, _e: &PlatformEventData) -> dioxus::html::MountedData {
         dioxus::html::MountedData::new(())
     }
@@ -209,9 +203,7 @@ fn escape() -> Rc<dyn std::any::Any> {
     Rc::new(PlatformEventData::new(Box::new(FakeEscape::default())))
 }
 
-/// Just the marker line the app prints, so a failure message is readable -
-/// the rendered document is mostly the theme stylesheet. Cut at the next
-/// tag, since a portal's outlet can render after it.
+/// Just the app's marker line, cut at the next tag, so a failure stays readable.
 fn state(dom: &VirtualDom) -> String {
     let html = dioxus_ssr::render(dom);
     // The space keeps a `--lsx-*-on-state:` declaration from matching.
@@ -220,8 +212,7 @@ fn state(dom: &VirtualDom) -> String {
     marker[..marker.find('<').unwrap_or(marker.len())].to_string()
 }
 
-/// Drains tasks and re-renders until nothing is left: a close travels
-/// through a spawned task, then the consumer's signal, then the effect that
+/// Drains tasks and re-renders: a close goes task, signal, then the effect that
 /// takes the layer off the stack.
 fn settle(dom: &mut VirtualDom) {
     for _ in 0..4 {
@@ -259,8 +250,7 @@ const ARROW_DOWN: FakeEscape = FakeEscape {
     arrow_down: true,
 };
 
-/// How many `<div>`s are open at `at`, so two elements can be shown to be
-/// siblings rather than nested. Nesting of other tags does not affect it.
+/// How many `<div>`s are open at `at`: tells siblings from nested elements.
 fn div_depth_at(html: &str, at: usize) -> i32 {
     let mut depth = 0;
     let mut rest = &html[..at];
@@ -277,9 +267,8 @@ fn div_depth_at(html: &str, at: usize) -> i32 {
     depth - closes
 }
 
-/// Two modals, the inner opened while the outer was up. Both always push -
-/// a modal's bubbled handler covers its whole subtree - so this is the
-/// arbitration on every backend.
+/// Two modals, the inner opened while the outer was up. Both always push, so
+/// this is the arbitration on every backend.
 #[component]
 fn TwoModals(outer: Signal<bool>, inner: Signal<bool>) -> Element {
     rsx! {
@@ -337,24 +326,17 @@ fn escape_acts_on_the_newest_modal_and_no_other() {
     press(&mut dom, inner_root);
     assert_eq!(state(&dom), "state: outer=true inner=false");
 
-    // And with the newer one gone the older is top again, which is the
-    // guard popping by identity rather than the stack being reset.
+    // The older is top again: the guard pops by identity, not by reset.
     press(&mut dom, outer_root);
     assert_eq!(state(&dom), "state: outer=false inner=false");
 }
 
-/// The discriminating test for popping by identity.
-///
-/// The older modal goes away on its own - a route change, a caller that
-/// simply stops rendering it - so nothing runs a close handler and only the
-/// guard's `Drop` takes it off the stack. It has to take *its own* entry. A
-/// pop-the-last would take the newer modal's instead, and the newer modal
-/// would then silently stop answering Escape with nothing to show for it.
+/// Popping by identity: the older modal just stops rendering, so only the guard's
+/// `Drop` pops it. A pop-the-last would take the newer one's entry instead.
 #[test]
 fn dropping_an_older_layer_leaves_the_newer_one_on_top() {
-    /// Outside both modals, so its own Escape bubbles to the app root and
-    /// through no layer's handler. A key rather than a click because the
-    /// test converter only speaks keyboard.
+    /// Outside both modals, so its Escape passes no layer's handler. A key, as
+    /// the test converter only speaks keyboard.
     #[component]
     fn Closer(outer: Signal<bool>) -> Element {
         let style = use_box().prepare();
@@ -408,10 +390,8 @@ fn dropping_an_older_layer_leaves_the_newer_one_on_top() {
     );
 }
 
-/// A dismissible region drawn *inside* the modal rather than portaled, so
-/// an Escape on it bubbles through the modal's own handler. `outside` is
-/// off because the focusout settle needs a platform, and `return_focus`
-/// because there is no document to hand focus back to.
+/// A dismissible region inside the modal, not portaled, so its Escape bubbles
+/// through the modal. `outside` and `return_focus` off: both need a platform.
 #[component]
 fn Region(open: Signal<bool>) -> Element {
     let anchor = use_element();
@@ -435,8 +415,7 @@ fn Region(open: Signal<bool>) -> Element {
     let trigger = use_box().prepare();
     let style = use_box().prepare();
 
-    // The trigger renders first, so the box is always the *last* keydown
-    // listener and the trigger the one before it.
+    // The trigger renders first, so the box is always the last keydown listener.
     rsx! {
         {
             trigger
@@ -467,13 +446,7 @@ fn region_in_modal() -> Element {
 }
 
 /// The layer consumes the press, so the `Modal` around it never hears it.
-///
-/// This is the assertion that discriminates. Before the bubble-phase
-/// `stop_propagation`, both closed, and the doc comment called that "no
-/// worse than what shipped" - true only because no non-portaled consumer
-/// existed yet, which is a rationalisation rather than a reason. The old
-/// test asserted only that the modal closed, so it passed either way and
-/// made the defect look intentional.
+/// Before the bubble-phase `stop_propagation`, both closed.
 #[test]
 fn a_layers_own_handler_consumes_the_press_before_the_modal_hears_it() {
     dioxus::html::set_event_converter(Box::new(EscapeConverter));
@@ -493,11 +466,8 @@ fn a_layers_own_handler_consumes_the_press_before_the_modal_hears_it() {
     );
 }
 
-/// What `ComboboxCore`, `Cascader`, the date fields and `ColorField` do
-/// with Escape: close the list from a handler inside the overlay, prevent
-/// the default, and let the press bubble on. None of them is on the layer
-/// stack, so only the prevented default can tell an enclosing overlay the
-/// press was taken.
+/// What `ComboboxCore`, `Cascader`, the date fields and `ColorField` do with Escape:
+/// close, prevent the default, bubble on. Off the layer stack, so only the default tells.
 #[component]
 fn FieldDropdown(open: Signal<bool>) -> Element {
     let style = use_box().prepare();
@@ -530,10 +500,8 @@ fn dropdown_in_modal() -> Element {
     }
 }
 
-/// Todo 249, off the web: the list is not on the stack, so `is_top()`
-/// answers yes for the modal, and before `key_taken` read the event's own
-/// flag both closed on one press. The second press, with the list shut,
-/// is the control: a dropdown that is not open takes nothing.
+/// Todo 249, off the web: before `key_taken`, one press closed list and modal.
+/// The second press, with the list shut, is the control.
 #[test]
 fn a_field_dropdown_taking_escape_leaves_the_modal_open() {
     dioxus::html::set_event_converter(Box::new(EscapeConverter));
@@ -571,10 +539,8 @@ fn DropdownInWindow() -> Element {
     rsx! { "state: window={window.is_open()} list={list}" }
 }
 
-/// Todo 249's `FloatingWindow` half. The window closed on any Escape, so
-/// with a `Select` open in it one press closed both, on every backend.
-/// Same control as the modal's: once the list is shut, Escape reaches the
-/// window.
+/// Todo 249's `FloatingWindow` half: one press closed list and window, on every
+/// backend. Same control as the modal's.
 #[test]
 fn a_field_dropdown_taking_escape_leaves_the_window_open() {
     fn app() -> Element {
@@ -585,8 +551,7 @@ fn a_field_dropdown_taking_escape_leaves_the_window_open() {
     let mut dom = VirtualDom::new(app);
     let mut find = FindKeydownListeners::default();
     dom.rebuild(&mut find);
-    // The window opens from a hook after the first render, so its markup
-    // arrives in a later pass, and the finder has to see that one.
+    // The window opens after the first render; the finder must see that pass.
     for _ in 0..4 {
         dom.process_events();
         dom.render_immediate(&mut find);
@@ -606,9 +571,7 @@ fn a_field_dropdown_taking_escape_leaves_the_window_open() {
     assert_eq!(state(&dom), "state: window=false list=false");
 }
 
-/// A `use_dismiss` box with a field dropdown in it: a `Select` in a
-/// `HoverCard`'s content. Region's setup, with the stand-in as the box's
-/// content.
+/// A `use_dismiss` box with a field dropdown in it, like a `Select` in a `HoverCard`.
 #[component]
 fn DropdownInRegion() -> Element {
     let mut open = use_signal(|| true);
@@ -642,12 +605,8 @@ fn DropdownInRegion() -> Element {
     }
 }
 
-/// Todo 348, off the web: the box's element listener did not ask
-/// `key_taken`, so the press the list took bubbled on and closed the box
-/// too. The second press is the control: with the list shut, Escape
-/// reaches the box. The web half, where the box hears Escape before the
-/// field does, is `use_field_list_layer`, and this harness has no
-/// keyboard capability to run it.
+/// Todo 348, off the web: the box's listener did not ask `key_taken`, so it closed
+/// too. The web half (`use_field_list_layer`) needs a keyboard this harness lacks.
 #[test]
 fn a_field_dropdown_taking_escape_leaves_the_dismiss_box_open() {
     fn app() -> Element {
@@ -674,8 +633,7 @@ fn a_field_dropdown_taking_escape_leaves_the_dismiss_box_open() {
     assert_eq!(state(&dom), "state: region=false list=false");
 }
 
-/// A real `Select`, for the regression tests below: the stand-in above
-/// proves the rule, these prove the field that ships follows it.
+/// A real `Select`: the stand-in proves the rule, these tests the shipped field.
 #[component]
 fn RealSelect() -> Element {
     let mut value = use_signal(|| None::<String>);
@@ -693,9 +651,8 @@ fn list_open(dom: &VirtualDom) -> bool {
     dioxus_ssr::render(dom).contains(r#"aria-expanded="true""#)
 }
 
-/// Opens the list with ArrowDown, then Escape twice: the first closes
-/// only the list, the second the overlay. `overlay` reads the overlay's
-/// open state from the marker.
+/// ArrowDown opens the list, then Escape twice: first the list, then the
+/// overlay, whose marker name is `overlay`.
 fn escape_through_a_real_select(dom: &mut VirtualDom, find: &FindKeydownListeners, overlay: &str) {
     let combobox = find.combobox.expect("the Select's combobox");
     assert!(state(dom).contains(&format!("{overlay}=true")));
@@ -774,10 +731,8 @@ fn a_real_select_in_a_window_takes_the_first_escape() {
     escape_through_a_real_select(&mut dom, &find, "window");
 }
 
-/// Todo 318. Escape held down over an open list: the first press closes
-/// the list, and its auto-repeats must not go on to close the modal. A
-/// composing Escape cancels the composition and closes nothing. The last,
-/// plain press is the control that the modal still answers.
+/// Todo 318: a held Escape's repeats must not close the modal after the list,
+/// and a composing one closes nothing. The last, plain press is the control.
 #[test]
 fn a_held_or_composing_escape_does_not_close_the_modal() {
     dioxus::html::set_event_converter(Box::new(EscapeConverter));
@@ -834,21 +789,8 @@ fn a_held_or_composing_escape_does_not_close_the_window() {
     assert_eq!(state(&dom), "state: window=false list=false");
 }
 
-/// The other side, and the control property the amended push rule exists
-/// for.
-///
-/// The press lands **elsewhere in the modal, not on the trigger** - focus on
-/// some other control the modal holds - so neither of the region's handlers
-/// fires. Focus on the trigger is the *neighbouring* test's scenario, and
-/// since `anchor_events()` landed that case closes the region rather than
-/// reaching the modal; a comment pointing at it here would claim this
-/// control property covers something it does not.
-///
-/// `platform::keyboard()` is `None` here, so the region is not on the stack
-/// either, and the `Modal` is therefore top and closes. If the region had
-/// pushed without a transport that could hear this press, the modal would
-/// have declined as not-top and Escape would have done nothing at all,
-/// where today it closes the modal.
+/// The press lands elsewhere in the modal, not on the trigger. With no
+/// `platform::keyboard()` the region never pushes, so the modal is top and closes.
 #[test]
 fn a_layer_that_cannot_hear_escape_never_wedges_the_modal() {
     dioxus::html::set_event_converter(Box::new(EscapeConverter));
@@ -868,16 +810,8 @@ fn a_layer_that_cannot_hear_escape_never_wedges_the_modal() {
     );
 }
 
-/// Bob3's block: off the web, Escape has to reach a box whose trigger still
-/// has focus.
-///
-/// This is the combobox-shaped consumer and every pointer-opened surface -
-/// `initial_focus: None`, focus never moves into the box. The floating box
-/// is portaled to the document root, so the trigger is not inside it and
-/// the box's own handler never fires. Without `anchor_events()` on the
-/// trigger the press reaches nothing at all and the surface cannot be
-/// dismissed from the keyboard, which is an SC 1.4.13 failure on a shipped
-/// target rather than a degradation.
+/// Off the web, Escape must reach a portaled box whose trigger keeps focus
+/// (`initial_focus: None`). Without `anchor_events()` it fails SC 1.4.13.
 #[test]
 fn escape_on_the_trigger_closes_the_box_where_there_is_no_document_listener() {
     fn app() -> Element {
@@ -895,12 +829,8 @@ fn escape_on_the_trigger_closes_the_box_where_there_is_no_document_listener() {
     dom.rebuild(&mut find);
     dom.render_immediate(&mut find);
 
-    // **Load-bearing, not a sanity check.** With no listener on the
-    // trigger there would be one listener instead of two, `keydown[0]`
-    // would silently be the *box's*, and pressing that closes the region -
-    // so the behaviour assertion below would pass for the wrong reason.
-    // Checked by stubbing `anchor_events()` out: this is the assertion that
-    // fails.
+    // Load-bearing: without the trigger's listener `keydown[0]` is the box's,
+    // and the assertion below would pass for the wrong reason.
     assert_eq!(
         find.keydown.len(),
         2,
@@ -918,15 +848,8 @@ fn escape_on_the_trigger_closes_the_box_where_there_is_no_document_listener() {
     );
 }
 
-/// Karen3's block 11: a **closed** popover must not swallow Escape for
-/// whatever is open behind it.
-///
-/// The trigger outlives the box, so its listener has to ask whether the box
-/// is open - the floating box never has to, because it is not rendered when
-/// closed. Without the guard the trigger's `stop_propagation` eats the
-/// press and the enclosing `Modal` never hears it, so Escape is dead for as
-/// long as focus sits on a closed popover's trigger. A layer that is not
-/// even open wedging one that is.
+/// A closed popover must not swallow Escape: the trigger outlives the box, so
+/// without the open guard its `stop_propagation` starves the `Modal` around it.
 #[test]
 fn a_closed_box_does_not_swallow_escape_from_the_modal_around_it() {
     #[component]
@@ -958,17 +881,14 @@ fn a_closed_box_does_not_swallow_escape_from_the_modal_around_it() {
     dom.rebuild(&mut find);
     dom.render_immediate(&mut find);
 
-    // The modal's root and its focus trap, and nothing else: a closed box
-    // contributes no listener at all. This is the discriminating
-    // assertion - before the fix there were three.
+    // The modal's root and focus trap only: before the fix there were three.
     assert_eq!(
         find.keydown.len(),
         2,
         "a closed box should contribute no keydown listener, got {:?}",
         find.keydown
     );
-    // Dispatched at the trigger even though it has no listener, because
-    // that is where focus is in the scenario and dioxus bubbles from there.
+    // At the trigger despite no listener: focus sits there, and dioxus bubbles from it.
     let trigger = find.trigger.expect("the trigger element");
     assert_eq!(state(&dom), "state: modal=true");
 
@@ -980,18 +900,13 @@ fn a_closed_box_does_not_swallow_escape_from_the_modal_around_it() {
     );
 }
 
-/// Todo 252, for `3203d7fd`: a `HoverCard` forced open cannot be
-/// dismissed, so it takes no Escape. With `escape: true` its trigger's
-/// listener consumed the press and closed nothing, and the `Modal` around
-/// it never heard Escape while focus sat on the trigger. Checked by
-/// putting `escape: true` back: this test then fails.
+/// Todo 252 (`3203d7fd`): a `HoverCard` forced open takes no Escape. With
+/// `escape: true` its trigger ate the press and starved the `Modal` around it.
 #[test]
 fn a_hover_card_forced_open_lets_escape_through_to_the_modal() {
     #[component]
     fn Forced(modal: Signal<bool>) -> Element {
-        // Through `use_box`, as `Region` does. With `button { id: .. }`
-        // written in `rsx!`, the recorded trigger was not where the press
-        // bubbled to the modal from, and even a bare button failed.
+        // Through `use_box`: a `button { id: .. }` in `rsx!` recorded the wrong trigger.
         let trigger = use_box().prepare();
         let anchor = use_element();
         rsx! {
@@ -1060,9 +975,8 @@ fn a_layer_with_only_its_own_handler_still_closes_on_escape() {
     assert_eq!(state(&dom), "state: region=false");
 }
 
-/// Two portaled modals are siblings at the outlet, not nested - which is
-/// why no Escape bubbles between them today and why the `is_top` guard
-/// changes nothing for the shipped case. Measured rather than reasoned.
+/// Two portaled modals are siblings at the outlet, not nested, so no Escape
+/// bubbles between them.
 #[test]
 fn two_portaled_modals_are_siblings_at_the_outlet() {
     #[component]
@@ -1095,9 +1009,7 @@ fn two_portaled_modals_are_siblings_at_the_outlet() {
     );
 }
 
-/// The wiring the docs page prints in its `use_dismiss` sample, which is
-/// not compiled anywhere else. Without this the sample can go stale and
-/// nothing says so.
+/// The docs page's `use_dismiss` sample, compiled nowhere else.
 #[test]
 fn the_documented_wiring_builds_and_renders() {
     #[component]
@@ -1247,10 +1159,8 @@ fn send_watched(with_focus_moved: bool, floor: bool, name: &str) -> String {
     state(&dom)
 }
 
-/// Focus leaving the box - a click or a Tab elsewhere, which is the only
-/// way this hook hears an outside pointer - calls `onfocusmoved` in place
-/// of `onclose`. Nothing is mounted here, so every focusout is focus
-/// leaving.
+/// Focus leaving the box (a click or Tab elsewhere) calls `onfocusmoved`, not
+/// `onclose`. Nothing is mounted, so every focusout is focus leaving.
 #[test]
 fn focus_leaving_calls_onfocusmoved_instead_of_onclose() {
     assert_eq!(
