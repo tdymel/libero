@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Anchor, Button, CodeBlock, Divider, Flex, Text, Title},
     sx::sx,
+    theme::{ColorCss, ColorShade},
 };
 
 use super::tint;
@@ -25,8 +26,12 @@ pub fn Closing() -> Element {
                         tint(22),
                         tint(6),
                     )),
-                Title { size: "xl", component: "h2", id: "closing-title", "Ready when you are" }
-                Text { size: "lg", "One line in your terminal, then the first component." }
+                Title {
+                    size: "xxl",
+                    component: "h2",
+                    id: "closing-title",
+                    span { color: ColorCss::PRIMARY.role_value("text-", ColorShade::S6), "The ball is in your hands" }
+                }
                 CodeBlock {
                     source: "cargo add libero",
                     language: "shell",
