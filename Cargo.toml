@@ -37,6 +37,14 @@ opt-level = 3
 lto = "thin"
 codegen-units = 16
 
+# The Android APK is a native library too: speed over size, and no LTO, which
+# is what makes the size-tuned `release` link so slow.
+[profile.android]
+inherits = "release"
+opt-level = 3
+lto = false
+codegen-units = 16
+
 [profile.release]
 opt-level = "z"
 codegen-units = 1

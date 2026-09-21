@@ -71,7 +71,7 @@ apk-android arch="aarch64": _dx
     app="${CARGO_TARGET_DIR:-{{root}}/target/main}/dx/docs/release/android/app"
     # `dx` keeps the other arch's library from an earlier build.
     rm -rf "$app/app/src/main/jniLibs"
-    {{aenv}} {{dx}} build --platform android --release --target {{arch}}-linux-android {{mfeat}}
+    {{aenv}} {{dx}} build --platform android --profile android --target {{arch}}-linux-android {{mfeat}}
     # No R8: it strips the Kotlin classes wry reaches only through JNI.
     sed -i 's/isMinifyEnabled = true/isMinifyEnabled = false/' "$app/app/build.gradle.kts"
     (cd "$app" && {{aenv}} ./gradlew -q assembleRelease)
