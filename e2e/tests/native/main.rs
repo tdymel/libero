@@ -33,6 +33,7 @@ mod inline_spaces;
 mod keyboard;
 mod lightbox;
 mod max_length;
+mod menu_link;
 mod menubar;
 mod nav_link;
 mod notifications;

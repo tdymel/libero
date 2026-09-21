@@ -60,6 +60,15 @@ fn the_tldr_menu_lists_four_new_tab_links_and_returns_focus() {
         .unwrap();
         wait::for_js_true(
             page,
+            "(() => { const marks = [...document.querySelectorAll('[role=menu] a [data-menu-section=leading] span span')]; \
+             return marks.length === 4 && marks.every((s) => { const css = getComputedStyle(s); \
+             return (css.maskImage || css.webkitMaskImage).includes('url') && s.getBoundingClientRect().width > 0; }); })()",
+            "a mask mark before each provider",
+        )
+        .await
+        .unwrap();
+        wait::for_js_true(
+            page,
             "[...document.querySelectorAll('[role=menu] a')].every((a) => a.target === '_blank' \
              && a.rel === 'noopener noreferrer' && a.href.startsWith('https://example.test/')) \
              && document.querySelector('[role=menu] [role=group]').getAttribute('aria-labelledby') \
@@ -138,6 +147,43 @@ fn the_tldr_menu_lists_four_new_tab_links_and_returns_focus() {
         .await
         .unwrap();
         fixture.console.assert_clean("the tldr fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+#[test]
+fn without_a_label_the_tldr_button_is_an_icon_named_summarize_with_ai() {
+    block_on(async {
+        let fixture = Fixture::open("/docs-shell/tldr-icon", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, TLDR).await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.querySelector('{TLDR}').getAttribute('aria-label') === 'Summarize with AI' \
+                 && document.querySelector('{TLDR}').textContent.trim() === ''"
+            ),
+            "an icon-only trigger with its name",
+        )
+        .await
+        .unwrap();
+        page.evaluate(format!("document.querySelector('{TLDR}').focus()"))
+            .await
+            .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "document.querySelectorAll('[role=menu] a[role=menuitem]').length === 4",
+            "the menu of the icon button",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("the icon-only tldr fixture")
+            .unwrap();
         fixture.close().await.unwrap();
     });
 }
