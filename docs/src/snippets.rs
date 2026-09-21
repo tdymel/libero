@@ -559,7 +559,14 @@ fn page_snippets_are_current() {
         let name = format!("{route:?}");
         let name = name.trim_end_matches(" {}").trim_end_matches(" { }");
         let defined = format!("fn {name}(");
-        let Some((path, source)) = sources.iter().find(|(_, s)| s.contains(&defined)) else {
+        // A definition, not a mention: a `// snippet: item .. fn Home()` comment is not a page.
+        let is_page = |source: &str| {
+            source.lines().any(|line| {
+                let line = line.trim_start().trim_start_matches("pub ");
+                line.starts_with(&defined)
+            })
+        };
+        let Some((path, source)) = sources.iter().find(|(_, s)| is_page(s)) else {
             if !demos.is_empty() {
                 problems.push(format!("{route}: no page defines `{defined}`"));
             }
