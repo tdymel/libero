@@ -25,6 +25,19 @@ fn before_a_count_it_is_the_host_icon_linking_to_the_repo() {
 }
 
 #[test]
+fn aria_label_replaces_the_built_name() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                RepoButton { repo: "tdymel/libero", aria_label: "Libero source (new tab)" }
+            }
+        }
+    }
+    let link = attributes_of(&body(&render(app)), "a");
+    assert_eq!(link["aria-label"], "Libero source (new tab)");
+}
+
+#[test]
 fn gitlab_links_its_own_page_in_the_localized_words() {
     fn app() -> Element {
         rsx! {

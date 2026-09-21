@@ -135,6 +135,9 @@ base_props! {
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
+        /// Replaces the built name (host, repo, stars, new-tab cue) whole.
+        #[props(default, into)]
+        aria_label: Option<String>,
     }
 }
 
@@ -186,12 +189,13 @@ pub fn RepoButton(props: RepoButtonProps) -> Element {
     let new_tab = localization.anchor.new_tab;
     // The repo in the name, else two buttons on a page read alike.
     let subject = format!("{} {}", host.name(), props.repo);
-    let aria_label = match count {
-        Some(count) => format!(
+    let aria_label = match (props.aria_label.clone(), count) {
+        (Some(label), _) => label,
+        (None, Some(count)) => format!(
             "{subject}, {} {new_tab}",
             (localization.repo_button.stars)(count, &compact_count(count, separator))
         ),
-        None => format!("{subject} {new_tab}"),
+        (None, None) => format!("{subject} {new_tab}"),
     };
     let variant = props.variant.copied_or(theme.repo_button.variant);
     let color = props

@@ -178,6 +178,21 @@ fn a_count_joins_the_icon_and_is_cached_for_the_session() {
     });
 }
 
+#[test]
+fn aria_label_replaces_the_name_while_the_count_shows() {
+    block_on(async {
+        let fixture = Fixture::open("/repo-button/named", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#named").await.unwrap();
+        let (name, text, _, _) = link(page, "#named").await;
+        assert_eq!(name, "Example source (new tab)");
+        assert_eq!(text, "1.2k", "the seeded count did not show");
+        fixture.close().await.unwrap();
+    });
+}
+
 /// It is a link: a tab stop, and Enter follows it. The click is caught before
 /// it opens a tab.
 #[test]

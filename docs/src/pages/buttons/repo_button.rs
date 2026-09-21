@@ -27,12 +27,18 @@ pub fn RepoButtonPage() -> Element {
                 prop("radius", "ThemeAwareValue")
                     .default("sm")
                     .doc("Corner radius, independent of `size`."),
+                prop("aria_label", "String")
+                    .doc("Replaces the whole built name: host, repository, star count and new-tab cue. Unset, the built name."),
             ])],
             accessibility: a11y()
                 .handles([
                     "The link's name is the host and repository (\"GitHub tdymel/libero\"), the star count once it arrives, and the new-tab cue, so two buttons on one page read apart. The words come from `RepoButtonLabels::stars` and `AnchorLabels::new_tab` in the localization.",
                     "The drawn count is not read twice: the name replaces the link's content.",
                     "A count drawn in the accent color, which could miss 4.5:1, takes the `ink` color instead.",
+                    "Set, `aria_label` replaces that whole name, count and new-tab cue included.",
+                ])
+                .must([
+                    "With your own `aria_label`, name the repository and say that it opens in a new tab.",
                 ]),
             lead: rsx! {
                 Text {

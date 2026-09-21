@@ -46,6 +46,12 @@ fn Demo() -> Element {
 - The drawn count is not read twice: the name replaces the link's content.
 - A count drawn in the accent color, which could miss 4.5:1, takes the `ink`
   color instead.
+- Set, `aria_label` replaces that whole name, count and new-tab cue included.
+
+### You must
+
+- With your own `aria_label`, name the repository and say that it opens in a
+  new tab.
 
 ## Props
 
@@ -57,6 +63,7 @@ fn Demo() -> Element {
 | `color` | `ThemeAwareValue` | `muted` | Accent color. A theme color name or any CSS color. |
 | `size` | `ThemeAwareValue` | `md` | Button size. The icon takes half of it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
+| `aria_label` | `String` | - | Replaces the whole built name: host, repository, star count and new-tab cue. Unset, the built name. |
 
 Like every component, `RepoButton` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the link.

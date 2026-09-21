@@ -8,7 +8,26 @@ use crate::Routes;
 pub const ROUTES: Routes = &[
     ("/repo-button", || rsx! { MountPage {} }),
     ("/repo-button/stubbed", || rsx! { StubbedPage {} }),
+    ("/repo-button/named", || rsx! { NamedPage {} }),
 ];
+
+/// A caller's `aria_label` beside a seeded count, which must not reach the name.
+#[component]
+fn NamedPage() -> Element {
+    let seeded = use_resource(|| async {
+        document::eval(
+            "sessionStorage.setItem('libero-repo-stars:https://api.github.com/repos/example/repo', '1234'); \
+             window.fetch = () => Promise.reject(new TypeError('blocked')); return true;",
+        )
+        .await
+        .is_ok()
+    });
+    rsx! {
+        if seeded() == Some(true) {
+            RepoButton { id: "named", repo: "example/repo", aria_label: "Example source (new tab)" }
+        }
+    }
+}
 
 /// The buttons mount on a press, so a test can stub `fetch` before they ask.
 #[component]
