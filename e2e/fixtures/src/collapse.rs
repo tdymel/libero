@@ -34,10 +34,8 @@ fn KeptPage() -> Element {
     }
 }
 
-/// The motion fixture: a `Collapse` whose open and close both run a
-/// transition, so a reduced-motion test has something to switch off.
-/// `keep_mounted: false`, so closing also exercises the unmount that
-/// `use_presence` ties to the exit.
+/// A `Collapse` transitioning both ways, for the reduced-motion test. `keep_mounted: false`
+/// also exercises the unmount `use_presence` ties to the exit.
 #[component]
 fn CollapsePage() -> Element {
     let mut open = use_signal(|| false);

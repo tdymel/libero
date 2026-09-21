@@ -3,9 +3,8 @@ use crate::icons::CheckmarkIcon;
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, List, ListItem, Text};
 
-/// The items are the fixture here, so the code block prints them verbatim.
-/// Only the outer list carries `size`: nested
-/// indent comes from the *parent*'s `& ul` rule.
+/// The items, printed verbatim. Only the outer list carries `size`: nested indent comes from
+/// the parent's `& ul` rule.
 const CHILDREN: &str = r#"ListItem { "First item" }
 ListItem { "Second item" }
 ListItem {

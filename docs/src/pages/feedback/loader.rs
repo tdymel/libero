@@ -2,9 +2,8 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, 
 use dioxus::prelude::*;
 use libero::components::{Box, Code, Flex, Input, Loader, Text, VisuallyHidden};
 
-/// Beside its own text, the text is the message and the loader stays silent.
-/// As the sole content of a busy region it stays silent too, and a status
-/// region outside that region says the text.
+/// The loader stays silent either way: beside text the text speaks; alone in a busy region,
+/// a status region outside it does.
 fn wrap_context(values: &DemoValues, code: &str) -> String {
     if beside_text(values) {
         format!(

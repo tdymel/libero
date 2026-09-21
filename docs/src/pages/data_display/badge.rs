@@ -77,9 +77,7 @@ pub fn BadgePage() -> Element {
                         .default("xxl")
                         .hidden_when(|values| values.str("variant") == "standard"),
                     Control::switch("circle"),
-                    // The child, not a prop - `circle` only reads with a one-
-                    // or two-character label, so the demo has to be able to
-                    // get there.
+                    // The child, not a prop: `circle` needs a one- or two-character label.
                     Control::toggle("label", ["New", "Beta", "9"]).code(|_, _| vec![]),
                 ],
                 render: move |values: DemoValues| rsx! {

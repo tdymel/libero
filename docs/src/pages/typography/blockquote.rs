@@ -68,9 +68,7 @@ pub fn BlockquotePage() -> Element {
                     .default(theme.blockquote.color.as_str()),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.blockquote.radius.as_str()),
-                    // Opens on, because a quote with nobody under it is half
-                    // the component - but unset is the real default, so it
-                    // prints whenever it is on.
+                    // Opens on, though unset is the real default, so it prints whenever on.
                     Control::switch("attribution").default("true").code(|_, values| {
                         match values.str("attribution").as_str() {
                             "true" => vec![format!("attribution: rsx! {{ {SPEAKER:?} }}")],

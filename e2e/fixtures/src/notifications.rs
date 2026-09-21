@@ -28,18 +28,8 @@ pub const ROUTES: Routes = &[
     ),
 ];
 
-/// The component the framework was **not** built for.
-///
-/// Everything in `Suite` assumes a static page: open a route, measure it,
-/// snapshot it. A notification is transient - it appears on an action and
-/// removes itself on a timer - so its accessibility tree is a function of time,
-/// and its live regions say different things at different moments.
-///
-/// `#notify` and `#notify-assertive` pin `auto_close` off. A fixture that
-/// disappears while being measured is not a test of the component, it is a
-/// race. `#notify-timed` does close itself, after [`TIMED_AUTO_CLOSE_MS`], and
-/// the test holds that timer on the page's clock and fires it by hand
-/// (`tests/all/notifications.rs`), so nothing waits on real time.
+/// `#notify` and `#notify-assertive` pin `auto_close` off, so nothing vanishes while measured.
+/// `#notify-timed` closes after [`TIMED_AUTO_CLOSE_MS`]; the test fires that timer by hand.
 #[component]
 fn NotificationsPage() -> Element {
     let notify = use_notifications();
@@ -98,9 +88,8 @@ fn NotificationsPage() -> Element {
     }
 }
 
-/// Two notifications, each with a "Clear all" button, so `clear()` runs with
-/// focus inside one (todo 440). Its own route, so `/notifications`' baselines
-/// stay as they are.
+/// Two notifications, each with a "Clear all" button, so `clear()` runs with focus inside one
+/// (todo 440). Own route, so `/notifications`' baselines stay.
 #[component]
 fn NotificationsClearPage() -> Element {
     let notify = use_notifications_with(|s: NotificationScope<String>| {
@@ -134,9 +123,8 @@ fn NotificationsClearPage() -> Element {
     }
 }
 
-/// A contained host whose `placement` changes, and which unmounts from inside
-/// one of its notifications (todo 577). `#notify` sits outside the host, so it
-/// survives it; it only counts, and `Feeder` inside the host shows.
+/// A contained host whose `placement` changes and which unmounts from inside a notification
+/// (todo 577). `#notify` sits outside the host to survive it; `Feeder` inside shows.
 #[component]
 fn NotificationsHostPage() -> Element {
     let mounted = use_context_provider(|| Signal::new(true));

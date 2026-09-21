@@ -29,9 +29,8 @@ fn SliderDragPage() -> Element {
     }
 }
 
-/// The one fixture that exists for the pointer pass. Nothing else in the suite
-/// reaches a drag, and the thumb is also the sharpest case for target size.
-/// The label and read-out give the contrast pass on-screen text (todo 387).
+/// The pointer pass's fixture: the only drag in the suite, and the sharpest target-size case.
+/// The label and read-out give the contrast pass text (todo 387).
 #[component]
 fn SliderPage() -> Element {
     let mut volume = use_signal(|| 40.0f64);

@@ -5,16 +5,10 @@ use dioxus::prelude::*;
 use libero::components::{Burger, Code, Flex, Input, Paper, Text};
 use libero::sx::sx;
 
-/// The panel the preview's `aria-controls` points at. A `Burger` whose
-/// `open` is `Some` and whose `aria-controls` names nothing is exactly what
-/// the component warns about, so the demo has to own a real one - and
-/// `open` is a relation to a neighbour, which the preview needs anyway.
+/// The panel `aria-controls` names: with `open` set and no real target, `Burger` warns.
 const PANEL_ID: &str = "burger-demo-panel";
 
-// Rendered on both states, hidden rather than absent: `aria-controls`
-// pointing at an element that is not in the document is a dangling
-// reference, and a disclosure's panel is the thing that exists and is
-// hidden.
+// Hidden rather than absent, or `aria-controls` dangles.
 // snippet: let open = use_signal(|| false);
 const PANEL: &str = r#"Paper {
     id: "burger-demo-panel",
@@ -22,9 +16,7 @@ const PANEL: &str = r#"Paper {
     "Navigation"
 }"#;
 
-/// The preview is a pair - the button and the thing it expands - so the block
-/// has to be that pair too, signal and all. The signal is the preview's own:
-/// nothing outside the block owns `open`.
+/// Prints the pair, the button and what it expands, with the `open` signal.
 fn wrap(_values: &DemoValues, source: &str) -> String {
     let mut code = String::from("let mut open = use_signal(|| false);\n\nrsx! {\n");
     code.push_str(&indent(source));
@@ -33,14 +25,8 @@ fn wrap(_values: &DemoValues, source: &str) -> String {
     code
 }
 
-/// The preview owns `open` itself, so the burger in it is the control.
-///
-/// `Demo` hands `render` a snapshot of the control values and no way to write
-/// back, which is why a *control* could never have driven this. It does not
-/// have to: `render` returns an `Element`, and an element may hold state even
-/// though the closure that built it may not. Everything the controls vary
-/// arrives as props, so a control change re-renders this scope without
-/// resetting the signal.
+/// Owns `open`, so the burger is its own control. A component, since `render` can't hold state;
+/// control changes arrive as props without resetting the signal.
 #[component]
 fn BurgerPreview(size: String, color: String, disabled: bool) -> Element {
     let mut open = use_signal(|| false);
@@ -119,13 +105,7 @@ pub fn BurgerPage() -> Element {
             Demo {
                 component: "Burger",
                 children_text: "",
-                // The three props the preview owns rather than varies.
-                // `open` is no longer a control - the burger toggles itself -
-                // but it is still the prop a caller has to hold, so the block
-                // prints it together with the handler that writes it and the
-                // `aria-controls` that names what it expands. That attribute is
-                // a `GlobalAttributes` pass-through, not a prop, and it is the
-                // half of the contract no control could ever have shown.
+                // Owned, not varied: `open`, its handler, and the `aria-controls` pass-through.
                 fixed: vec![
                     "open: open()".to_string(),
                     format!("{:?}: {PANEL_ID:?}", "aria-controls"),
@@ -133,9 +113,7 @@ pub fn BurgerPage() -> Element {
                 ],
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    // Unset is `currentColor`, not a palette colour, so the
-                    // swatch is painted rather than dropped - see
-                    // `codebase/docs/demo-controls`.
+                    // Unset is `currentColor`, so the swatch is painted (`codebase/docs/demo-controls`).
                     Control::color("color").with_unset()
                     .unset_swatch("currentColor"),
                     Control::switch("disabled"),

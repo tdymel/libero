@@ -99,10 +99,8 @@ pub fn SwitchPage() -> Element {
                             "error" => vec!["status: \"Turn this on to continue.\"".to_string()],
                             _ => vec![],
                         }),
-                    // Controlled state is `checked` + `onchange`; the
-                    // library warns about one without the other. The preview
-                    // writes `onchange` back into this control, so the
-                    // snippet shows the pair a caller writes.
+                    // `checked` + `onchange` as a pair (the library warns on one alone); the
+                    // preview writes `onchange` back into this control.
                     Control::switch("checked").default("true").code(|_, _| {
                         vec![
                             "checked: enabled()".to_string(),

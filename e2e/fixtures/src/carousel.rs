@@ -71,30 +71,8 @@ fn AutoplayPage() -> Element {
     }
 }
 
-/// The fixture for the one thing a carousel cannot get from structure: a key
-/// pressed **inside** a slide.
-///
-/// `Carousel`'s track handler acts on the arrows, Home and End, and
-/// `prevent_default()`s them. Its slides hold whatever a caller puts there,
-/// which is code the component cannot ask to stop propagating, so the press
-/// arrives at the track whatever it landed on. Three guard arms separate the
-/// two cases (`carousel.rs`, `key_taken || typing_target || arrow_target`),
-/// and the first slide holds one control per arm:
-///
-/// * a `TextField` and a `Slider` - the library's own controls. The slider
-///   takes the arrows and marks them by preventing their default, which is
-///   `key_taken`; the text field is left to the browser, which is
-///   `typing_target`.
-/// * a raw `<input type="range">` and a raw radio pair - HTML a caller wrote,
-///   which nothing in the library marks and which the browser steps with the
-///   arrows anyway. That is `arrow_target`.
-/// * a `Button`, which **no** arm covers. It is the positive control: arrows
-///   pressed on it have to move the strip, or "the strip did not move" is a
-///   sentence about a carousel that never moves.
-///
-/// The rest of the slides are plain text. Only the resting slide is out of
-/// `inert`, so a control on another one could not be focused to press a key
-/// in it.
+/// Keys pressed inside a slide: one control per track guard arm (`key_taken`, `typing_target`,
+/// `arrow_target`), plus a `Button` no arm covers as the positive control.
 #[component]
 fn CarouselPage() -> Element {
     let mut note = use_signal(|| "carousel".to_string());
@@ -104,9 +82,7 @@ fn CarouselPage() -> Element {
         Flex { direction: "column", gap: "md", max_width: "420px",
             Carousel {
                 aria_label: "Slide content",
-                // Not the theme default (`false`). The dots are a carousel's
-                // likeliest WCAG 2.5.8 failure and the `Suite` baseline cannot
-                // measure a control that is not drawn (todo 381).
+                // Not the default: the dots are the likeliest WCAG 2.5.8 failure (todo 381).
                 indicators: true,
                 slides: vec![
                     rsx! {

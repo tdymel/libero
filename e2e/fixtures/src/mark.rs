@@ -7,11 +7,8 @@ use crate::Routes;
 
 pub const ROUTES: Routes = &[("/mark", || rsx! { MarkPage {} })];
 
-/// Todo 53, part two: a link inside a `Mark` sits on the tint, so its ring has
-/// to be drawn from the tint's contrast twin, not the primary fallback.
-///
-/// One `Mark` per palette colour, because the fallback's contrast against a
-/// tint varies with the hue: it cleared 3:1 on some and not on others.
+/// Todo 53: a link's ring inside a `Mark` must use the tint's contrast twin, not the primary.
+/// One per palette colour: the fallback cleared 3:1 on some hues only.
 #[component]
 fn MarkPage() -> Element {
     rsx! {

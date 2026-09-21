@@ -1,7 +1,5 @@
-//! `NativeSelect` and `Textarea`: label and caption wiring, the placeholder,
-//! a refused pick, grouped and disabled options, and the disabled and
-//! read-only states. One field per
-//! `data-case`.
+//! `NativeSelect` and `Textarea`: wiring, placeholder, refused pick, groups, disabled and
+//! read-only states. One field per `data-case`.
 
 use dioxus::prelude::*;
 use libero::components::{

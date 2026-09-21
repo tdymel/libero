@@ -13,9 +13,7 @@ fn label(values: &DemoValues) -> Option<u32> {
     values.str("label").parse().ok()
 }
 
-/// What the avatar is announced as. The indicator is `aria-hidden`, so the
-/// count has to be in the name of the thing it marks - this is the a11y
-/// contract, shown rather than described.
+/// The avatar's name carries the count: the indicator itself is `aria-hidden`.
 fn avatar_name(values: &DemoValues) -> String {
     match label(values) {
         Some(count) => format!("Ada Lovelace, {count} unread"),
@@ -23,9 +21,7 @@ fn avatar_name(values: &DemoValues) -> String {
     }
 }
 
-/// Everything around the indicator prints: the relative box, the avatar it
-/// marks, and the `Float` that owns the corner. `placement` is a `Float` prop,
-/// so it lands here and not on `Indicator`.
+/// Prints the relative box, the avatar and the `Float`, which takes `placement`, not `Indicator`.
 fn wrap_anchor(values: &DemoValues, code: &str) -> String {
     format!(
         "Box {{\n    sx: sx().position(\"relative\").display(\"inline-flex\"),\n    Avatar {{ name: {:?}, alt: {:?}, src: AVATAR_IMAGE, size: \"lg\" }}\n    Float {{\n        placement: {:?},\n{}    }}\n}}",

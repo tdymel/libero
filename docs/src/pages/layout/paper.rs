@@ -97,16 +97,12 @@ pub fn PaperPage() -> Element {
                 controls: vec![
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.paper.radius.as_str()),
-                    // `none` is not a step on the scale - the prop is a
-                    // `Size`, so switching the shadow off is an `sx` override,
-                    // and this control prints the line that does it.
+                    // `none` is not a `Size`: it prints the `sx` override that does it.
                     Control::slider("shadow", ["none", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.paper.shadow.as_str())
                         .code(|control, values| match values.str("shadow").as_str() {
                             "none" => vec![NO_SHADOW.to_string()],
-                            // At the themed default the prop would not be
-                            // typed, so it does not print - but the padding
-                            // still has to.
+                            // At the default only the padding prints.
                             shadow if shadow == control.default => vec![PADDING.to_string()],
                             shadow => {
                                 vec![format!("shadow: {shadow:?}"), PADDING.to_string()]
@@ -118,9 +114,6 @@ pub fn PaperPage() -> Element {
                         .labels(["Div", "Section", "Article"]),
                 ],
                 render: move |values: DemoValues| {
-                    // `none` is not a `Size`, so the prop goes unset and the
-                    // `sx` override does the work - exactly what the code
-                    // block prints.
                     let flat = values.str("shadow") == "none";
                     let sx = match flat {
                         true => sx().padding("lg").box_shadow("none"),
@@ -140,10 +133,7 @@ pub fn PaperPage() -> Element {
                             glass,
                             component: values.str("component"),
                             sx,
-                            // `md` is an h4 by size, and the preview sits
-                            // straight under the page's h1 - the level is a
-                            // document decision, the size a design one
-                            // ([[codebase/heading-order]]).
+                            // Level is a document decision, size a design one ([[codebase/heading-order]]).
                             Title { size: "md", component: "h2", "Invoice #4021" }
                             Text { "Due 30 September." }
                         }

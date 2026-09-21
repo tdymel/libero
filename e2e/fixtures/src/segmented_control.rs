@@ -105,11 +105,8 @@ enum Alignment {
     Right,
 }
 
-/// Starts on the middle segment, for the same reason as `RadioGroupPage`.
-///
-/// `readonly` exists for the planted defect only: a read-only strip refuses the
-/// arrows, which is exactly "the arrows do nothing" as a keyboard user meets
-/// it.
+/// Starts on the middle segment, like `RadioGroupPage`. `readonly` is for the planted defect:
+/// a read-only strip refuses the arrows.
 #[component]
 pub fn SegmentedControlPage(#[props(default)] readonly: bool) -> Element {
     let mut alignment = use_signal(|| Alignment::Center);

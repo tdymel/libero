@@ -11,9 +11,7 @@ const CHILDREN: &str = r#"Box { sx: sx().padding("8px 16px").background("primary
 Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
 Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }"#;
 
-/// `align` and `justify` distribute *spare* space, so the flex needs a box
-/// bigger than its children - its own, not a wrapper's, or the children only
-/// ever fill it.
+/// `align` and `justify` distribute spare space, so the flex itself needs a box bigger than its children.
 // snippet: in Flex { .. }
 const BOX_SX: &str =
     r#"sx: sx().width("400px").height("200px").padding("8px").background("muted.1")"#;

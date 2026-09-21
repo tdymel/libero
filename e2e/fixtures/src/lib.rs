@@ -1,31 +1,10 @@
-//! Fixture app for the E2E suite.
+//! Fixture app for the E2E suite: one route per fixture, the smallest consumer of one component.
+//! Not the docs pages, whose controls and prose caused false failures (see `codebase/testing`).
 //!
-//! One route per fixture, each rendering a single component in the smallest
-//! realistic consumer that exercises it. These are **not** the docs pages: a
-//! docs page carries `Demo` controls, a code block printing the same strings
-//! the preview renders, and prose that changes for reasons unrelated to the
-//! component. Driving those produced fourteen false failures on 2026-09-14
-//! (see `codebase/testing`), so the suite drives this instead.
+//! One module per `e2e/tests/all/<unit>.rs` with a `pub const ROUTES`, plus its line in [`FIXTURES`].
+//! Size fixtures to the content, never the viewport (todo 296).
 //!
-//! One module per `e2e/tests/all/<unit>.rs`, named after it, owning its routes
-//! in a `pub const ROUTES: Routes`. A new fixture is its module, its `mod`
-//! line and its line in [`FIXTURES`]; nothing else here changes. The router
-//! sees one catch-all route and [`Page`] looks the path up, because a
-//! `#[derive(Routable)]` enum cannot be split across modules.
-//!
-//! Two rules every fixture follows:
-//!
-//! * **Size to the content, never to the viewport.** A fixture that assumes a
-//!   desktop width produces measurements about the fixture rather than about
-//!   the component - todo 296 is that mistake made in the docs, where a 320px
-//!   minimum in a 308px box shows a scrollbar at rest.
-//! * **Carry the ready marker.** `dx` answers every path with a 404 placeholder
-//!   *at a success status* while its first build runs, so a page that loaded
-//!   proves nothing. `data-fixture-ready` is on an element only the real app
-//!   renders, and the harness waits for it.
-//!
-//! A lib plus a bin (todo 822): `main.rs` launches it on the web, and the
-//! native backend mounts a page from [`route`] in Blitz.
+//! A lib plus a bin (todo 822): `main.rs` serves the web, the native backend mounts [`route`] in Blitz.
 
 mod accordion;
 mod action_icon;
@@ -311,16 +290,9 @@ fn Page(segments: Vec<String>) -> Element {
     }
 }
 
-/// Wraps every fixture in the provider and the ready marker, and nothing else.
-/// No shell, no navigation, no styling of its own - anything here would be
-/// measured as though it were the component.
-///
-/// The marker goes **outside** the provider. `Suite` scopes axe and the
-/// accessibility snapshot to it, and the provider renders its portal outlet
-/// beside its children - so with the marker inside, every dialog, menu and
-/// listbox was outside the scope. axe never saw one (a listbox planted with
-/// `#ddd` text on white passed), and the modal's "open" baseline recorded the
-/// trigger alone. Found 2026-09-19 by Olaf95.
+/// Wraps every fixture in the provider and the ready marker, nothing else: `dx` serves a 404
+/// placeholder at a success status during its first build, so the harness waits for the marker.
+// Marker outside the provider: axe is scoped to it, and portals render beside the provider's children.
 #[component]
 fn Fixture(children: Element) -> Element {
     let generation = try_use_context::<Generation>().map_or(0, |g| (g.0)());

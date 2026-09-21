@@ -39,27 +39,18 @@ pub struct Control {
     pub kind: ControlKind,
     pub options: Vec<String>,
     pub default: String,
-    /// What the code block prints for this control, when that isn't just
-    /// `name: "value"` - an unquoted `bool`, a switch standing in for a real
-    /// string, or one control driving two props (and reading the others, hence
-    /// the whole `DemoValues`). Set, it also bypasses the omit-if-default
-    /// rule, so the fn decides when to print nothing.
+    /// What the code block prints when it isn't `name: "value"` (a `bool`, two props, ...).
+    /// Bypasses the omit-if-default rule: the fn decides when to print nothing.
     pub code: Option<fn(&Control, &DemoValues) -> Vec<String>>,
-    /// Display text per option, when the value alone doesn't read - `"python
-    /// (not enabled)"` for a value that stays `"python"`. Positional.
+    /// Display text per option, positional: `"python (not enabled)"` for `"python"`.
     pub labels: Option<Vec<String>>,
-    /// When this prop does not exist in the current state - a control that
-    /// another control's *mode* has taken off the table entirely, rather than
-    /// one it merely pins.
+    /// When another control's mode removes this prop entirely, rather than merely pinning it.
     pub hidden: Option<fn(&DemoValues) -> bool>,
-    /// What the `UNSET` swatch is *painted*, for a `ControlKind::Color` whose
-    /// unset value is a real color the offered names cannot say - `ScrollArea`'s
-    /// grey-5 thumb. `None` leaves it white, which is what an unset color
-    /// renders as wherever nothing else is drawn.
+    /// The `UNSET` swatch's paint when unset is a color no offered name says (`ScrollArea`'s
+    /// grey-5 thumb). `None` leaves it white.
     pub unset_swatch: Option<String>,
-    /// Whether a `ControlKind::Color` ends in a swatch that opens a
-    /// `ColorPicker`. Off only where the page builds theme tokens *from* the
-    /// value (`{color}-contrast`), which a hex cannot name.
+    /// Whether a `ControlKind::Color` ends in a `ColorPicker` swatch. Off where the page builds
+    /// tokens from the value (`{color}-contrast`), which a hex cannot name.
     pub custom: bool,
 }
 
@@ -186,11 +177,8 @@ impl Control {
         self.hidden.is_some_and(|hidden| hidden(values))
     }
 
-    /// Paints the `UNSET` swatch the color the component actually renders
-    /// without the prop, for the case where no offered name resolves to it.
-    /// Where unset *does* equal a named color, drop the `UNSET` option and
-    /// `default` to that name instead - a swatch standing for a color the
-    /// next swatch already names is what made these read as "white".
+    /// Paints the `UNSET` swatch the color the component renders without the prop. Where that
+    /// equals a named color, drop `UNSET` and `default` to the name instead.
     pub fn unset_swatch(mut self, color: impl Into<String>) -> Self {
         self.unset_swatch = Some(color.into());
         self

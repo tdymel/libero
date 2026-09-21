@@ -1,6 +1,5 @@
-//! `TextField`, `PasswordField` and `Textarea`: the label, caption and status
-//! wiring, rules shown on blur, and the password's reveal toggle. One field per
-//! `data-case`.
+//! `TextField`, `PasswordField` and `Textarea`: label, caption and status wiring, rules on blur,
+//! the reveal toggle. One field per `data-case`.
 
 use dioxus::prelude::*;
 use libero::components::{

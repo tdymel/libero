@@ -1,8 +1,5 @@
-//! `Select`, for the combobox archetype.
-//!
-//! Not `searchable`, deliberately: a searchable list moves DOM focus into its
-//! search box, which is another pattern, and the archetype would be asserting
-//! the wrong one. `/select/field` is the searchable one, with every caption.
+//! `Select` for the combobox archetype. Not `searchable`: that moves DOM focus into a search
+//! box, another pattern. `/select/field` is the searchable one.
 
 use dioxus::prelude::*;
 use libero::components::{FieldStatus, Flex, OptionItem, OptionList, Select, Text};

@@ -137,11 +137,7 @@ pub fn StepperPage() -> Element {
             Demo {
                 component: "Stepper",
                 children_text: "",
-                // Three `md` steps with side labels need 358px, and the
-                // side-by-side preview never exceeds 498px at any viewport. So
-                // the default `side` arm overflowed its own demo, which reads
-                // as a defect in `Stepper` rather than as a demo too narrow to
-                // hold it.
+                // Three `md` steps with side labels overflowed the side-by-side preview.
                 wide_preview: true,
                 wrap: Wrap(|_: &DemoValues, source: &str| format!("{STAGE_ENUM}{source}")),
                 fixed: vec!["value: stage()".to_string(), CONTENT.to_string()],

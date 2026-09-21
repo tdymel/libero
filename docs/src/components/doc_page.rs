@@ -22,11 +22,8 @@ enum DocTab {
     Accessibility,
 }
 
-/// A docs page: its heading, a lead paragraph, and its `DocSection`s.
-///
-/// `lead` is an `Element` rather than a `String` because most leads embed
-/// `Code` spans in their prose. With `properties` or `accessibility` set, the
-/// sections move into a "Usage" tab beside those tabs.
+/// A docs page: heading, lead paragraph, `DocSection`s. With `properties` or `accessibility`
+/// set, the sections move into a "Usage" tab beside those tabs.
 #[component]
 pub fn DocPage(
     title: String,
@@ -107,8 +104,7 @@ pub fn DocPage(
                                 to: format!("{REPO}{source}"),
                                 target: "_blank",
                                 size: "sm",
-                                // Page furniture, not an accent: the filled
-                                // default would outrank the page's own title.
+                                // Filled would outrank the page title.
                                 variant: "outlined",
                                 color: "neutral",
                                 icon: rsx! { Icon { variant: "standard", size: "sm", color: "inherit", GitHubIcon {} } },
@@ -117,19 +113,8 @@ pub fn DocPage(
                         }
                         if let Some(markdown) = markdown {
                             Chip {
-                                // `External`, or the router parses the path as
-                                // a route and fails - it is a static file.
-                                //
-                                // Root-relative only works where something
-                                // serves `public/`. A Blitz window resolves
-                                // it against `dioxus://index.html` and drops
-                                // it for having the wrong scheme, so point at
-                                // the repo copy there instead - that opens a
-                                // browser.
-                                //
-                                // Gated on the renderer, not the target: the
-                                // fullstack server and the Android WebView are
-                                // both "not wasm" and both serve `public/`.
+                                // `External`: a static file, not a route. Blitz drops a root-relative
+                                // URL (no `public/` served), so native links the repo copy.
                                 to: NavigationTarget::External(
                                     if cfg!(any(feature = "native", feature = "native-cpu")) {
                                         format!("{REPO}docs/public{markdown}")

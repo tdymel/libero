@@ -10,9 +10,8 @@ const TRAPPED: &str = r#"Flex {
     Button { variant: "outlined", "Third" }
 }"#;
 
-/// The switch is not a prop - it is whether the `FocusTrap` is there at all,
-/// so off prints the bare children. Either way the two outside buttons are
-/// printed: they are what "focus cannot leave" is measured against.
+/// The switch is whether the `FocusTrap` exists at all. The two outside buttons always print:
+/// "focus cannot leave" is measured against them.
 fn wrap_page(values: &DemoValues, code: &str) -> String {
     let inner = match values.str("activate_focus_trap") == "true" {
         true => indent(code),

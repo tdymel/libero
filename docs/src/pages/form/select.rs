@@ -69,9 +69,7 @@ const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Fruit>| rsx! {
 const CUSTOM_SELECTION: &str =
     r#"selection: move |fruit: Fruit| rsx! { "{fruit.emoji()} {fruit.label()}" }"#;
 
-/// The point of the switch: a filter can test anything the caller knows, so
-/// this one searches the note as well - "thumb" finds Mango, "counter" finds
-/// Banana, and neither word is on the row.
+/// A filter can test anything the caller knows: this one searches the note too.
 // snippet: after FRUIT_ENUM
 // snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
 // snippet: let mut value = use_signal(|| None::<Fruit>);
@@ -151,16 +149,13 @@ fn custom(values: &DemoValues) -> bool {
     values.str("custom") == "true"
 }
 
-/// `searchable` as well, so the switch, the snippet and the rendered prop can
-/// never disagree: `filter` does nothing without a search box, and its value
-/// outlives the control being hidden.
+/// Needs `searchable` too: `filter` does nothing without a search box, and its value outlives
+/// the hidden control.
 fn filtering(values: &DemoValues) -> bool {
     values.str("filter") == "true" && values.str("searchable") == "true"
 }
 
-/// Matches the note as well as the label, which is what makes the switch worth
-/// flipping: "thumb" finds Mango and "counter" finds Banana, though neither
-/// word appears on the row.
+/// Matches the note as well as the label: "thumb" finds Mango.
 fn fruit_filter(f: SelectFilterArgs<Fruit>) -> bool {
     let query = f.query.to_lowercase();
     f.value.label().to_lowercase().contains(&query)
@@ -301,10 +296,7 @@ pub fn SelectPage() -> Element {
             Demo {
                 component: "Select",
                 children_text: "",
-                // The helpers the custom rows call only exist in the snippet
-                // while those rows are on.
-                // `filter` calls the same helpers the custom rows do, so the
-                // impl has to be printed for either switch.
+                // `filter` and the custom rows share helpers, printed for either switch.
                 wrap: Wrap(|values: &DemoValues, source: &str| match custom(values)
                     || filtering(values)
                 {
@@ -382,9 +374,7 @@ pub fn SelectPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    // Prints through the `grouped` switch above, since the two
-                    // share the one `options` prop and one snippet has to show
-                    // whatever both say.
+                    // Prints through `grouped` above: the two share the one `options` prop.
                     Control::switch("unavailable").code(|_, _| vec![]),
                     Control::switch("clearable"),
                     Control::switch("required"),

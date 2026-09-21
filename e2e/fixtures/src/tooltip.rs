@@ -35,9 +35,8 @@ fn TooltipQuickPage() -> Element {
     }
 }
 
-/// A `Tooltip` on a direct-child trigger, between two buttons so Tab has
-/// somewhere to come from and to go to. `bottom`, so the test knows where the
-/// gap it bridges lies.
+/// A `Tooltip` on a direct-child trigger between two buttons. `bottom`, so the test knows
+/// where the gap it bridges lies.
 #[component]
 fn TooltipPage() -> Element {
     rsx! {

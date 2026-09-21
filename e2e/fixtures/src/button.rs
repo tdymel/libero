@@ -13,10 +13,8 @@ pub const ROUTES: Routes = &[
     ("/button/landing", || rsx! { ButtonLanding {} }),
 ];
 
-/// A plain button and a busy one, each counting its activations, and a
-/// link-mode button whose route is one only this page leads to. Below them a
-/// busy submit button in a form, a long label, buttons laying out element
-/// children, and a toggle pair per variant.
+/// Plain and busy buttons counting activations, a link-mode button, a busy submit, a long
+/// label, element children and a toggle pair per variant.
 #[component]
 fn ButtonPage() -> Element {
     let mut plain = use_signal(|| 0u32);
@@ -78,9 +76,8 @@ fn ButtonPage() -> Element {
                     Button { id: "on-{variant}", variant, selected: true, "Bold" }
                 }
             }
-            // Todo 686: a badge with its own fill and border inside a pressed button.
-            // `currentColor`: an error badge's text failed axe on the pressed fill,
-            // once the 715 ring left the background plain for it to measure.
+            // Todo 686: a badge with its own fill inside a pressed button. `currentColor`:
+            // an error badge's text failed axe on the pressed fill (715).
             Flex { gap: "sm",
                 Button { id: "off-badge", selected: false, "Inbox" Badge { "3" } }
                 Button { id: "on-badge", selected: true, "Inbox"

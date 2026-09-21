@@ -1,6 +1,5 @@
 //! `Text`, `Title`, `Blockquote`, `Mark` and inline `Code`, every colour the docs offer.
-//!
-//! Two pages, because contrast coverage only counts text inside the viewport.
+//! Two pages: contrast coverage only counts text inside the viewport.
 
 use dioxus::prelude::*;
 use libero::components::{Blockquote, Code, Flex, Mark, Text, Title};

@@ -114,9 +114,7 @@ pub fn ButtonPage() -> Element {
                         ],
                         _ => vec![],
                     }),
-                    // A `GlobalAttributes` pass-through rather than a
-                    // prop, so it prints as the raw identifier. A link has
-                    // no `type`.
+                    // A `GlobalAttributes` pass-through, printed as the raw identifier. A link has no `type`.
                     Control::toggle("type", ["button", "submit", "reset"])
                         .labels(["Button", "Submit", "Reset"])
                         .hidden_when(is_link)

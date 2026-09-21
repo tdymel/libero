@@ -6,10 +6,8 @@ static AVATAR_IMAGE: Asset = asset!("/assets/avatar.svg");
 
 const MISSING_SRC: &str = "/does-not-exist.png";
 
-/// The six people the group demo holds, printed verbatim by `Wrap`. `people`
-/// is not a control, and it is most of what a reader needs. One field per
-/// line: the code block does not wrap, and a one-line struct literal runs off
-/// the right of it.
+/// The group demo's six people, printed verbatim by `Wrap`. One field per line: the code
+/// block does not wrap.
 // snippet: item const AVATAR_IMAGE: &str = "/ada.png";
 // snippet: in AvatarGroup { .. }
 const PEOPLE: &str = r#"people: vec![
@@ -58,11 +56,8 @@ fn people() -> Vec<AvatarSpec> {
     ]
 }
 
-/// `generate_code` never prints `people`, so the generated block is reopened
-/// and the whole `vec![..]` spliced in - the snippet is then the one that
-/// produced the preview.
-///
-/// The demo is `Avatar`'s, so in group mode the header is renamed too.
+/// In group mode, renames the block to `AvatarGroup` and splices in `people`, which
+/// `generate_code` never prints.
 fn wrap_group(values: &DemoValues, source: &str) -> String {
     if !grouped(values) {
         return source.to_string();
@@ -79,9 +74,7 @@ fn grouped(values: &DemoValues) -> bool {
     values.str("component") == "group"
 }
 
-/// One control over the whole fallback chain: every step of it is a different
-/// thing on screen, and a broken source is the only way to show that the
-/// picture falls back rather than merely being absent.
+/// One control over the fallback chain; a broken source shows the fallback happening.
 /// Prints `name` too, which a group does not take.
 fn content_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     let name = r#"name: "Ada Lovelace""#.to_string();
@@ -232,9 +225,7 @@ pub fn AvatarPage() -> Element {
                     )
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"])
                     .default("tonal"),
-                    // An unset `color` is `base_color`'s primary shade 6,
-                    // which is exactly what a bare `primary` resolves to - so
-                    // the default swatch is primary, not a white "unset" one.
+                    // Unset `color` resolves to primary, so the default swatch is primary.
                     Control::color("color"),
                 ],
                 render: move |values: DemoValues| {

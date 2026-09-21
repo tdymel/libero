@@ -120,9 +120,7 @@ fn wrap_hook_call(values: &DemoValues, _generated: &str) -> String {
     )
 }
 
-/// The hook call lives here rather than in `Demo`'s render closure: a hook
-/// called there would land in `Demo`'s own hook slots and shift every time a
-/// control changed what the closure does.
+/// Its own component: hooks in `Demo`'s render closure would land in `Demo`'s hook slots.
 #[component]
 fn PopoverDemo(
     side: String,
@@ -150,9 +148,8 @@ fn PopoverDemo(
     popover.on_dismiss(move || opened.set(false));
     let floating = *popover.floating();
 
-    // A dialog takes focus once it opens, but only once placed: until then it
-    // is `visibility: hidden` and `focus()` moves nothing. Once per opening, so
-    // a re-measure does not pull focus back from a control on the page.
+    // Focus once placed (before, `visibility: hidden` ignores `focus()`), once per opening,
+    // so a re-measure doesn't pull focus back.
     let mut entered = use_signal(|| false);
     use_effect(move || match (opened(), popover.placed()) {
         (true, true) if !*entered.peek() => {

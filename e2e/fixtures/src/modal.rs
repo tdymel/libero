@@ -52,10 +52,7 @@ fn ModalPage() -> Element {
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
-            // A stable hook of the fixture's own, rather than leaving the
-            // test to guess at `button`: once the dialog is open there are
-            // three buttons on the page and `querySelector` would pick whichever
-            // came first.
+            // Own id: with the dialog open, `querySelector("button")` picks whichever comes first.
             Button {
                 id: "open-modal",
                 onclick: move |_| {

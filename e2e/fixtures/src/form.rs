@@ -1,6 +1,5 @@
-//! `Form` with a bound, validated `TextField`, and buttons that write the
-//! form's value and re-render the page from outside the form, submit it and
-//! reset it.
+//! `Form` with a bound, validated `TextField`, and outside buttons that write its value,
+//! re-render the page, submit and reset.
 
 use dioxus::prelude::*;
 use libero::components::{Button, Fields, Flex, Form, Rule, TextField, not_empty, use_form};

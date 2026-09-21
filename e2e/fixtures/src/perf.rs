@@ -1,7 +1,5 @@
-//! Render counts in the browser (todo 821). On a `/perf/*` page `install`
-//! counts dioxus-core's `render` span per scope name; the test reads and resets
-//! the counts through `window.__lsxRenders()` / `window.__lsxRendersReset()`.
-//! Every other page keeps dioxus's default logger.
+//! Render counts per scope on `/perf/*` pages (todo 821), read and reset through
+//! `window.__lsxRenders()` / `window.__lsxRendersReset()`. Other pages keep the default logger.
 
 use dioxus::prelude::*;
 use libero::components::{

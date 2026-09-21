@@ -73,23 +73,8 @@ fn WindowPairPage() -> Element {
     }
 }
 
-/// `FloatingWindow`: a non-modal window whose live state is its geometry.
-///
-/// The window is resizable and carries explicit bounds in its own `sx`, so the
-/// separator's Home and End have something to clamp against: Home asks for
-/// `0x0` and End for `u16::MAX`, and what comes back is the caller's minimum
-/// and maximum. Without bounds both would land on the viewport, which measures
-/// the browser rather than the component.
-///
-/// Both reports are wired into text on the page. `onmove` and `onresize` are
-/// the only way a caller learns where the window went, and they are owed to an
-/// effect rather than written in the handler - reading the rect in the same
-/// task reports the *previous* one
-/// (`codebase/components/floating-window`). A report nobody reads is a claim
-/// no test can check, so the fixture reads them.
-///
-/// The two readouts are empty until the window says something, so the resting
-/// accessibility baseline carries no text of theirs.
+/// Resizable window with explicit `sx` bounds, so Home/End clamp to them rather than the viewport.
+/// `onmove`/`onresize` render into readouts, empty at rest (`codebase/components/floating-window`).
 #[component]
 fn FloatingWindowPage() -> Element {
     let mut moved = use_signal(String::new);

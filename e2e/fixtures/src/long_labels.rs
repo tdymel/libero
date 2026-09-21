@@ -1,7 +1,5 @@
-//! One label with no break opportunity in each of `Tree` (default row and
-//! `TreeItem`), `NavLink` and `Menu`, for reflow at a narrow width (todo 518),
-//! and in `Tabs`, `Timeline`, `Menubar` (todo 543), and a horizontal `DataList`. One more in `Button`,
-//! `Chip` and `SegmentedControl`, which keep one line (todo 481).
+//! Unbreakable labels for narrow-width reflow (todos 518, 543) in trees, menus, tabs and lists,
+//! and in `Button`, `Chip`, `SegmentedControl`, which keep one line (todo 481).
 
 use dioxus::prelude::*;
 use libero::components::{

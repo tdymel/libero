@@ -185,9 +185,7 @@ fn fetching(values: &DemoValues) -> bool {
     values.str("mode") == "fetching"
 }
 
-/// The mode drives the state the two examples keep, so it prints their props
-/// too - `options` is a whole filtered `Vec` in one and the enum's own list in
-/// the other.
+/// The mode also prints its example's props: a filtered `Vec` or the enum's own list.
 fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
     if fetching(values) {
         return [

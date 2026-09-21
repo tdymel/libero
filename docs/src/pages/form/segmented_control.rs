@@ -29,9 +29,7 @@ const RENAMED: &str = r#"option_label: |alignment: Alignment| -> OptionLabel {
     }
 }"#;
 
-// A segment is a `label`, so its content has to stay phrasing content: `Icon`
-// is an inline-flex `span` (and it is what sizes the raw svg), a `Flex` is a
-// `div`.
+// A segment is a `label`, so its content stays phrasing: `Icon` is a `span`, a `Flex` a `div`.
 // snippet: after ALIGNMENT_ENUM
 // snippet: item #[component] fn AlignLeftIcon() -> Element { rsx! {} }
 // snippet: item #[component] fn AlignCenterIcon() -> Element { rsx! {} }

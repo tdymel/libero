@@ -188,9 +188,7 @@ pub fn ColorPickerPage() -> Element {
                 ],
                 wrap: Wrap(wrap_picker),
                 controls: vec![
-                    // Not a prop: the picker, or one of the parts it is built
-                    // from, each usable on its own. A part prints its own
-                    // snippet whole.
+                    // Not a prop: the picker or one of its standalone parts, printed whole.
                     Control::toggle("component", ["picker", "hue", "alpha", "swatch"])
                         .labels(["ColorPicker", "HueSlider", "AlphaSlider", "ColorSwatch"])
                         .code(|_, _| vec![]),

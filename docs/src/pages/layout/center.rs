@@ -14,9 +14,7 @@ const CHILD: &str = r#"Box { sx: sx().padding("8px 16px").background("primary").
 // snippet: in Center { .. }
 const SX: &str = r#"sx: sx().height("120px").background("primary.1")"#;
 
-/// The preview pane centers and shrink-wraps whatever it holds, so a bare
-/// `Center` would have no width to fill and both modes would look alike. The
-/// wrapper gives it one, and the code block prints it.
+/// A printed wrapper gives `Center` a width: the shrink-wrapping preview makes both modes alike.
 fn wrap_parent(_: &DemoValues, code: &str) -> String {
     format!(
         "Box {{\n    sx: sx().width(\"260px\").background(\"muted.2\"),\n{}}}",

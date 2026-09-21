@@ -14,9 +14,8 @@ pub const ROUTES: Routes = &[
     ("/scroll-area/rtl", || rsx! { RtlPage {} }),
 ];
 
-/// A horizontal area under `dir="rtl"`, which starts at its right edge: the
-/// last `onscroll` percent, both `on*reached` counts, and `#to-end`, which
-/// asks the handle for 100%.
+/// A horizontal area under `dir="rtl"`, starting at its right edge: the last `onscroll`
+/// percent, both `on*reached` counts, and `#to-end` asking the handle for 100%.
 #[component]
 fn RtlPage() -> Element {
     let area = use_scroll_area();
@@ -52,10 +51,8 @@ fn RtlPage() -> Element {
     }
 }
 
-/// Two areas of plain text, nothing focusable inside: one left at its
-/// defaults, one `focusable` and named as APG's scrollable region asks. After
-/// them, the automatic tab stop's other cases (585): content that fits, links
-/// inside, and content that grows past the area.
+/// Plain-text areas at defaults and `focusable` + named, then the automatic tab stop's other
+/// cases (585): content that fits, links inside, content that grows past the area.
 #[component]
 fn KeyboardPage() -> Element {
     let lines = || (0..40).map(|i| rsx! { p { key: "{i}", "Line {i}" } });
@@ -148,9 +145,8 @@ fn EdgesPage() -> Element {
     }
 }
 
-/// A pane a test resizes by script, round a virtualized list whose window must
-/// follow the pane's height. The caller's own `onresize` on the `ScrollArea`,
-/// as `Scroller` sets one, is counted: it must still fire beside the area's.
+/// A script-resized pane round a virtualized list whose window follows its height. The
+/// caller's own `onresize` is counted: it must still fire beside the area's.
 #[component]
 fn ScrollAreaPage() -> Element {
     let mut resizes = use_signal(|| 0);

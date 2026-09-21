@@ -110,9 +110,8 @@ fn issues(mut last: Signal<String>) -> Vec<SpotlightAction> {
         .collect()
 }
 
-/// The search example's extra lines: a fake fetch per keystroke. `onquery`
-/// runs from the input event, so `loading` is set before the next frame and
-/// "nothing found" never flashes between the keystroke and the answer.
+/// A fake fetch per keystroke. `onquery` runs from the input event, so `loading` is set before
+/// the next frame and "nothing found" never flashes.
 const SEARCH_CODE: &str = r#"let mut results = use_signal(Vec::<SpotlightAction>::new);
 let mut loading = use_signal(|| false);
 "#;

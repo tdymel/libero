@@ -7,10 +7,8 @@ use libero::{
     sx::sx,
 };
 
-/// The demo frame is the scroll container, so `sticky` pins to its top and
-/// `static` scrolls away with the content - the difference only shows once
-/// there is more content than the frame is tall. A stacking context, so a
-/// native window clips the z-indexed header to it too (881).
+/// The frame scrolls, with more content than height, so `sticky` and `static` differ.
+/// A stacking context, so a native window clips the z-indexed header to it too (881).
 fn wrap_frame(_: &DemoValues, code: &str) -> String {
     format!(
         "Box {{\n    sx: sx().height(\"200px\").width(\"100%\").overflow_y(\"auto\")\n        .position(\"relative\").z_index(\"0\")\n        .border(\"1px solid var(--lsx-muted-3)\"),\n{}    Box {{\n        sx: sx().padding(\"md\"),\n        for i in 0..12 {{\n            Text {{ key: \"{{i}}\", \"Scroll me, line {{i}}\" }}\n        }}\n    }}\n}}",
@@ -79,9 +77,7 @@ pub fn HeaderPage() -> Element {
                     Control::toggle("position", ["sticky", "static"]).labels(["Sticky", "Static"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
-                    // Opens on the tinted banner, since that is what
-                    // `color` is for - but unset (the neutral white one)
-                    // is the real default, so it prints nothing.
+                    // Opens tinted, but unset is the real default, so that prints nothing.
                     Control::color("color").with_unset()
                     .default("primary")
                     .code(|_, values| match values.str("color").as_str() {

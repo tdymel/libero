@@ -4,10 +4,8 @@
 use dioxus::prelude::*;
 use libero::components::{Button, Options};
 
-/// A control on each side of a keyboard group, so "Tab leaves the group" and
-/// "Shift+Tab leaves the group" land somewhere real. At the document's edge
-/// Chromium parks Shift+Tab on a stop of its own for one press, and the
-/// assertion would be reading that instead of the component.
+/// A control on each side of a keyboard group, so Tab and Shift+Tab leave it somewhere real.
+/// At the document's edge Chromium parks Shift+Tab on a stop of its own for one press.
 #[component]
 pub fn Between(children: Element) -> Element {
     rsx! {

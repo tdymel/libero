@@ -37,13 +37,8 @@ const CITIES: &[&str] = &[
     "Florence",
 ];
 
-/// The combobox archetype, fully assembled.
-///
-/// `Autocomplete` rather than `Combobox` itself: `Combobox` is a wrapper whose
-/// caller supplies the trigger and its aria, so a fixture built on it would be
-/// testing the fixture's own wiring as much as the library's. `Autocomplete`
-/// owns the whole `aria-activedescendant` contract, which is what the pass is
-/// about.
+/// The combobox archetype: `Autocomplete` owns the whole `aria-activedescendant` contract,
+/// where `Combobox` leaves the trigger's aria to the caller.
 #[component]
 fn AutocompletePage() -> Element {
     let mut value = use_signal(String::new);

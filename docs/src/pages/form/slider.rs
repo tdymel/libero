@@ -194,9 +194,8 @@ fn continuous_marks(values: &DemoValues) -> Vec<SliderMark> {
     }
 }
 
-/// The readout is the other half of a controlled slider - `Start`/`End`
-/// bracket one drag, `Change` carries every value in between - so it belongs
-/// in the preview, and the code block prints it.
+/// The readout, the other half of a controlled slider: `Start`/`End` bracket a drag,
+/// `Change` carries each value. Printed too.
 fn wrap_readout(values: &DemoValues, code: &str) -> String {
     let (declaration, signal, last) = match discrete(values) {
         true => (QUALITY, "quality():?", "last_quality()"),
@@ -306,9 +305,8 @@ pub fn SliderPage() -> Element {
                 component: "Slider",
                 children_text: "",
                 controls: vec![
-                    // The value's type is the mode: an ordered enum makes
-                    // the slider discrete, `f64` leaves it continuous. Each
-                    // brings its own props, so the set below swaps with it.
+                    // The value's type is the mode: an ordered enum is discrete, `f64` continuous.
+                    // Each brings its own props, so the set below swaps with it.
                     Control::toggle("mode", ["discrete", "continuous"])
                         .labels(["Discrete", "Continuous"])
                         .code(mode_code),

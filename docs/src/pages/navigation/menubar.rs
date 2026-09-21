@@ -82,9 +82,7 @@ fn enum_code(control: &Control, values: &DemoValues) -> Vec<String> {
     vec![format!("{}: {kind}::{variant}", control.name)]
 }
 
-/// The whole example from the code block, as a component: the signal lives
-/// here rather than in `Demo`'s render closure, whose hook slots it would land
-/// in.
+/// The code block's example as a component, so its signal stays out of `Demo`'s hook slots.
 #[component]
 fn MenubarDemo(
     side: String,

@@ -69,9 +69,8 @@ fn RadioGroupEchoPage() -> Element {
     }
 }
 
-/// Starts on the **second** option, so "Tab enters at the checked radio" can
-/// fail: with the first one checked it is indistinguishable from "Tab enters at
-/// the first radio".
+/// Starts on the **second** option, so "Tab enters at the checked radio" differs from
+/// "Tab enters at the first radio".
 #[component]
 fn RadioGroupPage() -> Element {
     let mut plan = use_signal(|| Some(Plan::Pro));

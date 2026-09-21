@@ -2,9 +2,8 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, 
 use dioxus::prelude::*;
 use libero::components::{Anchor, Code, Text, VisuallyHidden};
 
-/// The point is what the hidden text is read *after*, so the link it sits in
-/// is part of the example - and the code block prints it. `focusable` is the
-/// other use, a skip link, so it prints that instead.
+/// Prints the link the hidden text sits in, since the point is what it's read after.
+/// `focusable` prints a skip link instead.
 fn wrap_link(values: &DemoValues, code: &str) -> String {
     if values.str("focusable") == "true" {
         return "VisuallyHidden {\n    focusable: true,\n    Anchor { to: \"#main\", \"Skip to content\" }\n}"

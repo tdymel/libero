@@ -1,7 +1,4 @@
-//! `TagsField`, for the combobox archetype.
-//!
-//! With `suggestions`, deliberately: without them it renders no listbox at
-//! all, which is another pattern.
+//! `TagsField` for the combobox archetype, with `suggestions`: without them there is no listbox.
 
 use dioxus::prelude::*;
 use libero::components::{Flex, TagsField, Text};
@@ -36,9 +33,7 @@ fn TagsEchoPage() -> Element {
     }
 }
 
-/// A tag already held, and five suggestions of which one is that tag - so the
-/// list shows four rows, and "anything already held drops out of the list" is
-/// visible in the open state's snapshot.
+/// One tag held among five suggestions, so the open snapshot shows four rows: held tags drop out.
 #[component]
 fn TagsFieldPage() -> Element {
     let mut topics = use_signal(|| vec!["rust".to_string()]);

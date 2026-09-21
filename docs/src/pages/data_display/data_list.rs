@@ -2,9 +2,7 @@ use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, DataList, DataListItem, Text};
 
-/// The pairs are the fixture, and `orientation` and `gap` the props, so the
-/// code block prints them verbatim. The `for` loop shows the lead's claim of
-/// several descriptions per term.
+/// The pairs, printed verbatim. The `for` loop shows several descriptions per term.
 // snippet: let phones = ["+49 30 1234567"];
 // snippet: in DataList { .. }
 const CHILDREN: &str = r#"DataListItem {

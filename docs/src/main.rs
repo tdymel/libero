@@ -325,22 +325,16 @@ fn AppShell() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            // Header sits flush against the content below - no rounding to
-            // the nearest Size step here, this needs to stay exactly 0.
             sx: sx().gap("0"),
-            // Escape closes the mobile drawer from anywhere it can be pressed
-            // while open: the burger (which holds focus right after opening)
-            // or the nav. `main` is inert then, so nothing else hears it.
-            // Focus goes back to the burger, as after a page link.
+            // Escape closes the mobile drawer (`main` is inert then) and returns focus to the burger.
             onkeydown: move |event: KeyboardEvent| {
                 if open() && event.key() == Key::Escape {
                     open.set(false);
                     let _ = burger.query_selector("button").and_then(|button| button.focus());
                 }
             },
-            // WCAG 2.4.1: the first tab stop skips the header and the nav.
-            // Off-screen until focused; the click moves focus itself, so the
-            // router never sees the fragment.
+            // WCAG 2.4.1 skip link, off-screen until focused. The click moves focus itself,
+            // so the router never sees the fragment.
             Box {
                 sx: sx()
                     .selector(
@@ -366,35 +360,20 @@ fn AppShell() -> Element {
                 }
             }
             Header {
-                // No `color`: the header is the page's own surface, so it
-                // reads as chrome rather than as a
-                // banner and follows the colour scheme without a second
-                // palette. Glass, so content scrolling under it is suggested
-                // rather than hidden - the bar is sticky, and an opaque one
-                // reads as a lid.
+                // No `color`: page surface, reads as chrome. Glass, so content scrolling
+                // under the sticky bar shows through.
                 publish_height: true,
                 glass: true,
                 sx: sx().gap("md"),
-                // Where focus goes when a page link closes the drawer: the
-                // link hides with it, and focus would fall to `<body>`.
-                // `Burger` takes no `onmounted`, so a `display: contents`
-                // wrapper holds the handle.
+                // Focus target when a page link closes the drawer. `Burger` takes no
+                // `onmounted`, so a `display: contents` wrapper holds the handle.
                 div { display: "contents", onmounted: burger.mount(),
                     Burger {
                         open: open(),
                         "aria-controls": "docs-nav",
                         onclick: move |_| open.set(!open()),
-                        // No `variant`/`color` prop - the underlying ActionIcon
-                        // then contributes no background/color/hover of its own
-                        // (same reasoning as `Code`'s copy button), so this `sx`
-                        // is the only thing controlling its look. The bars fall
-                        // back to `currentColor`, so inheriting the header's
-                        // text colour is one declaration fewer.
-                        // Only relevant below `Sm` - the burger is the only
-                        // way to set `open`, so hiding it here means the
-                        // mobile drawer can never actually be open at
-                        // desktop widths. The home page has no sidebar, so
-                        // its burger stays.
+                        // Hidden from `Sm` up, so the drawer can't open on desktop.
+                        // The home page has no sidebar, so its burger stays.
                         sx: if home {
                             sx().hover(sx().background("muted.1"))
                         } else {
@@ -411,21 +390,13 @@ fn AppShell() -> Element {
                     Image { src: LOGO, decorative: true, sx: sx().width("auto").height("28px") }
                     Title { size: "lg", component: "span", "Libero" }
                 }
-                // Looks like a search field, but it opens the Spotlight
-                // dialog, so it stays a button. The name is fixed, so the
-                // hidden hint on a phone does not change it; the shortcut
-                // rides `aria-keyshortcuts` instead of the name.
-                // On a phone the search is an icon button and nothing else -
-                // the room belongs to the burger and the title. From `Sm` up it
-                // grows into the field-shaped button, label and shortcut
-                // included. Two controls rather than one arm of it, because
-                // the two want different shapes; only one is ever rendered.
+                // Search: an icon button on a phone, the field-shaped button below from `Sm` up.
+                // Both open Spotlight; the shortcut rides `aria-keyshortcuts`, not the name.
                 ActionIcon {
                     aria_label: "Search",
                     "aria-keyshortcuts": "Control+K Meta+K",
                     onclick: move |_| search.open(),
-                    // Same box as the two beside it: three icon buttons in a
-                    // row, one of them borderless, reads as an oversight.
+                    // Same box as the icon buttons beside it.
                     variant: "outlined",
                     color: "muted",
                     size: "lg",
@@ -440,9 +411,7 @@ fn AppShell() -> Element {
                         SearchIcon {}
                     }
                 }
-                // Looks like a search field, but it opens the Spotlight
-                // dialog, so it stays a button. The name is fixed, so the
-                // shortcut rides `aria-keyshortcuts` instead of the name.
+                // Looks like a field, but opens Spotlight, so it stays a button.
                 Button {
                     variant: "standard",
                     aria_label: "Search",
@@ -452,10 +421,8 @@ fn AppShell() -> Element {
                         .color("muted.7")
                         // A placeholder's weight, not a button label's.
                         .font_weight("400")
-                        // A field's border, from the same step `use_field_frame`
-                        // draws one in: `standard` paints its own border
-                        // transparent, and on a palette whose paper is close to
-                        // its page the field had no edge at all.
+                        // `use_field_frame`'s border step: `standard`'s transparent border left
+                        // no edge on palettes whose paper is close to the page.
                         .border_color("muted.5")
                         // The icon buttons' `lg` box, not a `Button`'s own 36px:
                         // one row of controls, one height.
@@ -487,18 +454,11 @@ fn AppShell() -> Element {
                 RepoButton { repo: REPO, size: "lg" }
                 // Lets a reviewer check any component right to left.
                 DirectionToggle { size: "lg" }
-                // In the header rather than on a page: its job is to let a
-                // reviewer check any component in every scheme and palette,
-                // from wherever they are. `lg`, to match the search beside it.
+                // In the header, so any page can be checked in every scheme and palette.
                 ThemeToggle { size: "lg", themes: ThemeSet::CATALOGUE }
             }
-            // This row itself never scrolls - the nav scrolls its own
-            // content internally (`Sidebar` does), and only the rest of the
-            // row (everything the nav doesn't take up)
-            // should scroll. So `ScrollArea` - not `Container` - is the flex
-            // item filling that remaining space; `Container` just sizes/
-            // centers the actual page content inside it, and is free to grow
-            // past the row's height since `ScrollArea` is what scrolls.
+            // The row never scrolls: the nav scrolls itself, and `ScrollArea` (not
+            // `Container`) fills the rest and scrolls the page.
             Flex {
                 direction: "row",
                 align: "stretch",
@@ -514,14 +474,8 @@ fn AppShell() -> Element {
                     sx: sx()
                         .flex("1")
                         .min_height("0")
-                        // A flex item's default `min-width: auto` means "at
-                        // least my content's min-content width" - here
-                        // that's whichever single code line on the page is
-                        // longest, which can easily exceed the row's actual
-                        // available space. Without this, this item refuses
-                        // to shrink past that width, so it would push the
-                        // *row* wider instead of just that one code block
-                        // scrolling internally like it's meant to.
+                        // Default `min-width: auto` let the longest code line push the row
+                        // wider instead of that block scrolling.
                         .min_width("0"),
                     // The skip link's handle on `main`, as `burger` is on the burger.
                     div { display: "contents", onmounted: content.mount(),
@@ -531,25 +485,12 @@ fn AppShell() -> Element {
                             // Focusable by the skip link only, with no ring round the page.
                             tabindex: "-1",
                             size: if home { "xl" } else { "lg" },
-                            // Unreachable behind the open mobile drawer
-                            // otherwise - still in the DOM, just visually
-                            // covered. No-op at desktop widths, since `open`
-                            // never becomes true there. `inert` is a boolean
-                            // HTML attribute - presence (any value, including
-                            // "false") is what enables it, so it must be omitted
-                            // entirely when not open, not set to the string
-                            // "false".
+                            // Inert behind the open drawer. A boolean attribute: omitted when
+                            // closed, since even `"false"` enables it.
                             inert: open().then_some(true),
-                            // `Container`'s own framework `height: 100%` would
-                            // otherwise cap it to `ScrollArea`'s viewport height
-                            // instead of letting it grow to its real content
-                            // height - which is exactly what `ScrollArea` needs
-                            // to actually have something to scroll.
+                            // `Container`'s `height: 100%` would cap it to the viewport: nothing to scroll.
                             sx: sx()
                                 .height("auto")
-                                // Mobile has no room to spare for the desktop
-                                // padding - shrink it there, restore it from `Sm`
-                                // up.
                                 .padding("24px 16px")
                                 .breakpoint(Size::Sm, sx().padding("48px 64px"))
                                 .selector("&:focus", sx().outline("none")),

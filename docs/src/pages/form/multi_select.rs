@@ -87,9 +87,7 @@ const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rs
     }
 }"#;
 
-/// The point of the switch: a filter can test anything the caller knows, so
-/// this one searches the note as well - "earthy" finds Mushrooms and "divides"
-/// finds Pineapple, though neither word is on the row.
+/// A filter can test anything the caller knows: this one searches the note too.
 // snippet: after TOPPING_ENUM
 // snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
 // snippet: let mut value = use_signal(Vec::<Topping>::new);
@@ -143,9 +141,8 @@ enum Topping {
     Pineapple,
 }
 
-/// The two switches drive one prop, so the list is built once from both.
-/// Pineapple is the one that sells out, which is what `status: warning` is
-/// already about.
+/// The two switches drive one prop, so the list is built once from both. Pineapple sells out,
+/// matching `status: warning`.
 fn topping_options(values: &DemoValues) -> OptionList<Topping> {
     let pineapple = OptionItem::new(Topping::Pineapple).disabled(values.str("sold_out") == "true");
     let vegetables = [
@@ -199,16 +196,13 @@ fn custom(values: &DemoValues) -> bool {
     values.str("custom") == "true"
 }
 
-/// `searchable` as well, so the switch, the snippet and the rendered prop can
-/// never disagree: `filter` does nothing without a search box, and its value
-/// outlives the control being hidden.
+/// Needs `searchable` too: `filter` does nothing without a search box, and its value outlives
+/// the hidden control.
 fn filtering(values: &DemoValues) -> bool {
     values.str("filter") == "true" && values.str("searchable") == "true"
 }
 
-/// Matches the note as well as the label, which is what makes the switch worth
-/// flipping: "earthy" finds Mushrooms and "divides" finds Pineapple, though
-/// neither word appears on the row.
+/// Matches the note as well as the label: "earthy" finds Mushrooms.
 fn topping_filter(f: SelectFilterArgs<Topping>) -> bool {
     let query = f.query.to_lowercase();
     f.value.label().to_lowercase().contains(&query)
@@ -331,10 +325,7 @@ pub fn MultiSelectPage() -> Element {
             Demo {
                 component: "MultiSelect",
                 children_text: "",
-                // The helper the custom rows call only exists in the snippet
-                // while those rows are on.
-                // `filter` calls the same helper the custom rows do, so the impl
-                // has to be printed for either switch.
+                // `filter` and the custom rows share one helper, printed for either switch.
                 wrap: Wrap(|values: &DemoValues, source: &str| match custom(values)
                     || filtering(values)
                 {
@@ -412,9 +403,7 @@ pub fn MultiSelectPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    // Prints through the `grouped` switch above, since the two
-                    // share the one `options` prop and one snippet has to show
-                    // whatever both say.
+                    // Prints through `grouped` above: the two share the one `options` prop.
                     Control::switch("sold_out").code(|_, _| vec![]),
                     Control::switch("clearable"),
                     Control::switch("required"),

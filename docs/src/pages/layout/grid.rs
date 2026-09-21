@@ -23,10 +23,8 @@ GridItem { span: GridSpan::Third, Card { lines: 2, "F" } }"#;
 // snippet: in GridZone { .. }
 const WALL_SX: &str = r#"sx: sx().width("100%")"#;
 
-/// Span, height and label per card. The spans are deliberately mixed: `dense`
-/// backfills *holes*, and a wall of equal spans leaves none - a uniform set
-/// makes the switch look broken. Here E (six twelfths) cannot follow C + D
-/// (four each), leaving a four-wide hole that F fits exactly.
+/// Span, height and label per card, mixed so `dense` has a hole to backfill: E can't follow
+/// C + D, leaving four columns that F fits.
 const DEMO_CARDS: [(GridSpan, u32, &str); 6] = [
     (GridSpan::Third, 1, "A"),
     (GridSpan::TwoThirds, 4, "B"),

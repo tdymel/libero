@@ -74,10 +74,7 @@ pub fn ProgressBarPage() -> Element {
                     // An unset `color` is `base_color`'s primary shade 6, which
                     // is exactly what a bare `primary` resolves to.
                     Control::color("color"),
-                    // Opens on the tallest track, not the default `md`: on an
-                    // 8px track every radius from `sm` up is the same pill, so
-                    // the radius slider would look dead. The theme default
-                    // still prints nothing.
+                    // Opens on the tallest track: on an 8px one every radius from `sm` is the same pill.
                     Control::slider("size", SIZES)
                         .default("xxl")
                         .code(|_, values| match values.str("size").as_str() {

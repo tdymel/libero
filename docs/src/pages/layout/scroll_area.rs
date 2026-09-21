@@ -33,10 +33,8 @@ const CONTENT: &str = r#"Box {
     }
 }"#;
 
-/// The scroll position is read *and* written from the page, so all four wiring
-/// props are the demo's fixture rather than anything a control varies. `area`,
-/// `position` and `edge` are declared in `PREAMBLE`. The plain content makes
-/// the area a tab stop, so it needs a name.
+/// Fixed wiring; `area`, `position` and `edge` are declared in `PREAMBLE`. The plain content
+/// makes the area a tab stop, so it needs a name.
 const FIXED: [&str; 5] = [
     r#"aria_label: "Items""#,
     "handle: area",
@@ -45,8 +43,7 @@ const FIXED: [&str; 5] = [
     r#"onbottomreached: move |_| edge.set("bottom")"#,
 ];
 
-/// A raw `{event:?}` prints an unrounded `f64` and reflows the row on every
-/// scroll tick, so the readout formats the two percentages itself.
+/// Rounded percentages: a raw `{event:?}` reflows the row every tick.
 /// **Kept in step with `PREAMBLE` by hand.**
 fn readout(event: ScrollPositionEvent) -> String {
     let (kind, x, y) = match event {
@@ -74,9 +71,7 @@ let mut edge = use_signal(|| "none");
 
 "#;
 
-/// A scroll area fills its parent, so the preview has to give it one - and the
-/// readout and the three jump buttons are the other half of the wiring above,
-/// so they belong in the preview too. The code block prints all of it.
+/// Prints the sized parent a scroll area fills, and the readout and jump buttons it wires to.
 fn wrap_frame(_: &DemoValues, code: &str) -> String {
     format!(
         "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-muted-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}}, last edge: {{edge()}}\" }}\n        Flex {{\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
@@ -181,10 +176,7 @@ pub fn ScrollAreaPage() -> Element {
                     Control::toggle("scrollbar_size", ["thin", "auto"])
                         .labels(["Thin", "Auto"])
                         .default(theme.scroll_area.size.as_str()),
-                    // The unset thumb is grey-5, which a bare `grey` would
-                    // *not* resolve to - so the first swatch is unset, and it
-                    // is painted grey-5 rather than white: the swatch shows
-                    // what the scrollbar actually draws without the prop.
+                    // Unset draws grey-5, which bare `grey` is not: the unset swatch is painted grey-5.
                     Control::color("scrollbar_color").with_unset()
                     .unset_swatch("muted.5"),
                     // Not a prop: swaps the content for a `Virtualize` list,

@@ -23,12 +23,8 @@ const PYTHON_EXAMPLE: &str = "def shout(word):\n    # Python\n    return word.up
 const PYTHON_DIFF: &str =
     "def shout(word):\n    # Python\n-    return word.upper()\n+    return word.upper() + \"!\"";
 
-/// The demo's `source` follows its `language` - a Rust snippet under
-/// `language: "python"` would show the fallback for the wrong reason - and its
-/// `diff`, which needs a source written as one. Each `*_DIFF`'s `+` lines are
-/// exactly its plain twin, so the diff reads as the edit that produced the
-/// example. Returns the const's name alongside it, since the code block prints
-/// the name a caller would write.
+/// The source for `language` and `diff`, with the const's name the code block prints.
+/// Each `*_DIFF`'s `+` lines are exactly its plain twin.
 fn example(values: &DemoValues) -> (&'static str, &'static str) {
     match (
         values.str("language").as_str(),
@@ -98,9 +94,7 @@ pub fn CodeBlockPage() -> Element {
                     component: "CodeBlock",
                     children_text: "",
                     controls: vec![
-                        // Picks `source` as well, so it always prints - the
-                        // preview would otherwise show code the block below
-                        // never mentions. "none" is the real default.
+                        // Picks `source` as well, so it always prints. "none" is the real default.
                         Control::toggle("language", ["rust", "python"])
                             // `python` is a real, recognized name whose
                             // `code-lang-*` feature this build leaves off.

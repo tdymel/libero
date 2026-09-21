@@ -14,20 +14,10 @@ use libero::{
 
 use crate::Route;
 
-// One `Sidebar`, one responsive `sx` - no second drawer, no viewport
-// detection. Below the `Sm` breakpoint it's an absolute, off-canvas panel
-// toggled by `open` (slides via `transform`, `visibility` hidden when
-// closed so its links drop out of tab order/the a11y tree instead of just
-// being invisible); at `Sm` and up it's back to the persistent sticky
-// sidebar from before, with `open` irrelevant - the breakpoint override
-// hardcodes `transform`/`visibility` regardless of its value, so nothing
-// odd happens if the viewport crosses `Sm` while it happens to be open.
-// With `drawer` (the full-width home page) it stays off-canvas at every width,
-// only narrower from `Sm` up.
+// Below `Sm` an off-canvas panel toggled by `open` (`visibility` drops closed links from tab
+// order); from `Sm` up the sticky sidebar, ignoring `open`. With `drawer` off-canvas everywhere.
 fn nav_responsive_sx(open: bool, drawer: bool) -> Sx {
-    // `visibility` shouldn't flip to hidden until the slide-out finishes,
-    // or the panel would vanish mid-animation instead of sliding away;
-    // opening has no such concern, so only closing gets the delay.
+    // Only closing delays `visibility`, so the panel slides away instead of vanishing.
     let transition = if open {
         "transform 200ms ease, visibility 0s"
     } else {
@@ -43,15 +33,9 @@ fn nav_responsive_sx(open: bool, drawer: bool) -> Sx {
         .top("0")
         .height("100%")
         .width("100%")
-        // `Sidebar`'s own base has no background - fine sitting adjacent to
-        // content in normal flow (desktop), but this mode overlaps the main
-        // content, which would otherwise show through underneath it.
+        // Overlapping the content, so it needs its own background.
         .background("surface")
-        // Positioned alone, without an explicit z-index it's `auto`, which paints below anything else
-        // on the page that happens to have a real (even low, even `0`)
-        // z-index, letting that content's hit-testing win instead. Well
-        // under `Modal`'s own range (starts at 1000) so an actual modal
-        // still stacks above this.
+        // `auto` would paint below any positioned content; well under `Modal`'s 1000.
         .z_index("10")
         .transform(if open {
             "translateX(0)"
@@ -210,10 +194,8 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ThemeTogglePage {}, "ThemeToggle"),
             ],
         ),
-        // Fields built on `use_field`. A component moves here when it is
-        // ported onto that pattern, not before. Ordered for reading, not
-        // alphabetically: the guide, the containers, then the fields from the
-        // most common on, with related fields next to each other.
+        // Fields built on `use_field`, ordered for reading: guide, containers, then fields
+        // from the most common on, related ones together.
         group(
             "form",
             "Form",
@@ -400,21 +382,8 @@ pub fn DocsNav(
                     key: "{drawer}",
                     aria_label: "Documentation pages",
                     size: "xs",
-                    // Both zeroed off-scale, so they go through `sx` rather
-                    // than `size`, and the `& ul` half is what carries them
-                    // into every nested group as well as the root.
-                    //
-                    // Zero gap between sibling rows - each `NavLink`'s own
-                    // left border then reads as one continuous line down
-                    // the section instead of a dashed one.
-                    //
-                    // `Tree` no longer reserves any leading chevron column of
-                    // its own (that's purely `default_tree_render`'s thing
-                    // now) - with indent also zeroed, every row, branch or
-                    // leaf, at any depth, starts at the exact same x. That's
-                    // what puts a leaf's border in line with its parent
-                    // group's own chevron with no offsetting math needed;
-                    // `args.depth` below only pads a leaf's *label* inward.
+                    // Zero gap and indent at every depth: leaf borders form one continuous line,
+                    // in line with the parent chevron. `args.depth` only pads the label.
                     sx: sx()
                         .gap("0")
                         .selector("& ul", sx().gap("0").padding_inline_start("0")),
@@ -428,19 +397,8 @@ pub fn DocsNav(
                             return default_tree_render(args);
                         }
                         let padding_start = 7 + args.depth as u32 * 16;
-                        // Closes the panel when a page link is clicked, and
-                        // only then - a chevron must expand its section, not
-                        // close the panel. `NavLink` takes no `onclick`
-                        // (deliberately, same as `Button`'s link mode), so a
-                        // `display: contents` wrapper catches the bubbling
-                        // click, including the one `Tree` fires on Enter.
-                        // Only matters below `Sm`; at desktop widths `open`
-                        // never becomes true, since its toggle is hidden there.
-                        //
-                        // The link hides with the panel, so focus moves to the
-                        // burger that reopens it rather than falling to
-                        // `<body>`. A pointer click too: one handler, and the
-                        // burger shows no ring after a pointer interaction.
+                        // A page link (not a chevron) closes the panel and focuses the burger. `NavLink`
+                        // has no `onclick`, so a `display: contents` wrapper catches the bubble.
                         rsx! {
                             div {
                                 display: "contents",
@@ -454,32 +412,13 @@ pub fn DocsNav(
                                 },
                                 NavLink {
                                     to: NavigationTarget::Internal(args.id),
-                                    // Suppresses the anchor's own native tab
-                                    // stop - `Tree`'s roving `<li>` is the only
-                                    // one; see `TreeNodeRenderArgs::tabindex`.
+                                    // `Tree`'s roving `<li>` is the only tab stop.
                                     tabindex: args.tabindex,
                                     scroll_into_view: true,
-                                    // Only a *nested* leaf (inside a group) gets
-                                    // the connecting border - a top-level page
-                                    // like "Getting started" has no parent
-                                    // chevron to line up with.
+                                    // Only a nested leaf gets the connecting border.
                                     states: States::new().with("leaf", args.depth > 0),
-                                    // `NavLink` already knows whether it's
-                                    // active (it compares `to` against the
-                                    // current route itself) and sets its own
-                                    // `data-state="active"` - this just adds a
-                                    // border reacting to that same state,
-                                    // rather than `Tree` tracking "selected"
-                                    // at all. `align-self: stretch` overrides
-                                    // the row's own `align-items: center`, so
-                                    // this spans the row's full height instead
-                                    // of just its own text height - otherwise
-                                    // the border would stop short top/bottom
-                                    // and not read as continuous between rows.
-                                    // `border-radius: 0` overrides `NavLink`'s
-                                    // own rounded corners, which otherwise curve
-                                    // the border away from the edge and break
-                                    // that same continuity.
+                                    // The border follows `NavLink`'s own active state. Stretched and
+                                    // unrounded, so it runs continuously between rows.
                                     sx: sx()
                                         .align_self("stretch")
                                         .padding_inline_start(0)

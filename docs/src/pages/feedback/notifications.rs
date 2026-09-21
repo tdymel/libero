@@ -299,9 +299,8 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
     code
 }
 
-/// The trigger, below the host when there is one, so its handle feeds it. A
-/// component of its own: `Demo` calls `render` in its own scope, where the
-/// hooks would be invisible.
+/// The trigger, below the host so its handle feeds it. Its own component: `Demo` calls
+/// `render` in its own scope, where the hooks would be invisible.
 #[component]
 #[allow(clippy::too_many_arguments)]
 fn Examples(

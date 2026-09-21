@@ -15,9 +15,7 @@ fn label_child(values: &DemoValues) -> String {
     }
 }
 
-/// A rule has no size of its own, and `spacing` is a margin - so the preview
-/// gives it both an axis to span and something to be spaced from. The code
-/// block prints that wrapper.
+/// A printed wrapper gives the rule an axis to span and neighbours for `spacing`'s margin.
 fn wrap_rule(values: &DemoValues, code: &str) -> String {
     let indented = indent(code);
     match values.str("orientation").as_str() {
@@ -74,10 +72,7 @@ pub fn DividerPage() -> Element {
                         .labels(["Start", "Center", "End"])
                         .default("center")
                         .hidden_when(|values| values.str("with_label") != "true"),
-                    // The unset line is grey-4, which a bare `grey` would
-                    // *not* resolve to - it is tinted to shade 3 like every
-                    // other bare color. So the first swatch is unset, painted
-                    // the grey-4 the rule actually draws.
+                    // Unset draws grey-4, which bare `grey` (shade 3) is not: the unset swatch is painted grey-4.
                     Control::color("color").with_unset()
                     .unset_swatch("muted.4"),
                     Control::slider("spacing", ["auto", "xs", "sm", "md", "lg", "xl"])

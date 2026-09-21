@@ -16,9 +16,8 @@ pub fn use_scroll_reset<T: Clone + PartialEq + 'static>(location: T, area: Scrol
     }));
 }
 
-/// Focuses the `main h1` inside `content` whenever `location` changes, so focus
-/// lands on the new page rather than where the link was. Never on the first
-/// render: a fresh load keeps the browser's own start. The h1 needs `tabindex="-1"`.
+/// Focuses the `main h1` (needs `tabindex="-1"`) inside `content` whenever `location` changes.
+/// Never on the first render: a fresh load keeps the browser's own start.
 pub fn use_heading_focus<T: Clone + PartialEq + 'static>(location: T, content: ElementHandle) {
     let mut last = use_hook(|| CopyValue::new(location.clone()));
     use_effect(use_reactive!(|location| {

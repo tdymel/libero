@@ -27,9 +27,8 @@ fn focus_return(values: &DemoValues) -> bool {
     values.str("focus_return") == "true"
 }
 
-/// The height only visibly changes if the content's height does, so the two
-/// options are a one-liner and a paragraph rather than two of the same size.
-/// With focus return the panel also holds the button that closes it.
+/// A one-liner or a paragraph, so the height visibly changes. With focus return the panel also
+/// holds the button that closes it.
 fn content_code(values: &DemoValues) -> String {
     let count = match values.str("content").as_str() {
         "long" => 3,
@@ -54,10 +53,8 @@ fn content_code(values: &DemoValues) -> String {
     )
 }
 
-/// `open` is not a control: it is a signal the trigger toggles, which is the
-/// whole controlled-disclosure contract. The preview renders that button, so
-/// the snippet has to print it - along with the `use_signal` behind it, or the
-/// paste does not compile.
+/// Prints the trigger and its `open` signal: the controlled-disclosure contract, and needed
+/// for the paste to compile.
 fn wrap_page(values: &DemoValues, source: &str) -> String {
     let collapse = indent(&indent(source));
     let (hook, onclick) = match focus_return(values) {
@@ -91,12 +88,8 @@ fn wrap_page(values: &DemoValues, source: &str) -> String {
     )
 }
 
-/// The `use_signal` lives here rather than in `Demo`'s `render` closure, which
-/// runs in `Demo`'s own scope - a hook written there lands in `Demo`'s hook
-/// slots.
-///
-/// **Kept in step with `content_code` and `wrap_page` by hand**; change one and
-/// change the other, or the snippet stops reproducing the preview.
+/// Its own component: a hook in `render` would land in `Demo`'s scope.
+/// **Kept in step with `content_code` and `wrap_page` by hand.**
 #[component]
 fn CollapseDemo(
     keep_mounted: Option<bool>,

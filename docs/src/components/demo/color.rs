@@ -16,9 +16,8 @@ const FIRST_CUSTOM: u32 = 0x0ca678;
 /// Every hue once around, so the closed custom swatch reads as "pick any".
 const HUE_WHEEL: &str = "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)";
 
-/// Fill and tick color for one swatch. The unset swatch shows what the
-/// component renders *without* the prop, which is white only where nothing
-/// else is drawn - `Control::unset_swatch` names the real color otherwise.
+/// Fill and tick color for one swatch. The unset swatch shows the component without the prop:
+/// `Control::unset_swatch` names that color where it isn't the surface.
 fn swatch(control: &Control, option: &str) -> (String, String) {
     match option {
         UNSET => (
@@ -59,10 +58,8 @@ fn swatch_button() -> libero::sx::Sx {
         .hover(sx().background("transparent"))
 }
 
-/// A swatch per theme color the page offers, then one that opens a
-/// `ColorPicker` for any other color. A theme swatch sets its name, the
-/// picker sets a hex, so the code block prints whichever the caller would
-/// type.
+/// A swatch per theme color, then one opening a `ColorPicker` for any other. A swatch sets its
+/// name, the picker a hex, so the code block prints what the caller would type.
 #[component]
 pub fn ColorControl(
     control: Control,
@@ -72,9 +69,7 @@ pub fn ColorControl(
     onchange: EventHandler<String>,
 ) -> Element {
     let mut open = use_signal(|| false);
-    // The picker's own value, kept here rather than re-parsed from the hex it
-    // emits: HSVA through a hex loses the hue on a grey, and the hue thumb
-    // would jump to red.
+    // Kept, not re-parsed from the emitted hex: a grey's hex loses the hue, and the thumb jumps to red.
     let mut custom = use_signal(|| {
         value
             .parse::<ColorCode>()
@@ -83,8 +78,6 @@ pub fn ColorControl(
     let trigger = use_element();
 
     let is_custom = !control.options.contains(&value);
-    // Take everything the tree needs off `control` up front: one
-    // (option, fill, tick) triple per theme swatch, and the custom flag.
     let swatches: Vec<(String, String, String)> = control
         .options
         .iter()
@@ -113,9 +106,7 @@ pub fn ColorControl(
                 sx: sx().width("100%"),
                 role: "group",
                 aria_label: "{label}",
-                // Swatches read as separate chips, not one segmented control -
-                // so this is a row of toggle `Button`s, not a
-                // `SegmentedControl`.
+                // Toggle `Button`s, not a `SegmentedControl`: swatches read as separate chips.
                 for (option, fill_color, tick_color) in swatches.iter() {
                     Button {
                         key: "{option}",
@@ -142,9 +133,7 @@ pub fn ColorControl(
                     }
                 }
                 if has_custom {
-                    // `display: contents`, so the button stays the flex item;
-                    // the div is only there to be the handle Escape focuses
-                    // through.
+                    // `display: contents` keeps the button the flex item; the div is Escape's focus handle.
                     div {
                         style: "display: contents",
                         onmounted: trigger.mount(),
@@ -181,9 +170,7 @@ pub fn ColorControl(
             }
             if has_custom && open() {
                 div {
-                    // The picker handles arrows itself and lets Escape
-                    // bubble, which closes it and hands focus back to the
-                    // swatch that opened it.
+                    // The picker lets Escape bubble: close and hand focus back to the swatch.
                     onkeydown: move |event: KeyboardEvent| {
                         if event.key() == Key::Escape {
                             event.stop_propagation();

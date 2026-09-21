@@ -58,10 +58,8 @@ const MANY_PANEL: &str = r#"panel: |step: Step| match step {
     Step::Review => rsx! { Text { "Check the order, then place it." } },
 }"#;
 
-// A trigger is a `button`, so its content has to stay phrasing content: a
-// `Box` as a `span`, not a `Flex`, which is a `div`. The inline-flex row is
-// what centres the icon on the label; beside bare text it sits on the
-// baseline.
+// A trigger is a `button`, so its content stays phrasing: a `span` `Box`, not a `Flex` `div`.
+// The inline-flex row centres the icon on the label.
 // snippet: after STEP_ENUM
 // snippet: item impl Step { fn icon(&self) -> Element { rsx! {} } }
 // snippet: let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));

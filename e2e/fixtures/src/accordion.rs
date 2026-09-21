@@ -37,9 +37,8 @@ enum Step {
     Review,
 }
 
-/// Three sections, the middle one disabled so the arrows have one to skip.
-/// Shipping's "Continue" opens Review, which closes Shipping around the
-/// focused button: the focus-return case.
+/// Three sections, the middle disabled for the arrows to skip. Shipping's "Continue" opens
+/// Review, closing Shipping around the focused button: the focus-return case.
 #[component]
 fn AccordionPage() -> Element {
     let mut open = use_signal(|| AccordionOpen::One(None::<Step>));

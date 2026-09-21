@@ -187,9 +187,7 @@ pub fn PhoneFieldPage() -> Element {
                         .then(|| Callback::new(move |iso: String| rsx! { Tricolour { iso } }));
                     let e164 = value();
                     rsx! {
-                        // The column, not the field, takes the width: a column
-                        // sized by its content would be as wide as the input's
-                        // natural width, which is more than a phone has.
+                        // The column takes the width: sized by content, it outgrows a phone.
                         Flex { direction: "column", gap: "sm", align: "stretch",
                             sx: sx().width("100%").max_width("320px"),
                             PhoneField {

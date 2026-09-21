@@ -25,8 +25,7 @@ fn MountPage() -> Element {
     }
 }
 
-/// A count of 1234, seeded in the session before the buttons mount, so the
-/// suite's baseline sees the pill on the first render. `fetch` is stubbed too.
+/// A count seeded before mount so the baseline sees the pill on first render; `fetch` stubbed.
 /// One per count colour: dimmed text on the page, the fill's contrast colour.
 #[component]
 fn StubbedPage() -> Element {

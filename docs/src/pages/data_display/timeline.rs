@@ -3,9 +3,7 @@ use crate::icons::{CheckmarkIcon, CodeIcon, FileIcon, GitHubIcon};
 use dioxus::prelude::*;
 use libero::components::{Code, Text, Timeline, TimelineEvent, TimelineLine};
 
-/// The four fixed events, as the code block prints them. `Wrap` substitutes
-/// the bullet lines and the line style, so what is printed is what the
-/// controls produced.
+/// The four fixed events as printed, with the controls' bullets and line style.
 fn items_code(values: &DemoValues) -> String {
     let bullets = values.str("bullets") == "true";
     let dashed = values.str("line") == "dashed";
@@ -26,9 +24,7 @@ fn items_code(values: &DemoValues) -> String {
         if bullets {
             out.push_str(&format!("\n        .bullet(rsx! {{ {icon} {{}} }})"));
         }
-        // Only the last event's line would be visible if it had one, so the
-        // style goes on the second-to-last - the one whose connector reaches
-        // the final bullet.
+        // On the second-to-last: its connector reaches the final bullet.
         if dashed && index == rows.len() - 2 {
             out.push_str("\n        .line(TimelineLine::Dashed)");
         }
@@ -38,10 +34,7 @@ fn items_code(values: &DemoValues) -> String {
     out
 }
 
-/// `items` is not a control, so `generate_code` never prints it, but it is
-/// most of what the reader needs. The generated block is reopened and the
-/// whole `vec![..]` literal spliced in before the closing brace, so the
-/// snippet is the one that produces the preview.
+/// Splices `items`, which `generate_code` never prints, into the generated block.
 fn wrap_page(values: &DemoValues, source: &str) -> String {
     let items = indent(&items_code(values));
     match source.strip_suffix('}') {
@@ -153,10 +146,7 @@ pub fn TimelinePage() -> Element {
             Demo {
                 component: "Timeline",
                 children_text: "",
-                // `Alternate` centres a rail in the `<ol>`'s whole width, and
-                // the side-by-side preview never exceeds 498px at any viewport
-                // - which is how the mode shipped undemonstrable. Wide, the
-                // list has room for the alternation to read.
+                // `Alternate` needs more than the side-by-side preview's 498px.
                 wide_preview: true,
                 controls: vec![
                     Control::slider("active", ["none", "0", "1", "2", "3"])
@@ -167,14 +157,8 @@ pub fn TimelinePage() -> Element {
                         }),
                     Control::toggle("align", ["start", "end", "alternate"])
                         .labels(["Start", "End", "Alternate"]),
-                    // No `UNSET` swatch: unset resolves to `primary`, and a
-                    // white swatch beside five colours reads as a sixth
-                    // colour choice rather than as "no prop". `primary` is
-                    // the first option, so it is the default, and
-                    // `generate_code` omits a control at its default - the
-                    // block prints no `color:` line there, exactly as the
-                    // unset state did. Hidden with no `active`: nothing is
-                    // drawn in the accent then.
+                    // No `UNSET` swatch: unset is `primary`, the default. Hidden with no
+                    // `active`, since nothing is drawn in the accent then.
                     Control::color("color").hidden_when(|values| values.str("active") == "none"),
                     Control::slider("bullet_size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),

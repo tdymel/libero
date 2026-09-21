@@ -70,9 +70,8 @@ fn DisableWhileOpenPage() -> Element {
     }
 }
 
-/// A card with two controls, between two buttons so Tab has somewhere to come
-/// from and to go to past the trigger. Its delays are values nothing else on
-/// the page schedules, so the test can hold exactly those two timers.
+/// A card with two controls between two buttons. Its delays are unique on the page, so the
+/// test can hold exactly those two timers.
 #[component]
 fn HoverCardPage() -> Element {
     rsx! {
@@ -120,9 +119,8 @@ fn ColorFieldInCardPage() -> Element {
     }
 }
 
-/// Two cards `#open` forces open mid-page: `#start-card` on the start side,
-/// and `#below-card` under its trigger, start-aligned (todo 711). Opened by a
-/// press, so the test can set `dir` first.
+/// `#start-card` and `#below-card` (start-aligned, todo 711), forced open by `#open`'s press
+/// so the test can set `dir` first.
 #[component]
 fn SidesPage() -> Element {
     let card = || rsx! { Text { "Wrote the first algorithm meant for a machine." } };

@@ -53,10 +53,7 @@ pub fn TitlePage() -> Element {
                     component: "Title",
                     children_text: "The quick brown fox",
                     controls: vec![
-                        // `xl` is h2, the level a demo directly under the page's
-                        // own `xxl` h1 answers to. `xxl` would open the page on a
-                        // second h1. Both controls stay live: pinning `component`
-                        // would kill the one control this page exists to show.
+                        // `xl` is h2, under the page's `xxl` h1; `xxl` would open a second h1.
                         Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                             .default("xl"),
                         Control::slider(

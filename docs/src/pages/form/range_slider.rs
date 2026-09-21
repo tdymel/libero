@@ -91,9 +91,8 @@ fn bound_code(control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
-/// `min`/`max`/`step`/`min_range` print as unquoted floats under their real
-/// prop names - the controls carry `_value` only because the discrete `min`
-/// and `max` own those names.
+/// Prints unquoted floats under the real prop names; the controls' `_value` suffix avoids
+/// clashing with the discrete `min` and `max`.
 fn number_code(control: &Control, values: &DemoValues) -> Vec<String> {
     if discrete(values) {
         return vec![];
@@ -191,9 +190,7 @@ fn continuous_marks(values: &DemoValues) -> Vec<SliderMark> {
     }
 }
 
-/// The readout is the other half of a controlled range - and it is what shows
-/// that the thumbs never cross - so it belongs in the preview, and the code
-/// block prints it.
+/// The readout, the other half of a controlled range, shows the thumbs never cross. Printed too.
 fn wrap_readout(values: &DemoValues, code: &str) -> String {
     let (declaration, signal, last) = match discrete(values) {
         true => (QUALITY, "quality():?", "last_quality()"),

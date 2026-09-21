@@ -1,6 +1,5 @@
-//! A real component with one defect planted through a prop. Most plants are
-//! injected by the test instead (`tests/all/planted.rs`); these are the ones
-//! only a prop can make.
+//! Real components with one defect planted through a prop, the ones the test
+//! (`tests/all/planted.rs`) cannot inject.
 
 use dioxus::prelude::*;
 

@@ -6,12 +6,8 @@ use libero::{
     use_theme,
 };
 
-/// The slides are fixed markup, not a control: a carousel has nothing to show
-/// without them, and there is nothing here for a reader to vary. It opens on
-/// slide 3 because at slide 1 the strip is at its very start, where every
-/// `align` rests the same way; on a middle slide switching it moves the slide
-/// to the left, the middle or the right at once. Controlled, so a control
-/// change keeps the slide the reader moved to rather than snapping back.
+/// Fixed slides, controlled so a control change keeps the reader's slide. Opens on slide 3:
+/// at slide 1 every `align` rests the same way.
 const FIXED: [&str; 4] = [
     r#"aria_label: "Product photos""#,
     "index: index()",
@@ -42,11 +38,7 @@ fn demo_slides() -> Vec<Element> {
                         .display("flex")
                         .align_items("center")
                         .justify_content("center")
-                        // A slide has whatever length the carousel gives it,
-                        // a vertical one is 300px of the 300px track - so the
-                        // fixed height is a floor, not the size. It used to be
-                        // `height`, and a vertical slide then painted 160 of
-                        // its 300px and left the rest blank.
+                        // A floor, not the size: as `height`, a vertical 300px slide painted only 160px.
                         .min_height("160px")
                         .height("100%")
                         .background(format!("primary.{n}"))
@@ -136,16 +128,8 @@ pub fn CarouselPage() -> Element {
                 children_text: "",
                 fixed: FIXED.map(str::to_string).to_vec(),
                 controls: vec![
-                    // Opens at 1.5, not at the component's own default of 1.
-                    // `align` only moves a slide where the three alignments
-                    // snap to different offsets, and with equal slides that
-                    // takes a fractional `per_view`: at 1 a slide fills the
-                    // viewport, and at 3 the centred and end-aligned snaps
-                    // land on the same whole-slide offsets as the start ones,
-                    // so the control looked dead (todo 153). At 1.5 the slide
-                    // rests at the left, in the middle or at the right, with
-                    // the neighbours peeking round it. `code` prints against
-                    // the real default, and unquoted: `per_view` is an `f64`.
+                    // Opens at 1.5: `align` only shows at a fractional `per_view` (todo 153).
+                    // `code` prints against the real default of 1, unquoted (`f64`).
                     Control::slider("per_view", ["1", "1.5", "2", "3", "4"])
                         .default("1.5")
                         .code(|_, values| match values.str("per_view").as_str() {
@@ -175,11 +159,8 @@ pub fn CarouselPage() -> Element {
                         },
                     ),
                     Control::switch("controls").default(theme.carousel.controls.to_string()),
-                    // On, though the theme's default is off: above `per_view`
-                    // 1 the dot strip shows `align` moving the reachable
-                    // window - end-aligned at 1.5 has no dot for slide 1, and
-                    // at 3 the dots read 1-4, 2-5 or 3-6. `code` prints
-                    // against the theme.
+                    // On, though the theme's default is off: the dots show `align` moving the
+                    // reachable window. `code` prints against the theme.
                     Control::switch("indicators").default("true").code(|_, values| {
                         match values.str("indicators").as_str() {
                             "true" => vec!["indicators: true".to_string()],
@@ -207,9 +188,7 @@ pub fn CarouselPage() -> Element {
                             gap: values.str("gap"),
                             align: values.str("align"),
                             orientation: values.str("orientation"),
-                            // `Input::None`, not `""`: an empty string is a
-                            // value, and it resolves to an empty declaration
-                            // rather than to "no height".
+                            // `Input::None`, not `""`: an empty string is a value, not "no height".
                             height: match vertical {
                                 true => Input::Value("300px".into()),
                                 false => Input::None,

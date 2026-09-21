@@ -60,9 +60,8 @@ fn ActivateTreePage() -> Element {
     }
 }
 
-/// Todo 770: a controlled `expanded`. "o" opens `docs` from outside, as the docs
-/// nav reveals the current page; the second tree records requests and keeps
-/// its set, so a key there can only ask.
+/// Todo 770: a controlled `expanded`. "o" opens `docs` from outside, as the docs nav does;
+/// the second tree only records requests, so a key there can only ask.
 #[component]
 fn ControlledTreePage() -> Element {
     let data = || {
@@ -173,10 +172,8 @@ fn LinkTreePage() -> Element {
     }
 }
 
-/// A deliberately awkward fixture: `Tree` is listed under the roving-tabindex
-/// archetype, and this exists to find out whether that claim survives contact.
-/// A tree is roving *and* hierarchical - it has expansion, levels, and rows
-/// that appear and disappear - none of which a flat strip has.
+/// `Tree` under the roving-tabindex archetype, though it is also hierarchical: expansion,
+/// levels, rows that appear and disappear.
 #[component]
 fn TreePage() -> Element {
     let data = vec![

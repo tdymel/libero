@@ -19,11 +19,8 @@ static GALLERY: [Asset; 6] = [
     asset!("/assets/gallery/6.svg"),
 ];
 
-/// The six pictures, each URL marked with `gallery`, so a second gallery of
-/// the same files is fetched under URLs of its own and the test can tell
-/// which gallery a request came from. The thumbnails get URLs of their own
-/// too: the strip loads every one of them, and would hide what the stage's
-/// lazy loading fetched.
+/// URLs tagged with the gallery name, thumbnails separately, so the test can tell which
+/// gallery and which part (strip or lazy stage) fetched a request.
 fn gallery(name: &str) -> Vec<LightboxItem> {
     GALLERY
         .iter()
@@ -36,16 +33,12 @@ fn gallery(name: &str) -> Vec<LightboxItem> {
         .collect()
 }
 
-/// Two triggers into one viewer: the first picture, and the last - the far
-/// end a gallery swap scrolls back from. `#swap-gallery` sits under the
-/// modal, so only a script can press it: it is the second `open_with` while
-/// the viewer is open (todo 323), which no control inside the viewer makes.
+/// Triggers for the first and last picture. `#swap-gallery` sits under the modal, so only a
+/// script presses it: a second `open_with` while open (todo 323).
 #[component]
 fn LightboxPage() -> Element {
     let lightbox = use_lightbox(LightboxOptions {
-        // Named, or every open logs the missing-name warning and the console
-        // pass fails. The theme's own name, so the fixture reads as a caller
-        // doing it right rather than renaming the component.
+        // Unnamed, every open logs the missing-name warning and the console pass fails.
         aria_label: Some("Gallery".into()),
         ..LightboxOptions::default()
     });

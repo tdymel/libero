@@ -2,10 +2,8 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, 
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
-/// The `language` prop's doc, shared with the `CodeBlock` page: the prop and
-/// the feature flags behind it work the same for both. Each grammar is also a
-/// `language` value, though `language` takes aliases the feature names don't -
-/// `rs`, `py`, `c#`.
+/// The `language` prop's doc, shared with the `CodeBlock` page. `language` also takes
+/// aliases the feature names don't (`rs`, `py`, `c#`).
 pub(super) const LANGUAGE_DOC: &str = "One of 30 grammars, each behind its own `code-lang-*` \
 feature, so a build pays only for what it highlights: bash, c, cpp, csharp, css, dart, go, graphql, \
 haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, \
@@ -72,9 +70,7 @@ pub fn CodePage() -> Element {
                 component: "Code",
                 children_text: "",
                 controls: vec![
-                    // Picks `source` as well, so it always prints - the
-                    // preview would otherwise show code the block below
-                    // never mentions. "none" is the real default.
+                    // Picks `source` as well, so it always prints. "none" is the real default.
                     Control::toggle("language", ["rust", "python"])
                         // `python` is a real, recognized name whose
                         // `code-lang-*` feature this build leaves off.

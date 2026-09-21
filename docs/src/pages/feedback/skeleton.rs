@@ -173,9 +173,7 @@ pub fn SkeletonPage() -> Element {
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm")
                         .hidden_when(|values| values.str("circle") == "true"),
-                    // Two controls for one prop: a wrapper sizes itself from
-                    // its content, but a shape with no content and no height
-                    // is zero pixels tall.
+                    // Two controls for one prop: a shape with no content needs a height.
                     Control::toggle("height", ["auto", "12px", "40px"])
                         .labels(["Auto", "12px", "40px"])
                         .code(height_code)
@@ -213,9 +211,7 @@ pub fn SkeletonPage() -> Element {
                     };
                     match busy_region(&values) {
                         true => rsx! {
-                            // Full width in the preview's flex row, as it
-                            // is in a block flow; a shrunk region would
-                            // shrink the `100%` skeleton with it.
+                            // Full width, or the `100%` skeleton shrinks with the region.
                             Box {
                                 "aria-busy": if visible { "true" } else { "false" },
                                 sx: sx().width("100%"),

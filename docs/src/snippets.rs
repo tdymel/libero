@@ -1,40 +1,14 @@
-//! Every piece of Rust the docs pages print, compiled.
+//! Every piece of Rust the docs pages print (`const` snippets and rendered `Demo` code), written
+//! to the gitignored `libero/tests/page_snippets.md`: run this before libero's doc-tests.
 //!
-//! A page prints code two ways: a `const NAME: &str = r#"..."#` snippet, and
-//! the code block under a `Demo`, which the page assembles at run time from
-//! `fixed:` props, each control's `code` fn and `format!`. This test collects
-//! both and writes them into `libero/tests/page_snippets.md`, wrapped into a
-//! component so each compiles on its own, and `libero/src/md_examples.rs`
-//! compiles that file as doc-tests. The file is gitignored: run this test
-//! before libero's doc-tests, or they compile what the pages printed last
-//! time, and in a fresh clone they fail on the missing file.
+//! Each blank-line piece is placed by its first line: items on top, `let` in the body, rsx in
+//! `rsx!`. Directives in comment lines right above the `const` or the page's `Demo {`:
 //!
-//! The `Demo` code is not read from the source: the test renders every route,
-//! each `Demo` hands `record` what it generates its code from, and the test
-//! calls the same generator the page does. It does so for the defaults and
-//! for every option of every control once, a control the defaults hide
-//! included. So what is compiled is what a reader can see.
-//!
-//! Blocks are compiled, not run (`no_run`). A snippet is split at its blank
-//! lines, and each piece is placed by its first line of code: items (`fn`, `enum`,
-//! `#[derive]`, ...) at the top, `let` statements in the component's body,
-//! and rsx in its `rsx!`. A first line that is none of those is refused, so a
-//! TOML or shell snippet says so instead of failing to compile. Comment lines
-//! right above the `const`, or above the page's `Demo {`, tell it more:
-//!
-//! - `// snippet: ignore - <why>` - not compiled: pseudocode, not Rust, or
-//!   built on another page's code. The reason is required and lands in the
-//!   generated file, so every exception is listed there.
-//! - `// snippet: after A, B` - the page's snippets `A` and `B` go first, each
-//!   placed by its own shape. Usually the enum the snippet matches on.
-//! - `// snippet: item <item>` - one more item, such as a stand-in for the
-//!   docs' own icons: `#[component] fn FileIcon() -> Element { rsx! {} }`.
+//! - `// snippet: ignore - <why>` - not compiled; required for non-Rust `CodeBlock`s.
+//! - `// snippet: after A, B` - the page's snippets `A` and `B` go first.
+//! - `// snippet: item <item>` - one more item, e.g. a stand-in icon component.
 //! - `// snippet: let <statement>` - one more statement in the body.
-//! - `// snippet: in <rsx>` - the rsx the snippet goes into, at `..`. A prop
-//!   line like `label: |s: Section| ...` needs the component that takes it.
-//!
-//! A `const` printed by a `CodeBlock` whose `language` is not Rust must be
-//! marked `ignore`.
+//! - `// snippet: in <rsx>` - the rsx the snippet goes into, at `..`.
 
 use std::cell::RefCell;
 use std::fmt::Write as _;
@@ -387,12 +361,8 @@ fn demos_of(route: Route) -> Vec<DemoCode> {
     DEMOS.with(|demos| std::mem::take(&mut *demos.borrow_mut()))
 }
 
-/// What the code block prints in the states the test visits, each once: the
-/// defaults, then as few states as it takes to show every option of every
-/// control once. Each state moves as many controls as it can at the same time,
-/// so a `Demo` costs about as many states as its longest control has options,
-/// not their sum. A control that the defaults hide is shown by also moving one
-/// other control that reveals it (a mode and its own props).
+/// The code block in the defaults, then in as few states as show every control option once.
+/// A control the defaults hide is revealed by also moving the control that shows it.
 fn demo_sources(code: &DemoCode) -> Vec<String> {
     let base = DemoValues::defaults(&code.controls);
     let hidden = |state: &DemoValues, name: &str| {

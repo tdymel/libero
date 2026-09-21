@@ -88,14 +88,9 @@ fn base_props(extends: &str) -> Vec<PropDoc> {
 }
 
 /// The Properties tab: one table per component, its own props then the shared ones.
-///
-/// Two columns, not four - the first reads as a signature (`size: Size`) with
-/// the default beside it, so the table survives a phone without a horizontal
-/// scrollbar and without a tall cell per row.
+/// Two columns (signature with default, description) so it fits a phone.
 #[component]
 pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
-    // One table needs no heading - the tab already says what it lists, and the
-    // component is the page's own title.
     let named = properties.len() > 1;
 
     rsx! {
@@ -107,8 +102,7 @@ pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
                     direction: "column",
                     gap: "sm",
                     if named {
-                        // `lg` is an h3, and the page's own title is the h1 -
-                        // so the tag is pinned to h2, as `DocSection`'s xl is.
+                        // `lg` is an h3 by default; pinned to h2 under the page's h1.
                         Title { size: "lg", component: "h2", "{group.component}" }
                     }
                     PropRows {
@@ -133,15 +127,8 @@ fn PropRows(name: String, properties: Vec<PropDoc>, base: bool, extends: String)
     rsx! {
         Table {
             aria_label: name,
-            // A wrapped name cell would float a middle-aligned description
-            // away from the prop it describes.
-            //
-            // The table lays out automatically, so it grows to the widest
-            // unbreakable run in any cell - a type like
-            // `Option<Callback<WindowRect>>` in the Name column, or a
-            // `min_width`/`max_width`/`min_height` in a description. At 390px
-            // that pushed the table past the page on 18 pages, so every cell
-            // may break inside a word when it has to.
+            // Top-aligned so a wrapped name keeps its description beside it. Cells may break
+            // inside words: long types pushed the auto-layout table past a 390px page.
             sx: sx().selector(
                 "& td",
                 sx().vertical_align("top").with("overflow-wrap", "anywhere"),

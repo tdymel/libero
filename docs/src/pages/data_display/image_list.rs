@@ -28,9 +28,7 @@ fn cols(values: &DemoValues, fallback: Responsive<u8>) -> Responsive<u8> {
     }
 }
 
-/// Six pictures with six **different intrinsic heights**. Equal ones would
-/// make `masonry` look identical to `standard` and demonstrate nothing - the
-/// mistake the `Grid` page made with `dense` and three equal cards.
+/// Six pictures of **different intrinsic heights**, or `masonry` looks like `standard`.
 static GALLERY: [Asset; 6] = [
     asset!("/assets/gallery/1.svg"),
     asset!("/assets/gallery/2.svg"),
@@ -66,13 +64,8 @@ fn featured(index: usize) -> bool {
     index.is_multiple_of(3)
 }
 
-/// Twice the width `cols` gives an ordinary cell, so the `span` control
-/// actually changes something at every column count.
-///
-/// `GridSpan::Half` looked like the obvious choice and is a **no-op at
-/// `cols: 2`**, where an ordinary cell is already half the zone -
-/// caught in a browser, because the demo looked identical with the control on.
-/// A span demo has to be relative to the count it sits in.
+/// Twice an ordinary cell's width at every column count. A fixed `GridSpan::Half` is a
+/// no-op at `cols: 2`.
 fn wide_span(cols: u8) -> Option<GridSpan> {
     match cols {
         2 => Some(GridSpan::Full),
@@ -94,14 +87,8 @@ fn picture(index: usize) -> Element {
     }
 }
 
-/// The bar holds an `Element`, so this is a *caller's* caption rather than the
-/// component's: two lines and a control, laid out here.
-///
-/// Three things worth copying. The text block takes `flex: 1 1 auto` and
-/// `min-width: 0`, or a long title pushes the control out of the strip. Every
-/// line clips with an ellipsis for the same reason. And the `ActionIcon` is
-/// told `color: inherit` - a `<button>` inherits none, and an overlay bar's
-/// colour comes from the scrim.
+/// A caller's caption. `min-width: 0` and ellipses keep a long title from pushing the control
+/// out; `color: inherit`, since a `<button>` inherits none and the bar's colour is the scrim's.
 fn caption(index: usize) -> Element {
     let line = sx()
         .overflow("hidden")
@@ -158,11 +145,8 @@ fn items(values: &DemoValues) -> Vec<ImageItem> {
         .collect()
 }
 
-/// The `items` block, written out the way a caller would type it.
-///
-/// Five controls feed it and none of them is a prop on `ImageList` - they are
-/// builder calls on each `ImageItem`. A control whose effect the block cannot
-/// honestly print as `bar: "below"` has to print the thing it actually does.
+/// The `items` block as a caller would type it: five controls are `ImageItem` builder calls,
+/// not `ImageList` props.
 fn items_code(values: &DemoValues) -> String {
     let mut chain = String::new();
 
@@ -356,11 +340,8 @@ pub fn ImageListPage() -> Element {
                             false => vec![],
                         }
                     }),
-                    // Everything from here down is an `ImageItem` builder call
-                    // rather than a prop, so `bar` prints the whole `items`
-                    // block for all of them and the rest print nothing.
-                    // Hidden at one column, where nothing is wider, and under
-                    // `responsive`, where a fixed span would not follow `cols`.
+                    // From here down `ImageItem` builder calls: `bar` prints the whole `items`.
+                    // Hidden at one column and under `responsive`, where a span can't follow `cols`.
                     Control::switch("span")
                         .default("true")
                         .hidden_when(|values| {
@@ -390,9 +371,7 @@ pub fn ImageListPage() -> Element {
                         variant: values.str("variant"),
                         gap: values.str("gap"),
                         radius: values.str("radius"),
-                        // Left unset under `masonry`, which warns on a ratio
-                        // it is going to ignore - the control is hidden there,
-                        // so the prop must not be set behind its back either.
+                        // Unset under `masonry`, which warns on a ratio it ignores.
                         ratio: match (
                             values.str("variant").as_str(),
                             values.str("ratio").as_str(),

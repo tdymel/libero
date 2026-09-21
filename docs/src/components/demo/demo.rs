@@ -27,10 +27,8 @@ fn card_query(base: Sx, min_width: usize, nested: Sx) -> Sx {
     }
 }
 
-/// The color belongs *inside* the shorthand: a later `border-left: 1px solid`
-/// would otherwise reset the color to `currentColor`. A `&'static str`, not a
-/// local `String`, so the swatch closure can capture it without moving it out
-/// of the `FnMut` it lives in.
+/// Color inside the shorthand, or a later `border-left: 1px solid` resets it to `currentColor`.
+/// `&'static` so the swatch closure can capture it without moving out of its `FnMut`.
 static BORDER: LazyLock<String> =
     LazyLock::new(|| format!("1px solid {}", CODE_BLOCK_BORDER.value()));
 
@@ -99,9 +97,8 @@ impl DemoValues {
     }
 }
 
-/// Wraps the generated rsx in whatever the preview puts around it - for a
-/// component whose point is how it sits inside something else. A page-level
-/// constant, so two are always equal.
+/// Wraps the generated rsx in what the preview puts around it. A page-level constant, so two
+/// are always equal.
 #[derive(Clone, Copy)]
 pub struct Wrap(pub fn(&DemoValues, &str) -> String);
 
@@ -146,9 +143,8 @@ pub fn indent(code: &str) -> String {
 /// The narrowest segment of an `sm` `SegmentedControl` we plan for.
 const SEGMENT_WIDTH: usize = 88;
 
-/// A segment's width estimate: this much per character at the `sm` font size
-/// (14px), plus its padding and border. Measured: `Standard` 92px, `Bottom
-/// start` 117.5px.
+/// A segment's width estimate per character at `sm` (14px), plus padding and border.
+/// Measured: `Standard` 92px, `Bottom start` 117.5px.
 const SEGMENT_CHAR_WIDTH: f32 = 7.5;
 const SEGMENT_PADDING: f32 = 30.0;
 
@@ -159,15 +155,8 @@ const PANEL_PADDING: usize = 48;
 /// (512px wide, see the panel's `sx` below).
 const WIDE_PANEL_CONTROL: usize = 512 - PANEL_PADDING;
 
-/// The card width a toggle's segments need, or `None` when a segmented
-/// control is the right shape at every width.
-///
-/// Segments are `flex: 1 1 0` with `white-space: nowrap`, so a group narrower
-/// than its labels ellipsizes them: five options in the 308px a 390px phone
-/// leaves showed four of five labels truncated. More than three options
-/// therefore fall back to a select until the card is wide enough, and a set
-/// too wide for even the side column never gets the segments at all. Every
-/// segment is as wide as the longest label needs.
+/// The card width a toggle's segments need, or `None` when segments fit at every width.
+/// Narrow segments ellipsize their labels, so over three options fall back to a select.
 fn segments_need(control: &Control) -> Option<usize> {
     let options = control.options.len();
     if options <= 3 {
@@ -202,8 +191,6 @@ fn ToggleSegments(control: Control, value: String, onchange: EventHandler<String
             full_width: true,
             "aria-label": label(control.name),
             value,
-            // A control panel's options are data, so they arrive here rather
-            // than from a `T` that could list them statically.
             options: control.options.clone(),
             option_label: move |option: String| OptionLabel::from(control.label_of(&option)),
             onchange: move |next: String| onchange.call(next),
@@ -211,9 +198,8 @@ fn ToggleSegments(control: Control, value: String, onchange: EventHandler<String
     }
 }
 
-/// The controls the panel draws, switches after every other kind so a page's
-/// switches always share rows as one group. Stable, so each group keeps the
-/// page's order; the code block keeps it too, it reads `controls` directly.
+/// The shown controls, switches last so they share rows as one group. A stable sort keeps
+/// the page's order within each group.
 fn shown_controls<'a>(controls: &'a [Control], values: &DemoValues) -> Vec<(usize, &'a Control)> {
     let mut shown: Vec<_> = controls
         .iter()
@@ -315,9 +301,7 @@ pub fn Demo(
                 // Keeps the code block's own square corners inside the card's
                 // rounded ones.
                 .overflow("hidden")
-                // Whether the control panel wraps below the preview depends on
-                // this card's width, not the viewport's - under the docs shell
-                // the two disagree by the nav's width.
+                // The panel wraps on the card's width, not the viewport's (they differ by the nav).
                 .container(DEMO_CARD),
             Flex {
                 direction: "row",
@@ -341,21 +325,15 @@ pub fn Demo(
                 // the whole demo then.
                 if !controls.is_empty() {
                     Flex {
-                        // A wrapping row, not a column: every control claims a
-                        // full line except a switch, which is a label and a
-                        // 36px track - so a run of them shares one line and the
-                        // panel stops growing a row per boolean.
+                        // A wrapping row: every control takes a full line but a switch, so switches share one.
                         direction: "row",
                         wrap: "wrap",
                         // Stretched, a wrapped line's spare height goes below
                         // its controls instead of centring them in it.
                         align: "stretch",
                         gap: "lg",
-                        // Wrapped, the controls sit below the preview, so the
-                        // divider has to move with them.
                         sx: {
-                            // Packed at the top: a preview taller than the
-                            // controls would otherwise spread their lines apart.
+                            // Packed at the top, or a taller preview spreads the lines apart.
                             let panel = sx()
                                 .align_content("start")
                                 .width("100%")
@@ -367,46 +345,27 @@ pub fn Demo(
                                 // preview gets the card's whole width.
                                 panel
                             } else {
-                                // The same 752px the flex row wraps at, plus
-                                // slack so a subpixel rounding at the boundary
-                                // can't put the wrap and the query on opposite
-                                // sides.
+                                // The flex row's 752px wrap plus slack against subpixel rounding.
                                 card_query(
                                     panel,
                                     768,
                                     sx()
-                                        // 464px of controls plus the padding
-                                        // either side - `box-sizing` is
-                                        // border-box here. Sized for the widest
-                                        // control we have: a five-option
-                                        // segmented group whose longest label is
-                                        // `Elevated` (`Button`'s `variant`). Its
-                                        // segments are `flex: 1 1 0`, so every
-                                        // one is as wide as that longest label
-                                        // needs - ~93px at `sm`, times five.
+                                        // 464px of controls plus padding (border-box): five
+                                        // `Elevated`-wide segments, ~93px each at `sm`.
                                         .width("512px")
                                         .border_top("none")
                                         .border_left(border()),
                                 )
                             }
                         },
-                        // A hidden control is one the current mode does not
-                        // have at all, so it is gone rather than greyed: the
-                        // control that swaps the set sits above them and stays
-                        // put under the pointer.
-                        // Enumerated before the filter: `index` addresses
-                        // `DemoValues`, which keeps every control's value,
-                        // hidden or not.
+                        // `index` is from before the filter: it addresses `DemoValues`,
+                        // which keeps hidden controls' values too.
                         for (index, control) in shown_controls(&controls, &values()) {
                             Flex {
                                 key: "{control.name}",
                                 direction: "column",
-                                // `1 1 0` so a run of switches distributes over
-                                // the whole width; the min stops a long label
-                                // from wrapping under its own switch. Centred,
-                                // because a track is far narrower than its
-                                // share of the row - left-aligned it reads as
-                                // three stray switches rather than a group.
+                                // Switches spread over the row, centred to read as a group;
+                                // the min keeps a long label from wrapping under its switch.
                                 sx: if control.kind == ControlKind::Switch {
                                     sx().flex("1 1 0").min_width("104px").align_items("center")
                                 } else {
@@ -443,9 +402,7 @@ pub fn Demo(
                                             max: (control.options.len() - 1) as f64,
                                             step: 1.0,
                                             value: control.step_of(&values().str(control.name)),
-                                            // The step index means nothing to a
-                                            // reader - the bubble shows the value
-                                            // it stands for.
+                                            // The bubble shows the option, not the step index.
                                             format: {
                                                 let options = control.options.clone();
                                                 move |at: f64| options[at as usize].clone()
@@ -464,11 +421,8 @@ pub fn Demo(
                                         NativeSelect {
                                             size: "sm",
                                             label: label(control.name),
-                                            // Matches the `Text { size: "sm" }`
-                                            // label every other control kind
-                                            // gets. The field owns its label
-                                            // node, so the caption is styled
-                                            // from the wrapper's `sx`.
+                                            // Matches the other controls' `Text { size: "sm" }` label,
+                                            // styled from the wrapper since the field owns its label.
                                             sx: sx().selector(
                                                 "& > label",
                                                 sx()
@@ -476,10 +430,6 @@ pub fn Demo(
                                                     .font_size(TEXT_FONT_SIZE.value(Size::Sm)),
                                             ),
                                             value: Some(values().str(control.name)),
-                                            // A control panel's options are
-                                            // data, so they arrive here rather
-                                            // than from a `T` that could list
-                                            // them statically.
                                             options: control.options.clone(),
                                             option_label: {
                                                 let control = control.clone();
@@ -499,13 +449,8 @@ pub fn Demo(
                                             },
                                         }
                                     },
-                                    // A toggle too wide for the card falls back
-                                    // to a select. Both are rendered and a
-                                    // container query picks one: `display:
-                                    // none` keeps the other out of the tab
-                                    // order and the accessibility tree, which
-                                    // is what a JS width check would cost us a
-                                    // hook and a resize observer for.
+                                    // Too wide for the card, a select: a container query shows one,
+                                    // and `display: none` keeps the other out of tab order and a11y tree.
                                     ControlKind::Toggle if segments_need(control).is_some() => {
                                         let needed = segments_need(control).unwrap_or_default();
                                         rsx! {
@@ -523,10 +468,7 @@ pub fn Demo(
                                                 sx: card_query(sx().display("block"), needed, sx().display("none")),
                                                 NativeSelect {
                                                     size: "sm",
-                                                    // The row's own `Text`
-                                                    // already names it, so
-                                                    // the field draws no
-                                                    // second label.
+                                                    // The row's `Text` names it: no second label.
                                                     "aria-label": label(control.name),
                                                     value: Some(values().str(control.name)),
                                                     options: control.options.clone(),

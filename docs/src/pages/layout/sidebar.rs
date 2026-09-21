@@ -12,9 +12,8 @@ const REST: &str = r#"Flex {
     Text { "Rest of the layout" }
 }"#;
 
-/// `side` picks the border and the size axis, not the position - an in-flow
-/// panel sits where its parent's layout puts it, so the wrapper puts it at
-/// the matching end of the DOM, and the code block shows that.
+/// `side` picks the border and size axis, not the position: the printed wrapper puts the
+/// panel at the matching end of the DOM.
 fn wrap_layout(values: &DemoValues, code: &str) -> String {
     let panel = indent(code);
     let rest = indent(REST);

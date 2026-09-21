@@ -40,10 +40,8 @@ const CHILDREN: &str = r#"Flex { direction: "row", gap: "sm", wrap: "nowrap",
     }
 }"#;
 
-/// The edge report, printed under the strip. `onedgechange` is in `fixed`;
-/// this adds the signal it writes and the text that reads it. Under
-/// `controls: "never"` also the handle and the caller's own two buttons. A
-/// column, so the report sits below the strip rather than beside it.
+/// Adds the signal `onedgechange` writes and the report under the strip; under
+/// `controls: "never"` also the handle and the caller's own two buttons.
 fn wrap_edges(values: &DemoValues, source: &str) -> String {
     let own = values.str("controls") == "never";
     let (handle, buttons) = match own {

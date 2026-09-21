@@ -33,9 +33,8 @@ fn SpotlightLongPage() -> Element {
     }
 }
 
-/// The hook lives on the page, which outlives the trigger, as its docs ask.
-/// Each action writes its label into `#ran`'s `data-ran`, so the resting
-/// accessibility tree is unchanged.
+/// The hook lives on the page, which outlives the trigger. Actions write into `#ran`'s
+/// `data-ran`, leaving the resting accessibility tree unchanged.
 #[component]
 fn SpotlightPage() -> Element {
     let mut ran = use_signal(String::new);
@@ -58,10 +57,7 @@ fn SpotlightPage() -> Element {
         actions: Some(Callback::new(move |query: String| {
             spotlight_filter(&query, &all)
         })),
-        // Named, or every open logs the missing-name warning and the console
-        // pass fails.
-        // The theme's own name, so the fixture reads as a caller doing it
-        // right rather than renaming the component.
+        // Unnamed, every open logs the missing-name warning and the console pass fails.
         aria_label: Some("Command palette".into()),
         ..Default::default()
     });
