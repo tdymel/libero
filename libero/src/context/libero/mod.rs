@@ -241,7 +241,15 @@ impl LiberoContext {
         )
     }
 
+    /// Forces reduced motion, or with `None` follows the system, and keeps the choice.
     pub(crate) fn set_forced_reduced_motion(&self, reduced: Option<bool>) {
+        if let Some(platform) = a11y_media() {
+            platform.store_reduced_motion(reduced);
+        }
+        self.force_reduced_motion(reduced);
+    }
+
+    fn force_reduced_motion(&self, reduced: Option<bool>) {
         let mut stored = self.forced_reduced_motion;
         stored.set(reduced);
         self.publish_accessibility();
@@ -430,7 +438,13 @@ pub fn LiberoProvider(
             .map(|platform| platform.system())
             .unwrap_or_default()
     });
-    let forced_reduced_motion = use_signal(|| None);
+    // A kept choice. The web reads it after mount: it rewrites the sheets' text,
+    // which a hydrating client must render as the server did.
+    let forced_reduced_motion = use_signal(|| {
+        a11y_media()
+            .filter(|_| !cfg!(target_arch = "wasm32"))
+            .and_then(|platform| platform.stored_reduced_motion())
+    });
 
     let stylesheet_registry_version = use_signal(|| 0u64);
     let context = use_context_provider(|| {
@@ -451,7 +465,12 @@ pub fn LiberoProvider(
             stylesheet_registry_version,
         )
     });
-    use_hook(|| set_current_a11y_answers(A11yAnswers::new(*accessibility_system.peek(), None)));
+    use_hook(|| {
+        set_current_a11y_answers(A11yAnswers::new(
+            *accessibility_system.peek(),
+            *forced_reduced_motion.peek(),
+        ))
+    });
     // Every later change of the platform's settings, held for the provider's lifetime.
     let _accessibility_subscription = use_hook(|| {
         let context = context.clone();
@@ -466,6 +485,13 @@ pub fn LiberoProvider(
         move || {
             if let Some(platform) = a11y_media().filter(|_| !answers_a11y_media()) {
                 context.set_accessibility_system(platform.system());
+                // A choice made during the first render wins over the kept one.
+                if cfg!(target_arch = "wasm32")
+                    && context.forced_reduced_motion.peek().is_none()
+                    && let Some(kept) = platform.stored_reduced_motion()
+                {
+                    context.force_reduced_motion(Some(kept));
+                }
             }
         }
     });

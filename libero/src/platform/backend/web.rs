@@ -11,7 +11,9 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen::prelude::Closure;
 
 use super::INTERACTIVE;
-use crate::platform::a11y_media::A11yMediaSubscription;
+use crate::platform::a11y_media::{
+    A11yMediaSubscription, REDUCED_MOTION_STORAGE_KEY, kept_reduced_motion, parse_reduced_motion,
+};
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, ContentSubscription, Dimensions,
     DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, PlatformError, Read,
@@ -274,6 +276,26 @@ impl A11yMediaApi for WebA11yMedia {
             })
             .collect();
         Box::new(WebA11yMediaSubscription { queries, closure })
+    }
+
+    fn stored_reduced_motion(&self) -> Option<bool> {
+        parse_reduced_motion(
+            &local_storage()?
+                .get_item(REDUCED_MOTION_STORAGE_KEY)
+                .ok()??,
+        )
+    }
+
+    fn store_reduced_motion(&self, reduced: Option<bool>) {
+        let Some(storage) = local_storage() else {
+            return;
+        };
+        let _ = match reduced {
+            Some(reduced) => {
+                storage.set_item(REDUCED_MOTION_STORAGE_KEY, kept_reduced_motion(reduced))
+            }
+            None => storage.remove_item(REDUCED_MOTION_STORAGE_KEY),
+        };
     }
 }
 

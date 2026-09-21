@@ -22,6 +22,8 @@ const APPEARANCE: &str = "org.freedesktop.appearance";
 /// GNOME's own keys, for a portal older than `reduced-motion`.
 const GNOME_INTERFACE: &str = "org.gnome.desktop.interface";
 const GNOME_A11Y: &str = "org.gnome.desktop.a11y.interface";
+/// KDE's `kdeglobals` `[KDE]` group, for a Plasma older than `reduced-motion` (todo 973).
+const KDE_GLOBALS: &str = "org.kde.kdeglobals.KDE";
 /// A missing portal must not hold up the first frame.
 const TIMEOUT: Duration = Duration::from_millis(250);
 
@@ -42,11 +44,49 @@ fn setting(connection: &Connection, namespace: &str, key: &str) -> Option<u64> {
     value.0.as_u64()
 }
 
-fn read(connection: &Connection) -> AccessibilityPreferences {
-    let reduced_motion = match setting(connection, APPEARANCE, "reduced-motion") {
+/// KDE's animation speed factor, `0` for no animations. The portal hands
+/// `kdeglobals` entries over as text.
+fn kde_animation_factor(connection: &Connection) -> Option<f64> {
+    let proxy = connection.with_proxy(DESTINATION, PATH, TIMEOUT);
+    let (value,): (Variant<Box<dyn RefArg>>,) = proxy
+        .method_call(
+            SETTINGS,
+            "ReadOne",
+            (KDE_GLOBALS, "AnimationDurationFactor"),
+        )
+        .ok()?;
+    as_factor(&*value.0)
+}
+
+fn as_factor(value: &dyn RefArg) -> Option<f64> {
+    value
+        .as_f64()
+        .or_else(|| value.as_u64().map(|factor| factor as f64))
+        .or_else(|| value.as_str()?.trim().parse().ok())
+}
+
+/// The portal's answer first, then GNOME's key, then KDE's; each asked only
+/// when the one before is not set.
+fn reduces_motion(
+    appearance: Option<u64>,
+    gnome_animations: impl FnOnce() -> Option<u64>,
+    kde_factor: impl FnOnce() -> Option<f64>,
+) -> bool {
+    match appearance {
         Some(reduce) => reduce == 1,
-        None => setting(connection, GNOME_INTERFACE, "enable-animations") == Some(0),
-    };
+        None => match gnome_animations() {
+            Some(enabled) => enabled == 0,
+            None => kde_factor() == Some(0.0),
+        },
+    }
+}
+
+fn read(connection: &Connection) -> AccessibilityPreferences {
+    let reduced_motion = reduces_motion(
+        setting(connection, APPEARANCE, "reduced-motion"),
+        || setting(connection, GNOME_INTERFACE, "enable-animations"),
+        || kde_animation_factor(connection),
+    );
     let high_contrast = match setting(connection, APPEARANCE, "contrast") {
         Some(1) => true,
         _ => setting(connection, GNOME_A11Y, "high-contrast") == Some(1),
@@ -93,7 +133,7 @@ fn watch(sender: mpsc::UnboundedSender<AccessibilityPreferences>) {
     let notify = sender.clone();
     let changed = MatchRule::new_signal(SETTINGS, "SettingChanged");
     let added = connection.add_match(changed, move |(namespace,): (String,), connection, _| {
-        if [APPEARANCE, GNOME_INTERFACE, GNOME_A11Y].contains(&namespace.as_str()) {
+        if [APPEARANCE, GNOME_INTERFACE, GNOME_A11Y, KDE_GLOBALS].contains(&namespace.as_str()) {
             let _ = notify.unbounded_send(read(connection));
         }
         true
@@ -118,6 +158,30 @@ impl Drop for PortalSubscription {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn kde_answers_only_when_the_portal_and_gnome_do_not() {
+        let never = || -> Option<f64> { panic!("KDE asked") };
+        assert!(reduces_motion(Some(1), || panic!("GNOME asked"), never));
+        assert!(!reduces_motion(None, || Some(1), never));
+        assert!(reduces_motion(None, || Some(0), never));
+        assert!(reduces_motion(None, || None, || Some(0.0)));
+        assert!(!reduces_motion(None, || None, || Some(0.5)));
+        assert!(!reduces_motion(None, || None, || None));
+    }
+
+    #[test]
+    fn the_kde_factor_reads_as_text_or_number() {
+        let text: Box<dyn RefArg> = Box::new(String::from(" 0 "));
+        let double: Box<dyn RefArg> = Box::new(0.25f64);
+        let wrapped: Box<dyn RefArg> =
+            Box::new(Variant(Box::new(String::from("1.5")) as Box<dyn RefArg>));
+        assert_eq!(as_factor(&*text), Some(0.0));
+        assert_eq!(as_factor(&*double), Some(0.25));
+        assert_eq!(as_factor(&*wrapped), Some(1.5));
+        let junk: Box<dyn RefArg> = Box::new(String::from("fast"));
+        assert_eq!(as_factor(&*junk), None);
+    }
 
     /// Reads the desktop this runs on: only that the calls go through.
     #[test]

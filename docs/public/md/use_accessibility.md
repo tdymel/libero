@@ -57,7 +57,10 @@ fn Settings() -> Element {
 
 In a browser and Android's WebView the settings are the page's media queries.
 Natively they come from the desktop portal on Linux (`org.freedesktop.appearance`,
-GNOME's own keys as a fallback); other native platforms report no preference.
+GNOME's and older KDE's own keys as a fallback); other native platforms report no preference.
+
+A forced reduced motion is kept across restarts in a browser (`localStorage`) and on
+Android; on desktop and native it lasts for the session.
 
 ## API
 
@@ -69,7 +72,7 @@ pub fn use_accessibility() -> AccessibilityHandle
 |---|---|---|
 | `get()` | `AccessibilityPreferences` | All four at once: `reduced_motion` (forced or the system's), `forced_colors`, `contrast`, `reduced_transparency`. |
 | `reduced_motion()` | `bool` | Whether motion is reduced: the forced answer, else the system's. |
-| `set_reduced_motion(reduced: Option<bool>)` | `()` | Forces reduced motion on or off for the session; `None` follows the system again. |
+| `set_reduced_motion(reduced: Option<bool>)` | `()` | Forces reduced motion on or off, kept where the platform can; `None` follows the system again. |
 | `forced_colors()` | `bool` | Whether the system forces its own colors. |
 | `contrast()` | `Contrast` | `Contrast::NoPreference`, `More` or `Less`. |
 | `reduced_transparency()` | `bool` | Whether the system asks for less transparency. |

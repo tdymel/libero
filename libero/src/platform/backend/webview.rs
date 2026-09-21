@@ -12,14 +12,18 @@ use dioxus::core::{Runtime, ScopeId, Task, spawn_forever};
 use dioxus::document::{Document, eval};
 use dioxus::prelude::{Key, Modifiers, spawn};
 
-use crate::platform::a11y_media::A11yMediaSubscription;
+use crate::platform::a11y_media::{
+    A11yMediaSubscription, REDUCED_MOTION_STORAGE_KEY, kept_reduced_motion, parse_reduced_motion,
+};
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi,
     KeyChord, KeySubscription, KeyboardApi, PlatformError, Read, ScrollApi, ScrollSubscription,
     clipboard::{ClipboardApi, Write},
     keyboard::{CLICKED_INPUT_TYPES, warn_reserved_chord},
 };
-use crate::tokens::{AccessibilityPreferences, ColorScheme, ColorSchemeSetting, Contrast};
+use crate::tokens::{
+    AccessibilityPreferences, COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting, Contrast,
+};
 
 thread_local! {
     /// [`runs_scripts`]'s answer per document: one thread may serve SSR and liveview.
@@ -304,6 +308,20 @@ impl A11yMediaApi for WebViewA11yMedia {
         A11Y_CALLBACKS.with_borrow_mut(|callbacks| callbacks.push((id, Rc::from(callback))));
         Box::new(WebViewA11yMediaSubscription(id))
     }
+
+    fn stored_reduced_motion(&self) -> Option<bool> {
+        parse_reduced_motion(&std::fs::read_to_string(app_file(REDUCED_MOTION_STORAGE_KEY)?).ok()?)
+    }
+
+    fn store_reduced_motion(&self, reduced: Option<bool>) {
+        let Some(path) = app_file(REDUCED_MOTION_STORAGE_KEY) else {
+            return;
+        };
+        let _ = match reduced {
+            Some(reduced) => write_app_file(&path, kept_reduced_motion(reduced)),
+            None => std::fs::remove_file(path),
+        };
+    }
 }
 
 struct WebViewA11yMediaSubscription(u64);
@@ -350,27 +368,31 @@ fn watch_scheme() {
     });
 }
 
+fn write_app_file(path: &std::path::Path, text: &str) -> std::io::Result<()> {
+    if let Some(dir) = path.parent() {
+        std::fs::create_dir_all(dir)?;
+    }
+    std::fs::write(path, text)
+}
+
 /// Desktop names no app directory yet, so an override is not kept.
 #[cfg(not(target_os = "android"))]
-fn scheme_file() -> Option<PathBuf> {
+fn app_file(_name: &str) -> Option<PathBuf> {
     None
 }
 
-/// The app's own files directory, `None` where it cannot be named. User 0's
+/// `name` in the app's own files directory, `None` where it cannot be named. User 0's
 /// path: under a secondary Android user the override lives for the session.
 #[cfg(target_os = "android")]
-fn scheme_file() -> Option<PathBuf> {
+fn app_file(name: &str) -> Option<PathBuf> {
     let cmdline = std::fs::read("/proc/self/cmdline").ok()?;
     // The package name, minus a `:process` suffix and the NUL padding.
-    let name = cmdline.split(|byte| *byte == 0).next()?;
-    let package = std::str::from_utf8(name).ok()?.split(':').next()?;
+    let process = cmdline.split(|byte| *byte == 0).next()?;
+    let package = std::str::from_utf8(process).ok()?.split(':').next()?;
     if package.is_empty() || package.contains('/') {
         return None;
     }
-    Some(PathBuf::from(format!(
-        "/data/data/{package}/files/{}",
-        crate::tokens::COLOR_SCHEME_STORAGE_KEY
-    )))
+    Some(PathBuf::from(format!("/data/data/{package}/files/{name}")))
 }
 
 impl ColorSchemeApi for WebViewColorScheme {
@@ -387,18 +409,14 @@ impl ColorSchemeApi for WebViewColorScheme {
     }
 
     fn stored(&self) -> Option<ColorSchemeSetting> {
-        let stored = std::fs::read_to_string(scheme_file()?).ok()?;
+        let stored = std::fs::read_to_string(app_file(COLOR_SCHEME_STORAGE_KEY)?).ok()?;
         Some(ColorSchemeSetting::parse(stored.trim()))
     }
 
     fn store(&self, setting: ColorSchemeSetting) {
-        let Some(path) = scheme_file() else {
-            return;
-        };
-        if let Some(dir) = path.parent() {
-            let _ = std::fs::create_dir_all(dir);
+        if let Some(path) = app_file(COLOR_SCHEME_STORAGE_KEY) {
+            let _ = write_app_file(&path, setting.as_str());
         }
-        let _ = std::fs::write(path, setting.as_str());
     }
 }
 

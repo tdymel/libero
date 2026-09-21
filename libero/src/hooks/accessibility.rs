@@ -58,7 +58,8 @@ impl AccessibilityHandle {
             .unwrap_or(self.context.accessibility_system.read().reduced_motion)
     }
 
-    /// Forces reduced motion on or off for the session; `None` follows the system again.
+    /// Forces reduced motion on or off; `None` follows the system again. Kept where
+    /// the platform can (the web's `localStorage`, Android), so a restart keeps it.
     pub fn set_reduced_motion(&self, reduced: Option<bool>) {
         self.context.set_forced_reduced_motion(reduced);
     }
