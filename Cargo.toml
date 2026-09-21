@@ -29,23 +29,8 @@ debug = false
 [profile.dev.package."*"]
 opt-level = 3
 
-# `release` is tuned for wasm bundle size (opt-level "z"), which is the wrong
-# trade for a native window. Native release builds use this instead.
-[profile.native]
-inherits = "release"
-opt-level = 3
-lto = "thin"
-codegen-units = 16
-
-# The Android APK is a native library too: speed over size, and no LTO, which
-# is what makes the size-tuned `release` link so slow.
-[profile.android]
-inherits = "release"
+# Speed over size on every platform, wasm included: no LTO, default codegen
+# units. The wasm bundle grows and links in less time.
+[profile.release]
 opt-level = 3
 lto = false
-codegen-units = 16
-
-[profile.release]
-opt-level = "z"
-codegen-units = 1
-strip = true

@@ -36,10 +36,9 @@ start-native: _dx
 start-native-hybrid: _dx
     {{x11}} {{gpu}} {{dx}} serve --platform linux --renderer native --debug-symbols=false {{nhybrid}}
 
-# Optimised end to end, via the workspace's `native` profile - `release`
-# without its wasm-size trade-offs. Slow to build, and no hot reload.
+# Optimised end to end, via `release`. Slow to build, and no hot reload.
 start-native-release: _dx
-    {{x11}} {{gpu}} {{dx}} serve --platform linux --renderer native --debug-symbols=false --profile native {{nfeat}}
+    {{x11}} {{gpu}} {{dx}} serve --platform linux --renderer native --debug-symbols=false --release {{nfeat}}
 
 # The shortest path to a window (no `dx`, no hot reload, no devserver) - use
 # it when a failure might be `dx`'s rather than the app's. Only dx bundles
@@ -51,7 +50,7 @@ build-native: _dx
     {{dx}} build --platform linux --renderer native --debug-symbols=false {{nfeat}}
 
 build_release-native: _dx
-    {{dx}} build --platform linux --renderer native --debug-symbols=false --profile native {{nfeat}}
+    {{dx}} build --platform linux --renderer native --debug-symbols=false --release {{nfeat}}
 
 # --- CPU renderer -----------------------------------------------------------
 # `native-cpu` replaces `native` rather than adding to it (see docs/Cargo.toml),
