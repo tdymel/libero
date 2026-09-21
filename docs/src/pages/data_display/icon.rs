@@ -31,7 +31,9 @@ pub fn IconPage() -> Element {
                     prop("radius", "ThemeAwareValue")
                         .default("sm")
                         .doc("Corner radius."),
-                    prop("children", "Element").default("required").doc("The svg."),
+                    prop("src", "String")
+                        .doc("An image URL drawn as the glyph, in the icon's color, instead of `children`. Only its shape is used: its own colors are ignored."),
+                    prop("children", "Element").doc("The svg. Not needed with `src`."),
                 ]),
             ],
             accessibility: a11y()

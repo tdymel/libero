@@ -4,8 +4,8 @@ use crate::{
     components::{
         common::{
             HtmlTag, Input, States, Variables, Variant, VariantVars, base_color, base_props,
-            contrast_color, fill_color, names_itself, text_color, variables, variant_chrome_sx,
-            variant_colors,
+            contrast_color, css_string, fill_color, names_itself, text_color, variables,
+            variant_chrome_sx, variant_colors,
         },
         layout::use_box,
     },
@@ -60,6 +60,28 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
+/// An image as a stencil filled with `currentColor`, so it takes the icon's color.
+static ICON_MASK_SX: StaticSx = StaticSx::new(|| {
+    sx().display("block")
+        .width(ICON_GLYPH_VAR.value())
+        .height(ICON_GLYPH_VAR.value())
+        .background("currentColor")
+        .mask("center / contain no-repeat")
+});
+
+fn icon_mask_style(src: &str) -> String {
+    format!("mask-image:url({});", css_string(src))
+}
+
+#[component]
+fn IconMask(src: String) -> Element {
+    use_box()
+        .framework_sx(&ICON_MASK_SX)
+        .style(Some(icon_mask_style(&src)))
+        .prepare()
+        .render(HtmlTag::Span, Vec::new(), rsx! {})
+}
+
 fn icon_variables(props: &IconProps, variant: Variant) -> Variables {
     let base = base_color(props.color.as_ref());
     let contrast = contrast_color(&base);
@@ -94,6 +116,11 @@ base_props! {
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
+        /// An image URL drawn as the glyph, in the icon's color, instead of `children`.
+        /// It is only a stencil: its own colors are ignored.
+        #[props(default, into)]
+        src: Option<String>,
+        #[props(default)]
         children: Element,
     }
 }
@@ -106,6 +133,7 @@ base_props! {
 /// # fn app() -> Element {
 /// rsx! {
 ///     Icon { aria_label: "Verified", "✓" }
+///     Icon { src: "/assets/logo.svg", color: "primary" }
 /// }
 /// # }
 /// ```
@@ -138,6 +166,10 @@ pub fn Icon(props: IconProps) -> Element {
         .with(variant.state_name(), true)
         .into();
     let named = names_itself(&props.attributes);
+    let children = match props.src {
+        Some(src) => rsx! { IconMask { src } },
+        None => props.children,
+    };
 
     use_box()
         .framework_sx(&ICON_BASE_SX)
@@ -148,7 +180,7 @@ pub fn Icon(props: IconProps) -> Element {
         .prepare()
         .attr_default("role", named.then_some("img"))
         .attr_default("aria-hidden", (!named).then_some("true"))
-        .render(component, props.attributes, props.children)
+        .render(component, props.attributes, children)
 }
 
 #[cfg(test)]
@@ -169,8 +201,17 @@ mod tests {
             color,
             size: Input::None,
             radius: Input::None,
+            src: None,
             children: rsx! {},
         }
+    }
+
+    #[test]
+    fn a_source_url_is_quoted_into_the_mask() {
+        assert_eq!(
+            icon_mask_style("/a b\"c.svg"),
+            "mask-image:url(\"/a b\\\"c.svg\");"
+        );
     }
 
     #[test]
