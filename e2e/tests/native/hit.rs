@@ -1,7 +1,5 @@
-//! Blitz hit testing of inline content: a box laid out inline in a block with
-//! padding takes no hit, wherever the pointer lands. A block wrapper without
-//! padding, or a flex container, avoids it. And the client rect of a
-//! translated box.
+//! Blitz hit testing: an inline box in a padded block takes no hit (an unpadded block or a flex
+//! container avoids it); and the client rect of a translated box.
 
 use dioxus::prelude::*;
 use e2e::native::mount;

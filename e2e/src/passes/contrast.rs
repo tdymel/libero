@@ -1,32 +1,11 @@
-//! Contrast, and the ARIA-validity rules that come with axe.
-//!
-//! Vendored `axe-core` (4.10.2, MPL-2.0, `e2e/vendor/axe.min.js`), injected
-//! into the page. It is a test-only file: nothing in `libero` or `docs`
-//! references it and it is not shipped.
-//!
-//! ## Why axe rather than our own maths
-//!
-//! The WCAG contrast formula is trivial. Deciding what a thing is *drawn on*
-//! is not, once alpha compositing, ancestor traversal and gradients are in
-//! play - and that is exactly where we have been wrong before: todo 241 came
-//! from a colour that passes on white and fails on a tinted code block.
-//! `principles/use-crates-for-solved-domains` applies.
-//!
-//! ## Why axe as well as the tree snapshot
-//!
-//! A snapshot detects *regression*: it tells you something changed. Axe detects
-//! *defects*: it tells you something is wrong with no baseline to compare
-//! against. Todo 101 is the case in point - `aria-activedescendant` named an
-//! option that was not in the DOM, and a snapshot would have recorded the
-//! dangling reference as the baseline and gone green ever after.
+//! Contrast and ARIA-validity rules through vendored, test-only `axe-core` 4.10.2 (MPL-2.0).
+//! Axe finds defects a snapshot would baseline (todo 101), and knows what text is drawn on (todo 241).
 
 use anyhow::{Context, Result, bail};
 use chromiumoxide::Page;
 use serde::Deserialize;
 
-/// Read at runtime rather than `include_str!`, because the file is gitignored
-/// and extracted from `vendor/axe.zip` on first use - a compile-time include
-/// would fail to build on a fresh clone.
+/// Read at runtime, not `include_str!`: the file is gitignored and extracted on first use.
 fn axe_source() -> Result<&'static str> {
     static SOURCE: std::sync::OnceLock<String> = std::sync::OnceLock::new();
     if let Some(source) = SOURCE.get() {
@@ -38,9 +17,7 @@ fn axe_source() -> Result<&'static str> {
     Ok(SOURCE.get_or_init(|| source))
 }
 
-/// The rules this suite runs. Deliberately a short list: axe's full set
-/// overlaps the AX snapshot and reports page-level findings (landmarks,
-/// document title) that are about the fixture rather than the component.
+/// The rules this suite runs; the full set adds page-level findings about the fixture.
 const RULES: &[&str] = &[
     "color-contrast",
     "aria-valid-attr",
@@ -74,47 +51,8 @@ pub struct Node {
     pub target: String,
 }
 
-/// Lift `Modal`'s scroll lock for the duration of an axe run, and prove that
-/// lifting it moved nothing.
-///
-/// ## Why this is here at all (todo 327)
-///
-/// axe's `isVisibleOnScreen` runs five screen checks, and one of them is
-/// `overflowHidden`: it collects the element's `overflow: hidden` ancestors and
-/// calls the element hidden when any of their rects fails to overlap it.
-///
-/// `Modal` locks scroll with `body { overflow: hidden; }`
-/// (`components/overlay/modal.rs`). That makes `<body>` an overflow-hidden
-/// ancestor of everything in the dialog - and `<body>`'s border box is sized to
-/// the page's own content, which on a fixture is a couple of hundred pixels,
-/// while the dialog is `position: fixed` and draws wherever the viewport puts
-/// it. axe's ancestor walk does not stop at the fixed-position containing
-/// block, so it concludes that a 122px-tall body clips away a row at y=171 -
-/// and `color-contrast` becomes **inapplicable** to it. Measured 2026-09-20:
-/// every element in `/modal`'s dialog, both arrows and all six thumbnails in
-/// `/lightbox`, and every result row in `/spotlight`. `/drawer` was green only
-/// because its content happens to sit inside the body box. Nothing to do with
-/// the scroll box, the portal or `overflow: hidden auto`, which is what the
-/// todo guessed.
-///
-/// The browser is not clipping anything: when `<html>`'s overflow is `visible`
-/// the body's overflow propagates to the viewport and the body's own used value
-/// becomes `visible`, but `getComputedStyle` still reports `hidden`, which is
-/// what axe reads. So this is a tool defect, and the component is right.
-///
-/// ## Why the harness compensates rather than the component
-///
-/// `body { overflow: hidden }` is the scroll lock every modal in the world
-/// uses. Changing it to please a checker would be distorting the library to fit
-/// a tool. Lifting it for the length of one axe run restores exactly the state
-/// the page has when no modal is open, and is only done when the page is not
-/// scrollable anyway (the body box is shorter than the viewport), so no
-/// scrollbar can appear and nothing can reflow.
-///
-/// That last sentence is an assertion, not a hope: `__moved` records whether
-/// any element under `<body>` changed its rect across the lift, and a run that
-/// moved something fails instead of reporting a measurement taken of a layout
-/// nobody sees.
+/// Lifts `Modal`'s `body { overflow: hidden }` for one axe run (todo 327): axe treats the short body as
+/// clipping the fixed dialog and skips its contrast. Only on unscrollable pages; `__moved` asserts no reflow.
 const UNLOCK: &str = r#"
     const __boxes = () => Array.from(document.querySelectorAll('body *')).map(el => {
         const r = el.getBoundingClientRect();
@@ -138,16 +76,8 @@ const UNLOCK: &str = r#"
     try {
 "#;
 
-/// Puts the scroll lock back. Always paired with [`UNLOCK`], which opens the
-/// `try` this closes, so everything between the two runs with the lock lifted
-/// and the lock comes back however that block leaves.
-///
-/// The `finally` is the whole point. axe rejects rather than returns on a rule
-/// that throws or a detached root, and a `return` in the middle of the block is
-/// normal. With a plain statement here, any of those would leave `__style` in
-/// the document and the scroll lock lifted **for the rest of the page's life** -
-/// so the next assertion on that page would measure a document we quietly
-/// altered, which is precisely what the rect check exists to prevent.
+/// Puts the scroll lock back, closing [`UNLOCK`]'s `try`. A `finally`, so a throw or
+/// early `return` cannot leave the lock lifted for the rest of the page.
 const RELOCK: &str = "} finally { if (__style) { __style.remove(); } }";
 
 async fn inject(page: &Page) -> Result<()> {
@@ -227,14 +157,8 @@ struct Coverage {
     missing: Vec<String>,
 }
 
-/// Every on-screen element under `selector` that holds text of its own must
-/// have been **evaluated** by axe's `color-contrast` rule.
-///
-/// A contrast pass reports absence, so "axe found nothing" and "axe looked at
-/// nothing" are the same green. Todo 327 is four components' worth of the
-/// second, and it survived a `#ddd` plant. This is the difference asserted:
-/// axe's result lists the nodes each rule passed, failed and could not decide,
-/// and an element with visible text in none of those three was never checked.
+/// Every on-screen element under `selector` holding its own text must appear in axe's
+/// `color-contrast` passes, violations or incomplete: "found nothing" is not "looked" (todo 327).
 pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<usize> {
     inject(page).await?;
 
@@ -245,10 +169,7 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
                 runOnly: {{ type: 'rule', values: ['color-contrast'] }},
             }});
 
-            // Still inside the lift, deliberately: `wanted` below decides what
-            // is on screen from `getBoundingClientRect`, and it has to judge
-            // that against the same layout axe just judged. The rects are
-            // asserted identical across the lift either way.
+            // Still inside the lift: `wanted` must judge the same layout axe judged.
             const seen = new Set();
             for (const bucket of ['passes', 'violations', 'incomplete']) {{
                 for (const rule of result[bucket]) {{
@@ -300,9 +221,8 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
             const wanted = [];
             for (const host of document.querySelectorAll({selector})) {{
                 for (const el of [host, ...host.querySelectorAll('*')]) {{
-                    // The element that *owns* the text is the one axe reports,
-                    // so a wrapper whose text lives in a child is not wanted.
-                    // A letter or digit: axe's `ignoreUnicode` strips punctuation-only text and skips it.
+                    // Axe reports the element owning the text, with a letter or digit
+                    // (`ignoreUnicode` skips punctuation-only text).
                     const owns = Array.from(el.childNodes)
                         .some(n => n.nodeType === Node.TEXT_NODE && /[\p{{L}}\p{{N}}]/u.test(n.textContent));
                     if (!owns) continue;
@@ -316,8 +236,7 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
                     if (style.display === 'none' || style.visibility === 'hidden'
                         || style.opacity === '0') continue;
                     const r = el.getBoundingClientRect();
-                    // Smaller than this is a visually-hidden recipe, which no
-                    // sighted user reads and axe rightly skips.
+                    // Smaller is a visually-hidden recipe, which axe rightly skips.
                     if (r.width < 4 || r.height < 4) continue;
                     if (r.bottom <= 0 || r.right <= 0
                         || r.top >= window.innerHeight || r.left >= window.innerWidth) continue;
@@ -360,12 +279,7 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
     Ok(coverage.wanted)
 }
 
-/// A violation we know about and have decided not to fix yet.
-///
-/// A waiver is **not** a way to silence a failure. It names the todo that owns
-/// the decision, and every waived violation is still printed, so a reader sees
-/// "knowingly wrong, tracked" rather than nothing at all. A waiver with no todo
-/// behind it is a bug being hidden.
+/// A known violation not fixed yet. It names the owning todo and is still printed.
 pub struct Waiver {
     /// The axe rule id, e.g. `color-contrast`.
     pub rule: &'static str,
@@ -374,9 +288,7 @@ pub struct Waiver {
     pub why: &'static str,
 }
 
-/// Todo 297: `success` (4.05:1) and `warning` (3.27:1) fail as text at every
-/// ramp step. That is a brand decision the Maintainer owns, not a bug the suite
-/// should go red on every run until it is settled.
+/// Todo 297: `success` (4.05:1) and `warning` (3.27:1) fail as text; a pending brand decision.
 pub const TODO_297: &[Waiver] = &[
     Waiver {
         rule: "color-contrast",

@@ -1,9 +1,4 @@
-//! The battery every component gets for free.
-//!
-//! This is the piece the next implementer actually touches. Adding a component
-//! should be a fixture route and a dozen declarative lines, not a file of
-//! copied browser plumbing - if it is not, the suite stops growing after about
-//! five components and the rest of the library goes untested.
+//! The generic pass battery every component gets from a fixture route and a few declarative lines.
 //!
 //! ```ignore
 //! #[test]
@@ -16,28 +11,17 @@
 //! }
 //! ```
 //!
-//! What it deliberately does **not** do is the behaviour contract. That is
-//! per-component by nature, and hiding it behind a builder would mean either a
-//! builder that grows a method per component, or a suite that quietly tests
-//! nothing specific. Contracts live in `archetypes` (shared by a pattern) or in
-//! the component's own test (unique to it).
+//! Behaviour contracts live in `archetypes` or the component's own test, not here.
 
 use crate::passes::keyboard::{self, Key};
 use crate::passes::{contrast, focus, motion, pointer, target_size};
 use crate::{Fixture, Scheme, Viewport, ax, browser};
 
-/// How long a state's entry animation may take before the wait fails. Well
-/// past anything the theme animates (a notification's entry is 200 ms), and
-/// short enough that a stuck animation is a failure within a test's patience.
+/// How long a state's entry animation may take; well past the theme's longest (200 ms).
 const ANIMATION_BUDGET: std::time::Duration = std::time::Duration::from_secs(5);
 
 /// One move towards a state worth snapshotting.
-///
-/// Deliberately an enum and not a closure. An async closure in a builder means
-/// lifetimes and boxing in every call site, and the three moves below cover
-/// every state this library's components have: get to a control, press
-/// something, click something. When a fourth is genuinely needed, add it here
-/// rather than opening the door to arbitrary code in a declaration.
+/// An enum, not an async closure: add a variant rather than arbitrary code.
 #[derive(Clone, Copy)]
 pub enum Step {
     /// Tab until this selector holds focus.
@@ -52,17 +36,15 @@ pub enum Step {
 /// ways of passing it may use.
 struct Target {
     selector: &'static str,
-    /// Whether an undersized target may conform through the spacing exception.
-    /// Opt-in per control, so a page that leans on the exception says so.
+    /// Whether an undersized target may conform through the spacing exception (opt-in).
     spacing_exception: bool,
 }
 
 struct State {
     name: &'static str,
     steps: &'static [Step],
-    /// What must become visible before the state counts as reached. Waiting on
-    /// *placed* rather than on a sleep is what keeps this from being flaky.
-    /// It must not be visible before the steps run, or the wait proves nothing.
+    /// Visible once the state is reached, and not before the steps run,
+    /// or the wait proves nothing.
     settled: &'static str,
 }
 
@@ -75,9 +57,7 @@ pub struct Suite {
     targets: Vec<Target>,
     waivers: &'static [contrast::Waiver],
     covers: Vec<&'static str>,
-    /// `Some(why)` when this unit has opted out of the default coverage run
-    /// over `root`. The reason is required, because an unexplained exclusion is
-    /// how a coverage hole comes back.
+    /// `Some(why)` when this unit opted out of the default coverage run over `root`.
     coverage_waived: Option<&'static str>,
     snapshot: bool,
     /// `Some(why)` when the dark run keeps baselines of its own.
@@ -91,14 +71,12 @@ pub struct Suite {
 }
 
 impl Suite {
+    /// A battery named `name` (the snapshot prefix) over the fixture at `route`.
     pub fn new(name: &'static str, route: &'static str) -> Self {
         Suite {
             name,
             route,
-            // Everything the fixture renders, portal outlet included - the
-            // marker wraps the provider for exactly that reason. A component's
-            // own root would miss a portaled popover, which is the whole
-            // scoping problem.
+            // Wraps the provider, so portaled popovers are inside it too.
             root: "[data-fixture-ready]",
             focusable: Vec::new(),
             targets: Vec::new(),
@@ -136,17 +114,8 @@ impl Suite {
         self
     }
 
-    /// A control that may be under 24x24 and conform through WCAG 2.5.8's
-    /// **spacing exception** instead: a 24px circle on its centre reaching no
-    /// other target. Repeatable.
-    ///
-    /// The exception is a real part of the criterion, and several units need
-    /// it: a `RadioGroup` row, a `Notifications` close button. It is still
-    /// opt-in rather than automatic, for two reasons. It is a weaker claim, and a unit
-    /// that makes it should say so where a reviewer reads it. And it is only
-    /// sound when the selector names the **press target** rather than what is
-    /// drawn: the exception measures clearance around a region, so pointing it
-    /// at a 20px glyph inside a 44px button computes clearance nobody needs.
+    /// A control that may conform through WCAG 2.5.8's spacing exception instead of 24x24. Repeatable.
+    /// Name the press target, not a glyph drawn inside it.
     pub fn targets_spaced(mut self, selector: &'static str) -> Self {
         self.targets.push(Target {
             selector,
@@ -155,45 +124,22 @@ impl Suite {
         self
     }
 
-    /// Known, tracked axe violations. Every waiver names a todo, and waived
-    /// violations are still printed. A `target-size` waiver holds a target
-    /// whose selector contains its `contains`.
+    /// Known axe violations, each naming a todo; still printed. A `target-size`
+    /// waiver holds a target whose selector contains its `contains`.
     pub fn waive(mut self, waivers: &'static [contrast::Waiver]) -> Self {
         self.waivers = waivers;
         self
     }
 
-    /// Text that axe must be shown to have **looked at**, not merely found
-    /// nothing wrong with. Repeatable.
-    ///
-    /// `assert_clean` reports absence, so a rule that never ran and a rule that
-    /// found nothing are the same green. Todo 327 was four components' worth of
-    /// the first kind, surviving a `#ddd` plant in silence. Point this at the
-    /// text a unit believes it is checking - a result row, a dialog's body -
-    /// and the belief becomes an assertion.
-    ///
-    /// Like `targets`, it is measured wherever the text exists: content that
-    /// only appears in an open state matches nothing at rest. A selector that
-    /// matched in no state at all is a failure, not a pass.
+    /// Text axe must have looked at, not merely found clean (todo 327). Repeatable.
+    /// Measured in every state; a selector matching in none fails.
     pub fn contrast_covers(mut self, selector: &'static str) -> Self {
         self.covers.push(selector);
         self
     }
 
-    /// Opt this unit out of the **default** coverage run over `root`, naming
-    /// why in one line.
-    ///
-    /// Coverage is on by default (todo 378), because the units that most need
-    /// it are the ones that will forget to declare it: a unit whose axe run has
-    /// gone blind is by construction a unit that looks green, so nothing
-    /// prompts anybody to go and add the declaration. An opt-in *applicability*
-    /// check fails towards "this conforms".
-    ///
-    /// The reason is a required argument rather than a comment, so an exclusion
-    /// cannot be added without one. It belongs in the unit file, where the next
-    /// person reads it. A unit that opts out still gets `assert_clean`, and any
-    /// explicit `contrast_covers` it declares still runs - the opt-out removes
-    /// only the blanket run over the whole fixture.
+    /// Opt out of the default coverage run over `root` (on by default, todo 378), saying why.
+    /// `assert_clean` and explicit `contrast_covers` still run.
     pub fn no_contrast_coverage(mut self, why: &'static str) -> Self {
         assert!(
             !why.trim().is_empty(),
@@ -215,11 +161,6 @@ impl Suite {
     }
 
     /// Snapshot the component in another state, and run axe there too.
-    ///
-    /// A component's resting state is rarely the interesting one. An
-    /// accessibility tree that is correct closed and wrong open is the normal
-    /// shape of these bugs, so a suite that only ever looks at the initial
-    /// render tests the easy half.
     pub fn state(
         mut self,
         name: &'static str,
@@ -241,32 +182,15 @@ impl Suite {
         self
     }
 
-    /// Emulate `prefers-reduced-motion: reduce` for the whole battery, so
-    /// every scroll a step asks for is instant.
-    ///
-    /// For a component whose state is **derived from a scroll offset**. A
-    /// smooth scroll does not land in a page created `background: true`, and
-    /// `Carousel` tracks the scroll frame by frame: a `Step::Click` on its next
-    /// control moved `data-current` to the second slide and then, at 390px, let
-    /// a scroll event at the old offset put the index back, so the same
-    /// declared state snapshotted the previous control both enabled and
-    /// `[disabled]` on two runs of the same code. `codebase/e2e-harness`
-    /// records the trap at both widths; the house rule that follows from it is
-    /// that a test which moves a scroller runs under reduced motion unless the
-    /// smooth scroll is the thing it checks.
-    ///
-    /// It is opt-in rather than the default: a state reached under emulation is
-    /// a state the emulation may have changed, and most units declare no step
-    /// that scrolls anything.
+    /// Emulate `prefers-reduced-motion: reduce`, so scrolls are instant: a smooth scroll does not
+    /// land in a background page (`codebase/e2e-harness`). For state derived from a scroll offset.
     pub fn reduced_motion(mut self) -> Self {
         self.reduced_motion = true;
         self
     }
 
-    /// Give the dark run baselines of its own (`<name>_<state>_<viewport>_dark`),
-    /// for a unit whose tree names the scheme, like `ThemeToggle`'s
-    /// label. By default the dark tree must equal the light one. The reason
-    /// is required, as for [`Suite::no_contrast_coverage`].
+    /// Separate dark baselines (`<name>_<state>_<viewport>_dark`) for a tree that names the scheme.
+    /// By default the dark tree must equal the light one.
     pub fn dark_snapshot(mut self, why: &'static str) -> Self {
         assert!(
             !why.trim().is_empty(),
@@ -284,21 +208,14 @@ impl Suite {
         self
     }
 
+    /// How many Tab presses may reach a control (default 10).
     pub fn tab_budget(mut self, budget: usize) -> Self {
         self.tab_budget = budget;
         self
     }
 
-    /// Run the battery at every viewport.
-    ///
-    /// On failure it writes a screenshot and names it in the panic, because a
-    /// layout or focus failure described only in prose costs the next person a
-    /// re-run to see.
-    ///
-    /// Then again under the dark scheme (todo 314): axe, contrast coverage,
-    /// the focus rings and the console. Target sizes are geometry and are not
-    /// repeated; the AX snapshot is compared against the light baseline, so a
-    /// dark tree that differs fails rather than growing a second baseline.
+    /// Run the battery at every viewport, light then dark (todo 314); a failure names a screenshot.
+    /// The dark run skips target sizes and compares against the light AX baseline.
     pub fn run(self) {
         browser::block_on(async move {
             for scheme in [Scheme::Light, Scheme::Dark] {
@@ -333,9 +250,7 @@ impl Suite {
                 Ok(path) => format!("\n  screenshot: {}", path.display()),
                 Err(e) => format!("\n  (no screenshot: {e})"),
             };
-            // Closed on the failure path too. Without this a run with several
-            // failures leaves a page open per failure, and with a shared
-            // browser those outlive the test that made them.
+            // Closed on failure too: pages on the shared browser outlive the test.
             let _ = fixture.close().await;
             return Err(error.context(format!("at {}{where_to_look}", viewport.name())));
         }
@@ -365,11 +280,7 @@ impl Suite {
             focus::assert_ring_contrast(&ring)?;
         }
 
-        // Target sizes are measured wherever the control exists. A control that
-        // only appears in an open state - an option in a dropdown, a button in
-        // a dialog - matches nothing at rest, and treating that as a failure
-        // would make the check unusable for exactly the components that need
-        // it most.
+        // Targets are measured wherever they exist: an open-state control matches nothing at rest.
         let light = fixture.scheme == Scheme::Light;
         let mut seen: Vec<bool> = vec![false; self.targets.len()];
         if light {
@@ -393,9 +304,7 @@ impl Suite {
             }
         }
 
-        // Same rule as the targets below: a coverage selector that found text
-        // in no state checked nothing, which is the failure this method exists
-        // to make impossible.
+        // A coverage selector that found text in no state checked nothing.
         for (selector, found) in covers.iter().zip(&covered) {
             if *found == 0 {
                 anyhow::bail!(
@@ -405,9 +314,7 @@ impl Suite {
             }
         }
 
-        // A selector that matched in no state at all is a stale test, not a
-        // pass. Saying so is what stops a renamed role silently disabling the
-        // check.
+        // A target matching in no state is a stale test, e.g. after a renamed role.
         for (target, matched) in self.targets.iter().zip(&seen) {
             if light && !matched {
                 anyhow::bail!(
@@ -478,9 +385,7 @@ impl Suite {
     }
 
     async fn reach(&self, page: &chromiumoxide::Page, state: &State) -> anyhow::Result<()> {
-        // A `settled` selector visible before the steps run waits on nothing:
-        // the wait returns at once and the snapshot races the re-render. Tabs'
-        // "second" state settled on `[role=tab]` that way (review 7, E8).
+        // A `settled` already visible waits on nothing and races the re-render (review 7, E8).
         if crate::wait::is_visible(page, state.settled).await? {
             anyhow::bail!(
                 "the {:?} state settles on {}, which is already visible before its steps, \
@@ -507,17 +412,8 @@ impl Suite {
         self.assert_settled_in_root(page, state).await
     }
 
-    /// Visible is not finished.
-    ///
-    /// A notification is visible from the first frame of its fade-in, and axe
-    /// measured its text blended into the background there: 3.72:1, against
-    /// black on the settled card (todo 315). Every animated popup after it
-    /// inherits that, so the wait is here and not in one unit.
-    ///
-    /// Infinite animations never finish, so a spinner, a marquee or a skeleton
-    /// does not hold a state up. A finite one that never ends is a failure
-    /// naming it, never a silent pass: a state measured mid-animation is
-    /// measured against a colour, a position and a size that nobody ever sees.
+    /// Waits for finite animations to end: axe measured a fading-in notification at 3.72:1 (todo 315).
+    /// Infinite ones are ignored; a finite one past the budget fails.
     async fn wait_for_animations(
         &self,
         page: &chromiumoxide::Page,
@@ -547,13 +443,7 @@ impl Suite {
     }
 
     /// The state's `settled` element must lie inside the root, or axe and the
-    /// snapshot never see the thing the state was declared for.
-    ///
-    /// That was the case for every overlay until `dc3766db`: the root wrapped
-    /// only the fixture's outlet while the portal rendered beside it, and each
-    /// "open" state checked the trigger alone and reported clean (review 7,
-    /// E1). This makes the same hole fail loudly if a narrowed `root` or a
-    /// moved marker reopens it.
+    /// snapshot never see it (review 7, E1: portals outside the root).
     async fn assert_settled_in_root(
         &self,
         page: &chromiumoxide::Page,
@@ -600,12 +490,7 @@ impl Suite {
         Ok(())
     }
 
-    /// Snapshots live beside the tests, not beside this file.
-    ///
-    /// `insta` writes next to the *calling* source file by default, which for a
-    /// shared battery means every component's baseline lands in `e2e/src/` under
-    /// a name like `e2e__suite__slider_desktop.snap`. Nobody reviewing the
-    /// slider would look there.
+    /// Snapshots live beside the tests: `insta` would write next to this file by default.
     async fn take_snapshot(&self, fixture: &Fixture, state: &str) -> anyhow::Result<()> {
         let tree = ax::snapshot(&fixture.page, self.root).await?;
         let mut name = format!("{}_{}_{}", self.name, state, fixture.viewport.name());

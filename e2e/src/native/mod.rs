@@ -213,9 +213,8 @@ fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f6
     Some((min_x, min_y, max_x - min_x, max_y - min_y))
 }
 
-/// crates.io Blitz stops marking ancestors at a stale dirty bit, so a clock
-/// tick's restyle can be skipped and freeze a transition (Blitz #789, todo 880).
-/// libero heals at a flush, a read or a pointer move; a tick has none of those.
+/// crates.io Blitz stops marking ancestors at a stale dirty bit, freezing a tick's transition
+/// (Blitz #789, todo 880). libero heals at a flush, read or pointer move; a tick has none.
 fn heal_dirty_bits(doc: &BaseDocument) {
     let mut dirty = Vec::new();
     doc.visit(|id, node| {
@@ -335,9 +334,8 @@ impl Page {
         self.settle();
     }
 
-    /// Waits in short real-time steps, each settled, until `done` holds: a
-    /// timer's work lands late on a loaded machine. Whether it held within
-    /// [`WAIT_LIMIT`].
+    /// Whether `done` held within [`WAIT_LIMIT`], waiting in short settled real-time steps:
+    /// a timer's work lands late on a loaded machine.
     pub fn wait_for(&mut self, mut done: impl FnMut(&Page) -> bool) -> bool {
         let until = Instant::now() + WAIT_LIMIT;
         while !done(self) {
@@ -494,9 +492,8 @@ impl Page {
         self.dispatch(UiEvent::PointerMove(self.pointer(x, y, false)));
     }
 
-    /// Turns the wheel over the first match's centre: a positive `dy` scrolls
-    /// down by that many pixels. Blitz scrolls what the pointer hovers, so
-    /// `hover` it first, once: a second move there dropped the next wheel.
+    /// Turns the wheel over the first match's centre, positive `dy` scrolling down. Blitz scrolls
+    /// what is hovered: `hover` it first, once (a second move dropped the next wheel).
     pub fn wheel(&mut self, selector: &str, dy: f64) {
         let (x, y) = self.centre(selector);
         self.wheel_at(x, y, dy);
@@ -726,9 +723,8 @@ impl Page {
         scene
     }
 
-    /// The colour of the pixel at `(x, y)`, as `rgb(..)`: the scene rasterised
-    /// by the shell's CPU renderer, where a recorded command may still draw
-    /// nothing (a zero-blur shadow).
+    /// The `rgb(..)` of the pixel at `(x, y)` as the CPU renderer rasterises it,
+    /// where a recorded command may still draw nothing (a zero-blur shadow).
     pub fn painted_pixel(&self, x: u32, y: u32) -> String {
         let [r, g, b, a] = self.painted_pixels(&[(x, y)])[0];
         css_color(peniko::Color::from_rgba8(r, g, b, a))
@@ -809,9 +805,8 @@ impl Page {
         out
     }
 
-    /// The first match's `getBoundingClientRect()`: `(x, y, width, height)`.
-    /// Blitz's also subtracts the node's own scroll offset, added back as
-    /// libero's `client_rect` does (todo 885).
+    /// The first match's `getBoundingClientRect()`: `(x, y, width, height)`, adding back
+    /// the node's own scroll offset Blitz subtracts, as libero's `client_rect` does (todo 885).
     pub fn rect(&self, selector: &str) -> (f64, f64, f64, f64) {
         let id = self.node(selector);
         let doc = self.doc.inner.borrow();

@@ -250,9 +250,8 @@ fn assert_centred(page: &mut Page, index: usize) {
     );
 }
 
-/// Todo 652: Blitz's `scroll_size` was the overflow alone, so the stage
-/// scrolled only part of its range. Picture 2 of 3 sat 453px right of centre,
-/// and the last one could not be reached.
+/// Todo 652: Blitz's `scroll_size` was the overflow alone, so the stage scrolled only
+/// part of its range and the last picture could not be reached.
 #[test]
 fn every_picture_comes_to_rest_centred() {
     let mut page = mount(gallery_app);
@@ -265,9 +264,8 @@ fn every_picture_comes_to_rest_centred() {
     }
 }
 
-/// Todo 916: Blitz hit-tests a zoomed picture past its frame's clip, so the
-/// second press on "Zoom in" panned the picture instead. The caption and the
-/// strip come after the stage and keep theirs.
+/// Todo 916: Blitz hit-tests a zoomed picture past its frame's clip, so a second "Zoom in"
+/// panned instead. The caption and strip come after the stage and keep their hits.
 #[test]
 fn a_zoomed_picture_leaves_the_presses_round_it_alone() {
     const ZOOM_IN: &str = "button[aria-label=\"Zoom in\"]";

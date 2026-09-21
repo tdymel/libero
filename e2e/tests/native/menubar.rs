@@ -1,6 +1,5 @@
-//! `Menubar` in Blitz's layout: opening a menu re-lays the bar. Roving,
-//! ArrowDown, Escape and hover switching are e2e's shared scenarios
-//! (`menubar::`).
+//! `Menubar` in Blitz's layout: opening a menu re-lays the bar. Keys and hover
+//! switching are shared scenarios (`menubar::`).
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};

@@ -1,34 +1,12 @@
-//! Live regions.
-//!
-//! ## What this is checked against
-//!
-//! - **WCAG 4.1.3 Status Messages** - a status can be presented to assistive
-//!   technology without receiving focus.
-//! - **WAI-ARIA, `aria-live`** - politeness, and `role="status"` implying
-//!   `aria-live="polite"` plus `aria-atomic="true"`.
-//!   <https://www.w3.org/TR/wai-aria-1.2/#aria-live>
-//!
-//! A screen reader cannot be run here, so this proves the three things that are
-//! observable and that a reader depends on: the region **exists**, it carries
-//! the right politeness, and its text **changes** at the moment it should.
-//!
-//! That last one is the point. The library's status regions are always mounted
-//! and start empty (`codebase/components/combobox`), because a region that
-//! mounts together with its text is skipped by some readers. An assertion that
-//! the region merely exists would hold just as well for one that never says
-//! anything.
+//! Live regions (WCAG 4.1.3, <https://www.w3.org/TR/wai-aria-1.2/#aria-live>): the region exists,
+//! has the right politeness, and its text changes when it should (`codebase/components/combobox`).
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use serde::Deserialize;
 
 /// A lookup that distinguishes "not there" from "there and empty".
-///
-/// Returned as a struct rather than an `Option<String>` because a bare JS
-/// `null` cannot be deserialised into one: chromiumoxide reports "No value
-/// found", which surfaces as a confusing error about the harness instead of a
-/// clear one about the page. Any `evaluate` in this crate that might return
-/// nothing returns a defined object instead.
+/// A struct, since a bare JS `null` fails to deserialise as "No value found".
 #[derive(Debug, Deserialize)]
 struct Lookup {
     found: bool,

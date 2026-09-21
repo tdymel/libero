@@ -126,9 +126,8 @@ fn every_svg_thumbnail_fills_its_tile() {
     }
 }
 
-/// `scale-down` leaves the 100px square at its size, centred, where Blitz drew
-/// it as tall as the stage; zoomed 2x it stays centred rather than drifting
-/// by its letterbox.
+/// `scale-down` keeps the 100px square at its size and centred (Blitz drew it stage-tall);
+/// zoomed 2x it stays centred rather than drifting by its letterbox.
 #[test]
 fn a_zoomed_svg_stays_centred_in_its_frame() {
     let mut page = opened();

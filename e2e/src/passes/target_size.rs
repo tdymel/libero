@@ -1,33 +1,5 @@
-//! WCAG 2.5.8 target size (minimum): 24 by 24 CSS pixels.
-//!
-//! <https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html>
-//!
-//! Straight off the box model, so it is objective and cheap. The criterion has
-//! exemptions (inline targets in a sentence, targets whose spacing gives them
-//! a 24px circle), so this reports the measurement and the caller decides
-//! which controls it applies to, rather than the pass failing a whole page.
-//!
-//! ## What is measured is the press target, not the handle
-//!
-//! 2.5.8 measures "the region that accepts the pointer action", which is
-//! frequently larger than what is drawn. A slider's press target is the track
-//! its `use_drag` captures, not the thumb painted on it - two passes measured
-//! the thumb before that was noticed (`ColorPicker`, 2026-09-20). So the
-//! selector a unit hands this pass has to name the element the listener is on.
-//! Nothing here can work that out; naming the wrong element is a measurement of
-//! the wrong thing, and it will look like a clean one.
-//!
-//! ## The spacing exception
-//!
-//! An undersized target still conforms when "the target offset is at least 24
-//! CSS pixels to every adjacent target": put a 24px-diameter circle on the
-//! centre of each undersized target's bounding box, and no circle may touch
-//! another target or another undersized target's circle. That is what
-//! [`assert_sizes_spaced`] computes, and it is the only thing that makes a
-//! `RadioGroup` row conform. It is not on by
-//! default: a unit opts in with `Suite::targets_spaced`, so the page says which
-//! controls lean on the exception rather than the pass quietly relaxing for
-//! everything.
+//! WCAG 2.5.8 target size (minimum), 24x24 CSS px, and its opt-in spacing exception.
+//! The selector must name the press target (a slider's track, not its thumb), not what is drawn.
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -35,19 +7,14 @@ use serde::Deserialize;
 
 pub const MINIMUM: f64 = 24.0;
 
-/// Half the minimum: the radius of the circle the spacing exception centres on
-/// an undersized target.
+/// The radius of the spacing exception's circle on an undersized target.
 const RADIUS: f64 = MINIMUM / 2.0;
 
 /// Slack for the browser's sub-pixel geometry, well under the half a pixel
 /// that made `RadioGroup`'s rows fail (todo 302).
 const EPSILON: f64 = 0.01;
 
-/// Everything on the page that counts as "another target" for the exception.
-///
-/// The roles a pointer press acts on, plus anything a caller put in the tab
-/// order. Deliberately generous: a target the exception forgets is clearance
-/// this pass would grant and a user would not have.
+/// Everything counting as "another target" for the exception; generous on purpose.
 pub const TARGETS: &str = "a[href], button, input:not([type=hidden]), select, textarea, summary, \
                        [role=button], [role=link], [role=checkbox], [role=radio], [role=switch], \
                        [role=tab], [role=menuitem], [role=menuitemcheckbox], \
@@ -58,9 +25,7 @@ pub const TARGETS: &str = "a[href], button, input:not([type=hidden]), select, te
 pub struct Size {
     pub width: f64,
     pub height: f64,
-    /// Viewport-relative, as `getBoundingClientRect` reports it. Only the
-    /// spacing exception reads these; a plain size check does not care where a
-    /// control is.
+    /// Viewport-relative; only the spacing exception reads the position.
     #[serde(default)]
     pub x: f64,
     #[serde(default)]
@@ -88,16 +53,12 @@ impl Size {
 #[derive(Debug, Deserialize)]
 pub struct Spaced {
     pub target: Size,
-    /// Every other target within reach of the 24px circle. Neither an ancestor
-    /// nor a descendant of `target`: a radio inside the row that activates it,
-    /// or a button inside a clickable card, is the same target pressed twice
-    /// over, not an adjacent one to clear.
+    /// Other targets within reach of the circle; ancestors and descendants are the same target.
     pub neighbours: Vec<Size>,
 }
 
-/// `box(el)`: `el`'s press target. A positioned, unclipped element's own
-/// `::before` takes its presses too: `ActionIcon`'s invisible 24x24 hit area
-/// round a smaller button (todos 505, 566).
+/// `box(el)`: `el`'s press target, grown by a positioned, unclipped element's `::before`
+/// (`ActionIcon`'s invisible 24x24 hit area, todos 505, 566).
 const PRESS_BOX: &str = r#"const box = el => {
     const r = el.getBoundingClientRect();
     let [x0, y0, x1, y1] = [r.x, r.y, r.right, r.bottom];
@@ -138,9 +99,7 @@ pub async fn measure_spacing(page: &Page, selector: &str) -> Result<Vec<Spaced>>
                     const style = getComputedStyle(el);
                     return style.visibility !== 'hidden' && style.pointerEvents !== 'none';
                 }};
-                // The declared targets belong in the neighbour set too. They
-                // are what the unit calls a press target, and a selector of
-                // roles and focusables cannot always see one.
+                // The declared targets are neighbours too; `TARGETS` may not see them.
                 const all = [...new Set([
                     ...document.querySelectorAll({targets}),
                     ...document.querySelectorAll({selector}),
@@ -188,11 +147,7 @@ pub async fn assert_minimum_or_spacing(page: &Page, selector: &str) -> Result<()
     assert_sizes_spaced(selector, &measured)
 }
 
-/// The assertion on its own, for a caller that already has the measurements.
-///
-/// Split out because a control that only exists in an open state has to be
-/// measured where it exists: `[role=option]` matches nothing while the list is
-/// closed, and "nothing matched" is not a failure there.
+/// The assertion on measurements already taken, where "nothing matched" is no failure.
 pub fn assert_sizes(selector: &str, sizes: &[Size]) -> Result<()> {
     let small: Vec<_> = sizes.iter().filter(|s| s.undersized()).collect();
     if !small.is_empty() {
@@ -201,13 +156,8 @@ pub fn assert_sizes(selector: &str, sizes: &[Size]) -> Result<()> {
     Ok(())
 }
 
-/// 2.5.8 with the spacing exception applied, for measurements already taken.
-///
-/// A target of at least 24x24 passes outright. An undersized one passes only
-/// if the 24px circle on its centre reaches no other target and no other
-/// undersized target's circle - which for two undersized targets is their
-/// centres 24px apart, and for an undersized target beside a full-size one is
-/// 12px of clearance from the centre to that target's box.
+/// 2.5.8 with the spacing exception: an undersized target's 24px circle may reach no other target
+/// (12px from its box) nor another undersized target's circle (centres 24px apart).
 pub fn assert_sizes_spaced(selector: &str, measured: &[Spaced]) -> Result<()> {
     for Spaced { target, neighbours } in measured {
         if !target.undersized() {

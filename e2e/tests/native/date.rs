@@ -1,6 +1,5 @@
-//! Dates and times: `ChronoField`, `ChronoPicker`, `TimeField`, `TimePicker`, and
-//! a `TimeDelta` duration.
-//! `today` is pinned wherever a grid is drawn.
+//! Dates and times: `ChronoField`, `ChronoPicker`, `TimeField`, `TimePicker`, and a
+//! `TimeDelta` duration. `today` is pinned wherever a grid is drawn.
 
 use blitz_traits::events::{
     BlitzPointerEvent, BlitzPointerId, MouseEventButton, MouseEventButtons, Point, PointerCoords,
@@ -205,9 +204,8 @@ fn the_arrows_walk_the_days_and_enter_picks() {
     assert_eq!(page.text("#echo"), "2026-10-01", "{}", page.tree());
 }
 
-/// dioxus-native wrote `disabled="false"` on every allowed day, which Blitz
-/// matches as `:disabled`: the grid drew at 0.4 opacity, and a picked day's
-/// ring on that faded fill read as all white (todo 640).
+/// Todo 640: dioxus-native wrote `disabled="false"`, which Blitz matches as `:disabled`,
+/// so the grid drew at 0.4 opacity and a picked day's ring read as all white.
 #[test]
 fn a_picked_day_focused_by_the_arrows_keeps_its_fill() {
     const PICKED: &str = "[data-date='2026-09-25']";
@@ -306,9 +304,8 @@ fn the_keys_turn_a_digital_column() {
     assert!(page.is_focused(MINUTES), "{}", page.focus_owner());
 }
 
-/// A drag down past the column's edge turns it back (todo 845: the moves
-/// follow the pointer), and a wheel down turns it forward, as on the web (844),
-/// one step a notch (914).
+/// A drag down past the column's edge turns it back (845), and a wheel down turns it
+/// forward as on the web (844), one step a notch (914).
 #[test]
 fn a_drag_or_a_wheel_turns_a_digital_column() {
     let mut page = mount(digital);
@@ -389,9 +386,8 @@ fn analog() -> Element {
     }
 }
 
-/// Clicks the mark whose text is `label`. A mark is centred by
-/// `translate(-50%, -50%)`, which Blitz's client rect ignores: the drawn
-/// mark's centre is the rect's top-left corner.
+/// Clicks the mark whose text is `label`: at its rect's top-left corner, since Blitz's
+/// client rect ignores the mark's centring `translate(-50%, -50%)`.
 fn click_mark(page: &mut Page, label: &str) {
     let id = page
         .query_all("[data-slot='mark']")

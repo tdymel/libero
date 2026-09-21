@@ -1,10 +1,5 @@
-//! Colours and states the Maintainer saw go stale natively (todos 621, 624,
-//! 628, 651): an active `NavLink`'s text after a theme switch, `Select`'s clear
-//! x and every field's trailing icon on the dark theme, `CodeBlock`'s copy
-//! check after Tab moves away.
-//!
-//! One mount per test: a second mount on the same thread does not flip the
-//! root attribute on a toggle.
+//! Colours and states seen stale natively (todos 621, 624, 628, 651): `NavLink` text, trailing
+//! icons, `CodeBlock`'s copy check. One mount per test: a second one misses the root toggle.
 
 use std::{
     rc::Rc,
@@ -531,9 +526,8 @@ fn an_inline_svg_paints_its_stroke() {
     assert_eq!(centre, BLACK, "the icon's stroke at its centre");
 }
 
-/// Todo 893: the baked rebuild a check makes asks for a redraw that arms no
-/// check of its own (`redraw::quiet`). Unguarded, each check found an
-/// anonymous block stale again before its restyle and rebuilt it for ever.
+/// Todo 893: a check's baked rebuild asks for a redraw arming no check (`redraw::quiet`);
+/// unguarded, an anonymous block was rebuilt for ever.
 #[test]
 fn a_baked_rebuild_alone_arms_no_check() {
     let mut page = mount(timer_app);

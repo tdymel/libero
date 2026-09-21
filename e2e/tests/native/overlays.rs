@@ -1,6 +1,5 @@
-//! Portaled and `position: fixed` overlays: a `Menu` lands under its anchor, a
-//! `Modal` is centred in the viewport, and a pointer reaches both. The outlet
-//! must not take the hits meant for the app underneath.
+//! Portaled and fixed overlays: a `Menu` under its anchor, a `Modal` centred, a pointer reaching
+//! both, and an outlet that takes no hits meant for the app underneath.
 
 use dioxus::prelude::*;
 use e2e::native::{Key, Page, VIEWPORT, mount};
@@ -130,9 +129,8 @@ fn a_modal_is_centred_in_a_scrolled_document() {
     );
 }
 
-/// Blitz scrolls the viewport whatever `overflow` says, so a wheel over the
-/// backdrop scrolled the page the scroll lock should hold. A scroller in the
-/// dialog still takes the wheel.
+/// Blitz scrolls the viewport whatever `overflow` says, defeating the scroll lock from the
+/// backdrop. A scroller in the dialog still takes the wheel.
 #[test]
 fn a_wheel_under_a_modal_leaves_the_page_but_scrolls_the_dialog() {
     fn tall() -> Element {

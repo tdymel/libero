@@ -1,6 +1,5 @@
-//! `Tree` as Blitz lays it out and paints it: a row starts at its edge, and the
-//! painted chevron turns. The keys and the computed turn are e2e's shared
-//! scenarios (`tree::`).
+//! `Tree` in Blitz: a row starts at its edge and the painted chevron turns.
+//! Keys and the computed turn are shared scenarios (`tree::`).
 
 use dioxus::prelude::*;
 use e2e::native::{Key, mount};

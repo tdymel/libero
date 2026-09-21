@@ -1,12 +1,5 @@
-//! Console and page errors.
-//!
-//! The cheapest pass in the suite and, per line, the most valuable. Both
-//! portal bugs recorded in `codebase/use-popover` were loud in the console and
-//! silent in the DOM: a test asserting only on markup passed while the
-//! component was broken.
-//!
-//! Collection starts when the fixture opens and is drained at the end, so an
-//! error raised during an interaction is caught, not just one raised at mount.
+//! Console and page errors, recorded from fixture open to the end of the test.
+//! Both portal bugs in `codebase/use-popover` were loud here and silent in the DOM.
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -56,8 +49,7 @@ impl Recorder {
         Ok(recorder)
     }
 
-    /// Look without draining, for a caller that wants to wait for a message to
-    /// arrive before reading it.
+    /// Look without draining, e.g. to wait for a message to arrive.
     pub fn peek(&self) -> Vec<String> {
         self.messages.lock().unwrap().clone()
     }
@@ -90,9 +82,7 @@ impl Recorder {
     }
 }
 
-/// A console message known to be harmless, and why. Every entry names its
-/// reason, so the list can be audited and shrunk; an entry without one would
-/// be how a real warning gets silenced and forgotten.
+/// A console message known to be harmless, with the reason a reviewer can audit.
 pub struct Benign {
     /// Matched as a substring of the recorded message.
     pub pattern: &'static str,
@@ -119,16 +109,8 @@ pub fn benign<'a>(message: &str, list: &'a [Benign]) -> Option<&'a Benign> {
     list.iter().find(|entry| message.contains(entry.pattern))
 }
 
-/// Which messages count, and under what name.
-///
-/// `error`, `assert` and `warning` count as they are (review 7 E5: warnings
-/// used to be dropped). dioxus's tracing logger writes **every** level through
-/// `console.log`, marking the real one in the first argument as
-/// `%cWARN%c <file>%c <message>`, with the CSS in the arguments after it. The
-/// scope warning of todo 283 arrives exactly that way, so recording the
-/// `warning` level alone would still have missed it. Those are read by that
-/// marker, and `INFO`, `DEBUG` and `TRACE` stay dropped: dioxus logs freely
-/// at those in a debug build, and failing on them would make this noise.
+/// Which messages count: `error`, `assert`, `warning` (review 7 E5), and dioxus tracing's
+/// `%cWARN%c`/`%cERROR%c` markers, which arrive through `console.log` (todo 283).
 fn classify(level: &str, args: &[&serde_json::Value]) -> Option<(String, String)> {
     let joined = || {
         args.iter()

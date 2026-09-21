@@ -1,16 +1,5 @@
-//! What a dismissed overlay leaves behind.
-//!
-//! **WCAG 4.1.2 Name, Role, Value** and **1.3.1 Info and Relationships**: what
-//! is exposed to assistive technology has to match what is presented. A panel
-//! the sighted user has dismissed, still announced and still tabbable, does not.
-//!
-//! Between a popover closing and unmounting it is still in the DOM, still
-//! tabbable and still in the accessibility tree, so a screen reader user can
-//! reach a box the sighted user has already dismissed. Nothing in the library
-//! animates a popover yet, which means nothing exhibits this today - it is the
-//! obligation the first animated one inherits (`codebase/use-popover`), and
-//! having the assertion already written is what makes that inheritance real
-//! rather than a note somebody has to remember.
+//! What a dismissed overlay leaves behind (WCAG 4.1.2, 1.3.1): a closing popover must not stay
+//! announced or tabbable. For the first animated popover (`codebase/use-popover`).
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -25,11 +14,8 @@ struct Residue {
     tabbables: usize,
 }
 
-/// After dismissal, the box must be gone or genuinely hidden from AT.
-///
-/// "Genuinely" means one of `inert`, `aria-hidden`, or `visibility: hidden`.
-/// `opacity: 0` and a zero-size box do not count: both still expose their
-/// contents to a screen reader and can still hold focus.
+/// After dismissal, the box must be gone, `inert`, `aria-hidden` or `visibility: hidden`.
+/// `opacity: 0` and a zero-size box still expose their contents and can hold focus.
 pub async fn assert_gone_from_at(page: &Page, selector: &str) -> Result<()> {
     let residue: Residue = page
         .evaluate(format!(

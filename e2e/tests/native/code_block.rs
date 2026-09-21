@@ -1,7 +1,5 @@
-//! A `CodeBlock` wider than its box under `dir="rtl"` (todo 735). Its code is
-//! `dir="ltr"`, so a lone block paints as it does left to right. A whole block
-//! overflowing an RTL flex row runs off the left edge, where Blitz cannot scroll
-//! (the web scrolls there with a negative `scrollLeft`).
+//! A `CodeBlock` wider than its box under `dir="rtl"` (todo 735): its code is `dir="ltr"`. A block
+//! overflowing an RTL flex row runs off the left edge, where Blitz has no negative `scrollLeft`.
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};

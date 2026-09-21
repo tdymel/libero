@@ -1,14 +1,5 @@
-//! The passes.
-//!
-//! Each is a small async fn over a `Fixture`, so a component's test composes
-//! the ones that apply to it. They are deliberately *not* wrapped in a builder
-//! DSL: with two components in the suite an abstraction over them would be
-//! invented before anything had asked for it, and a plain call reads better
-//! than a fluent one that does the same thing.
-//!
-//! The composition that does pay off lives one level up, in `archetypes`: a
-//! whole interaction pattern parameterised once, so every component sharing it
-//! inherits the same assertions.
+//! The passes: small async fns over a page that a component's test composes.
+//! Whole interaction patterns live one level up, in `archetypes`.
 
 pub mod console;
 pub mod contrast;

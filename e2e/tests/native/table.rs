@@ -36,9 +36,8 @@ fn app() -> Element {
     }
 }
 
-/// Todo 772: Blitz's collapsing model painted a 3px black grid from the first
-/// cell's top border. The row line is the theme's 1px, and the cell's side
-/// edge carries none.
+/// Todo 772: Blitz's collapsing model painted a 3px black grid from the first cell's border.
+/// The row line is the theme's 1px; the cell's side edge carries none.
 #[test]
 fn a_row_line_is_one_thin_theme_line() {
     let page = mount(app);

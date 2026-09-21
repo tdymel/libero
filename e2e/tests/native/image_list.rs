@@ -1,6 +1,5 @@
-//! `ImageList`: `quilted` cells come out at `c*w + (c-1)*g` by `r*w + (r-1)*g`
-//! at ratio 1 (todos 89(c), 451), and responsive `cols` follow the viewport
-//! (todo 73).
+//! `ImageList`: `quilted` cells measure `c*w + (c-1)*g` by `r*w + (r-1)*g` at ratio 1
+//! (todos 89(c), 451); responsive `cols` follow the viewport (todo 73).
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};

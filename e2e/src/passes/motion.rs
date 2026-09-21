@@ -1,32 +1,16 @@
-//! Reduced motion.
-//!
-//! `Emulation.setEmulatedMedia` flips `prefers-reduced-motion` for the page, so
-//! a component's reduced arm is exercised rather than assumed. Several
-//! components animate (`Collapse`, `Accordion`, `Skeleton`, `Marquee`,
-//! `Indicator`) and their reduced arms are otherwise only read in source.
+//! Reduced motion: emulates `prefers-reduced-motion` so a component's reduced arm is exercised.
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use serde::Deserialize;
 
-/// Emulate `prefers-reduced-motion: reduce` (or clear it).
-///
-/// The same hook takes `forced-colors`, which is todo 50's open library-wide
-/// gap. Left unwired deliberately: what each component should emit under
-/// forced colours is undecided, and a pass asserting nothing would only look
-/// like coverage.
-///
-/// Emulates the light scheme too: for a dark page use
-/// [`crate::browser::emulate_media`], which keeps both.
+/// Emulate `prefers-reduced-motion: reduce` (or clear it), and the light scheme:
+/// for a dark page use [`crate::browser::emulate_media`]. `forced-colors` is unwired (todo 50).
 pub async fn set_reduced_motion(page: &Page, reduced: bool) -> Result<()> {
     crate::browser::emulate_media(page, crate::Scheme::Light, Some(reduced)).await
 }
 
-/// The page must report `prefers-reduced-motion: reduce`.
-///
-/// Called after [`set_reduced_motion`], so a test that believes it runs
-/// reduced proves it does. Without it an emulation that silently did nothing
-/// leaves every reduced-motion test measuring the animated arm.
+/// The page must report `prefers-reduced-motion: reduce`, proving the emulation took.
 pub async fn assert_reduced_motion_matches(page: &Page) -> Result<()> {
     let matches: bool = page
         .evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches")
@@ -50,13 +34,8 @@ pub struct Scroll {
     pub cut: bool,
 }
 
-/// Records every `scrollTo`, `scroll` and `scrollBy` on an element matching
-/// `selector`, and whether it would have been smooth. Read with [`scrolls`].
-///
-/// The suite's Chromium scrolls instantly (todo 687), so a test about smooth
-/// scrolling asks what was asked for instead of watching it move. With
-/// `cut_short`, every other smooth `scrollTo` lands half-way, for a test of
-/// what the component does when its smooth scroll is cut short.
+/// Records every `scrollTo`/`scroll`/`scrollBy` on `selector` and whether it was smooth (the suite's
+/// Chromium scrolls instantly, todo 687). `cut_short` lands every other smooth one half-way.
 pub async fn spy_scrolls(page: &Page, selector: &str, cut_short: bool) -> Result<()> {
     page.evaluate(format!(
         r#"(() => {{
@@ -100,17 +79,8 @@ pub async fn scrolls(page: &Page) -> Result<Vec<Scroll>> {
     seen.ok_or_else(|| anyhow::anyhow!("no scroll spy on the page; call spy_scrolls first"))
 }
 
-/// Nothing under `selector`, itself included, may run a transition or an
-/// animation: every computed `transition-duration` and `animation-duration`
-/// must be zero, on each element and on its rendered `::before`/`::after`.
-///
-/// **WCAG 2.3.3 Animation from Interactions**: under reduced motion, motion
-/// triggered by an interaction can be switched off. A reduced arm that is
-/// declared but lost - moved to another selector, outranked, or never
-/// emitted - leaves the component animating, and nothing else notices.
-///
-/// The pseudo-elements are read because `Skeleton` and the oval `Loader`
-/// animate only their `::after`: an element-only read saw both as still.
+/// WCAG 2.3.3: no transition or animation under `selector`, pseudo-elements included
+/// (`Skeleton` and the oval `Loader` animate only their `::after`).
 pub async fn assert_still(page: &Page, selector: &str) -> Result<()> {
     let moving: Option<Vec<String>> = page
         .evaluate(format!(

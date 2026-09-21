@@ -12,10 +12,8 @@ enum Alignment {
     Right,
 }
 
-/// Todo 849: the checked segment is `z-index: 1`, and Blitz hoists such a box
-/// into its stacking context at the offsets of the layout before (blitz-dom
-/// `flush_styles_to_layout` runs ahead of `resolve_layout`). The first frame
-/// after a resize paints it where it was; the next frame puts it right.
+/// Todo 849: Blitz hoists the `z-index: 1` checked segment at the previous layout's offsets
+/// (`flush_styles_to_layout` before `resolve_layout`): one stale frame after a resize.
 #[test]
 #[ignore = "Blitz paints a z-indexed box at its pre-resize place for one frame"]
 fn the_checked_segment_paints_in_place_after_a_resize() {

@@ -1,6 +1,5 @@
-//! `Checkbox`'s painted mark. The box click, Space and the radio group's keys
-//! are e2e's shared scenarios (`checkbox::`, `radio_group::`); links in labels
-//! are in `pointer.rs`.
+//! `Checkbox`'s painted mark. Clicks and keys are shared scenarios (`checkbox::`,
+//! `radio_group::`); links in labels are in `pointer.rs`.
 
 use dioxus::prelude::*;
 use e2e::native::mount;

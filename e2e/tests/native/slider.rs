@@ -1,6 +1,5 @@
-//! `Slider` under Blitz's pointer: a fast drag, the bubble over the hit area,
-//! no text selection. A drag from the thumb and one leaving the slider are in
-//! `pointer.rs`; the track drag and End are e2e's shared scenarios.
+//! `Slider` under Blitz's pointer: a fast drag, the bubble over the hit area, no text selection.
+//! Thumb and leaving drags are in `pointer.rs`; track drag and End are shared scenarios.
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};

@@ -1,6 +1,5 @@
-//! Blitz renders inline svg without resolving `var()`: a theme colour in a
-//! `fill` painted every module and the quiet zone black. The harness paints
-//! no svg, so this reads what the renderer gets.
+//! Blitz renders inline svg without resolving `var()`: a theme `fill` painted everything black.
+//! The harness paints no svg, so this reads what the renderer gets.
 
 use dioxus::prelude::*;
 use e2e::native::mount;

@@ -1,12 +1,5 @@
-//! Keyboard operation.
-//!
-//! **WCAG 2.1.1 Keyboard**: all functionality operable through a keyboard
-//! interface. The archetypes say what each pattern's keys mean; this module is
-//! only the dispatch.
-//!
-//! Real key events through CDP's `Input` domain rather than synthetic DOM
-//! events, so what the component receives is what a user's keypress produces,
-//! including the modifier state and the default actions the browser applies.
+//! Keyboard dispatch (WCAG 2.1.1) through CDP's `Input` domain, so the browser applies
+//! modifiers and default actions as for a real keypress. Key meanings live in `archetypes`.
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -21,14 +14,8 @@ pub struct Key {
     pub key: &'static str,
     pub code: &'static str,
     pub vk: i64,
-    /// The text the key produces, where it produces any.
-    ///
-    /// This is not cosmetic. Chromium applies a key's **default action** only
-    /// for a `keyDown` carrying its text; a bare `rawKeyDown` reports the press
-    /// and does nothing else. So Enter dispatched as `rawKeyDown` does not
-    /// activate a button - the event fires, every listener runs, and the dialog
-    /// never opens. That cost a whole `Modal` unit looking like a broken
-    /// component.
+    /// The text the key produces. Needed: Chromium runs a default action (Enter activating)
+    /// only for a `keyDown` carrying text, not a bare `rawKeyDown`.
     pub text: Option<&'static str>,
 }
 
@@ -133,9 +120,8 @@ pub async fn press_with(page: &Page, key: Key, modifiers: i64) -> Result<()> {
     dispatch(page, key, modifiers).await
 }
 
-/// Ctrl+PageUp, Ctrl+PageDown and Ctrl+Tab switch the browser's active tab
-/// before the page sees the key. A later Alt+ArrowLeft from any unit then sends
-/// that tab, another test's page, Back to `about:blank` (todo 597).
+/// Ctrl+PageUp/PageDown/Tab switch the browser's tab unseen; a later Alt+ArrowLeft
+/// then sends another test's page Back to `about:blank` (todo 597).
 fn switches_tabs(key: Key, modifiers: i64) -> bool {
     modifiers & CTRL != 0 && matches!(key.key, "PageUp" | "PageDown" | "Tab")
 }
@@ -164,8 +150,7 @@ async fn dispatch(page: &Page, key: Key, modifiers: i64) -> Result<()> {
         b
     };
 
-    // `keyDown` for a key that carries text, `rawKeyDown` otherwise. See
-    // `Key::text`.
+    // `keyDown` for a key that carries text, `rawKeyDown` otherwise (see `Key::text`).
     let down = if key.text.is_some() {
         DispatchKeyEventType::KeyDown
     } else {
@@ -197,9 +182,8 @@ pub async fn type_text(page: &Page, text: &str) -> Result<()> {
     Ok(())
 }
 
-/// Ctrl, Alt and Meta with each of `keys` on the focused element leave `probe`
-/// (a JS expression) as it was and are not cancelled: the chord is the
-/// browser's (Alt+ArrowLeft is Back), as for a native control.
+/// Ctrl, Alt and Meta with each of `keys` leave `probe` (a JS expression) unchanged and are
+/// not cancelled: the chord is the browser's, as for a native control.
 pub async fn assert_chords_ignored(page: &Page, keys: &[Key], probe: &str) -> Result<()> {
     assert_chords_ignored_with(
         page,
@@ -262,16 +246,9 @@ pub async fn assert_chords_ignored_with(
     Ok(())
 }
 
-/// Tab forward until `selector` holds focus, or fail.
-///
-/// This is how the suite proves a control is *reachable*, which is a different
-/// claim from it being focusable: a control with `tabindex="-1"` focuses
-/// perfectly well by script and can never be reached by a keyboard user.
+/// Tab forward until `selector` holds focus, or fail: proves reachable, not merely focusable.
 pub async fn tab_to(page: &Page, selector: &str, max: usize) -> Result<usize> {
-    // Wait for it to exist before walking the keyboard at it. Without this, a
-    // control that has not mounted yet reports as "not reachable within N tab
-    // stops", which sends the reader looking for a tabindex bug that is not
-    // there.
+    // Else an unmounted control reads as a tabindex bug.
     crate::wait::for_selector(page, selector).await?;
     let sel = serde_json::to_string(selector)?;
     for pressed in 1..=max {

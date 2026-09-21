@@ -1,6 +1,5 @@
-//! Pointer input `LiberoProvider`'s native wrapper watches: a drag followed
-//! past its element in place of pointer capture, and a press on a link nested
-//! in a label or card.
+//! Pointer input `LiberoProvider`'s native wrapper watches: a drag followed past its element
+//! (no pointer capture), and a press on a link nested in a label or card.
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};

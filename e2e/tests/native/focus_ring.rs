@@ -1,7 +1,5 @@
-//! Colours Blitz painted differently from the web (todo 478). It paints an
-//! `outline` before the `box-shadow`s, so the ring's halo covered its stripe;
-//! and it bakes an inline `<svg>`'s `currentColor` in when it builds the box,
-//! so an icon kept the old scheme's colour after a switch.
+//! Colours Blitz painted unlike the web (todo 478): `outline` before `box-shadow` (the halo hid
+//! the stripe), and an inline `<svg>`'s `currentColor` baked in at build (stale after a scheme switch).
 
 use std::time::Duration;
 

@@ -246,9 +246,8 @@ fn a_wheel_outside_a_nested_area_scrolls_the_page_alone() {
     assert!(area > 0.0);
 }
 
-/// Todo 717: the web latches a wheel to the scroller it began over, so the
-/// preview moving under a still pointer does not take the rest of the turn.
-/// Blitz starts each tick at the hovered node; the platform latches (todo 789).
+/// Todo 717: a wheel stays latched to the scroller it began over, as on the web, though
+/// the preview moves under the pointer. Blitz does not latch; the platform does (todo 789).
 #[test]
 fn a_wheel_keeps_scrolling_the_page_as_a_nested_area_passes_under_it() {
     let mut page = mount(preview_in_page);

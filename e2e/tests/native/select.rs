@@ -1,6 +1,5 @@
-//! `NativeSelect` is a real `<select>` on the web; natively, where that opens
-//! no picker, libero's listbox. `Select`'s keys and clicks are e2e's shared
-//! scenarios (`select::`).
+//! `NativeSelect`: a `<select>` on the web, libero's listbox natively (no picker there).
+//! `Select`'s keys and clicks are shared scenarios (`select::`).
 
 use dioxus::prelude::*;
 use e2e::native::{Key, mount};

@@ -1,6 +1,5 @@
-//! `Form` natively. Blitz fires no `submit` and implements no reset, so a
-//! submit button, Enter in a field, `FormHandle::submit` and `reset` all run
-//! libero's own path.
+//! `Form` natively: Blitz fires no `submit` and has no reset, so the submit button, Enter,
+//! `FormHandle::submit` and `reset` all run libero's own path.
 
 use dioxus::prelude::*;
 use e2e::native::{Key, Page, mount};

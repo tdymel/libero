@@ -1,6 +1,5 @@
-//! `Notifications`: shown without taking focus, placed in the viewport corner,
-//! closed by its button with focus handed on (todo 423), and closed by its own
-//! timer.
+//! `Notifications`: shown without taking focus, placed in the viewport corner, closed by
+//! its button with focus handed on (todo 423), and closed by its own timer.
 
 use std::time::{Duration, Instant};
 
@@ -128,10 +127,8 @@ fn a_click_on_its_close_button_closes_it() {
     assert!(!page.exists(ITEM), "{}", page.tree());
 }
 
-/// The store learns focus is inside from `focusin`, which Tab does not fire
-/// on Blitz; the silent-focus check reports it (N6). A harness `focus` is
-/// heard by neither, so the test tabs in, past the other triggers: the way back
-/// out is the last of them, where focus came from.
+/// Blitz's Tab fires no `focusin`; the silent-focus check reports it (N6). A harness `focus`
+/// reaches neither, so the test tabs in; the way back out is the last trigger passed.
 #[test]
 fn closing_a_focused_one_hands_focus_on_and_back_out() {
     let mut page = mount(app);
@@ -348,9 +345,8 @@ fn tall() -> Element {
     }
 }
 
-/// An empty stack keeps its portal entry mounted: a wheel leaves the outlet
-/// alone until a notification is drawn, which puts it back on the viewport
-/// (todo 639).
+/// Todo 639: an empty stack keeps its portal entry mounted; a wheel leaves the outlet
+/// alone until a drawn notification puts it back on the viewport.
 #[test]
 fn a_wheel_realigns_the_outlet_only_once_one_is_drawn() {
     let mut page = mount(tall);

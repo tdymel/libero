@@ -1,6 +1,5 @@
-//! `use_popover` against Blitz's own layout: the portal outlet is in the
-//! document's flow and placed against `<main>`. Placement, flip, shift and
-//! matched width are e2e's shared scenarios (`popover::`).
+//! `use_popover` in Blitz's layout, where the outlet is in flow and placed against `<main>`.
+//! Placement, flip, shift and matched width are shared scenarios (`popover::`).
 
 use dioxus::prelude::*;
 use e2e::native::{Key, Page, mount};
@@ -85,9 +84,8 @@ fn close_to(a: f64, b: f64) -> bool {
     (a - b).abs() <= 1.0
 }
 
-/// The outlet is `position: absolute`, and Blitz places it against `<main>`,
-/// which a first child's top margin collapsing through moves down: libero
-/// shifts it back.
+/// Blitz places the absolute outlet against `<main>`, which a first child's collapsing
+/// top margin moves down; libero shifts it back.
 #[test]
 fn a_collapsed_top_margin_shifts_the_portal_outlet() {
     let mut page = mount(|| {

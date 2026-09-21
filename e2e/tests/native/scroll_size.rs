@@ -1,6 +1,5 @@
-//! Todo 652: `ElementApi::scroll_size` is the content's size, as `scrollWidth`
-//! is on the web. Blitz reported the overflow alone, so every caller that
-//! subtracts the viewport lost it twice. `lightbox.rs` covers `Carousel`.
+//! Todo 652: `ElementApi::scroll_size` is the content's size, like `scrollWidth`, where Blitz
+//! reported the overflow alone. `lightbox.rs` covers `Carousel`.
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};

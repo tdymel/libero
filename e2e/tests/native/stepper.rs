@@ -1,6 +1,5 @@
-//! `Stepper` in Blitz's layout: no container queries, and the side labels'
-//! re-layout. Focus return and header clicks are e2e's shared scenarios
-//! (`stepper::`).
+//! `Stepper` in Blitz's layout: no container queries, and the side labels' re-layout.
+//! Focus return and header clicks are shared scenarios (`stepper::`).
 
 use dioxus::prelude::*;
 use e2e::native::mount;
@@ -24,9 +23,8 @@ fn side_at(width: &'static str) -> Element {
     }
 }
 
-/// Side labels at 320px broke words mid-word; they stack under the marker
-/// there (todo 542). Blitz has no container queries, so only a narrow window
-/// does it natively, not a narrow box.
+/// Todo 542: side labels stack under the marker at 320px rather than break mid-word.
+/// No container queries in Blitz, so only a narrow window does it, not a narrow box.
 #[test]
 fn side_labels_stack_below_the_marker_in_a_window_under_360px() {
     let mut page = mount(|| side_at("100%"));

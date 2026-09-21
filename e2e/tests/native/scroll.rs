@@ -1,6 +1,5 @@
-//! Scrolling natively (todo 468 N3): `ScrollApi` hears a wheel and libero's own
-//! scrolls, an open popover follows its anchor, and `scroll_into_view` scrolls
-//! the nearest scroller.
+//! Scrolling natively (todo 468 N3): `ScrollApi` hears wheels and libero's scrolls, an open
+//! popover follows its anchor, and `scroll_into_view` scrolls the nearest scroller.
 
 use std::{rc::Rc, time::Duration};
 

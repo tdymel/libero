@@ -1,7 +1,5 @@
-//! Blitz paints text with the layout of its last min-content measure when
-//! taffy answers the final layout from its cache; libero re-lays such text
-//! (todo 888, pinned in `menubar.rs` and `stepper.rs`). Soft wraps that are
-//! real, and preserved white space, stay.
+//! Blitz paints text at its last min-content measure when taffy serves the layout from cache;
+//! libero re-lays it (todo 888). Real soft wraps and preserved white space stay.
 
 use std::time::Duration;
 

@@ -1,6 +1,5 @@
-//! `Carousel`: a looping strip opened on slide N shows slide N (todo 925); a
-//! released drag or a wheel rests on the nearest slide, as the web's scroll
-//! snap does.
+//! `Carousel`: a looping strip opened on slide N shows slide N (todo 925); a released
+//! drag or a wheel rests on the nearest slide, as the web's scroll snap does.
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};

@@ -1,6 +1,5 @@
-//! The Blitz-only tests (paint, stylo, Blitz's event order), one binary as
-//! `tests/all` is. A unit mounts one app in `e2e::native::Page`; run one with
-//! `cargo test -p e2e --features native --test native switch::`.
+//! The Blitz-only tests (paint, stylo, event order), each mounting an app in `e2e::native::Page`.
+//! Run one with `cargo test -p e2e --features native --test native switch::`.
 
 mod accessibility;
 mod anchor;

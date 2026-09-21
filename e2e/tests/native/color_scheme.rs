@@ -103,9 +103,8 @@ fn swap_app() -> Element {
     }
 }
 
-/// Todo 871: a set swap rebuilds the theme's own sheet in the frame a click
-/// focuses the button. Its `:root` rules invalidate stylo fully, so no
-/// snapshot's class is read (todo 837's panic); `SheetWatch` guards it anyway.
+/// Todo 871: a set swap rebuilds the theme sheet in the click's focus frame. Its `:root` rules
+/// invalidate stylo fully, so todo 837's panic cannot occur; `SheetWatch` guards it anyway.
 #[test]
 fn a_theme_set_swap_in_a_focusing_click_restyles() {
     let mut page = mount(swap_app);

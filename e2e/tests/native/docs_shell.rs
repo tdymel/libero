@@ -50,9 +50,8 @@ fn shell() -> Element {
     }
 }
 
-/// Todos 716/839: natively the header published its height only once the
-/// provider's outlet had mounted, which it had not at the first render. The
-/// row lost its height, the document grew and the wheel took the header away.
+/// Todos 716/839: the header published its height only after the outlet mounted, so on the
+/// first render its row collapsed, the document grew and the wheel scrolled the header away.
 #[test]
 fn a_wheel_over_the_page_scrolls_the_page_and_leaves_the_header() {
     let mut page = mount(shell);

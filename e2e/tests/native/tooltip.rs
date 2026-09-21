@@ -1,6 +1,5 @@
-//! `Tooltip` under Blitz's hit-testing and paint: the bubble and its bridge
-//! take presses, a padded block's trigger hovers, a stacking scroller clips.
-//! Hover, placement, Escape and Tab focus are e2e's shared scenarios.
+//! `Tooltip` under Blitz's hit-testing and paint: bubble and bridge take presses, a padded
+//! block's trigger hovers, a stacking scroller clips. The rest are shared scenarios.
 
 use std::time::Duration;
 
@@ -32,10 +31,8 @@ fn app() -> Element {
     }
 }
 
-/// Todo 787: parley clamps a hit below a box's last line to that line, so a
-/// bubble's text answers over its overflow. Only the bridge reaches past it,
-/// and the web's bridge takes those presses too: the trigger and the page
-/// beside and below the bubble keep theirs.
+/// Todo 787: parley clamps a hit below the last line to that line, so bubble text answered
+/// over its overflow. Only the bridge reaches past it; the trigger and page keep their presses.
 #[test]
 fn the_bubble_takes_presses_only_over_itself_and_its_bridge() {
     fn above() -> Element {

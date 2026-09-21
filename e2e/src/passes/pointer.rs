@@ -1,10 +1,5 @@
-//! Pointer and drag.
-//!
-//! The only pass that reaches a class of behaviour nothing else can: SSR
-//! dispatches no pointer events at all, so `Slider`, `Splitter`, `Carousel`
-//! and `Lightbox` drags are untested by the Rust suite
-//! (`codebase/testing`). Real `Input.dispatchMouseEvent` calls go through
-//! Chromium's own pointer plumbing, including pointer capture.
+//! Pointer and drag through real `Input.dispatchMouseEvent`, pointer capture included.
+//! SSR dispatches no pointer events, so drags are only tested here (`codebase/testing`).
 
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -27,10 +22,6 @@ struct Located {
 }
 
 /// The centre of an element, in viewport coordinates.
-///
-/// Returns a defined object even when nothing matched: a bare JS `null` cannot
-/// be deserialised into an `Option<T>` and surfaces as "No value found", which
-/// reads like a harness fault rather than a missing element.
 pub async fn centre_of(page: &Page, selector: &str) -> Result<Point> {
     let located: Located = page
         .evaluate(format!(
@@ -80,12 +71,8 @@ async fn mouse_n(
     Ok(())
 }
 
-/// Press, move in steps, release.
-///
-/// The intermediate moves matter: a component that captures the pointer and
-/// tracks movement sees nothing from a press followed straight by a release,
-/// and `Scroller` only captures after 5px of travel
-/// (`codebase/components/scroller`). One jump would test the wrong thing.
+/// Press, move in steps, release. The steps matter: `Scroller` captures only
+/// after 5px of travel (`codebase/components/scroller`).
 pub async fn drag(page: &Page, from: Point, to: Point, steps: usize) -> Result<()> {
     mouse(page, DispatchMouseEventType::MouseMoved, from, 0).await?;
     mouse(page, DispatchMouseEventType::MousePressed, from, 1).await?;

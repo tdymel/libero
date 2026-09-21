@@ -1,20 +1,5 @@
-//! Focus management and the focus ring.
-//!
-//! One rule governs this whole file: **ask the document what it holds, never
-//! ask the focus call whether it worked.** `HTMLElement.focus()` on a
-//! `visibility: hidden` element does nothing and returns successfully, which is
-//! how a searchable `Select` shipped with a search box that never took focus -
-//! `focus()` said `Ok`, `is_focused()` said false (`codebase/use-popover`).
-//! Every assertion here reads `document.activeElement`.
-//!
-//! ## What this is checked against
-//!
-//! - **WCAG 2.4.7 Focus Visible** - a keyboard focus indicator is visible.
-//! - **WCAG 1.4.11 Non-text Contrast** - that indicator clears 3:1 against
-//!   what it is painted on, which for an offset outline is the **parent**
-//!   surface, never the element's own.
-//! - **WCAG 2.4.3 Focus Order** and **3.2.1 On Focus** - where focus goes, and
-//!   where it comes back to.
+//! Focus management and the focus ring (WCAG 2.4.7, 1.4.11, 2.4.3, 3.2.1).
+//! Always read `document.activeElement`: `focus()` on a hidden element succeeds silently (`codebase/use-popover`).
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -86,44 +71,19 @@ pub struct Ring {
     pub outline_color: String,
     pub outline_width: f64,
     pub box_shadow: String,
-    /// A field frame indicates focus by changing its border colour
-    /// (`use_field_frame`'s `focus_within`), not by drawing an outline. A pass
-    /// that looks only at outline and box-shadow reports "no focus ring" for a
-    /// component whose indicator is perfectly visible.
+    /// A field frame shows focus by its border colour (`use_field_frame`'s `focus_within`).
     pub border_color: String,
-    /// A `[data-ring]` overlay: the sibling that draws a field's or a
-    /// checkbox's keyboard ring, since focus lands on a child of the box the
-    /// ring belongs to (`ring_overlay` in `components/common/util.rs`).
+    /// A `[data-ring]` overlay: the sibling drawing a field's or checkbox's keyboard ring
+    /// (`ring_overlay` in `components/common/util.rs`).
     pub overlay: bool,
-    /// The background this ring is drawn against, resolved by walking up until
-    /// a non-transparent one is found.
+    /// The first non-transparent background walking up, which the ring is drawn against.
     pub against: String,
 }
 
-/// Assert that keyboard focus produces a visible ring.
-///
-/// Two things here were learned the hard way and are the reason this is not
-/// three lines:
-///
-/// * **Focus by Tab, not by `element.focus()`.** Every ring in the library is
-///   `:focus-visible` (`sx.rs`), and in Chromium a scripted focus does not
-///   always match it. Driving the keyboard is the only way to see what a
-///   keyboard user sees.
-/// * **The ring is usually not on the focused element.** A field's ring is
-///   drawn on its *frame*, and the focused node is the `<input>` inside it.
-///   Asserting on the input alone reports "no focus ring" for a component whose
-///   ring is perfectly visible - which is exactly what this pass did on its
-///   first run. So the element and its ancestors are all measured, and the
-///   assertion is that *something the user can see* changed.
+/// Assert that tabbing (scripted focus may miss `:focus-visible`) draws a visible ring
+/// on the element, an ancestor or a ring overlay: a field's ring sits on its frame.
 pub async fn assert_focus_ring(page: &Page, selector: &str, tab_budget: usize) -> Result<Ring> {
-    // Blur **first**, then read the unfocused state.
-    //
-    // Reading `before` and blurring afterwards means that a caller who had
-    // already focused the element - a test that tabbed to it to check something
-    // else, say - measures the focused state as the baseline, finds it
-    // identical to the focused state, and is told there is no focus ring. The
-    // pass then accuses a component whose ring is plainly visible, which is
-    // this file's recurring failure mode.
+    // Blur first: an already focused element would make `before` the focused state.
     page.evaluate("document.activeElement && document.activeElement.blur()")
         .await?;
     let before = ring_chain(page, selector).await?;
@@ -161,14 +121,8 @@ pub async fn assert_focus_ring(page: &Page, selector: &str, tab_budget: usize) -
     Ok(ring.clone())
 }
 
-/// The level of a [`ring_chain`] whose styles changed on focus, if any.
-///
-/// A drawn ring, outline or shadow, wins over a border that changed colour.
-/// A field frame's border turns on `:focus-within`, which a click shows as
-/// well, and the keyboard ring is drawn by its `[data-ring]` overlay. With
-/// the border counted first, deleting the overlay's rule left every field
-/// green (review 7, E4). So a border counts only where there is no overlay
-/// to carry the ring.
+/// The level of a [`ring_chain`] whose styles changed on focus. An outline or shadow wins;
+/// a border change counts only without a `[data-ring]` overlay (review 7, E4).
 pub fn pick_ring<'a>(before: &[Ring], after: &'a [Ring]) -> Option<&'a Ring> {
     let pairs: Vec<(&Ring, &Ring)> = before.iter().zip(after.iter()).collect();
     let drawn = pairs
@@ -182,32 +136,10 @@ pub fn pick_ring<'a>(before: &[Ring], after: &'a [Ring]) -> Option<&'a Ring> {
     drawn.or(bordered).map(|(_, ring)| *ring)
 }
 
-/// WCAG 1.4.11: a focus indicator is a non-text contrast case, so 3:1 against
-/// what it sits on.
-///
-/// **This discharges todo 53's third part**, which asks for a by-hand sweep of
-/// every `focus_visible(focus_ring_sx())` on a dark or saturated background,
-/// read in a browser because the emitted CSS cannot show the failure -
-/// `Carousel`'s current dot shipped a white ring on a white page, present in
-/// the CSS, matching `:focus-visible`, invisible to a user. Any component added
-/// to the suite with `.focusable()` is covered automatically. Check here before
-/// doing that sweep by hand.
-///
-/// The background is resolved by walking up for the first non-transparent one.
-/// That is the cheap approximation of "effective background" and it is wrong
-/// for a ring drawn over a gradient or an image - which is the reason contrast
-/// on *text* is left to axe rather than computed here
-/// (`principles/use-crates-for-solved-domains`). For a ring on a flat surface
-/// it is right, and it catches the case that matters: a ring too faint to see.
+/// WCAG 1.4.11: the ring needs 3:1 against the first flat background behind it (todo 53, part 3).
+/// Wrong over gradients or images, which is why text contrast is left to axe.
 pub fn assert_ring_contrast(ring: &Ring) -> Result<()> {
-    // A two-tone ring brings its own surround.
-    //
-    // `focus_ring_sx` paints a light halo on both sides of a dark stripe, so
-    // whatever the caller's surface turns out to be, the stripe has the halo
-    // next to it. WCAG's adjacent-colour rule is then discharged by the two
-    // tones against each other, and measuring the stripe against the page
-    // behind it asks a question the pattern deliberately does not answer -
-    // `Splitter`'s divider draws its ring entirely over the caller's panes.
+    // A two-tone ring (`focus_ring_sx`) brings its own surround: stripe against halo, not the page.
     if has_visible_outline(&ring.outline)
         && let Some(halo) = halo_color(&ring.box_shadow)
     {
@@ -244,8 +176,7 @@ pub fn assert_ring_contrast(ring: &Ring) -> Result<()> {
     } else {
         ring.border_color.as_str()
     };
-    // An indicator colour that cannot be read is a failure, not a pass. This
-    // returned Ok once, so a box-shadow ring was never measured at all.
+    // An unreadable colour fails: passing it once left box-shadow rings unmeasured.
     let Some(fg) = parse_rgb(indicator) else {
         bail!(
             "the focus indicator on {} has a colour this pass cannot read ({indicator:?}), \
@@ -280,22 +211,8 @@ pub async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
                 if (!start) return [];
                 const describe = (el, overlay) => {{
                     const s = getComputedStyle(el);
-                    // Start at the PARENT, not at the element.
-                    //
-                    // A focus ring is an `outline` with a positive
-                    // `outline-offset`, so it is painted *outside* the
-                    // element's own box - over whatever the element sits on.
-                    // Measuring against the element's own background reports a
-                    // filled primary button's ring as 1.37:1 against the
-                    // button's blue, when what the user sees is the ring
-                    // against the page behind it. A border's outer edge meets
-                    // the parent too.
-                    //
-                    // An overlay covers its owner, its containing block, so its
-                    // ring sits outside the owner: start at the owner's parent.
-                    //
-                    // An inset ring (`inset_focus_ring_sx`) lies wholly on the
-                    // element's own fill: start at the element.
+                    // An offset ring is painted over the parent; an overlay's over its owner's parent;
+                    // an inset ring (`inset_focus_ring_sx`) over the element itself.
                     let against = 'rgba(0, 0, 0, 0)';
                     const inset = s.outlineStyle !== 'none' && (parseFloat(s.outlineOffset) || 0) + (parseFloat(s.outlineWidth) || 0) <= 0;
                     const from = overlay
@@ -321,11 +238,8 @@ pub async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
                 }};
                 const out = [];
                 let el = start;
-                // Four levels is enough for a field frame; more would start
-                // reporting the page's own chrome as the component's ring.
-                //
-                // Each level's following `[data-ring]` siblings too: that is
-                // where a field draws its keyboard ring.
+                // Five levels reach a field frame without the page's chrome,
+                // plus each level's following `[data-ring]` siblings.
                 for (let i = 0; el && i < 5; i++, el = el.parentElement) {{
                     out.push(describe(el, false));
                     for (let sib = el.nextElementSibling; sib; sib = sib.nextElementSibling)
@@ -340,16 +254,12 @@ pub async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
     Ok(chain)
 }
 
-/// An `outline` shorthand that actually draws something. Chromium reports
-/// `"rgb(0, 0, 0) none 3px"` for an element with no outline at all, so a
-/// non-empty string proves nothing.
+/// An `outline` that draws something: Chromium reports `"rgb(0, 0, 0) none 3px"` for none.
 fn has_visible_outline(outline: &str) -> bool {
     !outline.is_empty() && !outline.contains("none") && !outline.starts_with("0px")
 }
 
-/// The first shadow in the list, split into its colour and its lengths.
-/// Chromium computes one as `rgb(34, 139, 230) 0px 0px 0px 2px`, and a colour
-/// carries commas of its own, so the list cannot be split on `,` alone.
+/// The first shadow split into colour and lengths; the colour's own commas forbid a plain split.
 fn first_shadow(shadow: &str) -> Option<(&str, &str)> {
     let start = shadow.find("rgb")?;
     let close = start + shadow[start..].find(')')?;
@@ -358,16 +268,10 @@ fn first_shadow(shadow: &str) -> Option<(&str, &str)> {
     Some((&shadow[start..=close], rest[..end].trim()))
 }
 
-/// The colour of a two-tone ring's halo, if the first shadow is one.
-///
-/// The halo is spread-only and outset - no offset, no blur - which is the
-/// shape [`focus_ring_sx`](../../../libero/src/components/common/util.rs)
-/// emits and which a resting elevation shadow never has. An inset shadow or
-/// one with an offset is the component's own chrome, not a ring.
+/// The halo colour if the first shadow is `focus_ring_sx`'s: outset, spread only, no offset or blur.
 fn halo_color(shadow: &str) -> Option<&str> {
     let (color, lengths) = first_shadow(shadow)?;
-    // Chromium puts the keyword after the lengths: `rgb(0, 0, 0) 0px 0px 0px
-    // 1px inset`.
+    // Chromium puts the keyword after the lengths: `rgb(0, 0, 0) 0px 0px 0px 1px inset`.
     if lengths.contains("inset") {
         return None;
     }
@@ -456,9 +360,7 @@ fn contrast(a: (f64, f64, f64), b: (f64, f64, f64)) -> f64 {
     (hi + 0.05) / (lo + 0.05)
 }
 
-/// Assert focus returned to where it started, which is the half of focus
-/// management that is easiest to get wrong and hardest to notice
-/// (`principles/focus-after-removal`).
+/// Assert focus returned to the trigger (`principles/focus-after-removal`).
 pub async fn assert_focus_returned(page: &Page, trigger: &str) -> Result<()> {
     assert_focused(page, trigger, "the overlay closed").await
 }
