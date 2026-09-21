@@ -44,10 +44,13 @@ fn Demo() -> Element {
 - The icon and the status reset when the pointer or the focus leaves.
 - Unset, `aria_label` is the localization's `copy`. The words are
   `CopyButtonLabels`.
+- `label` becomes the button's description through a hidden element, so the
+  name stays short: "Copy, Add libero to your project".
 
 ### You must
 
-- Name it after what it copies with `aria_label`, such as "Copy link".
+- Name it after what it copies with `aria_label`, such as "Copy link", or keep
+  the short name and say what it copies with `label`.
 - For a copy control of your own on `use_clipboard()`, say the result in a
   status region that is already mounted.
 
@@ -61,6 +64,7 @@ fn Demo() -> Element {
 | `size` | `ThemeAwareValue` | `md` | Button size. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `aria_label` | `String` | `"Copy"` | The button's name, such as "Copy link". Unset, the localization's. |
+| `label` | `String` | - | Describes what a press copies, read after the name, such as "Add libero to your project". |
 | `disabled` | `bool` | `false` | Disables and dims the button. |
 
 Like every component, `CopyButton` also takes the shared props `sx`, `class`,

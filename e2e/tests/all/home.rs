@@ -6,7 +6,7 @@ use chromiumoxide::Page;
 use e2e::browser::block_on;
 use e2e::driver::{Driver, eventually_focused};
 use e2e::passes::keyboard;
-use e2e::{Fixture, Viewport, wait};
+use e2e::{Fixture, Viewport, ax, wait};
 
 /// Arrow Down enters the picker on the typed day, not on the grid cell the
 /// month shown before held.
@@ -164,6 +164,29 @@ fn it_meets_the_baseline() {
         // The fields' own target sizes are their fixtures' business.
         .targets("button, [role=tab]")
         .run();
+}
+
+/// Todo 1025: each landing code block says what it holds, so its "Copy code" does too.
+#[test]
+fn the_landing_code_blocks_say_what_they_copy() {
+    block_on(async {
+        let fixture = Fixture::open("/home-code", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        for (block, label) in [
+            ("#install", "Add libero to your project"),
+            ("#card-code", "The booking card, Rust code"),
+        ] {
+            let tree = ax::snapshot(page, block).await.unwrap();
+            assert!(tree.starts_with(&format!("group \"{label}\"\n")), "{tree}");
+            assert!(tree.contains("button \"Copy code\""), "{tree}");
+            let button = format!("{block} button");
+            assert_eq!(ax::description(page, &button).await.unwrap(), label);
+        }
+        fixture.console.assert_clean("the landing code").unwrap();
+        fixture.close().await.unwrap();
+    });
 }
 
 async fn expect(page: &Page, js: &str, what: &str) -> Result<()> {

@@ -9,70 +9,75 @@ code
   StaticText "x;"
   StaticText "if"
   StaticText "y"
-StaticText "Rust"
-button "Copy code"
-status [atomic] [live=polite]
-code
-  StaticText "let"
-  StaticText "a ="
-  StaticText "1"
-  StaticText ";"
-  StaticText "let"
-  StaticText "b ="
-  StaticText "2"
-  StaticText ";"
+group "Rust code"
+  StaticText "Rust"
+  button "Copy code"
+  status [atomic] [live=polite]
+  code
+    StaticText "let"
+    StaticText "a ="
+    StaticText "1"
+    StaticText ";"
+    StaticText "let"
+    StaticText "b ="
+    StaticText "2"
+    StaticText ";"
 code
   StaticText "é"
   StaticText "/* a /* b */ c */"
   StaticText "x"
-StaticText "Rust"
-button "Copy code"
-status [atomic] [live=polite]
-code
-  StaticText "fn"
-  StaticText
-  StaticText "greet"
-  StaticText "() {"
-  StaticText "Removed"
-  StaticText
-  StaticText "old"
-  StaticText "();"
-  StaticText "Added"
-  StaticText
-  StaticText "new"
-  StaticText "();"
-  StaticText "}"
-code
-  StaticText "keep"
-  StaticText "Removed"
-  StaticText "old"
-  StaticText "Added"
-  StaticText "new"
-StaticText "Rust"
-button "Copy code"
-status [atomic] [live=polite]
-region "Rust code"
+group "Rust code"
+  StaticText "Rust"
+  button "Copy code"
+  status [atomic] [live=polite]
   code
     StaticText "fn"
     StaticText
-    StaticText "main"
+    StaticText "greet"
     StaticText "() {"
+    StaticText "Removed"
     StaticText
-    StaticText "let"
-    StaticText "s ="
-    StaticText ""a string long enough to scroll the block sideways""
-    StaticText ";"
+    StaticText "old"
+    StaticText "();"
+    StaticText "Added"
+    StaticText
+    StaticText "new"
+    StaticText "();"
     StaticText "}"
-StaticText "Rust"
-code
-  StaticText "let"
-  StaticText "a ="
-  StaticText "1"
-  StaticText ";"
-  StaticText "let"
-  StaticText "b ="
-  StaticText "2"
-  StaticText ";"
+group "Code"
+  code
+    StaticText "keep"
+    StaticText "Removed"
+    StaticText "old"
+    StaticText "Added"
+    StaticText "new"
+group "The greeting, Rust code"
+  StaticText "Rust"
+  button "Copy code"
+  status [atomic] [live=polite]
+  region "Rust code"
+    code
+      StaticText "fn"
+      StaticText
+      StaticText "main"
+      StaticText "() {"
+      StaticText
+      StaticText "let"
+      StaticText "s ="
+      StaticText ""a string long enough to scroll the block sideways""
+      StaticText ";"
+      StaticText "}"
+group "Rust code"
+  StaticText "Rust"
+  code
+    StaticText "let"
+    StaticText "a ="
+    StaticText "1"
+    StaticText ";"
+    StaticText "let"
+    StaticText "b ="
+    StaticText "2"
+    StaticText ";"
 paragraph
   StaticText "Add"
   code

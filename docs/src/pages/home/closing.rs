@@ -35,6 +35,7 @@ pub fn Closing() -> Element {
                 CodeBlock {
                     source: "cargo add libero",
                     language: "shell",
+                    label: "Add libero to your project",
                     header: false,
                     line_numbers: false,
                     sx: sx().width("100%").max_width("320px").text_align("start"),

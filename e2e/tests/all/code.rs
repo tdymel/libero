@@ -86,6 +86,42 @@ fn a_keyboard_copy_is_announced() {
     });
 }
 
+/// Todo 1025: a block is a group named by its label, and its copy button, still "Copy code",
+/// is described by it. A scrolling block's region keeps the language name inside.
+#[test]
+fn a_block_is_a_group_that_describes_its_copy_button() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_js_true(
+            page,
+            "!!document.querySelector('#wide-block [role=region]')",
+            "the wide block to become a scroll region",
+        )
+        .await
+        .unwrap();
+
+        let plain = ax::snapshot(page, "#diff-block").await.unwrap();
+        assert!(plain.starts_with("group \"Rust code\"\n"), "{plain}");
+        assert!(plain.contains("button \"Copy code\""), "{plain}");
+        assert_eq!(ax::description(page, COPY).await.unwrap(), "Rust code");
+
+        let labelled = ax::snapshot(page, "#wide-block").await.unwrap();
+        assert!(
+            labelled.starts_with("group \"The greeting, Rust code\"\n"),
+            "{labelled}"
+        );
+        assert!(labelled.contains("region \"Rust code\""), "{labelled}");
+        assert_eq!(
+            ax::description(page, FLOATING_COPY).await.unwrap(),
+            "The greeting, Rust code"
+        );
+
+        fixture.console.assert_clean("the code fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// `<code>`'s pieces, a classed span or bare text each: the spans **are** the
 /// result, which a check on `textContent` would pass without.
 const PIECES: &str = r#"[...(document.querySelector('#ID')?.childNodes ?? [])]

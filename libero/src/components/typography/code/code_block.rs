@@ -9,7 +9,10 @@ use crate::{
     components::{
         accessibility::VisuallyHidden,
         buttons::CopyButton,
-        common::{HtmlTag, Input, States, Variables, base_props, inset_focus_ring_sx, variables},
+        common::{
+            HtmlTag, Input, States, Variables, base_props, inset_focus_ring_sx, names_itself,
+            variables,
+        },
         layout::{Box, use_box},
     },
     hooks::{use_css, use_element, use_localization, use_theme},
@@ -195,6 +198,10 @@ base_props! {
         /// Reads `source` as a unified diff; wins over `highlight_lines`.
         #[props(default)]
         diff: bool,
+        /// Names the block and its copy button, e.g. "The booking card, Rust code".
+        /// Unset, the language, as "Rust code".
+        #[props(default, into)]
+        label: Option<String>,
     }
 }
 
@@ -395,12 +402,23 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         language.map(|language| highlight(&source, language))
     }));
 
+    let scroll_label = match language {
+        Some(language) => fill(labels.code_named, &[("language", &language.name(&labels))]),
+        None => labels.code.to_string(),
+    };
+    let group_label = props.label.clone().unwrap_or_else(|| scroll_label.clone());
+    // A group, so the copy button is read as this block's (todo 1025).
     let boxed = use_box()
         .framework_sx(&CODE_BLOCK_CONTAINER_SX)
         .class(&props.class)
         .sx(&props.sx)
         .states(&props.states)
-        .prepare();
+        .prepare()
+        .attr("role", Some("group"))
+        .attr(
+            "aria-label",
+            (!names_itself(&props.attributes)).then(|| group_label.clone()),
+        );
     let header_class = use_css(header.then_some(&CODE_BLOCK_HEADER_SX), CssLayer::Framework);
 
     // Diff statuses need the markers still present.
@@ -464,10 +482,6 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         measure();
     });
     let scrolls = overflows();
-    let scroll_label = match language {
-        Some(language) => fill(labels.code_named, &[("language", &language.name(&labels))]),
-        None => labels.code.to_string(),
-    };
     let scroll_box = use_box()
         .framework_sx(&CODE_BLOCK_SCROLL_SX)
         .sx(&scroll_sx)
@@ -510,6 +524,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
                         CopyButton {
                             value: copy_source,
                             aria_label: labels.copy,
+                            label: group_label.clone(),
                             sx: &CODE_COPY_BUTTON_SX,
                         }
                     }
@@ -518,6 +533,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
                 CopyButton {
                     value: copy_source,
                     aria_label: labels.copy,
+                    label: group_label.clone(),
                     sx: &CODE_COPY_BUTTON_FLOATING_SX,
                 }
             }
@@ -587,6 +603,67 @@ mod tests {
             .filter(|warning| warning.contains("`1-9`"))
             .count();
         assert_eq!(count, 1);
+    }
+
+    fn render(app: fn() -> Element) -> String {
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dioxus_ssr::render(&dom)
+    }
+
+    /// The copy button's description points at an element holding the group's name.
+    fn described_text(html: &str) -> Option<String> {
+        let id = html
+            .split("aria-describedby=\"")
+            .nth(1)?
+            .split('"')
+            .next()?;
+        let text = html.split(&format!("id=\"{id}\"")).nth(1)?;
+        Some(text.split('>').nth(1)?.split('<').next()?.to_string())
+    }
+
+    #[test]
+    fn a_block_is_a_group_named_by_its_label() {
+        let html = render(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    CodeBlock { source: "let a = 1;", language: "rust", label: "The setup, Rust code" }
+                }
+            }
+        });
+        assert!(html.contains(r#"role="group""#), "{html}");
+        assert!(
+            html.contains(r#"aria-label="The setup, Rust code""#),
+            "{html}"
+        );
+        assert_eq!(
+            described_text(&html).as_deref(),
+            Some("The setup, Rust code")
+        );
+    }
+
+    #[test]
+    fn an_unlabelled_block_is_named_after_its_language() {
+        let html = render(|| {
+            rsx! {
+                crate::LiberoProvider { CodeBlock { source: "x", language: "rust" } }
+            }
+        });
+        assert!(html.contains(r#"aria-label="Rust code""#), "{html}");
+        assert_eq!(described_text(&html).as_deref(), Some("Rust code"));
+    }
+
+    #[test]
+    fn a_callers_name_wins_over_the_label() {
+        let html = render(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    CodeBlock { source: "x", "aria-label": "Mine", copyable: false }
+                }
+            }
+        });
+        assert_eq!(html.matches("aria-label=").count(), 1, "{html}");
+        assert!(html.contains(r#"aria-label="Mine""#), "{html}");
     }
 
     #[test]

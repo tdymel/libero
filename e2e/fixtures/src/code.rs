@@ -26,6 +26,7 @@ fn CodePage() -> Element {
                 source: "keep\n-old\n+new"
             }
             CodeBlock { id: "wide-block", language: "rust", copyable: true, highlight_lines: "2",
+                label: "The greeting, Rust code",
                 // One token that starts in view: axe skips a token scrolled out whole.
                 source: "fn main() {{\n    let s = \"a string long enough to scroll the block sideways\";\n}}"
             }

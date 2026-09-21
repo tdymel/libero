@@ -94,6 +94,7 @@ pub fn Hero() -> Element {
                 CodeBlock {
                     source: "cargo add libero",
                     language: "shell",
+                    label: "Add libero to your project",
                     header: false,
                     line_numbers: false,
                     sx: sx().width("100%").max_width("360px").text_align("left"),

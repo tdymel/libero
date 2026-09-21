@@ -82,13 +82,17 @@ fn Demo() -> Element {
 
 ### Libero handles
 
+- The block is a `group` named by `label`. Its copy button is "Copy code",
+  described by the same words, so a screen reader hears "Copy code, Rust code".
 - In `diff` mode a screen reader hears "added" or "removed" before a changed
   line.
-- A block that scrolls is a region named after its language, such as "Rust
-  code". The words come from the [localization](localization.md).
+- A block that scrolls is a focusable region named after its language, such as
+  "Rust code". The words come from the [localization](localization.md).
 
 ### You must
 
+- With several blocks on a page, give each a `label` that says what the code
+  is, such as "The booking form, Rust code".
 - A line in `highlight_lines` is marked only by color and a bar, so say in the
   text why it matters.
 
@@ -104,6 +108,7 @@ fn Demo() -> Element {
 | `line_numbers` | `bool` | `true` | Shows the line-number gutter. |
 | `highlight_lines` | `String` | - | Lines to emphasize, counted from 1, such as `"1,5-7,10"`. Malformed parts are skipped. |
 | `diff` | `bool` | `false` | Reads `source` as a unified diff. A leading `+` or `-` colors the row and stays out of what is copied. Wins over `highlight_lines`. |
+| `label` | `String` | - | Names the block and describes its copy button, such as "The booking card, Rust code". Unset, the language, such as "Rust code". |
 
 Like every component, `CodeBlock` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.

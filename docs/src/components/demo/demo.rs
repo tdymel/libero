@@ -279,6 +279,8 @@ pub fn Demo(
     wide_preview: bool,
 ) -> Element {
     let mut values = use_signal(|| DemoValues::defaults(&controls));
+    // Every page has several demos: "Copy code" alone would not say which (todo 1025).
+    let code_label = format!("{component} demo, Rust code");
 
     let code = DemoCode {
         component,
@@ -501,6 +503,7 @@ pub fn Demo(
             CodeBlock {
                 language: "rust",
                 source,
+                label: code_label,
                 header: false,
                 sx: sx().border("none").border_radius("0"),
             }

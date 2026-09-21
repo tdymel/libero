@@ -1,4 +1,4 @@
-//! `CopyButton` bare, with a variant and a name of its own, and disabled.
+//! `CopyButton` bare, with a variant and a name of its own, with a description, and disabled.
 
 use dioxus::prelude::*;
 use libero::components::{CopyButton, Flex, Text};
@@ -20,6 +20,9 @@ fn CopyButtonPage() -> Element {
                     aria_label: "Copy the install command",
                     variant: "outlined",
                 }
+            }
+            span { id: "described",
+                CopyButton { value: "cargo add libero", label: "Add libero to your project" }
             }
             span { id: "off", CopyButton { value: "off", variant: "filled", disabled: true } }
         }

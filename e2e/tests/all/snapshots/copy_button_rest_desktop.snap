@@ -9,5 +9,7 @@ paragraph
   StaticText "cargo add libero"
 button "Copy the install command"
 status [atomic] [live=polite]
+button "Copy"
+status [atomic] [live=polite]
 button "Copy" [disabled]
 status [atomic] [live=polite]

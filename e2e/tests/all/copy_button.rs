@@ -2,7 +2,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
-use e2e::{Fixture, Suite, Viewport, wait};
+use e2e::{Fixture, Suite, Viewport, ax, wait};
 
 const BARE: &str = "#bare button";
 const NAMED: &str = "#named button";
@@ -73,6 +73,26 @@ fn a_press_is_announced_and_leaving_resets_it() {
         assert_eq!(bare_name, "Copy");
 
         fixture.console.assert_clean("copying").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Todo 1025: `label` describes the button, its name stays short, and the words are not read twice.
+#[test]
+fn a_label_describes_the_button() {
+    block_on(async {
+        let fixture = Fixture::open("/copy-button", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+
+        let tree = ax::snapshot(page, "#described").await.unwrap();
+        assert!(tree.contains(r#"button "Copy""#), "{tree}");
+        assert!(!tree.contains("Add libero"), "read as text too:\n{tree}");
+        let description = ax::description(page, "#described button").await.unwrap();
+        assert_eq!(description, "Add libero to your project");
+        assert_eq!(ax::description(page, BARE).await.unwrap(), "");
+
         fixture.close().await.unwrap();
     });
 }

@@ -6,7 +6,7 @@ use crate::{
         buttons::ActionIcon,
         common::{CopiedIcon, CopyFailedIcon, CopyIcon, Input, Variant, base_props},
     },
-    hooks::{use_clipboard, use_localization, use_silent_focus_out},
+    hooks::{use_clipboard, use_id, use_localization, use_silent_focus_out},
     sx::ThemeAwareValue,
 };
 
@@ -27,6 +27,9 @@ base_props! {
         /// Replaces the localized name, e.g. "Copy link".
         #[props(default, into)]
         aria_label: Option<String>,
+        /// What a press copies, read after the name, e.g. "Add libero to your project".
+        #[props(default, into)]
+        label: Option<String>,
         #[props(default)]
         disabled: Option<bool>,
     }
@@ -53,6 +56,8 @@ pub fn CopyButton(props: CopyButtonProps) -> Element {
         clipboard.reset();
     });
     let value = props.value.clone();
+    let label_id = use_id();
+    let described = props.label.as_ref().map(|_| label_id());
 
     rsx! {
         ActionIcon {
@@ -62,6 +67,7 @@ pub fn CopyButton(props: CopyButtonProps) -> Element {
             size: props.size.clone(),
             radius: props.radius.clone(),
             disabled: props.disabled,
+            aria_describedby: described,
             class: props.class.clone(),
             sx: props.sx.clone(),
             states: props.states.clone(),
@@ -86,6 +92,10 @@ pub fn CopyButton(props: CopyButtonProps) -> Element {
             } else {
                 CopyIcon {}
             }
+        }
+        // `hidden`: a description only, not read again in browse mode.
+        if let Some(label) = props.label.as_deref() {
+            span { id: label_id, hidden: true, "{label}" }
         }
         // Always mounted, so a screen reader is watching it when the text arrives.
         VisuallyHidden { role: "status",

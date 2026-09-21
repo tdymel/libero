@@ -5,8 +5,8 @@ use dioxus::prelude::*;
 use libero::{
     chrono::NaiveDate,
     components::{
-        Button, DateField, Fields, Form, Notifications, Options, Paper, Rule, Select, Switch,
-        Table, Tabs, TextField, Title, VisuallyHidden, column, not_empty, use_form,
+        Button, CodeBlock, DateField, Fields, Flex, Form, Notifications, Options, Paper, Rule,
+        Select, Switch, Table, Tabs, TextField, Title, VisuallyHidden, column, not_empty, use_form,
         use_notifications,
     },
     sx::sx,
@@ -22,6 +22,7 @@ pub const ROUTES: Routes = &[
         }
     }),
     ("/home-stats", || rsx! { Stats {} }),
+    ("/home-code", || rsx! { HomeCode {} }),
 ];
 
 /// A copy of the "Libero in numbers" section of `docs/src/pages/home/stats.rs`, cards cut to one.
@@ -33,6 +34,30 @@ fn Stats() -> Element {
                 VisuallyHidden { "Libero in numbers" }
             }
             Paper { bordered: true, "100+ Components and Hooks" }
+        }
+    }
+}
+
+/// The landing page's code blocks, copied like the card: `hero.rs`, `closing.rs`, `example.rs` (todo 1025).
+#[component]
+fn HomeCode() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "360px",
+            CodeBlock {
+                id: "install",
+                source: "cargo add libero",
+                language: "shell",
+                label: "Add libero to your project",
+                header: false,
+                line_numbers: false,
+            }
+            CodeBlock {
+                id: "card-code",
+                source: "#[component]\npub fn BookingCard() -> Element {{\n    rsx! {{ Paper {{}} }}\n}}",
+                language: "rust",
+                label: "The booking card, Rust code",
+                header: false,
+            }
         }
     }
 }

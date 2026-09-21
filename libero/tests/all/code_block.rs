@@ -72,11 +72,12 @@ fn unset_chrome_props_follow_the_theme() {
 
     let html = body(&render(default));
     assert!(html.contains("<button"), "{html}");
-    assert!(html.contains("Plain text"), "{html}");
+    // The header's text, not the group's `aria-label`.
+    assert!(html.contains(">Plain text<"), "{html}");
 
     let html = body(&render(bare));
     assert!(!html.contains("<button"), "{html}");
-    assert!(!html.contains("Plain text"), "{html}");
+    assert!(!html.contains(">Plain text<"), "{html}");
 
     assert!(body(&render(overridden)).contains("<button"));
 }

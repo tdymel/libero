@@ -124,6 +124,15 @@ impl File {
             File::Table => TABLE_CODE,
         }
     }
+
+    // Names the block and its copy button in the visitor's words, not the file name.
+    fn code_label(self) -> &'static str {
+        match self {
+            File::Card => "The booking card, Rust code",
+            File::Form => "The booking form, Rust code",
+            File::Table => "The bookings table, Rust code",
+        }
+    }
 }
 
 /// The booking code by file on the left, the card it makes on the right.
@@ -173,6 +182,7 @@ fn Files() -> Element {
                 CodeBlock {
                     source: file.code(),
                     language: "rust",
+                    label: file.code_label(),
                     header: false,
                     sx: sx()
                         .display("flex")
