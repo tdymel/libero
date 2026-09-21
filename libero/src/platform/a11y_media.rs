@@ -1,6 +1,5 @@
-//! Answers the accessibility media features in libero's own sheets: always under
-//! Blitz, whose stylo cannot match them, and for a forced reduced motion.
-//! Throw the Blitz half out once stylo matches them (todo 954).
+//! Answers the accessibility media features in libero's sheets: under Blitz,
+//! whose stylo can't match them (drop once it can, 954), and for forced motion.
 
 use std::borrow::Cow;
 use std::cell::Cell;

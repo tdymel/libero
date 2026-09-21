@@ -1,40 +1,35 @@
 use super::backend;
 use crate::tokens::{ColorScheme, ColorSchemeSetting};
 
-/// The platform's own colour scheme, and the one place an app's override is
-/// kept.
-///
-/// Two capabilities rather than one because they fail apart: a renderer can
-/// know the system scheme and have nowhere to persist a choice. Both live
-/// here because both are the colour scheme's, and neither is worth a platform
-/// API of its own (todo 69's plan rejected a general storage capability for
-/// exactly this).
+/// The platform's colour scheme, and where an app's override is kept. One
+/// trait, two capabilities that fail apart (69's plan rejected a storage API).
 pub trait ColorSchemeApi {
     /// What the platform is set to right now.
     fn system(&self) -> ColorScheme;
 
-    /// Calls `callback` when the platform's own setting changes, until the
-    /// returned subscription is dropped.
+    /// Calls `callback` when the platform's setting changes, until the returned
+    /// subscription is dropped.
     fn on_change(&self, callback: Box<dyn Fn(ColorScheme)>) -> Box<dyn ColorSchemeSubscription>;
 
-    /// The app's stored override, `None` where nothing was stored or where
-    /// this platform stores nothing.
+    /// The app's stored override, `None` where nothing is stored.
     fn stored(&self) -> Option<ColorSchemeSetting>;
 
-    /// Persists the override. A platform that cannot store it does nothing,
-    /// and the setting then lives for the session only.
+    /// Persists the override. Where nothing can be stored, it lasts the session.
     fn store(&self, setting: ColorSchemeSetting);
 }
 
-/// Dropping it stops the callbacks, the way every other platform
-/// subscription works.
+/// Dropping it stops the callbacks.
 pub trait ColorSchemeSubscription {}
 
-/// `None` where the renderer cannot tell what the platform is set to - a
-/// server or headless build. Blitz answers from its viewport, and hears a live
-/// change within half a second. A WebView answers light until its media query
-/// first replies, then reports a dark answer as a change; only Android keeps
-/// a stored override.
+/// The colour scheme, `None` on a server or headless build. Blitz hears a live
+/// change within half a second; a WebView answers light until its media query
+/// replies, and only Android keeps a stored override.
+///
+/// ```no_run
+/// if let Some(scheme) = libero::platform::color_scheme() {
+///     let _now = scheme.system();
+/// }
+/// ```
 pub fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     backend::color_scheme()
 }

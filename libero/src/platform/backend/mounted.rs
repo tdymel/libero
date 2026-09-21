@@ -4,12 +4,8 @@ use dioxus::prelude::*;
 
 use crate::platform::{Dimensions, ElementApi, PlatformError, Read};
 
-/// An [`ElementApi`] over a mounted element, so the same calls work wherever
-/// dioxus renders - there is no `document` to query off the web, but every
-/// renderer can measure and focus an element it has mounted.
-///
-/// The floor every renderer reaches: [`backend::element`](super::element)
-/// falls back to this when the renderer's own handle isn't one we know.
+/// An [`ElementApi`] over `MountedData`: measure, scroll and focus on any
+/// renderer. The floor [`backend::element`](super::element) falls back to.
 pub(super) struct MountedElement(pub(super) Rc<MountedData>);
 
 impl ElementApi for MountedElement {
@@ -78,9 +74,8 @@ impl ElementApi for MountedElement {
         })
     }
 
-    /// dioxus's own is `scrollIntoView`, focus side effect included where the
-    /// renderer has one; it is the only way a mounted handle can scroll an
-    /// ancestor.
+    /// dioxus's `scrollIntoView`, side effects included: the only way a mounted
+    /// handle scrolls an ancestor.
     fn scroll_into_view(&self, smooth: bool) -> Result<(), PlatformError> {
         let element = self.0.clone();
         let behavior = if smooth {
@@ -99,8 +94,7 @@ impl ElementApi for MountedElement {
         })
     }
 
-    /// dioxus exposes pointer capture on no mounted handle, so a drag only
-    /// keeps tracking outside the element where a richer backend answered.
+    /// No mounted handle exposes pointer capture.
     fn set_pointer_capture(&self, _pointer_id: i32) -> Result<(), PlatformError> {
         Err(PlatformError::Unsupported)
     }
@@ -123,17 +117,12 @@ impl ElementApi for MountedElement {
         Err(PlatformError::Unsupported)
     }
 
-    /// A bare mounted handle addresses one element; it cannot answer for the
-    /// document's focus or search below itself.
+    /// A bare handle cannot see the document's focus or search below itself.
     fn is_focused(&self) -> bool {
         false
     }
 
-    /// A mounted handle carries no way to ask whether its node is still in the
-    /// document, so this answers `true` - the trait's rule for a renderer that
-    /// cannot tell. On a WebView that keeps focus return doing exactly what it
-    /// did before the predicate existed, rather than routing every restore
-    /// into the fallback chain.
+    /// Cannot tell, so `true`, the trait's rule: focus return keeps working.
     fn is_connected(&self) -> bool {
         true
     }
@@ -150,8 +139,8 @@ impl ElementApi for MountedElement {
     }
 }
 
-/// A command nobody reads a result back from. Under a webview it is an IPC
-/// round-trip, so "queued" is the only thing answerable synchronously.
+/// A command nobody reads back: under a WebView an IPC round-trip, so `Ok` means
+/// queued.
 fn queue(
     future: impl std::future::Future<Output = MountedResult<()>> + 'static,
 ) -> Result<(), PlatformError> {
@@ -161,8 +150,7 @@ fn queue(
     Ok(())
 }
 
-/// Why a read failed is never actionable - the caller's only move is to skip
-/// whatever needed the measurement.
+/// Why a read failed is never actionable: the caller skips the measurement.
 fn failed<T>(result: MountedResult<T>) -> Result<T, PlatformError> {
     result.map_err(|_| PlatformError::Unsupported)
 }

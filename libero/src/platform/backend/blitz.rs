@@ -63,8 +63,7 @@ fn resolved_style_value(doc: &BaseDocument, node_id: NodeId, property: &str) -> 
 }
 
 /// Blitz backs a mounted element with a `NodeHandle`, which carries the whole
-/// document - so an element can answer for its subtree, and (via [`document`])
-/// for the document too.
+/// document, so it answers for its subtree and (via [`document`]) the document.
 pub(super) fn element(mounted: &Rc<MountedData>) -> Option<Box<dyn ElementApi>> {
     let handle = mounted.downcast::<NodeHandle>()?.clone();
     remember_document(&handle);
@@ -141,9 +140,8 @@ struct Doc {
     /// Each mounted [`Outlet`], newest last: the newest's handle is the
     /// document's, the one before takes over when it drops (todo 635).
     outlets: RefCell<Vec<OutletSlot>>,
-    /// A `NodeHandle` is the only way to reach the Blitz document, and
-    /// `use_modal` has to ask where focus is without owning an element. So the
-    /// first handle seen stands in until an [`Outlet`] mounts (todo 191).
+    /// The first handle seen, the only way to the document until an [`Outlet`]
+    /// mounts: `use_modal` asks for focus without an element (191).
     seen: RefCell<Option<NodeHandle>>,
     /// Commands that found the document borrowed, oldest first. See
     /// [`BlitzElement::command`].
@@ -305,10 +303,8 @@ impl<F: ?Sized> Callbacks<F> {
     }
 }
 
-/// Wraps the app natively, so a press's target is known until its click has
-/// bubbled, and a key press reaches [`BlitzKeyboard`]. Blitz runs a click's
-/// handlers before it moves focus (web: after), so `remember_active()` in one
-/// would name the element focused before.
+/// Wraps the app, so a press's target is known until its click bubbled and keys
+/// reach [`BlitzKeyboard`]. Blitz runs click handlers before moving focus.
 #[component]
 pub(super) fn Listener(children: Element) -> Element {
     let doc = use_hook(doc);
@@ -414,9 +410,8 @@ pub(super) fn Listener(children: Element) -> Element {
     }
 }
 
-/// Blitz focuses `<html>` after a click on nothing focusable, above this
-/// wrapper, where no key press would reach [`BlitzKeyboard`]. Taken back once
-/// that move is made, at the end of the poll; the web's equivalent is `<body>`.
+/// Blitz focuses `<html>` after a click on nothing focusable, where no key would
+/// reach [`BlitzKeyboard`]: taken back at the end of the poll.
 fn refocus_wrapper() {
     let Some(wrapper) = doc().and_then(|doc| doc.wrapper.borrow().clone()) else {
         return;
@@ -781,9 +776,8 @@ pub(super) fn keyboard() -> Option<&'static dyn KeyboardApi> {
     Some(&KEYBOARD)
 }
 
-/// Key presses as they bubble out of the app to [`Listener`]. Unlike the web's
-/// capture listener, a handler that stops a press first hides it, and one
-/// while focus sits outside the wrapper never arrives.
+/// Key presses bubbling out of the app to [`Listener`]: a stopped press, or one
+/// with focus outside the wrapper, never arrives.
 struct BlitzKeyboard;
 
 static KEYBOARD: BlitzKeyboard = BlitzKeyboard;
@@ -835,23 +829,16 @@ impl Drop for BlitzKeySubscription {
     }
 }
 
-/// Blitz lays `position: fixed` out against the parent box, so the outlet
-/// spans the viewport from its corner: a popover lands under its anchor and a
-/// modal's `inset: 0` covers the window. `absolute`, not `fixed`: no stacking
-/// context, so portaled z-indices still compete with the app's. It takes no
-/// hits; [`PortalEntry`] gives them back to what it holds.
+/// Blitz lays `fixed` out against the parent box, so the outlet spans the
+/// viewport. `absolute`: no stacking context; [`PortalEntry`] takes the hits.
 const PORTAL_ROOT_STYLE: &str = "position:absolute;width:100vw;height:100vh;pointer-events:none;";
 
-/// Blitz's hit test enters a stacking context's z-indexed boxes only inside
-/// their untransformed union, so a centred `Float` missed presses wherever its
-/// translate moved it: a hoisted, hitless box over the whole viewport widens it.
-/// During a followed drag it takes the hits, so a move off the app's content
-/// still bubbles through [`Listener`] (see [`follow_pointer`]).
+/// A hitless viewport-wide box: Blitz hit-tests z-indexed boxes only in their
+/// untransformed union. During a [`follow_pointer`] drag it takes the hits.
 const HIT_AREA_STYLE: &str = "position:absolute;inset:0;z-index:1;pointer-events:none;";
 
-/// The portal outlet, shifted back onto the viewport's corner whenever
-/// something scrolls: an `absolute` box moves with a scrolled root, an offset
-/// parent and a top margin collapsing through `<main>`.
+/// The portal outlet, shifted back onto the viewport's corner on each scroll: an
+/// `absolute` box moves with a scrolled root or a collapsing margin.
 #[component]
 pub(super) fn PortalRoot(children: Element) -> Element {
     let mut shift = use_signal(|| (0.0, 0.0));
@@ -998,9 +985,8 @@ fn pressed(event: &Event<PointerData>) {
     PRESS.set(press.flatten());
 }
 
-/// The web starts Tab and Shift+Tab from a clicked node that takes no focus;
-/// Blitz from the focus owner, the wrapper. So focus goes to that node first,
-/// and Blitz's move after this dispatch walks on from it.
+/// The web starts Tab from a clicked node that takes no focus, Blitz from the
+/// wrapper: focus goes to that node first, and Blitz walks on from it.
 fn tab_from_start(event: &Event<KeyboardData>) {
     if event.key() != Key::Tab {
         return;
@@ -1109,10 +1095,8 @@ fn catch_pointer(cursor: Option<String>) {
     });
 }
 
-/// Hands the followed drag what bubbled here from outside its element; what
-/// lands inside reached the element's own handlers already. Bubble phase, so
-/// an outside `stop_propagation` hides a move, and a release off the app
-/// (on `<html>`, outside this wrapper) is never seen.
+/// Hands the followed drag what bubbled here from outside its element. A stopped
+/// move, or a release off the app, is never seen.
 fn followed(event: &Event<PointerData>, up: bool) {
     let Some(follow) = FOLLOW.get().filter(|f| f.pointer_id == event.pointer_id()) else {
         return;
@@ -1147,9 +1131,8 @@ fn followed(event: &Event<PointerData>, up: bool) {
     }
 }
 
-/// The web's click focus: Blitz's `is_focussable` is the Tab walk's, so it
-/// skips a `tabindex="-1"` node a press still focuses (a roving tab, a dialog).
-/// A press in a disabled control or under `inert` counts from outside it.
+/// The web's click focus, `tabindex="-1"` included, which Blitz's Tab-walk
+/// `is_focussable` skips. Disabled or `inert` presses count from outside.
 fn focusable_ancestor(doc: &BaseDocument, node_id: NodeId) -> Option<NodeId> {
     let mut node_id = refused::press_origin(doc, node_id)?;
     loop {
@@ -1167,9 +1150,8 @@ fn focusable_ancestor(doc: &BaseDocument, node_id: NodeId) -> Option<NodeId> {
     }
 }
 
-/// The web arm's walk: the outermost tab stop from the press's hit up to
-/// `within`, focused unless focus is already inside it. The release then keeps
-/// it, though the press cancelled its `mousedown`.
+/// The web arm's walk: the outermost tab stop from the hit up to `within`,
+/// focused unless focus is inside it already.
 pub(super) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>) {
     let Some(handle) = within.downcast::<NodeHandle>() else {
         return;
@@ -1214,16 +1196,11 @@ pub(super) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>
 
 type Deferred = Box<dyn FnOnce()>;
 
-/// Mounted once by `LiberoProvider`. Its first mount is the document anchor;
-/// every later one runs the deferred commands.
+/// Mounted once by `LiberoProvider`: its first mount anchors the document, later
+/// ones run deferred commands.
 ///
-/// A mount is the one place dioxus-native calls back into user code with the
-/// document free while no event is being dispatched:
-/// `DioxusDocument::poll` fires `onmounted` after it drops the borrow it held
-/// across `render_immediate`. So deferring bumps `FLUSHES`, the keyed element
-/// below is replaced, and its `onmounted` runs the queue at the end of the
-/// same poll (seen in a native window: a modal's focus return, deferred and
-/// then run, before the next event).
+/// `onmounted` is the one callback with the document free: deferring bumps
+/// `flushes`, the keyed child remounts and runs the queue at the end of the poll.
 #[component]
 pub(super) fn Outlet() -> Element {
     let doc = use_hook(doc);
@@ -1309,11 +1286,8 @@ pub(super) fn Outlet() -> Element {
     }
 }
 
-/// A stylesheet change in a frame that also changed an element's state panics
-/// in stylo: its sheet invalidation reads the class off the state-only snapshot
-/// (`ServoElementSnapshot::get_attr` unwraps `attrs`, todo 837). So at this
-/// poll's end, keyed on the change like [`Outlet`]'s flush, every snapshot
-/// takes the attributes too; again at a flush after it.
+/// A sheet change in a frame with a state change panics in stylo's state-only
+/// snapshot (837): at this poll's end every snapshot takes the attributes too.
 #[component]
 pub(super) fn SheetWatch(version: u64) -> Element {
     // (key, mounted key, version seen): one remount per poll, see `later`.
@@ -1420,9 +1394,8 @@ fn heal_now() {
     }
 }
 
-/// crates.io Blitz leaves stale dirty bits under a clean ancestor, where a
-/// later change stops marking: its restyle is skipped (upstream #789). Whether
-/// any bit was stale.
+/// Blitz leaves stale dirty bits under a clean ancestor, skipping a later
+/// restyle (upstream #789). Whether any bit was stale.
 fn heal_dirty_bits(doc: &BaseDocument) -> bool {
     let mut dirty = Vec::new();
     doc.visit(|id, node| {
@@ -1447,16 +1420,12 @@ fn heal_dirty_bits(doc: &BaseDocument) -> bool {
 /// How often [`heal_while_animating`] heals.
 const FRAME: Duration = Duration::from_millis(16);
 
-/// Frames with nothing healed before [`heal_while_animating`] stops: an
-/// infinite animation (a spinner) kept it at 60 Hz, about 0.3 ms a frame over
-/// 500 rows in a debug build (todo 892). The next flush restarts it.
+/// Idle frames before [`heal_while_animating`] stops: a spinner kept it at 60 Hz
+/// (892). The next flush restarts it.
 const IDLE_FRAMES: u32 = 30;
 
-/// Each restyle marks an animating node dirty, and a stale bit above it skips
-/// that restyle: a transition stopped at its start (todo 870). So from each
-/// flush on, until the document stops animating or nothing needed healing for
-/// [`IDLE_FRAMES`], the bits are healed a frame apart, and once more with a
-/// redraw at the end.
+/// A stale bit above an animating node skips its restyle, stopping a transition
+/// (870): heal each frame until it stops animating or [`IDLE_FRAMES`] pass.
 fn heal_while_animating(state: &Rc<Doc>) {
     let mut ticks = state.animation_ticks.borrow_mut();
     if ticks.is_some() {
@@ -1509,9 +1478,8 @@ fn later(run: impl FnOnce() + 'static) {
         return;
     };
     doc.deferred.borrow_mut().push(in_origin(run));
-    // One remount per flush: a flush element replaced before its mount event
-    // ran panics in dioxus-native (a `Modal` backdrop click; todo 664: a timer
-    // task re-keying it again in the poll that rendered it).
+    // One remount per flush: replacing it before its mount event ran panics in
+    // dioxus-native (664).
     let newest = doc
         .outlets
         .borrow()
@@ -1550,10 +1518,8 @@ pub(super) fn document() -> Option<&'static dyn DocumentApi> {
     anchor().map(|_| &DOCUMENT as &'static dyn DocumentApi)
 }
 
-/// The running document's anchor as of right now. Looked up per call rather
-/// than held in [`BlitzDocument`], so the document can be a `&'static` like
-/// every other capability - and so a handle taken before the first frame is
-/// not stale.
+/// The running document's anchor, looked up per call so [`BlitzDocument`] can
+/// be `&'static` and no early handle goes stale.
 fn anchor() -> Option<NodeHandle> {
     doc()?.anchor()
 }
@@ -1562,10 +1528,8 @@ pub(super) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     Some(&COLOR_SCHEME)
 }
 
-/// The viewport's scheme, which the shell keeps in step with the window theme.
-/// Blitz sends no event on a live theme change, so it is read at [`Outlet`]'s
-/// first mount and then every [`SCHEME_INTERVAL`] while anyone subscribes.
-/// A timer's task finds the document free, unlike a handler's.
+/// The viewport's scheme. Blitz sends no change event, so it is read at the
+/// first [`Outlet`] mount, then every [`SCHEME_INTERVAL`] while subscribed.
 struct BlitzColorScheme;
 
 static COLOR_SCHEME: BlitzColorScheme = BlitzColorScheme;
@@ -1656,10 +1620,8 @@ pub(super) fn scroll() -> Option<&'static dyn ScrollApi> {
     Some(&SCROLL)
 }
 
-/// Blitz dispatches `scroll` only to the node that scrolled, and it does not
-/// bubble. What moves it does: a wheel reaches [`Listener`], and libero's own
-/// `scroll_to`/`scroll_into_view` report themselves. Blitz scrolls nothing on
-/// a key or a mouse drag (measured on the harness).
+/// Blitz's `scroll` does not bubble: a wheel reaching [`Listener`] and libero's
+/// own scroll commands report instead. Keys and drags scroll nothing there.
 struct BlitzScroll;
 
 static SCROLL: BlitzScroll = BlitzScroll;
@@ -1777,24 +1739,15 @@ fn run_or_defer(anchor: &NodeHandle, run: impl FnOnce(&mut BaseDocument) + 'stat
 }
 
 struct BlitzElement {
-    /// Any handle into the same document; `node_id` is what this addresses.
-    /// Nodes found by a query have no `NodeHandle` of their own - its fields
-    /// are private to dioxus - so one is carried along to reach the document.
+    /// Any handle into the document: a queried node has no `NodeHandle` of its
+    /// own. `node_id` is what this addresses.
     anchor: NodeHandle,
     node_id: NodeId,
 }
 
 impl BlitzElement {
-    /// **A read answers when it is called, not when it is awaited.** Blitz
-    /// hands its event driver the document as a mutable borrow and holds it
-    /// across the whole dispatch - which includes dioxus draining every task
-    /// spawned from a handler, so a read *created* inside a `spawn` finds the
-    /// document locked and no amount of yielding escapes that window (measured:
-    /// 2000 self-wakes, still borrowed). During the handler itself it is free.
-    ///
-    /// So callers must build the future where the handler is and await it
-    /// wherever; the returned `Read` is already resolved here, exactly as on
-    /// the web.
+    /// A read answers when called, not awaited: the document stays borrowed
+    /// while dioxus drains tasks, so a read made in a `spawn` fails.
     fn read<T: 'static>(&self, from: impl FnOnce(&BaseDocument, NodeId) -> Option<T>) -> Read<T> {
         let Some(doc) = self.anchor.try_doc() else {
             return Box::pin(std::future::ready(Err(PlatformError::Unsupported)));
@@ -1805,18 +1758,8 @@ impl BlitzElement {
         Box::pin(std::future::ready(answer))
     }
 
-    /// **A command runs now if it can, and at the end of this poll if not.**
-    /// Every dioxus task - anything `spawn`ed, and every timer callback - is
-    /// polled inside `render_immediate`, which `DioxusDocument::poll` calls
-    /// while it holds the document mutably (`dioxus_document.rs:233-236` in
-    /// native-dom). A command from there cannot take the document, and
-    /// `doc_mut()` panicked: `FocusReturn::restore` closing any modal did
-    /// exactly that (todo 189, seen in a native window). An event handler finds
-    /// it free.
-    ///
-    /// `try_doc` is how to ask - there is no `try_doc_mut` - and it fails only
-    /// while the document is borrowed mutably, which is the case that matters:
-    /// nothing in libero holds a shared borrow across a command.
+    /// Runs now if it can, else at the end of this poll: tasks run while the
+    /// document is borrowed, and `doc_mut()` there panicked (189).
     fn command(&self, run: impl FnOnce(&mut BaseDocument) + 'static) {
         run_or_defer(&self.anchor, run);
     }
@@ -1834,8 +1777,8 @@ impl ElementApi for BlitzElement {
         let wrapper = self::doc().and_then(|doc| doc.wrapper_id());
         let node_id = self.node_id;
         self.command(move |doc| {
-            // `<html>` is what `active_element` names the wrapper: focus there
-            // is above it, out of every key's reach.
+            // `active_element` names the wrapper `<html>`; focus there is out
+            // of every key's reach.
             let node_id = match wrapper {
                 Some(wrapper) if node_id == doc.root_element().id => wrapper,
                 _ => node_id,
@@ -1874,19 +1817,8 @@ impl ElementApi for BlitzElement {
             .is_some_and(|doc| doc.get_focussed_node_id() == Some(self.node_id))
     }
 
-    /// Blitz tracks this itself: `NodeFlags::IS_IN_DOCUMENT` is set across a
-    /// whole subtree when it is inserted and cleared across it again when it
-    /// is removed (`blitz-dom`'s `Mutator::process_added_subtree` /
-    /// `process_removed_subtree`). So this is a flag read, not a walk up the
-    /// parent chain, and it is exactly the DOM's `isConnected`.
-    ///
-    /// A removed node is also dropped from the slab, so a missing node is gone
-    /// too - both answers are covered.
-    ///
-    /// No document in reach answers `true`, the trait's rule for a renderer
-    /// that cannot tell. That case is real here: `try_doc` fails while dioxus
-    /// is draining tasks, and an optimistic answer keeps focus return doing
-    /// what it did before the predicate existed.
+    /// `IS_IN_DOCUMENT`, Blitz's own `isConnected`; a missing node is gone. A
+    /// borrowed document (tasks draining) answers `true`, the trait's rule.
     fn is_connected(&self) -> bool {
         let Some(doc) = self.anchor.try_doc() else {
             return true;
@@ -1995,9 +1927,8 @@ impl ElementApi for BlitzElement {
         Err(PlatformError::Unsupported)
     }
 
-    /// Blitz implements no form reset, so each text control and box is written
-    /// back to its markup default: what dioxus last wrote, the component's own
-    /// value for a controlled one. A `<select>` never changes on input here.
+    /// Blitz has no form reset: each text control and box goes back to what
+    /// dioxus last wrote. A `<select>` never changes on input here.
     fn reset(&self) -> Result<(), PlatformError> {
         let form = self.node_id;
         self.command(move |doc| {
@@ -2174,9 +2105,8 @@ fn show(anchor: NodeHandle, node_id: NodeId, tries: u8) {
     });
 }
 
-/// `x, y, width, height` of a node's border box in the viewport.
-/// `get_client_bounding_rect` also subtracts the node's own scroll offset,
-/// which moves its contents, not its box: added back here.
+/// `x, y, width, height` of a node's border box in the viewport, its own scroll
+/// offset added back: `get_client_bounding_rect` subtracts it.
 fn client_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f64)> {
     if let Some(rect) = transformed_rect(doc, node_id) {
         return Some(rect);
@@ -2186,9 +2116,8 @@ fn client_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f6
     Some((rect.x + own.x, rect.y + own.y, rect.width, rect.height))
 }
 
-/// Blitz's client rect leaves out `transform`, which paint and hit testing
-/// apply: the bounding box of the four corners, mapped up the layout parents
-/// through each one's transform. `None` when no box on the way has one.
+/// The rect with `transform`s, which Blitz's client rect leaves out: corners
+/// mapped up the layout parents. `None` when no box on the way has one.
 fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f64, f64)> {
     let node = doc.get_node(node_id)?;
     let size = node.unrounded_layout().size;
@@ -2232,9 +2161,8 @@ fn transformed_rect(doc: &BaseDocument, node_id: NodeId) -> Option<(f64, f64, f6
     Some((min_x, min_y, max_x - min_x, max_y - min_y))
 }
 
-/// `WebElement::scroll_into_view`'s walk: the nearest ancestor that overflows
-/// with `overflow-y: auto | scroll`, and how far it scrolls. Servo's stylo
-/// does not parse `scroll-margin`: [`SCROLL_MARGIN_VAR`] stands in.
+/// `WebElement::scroll_into_view`'s walk: the nearest `overflow-y` scroller and
+/// how far it scrolls, [`SCROLL_MARGIN_VAR`] for `scroll-margin`.
 fn into_view(doc: &BaseDocument, node_id: NodeId) -> Option<(NodeId, f64)> {
     let (_, y, width, height) = client_rect(doc, node_id)?;
     if width == 0.0 && height == 0.0 {

@@ -2,152 +2,84 @@ use dioxus::prelude::{Event, Key, KeyboardData, Modifiers};
 
 use super::backend;
 
-/// A live key subscription. **Dropping it unsubscribes** - the same contract as
-/// [`ScrollSubscription`](super::ScrollSubscription) and
-/// [`TimerSubscription`](super::TimerSubscription), and the same empty trait
-/// saying so.
+/// A live key subscription. Dropping it unsubscribes.
 pub trait KeySubscription {}
 
-/// One key press, seen at the document.
-///
-/// The same `Key` and `Modifiers` a `KeyboardData` handler gets, so a component
-/// that already matches on `event.key()` matches on this unchanged.
-///
-/// `#[non_exhaustive]`: a chord is something the platform hands you, never
-/// something you build, and the next field to be needed should not be a
-/// breaking change.
+/// One key press, seen at the document: the same `Key` and `Modifiers` a
+/// `KeyboardData` handler gets. Handed out, never built, hence `non_exhaustive`.
 #[non_exhaustive]
 pub struct KeyChord {
     pub key: Key,
     pub modifiers: Modifiers,
-    /// Whether the platform is repeating a key the user is still holding.
-    ///
-    /// **Held keys are not rare and not always deliberate.** A motor
-    /// impairment, Sticky Keys, Slow Keys or a switch device all turn one
-    /// intended press into a stream of them, and a toggle that fires per press
-    /// flaps - Ctrl+K opening and closing a palette over and over.
-    ///
-    /// Reported rather than debounced, because unlike the text-entry filter
-    /// this is a fact about the event and not a policy: a toggle ignores a
-    /// repeat, while a held ArrowDown scrolling a list wants every one.
+    /// Whether the platform is repeating a held key. Sticky Keys or a switch
+    /// device turn one press into many: a toggle should ignore a repeat.
     pub repeat: bool,
 }
 
-/// Hearing a key press anywhere in the document, not just inside one subtree.
-///
-/// Which is the only way a global shortcut can work: an `onkeydown` on an app's
-/// root element misses every press while focus is on `<body>` or inside a
-/// portal, and both are ordinary states rather than corner cases.
+/// Hearing a key press anywhere in the document, for a global shortcut: a root
+/// `onkeydown` misses presses while focus is on `<body>` or in a portal.
 pub trait KeyboardApi {
-    /// Calls `callback` for every key press in the document until the returned
-    /// subscription is dropped. **Returning `true` prevents the default
-    /// action** - what an `event.prevent_default()` would do from a handler,
-    /// which is how Ctrl+K opens a palette instead of the browser's search bar.
+    /// Calls `callback` for every key press until the returned subscription is
+    /// dropped. Returning `true` prevents the default action.
     ///
-    /// **Never return `true` for Tab or Shift+Tab.** This listens in capture on
-    /// the window, so preventing the default there stops focus moving anywhere
-    /// in the document, and a keyboard or screen-reader user has no way back -
-    /// the one mistake on this surface with no recovery. Answer the one chord
-    /// the subscription is for and return `false` to everything else.
+    /// Never return `true` for Tab: this listens in capture on the window, so
+    /// focus could not move anywhere. Answer one chord, `false` for the rest.
     ///
-    /// **A press the user is typing never arrives.** The capability drops
-    /// anything targeting a text-like `input`, a `textarea`, a `select` or a
-    /// `contenteditable`, enforced here rather than left to each consumer. A checkbox, radio, button or range input is not
-    /// text entry, so a hotkey still works after a click on one. So a shortcut cannot eat a character out of a
-    /// text field, and equally cannot fire while focus is in one: a palette
-    /// opens from the page, not from a search box. Focus on `<body>` or inside
-    /// a portal is unaffected, which is the case an element's own `onkeydown`
-    /// could not reach.
+    /// Presses into text entry (a text `input`, `textarea`, `select`,
+    /// `contenteditable`) never arrive. A debug build warns once on a reserved
+    /// chord (Tab, Escape, arrows, Ctrl+L and the like).
     ///
-    /// Where that is wrong, use [`on_key_unfiltered`](Self::on_key_unfiltered).
-    ///
-    /// In a debug build, the first press a subscription here takes on a key
-    /// the user or the browser relies on - Tab, Escape, Enter, Space, the
-    /// arrows, Home/End, PageUp/PageDown, or Ctrl+L, T, W, R, F and the like -
-    /// logs a warning.
+    /// ```no_run
+    /// # use dioxus::prelude::*;
+    /// # use libero::platform::keyboard;
+    /// # fn app() -> Element {
+    /// let _hotkey = use_hook(|| {
+    ///     keyboard().map(|keyboard| {
+    ///         std::rc::Rc::new(keyboard.on_key(Box::new(|chord| {
+    ///             let open = chord.modifiers.ctrl() && chord.key == Key::Character("k".into());
+    ///             open && !chord.repeat
+    ///         })))
+    ///     })
+    /// });
+    /// # rsx! {}
+    /// # }
+    /// ```
     fn on_key(&self, callback: Box<dyn Fn(KeyChord) -> bool>) -> Box<dyn KeySubscription>;
 
-    /// [`on_key`](Self::on_key) without the text-entry filter: every press,
-    /// wherever it landed.
-    ///
-    /// **Escape is the reason this exists.** A dismissible surface has to hear
-    /// it from inside its own text field - a pointer-opened HoverCard leaves
-    /// focus wherever it was, a Menu has a filter field, a palette has a search
-    /// box that a second Ctrl+K should still close. Filtering those is not
-    /// convenience, it is a surface the keyboard cannot escape from.
-    ///
-    /// **Per subscription, and never the default.** Opting out changes what
-    /// *this* callback receives and nothing else, and a consumer that does not
-    /// think about it gets the filtered stream. The cost of choosing this is
-    /// that the callback can now swallow a keystroke the user meant for a text
-    /// field, so a subscription here answers a specific chord and returns
-    /// `false` to everything else.
+    /// [`on_key`](Self::on_key) without the text-entry filter, for Escape: a
+    /// surface must close from its own text field. Answer one chord only.
     fn on_key_unfiltered(
         &self,
         callback: Box<dyn Fn(KeyChord) -> bool>,
     ) -> Box<dyn KeySubscription>;
 }
 
-/// `None` where the renderer cannot report a document-level key press: a server.
-///
-/// Natively (Blitz) a press is heard as it bubbles out of `LiberoProvider`, so
-/// a handler that stops its propagation hides it, and nothing is heard while
-/// focus sits on `<html>` or outside the provider. A WebView hears it
-/// at the window, also after the element handlers, and prevents a chord's
-/// default only from the second press its subscription takes.
+/// The keyboard, `None` on a server. Blitz hears presses bubbling out of
+/// `LiberoProvider`; a WebView prevents a default only from the second press.
 pub fn keyboard() -> Option<&'static dyn KeyboardApi> {
     backend::keyboard()
 }
 
-/// Whether something nearer the press already took it. Taking a key is marked
-/// the same way everywhere: by preventing its default. An enclosing overlay's
-/// bubbled handler asks this before it closes, so one Escape closes one layer.
-///
-/// Two places can have marked it. An element handler below this one - a field
-/// dropdown closing its list - sets the flag on the event itself, which every
-/// handler later in the same bubble shares, on every backend. On the web the
-/// capture-phase [`KeyboardApi`] listener, which runs ahead of every element
-/// handler, marks the native event instead.
+/// Whether something nearer already took the press (prevented its default), so
+/// one Escape closes one overlay layer. Also asks the web's capture listener.
 pub(crate) fn key_taken(event: &Event<KeyboardData>) -> bool {
     !event.default_action_enabled() || backend::key_taken(event)
 }
 
-/// Whether this press landed in something the user types into - a text-like
-/// `input`, a `textarea`, a `select` or a `contenteditable`.
-///
-/// **The component-facing half of the filter [`KeyboardApi::on_key`] applies
-/// to a document listener.** A root key handler that acts on the arrows,
-/// Home or End has the same obligation and no way to meet it: the press it
-/// receives has bubbled out of whatever is focused, so acting on it - and
-/// worse, `prevent_default()`ing it - takes the caret out of a text field a
-/// caller put inside the component. Ask this first and return.
-///
-/// The web reads the event's target and Blitz the focused node; every other
-/// renderer answers `false`.
+/// Whether this press landed in text entry. A root key handler acting on arrows,
+/// Home or End asks this first, so a nested field keeps its caret.
 pub(crate) fn typing_target(event: &Event<KeyboardData>) -> bool {
     backend::typing_target(event)
 }
 
-/// Whether this press landed on a control the browser steps with the arrow
-/// keys although it is not text entry - the rule is [`takes_arrows`].
-///
-/// **Ask it beside [`typing_target`], never instead of it.** The two are
-/// complements, so a component filtering the arrows asks both and a component
-/// filtering typing asks only the first. Neither name covers the other's
-/// elements.
-///
-/// Like [`typing_target`] it answers about the **element**, not about the key
-/// in hand: a `range` inside the component is left alone for Home and End too,
-/// which is right, since Home steps a range to its minimum.
-///
-/// Answered where [`typing_target`] is, `false` elsewhere.
+/// Whether this press landed on a control that steps on arrows ([`takes_arrows`]).
+/// Ask it beside [`typing_target`], never instead: the two are complements.
 pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     backend::arrow_target(event)
 }
 
-/// Whether this press landed in right-to-left content: the computed
-/// `direction` of the event's target on the web, of the focused node natively
-/// (the read behind `ElementHandle::is_rtl`). `false` elsewhere.
+/// Whether this press landed in right-to-left content: the target's computed
+/// `direction` on the web, the focused node's natively. `false` elsewhere.
 pub(crate) fn rtl_target(event: &Event<KeyboardData>) -> bool {
     backend::rtl_target(event)
 }
@@ -174,16 +106,8 @@ pub(crate) fn logical_arrow(key: Key, rtl: bool) -> Key {
     }
 }
 
-/// Whether an element takes typing, so a hotkey must not fire from it - the
-/// text-entry filter behind [`KeyboardApi::on_key`], kept apart from any one
-/// renderer so the next backend applies the same list. `tag` is upper case,
-/// the way `tagName` reports it; `input_type` is the raw `type` attribute.
-///
-/// An `input` counts unless its type is a control the user clicks or ticks. A
-/// radio, a checkbox, a button or a range takes no characters, and treating it
-/// as text left Ctrl+K dead after a click on a switch or a segmented control.
-/// A missing or unknown type is a text box, as it is to the browser. `select`
-/// counts: a key press there drives the native option search.
+/// Whether an element takes typing: the filter behind [`KeyboardApi::on_key`].
+/// `tag` upper case, as `tagName`; a clicked `input` type does not count.
 #[cfg_attr(not(any(target_arch = "wasm32", feature = "native")), allow(dead_code))]
 pub(crate) fn takes_typing(tag: &str, input_type: Option<&str>) -> bool {
     match tag {
@@ -201,24 +125,8 @@ pub(crate) const CLICKED_INPUT_TYPES: &[&str] = &[
     "checkbox", "radio", "button", "submit", "reset", "image", "file", "range", "color", "hidden",
 ];
 
-/// Whether an element steps on an arrow key although the user types nothing
-/// into it - **the complement of [`takes_typing`], not a superset of it**.
-/// `tag` and `input_type` are read the same way.
-///
-/// A `range` and a `radio` are the whole list: the browser moves a range's
-/// value and a radio group's selection on an arrow, and nothing prevents that
-/// default, so a component acting on the arrows has no other way to know the
-/// press was spoken for. A `textarea`, a `select` and a text `input` also take
-/// the arrows, and they are [`takes_typing`]'s, which is why a component
-/// filtering the arrows asks both and neither name lies about its own list.
-///
-/// A checkbox, a button and a file input are on neither list: the arrows do
-/// nothing there, so a component may act on them.
-///
-/// **Our own controls do not need this.** `Slider`, `RadioGroup` and
-/// `SegmentedControl` each `prevent_default()` on the arrows, which
-/// [`key_taken`] already reports. This is the backstop for raw HTML a caller
-/// wrote.
+/// Whether an element steps on arrows without taking typing: a `range` or
+/// `radio`, the complement of [`takes_typing`]. A backstop for raw caller HTML.
 #[cfg_attr(not(any(target_arch = "wasm32", feature = "native")), allow(dead_code))]
 pub(crate) fn takes_arrows(tag: &str, input_type: Option<&str>) -> bool {
     tag == "INPUT"
@@ -227,16 +135,8 @@ pub(crate) fn takes_arrows(tag: &str, input_type: Option<&str>) -> bool {
         })
 }
 
-/// What a global hotkey on this chord would take away from the user, or `None`
-/// if nothing. A development aid: [`reserved_chord_warning`] turns it into the
-/// dev-time warning.
-///
-/// Two lists. The keys that move and act without a mouse - Tab, Escape, Enter,
-/// Space, the arrows, Home/End, PageUp/PageDown, F6 - reserved with any
-/// modifier, since Shift+Tab or Alt+ArrowLeft is as much the browser's as the
-/// bare key. And the browser's own Ctrl (Cmd) shortcuts that a page can take:
-/// editing, find, the address bar, reload, and the tab and window ones, which
-/// some browsers do not even let a page see.
+/// What a global hotkey on this chord would take from the user, or `None`.
+/// Navigation keys count with any modifier; browser shortcuts with Ctrl/Cmd.
 pub(crate) fn reserved_chord(key: &Key, modifiers: Modifiers) -> Option<&'static str> {
     let named = match key {
         Key::Tab => Some("moving focus"),
@@ -276,8 +176,7 @@ pub(crate) fn reserved_chord(key: &Key, modifiers: Modifiers) -> Option<&'static
 pub(crate) fn reserved_chord_warning(key: &Key, modifiers: Modifiers) -> Option<String> {
     reserved_chord(key, modifiers).map(|what| {
         let mut chord = String::new();
-        // Ctrl and Cmd as one: a hotkey binds both, and the warning should
-        // read the same whichever a press happened to carry.
+        // Ctrl and Cmd as one: a hotkey binds both.
         for (held, name) in [
             (modifiers.ctrl() || modifiers.meta(), "Ctrl/Cmd+"),
             (modifiers.alt(), "Alt+"),
@@ -299,9 +198,7 @@ pub(crate) fn reserved_chord_warning(key: &Key, modifiers: Modifiers) -> Option<
     })
 }
 
-/// Says [`reserved_chord_warning`] once per chord for the page's lifetime -
-/// a hotkey is re-subscribed on every open and close, and the second telling
-/// adds nothing.
+/// Says [`reserved_chord_warning`] once per chord: hotkeys re-subscribe often.
 pub(crate) fn warn_reserved_chord(key: &Key, modifiers: Modifiers) {
     if !cfg!(debug_assertions) {
         return;
@@ -345,9 +242,7 @@ mod tests {
         assert!(!takes_typing("DIV", None));
     }
 
-    /// The two predicates are complements: a component filtering the arrows
-    /// asks both, so an element on both lists would be asked about twice and
-    /// one on neither is a press the component may act on.
+    /// The two predicates are complements: no element is on both lists.
     #[test]
     fn stepping_controls_take_the_arrows_without_taking_typing() {
         for kind in ["range", "radio", "RANGE"] {

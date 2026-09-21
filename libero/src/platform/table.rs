@@ -7,8 +7,7 @@ pub(crate) fn lays_out_captions() -> bool {
 }
 
 /// Whether a `width: 100%` table still widens to its content's minimum. Blitz
-/// holds it at the width and its cells overflow where no scroller reaches
-/// them, so `Table` takes `min-width: 100%` there.
+/// holds it and its cells overflow, so `Table` takes `min-width: 100%` there.
 pub(crate) fn widens_sized_tables() -> bool {
     backend::WIDENS_SIZED_TABLES
 }

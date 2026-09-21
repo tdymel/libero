@@ -1,6 +1,5 @@
-//! dioxus-native writes a `false` bool attribute as `hidden="false"`, which
-//! Blitz reads as set. The web's interpreter drops it; [`sync`] does the same
-//! at each flush, so `hidden: !open()` works as written (todo 943).
+//! dioxus-native writes `hidden="false"`, which Blitz reads as set; [`sync`]
+//! drops it at each flush, as the web's interpreter does (943).
 
 use blitz_dom::{BaseDocument, QualName};
 use dioxus_native_dom::NodeId;

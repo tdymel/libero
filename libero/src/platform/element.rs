@@ -7,12 +7,8 @@ use super::{PlatformError, backend};
 /// Dropping it stops the callbacks: a content watch, a form's `reset`.
 pub(crate) trait ContentSubscription {}
 
-/// Calls `callback` after `mounted`'s subtree changed: a node added or
-/// removed, text edited, or an attribute that makes a node focusable or not.
-/// The web watches with a `MutationObserver`; Blitz only sees a change that
-/// moves the subtree's scroll size (a `display: contents` node: its parent's),
-/// within half a second. Elsewhere `None`, and the caller keeps its own
-/// re-checks.
+/// Calls `callback` after `mounted`'s subtree changed (nodes, text, focusability).
+/// Blitz sees only scroll-size changes, within 0.5 s; elsewhere off the web `None`.
 pub(crate) fn on_content_change(
     mounted: &Rc<MountedData>,
     callback: Box<dyn Fn()>,
@@ -20,9 +16,8 @@ pub(crate) fn on_content_change(
     backend::on_content_change(mounted, callback)
 }
 
-/// Calls `on_reset` on each `reset` of the `<form>` that owns `mounted`: a
-/// control's own form owner, else the nearest `<form>` around it. `None` when
-/// no form owns it, and **off the web**, where nothing reads the DOM's owner.
+/// Calls `on_reset` on each `reset` of the `<form>` owning `mounted`. `None` when
+/// no form owns it, and off the web.
 pub(crate) fn on_form_reset(
     mounted: &Rc<MountedData>,
     on_reset: Box<dyn Fn()>,
@@ -36,9 +31,8 @@ pub(crate) fn is_rtl(mounted: &Rc<MountedData>) -> bool {
     backend::is_rtl(mounted)
 }
 
-/// Blitz's [`ElementApi::scroll_into_view`] reads this custom property, one
-/// `px` or `rem` length, in place of `scroll-margin`, which servo's stylo does
-/// not parse. Set it beside `scroll-margin`.
+/// Blitz's `scroll_into_view` reads this (one `px`/`rem` length) since stylo
+/// does not parse `scroll-margin`. Set it beside `scroll-margin`.
 pub(crate) const SCROLL_MARGIN_VAR: &str = "--lsx-scroll-margin";
 
 /// An element's rendered pixel size.
@@ -48,55 +42,44 @@ pub struct Dimensions {
     pub height: f64,
 }
 
-/// A read that has to reach the platform. Already resolved on the web and
-/// under Blitz; a round-trip through the webview off them, which is why it is
-/// a future rather than a plain `Result`.
+/// A read that has to reach the platform: resolved at once on the web and Blitz,
+/// a round-trip through a WebView.
 ///
-/// **Start the read where the event handler is, and await it wherever.** Under
-/// Blitz a read answers when it is *called*, and the document is locked for as
-/// long as dioxus is draining tasks - so a read created inside a `spawn` fails
-/// where the same read created just before it succeeds.
+/// Start the read in the event handler, await it anywhere: under Blitz a read
+/// made inside a `spawn` fails, the document is locked while tasks drain.
 pub type Read<T> = Pin<Box<dyn Future<Output = Result<T, PlatformError>>>>;
 
-/// One element, however this platform happens to address it. Reached through
-/// [`use_element`](crate::hooks::use_element), or a scoped query off another
-/// `ElementApi` - never stored.
+/// One element, reached through [`use_element`](crate::hooks::use_element) or a
+/// scoped query, never stored. What a renderer can't serve is `Unsupported`.
 ///
-/// Some renderers cannot answer all of it. A call the platform has no way to
-/// serve fails with [`PlatformError::Unsupported`] rather than being absent
-/// from the type: which parts work is a property of the running renderer, not
-/// of the build.
+/// ```
+/// # use libero::platform::{ElementApi, PlatformError};
+/// # async fn f(element: &dyn ElementApi) -> Result<(), PlatformError> {
+/// let size = element.dimensions().await?;
+/// element.focus()?;
+/// # let _ = size;
+/// # Ok(())
+/// # }
+/// ```
 pub trait ElementApi {
-    // Commands stay synchronous: nothing reads a result back, so a renderer
-    // that can only queue the work still honours them.
+    // Commands stay synchronous, so a renderer that only queues still honours them.
     fn focus(&self) -> Result<(), PlatformError>;
     fn blur(&self) -> Result<(), PlatformError>;
     fn click(&self) -> Result<(), PlatformError>;
 
-    /// A `<form>`'s own reset: every control back to its default value, except
-    /// one marked `data-controlled`, whose component sets its value - that one
-    /// keeps what it showed.
+    /// A `<form>`'s reset: every control back to its default, except one marked
+    /// `data-controlled`, which keeps what it showed.
     fn reset(&self) -> Result<(), PlatformError>;
 
     /// Submits a `<form>` as its submit button would, so `onsubmit` fires with
-    /// a real event. Only the web has one to fire.
+    /// a real event. Web only.
     fn request_submit(&self) -> Result<(), PlatformError>;
 
     /// Whether this is the currently focused element.
     fn is_focused(&self) -> bool;
 
-    /// Whether this node is still in the document - the DOM's `isConnected`.
-    ///
-    /// A plain `bool` rather than a [`Read`], like
-    /// [`is_focused`](Self::is_focused): every renderer that can answer it at
-    /// all can answer it synchronously, and the one caller that matters -
-    /// handing focus back to a trigger the application has since deleted -
-    /// has to decide *inside* the closing handler, before a `spawn`.
-    ///
-    /// **A renderer that cannot tell answers `true`.** `focus()` on a detached
-    /// node already returns `Ok(())` everywhere and does nothing, so the
-    /// optimistic answer is the one that leaves behaviour where it was; `false`
-    /// would claim every element on that renderer had been removed.
+    /// Whether this node is still in the document (`isConnected`). Synchronous,
+    /// for a closing handler; a renderer that cannot tell answers `true`.
     fn is_connected(&self) -> bool;
 
     /// This element's rendered pixel size.
@@ -111,19 +94,12 @@ pub trait ElementApi {
     /// Current scroll offset in pixels (`scrollLeft`, `scrollTop`).
     fn scroll_offset(&self) -> Read<(f64, f64)>;
 
-    /// An `<img>`'s intrinsic pixel size (`naturalWidth`/`naturalHeight`).
-    ///
-    /// [`PlatformError::NotFound`] until the picture has decoded, and for any
-    /// element that is not an image: there is no size to report yet, which is
-    /// different from a renderer that cannot say.
+    /// An `<img>`'s intrinsic pixel size. [`PlatformError::NotFound`] until it
+    /// decoded, and for a non-image.
     fn natural_size(&self) -> Read<Dimensions>;
 
     /// A CSS property's computed value in pixels, `None` when it is not a
     /// length (`auto`, `none`, a percentage the browser keeps as one).
-    ///
-    /// ```ignore
-    /// let min_width = element.computed_px("min-width").await?.unwrap_or(0.0);
-    /// ```
     fn computed_px(&self, property: &str) -> Read<Option<f64>> {
         let _ = property;
         Box::pin(std::future::ready(Err(PlatformError::Unsupported)))
@@ -132,23 +108,12 @@ pub trait ElementApi {
     /// Sets this element's scroll offset, in pixels.
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError>;
 
-    /// Scrolls the nearest scrollable ancestor, vertically, just far enough to
-    /// show this element and its `scroll-margin` - `scrollIntoView`'s
-    /// `nearest`, without calling it. Chromium moves its sequential focus
-    /// starting point to whatever `scrollIntoView` shows, so on page load the
-    /// next Tab would start from there rather than from the top of the page.
+    /// Scrolls the nearest scroller vertically just enough to show this element,
+    /// like `scrollIntoView` `nearest`: that call moves Chromium's Tab start.
     fn scroll_into_view(&self, smooth: bool) -> Result<(), PlatformError>;
 
-    /// Replaces this `<input type="file">`'s own file list.
-    ///
-    /// A `FileList` is the only thing a form posts, and it cannot be edited:
-    /// removing one file of three, or clearing a field, happens in Rust and
-    /// would otherwise leave the input still holding what the picker produced.
-    /// This writes the list back, so what posts is what the caller holds.
-    ///
-    /// Only the web can serve it (through a `DataTransfer`); elsewhere it is
-    /// [`PlatformError::Unsupported`], and a native form post is not a thing
-    /// there either.
+    /// Replaces this `<input type="file">`'s file list, so a form posts what the
+    /// caller holds. Web only, through a `DataTransfer`.
     fn set_files(&self, files: &[dioxus::html::FileData]) -> Result<(), PlatformError>;
 
     /// Sets a checkbox `<input>`'s `indeterminate` property, the only mixed
@@ -165,38 +130,21 @@ pub trait ElementApi {
         Err(PlatformError::Unsupported)
     }
 
-    /// An attribute as the markup has it, `None` when it is absent. Not the
-    /// live state: a radio's `checked` attribute is its default, not whether
-    /// it is checked now.
-    ///
-    /// A plain `Result` rather than a [`Read`], like
-    /// [`is_focused`](Self::is_focused): a key handler has to decide before it
-    /// returns whether it takes the press.
+    /// An attribute as the markup has it (not live state), `None` when absent.
+    /// Synchronous: a key handler decides before it returns.
     fn attribute(&self, name: &str) -> Result<Option<String>, PlatformError> {
         let _ = name;
         Err(PlatformError::Unsupported)
     }
 
-    /// Where a text control's selection starts, in UTF-16 units from its
-    /// value's start, as the DOM counts: the caret, when nothing is selected.
-    /// `None` for an element with no text selection, or a renderer that cannot
-    /// tell.
-    ///
-    /// ```ignore
-    /// let at_start = input.selection_start() == Some(0);
-    /// ```
+    /// Where a text control's selection starts (the caret), in UTF-16 units.
+    /// `None` without a text selection or where the renderer cannot tell.
     fn selection_start(&self) -> Option<u32> {
         None
     }
 
-    /// The last element matching `selector` before this one in document order,
-    /// which counts its ancestors and not its own subtree: where Shift+Tab
-    /// would land if this element were gone. `Ok(None)` when nothing matches
-    /// before it.
-    ///
-    /// ```ignore
-    /// let before = item.previous_focusable(FOCUSABLE_SELECTOR)?;
-    /// ```
+    /// The last match of `selector` before this one in document order, subtree
+    /// excluded: where Shift+Tab would land without it. `Ok(None)` for none.
     fn previous_focusable(
         &self,
         selector: &str,
@@ -205,9 +153,8 @@ pub trait ElementApi {
         Err(PlatformError::Unsupported)
     }
 
-    /// Routes further events from `pointer_id` here, so a drag keeps tracking
-    /// once the pointer leaves and still gets its `pointerup`. Released
-    /// automatically, hence no counterpart.
+    /// Routes further events from `pointer_id` here, so a drag keeps its
+    /// `pointerup`. Released automatically.
     fn set_pointer_capture(&self, pointer_id: i32) -> Result<(), PlatformError>;
 
     /// First descendant matching `selector`.

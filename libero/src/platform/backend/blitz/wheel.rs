@@ -1,8 +1,5 @@
-//! Wheel latching, which Blitz lacks: each tick scrolls from the hovered node,
-//! so a nested scroller sliding under a still pointer takes the rest of the
-//! turn. Browsers keep a gesture on the scroller it began with until the
-//! pointer moves or the wheel pauses; here a later tick that Blitz would start
-//! elsewhere is cancelled and scrolls the latched one instead.
+//! Wheel latching, which Blitz lacks: a gesture stays on its first scroller
+//! until the pointer moves or the wheel pauses, not a nested one sliding under.
 
 use std::{cell::Cell, time::Instant};
 
@@ -110,9 +107,8 @@ fn chain_start(doc: &BaseDocument, hover: Option<NodeId>, dx: f64, dy: f64) -> S
     ancestors(doc, hover).find(|&id| can_scroll(doc, id, dx, dy))
 }
 
-/// The viewport's `overflow` on that axis is `hidden` or `clip`, as CSS
-/// propagates it: `<html>`'s, else `<body>`'s (a `Modal`'s scroll lock). Blitz
-/// scrolls the viewport whatever it says.
+/// The viewport's propagated `overflow` is `hidden` or `clip` (a `Modal`'s
+/// scroll lock), which Blitz ignores.
 fn viewport_locked(doc: &BaseDocument, vertical: bool) -> bool {
     let axis = if vertical { "overflow-y" } else { "overflow-x" };
     let root = doc.root_element();

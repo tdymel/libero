@@ -1,6 +1,5 @@
-//! Focus moves Blitz makes without a focus event: Tab and Shift+Tab, and
-//! libero's own `focus()`/`blur()`. Each arms a check at [`Outlet`]'s next
-//! flush, which runs once the move has landed and the document is free.
+//! Focus moves Blitz makes without a focus event (Tab, libero's `focus()` and
+//! `blur()`), each checked at [`Outlet`]'s next flush.
 //!
 //! [`Outlet`]: super::Outlet
 

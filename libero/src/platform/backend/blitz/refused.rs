@@ -1,6 +1,5 @@
-//! Presses and Tab stops the web refuses and Blitz does not (todo 734): a
-//! disabled form control takes no click, and an `inert` subtree takes neither a
-//! click nor focus.
+//! Presses and Tab stops the web refuses and Blitz does not (734): a disabled
+//! control takes no click, an `inert` subtree neither a click nor focus.
 
 use std::cell::Cell;
 
@@ -62,10 +61,8 @@ pub(super) fn press_origin(doc: &BaseDocument, node_id: NodeId) -> Option<NodeId
     }
 }
 
-/// A release on a disabled control or under `inert`: prevented, so Blitz sends
-/// no click, and focus moves as for a press on what holds it. Only within 2px
-/// of the press: past that Blitz may be dragging, and a prevented release
-/// would leave the drag running.
+/// Prevents a release on a disabled control or under `inert`, within 2px of the
+/// press only: a prevented release would leave Blitz's drag running.
 pub(super) fn release(event: &Event<PointerData>) {
     let point = event.page_coordinates();
     let still = PRESSED_AT

@@ -1,8 +1,5 @@
-//! Blitz reports no render. Its mutator asks the shell for a redraw after each
-//! change to the document, so libero wraps the document's `ShellProvider`: each
-//! ask flushes [`Outlet`], which heals stale dirty bits before the restyle, and
-//! arms the baked-box [`check`]. A render no press or key preceded (a timer, a
-//! task after an async read) restyles and repaints too (todos 870, 872).
+//! Blitz reports no render, so its `ShellProvider` is wrapped: each redraw ask
+//! flushes [`Outlet`] and arms the baked-box [`check`] (870, 872).
 //!
 //! [`Outlet`]: super::Outlet
 //! [`check`]: super::baked

@@ -1,7 +1,5 @@
-//! Blitz keeps the text layout of the last measure it ran, and a final layout
-//! taffy answers from its cache does not redo it: a box sized for one line then
-//! paints its text broken per glyph or word from a min-content measure (todos
-//! 627, 886-888). [`stale`] finds such text once laid out; [`relayout`] re-lays it.
+//! A cached taffy layout keeps Blitz's min-content text break, so one-line boxes
+//! paint broken text (627, 886-888). [`stale`] finds it, [`relayout`] re-lays it.
 
 use std::collections::HashSet;
 
@@ -9,10 +7,8 @@ use blitz_dom::{BaseDocument, Node};
 use dioxus_native_dom::NodeId;
 use style::computed_values::white_space_collapse::T as WhiteSpaceCollapse;
 
-/// The elements whose own or anonymous-block text is broken narrower than its
-/// box, with the box's content width (as bits): two soft-broken lines side by
-/// side would fit, which a fresh greedy break never leaves. Preserved white
-/// space is skipped.
+/// Elements whose text breaks where two lines would fit side by side, with the
+/// content width as bits. Preserved white space is skipped.
 pub(super) fn stale(doc: &BaseDocument) -> Vec<(NodeId, u32)> {
     let scale = doc.viewport().scale();
     let mut stale = Vec::new();
@@ -28,9 +24,8 @@ pub(super) fn stale(doc: &BaseDocument) -> Vec<(NodeId, u32)> {
     stale
 }
 
-/// Re-sets an attribute on every text-holding element in the flex or grid
-/// container around each of `elements`, which rebuilds their boxes. Only the
-/// stale one would leave its clean siblings to go stale in the re-layout.
+/// Rebuilds every text box in the flex or grid container around each element:
+/// only the stale one would leave its siblings stale.
 pub(super) fn relayout(doc: &mut BaseDocument, elements: Vec<NodeId>) {
     let mut scopes = HashSet::new();
     for id in elements {

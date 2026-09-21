@@ -5,10 +5,8 @@ use dioxus::prelude::{Event, MountedData, ResizeData};
 
 use super::{ContentSubscription, Dimensions, backend};
 
-/// Calls `callback` as a `ResizeObserver` would call `onresize`: once at the
-/// first measure, then whenever `mounted`'s border box changes size. **Only
-/// where `onresize` never fires** (Blitz); elsewhere `None`, and the element's
-/// own `onresize` serves.
+/// Calls `callback` as `onresize` would: at the first measure, then on each
+/// border-box change. Only where `onresize` never fires (Blitz); else `None`.
 pub(crate) fn on_resize(
     mounted: &Rc<MountedData>,
     callback: Box<dyn Fn(Event<ResizeData>)>,

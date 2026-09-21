@@ -1,7 +1,5 @@
-//! Blitz reports no `resize` and no mutation. So each watched node's size is
-//! compared at every [`Outlet`] flush, shortly after each press or key, and
-//! every [`POLL`] while anything is watched, which also catches a window
-//! resize.
+//! Blitz reports no `resize` or mutation: watched sizes are compared at each
+//! [`Outlet`] flush, after each press or key, and every [`POLL`].
 //!
 //! [`Outlet`]: super::Outlet
 

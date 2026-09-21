@@ -1,9 +1,5 @@
-/// Resolves once the platform has run the rest of its current task.
-///
-/// A spawned dioxus task runs as a microtask on the web, which is *between*
-/// `focusout` and `focusin`: a check there sees focus nowhere. Awaiting this
-/// first sees where it landed. Native renderers dispatch focus changes as one
-/// step, so there it resolves at once.
+/// Resolves once the platform has run the rest of its current task. On the web a
+/// spawned task runs between `focusout` and `focusin`; natively this is instant.
 pub(crate) async fn next_task() {
     #[cfg(target_arch = "wasm32")]
     web::next_task().await;

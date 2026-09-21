@@ -1,14 +1,8 @@
-//! Everything that reaches the machine underneath dioxus: the DOM, the
-//! clipboard, a regex engine. One trait per capability, one implementation per
-//! platform behind it, and one accessor to reach it.
+//! What reaches below dioxus (DOM, clipboard, timers, regex): one trait per
+//! capability, one accessor each, one implementation per renderer.
 //!
-//! The layer sits below `hooks` and `components`, so both can use it - and
-//! nothing here may reach back up.
-//!
-//! **Elements are the exception to "call an accessor"**: there is no portable
-//! way to name an element, so the way in is
-//! [`use_element`](crate::hooks::use_element), whose handle picks the richest
-//! backend the renderer offers. See [`backend`].
+//! Sits below `hooks` and `components`; nothing here reaches back up. Elements
+//! come through [`use_element`](crate::hooks::use_element), not an accessor.
 
 mod a11y_media;
 mod backend;
@@ -44,7 +38,7 @@ pub(crate) use a11y_media::{
     A11yAnswers, A11yMediaApi, a11y_media, answer_a11y_media, answers_a11y_media,
     current_a11y_answers, set_current_a11y_answers,
 };
-// The renderer seams everything above `platform` reaches `backend` through (todo 820).
+// Renderer seams that everything above reaches `backend` through (820).
 pub(crate) use backend::{Listener, Outlet, PortalEntry, PortalRoot, SheetWatch, element};
 pub(crate) use click::{
     DoublePress, follow_pointer, hits_inline_boxes, nested_interactive, padding_press,

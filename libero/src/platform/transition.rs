@@ -2,26 +2,17 @@ use dioxus::prelude::{Event, TransitionData};
 
 use super::backend;
 
-/// The CSS property whose transition just ended, or `None` where this build
-/// cannot tell.
+/// The CSS property whose transition just ended, `None` where unreadable: only a
+/// downcast reaches it ([[codebase/dioxus-event-data]]). Web and WebView answer.
 ///
-/// It has to be asked of the platform: `TransitionData` keeps its inner box
-/// private and does not implement the public `HasTransitionData`, so
-/// downcasting to the renderer's own event type is the only way to any
-/// transition field ([[codebase/dioxus-event-data]]).
-///
-/// The web and the desktop/Android WebView answer - a WebView runs a real
-/// browser engine and fires `transitionend` per property. A server answers
-/// `None`, and [`use_presence`](crate::hooks::use_presence) takes an
-/// unreadable property as the exit it waits for. Blitz runs transitions but
-/// sends no `transitionend` at all, so its exits end on `use_presence`'s timer.
+/// Blitz sends no `transitionend`, so its exits end on
+/// [`use_presence`](crate::hooks::use_presence)'s timer.
 pub(crate) fn transition_property(event: &Event<TransitionData>) -> Option<String> {
     backend::transition_property(event)
 }
 
-/// The WebView arm, against the payload dioxus-desktop actually builds: its
-/// converter turns the IPC message into a `SerializedTransitionData` and
-/// wraps that, so the downcast has to find it there.
+/// The WebView arm, against dioxus-desktop's real payload: a wrapped
+/// `SerializedTransitionData`.
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use std::rc::Rc;

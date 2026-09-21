@@ -15,8 +15,7 @@ mod web {
     pub(super) struct WebClock;
 
     impl ClockApi for WebClock {
-        /// JS `Date` already answers in the browser's time zone, so no time
-        /// zone database is needed.
+        /// JS `Date` answers in the browser's time zone: no tz database needed.
         fn today(&self) -> NaiveDate {
             let now = js_sys::Date::new_0();
             NaiveDate::from_ymd_opt(
@@ -40,7 +39,6 @@ mod native {
     pub(super) struct NativeClock;
 
     impl ClockApi for NativeClock {
-        /// The system's time zone, which `Local` reads from the OS.
         fn today(&self) -> NaiveDate {
             Local::now().date_naive()
         }
@@ -49,11 +47,13 @@ mod native {
     pub(super) static CLOCK: NativeClock = NativeClock;
 }
 
-/// The platform's clock: JS `Date` on the web, the system clock and time
-/// zone off it.
+/// The platform's clock: JS `Date` on the web, the system clock off it. Call it
+/// after mount, never while rendering: server and hydrating client may disagree.
 ///
-/// Call it after mount, never while rendering: a server render and the
-/// hydrating client would disagree, if not on the answer then on the day.
+/// ```
+/// let today = libero::platform::clock().map(|clock| clock.today());
+/// # let _ = today;
+/// ```
 pub fn clock() -> Option<&'static dyn ClockApi> {
     #[cfg(target_arch = "wasm32")]
     return Some(&web::CLOCK);

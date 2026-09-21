@@ -6,11 +6,8 @@ use super::PlatformError;
 /// dismissed picker (Escape) is [`PlatformError::Denied`].
 pub(crate) type Pick = Pin<Box<dyn Future<Output = Result<String, PlatformError>>>>;
 
-/// Picks a color off the screen. Not element-scoped, hence its own capability
-/// rather than a place on [`ElementApi`](super::ElementApi).
-///
-/// Answers a hex string, not a color type: the platform layer sits below the
-/// components that own one.
+/// Picks a color off the screen. A hex string, not a color type: this layer sits
+/// below the components that own one.
 pub(crate) trait EyeDropperApi {
     fn pick(&self) -> Pick;
 }
@@ -24,9 +21,8 @@ mod web {
     use super::{EyeDropperApi, Pick};
     use crate::platform::PlatformError;
 
-    /// `window.EyeDropper`, reached by name: `web_sys` binds it only under
-    /// `--cfg=web_sys_unstable_apis`, which would leak into every consumer's
-    /// build.
+    /// `window.EyeDropper`, by name: `web_sys` binds it only under
+    /// `web_sys_unstable_apis`, which would leak into every consumer's build.
     pub(super) fn constructor() -> Option<Function> {
         let window = web_sys::window()?;
         Reflect::get(&window, &JsValue::from_str("EyeDropper"))
@@ -67,12 +63,8 @@ mod web {
     pub(super) static EYE_DROPPER: WebEyeDropper = WebEyeDropper;
 }
 
-/// `None` where the platform has no eyedropper - every native target, and
-/// every browser but Chromium's today. An absent capability is a missing
-/// accessor, never a stub that answers `Unsupported`.
-///
-/// Call it after mount, never while rendering: a server render answers `None`
-/// and a hydrating client would answer otherwise.
+/// `None` without an eyedropper: native, and every browser but Chromium. Call it
+/// after mount: a server render answers `None`, a hydrating client may not.
 pub(crate) fn eye_dropper() -> Option<&'static dyn EyeDropperApi> {
     #[cfg(target_arch = "wasm32")]
     return web::constructor().map(|_| &web::EYE_DROPPER as &'static dyn EyeDropperApi);

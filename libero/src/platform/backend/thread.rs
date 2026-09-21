@@ -1,15 +1,5 @@
-//! The portable non-wasm timer, the way [`mounted`](super::mounted) is the
-//! portable floor for elements: an OS thread that sleeps, and a dioxus task
-//! that delivers.
-//!
-//! **The thread is the easy half.** A timer callback writes signals, so it has
-//! to run on the thread dioxus renders on - and no timer crate does that hop
-//! for us. The one portable answer is to await inside a dioxus task and let the
-//! sleeping thread only call `waker.wake()`: dioxus wires its wakers to
-//! whatever event loop the renderer runs, so the callback lands on the right
-//! thread under Blitz and the WebView floor alike. That is why this needs no
-//! dependency - what a timer crate sells is the timer wheel, which is the part
-//! we do not need.
+//! The portable non-wasm timer: an OS thread sleeps and wakes a dioxus task, so
+//! the callback runs on the render thread under any renderer.
 
 use std::future::Future;
 use std::pin::Pin;
@@ -25,10 +15,8 @@ use dioxus::prelude::ScopeId;
 use super::origin::Origin;
 use crate::platform::{TimerApi, TimerSubscription};
 
-/// `None` outside a dioxus runtime, because delivery goes through a dioxus
-/// task - the same house rule as any other absent capability. That is a bare
-/// test, not a server render: SSR has a runtime, so it gets a timer that
-/// schedules and never fires.
+/// `None` outside a dioxus runtime: a task delivers. SSR has one, so it gets a
+/// timer that never fires.
 pub(super) fn timer() -> Option<&'static dyn TimerApi> {
     Runtime::try_current().map(|_| &TIMER as &'static dyn TimerApi)
 }
@@ -79,8 +67,7 @@ struct ThreadTimerSubscription {
 impl TimerSubscription for ThreadTimerSubscription {}
 
 impl Drop for ThreadTimerSubscription {
-    /// A flag rather than cancelling the task, because cancelling would need a
-    /// runtime at *drop* time and a drop runs wherever its owner does.
+    /// A flag, not a task cancel: that would need a runtime at drop time.
     fn drop(&mut self) {
         self.cancelled.store(true, Ordering::Release);
     }
@@ -88,25 +75,18 @@ impl Drop for ThreadTimerSubscription {
 
 fn spawn_on_root(future: impl Future<Output = ()> + 'static) {
     let Some(runtime) = Runtime::try_current() else {
-        // Unreachable: `timer()` already answered `None` without a runtime. If
-        // it ever happens the caller holds a subscription that can never fire,
-        // which is worth failing loudly for in a debug build.
+        // Unreachable: `timer()` answers `None` without a runtime.
         debug_assert!(false, "a timer was scheduled outside a dioxus runtime");
         return;
     };
 
-    // The root scope, not the calling one: what ties a timer's lifetime is its
-    // subscription, not whichever scope happened to be rendering. The callback
-    // still runs as the calling scope while that lives (see `Origin`).
+    // The root scope: the subscription owns a timer's lifetime. The callback
+    // still runs as the calling scope while it lives (see `Origin`).
     runtime.spawn(ScopeId::ROOT, future);
 }
 
-/// One thread per sleep, and a cancelled timer's still sleeps out its delay:
-/// typeahead restarts one per keystroke and `Menu` one per hover, so the live
-/// count is the delay times the event rate. Measured 2026-09-18 (release):
-/// a spawn costs 30-45 us, off the render path, and keys 15 ms apart under a
-/// 100 ms pause peaked at 6 extra threads, all gone after the pause. A shared
-/// scheduler is the thing to build if that ever grows.
+/// One thread per sleep, cancelled ones sleep out too. Measured 2026-09-18: a
+/// spawn 30-45 us, fast typing peaked at 6 threads. Share a scheduler if it grows.
 fn sleep(duration: Duration) -> Sleep {
     let state = Arc::new(SleepState {
         elapsed: AtomicBool::new(false),
@@ -147,9 +127,8 @@ impl Future for Sleep {
         *waker = Some(context.waker().clone());
         drop(waker);
 
-        // Read again: the thread may have taken an empty slot and woken nobody
-        // between the load above and the store. Without this the future sleeps
-        // forever, which is the classic shape of this bug.
+        // Read again: the thread may have found the slot empty in between, and
+        // the future would sleep forever.
         if self.state.elapsed.load(Ordering::Acquire) {
             Poll::Ready(())
         } else {

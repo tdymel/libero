@@ -1,6 +1,5 @@
-//! Blitz draws no `placeholder`. A framed field draws its own natively, an
-//! `aria-hidden` span right before its control; [`sync`] marks each span whose
-//! control holds no text, and the frame's stylesheet shows only marked ones.
+//! Blitz draws no `placeholder`: a field's own span before its control, which
+//! [`sync`] marks while the control is empty.
 
 use std::cell::Cell;
 

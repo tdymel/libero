@@ -2,12 +2,10 @@ use std::{future::Future, pin::Pin};
 
 use super::PlatformError;
 
-/// The write only resolves once the platform accepted it, so this is a
-/// future - reporting success synchronously would lie about a rejection.
+/// Resolves once the platform accepted the write, so a rejection is reported.
 pub(crate) type Write = Pin<Box<dyn Future<Output = Result<(), PlatformError>>>>;
 
-/// Not element-scoped at all, hence its own capability rather than a place on
-/// [`ElementApi`](super::ElementApi).
+/// Writing to the system clipboard.
 pub(crate) trait ClipboardApi {
     fn write_text(&self, text: String) -> Write;
 }
@@ -37,11 +35,8 @@ mod web {
     pub(super) static CLIPBOARD: WebClipboard = WebClipboard;
 }
 
-/// A desktop clipboard, under Blitz or anything else native. Not routed
-/// through the shell: `blitz-shell` drops its `arboard::Clipboard` after every
-/// write, and arboard's X11 backend destroys the window owning the selection
-/// on the last drop - the write reports success and the paste comes up empty.
-/// So the handle is kept for the process instead.
+/// A desktop clipboard, kept for the process: `blitz-shell` drops its arboard
+/// handle per write, and on X11 that drop empties the selection.
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
 mod native {
     use std::cell::RefCell;
@@ -50,8 +45,7 @@ mod native {
     use crate::platform::PlatformError;
 
     thread_local! {
-        /// Built on first use, then never dropped - dropping it is what loses
-        /// the copied text.
+        /// Built on first use, never dropped: dropping loses the copied text.
         static HANDLE: RefCell<Option<arboard::Clipboard>> = const { RefCell::new(None) };
     }
 
@@ -76,8 +70,7 @@ mod native {
     pub(super) static CLIPBOARD: NativeClipboard = NativeClipboard;
 }
 
-/// `None` where the platform has no clipboard at all - an absent capability is
-/// a missing accessor, never a stub that answers `Unsupported`.
+/// `None` where the platform has no clipboard: never a stub answering `Unsupported`.
 pub(crate) fn clipboard() -> Option<&'static dyn ClipboardApi> {
     #[cfg(target_arch = "wasm32")]
     return Some(&web::CLIPBOARD);

@@ -4,10 +4,8 @@ use dioxus::prelude::{Event, FocusData, MountedData, PointerData};
 
 use super::{ElementApi, backend};
 
-/// Gives a pressed drag handle the focus its cancelled pointerdown took away:
-/// the outermost tab stop from the press's target up to `within`, unless focus
-/// is already inside it. The web and Blitz act; a renderer without a target or
-/// a hit test does nothing.
+/// Gives a pressed drag handle the focus its cancelled pointerdown took: the
+/// outermost tab stop from the target up to `within`, unless focus is inside.
 pub(crate) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>) {
     backend::focus_pressed(event, within);
 }
@@ -46,27 +44,23 @@ pub(crate) fn focus_selectors(css: &str) -> Cow<'_, str> {
     backend::focus_selectors(css)
 }
 
-/// Whether `event` is a blur a field closing on blur should act on. Not the one
-/// Blitz makes for a press that cancelled its `mousedown`: the web keeps focus
-/// put there, and libero moves it back.
+/// Whether a field closing on blur should act on `event`. Not Blitz's blur for a
+/// press that cancelled its `mousedown`: libero moves focus back there.
 pub(crate) fn blur_counts(event: &Event<FocusData>) -> bool {
     let _ = event;
     !backend::press_kept_focus()
 }
 
-/// Whether the element this `focusin` landed on matches `:focus-visible`: the
-/// browser's own call on keyboard vs pointer focus, script focus after a press
-/// included. `None` off the web; the caller keeps its own press heuristic there.
+/// Whether this `focusin`'s element matches `:focus-visible`, the browser's call
+/// on keyboard vs pointer. `None` off the web: the caller keeps its heuristic.
 pub(crate) fn focus_visible(event: &Event<FocusData>) -> Option<bool> {
     backend::focus_visible(event)
 }
 
-/// For a `focusin` on the nearest ancestor matching `boundary`: the element
-/// focus left to get here, `Some(None)` when it came from `<body>`.
+/// For a `focusin` into `boundary`: the element focus left, `Some(None)` from
+/// `<body>`, `None` for a move within it or off wasm32 (no `relatedTarget`).
 ///
-/// `None` when it moved within `boundary`, or where this build cannot tell:
-/// **only the wasm32 arm answers** (`FocusData` carries no `relatedTarget`).
-/// Blitz answers for its silent moves, through [`FocusMove::entered_from`].
+/// Blitz answers for its silent moves through [`FocusMove::entered_from`].
 pub(crate) fn focus_entered_from(
     event: &Event<FocusData>,
     boundary: &str,

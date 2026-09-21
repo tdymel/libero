@@ -2,49 +2,42 @@ use std::time::Duration;
 
 use super::backend;
 
-/// A live timer. **Dropping it cancels** - that is the whole contract, which is
-/// why the trait has no methods.
-///
-/// So a cancelled timer is never a special case: a notification that is
-/// dismissed early drops its subscription, a carousel that unmounts drops its
-/// autoplay, and neither needs a generation guard to ignore a callback that
-/// should no longer run.
+/// A live timer. Dropping it cancels, so no generation guard is needed.
 pub trait TimerSubscription {}
 
-/// Being called back later. The second callback-shaped capability here, after
-/// [`ScrollApi`](super::ScrollApi), and deliberately the same shape.
-///
-/// **The callback runs outside every scope**, exactly like a scroll callback,
-/// so anything it writes has to be a signal that outlives the moment - see the
-/// `Signal::new_in_scope(.., ScopeId::ROOT)` pattern `use_popover` uses for the
-/// same reason.
+/// Being called back later. The callback runs outside every scope: anything it
+/// writes must be a signal that outlives it (`Signal::new_in_scope`, root).
 pub trait TimerApi {
     /// Calls `callback` once, `delay` from now, unless the returned
     /// subscription is dropped first.
     fn after(&self, delay: Duration, callback: Box<dyn FnOnce()>) -> Box<dyn TimerSubscription>;
 
     /// Calls `callback` every `interval` until the returned subscription is
-    /// dropped. Carousel autoplay is why this exists and not just [`after`](Self::after):
-    /// re-arming a one-shot from inside its own callback means the callback has
-    /// to own the subscription it is running under.
+    /// dropped.
     fn every(&self, interval: Duration, callback: Box<dyn Fn()>) -> Box<dyn TimerSubscription>;
 }
 
-/// `Some` on every renderer: the browser's own `setTimeout` on the web, and a
-/// sleeping thread delivering through a dioxus task everywhere else. `None`
-/// only outside a dioxus runtime, since the task is what delivers.
+/// The timer: `setTimeout` on the web, a thread and a dioxus task elsewhere.
+/// `None` outside a runtime; a server render is `Some` and never fires.
 ///
-/// **A server render is `Some` and inert**, not `None` - SSR has a runtime, and
-/// the render ends long before a delay does. So nothing fires there rather than
-/// nothing being scheduled, and a consumer gets no branch to write against it.
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use std::time::Duration;
+/// # fn app() -> Element {
+/// let _autoplay = use_hook(|| {
+///     libero::platform::timer().map(|timer| {
+///         std::rc::Rc::new(timer.every(Duration::from_secs(5), Box::new(|| {})))
+///     })
+/// });
+/// # rsx! {}
+/// # }
+/// ```
 pub fn timer() -> Option<&'static dyn TimerApi> {
     backend::timer()
 }
 
-/// Against the real non-wasm arm - a real thread, a real sleep, and a real
-/// `VirtualDom` polling the task the callback is delivered on. Each test runs
-/// on its own thread, which is what makes the `thread_local` state below
-/// isolated rather than shared.
+/// Against the real non-wasm arm: a real thread, sleep and `VirtualDom`. Each
+/// test has its own thread, so the `thread_local` state is isolated.
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use std::cell::{Cell, RefCell};
@@ -57,9 +50,7 @@ mod tests {
 
     thread_local! {
         static FIRED: Cell<usize> = const { Cell::new(0) };
-        /// The subscription the test drops to cancel. Handing it out of the
-        /// component is the whole point: the contract is what happens when it
-        /// dies, so the test has to own the moment it does.
+        /// The subscription the test drops to cancel, so it owns that moment.
         static SUBSCRIPTION: RefCell<Option<Box<dyn TimerSubscription>>> =
             const { RefCell::new(None) };
     }
@@ -96,8 +87,7 @@ mod tests {
         rsx! {}
     }
 
-    /// Polls the dom until `done`, or until `limit` runs out. `process_events`
-    /// is what drains a woken task, so this is the renderer's job stood in for.
+    /// Polls the dom until `done` or `limit`, standing in for the renderer.
     fn drive(dom: &mut VirtualDom, limit: Duration, done: impl Fn() -> bool) {
         let start = Instant::now();
         while start.elapsed() < limit {

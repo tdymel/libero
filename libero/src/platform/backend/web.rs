@@ -51,9 +51,7 @@ enum Controlled {
     Other,
 }
 
-/// dioxus-web's `HasTransitionData::as_any` hands back the `web_sys` event
-/// itself rather than dioxus's wrapper around it, so that is what the
-/// downcast names.
+/// dioxus-web's `as_any` is the `web_sys` event itself, not a wrapper.
 pub(super) fn transition_property(event: &Event<TransitionData>) -> Option<String> {
     Some(
         event
@@ -89,10 +87,8 @@ pub(super) fn rtl_target(event: &Event<KeyboardData>) -> bool {
         .is_some_and(|target| element_is_rtl(&target))
 }
 
-/// The click's target, walked up to the nearest interactive element and the
-/// nearest `boundary`: nested when the first sits strictly inside the second.
-/// dioxus-web delegates from the root, so `currentTarget` is not the element
-/// the handler sits on - the boundary selector stands in for it.
+/// Nested when the target's nearest interactive element sits inside `boundary`.
+/// dioxus-web delegates from the root, so a selector stands in for `currentTarget`.
 pub(super) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bool {
     let nested = || -> Option<bool> {
         let target = event
@@ -322,8 +318,7 @@ impl ColorSchemeApi for WebColorScheme {
     }
 
     fn on_change(&self, callback: Box<dyn Fn(ColorScheme)>) -> Box<dyn ColorSchemeSubscription> {
-        // The event carries the new state, but reading it off the query is
-        // one fewer downcast and cannot disagree with `system()`.
+        // Read off the query, so it cannot disagree with `system()`.
         let closure = Closure::<dyn FnMut()>::new(move || {
             let dark = dark_query().is_some_and(|query| query.matches());
             callback(match dark {
@@ -353,17 +348,15 @@ impl ColorSchemeApi for WebColorScheme {
     }
 }
 
-/// `None` wherever the browser refuses the store - a private window with site
-/// data blocked throws on access rather than returning nothing.
+/// `None` where the browser refuses the store: blocked site data throws.
 fn local_storage() -> Option<web_sys::Storage> {
     web_sys::window()?.local_storage().ok()?
 }
 
 struct WebColorSchemeSubscription {
-    /// `None` when there was no query to listen on, so `Drop` has nothing to
-    /// undo - the subscription exists, it just never fires.
+    /// `None` without a query: the subscription never fires.
     query: Option<web_sys::MediaQueryList>,
-    /// Kept alive for exactly as long as the listener is registered.
+    /// Kept alive as long as the listener is registered.
     closure: Closure<dyn FnMut()>,
 }
 
@@ -390,8 +383,8 @@ impl DocumentApi for WebDocument {
         Some(Box::new(WebElement { element }))
     }
 
-    /// `inner_width`/`inner_height`, so the answer includes whatever the
-    /// scrollbars leave - which is the box a fixed element is laid out in.
+    /// `inner_width`/`inner_height`: scrollbars included, the box a fixed
+    /// element is laid out in.
     fn viewport(&self) -> Read<Dimensions> {
         let size = web_sys::window()
             .and_then(|window| {
@@ -427,11 +420,8 @@ struct WebScroll;
 static SCROLL: WebScroll = WebScroll;
 
 impl ScrollApi for WebScroll {
-    /// **In the capture phase, on the window.** A `scroll` event does not
-    /// bubble, so a plain listener here would see the page scrolling and miss
-    /// every element that scrolls - including a `ScrollArea`, which is what the
-    /// docs shell scrolls and where this was first noticed. Capture sees every
-    /// scroll in the document on its way down.
+    /// In the capture phase, on the window: `scroll` does not bubble, so only
+    /// capture sees an element (a `ScrollArea`) scroll.
     fn on_scroll(&self, callback: Box<dyn Fn()>) -> Box<dyn ScrollSubscription> {
         let closure = Closure::<dyn FnMut()>::new(callback);
         let target = web_sys::window().and_then(|window| {
@@ -451,11 +441,10 @@ impl ScrollApi for WebScroll {
 }
 
 struct WebScrollSubscription {
-    /// `None` when there was no window to listen on, so `Drop` has nothing to
-    /// undo - the subscription still exists, it just never fires.
+    /// `None` without a window: the subscription never fires.
     target: Option<web_sys::EventTarget>,
-    /// Kept alive for exactly as long as the listener is registered: dropping a
-    /// `Closure` frees the JS function the listener still points at.
+    /// Kept alive as long as the listener is registered: dropping it frees the
+    /// JS function the listener points at.
     closure: Closure<dyn FnMut()>,
 }
 
@@ -554,8 +543,7 @@ impl ScrollSubscription for WebScrollSubscription {}
 impl Drop for WebScrollSubscription {
     fn drop(&mut self) {
         if let Some(target) = &self.target {
-            // The same three arguments it was added with, capture included, or
-            // the browser removes nothing.
+            // The same three arguments as added, capture included.
             let _ = target.remove_event_listener_with_callback_and_bool(
                 "scroll",
                 self.closure.as_ref().unchecked_ref(),
@@ -603,10 +591,8 @@ impl ElementApi for WebElement {
         Ok(())
     }
 
-    /// The native reset, then every control marked `data-controlled` gets its
-    /// value back: its component still holds that value, and dioxus never
-    /// sets a value again that did not change, so the control would show its
-    /// default while the component's state says otherwise.
+    /// The native reset, then each `data-controlled` control gets its value back:
+    /// dioxus never rewrites an unchanged value, so it would show its default.
     fn reset(&self) -> Result<(), PlatformError> {
         let form = self.form()?;
         let marked = form
@@ -658,9 +644,8 @@ impl ElementApi for WebElement {
             .map_err(|_| PlatformError::NotFound)
     }
 
-    /// The list is rebuilt through a `DataTransfer`, which is the only
-    /// constructor a `FileList` has. Every file came from a picker or a drop,
-    /// so its `FileData` still carries the `web_sys::File` it was made from.
+    /// Rebuilt through a `DataTransfer`, a `FileList`'s only constructor. Each
+    /// `FileData` still carries its `web_sys::File`.
     fn set_files(&self, files: &[dioxus::html::FileData]) -> Result<(), PlatformError> {
         let input = self
             .element
@@ -742,15 +727,11 @@ impl ElementApi for WebElement {
             .is_some_and(|active| JsValue::from(active) == JsValue::from(self.element.clone()))
     }
 
-    /// `Node::isConnected`, which is what "still in the document" means on the
-    /// web: it is false for a node the renderer has removed and for one that
-    /// was built but never appended.
     fn is_connected(&self) -> bool {
         self.element.is_connected()
     }
 
-    // The DOM answers all four immediately - they are futures only because a
-    // webview-backed renderer cannot.
+    // The DOM answers all four at once; futures only for the WebView.
     fn dimensions(&self) -> Read<Dimensions> {
         let rect = self.element.get_bounding_client_rect();
         resolved(Dimensions {
@@ -808,9 +789,8 @@ impl ElementApi for WebElement {
     }
 
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {
-        // One call, not `scrollLeft` then `scrollTop`: under
-        // `scroll-behavior: smooth` the second write starts a new scroll from
-        // the current position and replaces the first, so nothing moves.
+        // One call: under `scroll-behavior: smooth` a second write replaces
+        // the first scroll, so nothing moves.
         self.element.scroll_to_with_x_and_y(x, y);
         Ok(())
     }
@@ -826,8 +806,7 @@ impl ElementApi for WebElement {
                 .unwrap_or_default()
         };
         let rect = self.element.get_bounding_client_rect();
-        // Not rendered (`display: none` somewhere above): there is nothing to
-        // show, and a zero rect would scroll an ancestor to its top.
+        // Not rendered: a zero rect would scroll an ancestor to its top.
         if rect.width() == 0.0 && rect.height() == 0.0 {
             return Ok(());
         }
@@ -911,19 +890,16 @@ struct WebTimer;
 
 static TIMER: WebTimer = WebTimer;
 
-/// `set_timeout` takes an `i32` of milliseconds. A delay past that is 24 days
-/// out and a browser would not honour it anyway, so it saturates rather than
-/// wrapping into a timer that fires at once.
+/// `set_timeout` takes `i32` milliseconds: saturate past 24 days rather than
+/// wrap into a timer that fires at once.
 fn millis(duration: Duration) -> i32 {
     i32::try_from(duration.as_millis()).unwrap_or(i32::MAX)
 }
 
 impl TimerApi for WebTimer {
     fn after(&self, delay: Duration, callback: Box<dyn FnOnce()>) -> Box<dyn TimerSubscription> {
-        // The subscription and the callback share the handle so that a timer
-        // which has already fired forgets its own: the spec only requires an
-        // id to be unused, not unique forever, so a later `Drop` clearing a
-        // stale id could cancel an unrelated timer that inherited it.
+        // A fired timer forgets its id: ids are reused, so a stale `Drop` could
+        // cancel an unrelated timer.
         let handle: Rc<Cell<Option<i32>>> = Rc::new(Cell::new(None));
         let fired = handle.clone();
 
@@ -950,8 +926,7 @@ impl TimerApi for WebTimer {
 
     fn every(&self, interval: Duration, callback: Box<dyn Fn()>) -> Box<dyn TimerSubscription> {
         let closure = Closure::<dyn FnMut()>::new(callback);
-        // An interval never goes stale on its own - it runs until it is
-        // cleared - so nothing has to forget this one.
+        // An interval runs until cleared, so its id never goes stale.
         let handle = Rc::new(Cell::new(web_sys::window().and_then(|window| {
             window
                 .set_interval_with_callback_and_timeout_and_arguments_0(
@@ -970,15 +945,11 @@ impl TimerApi for WebTimer {
 }
 
 struct WebTimerSubscription {
-    /// `None` when there was no window to schedule on, or when a one-shot has
-    /// already fired and cleared it. Either way `Drop` has nothing to undo.
+    /// `None` without a window, or once a one-shot fired.
     handle: Rc<Cell<Option<i32>>>,
-    /// `clear_timeout` and `clear_interval` are separate calls in web-sys even
-    /// though the browser's handle space is shared, so the subscription has to
-    /// remember which one made it.
+    /// Picks `clear_interval` over `clear_timeout`.
     repeating: bool,
-    /// Kept alive for exactly as long as the timer is pending: dropping a
-    /// `Closure` frees the JS function the browser still holds.
+    /// Kept alive while the timer is pending: the browser holds the JS function.
     _closure: Closure<dyn FnMut()>,
 }
 
@@ -1014,8 +985,7 @@ fn key_target(event: &web_sys::KeyboardEvent) -> Option<web_sys::Element> {
         .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
 }
 
-/// Whether this event landed in something the user types into - the rule
-/// itself is [`takes_typing`], plus `contenteditable`.
+/// [`takes_typing`] for the event's target, plus `contenteditable`.
 fn editable_target(event: &web_sys::KeyboardEvent) -> bool {
     let Some(target) = key_target(event) else {
         return false;
@@ -1033,9 +1003,7 @@ fn editable_target(event: &web_sys::KeyboardEvent) -> bool {
         .is_some_and(|html| html.is_content_editable())
 }
 
-/// Whether this event landed on a control the browser steps with the arrows -
-/// the rule itself is [`takes_arrows`]. No `contenteditable` arm: that is text
-/// entry, and [`editable_target`] has it.
+/// [`takes_arrows`] for the event's target.
 fn stepping_target(event: &web_sys::KeyboardEvent) -> bool {
     key_target(event).is_some_and(|target| {
         takes_arrows(
@@ -1046,15 +1014,8 @@ fn stepping_target(event: &web_sys::KeyboardEvent) -> bool {
 }
 
 impl WebKeyboard {
-    /// **In the capture phase, on the window.** A key press does bubble, unlike
-    /// a scroll, but a handler anywhere along the way can stop it - and a
-    /// global shortcut that a dialog's own key handling can silently swallow is
-    /// not global. Capture sees the press on the way down, before anything has
-    /// the chance.
-    ///
-    /// `skip_text_entry` is per subscription rather than per capability, so one
-    /// subscriber opting out cannot widen what another receives: each holds its
-    /// own listener and its own closure.
+    /// In the capture phase, on the window, so no handler can swallow the press
+    /// first. Each subscription holds its own listener and filter.
     fn listen(
         &self,
         skip_text_entry: bool,
@@ -1062,14 +1023,8 @@ impl WebKeyboard {
     ) -> Box<dyn KeySubscription> {
         let closure = Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(
             move |event: web_sys::KeyboardEvent| {
-                // Ahead of the filter, so it guards the unfiltered path too -
-                // which is the one that needs it. Escape mid-composition means
-                // "cancel the composition", and every consumer of the opt-out
-                // matches Escape and returns `true`, so without this the
-                // `prevent_default()` below would eat the cancel and dismiss
-                // the surface instead. A press carrying `isComposing` is never
-                // a shortcut the user meant, so it costs the filtered path
-                // nothing either.
+                // Escape mid-composition cancels the IME: an unfiltered Escape
+                // handler must not eat it and dismiss the surface.
                 if event.is_composing() {
                     return;
                 }
@@ -1078,8 +1033,7 @@ impl WebKeyboard {
                     return;
                 }
 
-                // `Key` parses every named key it knows and falls back to the
-                // character itself, which is what `KeyboardData` does too.
+                // As `KeyboardData` parses it.
                 let key = event.key().parse().unwrap_or(Key::Unidentified);
                 let mut modifiers = Modifiers::empty();
                 modifiers.set(Modifiers::CONTROL, event.ctrl_key());
@@ -1095,9 +1049,8 @@ impl WebKeyboard {
                 });
                 if handled {
                     event.prevent_default();
-                    // A filtered subscription is a page's global hotkey. Said
-                    // on the first press it takes, because the callback is
-                    // opaque until then.
+                    // A filtered subscription is a global hotkey; the callback
+                    // is opaque until its first press.
                     if skip_text_entry {
                         warn_reserved_chord(&chord_key, modifiers);
                     }
@@ -1135,8 +1088,7 @@ impl KeyboardApi for WebKeyboard {
 }
 
 struct WebKeySubscription {
-    /// `None` when there was no window to listen on - the subscription exists
-    /// and never fires, so `Drop` has nothing to undo.
+    /// `None` without a window: the subscription never fires.
     target: Option<web_sys::EventTarget>,
     closure: Closure<dyn FnMut(web_sys::KeyboardEvent)>,
 }
@@ -1146,8 +1098,7 @@ impl KeySubscription for WebKeySubscription {}
 impl Drop for WebKeySubscription {
     fn drop(&mut self) {
         if let Some(target) = &self.target {
-            // The same three arguments it was added with, capture included, or
-            // the browser removes nothing.
+            // The same three arguments as added, capture included.
             let _ = target.remove_event_listener_with_callback_and_bool(
                 "keydown",
                 self.closure.as_ref().unchecked_ref(),

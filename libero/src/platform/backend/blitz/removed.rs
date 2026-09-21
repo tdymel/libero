@@ -85,9 +85,8 @@ pub(super) fn keyed(event: &Event<KeyboardData>) {
     }
 }
 
-/// At [`Outlet`](super::Outlet)'s flush: the remembered owner was removed with
-/// focus on it. Focus goes to the wrapper, as the web's to `<body>`, so the next
-/// key reaches [`keyed`]; Blitz would send it to `<html>`.
+/// Focus of a removed owner goes to the wrapper, as the web's to `<body>`, so
+/// the next key reaches [`keyed`]; Blitz would send it to `<html>`.
 pub(super) fn check(doc: &Doc) {
     let (Some(anchor), Some(wrapper)) = (doc.anchor(), doc.wrapper_id()) else {
         return;

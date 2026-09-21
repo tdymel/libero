@@ -36,8 +36,8 @@ mod native {
     }
 }
 
-/// GETs `url` and hands back its body. Call it from a component scope: the
-/// native provider is read from the context there.
+/// GETs `url` and hands back its body. Call it in a component scope: the
+/// native provider comes from the context.
 pub(crate) fn fetch_text(url: &str) -> Fetched {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     match native::fetch(url) {
@@ -46,8 +46,8 @@ pub(crate) fn fetch_text(url: &str) -> Fetched {
             "No network provider in reach: dioxus-native fetches only with its `net` feature (on by default).",
         ),
     }
-    // The web and the WebView: the page's own `fetch`. Anywhere without JS the
-    // eval fails, which reads as a failed fetch.
+    // The web and the WebView: the page's own `fetch`. Without JS the eval
+    // fails, which reads as a failed fetch.
     let eval = dioxus::document::eval(
         "const url = await dioxus.recv();
         try {

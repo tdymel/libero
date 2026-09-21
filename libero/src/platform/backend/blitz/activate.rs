@@ -36,9 +36,8 @@ thread_local! {
     static PRESSES: Cell<Option<(Instant, f64, f64, u32)>> = const { Cell::new(None) };
 }
 
-/// Clicks `node_id` at the end of this poll, through Blitz's own event driver:
-/// dioxus's handlers, then Blitz's default action (a box's tick, a link). A
-/// disabled element takes none, as on the web.
+/// Clicks `node_id` at the end of this poll through Blitz's event driver:
+/// handlers, then the default action. A disabled element takes none.
 pub(super) fn click(anchor: &NodeHandle, node_id: NodeId) {
     let anchor = anchor.clone();
     later(move || {
@@ -261,9 +260,8 @@ pub(super) fn pointer_down(event: &Event<PointerData>) {
     PRESSES.set(Some((now, at.x, at.y, count)));
 }
 
-/// A click on the focusable `target` has bubbled out, and Blitz's default
-/// action would only clear focus: prevented, and focus moves to `target` as
-/// on the web. Not a double click's second, whose `dblclick` Blitz sends there.
+/// Prevents a bubbled click whose Blitz default would only clear focus, so
+/// focus moves to the target as on the web. Not a double click's second.
 pub(super) fn takes_over(event: &Event<MouseData>, hit: Option<NodeId>) -> bool {
     if !event.default_action_enabled() || PRESSES.get().is_some_and(|press| press.3 == 2) {
         return false;
@@ -297,10 +295,8 @@ pub(super) fn focus_pressed(before: Option<NodeId>, target: NodeId) {
     });
 }
 
-/// A click on `target` has bubbled out. Blitz's default action clears focus
-/// for anything but a box, a `summary` or a field, and leaves it alone for a
-/// link; the web focuses it. Only while focus is still cleared, or unmoved
-/// since the press (`before`) for a link: an effect may have moved it since.
+/// Focuses a clicked `target` as the web does, where Blitz cleared focus or,
+/// for a link, left it unmoved since the press (`before`).
 pub(super) fn clicked(before: Option<NodeId>, target: NodeId) {
     let Some(anchor) = anchor() else {
         return;

@@ -1,8 +1,5 @@
-//! Blitz lays `position: sticky` out as `relative` (stylo_taffy). Every box
-//! whose computed `position` is sticky is moved by a `transform` instead, kept
-//! in its containing block, at each flush and after each scroll. All four
-//! edges stick; a percentage refers to the scroller's window. Blitz reports
-//! no window resize, so the window size is polled while any box is sticky.
+//! `position: sticky`, which Blitz lays out as `relative`, done by `transform`
+//! at each flush and scroll. The window size is polled: Blitz reports no resize.
 
 use std::cell::{Cell, RefCell};
 

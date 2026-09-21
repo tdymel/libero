@@ -4,25 +4,17 @@ use dioxus::prelude::{Callback, Event, MountedData, MouseData, PointerData};
 
 use super::ElementApi;
 
-/// Whether this click landed on something interactive of its own - a link, a
-/// button, a field - nested inside the nearest ancestor that matches
-/// `boundary`. A handler on that ancestor then leaves the click to it: per
-/// HTML a `<label>` does not forward such a click to its control, and a card
-/// should not either.
+/// Whether this click hit something interactive (link, button, field) nested in
+/// the nearest `boundary`, which then leaves the click to it, as a `<label>` does.
 ///
-/// It has to be asked of the platform: `MouseData` carries no target, so the
-/// renderer's own event is the only way to one ([[codebase/dioxus-event-data]]).
-///
-/// **The web and Blitz answer**; Blitz from the node its pointer press hit,
-/// inside `LiberoProvider`. Everywhere else it is `false`, which keeps the old
-/// behaviour: the whole of the boundary is one click target.
+/// Web and Blitz answer ([[codebase/dioxus-event-data]]); elsewhere `false`, the
+/// whole boundary one target.
 pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bool {
     super::backend::nested_interactive(event, boundary)
 }
 
-/// Whether an inline box in a block with padding takes the pointer. Blitz's hit
-/// test never reaches one there unless it is positioned with a positive
-/// `z-index`, which it enters from the stacking context instead (todo 889).
+/// Whether an inline box in a padded block takes the pointer. Blitz's hit test
+/// reaches one only when positioned with a positive `z-index` (889).
 pub(crate) fn hits_inline_boxes() -> bool {
     !cfg!(all(not(target_arch = "wasm32"), feature = "native"))
 }
@@ -72,13 +64,10 @@ impl DoublePress {
     }
 }
 
-/// The control a press on a frame's own padding belongs to: the first tab stop
-/// in the child of the nearest `boundary` that is neither a `[data-slot]` nor
-/// its `[data-ring]`. `None` when the press landed in that control, or on
-/// anything interactive of its own - a slot's button keeps its press.
+/// The control a press on a frame's padding belongs to: the first tab stop in
+/// `boundary`'s child that is no `[data-slot]` or `[data-ring]`.
 ///
-/// **Only the wasm32 arm answers**, as for [`nested_interactive`]. Elsewhere
-/// the padding stays outside the press target.
+/// `None` when the press hit that control or anything interactive, and off wasm32.
 pub(crate) fn padding_press(
     event: &Event<MouseData>,
     boundary: &str,

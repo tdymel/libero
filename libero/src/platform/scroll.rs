@@ -21,9 +21,8 @@ pub(crate) fn scroll_range(data: &ScrollData) -> (f64, f64) {
     (max_x.max(0.0), max_y.max(0.0))
 }
 
-/// Whether a scroll container clips its z-indexed descendants. Blitz paints
-/// them with the nearest stacking context, past any clip in between, so a
-/// scroller has to be a stacking context itself there.
+/// Whether a scroll container clips its z-indexed descendants. Blitz paints them
+/// past any clip, so a scroller must be a stacking context there.
 pub(crate) fn clips_z_indexed() -> bool {
     !NATIVE
 }
@@ -43,9 +42,8 @@ pub(crate) fn fires_scroll_end() -> bool {
 /// counts as ended: longer than the gap between two wheel ticks.
 pub(crate) const SCROLL_QUIET: Duration = Duration::from_millis(150);
 
-/// A wheel's vertical travel in the web's sign, positive down the page, with
-/// lines and pages counted as `line` pixels and `page` lines. Blitz reports
-/// the finger's sign (todo 844).
+/// A wheel's vertical travel in px, positive down the page; a line is `line` px,
+/// a page `page` lines. Blitz reports the finger's sign (844).
 pub(crate) fn wheel_travel_y(data: &WheelData, line: f64, page: f64) -> f64 {
     let travel = match data.delta() {
         WheelDelta::Pixels(delta) => delta.y,
@@ -55,33 +53,24 @@ pub(crate) fn wheel_travel_y(data: &WheelData, line: f64, page: f64) -> f64 {
     if NATIVE { -travel } else { travel }
 }
 
-/// A live scroll subscription. **Dropping it unsubscribes** - that is the whole
-/// contract, which is why the trait has no methods.
-///
-/// Held by whatever needs the callback to stop: a popover keeps one while it is
-/// open and drops it on close, so a closed dropdown costs nothing.
+/// A live scroll subscription. Dropping it unsubscribes.
 pub trait ScrollSubscription {}
 
-/// Being told that something scrolled.
-///
-/// The first callback-shaped capability here - everything else is a command or
-/// a [`Read`](super::Read), because everything else is a question with an
-/// answer. This one is the platform talking back.
-///
-/// **Anything that scrolls counts, not just the page.** A scroll event does not
-/// bubble, so a listener on the window alone misses an element scrolling - and
-/// an anchor inside a `ScrollArea` is the common case, not the exotic one. An
-/// implementation has to catch both.
+/// Being told that anything scrolled, not just the page: scroll does not bubble,
+/// so an implementation catches element scrolls too.
 pub trait ScrollApi {
     /// Calls `callback` whenever anything scrolls, until the returned
-    /// subscription is dropped. No coordinates: the callback's job is to
-    /// re-measure, and it has the handles to do that with.
+    /// subscription is dropped. No coordinates: the callback re-measures.
     fn on_scroll(&self, callback: Box<dyn Fn()>) -> Box<dyn ScrollSubscription>;
 }
 
-/// `None` where the renderer cannot report a scroll - a webview and a
-/// headless build, where an open popover drifts off its anchor. Blitz reports
+/// `None` where no scroll is reported: a WebView, a headless build. Blitz reports
 /// a wheel inside `LiberoProvider` and libero's own scroll commands.
+///
+/// ```no_run
+/// let _subscription = libero::platform::scroll()
+///     .map(|scroll| scroll.on_scroll(Box::new(|| println!("scrolled"))));
+/// ```
 pub fn scroll() -> Option<&'static dyn ScrollApi> {
     backend::scroll()
 }

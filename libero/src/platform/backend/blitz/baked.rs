@@ -1,12 +1,8 @@
-//! Blitz bakes colours into boxes it builds and keeps them: an inline `<svg>`'s
-//! `currentColor` (todo 478), and the style of an anonymous block, the text of
-//! a flex or grid container (todo 621). Rewriting an attribute rebuilds them.
+//! Blitz keeps colours baked into an `<svg>`'s `currentColor` (478) and an
+//! anonymous block (621); rewriting an attribute rebuilds them.
 //!
-//! A theme switch rebuilds every such box, a hover change the ones under what
-//! gained or lost `:hover`, both before the restyle. Every other state change
-//! (focus, `:checked`, an attribute) is caught after it painted: shortly after
-//! each press, key or render (see `redraw`), [`check`] rebuilds each box whose
-//! colour moved on. The same pass re-lays text left stale (`stale_text`).
+//! Theme and hover rebuild ahead of the restyle; any other change is caught by
+//! [`check`] after a press, key or render, which also re-lays stale text.
 
 use std::{
     cell::{Cell, RefCell},
@@ -45,9 +41,8 @@ pub(super) fn rebuild_all(doc: &mut BaseDocument) {
     rebuild(doc, elements, true);
 }
 
-/// What gains or loses `:hover` rebuilds its baked boxes, before the restyle
-/// this move asked for (todo 634). Blitz has moved hover by the time a
-/// `pointermove` handler runs.
+/// Rebuilds the boxes under what gained or lost `:hover`, before the restyle
+/// (634). Blitz has moved hover by the time `pointermove` runs.
 pub(super) fn on_hover_change() {
     let (Some(anchor), Some(state)) = (anchor(), doc()) else {
         return;
@@ -113,9 +108,8 @@ fn recheck() {
     }
 }
 
-/// Rebuilds each box that painted another colour than its element computes:
-/// an anonymous block's own style against its parent's, an svg against its
-/// colour at its last build. An svg first seen is rebuilt once.
+/// Rebuilds each box that painted another colour than its element computes.
+/// An svg first seen is rebuilt once.
 fn check() {
     let (Some(anchor), Some(state)) = (anchor(), doc()) else {
         return;

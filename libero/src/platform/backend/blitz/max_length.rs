@@ -1,6 +1,5 @@
-//! Blitz's text editor ignores `maxlength` (todos 942, 950): a press that would
-//! type past it is refused before the editor's default action, and a paste,
-//! whose length is not known then, is cut once it has landed.
+//! Blitz's editor ignores `maxlength` (942, 950): a press past it is refused,
+//! a paste cut once it has landed.
 
 use std::cell::RefCell;
 
@@ -71,9 +70,8 @@ fn typed_units(event: &Event<KeyboardData>, node: &Node) -> Option<usize> {
     }
 }
 
-/// A text control's `maxlength` (in UTF-16 units, as the DOM counts), its
-/// editor's text, and whether its selection is collapsed - a press replaces a
-/// selection, so only a collapsed one is refused.
+/// A text control's `maxlength` in UTF-16 units, its text, and whether its
+/// selection is collapsed: a press replaces a selection, so is not refused.
 fn limited(node: &Node) -> Option<(usize, &str, bool)> {
     let element = node.element_data()?;
     let limit = element

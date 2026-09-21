@@ -1,7 +1,5 @@
-//! The dioxus scope a callback was handed over in. Run later from a timer, an
-//! `Outlet` flush or another component's handler, it runs there again: what it
-//! reads is owned there, and a read from a scope above the owner is what
-//! `dioxus_signals` warns about (todo 718).
+//! The scope a callback was handed over in, to run it there again later: a read
+//! from a scope above the owner is what `dioxus_signals` warns about (718).
 
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 

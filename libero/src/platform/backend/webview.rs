@@ -1,11 +1,7 @@
-//! A WebView (wry: desktop and Android): the web's engine, but Rust holds no
-//! handle on its DOM. What needs no element handle goes through the page's own
-//! script, over `document::eval` - the same way
-//! [`fetch_text`](crate::platform::fetch_text) does. Elements stay on the
-//! [`mounted`](super::mounted) floor.
+//! A WebView (wry: desktop, Android): Rust holds no DOM handle, so the page's
+//! script runs over `eval`; elements stay on the [`mounted`](super::mounted) floor.
 //!
-//! A desktop build shares its cfg with a server build, which has no page to run
-//! a script in, so every accessor first asks [`runs_scripts`].
+//! A server build shares this cfg, so every accessor first asks [`runs_scripts`].
 
 use std::cell::{Cell, RefCell};
 use std::collections::{HashMap, HashSet};
@@ -31,9 +27,8 @@ thread_local! {
         const { RefCell::new(Vec::new()) };
 }
 
-/// Whether a page runs the current document's scripts. A server's document,
-/// and the no-op one, drop the script at once, so a send fails; plain SSR has
-/// no document.
+/// Whether a page runs the current document's scripts: a server's or the no-op
+/// document fails the send.
 fn runs_scripts() -> bool {
     // Outside a scope (a drop, a task's wake-up) the root's document answers.
     let Some(document) = Runtime::try_current().and_then(|runtime| {
@@ -198,9 +193,8 @@ thread_local! {
 
 type SchemeCallback = Rc<dyn Fn(ColorScheme)>;
 
-/// Hands `answer` the media query's result now and on every change, for the
-/// app's lifetime. The script is started here: from inside `spawn_forever` it
-/// never ran.
+/// Hands `answer` the media query's result now and on every change. The script
+/// starts here: from inside `spawn_forever` it never ran.
 fn watch_media(query: &'static str, answer: impl Fn(bool) + 'static) {
     let script = eval(
         "const query = window.matchMedia(await dioxus.recv());
@@ -326,9 +320,8 @@ pub(super) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
     runs_scripts().then_some(&COLOR_SCHEME as &'static dyn ColorSchemeApi)
 }
 
-/// The system scheme from the page's media query. The override is kept in a
-/// file rather than `localStorage`: the provider reads it once, at mount,
-/// before any script could answer.
+/// The system scheme from the page's media query. The override lives in a file:
+/// the provider reads it at mount, before any script could answer.
 struct WebViewColorScheme;
 
 static COLOR_SCHEME: WebViewColorScheme = WebViewColorScheme;
@@ -423,9 +416,8 @@ pub(super) fn keyboard() -> Option<&'static dyn KeyboardApi> {
     runs_scripts().then_some(&KEYBOARD as &'static dyn KeyboardApi)
 }
 
-/// Key presses at the window, in the bubble phase as on Blitz: a press a
-/// handler below took (its default prevented) is not the document's, and one
-/// whose propagation a handler stopped never arrives.
+/// Key presses at the window, bubbling as on Blitz: a press a handler took or
+/// stopped never arrives.
 struct WebViewKeyboard;
 
 static KEYBOARD: WebViewKeyboard = WebViewKeyboard;
