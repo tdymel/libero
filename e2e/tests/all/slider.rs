@@ -2,7 +2,7 @@
 
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually};
+use e2e::driver::{Driver, Platform, eventually, eventually_text, linger};
 use e2e::passes::target_size::MINIMUM;
 use e2e::passes::{keyboard, pointer};
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -49,6 +49,75 @@ e2e::scenario!(
     the_thumb_moves_with_the_value,
     "/slider/drag",
     thumb_follows
+);
+
+const SCROLL_THUMB: &str = "[role=slider][aria-label=Volume]";
+const RANGE_THUMB: &str = "[role=slider]:not([aria-label=Volume])";
+
+/// Todo 1020: on Android a vertical swipe over a slider scrolls the page and
+/// leaves the value; a mouse still grabs at once. Sideways drags and taps move it.
+async fn a_swipe_scrolls<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    let (_, height) = d.viewport().await?;
+    let touch = d.platform() == Platform::Android;
+    for (thumb, ended, grabbed) in [
+        (SCROLL_THUMB, "#slider-end", "0"),
+        (RANGE_THUMB, "#range-end", "20-80"),
+    ] {
+        d.drag(thumb, 0.0, -250.0).await?;
+        if touch {
+            let at = d.rect(thumb).await?;
+            ensure!(
+                at.y + at.height / 2.0 < height / 2.0 - 100.0,
+                "a swipe up over {thumb} did not scroll: its top at {}",
+                at.y
+            );
+            linger(d, 8).await;
+            ensure!(
+                d.text(ended).await?.is_empty(),
+                "a swipe over {thumb} moved it"
+            );
+        } else {
+            eventually_text(d, ended, grabbed, "a vertical mouse drag").await?;
+        }
+    }
+
+    d.drag(SCROLL_THUMB, 150.0, 0.0).await?;
+    eventually(d, "a sideways drag to move it", async |d| {
+        let value = d
+            .attr(SCROLL_THUMB, "aria-valuenow")
+            .await?
+            .unwrap_or_default();
+        Ok(value != "0" && d.text("#slider-end").await? == value)
+    })
+    .await?;
+
+    // 100px of the 280px travel on from the thumb, about 36 further.
+    let before: f64 = d.text("#slider-end").await?.parse()?;
+    let thumb = d.rect(SCROLL_THUMB).await?;
+    d.click_at(
+        thumb.x + thumb.width / 2.0 + 100.0,
+        thumb.y + thumb.height / 2.0,
+    )
+    .await?;
+    eventually(
+        d,
+        "a tap on the track to jump there and commit",
+        async |d| {
+            let value = d.attr(SCROLL_THUMB, "aria-valuenow").await?;
+            let committed = d.text("#slider-end").await?;
+            Ok(value.as_deref() == Some(committed.as_str())
+                && committed
+                    .parse::<f64>()
+                    .is_ok_and(|value| value >= before + 25.0))
+        },
+    )
+    .await
+}
+
+e2e::scenario!(
+    a_vertical_swipe_scrolls_the_page_and_a_sideways_drag_or_a_tap_moves_it,
+    "/slider/scroll",
+    a_swipe_scrolls
 );
 
 /// Todo 483: the label focuses the thumb it names by id.

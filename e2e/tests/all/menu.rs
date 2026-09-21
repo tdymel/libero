@@ -4,7 +4,7 @@
 use anyhow::Result;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually, eventually_focused};
+use e2e::driver::{Driver, eventually, eventually_focused, eventually_text, linger};
 use e2e::suite::Step;
 use e2e::{
     Fixture, Suite, Viewport,
@@ -116,6 +116,57 @@ e2e::scenario!(
     "/menu-submenu-reopen",
     a_click_outside_closes,
     android: skip("958: element identity on the WebView")
+);
+
+/// `level` is open and placed: an unplaced box sits hidden at 0,0.
+async fn placed<D: Driver>(d: &mut D, level: &str) -> Result<()> {
+    eventually(d, &format!("{level} to open"), async |d| {
+        Ok(d.exists(level).await?
+            && d.style(level, "visibility").await.unwrap_or_default() == "visible")
+    })
+    .await
+}
+
+/// Todo 1019: a press opens it, and a press outside, on another control or on
+/// nothing, closes it. Android's WebView cannot tell where focus went.
+async fn a_press_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    expanded(d, true).await?;
+    d.click("#rename").await?;
+    expanded(d, false).await?;
+
+    // Below the open menu, clear of Android's gesture strip at the very bottom.
+    d.click(TRIGGER).await?;
+    expanded(d, true).await?;
+    let (width, height) = d.viewport().await?;
+    d.click_at(width / 2.0, height * 0.75).await?;
+    expanded(d, false).await?;
+
+    // A press on the menu itself keeps it open; the trigger toggles it shut.
+    d.click(TRIGGER).await?;
+    placed(d, MENU).await?;
+    d.click(MENU).await?;
+    linger(d, 8).await;
+    expanded(d, true).await?;
+    d.click(TRIGGER).await?;
+    expanded(d, false).await?;
+
+    // A press in the portaled submenu is inside too: its item is chosen.
+    d.click(TRIGGER).await?;
+    placed(d, MENU).await?;
+    d.click(MENU).await?;
+    let submenu = "[role=menu][aria-labelledby$='-item-0']";
+    placed(d, submenu).await?;
+    d.click(&format!("{submenu} [role=menuitem]")).await?;
+    // `#rename` above renamed the item.
+    eventually_text(d, "#picked", "Post", "a press on the submenu's item").await?;
+    expanded(d, false).await
+}
+
+e2e::scenario!(
+    a_press_outside_closes_it,
+    "/menu-submenu-reopen",
+    a_press_outside_closes
 );
 
 /// The docs demo's row: the trigger and the text beside it share a centre line.

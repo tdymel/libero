@@ -3,7 +3,7 @@
 
 use anyhow::{Result, bail};
 use e2e::browser::block_on;
-use e2e::driver::{Driver, Rect, eventually};
+use e2e::driver::{Driver, Rect, eventually, linger};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -149,6 +149,42 @@ fn a_press_outside_closes_it() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Open means placed too: an unplaced box sits hidden at 0,0, and a tap
+/// aimed at it lands outside.
+async fn shown<D: Driver>(d: &mut D, open: bool, what: &str) -> Result<()> {
+    eventually(d, what, async |d| {
+        // A box removed between the two reads fails the second.
+        let placed = d.exists(BOX).await?
+            && d.style(BOX, "visibility").await.unwrap_or_default() == "visible";
+        Ok(placed == open)
+    })
+    .await
+}
+
+/// Todo 1019: the same by touch, where the WebView cannot tell where focus went.
+async fn a_tap_outside_closes<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    shown(d, true, "the box to open").await?;
+    d.click(BLANK).await?;
+    shown(d, false, "a tap on nothing to close it").await?;
+
+    d.click(TRIGGER).await?;
+    shown(d, true, "the box to reopen").await?;
+    d.click(BOX_TEXT).await?;
+    linger(d, 8).await;
+    if !d.exists(BOX).await? {
+        bail!("{:?}: a tap on the box's text closed it", d.platform());
+    }
+    d.click(TRIGGER).await?;
+    shown(d, false, "the trigger to toggle it shut").await
+}
+
+e2e::scenario!(
+    a_tap_outside_closes_it_and_one_inside_does_not,
+    "/popover",
+    a_tap_outside_closes
+);
 
 /// Escape closes it with focus on the trigger or inside the box, and focus
 /// ends on the trigger.

@@ -2,7 +2,7 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Flex, Slider, SliderChangeEvent, SliderValue, Text},
+    components::{Flex, RangeSlider, Slider, SliderChangeEvent, SliderValue, Text},
     sx::sx,
 };
 
@@ -12,7 +12,47 @@ pub const ROUTES: Routes = &[
     ("/slider", || rsx! { SliderPage {} }),
     ("/slider/states", || rsx! { SliderStatesPage {} }),
     ("/slider/drag", || rsx! { SliderDragPage {} }),
+    ("/slider/scroll", || rsx! { SliderScrollPage {} }),
 ];
+
+/// Todo 1020: a 300px slider and range mid-way down a page taller than any
+/// screen. `#slider-end` and `#range-end` show the value each last committed.
+#[component]
+fn SliderScrollPage() -> Element {
+    let mut value = use_signal(|| 0.0f64);
+    let mut ended = use_signal(String::new);
+    let mut range = use_signal(|| (20.0f64, 80.0f64));
+    let mut range_ended = use_signal(String::new);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", sx: sx().padding_top("60vh").padding_bottom("150vh"),
+            Slider {
+                aria_label: "Volume",
+                value: Some(value()),
+                oninput: move |e: SliderChangeEvent<f64>| {
+                    value.set(e.value());
+                    if let SliderChangeEvent::End(v) = e {
+                        ended.set(format!("{v:.0}"));
+                    }
+                },
+                sx: sx().width("300px"),
+            }
+            Text { id: "slider-end", "{ended}" }
+            RangeSlider {
+                aria_label: "Price",
+                value: range(),
+                oninput: move |e: SliderChangeEvent<(f64, f64)>| {
+                    range.set(e.value());
+                    if let SliderChangeEvent::End((a, b)) = e {
+                        range_ended.set(format!("{a:.0}-{b:.0}"));
+                    }
+                },
+                sx: sx().width("300px"),
+            }
+            Text { id: "range-end", "{range_ended}" }
+        }
+    }
+}
 
 /// A 400px slider at 0, for the shared web/native drag scenarios.
 #[component]

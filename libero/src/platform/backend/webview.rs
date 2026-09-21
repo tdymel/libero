@@ -19,7 +19,8 @@ use crate::platform::a11y_media::{
 };
 use crate::platform::{
     A11yMediaApi, ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi,
-    KeyChord, KeySubscription, KeyboardApi, PlatformError, Read, ScrollApi, ScrollSubscription,
+    KeyChord, KeySubscription, KeyboardApi, PRESS_MARKER_ATTR, PlatformError, PressApi,
+    PressSubscription, Read, ScrollApi, ScrollSubscription,
     clipboard::{ClipboardApi, Write},
     keyboard::{CLICKED_INPUT_TYPES, takes_arrows, takes_typing, warn_reserved_chord},
 };
@@ -192,6 +193,51 @@ impl ScrollApi for WebViewScroll {
     }
 }
 
+pub(super) fn press() -> Option<&'static dyn PressApi> {
+    runs_scripts().then_some(&PRESS as &'static dyn PressApi)
+}
+
+struct WebViewPress;
+
+static PRESS: WebViewPress = WebViewPress;
+
+/// Capture phase, so no handler that stops the press hides it. Sends every
+/// marker from the target up to the root.
+const ON_PRESS: &str = "const onPress = (event) => {
+        const markers = [];
+        for (let el = event.target instanceof Element ? event.target : null; el; el = el.parentElement) {
+            const value = el.getAttribute(data);
+            if (value) markers.push(...value.split(' ').map(Number));
+        }
+        dioxus.send(markers);
+    };
+    window.addEventListener('pointerdown', onPress, { capture: true });";
+
+impl PressApi for WebViewPress {
+    fn on_press(&self, callback: Box<dyn Fn(Vec<u64>)>) -> Box<dyn PressSubscription> {
+        let slot = Slot::new();
+        let script = eval_with(
+            json!(PRESS_MARKER_ATTR),
+            &format!(
+                "{ON_PRESS}
+                {}
+                window.removeEventListener('pointerdown', onPress, {{ capture: true }});",
+                slot.park("")
+            ),
+        );
+        let task = spawn(async move {
+            let mut script = script;
+            while let Ok(markers) = script.recv::<Vec<u64>>().await {
+                callback(markers);
+            }
+        });
+        Box::new(WebViewListener {
+            task,
+            _slot: Rc::new(slot),
+        })
+    }
+}
+
 /// A listening script's task and slot: dropping it stops both.
 struct WebViewListener {
     task: Task,
@@ -201,6 +247,8 @@ struct WebViewListener {
 impl ScrollSubscription for WebViewListener {}
 
 impl KeySubscription for WebViewListener {}
+
+impl PressSubscription for WebViewListener {}
 
 impl Drop for WebViewListener {
     fn drop(&mut self) {

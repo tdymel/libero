@@ -13,7 +13,7 @@ use dioxus::prelude::{
 
 use super::{
     A11yMediaApi, ColorSchemeApi, ContentSubscription, DocumentApi, ElementApi, KeyboardApi,
-    ScrollApi, SilentFocusApi, TimerApi,
+    PressApi, ScrollApi, SilentFocusApi, TimerApi,
 };
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
@@ -297,6 +297,14 @@ pub(crate) fn silent_focus() -> Option<&'static dyn SilentFocusApi> {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::silent_focus();
     #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return None;
+}
+
+/// Only a WebView - see [`press`](crate::platform::press).
+pub(crate) fn press() -> Option<&'static dyn PressApi> {
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return webview::press();
+    #[cfg(any(target_arch = "wasm32", feature = "native"))]
     return None;
 }
 

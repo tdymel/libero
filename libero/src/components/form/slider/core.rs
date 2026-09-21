@@ -13,8 +13,8 @@ use crate::{
         overlay::{PressFocus, Tooltip},
     },
     hooks::{
-        DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, use_css, use_drag,
-        use_element, use_formats, use_id, use_local_state, use_theme,
+        DragMove, DragOptions, DragStart, ElementHandle, sideways_drag_sx, use_css, use_element,
+        use_formats, use_id, use_local_state, use_sideways_drag, use_theme,
     },
     platform::{ElementApi, logical_key, next_task},
     sx::{FORCED_COLORS, StaticSx, Sx, ThemeAwareValue, sx},
@@ -58,7 +58,8 @@ const PLAIN_THUMB_SHADOW: &str = "0 0 0 1px rgba(0, 0, 0, 0.2), inset 0 0 0 1px 
 
 static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
     SliderDefaults::theme_vars()
-        .and(drag_handle_sx())
+        // A vertical swipe scrolls the page, as over a native Android slider.
+        .and(sideways_drag_sx())
         .display("flex")
         .align_items("center")
         .position("relative")
@@ -350,6 +351,15 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
     }
 }
 
+/// A drag whose geometry is still being measured, and what arrived meanwhile.
+#[derive(Clone, Copy, Default)]
+struct Starting {
+    measuring: bool,
+    /// The last move's client x.
+    moved_to: Option<f64>,
+    released: bool,
+}
+
 #[component]
 fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
     let props = core;
@@ -443,7 +453,11 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
         ));
     });
 
-    let drag = use_drag(DragOptions {
+    // Moves and a release that arrive before the measuring task has grabbed
+    // (a sideways touch starts mid-move) wait for the `Start`.
+    let mut starting = use_hook(|| CopyValue::new(Starting::default()));
+
+    let drag = use_sideways_drag(DragOptions {
         capture: root_element,
         onstart: Callback::new(move |event: DragStart| {
             if !editable {
@@ -451,6 +465,27 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                 return;
             }
 
+            starting.set(Starting {
+                measuring: true,
+                ..Starting::default()
+            });
+            // Replays what waited, or drops it on a cancel.
+            let settle = move |grabbed: bool| {
+                let mut starting = starting;
+                let waited = *starting.peek();
+                starting.set(Starting::default());
+                if !grabbed {
+                    return;
+                }
+                if let Some(raw) = waited.moved_to.and_then(|x| position_at.call(x)) {
+                    slide.call(raw);
+                }
+                if waited.released {
+                    // Copied out first: `emit` writes `latest`.
+                    let last = *latest.peek();
+                    emit.call(SliderChangeEvent::End(last));
+                }
+            };
             let (track_left, track_width, thumb_width) =
                 (track_left.clone(), track_width.clone(), thumb_width.clone());
             track_rtl.set(root_element.is_rtl());
@@ -460,14 +495,14 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
             let track_size = track_element.dimensions();
             let track_offset = track_element.client_offset();
             let thumb_size = thumb_elements[0].dimensions();
-            // Off the web the drag starts before the geometry; early moves hit
-            // `position_at`'s zero-travel guard.
             spawn(async move {
                 let (Ok(dimensions), Ok((left, _))) = (track_size.await, track_offset.await) else {
+                    settle(false);
                     event.cancel.call(());
                     return;
                 };
                 if dimensions.width <= 0.0 {
+                    settle(false);
                     event.cancel.call(());
                     return;
                 }
@@ -481,6 +516,7 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                         // `use_drag` cancels the pointerdown and so its focus;
                         // the grabbed thumb is focused here instead.
                         let index = grab.call(raw);
+                        settle(true);
                         let thumb = thumb_elements[index];
                         if focusable && !thumb.is_focused() {
                             // A track press is outside the thumb's `Tooltip`:
@@ -491,16 +527,35 @@ fn SliderBody(live: Signal<Live>, core: SliderCoreProps) -> Element {
                             press_focus.clear();
                         }
                     }
-                    None => event.cancel.call(()),
+                    None => {
+                        settle(false);
+                        event.cancel.call(());
+                    }
                 }
             });
         }),
         onmove: Callback::new(move |event: DragMove| {
+            let waiting = *starting.peek();
+            if waiting.measuring {
+                starting.set(Starting {
+                    moved_to: Some(event.client.x),
+                    ..waiting
+                });
+                return;
+            }
             if let Some(raw) = position_at.call(event.client.x) {
                 slide.call(raw);
             }
         }),
         onend: Callback::new(move |_| {
+            let waiting = *starting.peek();
+            if waiting.measuring {
+                starting.set(Starting {
+                    released: true,
+                    ..waiting
+                });
+                return;
+            }
             let last = *latest.peek();
             emit.call(SliderChangeEvent::End(last));
         }),

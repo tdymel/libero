@@ -110,6 +110,30 @@ pub struct Drag {
 ///
 /// Docs: <https://libero-ui.dev/hooks/use-drag>
 pub fn use_drag(options: DragOptions) -> Drag {
+    use_drag_with(options, false)
+}
+
+/// How far, in CSS px, a touch on a [`use_sideways_drag`] control moves
+/// sideways before it drags. Android's touch slop is 8dp.
+const SIDEWAYS_SLOP: f64 = 8.0;
+
+/// [`use_drag`] for a horizontal control on a page that scrolls, as a native
+/// Android slider: a touch drags once it moves sideways, a tap jumps on release,
+/// and a vertical swipe scrolls the page. Give it [`sideways_drag_sx`].
+///
+/// A tap calls `onend` right after `onstart`: an `onstart` that measures first
+/// must hold the end back until it has run.
+pub(crate) fn use_sideways_drag(options: DragOptions) -> Drag {
+    use_drag_with(options, true)
+}
+
+/// `touch-action: pan-y` for a [`use_sideways_drag`] control: the browser
+/// keeps a vertical swipe and cancels the pointer.
+pub(crate) fn sideways_drag_sx() -> Sx {
+    sx().touch_action("pan-y")
+}
+
+fn use_drag_with(options: DragOptions, sideways: bool) -> Drag {
     let DragOptions {
         capture,
         onstart,
@@ -119,13 +143,15 @@ pub fn use_drag(options: DragOptions) -> Drag {
 
     let mut active = use_signal(|| Option::<ActiveDrag>::None);
     let mut dragging = use_signal(|| false);
+    // A sideways touch not yet moved far enough to be a drag.
+    let mut pending = use_signal(|| Option::<ActiveDrag>::None);
 
     let cancel = use_callback(move |()| {
         active.set(None);
         dragging.set(false);
     });
 
-    let onpointermove = use_callback(move |event: Event<PointerData>| {
+    let track = use_callback(move |event: Event<PointerData>| {
         let Some(drag) = active() else {
             return;
         };
@@ -156,21 +182,9 @@ pub fn use_drag(options: DragOptions) -> Drag {
         onend.call(());
     });
 
-    let onpointerdown = use_callback(move |event: Event<PointerData>| {
-        // A right- or middle-click must not drag; an unreported button (some
-        // webviews, and touch) still counts as primary.
-        if matches!(event.trigger_button(), Some(button) if button != MouseButton::Primary)
-            || active.read().is_some()
-        {
-            return;
-        }
-        event.prevent_default();
-        let coordinates = event.client_coordinates();
-        let client = DragPoint {
-            x: coordinates.x,
-            y: coordinates.y,
-        };
-
+    // Starts the drag `event`'s pointer went down for at `client`; `false` if
+    // `onstart` cancelled it.
+    let begin = use_callback(move |(event, client): (Event<PointerData>, DragPoint)| {
         // Active before `onstart`, so a synchronous `cancel` clears it rather
         // than being overwritten.
         active.set(Some(ActiveDrag {
@@ -181,7 +195,7 @@ pub fn use_drag(options: DragOptions) -> Drag {
 
         onstart.call(DragStart { client, cancel });
         if active.peek().is_none() {
-            return;
+            return false;
         }
 
         // `prevent_default` also cancelled the focus the press would bring.
@@ -194,17 +208,92 @@ pub fn use_drag(options: DragOptions) -> Drag {
         if capture.set_pointer_capture(event.pointer_id()).is_err()
             && let Some(within) = capture.mounted()
         {
-            platform::follow_pointer(&event, &within, onpointermove, end);
+            platform::follow_pointer(&event, &within, track, end);
         }
+        true
+    });
+
+    let onpointerdown = use_callback(move |event: Event<PointerData>| {
+        // A right- or middle-click must not drag; an unreported button (some
+        // webviews, and touch) still counts as primary.
+        if matches!(event.trigger_button(), Some(button) if button != MouseButton::Primary)
+            || active.read().is_some()
+            || pending.read().is_some()
+        {
+            return;
+        }
+        event.prevent_default();
+        let coordinates = event.client_coordinates();
+        let client = DragPoint {
+            x: coordinates.x,
+            y: coordinates.y,
+        };
+        let press = ActiveDrag {
+            pointer_id: event.pointer_id(),
+            start: client,
+        };
+        match sideways && event.pointer_type() == "touch" {
+            true => pending.set(Some(press)),
+            false => {
+                begin.call((event, client));
+            }
+        }
+    });
+
+    let onpointermove = use_callback(move |event: Event<PointerData>| {
+        let Some(press) = *pending.peek() else {
+            track.call(event);
+            return;
+        };
+        if event.pointer_id() != press.pointer_id {
+            return;
+        }
+        let coordinates = event.client_coordinates();
+        let (dx, dy) = (coordinates.x - press.start.x, coordinates.y - press.start.y);
+        // Not yet sideways: wait, the browser cancels a swipe it scrolls.
+        if dx.abs() < SIDEWAYS_SLOP || dx.abs() <= dy.abs() {
+            return;
+        }
+        pending.set(None);
+        if begin.call((event.clone(), press.start)) {
+            track.call(event);
+        }
+    });
+
+    // A touch released before it moved is a tap: start and end at once.
+    let onpointerup = use_callback(move |event: Event<PointerData>| {
+        let Some(press) = *pending.peek() else {
+            end.call(event);
+            return;
+        };
+        if event.pointer_id() != press.pointer_id {
+            return;
+        }
+        pending.set(None);
+        if begin.call((event.clone(), press.start)) {
+            end.call(event);
+        }
+    });
+
+    // The OS can revoke a pointer mid-drag; without this the drag sticks. A
+    // pending touch the page scrolled is dropped unreported.
+    let onpointercancel = use_callback(move |event: Event<PointerData>| {
+        if pending
+            .peek()
+            .is_some_and(|press| press.pointer_id == event.pointer_id())
+        {
+            pending.set(None);
+            return;
+        }
+        end.call(event);
     });
 
     Drag {
         dragging,
         onpointerdown,
         onpointermove,
-        onpointerup: end,
-        // The OS can revoke a pointer mid-drag; without this the drag sticks.
-        onpointercancel: end,
+        onpointerup,
+        onpointercancel,
     }
 }
 

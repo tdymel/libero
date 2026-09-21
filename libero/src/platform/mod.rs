@@ -24,6 +24,7 @@ mod max_length;
 mod motion;
 mod paint;
 mod placeholder;
+mod press;
 mod regex;
 mod resize;
 mod scroll;
@@ -82,6 +83,7 @@ pub(crate) use placeholder::{
     PLACEHOLDER_ATTR, PLACEHOLDER_CELL_ATTR, PLACEHOLDER_SHOWN_ATTR, draws_placeholders,
     placeholder_drawn,
 };
+pub(crate) use press::{PRESS_MARKER_ATTR, PressApi, PressSubscription, press};
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub(crate) use resize::{is_measured_resize, on_resize};
 pub(crate) use scroll::{

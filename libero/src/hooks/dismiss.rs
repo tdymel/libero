@@ -17,8 +17,48 @@ use crate::{
         ElementHandle, FocusChange, FocusReturn, FocusWithin, focus_return::use_focus_return,
         use_focus_within,
     },
-    platform::{ElementApi, KeySubscription, PlatformError, key_taken, keyboard, next_task},
+    platform::{
+        ElementApi, KeySubscription, PRESS_MARKER_ATTR, PlatformError, PressSubscription,
+        key_taken, keyboard, next_task, press,
+    },
 };
+
+/// Tells a press inside a box from one outside where focus cannot (the
+/// WebView): its elements carry it, see [`press`]. Inert elsewhere.
+#[derive(Clone, Copy, PartialEq)]
+pub(crate) struct PressMarker {
+    id: u64,
+    live: bool,
+}
+
+impl PressMarker {
+    /// Spread on every element a press inside counts for. `None` where unused.
+    pub(crate) fn attribute(&self) -> Option<Attribute> {
+        self.live.then(|| {
+            Attribute::new(
+                PRESS_MARKER_ATTR,
+                AttributeValue::Text(self.id.to_string()),
+                None,
+                false,
+            )
+        })
+    }
+}
+
+/// A marker for a box, made where the trigger renders when that is not the
+/// box's scope (`Menu`'s wrapper). Pass it in [`DismissOptions::marker`].
+pub(crate) fn use_press_marker() -> PressMarker {
+    let stack = use_hook(layer_stack);
+    use_hook(move || {
+        let mut next = stack.next;
+        let id = *next.peek();
+        next.set(id + 1);
+        PressMarker {
+            id,
+            live: press().is_some(),
+        }
+    })
+}
 
 /// One open dismissible layer, identified only by when it opened.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -176,6 +216,11 @@ pub(crate) struct DismissOptions {
     /// Called instead of `onclose` for [`Dismissal::FocusMoved`] (a submenu
     /// decides by where focus went). `None` calls `onclose`.
     pub onfocusmoved: Option<Callback<()>>,
+    /// With `outside`, a press outside closes it where focus cannot tell
+    /// ([`press`]). Off for a box inside another that already listens (a submenu).
+    pub press: bool,
+    /// The trigger's marker, when it renders outside this scope. `None` makes one.
+    pub marker: Option<PressMarker>,
 }
 
 impl Default for DismissOptions {
@@ -186,22 +231,27 @@ impl Default for DismissOptions {
             return_focus: true,
             initial_focus: None,
             onfocusmoved: None,
+            press: true,
+            marker: None,
         }
     }
 }
 
 /// Counts one more element as inside until dropped, from
-/// [`DismissHandle::register_inside`].
+/// [`DismissHandle::register_inside_box`].
 pub(crate) struct InsideGuard {
     id: u64,
-    inside: Signal<Vec<(u64, ElementHandle)>>,
+    inside: Signal<Vec<Inside>>,
 }
+
+/// One element counted inside: its registration id, and its box's marker.
+type Inside = (u64, ElementHandle, u64);
 
 impl Drop for InsideGuard {
     fn drop(&mut self) {
         let mut inside = self.inside;
         if let Ok(mut elements) = inside.try_write() {
-            elements.retain(|(id, _)| *id != self.id);
+            elements.retain(|(id, ..)| *id != self.id);
         }
     }
 }
@@ -223,12 +273,13 @@ pub(crate) struct DismissHandle {
     /// Whether this layer hears Escape at the document, which is the same
     /// question as whether it is allowed on the stack.
     global: bool,
-    inside: Signal<Vec<(u64, ElementHandle)>>,
+    inside: Signal<Vec<Inside>>,
     inside_next: Signal<u64>,
     onfocusmoved: Option<Callback<()>>,
     focus: FocusWithin,
-    /// Bumped when a silent focus move left the box.
+    /// Bumped when a silent focus move, or a press, left the box.
     left_tick: Signal<u64>,
+    marker: PressMarker,
 }
 
 impl DismissHandle {
@@ -238,10 +289,10 @@ impl DismissHandle {
         self.focus_return
     }
 
-    /// Counts `element` *inside* for the outside check until the guard drops:
-    /// a portaled submenu is no descendant of its menu.
-    #[must_use = "the element stops counting as inside when the guard is dropped"]
-    pub(crate) fn register_inside(&self, element: ElementHandle) -> InsideGuard {
+    /// Counts `child`'s box *inside*, its marker too, until the guard drops: a
+    /// portaled submenu is no descendant of its menu.
+    #[must_use = "the box stops counting as inside when the guard is dropped"]
+    pub(crate) fn register_inside_box(&self, child: &DismissHandle) -> InsideGuard {
         // A counter: one handle may be registered twice (a reopened submenu).
         // Nothing subscribes: this writes during a render, a subscriber would loop.
         let mut next = self.inside_next;
@@ -250,12 +301,20 @@ impl DismissHandle {
 
         let mut inside = self.inside;
         if let Ok(mut elements) = inside.try_write() {
-            elements.push((id, element));
+            elements.push((id, child.floating, child.marker.id));
         }
         InsideGuard {
             id,
             inside: self.inside,
         }
+    }
+
+    /// Whether a press carrying `markers` landed in this box or one inside it.
+    fn pressed_inside(&self, markers: &[u64]) -> bool {
+        let inside = self.inside.peek();
+        let mut own =
+            std::iter::once(self.marker.id).chain(inside.iter().map(|(_, _, marker)| *marker));
+        own.any(|marker| markers.contains(&marker))
     }
 
     /// Closes deliberately, handing focus back, for a chosen item. See
@@ -274,6 +333,10 @@ impl DismissHandle {
         if self.open && self.escape && !self.global {
             events.push(self.escape_listener());
         }
+        // A press on the trigger is its own toggle, not one outside.
+        if self.open && self.outside {
+            events.extend(self.marker.attribute());
+        }
         events
     }
 
@@ -291,6 +354,7 @@ impl DismissHandle {
 
         if self.outside {
             events.push(self.focusout_listener());
+            events.extend(self.marker.attribute());
         }
 
         events
@@ -347,7 +411,7 @@ impl DismissHandle {
         let inside = self.inside.peek();
         let elements = [&self.anchor, &self.floating]
             .into_iter()
-            .chain(inside.iter().map(|(_, element)| element));
+            .chain(inside.iter().map(|(_, element, _)| element));
         focus_inside_of(elements.map(|element| {
             if element.mounted().is_none() {
                 return Some(false);
@@ -407,11 +471,12 @@ pub(crate) fn use_dismiss(
     options: DismissOptions,
 ) -> DismissHandle {
     let focus_return = use_focus_return();
-    let inside = use_signal(Vec::<(u64, ElementHandle)>::new);
+    let inside = use_signal(Vec::<Inside>::new);
     let inside_next = use_signal(|| 0u64);
     let global = use_global_escape();
     let focus = use_focus_within(Vec::new, |_| {});
     let left_tick = use_signal(|| 0u64);
+    let own_marker = use_press_marker();
 
     let handle = DismissHandle {
         anchor,
@@ -428,6 +493,7 @@ pub(crate) fn use_dismiss(
         onfocusmoved: options.onfocusmoved,
         focus,
         left_tick,
+        marker: options.marker.unwrap_or(own_marker),
     };
 
     use_document_escape(open && options.escape, global, move || {
@@ -436,11 +502,12 @@ pub(crate) fn use_dismiss(
 
     // Empty while closed, so a move then reports nothing.
     let watched = open && options.outside;
+    use_press_outside(watched && options.press, handle);
     focus.watch(
         move || match watched {
             true => [anchor, floating]
                 .into_iter()
-                .chain(inside.peek().iter().map(|(_, element)| *element))
+                .chain(inside.peek().iter().map(|(_, element, _)| *element))
                 .map(|element| element.mounted())
                 .collect(),
             false => Vec::new(),
@@ -479,6 +546,40 @@ pub(crate) fn use_dismiss(
     }));
 
     handle
+}
+
+/// Closes `handle` on a press outside it while `listen`, where [`press`] answers.
+/// As a focus move: the press put focus where it wanted.
+fn use_press_outside(listen: bool, handle: DismissHandle) {
+    let listening: Rc<RefCell<Option<Box<dyn PressSubscription>>>> =
+        use_hook(|| Rc::new(RefCell::new(None)));
+    use_drop({
+        let listening = listening.clone();
+        move || {
+            listening.borrow_mut().take();
+        }
+    });
+    use_effect(use_reactive!(|(listen,)| {
+        if !listen {
+            listening.borrow_mut().take();
+            return;
+        }
+        if listening.borrow().is_some() {
+            return;
+        }
+        let Some(api) = press() else {
+            return;
+        };
+        // Records the press only, outside every scope; `use_dismiss`'s effect closes.
+        let subscription = api.on_press(Box::new(move |markers| {
+            if !handle.pressed_inside(&markers) {
+                let mut tick = handle.left_tick;
+                let next = tick.peek().wrapping_add(1);
+                tick.set(next);
+            }
+        }));
+        *listening.borrow_mut() = Some(subscription);
+    }));
 }
 
 /// Whether the document can be listened to, decided once at render time. Safe:

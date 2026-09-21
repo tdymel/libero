@@ -12,9 +12,9 @@ use crate::{
         typography::Kbd,
     },
     hooks::{
-        Align, DismissHandle, DismissOptions, ElementHandle, PopoverOptions, Side, TYPEAHEAD_RESET,
-        Typeahead, current_localization, typeahead_match, use_dismiss, use_element, use_popover_on,
-        use_theme, use_typeahead,
+        Align, DismissHandle, DismissOptions, ElementHandle, PopoverOptions, PressMarker, Side,
+        TYPEAHEAD_RESET, Typeahead, current_localization, typeahead_match, use_dismiss,
+        use_element, use_popover_on, use_press_marker, use_theme, use_typeahead,
     },
     platform::{ElementApi, TimerSubscription, logical_key, timer},
     sx::{StaticSx, sx},
@@ -201,6 +201,12 @@ pub fn Menu(props: MenuProps) -> Element {
     }));
 
     let onclose = use_callback(move |()| state.close());
+    let marker = use_press_marker();
+    let wrapper_attributes: Vec<Attribute> = open
+        .then(|| marker.attribute())
+        .flatten()
+        .into_iter()
+        .collect();
 
     rsx! {
         {
@@ -236,7 +242,7 @@ pub fn Menu(props: MenuProps) -> Element {
                         _ => {}
                     }
                 })
-                .render(HtmlTag::Div, Vec::new(), props.children)
+                .render(HtmlTag::Div, wrapper_attributes, props.children)
         }
         MenuLevel {
             // Never equal while it holds items, so a closed level gets none and
@@ -265,6 +271,7 @@ pub fn Menu(props: MenuProps) -> Element {
                 .close_on_select
                 .unwrap_or(theme.menu.close_on_select),
             depth: 0,
+            marker: Some(marker),
             attributes: props.attributes,
             class: props.class,
             sx: props.sx,
@@ -632,6 +639,9 @@ struct MenuLevelProps {
     loop_focus: bool,
     close_on_select: bool,
     depth: usize,
+    /// The wrapper's, on the root only: a press there is the trigger's toggle.
+    #[props(default)]
+    marker: Option<PressMarker>,
     #[props(default)]
     attributes: Vec<Attribute>,
     #[props(default)]
@@ -678,6 +688,9 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         Some(props.onclose),
         DismissOptions {
             onfocusmoved: Some(focus_moved),
+            // The root hears every press; a submenu's is inside it.
+            press: root.is_none(),
+            marker: props.marker,
             ..Default::default()
         },
     );
@@ -688,7 +701,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         Rc::new(
             parents
                 .iter()
-                .map(|parent| parent.register_inside(floating))
+                .map(|parent| parent.register_inside_box(&dismiss))
                 .collect::<Vec<_>>(),
         )
     });
