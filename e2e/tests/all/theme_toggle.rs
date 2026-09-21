@@ -1,9 +1,11 @@
 //! `ThemeToggle`: every press moves the scheme one step round the cycle,
 //! and the name always says where the next press goes (todo 406).
 
+use anyhow::Result;
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
 use e2e::browser::block_on;
+use e2e::driver::{Driver, eventually};
 use e2e::passes::{focus, keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, ax, wait};
@@ -23,6 +25,7 @@ fn it_meets_the_baseline() {
 
 const TOGGLE: &str = "#split > button";
 const CHEVRON: &str = "#split > div > button";
+const MENU: &str = "[role=menu]";
 
 /// The split button: both halves are 24px tab stops with a ring; the menu is checked open.
 /// Nothing is picked, so nothing persists.
@@ -65,6 +68,31 @@ fn escape_returns_focus_to_the_chevron() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 1045: a press on nothing closes the theme menu, by touch too.
+async fn a_press_outside_closes_the_theme_menu<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    for _ in 0..2 {
+        d.click(CHEVRON).await?;
+        eventually(d, "the theme menu to open and be placed", async |d| {
+            Ok(d.exists(MENU).await?
+                && d.style(MENU, "visibility").await.unwrap_or_default() == "visible")
+        })
+        .await?;
+        let (width, height) = d.viewport().await?;
+        d.click_at(width / 2.0, height * 0.75).await?;
+        eventually(d, "a press outside to close it", async |d| {
+            Ok(d.attr(CHEVRON, "aria-expanded").await?.as_deref() == Some("false"))
+        })
+        .await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_press_outside_closes_the_theme_menu,
+    "/theme-toggle/themes",
+    a_press_outside_closes_the_theme_menu
+);
 
 /// Test pages share one profile, so a stored `dark` would leak into later fixtures.
 /// Presses write to a stand-in that records what the component tried to persist.
