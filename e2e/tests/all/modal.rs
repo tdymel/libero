@@ -1,13 +1,5 @@
-//! `Modal`: the overlay archetype.
-//!
-//! `contrast_covers` is load-bearing here. Todo 327: the scroll lock this
-//! component injects, `body { overflow: hidden }`, made axe judge **every**
-//! element in the dialog off-screen, so the open-state axe run checked nothing
-//! at all. Fixed in `passes/contrast.rs`; this line keeps it fixed.
-//!
-//! The focus-return half of this contract is the one that fails silently
-//! everywhere else: nothing looks wrong on screen when focus falls back to
-//! `<body>`, and the keyboard user is simply dumped at the top of the document.
+//! `Modal`: the overlay archetype. `contrast_covers` guards todo 327: the scroll lock made
+//! axe judge the whole dialog off-screen, so the open state checked nothing.
 
 use anyhow::{Result, ensure};
 use e2e::archetypes::Overlay;
@@ -120,9 +112,8 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// APG: a dialog with nothing focusable takes focus itself. Before, focus
-/// stayed on the trigger behind the backdrop, so Tab walked the page and
-/// Escape never reached the modal.
+/// APG: a dialog with nothing focusable takes focus itself, not leaving it on the trigger
+/// behind the backdrop.
 #[test]
 fn a_dialog_with_nothing_focusable_takes_focus_itself() {
     block_on(async {

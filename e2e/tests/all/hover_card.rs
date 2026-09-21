@@ -1,7 +1,5 @@
-//! `HoverCard`: a non-modal dialog opened by hover after `open_delay`, closed
-//! `close_delay` after the pointer leaves, and opened at once by keyboard
-//! focus. The card is portaled to the end of the document, so Tab has to be
-//! carried into it and back out past the trigger (todo 406).
+//! `HoverCard`: a non-modal dialog on hover delays or at once on focus. The card is
+//! portaled, so Tab is carried into it and back out past the trigger (406).
 
 use anyhow::Result;
 use e2e::browser::block_on;
@@ -181,9 +179,8 @@ fn the_pointer_opens_and_closes_it_on_its_delays() {
     });
 }
 
-/// Tab from the trigger enters the portaled card, leaves its last control for
-/// whatever follows the trigger, and Shift+Tab from its first control goes
-/// back to the trigger.
+/// Tab from the trigger enters the card and leaves it for what follows the trigger;
+/// Shift+Tab from its first control goes back to the trigger.
 #[test]
 fn tab_crosses_into_the_portaled_card_and_back() {
     block_on(async {
@@ -234,9 +231,7 @@ fn tab_crosses_into_the_portaled_card_and_back() {
     });
 }
 
-/// Escape inside the card closes it and hands focus to the trigger, and that
-/// returning focus does not open the card again. Escape on the trigger itself
-/// closes it too.
+/// Escape in the card or on the trigger closes it; the returning focus does not reopen it.
 #[test]
 fn escape_closes_it_and_returns_focus_to_the_trigger() {
     block_on(async {
@@ -399,9 +394,8 @@ struct Sides {
     start_aligned: bool,
 }
 
-/// Todo 711: `Side::Start` puts the card left of its trigger under LTR and
-/// right of it under RTL, and a start-aligned card below lines up the start
-/// edges - left edges, then right edges.
+/// Todo 711: `Side::Start` puts the card left of its trigger under LTR, right under RTL;
+/// a start-aligned card below lines up the start edges.
 #[test]
 fn the_start_side_and_align_follow_the_direction() {
     block_on(async {

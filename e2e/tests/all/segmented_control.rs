@@ -1,8 +1,5 @@
-//! `SegmentedControl`: the `RadioSet` archetype.
-//!
-//! Each segment is a native radio beside its `<label>`, so it is a radio group
-//! to assistive technology and to the keyboard - not a tab strip, whatever it
-//! looks like.
+//! `SegmentedControl`: the `RadioSet` archetype. Each segment is a native radio, so it is a
+//! radio group, not a tab strip, whatever it looks like.
 
 use anyhow::Result;
 use e2e::archetypes::RadioSet;
@@ -93,9 +90,8 @@ e2e::scenario!(
     "/segmented-control",
     one_tab_stop
 );
-/// What the "right" state waits on: the last segment's label, checked. Not
-/// `CHECKED`, since the radio is visually hidden and never counts as visible,
-/// and not any checked label, since the middle one is checked at rest.
+/// The "right" state's wait: the last segment's label, checked. Not `CHECKED` (the radio is
+/// hidden) nor any checked label (the middle one is, at rest).
 const RIGHT_CHECKED: &str = "[role=radiogroup] label[for$=\"-segment-2\"][data-state~=checked]";
 
 #[test]

@@ -1,6 +1,5 @@
-//! `FileField`: a real drop through CDP's drag plumbing, where focus goes
-//! once the file it was on is removed (todo 406), and the group, Browse button
-//! and chip list of todos 529 and 530.
+//! `FileField`: a real CDP drop, focus after its file is removed (406), and the group,
+//! Browse button and chip list (529, 530).
 
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::input::{
@@ -197,10 +196,8 @@ fn modifier_chords_leave_the_chips_alone() {
     });
 }
 
-/// Todos 529, 530: with files held and a chip focused, the required field is
-/// axe clean; the tree is a named group holding a list of the files and the
-/// Browse button, which hears "Required" and the error. The arrows and Delete
-/// work on real focus, which ends on the Browse button.
+/// Todos 529, 530: with a chip focused the required field is axe clean, a named group of
+/// the file list and Browse, which hears "Required" and the error.
 #[test]
 fn the_chips_take_the_focus_and_the_required_field_stays_clean() {
     block_on(async {
@@ -269,9 +266,8 @@ fn the_chips_take_the_focus_and_the_required_field_stays_clean() {
     });
 }
 
-/// Enter and Space on the Browse button open the picker, natively; read-only
-/// keeps the button and the chips in the tab order and refuses every edit;
-/// disabled takes them out of it (Bob's A3 for todo 529).
+/// Enter and Space on Browse open the picker; read-only keeps the tab order and refuses
+/// every edit; disabled leaves the tab order (529).
 #[test]
 fn read_only_and_disabled_refuse_the_picker_and_the_remove() {
     block_on(async {
@@ -364,10 +360,8 @@ fn a_dropped_file_becomes_a_card_and_posts() {
     });
 }
 
-/// Removing a card destroys the button focus was on. Focus moves to the new
-/// last card, and to the Browse button once none is left. The last card goes
-/// first: cards are keyed by index, so removing the first re-labels the node
-/// focus is on and would pass with no repair at all.
+/// Removing the focused card moves focus to the new last card, then Browse. The last goes
+/// first: cards are keyed by index, so removing the first would pass unrepaired.
 #[test]
 fn removing_a_file_moves_focus_to_what_took_its_place() {
     block_on(async {
@@ -407,9 +401,8 @@ fn removing_a_file_moves_focus_to_what_took_its_place() {
     });
 }
 
-/// Todo 520: with no placeholder and no files the control was 0px tall, so a
-/// drop at its centre landed on the frame and went nowhere. The Browse button
-/// is that control now.
+/// Todo 520: with no placeholder and no files the control was 0px tall, so a centred drop
+/// went nowhere. The Browse button is that control now.
 #[test]
 fn an_empty_control_fills_its_frame_and_takes_a_drop() {
     block_on(async {

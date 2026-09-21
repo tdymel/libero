@@ -1,9 +1,5 @@
-//! `Collapse`: the motion fixture.
-//!
-//! The one reduced-motion test lives here because `Collapse` animates both
-//! ways and ties its unmount to the exit (`use_presence`). The test it
-//! replaces ran on `Autocomplete`, where nothing animates, so it could not
-//! fail for what it named (review 7, E9).
+//! `Collapse`: the motion fixture. The reduced-motion test lives here because `Collapse`
+//! animates both ways and ties its unmount to the exit (`use_presence`).
 
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
@@ -26,12 +22,8 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// Under reduced motion nothing in the collapse transitions, open or closed,
-/// and closing still unmounts the content.
-///
-/// The same measurement at `no-preference` must see motion first. That is
-/// what makes a green reading here mean "the reduced arm switched it off"
-/// rather than "the check measured an element that never animates".
+/// Under reduced motion nothing transitions and closing still unmounts. The same check
+/// at `no-preference` must see motion first, so green means the reduced arm worked.
 #[test]
 fn reduced_motion_switches_its_transitions_off() {
     block_on(async {

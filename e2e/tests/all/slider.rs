@@ -1,7 +1,4 @@
-//! `Slider`, minimally.
-//!
-//! This fixture exists for one reason: it is the only one that exercises the
-//! pointer pass. A template with an unproven pass is not a finished template.
+//! `Slider`: the one fixture that exercises the pointer pass.
 
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
@@ -60,16 +57,8 @@ fn a_click_on_the_label_focuses_the_thumb() {
     crate::select::label_click_focuses("/slider", THUMB);
 }
 
-/// The generic battery.
-///
-/// * **No `targets()`.** The thumb is drawn 16x16, and its 24x24 hit area is a
-///   `::before` (todo 302), which a bounding box does not include. That
-///   check would report 16 for a thumb that meets 2.5.8, so
-///   `the_thumb_takes_the_pointer_over_24px` checks the hit area instead.
-///
-/// The baseline's `tooltip "40"` is the value bubble, and it is not ownerless:
-/// the thumb names it in `aria-describedby` (todo 309). The snapshot prints no
-/// descriptions, so `the_thumb_is_described_by_its_value_bubble` checks that.
+/// The generic battery. No `targets()`: the thumb's 24px hit area is a `::before` (302);
+/// the snapshot's `tooltip "40"` is described by the thumb (309), checked separately.
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("slider", "/slider").focusable(THUMB).run();
@@ -81,9 +70,8 @@ fn the_thumb_tracks_a_drag() {
         for viewport in Viewport::ALL {
             let fixture = Fixture::open("/slider", viewport).await.unwrap();
 
-            // Drag right along the track. The intermediate moves are the point:
-            // a press followed straight by a release never reaches a component
-            // that tracks movement.
+            // Drag right with intermediate moves: a bare press and release never reaches
+            // a component that tracks movement.
             let from = pointer::centre_of(&fixture.page, THUMB).await.unwrap();
             let to = pointer::Point {
                 x: from.x + 80.0,
@@ -164,13 +152,8 @@ fn the_thumb_moves_with_the_arrow_keys() {
     });
 }
 
-/// WCAG 2.5.8 on the thumb's hit area, not its box: the thumb is drawn 16px
-/// and an invisible square 24px wide takes the pointer (todo 302).
-///
-/// Hit-tests the square's corners, 11.5px out from the thumb's centre on both
-/// axes, and 13px out as the control that the check can fail. Then drags from
-/// 11px above the centre, which is outside the thumb's drawn box and outside
-/// the slider's root, so only the hit area can start that drag.
+/// WCAG 2.5.8 on the 16px thumb's 24px hit area (302): hit-tests 11.5px out, 13px as the
+/// failing control, then drags from 11px above, outside the drawn box.
 #[test]
 fn the_thumb_takes_the_pointer_over_24px() {
     block_on(async {
@@ -235,9 +218,8 @@ async fn corners_on_thumb(fixture: &Fixture, centre: pointer::Point, offset: f64
         .unwrap()
 }
 
-/// The thumb is centred on its value by margins, not a `transform` (Blitz's
-/// client rect ignores that): its centre on the track's centre line, at the
-/// value's point of the half-thumb-inset travel.
+/// The thumb is centred on its value by margins, not a `transform` (Blitz's client rect
+/// ignores that), on the half-thumb-inset travel.
 #[test]
 fn the_thumb_is_centred_on_its_value() {
     block_on(async {
@@ -578,9 +560,8 @@ fn the_track_and_an_open_mark_part_at_3_to_1() {
     );
 }
 
-/// A press on the track focuses the thumb from code, and that focus is the
-/// pointer's: the value bubble goes once the pointer leaves, as after a press
-/// on the thumb itself.
+/// A track press focuses the thumb as the pointer's focus: the value bubble goes once the
+/// pointer leaves.
 #[test]
 fn a_track_press_does_not_pin_the_value_bubble() {
     block_on(async {
@@ -659,9 +640,8 @@ const ALONG: &str = "(() => { const thumbs = [...document.querySelectorAll('[rol
      return [thumbs.map(th => { const r = th.getBoundingClientRect(); \
        return (r.left + r.width / 2 - t.left) / t.width; }), [t.left, t.top, t.width, t.height]]; })()";
 
-/// Todo 710: under RTL the minimum is at the right, as on a native range. The
-/// thumb is drawn there, a press near the left edge lands near the maximum,
-/// and ArrowLeft raises the value.
+/// Todo 710: under RTL the minimum is at the right, as on a native range; ArrowLeft raises
+/// the value.
 #[test]
 fn under_rtl_the_track_runs_right_to_left() {
     use e2e::passes::keyboard;

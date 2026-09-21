@@ -1,31 +1,5 @@
-//! `Notifications`: the component the framework was not built for.
-//!
-//! Added deliberately to find the edge. Every other unit is a static page that
-//! `Suite` opens, measures and snapshots. A notification exists only after an
-//! action and removes itself on a timer, so its accessibility tree is a
-//! function of *time* - which is the one axis none of the machinery has.
-//!
-//! ## What this is checked against
-//!
-//! - **WCAG 4.1.3 Status Messages** - a status is presented to assistive
-//!   technology without taking focus. That second half is the assertion that
-//!   matters and the one a sighted check cannot make.
-//! - **WAI-ARIA `aria-live`** - politeness, and a region that is mounted before
-//!   it has anything to say.
-//!   <https://www.w3.org/TR/wai-aria-1.2/#aria-live>
-//!
-//! ## Where the framework did not reach, and what was done about it
-//!
-//! 1. **`Suite` cannot express "do this, then measure over time".** Its `state`
-//!    steps reach a state and measure it, which is enough for the two AX
-//!    baselines below, so those go through `Suite`. The timeline (appears, is
-//!    announced once, disappears on auto-close) is hand-written in
-//!    [`a_timed_notification_appears_is_announced_once_and_closes_itself`].
-//!    That is the right answer rather than a gap to close: bending `Suite` into
-//!    a timeline runner would make it worse at the twenty static components it
-//!    serves well (todo 315 (c)).
-//! 2. **Auto-close is tested by holding the clock, not by sleeping.** See
-//!    [`HELD_CLOCK`] for how, and why CDP's virtual time was not used.
+//! `Notifications`: an accessibility tree that changes over time (WCAG 4.1.3, `aria-live`).
+//! `Suite` takes the baselines; the timeline is hand-written on a held clock (315 (c)).
 
 use e2e::browser::block_on;
 use e2e::clock::HELD_CLOCK;
@@ -49,15 +23,8 @@ const AUTO_CLOSE_MS: u32 = 4321;
 /// is removed.
 const EXIT_MS: u32 = 200;
 
-/// The shown state's baseline, polite and then assertive (todo 315 (b)).
-///
-/// The states accumulate on one page, so the "assertive" tree holds both: the
-/// polite one in its region and the assertive one in the other. The resting
-/// tree is the empty case, the 18 silent regions with no list in them.
-///
-/// `targets`: the close button is drawn 20x20 but takes presses in a 24x24 box
-/// (todos 505, 566), so it meets WCAG 2.5.8 outright. The click handler is on
-/// that button, and the card around it dismisses nothing.
+/// The shown baseline, polite then assertive (315 (b)); states accumulate on one page. The
+/// 20x20 close button presses in a 24x24 box (505, 566), so plain `targets` holds.
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("notifications", "/notifications")
@@ -72,12 +39,8 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// Counts what the live regions say, from before anything is shown.
-///
-/// A screen reader announces an insertion into a live region, so an insertion
-/// that carries `text` is one announcement. A re-render that put the item
-/// back, or re-set its text, would count again.
-/// Lists with no item in them: none may sit in the page at rest (todo 447).
+/// Counts live-region insertions carrying `text`, each one announcement; a re-render that
+/// re-sets it counts again. Also empty lists, none allowed at rest (447).
 const EMPTY_LISTS: &str = "[...document.querySelectorAll('ul, ol, [role=list]')]\
      .filter(list => !list.querySelector('li, [role=listitem]')).length";
 
@@ -104,10 +67,8 @@ async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expressi
         .unwrap_or_else(|e| panic!("read {expression}: {e}"))
 }
 
-/// The timeline `Suite` cannot express (todo 315 (a) and (c)): the notification
-/// appears, is announced once and without taking focus, and closes itself when
-/// its auto-close timer fires. Every step waits on a state and none on a
-/// duration. The clock moves only when the test fires it.
+/// The timeline (315 (a), (c)): appears, is announced once without taking focus, closes
+/// when the test fires the held clock. No step waits on a duration.
 #[test]
 fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
     block_on(async {
@@ -156,10 +117,8 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
                 "at {at}: the notification is in the wrong region"
             );
 
-            // Armed. If this times out while the item is shown, either the
-            // library no longer arms a timer or its timer no longer goes
-            // through `window.setTimeout`. Either way the clock holds nothing,
-            // and the fire below would prove nothing.
+            // Armed. A timeout here means the timer no longer goes through
+            // `window.setTimeout`, and the fire below would prove nothing.
             wait::for_js_true(
                 page,
                 &format!("window.__heldClock.armed({AUTO_CLOSE_MS}) === 1"),
@@ -173,14 +132,8 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
                 "at {at}: the exit is armed before the auto-close fired"
             );
 
-            // The control on the clock itself (Ted, 2026-09-20). If libero's
-            // timer went round the wrapper - a bound `setTimeout`, a worker, a
-            // future `TimerApi` arm - the real delay would still be running
-            // underneath, and every assertion after the fire would be about a
-            // notification that was closing on its own. So once, at the first
-            // viewport, the test spends the real delay and requires the
-            // notification to be untouched by it. This costs the suite ~4.5 s;
-            // the property is about the timer path, not about the viewport.
+            // Control on the held clock: once, the real delay passes and the notification must
+            // stay, or a timer bypassing the wrapper closes it on its own (~4.5 s).
             if viewport == Viewport::ALL[0] {
                 tokio::time::sleep(std::time::Duration::from_millis(
                     u64::from(AUTO_CLOSE_MS) + 500,
@@ -263,12 +216,7 @@ fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
     });
 }
 
-/// The assertion that only a browser can make: the status is announced **and
-/// focus does not move**.
-///
-/// WCAG 4.1.3 exists precisely because the tempting implementation - focus the
-/// new thing so a screen reader reads it - is a worse experience than a live
-/// region, and is indistinguishable from it in a screenshot.
+/// WCAG 4.1.3: the status is announced and focus does not move, which no screenshot shows.
 #[test]
 fn a_notification_is_announced_without_stealing_focus() {
     block_on(async {
@@ -306,15 +254,8 @@ fn a_notification_is_announced_without_stealing_focus() {
     });
 }
 
-/// The live regions are mounted before they have anything to say, and hold no
-/// empty list meanwhile.
-///
-/// A region that mounts together with its text is skipped by some screen
-/// readers, which is why the library keeps them always-mounted and empty
-/// (`codebase/components/notifications`). An assertion that a region exists
-/// *while it is speaking* would hold just as well for the broken shape. Only
-/// the list inside comes with the first notification: an empty one is read
-/// as "list, 0 items" (todo 447).
+/// The live regions mount before they speak (some readers skip one mounting with its text),
+/// with no empty list meanwhile: that reads "list, 0 items" (447).
 #[test]
 fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
     block_on(async {
@@ -349,10 +290,8 @@ fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
             "a live region is speaking before anything happened"
         );
 
-        // Queried by what the regions *are* rather than by a role the host may
-        // not use: the first version of this assumed `[role=status]`, found
-        // nothing, and reported it as a harness error rather than as a wrong
-        // assumption.
+        // Queried by what the regions are, not by a role the host may not use
+        // (`[role=status]` found nothing).
         let polite: usize = page
             .evaluate(
                 "[...document.querySelectorAll('[aria-live], [role=status]')]\
@@ -381,18 +320,8 @@ fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
     });
 }
 
-/// WCAG 2.5.8 for the close button, with the numbers written down (todo 366).
-///
-/// Drawn 20x20, it takes presses in an invisible 24x24 box (todos 505, 566),
-/// so the press target measures 24x24 at both viewports and the baseline
-/// declares it with plain `targets`.
-///
-/// **It asserts the count, not only the verdict.** The defect todo 366 was
-/// filed for was not a wrong measurement, it was no measurement: the unit had
-/// no target selector at all and reported green. A selector that matches
-/// nothing gives that same green, so a rename of `[data-slot=close]` has to
-/// turn this red rather than quietly reduce it to a no-op.
-/// This pins the exact count.
+/// WCAG 2.5.8 for the close button's 24x24 press box (366). Pins the count, so a selector
+/// matching nothing after a rename fails instead of passing empty.
 #[test]
 fn its_close_button_takes_presses_in_a_24px_box() {
     block_on(async {
@@ -422,9 +351,8 @@ fn its_close_button_takes_presses_in_a_24px_box() {
     });
 }
 
-/// Closing a focused notification hands focus to the next one's close button,
-/// the previous one's if it was the last, and back where it came from once the
-/// stack is empty (todo 423). Before, focus fell to `<body>`.
+/// Closing a focused notification moves focus to the next close button, else the previous,
+/// else back where it came from (423), never to `<body>`.
 #[test]
 fn closing_one_hands_focus_on_and_back_out_of_an_empty_stack() {
     block_on(async {
@@ -496,9 +424,8 @@ fn closing_one_hands_focus_on_and_back_out_of_an_empty_stack() {
     });
 }
 
-/// A host whose `placement` changes leaves a shown notification in its stack:
-/// the same element, announced once. Only a new one goes to the new stack.
-/// Before, every shown one remounted in the new stack's region (todo 577).
+/// A `placement` change leaves a shown notification in its stack, announced once; only a
+/// new one goes to the new stack (577).
 #[test]
 fn a_placement_change_leaves_shown_notifications_in_place() {
     block_on(async {
@@ -691,9 +618,8 @@ const F8: keyboard::Key = keyboard::Key {
     text: None,
 };
 
-/// Todo 575: F8 focuses the newest notification's first focusable from the
-/// page, and closing it hands focus back to where F8 was pressed. The region
-/// names the key.
+/// Todo 575: F8 focuses the newest notification, and closing it returns focus to where F8
+/// was pressed. The region names the key.
 #[test]
 fn f8_focuses_the_newest_notification() {
     const CLEAR: &str = ".clear-all";

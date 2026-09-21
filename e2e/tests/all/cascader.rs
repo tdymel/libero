@@ -1,10 +1,5 @@
-//! `Cascader`: the keyboard walks levels, and a disabled branch neither takes
-//! the cursor nor opens (todo 406).
-//!
-//! `/cascader` holds three roots: Europe (France: Paris, Lyon; Germany:
-//! Berlin), Asia, disabled (Japan: Tokyo), and Oceania (Australia: Sydney).
-//! Focus never leaves the trigger; the cursor is its `aria-activedescendant`.
-//! `/cascader/any-level` is the same tree with `any_level` on.
+//! `Cascader`: the keyboard walks levels; a disabled branch (Asia) neither takes the cursor
+//! nor opens (406). Focus stays on the trigger; the cursor is its `aria-activedescendant`.
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
@@ -40,9 +35,8 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// Todo 484: while the search box is open it is the combobox, so the role-less
-/// trigger may not keep `aria-expanded` or `aria-required` (axe
-/// `aria-allowed-attr`).
+/// Todo 484: while the search box is open it is the combobox, so the role-less trigger
+/// may not keep `aria-expanded` or `aria-required` (axe `aria-allowed-attr`).
 #[test]
 fn a_searchable_field_meets_the_baseline() {
     Suite::new("cascader_search", "/cascader/search")
@@ -562,10 +556,8 @@ fn typing_moves_to_the_row_it_starts() {
     });
 }
 
-/// A click on disabled Asia leaves the cursor on Europe: the ArrowDown after
-/// it lands on Oceania. Had the click opened Asia, the cursor would sit on
-/// Japan, alone in its column, and the key would leave it there. A click on
-/// Oceania is the positive control that a click on a root does open it.
+/// A click on disabled Asia leaves the cursor on Europe, so ArrowDown lands on Oceania.
+/// A click on Oceania is the positive control that a click opens a root.
 #[test]
 fn a_disabled_branch_does_not_open() {
     block_on(async {

@@ -1,11 +1,5 @@
-//! `Tree`, against the tree pattern rather than the strip it was once filed
-//! under.
-//!
-//! The archetype table used to list `Tree` under `RovingTabindex`, written from
-//! APG without checking. It shares that pattern's single tab stop and vertical
-//! arrows and nothing else: Right and Left open and close rows, and the set of
-//! rows changes as they do. `TreeWalk` is the pattern it actually is (todo
-//! 310); this unit runs it, and keeps only what is `Tree`'s own beside it.
+//! `Tree`: the `TreeWalk` archetype (310), not `RovingTabindex`: Right and Left open and
+//! close rows, changing the set of rows.
 
 use anyhow::{Result, ensure};
 use e2e::archetypes::TreeWalk;
@@ -77,9 +71,8 @@ const DELETE: keyboard::Key = keyboard::Key {
     text: None,
 };
 
-/// `/tree` starts as three roots, `src` and `docs` collapsed and `README.md` a
-/// leaf. The two indices `TreeWalk` needs are declared here so the fixture
-/// changing under it is a failure rather than a quietly weaker pass.
+/// `/tree`: roots `src`, `docs` (collapsed) and leaf `README.md`. Declared here so a
+/// fixture change fails rather than weakens `TreeWalk`.
 const WALK: TreeWalk = TreeWalk {
     rows: ROW,
     collapsed_parent: 0,

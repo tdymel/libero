@@ -41,9 +41,8 @@ fn a_disabled_trigger_is_gray_text_in_forced_colours() {
     });
 }
 
-/// A label with no break opportunity wraps inside its trigger at 390px, so
-/// neither the page nor the trigger scrolls sideways and the chevron stays on
-/// screen (1.4.10).
+/// A label with no break opportunity wraps inside its trigger at 390px: nothing scrolls
+/// sideways and the chevron stays on screen (1.4.10).
 #[test]
 fn a_long_label_wraps_instead_of_widening_the_page() {
     block_on(async {
@@ -177,9 +176,8 @@ fn the_keys_toggle_sections_and_only_an_open_panel_is_a_landmark() {
                 "an arrow toggled Review"
             );
 
-            // The disabled trigger is a tab stop that Enter does not open.
-            // Shift+Tab back and open the first: once it reads open, the
-            // disabled trigger's Enter has been handled too.
+            // The disabled trigger is a tab stop Enter does not open. Once the first
+            // reads open, the disabled trigger's Enter has been handled too.
             keyboard::press_shift(page, keyboard::TAB).await.unwrap();
             expect_focus(
                 page,

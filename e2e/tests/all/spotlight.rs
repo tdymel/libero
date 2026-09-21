@@ -1,18 +1,5 @@
-//! `Spotlight`: the overlay archetype, as a modal command palette.
-//!
-//! Focus goes to the search box and stays there while the highlight moves, so
-//! the palette is a trap with a single stop in it.
-//!
-//! `contrast_covers` on the dialog is not decoration. Until todo 327 was found
-//! axe judged every row below the search box off-screen - `Modal`'s
-//! `body { overflow: hidden }` scroll lock against a content-sized body box -
-//! so `color-contrast` was inapplicable to the whole result list and a `#ddd`
-//! description planted there stayed green. The lock is lifted for the axe run
-//! now (`passes/contrast.rs`), and this line is what stops that regressing
-//! into silence again.
-//!
-//! The search box's keys (the arrows wrap, Enter runs the highlighted row) and
-//! the Ctrl/Cmd+K hotkey are driven below with real key presses (todo 406).
+//! `Spotlight`: a modal palette trapping focus in its search box. `contrast_covers` guards
+//! todo 327 (the scroll lock hid the rows from axe); keys and Ctrl/Cmd+K are real (406).
 
 use anyhow::Result;
 use e2e::archetypes::Overlay;

@@ -1,7 +1,5 @@
-//! `ColorField`'s dropdown between two buttons (todo 449). `/color-field/alpha`
-//! holds `#1c7ed6` with the alpha slider and three swatches;
-//! `/color-field/swatches` holds only the swatches; `/color-field/keep-text`
-//! has `fix_on_blur: false` and no dropdown.
+//! `ColorField`'s dropdown between two buttons (449). `/color-field/keep-text` has
+//! `fix_on_blur: false` and no dropdown.
 
 use anyhow::Result;
 use e2e::browser::block_on;
@@ -182,9 +180,8 @@ fn unparsable_text_shows_and_says_an_error() {
     });
 }
 
-/// Todo 699: with `fix_on_blur: false`, Tab away from text that is no color
-/// keeps the text and the value, and marks the field invalid with the error.
-/// Todo 701: the error is said politely, as on Enter.
+/// Todo 699: with `fix_on_blur: false`, Tab away from no color keeps text and value and
+/// marks the field invalid; 701: the error is said politely, as on Enter.
 #[test]
 fn blur_on_unparsable_text_keeps_it_with_an_error() {
     block_on(async {

@@ -1,7 +1,5 @@
-//! `NumberField`: the steppers and the arrow keys step one value.
-//!
-//! The steppers are a scope that skips the render a press causes (todo 29), so
-//! a second press must still step from the value the first one set.
+//! `NumberField`: steppers and arrows step one value. The steppers skip a press's render
+//! (29), so a second press must step from the value the first set.
 
 use anyhow::Result;
 use chromiumoxide::Page;
@@ -131,9 +129,8 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// Clamping each keystroke turned the "2" of "25" into the floor 10, so no
-/// number above a two-digit floor could be typed. Out of range text waits for
-/// the field to be left, then clamps.
+/// Clamping per keystroke turned the "2" of "25" into the floor 10. Out-of-range text
+/// clamps on leaving the field.
 #[test]
 fn typing_clamps_when_the_field_is_left_not_per_keystroke() {
     block_on(async {

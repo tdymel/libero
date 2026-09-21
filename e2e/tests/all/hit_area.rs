@@ -1,6 +1,5 @@
-//! Todos 505, 566, 495: an `ActionIcon` under 24px takes presses in an
-//! invisible 24x24 box round it, its drawn box unchanged, and a slot button
-//! never grows its field's frame.
+//! Todos 505, 566, 495: an `ActionIcon` under 24px takes presses in an invisible 24x24
+//! box, and a slot button never grows its field's frame.
 
 use e2e::browser::block_on;
 use e2e::passes::{motion, pointer};

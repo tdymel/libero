@@ -181,9 +181,8 @@ fn only_the_sorted_header_carries_aria_sort_and_the_others_still_hint() {
     });
 }
 
-/// A wide table scrolls inside its region, not the page; the region is a
-/// named tab stop with the library ring (todo 588), which ArrowRight scrolls
-/// once it holds focus (654).
+/// A wide table scrolls in its region, a named tab stop with the library ring (588), which
+/// ArrowRight scrolls once focused (654).
 #[test]
 fn a_wide_table_scrolls_in_a_named_focusable_region() {
     const REGION: &str = "[role=region]";

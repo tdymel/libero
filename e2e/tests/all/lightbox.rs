@@ -1,15 +1,5 @@
-//! `Lightbox`: the overlay archetype, around a `Carousel` of pictures.
-//!
-//! Beyond the archetype, the contract here is the one `Carousel`'s `inert`
-//! slides and `Lightbox`'s effect-driven focus make together: the picture is
-//! the tab stop, an arrow moves both the picture and focus, and no Tab ever
-//! lands in a slide that is scrolled away (todo 57). And todo 323: a second
-//! `open_with` while the viewer is open jumps to the new gallery's index,
-//! rather than scrolling past - and so fetching - the pictures between.
-//!
-//! `contrast_covers` guards todo 327: the scroll lock made axe judge both
-//! arrows and every thumbnail off-screen, so nothing below the close button was
-//! contrast-checked in the open state.
+//! `Lightbox`: the overlay archetype around a `Carousel`. An arrow moves picture and focus,
+//! no Tab lands in a hidden slide (57), and a second `open_with` jumps (323).
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -141,9 +131,8 @@ fn the_current_thumbnail_shows_in_forced_colours() {
     });
 }
 
-/// The arrows on the picture move to the next picture and take focus with
-/// it; Tab from anywhere in the dialog never reaches a slide that is `inert`;
-/// and Escape after moving still returns focus to the trigger.
+/// The arrows move picture and focus; Tab never reaches an `inert` slide; Escape after
+/// moving still returns focus to the trigger.
 #[test]
 fn arrows_move_the_picture_and_tab_skips_inert_slides() {
     block_on(async {
@@ -194,12 +183,8 @@ fn shortcut_chords_pass_through() {
     });
 }
 
-/// Under reduced motion, so every slide change is an instant scroll. A smooth
-/// one is unreliable in the suite's background pages: at 390px a smooth
-/// `scrollTo` from picture 6 to 5 moved nothing and ended in a `scrollend` at
-/// the old offset, which put the index back. The same run passes in a
-/// foreground page (measured 2026-09-19). The gallery swap below is the test
-/// that needs smooth scrolling on.
+/// Under reduced motion: a smooth scroll in a background page ends at the old offset and
+/// puts the index back (2026-09-19). The gallery swap below needs smooth on.
 async fn arrows_and_tab(page: &Page) -> Result<()> {
     motion::set_reduced_motion(page, true).await?;
     motion::assert_reduced_motion_matches(page).await?;
@@ -239,9 +224,8 @@ async fn arrows_and_tab(page: &Page) -> Result<()> {
     focus::assert_focused(page, TRIGGER, "Escape after the arrows").await
 }
 
-/// Wait until picture `index` is the one on the stage: its frame lies inside
-/// the dialog, and nothing above it is `inert`. Both, since a slide can be
-/// live before the scroll has brought it in.
+/// Waits until picture `index` is on the stage: inside the dialog and not `inert` (a slide
+/// can be live before the scroll brings it in).
 async fn wait_showing(page: &Page, index: usize) -> Result<()> {
     let showing = format!(
         r#"(() => {{
@@ -315,13 +299,8 @@ async fn assert_picture_focused(page: &Page, index: usize) -> Result<()> {
     Ok(())
 }
 
-/// Tab round the whole dialog, more than once, and fail on any stop inside
-/// an `inert` subtree. The budget is every candidate in the dialog, inert or
-/// not, plus two, so the walk wraps whatever the live count is.
-///
-/// A picture that is not showing already carries `tabindex="-1"`, so on its
-/// own the walk could not fail. Every picture in an inert slide is first
-/// given `tabindex="0"`: only `inert` is then left to keep Tab out.
+/// Tabs round the dialog and fails on any stop in an `inert` subtree. Hidden pictures get
+/// `tabindex="0"` first, so only `inert` keeps Tab out.
 async fn assert_tab_skips_inert(page: &Page) -> Result<()> {
     let candidates: usize = page
         .evaluate(format!(
@@ -426,9 +405,8 @@ fn plus_and_minus_zoom_to_max_zoom_and_back() {
     });
 }
 
-/// Todo 864: the toolbar's zoom buttons step like `+` and `-` about the centre,
-/// and at a limit turn `aria-disabled` without losing focus; a double-click
-/// steps through 2x, 4x and 8x, then back to fit.
+/// Todo 864: the zoom buttons step like `+`/`-` and turn `aria-disabled` at a limit, keeping
+/// focus; a double-click steps 2x, 4x, 8x, then back to fit.
 #[test]
 fn the_zoom_buttons_and_double_click_step_the_zoom() {
     block_on(async {
@@ -574,9 +552,7 @@ async fn double_click_selection(page: &Page) -> Result<()> {
     Ok(())
 }
 
-/// Todo 421: zoom, pan to the edge, then turn the window into a phone. The pan
-/// has to be clamped to the new, smaller bounds, or the picture leaves its
-/// frame.
+/// Todo 421: zoom, pan to the edge, then shrink to a phone: the pan clamps to the new bounds.
 #[test]
 fn a_resize_keeps_a_zoomed_picture_in_its_frame() {
     block_on(async {
@@ -587,9 +563,8 @@ fn a_resize_keeps_a_zoomed_picture_in_its_frame() {
     });
 }
 
-/// The shown picture's centre offset from its frame's and how far it may be,
-/// per axis: `[dx, dy, x_bound, y_bound]`. The `<img>` box is the frame's, so
-/// its width over the frame's is the scale.
+/// The shown picture's centre offset from its frame's, and its bound, per axis:
+/// `[dx, dy, x_bound, y_bound]`.
 const PAN_JS: &str = r#"(() => {
     const frame = document.querySelector('[role=dialog] [data-lightbox-frame="0"]');
     const img = frame.querySelector('img');
@@ -785,9 +760,8 @@ async fn click_pan(page: &Page) -> Result<()> {
     Ok(())
 }
 
-/// Todo 652: the picture showing sits in the middle of the viewport, on both
-/// axes, at every viewport. The dialog, its frame and the drawn picture are
-/// all measured, so a failure says which of them is off.
+/// Todo 652: the shown picture is centred on both axes at every viewport; dialog, frame
+/// and picture are each measured.
 #[test]
 fn the_current_picture_is_centred_in_the_viewport() {
     block_on(async {
@@ -849,17 +823,8 @@ async fn assert_centred(page: &Page, index: usize) -> Result<()> {
     Ok(())
 }
 
-/// Todo 323. Open on the last picture (index 5), then swap in a second
-/// gallery at index 2 while the viewer is open. The strip has to jump: no
-/// scroll asked of the stage's track after the swap is smooth. A smooth
-/// scroll back from 5 passes 4 and 3, and lazy loading fetches what it passes.
-///
-/// What was fetched is asserted at desktop only. There a frame is 1136px
-/// wide, and only the new picture and its `preload: 1` neighbours, indices
-/// 1-3, may load. At 390px Chromium's lazy loading also fetches a picture a
-/// frame beyond the eager ones: a fresh open at index 0 fetches 0-2 there
-/// (measured). At both widths the old current picture, 5, must not load: it
-/// is on screen in the render that swaps, until the jump.
+/// Todo 323: swapping galleries from index 5 to 2 jumps, so nothing between is fetched.
+/// Fetches are asserted at desktop only: at 390px lazy loading reaches one frame further.
 #[test]
 fn a_gallery_swap_jumps_and_fetches_only_around_the_new_index() {
     block_on(async {

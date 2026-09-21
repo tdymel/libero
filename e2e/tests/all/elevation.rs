@@ -1,6 +1,5 @@
-//! The shadow scale (813): every surface casts a shadow in both schemes, and
-//! the dark page takes its own, deeper scale. `E2E_ELEVATION_SHOTS=1` also
-//! writes a screenshot per scheme, with and without the dialog open.
+//! The shadow scale (813): every surface casts a shadow in both schemes, deeper on dark.
+//! `E2E_ELEVATION_SHOTS=1` also writes screenshots.
 
 use e2e::browser::{Scheme, block_on};
 use e2e::passes::pointer;

@@ -1,6 +1,5 @@
-//! Gradient fills (todo 937): the label reads on every point of the fill in
-//! both schemes, an override replaces the theme's stops, hover lays a state
-//! layer over the image, glass mixes the stops down, and forced colours drop it.
+//! Gradient fills (937): the label reads on every point in both schemes; overrides, hover
+//! layer, glass and forced colours.
 
 use chromiumoxide::Page;
 use e2e::browser::block_on;

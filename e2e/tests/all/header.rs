@@ -10,9 +10,8 @@ fn it_meets_the_baseline() {
     Suite::new("header", "/header").focusable("#home").run();
 }
 
-/// Scrolls `#item-5` to just under the stuck banner's bottom edge with `#item-6`
-/// focused, presses Shift+Tab, and returns how far the focused button's bottom
-/// sits below the banner's (negative: entirely covered).
+/// Scrolls `#item-5` just under the stuck banner, Shift+Tabs from `#item-6`, and returns
+/// how far the focused button's bottom sits below the banner's (negative: covered).
 async fn clearance_after_shift_tab(padded: bool) -> f64 {
     let fixture = Fixture::open("/header", Viewport::Desktop).await.unwrap();
     let page = &fixture.page;

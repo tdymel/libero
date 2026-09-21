@@ -1,6 +1,5 @@
-//! A label with no break opportunity wraps instead of widening the page, in
-//! `Tree` rows, `NavLink` and `Menu` items (1.4.10, todo 518), and in
-//! `Tabs`, `Timeline`, `Menubar` (todo 543), and a horizontal `DataList`.
+//! A label with no break opportunity wraps instead of widening the page (1.4.10): `Tree`,
+//! `NavLink`, `Menu` (518), `Tabs`, `Timeline`, `Menubar` (543), a horizontal `DataList`.
 
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;
@@ -30,9 +29,8 @@ const OVERFLOWS: &str = "(() => {
     return out;
 })()";
 
-/// Per todo 481 control: `[id, one line, cut, full text in its title or text]`.
-/// Button and Chip cut at their edge with no ellipsis: their children stay
-/// unwrapped (todos 662, 674).
+/// Per todo 481 control: `[id, one line, cut, full text in its title or text]`. Button and
+/// Chip cut with no ellipsis: their children stay unwrapped (662, 674).
 const SINGLE_LINE: &str = "(() => {
     const long = 'Versandkostenberechnungsgrundlagenverordnungsentwurfsbearbeitungsstelle';
     const oneLine = e => !!e && getComputedStyle(e).whiteSpace === 'nowrap';

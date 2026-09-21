@@ -1,6 +1,5 @@
-//! `ImageList`'s `quilted` cells come out at `c*w + (c-1)*g` by `r*w + (r-1)*g`
-//! at ratio 1 (todos 89(c), 451): an ordinary cell stays square beside a wide
-//! one, at every width. And per-breakpoint `cols` follow the viewport (todo 73).
+//! `ImageList`'s `quilted` cells are `c*w + (c-1)*g` by `r*w + (r-1)*g` at ratio 1 (89(c),
+//! 451), at every width; per-breakpoint `cols` follow the viewport (73).
 
 use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::browser::block_on;

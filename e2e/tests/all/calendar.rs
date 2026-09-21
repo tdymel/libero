@@ -1,8 +1,5 @@
-//! `ChronoPicker`'s day grid: the arrows, Home/End and PageUp/PageDown, and a
-//! month change that keeps focus in the grid (todo 406).
-//!
-//! `/calendar` picks Wednesday 2026-03-18, which is also `today`, so the grid
-//! and its tab stop never depend on the clock. Weeks start on Monday.
+//! `ChronoPicker`'s day grid keys, and a month change that keeps focus in the grid (406).
+//! `/calendar` picks 2026-03-18, also `today`, so nothing depends on the clock.
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard::{self, Key};
@@ -46,9 +43,8 @@ fn a_disabled_day_grays_out_in_forced_colours() {
     });
 }
 
-/// Every key the grid owns, each read back from where focus lands. A focus
-/// that stays on the old cell, or lands on the neighbour month's copy of the
-/// day (`data-outside`), fails the step that caused it.
+/// Every key the grid owns, read back from where focus lands. Focus left on the old cell
+/// or on the neighbour month's copy (`data-outside`) fails the step that caused it.
 #[test]
 fn the_keys_move_focus_through_the_grid() {
     block_on(async {

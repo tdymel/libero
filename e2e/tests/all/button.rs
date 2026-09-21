@@ -73,9 +73,8 @@ fn presses(which: &str) -> String {
     format!("document.querySelector('#presses').dataset.{which}")
 }
 
-/// The plain button is the control: its presses land after the busy ones in
-/// the same event queue, so a busy count still at 0 once they have landed
-/// means the busy presses were swallowed, not merely not yet handled.
+/// The plain button is the control: its presses land after the busy ones, so a busy count
+/// still at 0 then means they were swallowed, not merely not yet handled.
 #[test]
 fn a_loading_button_swallows_enter_and_space() {
     block_on(async {
@@ -123,10 +122,8 @@ fn a_loading_button_swallows_enter_and_space() {
     });
 }
 
-/// Todo 662: element children are the button's own flex items, so a caller's
-/// gap, auto margin and percentage sizes reach them with no sx of its own.
-/// 481's label span broke the docs search field and every docs colour swatch
-/// (d1dc0f03). The `icon` prop keeps a gap and centres on the text.
+/// Todo 662: element children are the button's own flex items, so a caller's gap, margins
+/// and percentages reach them (481's label span broke that). `icon` keeps a gap.
 async fn element_children_layout<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     let search = d.rect("#search-like").await?;
     let pad: f64 = d
@@ -193,9 +190,8 @@ const PAIR: &str = "(selector => {
     return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 })";
 
-/// Todo 452: an outlined `primary` label read 3.52:1 on its hover tint. The
-/// resting unfilled buttons paint no background, so a ratio at all means the
-/// pointer's rule applied; the wait also rides out any transition.
+/// Todo 452: an outlined `primary` label read 3.52:1 on its hover tint. Resting unfilled
+/// buttons paint no background, so any ratio means the hover rule applied.
 #[test]
 fn a_hovered_button_s_label_reads_on_its_hover_fill() {
     block_on(async {
@@ -227,16 +223,14 @@ fn a_hovered_button_s_label_reads_on_its_hover_fill() {
     });
 }
 
-/// JS `ring(style)`: whether the style carries the house on-state ring, a
-/// `currentColor` inset ring drawn as four offset shadows (todo 715): 1px deep,
-/// 2px on a bordered control.
+/// JS `ring(style)`: whether the style carries the house on-state ring, four `currentColor`
+/// inset shadows (715): 1px deep, 2px on a bordered control.
 const RING: &str = "const ring = s => ['1px', '2px'].some(d => \
      [`${d} 0px`, `-${d} 0px`, `0px ${d}`, `0px -${d}`] \
      .every(o => s.boxShadow.includes(`${s.color} ${o} 0px 0px inset`)));";
 
-/// JS `bar(style)`: whether the style carries the house start bar, a 2px
-/// one-colour gradient at 3:1 on the row's tint (NavLink, a selected listbox
-/// row; todo 646). Not the label colour: the bar is the one indicator (764).
+/// JS `bar(style)`: whether the style carries the house start bar, a 2px gradient at 3:1 on
+/// the row's tint (646). Not the label colour: the bar is the one indicator (764).
 pub const BAR: &str = "const bar = s => { \
      const m = s.backgroundImage.match(/^linear-gradient\\((rgb\\([^)]*\\)), (rgb\\([^)]*\\))\\)$/); \
      if (!m || m[1] !== m[2] || m[1] === s.color || !s.backgroundSize.startsWith('2px')) return false; \
@@ -294,9 +288,8 @@ pub async fn assert_on_in_forced_colours(page: &chromiumoxide::Page, on: &str, o
     assert_eq!(on_bg, highlight, "{on} is not Highlight in forced colours");
     assert_ne!(off_bg, highlight, "{off} is Highlight too");
 
-    // Unforced, or Chromium backs the label with a `Canvas` plate (todo 646);
-    // then every descendant has to follow the label colour by hand. The start
-    // bar turns `HighlightText` too (764), as its author colour vanishes on `Highlight`.
+    // Unforced, or Chromium backs the label with a `Canvas` plate (646). The start bar
+    // turns `HighlightText` too (764): its author colour vanishes on `Highlight`.
     let [adjust, stray, line, label]: [String; 4] = page
         .evaluate(format!(
             "(() => {{ {RING} {BAR} const probe = document.createElement('div'); \
@@ -415,9 +408,8 @@ fn a_disabled_link_is_still_a_link() {
     });
 }
 
-/// Enter in a field is implicit submission, a synthetic click on the busy
-/// submit button. The scripted `requestSubmit` is the control: it lands after
-/// the key presses, so a count of exactly 1 means none of them submitted.
+/// Enter in a field clicks the busy submit button. The scripted `requestSubmit` lands after
+/// the keys, so a count of exactly 1 means none of them submitted.
 #[test]
 fn a_loading_submit_button_does_not_submit_its_form() {
     block_on(async {

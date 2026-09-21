@@ -1,6 +1,5 @@
-//! The sequential focus starting point (todo 622): a click on nothing focusable
-//! starts the next Tab or Shift+Tab from the clicked node, and a removed focus
-//! owner from where it was (todo 948).
+//! The sequential focus starting point: a click on nothing focusable starts the next Tab
+//! from the clicked node (622), a removed focus owner from where it was (948).
 
 use anyhow::Result;
 use e2e::driver::{Driver, eventually, eventually_focused};

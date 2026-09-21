@@ -23,9 +23,8 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// Watches every DOM change from here on: `window.__grey` is the ms after the
-/// watch started at which a grey was first shown, `null` if never. Mutations,
-/// not frames: a `background: true` page throttles `requestAnimationFrame`.
+/// `window.__grey`: ms until a grey first showed, `null` if never. Mutations, not frames:
+/// a `background: true` page throttles `requestAnimationFrame`.
 const WATCH_GREY: &str = "(() => {
     const start = performance.now();
     window.__grey = null;
@@ -38,9 +37,8 @@ const WATCH_GREY: &str = "(() => {
     new MutationObserver(check).observe(document.body, { subtree: true, childList: true, attributes: true });
 })()";
 
-/// Todo 107's docs recipe: a 50 ms fetch never paints the grey, a 1 s one
-/// paints it once the 200 ms grace is over. The slow run is the control that
-/// shows the watch can see a grey at all.
+/// Todo 107's recipe: a 50 ms fetch never paints the grey, a 1 s one does after the 200 ms
+/// grace (the control that the watch sees a grey).
 #[test]
 fn the_grace_recipe_keeps_a_fast_fetch_from_flashing() {
     block_on(async {
@@ -163,11 +161,8 @@ fn a_loaded_skeleton_is_not_inert() {
 const GREYS: &str = "[...document.querySelectorAll('#profile [data-state~=visible]')]\
      .map(el => [el.id, getComputedStyle(el, '::after').opacity])";
 
-/// The pulse runs, then stops under reduced motion on a grey that is still
-/// there: stopped at `0.7`, not at the invisible end of the pulse.
-///
-/// Both settings explicitly, since headless Chromium defaults to reduced: the
-/// animated reading is what proves the reduced one measured a real pulse.
+/// The pulse runs, then stops under reduced motion at `0.7`, still drawn. Both settings are
+/// explicit, since headless Chromium defaults to reduced.
 #[test]
 fn reduced_motion_stops_the_pulse_and_keeps_the_grey() {
     block_on(async {

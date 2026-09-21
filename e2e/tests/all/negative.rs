@@ -1,37 +1,13 @@
-//! The suite's self-test: proof that each pass can fail.
-//!
-//! Every other unit here asserts that a component is correct. This one asserts
-//! that the **harness** is, by pointing each pass at a fixture broken in
-//! exactly the way that pass claims to catch and requiring an error.
-//!
-//! Why it earns its place: a pass that has never been observed to fail is
-//! indistinguishable from a pass that cannot fail, and the second kind reports
-//! as coverage forever. Five of the harness bugs found while building this
-//! suite were assertions that looked right and were measuring the wrong thing;
-//! three of those would have gone unnoticed if they had happened to be measuring
-//! something that was *always true* rather than always false.
-//!
-//! If a test in this file starts failing, the pass it names has stopped
-//! working, and **every component relying on that pass is silently unguarded**.
-//! Treat it as more urgent than a component failure, not less.
+//! The suite's self-test: each pass must fail on a fixture broken the way it claims to catch.
+//! A failure here means every component relying on that pass is silently unguarded.
 
 use e2e::archetypes::{Combobox, Orientation, Overlay, RovingTabindex};
 use e2e::browser::block_on;
 use e2e::passes::{contrast, dismissal, focus, keyboard, target_size};
 use e2e::{Fixture, Viewport, wait};
 
-/// Open a broken fixture, run `check`, and require it to fail with an error
-/// containing `because`.
-///
-/// Takes the pass as a closure rather than duplicating the fixture plumbing in
-/// each test. `because` is what makes this a test of the pass rather than of
-/// the route: an error is easy to produce, and a check that gave up somewhere
-/// earlier - a selector that matched nothing, a step that never landed - would
-/// satisfy a bare `is_err()` while proving nothing about the thing the fixture
-/// breaks. `planted.rs` has required the reason from the start; this file did
-/// not, which is how the roving count could fail for its *own* reason
-/// (three `tabindex="0"` attributes) rather than for the one it claims to
-/// measure.
+/// Opens a broken fixture, runs `check`, and requires an error containing `because`: a bare
+/// `is_err()` also passes on a check that gave up earlier for another reason.
 async fn must_fail<F, Fut>(route: &str, what: &str, because: &str, check: F)
 where
     F: FnOnce(Fixture) -> Fut,
@@ -82,9 +58,8 @@ fn the_focus_ring_pass_catches_a_missing_ring() {
     });
 }
 
-/// WCAG 1.4.11 on a field: the ring is on the `[data-ring]` overlay, not on
-/// the frame's border, and a faint one must fail even though the border
-/// changes strongly.
+/// WCAG 1.4.11 on a field: the ring is the `[data-ring]` overlay, so a faint one fails even
+/// though the border changes strongly.
 #[test]
 fn the_focus_ring_pass_catches_a_faint_field_ring() {
     block_on(async {
@@ -127,13 +102,8 @@ fn the_target_size_pass_catches_a_small_target() {
     });
 }
 
-/// WCAG 2.5.8's spacing exception, which is what lets an undersized target
-/// conform.
-///
-/// The exception is the half of 2.5.8 that can quietly pass everything: a
-/// check that granted it without computing it would turn every undersized
-/// control green. Two 20x20 buttons edge to edge are the case it must refuse -
-/// each is under 24px, and the 24px circles on their centres overlap.
+/// WCAG 2.5.8's spacing exception must be computed, not granted: two 20x20 buttons edge to
+/// edge have overlapping 24px circles and must fail.
 #[test]
 fn the_target_size_pass_catches_targets_too_close_together() {
     block_on(async {
@@ -250,14 +220,8 @@ fn the_roving_pass_catches_many_tab_stops() {
     });
 }
 
-/// The roving fixture must break the count and **nothing else**.
-///
-/// Every fixture here violates exactly one thing, and until 2026-09-20 this
-/// one violated two: its arrows did nothing either. The count check happened
-/// to run first, so the test above passed while resting on the wrong defect -
-/// move the count check and it would have failed for a reason it never
-/// claimed. This walks the keys the archetype requires and leaves that
-/// ordering unable to hide anything.
+/// The roving fixture must break the count and nothing else: until 2026-09-20 its arrows
+/// were broken too, hidden by check order. This walks the required keys.
 #[test]
 fn the_broken_roving_fixture_breaks_only_its_count() {
     block_on(async {
@@ -386,9 +350,8 @@ fn the_combobox_pass_catches_a_static_highlight() {
     ));
 }
 
-/// `must_fail` for the combobox contract, also requiring the failure to be the
-/// one the fixture was built for - both fixtures here are sound up to their
-/// highlight, so failing anywhere else would mean an earlier step broke.
+/// `must_fail` for the combobox contract, requiring the fixture's own failure: both are
+/// sound up to their highlight.
 async fn combobox_must_fail(route: &str, trigger: &'static str, expected: &'static str) {
     must_fail(route, "Combobox", expected, |fixture| async move {
         let result = Combobox {
@@ -403,9 +366,8 @@ async fn combobox_must_fail(route: &str, trigger: &'static str, expected: &'stat
     .await;
 }
 
-/// Review 7, E1: a root that does not contain the overlay a state opens.
-/// Narrowed to the trigger here, which is the shape the hole had: every
-/// "open" state axe-checked the trigger alone and reported clean.
+/// Review 7, E1: a root narrowed to the trigger misses the overlay a state opens, so every
+/// "open" state axe-checked the trigger alone.
 #[test]
 #[should_panic(expected = "lie outside the suite root")]
 fn the_suite_rejects_a_state_settling_outside_its_root() {
@@ -423,9 +385,8 @@ fn the_suite_rejects_a_state_settling_outside_its_root() {
         .run();
 }
 
-/// Review 7, E8: a state whose `settled` selector is visible before its steps
-/// run. Tabs' "second" state waited on `[role=tab]` that way, so reaching it
-/// returned at once and the snapshot raced the re-render.
+/// Review 7, E8: a state whose `settled` selector is visible before its steps run returns
+/// at once, and the snapshot races the re-render.
 #[test]
 #[should_panic(expected = "already visible before its steps")]
 fn the_suite_rejects_a_state_that_waits_on_nothing() {
@@ -442,9 +403,8 @@ fn the_suite_rejects_a_state_that_waits_on_nothing() {
         .run();
 }
 
-/// Review 7, E7: an `aria-controls` naming an element that does not exist.
-/// The snapshot used to drop it without a line, so a baseline taken while it
-/// dangled recorded nothing to notice.
+/// Review 7, E7: an `aria-controls` naming a missing element, which the snapshot used to
+/// drop silently.
 #[test]
 fn the_snapshot_records_a_dangling_aria_controls() {
     block_on(async {

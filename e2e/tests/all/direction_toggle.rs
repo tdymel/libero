@@ -18,9 +18,8 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// Every test page shares one browser profile, and a stored `rtl` would
-/// restore into every fixture opened after it. Presses write to a stand-in,
-/// which also records what the component tried to persist.
+/// Test pages share one profile, so a stored `rtl` would leak into later fixtures.
+/// Presses write to a stand-in that records what the component tried to persist.
 const SHIELD_STORAGE: &str = r#"(() => {
     window.__realStorage = window.localStorage;
     window.__stored = [];

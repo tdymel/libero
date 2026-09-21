@@ -1,7 +1,5 @@
-//! `Tooltip`: a portaled bubble opened by hover and keyboard focus, with a
-//! transparent bridge across the gap (todos 405, 406), that flips at the
-//! viewport edge, escapes an `overflow: hidden` ancestor and closes on Escape
-//! (todo 6).
+//! `Tooltip`: a portaled bubble on hover and focus, bridged across the gap (405, 406); it
+//! flips at the edge, escapes `overflow: hidden` and closes on Escape (6).
 
 use anyhow::{Result, ensure};
 use e2e::browser::block_on;
@@ -159,9 +157,8 @@ struct Gap {
     hit_bubble: bool,
 }
 
-/// The pointer rests in the gap between trigger and bubble: the bubble stays,
-/// because the gap is its own transparent `::before`. Leaving for somewhere
-/// else is the control that it can drop.
+/// The pointer resting in the gap keeps the bubble (its transparent `::before`); leaving
+/// elsewhere is the control that it drops.
 #[test]
 fn hover_shows_the_bubble_and_the_pointer_can_cross_the_gap() {
     block_on(async {
@@ -276,9 +273,8 @@ struct Edge {
     hit_bubble: bool,
 }
 
-/// A `top` tooltip with no room above flips below its trigger, and a clipping
-/// ancestor does not cut it off: the bubble lies outside the clip box and is
-/// what the pointer finds there.
+/// A `top` tooltip with no room flips below, and a clipping ancestor does not cut it: the
+/// pointer finds the bubble outside the clip box.
 #[test]
 fn it_flips_at_the_edge_and_escapes_a_clipping_ancestor() {
     block_on(async {

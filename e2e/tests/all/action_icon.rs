@@ -144,8 +144,7 @@ const DISABLED_LOOK: &str = "(() => {
     return [el.contains(hit), getComputedStyle(hit).cursor, s.backgroundColor + ' ' + s.color];
 })()";
 
-/// Todo 586: `pointer-events: none` handed the pointer to whatever sat
-/// underneath, so `cursor: not-allowed` never showed. The hover still paints
+/// Todo 586: `pointer-events: none` hid `cursor: not-allowed`. The hover still paints
 /// nothing: the variant's `:hover` skips a disabled control.
 pub async fn assert_disabled_look(page: &chromiumoxide::Page, selector: &str) {
     wait::for_visible(page, selector).await.unwrap();

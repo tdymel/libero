@@ -74,11 +74,8 @@ const INK: &str = "[\
         .map((el, i) => [`${el.parentElement.id} > span ${i % 3 + 1}`, getComputedStyle(el)])\
    ].map(([what, s]) => [what, s.opacity, s.transform])";
 
-/// Cancelling an animation leaves its `from` frame, and `bars` starts at
-/// `opacity: 0`: a bare `animation: none` would make it vanish for exactly
-/// the readers who asked for less motion. So reduced means still *and* drawn.
-///
-/// Both settings explicitly, since headless Chromium defaults to reduced.
+/// `bars` starts at `opacity: 0`, so a bare `animation: none` would hide it: reduced means
+/// still and drawn. Both settings are explicit; headless Chromium defaults to reduced.
 #[test]
 fn reduced_motion_stops_every_variant_and_keeps_it_drawn() {
     block_on(async {

@@ -1,8 +1,5 @@
-//! `TimePicker`: a pick redraws the options it moved and leaves the rest, on
-//! both variants (todo 29 stopped the unchanged columns and marks redrawing).
-//!
-//! `/time-picker` shows 09:30 on a 24-hour digital picker and an analog one,
-//! each echoing its value into `#<variant>-value`.
+//! `TimePicker`: a pick redraws only the options it moved, on both variants (29). Each
+//! echoes its value into `#<variant>-value`.
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};
@@ -142,9 +139,8 @@ fn the_date_time_range_steps_meet_the_baseline() {
         .run();
 }
 
-/// Todo 815: the days, then the start's time, then the end's, each step moving
-/// on once complete, under tabs showing the picked values after hidden step
-/// names.
+/// Todo 815: days, start time, end time, each step moving on once complete, under tabs
+/// showing the picked values.
 #[test]
 fn a_date_time_range_takes_the_days_then_both_times() {
     block_on(async {
@@ -394,9 +390,8 @@ fn modifier_chords_go_to_the_browser() {
     });
 }
 
-/// A one-minute step and seconds (todo 474): the face picks by the pointer's
-/// angle, not only at the marks, an hour keeps its minute inside `min`, and a
-/// release moves on to the seconds hand.
+/// One-minute step and seconds (474): the face picks by angle, an hour keeps its minute
+/// inside `min`, a release moves on to seconds.
 #[test]
 fn the_analog_face_reaches_every_minute_and_second() {
     block_on(async {
@@ -613,9 +608,8 @@ fn picks_and_the_hand_show_in_forced_colours() {
     });
 }
 
-/// Todo 744: the hand the readout sets carries the house on-state ring, not a
-/// tint. Todo 745: a disabled mark turns `GrayText` in forced colours; the
-/// digital columns skip disabled values rather than show them.
+/// Todo 744: the readout's hand carries the on-state ring, not a tint; 745: a disabled mark
+/// is `GrayText` in forced colours, digital columns skip disabled values.
 #[test]
 fn the_readout_hand_is_ringed_and_disabled_parts_gray_out() {
     use crate::button::{assert_gray_in_forced_colours, assert_on_marker};

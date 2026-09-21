@@ -1,6 +1,5 @@
-//! `Badge`, `Indicator`, `Kbd` and `List`: contrast of small text in both
-//! schemes, list semantics that survive `list-style: none`, and an `Indicator`
-//! dot in forced colours.
+//! `Badge`, `Indicator`, `Kbd` and `List`: small-text contrast in both schemes, list
+//! semantics that survive `list-style: none`, an `Indicator` dot in forced colours.
 
 use e2e::browser::block_on;
 use e2e::passes::contrast;

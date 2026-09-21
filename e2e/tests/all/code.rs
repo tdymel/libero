@@ -1,19 +1,5 @@
-//! `Code`: the highlighter's **web** arm, on the one line the two engines split on.
-//!
-//! Todo 301. `platform/regex.rs` has two `find_impl`s behind one `RegexApi`:
-//! the browser's `RegExp` on wasm32, and the `regex` crate everywhere else -
-//! which is what every `cargo test`, Blitz and the `fullstack` server run. So
-//! every highlighter test there is was about the arm users do not see, and
-//! todo 279's fix was confirmed on the web exactly once, by hand, in a browser.
-//!
-//! `\b` is ASCII in JavaScript and Unicode in the `regex` crate, so `é` ends a
-//! word to one engine and not to the other. Before todo 279 this line produced
-//! **four** spans natively (`éif` unmarked, so one keyword) and **five** on the
-//! web. This test asserts the five, span for span, against the browser - the same
-//! list libero's `a_keyword_after_a_non_ascii_letter_tokenizes_as_it_does_on_
-//! the_web` asserts against the `regex` crate. One line, both engines, and the
-//! next person to touch a grammar or the shorthand rewrite finds out here
-//! rather than in a user's hydration mismatch.
+//! `Code`: the highlighter's web (`RegExp`) arm (301). `\b` is ASCII in JS and Unicode in
+//! `regex` (279): the same five spans libero's native test asserts, here in the browser.
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
@@ -116,9 +102,8 @@ fn a_keyword_after_a_non_ascii_letter_is_highlighted_by_the_browsers_regexp() {
     block_on(async {
         let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
 
-        // The highlight runs in a `use_resource`, so the first render is the
-        // bare source in a text node and there are no element children at all.
-        // Waiting on the element would be waiting on nothing.
+        // The highlight runs in a `use_resource`: the first render is a bare text node,
+        // with no element to wait on.
         wait::for_js_true(
             &fixture.page,
             "document.querySelector('#non-ascii-code')?.children.length > 0",

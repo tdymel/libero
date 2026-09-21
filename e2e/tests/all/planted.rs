@@ -1,21 +1,5 @@
-//! Planted defects: proof that a pass can fail **on a real component**.
-//!
-//! `negative.rs` proves each pass can fail on a hand-written broken page. That
-//! says the pass works, not that it works on the component a unit points it
-//! at: a selector that matches a different element, a ring drawn somewhere the
-//! pass does not look, or a contract that stops early would each leave that
-//! component's unit green whatever the component did.
-//!
-//! So each component added in todo 311 gets one defect planted into its own
-//! fixture, and the pass that should catch it has to fail - **for the reason
-//! named**, not for any reason. A plant that made the pass fail somewhere
-//! earlier would prove nothing about the check it was aimed at; that is how the
-//! first `DanglingActiveDescendant` fixture passed while testing nothing
-//! (`fixtures/src/negative.rs`).
-//!
-//! Most plants are injected from here after the page mounts - a stylesheet or a
-//! capturing listener - so the library is untouched and the fixture is the one
-//! its own unit runs against. One needs a prop, and has a route of its own.
+//! Planted defects (311): each pass must fail on a real component's fixture, for the reason
+//! named. Most plants are injected after mount (a stylesheet, a capturing listener).
 
 use e2e::archetypes::{Combobox, Orientation, Overlay, RadioSet, RovingTabindex, count_tab_stops};
 use e2e::browser::block_on;
@@ -71,9 +55,8 @@ fn stylesheet(css: &str) -> String {
     )
 }
 
-/// `RadioGroup` ignores ArrowDown - the shape of a group that handles only
-/// the axis of its own layout. A capturing listener swallows the key before
-/// the component or the browser sees it.
+/// `RadioGroup` ignores ArrowDown, as a group handling only its layout's axis would: a
+/// capturing listener swallows the key.
 #[test]
 fn radio_group_ignoring_arrow_down_fails_the_radio_set_contract() {
     block_on(async {
@@ -123,9 +106,8 @@ fn segmented_control_with_dead_arrows_fails_the_radio_set_contract() {
     });
 }
 
-/// `Menubar` with every trigger its own tab stop. The bar still works from a
-/// keyboard, which is why this is worth a pass: it is three tab stops where
-/// the pattern allows one.
+/// `Menubar` with every trigger its own tab stop: still keyboard-usable, but three stops
+/// where the pattern allows one.
 #[test]
 fn menubar_with_a_tab_stop_per_trigger_fails_the_roving_contract() {
     block_on(async {
@@ -151,15 +133,8 @@ fn menubar_with_a_tab_stop_per_trigger_fails_the_roving_contract() {
     });
 }
 
-/// `Tabs` with a close button inside a tab: the defect the old count could
-/// not see (review 7, E3).
-///
-/// Every `[role=tab]` still carries the right `tabindex`, so an attribute
-/// count over the item selector reports one stop and the strip reports clean.
-/// A keyboard user meets two - the tab, then its close button - and a strip of
-/// twelve would be thirteen stops before the next control. The count has to be
-/// taken by tabbing for this to be visible at all, which is why a plant on the
-/// real component is the proof and not a fixture written to fail.
+/// `Tabs` with a close button inside a tab (review 7, E3): the `tabindex` attributes stay
+/// right, so only a count taken by tabbing sees the second stop.
 #[test]
 fn tabs_with_a_tab_stop_inside_a_tab_fail_the_roving_contract() {
     block_on(async {
@@ -194,23 +169,8 @@ fn tabs_with_a_tab_stop_inside_a_tab_fail_the_roving_contract() {
     });
 }
 
-/// `Tree` with every row out of the tab order: the other direction the count
-/// has to tell apart.
-///
-/// Too many stops and none at all are different defects, and a count that
-/// cannot report zero would give the same green for a keyboard-unreachable
-/// widget as for a correct one - which is how the notification unit's missing
-/// target selector read as coverage (todo 366). An observer keeps every
-/// `[role=treeitem]` at `tabindex="-1"`, so nothing inside the tree is
-/// reachable, and the count has to say `0` rather than erroring or defaulting
-/// to the one stop the unit expects.
-///
-/// **This is evidence, not the guard.** The mechanism already distinguishes
-/// zero: `count_tab_stops` bails when the item selector matches nothing, and
-/// both `assert_single_tab_stop` and `tree::it_is_a_single_tab_stop` fail on
-/// any count other than 1. What this test is for is the day someone changes
-/// the counter - a budget, an early return, a "default to one if the walk
-/// never entered" - and turns zero back into a green.
+/// `Tree` with every row at `tabindex="-1"`: the count must say `0`, not default to one.
+/// Evidence for the day someone changes the counter and turns zero green (366).
 #[test]
 fn tree_with_no_tab_stop_at_all_counts_zero() {
     block_on(async {
@@ -218,12 +178,8 @@ fn tree_with_no_tab_stop_at_all_counts_zero() {
         fixture
             .page
             .evaluate(
-                // The guard on the write is not a nicety. `setAttribute` records
-                // a mutation even when the value is unchanged, so an observer
-                // that writes unconditionally re-triggers itself forever, the
-                // main thread never yields, and every later CDP call fails as
-                // `Timeout` - which reads as a slow machine rather than as a
-                // plant that froze the page. Measured 2026-09-20: 661s.
+                // Guarded: `setAttribute` records a mutation even when unchanged, so an
+                // unguarded observer loops forever and every CDP call times out (661 s).
                 "(() => { const strip = () => document.querySelectorAll('[role=treeitem]')\
                  .forEach(el => { if (el.getAttribute('tabindex') !== '-1') \
                  el.setAttribute('tabindex', '-1'); }); \
@@ -248,9 +204,8 @@ fn tree_with_no_tab_stop_at_all_counts_zero() {
     });
 }
 
-/// `Select` whose rows lose their ids: todo 101's bug on the real component.
-/// `aria-activedescendant` is present and well-formed and names nothing. An
-/// observer strips every option's id as soon as the list renders it.
+/// `Select` whose rows lose their ids (todo 101): `aria-activedescendant` names nothing.
+/// An observer strips every option's id as it renders.
 #[test]
 fn select_with_a_dangling_activedescendant_fails_the_combobox_contract() {
     block_on(async {
@@ -332,14 +287,8 @@ fn tags_field_with_squeezed_rows_fails_the_target_size_pass() {
     });
 }
 
-/// `Select`'s open list with `#ddd` text on white, checked where `Suite`
-/// checks it: axe over `[data-fixture-ready]`.
-///
-/// **This plant found a hole in the harness rather than in the pass.** The
-/// listbox is portaled beside the fixture, and the marker used to sit inside
-/// the provider - so the list was outside the subtree axe ran on, and this test
-/// stayed green. Every open-state contrast check in the suite had been
-/// measuring the trigger alone. The marker now wraps the provider.
+/// `Select`'s open list with `#ddd` text, under axe over `[data-fixture-ready]`. It found
+/// the portaled list outside that marker; the marker now wraps the provider.
 #[test]
 fn select_with_faint_options_fails_the_contrast_pass_in_the_open_state() {
     block_on(async {
@@ -363,16 +312,8 @@ fn select_with_faint_options_fails_the_contrast_pass_in_the_open_state() {
     });
 }
 
-/// `Spotlight`'s open result list with `#ddd` text, checked where `Suite`
-/// checks it.
-///
-/// **This is the positive control for todo 327.** This exact plant was made on
-/// 2026-09-19 and stayed green: `Modal`'s `body { overflow: hidden }` scroll
-/// lock made axe's `overflowHidden` judge every row below the search box
-/// clipped away by a content-sized body, so `color-contrast` was inapplicable
-/// to the entire list. The lock is lifted for the axe run now, and this test is
-/// what says so - it fails if the lift is ever removed, because the rows go
-/// back to being unreachable and no violation is reported.
+/// `Spotlight`'s result list with `#ddd` text: todo 327's positive control. The scroll lock
+/// hid every row from axe; it is lifted for the run, and this fails if the lift goes.
 #[test]
 fn spotlight_with_faint_rows_fails_the_contrast_pass_in_the_open_state() {
     block_on(async {
@@ -398,25 +339,8 @@ fn spotlight_with_faint_rows_fails_the_contrast_pass_in_the_open_state() {
     });
 }
 
-/// The coverage guard itself, proved able to fail.
-///
-/// `contrast_covers` asserts axe *evaluated* text rather than merely finding
-/// nothing wrong with it, so its own defect is text axe cannot reach. Pinning
-/// the scroll lock back on reproduces todo 327 exactly, and the guard has to
-/// name the rows it could not account for.
-///
-/// An **inline** `!important` is the plant, not a stylesheet: the harness lifts
-/// the lock with a stylesheet of its own appended at run time, which would win
-/// the cascade against any rule planted earlier. A style attribute outranks
-/// both. The general rule is in `principles/browser-harness-traps`: if the
-/// harness injects style at run time, a plant must outrank it inline or it is
-/// not a plant at all - it is a test of the harness's own stylesheet.
-///
-/// The expected message pins the **count**, `8 of 8`, not just the wording
-/// (the shortcut's "+" is punctuation, which axe and the guard both skip). A
-/// plant that only asserts "something was missed" would still pass if the lift
-/// half-worked and one row slipped through, which is the shape of failure this
-/// whole todo was.
+/// `contrast_covers` proved able to fail: the scroll lock pinned back inline (outranking the
+/// harness's lift stylesheet) re-creates todo 327, and the message pins `8 of 8`.
 #[test]
 fn spotlight_rows_axe_cannot_reach_fail_the_coverage_guard() {
     block_on(async {
@@ -465,9 +389,8 @@ async fn menu_coverage_with(fixture: &Fixture, before: &str) -> anyhow::Result<(
         .map(|_| ())
 }
 
-/// The guard's disabled rule (todo 386), proved narrow. The clipped menu has to
-/// name all four enabled labels, `4 of 4`: the `aria-disabled` "Paste" is the
-/// only one dropped, and `5 of 5` would mean the rule stopped working.
+/// The guard's disabled rule (386), proved narrow: `4 of 4`, only the `aria-disabled`
+/// "Paste" dropped; `5 of 5` would mean the rule stopped working.
 #[test]
 fn a_clipped_menu_fails_the_coverage_guard_on_its_enabled_rows_only() {
     block_on(async {
@@ -507,9 +430,8 @@ fn an_inert_menu_row_is_no_hole_but_a_clipped_menu_still_is() {
     });
 }
 
-/// A closed `<details>` body keeps a rect in Chromium, but axe skips it and the
-/// guard has to as well (todo 386). Green alone; clipping its wrapper leaves only
-/// the summary as the hole, `1 of 2`, where `2 of 3` would count the body.
+/// A closed `<details>` body keeps a rect in Chromium, but axe and the guard skip it (386):
+/// clipped, only the summary is the hole, `1 of 2`, not `2 of 3`.
 #[test]
 fn a_closed_details_body_is_no_hole_but_its_clipped_summary_is() {
     block_on(async {
@@ -543,13 +465,8 @@ fn a_closed_details_body_is_no_hole_but_its_clipped_summary_is() {
     });
 }
 
-/// `Drawer` whose trigger is disabled while the drawer is open - a common way
-/// to stop a double open, and one that leaves focus nowhere to return to.
-///
-/// Planted by an observer on the dialog appearing, not by a timer on the
-/// Enter keydown. The timer version was green in a parallel run and red alone
-/// (2026-09-19); tying the plant to the state it breaks removes the race,
-/// whatever it was.
+/// `Drawer` whose trigger is disabled while open, leaving focus nowhere to return. Planted
+/// by an observer on the dialog, not a keydown timer, which raced (2026-09-19).
 #[test]
 fn drawer_with_a_disabled_trigger_fails_the_focus_return() {
     block_on(async {
@@ -605,9 +522,8 @@ fn menu_with_unfocusable_items_fails_the_overlay_contract() {
     });
 }
 
-/// `Spotlight` whose focus trap never sees Tab: a capturing listener swallows
-/// the event before the palette's handler, and the browser's own Tab walks
-/// out of the dialog.
+/// `Spotlight` whose focus trap never sees Tab: a capturing listener swallows it, and the
+/// browser's Tab walks out of the dialog.
 #[test]
 fn spotlight_with_a_leaking_trap_fails_the_overlay_contract() {
     block_on(async {
@@ -635,10 +551,8 @@ fn spotlight_with_a_leaking_trap_fails_the_overlay_contract() {
     });
 }
 
-/// A phantom panel: when the overlay closes, an `opacity: 0` copy of it stays
-/// behind, still in the accessibility tree. The check has to run at the close
-/// signal and fail with the dismissal message. Behind a wait for the panel to
-/// be hidden it failed as a timeout instead, or not at all (review 7, E6).
+/// A phantom panel: an `opacity: 0` copy stays in the tree after close. The check runs at
+/// the close signal, else it failed as a timeout or not at all (review 7, E6).
 fn phantom(panel: &str) -> String {
     format!(
         "(() => {{ const sel = {}; let done = false; \
@@ -703,9 +617,7 @@ fn drawer_leaving_a_phantom_panel_fails_the_dismissal_check() {
     });
 }
 
-/// `Collapse` with its reduced-motion guard lost: a transition declared
-/// outside the `prefers-reduced-motion` arm, which is the move
-/// `collapse.rs` warns about.
+/// `Collapse` with a transition declared outside the `prefers-reduced-motion` arm.
 #[test]
 fn collapse_animating_under_reduced_motion_fails_the_motion_check() {
     block_on(async {
@@ -733,9 +645,8 @@ fn collapse_animating_under_reduced_motion_fails_the_motion_check() {
     });
 }
 
-/// A text colour fixed for the light page: `#444` is 9.74:1 on white and
-/// about 2:1 on the dark surface. Green in the light run and red in the dark
-/// one, so the dark run measures a page that is really dark (todo 314).
+/// `#444` text is 9.74:1 on white, ~2:1 on dark: red only in the dark run, proving that
+/// run is really dark (314).
 #[test]
 fn a_colour_fixed_for_the_light_page_fails_only_in_the_dark_run() {
     block_on(async {
@@ -793,15 +704,8 @@ fn a_page_pinned_light_under_dark_emulation_fails_the_scheme_check() {
     });
 }
 
-/// `Carousel`'s track guard with one arm taken out, three times over.
-///
-/// The arms are `key_taken || typing_target || arrow_target` in
-/// `carousel.rs`, and each covers a different kind of control in a slide, so
-/// removing all three at once would prove only that the checks see *a*
-/// broken carousel. One plant per arm, each aimed at the control only that arm
-/// can save, is what says the three checks are three checks.
-/// `crate::carousel::plant_arm_out` is how an arm is taken out of a running
-/// page.
+/// `Carousel`'s track guard with one arm out per plant (`crate::carousel::plant_arm_out`),
+/// each aimed at the control only that arm saves.
 #[test]
 fn a_carousel_that_ignores_key_taken_advances_under_its_own_slider() {
     block_on(async {
@@ -818,9 +722,8 @@ fn a_carousel_that_ignores_key_taken_advances_under_its_own_slider() {
     });
 }
 
-/// Without `typing_target` the track's `prevent_default()` eats the caret
-/// move, so the check fails on the caret before it reaches the strip - which
-/// is the symptom a user meets first.
+/// Without `typing_target` the track eats the caret move, so the check fails on the caret,
+/// the symptom a user meets first.
 #[test]
 fn a_carousel_that_ignores_typing_target_eats_a_caret_move() {
     block_on(async {
@@ -837,9 +740,8 @@ fn a_carousel_that_ignores_typing_target_eats_a_caret_move() {
     });
 }
 
-/// Without `arrow_target` a caller's own `<input type="range">` stops
-/// stepping: nothing in the library marks that press, and it is not typing, so
-/// no other arm covers it.
+/// Without `arrow_target` a caller's `<input type="range">` stops stepping; no other arm
+/// covers it.
 #[test]
 fn a_carousel_that_ignores_arrow_target_stops_a_raw_range() {
     block_on(async {
@@ -856,14 +758,8 @@ fn a_carousel_that_ignores_arrow_target_stops_a_raw_range() {
     });
 }
 
-/// `RadioGroup`'s rows crammed back under the 24px pitch todo 302 fixed.
-///
-/// This is the proof for todo 377, and the reason
-/// `radio_group::it_meets_the_baseline` may declare its rows with
-/// `targets_spaced` at all. Before the neighbour set included the unit's own
-/// declared selector, the pass was **green on this page**: a row's only
-/// neighbours were the `1x1` hidden inputs, and the adjacent rows - bare
-/// `div`s - were in no selector the pass looked at.
+/// `RadioGroup`'s rows crammed under the 24px pitch (302): todo 377's proof that
+/// `targets_spaced` sees the unit's own rows as neighbours.
 #[test]
 fn radio_group_rows_crammed_together_fail_the_spacing_exception() {
     block_on(async {
@@ -885,13 +781,8 @@ fn radio_group_rows_crammed_together_fail_the_spacing_exception() {
     });
 }
 
-/// `FloatingWindow` whose title bar is deaf to the arrows: a capturing
-/// listener swallows the key before the handle's own `onkeydown` sees it.
-///
-/// The window still opens, still takes focus, and still looks right - which is
-/// the point. A keyboard move that quietly stopped working would change
-/// nothing a snapshot or an axe run can see, so this is the plant for the half
-/// of the unit that only a browser can test.
+/// `FloatingWindow` whose title bar is deaf to the arrows (a capturing listener): nothing a
+/// snapshot or axe sees changes.
 #[test]
 fn a_floating_window_with_a_deaf_title_bar_never_moves() {
     block_on(async {
@@ -911,24 +802,8 @@ fn a_floating_window_with_a_deaf_title_bar_never_moves() {
     });
 }
 
-/// `FloatingWindow` reporting the rect it had *before* the move.
-///
-/// This is the defect the component's `owed` effect exists to prevent: reading
-/// the rect in the same task as the write reports the previous one
-/// (`codebase/components/floating-window`). The plant re-creates it without
-/// touching the library - a `MutationObserver` rewrites the readout's `x` one
-/// move back, so every report is exactly one step stale.
-///
-/// It remembers what it last wrote and skips that value, rather than guarding
-/// with a flag: a `MutationObserver` callback is a microtask, so a flag set and
-/// cleared synchronously is already false by the time the next one runs, and
-/// the first version of this plant rewrote the node for ever and hung the page
-/// (the run reported "Request timed out", not the planted reason).
-///
-/// Ten pixels is the whole difference, and nothing on the page shows it. The
-/// unit catches it only because it compares what the component *said* against
-/// the rect the browser *drew*, rather than only asserting that the report
-/// changed.
+/// `FloatingWindow` reporting the pre-move rect, the `owed` effect's defect. It skips the
+/// value it last wrote: a flag is already cleared by the next microtask and hung the page.
 #[test]
 fn a_floating_window_reporting_a_stale_rect_fails_the_move_report() {
     block_on(async {
@@ -953,13 +828,8 @@ fn a_floating_window_reporting_a_stale_rect_fails_the_move_report() {
     });
 }
 
-/// `FloatingWindow` whose corner handle is deaf to Home and End, so the two
-/// presses that ask for `0x0` and `u16::MAX` never reach the geometry and the
-/// caller's own bounds are never what answers.
-///
-/// The arrow step is left alone, so the separator still resizes: this plant
-/// removes the clamp alone, which is the half a reviewer would not notice
-/// missing.
+/// `FloatingWindow` whose corner handle is deaf to Home and End only, so the arrows still
+/// resize but the caller's bounds never answer.
 #[test]
 fn a_floating_window_that_ignores_home_on_its_separator_never_reaches_the_minimum() {
     block_on(async {
@@ -980,14 +850,8 @@ fn a_floating_window_that_ignores_home_on_its_separator_never_reaches_the_minimu
     });
 }
 
-/// `FloatingWindow`'s close button crammed against the move handle, with its
-/// 24x24 hit area stripped.
-///
-/// Drawn 20x20, the close button meets WCAG 2.5.8 through its invisible 24x24
-/// press box (todos 505, 566). Without that box it would lean on the spacing
-/// exception, which is silently green on a target with no neighbours in reach
-/// (todo 377). The plant strips the box, takes the gap away and shrinks the
-/// move handle to a strip, bringing the two centres inside the 24px circle.
+/// `FloatingWindow`'s 20x20 close button with its 24x24 press box stripped (505, 566) and
+/// crammed against the move handle, inside the 24px circle (377).
 #[test]
 fn a_floating_windows_crammed_title_bar_fails_the_spacing_exception() {
     block_on(async {
@@ -1016,18 +880,8 @@ fn a_floating_windows_crammed_title_bar_fails_the_spacing_exception() {
     });
 }
 
-/// `FloatingWindow` with `#ddd` text in its body, checked where `Suite` checks
-/// it: axe over `[data-fixture-ready]`.
-///
-/// A window is portaled beside the fixture, which is the arrangement that left
-/// every overlay's axe pass measuring the trigger alone until `dc3766db`, and
-/// the one that made todo 327's scroll lock invisible. Neither hole reports
-/// anything - both read as a clean run - so the only proof that
-/// `floating_window::it_meets_the_baseline` looks at the window at all is a
-/// defect planted in the window that it has to catch.
-///
-/// The window is **not** modal, so it locks no scroll and needs no `UNLOCK`
-/// lift; this is the plain half of the pair.
+/// `FloatingWindow` with `#ddd` body text: proves the baseline's axe run reaches the
+/// portaled window. Non-modal, so no scroll lock and no `UNLOCK` lift.
 #[test]
 fn a_floating_window_with_faint_text_fails_the_contrast_pass_in_the_open_state() {
     block_on(async {

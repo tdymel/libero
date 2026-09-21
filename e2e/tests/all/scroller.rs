@@ -27,9 +27,8 @@ const HIDDEN: &str = "(() => { const a = document.activeElement.getBoundingClien
     return Math.min(a.right, c.right) - Math.max(a.left, c.left); }); \
     return Math.max(0, v.left - a.left, a.right - v.right, ...under); })()";
 
-/// Waits on the item coming clear, not on a time: a smooth scroll in a
-/// background page crawls, but it lands. Without the fix it stays under the
-/// control, and the wait gives up.
+/// Waits on the item coming clear, not on a time: a smooth background scroll crawls but
+/// lands. Without the fix it stays under the control.
 async fn tab_along(page: &chromiumoxide::Page) {
     keyboard::tab_to(page, "#before", 3).await.unwrap();
     keyboard::tab_to(page, "#tag-0", 3).await.unwrap();
@@ -61,9 +60,8 @@ async fn focused_index(page: &chromiumoxide::Page) -> usize {
     id.trim_start_matches("tag-").parse().unwrap()
 }
 
-/// 2.4.11: Chromium's focus scroll alone left an item 34px under the forward
-/// control's fade; it ignores `scroll-padding` and `scroll-margin`. Reduced,
-/// no scroll of the strip is smooth.
+/// 2.4.11: Chromium's focus scroll ignores `scroll-padding`/`scroll-margin` and left an item
+/// 34px under the fade. Reduced, no strip scroll is smooth.
 #[test]
 fn a_tabbed_item_is_not_left_under_a_control() {
     block_on(async {
@@ -226,10 +224,8 @@ fn under_rtl_a_tabbed_item_is_not_left_under_a_control() {
     });
 }
 
-/// With smooth scrolling on, something can cut the strip's scroll short, and
-/// the item stayed hidden: the scroll's end checks again. The suite's
-/// Chromium scrolls instantly (687), so every other smooth scroll lands
-/// half-way.
+/// With smooth scrolling a cut-short scroll left the item hidden, so the scroll's end checks
+/// again. The suite's Chromium scrolls instantly otherwise (687).
 #[test]
 fn a_tabbed_item_scrolls_into_view_with_smooth_scrolling() {
     block_on(async {

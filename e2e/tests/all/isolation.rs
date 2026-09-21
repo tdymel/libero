@@ -5,9 +5,8 @@ use e2e::browser::block_on;
 use e2e::passes::keyboard;
 use e2e::{Fixture, Viewport, wait};
 
-/// A chord one unit sends leaves every other page where it was (todo 597).
-/// Ctrl+PageDown used to activate another test's page, and Alt+ArrowLeft then
-/// sent that page Back to `about:blank`.
+/// A chord one unit sends leaves every other page alone (597): Ctrl+PageDown once
+/// activated another test's page, and Alt+ArrowLeft sent it Back.
 #[test]
 fn a_chord_in_one_page_does_not_navigate_another() {
     block_on(async {

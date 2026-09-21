@@ -1,9 +1,5 @@
-//! `Mark`: a link inside it draws its focus ring against the tint.
-//!
-//! Todo 53, part two. `Mark` tints its background from a `var()`, which `sx`'s
-//! `background()` cannot read a contrast twin off, so a link inside it drew
-//! its ring from the `primary.6` fallback. The ring is an offset outline, so
-//! the surface it is measured against is the link's parent: the `Mark`.
+//! `Mark` (todo 53): a link inside draws its focus ring against the `var()` tint, which
+//! `background()` reads no contrast twin off; measured against the `Mark` itself.
 
 use e2e::browser::block_on;
 use e2e::passes::{contrast, focus};

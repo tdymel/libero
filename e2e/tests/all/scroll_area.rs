@@ -1,6 +1,5 @@
-//! `ScrollArea` re-measures when its pane resizes, not only at mount and on
-//! scroll (todo 425). The pane is resized by script, as a `Splitter` or a
-//! `FloatingWindow` would, with the window left alone.
+//! `ScrollArea` re-measures when its pane resizes (425), resized by script as a `Splitter`
+//! would, with the window left alone.
 
 use e2e::browser::block_on;
 use e2e::passes::{focus, keyboard, pointer};
@@ -11,9 +10,8 @@ const LAST_ROW: &str = "Math.max(...[...document.querySelectorAll('#list-pane [d
 /// How often the caller's own `onresize` on the area has run.
 const RESIZES: &str = "Number(document.querySelector('#list-resizes').textContent)";
 
-/// 20px rows: a 120px pane renders a dozen, a 600px one needs rows to 29. The
-/// area now listens for `onresize` itself, and a caller's listener on it, as
-/// `Scroller` has, must still run.
+/// 20px rows: a 120px pane shows a dozen, 600px needs 29. The area listens for `onresize`
+/// itself; a caller's listener must still run.
 #[test]
 fn a_taller_pane_renders_rows_to_its_new_bottom() {
     block_on(async {
@@ -276,9 +274,8 @@ fn a_change_inside_a_child_component_re_checks_the_tab_stop() {
     });
 }
 
-/// Under RTL the area starts at its right edge and `scrollLeft` runs negative:
-/// the percent counts from the start, 100% lands on the left edge, and left
-/// and right stay the physical edges.
+/// Under RTL `scrollLeft` runs negative from the right edge: the percent counts from the
+/// start, 100% is the left edge; left and right stay physical.
 #[test]
 fn under_rtl_the_percent_counts_from_the_right_edge() {
     const AREA: &str = "document.querySelector('#wide')";

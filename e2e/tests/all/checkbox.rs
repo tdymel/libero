@@ -13,9 +13,8 @@ fn it_meets_the_baseline() {
     Suite::new("checkbox", "/checkbox")
         .focusable("#terms")
         .focusable("#support")
-        // The control of a checkbox named by `aria_label` alone: an 18px box,
-        // so it conforms through the spacing exception. The control, not the
-        // box, so its own visually hidden input does not count as a neighbour.
+        // An `aria_label`-only checkbox's 18px control passes by the spacing exception;
+        // the control, so its own hidden input is no neighbour.
         .targets_spaced("span:has(> #bare)")
         .state(
             "ticked",

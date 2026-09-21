@@ -1,6 +1,5 @@
-//! `PinField`: its label names the cells' group, so a click on it focuses the
-//! first cell (todo 483); modifier chords are the browser's (todo 509); what a
-//! cell shows is the pin, however the character arrived (todo 449).
+//! `PinField`: a label click focuses the first cell (483), modifier chords are the
+//! browser's (509), a cell shows the pin however the character arrived (449).
 
 use anyhow::Result;
 use chromiumoxide::Page;

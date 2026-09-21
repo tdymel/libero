@@ -1,6 +1,5 @@
-//! `Marquee`: the pause toggle sits over the moving strip. A link focused
-//! while under it must still show (WCAG 2.4.11), the overlap Carousel's pause
-//! control had with Next (todo 551).
+//! `Marquee`: a link focused under the pause toggle must still show (WCAG 2.4.11), the
+//! overlap Carousel's pause had with Next (551).
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, motion};

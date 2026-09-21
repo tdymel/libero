@@ -121,9 +121,8 @@ fn a_press_on_the_padding_is_a_press_on_the_control() {
     });
 }
 
-/// Typing fills one pin cell and moves on, Backspace clears it and steps back.
-/// A cell redraws only when its own character changes, so each keystroke
-/// checks every cell against the pin.
+/// Typing fills one pin cell and moves on, Backspace clears and steps back. A cell redraws
+/// only on its own change, so each keystroke checks every cell.
 #[test]
 fn typing_a_pin_fills_and_clears_one_cell_at_a_time() {
     const BACKSPACE: keyboard::Key = keyboard::Key {

@@ -99,9 +99,8 @@ fn rows_js() -> String {
 /// The bar and its size, its length resolved to the row's font.
 const BAR: &str = "bar 2px min(50%, ";
 
-/// Todo 631: the selected row carries the house line at its start edge, beside
-/// the tint, and keeps it inside the active row's ring. `Combobox`'s rows are
-/// the same `ComboboxOption`.
+/// Todo 631: the selected row carries the house start line beside the tint, inside the
+/// active row's ring. `Combobox` shares the `ComboboxOption` rows.
 pub fn selected_row_is_marked(route: &str) {
     block_on(async {
         let fixture = Fixture::open(route, Viewport::Desktop).await.unwrap();
@@ -582,8 +581,7 @@ pub fn search_matching_nothing(route: &str, trigger: &str) {
     });
 }
 
-/// Todo 842: a pick writes the selection before `onchange`. A controlled
-/// caller that refuses it keeps the old row, in the form value and in
+/// Todo 842: a controlled caller refusing a pick keeps the old row, in the form value and
 /// `aria-selected`; one it takes moves both.
 #[test]
 fn a_refused_pick_keeps_the_old_selection() {

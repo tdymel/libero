@@ -1,6 +1,5 @@
-//! Clearable fields between `#before` and `#after` (todo 620): Tab out of the
-//! field past its x must close the list. Guards the control's blur closing it,
-//! unlike `ColorField`'s old input-only settle (8eea95fa).
+//! Clearable fields (620): Tab out past the x must close the list, via the control's blur,
+//! unlike `ColorField`'s old input-only settle.
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;

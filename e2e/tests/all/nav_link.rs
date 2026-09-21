@@ -1,7 +1,5 @@
-//! `NavLink`'s `scroll_into_view` scrolls its sidebar, not the page, just far
-//! enough to show the link and its `scroll-margin` (todo 468 N3 moved the
-//! `nearest` arithmetic into a function Blitz shares). Plus the baseline of
-//! `NavLink`, `Anchor` and `Burger` (todo 449).
+//! `NavLink`'s `scroll_into_view` scrolls its sidebar, not the page, just far enough
+//! (468 N3). Plus the `NavLink`, `Anchor` and `Burger` baseline (449).
 
 use anyhow::Result;
 use e2e::browser::block_on;

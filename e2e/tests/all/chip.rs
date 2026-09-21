@@ -233,10 +233,8 @@ fn a_disabled_link_chip_is_still_a_link() {
     });
 }
 
-/// A disabled `Fieldset` disables a `<button>` natively; every button-rooted
-/// control must dim with it rather than look clickable (todos 499, 514). The
-/// opacity is the product up the tree, so a wrapper's dimming counts and a
-/// double dimming shows.
+/// A disabled `Fieldset` disables a `<button>` natively, so every button-rooted control
+/// must dim (499, 514). Opacity is the product up the tree: double dimming shows.
 #[test]
 fn buttons_in_a_disabled_fieldset_look_disabled() {
     block_on(async {
@@ -356,9 +354,8 @@ fn a_new_tab_chip_shows_an_icon_and_says_so() {
     });
 }
 
-/// Todo 661: a control in an `onclick`/`to` chip's `trailing` is nested
-/// interactive content, and a debug build says so for each chip. A count there
-/// is fine and stays quiet.
+/// Todo 661: a control in an `onclick`/`to` chip's `trailing` is nested interactive
+/// content, and a debug build warns per chip. A count there stays quiet.
 #[test]
 fn a_control_in_a_clickable_chips_trailing_warns() {
     block_on(async {

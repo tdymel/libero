@@ -1,6 +1,5 @@
-//! `Box`, `Container`, `Flex`, `Center`, `Float`, `AspectRatio` and `Sidebar`: native
-//! semantics through `component`, reflow at 320px and focus rings that no
-//! wrapper clips.
+//! Layout components: native semantics through `component`, reflow at 320px and focus
+//! rings that no wrapper clips.
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;

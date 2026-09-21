@@ -1,8 +1,5 @@
-//! `MultiSelect`: the combobox archetype.
-//!
-//! The chips sit beside the `role="combobox"` element, not in it, so its value
-//! reads `Cherry` and not `Cherry Remove Cherry` (todo 70 (b), which rebaselined
-//! every `multi_select_*.snap`).
+//! `MultiSelect`: the combobox archetype. The chips sit beside the combobox, so its value
+//! reads `Cherry`, not `Cherry Remove Cherry` (70 (b)).
 
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
@@ -185,9 +182,8 @@ fn it_honours_the_combobox_contract() {
     });
 }
 
-/// Todo 876: a pick writes the selection before `onchange`. A caller that
-/// refuses it keeps the old rows, in the posted values and in `aria-selected`;
-/// one it takes moves both.
+/// Todo 876: a caller refusing a pick in `onchange` keeps the old rows, posted and in
+/// `aria-selected`; one it takes moves both.
 #[test]
 fn a_refused_pick_keeps_the_old_selection() {
     const ROUTE: &str = "/multi-select/refused";

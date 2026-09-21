@@ -1,9 +1,5 @@
-//! `Menubar`: `RovingTabindex` along the bar, `Overlay` for each menu.
-//!
-//! The first component to be two archetypes at once. The bar is a strip - one
-//! tab stop, Left and Right, Home and End, wrapping by default - and each menu
-//! it opens is a dismissible popup whose Escape returns focus to its trigger.
-//! Neither contract knows about the other, which is the composition working.
+//! `Menubar`: two archetypes at once, `RovingTabindex` along the bar and `Overlay` for
+//! each menu, whose Escape returns focus to its trigger.
 
 use anyhow::Result;
 use e2e::archetypes::{Orientation, Overlay, RovingTabindex};
@@ -168,9 +164,8 @@ fn its_menu_honours_the_overlay_contract() {
     });
 }
 
-/// Todo 283: moving the pointer between triggers while a menu is open logged
-/// a dioxus scope warning, twice per switch, and nothing in the DOM showed
-/// it. Edit holds the submenu level that the warning came from.
+/// Todo 283: moving between triggers with a menu open logged a dioxus scope warning,
+/// invisible in the DOM. Edit holds the submenu level it came from.
 #[test]
 fn switching_menus_by_pointer_logs_nothing() {
     block_on(async {
@@ -261,9 +256,8 @@ async fn tap(page: &chromiumoxide::Page, selector: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Todo 449: a tap on another trigger while a menu was open sent the
-/// compatibility `mouseenter` first, which switched menus, and then the click,
-/// which closed the new one. The tap opened nothing.
+/// Todo 449: a tap on another trigger sent `mouseenter`, switching menus, then the click
+/// closed the new one, so the tap opened nothing.
 #[test]
 fn a_tap_on_another_trigger_opens_its_menu() {
     use chromiumoxide::cdp::browser_protocol::emulation::SetTouchEmulationEnabledParams;
@@ -293,9 +287,8 @@ fn a_tap_on_another_trigger_opens_its_menu() {
     });
 }
 
-/// APG menubar: an open menu travels along the bar with Left and Right, from
-/// a submenu too; a disabled trigger takes focus and opens nothing, but the
-/// next enabled one opens its menu (todo 568).
+/// APG menubar: an open menu travels with Left/Right, from a submenu too; a disabled
+/// trigger takes focus and opens nothing, the next enabled one opens (568).
 #[test]
 fn an_open_menu_travels_along_the_bar() {
     block_on(async {

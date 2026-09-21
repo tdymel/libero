@@ -1,8 +1,5 @@
-//! One test binary, as `libero/tests/all/main.rs` does it: a full run links one
-//! executable instead of one per file, and every test shares the single browser
-//! and the single fixture server.
-//!
-//! A new component is `tests/all/<unit>.rs` plus its `mod` line here.
+//! One test binary sharing one browser and one fixture server. A new component is
+//! `tests/all/<unit>.rs` plus its `mod` line here.
 
 mod accordion;
 mod action_icon;
@@ -107,24 +104,8 @@ mod typography;
 mod use_accessibility;
 mod visually_hidden;
 
-/// Every `.rs` file in this directory must have a `mod` line above it.
-///
-/// A test file no `mod` reaches is not part of the crate: it never compiles and
-/// never runs, and `cargo test` stays green with a count that looks right. Every
-/// other registration hunk on the team checklist is a build error when you forget
-/// it; this one is the single silent member, which is why it needs a guard rather
-/// than a rule. `libero/tests/all/theme_set.rs` - 164 lines, five tests - was dead
-/// from the day it was written for exactly this reason.
-///
-/// The guard sits in `main.rs` rather than a module of its own on purpose: a
-/// module file has to be registered, so the guard would be dead in precisely the
-/// case it exists to catch.
-///
-/// Only the first direction - a file nothing declares - is a silent defect. The
-/// second - a `mod` line with no file - is a compile error, so it is reported
-/// only to make the message unambiguous when the two lists differ. `libero/tests/all/main.rs` carries the same copy, for
-/// the same reason - there is no crate the two test binaries could share it
-/// through.
+/// Every `.rs` file here needs a `mod` line: an unregistered test file silently never runs.
+/// Lives in `main.rs` so it cannot itself go unregistered; `libero/tests/all` has a copy.
 #[test]
 fn every_test_file_is_registered() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/all");
@@ -139,9 +120,7 @@ fn every_test_file_is_registered() {
         .map(|name| name.trim_start_matches("r#").to_owned())
         .collect();
 
-    // A `mod foo;` is satisfied by `foo.rs` or by `foo/mod.rs`, so both count as
-    // a file on disk. Anything else in the directory (`snapshots/`) is not a
-    // module and is ignored.
+    // `mod foo;` takes `foo.rs` or `foo/mod.rs`; anything else (`snapshots/`) is ignored.
     let mut on_disk: Vec<String> = std::fs::read_dir(&dir)
         .unwrap()
         .map(|entry| entry.unwrap().path())

@@ -363,9 +363,8 @@ fn an_orders_table_is_filtered_paged_and_sorted() {
 const TRIGGER: &str = "#add-member";
 const DIALOG: &str = "[role=dialog]";
 
-/// A form in a dialog: an invalid save keeps it open, a valid one closes it,
-/// adds the member and returns focus; Escape adds nothing and the next opening
-/// starts empty.
+/// A form in a dialog: an invalid save keeps it open, a valid one adds the member and
+/// returns focus; Escape adds nothing and the next opening starts empty.
 #[test]
 fn a_dialog_form_refuses_saves_and_dismisses() {
     block_on(async {

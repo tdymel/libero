@@ -1,32 +1,5 @@
-//! `Carousel`: a key pressed inside a slide belongs to the slide.
-//!
-//! The track handles the arrows, Home and End, and `prevent_default()`s them.
-//! Its slides hold a caller's own content, which this component cannot ask to
-//! stop propagating, so every press made inside a slide arrives at the track's
-//! handler as well. Three guard arms separate the two cases
-//! (`libero/src/components/data_display/carousel.rs`):
-//!
-//! | arm | what it covers | the control in the fixture |
-//! |---|---|---|
-//! | `key_taken` | a libero control that took the key by preventing its default | `Slider` |
-//! | `typing_target` | a caret move the browser performs, which nothing marks | `TextField` |
-//! | `arrow_target` | raw HTML the browser steps with the arrows | `<input type="range">`, a radio pair |
-//!
-//! Nothing in the tree covered any of it before todo 375: the docs page's
-//! slides are plain text, so the guard could be deleted whole with every test
-//! still green.
-//!
-//! **Each check asserts two things at once, and both halves matter.** That a
-//! control did what the key means to it is the visible symptom of the guard
-//! holding; that the strip did not move is the other half, since a carousel
-//! that advanced *as well* is the double action the guard exists to stop.
-//! [`arrows_on_a_plain_button_move_the_strip`] is what keeps the second half
-//! from being a sentence about a carousel that never moves: a `Button` is
-//! covered by no arm, so arrows pressed on one have to advance the strip.
-//!
-//! Desktop only. The guard is about where a press landed, not about layout,
-//! and `Carousel` moves the strip with a smooth scroll, which is unreliable in
-//! a background page at 390px (`codebase/e2e-harness`).
+//! `Carousel`: a key pressed in a slide belongs to the slide (375); each check asserts the
+//! control acted and the strip stayed. Desktop only: smooth scroll is unreliable in background.
 
 use anyhow::{Result, bail, ensure};
 use chromiumoxide::Page;
@@ -44,9 +17,8 @@ use e2e::{Fixture, Suite, Viewport, wait};
 /// round the clip a layout unit (1/64px) inside it.
 const SUBPIXEL: f64 = 0.5;
 
-/// Todos 618, 619: the slide and the track clip flush at a slide's edge, which
-/// cut away the outset ring of a slide's focusable content. Every visible
-/// slide's button, the first one flush with the track's left edge.
+/// Todos 618, 619: the slide and the track clipped the outset ring of a slide's content.
+/// Checks every visible slide's button, the first flush with the track's left edge.
 #[test]
 fn a_focused_slide_keeps_its_ring() {
     block_on(async {
@@ -96,9 +68,8 @@ fn a_focused_slide_keeps_its_ring() {
     });
 }
 
-/// The scroll container, which is also the tab stop and where the key handler
-/// sits. Not `[role=group]` alone: every slide is one too. The track is the
-/// group that describes itself with the live status region.
+/// The scroll container, tab stop and key handler. Not `[role=group]` alone: every slide
+/// is one too.
 pub const TRACK: &str = "[aria-roledescription=carousel] [role=group][aria-describedby]";
 const TEXT: &str = "[aria-roledescription=slide] input[type=text]";
 const SLIDER: &str = "[aria-roledescription=slide] [role=slider]";
@@ -113,28 +84,16 @@ const CONTROLS: &str = "[aria-roledescription=carousel] button[aria-controls]";
 /// generated, so the stable half of it is what this matches.
 const INDICATORS: &str = "[aria-roledescription=carousel] button[id*='-indicator-']";
 const NEXT: &str = "[aria-roledescription=carousel] button[aria-label='Next slide']";
-/// The second slide once it is the current one. Nothing carries `data-current`
-/// but the resting slide, so at rest this matches nothing - which is what
-/// `Suite` requires of a state's settle selector.
+/// The second slide once current. At rest this matches nothing, as `Suite` requires of a
+/// state's settle selector.
 const SECOND_CURRENT: &str = "[aria-roledescription=slide]:nth-of-type(2)[data-current]";
 
 /// The track, the text field, the slider, the range, the radio and the button,
 /// with room to spare.
 const TAB_BUDGET: usize = 10;
 
-/// Where the carousel says it is: the position of the slide carrying
-/// `data-current`, which is the index `onindexchange` reports and the status
-/// region reads out.
-///
-/// **Not the track's `scrollLeft`.** `go_to` sets the index and asks the track
-/// to scroll to it, and that scroll is smooth - which in a page created
-/// `background: true` does not land at all. Measured on this fixture at
-/// 1280x900: after an arrow the index went 0 -> 1 -> 2 and the slide the
-/// component treats as offscreen went `inert`, while `scrollLeft` stayed 0
-/// against a 1284px strip in a 420px track. `codebase/e2e-harness` records the
-/// same trap at 390px; this is it at desktop width. So the offset is not a
-/// measure of anything here, and the index is: it is what a caller is told and
-/// what a screen reader is read.
+/// The index of the slide carrying `data-current`. Not `scrollLeft`: a smooth scroll never
+/// lands in a `background: true` page, so it stays 0 (`codebase/e2e-harness`).
 const INDEX: &str = "[...document.querySelectorAll('[aria-roledescription=slide]')]\
                      .findIndex(el => el.hasAttribute('data-current'))";
 
@@ -221,9 +180,8 @@ fn slide_content_keeps_its_own_keys() {
 pub async fn the_caret_moves_in_a_slides_text_field(fixture: &Fixture) -> Result<()> {
     let page = &fixture.page;
     reach(page, TEXT).await?;
-    // Tab into a text input selects its contents, so the caret has no
-    // position to move from until Home gives it one. Home is a carousel key
-    // too, so this press is already inside what is being tested.
+    // Tab selects the input's text, so Home gives the caret a position; Home is a
+    // carousel key too, so this press is already under test.
     keyboard::press(page, keyboard::HOME).await?;
 
     let before = index(page).await?;
@@ -320,12 +278,8 @@ fn modifier_chords_go_to_the_browser() {
     });
 }
 
-/// The positive control, and the reason the four checks above say anything.
-///
-/// A `Button` is covered by no arm: it takes no arrows, the browser steps
-/// nothing on it, and nothing prevents their default. So the press belongs to
-/// the carousel, and a guard that returned for everything - the obvious way to
-/// make the four checks above pass - fails here.
+/// The positive control: no arm covers a `Button`, so a guard that returned for
+/// everything, passing the four checks above, fails here.
 pub async fn arrows_on_a_plain_button_move_the_strip(fixture: &Fixture) -> Result<()> {
     let page = &fixture.page;
     reach(page, BUTTON).await?;
@@ -341,12 +295,8 @@ pub async fn arrows_on_a_plain_button_move_the_strip(fixture: &Fixture) -> Resul
     Ok(())
 }
 
-/// Tab to `selector` from the top of the document.
-///
-/// Every check leaves focus inside the widget, and `blur()` does not put the
-/// next Tab back at the start (`archetypes::reset_tab_position`). Tabbing
-/// rather than calling `focus()` also gets each control's reachability
-/// asserted on the way past.
+/// Tab to `selector` from the top of the document (`blur()` does not reset the Tab
+/// position, see `archetypes::reset_tab_position`); asserts reachability on the way.
 async fn reach(page: &Page, selector: &str) -> Result<()> {
     reset_tab_position(page).await?;
     keyboard::tab_to(page, selector, TAB_BUDGET).await?;
@@ -361,11 +311,8 @@ async fn index(page: &Page) -> Result<i64> {
     Ok(index)
 }
 
-/// The strip is where it was.
-///
-/// Read **after** something the press was supposed to do has been waited for,
-/// never straight after the key: a carousel that has not moved yet and one
-/// that never will look the same on the next line.
+/// The strip is where it was. Call it only after waiting for the press's own effect:
+/// straight after the key, "not yet moved" looks like "never moves".
 async fn assert_strip_held(page: &Page, before: i64, what: &str) -> Result<()> {
     let after = index(page).await?;
     if after != before {
@@ -379,24 +326,8 @@ pub const KEY_TAKEN: &str = "key_taken";
 pub const TYPING_TARGET: &str = "typing_target";
 pub const ARROW_TARGET: &str = "arrow_target";
 
-/// The track's key handler with one guard arm taken out, as a plant.
-///
-/// The arm cannot be removed from the library for a test, so it is removed
-/// from a copy: a listener that re-implements the guard without `arm`, and
-/// applies the unguarded handler's two effects - `prevent_default()` and an
-/// advance - to every press it lets through. What a slide's control then sees
-/// is exactly what it would see with that arm deleted from `carousel.rs`.
-///
-/// The re-dispatched press is the real handler's, so this plant needs the
-/// component to be working to show anything: it takes an arm off the guard and
-/// leaves everything else alone.
-///
-/// It listens on `window` in the bubble phase, which is **after** dioxus's own
-/// delegated listener at the document root. That ordering is what makes the
-/// `key_taken` arm mean anything here: a listener on the track itself runs
-/// before every dioxus handler, so `defaultPrevented` would still be false for
-/// a key the `Slider` had already taken, and the arm would read as removed in
-/// all three plants.
+/// Plants the track's key handler without guard arm `arm`: a `window` bubble listener
+/// (after dioxus's root listener, so `defaultPrevented` is set) that prevents and advances.
 pub fn plant_arm_out(arm: &str) -> String {
     format!(
         r#"(() => {{
@@ -417,11 +348,8 @@ pub fn plant_arm_out(arm: &str) -> String {
                 if (arm !== 'typing_target' && typing) return;
                 if (arm !== 'arrow_target' && stepping) return;
                 if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return;
-                // What the unguarded handler does: eat the browser's default
-                // action, and navigate. The navigation is the component's own
-                // - the same press re-dispatched at the track, where no arm
-                // applies - rather than a scroll written by hand, so what is
-                // measured afterwards is `Carousel` moving.
+                // The unguarded handler: prevent the default, then re-dispatch the press
+                // at the track, so what moves afterwards is `Carousel` itself.
                 e.preventDefault();
                 el.closest(track).dispatchEvent(new KeyboardEvent('keydown', {{
                     key: e.key, code: e.code, bubbles: true, cancelable: true,
@@ -433,60 +361,22 @@ pub fn plant_arm_out(arm: &str) -> String {
     )
 }
 
-/// The generic battery, added by todo 381.
-///
-/// `81d44d8e` gave `/carousel` a fixture and a behaviour test and no
-/// `Suite::new`, so axe, the AX snapshot, the focus-ring pass and the
-/// target-size pass had never seen a real `Carousel` - on a page that draws
-/// two chevrons and, since this todo, a strip of dots.
-///
-/// **The advanced state is the point of the second declaration.** A carousel's
-/// resting render is the easy half: at index 0 the previous control is
-/// `aria-disabled`, one slide is live and two are `inert`, and the first dot is
-/// the strip's only tab stop. Every one of those flips on the first advance,
-/// and an accessibility tree that is right at rest and wrong one slide along is
-/// the normal shape of these bugs.
-///
-/// `focusable` is the track alone, because that is what `Suite` can reach: it
-/// measures the resting state, and the controls and dots are there too but the
-/// track is the component's own tab stop and the ring that matters. The dots'
-/// roving focus is exercised by the component's own keyboard tests in `libero`.
-///
-/// Contrast coverage holds because the guard drops `inert` text, as axe does
-/// (todo 386). Only the live slide is claimed; in the advanced state the drawn
-/// slide may still be `inert` (todo 375), and its text is not evaluated.
-///
-/// ## A pass not declared, and why
-///
-/// * **`targets(INDICATORS)`**, the dots. They are drawn **40x5, 24x5 and
-///   24x5** at 1280x800, and since todo 389 each takes the pointer over a
-///   `::before` at least 24px on both axes, as `Slider`'s thumb does. The pass
-///   measures bounding boxes, which never include a pseudo-element, so it would
-///   report 5px for dots that meet 2.5.8.
-///   [`the_dots_take_the_pointer_over_24px`] hit-tests the area instead.
+/// The generic battery (381), at rest and advanced: every state flips on the first advance.
+/// No `targets(INDICATORS)`: the pass ignores the dots' 24px `::before` (see the hit test).
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("carousel", "/carousel")
         .focusable(TRACK)
         .targets(CONTROLS)
-        // The strip is scroll-driven, and `current` follows the scroll frame
-        // by frame. Without this the advanced state snapshotted the previous
-        // control both enabled and `[disabled]` on two runs of the same code
-        // at 390px: a smooth scroll that never lands in a `background: true`
-        // page ends in a scroll event at the old offset, which puts the index
-        // back (todo 375).
+        // `current` follows the scroll; a smooth scroll that never lands in a background
+        // page puts the index back, and the snapshot flaked at 390px (375).
         .reduced_motion()
         .state("advanced", &[Step::Click(NEXT)], SECOND_CURRENT)
         .run();
 }
 
-/// WCAG 2.5.8 on the dots' hit area, not their box: a dot is drawn 5px thick
-/// and a `::before` at least 24px on both axes takes the pointer (todo 389).
-///
-/// Hit-tests each dot's corners 11.5px out from its centre on both axes, and
-/// 13px out as the control that the check can fail. Then clicks the third dot
-/// 11px above its centre, outside its drawn box, so only the hit area can take
-/// that click.
+/// WCAG 2.5.8 on the dots' 24px `::before` hit area (389): hit-tests 11.5px out, 13px as
+/// the failing control, then clicks the third dot 11px above its drawn box.
 #[test]
 fn the_dots_take_the_pointer_over_24px() {
     block_on(async {
@@ -549,9 +439,8 @@ async fn dot_centre(page: &Page, n: usize) -> Result<pointer::Point> {
     Ok(pointer::Point { x, y })
 }
 
-/// A clone showing in the viewport is the only live copy of its slide, so it
-/// cannot be `aria-hidden`: its button took Tab while hidden from a screen
-/// reader (axe `aria-hidden-focus`), and its slide was missing from the tree.
+/// A clone in the viewport is its slide's only live copy, so it cannot be `aria-hidden`
+/// (axe `aria-hidden-focus`: its button took Tab while hidden).
 #[test]
 fn a_visible_clone_is_not_hidden_from_assistive_tech() {
     block_on(async {
@@ -607,9 +496,8 @@ fn a_visible_clone_is_not_hidden_from_assistive_tech() {
 /// The autoplay toggle.
 const PAUSE: &str = "[aria-roledescription=carousel] button[aria-pressed]";
 
-/// WCAG 2.2.2 and APG (todo 548): autoplay advances; focus entering stops it
-/// for good, leaving does not resume it, and only Play does. The toggle is the
-/// carousel's first tab stop. The status is silent while it rotates.
+/// WCAG 2.2.2, APG (548): focus entering stops autoplay for good; only Play resumes it.
+/// The toggle is the first tab stop; the status is silent while it rotates.
 #[test]
 fn autoplay_stops_once_focus_enters_until_play() {
     block_on(async {
@@ -691,9 +579,8 @@ fn a_pointer_press_on_pause_pauses() {
             .into_value()
             .unwrap();
         let at = pointer::Point { x, y };
-        // On the rim, not the glyph: a glyph swapped under a held press takes
-        // its click with it. The moves in place let the render after `focusin`
-        // run before the release, as a person's click does.
+        // On the rim: a glyph swapped under a held press takes its click with it. The
+        // moves in place let the render after `focusin` run before the release.
         pointer::drag(page, at, at, 5).await.unwrap();
         wait::for_js_true(
             page,
@@ -876,9 +763,8 @@ fn the_pause_control_leaves_next_uncovered() {
     });
 }
 
-/// A looping strip opens on slide 1, drawn where the component thinks it is.
-/// Smooth, the opening scroll swept past the clones, and in a background page
-/// never landed: the drawn slides were `inert` and the live ones offscreen.
+/// A looping strip opens on slide 1, drawn where the component thinks it is. A smooth
+/// opening scroll never landed in a background page: the drawn slides were `inert`.
 #[test]
 fn a_looping_strip_opens_on_its_first_slide() {
     block_on(async {
@@ -929,9 +815,8 @@ fn a_looping_strip_opens_on_its_first_slide() {
     });
 }
 
-/// A smooth scroll crawls in a background page, and its late settle reads
-/// the index back from where it stopped: a "rotation" the autoplay never
-/// made. The autoplay units are about the timer, so the strip jumps.
+/// A smooth scroll's late settle in a background page reads back a "rotation" autoplay
+/// never made. The autoplay units test the timer, so the strip jumps.
 async fn instant_scroll(page: &Page) {
     page.evaluate(format!(
         "(() => {{ const s = document.createElement('style'); \

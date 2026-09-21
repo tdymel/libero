@@ -1,14 +1,5 @@
-//! `Autocomplete`: the combobox archetype, fully assembled.
-//!
-//! The pilot for the whole suite. It was chosen because it is **portaled** -
-//! its listbox renders at an outlet on the document root, so it is no
-//! descendant of its trigger. That breaks the obvious "snapshot the subtree"
-//! approach, and finding that out on component one rather than component twelve
-//! is the entire reason this component went first.
-//!
-//! The shape to copy for a new component: one `Suite` call for the generic
-//! battery, then hand-written tests only for what this component uniquely
-//! promises.
+//! `Autocomplete`, the suite's pilot: its listbox is portaled, no descendant of its trigger.
+//! The shape to copy: one `Suite` call, then tests only for what the component promises.
 
 use anyhow::{Result, ensure};
 use e2e::archetypes::Combobox;
@@ -23,9 +14,7 @@ const LISTBOX: &str = "[role=listbox]";
 const STATUS: &str = "[role=status]";
 const OPTION_COUNT: usize = 6;
 
-/// Contrast, focus rings, the accessibility tree and a clean console, at both
-/// viewports. Everything here is generic; nothing in it knows what a combobox
-/// is.
+/// Contrast, focus rings, the accessibility tree and a clean console, at both viewports.
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("autocomplete", "/autocomplete")
@@ -49,9 +38,7 @@ fn it_honours_the_combobox_contract() {
         for viewport in Viewport::ALL {
             let fixture = Fixture::open("/autocomplete", viewport).await.unwrap();
 
-            // The archetype tabs to the trigger itself, so reachability by
-            // keyboard is part of the contract rather than a precondition the
-            // caller has to remember.
+            // The archetype tabs to the trigger, so keyboard reachability is part of the contract.
             Combobox {
                 trigger: TRIGGER,
                 option_count: OPTION_COUNT,
@@ -70,11 +57,8 @@ fn it_honours_the_combobox_contract() {
     });
 }
 
-/// A dismissed listbox must not stay readable.
-///
-/// Nothing animates a popover today, so this passes trivially - which is the
-/// point of writing it now. The first animated dropdown inherits the assertion
-/// instead of inheriting a note in a brain file that somebody has to remember.
+/// A dismissed listbox must not stay readable. Trivial while nothing animates a popover;
+/// the first animated dropdown inherits it.
 #[test]
 fn a_dismissed_list_leaves_the_accessibility_tree() {
     block_on(async {
@@ -112,14 +96,8 @@ fn a_dismissed_list_leaves_the_accessibility_tree() {
     });
 }
 
-/// The status region exists, is polite, and is mounted before it has anything
-/// to say.
-///
-/// That last part is the design: a region that mounts together with its text is
-/// skipped by some screen readers, so `ComboboxCore` keeps an always-mounted
-/// empty one (`codebase/components/combobox`). An assertion that the region
-/// merely exists while it is speaking would not catch a regression to the
-/// mount-with-text shape.
+/// The status region is polite and mounted before it speaks: some screen readers skip a
+/// region that mounts with its text (`codebase/components/combobox`).
 #[test]
 fn its_status_region_is_mounted_and_silent_at_rest() {
     block_on(async {
@@ -141,9 +119,8 @@ fn its_status_region_is_mounted_and_silent_at_rest() {
     });
 }
 
-/// While typing, nothing is highlighted, so Home and End move the caret (APG
-/// editable combobox). A query matching nothing shows "No results" and says it
-/// politely (todo 482); the popup then draws that text, so it stays expanded.
+/// While typing, Home and End move the caret (APG editable combobox). A query matching
+/// nothing shows and says "No results" (482), so the popup stays expanded.
 #[test]
 fn typing_keeps_home_end_and_expanded_honest() {
     editable_combobox_typing("/autocomplete", "e");
@@ -212,9 +189,8 @@ pub fn editable_combobox_typing(route: &str, query: &str) {
     });
 }
 
-/// Home and End while typing leave the options alone, and a query matching
-/// nothing is drawn and said, on every platform. The caret itself is read on
-/// the web only, above.
+/// Home and End while typing leave the options alone, and "No results" is drawn and said,
+/// on every platform. The caret is read on the web only, above.
 async fn typing_keeps_the_list_honest<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.focus(TRIGGER).await?;
     d.type_text("e").await?;

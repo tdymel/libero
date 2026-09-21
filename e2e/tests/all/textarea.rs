@@ -1,8 +1,5 @@
-//! `Textarea { counter }` (todo 584): the visible count follows the text, and
-//! the polite status speaks only in the last tenth of `maxlength`.
-//!
-//! `/textarea/counter`: a controlled textarea, then one owning its own text,
-//! both `maxlength="20"`.
+//! `Textarea { counter }` (584): the count follows the text; the polite status speaks only
+//! in the last tenth of `maxlength`. Controlled and uncontrolled, both 20.
 
 use anyhow::Result;
 use e2e::browser::block_on;
@@ -165,9 +162,8 @@ fn an_uncontrolled_count_follows_a_raw_form_reset() {
     });
 }
 
-/// Todo 679: a reset brings an uncontrolled textarea back to its initial text
-/// without an input event, and the count follows, from the native reset button
-/// and from `FormHandle`.
+/// Todo 679: a reset (native button or `FormHandle`) restores an uncontrolled textarea
+/// without an input event, and the count follows.
 #[test]
 fn an_uncontrolled_count_follows_a_form_reset() {
     block_on(async {

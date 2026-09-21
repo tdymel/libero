@@ -37,10 +37,8 @@ async fn walk<D: Driver>(d: &mut D, presses: usize, backwards: bool) -> Result<V
     Ok(ids)
 }
 
-/// A trap mounted with the page focuses its first stop (todo 664). A
-/// `display: none` button used to stall Tab on the stop before it, for good,
-/// and `<summary>` was never a stop. A native radio group is one stop, its
-/// checked radio or else its first, as the browser's own Tab has it (todo 615).
+/// A trap mounted with the page focuses its first stop (664); a `display: none` button once
+/// stalled Tab. A radio group is one stop, its checked or first radio (615).
 async fn tab_passes_over_hidden_stops<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     eventually_focused(d, "#first", "mount").await?;
     let walked = walk(d, 5, false).await?;

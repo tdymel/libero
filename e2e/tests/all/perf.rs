@@ -1,6 +1,5 @@
-//! Render counts per interaction in a real browser (todo 821): each row drives
-//! one interaction, waits until nothing renders any more, and holds the count
-//! per scope to a budget. The probe proves the counter first (todo 463).
+//! Render counts per interaction in a browser (821), each scope held to a budget once
+//! rendering stops. The probe proves the counter first (463).
 
 use std::collections::BTreeMap;
 use std::time::{Duration, Instant};
@@ -54,9 +53,8 @@ fn count(renders: &Renders, scope: &str) -> u32 {
         .sum()
 }
 
-/// Every scope that rendered is in `budget` and stayed within its count. The
-/// budgets are the counts measured on 2026-09-27: they are deterministic, so
-/// any growth is a change to look at, and a fix that lowers one passes.
+/// Every scope that rendered is in `budget` and within it. Budgets are the deterministic
+/// counts of 2026-09-27: growth needs a look, a lower count passes.
 fn assert_within(renders: &Renders, budget: &[(&str, u32)], what: &str) {
     let mut short = Renders::new();
     for (name, rendered) in renders {
@@ -88,9 +86,8 @@ async fn open(route: &str) -> Fixture {
     fixture
 }
 
-/// A closure handler prop re-renders its child on every parent render; a
-/// `use_callback` one skips. If the counter could not see that, no budget
-/// below would mean anything.
+/// A closure handler prop re-renders its child on every parent render, a `use_callback`
+/// one skips; the counter must see that for any budget to mean anything.
 #[test]
 fn the_counter_sees_a_closure_handler_defeat_memo() {
     block_on(async {

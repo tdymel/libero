@@ -1,6 +1,5 @@
-//! Controlled fields: the shell skips a value change and a caller's new slot,
-//! so the control and the slot redraw alone (todo 29). Each must still show
-//! what the caller holds, keystroke by keystroke.
+//! Controlled fields: the control and slot redraw without the shell (29), and must still
+//! show what the caller holds, keystroke by keystroke.
 
 use anyhow::Result;
 use chromiumoxide::Page;

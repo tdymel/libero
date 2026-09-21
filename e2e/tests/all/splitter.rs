@@ -1,7 +1,5 @@
-//! `Splitter`: the divider keeps the keyboard after a mouse drag (todo 431).
-//!
-//! `use_drag` cancels the pointerdown, and with it the browser's own focus, so
-//! the hook focuses the pressed divider itself (todo 439c).
+//! `Splitter`: the divider keeps the keyboard after a mouse drag (431): `use_drag` cancels
+//! the pointerdown's focus, so it focuses the divider itself (439c).
 
 use anyhow::{Context, Result};
 use e2e::browser::block_on;

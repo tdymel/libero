@@ -1,53 +1,5 @@
-//! `FloatingWindow`: the overlay archetype, plus the geometry it owns.
-//!
-//! Three tables said the `Overlay` archetype covered this component while
-//! nothing ran against it: `e2e/src/archetypes/mod.rs`,
-//! `e2e/src/archetypes/overlay.rs` and `plans/13-e2e-pass/overview.md`
-//! (todo 379). It is the half of review 8's B3 that todo 353 dropped when it
-//! was filed `Lightbox`-only, and it matters because `fabcf2bc` split thirteen
-//! component functions with no browser pass and named `Carousel`, `Lightbox`
-//! and `FloatingWindow` as the three that moved the most live state.
-//!
-//! **A window is non-modal**, so the archetype runs with `traps_focus: false`:
-//! it opens, focus moves inside, Escape closes it and focus returns to the
-//! trigger, but the page behind it stays tabbable on purpose.
-//!
-//! Beyond the archetype, what a static review cannot clear is the geometry:
-//!
-//! * the title bar is the keyboard move handle, and an arrow on it moves the
-//!   window by the theme's step;
-//! * the corner separator resizes, and Home and End ask for `0x0` and for
-//!   `u16::MAX` so the caller's own `min-`/`max-` bounds are what answers;
-//! * both report through `onmove`/`onresize`, and those reports are **owed to
-//!   an effect**. Reading the rect in the same task as the write reported the
-//!   previous one (`codebase/components/floating-window`), so every geometry
-//!   check here asserts the report against the rect the browser actually drew.
-//!   That is the assertion the effect exists for.
-//!
-//! * the separator is the only thing that tells a screen-reader user how big
-//!   the window is, so after every resize its `aria-valuenow`/`valuetext` are
-//!   asserted against the drawn rect and its `aria-valuemin`/`valuemax`
-//!   against the caller's bounds in pixels (todo 388). Without them ARIA's
-//!   implicit 0..100 clamped every size to `100`, and the value once lagged
-//!   the window by two resizes.
-//!
-//! Desktop only for the geometry. The fixture's window may be 480x360, which
-//! does not fit a 390px viewport, so measuring it there would measure the
-//! viewport clamp rather than the component. The archetype and the `Suite`
-//! baseline run at both.
-//!
-//! ## Not covered, and why
-//!
-//! * **The viewport clamp on a move.** `clamped()` is CSS, and reaching it by
-//!   keyboard takes forty-odd presses; each one starts an async rect read, so
-//!   repeating them faster than the reads land measures the race rather than
-//!   the clamp. The resize's Home and End clamp against the caller's bounds in
-//!   one press each, and that is the clamp this unit measures.
-//! * **Pointer drag geometry.** `use_drag` is covered by its own hook tests,
-//!   and the keyboard path is the one that fails silently for a keyboard user.
-//!   Only the focus a drag leaves behind is asserted (todo 439c).
-//! * **Stacking beyond open order.** `/floating-window-pair` checks that the
-//!   newer window stacks on top; raise-on-click is `WindowHost`'s unit test.
+//! `FloatingWindow` (379): the non-modal overlay archetype, plus keyboard move/resize whose
+//! `onmove`/`onresize` reports must match the drawn rect. Geometry is desktop only.
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -86,9 +38,8 @@ const TAB_BUDGET: usize = 8;
 fn it_meets_the_baseline() {
     Suite::new("floating_window", "/floating-window")
         .focusable(TRIGGER)
-        // The window's text is portaled beside the fixture. Without this, axe
-        // reporting no contrast violation in the open state and axe never
-        // having looked at the window read the same (todo 327).
+        // The window's text is portaled beside the fixture; without this, axe never
+        // looking at it reads as clean (327).
         .contrast_covers(DIALOG)
         // Drawn 20x20 (an `ActionIcon` at `size: "sm"`), it takes presses in
         // an invisible 24x24 box (todos 505, 566), so it meets 2.5.8 outright.
@@ -146,10 +97,8 @@ fn the_title_bar_moves_the_window_and_reports_where_it_landed() {
 
 pub async fn keyboard_move(page: &Page) -> Result<()> {
     open(page).await?;
-    // The handle is focusable only because the window is not pinned, and it is
-    // named for the job. `assert_focus_ring` tabs to it itself, from the
-    // window's own root, so reaching it asserts both - and it leaves focus
-    // there for the arrows below.
+    // An unpinned window's handle is focusable; `assert_focus_ring` tabs to it from the
+    // window root and leaves focus there for the arrows below.
     let ring = focus::assert_focus_ring(page, HANDLE, TAB_BUDGET).await?;
     focus::assert_ring_contrast(&ring)?;
 
@@ -243,9 +192,8 @@ fn under_rtl_the_grip_resizes_from_the_bottom_left() {
     });
 }
 
-/// The separator is the only thing that tells a screen-reader user how big
-/// the window is: its value is the drawn width, its text the drawn size, and
-/// its range the caller's own bounds in pixels (todo 388).
+/// The separator tells a screen reader the window's size: value the drawn width, text the
+/// drawn size, range the caller's bounds in pixels (388).
 async fn assert_separator(page: &Page, drawn: (f64, f64, f64, f64), what: &str) -> Result<()> {
     let expected = format!(
         "{} {} by {} pixels {} {}",
@@ -281,9 +229,8 @@ async fn assert_separator(page: &Page, drawn: (f64, f64, f64, f64), what: &str) 
     Ok(())
 }
 
-/// `use_drag` cancels the pointerdown and with it the browser's focus, so the
-/// hook focuses the pressed handle itself (todo 439c). Focus starts on the
-/// window root after opening, so neither handle holds it beforehand.
+/// `use_drag` cancels the pointerdown and its focus, so the hook focuses the pressed
+/// handle itself (439c). Focus starts on the window root.
 #[test]
 fn a_drag_leaves_its_handle_focused() {
     block_on(async {
@@ -500,14 +447,8 @@ async fn wait_for_size(
     Ok(now)
 }
 
-/// What the component told the caller has to be what the browser drew.
-///
-/// This is the assertion the `owed` effect exists for. A report written in the
-/// handler rather than after the render carries the rect from *before* the
-/// change, which on a 10px step is a 10px lie that nothing else on the page
-/// shows.
-///
-/// The report arrives after the render, so it is waited for rather than read.
+/// The report must match the drawn rect, as the `owed` effect exists to ensure; a report
+/// from the handler carries the old rect. Waited for, since it arrives after the render.
 async fn assert_report(
     page: &Page,
     selector: &str,
@@ -544,16 +485,13 @@ async fn assert_report(
     Ok(())
 }
 
-/// A pixel of slack, so a fractional layout is not a failure. Every step this
-/// unit measures is ten pixels or a clamp to a bound, so nothing it asserts
-/// can hide inside it.
+/// A pixel of slack for fractional layout; every step here is 10px or a clamp.
 fn close_to(a: f64, b: f64) -> bool {
     (a - b).abs() <= 1.0
 }
 
-/// Two windows: the newer one stacks on top, Escape closes only the window
-/// holding focus and hands focus to its own trigger, and a close from the page
-/// leaves focus where the user put it rather than pulling it to the trigger.
+/// Two windows: the newer stacks on top, Escape closes only the focused one and returns
+/// focus to its trigger; a close from the page leaves focus where it is.
 #[test]
 fn each_window_closes_alone_and_a_close_from_the_page_keeps_focus() {
     block_on(async {

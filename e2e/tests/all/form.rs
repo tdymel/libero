@@ -1,7 +1,5 @@
-//! `Form`: a bound field's rule shows on blur and follows the form's value.
-//!
-//! Rules that capture nothing compare equal, so the field skips its parent's
-//! render (todo 29); it must still redraw on a keystroke and on a store write.
+//! `Form`: a bound field's rule shows on blur and follows the form's value. The field skips
+//! its parent's render (29), yet must redraw on a keystroke and a store write.
 
 use anyhow::Result;
 use chromiumoxide::Page;

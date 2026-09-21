@@ -1,9 +1,4 @@
-//! `Tabs`: the roving-tabindex archetype.
-//!
-//! Added as the second archetype's first consumer. The point of this unit is
-//! less about `Tabs` than about whether the archetype holds up when it meets a
-//! component it was not written against - `RovingTabindex` was written from
-//! APG, not from this component.
+//! `Tabs`: the roving-tabindex archetype's first consumer.
 
 use anyhow::Result;
 use e2e::archetypes::{Orientation, RovingTabindex, reset_tab_position};
@@ -338,9 +333,8 @@ fn manual_activation_selects_on_enter_and_space() {
     });
 }
 
-/// The strip is one tab stop from wherever the focus sits in it: Tab from a
-/// focused, unselected tab leaves for the panel rather than landing on the
-/// selected tab further along.
+/// The strip is one tab stop wherever focus sits: Tab from an unselected tab leaves for the
+/// panel, not the selected tab.
 #[test]
 fn tab_leaves_the_strip_from_a_focused_unselected_tab() {
     block_on(async {

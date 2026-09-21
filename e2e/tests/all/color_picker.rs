@@ -1,8 +1,5 @@
-//! `ColorPicker`'s saturation pad: a 2-D slider on one thumb. Left/Right move
-//! the saturation, Up/Down the brightness; a drag on the pad moves both and
-//! leaves the thumb focused (todo 406).
-//!
-//! `/color-picker` starts at `#1c7ed6`: saturation 87%, brightness 84%.
+//! `ColorPicker`'s saturation pad: Left/Right move saturation, Up/Down brightness; a drag
+//! moves both and focuses the thumb (406). Starts at `#1c7ed6`: 87% / 84%.
 
 use anyhow::Result;
 use e2e::browser::block_on;
@@ -139,10 +136,8 @@ fn modifier_chords_are_left_to_the_browser() {
     });
 }
 
-/// Focus starts on a button outside, so a thumb that never takes focus fails
-/// here rather than passing on focus it already had. The drag runs from a
-/// quarter into the pad to three quarters, so the reading names where it
-/// ended on both axes.
+/// Focus starts outside, so a thumb that never takes focus fails. The drag runs from a
+/// quarter to three quarters into the pad on both axes.
 #[test]
 fn a_drag_moves_the_pad_and_leaves_the_thumb_focused() {
     block_on(async {

@@ -1,7 +1,5 @@
-//! ArrowLeft and ArrowRight under `dir="rtl"` (todo 115): "next" sits on the
-//! left, so each family swaps the two. One test per family, on the existing
-//! fixtures with `dir="rtl"` set on `<html>`, as an RTL app sets it, so the
-//! portaled popups inherit it too.
+//! ArrowLeft/ArrowRight swap under `dir="rtl"` (115), one test per family. `dir` is set on
+//! `<html>`, as an RTL app does, so portaled popups inherit it.
 
 use chromiumoxide::Page;
 use e2e::browser::block_on;
@@ -290,9 +288,8 @@ fn carousel_dots_step_forward_on_arrow_left() {
     });
 }
 
-/// Which way a glyph points on screen, as the x of its drawn `(vx, vy)` after
-/// every CSS transform from it up to the root: `ChevronRightIcon` draws
-/// `(1, 0)`, `ChevronDownIcon` `(0, 1)`.
+/// Which way a glyph points on screen: the x of its `(vx, vy)` after every transform up to
+/// the root (`ChevronRightIcon` draws `(1, 0)`, `ChevronDownIcon` `(0, 1)`).
 async fn screen_x(page: &Page, selector: &str, vx: f64, vy: f64) -> Option<f64> {
     page.evaluate(format!(
         "(() => {{ let el = document.querySelector({selector:?}); \

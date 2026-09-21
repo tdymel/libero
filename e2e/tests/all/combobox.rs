@@ -114,9 +114,8 @@ async fn multi_click_toggles<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     echoes(d, "[Cherry, Banana]", "a click on Banana").await
 }
 
-/// The rows cancel `mousedown` to keep focus on the trigger, which closes on
-/// blur. Blitz moves focus on the press regardless; libero moves it back and
-/// the trigger ignores that blur (todo 472).
+/// The rows cancel `mousedown` to keep focus on the trigger. Blitz moves focus anyway;
+/// libero moves it back and the trigger ignores that blur (472).
 async fn multi_click_keeps_open<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
     d.click(TRIGGER).await?;
     listbox_shows(d, "a click on the trigger").await?;

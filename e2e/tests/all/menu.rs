@@ -1,6 +1,5 @@
-//! `Menu`: the overlay archetype, as a non-modal popup.
-//!
-//! Not a focus trap: Tab closes every level and moves on from the trigger.
+//! `Menu`: the overlay archetype as a non-modal popup. Tab closes every level and moves on
+//! from the trigger.
 
 use anyhow::Result;
 use e2e::archetypes::Overlay;
@@ -466,9 +465,8 @@ fn a_toggle_is_a_checkbox_whose_shortcut_stays_out_of_its_name() {
     });
 }
 
-/// Todo 641: a lone toggle's label lines up with the plain rows', and a
-/// disabled row's shortcut key dims with its label. Todo 745: the row is
-/// `GrayText` in forced colours.
+/// Todo 641: a lone toggle's label lines up with plain rows', a disabled row's shortcut
+/// dims; 745: the row is `GrayText` in forced colours.
 #[test]
 fn a_lone_toggle_lines_up_and_a_disabled_shortcut_dims() {
     block_on(async {

@@ -1,16 +1,5 @@
-//! The instrumentation todo 364 asked for, proved on made-up runs.
-//!
-//! Every other file here drives a browser. This one does not, on purpose: the
-//! thing under test is what the harness *writes down when it fails*, and the
-//! only honest way to exercise that is to hand it the two shapes and read back
-//! what it said. `planted.rs` and `negative.rs` make the same argument for the
-//! checks - a report that can only say "nothing went wrong" is not evidence
-//! until something has watched it say the opposite
-//! ([[principles/assertions-that-prove-nothing]]).
-//!
-//! It lives in the test binary rather than beside the code because this is the
-//! binary `cargo run -p e2e` runs. A unit test inside the runner's own
-//! `main.rs` would be run by nothing anybody runs.
+//! Todo 364's run journal, proved on made-up runs with no browser. It lives in this binary
+//! because `cargo run -p e2e` runs it; the runner's own unit tests nothing runs.
 
 use std::time::Duration;
 
@@ -82,12 +71,8 @@ fn a_summary_line_is_counted_and_anything_else_is_not() {
     assert_eq!(not_a_summary.ran(), 0);
 }
 
-/// The discriminator, which is the cheap half of todo 364: **a 364-shaped run
-/// fails everything; one frozen page leaves its siblings green.** Both read as
-/// "the suite was red and it took ages" from the wall clock alone, and the
-/// second all-fail was filed against the wrong mechanism for a day because of
-/// it. So the verdict has to say which it saw, and this is what watches it say
-/// both.
+/// Todo 364's discriminator: a 364-shaped run fails everything, one frozen page leaves its
+/// siblings green. The wall clock reads the same for both, so the verdict must say which.
 #[test]
 fn the_verdict_tells_an_all_fail_from_one_frozen_page() {
     let scratch = Scratch::new("verdict");
@@ -107,9 +92,8 @@ fn the_verdict_tells_an_all_fail_from_one_frozen_page() {
     assert!(all_fail.contains("ALL-FAIL"), "{all_fail}");
     assert!(all_fail.contains("todo 364 shape"), "{all_fail}");
 
-    // Olaf134's `MutationObserver` freeze: 661 s of wall clock, and
-    // `4 passed; 1 failed`. The wall time matches an all-fail and the shape
-    // does not, which is the whole point.
+    // A `MutationObserver` freeze: 661 s and `4 passed; 1 failed`, an all-fail's wall
+    // time without its shape.
     let one_page = journal::verdict(
         Tally {
             passed: 4,
@@ -129,9 +113,8 @@ fn the_verdict_tells_an_all_fail_from_one_frozen_page() {
     let no_tests = journal::verdict(Tally::default(), 0, &scratch.0, profile, 0, None);
     assert!(no_tests.contains("red without a failed test"), "{no_tests}");
 
-    // Surviving browsers are named in the verdict, not only in the file: the
-    // second all-fail left eleven of them and the run still said it had
-    // reaped everything.
+    // Surviving browsers are named in the verdict: an all-fail once left eleven while
+    // claiming it had reaped everything.
     let leaked = journal::verdict(
         Tally {
             passed: 0,
@@ -148,9 +131,8 @@ fn the_verdict_tells_an_all_fail_from_one_frozen_page() {
         "{leaked}"
     );
 
-    // `cargo run -p e2e -- tabs::` failing both its tests is not a suite that
-    // failed everything. Claiming the 364 shape there would be the third wrong
-    // diagnosis on this todo, so the caveat is attached to the claim itself.
+    // A filtered run failing all its tests is not the 364 shape, so the caveat rides on
+    // the claim itself.
     let filtered = journal::verdict(
         Tally {
             passed: 0,
@@ -166,14 +148,8 @@ fn the_verdict_tells_an_all_fail_from_one_frozen_page() {
     assert!(!filtered.contains("todo 364 shape"), "{filtered}");
 }
 
-/// The run that proved the discriminator could be defeated by this crate's own
-/// positive control (2026-09-20, todo 364).
-///
-/// 92 tests, `5 passed; 87 failed`, every failure a `navigation` wait against a
-/// browser that had stopped loading pages - a textbook 364 event. The five that
-/// passed were the `journal::` tests, which drive no browser on purpose, and
-/// the verdict therefore announced **PARTIAL: sibling pages stayed green**.
-/// A discriminator that a green non-browser unit can flip is not one.
+/// Todo 364 (2026-09-20): `5 passed; 87 failed`, all `navigation`, read as PARTIAL because
+/// the five were these browserless `journal::` tests. They must not flip the verdict.
 #[test]
 fn a_unit_that_drives_no_browser_is_not_a_sibling_that_stayed_up() {
     let scratch = Scratch::new("non-browser");
@@ -184,9 +160,8 @@ fn a_unit_that_drives_no_browser_is_not_a_sibling_that_stayed_up() {
         "journal::the_verdict_names_the_wait"
     ));
 
-    // libtest's per-test lines, and the two shapes that must not be read as
-    // one: the summary, and the progress line a slow run prints for every
-    // test still going.
+    // libtest's per-test lines, plus the summary and a slow run's progress line, which
+    // must not be read as one.
     assert_eq!(
         journal::test_outcome("test modal::it_meets_the_baseline ... ok"),
         Some(("modal::it_meets_the_baseline", true))
@@ -251,10 +226,8 @@ fn the_verdict_names_the_wait_that_gave_up_first() {
         &scratch.0,
         &gave_up("read", "[role=menu] to be visible", 15, 15, 0.02, 490),
     );
-    // A note in the same file, written by hand rather than through
-    // `journal::note`: that one appends to the live run's journal, and a test
-    // must not plant "reaped 88 browser process(es)" in the evidence of the
-    // run it is part of.
+    // Written by hand, not via `journal::note`, which would plant this in the live run's
+    // own journal.
     std::fs::write(
         scratch.0.join("waits.log"),
         format!(
@@ -275,12 +248,8 @@ fn the_verdict_names_the_wait_that_gave_up_first() {
     assert!(!summary.contains("note"), "{summary}");
 }
 
-/// A green run's `waits.log` is **not** empty: `negative.rs` and `planted.rs`
-/// exist to watch a check fail, and each spends a full `E2E_TIMEOUT_MS` doing
-/// it. Measured on a green run of this suite: twelve expiries, every one of
-/// them a control. Counting those beside a real one would bury the signal in
-/// its own positive controls, so they are set aside by thread name and said
-/// out loud rather than hidden.
+/// A green run's `waits.log` holds the controls' expiries (`negative.rs`, `planted.rs`).
+/// They are set aside by thread name and reported, not counted as real ones.
 #[test]
 fn the_controls_that_give_up_on_purpose_are_set_aside() {
     let scratch = Scratch::new("controls");
@@ -314,12 +283,8 @@ fn the_controls_that_give_up_on_purpose_are_set_aside() {
     );
     assert!(!with_a_real_one.contains("read 1"), "{with_a_real_one}");
 
-    // A control unit only controls an *assertion*. When its page never loads
-    // it gives up at `navigation`, and that is a real failure wearing a
-    // control's thread name. The real 364 run wrote 87 navigation failures,
-    // 36 of them from these two units, and the summary reported
-    // `navigation 51 (36 more were the controls)` - understating the event by
-    // 40% and inventing controls that never ran.
+    // A control unit failing at `navigation` is a real failure under a control's name;
+    // the 364 run undercounted by 40% that way.
     let scratch = Scratch::new("controls-by-kind");
     let never_loaded = "2026-09-20T11:38:29.020Z +243.4s navigation    failed  budget 120.000s \
                         elapsed 30.000s slowest-poll 30.000s polls 1 thread \
@@ -337,10 +302,8 @@ fn the_controls_that_give_up_on_purpose_are_set_aside() {
     );
 }
 
-/// The line has to carry the numbers that separate *slow* from *blocked*, or
-/// it is another wall-clock reading. A 15 s budget spent in one 118 s call is
-/// a page or a connection that stopped answering; the same budget spent over
-/// 480 quick polls is a condition that never came true.
+/// The line separates blocked from slow: one 118 s call is a page that stopped answering,
+/// 480 quick polls a condition that never came true.
 #[test]
 fn a_blocked_wait_and_a_slow_one_are_distinguishable_in_the_log() {
     let scratch = Scratch::new("shape");

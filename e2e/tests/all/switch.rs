@@ -20,9 +20,8 @@ fn it_meets_the_baseline() {
         .run();
 }
 
-/// WCAG 1.4.11: an off switch is its track and thumb alone, so the track must
-/// part from the page and the thumb from the track at 3:1. The off track is
-/// `muted.6` (todo 490); the old `muted.3` was 1.3:1 on a white page.
+/// WCAG 1.4.11: an off track parts from the page and the thumb from the track at 3:1. The
+/// off track is `muted.6` (490); `muted.3` was 1.3:1.
 #[test]
 fn an_off_switch_parts_from_the_page() {
     crate::boundary::assert_boundaries(

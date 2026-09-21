@@ -24,9 +24,8 @@ fn it_meets_the_baseline() {
 const TOGGLE: &str = "#split > button";
 const CHEVRON: &str = "#split > div > button";
 
-/// The split button: both halves are tab stops with a ring and 24px, and the
-/// picker's menu is checked in the open state. Nothing is picked, so nothing
-/// persists.
+/// The split button: both halves are 24px tab stops with a ring; the menu is checked open.
+/// Nothing is picked, so nothing persists.
 #[test]
 fn the_split_button_meets_the_baseline() {
     Suite::new("theme_toggle_themes", "/theme-toggle/themes")
@@ -67,9 +66,8 @@ fn escape_returns_focus_to_the_chevron() {
     });
 }
 
-/// Every test page shares one browser profile, and a stored `dark` would
-/// restore into every fixture opened after it. Presses write to a stand-in,
-/// which also records what the component tried to persist.
+/// Test pages share one profile, so a stored `dark` would leak into later fixtures.
+/// Presses write to a stand-in that records what the component tried to persist.
 const SHIELD_STORAGE: &str = r#"(() => {
     window.__realStorage = window.localStorage;
     window.__stored = [];

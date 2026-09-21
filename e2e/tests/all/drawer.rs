@@ -1,8 +1,5 @@
-//! `Drawer`: the overlay archetype, as a modal docked to an edge.
-//!
-//! It escaped todo 327 only by geometry - its panel happens to sit inside the
-//! fixture's short body box, where the scroll lock's phantom clip did not
-//! reach. `contrast_covers` makes that an assertion rather than luck.
+//! `Drawer`: the overlay archetype, docked to an edge. It escaped todo 327 by geometry
+//! alone; `contrast_covers` makes that an assertion.
 
 use anyhow::Result;
 use e2e::archetypes::Overlay;

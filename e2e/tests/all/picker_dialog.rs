@@ -1,7 +1,5 @@
-//! `ColorField` and `ChronoField`: a text input whose dropdown is a named,
-//! non-modal `role="dialog"` (APG Date Picker Combobox). Focus or a click opens
-//! it and leaves focus in the input, so typing still works; Arrow Down moves
-//! focus inside; Escape closes it and puts focus back on the input.
+//! `ColorField`, `ChronoField`: an input with a non-modal dialog dropdown (APG Date Picker
+//! Combobox). Opening keeps focus in the input; ArrowDown enters; Escape returns.
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;

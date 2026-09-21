@@ -1,7 +1,5 @@
-//! `ChronoField` at month level (todo 26): typed `9/2026` reads as the month's
-//! first day, and the dropdown opens on the month grid.
-//!
-//! `/chrono-field/month` holds March 2026, `today` pinned to 2026-03-18.
+//! `ChronoField` at month level (26): typed `9/2026` reads as the month's first day, and
+//! the dropdown opens on the month grid. `today` is pinned to 2026-03-18.
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;

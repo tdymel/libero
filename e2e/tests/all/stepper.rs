@@ -181,9 +181,8 @@ const WIDTHS: &str = "(() => {
     return [[document.documentElement.scrollWidth, innerWidth, 0], ...steppers];
 })()";
 
-/// A label with no break opportunity wraps inside its step at 390px and at
-/// 320px, in every arm: neither the page nor the stepper scrolls sideways
-/// (1.4.10, todos 518, 525).
+/// A label with no break opportunity wraps in its step at 390px and 320px, in every arm:
+/// nothing scrolls sideways (1.4.10, 518, 525).
 #[test]
 fn a_long_label_wraps_instead_of_widening_the_page() {
     block_on(async {
@@ -261,9 +260,8 @@ fn ordinary_labels_fit_320px_whole() {
     });
 }
 
-/// Side labels in a box under 360px stack under the marker, even on a wide
-/// page, and keep every word whole; the full-width `#side` keeps them beside
-/// it (todo 542).
+/// Side labels in a box under 360px stack under the marker with whole words; the
+/// full-width `#side` keeps them beside it (542).
 #[test]
 fn side_labels_stack_in_a_narrow_box() {
     block_on(async {
@@ -310,9 +308,8 @@ fn the_current_marker_carries_the_on_state_ring() {
     });
 }
 
-/// Forced colours paint every fill `Canvas` and every ring `CanvasText`: the
-/// completed marker's fill and the current step's ring must stay apart from a
-/// pending step's (todo 524).
+/// In forced colours the completed fill and the current ring must still differ from a
+/// pending step's (524).
 #[test]
 fn completed_and_current_steps_show_in_forced_colours() {
     use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
@@ -384,9 +381,8 @@ async fn continue_from(page: &Page, button: &str, landing: &str, route: &str) {
         .unwrap();
 }
 
-/// Each "Continue" is unmounted by its own press. Focus lands on the next
-/// step's header, which is `aria-current`; "Finish" leaves no current step,
-/// so it lands on the step that just closed.
+/// Each "Continue" unmounts itself; focus lands on the next, `aria-current` header, and
+/// after "Finish" on the step that just closed.
 #[test]
 fn moving_on_returns_focus_to_the_current_step() {
     block_on(async {
