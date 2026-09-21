@@ -1,9 +1,10 @@
 //! `ColorField`, `ChronoField`: an input with a non-modal dialog dropdown (APG Date Picker
 //! Combobox). Opening keeps focus in the input; ArrowDown enters; Escape returns.
 
-use anyhow::{Result, bail};
+use anyhow::{Result, bail, ensure};
 use chromiumoxide::Page;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, Platform, eventually, linger};
 use e2e::passes::{focus, keyboard};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -16,6 +17,33 @@ const FIELDS: [(&str, &str); 2] = [
     ("/color-field", "#color-field"),
     ("/chrono-field", "#chrono-field"),
 ];
+
+/// Todo 1012: a tap on a date field opens the calendar and, on a phone, no
+/// soft keyboard over it. The web keeps its keyboard.
+async fn a_tap_opens_only_the_calendar<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    const FIELD: &str = "#date-range-field";
+    d.click(FIELD).await?;
+    eventually(d, "the calendar after a tap", async |d| {
+        d.exists(DIALOG).await
+    })
+    .await?;
+    let android = d.platform() == Platform::Android;
+    let inputmode = d.attr(FIELD, "inputmode").await?;
+    ensure!(
+        inputmode.as_deref() == android.then_some("none"),
+        "{:?}: inputmode {inputmode:?}",
+        d.platform()
+    );
+    linger(d, 40).await;
+    ensure!(!d.soft_keyboard_shown().await?, "the soft keyboard came up");
+    Ok(())
+}
+
+e2e::scenario!(
+    a_tap_on_a_date_range_field_opens_only_the_calendar,
+    "/date-range-field",
+    a_tap_opens_only_the_calendar
+);
 
 #[test]
 fn the_color_field_meets_the_baseline() {

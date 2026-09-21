@@ -14,6 +14,14 @@ pub const TRIGGER: &str = "[role=combobox]";
 const LISTBOX: &str = "[role=listbox]";
 const OPTION_COUNT: usize = 5;
 
+use crate::cascader::a_tap_focuses_the_search;
+
+e2e::scenario!(
+    a_tap_on_a_searchable_multi_select_focuses_its_search_box,
+    "/multi-select/search",
+    a_tap_focuses_the_search
+);
+
 /// Todo 483: the label focuses the trigger it names by id.
 #[test]
 fn a_click_on_the_label_focuses_the_trigger() {

@@ -31,7 +31,7 @@ use crate::{
         use_popover_on, use_theme,
     },
     localization::DateLocale,
-    platform::{ElementApi, next_task},
+    platform::{ElementApi, next_task, soft_keyboard_app},
     sx::{StaticSx, Sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -459,6 +459,8 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .attr("readonly", readonly)
         .attr("required", required)
         .attr("autocomplete", "off")
+        // A phone app's keyboard would cover the picker, which is the input there (todo 1012).
+        .attr("inputmode", soft_keyboard_app().then_some("none"))
         // APG Date Picker Combobox: a textbox may not carry `aria-expanded`.
         .attr("role", "combobox")
         .attr("aria-haspopup", "dialog")

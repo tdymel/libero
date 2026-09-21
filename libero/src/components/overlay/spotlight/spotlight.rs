@@ -14,7 +14,7 @@ use crate::{
         typography::Kbd,
     },
     hooks::{ModalHandle, ModalScope, use_dismiss_layer, use_localization, use_modal, use_theme},
-    platform::{KeyChord, KeySubscription, keyboard, warn_reserved_chord},
+    platform::{self, KeyChord, KeySubscription, keyboard, warn_reserved_chord},
     sx::{StaticSx, sx},
     theme::{
         SPOTLIGHT_DESCRIPTION_COLOR, SPOTLIGHT_GROUP_COLOR, SPOTLIGHT_MAX_LIST_HEIGHT,
@@ -333,6 +333,11 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                         autocomplete: "off",
                         spellcheck: "false",
                         "data-autofocus": "true",
+                        // A WebView's trap cannot find it by `data-autofocus`, and the
+                        // soft keyboard comes up only for a focused box (todo 1014).
+                        onmounted: move |event: MountedEvent| {
+                            let _ = platform::element(&event.data()).focus();
+                        },
                         "aria-autocomplete": "list",
                         // Its own name: the dialog and the listbox carry `aria_label`.
                         "aria-label": "{labels.search}",

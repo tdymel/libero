@@ -78,6 +78,12 @@ pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
     backend::arrow_target(event)
 }
 
+/// Whether a tap on a field raises a soft keyboard that covers its dropdown: a
+/// mobile WebView app. The web answers `false`, touch screens included.
+pub(crate) fn soft_keyboard_app() -> bool {
+    backend::soft_keyboard_app()
+}
+
 /// Whether this press landed in right-to-left content: the target's computed
 /// `direction` on the web, the focused node's natively and in a WebView (read
 /// when it took focus). `false` on a server.

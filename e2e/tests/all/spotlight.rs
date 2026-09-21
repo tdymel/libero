@@ -4,7 +4,7 @@
 use anyhow::Result;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
-use e2e::driver::{Driver, eventually};
+use e2e::driver::{Driver, Platform, eventually, eventually_focused};
 use e2e::passes::{focus, keyboard::Key};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
@@ -33,6 +33,26 @@ async fn ctrl_k_opens<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 }
 
 e2e::scenario!(ctrl_k_opens_the_palette, "/spotlight", ctrl_k_opens);
+
+/// Todo 1014: a tap on the trigger lands focus in the search box, and on a
+/// phone raises the keyboard.
+async fn a_tap_focuses_the_search<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    eventually_focused(d, SEARCH, "a tap on the trigger").await?;
+    if d.platform() == Platform::Android {
+        eventually(d, "the soft keyboard", async |d| {
+            d.soft_keyboard_shown().await
+        })
+        .await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_tap_on_the_trigger_focuses_the_search_box,
+    "/spotlight",
+    a_tap_focuses_the_search
+);
 
 #[test]
 fn it_meets_the_baseline() {

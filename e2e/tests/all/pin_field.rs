@@ -26,8 +26,7 @@ async fn one_digit_per_cell<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
 e2e::scenario!(
     a_pin_field_takes_one_digit_per_cell_and_moves_on,
     "/pin-field/echo",
-    one_digit_per_cell,
-    android: skip("958: element identity on the WebView")
+    one_digit_per_cell
 );
 
 /// Todo 507: every cell is named, so axe `label` holds.

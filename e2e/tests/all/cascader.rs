@@ -1,7 +1,9 @@
 //! `Cascader`: the keyboard walks levels; a disabled branch (Asia) neither takes the cursor
 //! nor opens (406). Focus stays on the trigger; the cursor is its `aria-activedescendant`.
 
+use anyhow::Result;
 use e2e::browser::block_on;
+use e2e::driver::{Driver, Platform, eventually, eventually_focused};
 use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
@@ -16,6 +18,26 @@ const CURSOR: &str = "(() => { const t = document.querySelector('[role=combobox]
      const row = document.getElementById(t.getAttribute('aria-activedescendant')); \
      const label = row && row.querySelector('[data-slot=label]'); \
      return `${label && label.textContent}|${document.querySelectorAll('[role=listbox]').length}|${row && row.getAttribute('aria-selected')}`; })()";
+
+/// Todo 1014: a tap opening a searchable dropdown lands focus in its search
+/// box, and on a phone raises the keyboard.
+pub async fn a_tap_focuses_the_search<D: Driver>(d: &mut D, _route: &str) -> Result<()> {
+    d.click(TRIGGER).await?;
+    eventually_focused(d, SEARCH, "a tap on the trigger").await?;
+    if d.platform() == Platform::Android {
+        eventually(d, "the soft keyboard", async |d| {
+            d.soft_keyboard_shown().await
+        })
+        .await?;
+    }
+    Ok(())
+}
+
+e2e::scenario!(
+    a_tap_on_a_searchable_cascader_focuses_its_search_box,
+    "/cascader/search",
+    a_tap_focuses_the_search
+);
 
 #[test]
 fn it_meets_the_baseline() {

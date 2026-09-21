@@ -12,7 +12,7 @@ use crate::{
     },
     hooks::{ElementHandle, use_element, use_localization, use_theme},
     localization::fill,
-    platform::ElementApi,
+    platform::{ElementApi, PlatformError},
     sx::{StaticSx, sx},
     theme::{FIELD_HEIGHT, PinFieldDefaults},
 };
@@ -194,11 +194,14 @@ pub fn PinField(props: PinFieldProps) -> Element {
 
     // One handle for the field's life, refreshed each render: a cell whose
     // character did not change skips, and its handlers still see this render.
+    let handles: CellHandles = use_hook(|| Rc::new(RefCell::new(Vec::new())));
+    handles.borrow_mut().resize(length, None);
     let edit = PinEdit {
         cells: cells.clone(),
         length,
         kind,
         root,
+        handles,
         readonly,
         report,
     };
@@ -282,14 +285,23 @@ fn next_len_floor(length: usize) -> usize {
     length - 1
 }
 
-/// Scoped to this field's root. An out-of-range index stops at the ends:
-/// `wrapping_sub` on cell zero lands far past the last cell.
-fn focus_cell(root: &ElementHandle, index: usize, length: usize) {
-    if index >= length {
-        return;
-    }
-    let selector = format!("input[data-pin-index=\"{index}\"]");
-    let _ = root.query_selector(&selector).and_then(|el| el.focus());
+/// Each cell's own handle, by index, filled in as the cells render.
+type CellHandles = Rc<RefCell<Vec<Option<ElementHandle>>>>;
+
+/// Cell `index`, scoped to this field's root. A WebView cannot query below the
+/// root, so it falls back to the cell's own handle.
+fn cell_at(
+    root: &ElementHandle,
+    handles: &CellHandles,
+    index: usize,
+) -> Result<Box<dyn ElementApi>, PlatformError> {
+    root.query_selector(&format!("input[data-pin-index=\"{index}\"]"))
+        .or_else(
+            |error| match handles.borrow().get(index).copied().flatten() {
+                Some(handle) => Ok(Box::new(handle) as Box<dyn ElementApi>),
+                None => Err(error),
+            },
+        )
 }
 
 /// The pin's editing engine. Every change goes through `report`, so the
@@ -300,11 +312,21 @@ struct PinEdit {
     length: usize,
     kind: PinKind,
     root: ElementHandle,
+    handles: CellHandles,
     readonly: bool,
     report: Rc<dyn Fn(Vec<Option<char>>)>,
 }
 
 impl PinEdit {
+    /// An out-of-range index stops at the ends: `wrapping_sub` on cell zero
+    /// lands far past the last cell.
+    fn focus(&self, index: usize) {
+        if index >= self.length {
+            return;
+        }
+        let _ = cell_at(&self.root, &self.handles, index).and_then(|el| el.focus());
+    }
+
     /// One cell set or cleared.
     fn edit(&self, index: usize, character: Option<char>) {
         let mut next = self.cells.clone();
@@ -339,13 +361,10 @@ impl PinEdit {
     /// What arrived in one cell's `oninput`: a paste, or a character a soft
     /// keyboard typed without naming its key.
     fn typed(&self, index: usize, raw: String) {
-        let (root, length) = (&self.root, self.length);
         // Back to what the cell last rendered: dioxus writes it again only if
         // the edit changes it, so an unchanged cell would keep the raw text.
         let shown = self.cells[index].map(String::from).unwrap_or_default();
-        let _ = root
-            .query_selector(&format!("input[data-pin-index=\"{index}\"]"))
-            .and_then(|cell| cell.set_value(&shown));
+        let _ = cell_at(&self.root, &self.handles, index).and_then(|cell| cell.set_value(&shown));
         let mut accepted: Vec<char> = raw.chars().filter(|c| self.kind.accepts(*c)).collect();
         // The cell's old character sits on whichever side the caret was not.
         if accepted.len() > 1
@@ -366,11 +385,11 @@ impl PinEdit {
             0 => {}
             1 => {
                 self.edit(at, Some(accepted[0]));
-                focus_cell(root, at + 1, length);
+                self.focus(at + 1);
             }
             _ => {
                 let cursor = self.spread(at, accepted);
-                focus_cell(root, cursor, length);
+                self.focus(cursor);
             }
         }
     }
@@ -378,7 +397,7 @@ impl PinEdit {
     /// One cell's keyboard: the moves, the two deletions, and the characters
     /// that are dropped before they reach the DOM.
     fn keys(&self, index: usize, event: Event<KeyboardData>) {
-        let (root, length, readonly) = (&self.root, self.length, self.readonly);
+        let (length, readonly) = (self.length, self.readonly);
         let modified = event.modifiers().ctrl() || event.modifiers().meta();
         // Ctrl/Alt/Meta+arrow, Home or End is the caret's or the browser's.
         if navigation_chord(&event).is_some() {
@@ -387,19 +406,19 @@ impl PinEdit {
         match event.key() {
             Key::ArrowLeft => {
                 event.prevent_default();
-                focus_cell(root, index.wrapping_sub(1), length);
+                self.focus(index.wrapping_sub(1));
             }
             Key::ArrowRight => {
                 event.prevent_default();
-                focus_cell(root, index + 1, length);
+                self.focus(index + 1);
             }
             Key::Home => {
                 event.prevent_default();
-                focus_cell(root, 0, length);
+                self.focus(0);
             }
             Key::End => {
                 event.prevent_default();
-                focus_cell(root, length - 1, length);
+                self.focus(length - 1);
             }
             // Native `readonly` does not stop a handler clearing a cell.
             Key::Delete => {
@@ -416,10 +435,10 @@ impl PinEdit {
                         // The last cell keeps focus: it is where the next
                         // character goes, and the pin is one short.
                         if index + 1 < length {
-                            focus_cell(root, index.wrapping_sub(1), length);
+                            self.focus(index.wrapping_sub(1));
                         }
                     }
-                    false => focus_cell(root, index.wrapping_sub(1), length),
+                    false => self.focus(index.wrapping_sub(1)),
                 }
             }
             Key::Character(character) if !modified => {
@@ -429,13 +448,13 @@ impl PinEdit {
                     // pin accepts.
                     Some(' ') => {
                         event.prevent_default();
-                        focus_cell(root, index + 1, length);
+                        self.focus(index + 1);
                     }
                     // Retyping what the cell already holds reads as
                     // confirming it, so move on instead of rewriting it.
                     Some(character) if self.cells[index] == Some(character) => {
                         event.prevent_default();
-                        focus_cell(root, index + 1, length);
+                        self.focus(index + 1);
                     }
                     // Dropped at the key: an unchanged value prop could not take it back out.
                     Some(character) if !self.kind.accepts(character) => event.prevent_default(),
@@ -446,7 +465,7 @@ impl PinEdit {
                         if !readonly {
                             let at = self.landing(index);
                             self.edit(at, Some(character));
-                            focus_cell(root, at + 1, length);
+                            self.focus(at + 1);
                         }
                     }
                     None => {}
@@ -587,9 +606,14 @@ fn PinCell(
     autocomplete: &'static str,
     autofocus: bool,
 ) -> Element {
+    let handle = use_element();
+    if let Some(slot) = editor.0.borrow().handles.borrow_mut().get_mut(index) {
+        *slot = Some(handle);
+    }
     let typed = editor.clone();
     let keys = editor;
     let input = control
+        .element(&handle)
         .attr("id", format!("{id}-{}", index + 1))
         .attr("type", input_type)
         .attr("inputmode", (kind == PinKind::Numeric).then_some("numeric"))

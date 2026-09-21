@@ -29,7 +29,7 @@ use crate::tokens::{
 
 /// Whether a page runs the current document's scripts: a server's or the no-op
 /// document fails the send. Kept in [`PageState`]: Android resets thread-locals.
-fn runs_scripts() -> bool {
+pub(super) fn runs_scripts() -> bool {
     let Some(page) = page() else {
         return false;
     };

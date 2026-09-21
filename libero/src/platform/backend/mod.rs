@@ -389,6 +389,22 @@ pub(crate) fn rtl_target(event: &Event<KeyboardData>) -> bool {
     return webview::rtl_target();
 }
 
+/// Only a WebView on a phone - see [`soft_keyboard_app`](crate::platform::soft_keyboard_app).
+pub(crate) fn soft_keyboard_app() -> bool {
+    #[cfg(all(
+        not(target_arch = "wasm32"),
+        not(feature = "native"),
+        any(target_os = "android", target_os = "ios")
+    ))]
+    return webview::runs_scripts();
+    #[cfg(not(all(
+        not(target_arch = "wasm32"),
+        not(feature = "native"),
+        any(target_os = "android", target_os = "ios")
+    )))]
+    return false;
+}
+
 /// The web reads the click's target, Blitz the press `blitz::Listener` hit -
 /// see [`nested_interactive`](crate::platform::nested_interactive).
 pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bool {

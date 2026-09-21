@@ -74,6 +74,10 @@ pub trait Driver {
     async fn focused_id(&mut self) -> Result<String>;
     /// What focus is on, for a failure message.
     async fn focus_owner(&mut self) -> Result<String>;
+    /// Whether a soft keyboard is up; `false` where there is none.
+    async fn soft_keyboard_shown(&mut self) -> Result<bool> {
+        Ok(false)
+    }
     /// Lets time pass: timers fire and the page settles.
     async fn idle(&mut self);
     /// How long [`eventually`] polls.
@@ -745,6 +749,10 @@ mod android {
 
         async fn focus_owner(&mut self) -> Result<String> {
             Ok(format!("{:?}", focus::active_element(&self.page).await?))
+        }
+
+        async fn soft_keyboard_shown(&mut self) -> Result<bool> {
+            soft_keyboard_shown().await
         }
 
         async fn idle(&mut self) {
