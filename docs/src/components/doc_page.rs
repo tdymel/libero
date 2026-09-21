@@ -5,7 +5,7 @@ use libero::{
     theme::PAPER_BORDER_COLOR,
 };
 
-use super::{A11yDoc, A11yPanel, PropGroup, PropertyTable};
+use super::{A11yDoc, A11yPanel, PropGroup, PropertyTable, Tldr};
 use crate::{
     Route,
     icons::{AccessibilityIcon, CodeIcon, FileIcon, GitHubIcon, MarkdownIcon},
@@ -130,6 +130,7 @@ pub fn DocPage(
                                 "View as markdown"
                             }
                         }
+                        Tldr {}
                     }
                 }
                 {lead}

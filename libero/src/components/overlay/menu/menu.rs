@@ -6,7 +6,7 @@ use crate::{
     components::{
         common::{
             CheckIcon, ChevronRightIcon, HtmlTag, Input, LogicalTextAlign, States, base_props,
-            disabled_look_sx, has_shortcut_modifier, inset_focus_ring_sx,
+            disabled_look_sx, has_shortcut_modifier, inset_focus_ring_sx, is_javascript_url,
         },
         layout::{Divider, paper_sx, use_box},
         typography::Kbd,
@@ -22,6 +22,7 @@ use crate::{
         MENU_ITEM_FONT, MENU_ITEM_MIN_HEIGHT, MENU_ITEM_PAD_X, MENU_ITEM_RADIUS, MENU_LABEL_FONT,
         MENU_MAX_HEIGHT, MENU_PADDING, MenuDefaults, Size, SizeCss, Z_INDEX_POPOVER,
     },
+    utils::warn,
 };
 
 use super::{
@@ -65,7 +66,9 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
                 .flex_shrink("0")
                 .min_height(MENU_ITEM_MIN_HEIGHT.value())
                 .padding(format!("0 {}", MENU_ITEM_PAD_X.value()))
+                .box_sizing("border-box")
                 .appearance("none")
+                .text_decoration("none")
                 .border("0")
                 .border_radius(MENU_ITEM_RADIUS.value())
                 .background("transparent")
@@ -323,6 +326,14 @@ impl Level {
             .floating
             .query_selector(&format!("[data-menu-index=\"{index}\"]"))
             .and_then(|item| item.focus());
+    }
+
+    /// Clicks item `index`: Space on a link, which only Enter activates natively.
+    fn click(self, index: usize) {
+        let _ = self
+            .floating
+            .query_selector(&format!("[data-menu-index=\"{index}\"]"))
+            .and_then(|item| item.click());
     }
 
     fn step(self, from: usize, forward: bool) {
@@ -940,9 +951,26 @@ fn menu_item(
     let is_expanded = has_submenu && *expanded == Some(index);
     let opens = (has_submenu && !disabled).then_some(index);
 
+    let href = item.href_url().map(str::to_owned);
+    if let Some(href) = &href
+        && is_javascript_url(href)
+    {
+        warn(&format!(
+            "MenuItem \"{}\": a `javascript:` href runs script on click. If it comes from user \
+             data, check the scheme before passing it.",
+            item.label
+        ));
+    }
+    let is_link = href.is_some();
     let onkeydown = {
         let (typeahead, labels, hover) = (typeahead.clone(), labels.clone(), hover.clone());
         move |event: KeyboardEvent| {
+            let space = matches!(logical_key(&event), Key::Character(ref text) if text == " ");
+            if is_link && space && !has_shortcut_modifier(&event) && !typeahead.is_typing() {
+                event.prevent_default();
+                level.click(index);
+                return;
+            }
             level.item_keydown(event, index, opens.is_some(), &typeahead, &labels, &hover)
         }
     };
@@ -961,52 +989,82 @@ fn menu_item(
         }
     };
 
+    let content = rsx! {
+        // On every row of a level with a checkable item, so labels line up.
+        if check.is_some() || *checks {
+            span { "data-menu-check": "",
+                if check.is_some_and(Check::is_checked) {
+                    CheckIcon {}
+                }
+            }
+        }
+        if let Some(leading) = item.leading.clone() {
+            span { "data-menu-section": "leading", {leading} }
+        }
+        span { "data-menu-label": "", "{item.label}" }
+        if let Some(trailing) = item.trailing.clone() {
+            span { "data-menu-section": "trailing", {trailing} }
+        }
+        // Out of the name: `aria-keyshortcuts` announces it instead.
+        if let Some(keys) = item.shortcut.as_deref() {
+            span { "data-menu-section": "shortcut", "aria-hidden": "true",
+                Kbd { {shortcut_hint(keys, &current_localization().menu)} }
+            }
+        }
+        if has_submenu {
+            span { "data-menu-chevron": "", ChevronRightIcon {} }
+        }
+    };
+    let onmounted = move |event| {
+        if let Some(anchor) = anchor {
+            anchor.mount()(event);
+        }
+    };
+    let role = check.map_or("menuitem", Check::role);
+    let tabindex = if index == tabbable { "0" } else { "-1" };
+
+    if is_link {
+        return rsx! {
+            a {
+                key: "{index}",
+                "role": role,
+                id: "{item_id}",
+                href: href.filter(|_| !disabled),
+                target: "_blank",
+                rel: "noopener noreferrer",
+                "aria-checked": check.map(|check| check.is_checked().to_string()),
+                "aria-keyshortcuts": item.shortcut.clone(),
+                tabindex,
+                "data-menu-index": "{index}",
+                "aria-disabled": disabled.then_some("true"),
+                onmounted,
+                onclick,
+                onkeydown,
+                onmouseenter,
+                {content}
+            }
+        };
+    }
+
     rsx! {
         button {
             key: "{index}",
             r#type: "button",
-            "role": check.map_or("menuitem", Check::role),
+            "role": role,
             id: "{item_id}",
             "aria-checked": check.map(|check| check.is_checked().to_string()),
             "aria-keyshortcuts": item.shortcut.clone(),
-            tabindex: if index == tabbable { "0" } else { "-1" },
+            tabindex,
             "data-menu-index": "{index}",
             "aria-disabled": disabled.then_some("true"),
             "aria-haspopup": has_submenu.then_some("menu"),
             "aria-expanded": has_submenu.then(|| is_expanded.to_string()),
             "aria-controls": is_expanded.then_some(child_id),
-            onmounted: move |event| {
-                if let Some(anchor) = anchor {
-                    anchor.mount()(event);
-                }
-            },
+            onmounted,
             onclick,
             onkeydown,
             onmouseenter,
-            // On every row of a level with a checkable item, so labels line up.
-            if check.is_some() || *checks {
-                span { "data-menu-check": "",
-                    if check.is_some_and(Check::is_checked) {
-                        CheckIcon {}
-                    }
-                }
-            }
-            if let Some(leading) = item.leading.clone() {
-                span { "data-menu-section": "leading", {leading} }
-            }
-            span { "data-menu-label": "", "{item.label}" }
-            if let Some(trailing) = item.trailing.clone() {
-                span { "data-menu-section": "trailing", {trailing} }
-            }
-            // Out of the name: `aria-keyshortcuts` announces it instead.
-            if let Some(keys) = item.shortcut.as_deref() {
-                span { "data-menu-section": "shortcut", "aria-hidden": "true",
-                    Kbd { {shortcut_hint(keys, &current_localization().menu)} }
-                }
-            }
-            if has_submenu {
-                span { "data-menu-chevron": "", ChevronRightIcon {} }
-            }
+            {content}
         }
     }
 }

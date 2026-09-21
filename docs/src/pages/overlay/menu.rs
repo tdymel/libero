@@ -305,6 +305,15 @@ pub fn MenuPage() -> Element {
                     "sibling waits as long, so the pointer can cross one on its way into the "
                     "submenu."
                 }
+                Text {
+                    "An item can be a link: "
+                    Code { source: "MenuItem::new(\"Docs\").href(url)" }
+                    " renders an "
+                    Code { source: "<a>" }
+                    " that opens "
+                    Code { source: "url" }
+                    " in a new tab. Space activates it like Enter."
+                }
             },
             Demo {
                 component: "Menu",

@@ -3,7 +3,9 @@
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, ScrollArea, ScrollAreaHandle, use_scroll_area},
+    components::{
+        Button, Menu, MenuEntry, MenuItem, ScrollArea, ScrollAreaHandle, use_menu, use_scroll_area,
+    },
     hooks::{ElementHandle, use_element},
     platform::ElementApi,
 };
@@ -35,7 +37,37 @@ pub fn use_heading_focus<T: Clone + PartialEq + 'static>(location: T, content: E
 pub const ROUTES: Routes = &[
     ("/docs-shell/heading", || rsx! { HeadingPage {} }),
     ("/docs-shell/scroll", || rsx! { ScrollPage {} }),
+    ("/docs-shell/tldr", || rsx! { TldrPage {} }),
 ];
+
+/// The docs' `Tldr` menu (`docs/src/components/tldr.rs`), with links that stay on the fixture.
+#[component]
+fn TldrPage() -> Element {
+    let menu = use_menu();
+    let providers = ["ChatGPT", "Google AI", "Claude", "Perplexity"]
+        .map(|name| {
+            MenuItem::new(name)
+                .href(format!("https://example.test/{name}?q=x"))
+                .into()
+        })
+        .to_vec();
+    let items = vec![MenuEntry::Group {
+        label: "Summarize with".into(),
+        items: providers,
+    }];
+    rsx! {
+        h1 { "A page" }
+        Menu { state: menu, items,
+            Button {
+                size: "sm",
+                variant: "outlined",
+                color: "neutral",
+                attributes: menu.a11y_attributes(),
+                "TLDR"
+            }
+        }
+    }
+}
 
 /// Two "pages" behind one signal: the hook only needs a value that changes.
 #[component]

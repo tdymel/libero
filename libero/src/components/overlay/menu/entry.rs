@@ -22,13 +22,14 @@ impl From<MenuItem> for MenuEntry {
 }
 
 /// Run a command or open a submenu, never both: the command would run on every
-/// hover that opened the submenu.
+/// hover that opened the submenu. A link is a third, exclusive kind.
 #[derive(Clone, Default)]
 enum Action {
     #[default]
     None,
     Select(Callback<()>),
     Submenu(Vec<MenuEntry>),
+    Href(String),
 }
 
 /// One command in a [`Menu`](super::Menu).
@@ -113,6 +114,21 @@ impl MenuItem {
         self
     }
 
+    /// Opens `url` in a new tab: the item is an `<a>` with `role="menuitem"`, so
+    /// middle-click and the context menu work. Replaces an
+    /// [`onselect`](Self::onselect) or [`submenu`](Self::submenu). A disabled link has no `href`.
+    ///
+    /// ```no_run
+    /// # use libero::components::MenuItem;
+    /// # let _ =
+    /// MenuItem::new("Read the docs").href("https://libero-ui.dev")
+    /// # ;
+    /// ```
+    pub fn href(mut self, url: impl Into<String>) -> Self {
+        self.action = Action::Href(url.into());
+        self
+    }
+
     /// Drawn before the label, e.g. an icon.
     pub fn leading(mut self, leading: Element) -> Self {
         self.leading = Some(leading);
@@ -175,6 +191,13 @@ impl MenuItem {
     pub(super) fn onselect_callback(&self) -> Option<Callback<()>> {
         match &self.action {
             Action::Select(callback) => Some(*callback),
+            _ => None,
+        }
+    }
+
+    pub(super) fn href_url(&self) -> Option<&str> {
+        match &self.action {
+            Action::Href(url) => Some(url),
             _ => None,
         }
     }

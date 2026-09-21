@@ -337,3 +337,46 @@ fn a_shortcut_is_announced_by_attribute_not_by_name() {
     let delete = tags_with(&html, r#"data-menu-index="1""#);
     assert!(!delete[0].contains("aria-keyshortcuts"), "{}", delete[0]);
 }
+
+/// A link item is an `<a role="menuitem">` for a new tab; disabled, it keeps no `href`.
+#[test]
+fn a_link_item_is_an_anchor_that_opens_a_new_tab() {
+    fn app() -> Element {
+        let menu = use_menu();
+        use_hook(|| menu.open());
+
+        rsx! {
+            LiberoProvider {
+                Menu {
+                    state: menu,
+                    items: vec![
+                        MenuItem::new("Docs").href("https://libero-ui.dev").into(),
+                        MenuItem::new("Blog").href("https://example.com").disabled(true).into(),
+                        MenuItem::new("Copy").onselect(|_| {}).into(),
+                    ],
+                    Button { attributes: menu.a11y_attributes(), "Links" }
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let docs = tags_with(&html, r#"data-menu-index="0""#);
+    assert!(docs[0].starts_with("<a "), "{}", docs[0]);
+    for expected in [
+        r#"role="menuitem""#,
+        r#"href="https://libero-ui.dev""#,
+        r#"target="_blank""#,
+        r#"rel="noopener noreferrer""#,
+    ] {
+        assert!(docs[0].contains(expected), "{expected} in {}", docs[0]);
+    }
+
+    let blog = tags_with(&html, r#"data-menu-index="1""#);
+    assert!(blog[0].starts_with("<a "), "{}", blog[0]);
+    assert!(!blog[0].contains("href"), "{}", blog[0]);
+    assert!(blog[0].contains(r#"aria-disabled="true""#), "{}", blog[0]);
+
+    let copy = tags_with(&html, r#"data-menu-index="2""#);
+    assert!(copy[0].starts_with("<button "), "{}", copy[0]);
+}
