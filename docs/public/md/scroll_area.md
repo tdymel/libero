@@ -98,18 +98,6 @@ fn Rows() -> Element {
 }
 ```
 
-## Text with nothing to focus
-
-The area itself becomes a tab stop while it overflows, so the arrow keys can
-scroll it.
-
-```rust,ignore
-ScrollArea {
-    aria_label: "Release notes",
-    Text { "..." }
-}
-```
-
 ## Accessibility
 
 ### Libero handles
@@ -117,7 +105,7 @@ ScrollArea {
 - Tab reaches focusable content inside the area as usual.
 - When the content has nothing to focus, like a block of text, the area
   itself becomes a tab stop while it overflows, so the arrow keys can scroll
-  it. `focusable: true` keeps the stop always.
+  it. The Usage example is one. `focusable: true` keeps the stop always.
 - A debug build warns about a tab stop without a name.
 
 ### You must

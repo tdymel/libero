@@ -28,8 +28,22 @@ fn Demo() -> Element {
 }
 ```
 
-A link inside a `Mark` takes the same contrast color as the text, since no one
-link color reads on every tint, and is always underlined so it still stands out.
+## Accessibility
+
+### Libero handles
+
+- Each highlight is a real `<mark>`.
+- For a theme color, a shade or a hex, the text takes the tint's contrast
+  color, so it stays readable.
+- A link inside is underlined in the text's color, and its focus ring clears
+  3:1 against the tint.
+
+### You must
+
+- With a CSS color name such as `gold`, the text keeps the page's color: check
+  its contrast.
+- Say in the text why a highlight matters. Not every screen reader announces
+  `<mark>`.
 
 ## Props
 

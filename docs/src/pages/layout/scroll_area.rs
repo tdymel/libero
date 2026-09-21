@@ -1,20 +1,15 @@
 use crate::components::{
-    Child, Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, a11y, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Button, Code, CodeBlock, Flex, Input, List, ListItem, ScrollArea, ScrollPositionEvent,
-        Text, Virtualize, use_scroll_area,
+        Box, Button, Code, Flex, Input, List, ListItem, ScrollArea, ScrollPositionEvent, Text,
+        Virtualize, use_scroll_area,
     },
     sx::sx,
     use_theme,
 };
-
-const FOCUSABLE_EXAMPLE: &str = r#"ScrollArea {
-    aria_label: "Release notes",
-    Text { "..." }
-}"#;
 
 /// Fifty thousand rows, of which the preview renders about a dozen.
 const VIRTUAL_ROWS: usize = 50_000;
@@ -145,7 +140,7 @@ pub fn ScrollAreaPage() -> Element {
             accessibility: a11y()
                 .handles([
                     "Tab reaches focusable content inside the area as usual.",
-                    "When the content has nothing to focus, like a block of text, the area itself becomes a tab stop while it overflows, so the arrow keys can scroll it. `focusable: true` keeps the stop always.",
+                    "When the content has nothing to focus, like a block of text, the area itself becomes a tab stop while it overflows, so the arrow keys can scroll it. The Usage preview is one: Tab to it and press the arrow keys. `focusable: true` keeps the stop always.",
                     "A debug build warns about a tab stop without a name.",
                 ])
                 .must([
@@ -268,32 +263,6 @@ pub fn ScrollAreaPage() -> Element {
                 },
                 wrap: Wrap(wrap_frame),
             }
-
-            DocSection {
-                title: "Text with nothing to focus",
-                Text {
-                    "The area itself becomes a tab stop while it overflows, so the arrow keys "
-                    "can scroll it. Tab to the box below and press the arrow keys."
-                }
-                CodeBlock { source: FOCUSABLE_EXAMPLE, language: "rust" }
-                Box {
-                    sx: sx()
-                        .height("120px")
-                        .width("100%")
-                        .border("1px solid var(--lsx-muted-3)"),
-                    ScrollArea {
-                        id: "focusable-demo",
-                        aria_label: "Release notes",
-                        Box {
-                            sx: sx().padding("md"),
-                            for i in 0..20 {
-                                Text { key: "{i}", "Line {i} of text nothing can focus." }
-                            }
-                        }
-                    }
-                }
-            }
-
         }
     }
 }

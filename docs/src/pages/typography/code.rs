@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -49,6 +49,11 @@ pub fn CodePage() -> Element {
                     .doc("The text. Highlighted when `language` names a grammar this build compiles in."),
                 prop("language", "Language").doc(LANGUAGE_DOC),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "Each snippet is a real `<code>`. Highlighting only adds colored spans, so a screen reader reads the source as it is.",
+                    "A long identifier wraps at any character, so it fits a 320px column. A span of up to 20 characters stays on one line.",
+                ]),
             lead: rsx! {
                 Text {
                     "A "

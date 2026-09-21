@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Mark, Text},
@@ -20,6 +20,16 @@ pub fn MarkPage() -> Element {
                     .doc("A theme color name gets a light shade, and an explicit shade such as `error.4` stays as it is. Any CSS color works too."),
                 prop("children", "Element").default("required").doc("The highlighted content."),
             ])],
+            accessibility: a11y()
+                .handles([
+                    "Each highlight is a real `<mark>`.",
+                    "For a theme color, a shade or a hex, the text takes the tint's contrast color, so it stays readable.",
+                    "A link inside is underlined in the text's color, and its focus ring clears 3:1 against the tint.",
+                ])
+                .must([
+                    "With a CSS color name such as `gold`, the text keeps the page's color: check its contrast.",
+                    "Say in the text why a highlight matters. Not every screen reader announces `<mark>`.",
+                ]),
             lead: rsx! {
                 Text {
                     "Highlights "

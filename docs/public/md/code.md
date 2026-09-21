@@ -29,6 +29,15 @@ fn Demo() -> Element {
 }
 ```
 
+## Accessibility
+
+### Libero handles
+
+- Each snippet is a real `<code>`. Highlighting only adds colored spans, so a
+  screen reader reads the source as it is.
+- A long identifier wraps at any character, so it fits a 320px column. A span
+  of up to 20 characters stays on one line.
+
 ## Props
 
 | Prop | Type | Default | Description |
