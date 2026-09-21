@@ -35,12 +35,12 @@ pub fn HeaderPage() -> Element {
                     .doc("Minimum height. The header grows when its content wraps."),
                 prop("color", "ThemeAwareValue")
                     .default("none, a neutral background")
-                    .doc("Fills the header with shade 6 and a readable text color."),
+                    .doc("Fills the header with shade 6 and a readable text color. Under a gradient, its first stop."),
                 prop("glass", "bool")
                     .default("false")
                     .doc("Frosted glass, as on `Paper`: content scrolling under the bar shows through, blurred. It takes the paper surface, so it replaces `color`. Opaque when the user reduces transparency, in forced colours, and in native windows."),
                 prop("gradient", "Gradient")
-                    .doc("Fills the header with a gradient, as on `Paper`, `Gradient::default()` for the theme's. The text colour and focus rings are picked to read on both stops. It replaces `color`; with `glass`, the stops turn translucent."),
+                    .doc("Fills the header with a gradient from `color`, as on `Paper`: `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text colour and focus rings are picked to read on both stops. With `glass`, the stops turn translucent."),
                 prop("z_index", "ThemeAwareValue")
                     .default("100")
                     .doc("Stacking order."),

@@ -54,7 +54,8 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `variant` | `Variant` | - | Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. With `color` also unset, the button takes the surrounding text color. |
-| `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. Set alone, it gives the theme's default variant, `filled`. |
+| `color` | `ThemeAwareValue` | - | Accent color. A theme color name or any CSS color. Set alone, it gives the theme's default variant, `filled`. Under a gradient, its first stop. |
+| `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
 | `size` | `ThemeAwareValue` | `md` | Button size, independent of the icon's own size. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of `size`. |
 | `aria_label` | `String` | required | The button's accessible name. |

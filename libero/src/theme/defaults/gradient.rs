@@ -40,8 +40,10 @@ impl GradientDefaults {
     };
 }
 
-/// A linear gradient fill. Every key left `None` falls back to the theme's
-/// [`GradientDefaults`], so `Gradient::default()` is the theme's gradient.
+/// A linear gradient fill from the component's `color` to `to`. Every key
+/// left `None` falls back to the theme's [`GradientDefaults`] (an unset
+/// `color` to `GradientDefaults::from`), so `Gradient::default()` is the
+/// theme's gradient.
 ///
 /// A stop is a palette colour (`"primary"`, `"info.7"`) or a literal CSS one.
 /// The label is picked to read on palette and hex stops; any other literal
@@ -53,22 +55,17 @@ impl GradientDefaults {
 /// # use libero::theme::Gradient;
 /// # fn app() -> Element {
 /// # rsx! {
-/// Button { variant: "gradient", gradient: Gradient::default().to("info").deg(90), "Upgrade" }
+/// Button { variant: "gradient", color: "info", gradient: ("secondary", 90), "Upgrade" }
+/// Button { variant: "gradient", gradient: Gradient::default().to("info"), "Renew" }
 /// # } }
 /// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct Gradient {
-    pub from: Option<ThemeAwareValue>,
     pub to: Option<ThemeAwareValue>,
     pub deg: Option<u16>,
 }
 
 impl Gradient {
-    pub fn from(mut self, stop: impl Into<ThemeAwareValue>) -> Self {
-        self.from = Some(stop.into());
-        self
-    }
-
     pub fn to(mut self, stop: impl Into<ThemeAwareValue>) -> Self {
         self.to = Some(stop.into());
         self
@@ -79,24 +76,37 @@ impl Gradient {
         self
     }
 
-    fn stops(&self, defaults: &GradientDefaults) -> [ThemeAwareValue; 2] {
+    /// `from` is the component's `color`, the first stop.
+    fn stops(
+        &self,
+        from: Option<&ThemeAwareValue>,
+        defaults: &GradientDefaults,
+    ) -> [ThemeAwareValue; 2] {
         // A bare palette name is its `S6`, as on every variant's `color`.
-        let stop = |stop: &Option<ThemeAwareValue>, color| match stop {
+        let stop = |stop: Option<&ThemeAwareValue>, color| match stop {
             None => ThemeAwareValue::ColorValue(ColorValue::Shade(color, ColorShade::S6)),
             Some(ThemeAwareValue::Color(color)) => {
                 ThemeAwareValue::ColorValue(ColorValue::Shade(*color, ColorShade::S6))
             }
             Some(other) => other.clone(),
         };
-        [stop(&self.from, defaults.from), stop(&self.to, defaults.to)]
+        [
+            stop(from, defaults.from),
+            stop(self.to.as_ref(), defaults.to),
+        ]
     }
 
-    /// The five vars for this gradient, measured against every theme a
-    /// scheme switch can show without a re-render. `text` resolves palette
-    /// stops in the text role, for gradient text on the page.
-    pub(crate) fn declarations(&self, themes: &[&Theme], text: bool) -> Vec<CssDeclaration> {
+    /// The five vars for this gradient from `from`, measured against every
+    /// theme a scheme switch can show without a re-render. `text` resolves
+    /// palette stops in the text role, for gradient text on the page.
+    pub(crate) fn declarations(
+        &self,
+        from: Option<&ThemeAwareValue>,
+        themes: &[&Theme],
+        text: bool,
+    ) -> Vec<CssDeclaration> {
         let active = themes[0];
-        let stops = self.stops(&active.gradient);
+        let stops = self.stops(from, &active.gradient);
         let role = if text {
             ColorRole::Text
         } else {
@@ -117,9 +127,30 @@ impl Gradient {
     }
 }
 
+/// `gradient: ("secondary", 45)`: the second stop and the angle.
+impl<T: Into<ThemeAwareValue>> From<(T, u16)> for Gradient {
+    fn from((to, deg): (T, u16)) -> Self {
+        Self::default().to(to).deg(deg)
+    }
+}
+
+// Sealed: only `#[props(into)]` names it, through the impl below.
+#[doc(hidden)]
+#[allow(unnameable_types)]
+pub struct GradientTupleMarker;
+
+// The tuple on an `Option<Gradient>` prop; `Option` only takes `From<Gradient>` itself.
+impl<T: Into<ThemeAwareValue>> dioxus::core::SuperFrom<(T, u16), GradientTupleMarker>
+    for Option<Gradient>
+{
+    fn super_from(value: (T, u16)) -> Self {
+        Some(value.into())
+    }
+}
+
 /// One theme's `:root` vars, from its own [`GradientDefaults`].
 pub(crate) fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
-    Gradient::default().declarations(&[theme], false)
+    Gradient::default().declarations(None, &[theme], false)
 }
 
 /// `linear-gradient(...)` over the gradient vars. `share` mixes each stop
@@ -224,9 +255,12 @@ fn midpoint(a: HexColor, b: HexColor) -> HexColor {
     HexColor::new((mid(a.r(), b.r()) << 16) | (mid(a.g(), b.g()) << 8) | mid(a.b(), b.b()))
 }
 
-/// The label and layer tint with the best worst-case contrast on both stops and the
-/// midpoint (luminance sags there). Theme ends first; literals only where they fail.
-fn pick_label(stops: &[ThemeAwareValue; 2], themes: &[&Theme], text: bool) -> (String, String) {
+/// The label, its opposite end and the worst ratio, best over every point of every theme.
+/// Theme ends first; literals only where they fail. `None`: nothing measurable.
+fn best_label(
+    themes: &[&Theme],
+    points: impl Fn(&Theme) -> Option<[HexColor; 3]>,
+) -> Option<(f32, String, String)> {
     let (ink, surface) = (NamedColorCss::INK.value(), NamedColorCss::SURFACE.value());
     let (black, white) = (BLACK.to_string(), WHITE.to_string());
     type Paint = fn(&Theme) -> HexColor;
@@ -241,10 +275,8 @@ fn pick_label(stops: &[ThemeAwareValue; 2], themes: &[&Theme], text: bool) -> (S
         themes
             .iter()
             .filter_map(|theme| {
-                let from = stop_hex(&stops[0], theme, text)?;
-                let to = stop_hex(&stops[1], theme, text)?;
                 let label = paint(theme);
-                [from, to, midpoint(from, to)]
+                points(theme)?
                     .into_iter()
                     .map(|point| point.contrast_ratio(label))
                     .reduce(f32::min)
@@ -259,14 +291,64 @@ fn pick_label(stops: &[ThemeAwareValue; 2], themes: &[&Theme], text: bool) -> (S
             best = Some((score, label, layer));
         }
     }
+    best.map(|(score, label, layer)| (score, label.to_string(), layer.to_string()))
+}
+
+/// The label and layer tint with the best worst-case contrast on both stops and the
+/// midpoint (luminance sags there).
+fn pick_label(stops: &[ThemeAwareValue; 2], themes: &[&Theme], text: bool) -> (String, String) {
+    let best = best_label(themes, |theme| {
+        let from = stop_hex(&stops[0], theme, text)?;
+        let to = stop_hex(&stops[1], theme, text)?;
+        Some([from, to, midpoint(from, to)])
+    });
     // Nothing measurable: Mantine's white, on the caller.
-    let (score, label, layer) = best.unwrap_or((f32::MAX, &white, &black));
+    let (score, label, layer) = best.unwrap_or((f32::MAX, WHITE.to_string(), BLACK.to_string()));
     if score < TEXT_CONTRAST && !text {
         warn_once(format!(
             "gradient: no label reads at 4.5:1 on {stops:?} (best {score:.2}:1); pick closer stops."
         ));
     }
-    (label.to_string(), layer.to_string())
+    (label, layer)
+}
+
+/// The label and share of a glass tint of `fill`: the label reads on the solid fill
+/// (the opaque fallbacks) and on the tint over the page's surface, and the share is
+/// the theme's `glass_background`, raised in steps of 5% until it does.
+/// `None` for a literal with no hex.
+pub(crate) fn glass_tint(fill: &ThemeAwareValue, themes: &[&Theme]) -> Option<(String, u8)> {
+    let start = themes
+        .iter()
+        .map(|theme| theme.paper.glass_background)
+        .max()?;
+    let at = |share: u8| {
+        best_label(themes, |theme| {
+            let solid = stop_hex(fill, theme, false)?;
+            let tint = mix(solid, theme.surface, share);
+            Some([solid, tint, midpoint(solid, tint)])
+        })
+    };
+    let mut share = start.min(100);
+    loop {
+        let (score, label, _) = at(share)?;
+        if score >= TEXT_CONTRAST {
+            return Some((label, share));
+        }
+        if share == 100 {
+            warn_once(format!(
+                "Paper: no label reads at 4.5:1 on {fill:?} (best {score:.2}:1); pick a darker colour."
+            ));
+            return Some((label, share));
+        }
+        share = (share + 5).min(100);
+    }
+}
+
+/// `a` at `percent` over `b`, as `color-mix(in srgb, a percent, b)` paints it.
+fn mix(a: HexColor, b: HexColor, percent: u8) -> HexColor {
+    let share = f32::from(percent.min(100)) / 100.0;
+    let mix = |x: u8, y: u8| (f32::from(x) * share + f32::from(y) * (1.0 - share)).round() as u32;
+    HexColor::new((mix(a.r(), b.r()) << 16) | (mix(a.g(), b.g()) << 8) | mix(a.b(), b.b()))
 }
 
 /// Gradient text with a literal stop: warns where a stop, or the midpoint,
@@ -327,11 +409,17 @@ mod tests {
             .fold(f32::MAX, f32::min)
     }
 
+    /// The stops of `color` into `gradient`, over the default theme gradient.
+    fn stops(color: Option<&str>, gradient: Gradient) -> [ThemeAwareValue; 2] {
+        let color = color.map(ThemeAwareValue::from);
+        gradient.stops(color.as_ref(), &GradientDefaults::DEFAULT)
+    }
+
     /// The default gradient's label reads at 4.5:1 on every point, in both schemes.
     #[test]
     fn the_default_gradient_label_reads_in_both_schemes() {
         let themes = [&Theme::DEFAULT, &Theme::DARK];
-        let stops = Gradient::default().stops(&GradientDefaults::DEFAULT);
+        let stops = stops(None, Gradient::default());
         let (label, _) = pick_label(&stops, &themes, false);
         assert_eq!(label, NamedColorCss::SURFACE.value());
         for theme in themes {
@@ -340,13 +428,91 @@ mod tests {
         }
     }
 
+    /// `color` is the first stop, `to` the second; unset, both are the theme's.
+    #[test]
+    fn color_is_the_first_stop_and_unset_falls_back_to_the_theme() {
+        let s6 = |color| ThemeAwareValue::ColorValue(ColorValue::Shade(color, ColorShade::S6));
+        assert_eq!(
+            stops(None, Gradient::default()),
+            [s6(Color::Primary), s6(Color::Secondary)]
+        );
+        assert_eq!(
+            stops(Some("error"), ("info", 90).into()),
+            [s6(Color::Error), s6(Color::Info)]
+        );
+        let literal = stops(Some("#ffe066"), Gradient::default());
+        assert_eq!(literal[0], ThemeAwareValue::from("#ffe066"));
+    }
+
+    /// A glass tint's label reads on the tint over the page and on the opaque fallback,
+    /// light and dark, for every chromatic palette colour; the share only rises where needed.
+    #[test]
+    fn a_glass_tint_label_reads_on_the_tint_and_the_solid_fill() {
+        crate::utils::take_warnings();
+        let themes = [&Theme::DEFAULT, &Theme::DARK];
+        for color in [
+            Color::Primary,
+            Color::Secondary,
+            Color::Error,
+            Color::Warning,
+            Color::Info,
+            Color::Success,
+        ] {
+            let fill = ThemeAwareValue::ColorValue(ColorValue::Shade(color, ColorShade::S6));
+            let (label, share) = glass_tint(&fill, &themes).unwrap();
+            for theme in themes {
+                let paint = match label.as_str() {
+                    "#000000" => BLACK,
+                    "#FFFFFF" => WHITE,
+                    label if label == NamedColorCss::INK.value() => theme.ink,
+                    _ => theme.surface,
+                };
+                let solid = stop_hex(&fill, theme, false).unwrap();
+                let tint = mix(solid, theme.surface, share);
+                for point in [solid, tint] {
+                    let ratio = point.contrast_ratio(paint);
+                    assert!(ratio >= TEXT_CONTRAST, "{color:?}: {ratio}");
+                }
+            }
+        }
+        assert!(crate::utils::take_warnings().is_empty());
+    }
+
+    /// The tuple form is the builder's shorthand.
+    #[test]
+    fn a_tuple_is_the_second_stop_and_the_angle() {
+        let tuple: Gradient = ("secondary", 45).into();
+        assert_eq!(tuple, Gradient::default().to("secondary").deg(45));
+    }
+
+    /// A palette `color` into another palette stop reads at 4.5:1, light and dark.
+    #[test]
+    fn a_palette_color_into_a_palette_stop_reads_in_both_schemes() {
+        let themes = [&Theme::DEFAULT, &Theme::DARK];
+        for (color, to) in [
+            ("error", "warning"),
+            ("info", "primary"),
+            ("success", "info"),
+        ] {
+            let stops = stops(Some(color), Gradient::default().to(to));
+            let (label, _) = pick_label(&stops, &themes, false);
+            for theme in themes {
+                let paint = match label.as_str() {
+                    "#000000" => BLACK,
+                    "#FFFFFF" => WHITE,
+                    label if label == NamedColorCss::INK.value() => theme.ink,
+                    _ => theme.surface,
+                };
+                let ratio = worst(&stops, theme, paint);
+                assert!(ratio >= TEXT_CONTRAST, "{color} to {to}: {ratio}");
+            }
+        }
+    }
+
     /// A light pair takes a dark label, which the midpoint is checked for too.
     #[test]
     fn a_light_literal_pair_takes_black() {
-        let stops = Gradient::default()
-            .from("#ffe066")
-            .to("#8ce99a")
-            .stops(&GradientDefaults::DEFAULT);
+        let stops = stops(Some("#ffe066"), Gradient::default().to("#8ce99a"));
         let (label, layer) = pick_label(&stops, &[&Theme::DEFAULT, &Theme::DARK], false);
         // Ink in light, surface in dark: only a literal serves both.
         assert_eq!((label.as_str(), layer.as_str()), ("#000000", "#FFFFFF"));
@@ -356,10 +522,7 @@ mod tests {
     #[test]
     fn a_pair_no_label_reads_on_warns() {
         crate::utils::take_warnings();
-        let stops = Gradient::default()
-            .from("#1a1a80")
-            .to("#ffe066")
-            .stops(&GradientDefaults::DEFAULT);
+        let stops = stops(Some("#1a1a80"), Gradient::default().to("#ffe066"));
         pick_label(&stops, &[&Theme::DEFAULT, &Theme::DARK], false);
         let warnings = crate::utils::take_warnings();
         assert!(warnings.iter().any(|w| w.contains("4.5:1")), "{warnings:?}");
@@ -370,12 +533,10 @@ mod tests {
     fn gradient_text_warns_on_a_pale_literal_stop() {
         crate::utils::take_warnings();
         let themes = [&Theme::DEFAULT, &Theme::DARK];
-        Gradient::default().declarations(&themes, true);
+        Gradient::default().declarations(None, &themes, true);
         assert!(crate::utils::take_warnings().is_empty());
 
-        Gradient::default()
-            .from("#ffe066")
-            .declarations(&themes, true);
+        Gradient::default().declarations(Some(&"#ffe066".into()), &themes, true);
         let warnings = crate::utils::take_warnings();
         assert!(
             warnings.iter().any(|w| w.contains("gradient text")),
@@ -387,26 +548,25 @@ mod tests {
     #[test]
     fn gradient_text_on_readable_literal_stops_stays_quiet() {
         crate::utils::take_warnings();
-        Gradient::default()
-            .from("#1a1a80")
-            .to("#5c1a80")
-            .declarations(&[&Theme::DEFAULT], true);
+        Gradient::default().to("#5c1a80").declarations(
+            Some(&"#1a1a80".into()),
+            &[&Theme::DEFAULT],
+            true,
+        );
         assert!(crate::utils::take_warnings().is_empty());
     }
 
     #[test]
     fn an_unmeasurable_stop_falls_back_to_white() {
-        let stops = Gradient::default()
-            .from("rebeccapurple")
-            .stops(&GradientDefaults::DEFAULT);
+        let stops = stops(Some("rebeccapurple"), Gradient::default());
         assert_eq!(pick_label(&stops, &[&Theme::DEFAULT], false).0, "#FFFFFF");
     }
 
     #[test]
     fn declarations_resolve_palette_stops_in_their_role() {
-        let gradient = Gradient::default().to("info").deg(90);
+        let gradient = Gradient::from(("info", 90));
         let css: Vec<String> = gradient
-            .declarations(&[&Theme::DEFAULT], false)
+            .declarations(None, &[&Theme::DEFAULT], false)
             .iter()
             .map(ToString::to_string)
             .collect();
@@ -424,12 +584,12 @@ mod tests {
         );
 
         let text: Vec<String> = gradient
-            .declarations(&[&Theme::DEFAULT], true)
+            .declarations(Some(&"error".into()), &[&Theme::DEFAULT], true)
             .iter()
             .map(ToString::to_string)
             .collect();
         assert!(
-            text.contains(&"--lsx-gradient-from:var(--lsx-primary-text-6);".to_string()),
+            text.contains(&"--lsx-gradient-from:var(--lsx-error-text-6);".to_string()),
             "{text:?}"
         );
     }

@@ -56,6 +56,8 @@ Paper { sx: sx().padding("lg").box_shadow("none"), "Flat" }
 | `radius` | `Size` | `md` | Corner radius, a step on the shared radius scale. |
 | `shadow` | `Size` | `sm` | Elevation, a step on the shared shadow scale. For a flat surface use `sx().box_shadow("none")`. |
 | `bordered` | `bool` | `false` | A hairline border in the theme's surface border colour. Works together with a shadow. |
+| `color` | `ThemeAwareValue` | - | Fills the surface. A theme color name paints its shade 6 under a text colour picked to read on it; any other CSS color is used as given, and its text colour is yours to set. With `glass`, a translucent tint of it, kept dense enough for the text to read. Under a gradient, its first stop. |
+| `gradient` | `Gradient` | - | Fills the surface with a gradient from `color` to a second stop, as `("info", 90)` or `Gradient::default().to("info").deg(90)`; `Gradient::default()` is the theme's. The text colour is picked to read on both stops. |
 | `component` | `HtmlTag` | `div` | The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. A `section` or `aside` is a landmark and needs your `aria-label`. |
 | `variables` | `Variables` | - | Custom properties set on the element's `style`, for a component built on `Paper`. |
 | `framework_sx` | `&'static StaticSx` | - | Base styles for a component built on `Paper`. They replace `Paper`'s own, so start from `paper_sx()`. |

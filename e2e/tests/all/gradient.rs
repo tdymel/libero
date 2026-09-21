@@ -26,6 +26,29 @@ const WORST_RATIO: &str = "(sel => { const el = document.querySelector(sel); \
     const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); }; \
     return Math.min(...[from, to, mid].map(p => ratio(p, label))); })";
 
+/// The WCAG ratio of the label over a flat fill, a translucent one composited over the page.
+const FILL_RATIO: &str = "(sel => { const el = document.querySelector(sel); \
+    const rgba = c => { const v = c.match(/[\\d.]+/g).map(Number); const k = c.startsWith('color(') ? 255 : 1; \
+        return [v[0] * k, v[1] * k, v[2] * k, v.length > 3 ? v[3] : 1]; }; \
+    const probe = document.createElement('div'); probe.style.color = 'var(--lsx-surface)'; \
+    document.body.append(probe); const surface = rgba(getComputedStyle(probe).color); probe.remove(); \
+    const pages = [document.body, document.documentElement].map(e => rgba(getComputedStyle(e).backgroundColor)); \
+    const page = pages.find(p => p[3] > 0) || surface; \
+    const [r, g, b, a] = rgba(getComputedStyle(el).backgroundColor); \
+    const fill = [r, g, b].map((v, i) => v * a + page[i] * (1 - a)); \
+    const label = rgba(getComputedStyle(el).color).slice(0, 3); \
+    const lum = c => c.map(v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }) \
+        .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0); \
+    const [x, y] = [lum(fill), lum(label)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); })";
+
+async fn ratio(page: &Page, script: &str, selector: &str) -> f64 {
+    page.evaluate(format!("{script}('{selector}')"))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
+}
+
 async fn scheme(page: &Page, scheme: &str) {
     page.evaluate(format!(
         "document.documentElement.setAttribute('data-lsx-theme', '{scheme}')"
@@ -60,13 +83,15 @@ fn every_label_reads_on_its_whole_gradient_in_both_schemes() {
                 "#icon",
                 "#paper",
                 "#header",
+                "#color-only",
+                "#paper-gradient",
             ] {
-                let ratio: f64 = page
-                    .evaluate(format!("{WORST_RATIO}('{selector}')"))
-                    .await
-                    .unwrap()
-                    .into_value()
-                    .unwrap();
+                let ratio = ratio(page, WORST_RATIO, selector).await;
+                assert!(ratio >= 4.5, "{selector} in {name}: {ratio:.2}:1");
+            }
+            // Paper `color` (1017): a palette fill and a glass tint of it.
+            for selector in ["#paper-color", "#paper-glass"] {
+                let ratio = ratio(page, FILL_RATIO, selector).await;
                 assert!(ratio >= 4.5, "{selector} in {name}: {ratio:.2}:1");
             }
         }
@@ -89,6 +114,63 @@ fn an_override_replaces_the_theme_stops_and_other_variants_ignore_it() {
             style(page, "#override", "--lsx-gradient-to").await
         );
         assert_eq!(style(page, "#ignored", "background-image").await, "none");
+        fixture.close().await.unwrap();
+    });
+}
+
+/// `color` is the first stop (1016); unset, the theme's `from` stays.
+#[test]
+fn color_is_the_first_stop() {
+    block_on(async {
+        let fixture = Fixture::open("/gradient", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#button").await.unwrap();
+        let from = |selector| style(page, selector, "--lsx-gradient-from");
+        let fill = |var| style(page, "#button", var);
+        assert_eq!(from("#button").await, fill("--lsx-primary-fill-6").await);
+        assert_eq!(from("#override").await, fill("--lsx-success-fill-6").await);
+        let error = fill("--lsx-error-fill-6").await;
+        assert_eq!(from("#color-only").await, error);
+        assert_eq!(from("#paper-gradient").await, error);
+        assert_eq!(from("#header").await, error);
+        assert_eq!(
+            style(page, "#color-only", "--lsx-gradient-to").await,
+            style(page, "#button", "--lsx-gradient-to").await
+        );
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Paper `color` (1017): a palette fill hands its label to rings inside; a literal is as given;
+/// glass tints it; `Text` takes a plain `color`.
+#[test]
+fn paper_color_paints_the_fill_and_its_label() {
+    block_on(async {
+        let fixture = Fixture::open("/gradient", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+        wait::for_visible(page, "#paper-color").await.unwrap();
+        assert_eq!(
+            style(page, "#paper-color", "background-image").await,
+            "none"
+        );
+        assert_eq!(
+            style(page, "#in-paper-color", "--lsx-focus-contrast").await,
+            style(page, "#paper-color", "--lsx-paper-fill-contrast").await
+        );
+        assert_eq!(
+            style(page, "#paper-literal", "background-color").await,
+            "rgb(18, 52, 86)"
+        );
+        let glass = style(page, "#paper-glass", "background-color").await;
+        assert!(
+            glass.starts_with("rgba") || glass.contains("color(srgb"),
+            "{glass}"
+        );
+        assert_ne!(style(page, "#paper-glass", "backdrop-filter").await, "none");
+        assert_ne!(
+            style(page, "#text-color", "color").await,
+            style(page, "#text", "color").await
+        );
         fixture.close().await.unwrap();
     });
 }

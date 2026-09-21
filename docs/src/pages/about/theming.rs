@@ -214,8 +214,14 @@ pub fn ThemingPage() -> Element {
                     Code { source: "Text" }
                     ": two palette roles and an angle. Its label is picked to read on both "
                     "stops, in light and in dark. A component's "
+                    Code { source: "color" }
+                    " is the first stop, "
+                    Code { source: "from" }
+                    " only its fallback. Its "
                     Code { source: "gradient" }
-                    " prop overrides it."
+                    " prop sets the second stop and the angle, as "
+                    Code { source: "(\"secondary\", 45)" }
+                    "."
                 }
                 CodeBlock { source: GRADIENT, language: "rust" }
             }

@@ -63,8 +63,9 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. |
-| `variant` | `Variant` | `filled` | Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. |
+| `color` | `ThemeAwareValue` | `primary` | Accent color. A theme color name or any CSS color. Under a gradient, its first stop. |
+| `variant` | `Variant` | `filled` | Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop. |
+| `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
 | `radius` | `Size` | `md` | Corner radius, independent of `size`. |
 | `size` | `Size` | `md` | Height, padding and font size. |
 | `full_width` | `bool` | `false` | Stretches the button to fill its container. |

@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, a11y, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, UNSET, Wrap, a11y, gradient_controls, gradient_value,
+    indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Input, Paper, Text, Title},
@@ -35,9 +38,14 @@ fn wrap_backdrop(values: &DemoValues, code: &str) -> String {
     }
 }
 
+fn no_gradient(values: &DemoValues) -> bool {
+    values.str("gradient") != "true"
+}
+
 #[component]
 pub fn PaperPage() -> Element {
     let theme = use_theme();
+    let [gradient_to, gradient_deg] = gradient_controls(no_gradient);
 
     rsx! {
         DocPage {
@@ -58,8 +66,10 @@ pub fn PaperPage() -> Element {
                     prop("glass", "bool")
                         .default("false")
                         .doc("Frosted glass: translucent, blurring what is behind it, tuned by the theme's `paper.glass_background` and `paper.glass_blur`. Use it over app chrome, not over images, where text can lose contrast. Opaque when the user reduces transparency, in forced colours, and in native windows."),
+                    prop("color", "ThemeAwareValue")
+                        .doc("Fills the surface. A theme color name paints its shade 6 under a text colour picked to read on it; any other CSS color is used as given, and its text colour is yours to set. With `glass`, a translucent tint of it, kept dense enough for the text to read. Under a gradient, its first stop."),
                     prop("gradient", "Gradient")
-                        .doc("Fills the surface with a gradient, `Gradient::default()` for the theme's. The text colour is picked to read on both stops. With `glass`, the stops turn translucent. Its stops carry down to any gradient inside it."),
+                        .doc("Fills the surface with a gradient from `color` to a second stop, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`; `Gradient::default()` is the theme's. The text colour is picked to read on both stops. With `glass`, the stops turn translucent. Its stops carry down to any gradient inside it."),
                     prop("component", "HtmlTag")
                         .default("div")
                         .doc("The element to render, such as `section`, `article`, `aside`, or `a` for a clickable card. A `section` or `aside` is a landmark and needs your `aria-label`."),
@@ -110,6 +120,18 @@ pub fn PaperPage() -> Element {
                         }),
                     Control::switch("bordered"),
                     Control::switch("glass"),
+                    Control::color("color").with_unset(),
+                    // The theme's own second stop and angle print as `Gradient::default()`.
+                    Control::switch("gradient").code(|_, values| {
+                        let default = values.str("gradient_to") == "secondary"
+                            && values.str("gradient_deg") == "45";
+                        match values.str("gradient").as_str() {
+                            "true" if default => vec!["gradient: Gradient::default()".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    gradient_to,
+                    gradient_deg,
                     Control::toggle("component", ["div", "section", "article"])
                         .labels(["Div", "Section", "Article"]),
                 ],
@@ -131,6 +153,12 @@ pub fn PaperPage() -> Element {
                             shadow,
                             bordered: values.str("bordered") == "true",
                             glass,
+                            color: match values.str("color").as_str() {
+                                UNSET => Input::None,
+                                color => Input::from(color),
+                            },
+                            gradient: (values.str("gradient") == "true")
+                                .then(|| gradient_value(&values)),
                             component: values.str("component"),
                             sx,
                             // Level is a document decision, size a design one ([[codebase/heading-order]]).

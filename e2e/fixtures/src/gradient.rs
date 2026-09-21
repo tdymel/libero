@@ -15,10 +15,12 @@ fn GradientPage() -> Element {
         Flex { direction: "column", gap: "md", max_width: "480px",
             Flex { gap: "sm", wrap: "wrap", align: "center",
                 Button { id: "button", variant: "gradient", "Theme" }
-                Button { id: "override", variant: "gradient",
-                    gradient: Gradient::default().from("success").to("info").deg(90),
+                Button { id: "override", variant: "gradient", color: "success",
+                    gradient: ("info", 90),
                     "Override"
                 }
+                // `color` alone: the first stop, into the theme's second (1016).
+                Button { id: "color-only", variant: "gradient", color: "error", "Color" }
                 Button { id: "selected", variant: "gradient", selected: true, "Selected" }
                 Button { id: "ignored", gradient: Gradient::default().to("info"), "Filled" }
                 ActionIcon { id: "action-icon", variant: "gradient", aria_label: "Star", "★" }
@@ -34,10 +36,30 @@ fn GradientPage() -> Element {
                 Text { "Glass over a gradient." }
             }
             Text { id: "text", gradient: Gradient::default(), size: "xl", "Gradient text" }
-            // `color` is dropped: the gradient replaces it (968).
+            Text { id: "text-color", color: "error", "Plain coloured text" }
+            // `color` is the first stop, over glass too (1016).
             Header { id: "header", position: "static", glass: true, color: "error",
                 gradient: Gradient::default(),
                 Button { id: "in-header", variant: "standard", "Menu" }
+            }
+            // Paper `color` (1017): a palette fill with its label, a literal as given, glass.
+            Paper { id: "paper-color", color: "info", sx: libero::sx::sx().padding("md"),
+                Text { "On an info fill." }
+                button { id: "in-paper-color", style: "color: inherit; background: none; border: 0",
+                    "More"
+                }
+            }
+            // A literal's label is the caller's.
+            Paper { id: "paper-literal", color: "#123456", sx: libero::sx::sx().padding("md").color("#fff"),
+                Text { "On a literal fill." }
+            }
+            Paper { id: "paper-glass", color: "secondary", glass: true,
+                sx: libero::sx::sx().padding("md"),
+                Text { "A glass tint." }
+            }
+            Paper { id: "paper-gradient", color: "error", gradient: ("info", 90),
+                sx: libero::sx::sx().padding("md"),
+                Text { "From error to info." }
             }
         }
     }

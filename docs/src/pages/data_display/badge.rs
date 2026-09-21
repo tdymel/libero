@@ -1,4 +1,7 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Child, Control, Demo, DemoValues, DocPage, a11y, gradient_controls, gradient_value,
+    not_gradient_variant, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Badge, Code, Input, Text};
 
@@ -10,6 +13,7 @@ fn label(values: &DemoValues) -> String {
 
 #[component]
 pub fn BadgePage() -> Element {
+    let [gradient_to, gradient_deg] = gradient_controls(not_gradient_variant);
     rsx! {
         DocPage {
             title: "Badge",
@@ -20,10 +24,10 @@ pub fn BadgePage() -> Element {
                     .default("filled")
                     .doc("The look, shared with `Button` and `Chip`. A badge is not interactive, so it has no hover state."),
                 prop("gradient", "Gradient")
-                    .doc("With `variant: \"gradient\"`: this badge's own stops and angle. Ignored by the other variants."),
+                    .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),
                 prop("color", "ThemeAwareValue")
                     .default("primary")
-                    .doc("A theme color name or a CSS color. A theme color also sets a label color that reads on it."),
+                    .doc("A theme color name or a CSS color. A theme color also sets a label color that reads on it. Under a gradient, its first stop."),
                 prop("size", "Size")
                     .default("md")
                     .doc("Height, horizontal padding and font size, on a scale smaller than a chip's."),
@@ -65,12 +69,14 @@ pub fn BadgePage() -> Element {
                 controls: vec![
                     Control::toggle(
                         "variant",
-                        ["filled", "tonal", "elevated", "outlined", "standard"],
+                        ["filled", "tonal", "elevated", "outlined", "standard", "gradient"],
                     )
-                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"]),
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"]),
                     // A bare `primary` is what an unset `color` resolves to,
                     // so that swatch prints nothing.
                     Control::color("color"),
+                    gradient_to,
+                    gradient_deg,
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     // `standard` draws no box, so there is no corner to round.
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
@@ -83,6 +89,7 @@ pub fn BadgePage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     Badge {
                         variant: values.str("variant"),
+                        gradient: gradient_value(&values),
                         color: match values.str("color").as_str() {
                             "primary" => Input::None,
                             color => Input::from(color),

@@ -97,6 +97,19 @@ impl PaperDefaults {
             .media(FORCED_COLORS, opaque)
     }
 
+    /// Glass over a flat `fill`, mixed down to `share` (`glass_background` if `None`);
+    /// opaque where [`glass_sx`](Self::glass_sx) turns opaque.
+    pub(crate) fn glass_fill_sx(fill: &str, share: Option<&CssVar>) -> Sx {
+        let opaque = sx().background(fill).backdrop_filter("none");
+        let share = match share {
+            Some(share) => share.value_or(GLASS_SHARE.value()),
+            None => GLASS_SHARE.value(),
+        };
+        sx().background(format!("color-mix(in srgb, {fill} {share}, transparent)"))
+            .media(REDUCED_TRANSPARENCY, opaque.clone())
+            .media(FORCED_COLORS, opaque)
+    }
+
     /// Glass over a gradient: each stop mixed down to `glass_background`, and
     /// the opaque gradient again wherever [`glass_sx`](Self::glass_sx) turns opaque.
     pub(crate) fn glass_gradient_sx() -> Sx {

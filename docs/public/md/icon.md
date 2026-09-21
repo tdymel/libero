@@ -54,7 +54,8 @@ variant insets it to 60% of the box, clear of the container's edges. Set
 |---|---|---|---|
 | `component` | `HtmlTag` | `span` | Element to render as. |
 | `variant` | `Variant` | `filled` | The look, shared with `Button`. An icon is not interactive, so it has no hover state. |
-| `color` | `ThemeAwareValue` | `primary` | The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background. |
+| `color` | `ThemeAwareValue` | `primary` | The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background. Under a gradient, its first stop. |
+| `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
 | `size` | `ThemeAwareValue` | `md` | Width and height. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius. |
 | `children` | `Element` | required | The svg. |

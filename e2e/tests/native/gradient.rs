@@ -3,7 +3,7 @@
 
 use dioxus::prelude::*;
 use e2e::native::{Page, mount};
-use libero::components::{Button, Text};
+use libero::components::{Button, Paper, Text};
 use libero::sx::sx;
 use libero::theme::Gradient;
 
@@ -54,8 +54,25 @@ fn text_clip_paints_the_whole_box() {
 fn libero_app() -> Element {
     rsx! {
         Button { id: "button", variant: "gradient", sx: sx().width("200px"), "Gradient" }
+        Button { id: "colored", variant: "gradient", color: "error", gradient: ("info", 90),
+            sx: sx().width("200px"), "Colored"
+        }
         Text { id: "text", gradient: Gradient::default(), "Gradient text" }
+        Paper { id: "paper", color: "info", sx: sx().width("200px").height("40px") }
     }
+}
+
+/// `color` is the first stop (1016) and Paper paints a `color` fill (1017).
+#[test]
+fn color_starts_the_gradient_and_fills_a_paper() {
+    let mut page = mount(libero_app);
+    page.settle();
+    let theme = samples(&mut page, "#button");
+    let colored = samples(&mut page, "#colored");
+    assert_ne!(theme[0], colored[0], "the theme's first stop: {colored:?}");
+    assert_ne!(colored[0], colored[2], "one flat colour: {colored:?}");
+    let paper = samples(&mut page, "#paper");
+    assert_ne!(paper[1], "rgb(255, 255, 255)", "no fill: {paper:?}");
 }
 
 /// A gradient `Button` runs from one stop to the other, and a hover lays the

@@ -154,7 +154,7 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
 });
 
 fn header_variables(props: &HeaderProps) -> Variables {
-    // Glass and gradient paint their own fill, so a `color` would leave the text unreadable.
+    // Glass and gradient paint their own fill (a gradient starts at `color`), with their own label.
     let color = props
         .color
         .as_ref()
@@ -192,7 +192,7 @@ base_props! {
         /// Height, a size or any CSS length.
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
-        /// Banner fill; a bare color takes shade 6.
+        /// Banner fill; a bare color takes shade 6. The first stop under a `gradient`.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -203,8 +203,8 @@ base_props! {
         /// Frosted glass, as on `Paper`. Replaces a `color`.
         #[props(default)]
         glass: bool,
-        /// A linear gradient fill, as on `Paper`. Replaces a `color`.
-        #[props(default)]
+        /// A linear gradient fill from `color`, as on `Paper`: `("secondary", 45)` or a [`Gradient`].
+        #[props(default, into)]
         gradient: Option<Gradient>,
         children: Element,
     }
@@ -236,7 +236,12 @@ pub fn Header(props: HeaderProps) -> Element {
         .with("glass", props.glass && draws_backdrop_filter())
         .with("gradient", props.gradient.is_some())
         .into();
-    let gradient = use_gradient_style(props.gradient.as_ref(), true, false);
+    let gradient = use_gradient_style(
+        props.gradient.as_ref(),
+        props.color.as_ref(),
+        props.gradient.is_some(),
+        false,
+    );
 
     // The last mounted publisher wins; the size's own CSS, so nothing is measured.
     let id = use_id();
@@ -352,8 +357,9 @@ mod tests {
         assert!(!variables.contains(HEADER_COLOR_VAR.name()));
     }
 
+    /// The colour is the gradient's first stop, not a flat fill under it.
     #[test]
-    fn a_gradient_drops_the_color_it_replaces() {
+    fn a_gradient_takes_the_color_as_its_first_stop() {
         let props = HeaderProps {
             gradient: Some(Gradient::default()),
             ..header_props(Color::Primary.into())

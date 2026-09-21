@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, a11y, gradient_controls, gradient_value,
+    not_gradient_variant, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Code, Input, Text};
 
@@ -13,6 +16,7 @@ fn is_link(values: &DemoValues) -> bool {
 
 #[component]
 pub fn ActionIconPage() -> Element {
+    let [gradient_to, gradient_deg] = gradient_controls(not_gradient_variant);
     rsx! {
         DocPage {
             title: "ActionIcon",
@@ -20,11 +24,11 @@ pub fn ActionIconPage() -> Element {
             markdown: "/md/action_icon.md",
             properties: vec![props("ActionIcon", vec![
                 prop("variant", "Variant")
-                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. With `color` also unset, the button takes the surrounding text color."),
+                    .doc("Visual style, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`, `gradient`. With `color` also unset, the button takes the surrounding text color."),
                 prop("gradient", "Gradient")
-                    .doc("With `variant: \"gradient\"`: this button's own stops and angle. Ignored by the other variants."),
+                    .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),
                 prop("color", "ThemeAwareValue")
-                    .doc("Accent color. A theme color name or any CSS color. Set alone, it gives the theme's default variant, `filled`."),
+                    .doc("Accent color. A theme color name or any CSS color. Set alone, it gives the theme's default variant, `filled`. Under a gradient, its first stop."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
                     .doc("Button size, independent of the icon's own size."),
@@ -88,12 +92,14 @@ pub fn ActionIconPage() -> Element {
                 controls: vec![
                     Control::toggle(
                         "variant",
-                        ["filled", "tonal", "elevated", "outlined", "standard"],
+                        ["filled", "tonal", "elevated", "outlined", "standard", "gradient"],
                     )
-                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"]),
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"]),
                     // A bare `primary` is what an unset `color` resolves
                     // to, so that swatch prints nothing.
                     Control::color("color"),
+                    gradient_to,
+                    gradient_deg,
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
@@ -124,6 +130,7 @@ pub fn ActionIconPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     ActionIcon {
                         variant: values.str("variant"),
+                        gradient: gradient_value(&values),
                         color: match values.str("color").as_str() {
                             "primary" => Input::None,
                             color => Input::from(color),

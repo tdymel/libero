@@ -7,6 +7,8 @@ button "Theme"
   StaticText "Theme"
 button "Override"
   StaticText "Override"
+button "Color"
+  StaticText "Color"
 button "Selected" [pressed]
   StaticText "Selected"
 button "Filled"
@@ -24,6 +26,18 @@ paragraph
   StaticText "Glass over a gradient."
 paragraph
   StaticText "Gradient text"
+paragraph
+  StaticText "Plain coloured text"
 banner
   button "Menu"
     StaticText "Menu"
+paragraph
+  StaticText "On an info fill."
+button "More"
+  StaticText "More"
+paragraph
+  StaticText "On a literal fill."
+paragraph
+  StaticText "A glass tint."
+paragraph
+  StaticText "From error to info."

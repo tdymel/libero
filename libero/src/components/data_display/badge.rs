@@ -87,8 +87,9 @@ base_props! {
     pub struct BadgeProps {
         #[props(default, into)]
         variant: Input<Variant>,
-        /// The stops and angle of `variant: "gradient"`, over the theme's.
-        #[props(default)]
+        /// Second stop and angle of `variant: "gradient"`, whose first stop is `color`:
+        /// `("secondary", 45)` or a [`Gradient`]. Unset keys take the theme's.
+        #[props(default, into)]
         gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -124,7 +125,12 @@ pub fn Badge(props: BadgeProps) -> Element {
     let variant = props.variant.copied_or(theme.badge.variant);
     let size = props.size.copied_or(theme.badge.size);
     let variables: Input<Variables> = badge_variables(&props, variant).into();
-    let gradient = use_gradient_style(props.gradient.as_ref(), variant == Variant::Gradient, false);
+    let gradient = use_gradient_style(
+        props.gradient.as_ref(),
+        props.color.as_ref(),
+        variant == Variant::Gradient,
+        false,
+    );
 
     let states: Input<States> = props
         .states

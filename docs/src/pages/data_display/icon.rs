@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, a11y, gradient_controls, gradient_value,
+    not_gradient_variant, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, Input, Text};
 
@@ -9,6 +12,7 @@ const CHILDREN: &str = "CheckmarkIcon {}";
 
 #[component]
 pub fn IconPage() -> Element {
+    let [gradient_to, gradient_deg] = gradient_controls(not_gradient_variant);
     rsx! {
         DocPage {
             title: "Icon",
@@ -21,10 +25,10 @@ pub fn IconPage() -> Element {
                         .default("filled")
                         .doc("The look, shared with `Button`. An icon is not interactive, so it has no hover state."),
                     prop("gradient", "Gradient")
-                        .doc("With `variant: \"gradient\"`: this icon's own stops and angle. Ignored by the other variants."),
+                        .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. Ignored by the other variants."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
-                        .doc("The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background."),
+                        .doc("The CSS color, which an svg drawn in `currentColor` inherits. Under `filled` a theme color also tints the background. Under a gradient, its first stop."),
                     prop("size", "ThemeAwareValue")
                         .default("md")
                         .doc("Width and height."),
@@ -64,12 +68,14 @@ pub fn IconPage() -> Element {
                 controls: vec![
                     Control::toggle(
                         "variant",
-                        ["filled", "tonal", "elevated", "outlined", "standard"],
+                        ["filled", "tonal", "elevated", "outlined", "standard", "gradient"],
                     )
-                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"]),
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"]),
                     // A bare `primary` is what an unset `color` resolves
                     // to, so that swatch prints nothing.
                     Control::color("color"),
+                    gradient_to,
+                    gradient_deg,
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     // `standard` draws no box, so there is no corner to round.
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
@@ -79,6 +85,7 @@ pub fn IconPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     Icon {
                         variant: values.str("variant"),
+                        gradient: gradient_value(&values),
                         color: match values.str("color").as_str() {
                             "primary" => Input::None,
                             color => Input::from(color),

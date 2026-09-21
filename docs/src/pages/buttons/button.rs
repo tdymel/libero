@@ -1,4 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, a11y, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, a11y, gradient_controls, gradient_value,
+    not_gradient_variant, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Button, Code, Input, Text};
 
@@ -8,6 +11,7 @@ fn is_link(values: &DemoValues) -> bool {
 
 #[component]
 pub fn ButtonPage() -> Element {
+    let [gradient_to, gradient_deg] = gradient_controls(not_gradient_variant);
     rsx! {
         DocPage {
             title: "Button",
@@ -16,12 +20,12 @@ pub fn ButtonPage() -> Element {
             properties: vec![props("Button", vec![
                 prop("color", "ThemeAwareValue")
                     .default("primary")
-                    .doc("Accent color. A theme color name or any CSS color."),
+                    .doc("Accent color. A theme color name or any CSS color. Under a gradient, its first stop."),
                 prop("variant", "Variant")
                     .default("filled")
-                    .doc("Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it with the theme's gradient."),
+                    .doc("Visual style, from most to least emphasis: `filled`, `tonal`, `elevated`, `outlined`, `standard`. `gradient` fills it from `color` into the theme's second stop."),
                 prop("gradient", "Gradient")
-                    .doc("With `variant: \"gradient\"`: this button's own stops and angle, such as `Gradient::default().from(\"success\").to(\"info\").deg(90)`. A literal CSS stop's label contrast is yours to check. Ignored by the other variants."),
+                    .doc("With `variant: \"gradient\"`: the second stop and the angle, as `(\"info\", 90)` or `Gradient::default().to(\"info\").deg(90)`. The first stop is `color`. A literal CSS stop's label contrast is yours to check. Ignored by the other variants."),
                 prop("radius", "Size")
                     .default("md")
                     .doc("Corner radius, independent of `size`."),
@@ -84,6 +88,8 @@ pub fn ButtonPage() -> Element {
                         ["filled", "tonal", "elevated", "outlined", "standard", "gradient"],
                     )
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard", "Gradient"]),
+                    gradient_to,
+                    gradient_deg,
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
@@ -130,6 +136,7 @@ pub fn ButtonPage() -> Element {
                     Button {
                         color: values.str("color"),
                         variant: values.str("variant"),
+                        gradient: gradient_value(&values),
                         size: values.str("size"),
                         radius: values.str("radius"),
                         full_width: values.str("full_width") == "true",

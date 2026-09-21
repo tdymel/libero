@@ -163,8 +163,9 @@ base_props! {
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         variant: Input<Variant>,
-        /// Stops and angle of the `gradient` variant, over the theme's.
-        #[props(default)]
+        /// Second stop and angle of the `gradient` variant, whose first stop is `color`:
+        /// `("secondary", 45)` or a [`Gradient`]. Unset keys take the theme's.
+        #[props(default, into)]
         gradient: Option<Gradient>,
         /// Corner radius, independent of `size`.
         #[props(default, into)]
@@ -247,7 +248,12 @@ pub fn Button(props: ButtonProps) -> Element {
         (variant, color, selectable),
         |(variant, color, selectable)| button_variables(*variant, color, *selectable),
     );
-    let gradient = use_gradient_style(props.gradient.as_ref(), variant == Variant::Gradient, false);
+    let gradient = use_gradient_style(
+        props.gradient.as_ref(),
+        props.color.as_ref(),
+        variant == Variant::Gradient,
+        false,
+    );
     let style = match gradient {
         Some(gradient) => format!("{style}{gradient}"),
         None => style,

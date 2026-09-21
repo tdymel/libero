@@ -107,8 +107,9 @@ base_props! {
         component: Input<HtmlTag>,
         #[props(default, into)]
         variant: Input<Variant>,
-        /// The stops and angle of `variant: "gradient"`, over the theme's.
-        #[props(default)]
+        /// Second stop and angle of `variant: "gradient"`, whose first stop is `color`:
+        /// `("secondary", 45)` or a [`Gradient`]. Unset keys take the theme's.
+        #[props(default, into)]
         gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -153,7 +154,12 @@ pub fn Icon(props: IconProps) -> Element {
         ),
         |_| icon_variables(&props, variant).render(),
     );
-    let gradient = use_gradient_style(props.gradient.as_ref(), variant == Variant::Gradient, false);
+    let gradient = use_gradient_style(
+        props.gradient.as_ref(),
+        props.color.as_ref(),
+        variant == Variant::Gradient,
+        false,
+    );
     let style = match gradient {
         Some(gradient) => format!("{style}{gradient}"),
         None => style,

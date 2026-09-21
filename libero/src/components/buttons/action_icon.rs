@@ -169,8 +169,9 @@ base_props! {
     pub struct ActionIconProps {
         #[props(default, into)]
         variant: Input<Variant>,
-        /// Stops and angle of the `gradient` variant, over the theme's.
-        #[props(default)]
+        /// Second stop and angle of the `gradient` variant, whose first stop is `color`:
+        /// `("secondary", 45)` or a [`Gradient`]. Unset keys take the theme's.
+        #[props(default, into)]
         gradient: Option<Gradient>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -241,6 +242,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         action_icon_variables(&props, variant, has_variant_styling).into();
     let gradient = use_gradient_style(
         props.gradient.as_ref(),
+        props.color.as_ref(),
         has_variant_styling && variant == Variant::Gradient,
         false,
     );

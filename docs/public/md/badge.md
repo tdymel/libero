@@ -58,7 +58,8 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `variant` | `Variant` | `filled` | The look, shared with `Button` and `Chip`. A badge is not interactive, so it has no hover state. |
-| `color` | `ThemeAwareValue` | `primary` | A theme color name or a CSS color. A theme color also sets a label color that reads on it. |
+| `color` | `ThemeAwareValue` | `primary` | A theme color name or a CSS color. A theme color also sets a label color that reads on it. Under a gradient, its first stop. |
+| `gradient` | `Gradient` | - | With `variant: "gradient"`: the second stop and the angle, as `("info", 90)` or `Gradient::default().to("info").deg(90)`. The first stop is `color`. Ignored by the other variants. |
 | `size` | `Size` | `md` | Height, horizontal padding and font size, on a scale smaller than a chip's. |
 | `radius` | `Size` | `xxl` | A step on the badge's own radius scale, `2px` to `12px`. The default `xxl` is a pill at every height. |
 | `circle` | `bool` | `false` | Drops the horizontal padding and makes the width at least the height, for a count of one or two characters. |

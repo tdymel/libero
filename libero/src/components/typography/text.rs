@@ -2,13 +2,13 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        common::{HtmlTag, Input, States, base_props},
+        common::{HtmlTag, Input, States, base_color, base_props, text_color, variables},
         layout::use_box,
     },
     hooks::{use_gradient_style, use_theme},
     platform::clips_background_to_text,
-    sx::{StaticSx, Sx, sx},
-    theme::{GRADIENT_FROM, Gradient, Size, TextDefaults, gradient_image},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::{CssVar, GRADIENT_FROM, Gradient, Size, TextDefaults, gradient_image},
 };
 
 static TEXT_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -16,8 +16,11 @@ static TEXT_BASE_SX: StaticSx = StaticSx::new(|| {
         .margin("0")
         .padding("0")
         .text_decoration("none")
+        .when("colored", sx().color(TEXT_COLOR.value()))
         .when("gradient", gradient_text_sx())
 });
+
+const TEXT_COLOR: CssVar = CssVar::new("--lsx-text-color");
 
 /// The gradient through the glyphs. Blitz paints the whole box, so there it is the first stop.
 fn gradient_text_sx() -> Sx {
@@ -37,8 +40,13 @@ base_props! {
         /// The element to render, `p` by default.
         #[props(default, into)]
         component: Input<HtmlTag>,
-        /// Paints the glyphs in a gradient; a literal stop's contrast is the caller's to check.
-        #[props(default)]
+        /// The glyphs' colour: a palette colour in its text shade, a literal as given.
+        /// The first stop under a `gradient`.
+        #[props(default, into)]
+        color: Input<ThemeAwareValue>,
+        /// Paints the glyphs in a gradient from `color`: `("secondary", 45)` or a
+        /// [`Gradient`]. A literal stop's contrast is the caller's to check.
+        #[props(default, into)]
         gradient: Option<Gradient>,
         children: Element,
     }
@@ -61,13 +69,26 @@ base_props! {
 pub fn Text(props: TextProps) -> Element {
     let theme = use_theme();
     let chosen_size = props.size.copied_or(theme.text.size);
-    let gradient = use_gradient_style(props.gradient.as_ref(), true, true);
+    let color = props.color.as_ref();
+    let gradient = use_gradient_style(
+        props.gradient.as_ref(),
+        color,
+        props.gradient.is_some(),
+        true,
+    );
+    // Under a gradient the colour is its first stop instead.
+    let plain = color
+        .filter(|_| gradient.is_none())
+        .and_then(|color| text_color(&base_color(Some(color))));
+    let colored = plain.is_some();
+    let style = gradient.or_else(|| colored.then(|| variables().with(TEXT_COLOR, plain).render()));
 
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(chosen_size.state_name(), true)
-        .with("gradient", gradient.is_some())
+        .with("colored", colored)
+        .with("gradient", props.gradient.is_some())
         .into();
 
     use_box()
@@ -75,7 +96,7 @@ pub fn Text(props: TextProps) -> Element {
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
-        .style(gradient)
+        .style(style)
         .prepare()
         .render(
             props.component.copied_or(HtmlTag::P),
