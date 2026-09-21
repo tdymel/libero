@@ -6,7 +6,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, Box, Burger, Button, Container, DirectionToggle, Flex, Header, Image,
+        ActionIcon, Anchor, Box, Burger, Button, Container, DirectionToggle, Flex, Header, Icon,
         Kbd, Notifications, RepoButton, ScrollArea, SpotlightOptions, ThemeToggle, Title,
         spotlight_filter, use_scroll_area, use_spotlight,
     },
@@ -387,7 +387,16 @@ fn AppShell() -> Element {
                     to: Route::Home {},
                     underline: "never",
                     sx: sx().display("flex").align_items("center").gap("md").color("inherit"),
-                    Image { src: LOGO, decorative: true, sx: sx().width("auto").height("28px") }
+                    Icon {
+                        src: LOGO,
+                        variant: "standard",
+                        color: "primary",
+                        // Wide, and the glyph nearly filling it: at icon size the bars blur together.
+                        sx: sx()
+                            .width("72px")
+                            .height("44px")
+                            .with("--lsx-icon-glyph", "84%"),
+                    }
                     Title { size: "lg", component: "span", "Libero" }
                 }
                 // Search: an icon button on a phone, the field-shaped button below from `Sm` up.
